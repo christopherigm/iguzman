@@ -1,0 +1,30 @@
+replicaCount: 1
+volumeMountPath: "shared-volume"
+
+config:
+  POSTGRES_DB: default
+  POSTGRES_USER: default
+  POSTGRES_PASSWORD: default
+
+image:
+  registry: docker.io
+  repository: postgres
+  tag: 14.0-alpine
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  externalPort: 5432
+  internalPort: 5432
+
+ingress:
+  enabled: false
+  host: myapp.com
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

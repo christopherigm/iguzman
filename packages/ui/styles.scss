@@ -1,0 +1,11 @@
+@import 'footer/footer.scss';
+
+.DevMode {
+  border: dashed 1px red;
+}
+
+.PreventSelect {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

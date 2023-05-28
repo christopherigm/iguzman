@@ -1,0 +1,27 @@
+replicaCount: 1
+volumeMountPath: "shared-volume"
+nginxServiceName: "nginx-web-app"
+branch: "main"
+
+image:
+  registry: christopherguzman
+  repository: my-cv
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  externalPort: 80
+  internalPort: 3000
+
+ingress:
+  enabled: false
+  host: myapp.com
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi

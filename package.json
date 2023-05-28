@@ -1,0 +1,43 @@
+{
+  "name": "i-guzman",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "packageManager": "npm@8.19.2",
+  "dependencies": {
+    "@fontsource/roboto": "^4.5.8",
+    "chart.js": "^4.3.0",
+    "next": "^13.1.6",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.12",
+    "@emotion/react": "^11.10.6",
+    "@emotion/styled": "^11.10.6",
+    "@mui/icons-material": "^5.11.9",
+    "@mui/material": "^5.11.9",
+    "@types/node": "^18.13.0",
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.11",
+    "eslint": "^8.34.0",
+    "jose": "^4.12.0",
+    "prettier": "^2.8.4",
+    "sass": "^1.58.2",
+    "turbo": "^1.7.4",
+    "typescript": "^4.9.5"
+  }
+}

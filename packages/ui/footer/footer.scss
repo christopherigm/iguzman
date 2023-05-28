@@ -1,0 +1,17 @@
+.Footer {
+  &__flex-filler {
+    flex-grow: 1;
+  }
+
+  &__version {
+    cursor: pointer;
+  }
+}
+
+footer {
+  padding: 10px 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
