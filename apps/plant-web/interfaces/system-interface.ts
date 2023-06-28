@@ -13,7 +13,14 @@ export default interface System extends BaseSystem {
 export type setSystem = (s: System) => void;
 
 export const SystemInitalState: System = {
+  version: '0.0.1',
+  paths: [
+    '/',
+    '/plant'
+  ],
+  hostName: '',
   URLBase: '',
+  K8sURLBase: '',
   defaultLanguage: 'en',
   loginEnabled: false,
   cartEnabled: false,

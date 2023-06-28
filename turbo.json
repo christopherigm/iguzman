@@ -13,6 +13,7 @@
     }
   },
   "globalEnv": [
-    "URL_BASE"
+    "URL_BASE",
+    "VERSION"
   ]
 }

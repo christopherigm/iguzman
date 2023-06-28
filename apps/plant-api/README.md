@@ -57,6 +57,14 @@ psql plant-api -U plant-api < /plant-api.bak
 
 ### Production deployment
 
+0) Patch Microk8s Nginx Ingress controller 
+to set `proxy-body-size: 60m`
+https://github.com/canonical/microk8s/issues/1539
+
+```sh
+kubectl -n ingress patch configmap nginx-load-balancer-microk8s-conf --patch "$(cat ./deployment/nginx/nginx-config-map-patch.yaml)"
+```
+
 1) Build and publish Docker image
 ```sh
 docker build -t plant-api:latest . && \

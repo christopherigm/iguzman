@@ -38,7 +38,7 @@ const NavBar = ({
   }: Props) => {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const drawerWidth = 240;
-  const navItems = ['Home', 'About', 'Contact'];
+  // const navItems = ['Home', 'About', 'Contact'];
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -48,7 +48,7 @@ const NavBar = ({
     <>
     <AppBar
       color='inherit'
-      position='static'
+      position='fixed'
       component='nav'
       className='NavBar'>
       <Container maxWidth='lg'>
@@ -65,7 +65,14 @@ const NavBar = ({
             <Logo logo={logo} devMode={devMode} width={logoWidth} />
           </Link>
           <Typography sx={{ flexGrow: 1 }}></Typography>
-          {children}
+          <Box sx={{
+            display: {
+              xs: 'none',
+              sm: 'block',
+            }
+          }}>
+            {children}
+          </Box>
           {
             loginButton ?
               <SignInMenu user={user} language={language} /> :
@@ -95,13 +102,14 @@ const NavBar = ({
         <Logo logo={logo} fullWidth={true} />
         <Divider />
         <List>
-          {navItems.map((item) => (
+          {/* {navItems.map((item) => (
             <ListItem key={item} disablePadding>
               <ListItemButton sx={{ textAlign: 'center' }}>
                 <ListItemText primary={item} />
               </ListItemButton>
             </ListItem>
-          ))}
+          ))} */}
+          {children}
         </List>
       </Box>
     </Drawer>

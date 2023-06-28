@@ -34,7 +34,9 @@ export const HourParser12Format = (date: string): string => {
   const m = parsedDate.getMinutes();
   let pmam = 'am';
 
-  if (h > 12) {
+  if (h === 12) {
+    pmam = 'pm';
+  } else if (h > 12) {
     h = h - 12;
     pmam = 'pm';
   }

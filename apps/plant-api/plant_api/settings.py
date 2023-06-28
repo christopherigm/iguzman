@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'common',
     'users',
     'records',
+    'statistics_records',
 ]
 
 MIDDLEWARE = [

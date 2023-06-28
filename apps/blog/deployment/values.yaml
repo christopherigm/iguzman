@@ -1,0 +1,32 @@
+replicaCount: 1
+volumeMountPath: "shared-volume"
+# nginxServiceName: "nginx-api"
+
+config:
+  WORDPRESS_DB_HOST: mysql.blog.svc.cluster.local
+  WORDPRESS_DB_NAME: blog
+  WORDPRESS_DB_USER: root
+  WORDPRESS_DB_PASSWORD: blog
+
+image:
+  registry: docker.io
+  repository: wordpress
+  tag: 6.2.2
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  externalPort: 80
+  internalPort: 80
+
+ingress:
+  enabled: true
+  host: blog.iguzman.com.mx
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

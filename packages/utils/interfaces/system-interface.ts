@@ -1,12 +1,15 @@
 export type Languages = 'en' | 'es' | null;
 
 export interface EnvironmentVariables {
+  hostName: string
   URLBase: string;
+  K8sURLBase: string;
   defaultLanguage: string;
   loginEnabled: boolean;
   cartEnabled: boolean;
   favoritesEnabled: boolean;
   ordersEnabled: boolean;
+  version: string;
 };
 
 export interface CachedValues {
@@ -16,6 +19,7 @@ export interface CachedValues {
 }
 
 export interface System extends EnvironmentVariables, CachedValues {
+  paths: Array<string>;
   isLoading?: Array<boolean>;
   globalAlert?: any;
 };

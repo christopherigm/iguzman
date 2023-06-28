@@ -2,14 +2,22 @@ import {System} from '../interfaces/system-interface';
 
 export const SaveCookie = (
     key: string,
-    value: string
+    value: string,
+    paths: Array<string> = [],
   ) => {
   const date = new Date();
   const expDays = 30;
   document.cookie = `${key}=;`;
   date.setTime(date.getTime() + (expDays * 24 * 60 * 60 * 1000));
   const expires = `expires=${date.toUTCString()}`;
-  document.cookie = `${key}=${JSON.stringify(value)};${expires};path=/;`;
+  if (paths && paths.length) {
+    paths.forEach((i: string) => {
+      document.cookie = `${key}=${JSON.stringify(value)};${expires};path=${i};`;
+    });
+  } else {
+    document.cookie = `${key}=${JSON.stringify(value)};${expires};path=/;`;
+  }
+  document.cookie = `${key}=${JSON.stringify(value)};${expires};path=*;`;
 };
 
 type Cookie = {

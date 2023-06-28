@@ -12,7 +12,7 @@ def log(data):
     date = str("%04d-%02d-%02d"%(
         timestamp[0:3]
     ))
-    data_to_log = str(timestring) + ': ' + str(data)
+    data_to_log = str(timestring) + ': ' + str(data) + '\n'
     log_file_name = './logs-' + date
     f = open(log_file_name, "a")
     f.write(data_to_log)

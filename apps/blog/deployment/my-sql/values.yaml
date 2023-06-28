@@ -1,0 +1,29 @@
+replicaCount: 1
+volumeMountPath: "shared-volume"
+
+config:
+  MYSQL_DATABASE: blog
+  MYSQL_ROOT_PASSWORD: blog
+
+image:
+  registry: docker.io
+  repository: mysql
+  tag: 8
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  externalPort: 3306
+  internalPort: 3306
+
+ingress:
+  enabled: false
+  host: myapp.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

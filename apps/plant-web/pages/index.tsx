@@ -6,7 +6,8 @@ import Head from 'next/head';
 import {
   GetUserFromCookie,
   GetCookieCachedValues,
-  GetEnvVariables
+  GetEnvVariables,
+  ReplaceURLBase,
 } from 'utils';
 import type {
   EnvironmentVariables,
@@ -21,6 +22,8 @@ import type UserInterface from 'interfaces/user-interface';
 import type PlantInterface from 'interfaces/plant-interface';
 import GetMainPagePlants from 'local-utils/get-main-page-plants';
 import PlantsGrid from 'components/plants-grid';
+import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 
 const Page = (props: System): ReactElement => {
   const [system, updateSystem] = useState<System>(props);
@@ -42,11 +45,18 @@ const Page = (props: System): ReactElement => {
       </Head>
       <Typography
         marginTop={3}
-        variant='subtitle1'
+        variant='h4'
         color={system.darkMode ? 'primary.contrastText' : ''}>
         {system.plants.length} plants found
       </Typography>
-      <PlantsGrid plants={system.plants} />
+      <Box
+        marginTop={1.5}
+        marginBottom={1}>
+        <Divider />
+      </Box>
+      <PlantsGrid
+        plants={system.plants}
+        darkMode={system.darkMode} />
     </MainLayout>
   );
 };
@@ -59,9 +69,14 @@ export async function getServerSideProps({ req }: any) {
   let plants: Array<PlantInterface> = [];
   try {
     user = await GetUserFromCookie(cookies) as UserInterface;
-    plants = await GetMainPagePlants({URLBase: env.URLBase}) as Array<PlantInterface>;
+    plants = await GetMainPagePlants({
+      URLBase: env.hostName === 'localhost' ? env.URLBase : env.K8sURLBase
+    }) as Array<PlantInterface>;
   } catch (error) {
-    
+    console.log('error:', error);
+  }
+  if (env.hostName !== 'localhost') {
+    plants=ReplaceURLBase(plants, env.K8sURLBase, env.URLBase) as Array<PlantInterface>;
   }
   const props: System = {
     ...SystemInitalState,

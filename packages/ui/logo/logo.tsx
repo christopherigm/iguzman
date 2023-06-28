@@ -42,7 +42,10 @@ const Logo = ({
         style={{
           objectFit: objectFit ? objectFit : 'contain'
         }}
-        className={devMode ? 'DevMode' : ''} />
+        className={devMode ? 'DevMode' : ''}
+        sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
+        quality={60}
+        priority={false} />
     </div>
   )
 }

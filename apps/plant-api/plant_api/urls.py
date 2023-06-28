@@ -30,29 +30,45 @@ from rest_framework_simplejwt.views import (
 )
 from common.views import (
     CountryViewSet,
+    StateViewSet,
+    CityViewSet,
+    SystemViewSet,
+    System,
 )
 from users.views import (
     UserViewSet,
     GroupViewSet,
-    UserPictureViewSet
+    UserPictureViewSet,
 )
 from records.views import (
     PlantViewSet,
     MeasurementViewSet,
-    PlantTypeViewSet
+    PlantTypeViewSet,
+    PlantControllerTypeViewSet,
+    PlantControllerViewSet,
+)
+from statistics_records.views  import (
+    DayMeasurementViewSet
 )
 
 router=routers.DefaultRouter()
 
+router.register(r'system-configurations', SystemViewSet)
 router.register(r'countries', CountryViewSet)
+router.register(r'countries', CountryViewSet)
+router.register(r'states', StateViewSet)
+router.register(r'cities', CityViewSet)
 
 router.register(r'users', UserViewSet)
 router.register(r'user-pictures', UserPictureViewSet)
 router.register(r'groups', GroupViewSet)
 
+router.register(r'plant-controller-types', PlantControllerTypeViewSet)
+router.register(r'plant-controllers', PlantControllerViewSet)
 router.register(r'plant-types', PlantTypeViewSet)
 router.register(r'plants', PlantViewSet)
 router.register(r'measurements', MeasurementViewSet)
+router.register(r'daily-measurements', DayMeasurementViewSet)
 
 # https://github.com/axnsan12/drf-yasg
 schema_view=get_schema_view(
@@ -79,6 +95,7 @@ urlpatterns = [
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path('v1/system-information', System.as_view()),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

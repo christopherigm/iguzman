@@ -1,0 +1,26 @@
+replicaCount: 1
+apiName: default
+volumeMountPath: "shared-volume"
+
+image:
+  registry: docker.io
+  repository: nginx
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  externalPort: 80
+  internalPort: 80
+
+ingress:
+  enabled: false
+  host: myapp.com
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

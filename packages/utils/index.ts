@@ -23,6 +23,7 @@ export {default as GetUserFromCookie} from './lib/get-user-from-cookie';
 export {default as GetBrowserCachedValues} from './lib/get-browser-cached-values';
 export {default as GetCookieCachedValues} from './lib/get-cookie-cached-values';
 export {default as GetEnvVariables} from './lib/get-env-variables';
+export {default as ReplaceURLBase} from './lib/replace-url-base';
 
 /**
  * API
@@ -45,6 +46,7 @@ export {
   ShortDateParser,
   HourParser12Format
 } from './lib/date-parser';
+export {default as FormatNum} from './lib/format-number';
 
 /**
  * Reducers

@@ -13,7 +13,6 @@ import {
 import {
   blue,
   indigo,
-  purple,
   grey
 } from '@mui/material/colors';
 import {SaveCookie} from 'utils';
@@ -61,12 +60,12 @@ interface Props {
   children: ReactNode;
   system: System;
   setSystem: setSystem;
-  menus?: ReactNode;
+  menu?: ReactNode;
 };
 
-const MainLayout = ({ children, system, setSystem, menus }: Props) => {
+const MainLayout = ({ children, system, setSystem, menu }: Props) => {
   const switchTheme = () => {
-    SaveCookie('darkMode', String(!system.darkMode));
+    SaveCookie('darkMode', String(!system.darkMode), system.paths);
     setSystem({
       ...system,
       darkMode: !system.darkMode
@@ -74,7 +73,7 @@ const MainLayout = ({ children, system, setSystem, menus }: Props) => {
   };
 
   const switchDevMode = () => {
-    SaveCookie('devMode', String(!system.devMode));
+    SaveCookie('devMode', String(!system.devMode), system.paths);
     setSystem({
       ...system,
       devMode: !system.devMode
@@ -106,17 +105,22 @@ const MainLayout = ({ children, system, setSystem, menus }: Props) => {
             devMode={system.devMode}
             loginButton={system.loginEnabled}
             logoWidth='60px'>
-            {menus}
+            {menu}
           </NavBar>
         </header>
-        <Container maxWidth='lg'>
+        <Container
+          maxWidth='lg' sx={{
+          paddingTop: '60px'
+          }}>
           {children}
         </Container>
         <Footer
+          version={system.version}
           darkMode={system.darkMode}
           devMode={system.devMode}
           switchTheme={switchTheme}
-          switchDevMode={switchDevMode} />
+          switchDevMode={switchDevMode}
+          hostName={system.hostName} />
       </Box>
     </ThemeProvider>
   );

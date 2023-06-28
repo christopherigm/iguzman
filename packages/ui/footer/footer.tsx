@@ -16,6 +16,7 @@ type Props = {
   switchTheme: changeBooleanValue;
   devMode: boolean;
   switchDevMode: changeBooleanValue;
+  hostName: string;
 };
 
 const Footer = ({
@@ -23,7 +24,8 @@ const Footer = ({
     darkMode,
     switchTheme,
     devMode,
-    switchDevMode
+    switchDevMode,
+    hostName
   }: Props): ReactElement => {
   const [devModeTimes, setDevModeTimes] = useState<number>(0);
   
@@ -56,7 +58,7 @@ const Footer = ({
                 'Footer__version PreventSelect'
               }
               onClick={enableDevMode}>
-              Ver. {version ? version : '0.0.1'}
+              Ver. {version ? version : '0.0.1'} {devMode ? `- Host: ${hostName}` : null}
             </Typography>
             <Typography sx={{ flexGrow: 1 }}></Typography>
             <FormControlLabel

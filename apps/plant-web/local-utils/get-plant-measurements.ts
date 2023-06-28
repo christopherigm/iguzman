@@ -5,16 +5,20 @@ import {
 
 type Props = {
   URLBase: string;
-  id: number;
+  plantID: number;
+  pageSize?: number;
 };
 
 const GetPlantMeasurements = ({
     URLBase,
-    id
+    plantID,
+    pageSize = 30
   }: Props ): Promise<any> => {
   return new Promise((res, rej) => {
-    const pageSize = `filter[plant]=${id}&page[size]=50&sort=-id`;
-    const parameters = pageSize;
+    const filters = `filter[plant]=${plantID}&`;
+    const sorting = `sort=-id&`;
+    const size = `page[size]=${pageSize}&`;
+    const parameters = filters + sorting + size;
     const url = `${URLBase}/v1/measurements/?${parameters}`;
     API.Get({url})
       .then(response => {

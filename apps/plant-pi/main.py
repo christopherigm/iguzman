@@ -1,152 +1,136 @@
 # https://projects.raspberrypi.org/en/projects/get-started-pico-w/1
-from machine import Pin, Timer, PWM, ADC, RTC
-from time import sleep
-import network
-import urequests as requests
-import ujson
-import _thread
+from machine import WDT
+from utime import sleep
+import _thread, gc
 from log import log
-from wifi_connection import (
-    setup_wifi_connection,
-    prepare_connection,
-    terminate_connection
-)
-from get_plant_id import get_plant_id
-from create_measurement_record import create_measurement_record
-from tools import (
-    get_percent_value,
-    get_final_value
-)
-from read_analog_sensor import read_analog_sensor
-from read_digital_sensor import read_digital_sensor
-from read_dht_sensor import (
-    read_temperature,
-    read_humidity
-)
-from internal_sensors import read_cpu_temperature
+from raspberry_pi import RaspberryPi
+from plant import Plant
+from plant_array_data import plant_array_data
 
-debug = False
-plant_slug = 'green-beans'
-plant_url = str('https://api.plant.iguzman.com.mx/v1/plants/?filter%5Bslug%5D=' + plant_slug)
-measurement_url = 'https://api.plant.iguzman.com.mx/v1/measurements/'
+# https://docs.micropython.org/en/latest/library/gc.html#module-gc
+gc.enable()
 
-green_led_pin = 21
-red_pin = 20
-ldr_pin = 27
-light_sensor_pin = 22
-dht_sensor_pin = 19
-soil_sensor_1_pin = 26
-ldr_pin = 27
-
-sleep_interval_core_1 = 30 # Seconds
-time_to_update_core_1 = 10 * 2 # 10 Minutes
-sleep_interval_core_2 = 30 # Seconds
-if debug is True:
-    time_to_update_core_1 = 5
-    sleep_interval_core_1 = 3 # Seconds
-    sleep_interval_core_2 = 1 # Seconds
-    plant_slug = 'test-plant'
-
-
-plant_id = None
-ldr = 0
-soil_moisture = 0
-temperature = 0
-humidity = 0
-is_day = None
-cpu_temperature = 0
-
-soil_moisture_measures = []
-temperature_measures = []
-ldr_measures = []
-humidity_measures = []
-cpu_temperature_measures = []
-clean_all_measures = False
-
-wlan = network.WLAN(network.STA_IF)
-    
-internal_led = machine.Pin("LED", machine.Pin.OUT)
-internal_led.off()
-
-# Green Led
-green_led = Pin(green_led_pin, Pin.OUT)
-red_led = Pin(red_pin, Pin.OUT)
-        
-green_led.off()
-red_led.off()
+debug=False
 
 log('System init')
 
-red_led.on()
 
-setup_wifi_connection(wlan)
+wdt = WDT(timeout=8388)
 
-while plant_id is None:
-    prepare_connection(wlan)
-    plant_id = get_plant_id(plant_url)
-    sleep(5)
+def feed_the_dog():
+    if wdt is not None:
+        wdt.feed()
+
+raspberry=RaspberryPi(feed_the_dog=feed_the_dog)
+raspberry.lights_from_startup()
+wlan=raspberry.setup_wifi_connection()
+
+plants=[]
+
+for plant in plant_array_data:
+    if plant['enable'] is True:
+        plants.append(Plant(
+            wlan=wlan,
+            feed_the_dog=feed_the_dog,
+            version=plant['version'],
+            slug=plant['slug'],
+            debug=debug,
+            plant_number=plant['plant_number'],
+        ))
+
+#c=0
+#while True:
+#    feed_the_dog()
+#    c=c+1
+#    if c > 5:
+#        print("pump!")
+#        plants[0].activate_water_pump(2)
+#        plants[1].activate_water_pump(2)
+#        c=0
+#    sleep(1)
+
     
-red_led.off()
+for plant in plants:
+    raspberry.arduino.rgb_1.red()
+    plant.get_plant_information()
+    if plant.plant is None:
+        sleep(10) # trigger watch dog
+    else:
+        raspberry.arduino.rgb_1.blue()
+        sleep(1)
+        raspberry.arduino.rgb_1.off()
 
-def read_sensors():
-    global soil_moisture_measures, ldr_measures, temperature_measures, humidity_measures, cpu_temperature_measures, clean_all_measures
-    
+log('{} plants enabled'.format(len(plants)))
+log('Information for all plants collected!')
+
+#while True:
+#    print('Mem Free: {} KBs'.format(gc.mem_free()/1024))
+#    sleep(1)
+
+#baton = _thread.allocate_lock()
+
+core_1_counter=80
+def update_plant_sensors():
+    global core_1_counter, plants, feed_the_dog, raspberry, baton
     while True:
-        green_led.on()
-        soil_moisture_measures.append(read_analog_sensor(soil_sensor_1_pin))
-        ldr_measures.append(read_analog_sensor(ldr_pin))
-        temperature_measures.append(read_temperature(dht_sensor_pin))
-        humidity_measures.append(read_humidity(dht_sensor_pin))
-        cpu_temperature_measures.append(read_cpu_temperature())
-        if clean_all_measures is True:
-            soil_moisture_measures = []
-            temperature_measures = []
-            ldr_measures = []
-            humidity_measures = []
-            cpu_temperature_measures = []
-            clean_all_measures = False
-        green_led.off()
-        sleep(sleep_interval_core_2)
+        #baton.acquire()
+        feed_the_dog()
+        if core_1_counter > 70:
+            raspberry.record_microcontroller_information()
+            feed_the_dog()
+            raspberry.record_is_day()
+            feed_the_dog()
+            raspberry.record_temperature()
+            feed_the_dog()
+            raspberry.record_humidity()
+            feed_the_dog()
+            raspberry.record_ldr()
+            feed_the_dog()
+            raspberry.record_cpu_temperature()
+            feed_the_dog()
+            core_1_counter=0
+        gc.collect()
+        core_1_counter=core_1_counter+1
+        sleep(1)
+        #baton.release()
 
-_thread.start_new_thread(read_sensors, ())
+_thread.start_new_thread(update_plant_sensors, ())
 
-core_1_counter = 0
+core_0_counter=0
 while True:
-    core_1_counter = core_1_counter + 1
-    
-    if core_1_counter is time_to_update_core_1:
-        red_led.on()
-        
-        prepare_connection(wlan)
-
-        soil_moisture = get_final_value(soil_moisture_measures)
-        ldr = get_final_value(ldr_measures)
-        temperature = get_final_value(temperature_measures)
-        humidity = get_final_value(humidity_measures)
-        cpu_temperature = get_final_value(cpu_temperature_measures)
-        is_day = False if read_digital_sensor(light_sensor_pin) is 1 else True
-        
-        clean_all_measures = True
-        print('>>> All soil measurements: ' + str(len(soil_moisture_measures)))
-        
-        create_measurement_record(
-            measurement_url,
-            plant_id,
-            ldr,
-            soil_moisture,
-            temperature,
-            humidity,
-            is_day,
-            cpu_temperature,
-            debug
-        )
-        terminate_connection(wlan)
-        
-        red_led.off()
-        
-        core_1_counter = 0
-        
-    sleep(sleep_interval_core_1)
+    #baton.acquire()
+    feed_the_dog()
+    if core_0_counter >= len(plants):
+        core_0_counter=0
+    plants[core_0_counter].perform_measurement_operation()
+    plants[core_0_counter].perform_update_operation(        
+        temperature=raspberry.temperature,
+        humidity=raspberry.humidity,
+        ldr=raspberry.ldr,
+        is_day=raspberry.is_day,
+        cpu_temperature=raspberry.cpu_temperature,
+        total_ram=raspberry.total_ram,
+        allocated_ram=raspberry.allocated_ram,
+        disk_total_space=raspberry.disk_total_space,
+        disk_allocated_space=raspberry.disk_allocated_space,
+    )
+    core_0_counter=core_0_counter+1
+    gc.collect()
+    #print('Core 0: Mem Free: {} KBs'.format(gc.mem_free()/1024))
+    #print("============ From Raspberry Pi Class ============")
+    #print('Core 0: Mem Free: {} KBs'.format(gc.mem_free()/1024))
+    #print("total_ram:", raspberry.total_ram)
+    #print("allocated_ram:", raspberry.allocated_ram)
+    #print("disk_total_space:", raspberry.disk_total_space)
+    #print("disk_allocated_space:", raspberry.disk_allocated_space)
+    #print("temperature:", raspberry.temperature)
+    #print("humidity:", raspberry.humidity)
+    #print("ldr:", raspberry.ldr)
+    #print("cpu_temperature:", raspberry.cpu_temperature)
+    #print("is_day:", raspberry.is_day)
+    #print("============ From Raspberry Pi Class ============")
+    sleep(1)
+    #baton.release()
 
 # Raspberry pinout
 # https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html

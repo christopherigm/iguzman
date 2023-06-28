@@ -1,16 +1,19 @@
 import PlantInterface from './plant-interface';
 
 export default interface MeasurementInterface {
-  id: number,
+  id: number;
   attributes: {
     created: string;
     modified: string;
-    soil_moisture: number;
+    initial_measurement: boolean;
     ldr: number;
+    soil_moisture: number;
     temperature: number;
     humidity: number;
     is_day: boolean;
     cpu_temperature: number;
+    ram_allocated: number;
+    storage_allocated: number;
   }
   relationships: {
     plant: {
