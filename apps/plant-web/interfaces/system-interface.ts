@@ -30,7 +30,7 @@ export const SystemInitalState: System = {
   darkMode: false,
   devMode: false,
   globalAlert: {},
-  isLoading: [],
+  isLoading: false,
 
   user: null,
   plants: [],

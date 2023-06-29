@@ -22,12 +22,10 @@ import type System from 'interfaces/system-interface';
 import type UserInterface from 'interfaces/user-interface';
 import type PlantInterface from 'interfaces/plant-interface';
 import GetPlantBySlug from 'local-utils/get-plant-by-slug';
-
 import PlantDetailHeader from 'components/plant-detail-header';
 import Measurements from 'components/measurements';
 import DailyMeasurements from 'components/daily-measurements';
 import MicroControllerInformation from 'components/microcontroller-information';
-
 import Typography from '@mui/material/Typography';
 import { Button } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
@@ -42,7 +40,6 @@ const PlantDetail = (props: System): ReactElement => {
   const [nextUpdate, setNextUpdate] = useState(0);
   const [minSinceLastUpdate, setMinSinceLastUpdate] = useState(0);
   const [renderTime, setRenderTime] = useState(0);
-
   const [fechingData, setFechingData] = useState(false);
 
   const fetchPlantData = useCallback(() => {
@@ -135,15 +132,24 @@ const PlantDetail = (props: System): ReactElement => {
     );
   }
 
+  const setIsLoading = () => setSystem({
+    ...system,
+    isLoading: true
+  });
+
   const Menu = (): ReactElement => {
     return (
-      <Link href='/' passHref>
+      <Link
+        href='/'
+        onClick={setIsLoading}
+        passHref>
         <Button
           size='large'
           startIcon={<HomeIcon />}
           sx={{
             color: '#444'
-          }}>Home</Button>
+          }}
+          disabled={system.isLoading}>Home</Button>
       </Link>
     )
   };

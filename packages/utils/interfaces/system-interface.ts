@@ -20,7 +20,7 @@ export interface CachedValues {
 
 export interface System extends EnvironmentVariables, CachedValues {
   paths: Array<string>;
-  isLoading?: Array<boolean>;
+  isLoading: boolean;
   globalAlert?: any;
 };
 

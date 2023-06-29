@@ -1,4 +1,5 @@
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
+import Link from 'next/link';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -6,16 +7,13 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
-import Link from 'next/link';
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
 import Logo from 'ui/logo';
 import Container from '@mui/material/Container';
 import SignInMenu from './sign-in-menu';
 import type {Languages} from 'utils';
+import { useRouter } from 'next/router';
 
 interface Props {
   children?: any;
@@ -23,8 +21,9 @@ interface Props {
   user?: any;
   language: Languages;
   devMode: boolean;
-  loginButton?: boolean
-  logoWidth?: string
+  loginButton?: boolean;
+  logoWidth?: string;
+  setIsLoading: () => void;
 };
 
 const NavBar = ({
@@ -34,15 +33,22 @@ const NavBar = ({
     language,
     devMode,
     loginButton = false,
-    logoWidth = '200px'
+    logoWidth = '200px',
+    setIsLoading,
   }: Props) => {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const drawerWidth = 240;
-  // const navItems = ['Home', 'About', 'Contact'];
-
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
+  const router = useRouter();
+  const [enableLogoButton, setEnableLogoButton] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (router.pathname !== '/') {
+      setEnableLogoButton(_p => true);
+    }
+  }, []);
 
   return (
     <>
@@ -61,9 +67,15 @@ const NavBar = ({
             sx={{ mr: 2, display: { sm: 'none' } }}>
             <MenuIcon />
           </IconButton>
-          <Link href='/'>
-            <Logo logo={logo} devMode={devMode} width={logoWidth} />
-          </Link>
+          {
+            enableLogoButton ?
+              <Link
+                href='/'
+                onClick={setIsLoading}>
+                <Logo logo={logo} devMode={devMode} width={logoWidth} />
+              </Link> :
+              <Logo logo={logo} devMode={devMode} width={logoWidth} />
+          }
           <Typography sx={{ flexGrow: 1 }}></Typography>
           <Box sx={{
             display: {

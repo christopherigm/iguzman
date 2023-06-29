@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      volumes:
+      - name: {{ .Chart.Name }}-volume
+        hostPath:
+          path: /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{ .Chart.Name }}/db/
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        volumeMounts:
+        - name: {{ .Chart.Name }}-volume
+          mountPath: /var/lib/postgresql/data
+        ports:
+        - containerPort: {{ .Values.service.internalPort }}
+        {{- if .Values.config }}
+        env:
+        {{- range $key, $value := .Values.config }}
+        - name: {{ $key }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ $.Chart.Name }}
+              key: {{ $key }}
+        {{- end }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}

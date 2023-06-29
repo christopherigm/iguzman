@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { exec } = require('child_process');
 const { exit } = require('process');
+const fs = require('fs');
 require('dotenv').config();
 
 // Editable variables
@@ -10,7 +11,38 @@ const host = 'api.plant.iguzman.com.mx';
 const apiURL = 'https://api.plant.iguzman.com.mx/v1/';
 const webURL = 'https://plant.iguzman.com.mx/';
 const registry = 'christopherguzman';
+const envFile = '.env';
 // Editable variables
+
+const upgradeVersion = (version) => {
+  const a = version.split('.');
+  if ( Number(a[2]) === 9 ) {
+    if ( Number(a[1]) === 9 ) {
+      a[0] = Number(a[0]) + 1;
+      a[1] = 0;
+    } else {
+      a[1] = Number(a[1]) + 1;
+    }
+    a[2] = 0;
+  } else {
+    a[2] = Number(a[2]) + 1;
+  }
+  const newVersion = `${a[0]}.${a[1]}.${a[2]}`;
+  return newVersion;
+};
+
+const allFileContents = fs.readFileSync(envFile, 'utf-8');
+let newLines = '';
+allFileContents.split(/\r?\n/).forEach(line =>  {
+  if (line !== '' && line.substring(0,7) === 'VERSION') {
+    const value = line.split('=')[1].replace(/\'/g, '');
+    upgradeVersion(value);
+    newLines += `VERSION='${upgradeVersion(value)}'\r\n`;
+  } else if (line !== '') {
+    newLines += `${line}\r\n`;
+  }
+});
+fs.writeFileSync(envFile, newLines);
 
 let branch = '';
 const startTime = new Date(Date.now());
@@ -90,6 +122,7 @@ const deployMicroservice = () => {
     let command = `helm install ${name} deployment `;
     command += `--namespace=${namespace} `;
     command += `--set replicaCount=${process.env.REPLICAS} `;
+    command += `--set config.VERSION=${process.env.VERSION} `;
     command += `--set config.SECRET_KEY=${getSecretKey()} `;
     command += `--set config.ENVIRONMENT=production `;
     command += `--set config.BRANCH=${branch} `;

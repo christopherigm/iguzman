@@ -39,6 +39,7 @@ from users.views import (
     UserViewSet,
     GroupViewSet,
     UserPictureViewSet,
+    ActivateUser,
 )
 from records.views import (
     PlantViewSet,
@@ -96,6 +97,7 @@ urlpatterns = [
     re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('v1/system-information', System.as_view()),
+    re_path(r'^v1/activate-user', ActivateUser.as_view(), name='login'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

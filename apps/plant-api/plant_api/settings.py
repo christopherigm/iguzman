@@ -19,6 +19,8 @@ from .configs import env
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Environment variables
+HOSTNAME = env.HOSTNAME
+VERSION = env.VERSION
 ENVIRONMENT = env.ENVIRONMENT
 SECRET_KEY = env.SECRET_KEY
 DEBUG = env.DEBUG
