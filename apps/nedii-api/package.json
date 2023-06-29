@@ -1,0 +1,25 @@
+{
+  "name": "nedii-api",
+  "version": "2.0.0",
+  "description": "Nedii API",
+  "main": "manage.py",
+  "scripts": {
+    "dev": "python3 manage.py runserver 0.0.0.0:8000",
+    "static": "python3 manage.py collectstatic --noinput",
+    "migrations": "python3 manage.py makemigrations",
+    "migrate": "python3 manage.py migrate",
+    "freeze": "python3 -m pip freeze -l > requirements.txt",
+    "deploy": "npm run freeze && node build-and-deploy.js",
+    "fixtures": "python3 manage.py loaddata system skill-categories 9000-skills-backend 9100-skills-frontend 9200-skills-languages 9300-skills-mobile 9400-skills-data-bases 9500-skills-ci-cd 9600-skills-platforms 9700-skills-iot schools companies countries states cities user user-schools user-jobs user-skills"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:christopherigm/iguzman.git"
+  },
+  "author": "Christopher Irak Guzman Monsalvo",
+  "license": "Copyright",
+  "homepage": "https://github.com/christopherigm/iguzman#readme",
+  "dependencies": {
+    "dotenv": "^16.0.3"
+  }
+}

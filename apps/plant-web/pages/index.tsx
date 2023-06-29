@@ -1,6 +1,6 @@
 import {
   ReactElement,
-  useState
+  useState,
 } from 'react';
 import Head from 'next/head';
 import {
@@ -29,6 +29,11 @@ const Page = (props: System): ReactElement => {
   const [system, updateSystem] = useState<System>(props);
   const setSystem = (s: System): void => updateSystem(_s => s);
 
+  const setIsLoading = () => setSystem({
+    ...system,
+    isLoading: true
+  });
+
   return (
     <MainLayout
       system={system}
@@ -56,7 +61,8 @@ const Page = (props: System): ReactElement => {
       </Box>
       <PlantsGrid
         plants={system.plants}
-        darkMode={system.darkMode} />
+        darkMode={system.darkMode}
+        setIsLoading={setIsLoading} />
     </MainLayout>
   );
 };

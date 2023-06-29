@@ -19,7 +19,8 @@ class System(APIView):
         )
         data={
             "system": {
-                "version": "1.0.3",
+                "hostname": settings.HOSTNAME,
+                "version": settings.VERSION,
                 "time": server_time_raw,
                 "server_time": server_time
             }

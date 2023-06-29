@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-load-balancer-microk8s-conf
+  namespace: ingress
+data:
+  proxy-buffering: "on"
+  proxy-buffer-size: 16k
+  proxy-body-size: 60m
+  large-client-header-buffers: "4 16k"
+  use-forwarded-headers: "true"

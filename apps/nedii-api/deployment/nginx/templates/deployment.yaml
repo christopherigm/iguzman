@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      volumes:
+      - name: default-conf
+        configMap:
+          name: {{ .Chart.Name }}-default-conf
+          items:
+            - key: default.conf
+              path: default.conf
+      - name: {{ .Chart.Name }}-static-volume
+        hostPath:
+          path: /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.apiName}}/static
+      - name: {{ .Chart.Name }}-media-volume
+        hostPath:
+          path: /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.apiName}}/media
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        volumeMounts:
+        - name: default-conf
+          readOnly: true
+          mountPath: /etc/nginx/conf.d/
+        - name: {{ .Chart.Name }}-static-volume
+          readOnly: true
+          mountPath: /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.apiName}}/static
+        - name: {{ .Chart.Name }}-media-volume
+          readOnly: true
+          mountPath: /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.apiName}}/media
+        ports:
+        - containerPort: {{ .Values.service.internalPort }}
+        {{- if .Values.config }}
+        env:
+        {{- range $key, $value := .Values.config }}
+        - name: {{ $key }}
+          valueFrom:
+            configMapKeyRef:
+              name: {{ $.Chart.Name }}
+              key: {{ $key }}
+        {{- end }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}

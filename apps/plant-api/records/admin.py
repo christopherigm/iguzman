@@ -65,7 +65,11 @@ class PlantAdmin(admin.ModelAdmin):
         'enabled',
     ]
     search_fields = ('name','user')
-    list_filter = ('enabled',)
+    list_filter = (
+        'enabled',
+        'plant_type',
+        'plant_controller',
+    )
     readonly_fields=(
         'version',
     )
@@ -78,10 +82,13 @@ class MeasurementAdmin(admin.ModelAdmin):
         'soil_moisture',
         'temperature',
         'humidity',
-        'is_day',
+        'created',
     ]
     search_fields = ('plant__name',)
-    list_filter = ('enabled',)
+    list_filter = (
+        'enabled',
+        'plant',
+    )
     readonly_fields=(
         'version',
     )

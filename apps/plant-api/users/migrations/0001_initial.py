@@ -9,7 +9,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
 import django_resized.forms
-import users.models.m_user
+import users.models
 import uuid
 
 
@@ -37,8 +37,8 @@ class Migration(migrations.Migration):
                 ('is_active', models.BooleanField(default=True, help_text='Designates whether this user should be treated as active. Unselect this instead of deleting accounts.', verbose_name='active')),
                 ('date_joined', models.DateTimeField(default=django.utils.timezone.now, verbose_name='date joined')),
                 ('token', models.UUIDField(blank=True, default=uuid.uuid4, null=True)),
-                ('img_picture', django_resized.forms.ResizedImageField(blank=True, crop=None, force_format='JPEG', keep_meta=True, null=True, quality=90, scale=None, size=[512, 512], upload_to=users.models.m_user.picture)),
-                ('img_hero_picture', django_resized.forms.ResizedImageField(blank=True, crop=None, force_format='JPEG', keep_meta=True, null=True, quality=90, scale=None, size=[1920, 1080], upload_to=users.models.m_user.picture)),
+                ('img_picture', django_resized.forms.ResizedImageField(blank=True, crop=None, force_format='JPEG', keep_meta=True, null=True, quality=90, scale=None, size=[512, 512], upload_to=users.models.picture)),
+                ('img_hero_picture', django_resized.forms.ResizedImageField(blank=True, crop=None, force_format='JPEG', keep_meta=True, null=True, quality=90, scale=None, size=[1920, 1080], upload_to=users.models.picture)),
                 ('theme', models.CharField(default='default', max_length=16)),
                 ('theme_color', colorfield.fields.ColorField(default='#FF0000', image_field=None, max_length=18, samples=None)),
                 ('profile_picture_shape', models.CharField(default='default', max_length=16)),

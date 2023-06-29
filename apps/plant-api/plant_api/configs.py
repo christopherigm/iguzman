@@ -5,6 +5,8 @@ import environ
 BASE_DIR=Path(__file__).resolve().parent.parent
 
 environment=environ.Env(
+    HOSTNAME=(str, 'localhost'),
+    VERSION=(str, '0.0.1'),
     SECRET_KEY=(str, 'key'),
     ENVIRONMENT=(str, 'local'),
     BRANCH=(str, 'main'),
@@ -22,6 +24,8 @@ environment=environ.Env(
 
 environ.Env.read_env()
 
+HOSTNAME=environment('HOSTNAME')
+VERSION=environment('VERSION')
 SECRET_KEY=environment('SECRET_KEY')
 ENVIRONMENT=environment('ENVIRONMENT')
 BRANCH=environment('BRANCH')
@@ -61,6 +65,8 @@ class Production:
     MEDIA_ROOT='/media'
     STATIC_ROOT='/static'
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    HOSTNAME=HOSTNAME
+    VERSION=VERSION
     SECRET_KEY=SECRET_KEY
     ENVIRONMENT=ENVIRONMENT
     BRANCH=BRANCH

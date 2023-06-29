@@ -24,11 +24,13 @@ import MemoryIcon from '@mui/icons-material/Memory';
 type ItemProps = {
   plant: PlantInterface;
   darkMode: boolean;
+  setIsLoading: () => void;
 }
 
 const Item = ({
     plant,
-    darkMode
+    darkMode,
+    setIsLoading,
   }: ItemProps): ReactElement => {
   if (!plant ||
     !plant.relationships.plant_type.data ||
@@ -59,20 +61,12 @@ const Item = ({
     <Grid item xs={12} sm={6} md={4}>
       <Link
         href={`/plant/${plant.attributes.slug}/`}
+        onClick={setIsLoading}
         passHref>
       <Card sx={{ minWidth: 275 }} elevation={2}>
         <GenericImage
           src={img}
           alt={plant.attributes.name} />
-        {/* <CardMedia
-          sx={{
-            height: {
-              xs: 350,
-              md: 400
-            }
-          }}
-          image={img}
-          title={plant.attributes.name} /> */}
         <CardContent sx={{
           paddingBottom: '10px !important;'
         }}>
@@ -201,11 +195,13 @@ const Item = ({
 interface Interface {
   plants: Array<PlantInterface>;
   darkMode: boolean;
+  setIsLoading: () => void;
 }
 
 const PlantsGrid = ({
     plants,
-    darkMode
+    darkMode,
+    setIsLoading,
   }: Interface): ReactElement => {
   return (
     <Grid
@@ -220,7 +216,8 @@ const PlantsGrid = ({
             <Item
               plant={i} 
               darkMode={darkMode} 
-              key={index}/>
+              key={index}
+              setIsLoading={setIsLoading} />
           );
         })
       }
