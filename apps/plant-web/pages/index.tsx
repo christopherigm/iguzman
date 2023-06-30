@@ -52,7 +52,7 @@ const Page = (props: System): ReactElement => {
         marginTop={3}
         variant='h4'
         color={system.darkMode ? 'primary.contrastText' : ''}>
-        {system.plants.length} plants found
+        {system.plants.length} plants found.
       </Typography>
       <Box
         marginTop={1.5}
