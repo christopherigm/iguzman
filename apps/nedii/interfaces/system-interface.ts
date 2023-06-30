@@ -3,6 +3,7 @@ import type UserInterface from 'interfaces/user-interface';
 
 export default interface System extends BaseSystem {
   user: UserInterface | null;
+  token?: string;
 };
 
 export type setSystem = (s: System) => void;

@@ -19,12 +19,6 @@ spec:
           items:
             - key: default.conf
               path: default.conf
-      - name: {{ .Chart.Name }}-static-volume
-        hostPath:
-          path: /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.webAppName}}/static
-      - name: {{ .Chart.Name }}-media-volume
-        hostPath:
-          path: /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.webAppName}}/assets
       containers:
       - name: {{ .Chart.Name }}
         image: {{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
@@ -33,12 +27,6 @@ spec:
         - name: default-conf
           readOnly: true
           mountPath: /etc/nginx/conf.d/
-        - name: {{ .Chart.Name }}-static-volume
-          readOnly: true
-          mountPath: /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.webAppName}}/static
-        - name: {{ .Chart.Name }}-media-volume
-          readOnly: true
-          mountPath: /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.webAppName}}/assets
         ports:
         - containerPort: {{ .Values.service.internalPort }}
         {{- if .Values.config }}

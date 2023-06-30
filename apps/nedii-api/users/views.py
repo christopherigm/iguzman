@@ -28,7 +28,6 @@ from common.mixins import (
 )
 from users.models import (
     User,
-    UserPicture,
     UserFavoriteStand,
     UserAddress,
     UserCartBuyableItem,
@@ -39,7 +38,6 @@ from users.models import (
 )
 from users.serializers import (
     UserSerializer,
-    UserPictureSerializer,
     UserLoginSerializer,
     UserFavoriteStandSerializer,
     UserAddressSerializer,
@@ -68,17 +66,6 @@ class GroupViewSet (ReadOnlyModelViewSet):
     search_fields = [
         "name"
     ]
-
-
-class UserPictureViewSet(ReadOnlyModelViewSet):
-    queryset = UserPicture.objects.all()
-    serializer_class = UserPictureSerializer
-    ordering = ["id"]
-    filterset_fields = {
-        "id": ("exact",),
-        "user": ("exact",),
-        "user__username": ("exact",)
-    }
 
 
 class UserViewSet(ModelViewSet):
@@ -201,18 +188,15 @@ class ActivateUser(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         body_unicode=request.body.decode("utf-8")
         body = json.loads(body_unicode)
-        profile = None
         user = None
         if "token" in body["data"]["attributes"]:
             user = get_object_or_404(
                 User,
-                id = profile.user.id
+                token = body["data"]["attributes"]["token"]
             )
-        if profile:
             user.is_active = True
+            user.token = None
             user.save()
-            profile.token = None
-            profile.save()
             return Response( data = {
                 "success": True
             }, status = 200 )

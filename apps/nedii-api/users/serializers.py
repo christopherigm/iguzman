@@ -11,7 +11,6 @@ from rest_framework.validators import UniqueValidator
 from django.core.mail import EmailMultiAlternatives
 from users.models import (
     User,
-    UserPicture,
     UserFavoriteStand,
     UserAddress,
     UserCartBuyableItem,
@@ -62,20 +61,6 @@ class UserLoginSerializer(
             "access",
             "refresh"
         )
-
-
-class UserPictureSerializer(HyperlinkedModelSerializer):
-    user=ResourceRelatedField (
-        queryset=User.objects
-    )
-
-    included_serializers = {
-        "user": "users.serializers.UserSerializer"
-    }
-    
-    class Meta:
-        model = UserPicture
-        fields = "__all__"
 
 
 class UserSerializer(HyperlinkedModelSerializer):
@@ -131,19 +116,19 @@ class UserSerializer(HyperlinkedModelSerializer):
         user.set_password(validated_data["password"])
         user.token = uuid.uuid4()
         user.is_active = False
-        subject = "Activa tu cuenta"
-        from_email = "My Resume via Christopher Guzman <{}>".format(settings.EMAIL_HOST_USER)
+        subject = "Activa tu cuenta de Nedii"
+        from_email = "Nedii <{}>".format(settings.EMAIL_HOST_USER)
         to = user.email
-        text_content = """To verify your email and activate yout account, please use the following link: <a href="{}activate/{}">click here.</a>""".format(settings.WEB_APP_URL, user.token)
+        text_content = """Para verificar tu cuenta de correo electronico, por favor da click <a href="{}activate/{}">en este link.</a>""".format(settings.WEB_APP_URL, user.token)
         html_content = """
-            <h2>Welcome to My Resume {0}!</h2>
+            <h2>Bienvenido a Nedii {0}!</h2>
             <p>
-                To verify your email and activate yout account, please use the following link: 
-                <a href="{1}activate/{2}">click here.</a>
+                Para verificar tu cuenta de correo electronico, por favor da click 
+                <a href="{1}activate/{2}">en este link.</a>
             </p>
-            <span>Christopher Guzman from My Resume.</span>
+            <span>Christopher Guzman de Nedii</span>
             <br/><br/>
-            <img width="140" src="https://api.resume.iguzman.com.mx/media/CommonPicture/30fe7f63279bed0505eb6904fa2961f647c4.jpg" />
+            <img width="140" src="https://nedii.iguzman.com.mx/_next/image?url=%2Fimages%2Flogo.jpg&w=640&q=60" />
             <br/>
         """.format(
             user.first_name,

@@ -2,14 +2,16 @@ import {API} from 'utils';
 import * as jose from 'jose';
 
 type Props = {
+  URLBase: string;
   jwt?: string;
 };
 
-const GetUserFromCookie = (cookies: Props): Promise<any> => {
+const GetUserFromCookie = ({
+    jwt,
+    URLBase,
+  }: Props): Promise<any> => {
   return new Promise((res) => {
-    if (cookies.jwt) {
-      const jwt = cookies.jwt;
-      const URLBase = String(process.env.URL_BASE);
+    if (jwt) {
       const claims: any = jose.decodeJwt(jwt);
       API.GetUser({
         URLBase,

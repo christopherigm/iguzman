@@ -91,12 +91,6 @@ class VehiclePicture(MediumPicture):
 
 
 class VehicleMake(MediumPicture):
-    name=models.CharField(
-        max_length=64,
-        null=False,
-        blank=False
-    )
-
     def __str__(self):
         return self.name
 
@@ -109,11 +103,6 @@ class VehicleMake(MediumPicture):
 
 
 class VehicleModel(MediumPicture):
-    name=models.CharField(
-        max_length=64,
-        null=False,
-        blank=False
-    )
     make=models.ForeignKey(
         "vehicle.VehicleMake",
         verbose_name="Marca de vehiculo",
@@ -179,12 +168,12 @@ class Vehicle(RegularPicture):
         help_text="Modelo del vehiculo al que pertenece este registro",
         on_delete=models.CASCADE
     )
-    year=models.CharField(
+    year=models.PositiveSmallIntegerField(
         verbose_name="Anio del vehiculo",
-        max_length=4,
         null=False,
         blank=False,
-        help_text="Anio del vehiculo"
+        help_text="Anio del vehiculo",
+        default=2000,
     )
     doors=models.PositiveSmallIntegerField(
         verbose_name="Numero de puertas",

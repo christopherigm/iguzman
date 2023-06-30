@@ -5,10 +5,7 @@ from rest_framework_json_api.serializers import (
     HyperlinkedModelSerializer,
     ResourceRelatedField,
 )
-from users.models import (
-    User,
-    UserPicture,
-)
+from users.models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import Group
 from rest_framework.validators import UniqueValidator
@@ -49,20 +46,6 @@ class UserLoginSerializer(
             "access",
             "refresh"
         )
-
-
-class UserPictureSerializer(HyperlinkedModelSerializer):
-    user=ResourceRelatedField (
-        queryset=User.objects
-    )
-
-    included_serializers = {
-        "user": "users.serializers.UserSerializer"
-    }
-    
-    class Meta:
-        model = UserPicture
-        fields = "__all__"
 
 
 class UserSerializer(HyperlinkedModelSerializer):

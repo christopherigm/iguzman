@@ -11,5 +11,5 @@ export type Action = {
   type: Types;
   name?: string;
   value?: string;
-  error?: string;
+  error?: Array<any>;
 };

@@ -20,34 +20,34 @@ class NediiPlan(CommonFields):
         ]
     )
     unlimited_items=models.BooleanField (
-        verbose_name="Anuncios ilimitados?",
+        verbose_name='Anuncios ilimitados?',
         blank=False,
         default=False
     )
     number_of_items=models.PositiveSmallIntegerField(
-        verbose_name="Numero de anuncios",
+        verbose_name='Numero de anuncios',
         null=True,
         blank=True,
         default=4
     )
     advertising_days=models.PositiveSmallIntegerField(
-        verbose_name="Numero de dias de publicidad",
+        verbose_name='Numero de dias de publicidad',
         null=True,
         blank=True,
         default=5
     )
     stand_enabled=models.BooleanField (
-        verbose_name="Stand habilitado?",
+        verbose_name='Stand habilitado?',
         blank=False,
         default=True
     )
     digital_card=models.BooleanField (
-        verbose_name="Terjeta digital habilitada?",
+        verbose_name='Terjeta digital habilitada?',
         blank=False,
         default=True
     )
     billed_monthly=models.BooleanField (
-        verbose_name="Cobrado mensualmente?",
+        verbose_name='Cobrado mensualmente?',
         blank=False,
         default=True
     )
@@ -58,17 +58,17 @@ class NediiPlan(CommonFields):
         choices=[(i.value, i.value) for i in Exposure]
     )
     price=models.DecimalField(
-        verbose_name="Precio del plan",
+        verbose_name='Precio del plan',
         max_digits=10,
         decimal_places=2,
         null=False,
         blank=False,
         default=0,
-        help_text="Precio del plan"
+        help_text='Precio del plan'
     )
 
     def __str__(self):
         return self.name
 
     class JSONAPIMeta:
-        resource_name="NediiPlan"
+        resource_name='NediiPlan'

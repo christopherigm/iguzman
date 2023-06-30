@@ -7,12 +7,12 @@ from common.tools import set_media_url, get_unique_slug
 
 class MealClassification(MediumPicture):
     stand=models.ForeignKey(
-        "stand.Stand",
-        related_name="stand_meal_classification",
-        verbose_name="Restaurante",
+        'stand.Stand',
+        related_name='stand_meal_classification',
+        verbose_name='Restaurante',
         null=False,
         blank=False,
-        help_text="Restaurante al que pertenece este registro",
+        help_text='Restaurante al que pertenece este registro',
         on_delete=models.CASCADE
     )
     name=models.CharField (
@@ -27,7 +27,7 @@ class MealClassification(MediumPicture):
         unique=True
     )
     img_icon=models.CharField (
-        verbose_name="Icono",
+        verbose_name='Icono',
         max_length=32,
         null=True,
         blank=True
@@ -45,11 +45,11 @@ class MealClassification(MediumPicture):
         return self.name
 
     class Meta:
-        verbose_name="Categoría de comida"
-        verbose_name_plural="Categorías de comidas"
+        verbose_name='Categoría de comida'
+        verbose_name_plural='Categorías de comidas'
 
     class JSONAPIMeta:
-        resource_name="MealClassification"
+        resource_name='MealClassification'
 
 
 class MealAddon(SmallPicture):
@@ -59,69 +59,67 @@ class MealAddon(SmallPicture):
         blank=False
     )
     stand=models.ForeignKey(
-        "stand.Stand",
-        related_name="stand_meal_addon",
-        verbose_name="Restaurante",
+        'stand.Stand',
+        related_name='stand_meal_addon',
+        verbose_name='Restaurante',
         null=False,
         blank=False,
-        help_text="Restaurante al que pertenece este registro",
+        help_text='Restaurante al que pertenece este registro',
         on_delete=models.CASCADE
     )
     quantity=models.CharField(
-        verbose_name="Cantidad",
+        verbose_name='Cantidad',
         max_length=32,
         null=False,
         blank=True,
-        default="1"
+        default='1'
     )
     price=models.DecimalField(
-        verbose_name="Precio",
+        verbose_name='Precio',
         max_digits=10,
         decimal_places=2,
         null=False,
         blank=False,
         default=5,
     )
-
     def __str__(self):
-        return "[{0}] {1} ${2}".format(
+        return '[{0}] {1} ${2}'.format(
             self.stand,
             self.name,
             self.price
         )
-
     class Meta:
-        verbose_name="Ingrediente / adicional"
-        verbose_name_plural="Ingredientes / adicionales"
+        verbose_name='Ingrediente / adicional'
+        verbose_name_plural='Ingredientes / adicionales'
 
     class JSONAPIMeta:
-        resource_name="MealAddOn"
+        resource_name='MealAddOn'
 
 
 class MealPicture(MediumPicture):
     stand=models.ForeignKey (
-        "stand.Stand",
-        verbose_name="Restaurante",
+        'stand.Stand',
+        verbose_name='Restaurante',
         null=True,
         blank=False,
-        help_text="Restaurante al que pertenece este registro",
+        help_text='Restaurante al que pertenece este registro',
         on_delete=models.CASCADE
     )
     meal=models.ForeignKey (
-        "meal.Meal",
-        verbose_name="Platillo",
+        'meal.Meal',
+        verbose_name='Platillo',
         null=True,
         blank=False,
-        help_text="Platillo al que pertenece este registro",
+        help_text='Platillo al que pertenece este registro',
         on_delete=models.CASCADE
     )
 
     def __str__(self):
-        return self.name or "-"
+        return self.name or '-'
 
     def save(self, *args, **kwargs):
         if not self.name:
-            self.name="{} - {} image".format(
+            self.name='{} - {} image'.format(
                 self.stand.name,
                 self.meal.name
             )
@@ -129,15 +127,15 @@ class MealPicture(MediumPicture):
         super().save(*args, **kwargs)
 
     class Meta:
-        verbose_name="Foto de comida"
-        verbose_name_plural="Fotos de comidas"
+        verbose_name='Foto de comida'
+        verbose_name_plural='Fotos de comidas'
 
     class JSONAPIMeta:
-        resource_name="MealPicture"
+        resource_name='MealPicture'
 
 
 def meal_picture(instance, filename):
-    return set_media_url("meal_picture/", filename)
+    return set_media_url('meal_picture/', filename)
 
 class Meal(MediumPicture):
     name=models.CharField (
@@ -152,80 +150,80 @@ class Meal(MediumPicture):
       unique=True
     )
     classification=models.ForeignKey(
-        "meal.MealClassification",
-        verbose_name="Clasificación",
+        'meal.MealClassification',
+        verbose_name='Clasificación',
         null=True,
         blank=False,
-        help_text="Clasificación al que pertenece este registro",
+        help_text='Clasificación al que pertenece este registro',
         on_delete=models.CASCADE
     )
     stand=models.ForeignKey(
-        "stand.Stand",
-        related_name="stand_meal",
-        verbose_name="Restaurante",
+        'stand.Stand',
+        related_name='stand_meal',
+        verbose_name='Restaurante',
         null=True,
         blank=False,
-        help_text="Restaurante al que pertenece este registro",
+        help_text='Restaurante al que pertenece este registro',
         on_delete=models.CASCADE
     )
     publish_on_the_wall=models.BooleanField(
-        verbose_name="Publicar en el muro",
+        verbose_name='Publicar en el muro',
         blank=False,
         default=False
     )
     stock=models.PositiveSmallIntegerField(
-        verbose_name="Cantidad en Stock",
+        verbose_name='Cantidad en Stock',
         null=True,
         blank=True,
         default=1,
-        help_text="Cantidad que existe en stock"
+        help_text='Cantidad que existe en stock'
     )
     is_breakfast=models.BooleanField(
-        verbose_name="Es desayuno",
+        verbose_name='Es desayuno',
         blank=False,
         default=False
     )
     is_meal=models.BooleanField(
-        verbose_name="Es comida",
+        verbose_name='Es comida',
         blank=False,
         default=True
     )
     is_dinner=models.BooleanField(
-        verbose_name="Es cena",
+        verbose_name='Es cena',
         blank=False,
         default=False
     )
     short_description=models.CharField(
-        verbose_name="Descripción corta",
+        verbose_name='Descripción corta',
         max_length=90,
         null=True,
         blank=True,
-        help_text="Descripción corta (90 carácteres)"
+        help_text='Descripción corta (90 carácteres)'
     )
     description=models.TextField(
-        verbose_name="Descripción",
+        verbose_name='Descripción',
         null=True,
         blank=True,
-        default="Descripcion del platillo"
+        default='Descripcion del platillo'
     )
     price=models.DecimalField(
-        verbose_name="Precio del platillo",
+        verbose_name='Precio del platillo',
         max_digits=10,
         decimal_places=2,
         null=False,
         blank=False,
         default=5,
-        help_text="Precio del platillo"
+        help_text='Precio del platillo'
     )
     discount=models.PositiveSmallIntegerField(
-        verbose_name="Descuento",
+        verbose_name='Descuento',
         null=True,
         blank=True,
         default=0,
-        help_text="Descuento de 1% a 99%"
+        help_text='Descuento de 1% a 99%'
     )
     final_price=models.DecimalField(
-        verbose_name="Precio final",
+        verbose_name='Precio final',
         max_digits=10,
         decimal_places=2,
         null=True,
@@ -233,32 +231,32 @@ class Meal(MediumPicture):
         default=0
     )
     meal_addons=models.ManyToManyField(
-        "meal.MealAddon",
-        verbose_name="Adicionales",
+        'meal.MealAddon',
+        verbose_name='Adicionales',
         blank=True,
-        help_text="Ingredientes / Adicionales"
+        help_text='Ingredientes / Adicionales'
     )
     meal_pictures=models.ManyToManyField(
-        "meal.MealPicture",
-        related_name="meal_pictures",
-        verbose_name="Fotos",
+        'meal.MealPicture',
+        related_name='meal_pictures',
+        verbose_name='Fotos',
         blank=True,
-        help_text="Fotos del platillo"
+        help_text='Fotos del platillo'
     )
     video_link=models.URLField(
-        verbose_name="Link del vídeo",
+        verbose_name='Link del vídeo',
         null=True,
         blank=True,
-        help_text="Link del vídeo de youtube"
+        help_text='Link del vídeo de youtube'
     )
     times_selled=models.PositiveSmallIntegerField(
-        verbose_name="Cantidad de veces vendido",
+        verbose_name='Cantidad de veces vendido',
         null=False,
         blank=True,
         default=0
     )
     views=models.PositiveSmallIntegerField(
-        verbose_name="Cantidad de veces visto",
+        verbose_name='Cantidad de veces visto',
         null=False,
         blank=True,
         default=0
@@ -267,7 +265,7 @@ class Meal(MediumPicture):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug=get_unique_slug(
-                "{}-{}".format(
+                '{}-{}'.format(
                     self.stand.slug,
                     self.name
                 ),
@@ -294,14 +292,14 @@ class Meal(MediumPicture):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return "{} - {}".format(
+        return '{} - {}'.format(
             self.stand.name,
             self.name
         )
 
     class Meta:
-        verbose_name="Platillo"
-        verbose_name_plural="Platillos"
+        verbose_name='Platillo'
+        verbose_name_plural='Platillos'
 
     class JSONAPIMeta:
-        resource_name="Meal"
+        resource_name='Meal'

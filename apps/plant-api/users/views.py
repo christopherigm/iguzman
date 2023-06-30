@@ -16,13 +16,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from common.permissions import IsAdminOrIsItSelf
 import json
-from users.models import (
-    User,
-    UserPicture,
-)
+from users.models import User
 from users.serializers import (
     UserSerializer,
-    UserPictureSerializer,
     UserLoginSerializer,
 )
 
@@ -44,17 +40,6 @@ class GroupViewSet (ReadOnlyModelViewSet):
     search_fields = [
         "name"
     ]
-
-
-class UserPictureViewSet(ReadOnlyModelViewSet):
-    queryset = UserPicture.objects.all()
-    serializer_class = UserPictureSerializer
-    ordering = ["id"]
-    filterset_fields = {
-        "id": ("exact",),
-        "user": ("exact",),
-        "user__username": ("exact",)
-    }
 
 
 class UserViewSet(ModelViewSet):

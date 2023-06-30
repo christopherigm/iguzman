@@ -40,7 +40,6 @@ from common.views import (
 from users.views import (
     UserViewSet,
     GroupViewSet,
-    UserPictureViewSet,
     UserAddressViewSet,
     UserCartBuyableItemsViewSet,
     UserFavoriteBuyableItemsViewSet,
@@ -108,7 +107,6 @@ router.register(r'states', StateViewSet)
 router.register(r'cities', CityViewSet)
 
 router.register(r'users', UserViewSet)
-router.register(r'user-pictures', UserPictureViewSet)
 router.register(r'groups', GroupViewSet)
 router.register(r'user-address', UserAddressViewSet)
 router.register(r'groups', GroupViewSet)
@@ -187,7 +185,7 @@ urlpatterns = [
     re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('v1/system-information', System.as_view()),
-    re_path(r'^v1/activate-user', ActivateUser.as_view(), name='login'),
+    re_path(r'^v1/activate-user', ActivateUser.as_view(), name='activate-user'),
     re_path(r'^v1/post-rating', PostRating.as_view(), name='post-rating'),
 ]
 

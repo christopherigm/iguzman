@@ -7,8 +7,12 @@ import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import Avatar from '@mui/material/Avatar';
 import AccountCircle from '@mui/icons-material/AccountCircle';
-import {DeleteCookie} from 'utils';
+import {
+  DeleteCookie,
+  SetLocalStorageData,
+} from 'utils';
 import type {Languages} from 'utils';
+import { useRouter } from 'next/router';
 
 type User = {
   attributes: {
@@ -25,6 +29,7 @@ type Props = {
 }
 
 const SignInMenu = ({user, language='en'}: Props) => {
+  const router = useRouter()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -38,7 +43,10 @@ const SignInMenu = ({user, language='en'}: Props) => {
   const logOutAndHandleClose = () => {
     setAnchorEl(null);
     DeleteCookie('jwt');
-    window.location.replace('/');
+    DeleteCookie('user');
+    SetLocalStorageData('jwt', '');
+    SetLocalStorageData('user', '');
+    router.reload();
   };
 
   return (
@@ -113,7 +121,7 @@ const SignInMenu = ({user, language='en'}: Props) => {
             }}
             open={Boolean(anchorEl)}
             onClose={handleClose}>
-              <Link href='/login'>
+              <Link href='/sign-in'>
                 <MenuItem onClick={handleClose}>
                   <Typography
                     variant='body1'

@@ -23,6 +23,7 @@ interface Props {
   devMode: boolean;
   loginButton?: boolean;
   logoWidth?: string;
+  isLoading: boolean;
   setIsLoading: () => void;
 };
 
@@ -34,6 +35,7 @@ const NavBar = ({
     devMode,
     loginButton = false,
     logoWidth = '200px',
+    isLoading,
     setIsLoading,
   }: Props) => {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
@@ -83,7 +85,9 @@ const NavBar = ({
               sm: 'block',
             }
           }}>
-            {children}
+          {
+            !isLoading ? <>{children}</> : null
+          }
           </Box>
           {
             loginButton ?
@@ -114,13 +118,6 @@ const NavBar = ({
         <Logo logo={logo} fullWidth={true} />
         <Divider />
         <List>
-          {/* {navItems.map((item) => (
-            <ListItem key={item} disablePadding>
-              <ListItemButton sx={{ textAlign: 'center' }}>
-                <ListItemText primary={item} />
-              </ListItemButton>
-            </ListItem>
-          ))} */}
           {children}
         </List>
       </Box>
