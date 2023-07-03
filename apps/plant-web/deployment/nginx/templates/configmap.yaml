@@ -7,23 +7,4 @@ data:
     server {
       listen 80;
       server_name  _;
-
-      location / {
-        root   /usr/share/nginx/html;
-        index  index.html index.htm;
-      }
-
-      location /static/ {
-        autoindex on;
-        add_header Vary Accept-Encoding;
-        access_log off;
-        alias /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.webAppName}}/static/;
-      }
-
-      location /assets/ {
-        autoindex on;
-        add_header Vary Accept-Encoding;
-        access_log off;
-        alias /{{.Values.volumeMountPath}}/{{.Release.Namespace}}/{{.Values.webAppName}}/assets/;
-      }
     }

@@ -7,6 +7,7 @@ export default interface System extends BaseSystem {
   user: UserInterface | null;
   plants: Array<PlantInterface>;
   plant: PlantInterface | null;
+  plantSlug: string;
   measurements: Array<MeasurementInterface>;
 };
 
@@ -35,5 +36,6 @@ export const SystemInitalState: System = {
   user: null,
   plants: [],
   plant: null,
+  plantSlug: '',
   measurements: []
 };

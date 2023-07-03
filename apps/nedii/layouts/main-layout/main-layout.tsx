@@ -108,12 +108,13 @@ const MainLayout = ({
         </Head>
         <header>
           <NavBar
-            logo='/images/logo.png'
+            logo='/images/logo.jpg'
             user={system.user}
             language={system.language}
             devMode={system.devMode}
             loginButton={system.loginEnabled}
             logoWidth='60px'
+            isLoading={system.isLoading}
             setIsLoading={setIsLoading}>
             {menu}
           </NavBar>
@@ -128,21 +129,20 @@ const MainLayout = ({
                 height='100%'
                 top={0}
                 left={0}
-                bgcolor='rgba(0,0,0,0.1)'
                 display='flex'
                 justifyContent='center'
                 alignItems='center'>
-                <CircularProgress size={70}/>
-              </Box> : null
+                <CircularProgress size={60}/>
+              </Box> :
+              <Container
+                maxWidth='lg'
+                sx={{
+                  paddingTop: '60px',
+                  opacity: system.isLoading ? '0.5' : 1
+                }}>
+                {children}
+              </Container>
           }
-          <Container
-            maxWidth='lg'
-            sx={{
-              paddingTop: '60px',
-              opacity: system.isLoading ? '0.5' : 1
-            }}>
-            {children}
-          </Container>
         </Box>
         <Footer
           version={system.version}

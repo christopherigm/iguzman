@@ -38,7 +38,6 @@ from common.views import (
 from users.views import (
     UserViewSet,
     GroupViewSet,
-    UserPictureViewSet,
     ActivateUser,
 )
 from records.views import (
@@ -61,7 +60,6 @@ router.register(r'states', StateViewSet)
 router.register(r'cities', CityViewSet)
 
 router.register(r'users', UserViewSet)
-router.register(r'user-pictures', UserPictureViewSet)
 router.register(r'groups', GroupViewSet)
 
 router.register(r'plant-controller-types', PlantControllerTypeViewSet)

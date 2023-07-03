@@ -51,36 +51,36 @@ from users.models import User
 class ExpoViewSet(ModelViewSet):
     queryset=Expo.objects.all()
     serializer_class=ExpoSerializer
-    filter_fields=("enabled","real","slug")
-    search_fields=("name",)
-    ordering=( "id", )
-    # http_method_names=["get"]
+    filter_fields=('enabled','is_real','slug')
+    search_fields=('name',)
+    ordering=( 'id', )
+    # http_method_names=['get']
 
 
 class StandGroupViewSet(ModelViewSet):
     queryset=Group.objects.all()
     serializer_class=GroupSerializer
-    filter_fields=("enabled", "slug")
-    search_fields=("name", "description")
-    ordering=( "id", )
-    # http_method_names=["get"]
+    filter_fields=('enabled', 'slug')
+    search_fields=('name', 'description')
+    ordering=( 'id', )
+    # http_method_names=['get']
 
 
 class StandBookingQuestionViewSet(ModelViewSet):
     queryset=StandBookingQuestion.objects.all()
     serializer_class=StandBookingQuestionSerializer
-    filter_fields=("enabled", )
-    search_fields=("name",)
-    ordering=( "id", )
-    # http_method_names=["get"]
+    filter_fields=('enabled', )
+    search_fields=('name',)
+    ordering=( 'id', )
+    # http_method_names=['get']
 
 class StandBookingQuestionOptionsViewSet(ModelViewSet):
     queryset=StandBookingQuestionOption.objects.all()
     serializer_class=StandBookingQuestionOptionSerializer
-    filter_fields=("enabled", )
-    search_fields=("value",)
-    ordering=( "id", )
-    # http_method_names=["get"]
+    filter_fields=('enabled', )
+    search_fields=('value',)
+    ordering=( 'id', )
+    # http_method_names=['get']
 
 
 class StandNewsViewSet(CustomCreate,
@@ -92,17 +92,17 @@ class StandNewsViewSet(CustomCreate,
     ):
     queryset=StandNew.objects.all()
     serializer_class=StandNewSerializer
-    filter_fields=("enabled", "stand", "slug")
-    search_fields=("name", "description")
-    ordering=( "id", )
+    filter_fields=('enabled', 'stand', 'slug')
+    search_fields=('name', 'description')
+    ordering=( 'id', )
 
 
 class StandPhonesViewSet(ModelViewSet):
     queryset=StandPhone.objects.all()
     serializer_class=StandPhoneSerializer
-    filter_fields=("enabled",)
-    search_fields=("enabled", "stand", )
-    ordering=( "id", )
+    filter_fields=('enabled',)
+    search_fields=('enabled', 'stand', )
+    ordering=( 'id', )
 
 
 class StandPicturesViewSet(CustomCreate,
@@ -114,9 +114,9 @@ class StandPicturesViewSet(CustomCreate,
     ):
     queryset=StandPicture.objects.all()
     serializer_class=StandPictureSerializer
-    filter_fields=("enabled", "stand", )
-    search_fields=("name", "description")
-    ordering=( "id", )
+    filter_fields=('enabled', 'stand', )
+    search_fields=('name', 'description')
+    ordering=( 'id', )
 
 
 class StandPromotionsViewSet(CustomCreate,
@@ -128,16 +128,16 @@ class StandPromotionsViewSet(CustomCreate,
     ):
     queryset=StandPromotion.objects.all()
     serializer_class=StandPromotionSerializer
-    filter_fields=("enabled", "stand", )
-    search_fields=("name", "description")
-    ordering=( "id", )
+    filter_fields=('enabled', 'stand', )
+    search_fields=('name', 'description')
+    ordering=( 'id', )
 
 
 class StandRatingViewSet(ModelViewSet):
     queryset=StandRating.objects.all()
     serializer_class=StandRatingSerializer
-    filter_fields=("stand", "author")
-    ordering=( "id", )
+    filter_fields=('stand', 'author')
+    ordering=( 'id', )
 
 
 class PostRating(APIView):
@@ -148,28 +148,28 @@ class PostRating(APIView):
     ]
 
     def post(self, request, *args, **kwargs):
-        body_unicode=request.body.decode("utf-8")
+        body_unicode=request.body.decode('utf-8')
         body=json.loads(body_unicode)
         common_error={
-            "message": "Missing fields"
+            'message': 'Missing fields'
         }
-        if not "attributes" in body["data"]:
+        if not 'attributes' in body['data']:
             return Response(common_error, status=400)
-        if not "rating" in body["data"]["attributes"]:
+        if not 'rating' in body['data']['attributes']:
             return Response(common_error, status=400)
-        if not "relationships" in body["data"]:
+        if not 'relationships' in body['data']:
             return Response(common_error, status=400)
-        if not "stand" in body["data"]["relationships"]:
+        if not 'stand' in body['data']['relationships']:
             return Response(common_error, status=400)
-        if not "data" in body["data"]["relationships"]["stand"]:
+        if not 'data' in body['data']['relationships']['stand']:
             return Response(common_error, status=400)
-        if not "id" in body["data"]["relationships"]["stand"]["data"]:
+        if not 'id' in body['data']['relationships']['stand']['data']:
             return Response(common_error, status=400)
-        rating=body["data"]["attributes"]["rating"]
-        stand_id=body["data"]["relationships"]["stand"]["data"]["id"]
+        rating=body['data']['attributes']['rating']
+        stand_id=body['data']['relationships']['stand']['data']['id']
         comments=None
-        if "comments" in body["data"]["attributes"]:
-            comments=body["data"]["attributes"]["comments"]
+        if 'comments' in body['data']['attributes']:
+            comments=body['data']['attributes']['comments']
         user=get_object_or_404(
             User,
             id=request.user.id
@@ -207,14 +207,14 @@ class PostRating(APIView):
         stand.save()
 
         return Response({
-            "success": True,
-            "attributes": {
-                "user": user.id,
-                "stand": stand_id,
-                "comments": comments,
-                "rating": rating,
-                "average_rating": average,
-                "ratings_length": ratings_length
+            'success': True,
+            'attributes': {
+                'user': user.id,
+                'stand': stand_id,
+                'comments': comments,
+                'rating': rating,
+                'average_rating': average,
+                'ratings_length': ratings_length
             }
         })
 
@@ -222,18 +222,18 @@ class PostRating(APIView):
 class SurveyQuestionsViewSet(ModelViewSet):
     queryset=SurveyQuestion.objects.all()
     serializer_class=SurveyQuestionSerializer
-    filter_fields=("enabled",)
-    search_fields=("name",)
-    ordering=( "id", )
-    # http_method_names=["get"]
+    filter_fields=('enabled',)
+    search_fields=('name',)
+    ordering=( 'id', )
+    # http_method_names=['get']
 
 
 class VideoLinkViewSet(ModelViewSet):
     queryset=VideoLink.objects.all()
     serializer_class=VideoLinkSerializer
-    filter_fields=("enabled", "stand" )
-    search_fields=("name",)
-    ordering=( "id", )
+    filter_fields=('enabled', 'stand' )
+    search_fields=('name',)
+    ordering=( 'id', )
 
 
 class StandFilter(filters.FilterSet):
@@ -251,18 +251,18 @@ class StandFilter(filters.FilterSet):
     saturday_close=filters.DateFromToRangeFilter()
     sunday_open=filters.DateFromToRangeFilter()
     sunday_close=filters.DateFromToRangeFilter()
-    min_booking_cost=filters.NumberFilter(field_name="booking_cost", lookup_expr="gte")
-    max_booking_cost=filters.NumberFilter(field_name="booking_cost", lookup_expr="lte")
+    min_booking_cost=filters.NumberFilter(field_name='booking_cost', lookup_expr='gte')
+    max_booking_cost=filters.NumberFilter(field_name='booking_cost', lookup_expr='lte')
 
     class Meta:
         model=Stand
         fields=[
-            "enabled", "owner", "slug", "expo", "group",
-            "plan", "plan__unlimited_items", "plan__stand_enabled",
-            "plan__digital_card", "plan__billed_monthly",
-            "expo__slug", "group__slug",
-            "bar_code", "min_booking_cost", "max_booking_cost",
-            "city", "restaurant", "always_open","booking_active",
+            'enabled', 'owner', 'slug', 'expo', 'group',
+            'plan', 'plan__unlimited_items', 'plan__stand_enabled',
+            'plan__digital_card', 'plan__billed_monthly',
+            'expo__slug', 'group__slug',
+            'bar_code', 'min_booking_cost', 'max_booking_cost',
+            'city', 'restaurant', 'always_open','booking_active',
         ]
 
 
@@ -278,7 +278,7 @@ class StandViewSet(CustomCreate,
     serializer_class=StandSerializer
     filter_class=StandFilter
     search_fields=(
-        "name", "bar_code", "slogan","description",
-        "short_description", "about"
+        'name', 'bar_code', 'slogan','description',
+        'short_description', 'about'
     )
-    ordering=( "id", )
+    ordering=( 'id', )

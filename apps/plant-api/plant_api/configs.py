@@ -42,7 +42,7 @@ WEB_APP_URL=environment('WEB_APP_URL')
 
 
 class Production:
-    SITE_HEADER='My CV API CMS'
+    SITE_HEADER='Plants API CMS'
     INDEX_TITLE='CMS'
     SITE_TITLE='CMS'
     EMAIL_HOST='smtp.gmail.com'

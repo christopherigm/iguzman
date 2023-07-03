@@ -6,10 +6,10 @@ import {
 } from 'react';
 import Head from 'next/head';
 import {
-  GetUserFromCookie,
   GetCookieCachedValues,
   GetEnvVariables,
-  ReplaceURLBase,
+  GetLocalStorageData,
+  SetLocalStorageData,
 } from 'utils';
 import type {
   EnvironmentVariables,
@@ -19,7 +19,6 @@ import type {
 import MainLayout from 'layouts/main-layout';
 import {SystemInitalState} from 'interfaces/system-interface';
 import type System from 'interfaces/system-interface';
-import type UserInterface from 'interfaces/user-interface';
 import type PlantInterface from 'interfaces/plant-interface';
 import GetPlantBySlug from 'local-utils/get-plant-by-slug';
 import PlantDetailHeader from 'components/plant-detail-header';
@@ -40,22 +39,26 @@ const PlantDetail = (props: System): ReactElement => {
   const [nextUpdate, setNextUpdate] = useState(0);
   const [minSinceLastUpdate, setMinSinceLastUpdate] = useState(0);
   const [renderTime, setRenderTime] = useState(0);
+  const [firstRender, setFirstRender] = useState(true);
   const [fechingData, setFechingData] = useState(false);
+  const setIsLoading = () => setSystem({
+    ...system,
+    isLoading: true
+  });
 
   const fetchPlantData = useCallback(() => {
     if (fechingData) return;
     setFechingData(_p => true);
     GetPlantBySlug({
       URLBase: system.URLBase,
-      slug: system.plant?.attributes.slug || ''
+      slug: system.plantSlug
     })
       .then((plant: PlantInterface) => {
-        updateSystem(_p => {
-          return {
-            ..._p,
-            plant
-          };
+        setSystem({
+          ...system,
+          plant
         });
+        SetLocalStorageData(system.plantSlug, JSON.stringify(plant));
     })
       .catch((err) => console.log(err))
       .finally(() => setFechingData(_p => false));
@@ -104,7 +107,23 @@ const PlantDetail = (props: System): ReactElement => {
   }, [system.plant, nextUpdate, fetchPlantData, setDates]);
 
   useEffect(() => {
-    // console.log('New Render');
+    if (!system.plant) {
+      const cachedPlant = GetLocalStorageData(system.plantSlug);
+      if (cachedPlant) {
+        const plant = JSON.parse(cachedPlant) as PlantInterface;
+        setSystem({
+          ...system,
+          plant,
+          isLoading: false
+        });
+      } else {
+        setIsLoading();
+      }
+      if (firstRender) {
+        setFirstRender(_p => false);
+        fetchPlantData();
+      }
+    }
     const plant = system.plant;
     if (plant) {
       setPlantIntervalToUpdate(_p =>
@@ -123,19 +142,9 @@ const PlantDetail = (props: System): ReactElement => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     system.plant,
+    firstRender,
     minToUpdate,
   ]);
-
-  if (!system.plant) {
-    return(
-      <>No data</>
-    );
-  }
-
-  const setIsLoading = () => setSystem({
-    ...system,
-    isLoading: true
-  });
 
   const Menu = (): ReactElement => {
     return (
@@ -148,8 +157,9 @@ const PlantDetail = (props: System): ReactElement => {
           startIcon={<HomeIcon />}
           sx={{
             color: '#444'
-          }}
-          disabled={system.isLoading}>Home</Button>
+          }}>
+          Home
+        </Button>
       </Link>
     )
   };
@@ -188,6 +198,15 @@ const PlantDetail = (props: System): ReactElement => {
         } />
       </Head>
       {
+          system.isLoading && !system.plant ?
+            <Typography
+              marginTop={3}
+              variant='h4'
+              color={system.darkMode ? 'primary.contrastText' : ''}>
+              Loading plant...
+            </Typography> : null
+      }
+      {
         system.plant &&
         system.plant.relationships &&
         system.plant.relationships.plant_type &&
@@ -221,12 +240,7 @@ const PlantDetail = (props: System): ReactElement => {
             plantController={system.plant.relationships.plant_controller.data}
             plantControllerType={system.plant.relationships.plant_controller.data.relationships.plant_controller_type.data}
             darkMode={system.darkMode} />
-        </> :
-        <Typography
-          variant='subtitle1'
-          color={system.darkMode ? 'primary.contrastText' : ''}>
-          <b>Data not available:</b>
-        </Typography>
+        </> : null
       }
     </MainLayout>
   )
@@ -238,21 +252,21 @@ export async function getServerSideProps({ req, params }: any) {
   let user = null;
   const cachedValues: CachedValues = GetCookieCachedValues(cookies);
   let plant;
-  const slug = params.slug || null
-  try {
-    user = await GetUserFromCookie(cookies) as UserInterface;
-    if (slug) {
-      plant = await GetPlantBySlug({
-        URLBase: env.hostName === 'localhost' ? env.URLBase : env.K8sURLBase,
-        slug
-      }) as PlantInterface;
-    }
-  } catch (error) {
-    console.log('error', error);
-  }
-  if (env.hostName !== 'localhost') {
-    plant=ReplaceURLBase(plant, env.K8sURLBase, env.URLBase) as PlantInterface;
-  }
+  const plantSlug = params.slug || null
+  // try {
+  //   user = await GetUserFromCookie(cookies) as UserInterface;
+  //   if (slug) {
+  //     plant = await GetPlantBySlug({
+  //       URLBase: env.hostName === 'localhost' ? env.URLBase : env.K8sURLBase,
+  //       slug
+  //     }) as PlantInterface;
+  //   }
+  // } catch (error) {
+  //   console.log('error', error);
+  // }
+  // if (env.hostName !== 'localhost') {
+  //   plant=ReplaceURLBase(plant, env.K8sURLBase, env.URLBase) as PlantInterface;
+  // }
   const props: System = {
     ...SystemInitalState,
     ...env,
@@ -260,6 +274,7 @@ export async function getServerSideProps({ req, params }: any) {
     language: cachedValues.language ? cachedValues.language : env.defaultLanguage as Languages,
     user,
     plant: plant ? plant as PlantInterface : null,
+    plantSlug,
   };
   return {props};
 };

@@ -132,12 +132,12 @@ class RealEstate(RegularPicture):
         choices=[(i.value, i.value) for i in States],
         default='new'
     )
-    year=models.CharField(
+    year=models.PositiveSmallIntegerField(
         verbose_name="Anio del inmueble",
-        max_length=4,
         null=True,
         blank=True,
-        help_text="Anio del inmueble"
+        help_text="Anio del inmueble",
+        default=2000,
     )
     area=models.PositiveSmallIntegerField(
         verbose_name="Area",

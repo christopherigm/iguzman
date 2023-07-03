@@ -5,7 +5,7 @@ export type CommonLoginState = {
   username: string,
   password: string,
   keepMeLoggedIn: boolean,
-  error?: string,
+  error?: Array<any>,
 };
 
 export const CommonLoginInitialState: CommonLoginState = {

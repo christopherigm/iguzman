@@ -24,6 +24,8 @@ export {default as GetBrowserCachedValues} from './lib/get-browser-cached-values
 export {default as GetCookieCachedValues} from './lib/get-cookie-cached-values';
 export {default as GetEnvVariables} from './lib/get-env-variables';
 export {default as ReplaceURLBase} from './lib/replace-url-base';
+export {APICreationErrorHandler} from './lib/api-error-handler';
+export type {APIPostCreationError} from './lib/api-error-handler';
 
 /**
  * API
@@ -47,6 +49,10 @@ export {
   HourParser12Format
 } from './lib/date-parser';
 export {default as FormatNum} from './lib/format-number';
+export {
+  GetLocalStorageData,
+  SetLocalStorageData,
+} from './lib/local-storage';
 
 /**
  * Reducers

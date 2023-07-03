@@ -8,12 +8,12 @@ from common.tools import get_unique_slug
 
 class ServiceClassification(MediumPicture):
     stand=models.ForeignKey(
-        "stand.Stand",
-        related_name="stand_service_classification",
-        verbose_name="Empresa",
+        'stand.Stand',
+        related_name='stand_service_classification',
+        verbose_name='Empresa',
         null=False,
         blank=False,
-        help_text="Empresa al que pertenece este registro",
+        help_text='Empresa al que pertenece este registro',
         on_delete=models.CASCADE
     )
     name=models.CharField (
@@ -40,21 +40,21 @@ class ServiceClassification(MediumPicture):
         return self.name
 
     class Meta:
-        verbose_name="Categoría de servicio"
-        verbose_name_plural="Categorías de servicios"
+        verbose_name='Categoría de servicio'
+        verbose_name_plural='Categorías de servicios'
 
     class JSONAPIMeta:
-        resource_name="ServiceClassification"
+        resource_name='ServiceClassification'
 
 
 class ServiceFeature(CommonFields):
     stand=models.ForeignKey(
-        "stand.Stand",
-        related_name="stand_service_feature",
-        verbose_name="Empresa",
+        'stand.Stand',
+        related_name='stand_service_feature',
+        verbose_name='Empresa',
         null=False,
         blank=False,
-        help_text="Empresa al que pertenece este registro",
+        help_text='Empresa al que pertenece este registro',
         on_delete=models.CASCADE
     )
     name=models.CharField (
@@ -68,25 +68,25 @@ class ServiceFeature(CommonFields):
         return self.name
 
     class Meta:
-        verbose_name="Caracteristica del servicio"
-        verbose_name_plural="Caracteristicas de los servicios"
+        verbose_name='Caracteristica del servicio'
+        verbose_name_plural='Caracteristicas de los servicios'
 
     class JSONAPIMeta:
-        resource_name="ServiceFeature"
+        resource_name='ServiceFeature'
 
 
 class ServicePicture(MediumPicture):
     stand=models.ForeignKey (
-        "stand.Stand",
-        verbose_name="Empresa",
+        'stand.Stand',
+        verbose_name='Empresa',
         null=True,
         blank=False,
-        help_text="Empresa al que pertenece este registro",
+        help_text='Empresa al que pertenece este registro',
         on_delete=models.CASCADE
     )
     service=models.ForeignKey(
-        "service.Service",
-        verbose_name="Servicio",
+        'service.Service',
+        verbose_name='Servicio',
         null=False,
         blank=False,
         on_delete=models.CASCADE
@@ -94,17 +94,17 @@ class ServicePicture(MediumPicture):
 
     def __str__(self):
         name=self.name or 'picture'
-        return "{} - {}".format(
+        return '{} - {}'.format(
             self.service.name,
             name
         )
 
     class Meta:
-        verbose_name="Foto del servicio"
-        verbose_name_plural="Fotos de los servicios"
+        verbose_name='Foto del servicio'
+        verbose_name_plural='Fotos de los servicios'
 
     class JSONAPIMeta:
-        resource_name="ServicePicture"
+        resource_name='ServicePicture'
 
 
 class Service(RegularPicture):
@@ -120,45 +120,45 @@ class Service(RegularPicture):
         unique=True
     )
     classification=models.ForeignKey(
-        "service.ServiceClassification",
-        verbose_name="Clasificación",
+        'service.ServiceClassification',
+        verbose_name='Clasificación',
         null=True,
         blank=False,
-        help_text="Clasificación al que pertenece este registro",
+        help_text='Clasificación al que pertenece este registro',
         on_delete=models.CASCADE
     )
     stand=models.ForeignKey(
-        "stand.Stand",
-        related_name="stand_service",
-        verbose_name="Empresa",
+        'stand.Stand',
+        related_name='stand_service',
+        verbose_name='Empresa',
         null=True,
         blank=False,
-        help_text="Empresa al que pertenece este registro",
+        help_text='Empresa al que pertenece este registro',
         on_delete=models.CASCADE
     )
     publish_on_the_wall=models.BooleanField(
-        verbose_name="Publicar en el muro",
+        verbose_name='Publicar en el muro',
         blank=False,
         default=False
     )
     price=models.DecimalField(
-        verbose_name="Precio del servicio",
+        verbose_name='Precio del servicio',
         max_digits=10,
         decimal_places=2,
         null=False,
         blank=False,
         default=5,
-        help_text="Precio del servicio"
+        help_text='Precio del servicio'
     )
     discount=models.PositiveSmallIntegerField(
-        verbose_name="Descuento",
+        verbose_name='Descuento',
         null=True,
         blank=True,
         default=0,
-        help_text="Descuento de 1% a 99%"
+        help_text='Descuento de 1% a 99%'
     )
     final_price=models.DecimalField(
-        verbose_name="Precio final",
+        verbose_name='Precio final',
         max_digits=10,
         decimal_places=2,
         null=True,
@@ -166,74 +166,74 @@ class Service(RegularPicture):
         default=0
     )
     short_description=models.CharField(
-        verbose_name="Descripción corta",
+        verbose_name='Descripción corta',
         max_length=90,
         null=True,
         blank=True,
-        help_text="Descripción corta (90 carácteres)"
+        help_text='Descripción corta (90 carácteres)'
     )
     features=models.ManyToManyField(
-        "service.ServiceFeature",
-        related_name="service_features",
-        verbose_name="Caractarísticas del servicio",
+        'service.ServiceFeature',
+        related_name='service_features',
+        verbose_name='Caractarísticas del servicio',
         blank=True
     )
     service_pictures=models.ManyToManyField(
-        "service.ServicePicture",
-        related_name="service_pictures",
-        verbose_name="Fotos",
+        'service.ServicePicture',
+        related_name='service_pictures',
+        verbose_name='Fotos',
         blank=True,
-        help_text="Fotos del servicio"
+        help_text='Fotos del servicio'
     )
     related=models.ManyToManyField(
-        "service.Service",
-        related_name="related_services",
-        verbose_name="Servicios relacionados",
+        'service.Service',
+        related_name='related_services',
+        verbose_name='Servicios relacionados',
         blank=True,
     )
     video_link=models.CharField(
-        verbose_name="Link del vídeo",
+        verbose_name='Link del vídeo',
         max_length=512,
         null=True,
         blank=True,
-        help_text="Link del vídeo de youtube"
+        help_text='Link del vídeo de youtube'
     )
     support_email=models.EmailField(
-        verbose_name="Correo de soporte",
+        verbose_name='Correo de soporte',
         max_length=128,
         null=True,
         blank=True,
-        help_text="Correo electrónico de soporte"
+        help_text='Correo electrónico de soporte'
     )
     support_info=models.CharField(
-        verbose_name="Información de soporte",
+        verbose_name='Información de soporte',
         max_length=256,
         null=True,
         blank=True,
-        help_text="Información de soporte"
+        help_text='Información de soporte'
     )
     support_phone=models.CharField(
-        verbose_name="Teléfono de soporte",
+        verbose_name='Teléfono de soporte',
         max_length=12,
         null=True,
         blank=True,
-        help_text="Teléfono de soporte"
+        help_text='Teléfono de soporte'
     )
     warranty_days=models.PositiveSmallIntegerField(
-        verbose_name="Días de garantía",
+        verbose_name='Días de garantía',
         null=False,
         blank=True,
         default=0,
-        help_text="Días de garantía del servicio"
+        help_text='Días de garantía del servicio'
     )
     times_selled=models.PositiveSmallIntegerField(
-        verbose_name="Cantidad de veces vendido",
+        verbose_name='Cantidad de veces vendido',
         null=False,
         blank=True,
         default=0
     )
     views=models.PositiveSmallIntegerField(
-        verbose_name="Cantidad de veces visto",
+        verbose_name='Cantidad de veces visto',
         null=False,
         blank=True,
         default=0
@@ -242,7 +242,7 @@ class Service(RegularPicture):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug=get_unique_slug(
-                "{}-{}".format(
+                '{}-{}'.format(
                     self.stand.slug,
                     self.name
                 ),
@@ -269,14 +269,14 @@ class Service(RegularPicture):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return "{} - {}".format(
+        return '{} - {}'.format(
             self.stand.name,
             self.name
         )
 
     class Meta:
-        verbose_name="Servicio"
-        verbose_name_plural="Servicios"
+        verbose_name='Servicio'
+        verbose_name_plural='Servicios'
 
     class JSONAPIMeta:
-        resource_name="Service"
+        resource_name='Service'

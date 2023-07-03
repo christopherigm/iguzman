@@ -18,171 +18,172 @@ from stand.models import (
 
 class ExpoAdmin(admin.ModelAdmin):
 	list_display = [
-		"name",
-		"slug",
-		"enabled",
-		"version"
+		'name',
+		'slug',
+		'enabled',
+		'version'
 	]
-	search_fields = ("slug", "name")
-	list_filter = ("enabled",)
+	search_fields = ('slug', 'name')
+	list_filter = ('enabled',)
 	readonly_fields=(
-        "version",
-        "href"
+        'version',
+        'href'
 	)
 admin.site.register(Expo, ExpoAdmin)
 
 
 class GroupAdmin(admin.ModelAdmin):
 	list_display = [
-		"name",
-		"slug",
-		"enabled",
+		'name',
+		'slug',
+		'enabled',
 	]
-	search_fields = ("slug", "name", "description" )
-	list_filter = ("enabled",)
+	search_fields = ('slug', 'name', 'description' )
+	list_filter = ('enabled',)
 	readonly_fields=(
-        "version",
-        "href"
+        'version',
+        'href'
 	)
 admin.site.register(Group, GroupAdmin)
 
 
 class StandPhoneAdmin(admin.ModelAdmin):
 	list_display = [
-		"phone",
-		"stand"
+		'phone',
+		'stand'
 	]
-	search_fields = ("phone", )
-	list_filter = ("enabled", "stand", )
+	search_fields = ('phone', )
+	list_filter = ('enabled', 'stand', )
 	readonly_fields=(
-        "version",
+        'version',
 	)
 admin.site.register(StandPhone, StandPhoneAdmin)
 
 
 class StandPictureAdmin(admin.ModelAdmin):
 	list_display = [
-		"name",
-		"stand",
+		'name',
+		'stand',
 	]
-	search_fields = ("name", "description")
-	list_filter = ("enabled", "stand", )
+	search_fields = ('name', 'description')
+	list_filter = ('enabled', 'stand', )
 	readonly_fields=(
-        "version",
+        'version',
 	)
 admin.site.register(StandPicture, StandPictureAdmin)
 
 
 class StandBookingQuestionAdmin(admin.ModelAdmin):
 	list_display = [
-		"name",
-		"open_answer",
+		'name',
+		'open_answer',
 	]
-	search_fields = ("name", )
-	list_filter = ("enabled", )
+	search_fields = ('name', )
+	list_filter = ('enabled', )
 	readonly_fields=(
-        "version",
-        "order"
+        'version',
+        'order'
 	)
 admin.site.register(StandBookingQuestion, StandBookingQuestionAdmin)
 
 
 class StandBookingQuestionOptionAdmin(admin.ModelAdmin):
 	list_display = [
-		"value",
+		'value',
 	]
-	search_fields = ("value",)
-	list_filter = ("enabled",)
+	search_fields = ('value',)
+	list_filter = ('enabled',)
 	readonly_fields=(
-        "version",
-        "order"
+        'version',
+        'order'
 	)
 admin.site.register(StandBookingQuestionOption, StandBookingQuestionOptionAdmin)
 
 
 class StandNewAdmin(admin.ModelAdmin):
 	list_display = [
-		"slug",
-		"name",
-		"stand",
+		'slug',
+		'name',
+		'stand',
 	]
-	search_fields = ("slug", "name", "description")
-	list_filter = ("enabled", "stand", )
+	search_fields = ('slug', 'name', 'description')
+	list_filter = ('enabled', 'stand', )
 	readonly_fields=(
-        "version",
+        'version',
 	)
 admin.site.register(StandNew, StandNewAdmin)
 
 
 class StandPromotionAdmin(admin.ModelAdmin):
 	list_display = [
-		"slug",
-		"name",
-		# "product",
-		# "real_estate",
-		# "vehicle",
-		# "service",
-		"stand",
+		'slug',
+		'name',
+		'meal',
+		'product',
+		'real_estate',
+		'vehicle',
+		'service',
+		'stand',
 	]
-	search_fields = ("slug", "name",)
-	list_filter = ("enabled", "stand")
+	search_fields = ('slug', 'name',)
+	list_filter = ('enabled', 'stand')
 	readonly_fields=(
-        "version",
+        'version',
 	)
 admin.site.register(StandPromotion, StandPromotionAdmin)
 
 
 class VideoLinkAdmin(admin.ModelAdmin):
 	list_display = [
-		"link",
-		"name",
-		"stand",
+		'link',
+		'name',
+		'stand',
 	]
-	search_fields = ("name",)
-	list_filter = ("enabled", "stand", )
+	search_fields = ('name',)
+	list_filter = ('enabled', 'stand', )
 	readonly_fields=(
-        "version",
+        'version',
 	)
 admin.site.register(VideoLink, VideoLinkAdmin)
 
 
 class SurveyQuestionAdmin(admin.ModelAdmin):
 	list_display = [
-		"name",
+		'name',
 	]
-	search_fields = ("name",)
-	list_filter = ("enabled", )
+	search_fields = ('name',)
+	list_filter = ('enabled', )
 	readonly_fields=(
-        "version",
+        'version',
 	)
 admin.site.register(SurveyQuestion, SurveyQuestionAdmin)
 
 
 class StandRatingAdmin(admin.ModelAdmin):
 	list_display = [
-		"author",
-		"stand",
-		"rating"
+		'author',
+		'stand',
+		'rating'
 	]
-	list_filter = ("stand","author")
+	list_filter = ('stand','author')
 	readonly_fields=(
-        "version",
+        'version',
 	)
 admin.site.register(StandRating, StandRatingAdmin)
 
 
 class StandAdmin(admin.ModelAdmin):
 	list_display = [
-		"slug",
-		"name",
-        "group",
-        "expo",
-	    "plan",
+		'slug',
+		'name',
+        'group',
+        'expo',
+	    'plan',
 	]
-	search_fields = ("name", )
-	list_filter = ("slug", "enabled", "owner", "group", "expo", "plan",)
+	search_fields = ('name', )
+	list_filter = ('slug', 'enabled', 'owner', 'group', 'expo', 'plan',)
 	readonly_fields=(
-		"version",
+		'version',
 	)
 admin.site.register(Stand, StandAdmin)
 
