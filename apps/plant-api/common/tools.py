@@ -12,7 +12,7 @@ def set_media_url( path, filename ):
 	ext = filename.split('.')[-1]
 	renamedfile = '{}/{}.{}'.format (
         path,
-        get_random_mame(18),
+        get_random_mame(12),
         ext
     )
 	return renamedfile

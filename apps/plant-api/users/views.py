@@ -24,6 +24,10 @@ from users.serializers import (
     UserSerializer,
     UserLoginSerializer,
 )
+from common.mixins import (
+    CustomCreate,
+    CustomUpdate
+)
 
 
 class GroupViewSet (ReadOnlyModelViewSet):
@@ -45,7 +49,11 @@ class GroupViewSet (ReadOnlyModelViewSet):
     ]
 
 
-class UserViewSet(ModelViewSet):
+class UserViewSet(
+        CustomCreate,
+        CustomUpdate,
+        ModelViewSet
+    ):
     queryset = User.objects.filter(
         is_active=True,
     )

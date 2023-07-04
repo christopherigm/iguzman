@@ -43,7 +43,7 @@ const PasswordField = ({
         {label ? label : 'Password'}
       </InputLabel>
       <OutlinedInput
-        id='outlined-adornment-password'
+        id={name}
         type={showPassword ? 'text' : 'password'}
         endAdornment={
           <InputAdornment position='end'>
