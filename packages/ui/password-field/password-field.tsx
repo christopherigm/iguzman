@@ -18,14 +18,16 @@ type Props = {
   label?: string;
   variant?: variant;
   value?: string;
+  name?: string;
   onChange?: Dispatch<Action>;
-  disabled?: boolean
+  disabled?: boolean;
 }
 
 const PasswordField = ({
     label,
     variant,
     value,
+    name='password',
     onChange,
     disabled
   }: Props) => {
@@ -58,7 +60,7 @@ const PasswordField = ({
         onChange={(e: any) => {
           onChange && onChange({
             type: 'input',
-            name: 'password',
+            name,
             value: e.target.value
           });
         }}

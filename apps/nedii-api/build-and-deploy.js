@@ -8,8 +8,6 @@ require('dotenv').config();
 const name = 'nedii-api';
 const namespace = 'nedii';
 const host = 'api.nedii.iguzman.com.mx';
-const apiURL = 'https://api.nedii.iguzman.com.mx/v1/';
-const webURL = 'https://nedii.iguzman.com.mx/';
 const registry = 'christopherguzman';
 const envFile = '.env';
 // Editable variables
@@ -133,8 +131,8 @@ const deployMicroservice = () => {
     command += `--set config.EMAIL_HOST_USER=${process.env.EMAIL_HOST_USER} `;
     command += `--set config.EMAIL_HOST_PASSWORD=${process.env.EMAIL_HOST_PASSWORD} `;
     command += `--set config.RUN_FIXTURES=${process.env.RUN_FIXTURES} `;
-    command += `--set config.API_URL="${apiURL}" `;
-    command += `--set config.WEB_APP_URL="${webURL}" `;
+    command += `--set config.API_URL="${process.env.API_URL}" `;
+    command += `--set config.WEB_APP_URL="${process.env.WEB_APP_URL}" `;
     command += `--set ingress.enabled=true `;
     command += `--set ingress.host=${host} `;
     command += `--set image.tag=${branch}`;

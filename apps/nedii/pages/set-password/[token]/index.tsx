@@ -16,7 +16,7 @@ import type {
 import MainLayout from 'layouts/main-layout';
 import {SystemInitalState} from 'interfaces/system-interface';
 import type System from 'interfaces/system-interface';
-import {ResetPasswordForm} from 'ui';
+import {SetPasswordForm} from 'ui';
 
 const Page = (props: System): ReactElement => {
   const [system, updateSystem] = useState<System>(props);
@@ -45,16 +45,17 @@ const Page = (props: System): ReactElement => {
         marginTop={3}
         variant='h4'
         color={system.darkMode ? 'primary.contrastText' : ''}>
-        Restablecer contraseña
+        Crear nueva contraseña
       </Typography>
-      <ResetPasswordForm
+      <SetPasswordForm
         URLBase={system.URLBase}
+        token={system.token || ''}
         callback={() => {}} />
     </MainLayout>
   );
 };
 
-export async function getServerSideProps({ req }: any) {
+export async function getServerSideProps({ req, params }: any) {
   const cookies = req.cookies;
   const env = GetEnvVariables() as EnvironmentVariables;
   const cachedValues: CachedValues = GetCookieCachedValues(cookies);
@@ -63,6 +64,7 @@ export async function getServerSideProps({ req }: any) {
     ...env,
     ...cachedValues,
     language: cachedValues.language ? cachedValues.language : env.defaultLanguage as Languages,
+    token: params.token || null
   };
   return {props};
 };

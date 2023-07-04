@@ -177,12 +177,16 @@ const SignUpForm = ({
                 <Alert severity='error'>
                   Error: este usuario parece ya estar registrado.
                 </Alert>
-                <Alert severity='info'>
-                  Puedes iniciar sesion <Link href='/sign-in'>aqui</Link>
-                </Alert>
-                <Alert severity='success'>
-                  Restablecer tu contraseña <Link href='/reset-password'>aqui</Link>
-                </Alert>
+                <Link href='/sign-in'>
+                  <Alert severity='info'>
+                    Puedes iniciar sesion aqui.
+                  </Alert>
+                </Link>
+                <Link href='/reset-password'>
+                  <Alert severity='success'>
+                    Restablece tu contraseña aqui.
+                  </Alert>
+                </Link>
               </Stack>
             </Grid> : null
         }
@@ -205,12 +209,12 @@ const SignUpForm = ({
         </DialogTitle>
         <DialogContent>
           <DialogContentText id='alert-dialog-description'>
-            Su cuenta de usuario ha sido creada exitosamente, sin embargo
+            Tu cuenta de usuario ha sido creada exitosamente, sin embargo,
             es necesario validar su correo electronico antes de continuar.
             <br />
             <br />
-            Por favor busque en su correo electronico un mensaje de activacion
-            y siga las instrucciones, gracias!
+            Por favor, busca en tu correo electronico un mensaje de activacion
+            y sigue las instrucciones, gracias!
           </DialogContentText>
         </DialogContent>
         <DialogActions>

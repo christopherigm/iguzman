@@ -26,7 +26,7 @@ import type UserInterface from 'interfaces/user-interface';
 const Page = (props: System): ReactElement => {
   const [system, updateSystem] = useState<System>(props);
   const setSystem = (s: System): void => updateSystem(_s => s);
-  const router = useRouter()
+  const router = useRouter();
 
   const setIsLoading = (): void => setSystem({
     ...system,

@@ -1,38 +1,40 @@
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
 import {
   useReducer,
   FormEvent,
+  useState,
 } from 'react';
 import PasswordField from '../password-field';
 import {
   Action,
   API,
   APICreationErrorHandler,
-  SetLocalStorageData,
 } from 'utils';
-import type {
-  JWTPayload,
-  APIPostCreationError
-} from 'utils';
+import type {APIPostCreationError} from 'utils';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Link from 'next/link';
 
+
 type State = {
+  success: boolean;
   isLoading: boolean;
-  username: string;
   password: string;
+  repeatPassword: string;
   error: Array<APIPostCreationError>;
 };
 
 const InitialState: State = {
+  success: false,
   isLoading: false,
-  username: '',
   password: '',
+  repeatPassword: '',
   error: []
 };
 
@@ -40,20 +42,23 @@ const Reducer = (state: State = InitialState, action: Action): State => {
   if (action.type === 'loading') {
     return {
       ...state,
+      success: false,
       isLoading: true,
       error: [],
     };
   } else if (action.type === 'success') {
     return {
       ...state,
-      username: '',
+      success: true,
       password: '',
+      repeatPassword: '',
       error: [],
       isLoading: false,
     };
   } else if (action.type === 'error' && action.error) {
     return {
       ...state,
+      success: false,
       error: APICreationErrorHandler(action.error),
       isLoading: false,
     };
@@ -68,48 +73,54 @@ const Reducer = (state: State = InitialState, action: Action): State => {
 
 type Props = {
   URLBase: string;
+  token: string;
   callback: (data: any) => void;
 }
 
-const SignInForm = ({
+const SetPasswordForm = ({
     URLBase,
+    token,
     callback,
   }: Props) => {
   const [state, dispatch] = useReducer(Reducer, InitialState);
-    
+
   const canSubmit = (): boolean => {
-    return state.username !== '' && state.password !== '';
+    return state.password !== '' && state.password === state.repeatPassword;
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     dispatch({type: 'loading'});
-    API.Login({
+    API.SetPassword({
         URLBase,
         attributes: {
-          username: state.username,
-          password: state.password,
+          token: token,
+          password: state.password
         }
       })
-        .then((data: JWTPayload) => {
-          SetLocalStorageData('jwt', JSON.stringify(data));
-          return API.GetUser({
-            URLBase,
-            jwt: data.access,
-            userID: data.user_id
-          });
-        })
         .then((data: any) => {
           dispatch({type: 'success'});
           callback(data);
         })
         .catch((error) => {
-          dispatch({
-            type: 'error',
-            error: error
-          });
+          if (error.length) {
+            dispatch({
+              type: 'error',
+              error: error
+            });
+          } else {
+            dispatch({
+              type: 'error',
+              error: [{
+                status: 500,
+                code: '',
+                detail: '',
+                pointer: ''
+              }]
+            });
+          }
         });
-  }
+  };
 
   return (
     <Box
@@ -125,25 +136,18 @@ const SignInForm = ({
         rowSpacing={2}
         maxWidth={600}>
         <Grid item xs={12} md={6}>
-          <TextField
-            label='Email'
-            variant='outlined'
-            size='small'
-            type='email'
-            value={state.username}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              dispatch({
-                type: 'input',
-                name: 'username',
-                value: e.target.value
-              });
-            }}
-            disabled={state.isLoading}
-            style={{width: '100%'}} />
+          <PasswordField
+            label='Nueva contraseña'
+            name='password'
+            value={state.password}
+            onChange={dispatch}
+            disabled={state.isLoading} />
         </Grid>
         <Grid item xs={12} md={6}>
           <PasswordField
-            value={state.password}
+            label='Confirma tu contraseña'
+            name='repeatPassword'
+            value={state.repeatPassword}
             onChange={dispatch}
             disabled={state.isLoading} />
         </Grid>
@@ -159,29 +163,47 @@ const SignInForm = ({
             type='submit'
             size='small'
             disabled={state.isLoading || !canSubmit()}>
-            Acceder
+            Crear nueva contraseña
           </Button>
         </Grid>
         {
+          state.success ?
+            <Grid item xs={12} marginTop={2}>
+              <Stack sx={{ width: '100%' }} spacing={2}>
+                <Link href='/reset-password'>
+                  <Alert severity='success'>
+                    Tu contraseña ha sido cambiada correctamente! Ahora
+                    puedes iniciar sesion dando click aqui.
+                  </Alert>
+                </Link>
+              </Stack>
+            </Grid> : null
+        }
+        {
+          state.password !== '' && state.password !== state.repeatPassword ?
+            <Grid item xs={12} marginTop={2}>
+              <Stack sx={{ width: '100%' }} spacing={2}>
+                <Alert severity='warning'>
+                  Las contraseñas no coinciden.
+                </Alert>
+              </Stack>
+            </Grid> : null
+        }
+        {
           state.error.length &&
-          state.error[0].status === 401 &&
-          state.error[0].pointer === 'data' &&
-          state.error[0].code === 'no_active_account' ?
+          (state.error[0].status === 500 ||
+            state.error[0].status === 404 ) ?
             <Grid item xs={12} marginTop={2}>
               <Stack sx={{ width: '100%' }} spacing={2}>
                 <Alert severity='error'>
-                  Error: Este correo electronico no esta registrado en la plataforma
-                  o el correo electronico y/o contraseña son incorrectos.
+                  Error: el codigo para crear la nueva contraseña
+                  es incorrecto o ha expirado, por favor
+                  contacta al administrador de la plataforma.
                 </Alert>
                 <Link href='/reset-password'>
                   <Alert severity='success'>
-                    Si tu correo electronico es correcto, pero no recuerdas tu contraseña,
-                    puedes restablecerla dando click aqui.
-                  </Alert>
-                </Link>
-                <Link href='/sign-up'>
-                  <Alert severity='success'>
-                    Puedes crear una cuenta gratis dando click aqui.
+                    Restablece tu contraseña de nuevo dando click aqui 
+                    para obtener un nuevo codigo.
                   </Alert>
                 </Link>
               </Stack>
@@ -200,4 +222,4 @@ const SignInForm = ({
   );
 }
 
-export default SignInForm;
+export default SetPasswordForm;
