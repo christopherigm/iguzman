@@ -47,6 +47,8 @@ from users.views import (
     UserOrderBuyableItemViewSet,
     UserOrderViewSet,
     ActivateUser,
+    ResetPassword,
+    SetPassword,
 )
 from stand.views import (
     ExpoViewSet,
@@ -186,6 +188,8 @@ urlpatterns = [
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('v1/system-information', System.as_view()),
     re_path(r'^v1/activate-user', ActivateUser.as_view(), name='activate-user'),
+    re_path(r'^v1/reset-password', ResetPassword.as_view(), name='reset-password'),
+    re_path(r'^v1/set-password', SetPassword.as_view(), name='set-password'),
     re_path(r'^v1/post-rating', PostRating.as_view(), name='post-rating'),
 ]
 

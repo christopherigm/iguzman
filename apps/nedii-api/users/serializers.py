@@ -116,24 +116,39 @@ class UserSerializer(HyperlinkedModelSerializer):
         user.set_password(validated_data["password"])
         user.token = uuid.uuid4()
         user.is_active = False
-        subject = "Activa tu cuenta de Nedii"
-        from_email = "Nedii <{}>".format(settings.EMAIL_HOST_USER)
+        subject = "Activa tu cuenta de {0}".format(
+            settings.EMAIL_TEMPLATE_COMPANY_NAME
+        )
+        from_email = "{0} <{1}>".format(
+            settings.EMAIL_TEMPLATE_COMPANY_NAME,
+            settings.EMAIL_HOST_USER,
+        )
         to = user.email
-        text_content = """Para verificar tu cuenta de correo electronico, por favor da click <a href="{}activate/{}">en este link.</a>""".format(settings.WEB_APP_URL, user.token)
+        text_content = """
+            Para verificar tu cuenta de {0} con tu correo electronico
+            por favor da click <a href={1}activate/{2}">en este link.</a>
+        """.format(
+            settings.EMAIL_TEMPLATE_COMPANY_NAME,
+            settings.WEB_APP_URL,
+            user.token,
+        )
         html_content = """
-            <h2>Bienvenido a Nedii {0}!</h2>
+            <h2>Bienvenido a {0} {1}!</h2>
             <p>
                 Para verificar tu cuenta de correo electronico, por favor da click 
-                <a href="{1}activate/{2}">en este link.</a>
+                <a href="{2}activate/{3}">en este link.</a>
             </p>
-            <span>Christopher Guzman de Nedii</span>
             <br/><br/>
-            <img width="140" src="https://nedii.iguzman.com.mx/_next/image?url=%2Fimages%2Flogo.jpg&w=640&q=60" />
+            <span>Equipo de {0}</span>
+            <br/><br/>
+            <img width="140" src="{4}" />
             <br/>
         """.format(
-            user.first_name,
+            settings.EMAIL_TEMPLATE_COMPANY_NAME,
+            user.first_name or user.username,
             settings.WEB_APP_URL,
-            user.token
+            user.token,
+            settings.EMAIL_TEMPLATE_COMPANY_LOGO,
         )
         msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
         msg.attach_alternative(html_content, "text/html")

@@ -7,7 +7,6 @@ from colorfield.fields import ColorField
 from django.db import models
 from common.models import (
     CommonFields,
-    RegularPicture,
     Address,
 )
 from enum import Enum

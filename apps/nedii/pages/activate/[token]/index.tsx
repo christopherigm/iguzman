@@ -92,7 +92,7 @@ const Page = (props: System): ReactElement => {
           </Typography>
           <Stack sx={{ width: '100%' }} spacing={2} marginTop={2}>
             <Alert severity='success'>
-              Puedes iniciar sesion <Link href='/sign-in'>aqui</Link>
+              Puedes iniciar sesion <Link href='/sign-in'>aqui</Link>.
             </Alert>
           </Stack>
           </> : null
@@ -111,13 +111,13 @@ const Page = (props: System): ReactElement => {
             <Stack sx={{ width: '100%' }} spacing={2}>
               <Alert severity='error'>
                 Error: el codigo de activacion es incorrecto, por favor
-                contacte al administrador de la plataforma
+                contacta al administrador de la plataforma.
               </Alert>
               <Alert severity='info'>
-                Puedes iniciar sesion <Link href='/sign-in'>aqui</Link>
+                Puedes iniciar sesion <Link href='/sign-in'>aqui</Link>.
               </Alert>
               <Alert severity='success'>
-                Restablecer tu contraseña <Link href='/reset-password'>aqui</Link>
+                Restablece tu contraseña <Link href='/reset-password'>aqui</Link>.
               </Alert>
             </Stack>
           </> : null
@@ -137,14 +137,18 @@ const Page = (props: System): ReactElement => {
                 <Alert severity='error'>
                   Error: es probable que el codigo de activacion
                   ya haya sido utilizado antes, por favor
-                  contacte al administrador de la plataforma.
+                  contacta al administrador de la plataforma.
                 </Alert>
-                <Alert severity='info'>
-                  Puedes iniciar sesion <Link href='/sign-in'>aqui</Link>
-                </Alert>
-                <Alert severity='success'>
-                  Restablecer tu contraseña <Link href='/reset-password'>aqui</Link>
-                </Alert>
+                <Link href='/sign-in' passHref>
+                  <Alert severity='info'>
+                    Puedes iniciar sesion aqui.
+                  </Alert>
+                </Link>
+                <Link href='/reset-password' passHref>
+                  <Alert severity='success'>
+                    Restablecer tu contraseña aqui.
+                  </Alert>
+                </Link>
               </Stack>
             </> : null
           }

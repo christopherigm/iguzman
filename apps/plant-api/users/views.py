@@ -1,3 +1,6 @@
+import uuid
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
@@ -179,5 +182,140 @@ class ActivateUser(TokenObtainPairView):
             }, status = 200 )
         return Response( data = [{
             "detail": "Wrong credentials",
+            "status": 400
+        }], status = status.HTTP_400_BAD_REQUEST )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SetPassword(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        body_unicode=request.body.decode("utf-8")
+        body = json.loads(body_unicode)
+        user = None
+        if "token" in body["data"]["attributes"] and "password" in body["data"]["attributes"]:
+            user = get_object_or_404(
+                User,
+                is_active = True,
+                token = body["data"]["attributes"]["token"]
+            )
+            user.token = None
+            user.set_password(body["data"]["attributes"]["password"])
+            user.save()
+            subject = "Tu contraseña de {0} ha sido cambiada".format(
+                settings.EMAIL_TEMPLATE_COMPANY_NAME
+            )
+            from_email = "{0} <{1}>".format(
+                settings.EMAIL_TEMPLATE_COMPANY_NAME,
+                settings.EMAIL_HOST_USER,
+            )
+            to = user.email
+            text_content = """
+                Tu contraseña de {0} ha sido cambiada
+            """.format(
+                settings.EMAIL_TEMPLATE_COMPANY_NAME
+            )
+            html_content = """
+                <h2>Tu contraseña de {1} ha sido cambiada</h2>
+                <br/>
+                <b>{0}:</b>
+                <br/>
+                <p>
+                    Tu contraseña de tu cuenta de {1} ha sido cambiada hace unos
+                    instantes.
+                </p>
+                <p>
+                    Si tu no solicitaste cambiar tu contraseña, te solicitamos
+                    que contactes inmediatamente al administrador
+                    de la plataforma para verificar los mecanismos de seguridad
+                    de tu cuenta.
+                </p>
+                <br/><br/>
+                <span>Equipo de {1}</span>
+                <br/><br/>
+                <img width="140" src="{2}" />
+                <br/>
+            """.format(
+                user.first_name or user.username,
+                settings.EMAIL_TEMPLATE_COMPANY_NAME,
+                settings.EMAIL_TEMPLATE_COMPANY_LOGO,
+            )
+            msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
+            msg.attach_alternative(html_content, "text/html")
+            msg.send()
+            return Response( data = {
+                "success": True
+            }, status = 200 )
+        return Response( data = [{
+            "status": 400
+        }], status = status.HTTP_400_BAD_REQUEST )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class ResetPassword(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        body_unicode=request.body.decode("utf-8")
+        body = json.loads(body_unicode)
+        user = None
+        if "email" in body["data"]["attributes"]:
+            user = get_object_or_404(
+                User,
+                email = body["data"]["attributes"]["email"]
+            )
+            user.token = uuid.uuid4()
+            user.save()
+            subject = "Restablece tu contraseña de {0}".format(
+                settings.EMAIL_TEMPLATE_COMPANY_NAME
+            )
+            from_email = "{0} <{1}>".format(
+                settings.EMAIL_TEMPLATE_COMPANY_NAME,
+                settings.EMAIL_HOST_USER,
+            )
+            to = user.email
+            text_content = """
+                Restablecer contraseña de {0} click
+                <a href="{1}set-password/{2}">en este link.</a>
+            """.format(
+                settings.EMAIL_TEMPLATE_COMPANY_NAME,
+                settings.WEB_APP_URL,
+                user.token
+            )
+            html_content = """
+                <h2>Restablece tu contraseña de {3}</h2>
+                <br/>
+                <b>{0}:</b>
+                <br/>
+                <p>
+                    Hemos recibido la solicitud de restablecer la contraseña de
+                    tu cuenta de {3}.
+                </p>
+                <p>
+                    Para crear una nueva contraseña, por favor da click 
+                    <a href="{1}set-password/{2}">en este link.</a>
+                </p>
+                <p>
+                    Si tu no solicitaste restablecer tu contraseña, puedes
+                    hacer caso omiso de este mansaje o contactar al administrador
+                    de la plataforma para verificar los mecanismos de seguridad
+                    de tu cuenta.
+                </p>
+                <br/><br/>
+                <span>Equipo de {3}</span>
+                <br/><br/>
+                <img width="140" src="{4}" />
+                <br/>
+            """.format(
+                user.first_name or user.username,
+                settings.WEB_APP_URL,
+                user.token,
+                settings.EMAIL_TEMPLATE_COMPANY_NAME,
+                settings.EMAIL_TEMPLATE_COMPANY_LOGO,
+            )
+            msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
+            msg.attach_alternative(html_content, "text/html")
+            msg.send()
+            return Response( data = {
+                "success": True
+            }, status = 200 )
+        return Response( data = [{
             "status": 400
         }], status = status.HTTP_400_BAD_REQUEST )

@@ -39,6 +39,8 @@ from users.views import (
     UserViewSet,
     GroupViewSet,
     ActivateUser,
+    ResetPassword,
+    SetPassword,
 )
 from records.views import (
     PlantViewSet,
@@ -96,6 +98,8 @@ urlpatterns = [
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('v1/system-information', System.as_view()),
     re_path(r'^v1/activate-user', ActivateUser.as_view(), name='login'),
+    re_path(r'^v1/reset-password', ResetPassword.as_view(), name='reset-password'),
+    re_path(r'^v1/set-password', SetPassword.as_view(), name='set-password'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
