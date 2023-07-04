@@ -25,12 +25,18 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Link from 'next/link';
+import { Divider } from '@mui/material';
+import Avatar from '@mui/material/Avatar';
 
 
 type State = {
   isLoading: boolean;
   username: string;
   password: string;
+  repeatPassword: string;
+  firstName: string;
+  lastName: string;
+  imgPicture: string;
   error: Array<APIPostCreationError>;
 };
 
@@ -38,6 +44,10 @@ const InitialState: State = {
   isLoading: false,
   username: '',
   password: '',
+  repeatPassword: '',
+  firstName: '',
+  lastName: '',
+  imgPicture: '',
   error: []
 };
 
@@ -53,6 +63,10 @@ const Reducer = (state: State = InitialState, action: Action): State => {
       ...state,
       username: '',
       password: '',
+      repeatPassword: '',
+      firstName: '',
+      lastName: '',
+      imgPicture: '',
       error: [],
       isLoading: false,
     };
@@ -84,7 +98,11 @@ const SignUpForm = ({
   const [dialogOpen, setDialogOpen] = useState(false);
     
   const canSubmit = (): boolean => {
-    return state.username !== '' && state.password !== '';
+    return (
+      state.username !== '' &&
+      state.password !== '' &&
+      state.password === state.repeatPassword
+    );
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -95,7 +113,10 @@ const SignUpForm = ({
         attributes: {
           username: state.username,
           email: state.username,
-          password: state.password
+          password: state.password,
+          first_name: state.firstName,
+          last_name: state.lastName,
+          img_picture: state.imgPicture,
         }
       })
         .then((data: any) => {
@@ -129,6 +150,14 @@ const SignUpForm = ({
         columnSpacing={2}
         rowSpacing={2}
         maxWidth={600}>
+        <Grid item xs={12} marginBottom={1}>
+          <Typography variant='body1'>
+            Datos de acceso
+          </Typography>
+          <Typography variant='body2'>
+            (requerido)
+          </Typography>
+        </Grid>
         <Grid item xs={12} md={6}>
           <TextField
             label='Email'
@@ -148,9 +177,125 @@ const SignUpForm = ({
         </Grid>
         <Grid item xs={12} md={6}>
           <PasswordField
+            label='Contraseña'
+            name='password'
             value={state.password}
             onChange={dispatch}
             disabled={state.isLoading} />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <PasswordField
+            label='Confirma tu contraseña'
+            name='repeatPassword'
+            value={state.repeatPassword}
+            onChange={dispatch}
+            disabled={state.isLoading} />
+        </Grid>
+        {
+          state.password !== '' && state.password !== state.repeatPassword ?
+            <Grid item xs={12} marginTop={2}>
+              <Stack sx={{ width: '100%' }} spacing={2}>
+                <Alert severity='warning'>
+                  Las contraseñas no coinciden.
+                </Alert>
+              </Stack>
+            </Grid> : null
+        }
+        <Grid item
+          xs={12}
+          marginTop={2}
+          marginBottom={2}>
+          <Divider />
+        </Grid>
+        <Grid item xs={12} marginBottom={1}>
+          <Typography variant='body1'>
+            Perfil de usuario
+          </Typography>
+          <Typography variant='body2'>
+            (opcional)
+          </Typography>
+        </Grid>
+        <Grid item
+          xs={12}
+          display='flex'
+          justifyContent='center'
+          marginBottom={2}>
+          <Box
+            width={180}
+            height={180}
+            position='relative'>
+            <Avatar
+              alt='Profile pictre'
+              src={state.imgPicture}
+              variant='rounded'
+              sx={{
+                width: '180px',
+                height: '180px'
+              }} />
+            <Box
+              position='absolute'
+              top={0}
+              left={0}>
+              <input
+                type='file'
+                id='user-image'
+                onChange={(e: any) => {
+                  const file = e.target.files[0];
+                  const reader = new FileReader();
+                  reader.onload = (e: any) => {
+                    dispatch({
+                      type: 'input',
+                      name: 'imgPicture',
+                      value: e.target.result
+                    });
+                  };
+                  if (file) {
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                accept='image/*'
+                style={{
+                  width: '180px',
+                  height: '180px',
+                  cursor: 'pointer',
+                  opacity: 0
+                }} />
+            </Box>
+          </Box>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField
+            label='Nombre'
+            variant='outlined'
+            size='small'
+            type='text'
+            value={state.firstName}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              dispatch({
+                type: 'input',
+                name: 'firstName',
+                value: e.target.value
+              });
+            }}
+            disabled={state.isLoading}
+            style={{width: '100%'}} />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <TextField
+            label='Apellido'
+            variant='outlined'
+            size='small'
+            type='text'
+            value={state.lastName}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              dispatch({
+                type: 'input',
+                name: 'lastName',
+                value: e.target.value
+              });
+            }}
+            disabled={state.isLoading}
+            style={{width: '100%'}} />
         </Grid>
         <Grid item
           xs={12}

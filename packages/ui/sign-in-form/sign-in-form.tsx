@@ -163,6 +163,23 @@ const SignInForm = ({
           </Button>
         </Grid>
         {
+          !state.error.length ?
+            <Grid item xs={12} marginTop={2}>
+              <Stack sx={{ width: '100%' }} spacing={2}>
+                <Link href='/reset-password'>
+                  <Alert severity='info'>
+                    Si no recuerdas tu contraseña, puedes restablecerla dando click aqui.
+                  </Alert>
+                </Link>
+                <Link href='/sign-up'>
+                  <Alert severity='success'>
+                    Puedes crear una cuenta gratis dando click aqui.
+                  </Alert>
+                </Link>
+              </Stack>
+            </Grid> : null
+        }
+        {
           state.error.length &&
           state.error[0].status === 401 &&
           state.error[0].pointer === 'data' &&

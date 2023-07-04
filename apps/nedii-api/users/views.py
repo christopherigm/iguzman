@@ -70,7 +70,11 @@ class GroupViewSet (ReadOnlyModelViewSet):
     ]
 
 
-class UserViewSet(ModelViewSet):
+class UserViewSet(
+        CustomCreate,
+        CustomUpdate,
+        ModelViewSet
+    ):
     queryset = User.objects.filter(
         is_active=True,
     )

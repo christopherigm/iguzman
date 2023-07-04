@@ -4,6 +4,9 @@ type payloadInterface = {
   username: string;
   email: string;
   password: string;
+  first_name?: string;
+  last_name?: string;
+  img_picture?: string;
 };
 
 type Props = {
