@@ -398,12 +398,12 @@ class UserAddressViewSet (
 
 
 class UserCartBuyableItemsViewSet (
-      CustomCreate,
-      CustomUpdate,
-      mixins.ListModelMixin,
-      mixins.RetrieveModelMixin,
-      mixins.DestroyModelMixin,
-      GenericViewSet
+        CustomCreate,
+        CustomUpdate,
+        mixins.ListModelMixin,
+        mixins.RetrieveModelMixin,
+        mixins.DestroyModelMixin,
+        GenericViewSet
     ):
     queryset = UserCartBuyableItem.objects.all()
     serializer_class = UserCartBuyableItemSerializer
@@ -430,12 +430,12 @@ class UserCartBuyableItemsViewSet (
 
 
 class UserFavoriteBuyableItemsViewSet (
-      CustomCreate,
-      CustomUpdate,
-      mixins.ListModelMixin,
-      mixins.RetrieveModelMixin,
-      mixins.DestroyModelMixin,
-      GenericViewSet
+        CustomCreate,
+        CustomUpdate,
+        mixins.ListModelMixin,
+        mixins.RetrieveModelMixin,
+        mixins.DestroyModelMixin,
+        GenericViewSet
     ):
     queryset = UserFavoriteBuyableItem.objects.all()
     serializer_class = UserFavoriteBuyableItemSerializer
@@ -462,12 +462,12 @@ class UserFavoriteBuyableItemsViewSet (
 
 
 class UserFavoriteStandsViewSet (
-      CustomCreate,
-      CustomUpdate,
-      mixins.ListModelMixin,
-      mixins.RetrieveModelMixin,
-      mixins.DestroyModelMixin,
-      GenericViewSet
+        CustomCreate,
+        CustomUpdate,
+        mixins.ListModelMixin,
+        mixins.RetrieveModelMixin,
+        mixins.DestroyModelMixin,
+        GenericViewSet
     ):
     queryset = UserFavoriteStand.objects.all()
     serializer_class = UserFavoriteStandSerializer
@@ -486,12 +486,12 @@ class UserFavoriteStandsViewSet (
 
 
 class UserOrderBuyableItemViewSet (
-      CustomCreate,
-      CustomUpdate,
-      mixins.ListModelMixin,
-      mixins.RetrieveModelMixin,
-      mixins.DestroyModelMixin,
-      GenericViewSet
+        CustomCreate,
+        CustomUpdate,
+        mixins.ListModelMixin,
+        mixins.RetrieveModelMixin,
+        mixins.DestroyModelMixin,
+        GenericViewSet
     ):
     queryset = UserOrderBuyableItem.objects.all()
     serializer_class = UserOrderBuyableItemSerializer

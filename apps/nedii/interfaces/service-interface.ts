@@ -1,4 +1,4 @@
-import type {BasePictureAttributesInterface} from 'interfaces/common-interfaces';
+import type {BasePictureAttributesInterface} from 'utils';
 import type {StandInterface} from 'interfaces/stand-interface';
 
 interface ServiceClassificationAttributesInterface extends BasePictureAttributesInterface {

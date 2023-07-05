@@ -12,11 +12,13 @@ import {
 } from 'react';
 import PasswordField from '../password-field';
 import {
-  Action,
   API,
   APICreationErrorHandler,
 } from 'utils';
-import type {APIPostCreationError} from 'utils';
+import type {
+  APIPostCreationError,
+  Action,
+} from 'utils';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Dialog from '@mui/material/Dialog';
@@ -207,7 +209,7 @@ const SignUpForm = ({
           marginBottom={2}>
           <Divider />
         </Grid>
-        <Grid item xs={12} marginBottom={1}>
+        <Grid item xs={12}>
           <Typography variant='body1'>
             Perfil de usuario
           </Typography>
@@ -219,11 +221,14 @@ const SignUpForm = ({
           xs={12}
           display='flex'
           justifyContent='center'
-          marginBottom={2}>
+          marginBottom={7}>
           <Box
             width={180}
             height={180}
             position='relative'>
+            <Typography variant='body2'>
+              Foto de perfil
+            </Typography>
             <Avatar
               alt='Profile pictre'
               src={state.imgPicture}
@@ -261,6 +266,9 @@ const SignUpForm = ({
                   opacity: 0
                 }} />
             </Box>
+            <Typography variant='caption'>
+              (Click en la foto para cambiarla)
+            </Typography>
           </Box>
         </Grid>
         <Grid item xs={12} md={6}>

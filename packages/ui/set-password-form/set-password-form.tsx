@@ -12,11 +12,13 @@ import {
 } from 'react';
 import PasswordField from '../password-field';
 import {
-  Action,
   API,
   APICreationErrorHandler,
 } from 'utils';
-import type {APIPostCreationError} from 'utils';
+import type {
+  APIPostCreationError,
+  Action,
+} from 'utils';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Link from 'next/link';

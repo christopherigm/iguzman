@@ -24,11 +24,12 @@ type User = {
 }
 
 type Props = {
-  language: Languages
+  language: Languages;
   user?: User;
+  darkMode: boolean;
 }
 
-const SignInMenu = ({user, language='en'}: Props) => {
+const SignInMenu = ({user, language='en', darkMode=false}: Props) => {
   const router = useRouter()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -83,7 +84,7 @@ const SignInMenu = ({user, language='en'}: Props) => {
               <MenuItem onClick={handleClose}>
                 <Typography
                   variant='body1'
-                  color='primary.dark'>
+                  color={darkMode ? 'primary.contrastText' : '#333'}>
                   {language === 'en' ? 'My account' : 'Mi cuenta'}
                 </Typography>
               </MenuItem>
@@ -91,7 +92,7 @@ const SignInMenu = ({user, language='en'}: Props) => {
             <MenuItem onClick={logOutAndHandleClose}>
               <Typography
                 variant='body1'
-                color='primary.dark'>
+                color={darkMode ? 'primary.contrastText' : '#333'}>
                 {language === 'en' ? 'Logout' : 'Cerrar sesion'}
               </Typography>
             </MenuItem>
@@ -125,7 +126,7 @@ const SignInMenu = ({user, language='en'}: Props) => {
                 <MenuItem onClick={handleClose}>
                   <Typography
                     variant='body1'
-                    color='primary.dark'>
+                    color={darkMode ? 'primary.contrastText' : '#333'}>
                     {language === 'en' ? 'Login' : 'Iniciar sesion'}
                   </Typography>
                 </MenuItem>
@@ -134,7 +135,7 @@ const SignInMenu = ({user, language='en'}: Props) => {
                 <MenuItem onClick={handleClose}>
                   <Typography
                     variant='body1'
-                    color='primary.dark'>
+                    color={darkMode ? 'primary.contrastText' : '#333'}>
                     {language === 'en' ? 'Sign up' : 'Crear cuenta'}
                   </Typography>
                 </MenuItem>

@@ -2,21 +2,19 @@ import { Get } from '../communicator';
 
 type Props = {
   URLBase: string;
-  userID: number;
   jwt: string;
 };
 
-const GetUser = ({
+const GetUserAddress = ({
     URLBase,
-    userID,
     jwt
   }: Props ): Promise<any> => {
   return new Promise((res, rej) => {
-    const url = `${URLBase}/v1/users/${userID}/`;
+    const url = `${URLBase}/v1/user-address/`;
     Get({url, jwt})
       .then(response => res(response.data))
       .catch(error => rej(error));
   });
 };
 
-export default GetUser;
+export default GetUserAddress;

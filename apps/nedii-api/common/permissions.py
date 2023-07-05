@@ -1,6 +1,6 @@
 import jwt
 from django.conf import settings
-from django.contrib.auth.models import User
+from users.models import User
 from rest_framework.permissions import BasePermission
 
 class IsAdminOrIsItSelf(BasePermission):

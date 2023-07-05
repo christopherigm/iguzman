@@ -112,6 +112,7 @@ const MainLayout = ({
             user={system.user}
             language={system.language}
             devMode={system.devMode}
+            darkMode={system.darkMode}
             loginButton={system.loginEnabled}
             logoWidth='60px'
             isLoading={system.isLoading}

@@ -11,14 +11,16 @@ type Props = {
 
 const ActivateUser = ({
     URLBase,
-    attributes
+    attributes,
   }: Props ): Promise<any> => {
   return new Promise((res, rej) => {
     const url = `${URLBase}/v1/activate-user`;
     Post({
       url,
-      type: 'ActivateUser',
-      attributes
+      data:{
+        type: 'ActivateUser',
+        attributes,
+      }
     })
       .then((response: any) => {
         if (response.errors) {

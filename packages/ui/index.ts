@@ -7,4 +7,4 @@ export {default as SignInForm} from './sign-in-form';
 export {default as ResetPasswordForm} from './reset-password-form';
 export {default as SetPasswordForm} from './set-password-form';
 export {default as PasswordField} from './password-field';
-
+export {default as AccountTopMenu} from './account-top-menu';

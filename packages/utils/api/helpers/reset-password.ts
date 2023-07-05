@@ -11,14 +11,16 @@ type Props = {
 
 const ResetPassword = ({
     URLBase,
-    attributes
+    attributes,
   }: Props ): Promise<any> => {
   return new Promise((res, rej) => {
     const url = `${URLBase}/v1/reset-password`;
     Post({
       url,
-      type: 'ResetPassword',
-      attributes
+      data: {
+        type: 'ResetPassword',
+        attributes,
+      }
     })
       .then((response: any) => {
         if (response.errors) {

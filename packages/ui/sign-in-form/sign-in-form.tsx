@@ -9,14 +9,14 @@ import {
 } from 'react';
 import PasswordField from '../password-field';
 import {
-  Action,
   API,
   APICreationErrorHandler,
   SetLocalStorageData,
 } from 'utils';
 import type {
   JWTPayload,
-  APIPostCreationError
+  APIPostCreationError,
+  Action,
 } from 'utils';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
