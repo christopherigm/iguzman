@@ -1,8 +1,10 @@
 import type {
-  CityInterface,
   NediiPlanInterface,
-  BasePictureAttributesInterface,
 } from 'interfaces/common-interfaces';
+import type {
+  CityInterface,
+  BasePictureAttributesInterface,
+} from 'utils';
 import UserInterface from 'interfaces/user-interface';
 import { MealInterface } from 'interfaces/meal-interface';
 import { ProductInterface } from 'interfaces/product-interface';

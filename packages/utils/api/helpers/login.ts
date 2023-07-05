@@ -1,4 +1,4 @@
-import { Post } from '../../api/communicator';
+import { Post } from '../communicator';
 import * as jose from 'jose';
 import type {JWTPayload} from '../../interfaces/jwt-interface';
 
@@ -29,14 +29,16 @@ type Props = {
 
 const Login = ({
     URLBase,
-    attributes
+    attributes,
   }: Props ): Promise<JWTPayload> => {
   return new Promise((res, rej) => {
     const url = `${URLBase}/v1/token/`;
     Post({
       url,
-      type: 'TokenObtainPairView',
-      attributes
+      data: {
+        type: 'TokenObtainPairView',
+        attributes,
+      }
     })
       .then((response: response) => {
         if (response.errors) {

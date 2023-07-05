@@ -267,7 +267,7 @@ class AddressType(Enum):
 
 class UserAddress(Address):
     user=models.ForeignKey (
-        User,
+        'users.User',
         null=False,
         blank=False,
         on_delete=models.CASCADE
@@ -387,7 +387,7 @@ class UserOrderBuyableItem(UserAbstractBuyableItem):
 
 class UserOrder(CommonFields):
     user=models.ForeignKey(
-        User,
+        'users.User',
         verbose_name='Usuario',
         null=False,
         blank=False,

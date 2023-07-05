@@ -1,8 +1,9 @@
 import type {
   BaseUser,
   BaseUserAttributes,
+  CityInterface,
+  UserAddressAttributesInterface,
 } from 'utils';
-import type {CityInterface} from 'interfaces/common-interfaces';
 import type {StandInterface} from 'interfaces/stand-interface';
 import {
   MealInterface,
@@ -30,21 +31,10 @@ export default interface UserInterface extends BaseUser{
   attributes: attributes
 };
 
-export interface UserAddressInterface {
+export interface UserAddressInterface extends UserAddressAttributesInterface {
   id: number;
   type: 'UserAddress';
-  attributes: {
-    alias: string;
-    receptor_name: string;
-    phone: string;
-    zip_code: string;
-    street: string;
-    ext_number: string;
-    int_number: string;
-    reference: string;
-    address_type: 'house' | 'apartment' | 'work' | 'mail_box';
-    delivery_instructions: string;
-  };
+  attributes: UserAddressAttributesInterface;
   relationships: {
     city: {
       data: CityInterface

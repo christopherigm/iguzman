@@ -16,14 +16,16 @@ type Props = {
 
 const Register = ({
     URLBase,
-    attributes
+    attributes,
   }: Props ): Promise<any> => {
   return new Promise((res, rej) => {
     const url = `${URLBase}/v1/users/`;
     Post({
       url,
-      type: 'User',
-      attributes
+      data: {
+        type: 'User',
+        attributes,
+      }
     })
       .then((response: any) => {
         if (response.errors) {

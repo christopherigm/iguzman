@@ -86,7 +86,7 @@ const Page = (props: System): ReactElement => {
           <>
           <Typography
             marginTop={3}
-            variant='h4'
+            variant='h5'
             color={system.darkMode ? 'primary.contrastText' : ''}>
             Cuenta activada exitosamente!
           </Typography>
@@ -104,7 +104,7 @@ const Page = (props: System): ReactElement => {
             <Typography
               marginTop={3}
               marginBottom={3}
-              variant='h4'
+              variant='h5'
               color={system.darkMode ? 'primary.contrastText' : ''}>
               Error activando cuenta
             </Typography>
@@ -129,7 +129,7 @@ const Page = (props: System): ReactElement => {
               <Typography
                 marginTop={3}
                 marginBottom={3}
-                variant='h4'
+                variant='h5'
                 color={system.darkMode ? 'primary.contrastText' : ''}>
                 Error activando cuenta
               </Typography>

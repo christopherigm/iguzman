@@ -64,7 +64,7 @@ const Page = (props: System): ReactElement => {
       </Head>
       <Typography
         marginTop={3}
-        variant='h4'
+        variant='h5'
         color={system.darkMode ? 'primary.contrastText' : ''}>
         Acceder a mi cuenta
       </Typography>

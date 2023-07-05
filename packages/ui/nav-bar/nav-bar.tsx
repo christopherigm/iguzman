@@ -21,6 +21,7 @@ interface Props {
   user?: any;
   language: Languages;
   devMode: boolean;
+  darkMode: boolean;
   loginButton?: boolean;
   logoWidth?: string;
   isLoading: boolean;
@@ -32,7 +33,8 @@ const NavBar = ({
     logo,
     user,
     language,
-    devMode,
+    devMode = false,
+    darkMode = false,
     loginButton = false,
     logoWidth = '200px',
     isLoading,
@@ -62,7 +64,7 @@ const NavBar = ({
       <Container maxWidth='lg'>
         <Toolbar disableGutters>
           <IconButton
-            color='primary'
+            color={darkMode ? 'success' : 'primary'}
             aria-label='open drawer'
             edge='start'
             onClick={handleDrawerToggle}
@@ -91,7 +93,10 @@ const NavBar = ({
           </Box>
           {
             loginButton ?
-              <SignInMenu user={user} language={language} /> :
+              <SignInMenu
+                user={user}
+                language={language}
+                darkMode={darkMode} /> :
               null
           }
         </Toolbar>
