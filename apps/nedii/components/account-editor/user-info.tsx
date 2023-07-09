@@ -1,83 +1,56 @@
-import React, {
+import {
   ReactElement,
-  useState,
   FormEvent,
+  useState,
   useReducer,
   useEffect,
 } from 'react';
-import Head from 'next/head';
-import {
-  API,
-  GetCookieCachedValues,
-  GetEnvVariables,
-  GetLocalStorageData,
-  APICreationErrorHandler,
-} from 'utils';
-import type {
-  EnvironmentVariables,
-  CachedValues,
-  Languages,
-  APIPostCreationError,
-  Action,
-} from 'utils';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Container from '@mui/material/Container';
-import Alert from '@mui/material/Alert';
-import Stack from '@mui/material/Stack';
-import Link from 'next/link';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
-import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid';
-import LinearProgress from '@mui/material/LinearProgress';
-import MainLayout from 'layouts/main-layout';
-import {SystemInitalState} from 'interfaces/system-interface';
-import type System from 'interfaces/system-interface';
-import WbSunnyIcon from '@mui/icons-material/WbSunny';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import ContactMailIcon from '@mui/icons-material/ContactMail';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import StoreIcon from '@mui/icons-material/Store';
-import PaymentIcon from '@mui/icons-material/Payment';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import TextField from '@mui/material/TextField';
+import Divider from '@mui/material/Divider';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import Avatar from '@mui/material/Avatar';
+import Paper from '@mui/material/Paper';
 import {PasswordField} from 'ui';
+import {
+  GetLocalStorageData,
+  APICreationErrorHandler,
+  API,
+  SetLocalStorageData,
+} from 'utils';
+import type {
+  APIPostCreationError,
+  Action,
+} from 'utils';
 import type UserInterface from 'interfaces/user-interface';
-import UserAddress from './user-address';
-import { JWTPayload } from 'utils';
+import type {UserAttributesInterface} from 'interfaces/user-interface';
+import type { JWTPayload } from 'utils';
+import {
+  UserAttributesInitialState
+} from 'interfaces/user-interface';
 
 type State = {
   isLoading: boolean;
-  username: string;
-  email: string;
+  id: number;
+  attributes: UserAttributesInterface;
   currentPassword: string;
-  password: string;
+  newPassword: string;
   repeatPassword: string;
-  firstName: string;
-  lastName: string;
-  imgPicture: string;
-  newsletter: boolean;
-  promotions: boolean;
   error: Array<APIPostCreationError>;
 };
 
 const InitialState: State = {
   isLoading: false,
-  username: '',
-  email: '',
+  id: 0,
+  attributes: UserAttributesInitialState,
   currentPassword: '',
-  password: '',
+  newPassword: '',
   repeatPassword: '',
-  firstName: '',
-  lastName: '',
-  imgPicture: '',
-  newsletter: false,
-  promotions: false,
   error: []
 };
 
@@ -106,69 +79,86 @@ const Reducer = (state: State = InitialState, action: Action): State => {
       isLoading: false,
     };
   } else if (action.type === 'input' && action.name) {
+    const attributes: UserAttributesInterface = {
+      ...state.attributes,
+      [action.name]: action.value,
+    };
     return {
       ...state,
-      [action.name]: action.value
+      attributes,
     };
   }
   throw new Error('Invalid action');
 };
 
-
-interface Props {
+type Props = {
   darkMode: boolean;
   URLBase: string;
-}
+  jwt: string;
+};
 
-const AccountEditorForm = ({
-    darkMode,
+const UserInfo = ({
+    darkMode=false,
     URLBase,
+    jwt,
   }: Props): ReactElement => {
   const [state, dispatch] = useReducer(Reducer, InitialState);
   const [user, setUser] = useState<UserInterface | null>(null);
-  const [jwt, setJWT] = useState<JWTPayload | null>(null);
 
   useEffect(() => {
     if (!user) {
-      const u = GetLocalStorageData('user');
-      if (u) {
-        setUser( _p => JSON.parse(u) as UserInterface);
-        const user = JSON.parse(u) as UserInterface;
+      const cachedUser: string | null = GetLocalStorageData('user');
+      if (cachedUser) {
+        const u: UserInterface = JSON.parse(cachedUser) as UserInterface;
+        setUser(_p => u);
         dispatch({
           type: 'setState',
           state: {
-            username: user.attributes.username,
-            email: user.attributes.email,
-            firstName: user.attributes.first_name,
-            lastName: user.attributes.last_name,
-            imgPicture: user.attributes.img_picture,
+            ...state,
+            id: u.id,
+            attributes: u.attributes,
           }
-        });
+        })
       }
     }
-    if (!jwt) {
-      const cachedJWT = GetLocalStorageData('jwt');
-      if (cachedJWT) {
-        setJWT(_p => JSON.parse(cachedJWT) as JWTPayload);
-      }
+  }, []);
+
+  const handleSubmit = (e: FormEvent): void => {
+    e.preventDefault();
+    const attributes = {...state.attributes};
+    if (attributes.img_picture && attributes.img_picture.search('base64') < 0 ) {
+      delete attributes.img_picture;
     }
-  }, [user, jwt]);
+    dispatch({type: 'loading'});
+    API.UpdateUser({
+      URLBase,
+      jwt,
+      id: user ? Number(user.id) : 0,
+      attributes: attributes,
+    })
+      .then(() => API.GetUser({
+        URLBase,
+        userID: user ? Number(user.id) : 0,
+        jwt,
+      }))
+      .then((user: UserInterface) => {
+        SetLocalStorageData('user', JSON.stringify(user));
+        dispatch({type: 'success'});
+      })
+      .catch((error) => {
+        console.log('err', error);
+        dispatch({type: 'error', error});
+      });
+  };
 
   return (
-    <>
-    {
-      state.username ?
-        <Grid container
-          marginTop={1}
-          columnSpacing={2}
-          rowSpacing={2}>
-          <Grid item
-            xs={12}
-            sm={6}
-            md={4}
-            marginBottom={2}>
-            <Paper elevation={1}>
-            <Box padding={1.5}>
+    <Paper elevation={1}>
+      <Box 
+        component='form'
+        noValidate={false}
+        autoComplete='on'
+        onSubmit={handleSubmit}
+        padding={1.5}>
                   <Typography variant='caption'>
                     Foto de perfil
                   </Typography>
@@ -179,7 +169,7 @@ const AccountEditorForm = ({
                     overflow='hidden'>
                     <Avatar
                       alt='Profile pictre'
-                      src={state.imgPicture}
+                      src={state.attributes.img_picture}
                       variant='rounded'
                       sx={{
                         width: '100%',
@@ -198,7 +188,7 @@ const AccountEditorForm = ({
                           reader.onload = (e: any) => {
                             dispatch({
                               type: 'input',
-                              name: 'imgPicture',
+                              name: 'img_picture',
                               value: e.target.result
                             });
                           };
@@ -229,11 +219,11 @@ const AccountEditorForm = ({
                       variant='outlined'
                       size='small'
                       type='text'
-                      value={state.firstName}
+                      value={state.attributes.first_name}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         dispatch({
                           type: 'input',
-                          name: 'firstName',
+                          name: 'first_name',
                           value: e.target.value
                         });
                       }}
@@ -246,11 +236,11 @@ const AccountEditorForm = ({
                       variant='outlined'
                       size='small'
                       type='text'
-                      value={state.lastName}
+                      value={state.attributes.last_name}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         dispatch({
                           type: 'input',
-                          name: 'lastName',
+                          name: 'last_name',
                           value: e.target.value
                         });
                       }}
@@ -263,7 +253,7 @@ const AccountEditorForm = ({
                       variant='outlined'
                       size='small'
                       type='text'
-                      value={state.email}
+                      value={state.attributes.email}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         dispatch({
                           type: 'input',
@@ -284,8 +274,34 @@ const AccountEditorForm = ({
                   </Typography>
                   <Box marginTop={1}>
                     <FormGroup>
-                      <FormControlLabel control={<Switch checked={state.promotions} />} label='Promociones' />
-                      <FormControlLabel control={<Switch checked={state.newsletter} />} label='Comunicados' />
+                      <FormControlLabel
+                        disabled={state.isLoading}
+                        control={
+                          <Switch
+                            checked={state.attributes.promotions}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                              dispatch({
+                                type: 'input',
+                                name: 'promotions',
+                                value: e.target.checked
+                              });
+                            }} />
+                        }
+                        label='Promociones' />
+                      <FormControlLabel
+                        disabled={state.isLoading}
+                        control={
+                          <Switch
+                            checked={state.attributes.newsletter}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                              dispatch({
+                                type: 'input',
+                                name: 'newsletter',
+                                value: e.target.checked
+                              });
+                            }} />
+                        }
+                        label='Comunicadoss' />
                     </FormGroup>
                   </Box>
                   <Box
@@ -308,7 +324,7 @@ const AccountEditorForm = ({
                     <PasswordField
                       label='Nueva contraseña'
                       name='newPassword'
-                      value={state.password}
+                      value={state.newPassword}
                       onChange={dispatch}
                       disabled={state.isLoading} />
                   </Box>
@@ -320,46 +336,26 @@ const AccountEditorForm = ({
                       onChange={dispatch}
                       disabled={state.isLoading} />
                   </Box>
-            </Box>
-            </Paper>
-          </Grid>
-          <Grid item
-            xs={12}
-            sm={6}
-            md={8}
-            marginBottom={2}>
-            {
-              user && jwt ?
-                <Box>
-                <Paper elevation={1}>
-                <Box padding={1.5}>
-                  <Typography variant='body2'>
-                    Direcciones de entrega
-                  </Typography>
-                  <UserAddress
-                    darkMode={darkMode}
-                    userID={Number(user.id)}
-                    URLBase={URLBase}
-                    jwt={jwt.access} />
-                </Box>
-                </Paper>
-                </Box> : null
-            }
-            <Box marginTop={3}>
-            <Paper elevation={1}>
-            <Box padding={1.5}>
-              <Typography variant='body2'>
-                Formas de pago
-              </Typography>
-            </Box>
-            </Paper>
-            </Box>
-          </Grid>
-        </Grid> : null
-    }
-    </>
-    
+                  <Box
+                    display='flex'
+                    justifyContent='end'
+                    width='100%'
+                    marginTop={2}>
+                    <Button
+                      variant='contained'
+                      type='submit'
+                      size='small'
+                      disabled={state.isLoading}
+                      sx={{
+                        marginLeft: '20px',
+                        textTransform: 'initial',
+                      }}>
+                      Guardar cambios
+                    </Button>
+                  </Box>
+      </Box>
+    </Paper>
   );
 };
 
-export default AccountEditorForm;
+export default UserInfo;

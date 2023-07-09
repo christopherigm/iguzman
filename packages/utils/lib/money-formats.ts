@@ -1,3 +1,4 @@
+// DEPRECATED
 import wNumb from 'wnumb';
 
 const moneyFormat = wNumb({

@@ -12,7 +12,7 @@ type Types =
 export type Action = {
   type: Types;
   name?: string;
-  value?: string;
+  value?: string | boolean;
   state?: any;
   error?: Array<any>;
 };
