@@ -1,13 +1,11 @@
 import React, {
   ReactElement,
   useState,
-  FormEvent,
   useReducer,
   useEffect,
 } from 'react';
 import Head from 'next/head';
 import {
-  API,
   GetCookieCachedValues,
   GetEnvVariables,
   APICreationErrorHandler,
@@ -21,35 +19,18 @@ import type {
   Action,
 } from 'utils';
 import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Container from '@mui/material/Container';
-import Alert from '@mui/material/Alert';
-import Stack from '@mui/material/Stack';
-import Link from 'next/link';
-import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
-import Paper from '@mui/material/Paper';
-import Grid from '@mui/material/Grid';
-import LinearProgress from '@mui/material/LinearProgress';
 import MainLayout from 'layouts/main-layout';
 import {SystemInitalState} from 'interfaces/system-interface';
 import type System from 'interfaces/system-interface';
-import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import ContactMailIcon from '@mui/icons-material/ContactMail';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import StoreIcon from '@mui/icons-material/Store';
-import PaymentIcon from '@mui/icons-material/Payment';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import {
-  ResetPasswordForm,
   AccountTopMenu,
 } from 'ui';
 import type UserInterface from 'interfaces/user-interface';
-
-// import AccountTopMenu from 'components/account-top-menu';
-import AccountEditorForm from 'components/account-editor-form';
+import AccountEditor from 'components/account-editor';
 
 type State = {
   success: boolean;
@@ -178,7 +159,7 @@ const Page = (props: System): ReactElement => {
             <div key={id}>
               {
                 id === 0 && selected ?
-                  <AccountEditorForm
+                  <AccountEditor
                     URLBase={system.URLBase}
                     darkMode={system.darkMode} /> : null
               }

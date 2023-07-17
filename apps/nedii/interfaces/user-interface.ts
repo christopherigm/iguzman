@@ -14,21 +14,43 @@ import { ServiceInterface } from 'interfaces/service-interface';
 import { RealEstateInterface } from 'interfaces/real-estate-interface';
 import { VehicleInterface } from 'interfaces/vehicle-interface';
 
-interface attributes extends BaseUserAttributes {
-  is_seller: boolean;
-  newsletter: boolean;
-  promotions: boolean;
-  biography: string;
-  owner_position: string;
-  owner_position_description: string;
-  owner_phone: string;
-  owner_office_phone: string;
-  owner_email: string;
-  owner_whatsapp: string;
-  owner_address: string;
+export interface UserAttributesInterface extends BaseUserAttributes {
+  is_seller?: boolean;
+  newsletter?: boolean;
+  promotions?: boolean;
+  biography?: string;
+  owner_position?: string;
+  owner_position_description?: string;
+  owner_phone?: string;
+  owner_office_phone?: string;
+  owner_email?: string;
+  owner_whatsapp?: string;
+  owner_address?: string;
 };
 export default interface UserInterface extends BaseUser{
-  attributes: attributes
+  attributes: UserAttributesInterface;
+};
+export const UserAttributesInitialState: UserAttributesInterface = {
+  username: '',
+  email: '',
+  first_name: '',
+  last_name: '',
+  img_picture: '',
+  theme: '',
+  theme_color: '',
+  profile_picture_shape: '',
+  phone_number: '',
+  newsletter: false,
+  promotions: false,
+  is_seller: false,
+  biography: '',
+  owner_position: '',
+  owner_position_description: '',
+  owner_phone: '',
+  owner_office_phone: '',
+  owner_email: '',
+  owner_whatsapp: '',
+  owner_address: '',
 };
 
 export interface UserAddressInterface extends UserAddressAttributesInterface {

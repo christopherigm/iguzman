@@ -1,7 +1,6 @@
 import binascii, os, bcrypt, base64
 from django.conf import settings
 from django.utils.text import slugify
-from enum import Enum
 from django.core.files import File
 import os, re, json
 
@@ -51,14 +50,14 @@ def base64_to_file(picture, dir):
     return picture_name
 
 def save_base64_picture(request):
-    dir = 'common/'
+    dir = 'common'
     try:
         dir = '{0}/'.format(json.loads(request.body.decode('utf-8'))['data']['type']) # Improve this for modles using common picture model
         pass
     except:
         pass
     for i in request.data:
-        if len(re.findall(r'img',i)) > 0:
+        if len(re.findall(r'img',i)) > 0 and request.data[i] is not None:
             picture = base64_to_file( request.data[i], dir )
             path = os.path.join(settings.BASE_DIR, settings.MEDIA_ROOT + '/' + picture)
             picture = open(path, 'rb')

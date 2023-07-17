@@ -18,6 +18,9 @@ const Register = ({
     URLBase,
     attributes,
   }: Props ): Promise<any> => {
+  if (!attributes.img_picture) {
+    delete attributes.img_picture;
+  }
   return new Promise((res, rej) => {
     const url = `${URLBase}/v1/users/`;
     Post({

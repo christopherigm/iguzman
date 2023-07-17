@@ -73,7 +73,7 @@ class GroupViewSet (ReadOnlyModelViewSet):
 class UserViewSet(
         CustomCreate,
         CustomUpdate,
-        ModelViewSet
+        GenericViewSet,
     ):
     queryset = User.objects.filter(
         is_active=True,
@@ -126,27 +126,6 @@ class UserViewSet(
         elif instance.public is False or instance.published is False or instance.listed is False:
             raise Http404
         return Response(serializer.data)
-
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
-            instance._prefetched_objects_cache = {}
-
-        return Response(serializer.data)
-
-    def perform_update(self, serializer):
-        serializer.save()
-
-    def partial_update(self, request, *args, **kwargs):
-        kwargs['partial'] = True
-        return self.update(request, *args, **kwargs)
 
     def get_permissions(self):
         permission_classes = [IsAuthenticatedOrReadOnly]
@@ -353,7 +332,7 @@ class UserAddressViewSet (
         mixins.ListModelMixin,
         mixins.RetrieveModelMixin,
         mixins.DestroyModelMixin,
-        GenericViewSet
+        GenericViewSet,
     ):
     queryset = UserAddress.objects.all()
     serializer_class = UserAddressSerializer
