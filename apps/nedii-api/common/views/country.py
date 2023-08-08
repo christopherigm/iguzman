@@ -1,12 +1,22 @@
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.viewsets import ModelViewSet
 from common.models import Country
 from common.serializers import CountrySerializer
 
 # Create your views here.
 
-class CountryViewSet (ReadOnlyModelViewSet):
+class CountryViewSet (ModelViewSet):
     queryset=Country.objects.all()
     serializer_class=CountrySerializer
+    permission_classes=[AllowAny]
+    authentication_classes=[]
+    # permission_classes=[ IsAuthenticated ]
+    # authentication_classes=[
+    #     JWTAuthentication,
+    #     SessionAuthentication
+    # ]
     ordering=['id']
     ordering_fields='__all__'
     filterset_fields={

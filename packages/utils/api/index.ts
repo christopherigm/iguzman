@@ -9,6 +9,17 @@ import GetUserAddress from './helpers/get-user-address';
 import CreateUserAddress from './helpers/create-user-address';
 import UpdateUserAddress from './helpers/update-user-address';
 import DeleteUserAddress from './helpers/delete-user-address';
+import GetCountries from './helpers/get-countries';
+import {
+  GetStates,
+  GetStatesByCountryID,
+} from './helpers/get-states';
+import CreateState from './helpers/create-state';
+import CreateCity from './helpers/create-city';
+import {
+  GetCities,
+  GetCitiesByStateID,
+} from './helpers/get-cities';
 import {
   Get,
   Post,
@@ -32,6 +43,13 @@ const API = {
   CreateUserAddress,
   UpdateUserAddress,
   DeleteUserAddress,
+  GetCountries,
+  GetStates,
+  GetStatesByCountryID,
+  CreateState,
+  GetCities,
+  GetCitiesByStateID,
+  CreateCity,
 };
 
 export default API;

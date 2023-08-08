@@ -22,11 +22,6 @@ const Page = (props: System): ReactElement => {
   const [system, updateSystem] = useState<System>(props);
   const setSystem = (s: System): void => updateSystem(_s => s);
 
-  const setIsLoading = (): void => setSystem({
-    ...system,
-    isLoading: true
-  });
-
   return (
     <MainLayout
       system={system}

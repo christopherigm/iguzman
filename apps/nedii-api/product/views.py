@@ -30,7 +30,14 @@ class ProductClassificationViewSet( CustomCreate,
     ):
     queryset=ProductClassification.objects.all()
     serializer_class=ProductClassificationSerializer
-    filter_fields=("enabled","slug", "stand")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'slug': ('exact',),
+    }
     search_fields=("name",)
     ordering=( "id", )
 
@@ -44,7 +51,12 @@ class ProductDeliveryTypeViewSet( CustomCreate,
     ):
     queryset=ProductDeliveryType.objects.all()
     serializer_class=ProductDeliveryTypeSerializer
-    filter_fields=("enabled",)
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+    }
     search_fields=("name",)
     ordering=( "id", )
 
@@ -58,7 +70,13 @@ class ProductFeatureViewSet( CustomCreate,
     ):
     queryset=ProductFeature.objects.all()
     serializer_class=ProductFeatureSerializer
-    filter_fields=("enabled", "stand")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     search_fields=("name",)
     ordering=("id",)
 
@@ -71,7 +89,13 @@ class ProductFeatureOptionViewSet( CustomCreate,
     ):
     queryset=ProductFeatureOption.objects.all()
     serializer_class=ProductFeatureOptionSerializer
-    filter_fields=("enabled", "feature__stand")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'feature__stand': ('exact',),
+    }
     search_fields=("name",)
     ordering=("id",)
 
@@ -85,7 +109,14 @@ class ProductPictureViewSet( CustomCreate,
     ):
     queryset=ProductPicture.objects.all()
     serializer_class=ProductPictureSerializer
-    filter_fields=("enabled", "stand", "product")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'product': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     ordering=( "id", )
 
 

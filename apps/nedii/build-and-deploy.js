@@ -120,7 +120,7 @@ const deployMicroservice = () => {
   return new Promise((res, rej) => {
     let command = `helm install ${name} deployment `;
     command += `--namespace=${namespace} `;
-    command += '--set replicaCount=1 ';
+    command += '--set replicaCount=2 ';
     command += `--set ingress.enabled=true `;
     command += `--set ingress.host=${host} `;
     command += `--set image.tag=${branch}`;

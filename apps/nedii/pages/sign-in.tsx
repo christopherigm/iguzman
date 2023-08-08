@@ -28,11 +28,6 @@ const Page = (props: System): ReactElement => {
   const setSystem = (s: System): void => updateSystem(_s => s);
   const router = useRouter();
 
-  const setIsLoading = (): void => setSystem({
-    ...system,
-    isLoading: true
-  });
-
   useEffect(() => {
     const user = GetLocalStorageData('user');
     if (user) {

@@ -16,6 +16,8 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import Avatar from '@mui/material/Avatar';
 import Paper from '@mui/material/Paper';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
 import {PasswordField} from 'ui';
 import {
   GetLocalStorageData,
@@ -29,28 +31,35 @@ import type {
 } from 'utils';
 import type UserInterface from 'interfaces/user-interface';
 import type {UserAttributesInterface} from 'interfaces/user-interface';
-import type { JWTPayload } from 'utils';
 import {
   UserAttributesInitialState
 } from 'interfaces/user-interface';
 
-type State = {
-  isLoading: boolean;
-  id: number;
-  attributes: UserAttributesInterface;
+interface Attributes extends UserAttributesInterface {
+  password?: string;
   currentPassword: string;
   newPassword: string;
   repeatPassword: string;
+};
+
+type State = {
+  isLoading: boolean;
+  id: number;
+  attributes: Attributes;
   error: Array<APIPostCreationError>;
+};
+
+const AttributesInitialState: Attributes = {
+  ...UserAttributesInitialState,
+  currentPassword: '',
+  newPassword: '',
+  repeatPassword: '',
 };
 
 const InitialState: State = {
   isLoading: false,
   id: 0,
-  attributes: UserAttributesInitialState,
-  currentPassword: '',
-  newPassword: '',
-  repeatPassword: '',
+  attributes: AttributesInitialState,
   error: []
 };
 
@@ -67,10 +76,22 @@ const Reducer = (state: State = InitialState, action: Action): State => {
       error: [],
     };
   } else if (action.type === 'success') {
+    const attributes: Attributes = {
+      ...state.attributes,
+      password: '',
+      newPassword: '',
+      repeatPassword: '',
+    };
     return {
       ...state,
       error: [],
       isLoading: false,
+      attributes,
+    };
+  } else if (action.type === 'clearErrors') {
+    return {
+      ...state,
+      error: [],
     };
   } else if (action.type === 'error' && action.error) {
     return {
@@ -79,12 +100,13 @@ const Reducer = (state: State = InitialState, action: Action): State => {
       isLoading: false,
     };
   } else if (action.type === 'input' && action.name) {
-    const attributes: UserAttributesInterface = {
+    const attributes: Attributes = {
       ...state.attributes,
       [action.name]: action.value,
     };
     return {
       ...state,
+      error: [],
       attributes,
     };
   }
@@ -114,22 +136,20 @@ const UserInfo = ({
         dispatch({
           type: 'setState',
           state: {
-            ...state,
             id: u.id,
-            attributes: u.attributes,
+            attributes: {
+              ...u.attributes,
+              currentPassword: '',
+              newPassword: '',
+              repeatPassword: '',
+            },
           }
-        })
+        });
       }
     }
-  }, []);
+  }, [user]);
 
-  const handleSubmit = (e: FormEvent): void => {
-    e.preventDefault();
-    const attributes = {...state.attributes};
-    if (attributes.img_picture && attributes.img_picture.search('base64') < 0 ) {
-      delete attributes.img_picture;
-    }
-    dispatch({type: 'loading'});
+  const UpdateUserData = (attributes: Attributes) => {
     API.UpdateUser({
       URLBase,
       jwt,
@@ -145,10 +165,34 @@ const UserInfo = ({
         SetLocalStorageData('user', JSON.stringify(user));
         dispatch({type: 'success'});
       })
-      .catch((error) => {
-        console.log('err', error);
-        dispatch({type: 'error', error});
-      });
+      .catch((error) => dispatch({type: 'error', error}));
+  };
+
+  const handleSubmit = (e: FormEvent): void => {
+    e.preventDefault();
+    dispatch({type: 'loading'});
+    const attributes: Attributes = {...state.attributes};
+    if (attributes.img_picture && attributes.img_picture.search('base64') < 0 ) {
+      delete attributes.img_picture;
+    }
+    if (state.attributes.currentPassword &&
+        state.attributes.newPassword &&
+        state.attributes.repeatPassword) {
+      API.Login({
+        URLBase,
+        attributes: {
+          username: state.attributes.email,
+          password: state.attributes.currentPassword
+        }
+      })
+        .then(() => {
+          attributes.password = state.attributes.newPassword;
+          UpdateUserData(attributes);
+        })
+        .catch((error) => dispatch({type: 'error', error}));
+    } else {
+      UpdateUserData(attributes);
+    }
   };
 
   return (
@@ -159,200 +203,239 @@ const UserInfo = ({
         autoComplete='on'
         onSubmit={handleSubmit}
         padding={1.5}>
-                  <Typography variant='caption'>
-                    Foto de perfil
-                  </Typography>
-                  <Box
-                    width='100%'
-                    height={280}
-                    position='relative'
-                    overflow='hidden'>
-                    <Avatar
-                      alt='Profile pictre'
-                      src={state.attributes.img_picture}
-                      variant='rounded'
-                      sx={{
-                        width: '100%',
-                        height: '280px'
-                      }} />
-                    <Box
-                      position='absolute'
-                      top={0}
-                      left={0}>
-                      <input
-                        type='file'
-                        id='user-image'
-                        onChange={(e: any) => {
-                          const file = e.target.files[0];
-                          const reader = new FileReader();
-                          reader.onload = (e: any) => {
-                            dispatch({
-                              type: 'input',
-                              name: 'img_picture',
-                              value: e.target.result
-                            });
-                          };
-                          if (file) {
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        accept='image/*'
-                        style={{
-                          width: '700px',
-                          height: '280px',
-                          cursor: 'pointer',
-                          opacity: 0
-                        }} />
-                    </Box>
-                  </Box>
-                  <Typography variant='caption'>
-                    (Click en la foto para cambiarla)
-                  </Typography>
-                  <Box
-                    marginTop={2}
-                    marginBottom={2}>
-                    <Divider />
-                  </Box>
-                  <Box marginTop={3}>
-                    <TextField
-                      label='Nombre'
-                      variant='outlined'
-                      size='small'
-                      type='text'
-                      value={state.attributes.first_name}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        dispatch({
-                          type: 'input',
-                          name: 'first_name',
-                          value: e.target.value
-                        });
-                      }}
-                      disabled={state.isLoading}
-                      style={{width: '100%'}}/>
-                  </Box>
-                  <Box marginTop={3}>
-                    <TextField
-                      label='Apellido(s)'
-                      variant='outlined'
-                      size='small'
-                      type='text'
-                      value={state.attributes.last_name}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        dispatch({
-                          type: 'input',
-                          name: 'last_name',
-                          value: e.target.value
-                        });
-                      }}
-                      disabled={state.isLoading}
-                      style={{width: '100%'}}/>
-                  </Box>
-                  <Box marginTop={3}>
-                    <TextField
-                      label='Email'
-                      variant='outlined'
-                      size='small'
-                      type='text'
-                      value={state.attributes.email}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        dispatch({
-                          type: 'input',
-                          name: 'email',
-                          value: e.target.value
-                        });
-                      }}
-                      disabled={state.isLoading}
-                      style={{width: '100%'}}/>
-                  </Box>
-                  <Box
-                    marginTop={3}
-                    marginBottom={1}>
-                    <Divider />
-                  </Box>
-                  <Typography variant='caption'>
-                    Preferencias de comunicacion
-                  </Typography>
-                  <Box marginTop={1}>
-                    <FormGroup>
-                      <FormControlLabel
-                        disabled={state.isLoading}
-                        control={
-                          <Switch
-                            checked={state.attributes.promotions}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                              dispatch({
-                                type: 'input',
-                                name: 'promotions',
-                                value: e.target.checked
-                              });
-                            }} />
-                        }
-                        label='Promociones' />
-                      <FormControlLabel
-                        disabled={state.isLoading}
-                        control={
-                          <Switch
-                            checked={state.attributes.newsletter}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                              dispatch({
-                                type: 'input',
-                                name: 'newsletter',
-                                value: e.target.checked
-                              });
-                            }} />
-                        }
-                        label='Comunicadoss' />
-                    </FormGroup>
-                  </Box>
-                  <Box
-                    marginTop={3}
-                    marginBottom={1}>
-                    <Divider />
-                  </Box>
-                  <Typography variant='caption'>
-                    Cambiar contraseña
-                  </Typography>
-                  <Box marginTop={2}>
-                    <PasswordField
-                      label='Contraseña actual'
-                      name='password'
-                      value={state.currentPassword}
-                      onChange={dispatch}
-                      disabled={state.isLoading} />
-                  </Box>
-                  <Box marginTop={2}>
-                    <PasswordField
-                      label='Nueva contraseña'
-                      name='newPassword'
-                      value={state.newPassword}
-                      onChange={dispatch}
-                      disabled={state.isLoading} />
-                  </Box>
-                  <Box marginTop={2}>
-                    <PasswordField
-                      label='Confirma tu contraseña'
-                      name='repeatPassword'
-                      value={state.repeatPassword}
-                      onChange={dispatch}
-                      disabled={state.isLoading} />
-                  </Box>
-                  <Box
-                    display='flex'
-                    justifyContent='end'
-                    width='100%'
-                    marginTop={2}>
-                    <Button
-                      variant='contained'
-                      type='submit'
-                      size='small'
-                      disabled={state.isLoading}
-                      sx={{
-                        marginLeft: '20px',
-                        textTransform: 'initial',
-                      }}>
-                      Guardar cambios
-                    </Button>
-                  </Box>
+        <Typography variant='caption'>
+          Foto de perfil
+        </Typography>
+        <Box
+          width='100%'
+          height={280}
+          position='relative'
+          overflow='hidden'>
+          <Avatar
+            alt='Profile pictre'
+            src={state.attributes.img_picture}
+            variant='rounded'
+            sx={{
+              width: '100%',
+              height: '280px'
+            }} />
+          <Box
+            position='absolute'
+            top={0}
+            left={0}>
+            <input
+              type='file'
+              id='user-image'
+              onChange={(e: any) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (e: any) => {
+                  dispatch({
+                    type: 'input',
+                    name: 'img_picture',
+                    value: e.target.result
+                  });
+                };
+                if (file) {
+                  reader.readAsDataURL(file);
+                }
+              }}
+              accept='image/*'
+              style={{
+                width: '700px',
+                height: '280px',
+                cursor: 'pointer',
+                opacity: 0
+              }} />
+          </Box>
+        </Box>
+        <Typography variant='caption'>
+          (Click en la foto para cambiarla)
+        </Typography>
+        <Box
+          marginTop={2}
+          marginBottom={2}>
+          <Divider />
+        </Box>
+        <Box marginTop={3}>
+          <TextField
+            label='Nombre'
+            variant='outlined'
+            size='small'
+            type='text'
+            value={state.attributes.first_name}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              dispatch({
+                type: 'input',
+                name: 'first_name',
+                value: e.target.value
+              });
+            }}
+            disabled={state.isLoading}
+            style={{width: '100%'}}/>
+        </Box>
+        <Box marginTop={3}>
+          <TextField
+            label='Apellido(s)'
+            variant='outlined'
+            size='small'
+            type='text'
+            value={state.attributes.last_name}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              dispatch({
+                type: 'input',
+                name: 'last_name',
+                value: e.target.value
+              });
+            }}
+            disabled={state.isLoading}
+            style={{width: '100%'}}/>
+        </Box>
+        <Box marginTop={3}>
+          <TextField
+            label='Email'
+            variant='outlined'
+            size='small'
+            type='text'
+            value={state.attributes.email}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              dispatch({
+                type: 'input',
+                name: 'email',
+                value: e.target.value
+              });
+            }}
+            disabled={state.isLoading}
+            style={{width: '100%'}}/>
+        </Box>
+        <Box
+          marginTop={3}
+          marginBottom={1}>
+          <Divider />
+        </Box>
+        <Typography variant='caption'>
+          Preferencias de comunicacion
+        </Typography>
+        <Box marginTop={1}>
+          <FormGroup>
+            <FormControlLabel
+              disabled={state.isLoading}
+              control={
+                <Switch
+                  checked={state.attributes.promotions}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    dispatch({
+                      type: 'input',
+                      name: 'promotions',
+                      value: e.target.checked
+                    });
+                  }} />
+              }
+              label='Promociones' />
+            <FormControlLabel
+              disabled={state.isLoading}
+              control={
+                <Switch
+                  checked={state.attributes.newsletter}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    dispatch({
+                      type: 'input',
+                      name: 'newsletter',
+                      value: e.target.checked
+                    });
+                  }} />
+              }
+              label='Comunicados' />
+          </FormGroup>
+        </Box>
+        <Box
+          marginTop={3}
+          marginBottom={1}>
+          <Divider />
+        </Box>
+        <Typography variant='caption'>
+          Cambiar contraseña
+        </Typography>
+        <Box marginTop={2}>
+          <PasswordField
+            label='Contraseña actual'
+            name='currentPassword'
+            value={state.attributes.currentPassword}
+            onChange={(v: string) => dispatch({
+              type: 'input',
+              name: 'currentPassword',
+              value: v
+            })}
+            disabled={state.isLoading} />
+        </Box>
+        <Box marginTop={2}>
+          <PasswordField
+            label='Nueva contraseña'
+            name='newPassword'
+            value={state.attributes.newPassword}
+            onChange={(v: string) => dispatch({
+              type: 'input',
+              name: 'newPassword',
+              value: v
+            })}
+            disabled={state.isLoading} />
+        </Box>
+        <Box marginTop={2}>
+          <PasswordField
+            label='Confirma tu contraseña'
+            name='repeatPassword'
+            value={state.attributes.repeatPassword}
+            onChange={(v: string) => dispatch({
+              type: 'input',
+              name: 'repeatPassword',
+              value: v
+            })}
+            disabled={state.isLoading} />
+        </Box>
+        {
+          state.attributes.newPassword !== '' &&
+          state.attributes.newPassword !== state.attributes.repeatPassword ?
+            <Box marginTop={2}>
+              <Grid item xs={12} marginTop={2}>
+                <Stack sx={{ width: '100%' }} spacing={2}>
+                  <Alert severity='warning'>
+                    Las contraseñas no coinciden.
+                  </Alert>
+                </Stack>
+              </Grid>
+            </Box> : null
+        }
+        {
+          state.error &&
+          state.error.length &&
+          state.error[0].status !== 200 ?
+            <Box marginTop={2}>
+              <Stack sx={{ width: '100%' }} spacing={2}>
+                <Alert severity='error' onClose={() => dispatch({
+                    type: 'clearErrors',
+                  })}>
+                  Error: La contraseña actual es incorrecta.
+                </Alert>
+              </Stack>
+            </Box> : null
+        }
+        <Box
+          display='flex'
+          justifyContent='end'
+          width='100%'
+          marginTop={2}>
+          <Button
+            variant='contained'
+            type='submit'
+            size='small'
+            disabled={state.isLoading}
+            sx={{
+              marginLeft: '20px',
+              textTransform: 'initial',
+            }}>
+            Guardar cambios
+          </Button>
+        </Box>
       </Box>
     </Paper>
   );

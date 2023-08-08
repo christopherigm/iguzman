@@ -1,7 +1,6 @@
 import React, {
   ReactElement,
   useState,
-  useReducer,
   useEffect,
 } from 'react';
 import Head from 'next/head';
@@ -31,6 +30,7 @@ import {
 } from 'ui';
 import type UserInterface from 'interfaces/user-interface';
 import AccountEditor from 'components/account-editor';
+import Companies from 'components/companies';
 
 type State = {
   success: boolean;
@@ -78,11 +78,9 @@ const Reducer = (state: State = InitialState, action: Action): State => {
   throw new Error('Invalid action');
 };
 
-
 const Page = (props: System): ReactElement => {
   const [system, updateSystem] = useState<System>(props);
   const setSystem = (s: System): void => updateSystem(_s => s);
-  const [state, dispatch] = useReducer(Reducer, InitialState);
   const [menu, setMenu] = useState([
     {
       id: 0,
@@ -120,11 +118,6 @@ const Page = (props: System): ReactElement => {
     }
   }, []);
 
-  const setIsLoading = (): void => setSystem({
-    ...system,
-    isLoading: true
-  });
-
   const menuCallback = (id: number) => {
     const m = [...menu];
     m.map((i: any) => i.selected=false);
@@ -152,7 +145,10 @@ const Page = (props: System): ReactElement => {
         color={system.darkMode ? 'primary.contrastText' : ''}>
         Hola {system.user?.attributes.first_name}!
       </Typography>
-      <AccountTopMenu darkMode={system.darkMode} menu={menu} menuCallback={menuCallback} />
+      <AccountTopMenu
+        darkMode={system.darkMode}
+        menu={menu}
+        menuCallback={menuCallback} />
       {
         menu.map(({id, selected}) => {
           return (
@@ -161,6 +157,11 @@ const Page = (props: System): ReactElement => {
                 id === 0 && selected ?
                   <AccountEditor
                     URLBase={system.URLBase}
+                    darkMode={system.darkMode} /> :
+                id === 3 && selected ?
+                  <Companies
+                    URLBase={system.URLBase}
+                    language={system.language}
                     darkMode={system.darkMode} /> : null
               }
             </div>

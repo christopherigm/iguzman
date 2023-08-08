@@ -1,7 +1,6 @@
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import Container from '@mui/material/Container';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
@@ -81,6 +80,7 @@ const Reducer = (state: State = InitialState, action: Action): State => {
   } else if (action.type === 'input' && action.name) {
     return {
       ...state,
+      error: [],
       [action.name]: action.value
     };
   }
@@ -182,7 +182,11 @@ const SignUpForm = ({
             label='Contraseña'
             name='password'
             value={state.password}
-            onChange={dispatch}
+            onChange={(v: string) => dispatch({
+              type: 'input',
+              name: 'password',
+              value: v
+            })}
             disabled={state.isLoading} />
         </Grid>
         <Grid item xs={12} md={6}>
@@ -190,7 +194,11 @@ const SignUpForm = ({
             label='Confirma tu contraseña'
             name='repeatPassword'
             value={state.repeatPassword}
-            onChange={dispatch}
+            onChange={(v: string) => dispatch({
+              type: 'input',
+              name: 'repeatPassword',
+              value: v
+            })}
             disabled={state.isLoading} />
         </Grid>
         {

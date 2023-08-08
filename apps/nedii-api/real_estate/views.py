@@ -25,7 +25,13 @@ class RealEstateClassificationViewSet( CustomCreate,
     ):
     queryset=RealEstateClassification.objects.all()
     serializer_class=RealEstateClassificationSerializer
-    filter_fields=("enabled","slug",)
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'slug': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     search_fields=("name",)
     ordering=( "id", )
 
@@ -39,7 +45,12 @@ class RealEstateFeatureViewSet( CustomCreate,
     ):
     queryset=RealEstateFeature.objects.all()
     serializer_class=RealEstateFeatureSerializer
-    filter_fields=("enabled",)
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+    }
     search_fields=("name",)
     ordering=("id",)
 
@@ -53,7 +64,14 @@ class RealEstatePictureViewSet( CustomCreate,
     ):
     queryset=RealEstatePicture.objects.all()
     serializer_class=RealEstatePictureSerializer
-    filter_fields=("enabled", "stand", "real_estate")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'real_estate': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     ordering=("id",)
 
 

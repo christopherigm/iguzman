@@ -8,27 +8,14 @@ import {
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
-import Button from '@mui/material/Button';
-import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid';
 import AddIcon from '@mui/icons-material/Add';
 import { UserAddressInterface } from 'interfaces/user-interface';
-import TextField from '@mui/material/TextField';
-import Container from '@mui/material/Container';
-import Alert from '@mui/material/Alert';
-import Stack from '@mui/material/Stack';
-import Link from 'next/link';
 import {
   API,
-  GetCookieCachedValues,
-  GetEnvVariables,
-  GetLocalStorageData,
   APICreationErrorHandler,
 } from 'utils';
 import type {
-  EnvironmentVariables,
-  CachedValues,
-  Languages,
   APIPostCreationError,
   Action,
 } from 'utils';
@@ -176,9 +163,7 @@ const UserAddress = ({
           setUserAddress(_p => address);
         }
       })
-      .catch((error) => {
-        console.log('error', error);
-      })
+      .catch((error) => console.log('error', error));
   }, []);
 
   const handleSubmit = (e: FormEvent) => {

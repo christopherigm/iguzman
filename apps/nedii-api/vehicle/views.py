@@ -30,7 +30,13 @@ class VehicleClassificationViewSet( CustomCreate,
     ):
     queryset=VehicleClassification.objects.all()
     serializer_class=VehicleClassificationSerializer
-    filter_fields=("enabled","slug",)
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'slug': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     search_fields=("name",)
     ordering=( "id", )
 
@@ -44,7 +50,12 @@ class VehicleFeatureViewSet( CustomCreate,
     ):
     queryset=VehicleFeature.objects.all()
     serializer_class=VehicleFeatureSerializer
-    filter_fields=("enabled",)
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+    }
     search_fields=("name",)
     ordering=("id",)
 
@@ -58,7 +69,14 @@ class VehiclePictureViewSet( CustomCreate,
     ):
     queryset=VehiclePicture.objects.all()
     serializer_class=VehiclePictureSerializer
-    filter_fields=("enabled", "stand", "vehicle")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'vehicle': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     ordering=("id",)
 
 
@@ -71,7 +89,12 @@ class VehicleMakeViewSet( CustomCreate,
     ):
     queryset=VehicleMake.objects.all()
     serializer_class=VehicleMakeSerializer
-    filter_fields=("enabled",)
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+    }
     ordering=("id",)
 
 
@@ -84,7 +107,13 @@ class VehicleModelViewSet( CustomCreate,
     ):
     queryset=VehicleModel.objects.all()
     serializer_class=VehicleModelSerializer
-    filter_fields=("enabled", "make",)
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'make': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     ordering=("id",)
 
 

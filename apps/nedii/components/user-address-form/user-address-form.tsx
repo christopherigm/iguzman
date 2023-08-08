@@ -106,13 +106,12 @@ const UserAddressForm = ({
             disabled={state.isLoading}
             style={{width: '100%'}}/>
         </Grid>
-        <Grid item xs={12}></Grid>
         <Grid item xs={12} sm={6}>
           <TextField
             label='Nombre de la calle'
             variant='outlined'
             size='small'
-            type='tel'
+            type='text'
             value={state.street}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               dispatch({
@@ -129,7 +128,7 @@ const UserAddressForm = ({
             label='Numero exterior'
             variant='outlined'
             size='small'
-            type='tel'
+            type='text'
             value={state.ext_number}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               dispatch({
@@ -146,7 +145,7 @@ const UserAddressForm = ({
             label='Numero interior'
             variant='outlined'
             size='small'
-            type='tel'
+            type='text'
             value={state.int_number}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               dispatch({
@@ -181,7 +180,7 @@ const UserAddressForm = ({
             label='Referencias'
             variant='outlined'
             size='small'
-            type='tel'
+            type='text'
             value={state.reference}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               dispatch({
