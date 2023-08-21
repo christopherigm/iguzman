@@ -1,4 +1,3 @@
-
 import FormControl from '@mui/material/FormControl';
 import InputAdornment from '@mui/material/InputAdornment';
 import InputLabel from '@mui/material/InputLabel';
@@ -7,10 +6,6 @@ import IconButton from '@mui/material/IconButton';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useState } from 'react';
-import type {
-  Action,
-  Dispatch
-} from 'utils';
 
 type variant = 'filled' | 'outlined' | 'standard';
 
@@ -19,7 +14,7 @@ type Props = {
   variant?: variant;
   value?: string;
   name?: string;
-  onChange?: Dispatch<Action>;
+  onChange: (A: string) => void;
   disabled?: boolean;
 }
 
@@ -57,13 +52,7 @@ const PasswordField = ({
         }
         label={label ? label : 'Password'}
         value={value}
-        onChange={(e: any) => {
-          onChange && onChange({
-            type: 'input',
-            name,
-            value: e.target.value
-          });
-        }}
+        onChange={(e: any) => onChange(e.target.value)}
       />
     </FormControl>
   );

@@ -200,7 +200,7 @@ class StandSerializer(HyperlinkedModelSerializer):
     )
 
     included_serializers={
-        'plan': 'common.serializers.NediiPlansSerializer',
+        'plan': 'common.serializers.NediiPlanSerializer',
         'owner': 'users.serializers.UserSerializer',
         'expo': 'stand.serializers.ExpoSerializer',
         'group': 'stand.serializers.GroupSerializer',

@@ -1,7 +1,7 @@
 export const DateParser = (date: string): string => {
   const parsedDate = new Date(date);
   const months = [
-    'January', 'February', 'Narch', 'April', 'May', 'June', 'July',
+    'January', 'February', 'March', 'April', 'May', 'June', 'July',
     'August', 'September', 'October', 'November', 'December'
   ];
 

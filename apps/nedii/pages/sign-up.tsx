@@ -22,15 +22,6 @@ const Page = (props: System): ReactElement => {
   const [system, updateSystem] = useState<System>(props);
   const setSystem = (s: System): void => updateSystem(_s => s);
 
-  const setIsLoading = (): void => setSystem({
-    ...system,
-    isLoading: true
-  });
-
-  const callback = (data: any) => {
-    // console.log('callback data', data);
-  };
-
   return (
     <MainLayout
       system={system}
@@ -53,7 +44,7 @@ const Page = (props: System): ReactElement => {
       </Typography>
       <SignUpForm
         URLBase={system.URLBase}
-        callback={callback} />
+        callback={() => {}} />
     </MainLayout>
   );
 };

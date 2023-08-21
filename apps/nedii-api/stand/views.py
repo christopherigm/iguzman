@@ -5,7 +5,6 @@ import json
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from django_filters import rest_framework as filters
 from rest_framework.viewsets import (
     ModelViewSet,
     GenericViewSet,
@@ -51,25 +50,35 @@ from users.models import User
 class ExpoViewSet(ModelViewSet):
     queryset=Expo.objects.all()
     serializer_class=ExpoSerializer
-    filter_fields=('enabled','is_real','slug')
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+        "is_real": ("exact",),
+        "slug": ("exact",),
+    }
     search_fields=('name',)
     ordering=( 'id', )
-    # http_method_names=['get']
 
 
 class StandGroupViewSet(ModelViewSet):
     queryset=Group.objects.all()
     serializer_class=GroupSerializer
-    filter_fields=('enabled', 'slug')
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+        "slug": ("exact",),
+    }
     search_fields=('name', 'description')
     ordering=( 'id', )
-    # http_method_names=['get']
 
 
 class StandBookingQuestionViewSet(ModelViewSet):
     queryset=StandBookingQuestion.objects.all()
     serializer_class=StandBookingQuestionSerializer
-    filter_fields=('enabled', )
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+    }
     search_fields=('name',)
     ordering=( 'id', )
     # http_method_names=['get']
@@ -77,10 +86,12 @@ class StandBookingQuestionViewSet(ModelViewSet):
 class StandBookingQuestionOptionsViewSet(ModelViewSet):
     queryset=StandBookingQuestionOption.objects.all()
     serializer_class=StandBookingQuestionOptionSerializer
-    filter_fields=('enabled', )
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+    }
     search_fields=('value',)
     ordering=( 'id', )
-    # http_method_names=['get']
 
 
 class StandNewsViewSet(CustomCreate,
@@ -92,7 +103,12 @@ class StandNewsViewSet(CustomCreate,
     ):
     queryset=StandNew.objects.all()
     serializer_class=StandNewSerializer
-    filter_fields=('enabled', 'stand', 'slug')
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+        "stand": ("exact",),
+        "slug": ("exact",),
+    }
     search_fields=('name', 'description')
     ordering=( 'id', )
 
@@ -101,6 +117,11 @@ class StandPhonesViewSet(ModelViewSet):
     queryset=StandPhone.objects.all()
     serializer_class=StandPhoneSerializer
     filter_fields=('enabled',)
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+        "stand": ("exact",),
+    }
     search_fields=('enabled', 'stand', )
     ordering=( 'id', )
 
@@ -114,7 +135,11 @@ class StandPicturesViewSet(CustomCreate,
     ):
     queryset=StandPicture.objects.all()
     serializer_class=StandPictureSerializer
-    filter_fields=('enabled', 'stand', )
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+        "stand": ("exact",),
+    }
     search_fields=('name', 'description')
     ordering=( 'id', )
 
@@ -128,7 +153,11 @@ class StandPromotionsViewSet(CustomCreate,
     ):
     queryset=StandPromotion.objects.all()
     serializer_class=StandPromotionSerializer
-    filter_fields=('enabled', 'stand', )
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+        "stand": ("exact",),
+    }
     search_fields=('name', 'description')
     ordering=( 'id', )
 
@@ -136,7 +165,12 @@ class StandPromotionsViewSet(CustomCreate,
 class StandRatingViewSet(ModelViewSet):
     queryset=StandRating.objects.all()
     serializer_class=StandRatingSerializer
-    filter_fields=('stand', 'author')
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+        "stand": ("exact",),
+        "author": ("exact",),
+    }
     ordering=( 'id', )
 
 
@@ -222,49 +256,24 @@ class PostRating(APIView):
 class SurveyQuestionsViewSet(ModelViewSet):
     queryset=SurveyQuestion.objects.all()
     serializer_class=SurveyQuestionSerializer
-    filter_fields=('enabled',)
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+    }
     search_fields=('name',)
     ordering=( 'id', )
-    # http_method_names=['get']
 
 
 class VideoLinkViewSet(ModelViewSet):
     queryset=VideoLink.objects.all()
     serializer_class=VideoLinkSerializer
-    filter_fields=('enabled', 'stand' )
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+        "stand": ("exact",),
+    }
     search_fields=('name',)
     ordering=( 'id', )
-
-
-class StandFilter(filters.FilterSet):
-    monday_open=filters.DateFromToRangeFilter()
-    monday_close=filters.DateFromToRangeFilter()
-    tuesday_open=filters.DateFromToRangeFilter()
-    tuesday_close=filters.DateFromToRangeFilter()
-    wednesday_open=filters.DateFromToRangeFilter()
-    wednesday_close=filters.DateFromToRangeFilter()
-    thursday_open=filters.DateFromToRangeFilter()
-    thursday_close=filters.DateFromToRangeFilter()
-    friday_open=filters.DateFromToRangeFilter()
-    friday_close=filters.DateFromToRangeFilter()
-    saturday_open=filters.DateFromToRangeFilter()
-    saturday_close=filters.DateFromToRangeFilter()
-    sunday_open=filters.DateFromToRangeFilter()
-    sunday_close=filters.DateFromToRangeFilter()
-    min_booking_cost=filters.NumberFilter(field_name='booking_cost', lookup_expr='gte')
-    max_booking_cost=filters.NumberFilter(field_name='booking_cost', lookup_expr='lte')
-
-    class Meta:
-        model=Stand
-        fields=[
-            'enabled', 'owner', 'slug', 'expo', 'group',
-            'plan', 'plan__unlimited_items', 'plan__stand_enabled',
-            'plan__digital_card', 'plan__billed_monthly',
-            'expo__slug', 'group__slug',
-            'bar_code', 'min_booking_cost', 'max_booking_cost',
-            'city', 'restaurant', 'always_open','booking_active',
-        ]
-
 
 class StandViewSet(CustomCreate,
         CustomUpdate,
@@ -273,10 +282,42 @@ class StandViewSet(CustomCreate,
         mixins.DestroyModelMixin,
         GenericViewSet
     ):
-    
     queryset=Stand.objects.all()
     serializer_class=StandSerializer
-    filter_class=StandFilter
+    filterset_fields = {
+        "id": ("exact",),
+        "enabled": ("exact",),
+        "created": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "owner": ("exact", "in",),
+        "slug": ("exact",),
+        "expo": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "group": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "plan": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "plan__unlimited_items": ("exact",),
+        "plan__stand_enabled": ("exact",),
+        "plan__digital_card": ("exact",),
+        "plan__billed_monthly": ("exact",),
+        "expo__slug": ("exact",),
+        "group__slug": ("exact",),
+        "city": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "restaurant": ("exact",),
+        "always_open": ("exact",),
+        "booking_active": ("exact",),
+        "monday_open": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "monday_close": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "tuesday_open": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "tuesday_close": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "wednesday_open": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "wednesday_close": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "thursday_open": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "thursday_close": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "friday_open": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "friday_close": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "saturday_open": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "saturday_close": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "sunday_open": ("exact", "lt", "gt", "gte", "lte", "in"),
+        "sunday_close": ("exact", "lt", "gt", "gte", "lte", "in"),
+    }
     search_fields=(
         'name', 'bar_code', 'slogan','description',
         'short_description', 'about'

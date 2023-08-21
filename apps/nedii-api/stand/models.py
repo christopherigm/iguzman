@@ -390,7 +390,7 @@ class Expo(RegularPicture):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        if self.real:
+        if self.is_real:
             return 'Expo física: {0}'.format(self.name)
         else:
             return 'Expo virtual: {0}'.format(self.name)

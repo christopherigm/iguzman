@@ -26,7 +26,14 @@ class ServiceClassificationViewSet( CustomCreate,
     ):
     queryset=ServiceClassification.objects.all()
     serializer_class=ServiceClassificationSerializer
-    filter_fields=("enabled","slug", "stand")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'slug': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     search_fields=("name",)
     ordering=( "id", )
 
@@ -40,7 +47,13 @@ class ServiceFeatureViewSet( CustomCreate,
     ):
     queryset=ServiceFeature.objects.all()
     serializer_class=ServiceFeatureSerializer
-    filter_fields=("enabled", "stand")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     search_fields=("name",)
     ordering=("id",)
 
@@ -54,7 +67,14 @@ class ServicePictureViewSet( CustomCreate,
     ):
     queryset=ServicePicture.objects.all()
     serializer_class=ServicePictureSerializer
-    filter_fields=("enabled", "stand", "service")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'service': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     ordering=("id",)
 
 

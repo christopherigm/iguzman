@@ -17,7 +17,7 @@ class CommonFields(models.Model):
     modified=models.DateTimeField (
         auto_now=True
     )
-    version=models.PositiveSmallIntegerField (
+    version=models.PositiveBigIntegerField (
         default=0,
         blank=False,
         null=False

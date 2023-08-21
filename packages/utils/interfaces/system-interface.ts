@@ -1,4 +1,4 @@
-export type Languages = 'en' | 'es' | null;
+export type Languages = 'en' | 'es';
 
 export interface EnvironmentVariables {
   hostName: string

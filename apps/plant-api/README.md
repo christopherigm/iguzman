@@ -84,6 +84,13 @@ helm install postgres-api deployment/postgres \
   --set config.POSTGRES_PASSWORD=plant-api
 ```
 
+helm uninstall postgres-api --namespace=plant && \
+helm install postgres-api deployment/postgres \
+  --namespace=plant \
+  --set config.POSTGRES_DB=plant-api \
+  --set config.POSTGRES_USER=plant-api \
+  --set config.POSTGRES_PASSWORD=plant-api
+
 4) Deploy Nginx server
 ```sh
 helm install nginx-api deployment/nginx \

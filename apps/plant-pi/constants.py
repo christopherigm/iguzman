@@ -1,5 +1,5 @@
 plant_base_url='https://api.plant.iguzman.com.mx/v1/plants/?include=plant_type,plant_controller&filter%5Bslug%5D='
 measurement_url='https://api.plant.iguzman.com.mx/v1/measurements/'
 system_info_url='https://api.plant.iguzman.com.mx/v1/system-information'
-wifi_ssid='2.4 Ol'
-wifi_password='aline777'
+wifi_ssid='INFINITUM459D_2.4'
+wifi_password='shAm96L5V3'

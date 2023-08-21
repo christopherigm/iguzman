@@ -1,16 +1,10 @@
 import React, {
   ReactElement,
   useState,
-  useReducer,
   useEffect,
 } from 'react';
 import {
   GetLocalStorageData,
-  APICreationErrorHandler,
-} from 'utils';
-import type {
-  APIPostCreationError,
-  Action,
 } from 'utils';
 import type UserInterface from 'interfaces/user-interface';
 import type { JWTPayload } from 'utils';
@@ -74,18 +68,18 @@ const AccountEditor = ({
             {
               user && jwt ?
                 <Box>
-                <Paper elevation={1}>
-                <Box padding={1.5}>
-                  <Typography variant='body2'>
-                    Direcciones de entrega
-                  </Typography>
-                  <UserAddress
-                    darkMode={darkMode}
-                    userID={Number(user.id)}
-                    URLBase={URLBase}
-                    jwt={jwt.access} />
-                </Box>
-                </Paper>
+                  <Paper elevation={1}>
+                    <Box padding={1.5}>
+                      <Typography variant='body2'>
+                        Direcciones de entrega
+                      </Typography>
+                      <UserAddress
+                        darkMode={darkMode}
+                        userID={Number(user.id)}
+                        URLBase={URLBase}
+                        jwt={jwt.access} />
+                    </Box>
+                  </Paper>
                 </Box> : null
             }
             <Box marginTop={3}>

@@ -60,6 +60,7 @@ const Reducer = (state: State = InitialState, action: Action): State => {
   } else if (action.type === 'input' && action.name) {
     return {
       ...state,
+      error: [],
       [action.name]: action.value
     };
   }
@@ -144,7 +145,11 @@ const SignInForm = ({
         <Grid item xs={12} md={6}>
           <PasswordField
             value={state.password}
-            onChange={dispatch}
+            onChange={(v: string) => dispatch({
+              type: 'input',
+              name: 'password',
+              value: v
+            })}
             disabled={state.isLoading} />
         </Grid>
         <Grid item

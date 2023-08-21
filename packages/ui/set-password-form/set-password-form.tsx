@@ -142,7 +142,11 @@ const SetPasswordForm = ({
             label='Nueva contraseña'
             name='password'
             value={state.password}
-            onChange={dispatch}
+            onChange={(v: string) => dispatch({
+              type: 'input',
+              name: 'password',
+              value: v
+            })}
             disabled={state.isLoading} />
         </Grid>
         <Grid item xs={12} md={6}>
@@ -150,7 +154,11 @@ const SetPasswordForm = ({
             label='Confirma tu contraseña'
             name='repeatPassword'
             value={state.repeatPassword}
-            onChange={dispatch}
+            onChange={(v: string) => dispatch({
+              type: 'input',
+              name: 'repeatPassword',
+              value: v
+            })}
             disabled={state.isLoading} />
         </Grid>
         <Grid item

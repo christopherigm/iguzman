@@ -25,7 +25,13 @@ class MealAddonViewSet( CustomCreate,
     ):
     queryset=MealAddon.objects.all()
     serializer_class=MealAddonSerializer
-    filter_fields=("enabled","stand")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     search_fields=("name",)
     ordering=( "id", )
 
@@ -39,7 +45,13 @@ class MealClassificationViewSet( CustomCreate,
     ):
     queryset=MealClassification.objects.all()
     serializer_class=MealClassificationSerializer
-    filter_fields=("enabled", "stand")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     search_fields=("name",)
     ordering=( "id", )
 
@@ -53,7 +65,14 @@ class MealPictureViewSet(CustomCreate,
     ):
     queryset=MealPicture.objects.all()
     serializer_class=MealPictureSerializer
-    filter_fields=("enabled","stand","meal")
+    filterset_fields={
+        'enabled': ('exact',),
+        'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
+        'meal': ('exact', 'lt', 'gt', 'gte', 'lte'),
+    }
     search_fields=("name",)
     ordering=( "id", )
 

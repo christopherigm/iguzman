@@ -1,3 +1,19 @@
+export type JSONAPICommonArrayResponse = {
+  links: {
+    first: string;
+    last: string;
+    next: null | string;
+    prev: null | string;
+  },
+  meta: {
+    pagination: {
+      page: number;
+      pages: number;
+      count: number;
+    }
+  }
+};
+
 export type CountryInterface = {
   id: number;
   type: 'Country';
@@ -17,7 +33,7 @@ export type StateInterface = {
   };
   relationships: {
     country: {
-      data: CountryInterface
+      data: CountryInterface | null
     }
   }
 };
@@ -30,7 +46,7 @@ export type CityInterface = {
   };
   relationships: {
     state: {
-      data: StateInterface
+      data: StateInterface | null
     }
   }
 };
