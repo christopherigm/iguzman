@@ -1,6 +1,5 @@
 import {
   ReactElement,
-  SyntheticEvent,
   useEffect,
   useState,
 } from 'react';
@@ -8,7 +7,12 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
-import Autocomplete from '@mui/material/Autocomplete';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Select, {
+  SelectChangeEvent
+} from '@mui/material/Select';
 import {
   API,
   CityInterface,
@@ -85,6 +89,12 @@ const CityField = ({
       .catch((_e: any) => setIsLoading(false));
   };
 
+  const getLabel = (): string => {
+    return !cities.length && isLoading ?
+    language === 'en' ? 'Loading cities' : 'Cargando ciudades' :
+    language === 'en' ? 'City' : 'Ciudad'
+  };
+
   return (
     <>
     {
@@ -155,35 +165,32 @@ const CityField = ({
           justifyContent='space-between'
           alignItems='center'
           marginBottom={1}>
-          <Autocomplete
-            disablePortal={true}
-            options={options}
-            size='small'
-            sx={{width: '100%'}}
-            disableClearable={true}
-            disabled={isLoading}
-            value={
-              options.length &&
-              options.filter((i: Option) => i.id === city).length ?
-              options.filter((i: Option) => i.id === city)[0] : {
-                id: 0,
-                label: ''
+          <FormControl fullWidth>
+            <InputLabel id="demo-simple-select-label">
+              {getLabel()}
+            </InputLabel>
+            <Select
+              labelId="demo-simple-select-label"
+              id="demo-simple-select"
+              value={String(city)}
+              label={getLabel()}
+              disabled={isLoading}
+              size='small'
+              onChange={(e: SelectChangeEvent) => {
+                onChange(Number(e.target.value));
+              }}>
+              {
+                options.map((i: Option, index: number) => {
+                  return (
+                    <MenuItem
+                      key={index}
+                      value={i.id}>{i.label}
+                    </MenuItem>
+                  );
+                })
               }
-            }
-            onChange={(_e: SyntheticEvent<Element, Event>, v: Option | null) => {
-              if (v) {
-                onChange(v.id);
-              }
-            }}
-            renderInput={(params) =>
-              <TextField {...params}
-                label={
-                  !cities.length && isLoading?
-                  language === 'en' ? 'Loading cities' : 'Cargando ciudades' :
-                  language === 'en' ? 'City' : 'Ciudad'
-                } />
-            }
-          />
+            </Select>
+          </FormControl>
           <Button
             variant='contained'
             type='submit'
@@ -201,7 +208,15 @@ const CityField = ({
           </Button>
         </Box>
         <Typography variant='caption'>
-          Si tu ciudad no se encuentra listada, de click en <b>Nueva</b> para agregar una nueva ciudad.
+        {
+          language === 'en' ?
+          <>
+            If the city where you live in, isn't listed, click on <b>New</b> to add add a new city.
+          </> :
+          <>
+            Si tu ciuad no se encuentra listada, da click en <b>Nuevo</b> para agregar una nueva ciudad.
+          </>
+        }
         </Typography>
       </Box>
     }

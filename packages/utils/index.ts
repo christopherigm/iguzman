@@ -11,6 +11,7 @@ export type {
   StateInterface,
   CityInterface,
   BasePictureAttributesInterface,
+  JSONAPICommonArrayResponse,
 } from './interfaces/common-interfaces';
 export type {
   Action,
@@ -24,7 +25,10 @@ export type {
   UserAddressAttributesInterface
 } from './interfaces/user-address-attributes-interface';
 export type {JWTPayload} from './interfaces/jwt-interface';
-export type {APIPostCreationError} from './interfaces/api-error-handler';
+export type {
+  APIPostCreationError,
+  CreationErrorInput,
+} from './interfaces/api-error-handler';
 export type {
   LoginCallback,
   VoidCallback
@@ -47,7 +51,9 @@ export {APICreationErrorHandler} from './lib/api-error-handler';
  */
 export {
   Get,
-  Post
+  Post,
+  Patch,
+  Delete,
 } from './api/communicator';
 export {default as API} from './api';
 
@@ -69,3 +75,13 @@ export {
  */
 export {default as CommonLoginReducer} from './reducers/common-login-reducer';
 export {CommonLoginInitialState} from './reducers/common-login-reducer';
+
+
+/**
+ * Classes
+ */
+export {default as BaseClass} from './classes/base-class';
+export {default as CommonFields} from './classes/common-fields';
+export {default as TimeFields} from './classes/time-fields';
+export {default as WeekSchedule} from './classes/week-schedule';
+export {default as WebLinks} from './classes/web-links';

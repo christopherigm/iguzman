@@ -16,6 +16,7 @@ import {
 } from 'utils';
 import type {
   APIPostCreationError,
+  CreationErrorInput,
   Action,
 } from 'utils';
 import Alert from '@mui/material/Alert';
@@ -28,7 +29,9 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Link from 'next/link';
 import { Divider } from '@mui/material';
 import Avatar from '@mui/material/Avatar';
-
+import {
+  GenericImageInput
+} from 'ui';
 
 type State = {
   isLoading: boolean;
@@ -52,7 +55,7 @@ const InitialState: State = {
   error: []
 };
 
-const Reducer = (state: State = InitialState, action: Action): State => {
+const Reducer = (state: State = InitialState, action: Action<null, CreationErrorInput>): State => {
   if (action.type === 'loading') {
     return {
       ...state,
@@ -230,54 +233,18 @@ const SignUpForm = ({
           display='flex'
           justifyContent='center'
           marginBottom={7}>
-          <Box
-            width={180}
+          <GenericImageInput
+            label='Foto de perfil'
+            language={'es'}
+            onChange={(img: string) => {
+              dispatch({
+                type: 'input',
+                name: 'imgPicture',
+                value: img
+              });
+            }}
             height={180}
-            position='relative'>
-            <Typography variant='body2'>
-              Foto de perfil
-            </Typography>
-            <Avatar
-              alt='Profile pictre'
-              src={state.imgPicture}
-              variant='rounded'
-              sx={{
-                width: '180px',
-                height: '180px'
-              }} />
-            <Box
-              position='absolute'
-              top={0}
-              left={0}>
-              <input
-                type='file'
-                id='user-image'
-                onChange={(e: any) => {
-                  const file = e.target.files[0];
-                  const reader = new FileReader();
-                  reader.onload = (e: any) => {
-                    dispatch({
-                      type: 'input',
-                      name: 'imgPicture',
-                      value: e.target.result
-                    });
-                  };
-                  if (file) {
-                    reader.readAsDataURL(file);
-                  }
-                }}
-                accept='image/*'
-                style={{
-                  width: '180px',
-                  height: '180px',
-                  cursor: 'pointer',
-                  opacity: 0
-                }} />
-            </Box>
-            <Typography variant='caption'>
-              (Click en la foto para cambiarla)
-            </Typography>
-          </Box>
+            width={180} />
         </Grid>
         <Grid item xs={12} md={6}>
           <TextField

@@ -114,7 +114,10 @@ class Plant(RaspberryPi):
         
     def get_plant_information(self):
         self.prepare_connection()
-        data=get_plant(self.slug)
+        data=get_plant(
+            feed_the_dog=self.feed_the_dog,
+            plant_slug=self.slug,
+        )
         if data is not None:
             self.plant=PlantModel(data['plant'])
             self.plant_type=PlantTypeModel(data['plant_type'])
@@ -150,24 +153,21 @@ class Plant(RaspberryPi):
                 self.plant is None or
                 self.plant.id is None or
                 self.ldr is None or
-                self.soil_moisture is None or
+                #self.soil_moisture is None or
                 self.temperature is None or
                 self.humidity is None or
                 self.is_day is None or
                 self.cpu_temperature is None
             ):
             print("Missing data")
-            #print("plant:", self.plant)
-            #print("plant.id:", self.plant.id)
-            #print("total_ram:", self.total_ram)
-            #print("allocated_ram:", self.allocated_ram)
-            #print("disk_total_space:", self.disk_total_space)
-            #print("disk_allocated_space:", self.disk_allocated_space)
-            #print("temperature:", self.temperature)
-            #print("humidity:", self.humidity)
-            #print("ldr:", self.ldr)
-            #print("cpu_temperature:", self.cpu_temperature)
-            #print("is_day:", self.is_day)
+            print("plant:", self.plant)
+            print("plant.id:", self.plant.id)
+            print("soil_moisture:", self.soil_moisture)
+            print("temperature:", self.temperature)
+            print("humidity:", self.humidity)
+            print("ldr:", self.ldr)
+            print("cpu_temperature:", self.cpu_temperature)
+            print("is_day:", self.is_day)
             return
         #print("============ From Raspberry Pi Class ============")
         #print("total_ram:", self.total_ram)
@@ -186,7 +186,6 @@ class Plant(RaspberryPi):
         self.terminate_connection()
         self.prepare_connection()
         status_code=create_measurement_record(
-            self.wlan,
             self.feed_the_dog,
             plant_id=self.plant.id,
             ldr=self.ldr,
@@ -236,6 +235,7 @@ class Plant(RaspberryPi):
             #print('\n+++++++++++++++++++++++++')
             #print(self.plant.name, '(', self.plant_number, ')', 'pin:', self.soil_moisture_pin)
             #print('perform_update_operation:', now.get_human_readable_date_time())
+            #print('soil_moisture_measurements:', self.soil_moisture_measurements)
             self.soil_moisture=get_final_value(self.soil_moisture_measurements)
             
             if ldr is not None:
@@ -278,24 +278,31 @@ class Plant(RaspberryPi):
             #print('soil_moisture:', self.soil_moisture)
             #if int(self.get_soil_moisture()) < 90:
             #   self.activate_water_pump(1)
-                
             self.performing_measurement=False
             self.set_next_measurement()
             self.feed_the_dog()
 
     def get_soil_moisture(self):
         value=None
+        
+        #For Arduino Soil Moisture
         if self.arduino is not None and self.arduino_soil_moisture_pin is True:
+            #print('Arduino Plant:', self.plant.name)
             if self.is_day:
                 self.arduino.rgb_1.green()
-            while value is None:
-                data=self.arduino.get_analog_input(self.soil_moisture_pin)
-                if data is not None and data['value'] is not None:
-                    value=data['value']
-                else:
-                    self.feed_the_dog()
+            #while value is None:
+            #    data=self.arduino.get_analog_input(self.soil_moisture_pin)
+            #    if data is not None and data['value'] is not None:
+            #        value=data['value']
+            #    else:
+            #        self.feed_the_dog()
+            data=self.arduino.get_analog_input(self.soil_moisture_pin)
+            if data is not None:
+                value=data['value']
             self.arduino.rgb_1.off()
             return value
+        
+        # For Raspberry Pico Soil Moisture
         if self.soil_moisture_pin is None:
             return -1
         while value is None:
@@ -306,7 +313,11 @@ class Plant(RaspberryPi):
         return value
 
     def record_soil_moisture(self):
-        value=None
-        while value is None:
+        value=self.get_soil_moisture()
+        if value is not None:
             value=self.get_soil_moisture()
-        self.soil_moisture_measurements.append(value)
+            self.soil_moisture_measurements.append(value)
+        #value=None
+        #while value is None:
+        #    value=self.get_soil_moisture()
+        #self.soil_moisture_measurements.append(value)

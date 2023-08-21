@@ -4,11 +4,16 @@ import {
 } from 'utils';
 import type {
   APIPostCreationError,
+  CreationErrorInput,
   Action,
 } from 'utils';
 
 export type State = {
   isLoading: boolean;
+
+  expo: number;
+  group: number;
+
   name: string;
   short_description: string;
   contact_email: string;
@@ -68,7 +73,10 @@ export type State = {
 
 export const InitialState: State = {
   isLoading: false,
-  
+
+  expo: 0,
+  group: 0,
+
   name: '',
   short_description: '',
   contact_email: '',
@@ -123,7 +131,7 @@ export const InitialState: State = {
   error: []
 };
 
-export const Reducer = (state: State = InitialState, action: Action): State => {
+export const Reducer = (state: State = InitialState, action: Action<null, CreationErrorInput>): State => {
   if (action.type === 'setState') {
     return {
       ...state,

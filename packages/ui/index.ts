@@ -1,3 +1,4 @@
+export {default as GenericImage} from './generic-image';
 export {default as Logo} from './logo';
 export {default as NavBar} from './nav-bar';
 export {default as Footer} from './footer';
@@ -13,3 +14,6 @@ export {default as PaperCard} from './paper-card';
 export {default as CountryField} from './country-field';
 export {default as StateField} from './state-field';
 export {default as CityField} from './city-field';
+export {default as GenericImageInput} from './generic-image-input';
+export {default as UIIcons} from './ui-icons';
+export {default as GetIconByName} from './get-icon-by-name';

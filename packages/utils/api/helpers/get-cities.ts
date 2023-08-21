@@ -1,5 +1,5 @@
 import { Get } from '../communicator';
-import {
+import type {
   JSONAPICommonArrayResponse,
   CityInterface,
 } from '../../interfaces/common-interfaces';

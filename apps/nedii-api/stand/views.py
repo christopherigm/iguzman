@@ -1,4 +1,4 @@
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import json
@@ -47,22 +47,42 @@ from stand.serializers import (
 from users.models import User
 
 
-class ExpoViewSet(ModelViewSet):
+class ExpoViewSet(
+        CustomCreate,
+        CustomUpdate,
+        mixins.ListModelMixin,
+        mixins.RetrieveModelMixin,
+        mixins.DestroyModelMixin,
+        GenericViewSet
+    ):
     queryset=Expo.objects.all()
     serializer_class=ExpoSerializer
+    permission_classes=[AllowAny]
+    authentication_classes=[]
     filterset_fields = {
-        "id": ("exact",),
+        "id": ("exact", "in",),
         "enabled": ("exact",),
         "is_real": ("exact",),
         "slug": ("exact",),
+        "groups__id": ("in",),
+        "groups__slug": ("in",),
     }
     search_fields=('name',)
     ordering=( 'id', )
 
 
-class StandGroupViewSet(ModelViewSet):
+class StandGroupViewSet(
+        CustomCreate,
+        CustomUpdate,
+        mixins.ListModelMixin,
+        mixins.RetrieveModelMixin,
+        mixins.DestroyModelMixin,
+        GenericViewSet
+    ):
     queryset=Group.objects.all()
     serializer_class=GroupSerializer
+    permission_classes=[AllowAny]
+    authentication_classes=[]
     filterset_fields = {
         "id": ("exact",),
         "enabled": ("exact",),
@@ -75,6 +95,11 @@ class StandGroupViewSet(ModelViewSet):
 class StandBookingQuestionViewSet(ModelViewSet):
     queryset=StandBookingQuestion.objects.all()
     serializer_class=StandBookingQuestionSerializer
+    permission_classes=[ IsAuthenticated ]
+    authentication_classes=[
+        JWTAuthentication,
+        SessionAuthentication
+    ]
     filterset_fields = {
         "id": ("exact",),
         "enabled": ("exact",),
@@ -86,6 +111,11 @@ class StandBookingQuestionViewSet(ModelViewSet):
 class StandBookingQuestionOptionsViewSet(ModelViewSet):
     queryset=StandBookingQuestionOption.objects.all()
     serializer_class=StandBookingQuestionOptionSerializer
+    permission_classes=[ IsAuthenticated ]
+    authentication_classes=[
+        JWTAuthentication,
+        SessionAuthentication
+    ]
     filterset_fields = {
         "id": ("exact",),
         "enabled": ("exact",),
@@ -94,7 +124,8 @@ class StandBookingQuestionOptionsViewSet(ModelViewSet):
     ordering=( 'id', )
 
 
-class StandNewsViewSet(CustomCreate,
+class StandNewsViewSet(
+        CustomCreate,
         CustomUpdate,
         mixins.ListModelMixin,
         mixins.RetrieveModelMixin,
@@ -103,6 +134,11 @@ class StandNewsViewSet(CustomCreate,
     ):
     queryset=StandNew.objects.all()
     serializer_class=StandNewSerializer
+    permission_classes=[ IsAuthenticated ]
+    authentication_classes=[
+        JWTAuthentication,
+        SessionAuthentication
+    ]
     filterset_fields = {
         "id": ("exact",),
         "enabled": ("exact",),
@@ -116,6 +152,11 @@ class StandNewsViewSet(CustomCreate,
 class StandPhonesViewSet(ModelViewSet):
     queryset=StandPhone.objects.all()
     serializer_class=StandPhoneSerializer
+    permission_classes=[ IsAuthenticated ]
+    authentication_classes=[
+        JWTAuthentication,
+        SessionAuthentication
+    ]
     filter_fields=('enabled',)
     filterset_fields = {
         "id": ("exact",),
@@ -135,6 +176,11 @@ class StandPicturesViewSet(CustomCreate,
     ):
     queryset=StandPicture.objects.all()
     serializer_class=StandPictureSerializer
+    permission_classes=[ IsAuthenticated ]
+    authentication_classes=[
+        JWTAuthentication,
+        SessionAuthentication
+    ]
     filterset_fields = {
         "id": ("exact",),
         "enabled": ("exact",),
@@ -153,6 +199,12 @@ class StandPromotionsViewSet(CustomCreate,
     ):
     queryset=StandPromotion.objects.all()
     serializer_class=StandPromotionSerializer
+    serializer_class=ExpoSerializer
+    permission_classes=[ IsAuthenticated ]
+    authentication_classes=[
+        JWTAuthentication,
+        SessionAuthentication
+    ]
     filterset_fields = {
         "id": ("exact",),
         "enabled": ("exact",),
@@ -165,6 +217,11 @@ class StandPromotionsViewSet(CustomCreate,
 class StandRatingViewSet(ModelViewSet):
     queryset=StandRating.objects.all()
     serializer_class=StandRatingSerializer
+    permission_classes=[ IsAuthenticated ]
+    authentication_classes=[
+        JWTAuthentication,
+        SessionAuthentication
+    ]
     filterset_fields = {
         "id": ("exact",),
         "enabled": ("exact",),

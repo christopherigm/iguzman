@@ -1,24 +1,14 @@
 import React, {
   ReactElement,
 } from 'react';
-import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
-import Divider from '@mui/material/Divider';
-import FormGroup from '@mui/material/FormGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
-import TextField from '@mui/material/TextField';
-import {State} from './add-company-reducer';
-
 import {WeekSchedule} from 'ui';
 import CompanyBasicInformationInput from 'components/company-basic-information-input';
 import CompanyAddressInput from 'components/company-address-input';
 import CompanyIdentityInput from 'components/company-identity-input';
 import BookingInputData from 'components/booking-input-data';
-
-
+import {State} from './add-company-reducer';
+import Stand from 'classes/stand';
+import { signal } from '@preact/signals-react';
 
 type Props = {
   URLBase: string;
@@ -26,30 +16,30 @@ type Props = {
   jwt: string;
   state: State;
   onChange: (name: string, value: string | boolean | number) => void;
+  stand: Stand,
 };
+
+const advancedOptions = signal<boolean>(false);
 
 const InformationForm = ({
     URLBase,
     language,
     jwt,
     state,
-    onChange
+    onChange,
+    stand,
   }: Props): ReactElement => {
+  
   return (
     <>
       <CompanyBasicInformationInput
-        name={state.name}
-        short_description={state.short_description}
-        contact_email={state.contact_email}
-        isLoading={state.isLoading}
+        isLoading={false}
         displayAdvancedOptions={true}
-        advancedOptions={state.advancedOptions}
-        onChange={(name: string,
-            value: string | boolean | number) =>
-          onChange(name, value)
-        } />
+        advancedOptions={advancedOptions.value}
+        stand={stand}
+        switchAdvancedOptions={(value: boolean) => advancedOptions.value=value} />
       {
-        state.advancedOptions ?
+        advancedOptions.value ?
           <>
             <CompanyAddressInput
               URLBase={URLBase}

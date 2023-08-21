@@ -1,5 +1,5 @@
 import { Get } from '../communicator';
-import {
+import type {
   JSONAPICommonArrayResponse,
   CountryInterface,
 } from '../../interfaces/common-interfaces';

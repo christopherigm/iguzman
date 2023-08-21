@@ -1,13 +1,7 @@
-import type {APIPostCreationError} from '../interfaces/api-error-handler';
-
-interface CreationErrorInput {
-  detail: string;
-  status: number;
-  source: {
-    pointer: string;
-  };
-  code: string;
-};
+import type {
+  APIPostCreationError,
+  CreationErrorInput,
+} from '../interfaces/api-error-handler';
 
 export const APICreationErrorHandler = (error: Array<CreationErrorInput>): Array<APIPostCreationError> => {
   const e: Array<CreationErrorInput> = error;

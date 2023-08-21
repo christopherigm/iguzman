@@ -15,6 +15,7 @@ import PaperCard from '../paper-card';
 
 import type {
   Action,
+  CreationErrorInput,
 } from 'utils';
 
 type State = {
@@ -88,7 +89,7 @@ const i18 = {
   }
 };
 
-const Reducer = (state: State = InitialState, action: Action): State => {
+const Reducer = (state: State = InitialState, action: Action<null, CreationErrorInput>): State => {
   if (action.type === 'input' && action.name) {
     return {
       ...state,
