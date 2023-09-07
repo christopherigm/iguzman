@@ -728,6 +728,97 @@ const GeneradorTitulos = (): ReactElement => {
             </Typography>
           </Grid>
           <div>{state.tipo ? `${state.tipo}-`: ''}{state.sistema ? `${state.sistema}-` : ''}{state.titulo ? `${state.titulo}-` : ''}{state.nivel ? `LEVEL ${state.nivel}` : ''}{state.unidad ? `${state.unidad}` : ''}</div>
+
+          <Grid item xs={12}>
+            <Box display='flex' justifyContent='center'>
+              <Typography variant='body1'>Nombres de vistas 360</Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={2}>
+            <TextField
+              fullWidth
+              label='Numero de vista'
+              type='number'
+              value={state.numeroPlano}
+              onChange={(event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+                dispatch({
+                  type: 'input',
+                  name: 'numeroPlano',
+                  value: event.target.value
+                });
+              }} />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+            <InputLabel id='tipoVistaId' >Tipó de vista</InputLabel>
+            <Select
+              labelId='tipoVistaId'
+              id='tipoVistaId'
+              value={state.tipo}
+              label='Tipo de vista'
+              onChange={(event: SelectChangeEvent<string>) => {
+                dispatch({
+                  type: 'input',
+                  name: 'tipo',
+                  value: event.target.value
+                });
+              }}>
+                <MenuItem value={'INT'}>Interior</MenuItem>
+                <MenuItem value={'EXT'}>Exterior</MenuItem>
+                <MenuItem value={'AER'}>Aereo</MenuItem>
+            </Select>
+            </FormControl>
+          </Grid>
+           <Grid item xs={12} sm={4}>
+            <TextField
+            fullWidth
+            label='Ubicación'
+            value={state.titulo}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              dispatch({
+                type: 'input',
+                name: 'titulo',
+                value: event.target.value
+              });
+            }} />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField
+              fullWidth
+              label=''
+              value={state.fecha}
+              type='date'
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                dispatch({
+                  type: 'input',
+                  name: 'fecha',
+                  value: event.target.value
+                });
+              }} />
+          </Grid>
+          <Grid item xs={12} sm={2}>
+            <TextField
+              fullWidth
+              label='Numero de version'
+              type='number'
+              value={state.revision}
+              onChange={(event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+                dispatch({
+                  type: 'input',
+                  name: 'revision',
+                  value: event.target.value
+                });
+              }} />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography
+            variant='h6'
+            color='blue'
+            textAlign='center'>
+            Resultado titulo
+            </Typography>
+          </Grid>
+          <div>{state.numeroPlano}-{state.tipo}-({state.titulo})-{state.fecha.split('-').join('.')}-VER-{state.revision}</div>
       </Grid>
     </>
   );

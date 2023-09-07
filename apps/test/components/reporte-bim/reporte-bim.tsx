@@ -257,7 +257,7 @@ const ReporteBim = () => {
                     actividad: state.actividad,
                     estatus: state.estatus,
                     comentario: state.comentario,
-                    ubicacion: state.comentario
+                    ubicacion: state.ubicacion
                   });
                   return reporteBim;
                 })}>Guardar</Button>
@@ -309,7 +309,7 @@ const ReporteBim = () => {
                                   <Grid item xs={12}>
                                     <Typography textAlign='left'>
                                       {
-                                        `Actividad: ${i.actividad} ${i.estatus ? `con un estatus de:${i.estatus}` : ''} ${i.ubicacion ? `ubicado en: ${i.ubicacion}` : '' } ${i.comentario}` 
+                                        `Actividad: ${i.actividad} ${i.estatus ? `con un estatus:${i.estatus}` : ''} ${i.ubicacion ? `ubicado en: ${i.ubicacion}` : '' } ${i.comentario}` 
                                       }
                                     </Typography>
                                   </Grid>
