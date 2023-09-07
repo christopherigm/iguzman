@@ -84,6 +84,9 @@ const Page = (props: System): ReactElement => {
       <Link href={'/registro-de-proyecto'}>
         <Button variant='contained'>Registro de Proyectos</Button>
       </Link>
+      <Link href={'/registro-de-disciplinas'}>
+        <Button variant='contained'>Registro de disciplinas</Button>
+      </Link>
     </MainLayout>
   );
 };
