@@ -248,42 +248,35 @@ const ReporteRfi = () => {
           </Grid>
       </Grid>
       <Grid container>
-            <Box 
-              display='flex'
-              flexDirection='row'
-              flexWrap='wrap'
-              justifyContent='space-between'
-              marginTop={5} >
-                {
-                  registroRFI.map((i: RegistroRFI, index: number) => {
-                    return (
-                      <Grid
-                        key={index}
-                        marginBottom={3}
-                        item xs={12} sm={6}>
-                          <Box padding={2} minWidth={500}>
-                            <Paper elevation={3}>
-                              <Box padding={2}>
-                                <Typography>Numero RFI: {i.numeroRfi}</Typography>
-                                <Typography>Tema: {i.tema}</Typography>
-                                <Typography>Nivel de importamcia: {i.importancia}</Typography>
-                                <Typography>Fecha de inicio: {i.fechaInicio}</Typography>
-                                <Typography>Fecha de respuesta: {i.fechaRespuesta}</Typography>
-                                <Typography>Disciplina: {i.disciplina}</Typography>
-                                <Typography>Subdisciplina: {i.categoria}</Typography>
-                                <Typography>Compania: {i.compania}</Typography>
-                                <Typography>Rfi emitido por: {i.emitido}</Typography>
-                                <Typography>Pregunta en espanol: {i.pregunta}</Typography>
-                                <Typography>Pregunta en ingles: {i.preguntaIng}</Typography>
-                              </Box>
-                            </Paper>
-                          </Box>
-                      </Grid>
-                    );
-                  })
-                }
-            </Box>
-          </Grid>
+        {
+          registroRFI.map((i: RegistroRFI, index: number) => {
+            return (
+              <Grid
+                key={index}
+                marginBottom={1}
+                item xs={12} sm={6}>
+                  <Box padding={2} minWidth={500}>
+                    <Paper elevation={3}>
+                      <Box padding={2}>
+                        <Typography>Numero RFI: {i.numeroRfi}</Typography>
+                        <Typography>Tema: {i.tema}</Typography>
+                        <Typography>Nivel de importamcia: {i.importancia}</Typography>
+                        <Typography>Fecha de inicio: {i.fechaInicio}</Typography>
+                        <Typography>Fecha de respuesta: {i.fechaRespuesta}</Typography>
+                        <Typography>Disciplina: {i.disciplina}</Typography>
+                        <Typography>Subdisciplina: {i.categoria}</Typography>
+                        <Typography>Compania: {i.compania}</Typography>
+                        <Typography>Rfi emitido por: {i.emitido}</Typography>
+                        <Typography>Pregunta en espanol: {i.pregunta}</Typography>
+                        <Typography>Pregunta en ingles: {i.preguntaIng}</Typography>
+                      </Box>
+                    </Paper>
+                  </Box>
+              </Grid>
+            );
+          })
+        }
+      </Grid>
     </>
   );
 };
