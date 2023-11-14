@@ -9,11 +9,13 @@ import Step from '@mui/material/Step';
 import Button from '@mui/material/Button';
 import StepLabel from '@mui/material/StepLabel';
 import InformationForm from './information-form';
-
+import GroupInput from 'components/group-input';
+import CompanyImages from 'components/company-images';
 import {
   InitialState,
   Reducer,
 } from './add-company-reducer';
+import {stand} from 'classes/stand';
 
 type Props = {
   URLBase: string;
@@ -51,6 +53,31 @@ const AddCompanies = ({
             language={language}
             jwt={jwt}
             state={state}
+            onChange={(name, value) => {
+              dispatch({
+                type: 'input',
+                name,
+                value,
+              });
+            }}
+            stand={stand} /> : null
+      }
+      {
+        activeStep === 1 ?
+          <GroupInput
+            URLBase={URLBase}
+            onChange={(name, value) => {
+              dispatch({
+                type: 'input',
+                name,
+                value,
+              });
+            }} /> : null
+      }
+      {
+        activeStep === 2 ?
+          <CompanyImages
+            URLBase={URLBase}
             onChange={(name, value) => {
               dispatch({
                 type: 'input',

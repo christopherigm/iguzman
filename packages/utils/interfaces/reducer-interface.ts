@@ -8,12 +8,14 @@ type Types =
   'error' |
   'clearErrors' |
   'login' |
-  'input';
+  'input' |
+  'item';
 
-export type Action = {
+export type Action<Item, Error> = {
   type: Types;
   name?: string;
   value?: string | boolean | number;
   state?: any;
-  error?: Array<any>;
+  error?: Array<Error>;
+  item?: Item;
 };

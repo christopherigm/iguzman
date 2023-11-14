@@ -154,7 +154,7 @@ export interface ExpoInterface {
     groups: {
       data: Array<GroupInterface>
     };
-  }
+  };
 };
 
 interface GroupAttributesInterface extends BasePictureAttributesInterface {
@@ -173,53 +173,56 @@ export interface StandInterface {
   id: number;
   type: 'Stand';
   attributes: {
-    restaurant: boolean;
-    name: string;
-    slug: string;
-    slogan: string;
-    bar_code: string;
-    description: string;
-    short_description: string;
-    img_logo: string;
-    img_cover: string;
-    contact_email: string;
-    support_email: string;
-    always_open: boolean;
-    monday_open: string;
-    monday_close: string;
-    tuesday_open: string;
-    tuesday_close: string;
-    wednesday_open: string;
-    wednesday_close: string;
-    thursday_open: string;
-    thursday_close: string;
-    friday_open: string;
-    friday_close: string;
-    saturday_open: string;
-    saturday_close: string;
-    sunday_open: string;
-    sunday_close: string;
-    booking_active: boolean;
-    booking_fee: number;
-    booking_email: string;
-    zip_code: string;
-    address: string;
-    about: string;
-    mission: string;
-    vision: string;
-    web_link: string;
-    facebook_link: string;
-    twitter_link: string;
-    instagram_link: string;
-    linkedin_link: string;
-    google_link: string;
-    youtube_link: string;
-    average_rating: number;
-    products_max_price: number;
-    meals_max_price: number;
-    services_max_price: number;
-    vehicles_max_price: number;
-    real_state_max_price: number;
+    // restaurant: boolean;
+    // name: string;
+    // slug: string;
+    // slogan: string;
+    // bar_code: string;
+    // description: string;
+    // short_description: string;
+    // img_logo: string;
+    // img_cover: string;
+    // contact_email: string;
+    // support_email: string;
+
+    // always_open: boolean;
+    // monday_open: string;
+    // monday_close: string;
+    // tuesday_open: string;
+    // tuesday_close: string;
+    // wednesday_open: string;
+    // wednesday_close: string;
+    // thursday_open: string;
+    // thursday_close: string;
+    // friday_open: string;
+    // friday_close: string;
+    // saturday_open: string;
+    // saturday_close: string;
+    // sunday_open: string;
+    // sunday_close: string;
+    // booking_active: boolean;
+    // booking_fee: number;
+    // booking_email: string;
+    
+    // zip_code: string;
+    // address: string;
+    // about: string;
+    // mission: string;
+    // vision: string;
+
+    // web_link: string;
+    // facebook_link: string;
+    // twitter_link: string;
+    // instagram_link: string;
+    // linkedin_link: string;
+    // google_link: string;
+    // youtube_link: string;
+    // average_rating: number;
+    // products_max_price: number;
+    // meals_max_price: number;
+    // services_max_price: number;
+    // vehicles_max_price: number;
+    // real_state_max_price: number;
   };
   relationships: {
     plan: {

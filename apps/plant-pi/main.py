@@ -9,14 +9,11 @@ from plant_array_data import plant_array_data
 
 # https://docs.micropython.org/en/latest/library/gc.html#module-gc
 gc.enable()
-
 debug=False
-
 log('System init')
 
-
-wdt = WDT(timeout=8388)
-
+#wdt = WDT(timeout=8388)
+wdt = None
 def feed_the_dog():
     if wdt is not None:
         wdt.feed()
@@ -29,25 +26,16 @@ plants=[]
 
 for plant in plant_array_data:
     if plant['enable'] is True:
-        plants.append(Plant(
-            wlan=wlan,
-            feed_the_dog=feed_the_dog,
-            version=plant['version'],
-            slug=plant['slug'],
-            debug=debug,
-            plant_number=plant['plant_number'],
-        ))
-
-#c=0
-#while True:
-#    feed_the_dog()
-#    c=c+1
-#    if c > 5:
-#        print("pump!")
-#        plants[0].activate_water_pump(2)
-#        plants[1].activate_water_pump(2)
-#        c=0
-#    sleep(1)
+        plants.append(
+            Plant(
+                wlan=wlan,
+                feed_the_dog=feed_the_dog,
+                version=plant['version'],
+                slug=plant['slug'],
+                debug=debug,
+                plant_number=plant['plant_number'],
+            )
+        )
 
     
 for plant in plants:

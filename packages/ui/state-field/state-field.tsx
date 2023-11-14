@@ -1,6 +1,5 @@
 import {
   ReactElement,
-  SyntheticEvent,
   useEffect,
   useState,
 } from 'react';
@@ -8,7 +7,12 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
-import Autocomplete from '@mui/material/Autocomplete';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Select, {
+  SelectChangeEvent
+} from '@mui/material/Select';
 import {
   API,
   StateInterface
@@ -85,6 +89,12 @@ const StateField = ({
       .catch((_e: any) => setIsLoading(false));
   };
 
+  const getLabel = (): string => {
+    return !states.length && isLoading ?
+    language === 'en' ? 'Loading states' : 'Cargando estados' :
+    language === 'en' ? 'State' : 'Estado'
+  };
+
   return (
     <>
     {
@@ -155,36 +165,33 @@ const StateField = ({
           justifyContent='space-between'
           alignItems='center'
           marginBottom={1}>
-          <Autocomplete
-            disablePortal={true}
-            options={options}
-            size='small'
-            sx={{width: '100%'}}
-            disableClearable={true}
-            disabled={isLoading}
-            value={
-              state && options.length &&
-              options.filter((i: Option) => i.id === state).length ?
-              options.filter((i: Option) => i.id === state)[0] : {
-                id: 0,
-                label: ''
-              }
-            }
-            onChange={(_e: SyntheticEvent<Element, Event>, v: Option | null) => {
-              if (v) {
-                onChange('state', v.id);
+          <FormControl fullWidth>
+            <InputLabel id="demo-simple-select-label">
+              {getLabel()}
+            </InputLabel>
+            <Select
+              labelId="demo-simple-select-label"
+              id="demo-simple-select"
+              value={String(state)}
+              label={getLabel()}
+              disabled={isLoading}
+              size='small'
+              onChange={(e: SelectChangeEvent) => {
+                onChange('state', Number(e.target.value));
                 onChange('city', 0);
+              }}>
+              {
+                options.map((i: Option, index: number) => {
+                  return (
+                    <MenuItem
+                      key={index}
+                      value={i.id}>{i.label}
+                    </MenuItem>
+                  );
+                })
               }
-            }}
-            renderInput={(params) =>
-              <TextField {...params}
-                label={
-                  !states.length && isLoading?
-                  language === 'en' ? 'Loading states' : 'Cargando estados' :
-                  language === 'en' ? 'State' : 'Estado'
-                } />
-            }
-          />
+            </Select>
+          </FormControl>
           <Button
             variant='contained'
             type='submit'
@@ -204,7 +211,16 @@ const StateField = ({
         {
           !newEntry ?
             <Typography variant='caption'>
-              Si tu estado no se encuentra listada, de click en <b>Nuevo</b> para agregar una nuevo estado.
+            {
+              language === 'en' ?
+              <>
+                If the state where you live in, isn't listed, click on <b>New</b> to add add a new state.
+              </> :
+              <>
+                Si tu estado no se encuentra listado, da click en 
+                <b> Nuevo</b> para agregar un nuevo estado.
+              </>
+            }
             </Typography> : null
         }
       </Box>

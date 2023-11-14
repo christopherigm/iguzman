@@ -15,6 +15,7 @@ import type {
   CachedValues,
   Languages,
   APIPostCreationError,
+  CreationErrorInput,
   Action,
 } from 'utils';
 import Typography from '@mui/material/Typography';
@@ -46,7 +47,7 @@ const InitialState: State = {
   error: []
 };
 
-const Reducer = (state: State = InitialState, action: Action): State => {
+const Reducer = (state: State = InitialState, action: Action<null, CreationErrorInput>): State => {
   if (action.type === 'loading') {
     return {
       ...state,

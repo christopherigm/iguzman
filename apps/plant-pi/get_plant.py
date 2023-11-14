@@ -1,11 +1,16 @@
 from machine import Pin
 import urequests as requests
 from utime import sleep
+import gc
 import ujson
 from log import log
 from constants import plant_base_url
 
-def get_plant(plant_slug='test-plant'):
+def get_plant(
+        feed_the_dog,
+        plant_slug='test-plant',
+        retries=0,
+    ):
     step = 0
     response_text='-'
     
@@ -23,6 +28,8 @@ def get_plant(plant_slug='test-plant'):
             return None
         
         if status_code is 200:
+            if retries > 0:
+                log('OK after retries:' + str(retries))
             plant = ujson.loads(str(response_text))
             if plant['data'] is not None and len(plant['data']) is 1 and len(plant['included']) is 2:
                 plant_type = None
@@ -43,6 +50,20 @@ def get_plant(plant_slug='test-plant'):
         log('status_code: ' + str(status_code))
         return None
     except Exception as e:
-        print('except e: "{}"'.format(str(e)))
+        log('Exception on get plant:' + str(e))
+        log('Retries:' + str(retries))
         log('Error on get_plant: url: ' + plant_url)
-        return None
+        gc.collect()
+        feed_the_dog()
+        retries=retries+1
+        if retries <= 5:
+            feed_the_dog()
+            sleep(7)
+            feed_the_dog()
+            return get_plant(
+                feed_the_dog=feed_the_dog,
+                plant_slug=plant_slug,
+                retries=retries,
+            )
+        else:
+            return None

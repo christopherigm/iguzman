@@ -18,7 +18,10 @@ import Avatar from '@mui/material/Avatar';
 import Paper from '@mui/material/Paper';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
-import {PasswordField} from 'ui';
+import {
+  PasswordField,
+  GenericImageInput,
+} from 'ui';
 import {
   GetLocalStorageData,
   APICreationErrorHandler,
@@ -27,6 +30,7 @@ import {
 } from 'utils';
 import type {
   APIPostCreationError,
+  CreationErrorInput,
   Action,
 } from 'utils';
 import type UserInterface from 'interfaces/user-interface';
@@ -63,7 +67,7 @@ const InitialState: State = {
   error: []
 };
 
-const Reducer = (state: State = InitialState, action: Action): State => {
+const Reducer = (state: State = InitialState, action: Action<null, CreationErrorInput>): State => {
   if (action.type === 'setState') {
     return {
       ...state,
@@ -203,55 +207,23 @@ const UserInfo = ({
         autoComplete='on'
         onSubmit={handleSubmit}
         padding={1.5}>
-        <Typography variant='caption'>
-          Foto de perfil
-        </Typography>
         <Box
           width='100%'
-          height={280}
-          position='relative'
-          overflow='hidden'>
-          <Avatar
-            alt='Profile pictre'
-            src={state.attributes.img_picture}
-            variant='rounded'
-            sx={{
-              width: '100%',
-              height: '280px'
-            }} />
-          <Box
-            position='absolute'
-            top={0}
-            left={0}>
-            <input
-              type='file'
-              id='user-image'
-              onChange={(e: any) => {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = (e: any) => {
-                  dispatch({
-                    type: 'input',
-                    name: 'img_picture',
-                    value: e.target.result
-                  });
-                };
-                if (file) {
-                  reader.readAsDataURL(file);
-                }
-              }}
-              accept='image/*'
-              style={{
-                width: '700px',
-                height: '280px',
-                cursor: 'pointer',
-                opacity: 0
-              }} />
-          </Box>
+          position='relative'>
+          <GenericImageInput
+            label='Foto de perfil'
+            language={'es'}
+            onChange={(img: string) => {
+              dispatch({
+                type: 'input',
+                name: 'img_picture',
+                value: img
+              });
+            }}
+            height={280}
+            width='100%'
+            defaultValue={state.attributes.img_picture} />
         </Box>
-        <Typography variant='caption'>
-          (Click en la foto para cambiarla)
-        </Typography>
         <Box
           marginTop={2}
           marginBottom={2}>

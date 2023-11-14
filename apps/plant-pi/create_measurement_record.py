@@ -1,11 +1,11 @@
 import urequests as requests
 from utime import sleep
+import gc
 import ujson
 from log import log
 from constants import measurement_url
 
 def create_measurement_record(
-        wlan,
         feed_the_dog,
         plant_id=0,
         ldr=None,
@@ -33,7 +33,7 @@ def create_measurement_record(
             'type': 'Measurement',
             'attributes': {
                 'ldr': ldr,
-                'soil_moisture': round(soil_moisture, 2),
+                'soil_moisture': None if soil_moisture is None else round(soil_moisture, 2),
                 'temperature': round(temperature, 2),
                 'humidity': round(humidity, 2),
                 'is_day': is_day,
@@ -72,12 +72,17 @@ def create_measurement_record(
         #print("Request time: {} seconds".format(elapsed_time/1000))
         
         if status_code == 201:
+            if retries > 0:
+                log('OK after retries:' + str(retries))
             return status_code
         else:
             log('Error on create_measurement_record status_code: ' + str(status_code))
             log('Error on create_measurement_record payload:' + payload)
     except Exception as e:
         log('Exception on create_measurement_record:' + str(e))
+        log('Retries:' + str(retries))
+        log('Error on create_measurement_record payload:' + payload)
+        gc.collect()
         feed_the_dog()
         retries=retries+1
         if retries <= 5:
@@ -85,7 +90,6 @@ def create_measurement_record(
             sleep(7)
             feed_the_dog()
             return create_measurement_record(
-                wlan=wlan,
                 feed_the_dog=feed_the_dog,
                 plant_id=plant_id,
                 ldr=ldr,

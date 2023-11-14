@@ -17,6 +17,7 @@ import {
 } from 'utils';
 import type {
   APIPostCreationError,
+  CreationErrorInput,
   Action,
 } from 'utils';
 import HomeIcon from '@mui/icons-material/Home';
@@ -59,7 +60,7 @@ const InitialState: State = {
   error: []
 };
 
-const Reducer = (state: State = InitialState, action: Action): State => {
+const Reducer = (state: State = InitialState, action: Action<null, CreationErrorInput>): State => {
   if (action.type === 'setState') {
     return {
       ...state,

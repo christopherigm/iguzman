@@ -36,6 +36,16 @@ class Arduino:
             green_pin=self.D10_RGB_GREEN,
             blue_pin=self.D9_RGB_BLUE,
         )
+        
+    def getValueFromBufferItem(self, item):
+        try:
+            pin = int(item.replace("\'", ''))
+            return pin
+        except Exception as e:
+            print('Error on getValueFromBufferItem')
+            print('Exception:', str(e))
+            print('Buffer Item:', str(item))
+            return 0
 
     def handle_buffer(self, buff):
         if buff is not "None" and buff is not None and buff is not "":        
@@ -45,9 +55,9 @@ class Arduino:
                 buff = buff[1]
                 buff = buff.split(' ')
                 if len(buff) is 3:
-                    pin = int(buff[0])
-                    val = int(buff[1])
-                    sent = int(buff[2])
+                    pin = self.getValueFromBufferItem(str(buff[0]))
+                    val = self.getValueFromBufferItem(str(buff[1]))
+                    sent = self.getValueFromBufferItem(str(buff[2]))
                     return {
                         'pin': pin,
                         'value': val,
@@ -64,10 +74,10 @@ class Arduino:
         if value is None or int(value) is 0:
             return 0
         max_value=800
-        min_value = 200
+        min_value=200
         diff=max_value-min_value
         val=int(value)
-        #print('Val', val)
+        #print('Arduino Mousture Val:', val)
         if val > max_value or val < min_value:
             return None
         val=((max_value-val) * 100) / diff
@@ -77,7 +87,8 @@ class Arduino:
         data=None
         value=None
         
-        while data is None and value is None:
+        #while data is None and value is None:
+        while data is None:
             self.uart.write(str(pin))
             self.uart.write('\n')
             
@@ -85,21 +96,27 @@ class Arduino:
             while self.uart.any():
                 data = data + str(self.uart.readline())
             data = self.handle_buffer(data)
+            #print('1) >>>', data)
             data = None if data['value'] is None else data
+            #print('2) >>>', data)
             
             if not data is None:
                 if data['pin'] is 0:
                     return data
                 else:
-                    print
-                    #data['value']=self.get_soil_moisture_value(data['value'])
+                    #print('3) >>>', data)
                     value=self.get_soil_moisture_value(data['value'])
-                    if value is not None:
-                        data['value']=value
-                        return data
-                    else:
-                        print('Data:', data)
-                        print('value:', value)
+                    #print('4) value:', value)
+                    data['value']=value
+                    #print('>>>', data)
+                    return data
+                    #if value is not None:
+                    #    data['value']=value
+                    #    return data
+                    #else:
+                    #    print('-------')
+                        #print('Data:', data)
+                        #print('value:', value)
             sleep(1)
 
     def set_digital_output(self, pin, state='on'):

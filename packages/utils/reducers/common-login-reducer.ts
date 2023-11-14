@@ -1,4 +1,7 @@
-import type { Action } from 'utils';
+import type {
+  Action,
+  CreationErrorInput,
+} from 'utils';
 
 export type CommonLoginState = {
   login: boolean,
@@ -15,7 +18,7 @@ export const CommonLoginInitialState: CommonLoginState = {
   keepMeLoggedIn: false
 };
 
-const CommonLoginReducer = (state: CommonLoginState = CommonLoginInitialState, action: Action): CommonLoginState => {
+const CommonLoginReducer = (state: CommonLoginState = CommonLoginInitialState, action: Action<null, CreationErrorInput>): CommonLoginState => {
   if (action.type === 'login') {
     return {
       ...state,

@@ -4,3 +4,12 @@ export interface APIPostCreationError {
   pointer: string;
   code: string;
 };
+
+export interface CreationErrorInput {
+  detail: string;
+  status: number;
+  source: {
+    pointer: string;
+  };
+  code: string;
+};

@@ -1,12 +1,15 @@
 import {
   ReactElement,
-  SyntheticEvent,
   useEffect,
   useState,
 } from 'react';
 import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Autocomplete from '@mui/material/Autocomplete';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Select, {
+  SelectChangeEvent
+} from '@mui/material/Select';
 import {
   API,
   CountryInterface,
@@ -53,6 +56,12 @@ const CountryField = ({
       .catch((_e: any) => setIsLoading(false));
   }, []);
 
+  const getLabel = (): string => {
+    return !countries.length && isLoading ?
+      language === 'en' ? 'Loading countries' : 'Cargando paises' :
+      language === 'en' ? 'County' : 'Pais';
+  };
+
   return (
     <Box
       display='flex'
@@ -60,38 +69,34 @@ const CountryField = ({
       justifyContent='space-between'
       alignItems='center'
       marginBottom={1}>
-      <Autocomplete
-        disablePortal={true}
-        options={options}
-        size='small'
-        sx={{width: '100%'}}
-        disableClearable={true}
-        disabled={isLoading}
-        value={
-          options.length &&
-          options.filter((i: Option) => i.id === country).length ?
-          options.filter((i: Option) => i.id === country)[0] :
-          {
-            id: 0,
-            label: ''
-          }
-        }
-        onChange={(_e: SyntheticEvent<Element, Event>, v: Option | null) => {
-          if (v) {
-            onChange('country', v.id);
+      <FormControl fullWidth>
+        <InputLabel id="demo-simple-select-label">
+          {getLabel()}
+        </InputLabel>
+        <Select
+          labelId="demo-simple-select-label"
+          id="demo-simple-select"
+          value={String(country)}
+          label={getLabel()}
+          disabled={isLoading}
+          size='small'
+          onChange={(e: SelectChangeEvent) => {
+            onChange('country', Number(e.target.value));
             onChange('state', 0);
             onChange('city', 0);
+          }}>
+          {
+            options.map((i: Option, index: number) => {
+              return (
+                <MenuItem
+                  key={index}
+                  value={i.id}>{i.label}
+                </MenuItem>
+              );
+            })
           }
-        }}
-        renderInput={(params) =>
-          <TextField {...params}
-            label={
-              !countries.length && isLoading?
-              language === 'en' ? 'Loading countries' : 'Cargando paises' :
-              language === 'en' ? 'County' : 'Pais'
-            } />
-        }
-      />
+        </Select>
+      </FormControl>
     </Box>
   );
 };

@@ -26,6 +26,5 @@ export const SystemInitalState: System = {
   devMode: false,
   globalAlert: {},
   isLoading: false,
-
   user: null,
 };
