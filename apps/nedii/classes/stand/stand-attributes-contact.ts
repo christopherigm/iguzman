@@ -9,28 +9,28 @@ export default class StandAttributesContact {
   public get contact_email() {
     return this._contact_email.value;
   }
-  public set contact_email(value: string) {
+  public set contact_email(value) {
     this._contact_email.value = value;
   }
   
   public get support_email() {
     return this._support_email.value;
   }
-  public set support_email(value: string) {
+  public set support_email(value) {
     this._support_email.value = value;
   }
   
   public get zip_code() {
     return this._zip_code.value;
   }
-  public set zip_code(value: string) {
+  public set zip_code(value) {
     this._zip_code.value = value;
   }
   
   public get address() {
     return this._address.value;
   }
-  public set address(value: string) {
+  public set address(value) {
     this._address.value = value;
   }
 }

@@ -9,21 +9,21 @@ export default class CommonFields extends TimeFields {
   public get enabled() {
     return this._enabled.value;
   }
-  public set enabled(value: boolean) {
+  public set enabled(value) {
     this._enabled.value = value;
   }
 
   public get order() {
     return this._order.value;
   }
-  public set order(value: number) {
+  public set order(value) {
     this._order.value = value;
   }
 
   public get version() {
     return this._version.value;
   }
-  public set version(value: number) {
+  public set version(value) {
     this._version.value = value;
   }
 }

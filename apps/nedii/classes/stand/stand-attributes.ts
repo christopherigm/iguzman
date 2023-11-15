@@ -29,70 +29,70 @@ export default class StandAttributes extends Mixin(
   public get name() {
     return this._name.value;
   }
-  public set name(value: string) {
+  public set name(value) {
     this._name.value = value;
   }
   
   public get slug() {
     return this._slug.value;
   }
-  public set slug(value: string) {
+  public set slug(value) {
     this._slug.value = value;
   }
   
   public get img_logo() {
     return this._img_logo.value;
   }
-  public set img_logo(value: string) {
+  public set img_logo(value) {
     this._img_logo.value = value;
   }
   
   public get img_cover() {
     return this._img_cover.value;
   }
-  public set img_cover(value: string) {
+  public set img_cover(value) {
     this._img_cover.value = value;
   }
   
   public get average_rating() {
     return this._average_rating.value;
   }
-  public set average_rating(value: number) {
+  public set average_rating(value) {
     this._average_rating.value = value;
   }
   
   public get products_max_price() {
     return this._products_max_price.value;
   }
-  public set products_max_price(value: number) {
+  public set products_max_price(value) {
     this._products_max_price.value = value;
   }
   
   public get meals_max_price() {
     return this._meals_max_price.value;
   }
-  public set meals_max_price(value: number) {
+  public set meals_max_price(value) {
     this._meals_max_price.value = value;
   }
   
   public get services_max_price() {
     return this._services_max_price.value;
   }
-  public set services_max_price(value: number) {
+  public set services_max_price(value) {
     this._services_max_price.value = value;
   }
   
   public get vehicles_max_price() {
     return this._vehicles_max_price.value;
   }
-  public set vehicles_max_price(value: number) {
+  public set vehicles_max_price(value) {
     this._vehicles_max_price.value = value;
   }
   
   public get real_state_max_price() {
     return this._real_state_max_price.value;
   }
-  public set real_state_max_price(value: number) {
+  public set real_state_max_price(value) {
     this._real_state_max_price.value = value;
   }
 }
