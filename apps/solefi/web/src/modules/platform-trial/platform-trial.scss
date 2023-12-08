@@ -1,0 +1,99 @@
+@import 'materialize-css';
+@import 'src/constants/Constants.scss';
+
+$gradient: linear-gradient(19deg, #0a2bb3, #24b1e6);
+
+.PlatformTrial {
+  position: relative;
+
+  &__background {
+    &--mini {
+      width: 100%;
+      margin-top: -40px;
+      padding: 60px 0 30px;
+      background-image: $gradient;
+    }
+  
+    &--desktop {
+      background-image: $gradient;
+    }
+  }
+
+  &__img {
+    position: inherit;
+    height: 220px;
+    width: 80%;
+    max-width: 350px;
+    margin: 0 auto;
+    border-radius: 15px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    box-shadow: rgba(0, 0, 0, 0.3) 0 2px 5px 0;
+    z-index: 1;
+  }
+
+  .Title {
+    margin-bottom: 15px;
+  }
+
+  &__text {
+    ul {
+      padding: 0 0 5px 16px !important;
+    }
+    
+    li {
+      list-style: circle !important;
+      margin: 4px 0;
+    }
+  }
+
+  &__button {
+    margin-top: 30px;
+  }
+}
+
+@media screen and (min-width: 993px) {
+  .PlatformTrial {
+    height: 70vh;
+
+    &__background {
+      &--desktop {
+        position: absolute;
+        height: 100%;
+        width: 54%;
+      }
+    }
+
+    &__desktop-info {
+      height: 100%;
+    }
+
+    &__img {
+      position: absolute;
+      top: 40px;
+      right: 0;
+      width: 50%;
+      max-width: none;
+      height: calc(100% - 80px);
+      border-radius: 15px 0 0 15px;
+      margin-bottom: 3em;
+    }
+
+    &__info {
+      position: relative;
+    }
+
+    &__text {
+      max-width: 350px;
+    }
+  }
+}
+
+@media screen and (min-width: 1200px) {
+  .PlatformTrial {
+    &__text {
+      max-width: 400px;
+    }
+  }
+}

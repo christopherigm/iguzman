@@ -1,12 +1,11 @@
 import { Signal, signal } from '@preact/signals-react';
 import CommonFields from './common-fields';
 
-export default class Country extends CommonFields {
+export default class Country {
   public static instance: Country;
-  protected type: string = 'Country';
+  public type: string = 'Country';
   private _id: Signal<number> = signal(0);
   public attributes: CountryAttributes = new CountryAttributes();
-  // public relationships: StandRelationships = new CountryAttributes();
 
   public static getInstance(): Country {
     return Country.instance || new Country();
@@ -15,12 +14,12 @@ export default class Country extends CommonFields {
   public get id() {
     return this._id.value;
   }
-  public set id(value: number) {
+  public set id(value) {
     this._id.value = value;
   }
 }
 
-class CountryAttributes {
+class CountryAttributes extends CommonFields {
   private _name: Signal<string> = signal('');
   private _code: Signal<string> = signal('');
   private _phone_code: Signal<string> = signal('');

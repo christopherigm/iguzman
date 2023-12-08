@@ -1,0 +1,13 @@
+@import 'materialize-css';
+@import 'src/constants/Constants.scss';
+
+.SubTitle {
+  &__text {
+    display: block;
+    font-size: $subtitle-font-size;
+    font-weight: $slim-font-weight;
+    line-height: 1.6em;
+    text-align: center;
+    @extend .grey-text, .text-darken-3;
+  }
+}

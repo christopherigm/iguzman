@@ -13,8 +13,8 @@ const envFile = '.env.local';
 
 const upgradeVersion = (version) => {
   const a = version.split('.');
-  if ( Number(a[2]) === 9 ) {
-    if ( Number(a[1]) === 9 ) {
+  if (Number(a[2]) === 9) {
+    if (Number(a[1]) === 9) {
       a[0] = Number(a[0]) + 1;
       a[1] = 0;
     } else {
@@ -30,8 +30,8 @@ const upgradeVersion = (version) => {
 
 const allFileContents = fs.readFileSync(envFile, 'utf-8');
 let newLines = '';
-allFileContents.split(/\r?\n/).forEach(line =>  {
-  if (line !== '' && line.substring(0,7) === 'VERSION') {
+allFileContents.split(/\r?\n/).forEach((line) => {
+  if (line !== '' && line.substring(0, 7) === 'VERSION') {
     const value = line.split('=')[1].replace(/\'/g, '');
     upgradeVersion(value);
     newLines += `VERSION='${upgradeVersion(value)}'\r\n`;
@@ -87,16 +87,20 @@ getBranchName()
   .then(() => deployMicroservice())
   .then(() => {
     const endTime = new Date(Date.now());
-    const difference = (((endTime - startTime) / 100 ) / 60) / 60;
+    const difference = (endTime - startTime) / 100 / 60 / 60;
     console.log('\nProcess Complete!!');
     console.log('\nBranch:', branch);
     console.log('Starting time:', startTime);
     console.log('Ending time:', endTime);
-    console.log('Processing time:', Math.round((difference + Number.EPSILON) * 100) / 100, 'minutes.');
+    console.log(
+      'Processing time:',
+      Math.round((difference + Number.EPSILON) * 100) / 100,
+      'minutes.'
+    );
     exit(0);
   })
   .catch((err) => {
-    if ( err && err.response && err.response.statusText ) {
+    if (err && err.response && err.response.statusText) {
       console.log('\nError:', err.response.statusText);
     } else {
       console.log('\nError:', err);

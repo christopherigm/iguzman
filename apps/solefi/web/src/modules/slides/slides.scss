@@ -1,0 +1,118 @@
+@import 'materialize-css';
+
+.Swiper {
+  display: block;
+  overflow-y: hidden;
+
+  &__content {
+    display: block;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    height: 80vh;
+    @extend .white-text;
+  }
+
+  .swiper-pagination {
+    bottom: -4px !important;
+  }
+
+  .swiper-pagination-bullet-active {
+    @extend .blue;
+  }
+
+  &__navigation-button {
+    position: absolute;
+    display: block;
+    top: calc(50% - 50px);
+    width: 40px;
+    height: 40px;
+    border-radius: 40px;
+    background-position: center;
+    background-size: contain;
+    cursor: pointer;
+    z-index: 3;
+  
+    &--right {
+      right: 5px;
+    }
+
+    &--left {
+      left: 5px;
+    }
+  }
+
+  &__triangle {
+    position: absolute;
+    bottom: -2px;
+    width: 100%;
+    height: 140px;
+    background-position: top right;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    z-index: 2;
+  }
+
+  .WhiteTextBox {
+    position: absolute;
+    bottom: 10px;
+    width: 84%;
+    left: 8%;
+    z-index: 2;
+  }
+}
+
+@media screen and (min-width: 601px) {
+  .Swiper {
+    .WhiteTextBox {
+      width: 400px;
+      bottom: 40px;
+      left: calc(50% - 200px);
+    }
+
+    &__navigation-button {
+      top: calc(50% - 60px);
+      width: 50px;
+      height: 50px;
+      outline: none;
+    
+      &--right {
+        right: 10px;
+      }
+  
+      &--left {
+        left: 10px;
+      }
+    }
+
+    .swiper-pagination {
+      bottom: 15px !important;
+    }
+
+    &__triangle {
+      height: 190px;
+    }
+  }
+}
+
+@media screen and (min-width: 993px) {
+  .Swiper {
+    &__content {
+      height: 90vh;
+    }
+
+    .WhiteTextBox {
+      bottom: 70px;
+      width: 460px;
+      left: calc(50% - 230px);
+    }
+
+    .swiper-pagination {
+      bottom: 35px !important;
+    }
+
+    &__triangle {
+      height: 250px;
+    }
+  }
+}

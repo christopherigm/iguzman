@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      volumes:
+      - name: default-conf
+        configMap:
+          name: {{ .Chart.Name }}-default-conf
+          items:
+            - key: default.conf
+              path: default.conf
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        volumeMounts:
+        - name: default-conf
+          readOnly: true
+          mountPath: /etc/nginx/conf.d/
+        ports:
+        - containerPort: {{ .Values.service.internalPort }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      nodeSelector:
+          {{- toYaml .Values.deployment.nodeSelector | nindent 12 }}

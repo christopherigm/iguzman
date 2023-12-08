@@ -1,86 +1,62 @@
-import React, {
-  ReactElement,
-  useEffect,
-  useState,
-} from 'react';
+import React, { ReactElement, useEffect } from 'react';
 import Head from 'next/head';
 import Typography from '@mui/material/Typography';
-import {
-  GetCookieCachedValues,
-  GetEnvVariables,
-  GetLocalStorageData,
-  SetLocalStorageData,
-} from 'utils';
-import type {
-  EnvironmentVariables,
-  CachedValues,
-  Languages,
-} from 'utils';
-import {SignInForm} from 'ui';
-import MainLayout from 'layouts/main-layout';
-import {SystemInitalState} from 'interfaces/system-interface';
-import type System from 'interfaces/system-interface';
 import { useRouter } from 'next/router';
-import type UserInterface from 'interfaces/user-interface';
+import { SetLocalStorageData } from 'utils';
+import { SignInForm, MainLayout } from 'ui';
+import System, { system } from 'classes/system';
+import { user } from 'classes/user';
 
-const Page = (props: System): ReactElement => {
-  const [system, updateSystem] = useState<System>(props);
-  const setSystem = (s: System): void => updateSystem(_s => s);
+const Page = (props: any): ReactElement => {
   const router = useRouter();
 
   useEffect(() => {
-    const user = GetLocalStorageData('user');
-    if (user) {
-      setSystem({
-        ...system,
-        user: JSON.parse(user) as UserInterface
-      });
-    }
-  }, [system]);
+    system.setServerSideProps(props);
+  }, [props]);
 
-  const callback = (data: UserInterface) => {
-    SetLocalStorageData('user', JSON.stringify(data));
+  const callback = (data: any) => {
+    SetLocalStorageData(user.type, JSON.stringify(data));
     router.push('/');
   };
 
   return (
     <MainLayout
-      system={system}
-      setSystem={setSystem}>
+      darkMode={system.darkMode}
+      switchTheme={() => system.switchTheme()}
+      devMode={system.devMode}
+      switchDevMode={() => system.switchDevMode()}
+      isLoading={system.isLoading}
+      language={props.defaultLanguage}
+      loginEnabled={props.loginEnabled}
+      version={props.version}
+      hostName={props.hostName}
+    >
       <Head>
-        <link rel='icon' href='/favicon.ico' />
+        <link rel="icon" href="/favicon.ico" />
         <meta
-          name='description'
-          content='Learn how to build a personal website using Next.js'
+          name="description"
+          content="Learn how to build a personal website using Next.js"
         />
         <title>Nedii</title>
-        <meta name='og:title' content={'siteTitle'} />
-        <meta name='twitter:card' content='summary_large_image' />
+        <meta name="og:title" content={'siteTitle'} />
+        <meta name="twitter:card" content="summary_large_image" />
       </Head>
       <Typography
         marginTop={3}
-        variant='h5'
-        color={system.darkMode ? 'primary.contrastText' : ''}>
+        variant="h5"
+        color={system.darkMode ? 'primary.contrastText' : ''}
+      >
         Acceder a mi cuenta
       </Typography>
-      <SignInForm
-        URLBase={system.URLBase}
-        callback={callback} />
+      <SignInForm URLBase={props.URLBase} callback={callback} />
     </MainLayout>
   );
 };
 
 export async function getServerSideProps({ req }: any) {
-  const cookies = req.cookies;
-  const env = GetEnvVariables() as EnvironmentVariables;
-  const cachedValues: CachedValues = GetCookieCachedValues(cookies);
-  const props: System = {
-    ...SystemInitalState,
-    ...env,
-    ...cachedValues,
-    language: cachedValues.language ? cachedValues.language : env.defaultLanguage as Languages,
-  };
-  return {props};
-};
+  const props = System.getInstance();
+  props.parseCookies(req.cookies);
+  return { props: props.getServerSideProps() };
+}
 
 export default Page;

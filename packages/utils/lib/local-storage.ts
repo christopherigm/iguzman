@@ -1,11 +1,24 @@
 export const GetLocalStorageData = (key: string): string | null => {
-  const data = localStorage.getItem(key);
-  if (typeof data === 'string') {
-    return data;
+  try {
+    if (localStorage === undefined) return null;
+    const data = localStorage.getItem(key);
+    if (
+      typeof data === 'string' &&
+      data !== undefined &&
+      data !== 'undefined'
+    ) {
+      return data;
+    }
+    return null;
+  } catch {
+    return null;
   }
-  return null;
 };
 
 export const SetLocalStorageData = (key: string, value: string): void => {
-  localStorage.setItem(key, value);
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    null;
+  }
 };

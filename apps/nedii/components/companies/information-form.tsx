@@ -35,7 +35,7 @@ const InformationForm = ({
           (advancedOptions.value = value)
         }
       />
-      {advancedOptions.value ? (
+      {/* {advancedOptions.value ? (
         <>
           <CompanyAddressInput
             URLBase={URLBase}
@@ -48,20 +48,12 @@ const InformationForm = ({
             language="es"
             always_open={stand.attributes.always_open}
             onChange={(name: string, value: string | boolean) =>
-              onChange(name, value)
+              console.log(name, value)
             }
           />
-          <BookingInputData
-            booking_active={stand.attributes.booking_active}
-            booking_fee={stand.attributes.booking_fee}
-            booking_email={stand.attributes.booking_email}
-            restaurant={stand.attributes.restaurant}
-            onChange={(name: string, value: string | boolean | number) =>
-              onChange(name, value)
-            }
-          />
+          <BookingInputData stand={stand} />
         </>
-      ) : null}
+      ) : null} */}
     </>
   );
 };

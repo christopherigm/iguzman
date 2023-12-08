@@ -37,6 +37,7 @@ export { default as GetCookieCachedValues } from './lib/get-cookie-cached-values
 export { default as GetEnvVariables } from './lib/get-env-variables';
 export { default as ReplaceURLBase } from './lib/replace-url-base';
 export { APICreationErrorHandler } from './lib/api-error-handler';
+export { default as GetBooleanFromString } from './lib/get-boolean-from-string';
 
 /**
  * API
@@ -72,3 +73,5 @@ export { BaseUser, BaseUserAttributes } from './classes/base-user';
 export { default as Country } from './classes/country';
 export { default as State } from './classes/state';
 export { default as City } from './classes/city';
+export { BasePicture, BasePictureAttributes } from './classes/base-picture';
+export { BaseSystem } from './classes/base-system';

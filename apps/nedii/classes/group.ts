@@ -1,4 +1,4 @@
-import { Signal, signal } from "@preact/signals-react";
+import { Signal, signal } from '@preact/signals-react';
 import { CommonFields } from 'utils';
 
 export default class Group {
@@ -14,7 +14,7 @@ export default class Group {
   public get id() {
     return this._id.value;
   }
-  public set id(value: number) {
+  public set id(value) {
     this._id.value = value;
   }
 }
@@ -24,28 +24,28 @@ class GroupAttributes extends CommonFields {
   private _slug: Signal<string> = signal('');
   private _icon: Signal<string> = signal('');
   private _color: Signal<string> = signal('');
-  
+
   public get name() {
     return this._name.value;
   }
   public set name(value) {
     this._name.value = value;
   }
-  
+
   public get slug() {
     return this._slug.value;
   }
   public set slug(value) {
     this._slug.value = value;
   }
-  
+
   public get icon() {
     return this._icon.value;
   }
   public set icon(value) {
     this._icon.value = value;
   }
-  
+
   public get color() {
     return this._color.value;
   }

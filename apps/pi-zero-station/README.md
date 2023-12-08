@@ -25,9 +25,9 @@ scp -r christopher@raspberrypi:/home/christopher/pictures .
 scp christopher@raspberrypi:/home/christopher/video.h264 .
 
 ffmpeg \
- -framerate 30 \
+ -framerate 60 \
  -pattern_type glob \
- -i "time-lapse/picam/\*.jpg" \
+ -i "/shared-volume/time-lapse/picam/\*.jpg" \
  -s:v 1920x1080 \
  -c:v libx264 \
  -crf 17 \
@@ -92,7 +92,7 @@ ffmpeg \
 
 # Instagram
 
-./yt-dlp https://www.instagram.com/p/Cxyx4usP5u6/ \
+./yt-dlp https://www.instagram.com/reel/CzG-g_EuLJG \
 --add-header 'user-agent:Mozilla/5.0' -vU \
  -o "%(title)s.%(ext)s"
 

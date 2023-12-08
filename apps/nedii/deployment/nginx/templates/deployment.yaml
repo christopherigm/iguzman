@@ -41,3 +41,6 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
+      nodeSelector:
+          {{- toYaml .Values.deployment.nodeSelector | nindent 12 }}
+

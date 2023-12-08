@@ -1,5 +1,5 @@
 import { Signal, signal } from '@preact/signals-react';
-import { BaseUser, BaseUserAttributes } from 'utils';
+import { BaseUser, BaseUserAttributes, GetLocalStorageData, API } from 'utils';
 
 export default class User extends BaseUser {
   public static instance: User;
@@ -7,6 +7,66 @@ export default class User extends BaseUser {
 
   public static getInstance(): User {
     return User.instance || new User();
+  }
+
+  public getNediiUserFromLocalStorage() {
+    this.getUserFromLocalStorage();
+    let cachedUser: any = GetLocalStorageData(this.type);
+    if (cachedUser) {
+      cachedUser = JSON.parse(cachedUser);
+      this.attributes.is_seller =
+        cachedUser?.attributes?.is_seller ?? this.attributes.is_seller;
+      this.attributes.newsletter =
+        cachedUser?.attributes?.newsletter ?? this.attributes.newsletter;
+      this.attributes.promotions =
+        cachedUser?.attributes?.promotions ?? this.attributes.promotions;
+      this.attributes.biography =
+        cachedUser?.attributes?.biography ?? this.attributes.biography;
+      this.attributes.owner_position =
+        cachedUser?.attributes?.owner_position ??
+        this.attributes.owner_position;
+      this.attributes.owner_position_description =
+        cachedUser?.attributes?.owner_position_description ??
+        this.attributes.owner_position_description;
+      this.attributes.owner_phone =
+        cachedUser?.attributes?.owner_phone ?? this.attributes.owner_phone;
+      this.attributes.owner_office_phone =
+        cachedUser?.attributes?.owner_office_phone ??
+        this.attributes.owner_office_phone;
+      this.attributes.owner_email =
+        cachedUser?.attributes?.owner_email ?? this.attributes.owner_email;
+      this.attributes.owner_whatsapp =
+        cachedUser?.attributes?.owner_whatsapp ??
+        this.attributes.owner_whatsapp;
+      this.attributes.owner_address =
+        cachedUser?.attributes?.owner_address ?? this.attributes.owner_address;
+    }
+  }
+
+  getPlainAttributes(): Object {
+    return {
+      email: this.attributes.email,
+      username: this.attributes.username,
+      password: this.attributes.password,
+      first_name: this.attributes.first_name,
+      last_name: this.attributes.last_name,
+      img_picture: this.attributes.img_picture,
+      theme: this.attributes.theme,
+      theme_color: this.attributes.theme_color,
+      profile_picture_shape: this.attributes.profile_picture_shape,
+      phone_number: this.attributes.phone_number,
+      is_seller: this.attributes.is_seller,
+      newsletter: this.attributes.newsletter,
+      promotions: this.attributes.promotions,
+      biography: this.attributes.biography,
+      owner_position: this.attributes.owner_position,
+      owner_position_description: this.attributes.owner_position_description,
+      owner_phone: this.attributes.owner_phone,
+      owner_office_phone: this.attributes.owner_office_phone,
+      owner_email: this.attributes.owner_email,
+      owner_whatsapp: this.attributes.owner_whatsapp,
+      owner_address: this.attributes.owner_address,
+    };
   }
 }
 
@@ -100,3 +160,5 @@ class UserAttributes extends BaseUserAttributes {
     this._owner_address.value = value;
   }
 }
+
+export const user = signal<User>(User.getInstance()).value;

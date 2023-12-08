@@ -3,224 +3,151 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
-import {
-  useReducer,
-  FormEvent,
-} from 'react';
-import PasswordField from '../password-field';
-import {
-  API,
-  APICreationErrorHandler,
-  SetLocalStorageData,
-} from 'utils';
-import type {
-  JWTPayload,
-  APIPostCreationError,
-  CreationErrorInput,
-  Action,
-} from 'utils';
+import { Signal, signal } from '@preact/signals-react';
+import { FormEvent, useEffect } from 'react';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Link from 'next/link';
+import type { APIPostCreationError } from 'utils';
+import PasswordField from '../password-field';
+import { BaseUser } from 'utils';
 
-type State = {
-  isLoading: boolean;
-  username: string;
-  password: string;
-  error: Array<APIPostCreationError>;
-};
-
-const InitialState: State = {
-  isLoading: false,
-  username: '',
-  password: '',
-  error: []
-};
-
-const Reducer = (state: State = InitialState, action: Action<null, CreationErrorInput>): State => {
-  if (action.type === 'loading') {
-    return {
-      ...state,
-      isLoading: true,
-      error: [],
-    };
-  } else if (action.type === 'success') {
-    return {
-      ...state,
-      username: '',
-      password: '',
-      error: [],
-      isLoading: false,
-    };
-  } else if (action.type === 'error' && action.error) {
-    return {
-      ...state,
-      error: APICreationErrorHandler(action.error),
-      isLoading: false,
-    };
-  } else if (action.type === 'input' && action.name) {
-    return {
-      ...state,
-      error: [],
-      [action.name]: action.value
-    };
-  }
-  throw new Error('Invalid action');
-};
+const user = signal<BaseUser>(BaseUser.getInstance()).value;
+const isLoading: Signal<boolean> = signal(false);
+const error: Signal<Array<APIPostCreationError>> = signal([]);
 
 type Props = {
   URLBase: string;
   callback: (data: any) => void;
-}
+};
 
-const SignInForm = ({
-    URLBase,
-    callback,
-  }: Props) => {
-  const [state, dispatch] = useReducer(Reducer, InitialState);
-    
+const SignInForm = ({ URLBase, callback }: Props) => {
+  useEffect(() => {
+    user.URLBase = URLBase;
+  }, []);
+
   const canSubmit = (): boolean => {
-    return state.username !== '' && state.password !== '';
+    return user.attributes.email !== '' && user.attributes.password !== '';
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    dispatch({type: 'loading'});
-    API.Login({
-        URLBase,
-        attributes: {
-          username: state.username,
-          password: state.password,
-        }
-      })
-        .then((data: JWTPayload) => {
-          SetLocalStorageData('jwt', JSON.stringify(data));
-          return API.GetUser({
-            URLBase,
-            jwt: data.access,
-            userID: data.user_id
-          });
+    isLoading.value = true;
+    user
+      .login()
+      .then(() => user.getUserFromAPI())
+      .then((data) =>
+        callback({
+          ...data,
+          jwt: user.jwt,
+          access: user.access,
         })
-        .then((data: any) => {
-          dispatch({type: 'success'});
-          callback(data);
-        })
-        .catch((error) => {
-          dispatch({
-            type: 'error',
-            error: error
-          });
-        });
-  }
+      )
+      .catch((e) => (error.value = e))
+      .finally(() => (isLoading.value = false));
+  };
 
   return (
     <Box
-      display='flex'
-      justifyContent='center'
-      component='form'
+      display="flex"
+      justifyContent="center"
+      component="form"
       noValidate={false}
-      autoComplete='on'
+      autoComplete="on"
       onSubmit={handleSubmit}
-      marginTop={4}>
-      <Grid container
-        columnSpacing={2}
-        rowSpacing={2}
-        maxWidth={600}>
+      marginTop={4}
+    >
+      <Grid container columnSpacing={2} rowSpacing={2} maxWidth={600}>
         <Grid item xs={12} md={6}>
           <TextField
-            label='Email'
-            variant='outlined'
-            size='small'
-            type='email'
-            value={state.username}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              dispatch({
-                type: 'input',
-                name: 'username',
-                value: e.target.value
-              });
-            }}
-            disabled={state.isLoading}
-            style={{width: '100%'}} />
+            label="Email"
+            variant="outlined"
+            size="small"
+            type="email"
+            value={user.attributes.email}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              (user.attributes.email = e.target.value)
+            }
+            disabled={isLoading.value}
+            style={{ width: '100%' }}
+          />
         </Grid>
         <Grid item xs={12} md={6}>
           <PasswordField
-            value={state.password}
-            onChange={(v: string) => dispatch({
-              type: 'input',
-              name: 'password',
-              value: v
-            })}
-            disabled={state.isLoading} />
+            value={user.attributes.password}
+            onChange={(v: string) => (user.attributes.password = v)}
+            disabled={isLoading.value}
+          />
         </Grid>
-        <Grid item
+        <Grid
+          item
           xs={12}
           marginTop={1}
           sx={{
             display: 'flex',
-            justifyContent: 'right'
-          }}>
+            justifyContent: 'right',
+          }}
+        >
           <Button
-            variant='contained'
-            type='submit'
-            size='small'
-            disabled={state.isLoading || !canSubmit()}>
+            variant="contained"
+            type="submit"
+            size="small"
+            disabled={isLoading.value || !canSubmit()}
+          >
             Acceder
           </Button>
         </Grid>
-        {
-          !state.error.length ?
-            <Grid item xs={12} marginTop={2}>
-              <Stack sx={{ width: '100%' }} spacing={2}>
-                <Link href='/reset-password'>
-                  <Alert severity='info'>
-                    Si no recuerdas tu contraseña, puedes restablecerla dando click aqui.
-                  </Alert>
-                </Link>
-                <Link href='/sign-up'>
-                  <Alert severity='success'>
-                    Puedes crear una cuenta gratis dando click aqui.
-                  </Alert>
-                </Link>
-              </Stack>
-            </Grid> : null
-        }
-        {
-          state.error.length &&
-          state.error[0].status === 401 &&
-          state.error[0].pointer === 'data' &&
-          state.error[0].code === 'no_active_account' ?
-            <Grid item xs={12} marginTop={2}>
-              <Stack sx={{ width: '100%' }} spacing={2}>
-                <Alert severity='error'>
-                  Error: Este correo electronico no esta registrado en la plataforma
-                  o el correo electronico y/o contraseña son incorrectos.
+        {!error.value.length ? (
+          <Grid item xs={12} marginTop={2}>
+            <Stack sx={{ width: '100%' }} spacing={2}>
+              <Link href="/reset-password">
+                <Alert severity="info">
+                  Si no recuerdas tu contraseña, puedes restablecerla dando
+                  click aqui.
                 </Alert>
-                <Link href='/reset-password'>
-                  <Alert severity='success'>
-                    Si tu correo electronico es correcto, pero no recuerdas tu contraseña,
-                    puedes restablecerla dando click aqui.
-                  </Alert>
-                </Link>
-                <Link href='/sign-up'>
-                  <Alert severity='success'>
-                    Puedes crear una cuenta gratis dando click aqui.
-                  </Alert>
-                </Link>
-              </Stack>
-            </Grid> : null
-        }
-        {
-          state.isLoading ?
-            <Grid item xs={12} marginTop={1}>
-              <Box sx={{ width: '100%' }}>
-                <LinearProgress />
-              </Box>
-            </Grid> : null
-        }
+              </Link>
+              <Link href="/sign-up">
+                <Alert severity="success">
+                  Puedes crear una cuenta gratis dando click aqui.
+                </Alert>
+              </Link>
+            </Stack>
+          </Grid>
+        ) : null}
+        {error.value.length &&
+        Number(error.value[0].status) === 401 &&
+        error.value[0].code === 'no_active_account' ? (
+          <Grid item xs={12} marginTop={2}>
+            <Stack sx={{ width: '100%' }} spacing={2}>
+              <Alert severity="error">
+                Error: Este correo electronico no esta registrado en la
+                plataforma o el correo electronico y/o contraseña son
+                incorrectos.
+              </Alert>
+              <Link href="/reset-password">
+                <Alert severity="success">
+                  Si tu correo electronico es correcto, pero no recuerdas tu
+                  contraseña, puedes restablecerla dando click aqui.
+                </Alert>
+              </Link>
+              <Link href="/sign-up">
+                <Alert severity="success">
+                  Puedes crear una cuenta gratis dando click aqui.
+                </Alert>
+              </Link>
+            </Stack>
+          </Grid>
+        ) : null}
+        {isLoading.value ? (
+          <Grid item xs={12} marginTop={1}>
+            <Box sx={{ width: '100%' }}>
+              <LinearProgress />
+            </Box>
+          </Grid>
+        ) : null}
       </Grid>
     </Box>
   );
-}
+};
 
 export default SignInForm;

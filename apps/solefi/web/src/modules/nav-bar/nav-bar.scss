@@ -1,0 +1,31 @@
+.Logo {
+  display: block;
+  width: 170px;
+  height: 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 90%;
+}
+
+.SideNavBar {
+  &__logo {
+    display: block;
+    width: 100%;
+    height: 70px;
+    margin: 10px 0;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 55%;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .ClientAccess {
+    width: 140px !important;
+    padding: 0 !important;
+  
+    i {
+      margin-right: 10px !important;
+    }
+  }
+}

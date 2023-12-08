@@ -2,9 +2,9 @@ import { Signal, signal } from '@preact/signals-react';
 import CommonFields from './common-fields';
 import State from './state';
 
-export default class City extends CommonFields {
+export default class City {
   public static instance: City;
-  protected type: string = 'Stand';
+  public type: string = 'City';
   private _id: Signal<number> = signal(0);
   public attributes: CityAttributes = new CityAttributes();
   public relationships: CityRelationships = new CityRelationships();
@@ -16,12 +16,12 @@ export default class City extends CommonFields {
   public get id() {
     return this._id.value;
   }
-  public set id(value: number) {
+  public set id(value) {
     this._id.value = value;
   }
 }
 
-class CityAttributes {
+class CityAttributes extends CommonFields {
   private _name: Signal<string> = signal('');
 
   public get name() {
