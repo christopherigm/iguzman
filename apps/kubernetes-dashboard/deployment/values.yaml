@@ -1,0 +1,7 @@
+service:
+  type: ClusterIP
+  externalPort: 443
+
+ingress:
+  enabled: true
+  host: k8s.iguzman.com.mx
