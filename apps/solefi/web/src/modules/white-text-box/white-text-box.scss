@@ -1,0 +1,25 @@
+@import 'materialize-css';
+@import 'src/constants/Constants.scss';
+
+.WhiteTextBox {
+  display: block;
+  background-color: rgb(255, 255, 255);
+  border-radius: 5px;
+  padding: 10px;
+
+  &__text {
+    padding: 0;
+    display: block;
+    text-align: center;
+    font-size: $medium-text;
+    line-height: 1.2em;
+    transition: all 0.8s;
+    @extend .black-text;
+  }
+}
+
+@media screen and (min-width: 600px) {
+  .WhiteTextBox {
+    padding: 20px;
+  }
+}

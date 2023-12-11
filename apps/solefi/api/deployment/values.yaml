@@ -1,0 +1,39 @@
+replicaCount: 1
+volumeMountPath: "shared-volume"
+nginxServiceName: "nginx-api"
+
+config:
+  ENVIRONMENT: staging
+  BRANCH_NAME: integration
+  SECRET_KEY: default
+  DB_HOST: postgres-api.solefi.svc.cluster.local
+  DB_NAME: default
+  DB_USER: default
+  DB_PASSWORD: default
+
+image:
+  registry: christopherguzman
+  repository: solefi-api
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  externalPort: 80
+  internalPort: 8000
+
+ingress:
+  enabled: false
+  host: myapp.com
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+deployment:
+  nodeSelector:
+    nodeProjects: real-clients

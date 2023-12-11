@@ -1,0 +1,108 @@
+{
+  "plugins": [
+    "@typescript-eslint",
+    "react-hooks"
+  ],
+  "extends": [
+    "plugin:react/recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "env": {
+    "node": true,
+    "browser": true,
+    "mocha": true,
+    "es6": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "rules": {
+    "max-lines-per-function": [
+      "error",
+      { 
+        "max": 200, 
+        "skipBlankLines": true,
+        "skipComments": true 
+      }
+    ],
+    "max-lines": [
+      "error",
+      { 
+        "max": 260,
+        "skipBlankLines": true,
+        "skipComments": true 
+      }
+    ],
+    "@typescript-eslint/no-explicit-any": "off",
+    "max-depth": ["error", 4],
+    "max-params": ["error", 5],
+    "max-nested-callbacks": ["error", 4],
+    "comma-dangle": 2,
+    "no-dupe-keys": 1,
+    "no-empty": 1,
+    "no-extra-semi": 2,
+    "no-irregular-whitespace": 1,
+    "no-unreachable": 2,
+    "curly": [2, "multi-line", "consistent"],
+    "default-case": 1,
+    "dot-notation": 2,
+    "eqeqeq": 2,
+    "guard-for-in": 1,
+    "no-alert": 1,
+    "no-else-return": 1,
+    "no-labels": 1,
+    "no-eval": 2,
+    "no-extra-bind": 2,
+    "no-fallthrough": 2,
+    "no-floating-decimal": 1,
+    "no-implied-eval": 1,
+    "no-iterator": 1,
+    "no-lone-blocks": 1,
+    "no-loop-func": 2,
+    "no-native-reassign": 2,
+    "no-redeclare": 2,
+    "no-return-assign": 1,
+    "no-script-url": 2,
+    "no-self-compare": 1,
+    "no-sequences": 1,
+    "no-multi-spaces": 2,
+    "radix": 2,
+    "yoda": 2,
+    "no-undef": 2,
+    "no-unused-vars": [2, { "args": "none" }],
+    "brace-style": [2, "1tbs", { "allowSingleLine": false }],
+    "comma-spacing": [2, { "before": false, "after": true }],
+    "comma-style": [2, "last"],
+    "eol-last": 2,
+    "key-spacing": [2, { "mode": "strict" }],
+    "no-mixed-spaces-and-tabs": 2,
+    "semi-spacing": 2,
+    "no-spaced-func": 2,
+    "no-trailing-spaces": 2,
+    "quotes": [2, "single"],
+    "semi": [2, "always"],
+    "sort-vars": 0,
+    "space-before-function-paren": [2, "never"],
+    "space-before-blocks": 2,
+    "space-in-brackets": 0,
+    "space-in-parens": 0,
+    "space-infix-ops": 2,
+    "spaced-comment": 2,
+    "keyword-spacing": 2
+  },
+  "overrides": [
+    {
+      "files": [
+        "*test.js"
+      ],
+      "rules": {
+        "max-lines-per-function": "off",
+        "max-lines": "off"
+      }
+    }
+  ]
+}

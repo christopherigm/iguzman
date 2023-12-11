@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
@@ -7,30 +7,25 @@ import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import Avatar from '@mui/material/Avatar';
 import AccountCircle from '@mui/icons-material/AccountCircle';
-import {
-  DeleteCookie,
-  SetLocalStorageData,
-} from 'utils';
-import type {Languages} from 'utils';
+import { DeleteCookie, SetLocalStorageData } from 'utils';
+import type { Languages } from 'utils';
 import { useRouter } from 'next/router';
 
-type User = {
-  attributes: {
-    username: string;
-    img_picture: string;
-    firstname: string;
-    lastname: string;
-  }
-}
+export type SignInMenuUser = {
+  username?: string;
+  img_picture?: string;
+  firstname?: string;
+  lastname?: string;
+};
 
 type Props = {
   language: Languages;
-  user?: User;
+  user?: SignInMenuUser;
   darkMode: boolean;
-}
+};
 
-const SignInMenu = ({user, language='en', darkMode=false}: Props) => {
-  const router = useRouter()
+const SignInMenu = ({ user, language = 'en', darkMode = false }: Props) => {
+  const router = useRouter();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -43,31 +38,27 @@ const SignInMenu = ({user, language='en', darkMode=false}: Props) => {
 
   const logOutAndHandleClose = () => {
     setAnchorEl(null);
-    DeleteCookie('jwt');
-    DeleteCookie('user');
-    SetLocalStorageData('jwt', '');
-    SetLocalStorageData('user', '');
+    DeleteCookie('User');
+    SetLocalStorageData('User', '');
     router.reload();
   };
 
   return (
     <div>
-      {
-        user ?
+      {user && user.username ? (
         <>
-          <Tooltip title='Open settings'>
+          <Tooltip title="Open settings">
             <IconButton onClick={handleMenu} sx={{ p: 0 }}>
               <Avatar
-                alt=''
+                alt=""
                 src={
-                  user.attributes.img_picture ?
-                  user.attributes.img_picture :
-                  '/images/profile.jpg'
-                  } />
+                  user.img_picture ? user.img_picture : '/images/profile.jpg'
+                }
+              />
             </IconButton>
           </Tooltip>
           <Menu
-            id='menu-appbar'
+            id="menu-appbar"
             anchorEl={anchorEl}
             anchorOrigin={{
               vertical: 'top',
@@ -79,37 +70,42 @@ const SignInMenu = ({user, language='en', darkMode=false}: Props) => {
               horizontal: 'right',
             }}
             open={Boolean(anchorEl)}
-            onClose={handleClose}>
-            <Link href='/account'>
+            onClose={handleClose}
+          >
+            <Link href="/account">
               <MenuItem onClick={handleClose}>
                 <Typography
-                  variant='body1'
-                  color={darkMode ? 'primary.contrastText' : '#333'}>
+                  variant="body1"
+                  color={darkMode ? 'primary.contrastText' : '#333'}
+                >
                   {language === 'en' ? 'My account' : 'Mi cuenta'}
                 </Typography>
               </MenuItem>
             </Link>
             <MenuItem onClick={logOutAndHandleClose}>
               <Typography
-                variant='body1'
-                color={darkMode ? 'primary.contrastText' : '#333'}>
+                variant="body1"
+                color={darkMode ? 'primary.contrastText' : '#333'}
+              >
                 {language === 'en' ? 'Logout' : 'Cerrar sesion'}
               </Typography>
             </MenuItem>
           </Menu>
-        </> :
+        </>
+      ) : (
         <>
           <IconButton
-            size='large'
-            aria-label='account of current user'
-            aria-controls='menu-appbar'
-            aria-haspopup='true'
+            size="large"
+            aria-label="account of current user"
+            aria-controls="menu-appbar"
+            aria-haspopup="true"
             onClick={handleMenu}
-            color='primary'>
+            color="primary"
+          >
             <AccountCircle />
           </IconButton>
           <Menu
-            id='menu-appbar'
+            id="menu-appbar"
             anchorEl={anchorEl}
             anchorOrigin={{
               vertical: 'top',
@@ -121,31 +117,33 @@ const SignInMenu = ({user, language='en', darkMode=false}: Props) => {
               horizontal: 'right',
             }}
             open={Boolean(anchorEl)}
-            onClose={handleClose}>
-              <Link href='/sign-in'>
-                <MenuItem onClick={handleClose}>
-                  <Typography
-                    variant='body1'
-                    color={darkMode ? 'primary.contrastText' : '#333'}>
-                    {language === 'en' ? 'Login' : 'Iniciar sesion'}
-                  </Typography>
-                </MenuItem>
-              </Link>
-              <Link href='/sign-up'>
-                <MenuItem onClick={handleClose}>
-                  <Typography
-                    variant='body1'
-                    color={darkMode ? 'primary.contrastText' : '#333'}>
-                    {language === 'en' ? 'Sign up' : 'Crear cuenta'}
-                  </Typography>
-                </MenuItem>
-              </Link>
+            onClose={handleClose}
+          >
+            <Link href="/sign-in">
+              <MenuItem onClick={handleClose}>
+                <Typography
+                  variant="body1"
+                  color={darkMode ? 'primary.contrastText' : '#333'}
+                >
+                  {language === 'en' ? 'Login' : 'Iniciar sesion'}
+                </Typography>
+              </MenuItem>
+            </Link>
+            <Link href="/sign-up">
+              <MenuItem onClick={handleClose}>
+                <Typography
+                  variant="body1"
+                  color={darkMode ? 'primary.contrastText' : '#333'}
+                >
+                  {language === 'en' ? 'Sign up' : 'Crear cuenta'}
+                </Typography>
+              </MenuItem>
+            </Link>
           </Menu>
         </>
-      }
-      
+      )}
     </div>
   );
-}
+};
 
 export default SignInMenu;

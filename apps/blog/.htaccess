@@ -1,0 +1,22 @@
+# BEGIN WordPress
+# Die Anweisungen (Zeilen) zwischen „BEGIN WordPress“ und „END WordPress“ sind
+# dynamisch generiert und sollten nur über WordPress-Filter geändert werden.
+# Alle Änderungen an den Anweisungen zwischen diesen Markierungen werden überschrieben.
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteRule ^en/wp-login.php /wp-login.php [QSA,L]
+RewriteRule ^de/wp-login.php /wp-login.php [QSA,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+
+# END WordPress
+
+php_value upload_max_filesize 256M
+php_value post_max_size 256M
+php_value max_execution_time 300
+php_value max_input_time 300

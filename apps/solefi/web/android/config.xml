@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="mx.com.iguzman.solefi" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Solefi</name>
+    <description>
+        Solefi, Asesores de Negocios
+    </description>
+    <author email="christopher.guzman.monsalvo@gmail.com" href="https://www.iguzman.com.mx">
+        Edgar and Christopher Guzman
+    </author>
+    <content src="index.html" />
+    <access origin="*" />
+    <icon src="./logo.png"/>
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    <platform name="android">
+        <allow-intent href="market:*" />
+        <splash src="splash.png" />
+        <preference name="StatusBarBackgroundColor" value="#ffffff" />
+        <preference name="StatusBarStyle" value="blacktranslucent" />
+    </platform>
+    <platform name="ios">
+        <allow-intent href="itms:*" />
+        <allow-intent href="itms-apps:*" />
+    </platform>
+    <preference name="SplashScreenDelay" value="2500" />
+</widget>

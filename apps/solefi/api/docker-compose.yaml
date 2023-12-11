@@ -1,0 +1,31 @@
+version: "3.9"
+services:
+  solefi-api-db:
+    image: postgres:14.0-alpine
+    restart: unless-stopped
+    volumes:
+      - /apps/solefi-api/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+  solefi-api:
+    image: registry.iguzman.com.mx/solefi-api:${BRANCH}
+    restart: unless-stopped
+    scale: 1
+    environment:
+      - BRANCH=${BRANCH}
+      - SECRET_KEY=${SECRET_KEY}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+    volumes:
+      - /apps/solefi-api/static:/static
+      - /apps/solefi-api/media:/media
+    ports:
+      - "${PUBLIC_PORT}:8000"
+    depends_on:
+      - solefi-api-db

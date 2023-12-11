@@ -22,8 +22,12 @@ ingress:
 
 resources:
   limits:
-    cpu: 500m
+    cpu: 300m
     memory: 512Mi
   requests:
     cpu: 100m
     memory: 128Mi
+
+deployment:
+  nodeSelector:
+    nodeName: master

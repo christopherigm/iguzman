@@ -13,14 +13,14 @@ export default class TimeFields {
   public get created() {
     return this._created.value;
   }
-  public set created(value: Date) {
+  public set created(value) {
     this._created.value = value;
   }
 
   public get modified() {
     return this._modified.value;
   }
-  public set modified(value: Date) {
+  public set modified(value) {
     this._modified.value = value;
   }
   

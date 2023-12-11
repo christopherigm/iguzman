@@ -35,8 +35,12 @@ ingress:
 
 resources:
   limits:
-    cpu: 300m
+    cpu: 200m
     memory: 512Mi
   requests:
     cpu: 100m
     memory: 128Mi
+
+deployment:
+  nodeSelector:
+    nodeProjects: real-clients

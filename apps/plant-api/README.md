@@ -1,6 +1,7 @@
 # Plant API
 
 ## Linux instructions
+
 ```sh
 sudo apt install libpq-dev python3-dev python3.10-venv build-essential python-setuptools python3-distutils
 sudo apt install postgresql-server-dev-all
@@ -8,7 +9,7 @@ sudo apt install postgresql-server-dev-all
 
 ## Windows instructions
 
-### Install Python 
+### Install Python
 
 Get it form [here](https://www.python.org/downloads/)
 
@@ -43,12 +44,14 @@ deactivate
 ```
 
 ### Backup database
+
 ```sh
 kubectl exec -it <POD> \
 /usr/local/bin/pg_dump plant-api -U plant-api > plant-api.bak
 ```
 
 ### Restore database
+
 ```sh
 kubectl cp plant-api.bak <POD>:/ -n plant
 kubectl exec -it <POD> -n plant -- /bin/sh
@@ -57,25 +60,30 @@ psql plant-api -U plant-api < /plant-api.bak
 
 ### Production deployment
 
-0) Patch Microk8s Nginx Ingress controller 
-to set `proxy-body-size: 60m`
-https://github.com/canonical/microk8s/issues/1539
+0. Patch Microk8s Nginx Ingress controller
+   to set `proxy-body-size: 60m`
+   https://github.com/canonical/microk8s/issues/1539
 
 ```sh
 kubectl -n ingress patch configmap nginx-load-balancer-microk8s-conf --patch "$(cat ./deployment/nginx/nginx-config-map-patch.yaml)"
 ```
 
-1) Build and publish Docker image
+1. Build and publish Docker image
+
 ```sh
 docker build -t plant-api:latest . && \
 docker tag plant-api:latest christopherguzman/plant-api:latest && \
 docker push christopherguzman/plant-api:latest
 ```
 
-2) Create namespace
-`kubectl create namespace plant`
+2. Create namespace
 
-3) Deploy Postgres
+```sh
+kubectl create namespace plant
+```
+
+3. Deploy Postgres
+
 ```sh
 helm install postgres-api deployment/postgres \
   --namespace=plant \
@@ -84,14 +92,14 @@ helm install postgres-api deployment/postgres \
   --set config.POSTGRES_PASSWORD=plant-api
 ```
 
-helm uninstall postgres-api --namespace=plant && \
-helm install postgres-api deployment/postgres \
-  --namespace=plant \
-  --set config.POSTGRES_DB=plant-api \
-  --set config.POSTGRES_USER=plant-api \
-  --set config.POSTGRES_PASSWORD=plant-api
+Uninstall Postgres:
 
-4) Deploy Nginx server
+```sh
+helm uninstall postgres-api --namespace=plant
+```
+
+4. Deploy Nginx server
+
 ```sh
 helm install nginx-api deployment/nginx \
   --namespace=plant \
@@ -99,7 +107,14 @@ helm install nginx-api deployment/nginx \
   --set volumeMountPath=shared-volume
 ```
 
-5) Deploy microservice
+Uninstall Nginx
+
+```sh
+helm uninstall nginx-api -n plant
+```
+
+5. Deploy microservice
+
 ```sh
 helm install plant-api deployment \
   --namespace=plant \
@@ -112,34 +127,37 @@ helm install plant-api deployment \
   --set config.DB_PASSWORD=plant-api \
   --set config.EMAIL_HOST_USER=email@gmail.com \
   --set config.EMAIL_HOST_PASSWORD=password \
-  --set config.API_URL="https://api.resume.iguzman.com.mx" \
-  --set config.WEB_APP_URL="https://resume.iguzman.com.mx" \
+  --set config.API_URL="https://api.plant.iguzman.com.mx" \
+  --set config.WEB_APP_URL="https://plant.iguzman.com.mx" \
   --set ingress.enabled=true \
   --set ingress.host=api.resume.iguzman.com.mx
 ```
 
-6) Delete deployments
+6. Delete deployments
+
 ```sh
 helm delete nginx-api -n plant && \
 helm delete postgres-api -n plant && \
 helm delete plant-api -n plant
 ```
 
-7) Automated NodeJS deployment
+7. Automated NodeJS deployment
 
 Regular deployment
+
 ```sh
 npm run deploy
 ```
 
 Regular deployment + fixtures
+
 ```sh
 export RUN_FIXTURES=true && \
 npm run deploy
 ```
 
-
 ## Update Python packages
+
 ```sh
 python3 -m pip install \
 asgiref bcrypt certifi cffi charset-normalizer \
@@ -157,6 +175,7 @@ uritemplate urllib3 python-environ
 ```
 
 Update requirements text file
+
 ```sh
 npm run freeze
 ```

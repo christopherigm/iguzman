@@ -4,14 +4,14 @@ export type JSONAPICommonArrayResponse = {
     last: string;
     next: null | string;
     prev: null | string;
-  },
+  };
   meta: {
     pagination: {
       page: number;
       pages: number;
       count: number;
-    }
-  }
+    };
+  };
 };
 
 export type CountryInterface = {
@@ -22,7 +22,7 @@ export type CountryInterface = {
     code: string;
     phone_code: string;
     img_flag: string;
-  }
+  };
 };
 
 export type StateInterface = {
@@ -33,9 +33,9 @@ export type StateInterface = {
   };
   relationships: {
     country: {
-      data: CountryInterface | null
-    }
-  }
+      data: CountryInterface | null;
+    };
+  };
 };
 
 export type CityInterface = {
@@ -46,9 +46,9 @@ export type CityInterface = {
   };
   relationships: {
     state: {
-      data: StateInterface | null
-    }
-  }
+      data: StateInterface | null;
+    };
+  };
 };
 
 export interface BasePictureAttributesInterface {
@@ -57,4 +57,4 @@ export interface BasePictureAttributesInterface {
   href: string;
   full_size: string;
   img_picture: string;
-};
+}

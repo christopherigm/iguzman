@@ -1,0 +1,28 @@
+{
+  "name": "solefi-cms",
+  "version": "1.0.0",
+  "description": "Solefi CMS",
+  "main": "manage.py",
+  "scripts": {
+    "start": "python manage.py runserver 0.0.0.0:8000",
+    "static": "python manage.py collectstatic --noinput",
+    "migrations": "python manage.py makemigrations",
+    "migrate": "python manage.py migrate",
+    "freeze": "python -m pip freeze -l > requirements.txt",
+    "deploy": "node build-and-deploy.js",
+    "deploy:prod": "node build-and-deploy.js --production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/christopherigm/solefi-cms.git"
+  },
+  "author": "Christopher Guzman",
+  "license": "GPL",
+  "bugs": {
+    "url": "https://github.com/christopherigm/solefi-cms/issues"
+  },
+  "homepage": "https://github.com/christopherigm/solefi-cms#readme",
+  "devDependencies": {
+    "axios": "^0.26.0"
+  }
+}

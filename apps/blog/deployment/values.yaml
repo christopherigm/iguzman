@@ -1,6 +1,5 @@
 replicaCount: 1
-volumeMountPath: "shared-volume"
-# nginxServiceName: "nginx-api"
+volumeMountPath: 'shared-volume'
 
 config:
   WORDPRESS_DB_HOST: mysql.blog.svc.cluster.local
@@ -11,7 +10,7 @@ config:
 image:
   registry: docker.io
   repository: wordpress
-  tag: 6.2.2
+  tag: 6.4.2
   pullPolicy: IfNotPresent
 
 service:
@@ -25,8 +24,12 @@ ingress:
 
 resources:
   limits:
-    cpu: 500m
+    cpu: 300m
     memory: 512Mi
   requests:
     cpu: 100m
     memory: 128Mi
+
+deployment:
+  nodeSelector:
+    nodeName: master

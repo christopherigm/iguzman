@@ -1,7 +1,7 @@
 replicaCount: 1
-volumeMountPath: "shared-volume"
-nginxServiceName: "nginx-web-app"
-branch: "main"
+volumeMountPath: 'shared-volume'
+nginxServiceName: 'nginx-web-app'
+branch: 'main'
 
 image:
   registry: christopherguzman
@@ -20,8 +20,8 @@ ingress:
 
 resources:
   limits:
-    cpu: 300m
-    memory: 512Mi
+    cpu: 200m
+    memory: 256Mi
   requests:
     cpu: 100m
-    memory: 256Mi
+    memory: 128Mi
