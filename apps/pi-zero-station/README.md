@@ -27,7 +27,7 @@ scp christopher@raspberrypi:/home/christopher/video.h264 .
 ffmpeg \
  -framerate 60 \
  -pattern_type glob \
- -i "/shared-volume/time-lapse/picam/\*.jpg" \
+ -i "/shared-volume/time-lapse/picam/*.jpg" \
  -s:v 1920x1080 \
  -c:v libx264 \
  -crf 17 \
@@ -138,17 +138,19 @@ streamer \
 
 # https://www-users.york.ac.uk/~mjf5/shed_cam/src/USB%20webcam.html
 
+v4l2-ctl -d /dev/video1 -c white_balance_automatic=0 && \
+v4l2-ctl -d /dev/video1 -c brightness=90 && \
 fswebcam \
  -d /dev/video1 \
- -r 2560x1440 \
- -S 0 \
- --tuner 1 \
- --quiet \
- --jpeg 100 \
- --set brightness=auto \
+ -r 1920x1080 \
+ -S 1 \
+ --jpeg 95 \
+ --rotate 180 \
  --no-banner image.jpeg
 
-v4l2-ctl -d /dev/video1 −−list−controls
+v4l2-ctl -d /dev/video1 -l
+v4l2-ctl -d /dev/video1 -c white_balance_automatic=0
+v4l2-ctl -d /dev/video1 -c brightness=90
 scp christopher@raspberrypi:/home/christopher/image.jpeg .
 
 ==============================================================
