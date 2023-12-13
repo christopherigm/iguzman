@@ -27,14 +27,14 @@ scp christopher@raspberrypi:/home/christopher/video.h264 .
 ffmpeg \
  -framerate 60 \
  -pattern_type glob \
- -i "/shared-volume/time-lapse/picam/*.jpg" \
+ -i "/shared-volume/time-lapse/webcam/\*.jpg" \
  -s:v 1920x1080 \
  -c:v libx264 \
  -crf 17 \
  -pix_fmt yuv420p \
  timelapse.mp4
 
-scp christopher@surface:/home/christopher/Videos/timelapse.mp4 .
+scp christopher@master:/home/christopher/timelapse.mp4 .
 
 # https://www.raspberrypi-spy.co.uk/2013/05/how-to-disable-the-red-led-on-the-pi-camera-module/
 
@@ -65,6 +65,25 @@ ffmpeg \
 
 # Music from youtube
 
+Get video info
+
+```sh
+./yt-dlp-win.exe https://youtu.be/k1UCqCuGdck \
+ --print "%(channel)s - %(duration>%H:%M:%S)s - %(title)s - %(purl)s"
+```
+
+Get video title
+
+```sh
+./yt-dlp-win.exe https://youtu.be/k1UCqCuGdck --print "%(title)s"
+```
+
+Get video formats
+
+```sh
+./yt-dlp https://youtu.be/k1UCqCuGdck --list-formats
+```
+
 ./yt-dlp https://www.youtube.com/watch?v=1Tgu8aK0omo \
  -f 'bestaudio[ext=webm]/bestaudio' \
  -o "%(artist)s - %(title)s.mp3"
@@ -74,12 +93,9 @@ ffmpeg \
  -o "%(artist)s - %(title)s.mp3" \
  --cookies /home/christopher/Downloads/cookies.txt
 
-./yt-dlp https://youtu.be/k1UCqCuGdck \
- --list-formats
-
 # Youtube
 
-./yt-dlp https://youtu.be/9IQP6otIvhs \
+./yt-dlp https://youtu.be/d8OI9FllKfg \
  -f 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio' \
  --merge-output-format mp4 \
  -o "%(title)s.%(ext)s"
@@ -98,9 +114,9 @@ ffmpeg \
 
 # Twitter
 
-./yt-dlp https://x.com/Laufey_Subtwt/status/1703038638232055933 \
+./yt-dlp-win.exe https://x.com/FadeHubb/status/1731362761773318168?s=20 \
 --add-header 'user-agent:Mozilla/5.0' -vU \
- -o "%(title)s.%(ext)s"
+-o "%(title)s.%(ext)s"
 
 # Facebook
 
