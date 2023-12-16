@@ -24,7 +24,7 @@ type Props = {
 const SignInForm = ({ URLBase, callback }: Props) => {
   useEffect(() => {
     user.URLBase = URLBase;
-  }, []);
+  }, [URLBase]);
 
   const canSubmit = (): boolean => {
     return user.attributes.email !== '' && user.attributes.password !== '';

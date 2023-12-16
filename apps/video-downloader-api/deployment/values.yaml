@@ -1,6 +1,6 @@
 replicaCount: 1
 volumeMountPath: 'shared-volume'
-nginxServiceName: 'nginx-web-app'
+nginxServiceName: nginx-web-app
 branch: 'main'
 
 image:
@@ -12,7 +12,7 @@ image:
 service:
   type: ClusterIP
   externalPort: 80
-  internalPort: 3000
+  internalPort: 3001
 
 ingress:
   enabled: false

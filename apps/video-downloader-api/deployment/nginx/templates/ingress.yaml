@@ -21,4 +21,11 @@ spec:
                 name: {{ .Chart.Name }}
                 port:
                   number: {{ .Values.service.externalPort }}
+          - path: /media/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.nginxServiceName }}
+                port:
+                  number: 80
 {{- end }}

@@ -58,6 +58,7 @@ interface Props {
   loginEnabled: boolean;
   version: string;
   hostName: string;
+  logo: string;
   menu?: ReactNode;
 }
 
@@ -73,6 +74,7 @@ const MainLayout = ({
   loginEnabled = false,
   version,
   hostName,
+  logo = '/images/logo.jpg',
   menu,
 }: Props) => {
   const setIsLoading = () => null;
@@ -96,7 +98,7 @@ const MainLayout = ({
         </Head>
         <header>
           <NavBar
-            logo="/images/logo.jpg"
+            logo={logo}
             user={user}
             language={language}
             devMode={devMode}

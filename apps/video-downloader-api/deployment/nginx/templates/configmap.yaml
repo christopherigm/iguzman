@@ -7,4 +7,11 @@ data:
     server {
       listen 80;
       server_name  _;
+
+      location /media/ {
+        autoindex on;
+        add_header Vary Accept-Encoding;
+        access_log off;
+        alias /media/;
+      }
     }

@@ -1,33 +1,41 @@
-const headers = {
-  'Content-Type': 'application/vnd.api+json'
+const jsonapiHeaders = {
+  'Content-Type': 'application/vnd.api+json',
+};
+const regularHeaders = {
+  'Content-Type': 'application/json',
 };
 
 type PostProps = {
   url: string;
   jwt?: string;
   data: any;
+  jsonapi?: boolean;
 };
 
 export const Post = ({
-    url,
-    jwt,
-    data,
-  }: PostProps): Promise<any> => {
-  const h = jwt ? {
-    ...headers, 
-    Authorization: `Bearer ${jwt}`
-  } : headers;
+  url,
+  jwt,
+  data,
+  jsonapi = true,
+}: PostProps): Promise<any> => {
+  const common = jsonapi ? { ...jsonapiHeaders } : { ...regularHeaders };
+  const headers = jwt
+    ? {
+        ...common,
+        Authorization: `Bearer ${jwt}`,
+      }
+    : common;
   return new Promise((res, rej) => {
     fetch(url, {
       method: 'POST',
-      headers: h,
+      headers,
       body: JSON.stringify({
-        data: data
-      })
+        data: data,
+      }),
     })
-    .then((response) => response.json())
-    .then((data) => res(data))
-    .catch((error) => rej(error));
+      .then((response) => response.json())
+      .then((data) => res(data))
+      .catch((error) => rej(error));
   });
 };
 
@@ -35,72 +43,85 @@ type PatchProps = {
   url: string;
   jwt?: string;
   data: any;
+  jsonapi?: boolean;
 };
 
 export const Patch = ({
-    url,
-    jwt,
-    data,
-  }: PatchProps): Promise<any> => {
-  const h = jwt ? {
-    ...headers, 
-    Authorization: `Bearer ${jwt}`
-  } : headers;
+  url,
+  jwt,
+  data,
+  jsonapi = true,
+}: PatchProps): Promise<any> => {
+  const common = jsonapi ? { ...jsonapiHeaders } : { ...regularHeaders };
+  const headers = jwt
+    ? {
+        ...common,
+        Authorization: `Bearer ${jwt}`,
+      }
+    : common;
   return new Promise((res, rej) => {
     fetch(url, {
       method: 'PATCH',
-      headers: h,
+      headers,
       body: JSON.stringify({
-        data: data
-      })
+        data: data,
+      }),
     })
-    .then((response) => response.json())
-    .then((data) => res(data))
-    .catch((error) => rej(error));
+      .then((response) => response.json())
+      .then((data) => res(data))
+      .catch((error) => rej(error));
   });
 };
 
 type GetProps = {
   url: string;
   jwt?: string;
+  jsonapi?: boolean;
 };
 
-export const Get = ({url, jwt}: GetProps): Promise<any> => {
-  const h = jwt ? {
-    ...headers, 
-    Authorization: `Bearer ${jwt}`
-  } : headers;
+export const Get = ({ url, jwt, jsonapi = true }: GetProps): Promise<any> => {
+  const common = jsonapi ? { ...jsonapiHeaders } : { ...regularHeaders };
+  const headers = jwt
+    ? {
+        ...common,
+        Authorization: `Bearer ${jwt}`,
+      }
+    : common;
   return new Promise((res, rej) => {
     fetch(url, {
       method: 'GET',
-      headers: h
+      headers,
     })
-    .then((response) => response.json())
-    .then((data) => res(data))
-    .catch((error) => rej(error));
+      .then((response) => response.json())
+      .then((data) => res(data))
+      .catch((error) => rej(error));
   });
 };
-
 
 type DeleteProps = {
   url: string;
   jwt?: string;
+  jsonapi?: boolean;
 };
 
 export const Delete = ({
-    url,
-    jwt,
-  }: DeleteProps): Promise<any> => {
-  const h = jwt ? {
-    ...headers, 
-    Authorization: `Bearer ${jwt}`
-  } : headers;
+  url,
+  jwt,
+  jsonapi = true,
+}: DeleteProps): Promise<any> => {
+  const common = jsonapi ? { ...jsonapiHeaders } : { ...regularHeaders };
+  const headers = jwt
+    ? {
+        ...common,
+        Authorization: `Bearer ${jwt}`,
+      }
+    : common;
   return new Promise((res, rej) => {
     fetch(url, {
       method: 'DELETE',
-      headers: h,
+      headers,
     })
-    .then(() => res(null))
-    .catch((error) => rej(error));
+      .then(() => res(null))
+      .catch((error) => rej(error));
   });
 };
