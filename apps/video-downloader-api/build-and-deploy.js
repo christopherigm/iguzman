@@ -59,6 +59,18 @@ const getBranchName = () => {
   });
 };
 
+const getLatestLinuxYTDlp = () => {
+  return new Promise((res, rej) => {
+    exec(
+      'curl -LO https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp',
+      (err, stdout) => {
+        if (err) return rej(err);
+        res(stdout);
+      }
+    ).stdout.on('data', onData);
+  });
+};
+
 const buildPackage = () => {
   return new Promise((res, rej) => {
     console.log('\n========= Building App =========');
@@ -132,6 +144,7 @@ const deployMicroservice = () => {
 };
 
 getBranchName()
+  .then(() => getLatestLinuxYTDlp())
   .then(() => buildPackage())
   .then(() => buildDockerImage())
   .then(() => tagDockerImage())

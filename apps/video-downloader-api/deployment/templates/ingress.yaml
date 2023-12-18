@@ -21,14 +21,7 @@ spec:
                 name: {{ .Chart.Name }}
                 port:
                   number: {{ .Values.service.externalPort }}
-          - path: /static
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Values.nginxServiceName }}
-                port:
-                  number: 80
-          - path: /assets
+          - path: /media/
             pathType: Prefix
             backend:
               service:

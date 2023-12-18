@@ -4,6 +4,7 @@ import fs from 'fs';
 import { exec } from 'child_process';
 import bodyParser from 'body-parser';
 import { v4 as uuidv4 } from 'uuid';
+import cors from 'cors';
 
 const app = express();
 app.use(bodyParser.json());
@@ -12,11 +13,29 @@ app.use(
     extended: true,
   })
 );
-const port = 3000;
+const port = 3001;
 const platform = os.platform();
 const hostname = process.env.HOSTNAME ?? 'localhost';
 const winBinary = 'yt-dlp-win.exe';
 const linuxBinary = '/app/yt-dlp';
+
+const allowedOrigins = ['*', 'localhost', '127.0.0.1'];
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        const msg =
+          'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+  })
+);
 
 const onData = (data) => {
   console.log('>>>', data);
@@ -61,12 +80,6 @@ const getVideoFormats = (url: string): Promise<string> => {
   });
 };
 
-const isTwitter = (url: string): boolean => {
-  return (
-    url.search('https://x.com') > 1 || url.search('https://twitter.com') > 1
-  );
-};
-
 const isYoutube = (url: string): boolean => {
   return (
     url.search('https://youtube.com') > -1 || url.search('https://youtu.be') > 1
@@ -79,27 +92,24 @@ const getVideoName = (id: string, url: string): Promise<string> => {
       os.platform() === 'win32'
         ? `${winBinary} "${url}" --print "%(title)s"`
         : `${linuxBinary} "${url}" --print "%(title)s"`;
-    if (isTwitter(url)) {
-      command += ` --username ${process.env.TWITTER_USERNAME}`;
-      command += ` --password ${process.env.TWITTER_PASSWORD}`;
-    }
+    command += ' --cookies /app/netscape-cookies.txt';
     exec(command, (err, videoName: string) => {
       if (err) {
-        if (err.cmd && isTwitter(url)) delete err.cmd;
         return rej(err);
       }
       let name = videoName;
       name = name.replace(/\n/g, '');
-      name = name.replace(/[^\x00-\x7F]/g, '');
+      // name = name.replace(/[^\x00-\x7F]/g, '');
       name = name.replace(/https\:\/\//g, '');
       name = name.replace(/\//g, '');
       name = name.replace(/\./g, '');
       name = name.replace(/\@/g, '');
       name = name.replace(/\#/g, '');
+      name = name.replace(/\?/g, '');
       name = name.replace(/  /, '');
       name = name.replace(/(?:https?|ftp):\/\/[\n\S]+/g, '');
-      if (name.length > 250) {
-        name = name.slice(0, 250);
+      if (name.length > 128) {
+        name = name.slice(0, 128);
       }
       if (name[name.length - 1] === ' ') {
         name = name.slice(0, name.length - 1);
@@ -115,7 +125,7 @@ const moveVideo = (videoName: string, id: string): Promise<string> => {
     if (!fs.existsSync(`${id}.mp4`)) {
       return rej(new Error('File does not exist.'));
     }
-    exec(`mv ${id}.mp4 "media/${videoName}.mp4"`, (err, stdout) => {
+    exec(`mv ${id}.mp4 "media/${id}.mp4"`, (err, stdout) => {
       if (err) {
         return rej(err);
       }
@@ -135,16 +145,12 @@ const getVideo = (url: string, id: string): Promise<string> => {
     } else {
       command += `--add-header "user-agent:Mozilla/5.0" -vU `;
     }
-    if (isTwitter(url)) {
-      command += `--username ${process.env.TWITTER_USERNAME} `;
-      command += `--password ${process.env.TWITTER_PASSWORD} `;
-    }
+    command += '--cookies /app/netscape-cookies.txt ';
     command += '--merge-output-format mp4 ';
     command += `-o "${id}.%(ext)s"`;
     console.log('Command', command);
     exec(command, (err, stdout) => {
       if (err) {
-        if (err.cmd && isTwitter(url)) delete err.cmd;
         return rej(err);
       }
       res(stdout);
@@ -166,12 +172,19 @@ const saveEntity = (url: string): string => {
 };
 
 app.post('/download-video', (req, res) => {
-  const url = req.body?.url ?? null;
+  const url = req.body?.data?.url ?? null;
   if (!url) {
-    return res.status(400).send('No URL');
+    return res.status(400).json({
+      id: '',
+      message: 'Error',
+      status: 'error',
+      url: '',
+      error: 'No url provided',
+    });
   }
   const id = saveEntity(url);
   entities[id].status = 'downloading';
+  getVideoName(id, url);
   getVideo(url, id)
     .then((_v) => getVideoName(id, url))
     .then((videoName) => moveVideo(videoName, id))
@@ -189,7 +202,13 @@ app.post('/download-video', (req, res) => {
 app.post('/get-video-name', (req, res) => {
   const url = req.body?.url ?? null;
   if (!url) {
-    return res.status(400).send('No URL');
+    return res.status(400).json({
+      id: '',
+      message: 'Error',
+      status: 'error',
+      url: '',
+      error: 'No url provided',
+    });
   }
   const id = saveEntity(url);
   getVideoName(id, url)
@@ -197,14 +216,20 @@ app.post('/get-video-name', (req, res) => {
     .catch((error) => res.status(400).send(error));
 });
 
-app.get('/get-videos', (req, res) => {
+app.get('/get-videos', (_req, res) => {
   res.json(entities);
 });
 
 app.get('/get-videos/:id', (req, res) => {
   const entity = entities[req.params.id ?? ''] ?? null;
   if (!entity) {
-    return res.status(400).send('No entity');
+    return res.status(400).json({
+      id: req.params.id,
+      message: 'Error',
+      status: 'error',
+      url: '',
+      error: 'Not found',
+    });
   }
   res.json(entity);
 });

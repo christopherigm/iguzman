@@ -1,5 +1,5 @@
 import { Signal, signal } from '@preact/signals-react';
-import { BaseUser, BaseUserAttributes, GetLocalStorageData, API } from 'utils';
+import { BaseUser, BaseUserAttributes, GetLocalStorageData } from 'utils';
 
 export default class User extends BaseUser {
   public static instance: User;

@@ -29,6 +29,7 @@ const Page = (props: any): ReactElement => {
       language={props.defaultLanguage}
       loginEnabled={props.loginEnabled}
       version={props.version}
+      logo="/images/logo.jpg"
       hostName={props.hostName}
     >
       <Head>
