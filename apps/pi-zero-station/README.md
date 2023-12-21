@@ -15,10 +15,30 @@ raspivid \
  --codec H264 \
  --timeout 600000 \
  --sharpness 70 \
- --width 1920 \
- --height 1080 \
+ --width 1080 \
+ --height 1920 \
  --output video.h264 \
  --rotation 180
+
+raspivid \
+ --codec H264 \
+ --width 1080 \
+ --height 1080 \
+ --output video.h264 \
+ --timeout 0 \
+ --rotation 90 \
+ --framerate 40 \
+ --bitrate 25000000 \
+ --brightness 80
+
+--imxfx film \
+ --drc low
+
+--imxfx saturation
+
+--exposure nightpreview
+
+--saturation -30
 
 scp christopher@raspberrypi:/home/christopher/image.jpg .
 scp -r christopher@raspberrypi:/home/christopher/pictures .

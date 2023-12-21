@@ -11,7 +11,7 @@ const Page = (props: any): ReactElement => {
   useEffect(() => {
     system.setServerSideProps(props);
     user.getNediiUserFromLocalStorage();
-  });
+  }, [props]);
 
   return (
     <MainLayout
@@ -39,8 +39,8 @@ const Page = (props: any): ReactElement => {
           content="Learn how to build a personal website using Next.js"
         />
         <title>Nedii</title>
-        <meta name="og:title" content={'siteTitle'} />
-        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="og:title" content={'Nedii'} />
+        <meta name="twitter:card" content="/images/logo.jpg" />
       </Head>
       <Typography
         marginTop={3}

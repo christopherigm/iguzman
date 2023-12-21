@@ -2,6 +2,7 @@ import { Signal, signal } from '@preact/signals-react';
 import { GetLocalStorageData, SetLocalStorageData } from '../lib/local-storage';
 import type { JWTPayload } from 'utils';
 import { API } from 'utils';
+
 export class BaseUser {
   public static instance: BaseUser;
   public type = 'User';

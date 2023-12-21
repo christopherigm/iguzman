@@ -3,14 +3,13 @@ import { Mixin } from 'ts-mixer';
 import { Languages } from '../interfaces/system-interface';
 import { SaveCookie } from '../lib/cookie-handler';
 import GetBooleanFromString from '../lib/get-boolean-from-string';
-import { GetLocalStorageData, SetLocalStorageData } from '../lib/local-storage';
-import { BaseUser } from './base-user';
 
 export class EnvironmentVariables {
   private _hostName: Signal<string> = signal('');
   private _URLBase: Signal<string> = signal('');
   private _K8sURLBase: Signal<string> = signal('');
   private _defaultLanguage: Signal<string> = signal('');
+  private _logo: Signal<string> = signal('');
   private _loginEnabled: Signal<boolean> = signal(false);
   private _cartEnabled: Signal<boolean> = signal(false);
   private _favoritesEnabled: Signal<boolean> = signal(false);
@@ -23,6 +22,7 @@ export class EnvironmentVariables {
     this.URLBase = process.env.URL_BASE ?? 'http://127.0.0.1:3000';
     this.K8sURLBase = process.env.K8S_URL_BASE ?? 'http://127.0.0.1:3000';
     this.defaultLanguage = process.env.DEFAULT_LANGUAGE ?? 'en';
+    this.logo = process.env.LOGO ?? '/images/logo.jpg';
     this.loginEnabled = GetBooleanFromString(process.env.LOGIN_ENABLED ?? '');
     this.cartEnabled = GetBooleanFromString(process.env.CART_ENABLED ?? '');
     this.favoritesEnabled = GetBooleanFromString(
@@ -62,6 +62,13 @@ export class EnvironmentVariables {
   }
   public set defaultLanguage(value) {
     this._defaultLanguage.value = value;
+  }
+
+  public get logo() {
+    return this._logo.value;
+  }
+  public set logo(value) {
+    this._logo.value = value;
   }
 
   public get loginEnabled() {

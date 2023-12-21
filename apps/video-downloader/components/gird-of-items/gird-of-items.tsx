@@ -8,7 +8,7 @@ import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinearProgress from '@mui/material/LinearProgress';
 import { Signal, signal } from '@preact/signals-react';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import type { APIPostCreationError } from 'utils';
@@ -52,7 +52,7 @@ const GridItem = ({ item, onDeleteItem }: GridItemProps) => {
               <Link
                 href={`${item.URLBase}/media/${item.id}.mp4`}
                 passHref
-                target="_blank"
+                download={`${item.URLBase}/media/${item.id}.mp4`}
               >
                 <Button variant="contained" type="submit" size="small">
                   Download
@@ -100,6 +100,7 @@ const GridItem = ({ item, onDeleteItem }: GridItemProps) => {
             controls={true}
             autoPlay={false}
             src={`${item.URLBase}/media/${item.id}.mp4`}
+            id="video"
           ></video>
         </Box>
       ) : null}

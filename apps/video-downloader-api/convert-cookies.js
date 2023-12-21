@@ -13,6 +13,8 @@ if (!filename) {
 const content = fs.readFileSync(filename, 'utf8');
 const cookies = content.split('\n');
 
+console.log('# Netscape HTTP Cookie File');
+
 for (const cookie of cookies) {
   let [name, value, domain, path, expiration /* size */, , httpOnly] =
     cookie.split('\t');
