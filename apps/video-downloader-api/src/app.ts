@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import os from 'node:os';
 import express from 'express';
 import fs from 'fs';
@@ -99,7 +100,6 @@ const getVideoName = (id: string, url: string): Promise<string> => {
       }
       let name = videoName;
       name = name.replace(/\n/g, '');
-      // name = name.replace(/[^\x00-\x7F]/g, '');
       name = name.replace(/https\:\/\//g, '');
       name = name.replace(/\//g, '');
       name = name.replace(/\./g, '');

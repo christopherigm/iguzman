@@ -39,13 +39,10 @@ const Page = (props: any): ReactElement => {
     >
       <Head>
         <link rel="icon" href="/favicon.ico" />
-        <meta
-          name="description"
-          content="Learn how to build a personal website using Next.js"
-        />
+        <meta name="description" content="Video downloader" />
         <title>Video downloader</title>
-        <meta name="og:title" content={'siteTitle'} />
-        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="og:title" content="Video downloader" />
+        <meta name="twitter:card" content="/images/logo.png" />
       </Head>
       <Typography
         marginTop={3}

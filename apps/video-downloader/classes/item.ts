@@ -13,6 +13,7 @@ export default class Item {
   private _name: Signal<string> = signal('');
   private _status: Signal<Status> = signal('none');
   private _url: Signal<string> = signal('');
+  private _blob: Signal<Blob> = signal(new Blob());
   private _error: Signal<string | null> = signal(null);
   private timeout: NodeJS.Timeout = setTimeout(() => {}, 100000);
 
@@ -154,6 +155,13 @@ export default class Item {
   }
   public set url(value) {
     this._url.value = value;
+  }
+
+  public get blob() {
+    return this._blob.value;
+  }
+  public set blob(value) {
+    this._blob.value = value;
   }
 
   public get error() {

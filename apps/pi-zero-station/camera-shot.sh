@@ -87,6 +87,9 @@ while true; do
   echo "  -Picam enabled: $picam_enabled" >> $logs_file_name;
   scp -i "$home_path/.ssh/id_ed25519" $logs_file_name "$remote_path/logs";
 
+  if [[ $current_hour -ge 4 ]]; then
+    sleep_time=$(($sleep_time/2))
+  fi
   sleep $sleep_time
 done
 

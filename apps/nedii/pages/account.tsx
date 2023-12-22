@@ -47,7 +47,7 @@ const Page = (props: any): ReactElement => {
     if (!user.id) {
       router.push('/');
     }
-  });
+  }, [props, router]);
 
   const menuCallback = (id: number) => {
     const m = [...menu];
@@ -72,7 +72,7 @@ const Page = (props: any): ReactElement => {
       }}
       loginEnabled={props.loginEnabled}
       version={props.version}
-      logo="/images/logo.jpg"
+      logo={system.logo}
       hostName={props.hostName}
     >
       <Head>

@@ -1,65 +1,49 @@
-import React, {
-  ReactElement,
-  useState,
-} from 'react';
+import React, { ReactElement } from 'react';
 import Head from 'next/head';
 import Typography from '@mui/material/Typography';
-import {
-  GetCookieCachedValues,
-  GetEnvVariables,
-} from 'utils';
-import type {
-  EnvironmentVariables,
-  CachedValues,
-  Languages,
-} from 'utils';
-import MainLayout from 'layouts/main-layout';
-import {SystemInitalState} from 'interfaces/system-interface';
-import type System from 'interfaces/system-interface';
-import {ResetPasswordForm} from 'ui';
+import { ResetPasswordForm, MainLayout } from 'ui';
+import System, { system } from 'classes/system';
 
-const Page = (props: System): ReactElement => {
-  const [system, updateSystem] = useState<System>(props);
-  const setSystem = (s: System): void => updateSystem(_s => s);
-
+const Page = (props: any): ReactElement => {
   return (
     <MainLayout
-      system={system}
-      setSystem={setSystem}>
+      darkMode={system.darkMode}
+      switchTheme={() => system.switchTheme()}
+      devMode={system.devMode}
+      switchDevMode={() => system.switchDevMode()}
+      isLoading={system.isLoading}
+      language={props.defaultLanguage}
+      loginEnabled={props.loginEnabled}
+      version={props.version}
+      logo="/images/logo.jpg"
+      hostName={props.hostName}
+    >
       <Head>
-        <link rel='icon' href='/favicon.ico' />
+        <link rel="icon" href="/favicon.ico" />
         <meta
-          name='description'
-          content='Learn how to build a personal website using Next.js'
+          name="description"
+          content="Learn how to build a personal website using Next.js"
         />
         <title>Nedii</title>
-        <meta name='og:title' content={'siteTitle'} />
-        <meta name='twitter:card' content='summary_large_image' />
+        <meta name="og:title" content={'siteTitle'} />
+        <meta name="twitter:card" content="summary_large_image" />
       </Head>
       <Typography
         marginTop={3}
-        variant='h5'
-        color={system.darkMode ? 'primary.contrastText' : ''}>
+        variant="h5"
+        color={system.darkMode ? 'primary.contrastText' : ''}
+      >
         Restablecer contraseña
       </Typography>
-      <ResetPasswordForm
-        URLBase={system.URLBase}
-        callback={() => {}} />
+      <ResetPasswordForm URLBase={system.URLBase} callback={() => {}} />
     </MainLayout>
   );
 };
 
 export async function getServerSideProps({ req }: any) {
-  const cookies = req.cookies;
-  const env = GetEnvVariables() as EnvironmentVariables;
-  const cachedValues: CachedValues = GetCookieCachedValues(cookies);
-  const props: System = {
-    ...SystemInitalState,
-    ...env,
-    ...cachedValues,
-    language: cachedValues.language ? cachedValues.language : env.defaultLanguage as Languages,
-  };
-  return {props};
-};
+  const props = System.getInstance();
+  props.parseCookies(req.cookies);
+  return { props: props.getServerSideProps() };
+}
 
 export default Page;

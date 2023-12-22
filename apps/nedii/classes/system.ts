@@ -1,4 +1,4 @@
-import { signal } from '@preact/signals-react';
+import { Signal, signal } from '@preact/signals-react';
 import { BaseSystem } from 'utils';
 
 export type Exposure = 'basic' | 'medium' | 'high' | 'full';
@@ -21,6 +21,7 @@ export default class System extends BaseSystem {
       URLBase: this.URLBase,
       K8sURLBase: this.K8sURLBase,
       defaultLanguage: this.defaultLanguage,
+      logo: this.logo,
       loginEnabled: this.loginEnabled,
       cartEnabled: this.cartEnabled,
       favoritesEnabled: this.favoritesEnabled,
@@ -38,6 +39,7 @@ export default class System extends BaseSystem {
     this.URLBase = props.URLBase ?? this.URLBase;
     this.K8sURLBase = props.K8sURLBase ?? this.K8sURLBase;
     this.defaultLanguage = props.defaultLanguage ?? this.defaultLanguage;
+    this.logo = props.logo ?? this.logo;
     this.loginEnabled = props.loginEnabled ?? this.loginEnabled;
     this.cartEnabled = props.cartEnabled ?? this.cartEnabled;
     this.favoritesEnabled = props.favoritesEnabled ?? this.favoritesEnabled;
