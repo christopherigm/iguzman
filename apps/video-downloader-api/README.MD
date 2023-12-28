@@ -61,6 +61,33 @@ Create namespace
 kubectl create namespace video-downloader
 ```
 
+Deploy Nginx server
+
+```sh
+helm install nginx-api deployment/nginx \
+  --namespace=video-downloader \
+  --set apiName=video-downloader-api \
+  --set volumeMountPath=shared-volume
+```
+
+Uninstall Nginx
+
+```sh
+helm delete nginx-api -n video-downloader
+```
+
+Deploy Mongo
+
+```sh
+helm install mongo-api deployment/mongo -n video-downloader
+```
+
+Uninstall Mongo
+
+```sh
+helm delete mongo-api -n video-downloader
+```
+
 Deploy app
 
 ```sh

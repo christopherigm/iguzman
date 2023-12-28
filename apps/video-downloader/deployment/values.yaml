@@ -28,4 +28,4 @@ resources:
 
 deployment:
   nodeSelector:
-    nodeName: node1
+    nodeName: node4

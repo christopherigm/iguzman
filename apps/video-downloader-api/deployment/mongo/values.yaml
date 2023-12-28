@@ -1,0 +1,29 @@
+replicaCount: 1
+volumeMountPath: 'shared-volume'
+
+image:
+  registry: docker.io
+  repository: mongo
+  tag: 4.4.18
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  externalPort: 27017
+  internalPort: 27017
+
+ingress:
+  enabled: false
+  host: myapp.com
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+deployment:
+  nodeSelector:
+    nodeName: master

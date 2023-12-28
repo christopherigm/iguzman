@@ -1,46 +1,48 @@
 {
-  "name": "i-guzman",
-  "version": "0.0.1",
+  "name": "monorepo",
   "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "app": "npx create-next-app@latest"
+  },
+  "devDependencies": {
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.15.1",
+    "@mui/material": "^5.15.1",
+    "@preact/signals-react": "^2.0.0",
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/uuid": "^9.0.7",
+    "jose": "^5.1.3",
+    "prettier": "^3.1.0",
+    "sass": "^1.69.5",
+    "ts-mixer": "^6.0.3",
+    "tsc-watch": "^6.0.4",
+    "turbo": "latest",
+    "wnumb": "^1.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "npm@10.2.3",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev --parallel",
-    "lint": "turbo run lint",
-    "create-next-app": "node create-next-app.js",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  },
-  "packageManager": "npm@8.19.2",
   "dependencies": {
-    "@fontsource/roboto": "^4.5.8",
-    "@preact/signals-react": "^1.3.6",
-    "chart.js": "^4.3.0",
-    "next": "^13.5.6",
-    "react": "^18.2.0",
-    "react-chartjs-2": "^5.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.20.12",
-    "@emotion/react": "^11.10.6",
-    "@emotion/styled": "^11.10.6",
-    "@mui/icons-material": "^5.11.9",
-    "@mui/material": "^5.11.9",
-    "@types/node": "^18.13.0",
-    "@types/react": "^18.0.28",
-    "@types/react-dom": "^18.0.11",
-    "eslint": "^8.34.0",
-    "jose": "^4.12.0",
-    "prettier": "^2.8.4",
-    "sass": "^1.58.2",
-    "ts-mixer": "^6.0.3",
-    "turbo": "^1.10.16",
-    "typescript": "^4.9.5"
+    "@fontsource/roboto": "^5.0.8",
+    "@preact-signals/safe-react": "^0.5.1",
+    "@preact/signals": "^1.2.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0",
+    "uuid": "^9.0.1"
   }
 }

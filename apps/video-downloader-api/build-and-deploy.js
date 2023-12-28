@@ -6,7 +6,6 @@ const fs = require('fs');
 // Editable variables
 const name = 'video-downloader-api';
 const namespace = 'video-downloader';
-const host = 'api.vd.iguzman.com.mx';
 const registry = 'christopherguzman';
 const envFile = '.env';
 // Editable variables
@@ -55,6 +54,15 @@ const getBranchName = () => {
       const b = stdout.toString().replace(/(\r\n|\n|\r)/gm, '');
       branch = b;
       res(branch);
+    }).stdout.on('data', onData);
+  });
+};
+
+const cleanDistFolder = () => {
+  return new Promise((res, rej) => {
+    exec('rm -rf dist', (err, stdout) => {
+      if (err) return rej(err);
+      res(stdout);
     }).stdout.on('data', onData);
   });
 };
@@ -132,9 +140,6 @@ const deployMicroservice = () => {
   return new Promise((res, rej) => {
     let command = `helm install ${name} deployment `;
     command += `--namespace=${namespace} `;
-    command += '--set replicaCount=1 ';
-    command += `--set ingress.enabled=true `;
-    command += `--set ingress.host=${host} `;
     command += `--set image.tag=${branch}`;
     exec(command, (err, stdout) => {
       if (err) return rej(err);
@@ -145,8 +150,10 @@ const deployMicroservice = () => {
 
 getBranchName()
   .then(() => getLatestLinuxYTDlp())
+  .then(() => cleanDistFolder())
   .then(() => buildPackage())
   .then(() => buildDockerImage())
+  .then(() => cleanDistFolder())
   .then(() => tagDockerImage())
   .then(() => publishDockerImage())
   .then(() => deleteDeployment())

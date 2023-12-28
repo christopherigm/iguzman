@@ -1,11 +1,29 @@
-@import 'ui/styles.scss';
-
 html,
 body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    Segoe UI,
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    Fira Sans,
+    Droid Sans,
+    Helvetica Neue,
+    sans-serif;
+}
+
+.DevMode {
+  border: dashed 1px red;
+}
+
+.PreventSelect {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 * {

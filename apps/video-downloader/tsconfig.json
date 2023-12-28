@@ -1,15 +1,19 @@
 {
-  "extends": "tsconfig/nextjs.json",
+  "extends": "@repo/typescript-config/nextjs.json",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": "."
+  },
   "include": [
     "next-env.d.ts",
+    "next.config.js",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"],
-  "compilerOptions": {
-    "baseUrl": "./",
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true
-  }
+  "exclude": ["node_modules"]
 }
