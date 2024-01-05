@@ -1,17 +1,18 @@
-import React, { ReactElement, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Head from 'next/head';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
-import { BaseUser } from 'utils';
-import { MainLayout } from 'ui';
+import { BaseUser } from '@repo/utils';
+import { MainLayout } from '@repo/ui';
 import System, { system } from 'classes/system';
 import DownloadForm from 'components/download-form';
 import GridOfItems from 'components/gird-of-items';
+import type { DownloadOptions } from 'classes/item';
 
 const user = BaseUser.getInstance();
 
-const Page = (props: any): ReactElement => {
+const Page = (props: any) => {
   useEffect(() => {
     system.setServerSideProps(props);
     system.getItemsFromLocalStorage();
@@ -51,25 +52,25 @@ const Page = (props: any): ReactElement => {
       >
         Video downloader
       </Typography>
-      <Box marginTop={1.5} marginBottom={1}>
+      <Box marginTop={1.5}>
         <Divider />
       </Box>
       <DownloadForm
         URLBase={props.URLBase}
-        callback={(url: string) => system.addItem(url)}
+        callback={(url: string, options: DownloadOptions) =>
+          system.addItem(url, options)
+        }
       />
       {system.items.length ? (
         <>
-          <Box marginTop={1.5} marginBottom={1}>
+          <Box marginTop={1.5} marginBottom={2}>
             <Divider />
           </Box>
           <GridOfItems
             items={system.items}
             onDeleteItem={(id: string) => system.deleteItem(id)}
+            devMode={system.devMode}
           />
-          <Box marginTop={1.5} marginBottom={1}>
-            <Divider />
-          </Box>
         </>
       ) : null}
     </MainLayout>

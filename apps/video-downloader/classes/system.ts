@@ -1,8 +1,11 @@
-import { Signal, signal } from '@preact/signals-react';
-import { BaseSystem, GetLocalStorageData, SetLocalStorageData } from 'utils';
+import { Signal, signal } from '@preact-signals/safe-react';
+import {
+  BaseSystem,
+  GetLocalStorageData,
+  SetLocalStorageData,
+} from '@repo/utils';
 import Item from 'classes/item';
-
-export type Exposure = 'basic' | 'medium' | 'high' | 'full';
+import type { DownloadOptions } from 'classes/item';
 
 export default class System extends BaseSystem {
   public static instance: System;
@@ -51,11 +54,11 @@ export default class System extends BaseSystem {
     this.devMode = props.devMode ?? this.devMode;
   }
 
-  public addItem(url: string) {
+  public addItem(url: string, options: DownloadOptions) {
     const item = Item.getInstance();
     item.URLBase = this.URLBase;
     item.url = url;
-    item.getVideo();
+    item.getVideo(options);
     this.items = [item, ...this.items];
     this.saveItemsToLocalStorage();
   }
@@ -65,12 +68,9 @@ export default class System extends BaseSystem {
       this.items = [];
     } else {
       const index = this.items.findIndex((i: Item) => i.id === id);
-      console.log('index', index);
-      console.log('items before', this.items);
       if (index > -1) {
         this.items.splice(index, 1);
         this.items = [...this.items];
-        console.log('items after', this.items);
       }
     }
     this.saveItemsToLocalStorage();
@@ -90,11 +90,15 @@ export default class System extends BaseSystem {
       this.items = cachedItems.map((i: any) => {
         const newItem = Item.getInstance();
         newItem.id = i.id;
-        newItem.URLBase = i.URLBase;
+        newItem.URLBase = this.URLBase;
         newItem.name = i.name;
+        newItem.filename = i.filename;
         newItem.status = i.status;
         newItem.url = i.url;
         newItem.error = i.error;
+        newItem.created = i.created;
+        newItem.justAudio = i.justAudio;
+        newItem.setType();
         newItem.checkStatus();
         return newItem;
       });

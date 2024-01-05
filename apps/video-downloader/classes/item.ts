@@ -1,9 +1,25 @@
-import { Signal, signal } from '@preact/signals-react';
-import { API } from 'utils';
-import type ItemResponse from 'interfaces/item-response';
-import { GetLocalStorageData, SetLocalStorageData } from 'utils';
+import { Signal, signal } from '@preact-signals/safe-react';
+import {
+  API,
+  GetLocalStorageData,
+  SetLocalStorageData,
+  isYoutube,
+  isInstagram,
+  isTiktok,
+  isFacebook,
+  isTwitter,
+} from '@repo/utils';
 
 type Status = 'downloading' | 'none' | 'ready' | 'error';
+export type VideoType =
+  | 'youtube'
+  | 'instagram'
+  | 'tiktok'
+  | 'facebook'
+  | 'twitter';
+export type DownloadOptions = {
+  justAudio: boolean;
+};
 
 export default class Item {
   public static instance: Item;
@@ -11,78 +27,152 @@ export default class Item {
   private _URLBase: Signal<string> = signal('');
   private _message: Signal<string> = signal('');
   private _name: Signal<string> = signal('');
+  private _filename: Signal<string> = signal('');
   private _status: Signal<Status> = signal('none');
   private _url: Signal<string> = signal('');
+  private _type: Signal<VideoType | null> = signal(null);
   private _blob: Signal<Blob> = signal(new Blob());
   private _error: Signal<string | null> = signal(null);
+  private _created: Signal<Date | null> = signal(null);
+  private _justAudio: Signal<boolean> = signal(false);
   private timeout: NodeJS.Timeout = setTimeout(() => {}, 100000);
 
   public static getInstance(): Item {
     return Item.instance || new Item();
   }
 
-  private handleResponse(response: ItemResponse) {
+  private handleResponse(response: Item) {
+    // console.log('handleResponse', response);
     this.id = response.id;
-    this.status = response.status;
-    this.message = response.message;
+    if (response.filename) {
+      this.filename = response.filename;
+    }
+    if (response.status) {
+      this.status = response.status;
+    }
     if (response.name) {
       this.name = response.name;
     }
+    this.message = response.message;
     this.error = response.error;
+    this.created = response.created || null;
     this.updateLocalStorageItem();
   }
 
-  public getVideo() {
-    console.log('> getVideo');
+  public setType() {
+    if (!this.url || this.type) {
+      return;
+    }
+    if (isYoutube(this.url)) {
+      this.type = 'youtube';
+    } else if (isInstagram(this.url)) {
+      this.type = 'instagram';
+    } else if (isTiktok(this.url)) {
+      this.type = 'tiktok';
+    } else if (isFacebook(this.url)) {
+      this.type = 'facebook';
+    } else if (isTwitter(this.url)) {
+      this.type = 'twitter';
+    }
+  }
+
+  public getVideo(options?: DownloadOptions) {
     if (!this.URLBase || !this.url) {
       return;
     }
+    this.setType();
+    let force = false;
+    if (this.status === 'ready' || this.status === 'error') {
+      this.status = 'none';
+      force = true;
+      this.updateLocalStorageItem();
+    }
+    if (options) {
+      this.justAudio = options?.justAudio ?? false;
+    }
     const url = `${this.URLBase}/download-video`;
-    const data = {
+    let data: any = {
       url: this.url,
+      justAudio: this.justAudio,
+      force,
     };
+    if (this.id) {
+      data.id = this.id;
+    }
     API.Post({
       url,
       data,
       jsonapi: false,
     })
-      .then((response: ItemResponse) => {
+      .then((response: Item) => {
         this.handleResponse(response);
         this.checkStatus();
       })
       .catch((e) => {
-        this.error = e;
-        this.status = 'error';
+        this.error = e ?? '';
+        if (this.error) {
+          this.status = 'error';
+        }
         this.updateLocalStorageItem();
       });
   }
 
   public checkStatus() {
-    console.log('> checkStatus');
     clearTimeout(this.timeout);
     if (
       !this.URLBase ||
       !this.url ||
-      !this.id ||
-      this.status === 'ready' ||
-      this.status === 'error'
+      this.status === 'ready'
+      // (this.status === 'error' && this.id)
     ) {
       return;
     }
-    const url = `${this.URLBase}/get-videos/${this.id}`;
-    API.Get({
-      url,
-      jsonapi: false,
-    })
-      .then((response: ItemResponse) => this.handleResponse(response))
-      .catch((e) => {
-        this.error = e;
-        this.status = 'error';
-        this.updateLocalStorageItem();
+    if (this.status === 'error') {
+      this.status = 'none';
+      this.updateLocalStorageItem();
+    }
+    if (this.id) {
+      API.Get({
+        url: `${this.URLBase}/get-videos/${this.id}`,
+        jsonapi: false,
       })
-      .finally(
-        () => (this.timeout = setTimeout(() => this.checkStatus(), 3000))
-      );
+        .then((response: Item) => this.handleResponse(response))
+        .catch((e) => {
+          if (this.id) {
+            this.error = e ?? '';
+            if (this.error) {
+              this.status = 'error';
+            }
+            this.updateLocalStorageItem();
+          }
+        })
+        .finally(
+          () => (this.timeout = setTimeout(() => this.checkStatus(), 2000))
+        );
+    } else if (this.url) {
+      // console.log('>>>>> checkStatus NO ID URL:', this.url);
+      // console.log('>>>>> checkStatus NO ID justAudio:', this.justAudio);
+      // console.log('>>>>> checkStatus NO ID status:', this.status);
+      API.Post({
+        url: `${this.URLBase}/get-video-name`,
+        jsonapi: false,
+        data: {
+          url: this.url,
+          justAudio: this.justAudio,
+        },
+      })
+        .then((response: Item) => this.handleResponse(response))
+        .catch((e) => {
+          this.error = e ?? '';
+          if (this.error) {
+            this.status = 'error';
+          }
+          this.updateLocalStorageItem();
+        })
+        .finally(
+          () => (this.timeout = setTimeout(() => this.checkStatus(), 2000))
+        );
+    }
   }
 
   public updateLocalStorageItem() {
@@ -109,9 +199,13 @@ export default class Item {
       id: this.id,
       URLBase: this.URLBase,
       name: this.name,
+      filename: this.filename,
       status: this.status,
       url: this.url,
+      type: this.type,
       error: this.error,
+      created: this.created,
+      justAudio: this.justAudio,
     };
   }
 
@@ -143,6 +237,13 @@ export default class Item {
     this._name.value = value;
   }
 
+  public get filename() {
+    return this._filename.value;
+  }
+  public set filename(value) {
+    this._filename.value = value;
+  }
+
   public get status() {
     return this._status.value;
   }
@@ -169,6 +270,27 @@ export default class Item {
   }
   public set error(value) {
     this._error.value = value;
+  }
+
+  public get created() {
+    return this._created.value;
+  }
+  public set created(value) {
+    this._created.value = value;
+  }
+
+  public get justAudio() {
+    return this._justAudio.value;
+  }
+  public set justAudio(value) {
+    this._justAudio.value = value;
+  }
+
+  public get type() {
+    return this._type.value;
+  }
+  public set type(value) {
+    this._type.value = value;
   }
 }
 

@@ -102,6 +102,16 @@ Get video formats
 
 ```sh
 ./yt-dlp https://youtu.be/k1UCqCuGdck --list-formats
+
+./yt-dlp-win.exe https://www.instagram.com/reel/C1n1kxFrLvT/ --list-formats
+./yt-dlp-win.exe https://youtu.be/k1UCqCuGdck --list-formats
+```
+
+Get video and convert it into mov
+
+```sh
+rm -rf media/* && rm -rf public/media/* && \
+./yt-dlp-win.exe "https://youtube.com/shorts/l48BW7BKcBU?si=lEdKGj2Tp5FEK_nI" -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio" --remux-video mov --merge-output-format mov --postprocessor-args "-acodec aac -vcodec libx264" -o "media/659854d84d68229396c95e7c.%(ext)s"
 ```
 
 ./yt-dlp https://www.youtube.com/watch?v=1Tgu8aK0omo \

@@ -1,0 +1,28 @@
+.GenericImage {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  img {
+    object-fit: cover;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  &__loading::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    background-color: rgba(255, 255, 255, 0);
+  }
+  50% {
+    background-color: rgba(255, 255, 255, 0.25);
+  }
+  100% {
+    background-color: rgba(255, 255, 255, 0);
+  }
+}

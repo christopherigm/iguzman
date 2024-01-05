@@ -8,7 +8,7 @@ const name = 'video-downloader';
 const namespace = 'video-downloader';
 const host = 'vd.iguzman.com.mx';
 const registry = 'christopherguzman';
-const envFile = '.env.local';
+const envFile = '.env';
 // Editable variables
 
 const upgradeVersion = (version) => {
