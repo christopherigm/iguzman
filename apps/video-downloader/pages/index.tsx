@@ -70,6 +70,7 @@ const Page = (props: any) => {
             items={system.items}
             onDeleteItem={(id: string) => system.deleteItem(id)}
             devMode={system.devMode}
+            darkMode={system.darkMode}
           />
         </>
       ) : null}

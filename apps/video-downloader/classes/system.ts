@@ -59,7 +59,10 @@ export default class System extends BaseSystem {
     item.URLBase = this.URLBase;
     item.url = url;
     item.getVideo(options);
-    this.items = [item, ...this.items];
+    // this.items = [item, ...this.items];
+    this.items.unshift(item);
+    this.items = [...this.items];
+    console.log('>>> this.items', this.items);
     this.saveItemsToLocalStorage();
   }
 
@@ -69,10 +72,13 @@ export default class System extends BaseSystem {
     } else {
       const index = this.items.findIndex((i: Item) => i.id === id);
       if (index > -1) {
+        this.items[index]?.cancelRequest();
+        this.items[index]?.clearTimeout();
         this.items.splice(index, 1);
         this.items = [...this.items];
       }
     }
+    console.log('>>> this.items', this.items);
     this.saveItemsToLocalStorage();
   }
 

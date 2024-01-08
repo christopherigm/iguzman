@@ -125,6 +125,7 @@ const downloadVideo = (
           writeMetadataToFile(item, options.force)
             .then((item) => {
               item.status = 'ready';
+              item.created = new Date();
               delete item.error;
               updateItem(item)
                 .then((item) => res(item))
@@ -176,6 +177,7 @@ const downloadVideo = (
           item.remoteAddress = metadata.remoteAddress;
           item.justAudio = options.justAudio;
           item.status = 'downloading';
+          item.created = new Date();
           item.extention = options.justAudio ? 'm4a' : iOS ? 'mov' : 'mp4';
           delete item.error;
           updateItem(item)
