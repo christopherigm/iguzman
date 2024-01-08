@@ -10,8 +10,9 @@ import {
   isTwitter,
 } from '@repo/utils';
 
-type Status = 'downloading' | 'none' | 'ready' | 'error';
+type Status = 'downloading' | 'none' | 'ready' | 'error' | 'canceled';
 export type VideoType =
+  | 'audio'
   | 'youtube'
   | 'instagram'
   | 'tiktok'
@@ -60,10 +61,12 @@ export default class Item {
   }
 
   public setType() {
-    if (!this.url || this.type) {
+    if (!this.url || this.type || (this.type === 'youtube' && this.justAudio)) {
       return;
     }
-    if (isYoutube(this.url)) {
+    if (this.justAudio) {
+      this.type = 'audio';
+    } else if (isYoutube(this.url)) {
       this.type = 'youtube';
     } else if (isInstagram(this.url)) {
       this.type = 'instagram';
@@ -74,6 +77,7 @@ export default class Item {
     } else if (isTwitter(this.url)) {
       this.type = 'twitter';
     }
+    this.updateLocalStorageItem();
   }
 
   public getVideo(options?: DownloadOptions) {
@@ -82,7 +86,11 @@ export default class Item {
     }
     this.setType();
     let force = false;
-    if (this.status === 'ready' || this.status === 'error') {
+    if (
+      this.status === 'ready' ||
+      this.status === 'error' ||
+      this.status === 'canceled'
+    ) {
       this.status = 'none';
       force = true;
       this.updateLocalStorageItem();
@@ -117,13 +125,22 @@ export default class Item {
       });
   }
 
-  public checkStatus() {
+  public cancelRequest() {
+    this.status = 'canceled';
+    this.updateLocalStorageItem();
+  }
+
+  public clearTimeout() {
     clearTimeout(this.timeout);
+  }
+
+  public checkStatus() {
+    this.clearTimeout();
     if (
       !this.URLBase ||
       !this.url ||
-      this.status === 'ready'
-      // (this.status === 'error' && this.id)
+      this.status === 'ready' ||
+      this.status === 'canceled'
     ) {
       return;
     }
@@ -150,9 +167,6 @@ export default class Item {
           () => (this.timeout = setTimeout(() => this.checkStatus(), 2000))
         );
     } else if (this.url) {
-      // console.log('>>>>> checkStatus NO ID URL:', this.url);
-      // console.log('>>>>> checkStatus NO ID justAudio:', this.justAudio);
-      // console.log('>>>>> checkStatus NO ID status:', this.status);
       API.Post({
         url: `${this.URLBase}/get-video-name`,
         jsonapi: false,

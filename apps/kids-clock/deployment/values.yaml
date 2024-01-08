@@ -1,0 +1,31 @@
+replicaCount: 1
+volumeMountPath: 'shared-volume'
+nginxServiceName: 'nginx-web-app'
+branch: 'main'
+
+image:
+  registry: christopherguzman
+  repository: kids-clock
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  externalPort: 80
+  internalPort: 3000
+
+ingress:
+  enabled: true
+  host: vd.iguzman.com.mx
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+deployment:
+  nodeSelector:
+    nodeName: node1

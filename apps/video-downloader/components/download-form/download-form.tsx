@@ -46,7 +46,7 @@ const DownloadForm = ({ URLBase, callback }: Props) => {
     });
     link.value = '';
     isYoutubeLink.value = false;
-    downloadJustAudio.value = false;
+    // downloadJustAudio.value = false;
   };
 
   return (
@@ -98,11 +98,7 @@ const DownloadForm = ({ URLBase, callback }: Props) => {
         </Grid>
         {isYoutubeLink.value ? (
           <Grid item xs={12}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-            >
+            <Box display="flex" justifyContent="end">
               <FormGroup>
                 <FormControlLabel
                   control={
@@ -115,6 +111,7 @@ const DownloadForm = ({ URLBase, callback }: Props) => {
                   }
                   color="primary.contrastText"
                   label="Just audio"
+                  labelPlacement="start"
                   disabled={isLoading.value}
                 />
               </FormGroup>

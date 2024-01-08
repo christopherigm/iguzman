@@ -14,7 +14,7 @@ import YouTube from '@mui/icons-material/YouTube';
 import Instagram from '@mui/icons-material/Instagram';
 import Facebook from '@mui/icons-material/Facebook';
 import X from '@mui/icons-material/X';
-import Tiktok from '@mui/icons-material/VideoChat';
+import BlockIcon from '@mui/icons-material/Block';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import GridViewIcon from '@mui/icons-material/GridView';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
@@ -23,47 +23,104 @@ import ErrorIcon from '@mui/icons-material/Error';
 import LinearProgress from '@mui/material/LinearProgress';
 import { signal } from '@preact-signals/safe-react';
 import { PaperCard } from '@repo/ui';
-import { BaseUser, InnerSort, DateParser, HourParser } from '@repo/utils';
+import { InnerSort, DateParser, HourParser } from '@repo/utils';
 import Item, { VideoType } from 'classes/item';
-import { ReactElement, ReactNode } from 'react';
+import { ReactElement, ReactNode, useEffect } from 'react';
 import ReactPlayer from 'react-player';
 import copy from 'copy-to-clipboard';
-import { useEffect } from '@preact-signals/safe-react/react';
+import Link from 'next/link';
+
+type IconColorType = Record<VideoType, string>;
+const iconColor: IconColorType = {
+  audio: 'red',
+  youtube: 'red',
+  instagram: '#fbad50',
+  facebook: '#1877F2',
+  twitter: '#111',
+  tiktok: '#111',
+};
+
+type TikTokProps = {
+  sx?: {
+    color?: string;
+  };
+  color?: string;
+  fontSize?: 'small' | 'medium' | 'large';
+};
+
+const TikTok = ({ sx, color, fontSize = 'medium' }: TikTokProps) => {
+  return (
+    <svg
+      fill={sx?.color || color}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 50 50"
+      width={fontSize === 'small' ? 20 : fontSize === 'medium' ? 24 : 28}
+      height={fontSize === 'small' ? 20 : fontSize === 'medium' ? 24 : 28}
+    >
+      <path d="M41,4H9C6.243,4,4,6.243,4,9v32c0,2.757,2.243,5,5,5h32c2.757,0,5-2.243,5-5V9C46,6.243,43.757,4,41,4z M37.006,22.323 c-0.227,0.021-0.457,0.035-0.69,0.035c-2.623,0-4.928-1.349-6.269-3.388c0,5.349,0,11.435,0,11.537c0,4.709-3.818,8.527-8.527,8.527 s-8.527-3.818-8.527-8.527s3.818-8.527,8.527-8.527c0.178,0,0.352,0.016,0.527,0.027v4.202c-0.175-0.021-0.347-0.053-0.527-0.053 c-2.404,0-4.352,1.948-4.352,4.352s1.948,4.352,4.352,4.352s4.527-1.894,4.527-4.298c0-0.095,0.042-19.594,0.042-19.594h4.016 c0.378,3.591,3.277,6.425,6.901,6.685V22.323z" />
+    </svg>
+  );
+};
 
 type GridItemProps = {
   item: Item;
-  onDeleteItem: (id: string) => void;
+  onDeleteItem: () => void;
+  onCancelItem: () => void;
   miniMode: boolean;
   devMode: boolean;
+  darkMode: boolean;
 };
 
-const GridItem = ({ item, onDeleteItem, miniMode, devMode }: GridItemProps) => {
+const GridItem = ({
+  item,
+  onDeleteItem,
+  onCancelItem,
+  miniMode,
+  devMode,
+  darkMode,
+}: GridItemProps) => {
   const URLBase = item.URLBase.substring(0, item.URLBase.length - 4);
 
   const actionButtons = (
     <>
-      {item.status === 'ready' || item.status === 'error' ? (
+      {item.status === 'ready' ||
+      item.status === 'error' ||
+      item.status === 'canceled' ? (
+        <>
+          <Box marginLeft={0.5} paddingLeft={1} borderLeft="solid 1px #666">
+            <IconButton
+              aria-label="re-download"
+              size="small"
+              onClick={() => item.getVideo()}
+              color="default"
+            >
+              <SettingsBackupRestoreIcon fontSize="small" />
+            </IconButton>
+          </Box>
+          <Box marginLeft={0.5} paddingLeft={1} borderLeft="solid 1px #666">
+            <IconButton
+              aria-label="delete"
+              size="small"
+              onClick={() => onDeleteItem()}
+              color="error"
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </>
+      ) : null}
+      {item.status === 'downloading' || item.status === 'none' ? (
         <Box marginLeft={0.5} paddingLeft={1} borderLeft="solid 1px #666">
           <IconButton
-            aria-label="re-download"
+            aria-label="delete"
             size="small"
-            onClick={() => item.getVideo()}
-            color="default"
+            onClick={() => onCancelItem()}
+            color="error"
           >
-            <SettingsBackupRestoreIcon fontSize="small" />
+            <BlockIcon fontSize="small" />
           </IconButton>
         </Box>
       ) : null}
-      <Box marginLeft={0.5} paddingLeft={1} borderLeft="solid 1px #666">
-        <IconButton
-          aria-label="delete"
-          size="small"
-          onClick={() => onDeleteItem(item.id)}
-          color="error"
-        >
-          <DeleteIcon fontSize="small" />
-        </IconButton>
-      </Box>
     </>
   );
 
@@ -84,19 +141,39 @@ const GridItem = ({ item, onDeleteItem, miniMode, devMode }: GridItemProps) => {
             paddingTop={1}
             borderRight="solid 1px #666"
           >
-            {item.justAudio ? (
-              <AudioIcon fontSize={miniMode ? 'small' : 'medium'} />
-            ) : item.type === 'youtube' ? (
-              <YouTube fontSize={miniMode ? 'small' : 'medium'} />
-            ) : item.type === 'instagram' ? (
-              <Instagram fontSize={miniMode ? 'small' : 'medium'} />
-            ) : item.type === 'facebook' ? (
-              <Facebook fontSize={miniMode ? 'small' : 'medium'} />
-            ) : item.type === 'twitter' ? (
-              <X fontSize={miniMode ? 'small' : 'medium'} />
-            ) : item.type === 'tiktok' ? (
-              <Tiktok fontSize={miniMode ? 'small' : 'medium'} />
-            ) : null}
+            <Link href={item.url} target="_blank">
+              {item.justAudio || item.type === 'audio' ? (
+                <AudioIcon
+                  fontSize={miniMode ? 'small' : 'medium'}
+                  sx={{ color: darkMode ? 'white' : iconColor.audio }}
+                />
+              ) : item.type === 'youtube' ? (
+                <YouTube
+                  fontSize={miniMode ? 'small' : 'medium'}
+                  sx={{ color: darkMode ? 'white' : iconColor.youtube }}
+                />
+              ) : item.type === 'instagram' ? (
+                <Instagram
+                  fontSize={miniMode ? 'small' : 'medium'}
+                  sx={{ color: darkMode ? 'white' : iconColor.instagram }}
+                />
+              ) : item.type === 'facebook' ? (
+                <Facebook
+                  fontSize={miniMode ? 'small' : 'medium'}
+                  sx={{ color: darkMode ? 'white' : iconColor.facebook }}
+                />
+              ) : item.type === 'twitter' ? (
+                <X
+                  fontSize={miniMode ? 'small' : 'medium'}
+                  sx={{ color: darkMode ? 'white' : iconColor.twitter }}
+                />
+              ) : item.type === 'tiktok' ? (
+                <TikTok
+                  fontSize={miniMode ? 'small' : 'medium'}
+                  sx={{ color: darkMode ? 'white' : iconColor.tiktok }}
+                />
+              ) : null}
+            </Link>
           </Box>
         ) : null}
         <Typography
@@ -110,6 +187,8 @@ const GridItem = ({ item, onDeleteItem, miniMode, devMode }: GridItemProps) => {
             <>{item.name ? item.name : ''}</>
           ) : item.status === 'error' ? (
             <>Error!</>
+          ) : item.status === 'canceled' ? (
+            <>Canceled</>
           ) : (
             <>Processing...</>
           )}
@@ -271,37 +350,52 @@ const GridItem = ({ item, onDeleteItem, miniMode, devMode }: GridItemProps) => {
   );
 };
 
-type ButtonFilterProps = {
+type FilterButtonProps = {
   children: ReactNode;
   videoType: VideoType;
+  darkMode: boolean;
 };
 
-const ButtonFilter = ({
+const FilterButton = ({
   children,
   videoType,
-}: ButtonFilterProps): ReactElement => {
+  darkMode,
+}: FilterButtonProps): ReactElement => {
   const selected = filterTypes.value.indexOf(videoType) > -1;
+  const color = selected
+    ? darkMode
+      ? 'white'
+      : iconColor[videoType]
+    : darkMode
+      ? '#999'
+      : '#000';
   return (
-    <IconButton
-      aria-label="miniGrid"
-      size="medium"
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      marginRight={1}
+      padding={0.5}
       onClick={() => {
         const index = filterTypes.value.indexOf(videoType);
         if (index > -1) {
           filterTypes.value.splice(index, 1);
           filterTypes.value = [...filterTypes.value];
         } else {
-          filterTypes.value = [...filterTypes.value, videoType];
+          filterTypes.value.push(videoType);
+          filterTypes.value = [...filterTypes.value];
         }
       }}
       sx={{
+        cursor: 'pointer',
         opacity: selected ? '1' : '0.7',
-        backgroundColor: selected ? '#333' : '',
-        color: selected ? 'white' : '#000',
+        color: color,
+        fill: color,
+        borderBottom: `2px solid ${selected ? color : 'rgba(0,0,0,0)'}`,
       }}
     >
       {children}
-    </IconButton>
+    </Box>
   );
 };
 
@@ -309,6 +403,7 @@ type Props = {
   items: Array<Item>;
   onDeleteItem: (id: string) => void;
   devMode: boolean;
+  darkMode: boolean;
 };
 
 const miniGrid = signal(false);
@@ -319,7 +414,12 @@ const filterTypes = signal<Array<VideoType>>([]);
 const filterByErrors = signal<boolean>(false);
 const filteredItems = signal<Array<Item>>([]);
 
-const GridOfItems = ({ items, onDeleteItem, devMode }: Props): ReactElement => {
+const GridOfItems = ({
+  items,
+  onDeleteItem,
+  devMode,
+  darkMode,
+}: Props): ReactElement => {
   offset.value = (page.value - 1) * itemsToDisplay.value;
   filteredItems.value = items
     .filter((i) => {
@@ -339,34 +439,44 @@ const GridOfItems = ({ items, onDeleteItem, devMode }: Props): ReactElement => {
     })
     .sort(InnerSort('_created', 'desc'));
 
+  useEffect(() => {
+    page.value = 1;
+    filterTypes.value = [];
+  }, [items.length]);
+
   return (
     <Box display="flex" flexDirection="column">
       <Box display="flex" flexDirection="row" justifyContent="space-between">
-        <Box>
+        <Box display="flex" flexDirection="row" alignItems="center">
+          {items.filter((i) => i.justAudio).length ? (
+            <FilterButton videoType="audio" darkMode={darkMode}>
+              <AudioIcon />
+            </FilterButton>
+          ) : null}
           {items.filter((i) => i.type && i.type === 'youtube').length ? (
-            <ButtonFilter videoType="youtube">
+            <FilterButton videoType="youtube" darkMode={darkMode}>
               <YouTube />
-            </ButtonFilter>
+            </FilterButton>
           ) : null}
           {items.filter((i) => i.type && i.type === 'instagram').length ? (
-            <ButtonFilter videoType="instagram">
+            <FilterButton videoType="instagram" darkMode={darkMode}>
               <Instagram />
-            </ButtonFilter>
+            </FilterButton>
           ) : null}
           {items.filter((i) => i.type && i.type === 'tiktok').length ? (
-            <ButtonFilter videoType="tiktok">
-              <Tiktok />
-            </ButtonFilter>
+            <FilterButton videoType="tiktok" darkMode={darkMode}>
+              <TikTok />
+            </FilterButton>
           ) : null}
           {items.filter((i) => i.type && i.type === 'facebook').length ? (
-            <ButtonFilter videoType="facebook">
+            <FilterButton videoType="facebook" darkMode={darkMode}>
               <Facebook />
-            </ButtonFilter>
+            </FilterButton>
           ) : null}
           {items.filter((i) => i.type && i.type === 'twitter').length ? (
-            <ButtonFilter videoType="twitter">
+            <FilterButton videoType="twitter" darkMode={darkMode}>
               <X />
-            </ButtonFilter>
+            </FilterButton>
           ) : null}
         </Box>
         <Box display="flex" flexDirection="row">
@@ -391,20 +501,22 @@ const GridOfItems = ({ items, onDeleteItem, devMode }: Props): ReactElement => {
               </Select>
             </FormControl>
           </Box>
-          <Box>
-            <IconButton
-              aria-label="filterByErrors"
-              size="medium"
-              onClick={() => (filterByErrors.value = !filterByErrors.value)}
-              sx={{
-                opacity: filterByErrors.value ? '1' : '0.7',
-                backgroundColor: filterByErrors.value ? '#333' : '',
-                color: filterByErrors.value ? 'white' : '#000',
-              }}
-            >
-              <ErrorIcon />
-            </IconButton>
-          </Box>
+          {items.filter((i) => i.type && i.status === 'error').length ? (
+            <Box>
+              <IconButton
+                aria-label="filterByErrors"
+                size="medium"
+                onClick={() => (filterByErrors.value = !filterByErrors.value)}
+                sx={{
+                  opacity: filterByErrors.value ? '1' : '0.7',
+                  backgroundColor: filterByErrors.value ? '#333' : '',
+                  color: filterByErrors.value ? 'white' : '#000',
+                }}
+              >
+                <ErrorIcon />
+              </IconButton>
+            </Box>
+          ) : null}
           <Box marginRight={1}>
             <IconButton
               aria-label="miniGrid"
@@ -459,9 +571,17 @@ const GridOfItems = ({ items, onDeleteItem, devMode }: Props): ReactElement => {
             >
               <GridItem
                 item={i}
-                onDeleteItem={(id: string) => onDeleteItem(id)}
+                onDeleteItem={() => {
+                  i.clearTimeout();
+                  onDeleteItem(i.id);
+                }}
+                onCancelItem={() => {
+                  i.cancelRequest();
+                  i.clearTimeout();
+                }}
                 miniMode={miniGrid.value}
                 devMode={devMode}
+                darkMode={darkMode}
               />
             </Grid>
           ))}

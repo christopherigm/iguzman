@@ -26,15 +26,25 @@ cat "$home_path/.env"
 # sunrise=`expr $SUNRISE + 0`;
 # sunset=`expr $sunset + 0`;
 
-if $picam_enabled; then
+force=false;
+
+if [[ "$1" == "--force" ]]; then
+  force=true;
+fi
+
+
+
+if $picam_enabled || $force; then
   mkdir -p "$home_path/picam";
   # ssh -i /home/christopher/.ssh/id_ed25519 christopher@master 'mkdir -p /shared-volume/time-lapse/picam'
 fi
 
-if $webcam_enabled; then
+if $webcam_enabled || $force; then
   mkdir -p "$home_path/webcam";
   # ssh -i /home/christopher/.ssh/id_ed25519 christopher@master 'mkdir -p /shared-volume/time-lapse/webcam'
 fi
+
+echo "force: $force";
 
 while true; do
   source "$home_path/.env"
@@ -48,15 +58,28 @@ while true; do
 
   date=$(date '+%Y-%m-%d %H-%M-%S');
 
-  if [[ $current_hour -ge $sunrise && $current_hour -le $sunset ]]; then
+  if [[ $current_hour -ge $sunrise && $current_hour -le $sunset ]] || $force ; then
     echo "===== Photos are enabled: $date. =====";
 
     # File name
     file_name="picture $date.jpg";
 
+    #Foto time
+    photo_time=`date "+%m/%d/%Y - %H\:%M"`;
+    echo "[Photo time]: $photo_time";
+    fontfile="fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+    fontcolor="fontcolor=white";
+    fontsize="fontsize=50"
+    textbox="box=1:boxcolor=black@0.5:boxborderw=20"
+    
+
     # Raspberry PI Camera
     if $picam_enabled; then
-      raspistill -o "$home_path/picam/$file_name" -w $picam_width -h $picam_height -q 100 -sh 90 -rot $picam_rotation;
+      raspistill -o "$home_path/picam/tmp-$file_name" -w $picam_width -h $picam_height -q 100 -sh 90 -rot $picam_rotation;
+      ffmpeg -i "$home_path/picam/tmp-$file_name" \
+        -vf "drawtext=$fontfile:text='$photo_time':$fontcolor:$fontsize:$textbox:x=(w-text_w)-50:y=(h-text_h)-50" \
+        -vf "drawtext=$fontfile:text='Longmont CO':$fontcolor:$fontsize:$textbox:x=50:y=(h-text_h)-50" \
+        -y "$home_path/picam/$file_name";
       scp -i "$home_path/.ssh/id_ed25519" "$home_path/picam/$file_name" "$remote_path/picam";
       rm "$home_path/picam/$file_name";
       echo "[picam] Picture saved: picture $date.jpg" >> $logs_file_name;
@@ -73,7 +96,12 @@ while true; do
         --quiet \
         --jpeg 95 \
         --rotate $webcam_rotation \
-        --no-banner "$home_path/webcam/$file_name";
+        --no-banner "$home_path/webcam/tmp-$file_name";
+      text1="drawtext=$fontfile:text='$photo_time':$fontcolor:$fontsize:$textbox:x=(w-text_w)-50:y=(h-text_h)-50"
+      text2="drawtext=$fontfile:text='Longmont CO':$fontcolor:$fontsize:$textbox:x=50:y=(h-text_h)-50"
+      ffmpeg -i "$home_path/webcam/tmp-$file_name" \
+        -vf "$text1,$text2" \
+        -y "$home_path/webcam/$file_name";
       scp -i "$home_path/.ssh/id_ed25519" "$home_path/webcam/$file_name" "$remote_path/webcam";
       rm "$home_path/webcam/$file_name";
       echo "[webcam] Picture saved: picture $date.jpg" >> $logs_file_name;
@@ -94,3 +122,5 @@ while true; do
 done
 
 exit 0
+
+# https://stackoverflow.com/questions/17623676/text-on-video-ffmpeg

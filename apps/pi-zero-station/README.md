@@ -2,6 +2,15 @@
 
 POWER YOUR RASPBERRY PI WITH A BATTERY
 
+photo_time=`date "+%Y/%m/%d - %H:%M"`;
+echo $photo_time;
+
+./ffmpeg.exe -i img.jpg -vf "drawtext=fontfile=/path/to/font.ttf:text='01/05/24 - 07\:00':fontcolor=white:fontsize=56:box=1:boxcolor=black@0.5:boxborderw=20:x=(w-text_w)-50:y=(h-text_h)-50" -y output.jpg
+
+if [[$1 && $1 == "--force"]]; then
+echo "FORCEEE";
+fi
+
 # https://projects.raspberrypi.org/en/projects/getting-started-with-picamera/3
 
 raspistill -o image.jpg -w 640 -h 480
