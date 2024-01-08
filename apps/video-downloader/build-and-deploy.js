@@ -6,7 +6,6 @@ const fs = require('fs');
 // Editable variables
 const name = 'video-downloader';
 const namespace = 'video-downloader';
-const host = 'vd.iguzman.com.mx';
 const registry = 'christopherguzman';
 const envFile = '.env';
 // Editable variables
@@ -120,9 +119,6 @@ const deployMicroservice = () => {
   return new Promise((res, rej) => {
     let command = `helm install ${name} deployment `;
     command += `--namespace=${namespace} `;
-    command += '--set replicaCount=1 ';
-    command += `--set ingress.enabled=true `;
-    command += `--set ingress.host=${host} `;
     command += `--set image.tag=${branch}`;
     exec(command, (err, stdout) => {
       if (err) return rej(err);

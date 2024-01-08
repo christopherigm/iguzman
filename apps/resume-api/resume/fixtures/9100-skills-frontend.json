@@ -1,0 +1,46 @@
+[
+  {
+    "model": "resume.Skill",
+    "pk": 9100,
+    "fields": {
+      "category": 9001,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "React",
+      "img_picture": "skills/front-end/react.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9101,
+    "fields": {
+      "category": 9001,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Redux",
+      "img_picture": "skills/front-end/react-redux.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9102,
+    "fields": {
+      "category": 9001,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Sass",
+      "img_picture": "skills/front-end/sass.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9103,
+    "fields": {
+      "category": 9001,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Materialize CSS",
+      "img_picture": "skills/front-end/materialize-css.png"
+    }
+  }
+]

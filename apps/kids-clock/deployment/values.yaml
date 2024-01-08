@@ -16,7 +16,7 @@ service:
 
 ingress:
   enabled: true
-  host: vd.iguzman.com.mx
+  host: clock.kids.iguzman.com.mx
 
 resources:
   limits:

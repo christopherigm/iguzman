@@ -1,0 +1,35 @@
+[
+  {
+    "model": "resume.Skill",
+    "pk": 9400,
+    "fields": {
+      "category": 9004,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "MongoDB",
+      "img_picture": "skills/data-bases/mongo-db.jpg"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9401,
+    "fields": {
+      "category": 9004,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Postgres",
+      "img_picture": "skills/data-bases/postgres.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9402,
+    "fields": {
+      "category": 9004,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Redis",
+      "img_picture": "skills/data-bases/redis.png"
+    }
+  }
+]

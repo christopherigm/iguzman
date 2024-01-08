@@ -1,11 +1,0 @@
-[youtube] Extracting URL: https://youtube.com/shorts/l48BW7BKcBU?si=lEdKGj2Tp5FEK_nI
-[youtube] l48BW7BKcBU: Downloading webpage
-[youtube] l48BW7BKcBU: Downloading ios player API JSON
-[youtube] l48BW7BKcBU: Downloading android player API JSON
-[youtube] l48BW7BKcBU: Downloading m3u8 information
-[info] l48BW7BKcBU: Downloading 1 format(s): 616+140
-[download] media\659854d84d68229396c95e7c.f616.mp4 has already been downloaded
-[download] 100% of   32.51MiB
-[download] media\659854d84d68229396c95e7c.f140.m4a has already been downloaded
-[download] 100% of  942.00KiB
-[Merger] Merging formats into "media\659854d84d68229396c95e7c.mov"

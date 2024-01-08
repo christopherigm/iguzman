@@ -76,10 +76,15 @@ while true; do
     # Raspberry PI Camera
     if $picam_enabled; then
       raspistill -o "$home_path/picam/tmp-$file_name" -w $picam_width -h $picam_height -q 100 -sh 90 -rot $picam_rotation;
+      text1="drawtext=$fontfile:text='$photo_time':$fontcolor:$fontsize:$textbox:x=(w-text_w)-50:y=(h-text_h)-50"
+      text2="drawtext=$fontfile:text='Longmont CO':$fontcolor:$fontsize:$textbox:x=50:y=(h-text_h)-50"
       ffmpeg -i "$home_path/picam/tmp-$file_name" \
-        -vf "drawtext=$fontfile:text='$photo_time':$fontcolor:$fontsize:$textbox:x=(w-text_w)-50:y=(h-text_h)-50" \
-        -vf "drawtext=$fontfile:text='Longmont CO':$fontcolor:$fontsize:$textbox:x=50:y=(h-text_h)-50" \
+        -vf "$text1,$text2" \
         -y "$home_path/picam/$file_name";
+      # ffmpeg -i "$home_path/picam/tmp-$file_name" \
+      #   -vf "drawtext=$fontfile:text='$photo_time':$fontcolor:$fontsize:$textbox:x=(w-text_w)-50:y=(h-text_h)-50" \
+      #   -vf "drawtext=$fontfile:text='Longmont CO':$fontcolor:$fontsize:$textbox:x=50:y=(h-text_h)-50" \
+      #   -y "$home_path/picam/$file_name";
       scp -i "$home_path/.ssh/id_ed25519" "$home_path/picam/$file_name" "$remote_path/picam";
       rm "$home_path/picam/$file_name";
       echo "[picam] Picture saved: picture $date.jpg" >> $logs_file_name;

@@ -173,7 +173,6 @@ const downloadVideo = (
             }
           }
           command += `-o "media/${item.id}.%(ext)s"`;
-          console.log('>> downloadVideo command:', command);
           item.remoteAddress = metadata.remoteAddress;
           item.justAudio = options.justAudio;
           item.status = 'downloading';

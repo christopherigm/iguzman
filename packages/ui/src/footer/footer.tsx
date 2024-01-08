@@ -42,8 +42,9 @@ const Footer = ({
 
   return (
     <>
-      <Box flexGrow={1}></Box>
+      <Box flexGrow={1} className="hide-on-print"></Box>
       <Box
+        className="hide-on-print"
         sx={{
           height: 'auto',
           backgroundColor: 'secondary.main',

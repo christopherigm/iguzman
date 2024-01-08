@@ -170,6 +170,40 @@ export class BaseSystem extends Mixin(EnvironmentVariables, CachedValues) {
     SaveCookie('devMode', String(this.devMode), this.paths);
   }
 
+  public getPlainAttributes(): Object {
+    return {
+      hostName: this.hostName,
+      URLBase: this.URLBase,
+      K8sURLBase: this.K8sURLBase,
+      defaultLanguage: this.defaultLanguage,
+      loginEnabled: this.loginEnabled,
+      cartEnabled: this.cartEnabled,
+      favoritesEnabled: this.favoritesEnabled,
+      ordersEnabled: this.ordersEnabled,
+      version: this.version,
+      isLoading: this.isLoading,
+      language: this.language,
+      darkMode: this.darkMode,
+      devMode: this.devMode,
+    };
+  }
+
+  public setSystemAttributesFromPlainObject(object: any) {
+    this.hostName = object.hostName ?? this.hostName;
+    this.URLBase = object.URLBase ?? this.URLBase;
+    this.K8sURLBase = object.K8sURLBase ?? this.K8sURLBase;
+    this.defaultLanguage = object.defaultLanguage ?? this.defaultLanguage;
+    this.loginEnabled = object.loginEnabled ?? this.loginEnabled;
+    this.cartEnabled = object.cartEnabled ?? this.cartEnabled;
+    this.favoritesEnabled = object.favoritesEnabled ?? this.favoritesEnabled;
+    this.ordersEnabled = object.ordersEnabled ?? this.ordersEnabled;
+    this.version = object.version ?? this.version;
+    this.isLoading = object.isLoading ?? this.isLoading;
+    this.language = object.language ?? this.language;
+    this.darkMode = object.darkMode ?? this.darkMode;
+    this.devMode = object.devMode ?? this.devMode;
+  }
+
   public get paths() {
     return this._paths.value;
   }

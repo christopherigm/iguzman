@@ -1,0 +1,13 @@
+[
+  {
+    "model": "resume.Skill",
+    "pk": 9600,
+    "fields": {
+      "category": 9006,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Samsung SmartTV",
+      "img_picture": "skills/platforms/smart-tv.png"
+    }
+  }
+]

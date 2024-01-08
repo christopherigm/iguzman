@@ -20,6 +20,11 @@ raspistill -o image.jpg -w 6000 -h 4000
 raspistill -o image.jpg -w 2592 -h 1944 -q 100 -sh 90 -ss 1200000 -rot 180
 raspistill -o image.jpg -w 2592 -h 1944 -q 100 -sh 90
 
+raspistill -o image.jpg -w 2592 -h 1944 \
+ -q 100 -sh 90 -rot 90 --exposure night -ss 60000 && \
+ scp image.jpg christopher@master:/shared-volume/time-lapse/picam && \
+ rm image.jpg
+
 raspivid \
  --codec H264 \
  --timeout 600000 \
@@ -194,14 +199,16 @@ streamer \
 # https://www-users.york.ac.uk/~mjf5/shed_cam/src/USB%20webcam.html
 
 v4l2-ctl -d /dev/video1 -c white_balance_automatic=0 && \
-v4l2-ctl -d /dev/video1 -c brightness=90 && \
+v4l2-ctl -d /dev/video1 -c brightness=190 && \
 fswebcam \
  -d /dev/video1 \
- -r 1920x1080 \
- -S 1 \
+ -r 2560x1440 \
+ -S 10 \
  --jpeg 95 \
  --rotate 180 \
- --no-banner image.jpeg
+ --no-banner image.jpeg && \
+ scp image.jpeg christopher@master:/shared-volume/time-lapse/webcam && \
+ rm image.jpeg
 
 v4l2-ctl -d /dev/video1 -l
 v4l2-ctl -d /dev/video1 -c white_balance_automatic=0

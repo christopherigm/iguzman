@@ -50,7 +50,7 @@ touch "$output_dir/picam.txt"
 date=$(date '+%Y-%m-%d');
 
 ffmpeg \
-  -framerate 60 \
+  -framerate 30 \
   -pattern_type glob \
   -i "$home_path/webcam/*.jpg" \
   -s:v 2560x1440 \
@@ -61,7 +61,7 @@ ffmpeg \
 echo "$output_dir/webcam/$date.mp4" >> "file $output_dir/webcam.txt";
 
 ffmpeg \
-  -framerate 60 \
+  -framerate 30 \
   -pattern_type glob \
   -i "$home_path/picam/*.jpg" \
   -s:v 2592x1944 \

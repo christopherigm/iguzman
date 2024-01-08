@@ -1,0 +1,13 @@
+[
+  {
+    "model": "resume.Skill",
+    "pk": 9300,
+    "fields": {
+      "category": 9003,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Cordova",
+      "img_picture": "skills/mobile/cordova.png"
+    }
+  }
+]

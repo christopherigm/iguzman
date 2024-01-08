@@ -1,0 +1,22 @@
+[
+  {
+    "model": "common.City",
+    "pk": 9000,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Longmont",
+      "state": 9000
+    }
+  },
+  {
+    "model": "common.City",
+    "pk": 9001,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Mexico City",
+      "state": 9001
+    }
+  }
+]

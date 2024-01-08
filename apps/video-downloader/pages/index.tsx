@@ -14,7 +14,7 @@ const user = BaseUser.getInstance();
 
 const Page = (props: any) => {
   useEffect(() => {
-    system.setServerSideProps(props);
+    system.setSystemAttributesFromPlainObject(props);
     system.getItemsFromLocalStorage();
     user.getUserFromLocalStorage();
   }, [props]);
@@ -79,9 +79,9 @@ const Page = (props: any) => {
 };
 
 export async function getServerSideProps({ req }: any) {
-  const props = System.getInstance();
-  props.parseCookies(req.cookies);
-  return { props: props.getServerSideProps() };
+  const system = System.getInstance();
+  system.parseCookies(req.cookies);
+  return { props: system.getPlainAttributes() };
 }
 
 export default Page;

@@ -1,0 +1,15 @@
+[
+  {
+    "model": "common.System",
+    "pk": 1,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "site_name": "My CV API",
+      "img_logo": "system/logo.png",
+      "privacy_policy": "privacy_policy",
+      "terms_and_conditions": "terms_and_conditions",
+      "user_data": "user_data"
+    }
+  }
+]

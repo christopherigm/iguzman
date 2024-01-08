@@ -1,0 +1,24 @@
+[
+  {
+    "model": "common.Country",
+    "pk": 9000,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "United States Of America",
+      "code": "US",
+      "phone_code": 1
+    }
+  },
+  {
+    "model": "common.Country",
+    "pk": 9001,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Mexico",
+      "code": "MX",
+      "phone_code": 52
+    }
+  }
+]
