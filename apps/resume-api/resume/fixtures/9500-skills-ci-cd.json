@@ -1,0 +1,57 @@
+[
+  {
+    "model": "resume.Skill",
+    "pk": 9500,
+    "fields": {
+      "category": 9005,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Docker",
+      "img_picture": "skills/ci-cd/docker.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9501,
+    "fields": {
+      "category": 9005,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Kubernetes",
+      "img_picture": "skills/ci-cd/kubernetes.jpg"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9502,
+    "fields": {
+      "category": 9005,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "MicroK8s",
+      "img_picture": "skills/ci-cd/microk8s.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9503,
+    "fields": {
+      "category": 9005,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Azure",
+      "img_picture": "skills/ci-cd/azure.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9504,
+    "fields": {
+      "category": 9005,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Jenkins",
+      "img_picture": "skills/ci-cd/jenkins.png"
+    }
+  }
+]

@@ -28,36 +28,37 @@ export class BaseUser {
     if (this.attributes && this.attributes.first_name) {
       console.log(`Hello ${this.attributes.first_name}!`);
     } else {
-      console.log('Hello! (No name)');
+      console.log('Hello!');
     }
+  }
+
+  public setUserAttributesFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.jwt = object.jwt ?? this.jwt;
+    this.access = object.access ?? this.access;
+    this.attributes.email = object.attributes?.email ?? this.attributes.email;
+    this.attributes.username =
+      object.attributes?.username ?? this.attributes.username;
+    this.attributes.first_name =
+      object.attributes?.first_name ?? this.attributes.first_name;
+    this.attributes.last_name =
+      object.attributes?.last_name ?? this.attributes.last_name;
+    this.attributes.img_picture =
+      object.attributes?.img_picture ?? this.attributes.img_picture;
+    this.attributes.theme = object.attributes?.theme ?? this.attributes.theme;
+    this.attributes.theme_color =
+      object.attributes?.theme_color ?? this.attributes.theme_color;
+    this.attributes.profile_picture_shape =
+      object.attributes?.profile_picture_shape ??
+      this.attributes.profile_picture_shape;
+    this.attributes.phone_number =
+      object.attributes?.phone_number ?? this.attributes.phone_number;
   }
 
   public getUserFromLocalStorage() {
     let cachedUser: any = GetLocalStorageData(this.type);
     if (cachedUser) {
-      cachedUser = JSON.parse(cachedUser);
-      this.id = Number(cachedUser?.id ?? 0) ?? this.id;
-      this.jwt = cachedUser?.jwt ?? this.jwt;
-      this.access = cachedUser?.access ?? this.access;
-      this.attributes.email =
-        cachedUser?.attributes?.email ?? this.attributes.email;
-      this.attributes.username =
-        cachedUser?.attributes?.username ?? this.attributes.username;
-      this.attributes.first_name =
-        cachedUser?.attributes?.first_name ?? this.attributes.first_name;
-      this.attributes.last_name =
-        cachedUser?.attributes?.last_name ?? this.attributes.last_name;
-      this.attributes.img_picture =
-        cachedUser?.attributes?.img_picture ?? this.attributes.img_picture;
-      this.attributes.theme =
-        cachedUser?.attributes?.theme ?? this.attributes.theme;
-      this.attributes.theme_color =
-        cachedUser?.attributes?.theme_color ?? this.attributes.theme_color;
-      this.attributes.profile_picture_shape =
-        cachedUser?.attributes?.profile_picture_shape ??
-        this.attributes.profile_picture_shape;
-      this.attributes.phone_number =
-        cachedUser?.attributes?.phone_number ?? this.attributes.phone_number;
+      this.setUserAttributesFromPlainObject(JSON.parse(cachedUser));
     }
   }
 
@@ -76,7 +77,7 @@ export class BaseUser {
     );
   }
 
-  getPlainAttributes(): Object {
+  public getPlainAttributes(): Object {
     return {
       email: this.attributes.email,
       username: this.attributes.username,
@@ -91,7 +92,7 @@ export class BaseUser {
     };
   }
 
-  updateUserData(urlBase?: string): Promise<void> {
+  public updateUserData(urlBase?: string): Promise<void> {
     return new Promise((res, rej) => {
       const URLBase = urlBase ?? this.URLBase;
       if (!URLBase || URLBase === '') {
@@ -126,7 +127,7 @@ export class BaseUser {
     });
   }
 
-  login(urlBase?: string): Promise<JWTPayload> {
+  public login(urlBase?: string): Promise<JWTPayload> {
     return new Promise((res, rej) => {
       const URLBase = urlBase ?? this.URLBase;
       if (!URLBase || URLBase === '') {
@@ -152,7 +153,7 @@ export class BaseUser {
     });
   }
 
-  getUserFromAPI(urlBase?: string): Promise<any> {
+  public getUserFromAPI(urlBase?: string): Promise<any> {
     return new Promise((res, rej) => {
       const URLBase = urlBase ?? this.URLBase;
       if (!URLBase || URLBase === '') {

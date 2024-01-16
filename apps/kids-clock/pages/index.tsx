@@ -29,7 +29,7 @@ const Page = (props: any) => {
   const minuteRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    system.setServerSideProps(props);
+    system.setSystemAttributesFromPlainObject(props);
   }, [props]);
   const getRandomArbitrary = (min: number, max: number) => {
     return Math.floor(Math.random() * (max - min) + min);
@@ -211,18 +211,33 @@ const Page = (props: any) => {
               }${answerMinutes.value}`}</Typography>
             </Grid>
           )}
-          <Grid item xs={12} display="flex" justifyContent="end">
-            <Box marginLeft={2}>
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={!canSubmit()}
-                size="small"
-              >
-                Check
-              </Button>
-            </Box>
-          </Grid>
+          {!success.value ? (
+            <Grid item xs={12} display="flex" justifyContent="end">
+              <Box marginLeft={2}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={!canSubmit()}
+                  size="small"
+                >
+                  Check
+                </Button>
+              </Box>
+            </Grid>
+          ) : null}
+          {success.value ? (
+            <Grid item xs={12} display="flex" justifyContent="end">
+              <Box marginLeft={2}>
+                <Button
+                  variant="contained"
+                  onClick={() => setTime()}
+                  size="small"
+                >
+                  New one!
+                </Button>
+              </Box>
+            </Grid>
+          ) : null}
         </Grid>
       </Box>
     </MainLayout>
@@ -230,9 +245,9 @@ const Page = (props: any) => {
 };
 
 export async function getServerSideProps({ req }: any) {
-  const props = System.getInstance();
-  props.parseCookies(req.cookies);
-  return { props: props.getServerSideProps() };
+  const system = System.getInstance();
+  system.parseCookies(req.cookies);
+  return { props: system.getPlainAttributes() };
 }
 
 export default Page;

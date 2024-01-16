@@ -79,6 +79,9 @@ const DownloadForm = ({ URLBase, callback }: Props) => {
                 const value = e.target.value;
                 link.value = value;
                 isYoutubeLink.value = isYoutube(value);
+                if (!isYoutubeLink.value) {
+                  downloadJustAudio.value = false;
+                }
               }}
               disabled={isLoading.value}
               style={{ width: '100%' }}

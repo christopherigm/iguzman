@@ -6,7 +6,6 @@ const fs = require('fs');
 // Editable variables
 const name = 'kids-clock';
 const namespace = 'kids';
-const host = 'clock.kids.iguzman.com.mx';
 const envFile = '.env';
 // Editable variables
 
@@ -70,9 +69,6 @@ const deployMicroservice = () => {
   return new Promise((res, rej) => {
     let command = `helm install ${name} deployment `;
     command += `--namespace=${namespace} `;
-    command += '--set replicaCount=1 ';
-    command += `--set ingress.enabled=true `;
-    command += `--set ingress.host=${host} `;
     command += `--set image.tag=${branch}`;
     exec(command, (err, stdout) => {
       if (err) return rej(err);

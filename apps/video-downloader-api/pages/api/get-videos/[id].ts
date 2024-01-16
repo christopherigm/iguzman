@@ -14,11 +14,6 @@ export default function handler(
       if (req.query.id) {
         queryItem._id = new ObjectId(req.query.id?.toString());
       }
-      // if (req.query.justAudio) {
-      //   queryItem.justAudio = req.query.justAudio === 'true' ? true : false;
-      // }
-      // console.log('query', typeof req.query.justAudio);
-      // console.log('queryItem', queryItem);
       getItem(queryItem)
         .then((item) => {
           if (item) {

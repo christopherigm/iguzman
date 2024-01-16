@@ -1,0 +1,22 @@
+[
+  {
+    "model": "resume.School",
+    "pk": 9000,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Universidad Nacional Autonoma de Mexico",
+      "img_picture": "schools/unam.png"
+    }
+  },
+  {
+    "model": "resume.School",
+    "pk": 9001,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Universidad ICEL",
+      "img_picture": "schools/icel.jpg"
+    }
+  }
+]

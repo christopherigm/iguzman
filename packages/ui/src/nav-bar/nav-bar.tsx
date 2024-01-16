@@ -61,7 +61,7 @@ const NavBar = ({
         color="inherit"
         position="fixed"
         component="nav"
-        className="NavBar"
+        className="NavBar hide-on-print"
       >
         <Container maxWidth="lg">
           <Toolbar disableGutters>

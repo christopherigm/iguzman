@@ -1,0 +1,308 @@
+[
+  {
+    "model": "resume.UserSkill",
+    "pk": 9000,
+    "hint": "Django",
+    "fields": {
+      "skill": 9000,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 80,
+      "years_of_experience": 5
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9001,
+    "hint": "Node JS",
+    "fields": {
+      "skill": 9001,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 80,
+      "years_of_experience": 6
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9002,
+    "hint": "ExpressJS",
+    "fields": {
+      "skill": 9002,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 90,
+      "years_of_experience": 5
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9003,
+    "hint": "JSON-API",
+    "fields": {
+      "skill": 9003,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 85,
+      "years_of_experience": 4
+    }
+  },
+
+  {
+    "model": "resume.UserSkill",
+    "pk": 9010,
+    "hint": "React",
+    "fields": {
+      "skill": 9100,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 80,
+      "years_of_experience": 4
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9011,
+    "hint": "Redux",
+    "fields": {
+      "skill": 9101,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 70,
+      "years_of_experience": 3
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9012,
+    "hint": "Sass",
+    "fields": {
+      "skill": 9102,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 70,
+      "years_of_experience": 4
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9013,
+    "hint": "Materialize CSS",
+    "fields": {
+      "skill": 9103,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 85,
+      "years_of_experience": 4
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9013,
+    "hint": "Materialize CSS",
+    "fields": {
+      "skill": 9103,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 85,
+      "years_of_experience": 4
+    }
+  },
+
+  {
+    "model": "resume.UserSkill",
+    "pk": 9020,
+    "hint": "TypeScript",
+    "fields": {
+      "skill": 9200,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 85,
+      "years_of_experience": 5
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9021,
+    "hint": "Python",
+    "fields": {
+      "skill": 9201,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 60,
+      "years_of_experience": 4
+    }
+  },
+
+  {
+    "model": "resume.UserSkill",
+    "pk": 9030,
+    "hint": "Cordova",
+    "fields": {
+      "skill": 9300,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 88,
+      "years_of_experience": 4
+    }
+  },
+
+  {
+    "model": "resume.UserSkill",
+    "pk": 9040,
+    "hint": "MongoDB",
+    "fields": {
+      "skill": 9400,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 85,
+      "years_of_experience": 5
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9041,
+    "hint": "Postgres",
+    "fields": {
+      "skill": 9401,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 80,
+      "years_of_experience": 4
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9042,
+    "hint": "Redis",
+    "fields": {
+      "skill": 9402,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 50,
+      "years_of_experience": 1
+    }
+  },
+
+  {
+    "model": "resume.UserSkill",
+    "pk": 9050,
+    "hint": "Docker",
+    "fields": {
+      "skill": 9500,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 85,
+      "years_of_experience": 5
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9051,
+    "hint": "Kubernetes",
+    "fields": {
+      "skill": 9501,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 80,
+      "years_of_experience": 3
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9052,
+    "hint": "MicroK8s",
+    "fields": {
+      "skill": 9502,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 83,
+      "years_of_experience": 2
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9053,
+    "hint": "Azure",
+    "fields": {
+      "skill": 9503,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 60,
+      "years_of_experience": 1
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9054,
+    "hint": "Jenkins",
+    "fields": {
+      "skill": 9504,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 70,
+      "years_of_experience": 4
+    }
+  },
+
+  {
+    "model": "resume.UserSkill",
+    "pk": 9060,
+    "hint": "Samsung SmartTV",
+    "fields": {
+      "skill": 9600,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 60,
+      "years_of_experience": 3
+    }
+  },
+
+  {
+    "model": "resume.UserSkill",
+    "pk": 9070,
+    "hint": "Raspberry Pi",
+    "fields": {
+      "skill": 9700,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 60,
+      "years_of_experience": 4
+    }
+  },
+  {
+    "model": "resume.UserSkill",
+    "pk": 9071,
+    "hint": "Arduino",
+    "fields": {
+      "skill": 9701,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "percentage": 60,
+      "years_of_experience": 4
+    }
+  }
+]

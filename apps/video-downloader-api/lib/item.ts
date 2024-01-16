@@ -4,6 +4,18 @@ import type Item from '@/types/items';
 import { ObjectId } from 'mongodb';
 import type { Document } from 'mongodb';
 
+export const getAllItems = (query: Item): Promise<Array<Document>> => {
+  return new Promise((res, rej) => {
+    dbOpenConnection()
+      .then(async (db) => {
+        const collection = db.collection(MONGO_DB_ITEM_COLLECTION);
+        const items = await collection.find(query);
+        return res(items.toArray() ?? []);
+      })
+      .catch((error) => rej(error));
+  });
+};
+
 export const getOrCreateItem = (item: Item): Promise<Item> => {
   return new Promise((res, rej) => {
     if (item.url || item.id) {

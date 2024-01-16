@@ -1,0 +1,46 @@
+[
+  {
+    "model": "resume.Skill",
+    "pk": 9000,
+    "fields": {
+      "category": 9000,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Django",
+      "img_picture": "skills/back-end/django.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9001,
+    "fields": {
+      "category": 9000,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "NodeJS",
+      "img_picture": "skills/back-end/nodejs.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9002,
+    "fields": {
+      "category": 9000,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "ExpressJS",
+      "img_picture": "skills/back-end/express.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9003,
+    "fields": {
+      "category": 9000,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "JSON-API",
+      "img_picture": "skills/back-end/json-api.png"
+    }
+  }
+]

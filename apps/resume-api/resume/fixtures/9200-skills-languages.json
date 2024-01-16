@@ -1,0 +1,24 @@
+[
+  {
+    "model": "resume.Skill",
+    "pk": 9200,
+    "fields": {
+      "category": 9002,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "TypeScript",
+      "img_picture": "skills/languages/type-script.png"
+    }
+  },
+  {
+    "model": "resume.Skill",
+    "pk": 9201,
+    "fields": {
+      "category": 9002,
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Python",
+      "img_picture": "skills/languages/python.png"
+    }
+  }
+]

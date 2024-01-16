@@ -1,0 +1,39 @@
+[
+  {
+    "model": "users.User",
+    "pk": 1,
+    "fields": {
+      "email": "chris@iguzman.com.mx",
+      "username": "christopher",
+      "first_name": "Christopher",
+      "last_name": "Guzman",
+      "is_active": true,
+      "date_joined": "2022-01-01T00:00:00Z",
+      "theme_color": "#4ABBFF",
+      "open_to_work": true,
+      "listening_offers": true,
+      "headline": "Full Stack Web Developer",
+      "biography": "I love to listen to music, hiking, biking, kayak, travel, spend time with my family, photography, wildlife watching, watch movies & series and I love to code, of course.",
+      "legal_name": "Christopher I Guzman Monsalvo",
+      "birthday": "1989-09-07",
+      "linkedin": "https://www.linkedin.com/in/christopher-guzman-53336466/",
+      "github": "https://github.com/christopherigm",
+      "img_picture": "user/profile.jpg",
+      "img_hero_picture": "user/hero.jpg",
+      "public": true,
+      "listed": true,
+      "published": true,
+      "display_email": true,
+      "city": 9000,
+      "categories": [
+        9000,
+        9001,
+        9002,
+        9003,
+        9004,
+        9005,
+        9006
+      ]
+    }
+  }
+]

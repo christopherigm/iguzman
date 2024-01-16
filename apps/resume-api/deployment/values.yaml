@@ -1,0 +1,46 @@
+replicaCount: 1
+volumeMountPath: "shared-volume"
+nginxServiceName: "nginx-api"
+
+config:
+  SECRET_KEY: default
+  ENVIRONMENT: production
+  BRANCH: integration
+  DB_HOST: postgres-api.my-cv.svc.cluster.local
+  DB_NAME: default
+  DB_USER: default
+  DB_PASSWORD: default
+  EMAIL_HOST_USER: email@gmail.com
+  EMAIL_HOST_PASSWORD: password
+  JWT_ACCESS_EXPIRATION_DAYS: 7
+  JWT_REFRESH_EXPIRATION_DAYS: 30
+  API_URL: http://127.0.0.1:8000/
+  WEB_APP_URL: http://127.0.0.1:3000/
+  RUN_FIXTURES: false
+
+image:
+  registry: christopherguzman
+  repository: my-cv-api
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  externalPort: 80
+  internalPort: 8000
+
+ingress:
+  enabled: true
+  host: api.resume.iguzman.com.mx
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+deployment:
+  nodeSelector:
+    nodeProjects: real-clients

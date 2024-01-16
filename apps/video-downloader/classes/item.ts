@@ -61,7 +61,7 @@ export default class Item {
   }
 
   public setType() {
-    if (!this.url || this.type || (this.type === 'youtube' && this.justAudio)) {
+    if (!this.url || this.type) {
       return;
     }
     if (this.justAudio) {
@@ -77,7 +77,6 @@ export default class Item {
     } else if (isTwitter(this.url)) {
       this.type = 'twitter';
     }
-    this.updateLocalStorageItem();
   }
 
   public getVideo(options?: DownloadOptions) {

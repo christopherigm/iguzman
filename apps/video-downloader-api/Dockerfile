@@ -11,4 +11,8 @@ RUN node convert-cookies.js cookies.txt > netscape-cookies.txt
 
 RUN npm i
 
+RUN rm -f /etc/localtime \
+    && ln -sv /usr/share/zoneinfo/America/Denver /etc/localtime \
+    && echo "America/Denver" > /etc/timezone
+
 CMD [ "npm", "run", "start" ]

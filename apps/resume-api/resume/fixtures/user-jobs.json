@@ -1,0 +1,148 @@
+[
+  {
+    "model": "resume.UserJob",
+    "pk": 9000,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "company": 9000,
+      "full_time": true,
+      "job_title": "Team Leader & Web developer",
+      "start_date": "2015-11-30",
+      "end_date": "2018-01-05",
+      "city": 9001,
+      "description": "NodeJS and Django developer for the backend and MootoolsJS for the frontend for web apps, web portals and API's. MootoolsJS, jQuery, JS, Adobe Flash for SmartTV App Development."
+    }
+  },
+  {
+    "model": "resume.UserJob",
+    "pk": 9001,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "company": 9001,
+      "full_time": true,
+      "job_title": "Senior Web UI Developer",
+      "start_date": "2018-01-08",
+      "end_date": "2019-08-16",
+      "city": 9001,
+      "description": "NodeJS and Django developer for the backend and React for the frontend and Docker and Jenkins for CI / CD. for multiple projects for companies like Century 21, ERA, Better Home and Gardens, Zaplabs and Lending Club."
+    }
+  },
+  {
+    "model": "resume.UserJob",
+    "pk": 9002,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "company": 9002,
+      "full_time": true,
+      "contractor": true,
+      "job_title": "Engineer Senior",
+      "start_date": "2019-10-16",
+      "end_date": "2022-10-19",
+      "city": 9000,
+      "description": "NodeJS and Django developer for the backend and React and Vue for the frontend on a data orchestration microservice oriented system. Azure AKS and Microk8s for cloud deployment and Docker and Jenkins for CI / CD.",
+      "job_promotions": [
+        9003,
+        9004,
+        9005,
+        9006
+      ]
+    }
+  },
+    {
+      "model": "resume.UserJobPromotion",
+      "pk": 9003,
+      "fields": {
+        "created": "2022-01-01T00:00:00Z",
+        "modified": "2022-01-01T00:00:00Z",
+        "user": 1,
+        "user_job": 9002,
+        "contractor": true,
+        "job_title": "Contractor",
+        "start_date": "2019-10-21",
+        "end_date": "2020-05-01",
+        "description": "Fulltime employee at GreenByte IT LLC"
+      }
+    },
+    {
+      "model": "resume.UserJobPromotion",
+      "pk": 9004,
+      "fields": {
+        "created": "2022-01-01T00:00:00Z",
+        "modified": "2022-01-01T00:00:00Z",
+        "user": 1,
+        "user_job": 9002,
+        "contractor": true,
+        "job_title": "Contractor",
+        "start_date": "2020-05-04",
+        "end_date": "2020-11-06",
+        "description": "Fulltime employee at Infogain Corp"
+      }
+    },
+    {
+      "model": "resume.UserJobPromotion",
+      "pk": 9005,
+      "fields": {
+        "created": "2022-01-01T00:00:00Z",
+        "modified": "2022-01-01T00:00:00Z",
+        "user": 1,
+        "user_job": 9002,
+        "full_time": true,
+        "job_title": "Engineer II",
+        "start_date": "2020-11-09",
+        "end_date": "2021-08-27",
+        "description": "Promotion to Engineer level 2"
+      }
+    },
+    {
+      "model": "resume.UserJobPromotion",
+      "pk": 9006,
+      "fields": {
+        "created": "2022-01-01T00:00:00Z",
+        "modified": "2022-01-01T00:00:00Z",
+        "user": 1,
+        "user_job": 9002,
+        "full_time": true,
+        "job_title": "Senior Engineer",
+        "start_date": "2021-08-30",
+        "end_date": "2022-10-19",
+        "description": "Promotion to Engineer Senior"
+      }
+    },
+  {
+    "model": "resume.UserJob",
+    "pk": 9007,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "user": 1,
+      "company": 9003,
+      "contractor": true,
+      "job_title": "Full Stack Developer",
+      "start_date": "2022-10-24",
+      "currently_working_here": true,
+      "city": 9000,
+      "description": "Hacklang developer for the backend and React developer for the frontend on Smart Assistant platform.",
+      "job_promotions": [9008]
+    }
+  },
+    {
+      "model": "resume.UserJobPromotion",
+      "pk": 9008,
+      "fields": {
+        "created": "2022-01-01T00:00:00Z",
+        "modified": "2022-01-01T00:00:00Z",
+        "user": 1,
+        "user_job": 9007,
+        "contractor": true,
+        "job_title": "Contractor",
+        "start_date": "2022-10-24",
+        "description": "Fulltime employee at Infogain Corp"
+      }
+    }
+]

@@ -2,7 +2,7 @@
 
 import Head from 'next/head';
 import { ReactNode } from 'react';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { Breakpoint, createTheme, ThemeProvider } from '@mui/material/styles';
 import { blue, indigo, grey } from '@mui/material/colors';
 import { Languages } from '@repo/utils';
 import Container from '@mui/material/Container';
@@ -62,6 +62,7 @@ interface Props {
   hostName: string;
   logo: string;
   menu?: ReactNode;
+  maxWidth?: Breakpoint | false;
 }
 
 const MainLayout = ({
@@ -78,6 +79,7 @@ const MainLayout = ({
   hostName,
   logo = '/images/logo.jpg',
   menu,
+  maxWidth = 'lg',
 }: Props) => {
   const setIsLoading = () => null;
 
@@ -129,15 +131,24 @@ const MainLayout = ({
               <CircularProgress size={60} />
             </Box>
           ) : (
-            <Container
-              maxWidth="lg"
-              sx={{
-                paddingTop: '60px',
-                opacity: isLoading ? '0.5' : 1,
-              }}
-            >
-              {children}
-            </Container>
+            <>
+              {maxWidth ? (
+                <Container
+                  maxWidth={maxWidth}
+                  sx={{
+                    opacity: isLoading ? '0.5' : 1,
+                  }}
+                >
+                  <Box height={60} className="hide-on-print"></Box>
+                  {children}
+                </Container>
+              ) : (
+                <>
+                  <Box height={60} className="hide-on-print"></Box>
+                  {children}
+                </>
+              )}
+            </>
           )}
         </Box>
         <Footer

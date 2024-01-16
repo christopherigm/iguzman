@@ -1,0 +1,83 @@
+[
+  {
+    "model": "resume.SkillCategory",
+    "pk": 9000,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Backend"
+    }
+  },
+  {
+    "model": "resume.SkillCategory",
+    "pk": 9001,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Frontend"
+    }
+  },
+  {
+    "model": "resume.SkillCategory",
+    "pk": 9002,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Languages"
+    }
+  },
+  {
+    "model": "resume.SkillCategory",
+    "pk": 9003,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Mobile"
+    }
+  },
+  {
+    "model": "resume.SkillCategory",
+    "pk": 9004,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Data Bases"
+    }
+  },
+  {
+    "model": "resume.SkillCategory",
+    "pk": 9005,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "CI / CD"
+    }
+  },
+  {
+    "model": "resume.SkillCategory",
+    "pk": 9006,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Platforms"
+    }
+  },
+  {
+    "model": "resume.SkillCategory",
+    "pk": 9007,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "IoT"
+    }
+  },
+  {
+    "model": "resume.SkillCategory",
+    "pk": 9008,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Web / Servers"
+    }
+  }
+]

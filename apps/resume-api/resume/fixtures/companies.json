@@ -1,0 +1,42 @@
+[
+  {
+    "model": "resume.Company",
+    "pk": 9000,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Ironbit",
+      "img_picture": "companies/ironbit.png"
+    }
+  },
+  {
+    "model": "resume.Company",
+    "pk": 9001,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Globant",
+      "img_picture": "companies/globant.png"
+    }
+  },
+  {
+    "model": "resume.Company",
+    "pk": 9002,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Seagate",
+      "img_picture": "companies/seagate.jpg"
+    }
+  },
+  {
+    "model": "resume.Company",
+    "pk": 9003,
+    "fields": {
+      "created": "2022-01-01T00:00:00Z",
+      "modified": "2022-01-01T00:00:00Z",
+      "name": "Meta",
+      "img_picture": "companies/meta.png"
+    }
+  }
+]
