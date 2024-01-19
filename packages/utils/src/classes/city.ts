@@ -13,6 +13,18 @@ export default class City {
     return City.instance || new City();
   }
 
+  public setAttributesFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    // Attributes
+    this.attributes.name = object.attributes?.name ?? this.attributes.name;
+    // Relationships
+    if (object.relationships?.state.data) {
+      this.relationships.state.data.setAttributesFromPlainObject(
+        object.relationships?.state?.data
+      );
+    }
+  }
+
   public get id() {
     return this._id.value;
   }

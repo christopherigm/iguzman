@@ -43,6 +43,10 @@ const Page = (props: any) => {
         <title>My Resume</title>
         <meta name="og:title" content="Video downloader" />
         <meta name="twitter:card" content="/images/logo.png" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"
+        />
       </Head>
       <Typography
         marginTop={3}

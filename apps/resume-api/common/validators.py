@@ -1,8 +1,8 @@
 # Validators
 from django.core.validators import RegexValidator
 
-r_name='^[A-Za-z\u00C0-\u017F\s]{3,64}$'
-r_code='^[A-Za-z0-9_-]{3,64}$'
+r_name='^[A-Za-z\u00C0-\u017F]{3,64}$'
+r_code='^[A-Za-z0-9]{2,64}$'
 r_mx_phone='^[0-9+]{10,10}$'
 r_mx_zip_code='^[0-9]{5,5}$'
 r_us_phone='^[0-9+]{10,10}$'

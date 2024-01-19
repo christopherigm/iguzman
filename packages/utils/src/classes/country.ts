@@ -11,6 +11,17 @@ export default class Country {
     return Country.instance || new Country();
   }
 
+  public setAttributesFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    // Attributes
+    this.attributes.name = object.attributes?.name ?? this.attributes.name;
+    this.attributes.code = object.attributes?.code ?? this.attributes.code;
+    this.attributes.phone_code =
+      object.attributes?.phone_code ?? this.attributes.phone_code;
+    this.attributes.img_flag =
+      object.attributes?.img_flag ?? this.attributes.img_flag;
+  }
+
   public get id() {
     return this._id.value;
   }

@@ -1,14 +1,15 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import Head from 'next/head';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import Divider from '@mui/material/Divider';
+import Container from '@mui/material/Container';
 import User from 'classes/user';
 import { MainLayout } from '@repo/ui';
 import System, { system } from 'classes/system';
-import { Grid } from '@mui/material';
-import ResumesGrid from 'components/resumes-grid';
+import { Box, Grid } from '@mui/material';
 import UserResumeHeader from 'components/user-resume-header';
+import UserInfo from 'components/user-info';
+import ResumeUserJobs from 'components/resume-user-jobs';
+import ResumeUserEducation from 'components/resume-user-education';
+import ResumeUserSkills from 'components/resume-user-skills';
 
 const user = User.getInstance();
 const pageUser = User.getInstance();
@@ -19,6 +20,10 @@ const Page = (props: any) => {
   useEffect(() => {
     system.setResumeSystemAttributesFromPlainObject(props);
     user.getResumeUserFromLocalStorage();
+    pageUser.URLBase = props.URLBase;
+    pageUser.getUserJobsFromAPI();
+    pageUser.getUserSchoolsFromAPI();
+    pageUser.getUserSkillsFromAPI();
   }, [props]);
 
   return (
@@ -47,13 +52,72 @@ const Page = (props: any) => {
         <title>My Resume</title>
         <meta name="og:title" content="Video downloader" />
         <meta name="twitter:card" content="/images/logo.png" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"
+        />
       </Head>
       {pageUser && pageUser.id ? (
-        <UserResumeHeader
-          user={pageUser}
-          darkMode={system.darkMode}
-          devMode={system.devMode}
-        />
+        <>
+          <UserResumeHeader
+            user={pageUser}
+            darkMode={system.darkMode}
+            devMode={system.devMode}
+          />
+          <Container maxWidth="lg">
+            <Grid
+              container
+              columnSpacing={{
+                xs: 0,
+                sm: 2,
+                md: 3,
+              }}
+              rowSpacing={2}
+              marginTop={1}
+              marginBottom={3}
+            >
+              <Grid item xs={12} sm={5} md={4}>
+                <UserInfo
+                  user={pageUser}
+                  darkMode={system.darkMode}
+                  devMode={system.devMode}
+                />
+              </Grid>
+              {pageUser.jobs.length ? (
+                <Grid item xs={12} sm={7} md={8}>
+                  <ResumeUserJobs
+                    userJobs={pageUser.jobs}
+                    darkMode={system.darkMode}
+                    devMode={system.devMode}
+                  />
+                  {pageUser.schools.length ? (
+                    <>
+                      <Box marginTop={4}></Box>
+                      <ResumeUserEducation
+                        userSchools={pageUser.schools}
+                        darkMode={system.darkMode}
+                        devMode={system.devMode}
+                      />
+                    </>
+                  ) : null}
+                </Grid>
+              ) : null}
+              {pageUser.skills.length ? (
+                <>
+                  <Box marginTop={4}></Box>
+                  <Grid item xs={12}>
+                    <ResumeUserSkills
+                      userSkills={pageUser.skills}
+                      themeColor={pageUser.attributes.theme_color}
+                      darkMode={system.darkMode}
+                      devMode={system.devMode}
+                    />
+                  </Grid>
+                </>
+              ) : null}
+            </Grid>
+          </Container>
+        </>
       ) : null}
     </MainLayout>
   );
@@ -68,8 +132,6 @@ export async function getServerSideProps({ req, params }: any) {
   } else if (params.id !== undefined && params.id !== '') {
     user.attributes.username = params.id;
   }
-  // console.log('User:', user.id);
-  // console.log(params.id, user.id, Number(params.id), user.attributes.username);
   const data = await user.getUserFromAPI();
   return {
     props: {

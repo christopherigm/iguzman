@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "next": "14.0.4",
+    "flag-icons": "^7.1.0",
     "react": "^18",
     "react-dom": "^18",
     "react-player": "^2.14.1",

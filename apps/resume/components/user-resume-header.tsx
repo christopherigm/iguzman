@@ -1,43 +1,9 @@
+import React, { ReactElement } from 'react';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
-import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
-import Pagination from '@mui/material/Pagination';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import Select, { SelectChangeEvent } from '@mui/material/Select';
-import IconButton from '@mui/material/IconButton';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AudioIcon from '@mui/icons-material/Audiotrack';
-import YouTube from '@mui/icons-material/YouTube';
-import Instagram from '@mui/icons-material/Instagram';
-import Facebook from '@mui/icons-material/Facebook';
-import X from '@mui/icons-material/X';
-import BlockIcon from '@mui/icons-material/Block';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import GridViewIcon from '@mui/icons-material/GridView';
-import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
-import SplitscreenIcon from '@mui/icons-material/Splitscreen';
-import ErrorIcon from '@mui/icons-material/Error';
-import LinearProgress from '@mui/material/LinearProgress';
-import { Signal, signal } from '@preact-signals/safe-react';
-import { PaperCard } from '@repo/ui';
-import { InnerSort, DateParser, HourParser } from '@repo/utils';
-// import Item, { VideoType } from 'classes/item';
-import { ReactElement, ReactNode, useEffect } from 'react';
-import LinkedIn from '@mui/icons-material/LinkedIn';
-import GitHub from '@mui/icons-material/GitHub';
-import Email from '@mui/icons-material/Email';
-import Phone from '@mui/icons-material/Phone';
-import ReactPlayer from 'react-player';
-import copy from 'copy-to-clipboard';
-import Link from 'next/link';
 import User from 'classes/user';
-import ResumesGridItem from 'components/resumes-grid-item';
 import Avatar from '@mui/material/Avatar';
 import Ribbon from 'components/ribbon';
-import Badge from 'components/badge';
 import Container from '@mui/material/Container';
 import { useMediaQuery, useTheme } from '@mui/material';
 
@@ -160,7 +126,7 @@ const UserResumeHeader = ({ user, devMode, darkMode }: Props): ReactElement => {
                 </Typography>
                 {user.attributes.headline ? (
                   <Typography
-                    variant={isXSSize ? 'body2' : 'h6'}
+                    variant={isXSSize ? 'body1' : 'h6'}
                     color="primary.contrastText"
                     fontStyle="italic"
                     textAlign="center"
@@ -183,44 +149,9 @@ const UserResumeHeader = ({ user, devMode, darkMode }: Props): ReactElement => {
                 </Typography>
               </Box>
             </Box>
-            {/* <Box display="flex" flexDirection="column" justifyContent="end">
-              <Box display="flex" flexDirection="row" justifyContent="end">
-                {user.attributes.linkedin ? (
-                  <Badge>
-                    <LinkedIn fontSize="small" />
-                  </Badge>
-                ) : null}
-                {user.attributes.github ? (
-                  <Badge>
-                    <GitHub fontSize="small" />
-                  </Badge>
-                ) : null}
-                {user.attributes.email ? (
-                  <Badge>
-                    <Email fontSize="small" />
-                  </Badge>
-                ) : null}
-                {user.attributes.phone_number ? (
-                  <Badge>
-                    <Phone fontSize="small" />
-                  </Badge>
-                ) : null}
-              </Box>
-            </Box> */}
           </Box>
         </Container>
       </Box>
-      {/* <Typography
-        marginTop={3}
-        variant="h5"
-        color={darkMode ? 'primary.contrastText' : ''}
-      >
-        {user.attributes.first_name}
-        {user.attributes.last_name ? ` ${user.attributes.last_name}` : null}
-      </Typography>
-      <Box marginTop={1.5}>
-        <Divider />
-      </Box> */}
     </Box>
   );
 };
