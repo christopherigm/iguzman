@@ -51,8 +51,10 @@ export { default as API } from './api';
 export { default as RebuildData } from './lib/json-api-rebuild';
 export {
   DateParser,
-  HourParser,
   ShortDateParser,
+  SubstractDates,
+  DateRangeComposer,
+  HourParser,
   HourParser12Format,
 } from './lib/date-parser';
 export { default as FormatNum } from './lib/format-number';

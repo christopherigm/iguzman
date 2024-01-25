@@ -7,6 +7,7 @@ type Props = {
   marginTop?: number;
   elevation?: number;
   padding?: number;
+  overflow?: 'visible' | 'hidden' | 'clip' | 'scroll' | 'auto';
 };
 
 const PaperCard = ({
@@ -14,10 +15,11 @@ const PaperCard = ({
   elevation = 1,
   marginTop = 3,
   padding = 1.5,
+  overflow = 'hidden',
 }: Props): ReactElement => {
   return (
     <Box marginTop={marginTop}>
-      <Paper elevation={elevation}>
+      <Paper elevation={elevation} sx={{ overflow }}>
         <Box padding={padding}>{children}</Box>
       </Paper>
     </Box>

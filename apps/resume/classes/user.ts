@@ -1,14 +1,23 @@
 import { Signal, signal } from '@preact-signals/safe-react';
 import {
   API,
+  RebuildData,
   BaseUser,
   BaseUserAttributes,
   GetLocalStorageData,
+  City,
 } from '@repo/utils';
+import { UserJob } from 'classes/user-job';
+import { UserSchool } from 'classes/user-school';
+import { UserSkill } from 'classes/user-skill';
 
 export default class User extends BaseUser {
   public static instance: User;
   public attributes: UserAttributes = new UserAttributes();
+  public relationships: UserRelationships = new UserRelationships();
+  public _jobs: Signal<Array<UserJob>> = signal([]);
+  public _schools: Signal<Array<UserSchool>> = signal([]);
+  public _skills: Signal<Array<UserSkill>> = signal([]);
 
   public static getInstance(): User {
     return User.instance || new User();
@@ -48,6 +57,12 @@ export default class User extends BaseUser {
     this.attributes.years_of_experience =
       object?.attributes?.years_of_experience ??
       this.attributes.years_of_experience;
+    // Relationships
+    if (object.relationships?.city.data) {
+      this.relationships.city.data.setAttributesFromPlainObject(
+        object.relationships?.city?.data
+      );
+    }
   }
 
   public getResumeUserFromLocalStorage() {
@@ -84,20 +99,21 @@ export default class User extends BaseUser {
 
   public getUserFromAPI(urlBase?: string): Promise<any> {
     return new Promise((res, rej) => {
-      const URLBase = urlBase ?? this.URLBase;
-      if (!URLBase || URLBase === '') {
+      this.URLBase = urlBase ?? this.URLBase;
+      if (!this.URLBase || this.URLBase === '') {
         return rej(new Error('No URL Base'));
       }
       if (this.id) {
         API.GetUser({
-          URLBase,
+          URLBase: this.URLBase,
           jwt: '',
           userID: this.id,
         })
           .then((data: any) => res(data))
           .catch((error) => rej(error));
       } else if (this.attributes.username) {
-        const url = `${URLBase}/v1/users/?filter[username]=${this.attributes.username}`;
+        let url = `${this.URLBase}/v1/users/?filter[username]=${this.attributes.username}`;
+        url += '&include=city,city.state,city.state.country';
         API.Get({ url })
           .then((response) => res(response.data.length ? response.data[0] : {}))
           .catch((error) => rej(error));
@@ -105,6 +121,120 @@ export default class User extends BaseUser {
         rej('No user id or username');
       }
     });
+  }
+
+  public getUserJobsFromAPI(urlBase?: string): Promise<any> {
+    return new Promise((res, rej) => {
+      this.URLBase = urlBase ?? this.URLBase;
+      if (!this.URLBase || !this.id) {
+        return rej(new Error('No URL Base'));
+      }
+      let url = `${this.URLBase}/v1/user-jobs/?filter[user]=${this.id}`;
+      url += '&include=company,city,city.state,city.state.country';
+      url += '&sort=-start_date';
+      API.Get({
+        url,
+        jwt: '',
+      })
+        .then((response: any) => {
+          this.jobs = [];
+          const data: Array<any> = RebuildData(response).data;
+          data.forEach((i: any) => {
+            const job = new UserJob();
+            job.setAttributesFromPlainObject(i);
+            this.jobs.push(job);
+          });
+          this.jobs = [...this.jobs];
+          res(data);
+        })
+        .catch((error) => {
+          console.log(error);
+          rej(error);
+        });
+    });
+  }
+
+  public getUserSchoolsFromAPI(urlBase?: string): Promise<any> {
+    return new Promise((res, rej) => {
+      this.URLBase = urlBase ?? this.URLBase;
+      if (!this.URLBase || !this.id) {
+        return rej(new Error('No URL Base'));
+      }
+      let url = `${this.URLBase}/v1/user-schools/?filter[user]=${this.id}`;
+      url += '&include=school,city,city.state,city.state.country';
+      url += '&sort=-start_date';
+      API.Get({
+        url,
+        jwt: '',
+      })
+        .then((response: any) => {
+          this.schools = [];
+          const data: Array<any> = RebuildData(response).data;
+          data.forEach((i: any) => {
+            const school = new UserSchool();
+            school.setAttributesFromPlainObject(i);
+            this.schools.push(school);
+          });
+          this.schools = [...this.schools];
+          res(data);
+        })
+        .catch((error) => {
+          console.log(error);
+          rej(error);
+        });
+    });
+  }
+
+  public getUserSkillsFromAPI(urlBase?: string): Promise<any> {
+    return new Promise((res, rej) => {
+      this.URLBase = urlBase ?? this.URLBase;
+      if (!this.URLBase || !this.id) {
+        return rej(new Error('No URL Base'));
+      }
+      let url = `${this.URLBase}/v1/user-skills/?filter[user]=${this.id}`;
+      url += '&include=skill,skill.category';
+      url += '&page[number]=1&page[size]=200';
+      API.Get({
+        url,
+        jwt: '',
+      })
+        .then((response: any) => {
+          this.skills = [];
+          const data: Array<any> = RebuildData(response).data;
+          data.forEach((i: any) => {
+            const skill = new UserSkill();
+            skill.setAttributesFromPlainObject(i);
+            this.skills.push(skill);
+          });
+          this.skills = [...this.skills];
+          res(data);
+        })
+        .catch((error) => {
+          console.log(error);
+          rej(error);
+        });
+    });
+  }
+
+  public get jobs() {
+    return this._jobs.value;
+  }
+  public set jobs(value) {
+    this._jobs.value = value;
+  }
+
+  public get schools() {
+    return this._schools.value;
+  }
+  public set schools(value) {
+    this._schools.value = value;
+  }
+
+  public get skills() {
+    return this._skills.value;
+  }
+  public set skills(value) {
+    this._skills.value = value;
   }
 }
 
@@ -236,6 +366,19 @@ class UserAttributes extends BaseUserAttributes {
   }
   public set years_of_experience(value) {
     this._years_of_experience.value = value;
+  }
+}
+
+class UserRelationships {
+  public _city: Signal<{ data: City }> = signal({
+    data: City.getInstance(),
+  });
+
+  public get city() {
+    return this._city.value;
+  }
+  public set city(value) {
+    this._city.value = value;
   }
 }
 

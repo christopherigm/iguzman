@@ -81,11 +81,8 @@ while true; do
       ffmpeg -i "$home_path/picam/tmp-$file_name" \
         -vf "$text1,$text2" \
         -y "$home_path/picam/$file_name";
-      # ffmpeg -i "$home_path/picam/tmp-$file_name" \
-      #   -vf "drawtext=$fontfile:text='$photo_time':$fontcolor:$fontsize:$textbox:x=(w-text_w)-50:y=(h-text_h)-50" \
-      #   -vf "drawtext=$fontfile:text='Longmont CO':$fontcolor:$fontsize:$textbox:x=50:y=(h-text_h)-50" \
-      #   -y "$home_path/picam/$file_name";
       scp -i "$home_path/.ssh/id_ed25519" "$home_path/picam/$file_name" "$remote_path/picam";
+      rm "$home_path/picam/tmp-$file_name";
       rm "$home_path/picam/$file_name";
       echo "[picam] Picture saved: picture $date.jpg" >> $logs_file_name;
     fi
@@ -108,6 +105,7 @@ while true; do
         -vf "$text1,$text2" \
         -y "$home_path/webcam/$file_name";
       scp -i "$home_path/.ssh/id_ed25519" "$home_path/webcam/$file_name" "$remote_path/webcam";
+      rm "$home_path/webcam/tmp-$file_name";
       rm "$home_path/webcam/$file_name";
       echo "[webcam] Picture saved: picture $date.jpg" >> $logs_file_name;
     fi

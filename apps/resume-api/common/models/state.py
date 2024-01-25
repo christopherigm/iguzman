@@ -14,7 +14,16 @@ class State(CommonFields):
         blank=False,
         unique=True,
         validators=[
-        ModelValidators.name
+            ModelValidators.name
+        ]
+    )
+    code=models.CharField(
+        max_length=5,
+        null=True,
+        blank=True,
+        unique=True,
+        validators=[
+            ModelValidators.code
         ]
     )
     country=models.ForeignKey(

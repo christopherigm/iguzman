@@ -1,22 +1,43 @@
-export const DateParser = (date: string): string => {
-  const parsedDate = new Date(date);
-  const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
+const months = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
 
-  const month = months[parsedDate.getMonth()];
-  const day = parsedDate.getDate();
+const shortMonthsArray = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+export const DateParser = (
+  date: string,
+  shortMonths: boolean = false
+): string => {
+  const parsedDate = new Date(date);
+
+  const month = shortMonths
+    ? shortMonthsArray[parsedDate.getMonth()]
+    : months[parsedDate.getMonth()];
+  const day = parsedDate.getUTCDate();
   const year = parsedDate.getFullYear();
 
   return `${month} ${day}, ${year}`;
@@ -28,9 +49,39 @@ export const ShortDateParser = (
 ): string => {
   const parsedDate = new Date(date);
   const month = parsedDate.getMonth() + 1;
-  const day = parsedDate.getDate();
+  const day = parsedDate.getUTCDate();
 
   return `${month}/${day}${year ? `/${parsedDate.getFullYear()}` : ''}`;
+};
+
+export const SubstractDates = (d1: Date, d2: Date): Date => {
+  const diff = Math.abs(d2.getTime() - d1.getTime());
+  const dateDiff = new Date();
+  dateDiff.setTime(diff);
+  dateDiff.setFullYear(dateDiff.getFullYear() - 1970);
+  return dateDiff;
+};
+
+export const DateRangeComposer = (
+  startDate: Date | null,
+  endDate: Date | null,
+  shortMonth: boolean = false
+): string => {
+  const startDateString = startDate
+    ? DateParser(startDate.toString(), shortMonth)
+    : '';
+  const endDateString = endDate
+    ? DateParser(endDate.toString(), shortMonth)
+    : 'Present';
+  const d1 = startDate ? new Date(startDate) : new Date();
+  const d2 = endDate ? new Date(endDate) : new Date();
+  const diff = SubstractDates(d2, d1);
+  let years = diff.getFullYear();
+  let months = diff.getMonth() / 12;
+  const dates = `${startDateString} to ${endDateString} (${years}${
+    months ? `.${months.toFixed(2).toString().split('.')[1]}` : '.'
+  } years).`;
+  return dates;
 };
 
 export const HourParser = (date: string): string => {

@@ -139,12 +139,24 @@ const MainLayout = ({
                     opacity: isLoading ? '0.5' : 1,
                   }}
                 >
-                  <Box height={60} className="hide-on-print"></Box>
+                  <Box
+                    height={{
+                      xs: 55,
+                      sm: 60,
+                    }}
+                    className="hide-on-print"
+                  ></Box>
                   {children}
                 </Container>
               ) : (
                 <>
-                  <Box height={60} className="hide-on-print"></Box>
+                  <Box
+                    height={{
+                      xs: 55,
+                      sm: 60,
+                    }}
+                    className="hide-on-print"
+                  ></Box>
                   {children}
                 </>
               )}

@@ -13,6 +13,19 @@ export default class State {
     return State.instance || new State();
   }
 
+  public setAttributesFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    // Attributes
+    this.attributes.name = object.attributes?.name ?? this.attributes.name;
+    this.attributes.code = object.attributes?.code ?? this.attributes.code;
+    // Relationships
+    if (object.relationships?.country.data) {
+      this.relationships.country.data.setAttributesFromPlainObject(
+        object.relationships?.country?.data
+      );
+    }
+  }
+
   public get id() {
     return this._id.value;
   }
@@ -23,12 +36,20 @@ export default class State {
 
 class StateAttributes extends CommonFields {
   private _name: Signal<string> = signal('');
+  private _code: Signal<string> = signal('');
 
   public get name() {
     return this._name.value;
   }
   public set name(value) {
     this._name.value = value;
+  }
+
+  public get code() {
+    return this._code.value;
+  }
+  public set code(value) {
+    this._code.value = value;
   }
 }
 

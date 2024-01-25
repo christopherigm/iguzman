@@ -28,6 +28,7 @@ admin.site.register(Country, CountryAdmin)
 class StateAdmin(admin.ModelAdmin):
     list_display = [
         'name',
+        'code',
         'country',
         'enabled'
     ]
