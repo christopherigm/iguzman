@@ -28,6 +28,8 @@ const LogoItem = ({
     useMediaQuery(theme.breakpoints.only('xs')) && resize;
   const w = typeof width === 'number' ? width - (padding * 4 ?? 0) : width;
   const h = typeof height === 'number' ? height - (padding * 15 ?? 0) : height;
+  const transitionDuration = '0.4s';
+  const transitionTimingFunction = 'ease';
 
   return (
     <Box
@@ -40,6 +42,11 @@ const LogoItem = ({
       }
       marginBottom={isXSSize ? 2 : 0}
       bgcolor={isXSSize || darkMode ? 'white' : ''}
+      sx={{
+        transition: 'height, width',
+        transitionDuration: transitionDuration,
+        transitionTimingFunction: transitionTimingFunction,
+      }}
     >
       <Box
         width={w}
@@ -55,6 +62,9 @@ const LogoItem = ({
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           backgroundImage: `url(${image})`,
+          transition: 'height, width',
+          transitionDuration: transitionDuration,
+          transitionTimingFunction: transitionTimingFunction,
         }}
         borderRadius={borderRadius}
       />
