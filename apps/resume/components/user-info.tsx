@@ -251,6 +251,16 @@ const UserInfo = ({ user, devMode, darkMode }: Props): ReactElement => {
                         }}
                       >
                         {i.title}
+                        {i.countryCode ? (
+                          <span
+                            className={`fi fi-${i.countryCode}`}
+                            style={{
+                              fontSize: 'small',
+                              marginLeft: 5,
+                              paddingTop: 3,
+                            }}
+                          ></span>
+                        ) : null}
                       </Typography>
                     </Box>
                     {i.href ? (
@@ -298,6 +308,7 @@ const UserInfo = ({ user, devMode, darkMode }: Props): ReactElement => {
                 title={i.title}
                 subTitle={i.subtitle}
                 href={i.href}
+                countryCode={i.countryCode}
                 key={index}
               >
                 {i.icon}
