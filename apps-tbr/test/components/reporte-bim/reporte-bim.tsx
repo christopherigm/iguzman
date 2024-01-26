@@ -108,10 +108,10 @@ const ReporteBim = () => {
                   value: event.target.value
                 });
               }}>
-              <MenuItem value={'Two Tone'}>Two Tone</MenuItem>
-              <MenuItem value={'Bap 2'}>Bap 2</MenuItem>
-              <MenuItem value={'Ress 2'}>Ress 2</MenuItem>
-              <MenuItem value={'Body Shop'}>Body Shop</MenuItem>
+              <MenuItem value={'TWO TONE'}>Two Tone</MenuItem>
+              <MenuItem value={'BAP 2'}>Bap 2</MenuItem>
+              <MenuItem value={'RESS 2'}>Ress 2</MenuItem>
+              <MenuItem value={'BODY SHOP'}>Body Shop</MenuItem>
             </Select>
             </FormControl>  
           </Grid>
@@ -155,6 +155,7 @@ const ReporteBim = () => {
               <MenuItem value={'VideoVigilancia'}>Videovigilancia</MenuItem>
               <MenuItem value={'Control de acceso'}>Control de Acceso</MenuItem>
               <MenuItem value={'Alarma Contra Incendios'}>Alarma contra incendios</MenuItem>
+              <MenuItem value={'General'}>General</MenuItem>
             </Select>
             </FormControl>
           </Grid>
@@ -190,6 +191,7 @@ const ReporteBim = () => {
               <MenuItem value={'Recorrido en sitio para validacion de ingenieria'}>Recorrido en sitio</MenuItem>
               <MenuItem value={'Actualizacion de modelo bim en general'}>Actualizacion gral</MenuItem>
               <MenuItem value={'Trabajo en RFI para aprobacion'}>Trabajo en RFI</MenuItem>
+              <MenuItem value={'Sin cambios'}>Sin cambios</MenuItem>
             </Select>
             </FormControl>
           </Grid>
@@ -228,7 +230,7 @@ const ReporteBim = () => {
                 });
               }} />
           </Grid>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12}>
             <TextField
               fullWidth
               label='Ubicacion'
@@ -268,62 +270,29 @@ const ReporteBim = () => {
           </Grid>
           
       </Grid>
-      <Grid container>
-            <Box
-              display='flex'
-              flexDirection='row'
-              flexWrap='wrap'
-              marginTop={5}>
-                {
-                  reporteBim.map((i: ReporteBim, index: number) => {
-                    return (
-                      <Grid
-                        key={index}
-                        marginBottom={3}
-                        item xs={12}>
-                          <Box padding={1}>
-                            <Paper elevation={3}>
-                              <Box padding={2} textAlign='center'>
-                                <Grid container spacing={2}>
-                                  <Grid item xs={12}>
-                                    <Typography>Fecha: {i.fecha}</Typography>
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography>Proyecto: {i.proyecto}</Typography>
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography>Reporte: {i.reporte}</Typography>
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography>Edificio: {i.edificio}</Typography>
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography>Bim Coordinator: {i.bimCoordinator}</Typography>
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography>Bim Modeler: Edgar Monsalvo</Typography>
-                                  </Grid>
-                                  <Grid item xs={4}>
-                                    <Typography>Sistema: {i.sistema}</Typography>
-                                  </Grid>
-                                  <Grid item xs={12}>
-                                    <Typography textAlign='left'>
-                                      {
-                                        `Actividad: ${i.actividad} ${i.estatus ? `con un estatus:${i.estatus}` : ''} ${i.ubicacion ? `ubicado en: ${i.ubicacion}` : '' } ${i.comentario}` 
-                                      }
-                                    </Typography>
-                                  </Grid>
-                                  <Grid item xs={4}></Grid>
-                                </Grid>
-                              </Box>
-                            </Paper>
-                          </Box>
-                      </Grid>
-                    );
-                  })
-                }
-            </Box>
-          </Grid>
+      <Grid>
+        {
+          reporteBim.map((i: ReporteBim, index: number) => {
+            return (
+              <Box marginTop={4} marginBottom={4}>
+                <div>Fecha: {i.fecha}</div>
+                <div>Proyecto: {i.proyecto}</div>
+                <div>Edificio: {i.edificio}</div>
+                <div>Bim Coordinator: {i.bimCoordinator}</div>
+                <div>Bim Modeler: Edgar Monsalvo</div>
+                <div>Sistema: {i.sistema}</div>
+                <div>{`Actividad: ${i.actividad}`} {i.estatus ? `con un estatus:${i.estatus}` : ''} {i.ubicacion ? `ubicado en: ${i.ubicacion}` : '' }</div>
+                <div>{i.comentario ? `Comentario adicional: ${i.comentario}` : ''}</div>
+                <Divider variant='fullWidth'/>
+                <Box marginTop={2} marginBottom={2}>
+                  <div>Titulo de archivo</div>
+                  <div>{state.fecha.split('-').join('')}{` I ${state.proyecto} I ${state.edificio} I REPORTE DE MODELADO BIM`}</div>
+                </Box>
+              </Box>
+            );
+          })
+        }
+      </Grid>
     </>
   );
 };

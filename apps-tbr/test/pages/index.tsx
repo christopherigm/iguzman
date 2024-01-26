@@ -58,7 +58,7 @@ const Page = (props: System): ReactElement => {
         marginTop={2}>
       </Box>
       <Link href='/reporte-de-avances'>
-        <Button variant="contained">Reporte diario</Button>
+        <Button variant="contained">Reporte de avance</Button>
       </Link>
       <Link href={'/reporte-admin'}>
         <Button variant='contained'>Reporte Administrativo</Button>
@@ -86,6 +86,15 @@ const Page = (props: System): ReactElement => {
       </Link>
       <Link href={'/registro-de-disciplinas'}>
         <Button variant='contained'>Registro de disciplinas</Button>
+      </Link>
+      <Link href={'/compositor-de-correos'}>
+        <Button variant='contained'>Compositor de correos</Button>
+      </Link>
+      <Link href={'/registro-de-personal'}>
+        <Button variant='contained'>Registro de personal</Button>
+      </Link>
+      <Link href={'/registro-de-productos'}>
+        <Button variant='contained'>Registro de productos</Button>
       </Link>
     </MainLayout>
   );

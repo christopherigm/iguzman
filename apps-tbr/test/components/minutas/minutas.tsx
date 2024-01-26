@@ -297,15 +297,16 @@ const MinutasDeJunta = () => {
                 });
               }}>
                 <MenuItem value={'Administracion'}>Administracion</MenuItem>
-                <MenuItem value={'Ingenieria'}>Ingenieria</MenuItem>
                 <MenuItem value={'Ambiental'}>Abmiental</MenuItem>
+                <MenuItem value={'Bim'}>Bim</MenuItem>
                 <MenuItem value={'Calidad'}>Calidad</MenuItem>
+                <MenuItem value={'Capacitacion / Entrenamiento'}>Capacitacion / Entrenamiento</MenuItem>
+                <MenuItem value={'Close Out'}>Close Out</MenuItem>
+                <MenuItem value={'Comisionamiento'}>Comisionamiento</MenuItem>
                 <MenuItem value={'Contabilidad'}>Contabilidad</MenuItem>
-                <MenuItem value={'Seguridad'}>Seguridad</MenuItem>
-                <MenuItem value={'Junta'}>Junta</MenuItem>
-                <MenuItem value={'Revision'}>Revision</MenuItem>
-                <MenuItem value={'Cierre'}>Cierre</MenuItem>
+                <MenuItem value={'Ingeniería'}>Ingeniería</MenuItem>
                 <MenuItem value={'Instalación'}>Instalación</MenuItem>
+                <MenuItem value={'Seguridad'}>Seguridad</MenuItem>
             </Select>
             </FormControl>
           </Grid>
@@ -438,8 +439,7 @@ const MinutasDeJunta = () => {
           <Box marginTop={1}></Box>
           <Divider variant="middle" />
           <Typography textAlign='center'>Eventos vistos y revisados en la junta</Typography>
-          <Grid
-            container>
+          <Grid>
             <Box
               marginTop={1}> 
               {
@@ -463,6 +463,8 @@ const MinutasDeJunta = () => {
               }
             </Box>
           </Grid>
+          <Box marginTop={3}/>
+          <Divider variant="fullWidth" />
         <div>Se finaliza la junta con esta minuta con los puntos revisados y por revisar por parte de los presentes con fecha: {state.fecha} siendo las: {state.horafin} hrs</div>
       </Box>
     </div>

@@ -123,10 +123,34 @@ const ReporteAdministrativo = (): ReactElement => {
                 value: event.target.value
               });
             }} >
-              <MenuItem value={'Videovigilancia'}>VideoVigilancia</MenuItem>
-              <MenuItem value={'Control de Acceso'}>Control de Acceso</MenuItem>
-              <MenuItem value={'Alarma contra incendios'}>Fire Alarm System</MenuItem>
               <MenuItem value={'General'}>General</MenuItem>
+              <MenuItem value={'Alarmas'}>Alarmas</MenuItem>
+              <MenuItem value={'Alimentación'}>Alimentación</MenuItem>
+              <MenuItem value={'Anclajes / Pilotes'}>Anclajes / Pilotes</MenuItem>
+              <MenuItem value={'Cimentaciones profundas'}>Cimentaciones profundas</MenuItem>
+              <MenuItem value={'Cimentaciones superficiales'}>Cimentaciones superficiales</MenuItem>
+              <MenuItem value={'Demolición '}>Demolición </MenuItem>
+              <MenuItem value={'Diseño'}>Diseño</MenuItem>
+              <MenuItem value={'Drenaje y Saneamiento '}>Drenaje y Saneamiento </MenuItem>
+              <MenuItem value={'Equipos mecánicos industriales'}>Equipos mecánicos industriales</MenuItem>
+              <MenuItem value={'Estructura de acero'}>Estructura de acero</MenuItem>
+              <MenuItem value={'Estructura de concreto armado'}>Estructura de concreto armado</MenuItem>
+              <MenuItem value={'Excavación'}>Excavación</MenuItem>
+              <MenuItem value={'Fachadas y cubiertas'}>Fachadas y cubiertas</MenuItem>
+              <MenuItem value={'Hormigón armado'}>Hormigón armado</MenuItem>
+              <MenuItem value={'Hvac'}>Hvac</MenuItem>
+              <MenuItem value={'Iluminación'}>Iluminación</MenuItem>
+              <MenuItem value={'Integración de tecnología'}>Integración de tecnología</MenuItem>
+              <MenuItem value={'Muros'}>Muros</MenuItem>
+              <MenuItem value={'Muros de contención '}>Muros de contención </MenuItem>
+              <MenuItem value={'Redes de comunicación y datos'}>Redes de comunicación y datos</MenuItem>
+              <MenuItem value={'Simulacros de incendios'}>Simulacros de incendios</MenuItem>
+              <MenuItem value={'Sistema contra incendios'}>Sistema contra incendios</MenuItem>
+              <MenuItem value={'Sistema de control de acceso'}>Sistema de control de acceso</MenuItem>
+              <MenuItem value={'Sistemas de extinción de incendios'}>Sistemas de extinción de incendios</MenuItem>
+              <MenuItem value={'Sistemas eléctricos'}>Sistemas eléctricos</MenuItem>
+              <MenuItem value={'Ventilación '}>Ventilación </MenuItem>
+              <MenuItem value={'Videovigilancia'}>Videovigilancia</MenuItem>
           </Select>
         </FormControl>
       </Grid> 
@@ -146,15 +170,16 @@ const ReporteAdministrativo = (): ReactElement => {
               });
             }}>
               <MenuItem value={'Administracion'}>Administracion</MenuItem>
-              <MenuItem value={'Ingenieria'}>Ingenieria</MenuItem>
               <MenuItem value={'Ambiental'}>Abmiental</MenuItem>
+              <MenuItem value={'Bim'}>Bim</MenuItem>
               <MenuItem value={'Calidad'}>Calidad</MenuItem>
+              <MenuItem value={'Capacitacion / Entrenamiento'}>Capacitacion / Entrenamiento</MenuItem>
+              <MenuItem value={'Close Out'}>Close Out</MenuItem>
+              <MenuItem value={'Comisionamiento'}>Comisionamiento</MenuItem>
               <MenuItem value={'Contabilidad'}>Contabilidad</MenuItem>
-              <MenuItem value={'Seguridad'}>Seguridad</MenuItem>
-              <MenuItem value={'Junta'}>Junta</MenuItem>
-              <MenuItem value={'Revision'}>Revision</MenuItem>
-              <MenuItem value={'Cierre'}>Cierre</MenuItem>
+              <MenuItem value={'Ingeniería'}>Ingeniería</MenuItem>
               <MenuItem value={'Instalación'}>Instalación</MenuItem>
+              <MenuItem value={'Seguridad'}>Seguridad</MenuItem>
           </Select>
         </FormControl>
       </Grid>
@@ -190,7 +215,6 @@ const ReporteAdministrativo = (): ReactElement => {
               <MenuItem value={'Walbridge'}>Walbridge</MenuItem>
               <MenuItem value={'General Motors'}>General Motors</MenuItem>
               <MenuItem value={'GK'}>GK</MenuItem>
-              <MenuItem value={'Johnson Controls'}>Johnson Controls</MenuItem>
           </Select>
         </FormControl>
       </Grid>
@@ -260,36 +284,37 @@ const ReporteAdministrativo = (): ReactElement => {
     </Box>
     
 
-    <Grid
-      container
-      rowSpacing={2}
-      columnSpacing={2}>
+    <Grid container>
         <Grid item xs={12}>
           <div>Proyecto: {state.proyecto}</div>
           <div>Edificio: {state.edificio}</div>
           <div>Fecha: {state.fecha}</div>
+          <Box marginTop={1} marginBottom={1}>
+            <Divider variant="middle" />
+          </Box>
         </Grid>
         <Grid item xs={12}>
-          <Box>
-            {
-              reportes.map((i: Reportes, index: number ) => {
-                return (
-                  <Grid
-                    key={index}
-                    marginBottom={3}
-                    item xs={12}>
-                      <Box>
-                        <div>Sistema: {i.sistema}</div>
-                        <div>Categoria: {i.otraCategoria ? i.otraCategoria : i.categoria}</div>
-                        <div>Empresa: {i.otraEmpresa ? i.otraEmpresa : i.empresa}</div>
-                        <div>Descripcion: {i.descripcion}</div>
-                        <div>Etiquetas: {`#${i.etiqueta} `}{i.otraCategoria ? ` #${i.otraCategoria}` : `#${i.categoria}`}</div>
-                      </Box>
-                  </Grid>
-                );
-              })
-            }
-          </Box>
+          {
+            reportes.map((i: Reportes, index: number ) => {
+              return (
+                <Grid
+                  key={index}
+                  marginBottom={3}
+                  item xs={12}>
+                    <Box>
+                      <div>Sistema: {i.sistema}</div>
+                      <div>Categoria: {i.otraCategoria ? i.otraCategoria : i.categoria}</div>
+                      <div>Empresa: {i.otraEmpresa ? i.otraEmpresa : i.empresa}</div>
+                      <div>Descripcion: {i.descripcion}</div>
+                      <div>Etiquetas: {`#${i.etiqueta} `}{i.otraCategoria ? ` #${i.otraCategoria}` : `#${i.categoria}`}</div>
+                    </Box>
+                    <Box marginTop={1} marginBottom={1}>
+                      <Divider variant="middle" />
+                    </Box>
+                </Grid>
+              );
+            })
+          }
         </Grid>
     </Grid>
     </>

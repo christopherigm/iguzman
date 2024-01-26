@@ -33,26 +33,6 @@ export interface RegistroReportes extends Reportes {
   etiqueta: string;
 };
 
-export interface Reportes {
-  sistema: string;
-  categoria: string;
-  otraCategoria: string;
-  otraEmpresa: string;
-  empresa: string;
-  descripcion: string;
-  etiqueta: string;
-};
-
-export interface RegistroReportes extends Reportes {
-  sistema: string;
-  categoria: string;
-  otraCategoria: string;
-  empresa: string;
-  otraEmpresa: string;
-  descripcion: string;
-  etiqueta: string;
-};
-
 export const InitialState: State = {
   proyecto: '',
   edificio: '',

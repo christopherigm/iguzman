@@ -1,0 +1,1 @@
+export {default} from './compositor-de-correos';

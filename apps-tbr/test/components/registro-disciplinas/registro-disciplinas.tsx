@@ -110,19 +110,18 @@ const RegistroDeDisciplinas = () => {
             </Box>
           </Grid>
       </Grid>
-      <Grid container>
+      <Grid>
         <Box
           display='flex'
           flexDirection='row'
           flexWrap='wrap'
-          justifyContent='space-between'
+          justifyContent='space-evenly'
           marginTop={5} >
             {
               disciplina.map((i: RegistroDisciplina, index: number) => {
                 return (
                   <Grid
                     key={index}
-                    marginBottom={3}
                     item xs={12} sm={6}>
                       <Box padding={2} minWidth={300}>
                         <Paper elevation={3}>
