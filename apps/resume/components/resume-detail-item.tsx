@@ -76,7 +76,7 @@ const ResumeInfoItem = ({
             {countryCode ? (
               <span
                 className={`fi fi-${countryCode}`}
-                style={{ fontSize: 'small', marginLeft: 4, paddingTop: 2 }}
+                style={{ fontSize: 'small', marginLeft: 4, paddingTop: 3 }}
               ></span>
             ) : null}
           </Typography>

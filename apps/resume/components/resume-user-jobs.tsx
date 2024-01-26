@@ -4,7 +4,7 @@ import { ReactElement } from 'react';
 import { DateRangeComposer } from '@repo/utils';
 import { UserJob } from 'classes/user-job';
 import { useMediaQuery, useTheme } from '@mui/material';
-import ResumeInfoItem from 'components/resume-info-item';
+import ResumeInfoItem from 'components/resume-detail-item';
 import Title from 'components/title';
 
 type Props = {

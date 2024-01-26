@@ -58,7 +58,7 @@ export default class User extends BaseUser {
       object?.attributes?.years_of_experience ??
       this.attributes.years_of_experience;
     // Relationships
-    if (object.relationships?.city.data) {
+    if (object.relationships?.city?.data) {
       this.relationships.city.data.setAttributesFromPlainObject(
         object.relationships?.city?.data
       );
@@ -109,13 +109,15 @@ export default class User extends BaseUser {
           jwt: '',
           userID: this.id,
         })
-          .then((data: any) => res(data))
+          .then((response: any) => res(RebuildData(response).data))
           .catch((error) => rej(error));
       } else if (this.attributes.username) {
         let url = `${this.URLBase}/v1/users/?filter[username]=${this.attributes.username}`;
         url += '&include=city,city.state,city.state.country';
         API.Get({ url })
-          .then((response) => res(response.data.length ? response.data[0] : {}))
+          .then((response) =>
+            res(response.data.length ? RebuildData(response).data[0] : {})
+          )
           .catch((error) => rej(error));
       } else {
         rej('No user id or username');
