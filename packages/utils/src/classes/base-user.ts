@@ -63,7 +63,7 @@ export class BaseUser {
   }
 
   public saveUserToLocalStorage() {
-    let attributes = this.attributes;
+    let attributes: any = this.getPlainAttributes();
     attributes.password = '';
     SetLocalStorageData(
       this.type,

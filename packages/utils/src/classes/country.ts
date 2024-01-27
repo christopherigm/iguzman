@@ -22,6 +22,15 @@ export default class Country {
       object.attributes?.img_flag ?? this.attributes.img_flag;
   }
 
+  public getPlainAttributes(): Object {
+    return {
+      name: this.attributes.name,
+      code: this.attributes.code,
+      phone_code: this.attributes.phone_code,
+      img_flag: this.attributes.img_flag,
+    };
+  }
+
   public get id() {
     return this._id.value;
   }

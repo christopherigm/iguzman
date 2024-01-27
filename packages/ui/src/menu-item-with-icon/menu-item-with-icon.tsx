@@ -6,6 +6,7 @@ import Paper from '@mui/material/Paper';
 
 type Props = {
   selected?: boolean;
+  isLoading?: boolean;
   darkMode: boolean;
   label: string;
   icon: any;
@@ -14,6 +15,7 @@ type Props = {
 
 const MenuItemWithIcon = ({
   selected = false,
+  isLoading = false,
   darkMode,
   label,
   icon,
@@ -26,14 +28,14 @@ const MenuItemWithIcon = ({
   return (
     <Paper
       elevation={elevation}
-      onClick={() => onClick(label)}
+      onClick={() => (isLoading ? null : onClick(label))}
       onMouseLeave={() => setElevation((_p) => (selected ? 3 : 1))}
       onMouseOver={() => setElevation((_p) => 4)}
       sx={{
         cursor: 'pointer',
       }}
     >
-      <Box padding={1.5}>
+      <Box padding={1.5} sx={{ opacity: isLoading ? '0.5' : '1' }}>
         <Box
           display="flex"
           justifyContent="space-evenly"

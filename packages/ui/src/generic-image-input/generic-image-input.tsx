@@ -38,6 +38,7 @@ const GenericImageInput = ({
         sx={{
           width: width,
           height: height,
+          boxShadow: '1px 1px 5px rgba(0,0,0,0.5)',
         }}
       />
       <Box
