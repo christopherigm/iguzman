@@ -7,13 +7,6 @@ import { VerticalMenu } from '@repo/ui';
 import type { VerticalMenuItemProps } from '@repo/ui';
 import { Signal, signal } from '@preact-signals/safe-react';
 
-type Props = {
-  darkMode: boolean;
-  URLBase: string;
-  isLoading: boolean;
-  switchLoading: (v: boolean) => void;
-};
-
 const menuItems: Signal<Array<VerticalMenuItemProps>> = signal([
   {
     id: 0,
@@ -25,11 +18,6 @@ const menuItems: Signal<Array<VerticalMenuItemProps>> = signal([
     label: 'Direcciones de usuario',
     selected: false,
   },
-  // {
-  //   id: 2,
-  //   label: 'Perfil de empresa',
-  //   selected: false,
-  // },
 ]);
 
 const itemSelected: Signal<Array<VerticalMenuItemProps>> = signal(
@@ -39,12 +27,12 @@ const itemSelectedId: Signal<number> = signal(
   (itemSelected.value.length ? itemSelected.value[0]?.id : -1) || -1
 );
 
-const AccountEditor = ({
-  darkMode = false,
-  URLBase,
-  isLoading = false,
-  switchLoading,
-}: Props): ReactElement => {
+type Props = {
+  darkMode: boolean;
+  URLBase: string;
+};
+
+const AccountEditor = ({ darkMode = false, URLBase }: Props): ReactElement => {
   useEffect(() => {
     user.getNediiUserFromLocalStorage();
   }, []);

@@ -4,11 +4,11 @@ import { useRouter } from 'next/router';
 import Typography from '@mui/material/Typography';
 import { AccountTopMenu, MainLayout } from '@repo/ui';
 import type { TopMenuItem } from '@repo/ui';
-import AccountEditor from 'components/account-editor';
-// import Companies from 'components/companies';
 import System, { system } from 'classes/system';
 import { user } from 'classes/user';
 import AccountTopMenuItems from 'components/account-top-menu-items';
+import AccountEditor from 'components/account-editor';
+import Companies from 'components/companies';
 
 const menu = AccountTopMenuItems;
 
@@ -16,6 +16,10 @@ const Page = (props: any): ReactElement => {
   const router = useRouter();
 
   useEffect(() => {
+    menu.value.forEach((i) =>
+      i.id === 0 ? (i.selected = true) : (i.selected = false)
+    );
+    menu.value = [...menu.value];
     system.setNediiSystemAttributesFromPlainObject(props);
     user.getNediiUserFromLocalStorage();
     if (!user.id) {
@@ -78,9 +82,9 @@ const Page = (props: any): ReactElement => {
               <AccountEditor
                 URLBase={props.URLBase}
                 darkMode={system.darkMode}
-                isLoading={system.isLoading}
-                switchLoading={(v: boolean) => system.switchLoading(v)}
               />
+            ) : id === 3 && selected ? (
+              <Companies URLBase={props.URLBase} darkMode={system.darkMode} />
             ) : null}
             {/* {id === 0 && selected ? (
               <AccountEditor
