@@ -26,6 +26,19 @@ export default class State {
     }
   }
 
+  public getPlainAttributes(): Object {
+    return {
+      name: this.attributes.name,
+      code: this.attributes.code,
+    };
+  }
+
+  public getPlainRelationships(): Object {
+    return {
+      country: this.relationships.country.data.getPlainAttributes(),
+    };
+  }
+
   public get id() {
     return this._id.value;
   }

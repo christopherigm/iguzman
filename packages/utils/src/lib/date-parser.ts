@@ -79,8 +79,8 @@ export const DateRangeComposer = (
   let years = diff.getFullYear();
   let months = diff.getMonth() / 12;
   const dates = `${startDateString} to ${endDateString} (${years}${
-    months ? `.${months.toFixed(2).toString().split('.')[1]}` : '.'
-  } years).`;
+    months ? `.${months.toFixed(2).toString().split('.')[1]}` : ''
+  } years)`;
   return dates;
 };
 

@@ -25,6 +25,18 @@ export default class City {
     }
   }
 
+  public getPlainAttributes(): Object {
+    return {
+      name: this.attributes.name,
+    };
+  }
+
+  public getPlainRelationships(): Object {
+    return {
+      state: this.relationships.state.data.getPlainAttributes(),
+    };
+  }
+
   public get id() {
     return this._id.value;
   }

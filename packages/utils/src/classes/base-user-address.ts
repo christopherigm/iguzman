@@ -1,4 +1,4 @@
-import { Signal, signal } from '@preact/signals-react';
+import { Signal, signal } from '@preact-signals/safe-react';
 // import {
 //   City,
 //   BaseUser,
@@ -13,25 +13,65 @@ import HomeIcon from '@mui/icons-material/Home';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import WorkIcon from '@mui/icons-material/Work';
 import MarkunreadMailboxIcon from '@mui/icons-material/MarkunreadMailbox';
-import { ReactElement } from 'react';
-// import { GetIconByName } from 'ui';
+import React, { ReactNode } from 'react';
+// import GetIconByName from ''
+import { GetIconByName } from '@repo/ui';
+import type { TopMenuItem } from '@repo/ui';
 
 type AddressTypes = 'house' | 'apartment' | 'work' | 'mail_box';
-const addressTypesArray = [
+type AddressItem = {
+  slug: string;
+  label: {
+    en: string;
+    es: string;
+  };
+  icon: string;
+  selected: boolean;
+};
+
+const addressTypesArray: Array<AddressItem> = [
   {
     slug: 'house',
     label: {
       en: 'House',
       es: 'Casa',
     },
-    icon: 'HomeIcon',
+    icon: 'Home',
+    selected: false,
+  },
+  {
+    slug: 'apartment',
+    label: {
+      en: 'Apartment',
+      es: 'Departamento',
+    },
+    icon: 'Apartment',
+    selected: false,
+  },
+  {
+    slug: 'work',
+    label: {
+      en: 'Work',
+      es: 'Trabajo',
+    },
+    icon: 'Work',
+    selected: false,
+  },
+  {
+    slug: 'mail_box',
+    label: {
+      en: 'Mailbox',
+      es: 'Buzon',
+    },
+    icon: 'MarkunreadMailbox',
+    selected: false,
   },
 ];
 
 export class BaseUserAddress {
   public static instance: BaseUserAddress;
   public type = 'UserAddress';
-  protected endpoint = 'v1/user-address/';
+  protected endpoint = 'v1/user-address';
   private _id: Signal<number> = signal(0);
   private _URLBase: Signal<string> = signal('');
   private _language: Signal<Languages> = signal('en');
@@ -40,25 +80,70 @@ export class BaseUserAddress {
     new BaseUserAddressAttributes();
   public relationships: BaseUserAddressRelationships =
     new BaseUserAddressRelationships();
-  public _addressTypeMenu: Array<AddressTypeMenuItem> = [];
-
-  public get AddressTypeMenu(): Array<AddressTypeMenuItem> {
-    if (!this._addressTypeMenu.length) {
-      const items: Array<AddressTypeMenuItem> = [];
-      addressTypesArray.forEach((i) => {
-        const e = new AddressTypeMenuItem();
-        e.slug = i.slug as AddressTypes;
-        e.label = i.label[this.language];
-        e.icon = i.icon;
-        items.push(e);
-      });
-      this._addressTypeMenu = items;
-    }
-    return this._addressTypeMenu;
-  }
+  private _addressTypeItems: Signal<Array<AddressTypeMenuItem>> = signal([]);
 
   public static getInstance(): BaseUserAddress {
     return BaseUserAddress.instance || new BaseUserAddress();
+  }
+
+  public setAddressAttributesFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.attributes.alias = object.attributes.alias ?? this.attributes.alias;
+    this.attributes.receptor_name =
+      object.attributes.receptor_name ?? this.attributes.receptor_name;
+    this.attributes.phone = object.attributes.phone ?? this.attributes.phone;
+    this.attributes.zip_code =
+      object.attributes.zip_code ?? this.attributes.zip_code;
+    this.attributes.street = object.attributes.street ?? this.attributes.street;
+    this.attributes.ext_number =
+      object.attributes.ext_number ?? this.attributes.ext_number;
+    this.attributes.int_number =
+      object.attributes.int_number ?? this.attributes.int_number;
+    this.attributes.reference =
+      object.attributes.reference ?? this.attributes.reference;
+    this.attributes.address_type =
+      object.attributes.address_type ?? this.attributes.address_type;
+    this.attributes.delivery_instructions =
+      object.attributes.delivery_instructions ??
+      this.attributes.delivery_instructions;
+    // Relationships
+    if (object.relationships?.city?.data) {
+      this.relationships.city.data.setAttributesFromPlainObject(
+        object.relationships?.city?.data
+      );
+    }
+  }
+
+  public getPlainAttributes(): Object {
+    return {
+      alias: this.attributes.alias,
+      receptor_name: this.attributes.receptor_name,
+      phone: this.attributes.phone,
+      zip_code: this.attributes.zip_code,
+      street: this.attributes.street,
+      ext_number: this.attributes.ext_number,
+      int_number: this.attributes.int_number,
+      reference: this.attributes.reference,
+      address_type: this.attributes.address_type,
+      delivery_instructions: this.attributes.delivery_instructions,
+    };
+  }
+
+  public getPlainRelationships(): Object {
+    return {
+      city: this.relationships.city.data.getPlainAttributes(),
+    };
+  }
+
+  public getPlainRelationshipsForAPI(): Object {
+    const obj: any = {};
+    if (this.relationships.city.data.id) {
+      obj.city = {
+        type: this.relationships.city.data.type,
+        id: this.relationships.city.data.id,
+      };
+    }
+    return obj;
   }
 
   public CreateUserAddress(): Promise<string> {
@@ -66,14 +151,16 @@ export class BaseUserAddress {
       if (!this.URLBase || !this.access) {
         return rej(new Error('No url or access token'));
       }
-      const url = `${this.URLBase}/${this.endpoint}`;
+      const attributes = this.getPlainAttributes();
+      const relationships = this.getPlainRelationshipsForAPI();
+      const url = `${this.URLBase}/${this.endpoint}/`;
       API.Post({
         url,
         jwt: this.access,
         data: {
           type: this.type,
-          attributes: this.attributes,
-          relationships: this.relationships,
+          attributes: attributes,
+          relationships: relationships,
         },
       })
         .then((response) => res(response.data))
@@ -86,6 +173,8 @@ export class BaseUserAddress {
       if (!this.URLBase || !this.access || !this.id) {
         return rej(new Error('No url or access token'));
       }
+      const attributes = this.getPlainAttributes();
+      // const relationships = this.getPlainRelationships();
       const url = `${this.URLBase}/${this.endpoint}/${this.id}/`;
       API.Patch({
         url,
@@ -93,11 +182,26 @@ export class BaseUserAddress {
         data: {
           type: this.type,
           id: this.id,
-          attributes: this.attributes,
-          relationships: this.relationships,
+          attributes: attributes,
+          // relationships: relationships,
         },
       })
         .then((response) => res(response.data))
+        .catch((error) => rej(error));
+    });
+  }
+
+  public DeleteUserAddress(): Promise<void> {
+    return new Promise((res, rej) => {
+      if (!this.URLBase || !this.access || !this.id) {
+        return rej(new Error('No url or access token'));
+      }
+      const url = `${this.URLBase}/${this.endpoint}/${this.id}/`;
+      API.Delete({
+        url,
+        jwt: this.access,
+      })
+        .then(() => res())
         .catch((error) => rej(error));
     });
   }
@@ -128,6 +232,36 @@ export class BaseUserAddress {
   }
   public set language(value) {
     this._language.value = value;
+  }
+
+  public updateAddressTypeSelected(slug: string) {
+    this.addressTypeItems.forEach((i: AddressTypeMenuItem) => {
+      i.selected = i.slug === slug;
+    });
+    this.attributes.address_type = slug as AddressTypes;
+    this.addressTypeItems = [...this.addressTypeItems];
+  }
+
+  public get addressTypeItems() {
+    if (!this._addressTypeItems.value.length) {
+      const items: Array<AddressTypeMenuItem> = [];
+      addressTypesArray.forEach((i) => {
+        const e = new AddressTypeMenuItem();
+        e.slug = i.slug as AddressTypes;
+        e.label = i.label[this.language];
+        e.icon = i.icon;
+        if (e.slug === this.attributes.address_type) {
+          e.selected = true;
+        }
+        items.push(e);
+      });
+      this._addressTypeItems.value = items;
+    }
+    return this._addressTypeItems.value;
+  }
+
+  public set addressTypeItems(value) {
+    this._addressTypeItems.value = value;
   }
 }
 

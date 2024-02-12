@@ -28,5 +28,4 @@ resources:
 
 deployment:
   nodeSelector:
-    nodeName: node4
     nodeProjects: real-clients

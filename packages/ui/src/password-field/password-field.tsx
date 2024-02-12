@@ -40,6 +40,7 @@ const PasswordField = ({
       </InputLabel>
       <OutlinedInput
         id={name}
+        autoComplete={name}
         type={showPassword ? 'text' : 'password'}
         endAdornment={
           <InputAdornment position="end">

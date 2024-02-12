@@ -68,6 +68,11 @@ import AlarmIcon from '@mui/icons-material/Alarm';
 import AlarmAddIcon from '@mui/icons-material/AlarmAdd';
 import AlarmOffIcon from '@mui/icons-material/AlarmOff';
 
+import HomeIcon from '@mui/icons-material/Home';
+import ApartmentIcon from '@mui/icons-material/Apartment';
+import WorkIcon from '@mui/icons-material/Work';
+import MarkunreadMailboxIcon from '@mui/icons-material/MarkunreadMailbox';
+
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap';
 
 type IconSize = {
@@ -227,6 +232,15 @@ const GetIconByName = ({
     return <AbcIcon sx={{ color, fontSize: iconSize }} />;
   else if (name === 'ZoomOutMap')
     return <ZoomOutMapIcon sx={{ color, fontSize: iconSize }} />;
+  else if (name === 'Home')
+    return <HomeIcon sx={{ color, fontSize: iconSize }} />;
+  else if (name === 'Apartment')
+    return <ApartmentIcon sx={{ color, fontSize: iconSize }} />;
+  else if (name === 'Work')
+    return <WorkIcon sx={{ color, fontSize: iconSize }} />;
+  else if (name === 'MarkunreadMailbox')
+    return <MarkunreadMailboxIcon sx={{ color, fontSize: iconSize }} />;
+
   return <></>;
 };
 
