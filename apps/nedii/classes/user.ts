@@ -8,11 +8,13 @@ import {
   GetLocalStorageData,
   SetLocalStorageData,
 } from '@repo/utils';
+import Stand from 'classes/stand';
 
 export default class User extends BaseUser {
   public static instance: User;
   public attributes: UserAttributes = new UserAttributes();
   private _addresses: Signal<Array<BaseUserAddress>> = signal([]);
+  private _companies: Signal<Array<Stand>> = signal([]);
 
   public static getInstance(): User {
     return User.instance || new User();
@@ -163,11 +165,11 @@ export default class User extends BaseUser {
         jwt: this.access,
       })
         .then((response: { data: Array<any> }) => {
-          const rawAddresses = response.data.length
+          const rawData = response.data.length
             ? RebuildData(response).data
             : [];
           this.addresses = [];
-          rawAddresses.forEach((i: any) => {
+          rawData.forEach((i: any) => {
             const newItem = new BaseUserAddress();
             newItem.id = Number(i.id);
             newItem.URLBase = this.URLBase;
@@ -176,7 +178,37 @@ export default class User extends BaseUser {
             this.addresses.push(newItem);
           });
           this.addresses = [...this.addresses];
-          res(rawAddresses);
+          res(rawData);
+        })
+        .catch((error) => rej(error));
+    });
+  }
+
+  public getUserCompaniesFromAPI(): Promise<Array<any>> {
+    return new Promise((res, rej) => {
+      let url = `${this.URLBase}/v1/stands/?filter[owner]=${this.id}`;
+      // url += '&include=city,city.state,city.state.country';
+      API.Get({
+        url,
+        jwt: this.access,
+      })
+        .then((response: { data: Array<any> }) => {
+          const rawData = response.data.length
+            ? RebuildData(response).data
+            : [];
+          this.companies = [];
+          rawData.forEach((i: any) => {
+            const newItem = new Stand();
+            newItem.id = Number(i.id);
+            newItem.URLBase = this.URLBase;
+            newItem.access = this.access;
+            newItem.setStandAttributesFromPlainObject(i);
+            this.companies.push(newItem);
+          });
+          this.companies = [...this.companies];
+          console.log('> Companies URL:', url);
+          console.log('> Companies:', rawData);
+          res(rawData);
         })
         .catch((error) => rej(error));
     });
@@ -187,6 +219,13 @@ export default class User extends BaseUser {
   }
   public set addresses(value) {
     this._addresses.value = value;
+  }
+
+  public get companies() {
+    return this._companies.value;
+  }
+  public set companies(value) {
+    this._companies.value = value;
   }
 }
 

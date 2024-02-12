@@ -3,6 +3,8 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import StoreIcon from '@mui/icons-material/Store';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import CategoryIcon from '@mui/icons-material/Category';
+import RoomServiceIcon from '@mui/icons-material/RoomService';
 import type { TopMenuItem } from '@repo/ui';
 
 const AccountTopMenuItems: Signal<Array<TopMenuItem>> = signal([
@@ -28,6 +30,18 @@ const AccountTopMenuItems: Signal<Array<TopMenuItem>> = signal([
     id: 3,
     label: 'Empresas',
     icon: <StoreIcon />,
+    selected: false,
+  },
+  {
+    id: 4,
+    label: 'Productos',
+    icon: <CategoryIcon />,
+    selected: false,
+  },
+  {
+    id: 5,
+    label: 'Servicios',
+    icon: <RoomServiceIcon />,
     selected: false,
   },
 ]);

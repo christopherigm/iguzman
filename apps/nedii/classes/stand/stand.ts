@@ -13,11 +13,54 @@ export default class Stand {
   public static instance: Stand;
   protected type: string = 'Stand';
   private _id: Signal<number> = signal(0);
+  private _URLBase: Signal<string> = signal('');
+  private _access: Signal<string> = signal('');
   public attributes: StandAttributes = new StandAttributes();
   public relationships: StandRelationships = new StandRelationships();
 
   public static getInstance(): Stand {
     return Stand.instance || new Stand();
+  }
+
+  public setStandAttributesFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.attributes.name = object.attributes.name ?? this.attributes.name;
+    this.attributes.slug = object.attributes.slug ?? this.attributes.slug;
+    this.attributes.img_logo =
+      object.attributes.img_logo ?? this.attributes.img_logo;
+    this.attributes.img_cover =
+      object.attributes.img_cover ?? this.attributes.img_cover;
+    this.attributes.average_rating =
+      object.attributes.average_rating ?? this.attributes.average_rating;
+    this.attributes.products_max_price =
+      object.attributes.products_max_price ??
+      this.attributes.products_max_price;
+    this.attributes.meals_max_price =
+      object.attributes.meals_max_price ?? this.attributes.meals_max_price;
+    this.attributes.services_max_price =
+      object.attributes.services_max_price ??
+      this.attributes.services_max_price;
+    this.attributes.vehicles_max_price =
+      object.attributes.vehicles_max_price ??
+      this.attributes.vehicles_max_price;
+    this.attributes.real_state_max_price =
+      object.attributes.real_state_max_price ??
+      this.attributes.real_state_max_price;
+    // Relationships
+    if (object.relationships?.city?.data) {
+      // this.relationships.owner.plan.setNediiUserAttributesFromPlainObject(
+      //   object.relationships?.plan?.data
+      // );
+      // this.relationships.owner.data.setNediiUserAttributesFromPlainObject(
+      //   object.relationships?.owner?.data
+      // );
+      this.relationships.city.data.setAttributesFromPlainObject(
+        object.relationships?.city?.data
+      );
+    }
+    this.relationships.owner = {
+      data: User.getInstance(),
+    };
   }
 
   public get id() {
@@ -26,15 +69,27 @@ export default class Stand {
   public set id(value) {
     this._id.value = value;
   }
+
+  public get URLBase() {
+    return this._URLBase.value;
+  }
+  public set URLBase(value) {
+    this._URLBase.value = value;
+  }
+
+  public get access() {
+    return this._access.value;
+  }
+  public set access(value) {
+    this._access.value = value;
+  }
 }
 
 class StandRelationships {
   public _plan: Signal<{ data: NediiPlan }> = signal({
     data: NediiPlan.getInstance(),
   });
-  public _owner: Signal<{ data: User }> = signal({
-    data: User.getInstance(),
-  });
+  public _owner: Signal<{ data: User } | null> = signal(null);
   public _city: Signal<{ data: City }> = signal({
     data: City.getInstance(),
   });

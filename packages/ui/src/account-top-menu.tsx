@@ -30,7 +30,7 @@ const AccountTopMenu = ({
     >
       {menu.map(({ id, icon, label, selected }: TopMenuItem, index: number) => {
         return (
-          <Grid item xs={6} sm={3} md={2} key={index}>
+          <Grid item xs={4} sm={2} key={index}>
             <MenuItemWithIcon
               darkMode={darkMode}
               label={label}
