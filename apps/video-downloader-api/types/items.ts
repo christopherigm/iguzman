@@ -10,7 +10,7 @@ type Item = {
   filename?: string;
   extention?: 'm4a' | 'mp4' | 'mov';
   justAudio?: boolean;
-  status?: 'none' | 'downloading' | 'ready' | 'error';
+  status?: 'none' | 'downloading' | 'ready' | 'error' | 'deleted' | 'canceled';
   url?: string;
   error?: string;
   created?: Date;

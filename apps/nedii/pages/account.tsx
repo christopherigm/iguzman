@@ -8,7 +8,6 @@ import System, { system } from 'classes/system';
 import { user } from 'classes/user';
 import AccountTopMenuItems from 'components/account-top-menu-items';
 import AccountEditor from 'components/account-editor';
-import Companies from 'components/companies';
 
 const menu = AccountTopMenuItems;
 
@@ -16,8 +15,9 @@ const Page = (props: any): ReactElement => {
   const router = useRouter();
 
   useEffect(() => {
+    const path = router.pathname.replace(/\//g, '');
     menu.value.forEach((i) =>
-      i.id === 0 ? (i.selected = true) : (i.selected = false)
+      i.href === path ? (i.selected = true) : (i.selected = false)
     );
     menu.value = [...menu.value];
     system.setNediiSystemAttributesFromPlainObject(props);
@@ -75,34 +75,7 @@ const Page = (props: any): ReactElement => {
           menu.value = [...menu.value];
         }}
       />
-      {menu.value.map(({ id, selected }) => {
-        return (
-          <div key={id}>
-            {id === 0 && selected ? (
-              <AccountEditor
-                URLBase={props.URLBase}
-                darkMode={system.darkMode}
-              />
-            ) : id === 3 && selected ? (
-              <Companies URLBase={props.URLBase} darkMode={system.darkMode} />
-            ) : null}
-            {/* {id === 0 && selected ? (
-              <AccountEditor
-                URLBase={props.URLBase}
-                darkMode={system.darkMode}
-                isLoading={system.isLoading}
-                switchLoading={(v: boolean) => system.switchLoading(v)}
-              />
-            ) : id === 3 && selected ? (
-              <Companies
-                URLBase={props.URLBase}
-                language={props.language}
-                darkMode={system.darkMode}
-              />
-            ) : null} */}
-          </div>
-        );
-      })}
+      <AccountEditor URLBase={props.URLBase} darkMode={system.darkMode} />
     </MainLayout>
   );
 };

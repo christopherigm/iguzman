@@ -5,6 +5,7 @@ import MenuItemWithIcon from './menu-item-with-icon';
 export type TopMenuItem = {
   id: number;
   label: string;
+  href: string;
   icon: ReactElement;
   selected: boolean;
 };
@@ -28,21 +29,21 @@ const AccountTopMenu = ({
       columnSpacing={2}
       rowSpacing={2}
     >
-      {menu.map(({ id, icon, label, selected }: TopMenuItem, index: number) => {
-        return (
-          <Grid item xs={4} sm={2} key={index}>
-            <MenuItemWithIcon
-              darkMode={darkMode}
-              label={label}
-              icon={icon}
-              selected={selected}
-              onClick={() => {
-                menuCallback(id);
-              }}
-            />
-          </Grid>
-        );
-      })}
+      {menu.map(
+        ({ id, icon, label, href, selected }: TopMenuItem, index: number) => {
+          return (
+            <Grid item xs={4} sm={2} key={index}>
+              <MenuItemWithIcon
+                darkMode={darkMode}
+                label={label}
+                icon={icon}
+                selected={selected}
+                href={href}
+              />
+            </Grid>
+          );
+        }
+      )}
     </Grid>
   );
 };

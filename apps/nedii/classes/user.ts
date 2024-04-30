@@ -174,7 +174,7 @@ export default class User extends BaseUser {
             newItem.id = Number(i.id);
             newItem.URLBase = this.URLBase;
             newItem.access = this.access;
-            newItem.setAddressAttributesFromPlainObject(i);
+            newItem.setAttributesFromPlainObject(i);
             this.addresses.push(newItem);
           });
           this.addresses = [...this.addresses];
@@ -202,7 +202,7 @@ export default class User extends BaseUser {
             newItem.id = Number(i.id);
             newItem.URLBase = this.URLBase;
             newItem.access = this.access;
-            newItem.setStandAttributesFromPlainObject(i);
+            newItem.setAttributesFromPlainObject(i);
             this.companies.push(newItem);
           });
           this.companies = [...this.companies];

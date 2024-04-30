@@ -21,6 +21,7 @@ export default class Group {
 
 class GroupAttributes extends CommonFields {
   private _name: Signal<string> = signal('');
+  private _img_picture: Signal<string> = signal('');
   private _slug: Signal<string> = signal('');
   private _icon: Signal<string> = signal('');
   private _color: Signal<string> = signal('');
@@ -30,6 +31,13 @@ class GroupAttributes extends CommonFields {
   }
   public set name(value) {
     this._name.value = value;
+  }
+
+  public get img_picture() {
+    return this._img_picture.value;
+  }
+  public set img_picture(value) {
+    this._img_picture.value = value;
   }
 
   public get slug() {

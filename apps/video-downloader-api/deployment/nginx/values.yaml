@@ -1,4 +1,4 @@
-replicaCount: 1
+replicaCount: 3
 webAppName: default
 volumeMountPath: 'shared-volume'
 
@@ -27,4 +27,4 @@ resources:
 
 deployment:
   nodeSelector:
-    nodeName: node4
+    nodeProjects: real-clients

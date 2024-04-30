@@ -1,22 +1,8 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-// import {
-//   City,
-//   BaseUser,
-//   GetLocalStorageData,
-//   SetLocalStorageData,
-// } from 'utils';
 import API from '../api';
 import City from '../classes/city';
 import { BaseUser } from '../classes/base-user';
 import type { Languages } from '../interfaces/system-interface';
-import HomeIcon from '@mui/icons-material/Home';
-import ApartmentIcon from '@mui/icons-material/Apartment';
-import WorkIcon from '@mui/icons-material/Work';
-import MarkunreadMailboxIcon from '@mui/icons-material/MarkunreadMailbox';
-import React, { ReactNode } from 'react';
-// import GetIconByName from ''
-import { GetIconByName } from '@repo/ui';
-import type { TopMenuItem } from '@repo/ui';
 
 type AddressTypes = 'house' | 'apartment' | 'work' | 'mail_box';
 type AddressItem = {
@@ -86,7 +72,7 @@ export class BaseUserAddress {
     return BaseUserAddress.instance || new BaseUserAddress();
   }
 
-  public setAddressAttributesFromPlainObject(object: any) {
+  public setAttributesFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
     this.attributes.alias = object.attributes.alias ?? this.attributes.alias;
     this.attributes.receptor_name =

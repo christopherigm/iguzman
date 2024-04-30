@@ -22,7 +22,7 @@ export default class Stand {
     return Stand.instance || new Stand();
   }
 
-  public setStandAttributesFromPlainObject(object: any) {
+  public setAttributesFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
     this.attributes.name = object.attributes.name ?? this.attributes.name;
     this.attributes.slug = object.attributes.slug ?? this.attributes.slug;

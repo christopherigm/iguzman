@@ -14,8 +14,10 @@ import YouTube from '@mui/icons-material/YouTube';
 import Instagram from '@mui/icons-material/Instagram';
 import Facebook from '@mui/icons-material/Facebook';
 import X from '@mui/icons-material/X';
+import Pinterest from '@mui/icons-material/Pinterest';
 import BlockIcon from '@mui/icons-material/Block';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 import GridViewIcon from '@mui/icons-material/GridView';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 import SplitscreenIcon from '@mui/icons-material/Splitscreen';
@@ -25,10 +27,11 @@ import { signal } from '@preact-signals/safe-react';
 import { PaperCard } from '@repo/ui';
 import { InnerSort, DateParser, HourParser } from '@repo/utils';
 import Item, { VideoType } from 'classes/item';
-import { ReactElement, ReactNode, useEffect } from 'react';
+import { ReactElement, ReactNode, useEffect, useState } from 'react';
 import ReactPlayer from 'react-player';
 import copy from 'copy-to-clipboard';
 import Link from 'next/link';
+import Snackbar from '@mui/material/Snackbar';
 
 type IconColorType = Record<VideoType, string>;
 const iconColor: IconColorType = {
@@ -38,6 +41,7 @@ const iconColor: IconColorType = {
   facebook: '#1877F2',
   twitter: '#111',
   tiktok: '#111',
+  pinterest: 'red',
 };
 
 type TikTokProps = {
@@ -66,6 +70,7 @@ type GridItemProps = {
   item: Item;
   onDeleteItem: () => void;
   onCancelItem: () => void;
+  setOpen: () => void;
   miniMode: boolean;
   devMode: boolean;
   darkMode: boolean;
@@ -75,11 +80,16 @@ const GridItem = ({
   item,
   onDeleteItem,
   onCancelItem,
+  setOpen,
   miniMode,
   devMode,
   darkMode,
 }: GridItemProps) => {
   const URLBase = item.URLBase.substring(0, item.URLBase.length - 4);
+
+  const videoLink = item.filename
+    ? `${URLBase}/media/${item.filename}`
+    : `${URLBase}/media/${item.id}.${item.justAudio ? 'm4a' : 'mp4'}`;
 
   const actionButtons = (
     <>
@@ -118,6 +128,18 @@ const GridItem = ({
             color="error"
           >
             <BlockIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      ) : null}
+      {item.status === 'deleted' ? (
+        <Box marginLeft={0.5} paddingLeft={1} borderLeft="solid 1px #666">
+          <IconButton
+            aria-label="delete"
+            size="small"
+            onClick={() => onDeleteItem()}
+            color="error"
+          >
+            <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
       ) : null}
@@ -172,6 +194,11 @@ const GridItem = ({
                   fontSize={miniMode ? 'small' : 'medium'}
                   sx={{ color: darkMode ? 'white' : iconColor.tiktok }}
                 />
+              ) : item.type === 'pinterest' ? (
+                <Pinterest
+                  fontSize={miniMode ? 'small' : 'medium'}
+                  sx={{ color: darkMode ? 'white' : iconColor.pinterest }}
+                />
               ) : null}
             </Link>
           </Box>
@@ -189,6 +216,8 @@ const GridItem = ({
             <>Error!</>
           ) : item.status === 'canceled' ? (
             <>Canceled</>
+          ) : item.status === 'deleted' ? (
+            <>Video deleted {" :'c"}</>
           ) : (
             <>Processing...</>
           )}
@@ -238,19 +267,56 @@ const GridItem = ({
         alignItems="center"
       >
         <Typography variant="body2" noWrap={true}>
-          {item.url}
+          <Link
+            href={item.url}
+            target="_blank"
+            style={{
+              color: darkMode ? 'white' : 'black',
+            }}
+          >
+            URL: {item.url}
+          </Link>
         </Typography>
+
         <Box marginLeft={1} paddingLeft={1} borderLeft="solid 1px #666">
           <IconButton
             aria-label="copy"
             size="small"
-            onClick={() => copy(item.url)}
+            onClick={() => {
+              copy(item.url);
+              setOpen();
+            }}
             color="default"
           >
             <ContentCopyIcon fontSize="small" />
           </IconButton>
         </Box>
       </Box>
+      {item.status === 'ready' ? (
+        <>
+          <Box marginTop={1} marginBottom={1}>
+            <Divider />
+          </Box>
+          <Link href={videoLink} download={true}>
+            <Box
+              display="flex"
+              flexDirection="row"
+              justifyContent="space-between"
+              alignItems="center"
+              color={darkMode ? 'white' : 'black'}
+            >
+              <Typography variant="body2" noWrap={true}>
+                Direct video link: {videoLink}
+              </Typography>
+              <Box marginLeft={1} paddingLeft={1} borderLeft="solid 1px #666">
+                <IconButton aria-label="copy" size="small" color="default">
+                  <AttachFileIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+          </Link>
+        </>
+      ) : null}
 
       {miniMode ? (
         <>
@@ -420,6 +486,7 @@ const GridOfItems = ({
   devMode,
   darkMode,
 }: Props): ReactElement => {
+  const [open, setOpen] = useState(false);
   offset.value = (page.value - 1) * itemsToDisplay.value;
   filteredItems.value = items
     .filter((i) => {
@@ -579,6 +646,7 @@ const GridOfItems = ({
                   i.cancelRequest();
                   i.clearTimeout();
                 }}
+                setOpen={() => setOpen(true)}
                 miniMode={miniGrid.value}
                 devMode={devMode}
                 darkMode={darkMode}
@@ -600,6 +668,12 @@ const GridOfItems = ({
         />
       </Box>
       <Box marginTop={1.5} marginBottom={1}></Box>
+      <Snackbar
+        open={open}
+        onClose={() => setOpen(false)}
+        autoHideDuration={2000}
+        message="Link copied to clipboard"
+      />
     </Box>
   );
 };

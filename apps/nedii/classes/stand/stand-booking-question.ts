@@ -14,6 +14,30 @@ export default class StandBookingQuestion {
     return StandBookingQuestion.instance || new StandBookingQuestion();
   }
 
+  public setAttributesFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.attributes.name = object.attributes.name ?? this.attributes.name;
+    this.attributes.open_answer =
+      object.attributes.open_answer ?? this.attributes.open_answer;
+    // Relationships
+    if (object.relationships?.options?.data) {
+      console.log('options', object.relationships?.options);
+      const options: Array<StandBookingQuestionOption> = [];
+      object.relationships?.options?.data.forEach((i: any) => {});
+
+      //   this.relationships.options.data.setAttributesFromPlainObject(
+      //     object.relationships?.options?.data
+      //   );
+    }
+  }
+
+  public getAttributesFromPlainObject(): Object {
+    return {
+      name: this.attributes.name,
+      open_answer: this.attributes.open_answer,
+    };
+  }
+
   public get id() {
     return this._id.value;
   }
@@ -68,6 +92,17 @@ export class StandBookingQuestionOption {
     return (
       StandBookingQuestionOption.instance || new StandBookingQuestionOption()
     );
+  }
+
+  public setAttributesFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.attributes.value = object.attributes.value ?? this.attributes.value;
+  }
+
+  public getAttributesFromPlainObject(): Object {
+    return {
+      name: this.attributes.value,
+    };
   }
 
   public get id() {

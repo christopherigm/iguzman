@@ -39,7 +39,9 @@ export { default as isTwitter } from './lib/is-twitter-checker';
 export { default as isFacebook } from './lib/is-facebook-checker';
 export { default as isInstagram } from './lib/is-instagram-checker';
 export { default as isTiktok } from './lib/is-tiktok-checker';
+export { default as isX } from './lib/is-x-checker';
 export { default as InnerSort } from './lib/inner-sort';
+export { default as isPinterest } from './lib/is-pinterest-checker';
 export type { InnerSortOrderTypes } from './lib/inner-sort';
 
 /**

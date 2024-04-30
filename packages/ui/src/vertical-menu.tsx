@@ -8,6 +8,10 @@ export type VerticalMenuItemProps = {
   id: number;
   label: string;
   selected: boolean;
+  completed?: boolean;
+  completeIcon?: ReactElement;
+  incompleteIcon?: ReactElement;
+  icon?: ReactElement;
 };
 
 type ButtonItemProps = {
@@ -22,8 +26,12 @@ const ButtonItem = ({
   id,
   label,
   selected = false,
-  darkMode,
+  completed = false,
+  completeIcon,
+  incompleteIcon,
+  darkMode = false,
   onClick,
+  icon,
 }: ButtonItemProps): ReactNode => {
   return (
     <Button
@@ -36,6 +44,13 @@ const ButtonItem = ({
         fontWeight: selected ? 'bold' : 'none',
         backgroundColor: selected && darkMode ? 'white' : 'none',
       }}
+      startIcon={
+        completed && completeIcon
+          ? completeIcon
+          : !completed && incompleteIcon
+            ? incompleteIcon
+            : icon ?? null
+      }
     >
       {label}
     </Button>
@@ -55,6 +70,7 @@ const VerticalMenu = ({ darkMode = false, items }: Props): ReactElement => {
     });
     items.value = [...items.value];
   };
+
   return (
     <Paper elevation={1}>
       <ButtonGroup
