@@ -51,7 +51,11 @@ const GroupItem = ({
           }}
         >
           <GetIconByName
-            name={group.attributes.icon ?? 'AccountTree'}
+            name={
+              group.attributes.icon !== ''
+                ? group.attributes.icon
+                : 'AccountTree'
+            }
             iconSize={{ xs: 64 - 16 }}
             color={group.attributes.color ?? '#777'}
           />

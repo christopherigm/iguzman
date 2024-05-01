@@ -122,7 +122,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
       <Box marginTop={2}></Box>
       <Paper elevation={1}>
         <Box padding={1.5}>
-          <Typography variant="caption">Informacion basica</Typography>
+          <Typography variant="body1">Informacion basica</Typography>
           <Grid container rowSpacing={2} columnSpacing={2} marginTop={1}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -167,12 +167,11 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
               />
             </Grid>
           </Grid>
+
           <Box marginTop={3} marginBottom={2}>
             <Divider />
           </Box>
-          <Typography variant="caption">
-            Preferencias de comunicacion
-          </Typography>
+          <Typography variant="body1">Preferencias de comunicacion</Typography>
 
           <Grid container rowSpacing={2} columnSpacing={2} marginTop={0}>
             <Grid item xs={12} sm={6}>
@@ -244,7 +243,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
           <Box marginTop={2} marginBottom={2}>
             <Divider />
           </Box>
-          <Typography variant="caption">Cambiar contraseña</Typography>
+          <Typography variant="body1">Cambiar contraseña</Typography>
           <Grid container rowSpacing={2} columnSpacing={2} marginTop={1}>
             <Grid item xs={12} sm={6}>
               <PasswordField

@@ -3,7 +3,6 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { GenericImage } from '@repo/ui';
-// import type { ExpoInterface } from 'interfaces/stand-interface';
 import { red } from '@mui/material/colors';
 
 type Props = {

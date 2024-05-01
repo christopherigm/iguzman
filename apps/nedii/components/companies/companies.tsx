@@ -15,6 +15,8 @@ import Stand from 'classes/stand';
 import CompanyForm from 'components/companies/company-form';
 import menuItems from './company-form-menu';
 import CompanyFormButtons from './company-form-buttons';
+import GroupSelector from 'components/companies/group-selector';
+import Group from 'classes/group';
 
 const itemSelected: Signal<Array<VerticalMenuItemProps>> = signal(
   menuItems.value.filter((i: VerticalMenuItemProps) => i.selected)
@@ -78,7 +80,15 @@ const Companies = ({ darkMode = false, URLBase }: Props): ReactElement => {
           </Grid>
           <Grid item xs={12} sm={8} md={9}>
             <Paper elevation={1}>
-              <Box paddingLeft={1.5} paddingRight={1.5} paddingBottom={1.5}>
+              <Box padding={1.5}>
+                {itemSelectedId.value === 0 ? (
+                  <GroupSelector
+                    URLBase={URLBase}
+                    onSelect={(g: Group) => {
+                      console.log('group:', g);
+                    }}
+                  />
+                ) : null}
                 {itemSelectedId.value === 1 ? (
                   <CompanyForm
                     darkMode={darkMode}
