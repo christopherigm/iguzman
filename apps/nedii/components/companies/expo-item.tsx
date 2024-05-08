@@ -4,11 +4,12 @@ import Box from '@mui/material/Box';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { GenericImage } from '@repo/ui';
 import { red } from '@mui/material/colors';
+import Expo from 'classes/expo';
 
 type Props = {
   selected: boolean;
   onClick: () => void;
-  expo: any;
+  expo: Expo;
 };
 
 const ExpoItem = ({ selected, onClick, expo }: Props): ReactElement => {

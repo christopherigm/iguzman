@@ -21,10 +21,6 @@ const GenericImage = ({
 }: ImageProps): ReactElement => {
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    console.log('renders');
-  });
-
   return (
     <Box
       className={

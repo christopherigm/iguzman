@@ -22,6 +22,30 @@ export default class StandAttributes extends Mixin(
   private _vehicles_max_price: Signal<number> = signal(0);
   private _real_state_max_price: Signal<number> = signal(0);
 
+  public getStandPlainAttributes(): Object {
+    return {
+      name: this.name,
+      slug: this.slug,
+      img_logo: this.img_logo,
+      img_cover: this.img_cover,
+      restaurant: this.restaurant,
+      bar_code: this.bar_code,
+      description: this.description,
+      short_description: this.short_description,
+      booking_active: this.booking_active,
+      booking_fee: this.booking_fee,
+      about: this.about,
+      booking_email: this.booking_email,
+      slogan: this.slogan,
+      mission: this.mission,
+      vision: this.vision,
+      contact_email: this.contact_email,
+      support_email: this.support_email,
+      zip_code: this.zip_code,
+      address: this.address,
+    };
+  }
+
   public get name() {
     return this._name.value;
   }

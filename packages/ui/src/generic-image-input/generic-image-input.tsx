@@ -12,6 +12,8 @@ type Props = {
   defaultValue?: string;
   labelPosition?: 'top' | 'bottom';
   isLoading?: boolean;
+  cleanAfterLoadImage?: boolean;
+  hideInstructions?: boolean;
 };
 
 const GenericImageInput = ({
@@ -23,6 +25,8 @@ const GenericImageInput = ({
   defaultValue,
   labelPosition = 'top',
   isLoading = false,
+  cleanAfterLoadImage = false,
+  hideInstructions = false,
 }: Props): ReactElement => {
   const [img, setImg] = useState<string>('');
 
@@ -57,7 +61,9 @@ const GenericImageInput = ({
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = (e: any) => {
-              setImg(e.target.result);
+              if (!cleanAfterLoadImage) {
+                setImg(e.target.result);
+              }
               onChange(e.target.result);
             };
             if (file) {
@@ -78,13 +84,15 @@ const GenericImageInput = ({
           <Typography variant="caption">{label}</Typography>
         </Box>
       ) : null}
-      <Typography variant="caption">
-        {language === 'en' ? (
-          <>(Click on picture to change it)</>
-        ) : (
-          <>(Click en la foto para cambiarla)</>
-        )}
-      </Typography>
+      {!hideInstructions ? (
+        <Typography variant="caption">
+          {language === 'en' ? (
+            <>(Click on picture to change it)</>
+          ) : (
+            <>(Click en la foto para cambiarla)</>
+          )}
+        </Typography>
+      ) : null}
     </Box>
   );
 };

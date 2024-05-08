@@ -75,7 +75,11 @@ const Page = (props: any): ReactElement => {
           menu.value = [...menu.value];
         }}
       />
-      <Companies URLBase={props.URLBase} darkMode={system.darkMode} />
+      <Companies
+        URLBase={props.URLBase}
+        devMode={system.devMode}
+        darkMode={system.darkMode}
+      />
     </MainLayout>
   );
 };

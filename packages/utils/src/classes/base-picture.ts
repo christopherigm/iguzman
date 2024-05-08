@@ -20,10 +20,18 @@ export class BasePicture {
 }
 
 export class BasePictureAttributes extends CommonFields {
+  private _img_picture: Signal<string> = signal('');
   private _name: Signal<string> = signal('');
   private _description: Signal<string> = signal('');
   private _href: Signal<string> = signal('');
   private _full_size: Signal<boolean> = signal(false);
+
+  public get img_picture() {
+    return this._img_picture.value;
+  }
+  public set img_picture(value) {
+    this._img_picture.value = value;
+  }
 
   public get name() {
     return this._name.value;

@@ -69,7 +69,7 @@ export { default as BaseClass } from './classes/base-class';
 export { default as CommonFields } from './classes/common-fields';
 export { default as TimeFields } from './classes/time-fields';
 export { default as WeekSchedule } from './classes/week-schedule';
-export { default as WebLinks } from './classes/web-links';
+export { default as WebLinks } from './classes/web-links-common';
 export { BaseUser, BaseUserAttributes } from './classes/base-user';
 export { default as Country } from './classes/country';
 export { default as State } from './classes/state';
