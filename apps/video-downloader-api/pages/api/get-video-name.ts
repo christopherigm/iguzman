@@ -38,6 +38,9 @@ export const getVideoName = (
         if (os.platform() !== 'win32') {
           command += ' --cookies /app/netscape-cookies.txt';
         }
+        if (isYoutube(URL)) {
+          command += ' --no-playlist ';
+        }
         exec(command, (err, videoName: string) => {
           if (err) {
             console.log('Error, getVideoName:', err);

@@ -132,6 +132,7 @@ class StandPhone(CommonFields):
     class Meta:
         verbose_name = 'Teléfono de Stand'
         verbose_name_plural = 'Teléfonos de los Stands'
+        unique_together = (('stand', 'phone'),)
 
     class JSONAPIMeta:
         resource_name = 'StandPhone'
@@ -378,12 +379,12 @@ class Expo(RegularPicture):
         blank=True,
         unique=True
     )
-    groups = models.ManyToManyField(
-        'stand.Group',
-        related_name='expo_groups',
-        verbose_name='Grupos',
+    categories = models.ManyToManyField(
+        'stand.Category',
+        related_name='expo_categories',
+        verbose_name='Categorias',
         blank=True,
-        help_text='Grupos de esta expo'
+        help_text='Categorias de esta expo'
     )
 
     def save(self, *args, **kwargs):
@@ -405,7 +406,7 @@ class Expo(RegularPicture):
         resource_name = 'Expo'
 
 
-class Group(RegularPicture):
+class Category(RegularPicture):
     name = models.CharField(
         max_length=64,
         null=False,
@@ -433,15 +434,15 @@ class Group(RegularPicture):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = get_unique_slug(self.name, Group)
+            self.slug = get_unique_slug(self.name, Category)
         super().save(*args, **kwargs)
 
     class Meta:
-        verbose_name = 'Pabellon'
-        verbose_name_plural = 'Pabellones'
+        verbose_name = 'Categoria'
+        verbose_name_plural = 'Categorias'
 
     class JSONAPIMeta:
-        resource_name = 'Group'
+        resource_name = 'Category'
 
 
 def stand(instance, filename):
@@ -475,8 +476,8 @@ class Stand(CommonFields):
         help_text='Expo al que pertenece este registro',
         on_delete=models.CASCADE
     )
-    group = models.ForeignKey(
-        'stand.Group',
+    category = models.ForeignKey(
+        'stand.Category',
         verbose_name='Pabellon',
         null=False,
         blank=False,

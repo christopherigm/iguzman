@@ -7,12 +7,17 @@ import TextField from '@mui/material/TextField';
 import { Signal, signal } from '@preact-signals/safe-react';
 import Divider from '@mui/material/Divider';
 import Stand from 'classes/stand';
+import FormGroup from '@mui/material/FormGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import InputAdornment from '@mui/material/InputAdornment';
 
-const isLoading: Signal<boolean> = signal(false);
+const isLoadingLocal: Signal<boolean> = signal(false);
 const complete: Signal<boolean> = signal(false);
 const error: Signal<string> = signal('');
 
 type Props = {
+  isLoading: boolean;
   darkMode: boolean;
   URLBase: string;
   stand: Stand;
@@ -22,6 +27,7 @@ type Props = {
 };
 
 const CompanyFormBasicInfo = ({
+  isLoading = false,
   darkMode = false,
   URLBase,
   stand,
@@ -31,9 +37,10 @@ const CompanyFormBasicInfo = ({
 }: Props): ReactElement => {
   useEffect(() => {
     console.log('CompanyFormBasicInfo.tsx > renders');
-    isLoading.value = false;
+    isLoadingLocal.value = false;
     complete.value = false;
     error.value = '';
+    checkCompleteness();
   }, []);
 
   const canSubmit = (): boolean => {
@@ -42,7 +49,7 @@ const CompanyFormBasicInfo = ({
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    isLoading.value = true;
+    isLoadingLocal.value = true;
     complete.value = false;
     error.value = '';
   };
@@ -80,7 +87,7 @@ const CompanyFormBasicInfo = ({
               stand.attributes.name = e.target.value;
               checkCompleteness();
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -96,7 +103,7 @@ const CompanyFormBasicInfo = ({
               stand.attributes.slogan = e.target.value;
               checkCompleteness();
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -114,7 +121,7 @@ const CompanyFormBasicInfo = ({
               stand.attributes.description = e.target.value;
               checkCompleteness();
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -130,10 +137,95 @@ const CompanyFormBasicInfo = ({
               stand.attributes.short_description = e.target.value;
               checkCompleteness();
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
+
+        <Grid item xs={12}>
+          <Box marginTop={3} marginBottom={2}>
+            <Divider />
+          </Box>
+          <Typography variant="body1">
+            Informacion de para restaurantes (opcional)
+          </Typography>
+        </Grid>
+        <Grid item xs={12}>
+          <FormGroup>
+            <Grid container columnSpacing={2}>
+              <Grid item xs={6}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={stand.attributes.restaurant}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        (stand.attributes.restaurant = e.target.checked)
+                      }
+                    />
+                  }
+                  label="La empresa es un restaurante?"
+                  disabled={isLoading || isLoadingLocal.value}
+                />
+              </Grid>
+              {stand.attributes.restaurant ? (
+                <Grid item xs={6}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={stand.attributes.booking_active}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          (stand.attributes.booking_active = e.target.checked)
+                        }
+                      />
+                    }
+                    label="Tiene reservaciones?"
+                    disabled={isLoading || isLoadingLocal.value}
+                  />
+                </Grid>
+              ) : null}
+            </Grid>
+          </FormGroup>
+        </Grid>
+        {stand.attributes.booking_active ? (
+          <>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                label="Costo de reservacion (opcional)"
+                variant="outlined"
+                size="small"
+                type="number"
+                name="booking_fee"
+                value={stand.attributes.booking_fee}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  stand.attributes.booking_fee =
+                    Number(e.target.value) >= 0 ? Number(e.target.value) : 0;
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">$</InputAdornment>
+                  ),
+                }}
+                disabled={isLoading || isLoadingLocal.value}
+                style={{ width: '100%' }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={8}>
+              <TextField
+                label="Correo electronico de reservaciones"
+                variant="outlined"
+                size="small"
+                type="email"
+                name="booking_email"
+                value={stand.attributes.booking_email}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  stand.attributes.booking_email = e.target.value;
+                }}
+                disabled={isLoading || isLoadingLocal.value}
+                style={{ width: '100%' }}
+              />
+            </Grid>
+          </>
+        ) : null}
 
         <Grid item xs={12}>
           <Box marginTop={3} marginBottom={2}>
@@ -154,7 +246,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.web_link = e.target.value;
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -169,7 +261,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.facebook_link = e.target.value;
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -184,7 +276,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.twitter_link = e.target.value;
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -199,7 +291,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.instagram_link = e.target.value;
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -214,7 +306,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.linkedin_link = e.target.value;
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -229,7 +321,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.google_link = e.target.value;
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -244,7 +336,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.youtube_link = e.target.value;
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -271,7 +363,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               (stand.attributes.about = e.target.value)
             }
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -288,7 +380,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               (stand.attributes.mission = e.target.value)
             }
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -305,7 +397,7 @@ const CompanyFormBasicInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               (stand.attributes.vision = e.target.value)
             }
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>

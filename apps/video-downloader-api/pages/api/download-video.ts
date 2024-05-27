@@ -178,9 +178,12 @@ const downloadVideo = (
           } else {
             command += `--add-header "user-agent:Mozilla/5.0" -vU `;
           }
-          if (isTiktok(url)) {
-            command += ' -f 0 ';
+          if (isYoutube(url)) {
+            command += ' --no-playlist ';
           }
+          // if (isTiktok(url)) {
+          //   command += ' -f 0 ';
+          // }
           if (isInstagram(url) || iOS) {
             command += ' -S "codec:h264" ';
           }
@@ -192,6 +195,7 @@ const downloadVideo = (
             command += ' --merge-output-format mp4 ';
           }
           command += ` -o "media/${item.id}.%(ext)s"`;
+          command += ' --quiet';
           console.log('command:', command);
           item.remoteAddress = metadata.remoteAddress;
           item.justAudio = options.justAudio;
@@ -202,7 +206,7 @@ const downloadVideo = (
           updateItem(item)
             .then((item) => {
               res(item);
-              exec(command, (error, _stdout) => {
+              exec(command, { maxBuffer: 1024 * 2048 }, (error, _stdout) => {
                 if (error) {
                   console.log('>> download error:', error);
                   const videoDeleted =
@@ -273,7 +277,7 @@ export default function handler(
             .then((item) => res.status(201).json(item))
             .catch((error) => res.status(400).send(error.toString()));
           downloadVideo(url, options, metadata)
-            .then(() => console.log('downloadVideo success'))
+            .then(() => console.log('downloadVideo request processing'))
             .catch((e) => console.log('downloadVideo error:', e));
         })
         .catch((error) => res.status(400).send(error.toString()));

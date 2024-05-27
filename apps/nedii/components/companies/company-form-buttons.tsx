@@ -11,6 +11,7 @@ type Props = {
   canSubmit: () => boolean;
   onCancel: () => void;
   onDelete: () => void;
+  onComplete: () => void;
 };
 
 const CompanyFormButtons = ({
@@ -20,6 +21,7 @@ const CompanyFormButtons = ({
   canSubmit,
   onCancel,
   onDelete,
+  onComplete,
 }: Props): ReactElement => {
   return (
     <>
@@ -70,6 +72,7 @@ const CompanyFormButtons = ({
             marginLeft: '15px',
             textTransform: 'initial',
           }}
+          onClick={() => onComplete()}
         >
           {standID ? 'Actualizar' : 'Agregar'} empresa
         </Button>

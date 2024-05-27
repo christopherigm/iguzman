@@ -43,6 +43,7 @@ export { default as isX } from './lib/is-x-checker';
 export { default as InnerSort } from './lib/inner-sort';
 export { default as isPinterest } from './lib/is-pinterest-checker';
 export type { InnerSortOrderTypes } from './lib/inner-sort';
+export { default as removeImagesForAPICall } from './lib/remove-images-for-api-call';
 
 /**
  * API

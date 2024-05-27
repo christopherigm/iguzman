@@ -22,12 +22,20 @@ export default class Country {
       object.attributes?.img_flag ?? this.attributes.img_flag;
   }
 
-  public getPlainAttributes(): Object {
+  public getPlainAttributes(): any {
     return {
       name: this.attributes.name,
       code: this.attributes.code,
       phone_code: this.attributes.phone_code,
       img_flag: this.attributes.img_flag,
+    };
+  }
+
+  public getPlainObject(): any {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.getPlainAttributes(),
     };
   }
 

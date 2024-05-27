@@ -10,6 +10,30 @@ export default class WebLinks {
   private _youtube_link: Signal<string> = signal('');
   private _twitch_link: Signal<string> = signal('');
 
+  public getWebLinksPlainAttributes() {
+    return {
+      ...(this.web_link && { web_link: this.web_link }),
+      ...(this.facebook_link && { facebook_link: this.facebook_link }),
+      ...(this.twitter_link && { twitter_link: this.twitter_link }),
+      ...(this.instagram_link && { instagram_link: this.instagram_link }),
+      ...(this.linkedin_link && { linkedin_link: this.linkedin_link }),
+      ...(this.google_link && { google_link: this.google_link }),
+      ...(this.youtube_link && { youtube_link: this.youtube_link }),
+      ...(this.twitch_link && { twitch_link: this.twitch_link }),
+    };
+  }
+
+  public setWebLinksFromPlainObject(object: any) {
+    this.web_link = object.web_link ?? this.web_link;
+    this.facebook_link = object.facebook_link ?? this.facebook_link;
+    this.twitter_link = object.twitter_link ?? this.twitter_link;
+    this.instagram_link = object.instagram_link ?? this.instagram_link;
+    this.linkedin_link = object.linkedin_link ?? this.linkedin_link;
+    this.google_link = object.google_link ?? this.google_link;
+    this.youtube_link = object.youtube_link ?? this.youtube_link;
+    this.twitch_link = object.twitch_link ?? this.twitch_link;
+  }
+
   public get web_link() {
     return this._web_link.value;
   }

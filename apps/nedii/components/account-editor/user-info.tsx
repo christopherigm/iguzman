@@ -130,6 +130,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                 variant="outlined"
                 size="small"
                 type="text"
+                name="name"
                 value={user.attributes.first_name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   (user.attributes.first_name = e.target.value)
@@ -144,6 +145,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                 variant="outlined"
                 size="small"
                 type="text"
+                name="lastname"
                 value={user.attributes.last_name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   (user.attributes.last_name = e.target.value)
@@ -158,6 +160,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                 variant="outlined"
                 size="small"
                 type="text"
+                name="email"
                 value={user.attributes.email}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   (user.attributes.email = e.target.value)
@@ -185,6 +188,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                       }
                     />
                   }
+                  name="promotions"
                   label="Promociones"
                   disabled={isLoading.value}
                 />
@@ -197,6 +201,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                       }
                     />
                   }
+                  name="newsletter"
                   label="Comunicados"
                   disabled={isLoading.value}
                 />

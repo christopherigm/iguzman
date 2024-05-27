@@ -58,14 +58,18 @@ const Companies = ({
     isLoading.value = true;
     user.getNediiUserFromLocalStorage();
     user.URLBase = URLBase;
-    user.getUserCompaniesFromAPI().finally(() => (isLoading.value = false));
+    user.getUserCompaniesFromAPI().finally(() => {
+      isLoading.value = false;
+      addOrEditCompany.value = false;
+    });
   }, []);
 
-  // const onComplete = () => {
-  //   addOrEditCompany.value = false;
-  //   isLoading.value = true;
-  //   user.getUserCompaniesFromAPI().finally(() => (isLoading.value = false));
-  // };
+  const onComplete = () => {
+    // addOrEditCompany.value = false;
+    // isLoading.value = true;
+    // user.getUserCompaniesFromAPI().finally(() => (isLoading.value = false));
+    // console.log('stand', currentCompany.value.getPlainObject());
+  };
 
   const goToNextMenuItem = (id?: number) => {
     itemSelectedId.value = id ?? itemSelectedId.value + 1;
@@ -84,6 +88,7 @@ const Companies = ({
       return i;
     });
     menuItems.value = [...menuItems.value];
+    onComplete();
   };
 
   return (
@@ -117,6 +122,7 @@ const Companies = ({
                 ) : null}
                 {itemSelectedId.value === 1 ? (
                   <CompanyFormBasicInfo
+                    isLoading={isLoading.value}
                     darkMode={darkMode}
                     URLBase={URLBase}
                     stand={currentCompany.value}
@@ -127,6 +133,7 @@ const Companies = ({
                 ) : null}
                 {itemSelectedId.value === 2 ? (
                   <CompanyFormContactInfo
+                    isLoading={isLoading.value}
                     darkMode={darkMode}
                     URLBase={URLBase}
                     stand={currentCompany.value}
@@ -137,6 +144,7 @@ const Companies = ({
                 ) : null}
                 {itemSelectedId.value === 3 ? (
                   <CompanyFormGallery
+                    isLoading={isLoading.value}
                     darkMode={darkMode}
                     URLBase={URLBase}
                     stand={currentCompany.value}
@@ -170,14 +178,28 @@ const Companies = ({
               ) : null}
             </Box>
           </Grid>
+          {isLoading.value ? (
+            <Grid item xs={12}>
+              <Box sx={{ width: '100%' }}>
+                <LinearProgress />
+              </Box>
+            </Grid>
+          ) : null}
           <Grid item xs={12} marginBottom={2}>
             <CompanyFormButtons
               standID={currentCompany.value.id}
-              isLoading={false}
-              complete={false}
-              canSubmit={() => false}
-              onCancel={() => {}}
+              isLoading={isLoading.value}
+              complete={currentCompany.value.id ? true : false}
+              canSubmit={() => true}
+              onCancel={() => (addOrEditCompany.value = false)}
               onDelete={() => {}}
+              onComplete={() => {
+                isLoading.value = true;
+                currentCompany.value
+                  .save()
+                  .catch((e) => console.log('error:', e))
+                  .finally(() => (isLoading.value = false));
+              }}
             />
           </Grid>
           {devMode ? (
@@ -214,6 +236,36 @@ const Companies = ({
                     }}
                   />
                 </Grid>
+                {user.companies.map((i: Stand, index: number) => {
+                  return (
+                    <Grid item xs={4} sm={2} key={index}>
+                      <Paper
+                        elevation={2}
+                        onClick={() => {
+                          currentCompany.value = i;
+                          currentCompany.value.URLBase = user.URLBase;
+                          currentCompany.value.access = user.access;
+                          currentCompany.value.relationships.owner = {
+                            data: new User(),
+                          };
+                          currentCompany.value.relationships.owner.data.id =
+                            user.id;
+                          addOrEditCompany.value = true;
+                        }}
+                        sx={{
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Box
+                          padding={1.5}
+                          sx={{ opacity: isLoading ? '0.5' : '1' }}
+                        >
+                          {i.attributes.name}
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  );
+                })}
                 {isLoading.value ? (
                   <Grid item xs={12}>
                     <Box sx={{ width: '100%' }}>

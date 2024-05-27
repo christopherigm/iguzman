@@ -1,11 +1,11 @@
-asgiref==3.6.0
+asgiref==3.8.1
 bcrypt==4.0.1
 certifi==2023.5.7
 cffi==1.15.1
 charset-normalizer==3.1.0
 coreapi==2.3.3
 coreschema==0.0.4
-Django==4.1.9
+Django==5.0.6
 django-3-jet==1.0.8
 django-colorfield==0.8.0
 django-cors-headers==4.0.0
@@ -14,9 +14,9 @@ django-filter==23.2
 django-resized==1.0.2
 django-tinymce==3.6.1
 django-tinymce4-lite==1.8.0
-djangorestframework==3.14.0
-djangorestframework-jsonapi==6.0.0
-djangorestframework-simplejwt==5.2.2
+djangorestframework==3.15.1
+djangorestframework-jsonapi==7.0.0
+djangorestframework-simplejwt==5.3.1
 drf-yasg==1.21.5
 environ==1.0
 gunicorn==20.1.0

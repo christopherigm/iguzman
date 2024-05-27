@@ -37,6 +37,21 @@ export class EnvironmentVariables {
     this.isLoading = v;
   }
 
+  public getPlainObject(): Object {
+    return {
+      hostName: this.hostName,
+      URLBase: this.URLBase,
+      K8sURLBase: this.K8sURLBase,
+      defaultLanguage: this.defaultLanguage,
+      logo: this.logo,
+      loginEnabled: this.loginEnabled,
+      cartEnabled: this.cartEnabled,
+      favoritesEnabled: this.favoritesEnabled,
+      ordersEnabled: this.ordersEnabled,
+      version: this.version,
+    };
+  }
+
   public get hostName() {
     return this._hostName.value;
   }

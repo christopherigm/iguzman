@@ -79,16 +79,36 @@ export class BaseUser {
 
   public getPlainAttributes(): Object {
     return {
-      email: this.attributes.email,
-      username: this.attributes.username,
-      password: this.attributes.password,
-      first_name: this.attributes.first_name,
-      last_name: this.attributes.last_name,
-      img_picture: this.attributes.img_picture,
-      theme: this.attributes.theme,
-      theme_color: this.attributes.theme_color,
-      profile_picture_shape: this.attributes.profile_picture_shape,
-      phone_number: this.attributes.phone_number,
+      ...(this.attributes.email && { email: this.attributes.email }),
+      ...(this.attributes.username && { username: this.attributes.username }),
+      ...(this.attributes.password && { password: this.attributes.password }),
+      ...(this.attributes.first_name && {
+        first_name: this.attributes.first_name,
+      }),
+      ...(this.attributes.last_name && {
+        last_name: this.attributes.last_name,
+      }),
+      ...(this.attributes.img_picture && {
+        img_picture: this.attributes.img_picture,
+      }),
+      ...(this.attributes.theme && { theme: this.attributes.theme }),
+      ...(this.attributes.theme_color && {
+        email: this.attributes.theme_color,
+      }),
+      ...(this.attributes.profile_picture_shape && {
+        profile_picture_shape: this.attributes.profile_picture_shape,
+      }),
+      ...(this.attributes.phone_number && {
+        phone_number: this.attributes.phone_number,
+      }),
+    };
+  }
+
+  public getPlainObject(): Object {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.getPlainAttributes(),
     };
   }
 

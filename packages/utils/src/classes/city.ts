@@ -16,24 +16,43 @@ export default class City {
   public setAttributesFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
     // Attributes
-    this.attributes.name = object.attributes?.name ?? this.attributes.name;
+    if (object.attributes) {
+      this.attributes.name = object.attributes.name ?? this.attributes.name;
+    }
     // Relationships
-    if (object.relationships?.state.data) {
-      this.relationships.state.data.setAttributesFromPlainObject(
-        object.relationships?.state?.data
-      );
+    if (object.relationships) {
+      if (object.relationships.state?.data) {
+        this.relationships.state.data.setAttributesFromPlainObject(
+          object.relationships.state.data
+        );
+      }
     }
   }
 
-  public getPlainAttributes(): Object {
+  public getPlainAttributes(): any {
     return {
-      name: this.attributes.name,
+      ...(this.attributes.name && {
+        name: this.attributes.name,
+      }),
     };
   }
 
-  public getPlainRelationships(): Object {
+  public getPlainRelationships(): any {
     return {
-      state: this.relationships.state.data.getPlainAttributes(),
+      ...(this.relationships.state.data.id && {
+        state: {
+          data: this.relationships.state.data.getPlainAttributes(),
+        },
+      }),
+    };
+  }
+
+  public getPlainObject(): any {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.getPlainAttributes(),
+      relationships: this.getPlainRelationships(),
     };
   }
 

@@ -1,27 +1,29 @@
 import { ReactElement, FormEvent, useEffect } from 'react';
+import { user } from 'classes/user';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
-import Alert from '@mui/material/Alert';
-import Stack from '@mui/material/Stack';
-import { GetIconByName, MenuItemWithIcon } from '@repo/ui';
-import { BaseUserAddress } from '@repo/utils';
 import { Signal, signal } from '@preact-signals/safe-react';
-import Divider from '@mui/material/Divider';
 import Stand from 'classes/stand';
-import { PaperCard, CountryField, StateField, CityField } from '@repo/ui';
+import { CountryField, StateField, CityField } from '@repo/ui';
 import { Country, State, City } from '@repo/utils';
+import StandPhone from 'classes/stand/stand-phone';
+import PhonesForm from 'components/companies/phones-form';
 
 const country = signal<Country>(Country.getInstance()).value;
+const defaultCountry = signal<Country>(Country.getInstance()).value;
 const state = signal<State>(State.getInstance()).value;
+const defaultState = signal<State>(State.getInstance()).value;
+const defaultCity = signal<City>(City.getInstance()).value;
 
-const isLoading: Signal<boolean> = signal(false);
+const isLoadingLocal: Signal<boolean> = signal(false);
 const complete: Signal<boolean> = signal(false);
 const error: Signal<string> = signal('');
+const phones: Signal<Array<StandPhone>> = signal([]);
 
 type Props = {
+  isLoading: boolean;
   darkMode: boolean;
   URLBase: string;
   stand: Stand;
@@ -31,6 +33,7 @@ type Props = {
 };
 
 const CompanyFormContactInfo = ({
+  isLoading = false,
   darkMode = false,
   URLBase,
   stand,
@@ -40,19 +43,31 @@ const CompanyFormContactInfo = ({
 }: Props): ReactElement => {
   useEffect(() => {
     console.log('CompanyFormContactInfo.tsx > renders');
-    isLoading.value = false;
+    isLoadingLocal.value = false;
     complete.value = false;
     error.value = '';
-    // country.id = 0;
+    phones.value = [...stand.relationships.phones.data];
+    user.getNediiUserFromLocalStorage();
+    user.URLBase = URLBase;
+    if (stand.relationships.city.data.id) {
+      defaultCity.id = stand.relationships.city.data.id;
+      if (stand.relationships.city.data.relationships?.state?.data?.id) {
+        defaultState.id =
+          stand.relationships.city.data.relationships.state.data.id;
+        if (
+          stand.relationships.city.data.relationships.state.data.relationships
+            ?.country?.data?.id
+        ) {
+          defaultCountry.id =
+            stand.relationships.city.data.relationships.state.data.relationships.country.data.id;
+        }
+      }
+    }
   }, []);
-
-  const canSubmit = (): boolean => {
-    return true;
-  };
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    isLoading.value = true;
+    isLoadingLocal.value = true;
     complete.value = false;
     error.value = '';
   };
@@ -63,7 +78,7 @@ const CompanyFormContactInfo = ({
       stand.attributes.address &&
       stand.attributes.zip_code &&
       stand.attributes.contact_email &&
-      stand.relationships.phone
+      stand.relationships.phones.data.length
     ) {
       onComplete();
     } else {
@@ -87,6 +102,7 @@ const CompanyFormContactInfo = ({
             country={country.id}
             language="es"
             URLBase={URLBase}
+            defaultCountryID={defaultCountry.id}
             onChange={(value) => {
               country.id = value;
               state.id = 0;
@@ -101,6 +117,7 @@ const CompanyFormContactInfo = ({
               language="es"
               URLBase={URLBase}
               state={state.id}
+              defaultStateID={defaultState.id}
               onChange={(value) => {
                 state.id = value;
                 stand.relationships.city.data.id = 0;
@@ -115,14 +132,15 @@ const CompanyFormContactInfo = ({
               language="es"
               URLBase={URLBase}
               city={stand.relationships.city.data.id}
+              defaultCityID={defaultCity.id}
               onChange={(value) => {
+                console.log('Update city value:', value);
                 stand.relationships.city.data.id = value;
                 checkCompleteness();
               }}
             />
           </Grid>
         ) : null}
-
         <Grid item xs={12} sm={8}>
           <TextField
             label="Direccion de la empresa"
@@ -135,7 +153,7 @@ const CompanyFormContactInfo = ({
               stand.attributes.address = e.target.value;
               checkCompleteness();
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -151,7 +169,7 @@ const CompanyFormContactInfo = ({
               stand.attributes.zip_code = e.target.value;
               checkCompleteness();
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -167,7 +185,7 @@ const CompanyFormContactInfo = ({
               stand.attributes.contact_email = e.target.value;
               checkCompleteness();
             }}
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
@@ -182,26 +200,25 @@ const CompanyFormContactInfo = ({
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               (stand.attributes.support_email = e.target.value)
             }
-            disabled={isLoading.value}
+            disabled={isLoading || isLoadingLocal.value}
             style={{ width: '100%' }}
           />
         </Grid>
-        <Grid item xs={6} sm={4}>
-          <TextField
-            label="Telefono de la empresa"
-            variant="outlined"
-            size="small"
-            type="tel"
-            name="phone"
-            value={stand.relationships.phone}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              stand.relationships.phone = e.target.value;
-              checkCompleteness();
-            }}
-            disabled={isLoading.value}
-            style={{ width: '100%' }}
-          />
-        </Grid>
+        {stand.id ? (
+          <Grid item xs={12}>
+            <PhonesForm
+              isLoading={isLoadingLocal.value}
+              phones={phones.value}
+              standId={stand.id}
+              URLBase={URLBase}
+              access={user.access}
+              onChnage={(): void => {
+                phones.value = [...phones.value];
+                stand.relationships.phones.data = [...phones.value];
+              }}
+            />
+          </Grid>
+        ) : null}
       </Grid>
     </Box>
   );

@@ -10,6 +10,7 @@ type Props = {
   URLBase: string;
   language: 'en' | 'es';
   country: number;
+  defaultCountryID?: number;
   onChange: (value: number) => void;
 };
 
@@ -22,6 +23,7 @@ const CountryField = ({
   URLBase,
   language = 'en',
   country = 0,
+  defaultCountryID,
   onChange,
 }: Props): ReactElement => {
   const [countries, setCountries] = useState<Array<Country>>([]);
@@ -42,12 +44,14 @@ const CountryField = ({
             };
           })
         );
-        if (!country && data.length && data[0]) {
+        if (!country && data.length && data[0] && !defaultCountryID) {
           onChange(data[0].id);
+        } else if (defaultCountryID) {
+          onChange(defaultCountryID);
         }
       })
       .catch((_e: any) => setIsLoading(false));
-  }, []);
+  }, [defaultCountryID]);
 
   const getLabel = (): string => {
     return !countries.length && isLoading
@@ -74,7 +78,7 @@ const CountryField = ({
           id="demo-simple-select"
           value={String(country)}
           label={getLabel()}
-          disabled={isLoading}
+          disabled={isLoading || !options.length}
           size="small"
           onChange={(e: SelectChangeEvent) => onChange(Number(e.target.value))}
         >

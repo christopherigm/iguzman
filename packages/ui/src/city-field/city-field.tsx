@@ -14,6 +14,7 @@ type Props = {
   language: 'en' | 'es';
   state: number;
   city: number;
+  defaultCityID?: number;
   onChange: (value: number) => void;
 };
 
@@ -27,6 +28,7 @@ const CityField = ({
   language = 'en',
   state,
   city,
+  defaultCityID,
   onChange,
 }: Props): ReactElement => {
   const [cities, setCities] = useState<Array<CityInterface>>([]);
@@ -38,7 +40,7 @@ const CityField = ({
   useEffect(() => {
     setIsLoading(true);
     GetCities();
-  }, [state]);
+  }, [state, defaultCityID]);
 
   const GetCities = (): Promise<CityInterface> => {
     return new Promise((_res, rej) => {
@@ -58,8 +60,10 @@ const CityField = ({
               };
             })
           );
-          if (!city && data.length && data[0]) {
+          if (!city && data.length && data[0] && !defaultCityID) {
             onChange(data[0].id);
+          } else if (defaultCityID) {
+            onChange(defaultCityID);
           }
         })
         .catch((e: any) => rej(e));
@@ -170,11 +174,13 @@ const CityField = ({
                 id="demo-simple-select"
                 value={String(city)}
                 label={getLabel()}
-                disabled={isLoading}
+                disabled={isLoading || !options.length}
                 size="small"
-                onChange={(e: SelectChangeEvent) => {
-                  onChange(Number(e.target.value));
-                }}
+                onChange={(e: SelectChangeEvent) =>
+                  Number(e.target.value) && options.length
+                    ? onChange(Number(e.target.value))
+                    : null
+                }
               >
                 {options.map((i: Option, index: number) => {
                   return (

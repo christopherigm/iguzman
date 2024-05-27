@@ -7,6 +7,7 @@ import {
   BaseUserAddress,
   GetLocalStorageData,
   SetLocalStorageData,
+  removeImagesForAPICall,
 } from '@repo/utils';
 import Stand from 'classes/stand';
 
@@ -63,18 +64,48 @@ export default class User extends BaseUser {
   public getNediiUserPlainAttributes(): Object {
     return {
       ...this.getPlainAttributes(),
-      token: this.attributes.token,
-      is_seller: this.attributes.is_seller,
-      newsletter: this.attributes.newsletter,
-      promotions: this.attributes.promotions,
-      biography: this.attributes.biography,
-      owner_position: this.attributes.owner_position,
-      owner_position_description: this.attributes.owner_position_description,
-      owner_phone: this.attributes.owner_phone,
-      owner_office_phone: this.attributes.owner_office_phone,
-      owner_email: this.attributes.owner_email,
-      owner_whatsapp: this.attributes.owner_whatsapp,
-      owner_address: this.attributes.owner_address,
+      ...(this.attributes.token && { token: this.attributes.token }),
+      ...(this.attributes.is_seller && {
+        is_seller: this.attributes.is_seller,
+      }),
+      ...(this.attributes.newsletter && {
+        newsletter: this.attributes.newsletter,
+      }),
+      ...(this.attributes.promotions && {
+        promotions: this.attributes.promotions,
+      }),
+      ...(this.attributes.biography && {
+        biography: this.attributes.biography,
+      }),
+      ...(this.attributes.owner_position && {
+        owner_position: this.attributes.owner_position,
+      }),
+      ...(this.attributes.owner_position_description && {
+        owner_position_description: this.attributes.owner_position_description,
+      }),
+      ...(this.attributes.owner_phone && {
+        owner_phone: this.attributes.owner_phone,
+      }),
+      ...(this.attributes.owner_office_phone && {
+        owner_office_phone: this.attributes.owner_office_phone,
+      }),
+      ...(this.attributes.owner_email && {
+        owner_email: this.attributes.owner_email,
+      }),
+      ...(this.attributes.owner_whatsapp && {
+        owner_whatsapp: this.attributes.owner_whatsapp,
+      }),
+      ...(this.attributes.owner_address && {
+        owner_address: this.attributes.owner_address,
+      }),
+    };
+  }
+
+  public getPlainObject(): Object {
+    return {
+      ...(this.id && { id: this.id }),
+      type: this.type,
+      attributes: this.getNediiUserPlainAttributes(),
     };
   }
 
@@ -113,9 +144,7 @@ export default class User extends BaseUser {
         return rej(new Error('No URLBase'));
       }
       const attributes: any = this.getNediiUserPlainAttributes();
-      if (this.attributes.img_picture.search(';base64') < 0) {
-        delete attributes.img_picture;
-      }
+      removeImagesForAPICall(attributes);
       if (attributes.password === '') {
         delete attributes.password;
       }
@@ -187,22 +216,23 @@ export default class User extends BaseUser {
   public getUserCompaniesFromAPI(): Promise<Array<any>> {
     return new Promise((res, rej) => {
       let url = `${this.URLBase}/v1/stands/?filter[owner]=${this.id}`;
-      // url += '&include=city,city.state,city.state.country';
+      url += '&include=city,city.state,city.state.country,phones';
       API.Get({
         url,
         jwt: this.access,
       })
         .then((response: { data: Array<any> }) => {
-          const rawData = response.data.length
-            ? RebuildData(response).data
-            : [];
+          const rawData =
+            response && response.data && response.data.length
+              ? RebuildData(response).data
+              : [];
           this.companies = [];
           rawData.forEach((i: any) => {
             const newItem = new Stand();
             newItem.id = Number(i.id);
             newItem.URLBase = this.URLBase;
             newItem.access = this.access;
-            newItem.setAttributesFromPlainObject(i);
+            newItem.setDataFromPlainObject(i);
             this.companies.push(newItem);
           });
           this.companies = [...this.companies];

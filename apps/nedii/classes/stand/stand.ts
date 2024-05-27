@@ -1,8 +1,8 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { City } from '@repo/utils';
+import { City, API, removeImagesForAPICall } from '@repo/utils';
 import NediiPlan from 'classes/nedii-plan';
 import User from 'classes/user';
-import Group from 'classes/group';
+import Category from 'classes/category';
 import Expo from 'classes/expo';
 import StandAttributes from './stand-attributes';
 import StandBookingQuestion from 'classes/stand/stand-booking-question';
@@ -26,39 +26,18 @@ export default class Stand {
     return Stand.instance || new Stand();
   }
 
-  public setAttributesFromPlainObject(object: any) {
+  public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.name = object.attributes.name ?? this.attributes.name;
-    this.attributes.slug = object.attributes.slug ?? this.attributes.slug;
-    this.attributes.img_logo =
-      object.attributes.img_logo ?? this.attributes.img_logo;
-    this.attributes.img_cover =
-      object.attributes.img_cover ?? this.attributes.img_cover;
-    this.attributes.average_rating =
-      object.attributes.average_rating ?? this.attributes.average_rating;
-    this.attributes.products_max_price =
-      object.attributes.products_max_price ??
-      this.attributes.products_max_price;
-    this.attributes.meals_max_price =
-      object.attributes.meals_max_price ?? this.attributes.meals_max_price;
-    this.attributes.services_max_price =
-      object.attributes.services_max_price ??
-      this.attributes.services_max_price;
-    this.attributes.vehicles_max_price =
-      object.attributes.vehicles_max_price ??
-      this.attributes.vehicles_max_price;
-    this.attributes.real_state_max_price =
-      object.attributes.real_state_max_price ??
-      this.attributes.real_state_max_price;
+    this.attributes.setAttributesFromPlainObject(object);
     // Relationships
     if (object.relationships?.city?.data) {
       this.relationships.city.data.setAttributesFromPlainObject(
         object.relationships?.city?.data
       );
     }
-    if (object.relationships?.group?.data) {
-      this.relationships.group.data.setAttributesFromPlainObject(
-        object.relationships?.group?.data
+    if (object.relationships?.category?.data) {
+      this.relationships.category.data.setAttributesFromPlainObject(
+        object.relationships?.category?.data
       );
     }
     if (object.relationships?.expo?.data) {
@@ -66,9 +45,63 @@ export default class Stand {
         object.relationships?.expo?.data
       );
     }
+    if (object.relationships?.phones?.data) {
+      object.relationships.phones.data.map((i: any) => {
+        const newPhone = new StandPhone();
+        newPhone.setDataFromPlainObject(i);
+        this.relationships.phones.data.push(newPhone);
+      });
+      this.relationships.phones.data = [...this.relationships.phones.data];
+    }
     this.relationships.owner = {
       data: User.getInstance(),
     };
+  }
+
+  public getPlainObject(): any {
+    return {
+      ...(this.id && { id: this.id }),
+      type: this.type,
+      attributes: this.attributes.getStandPlainAttributes(),
+      relationships: this.relationships.getStandRelationshipsPlainAttributes(
+        this.id
+      ),
+    };
+  }
+
+  public getMinimumPlainObject(): any {
+    return {
+      ...(this.id && { id: this.id }),
+      type: this.type,
+    };
+  }
+
+  public save(): Promise<void> {
+    return new Promise((res, rej) => {
+      const url = `${this.URLBase}/v1/stands/${this.id ? this.id + '/' : ''}`;
+      const data = {
+        url,
+        jwt: this.access,
+        data: this.getPlainObject(),
+      };
+      removeImagesForAPICall(data.data.attributes);
+      console.log('saveStand:', data);
+      if (this.id) {
+        API.Patch(data)
+          .then((response) => {
+            console.log('response:', response);
+            res(response);
+          })
+          .catch((error) => rej(error));
+      } else {
+        API.Post(data)
+          .then((response) => {
+            console.log('response:', response);
+            res(response);
+          })
+          .catch((error) => rej(error));
+      }
+    });
   }
 
   public get id() {
@@ -94,12 +127,82 @@ export default class Stand {
 }
 
 class StandRelationships {
+  public getStandRelationshipsPlainAttributes(id = 0): Object {
+    return {
+      plan: {
+        data: this.plan.data.id
+          ? this.plan.data.getPlainObject()
+          : {
+              id: 1,
+              type: 'NediiPlan',
+            },
+      },
+      owner: {
+        data: this.owner?.data.getPlainObject(),
+      },
+      category: {
+        data: this.category.data.getPlainObject(),
+      },
+      expo: {
+        data: this.expo.data.getPlainObject(),
+      },
+      ...(this.city.data.id && {
+        city: {
+          data: this.city.data.getPlainObject(),
+        },
+      }),
+
+      phones: {
+        data: id ? this.phones.data.map((i) => i.getPlainObject()) : [],
+      },
+      pictures: {
+        data: id ? this.pictures.data.map((i) => i.getPlainObject()) : [],
+      },
+      highlighted_meals: {
+        data: [],
+      },
+      highlighted_products: {
+        data: [],
+      },
+      highlighted_real_estates: {
+        data: [],
+      },
+      highlighted_services: {
+        data: [],
+      },
+      highlighted_vehicles: {
+        data: [],
+      },
+      panorama: {
+        data: [],
+      },
+      promotions: {
+        data: [],
+      },
+      ratings: {
+        data: [],
+      },
+      stand_booking_questions: {
+        data: [],
+      },
+      stand_news: {
+        data: [],
+      },
+      survey_questions: {
+        data: [],
+      },
+      video_links: {
+        data: [],
+      },
+    };
+  }
+
   public _plan: Signal<{ data: NediiPlan }> = signal({
     data: NediiPlan.getInstance(),
   });
   public _owner: Signal<{ data: User } | null> = signal(null);
-  public _group: Signal<{ data: Group }> = signal({
-    data: Group.getInstance(),
+  public _category: Signal<{ data: Category }> = signal({
+    data: Category.getInstance(),
   });
   public _expo: Signal<{ data: Expo }> = signal({
     data: Expo.getInstance(),
@@ -145,11 +248,11 @@ class StandRelationships {
     this._owner.value = value;
   }
 
-  public get group() {
-    return this._group.value;
+  public get category() {
+    return this._category.value;
   }
-  public set group(value) {
-    this._group.value = value;
+  public set category(value) {
+    this._category.value = value;
   }
 
   public get expo() {
@@ -213,14 +316,6 @@ class StandRelationships {
   }
   public set ratings(value) {
     this._ratings.value = value;
-  }
-
-  public get phone() {
-    return '248 111';
-    // return this._id.value;
-  }
-  public set phone(value) {
-    // this._id.value = value;
   }
 }
 

@@ -4,12 +4,34 @@ export type Exposure = 'basic' | 'medium' | 'high' | 'full';
 
 export default class NediiPlan {
   public static instance: NediiPlan;
-  protected type: string = 'NediiPlan';
+  public type: string = 'NediiPlan';
   private _id: Signal<number> = signal(0);
   public attributes: NediiPlanAttributes = new NediiPlanAttributes();
 
   public static getInstance(): NediiPlan {
     return NediiPlan.instance || new NediiPlan();
+  }
+
+  public getPlainAttributes(): Object {
+    return {
+      name: this.attributes.name,
+      unlimited_items: this.attributes.unlimited_items,
+      number_of_items: this.attributes.number_of_items,
+      advertising_days: this.attributes.advertising_days,
+      stand_enabled: this.attributes.stand_enabled,
+      digital_card: this.attributes.digital_card,
+      billed_monthly: this.attributes.billed_monthly,
+      exposure: this.attributes.exposure,
+      price: this.attributes.price,
+    };
+  }
+
+  public getPlainObject(): Object {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.getPlainAttributes(),
+    };
   }
 
   public get id() {

@@ -121,6 +121,15 @@ export class BaseUserAddress {
     };
   }
 
+  public getPlainObject(): Object {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.getPlainAttributes(),
+      relationships: this.getPlainRelationships(),
+    };
+  }
+
   public getPlainRelationshipsForAPI(): Object {
     const obj: any = {};
     if (this.relationships.city.data.id) {

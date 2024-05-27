@@ -1,6 +1,6 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { API, RebuildData, CommonFields } from '@repo/utils';
-import Group from 'classes/group';
+import { API, CommonFields } from '@repo/utils';
+import Category from 'classes/category';
 
 export default class Expo {
   public static instance: Expo;
@@ -15,14 +15,14 @@ export default class Expo {
     return Expo.instance || new Expo();
   }
 
-  public getExpos(groups: Array<number> = []): Promise<Array<Expo>> {
+  public getExpos(categories: Array<number> = []): Promise<Array<Expo>> {
     return new Promise((res, rej) => {
       if (!this.URLBase) {
         return rej('No URLBase');
       }
       const url = `${
         this.URLBase
-      }/v1/expos/?filter[groups__id__in]=${groups.join(',')}`;
+      }/v1/expos/?filter[categories__id__in]=${categories.join(',')}`;
       API.Get({ url })
         .then((response) => {
           const expos: Array<Expo> = [];
@@ -39,10 +39,47 @@ export default class Expo {
 
   public setAttributesFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.name = object.attributes.name ?? this.attributes.name;
-    this.attributes.img_picture =
-      object.attributes.img_picture ?? this.attributes.img_picture;
-    this.attributes.slug = object.attributes.slug ?? this.attributes.slug;
+    if (object.attributes) {
+      this.attributes.name = object.attributes.name ?? this.attributes.name;
+      this.attributes.img_picture =
+        object.attributes.img_picture ?? this.attributes.img_picture;
+      this.attributes.slug = object.attributes.slug ?? this.attributes.slug;
+    }
+  }
+
+  public getPlainAttributes(): Object {
+    return {
+      ...(this.attributes.name && {
+        name: this.attributes.name,
+      }),
+      ...(this.attributes.slug && {
+        slug: this.attributes.slug,
+      }),
+      ...(this.attributes.img_picture && {
+        img_picture: this.attributes.img_picture,
+      }),
+      ...(this.attributes.email && {
+        email: this.attributes.email,
+      }),
+      ...(this.attributes.is_real && {
+        is_real: this.attributes.is_real,
+      }),
+    };
+  }
+
+  public getPlainObject(): Object {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.getPlainAttributes(),
+    };
+  }
+
+  public getMinimumPlainObject(): Object {
+    return {
+      id: this.id,
+      type: this.type,
+    };
   }
 
   public get id() {
@@ -111,13 +148,13 @@ class ExpoAttributes extends CommonFields {
 }
 
 class ExpoRelationships {
-  public _groups: Signal<{ data: Array<Group> }> = signal({ data: [] });
+  public _categories: Signal<{ data: Array<Category> }> = signal({ data: [] });
 
-  public get groups() {
-    return this._groups.value;
+  public get categories() {
+    return this._categories.value;
   }
-  public set groups(value) {
-    this._groups.value = value;
+  public set categories(value) {
+    this._categories.value = value;
   }
 }
 

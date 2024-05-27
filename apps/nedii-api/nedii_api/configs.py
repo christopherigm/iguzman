@@ -52,7 +52,7 @@ class Production:
     EMAIL_HOST = 'smtp.gmail.com'
     EMAIL_USE_TLS = True
     EMAIL_PORT = 587
-    DEBUG = True
+    DEBUG = False
     ALLOWED_HOSTS = ['*']
     JWT_ACCESS_EXPIRATION_DAYS = 360
     JWT_REFRESH_EXPIRATION_DAYS = 360
@@ -94,6 +94,7 @@ class LOCAL(Production):
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     STATIC_ROOT = os.path.join(BASE_DIR, "static")
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'http')
+    DEBUG = True
 
 
 env = Production

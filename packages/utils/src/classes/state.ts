@@ -26,16 +26,27 @@ export default class State {
     }
   }
 
-  public getPlainAttributes(): Object {
+  public getPlainAttributes(): any {
     return {
       name: this.attributes.name,
       code: this.attributes.code,
     };
   }
 
-  public getPlainRelationships(): Object {
+  public getPlainRelationships(): any {
     return {
-      country: this.relationships.country.data.getPlainAttributes(),
+      country: {
+        data: this.relationships.country.data.getPlainAttributes(),
+      },
+    };
+  }
+
+  public getPlainObject(): any {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.getPlainAttributes(),
+      relationships: this.getPlainRelationships(),
     };
   }
 

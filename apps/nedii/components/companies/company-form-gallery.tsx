@@ -11,11 +11,12 @@ import { GenericImageInput } from '@repo/ui';
 import Avatar from '@mui/material/Avatar';
 import StandPicture from 'classes/stand/stand-picture';
 
-const isLoading: Signal<boolean> = signal(false);
+const isLoadingLocal: Signal<boolean> = signal(false);
 const complete: Signal<boolean> = signal(false);
 const error: Signal<string> = signal('');
 
 type Props = {
+  isLoading: boolean;
   darkMode: boolean;
   URLBase: string;
   stand: Stand;
@@ -25,6 +26,7 @@ type Props = {
 };
 
 const CompanyFormGallery = ({
+  isLoading = false,
   darkMode = false,
   URLBase,
   stand,
@@ -34,7 +36,7 @@ const CompanyFormGallery = ({
 }: Props): ReactElement => {
   useEffect(() => {
     console.log('CompanyFormGallery.tsx > renders');
-    isLoading.value = false;
+    isLoadingLocal.value = false;
     complete.value = false;
     error.value = '';
   }, []);
@@ -45,7 +47,7 @@ const CompanyFormGallery = ({
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    isLoading.value = true;
+    isLoadingLocal.value = true;
     complete.value = false;
     error.value = '';
   };
@@ -129,41 +131,43 @@ const CompanyFormGallery = ({
                 hideInstructions={true}
               />
             </Grid>
-            {stand.relationships.pictures.data.map((i: StandPicture) => {
-              return (
-                <Grid item xs={6} sm={4} md={3}>
-                  <Box display="flex" flexDirection="column">
-                    <Avatar
-                      alt=""
-                      src={i.attributes.img_picture}
-                      variant="rounded"
-                      sx={{
-                        width: '100%',
-                        height: 190,
-                        boxShadow: '1px 1px 5px rgba(0,0,0,0.5)',
-                      }}
-                    />
-                    <Button
-                      variant="contained"
-                      size="small"
-                      disabled={isLoading.value}
-                      onClick={() => {
-                        const index =
-                          stand.relationships.pictures.data.indexOf(i);
-                        stand.relationships.pictures.data.splice(index, 1);
-                        stand.relationships.pictures = {
-                          ...stand.relationships.pictures,
-                        };
-                      }}
-                      color="error"
-                      sx={{ textTransform: 'initial' }}
-                    >
-                      Eliminar foto
-                    </Button>
-                  </Box>
-                </Grid>
-              );
-            })}
+            {stand.relationships.pictures.data.map(
+              (i: StandPicture, index: number) => {
+                return (
+                  <Grid item xs={6} sm={4} md={3} key={index}>
+                    <Box display="flex" flexDirection="column">
+                      <Avatar
+                        alt=""
+                        src={i.attributes.img_picture}
+                        variant="rounded"
+                        sx={{
+                          width: '100%',
+                          height: 190,
+                          boxShadow: '1px 1px 5px rgba(0,0,0,0.5)',
+                        }}
+                      />
+                      <Button
+                        variant="contained"
+                        size="small"
+                        disabled={isLoading || isLoadingLocal.value}
+                        onClick={() => {
+                          const index =
+                            stand.relationships.pictures.data.indexOf(i);
+                          stand.relationships.pictures.data.splice(index, 1);
+                          stand.relationships.pictures = {
+                            ...stand.relationships.pictures,
+                          };
+                        }}
+                        color="error"
+                        sx={{ textTransform: 'initial' }}
+                      >
+                        Eliminar foto
+                      </Button>
+                    </Box>
+                  </Grid>
+                );
+              }
+            )}
           </Grid>
         </Grid>
       </Grid>

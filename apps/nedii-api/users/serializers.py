@@ -27,6 +27,7 @@ from meal.models import Meal, MealAddon
 from real_estate.models import RealEstate
 from vehicle.models import Vehicle
 
+
 class GroupSerializer(HyperlinkedModelSerializer):
     class Meta:
         model = Group
@@ -34,9 +35,9 @@ class GroupSerializer(HyperlinkedModelSerializer):
 
 
 class UserLoginSerializer(
-        HyperlinkedModelSerializer,
-        TokenObtainPairSerializer
-    ):
+    HyperlinkedModelSerializer,
+    TokenObtainPairSerializer
+):
     access = serializers.SerializerMethodField()
     refresh = serializers.SerializerMethodField()
 
@@ -64,20 +65,21 @@ class UserLoginSerializer(
 
 
 class UserSerializer(HyperlinkedModelSerializer):
-    groups = ResourceRelatedField (
-        queryset = Group.objects,
-        many = True,
-        required = False
+    groups = ResourceRelatedField(
+        queryset=Group.objects,
+        many=True,
+        required=False
     )
-    email = serializers.EmailField (
-        required = False,
-        validators = [
+    email = serializers.EmailField(
+        required=False,
+        validators=[
             UniqueValidator(queryset=User.objects.all())
         ]
     )
     included_serializers = {
         "groups": "users.serializers.GroupSerializer"
     }
+
     class Meta:
         model = User
         exclude = (
@@ -109,8 +111,10 @@ class UserSerializer(HyperlinkedModelSerializer):
                 "read_only": True
             }
         }
+
     def create(self, validated_data):
         user = User()
+        print('>>> EMAIL_HOST_USER', settings.EMAIL_HOST_USER)
         for i in validated_data:
             setattr(user, i, validated_data[i])
         user.set_password(validated_data["password"])
@@ -167,13 +171,13 @@ class UserSerializer(HyperlinkedModelSerializer):
 
 ######### Nedii specifics #########
 class UserFavoriteStandSerializer(HyperlinkedModelSerializer):
-    stand = ResourceRelatedField (
-        queryset = Stand.objects,
-        required = False
+    stand = ResourceRelatedField(
+        queryset=Stand.objects,
+        required=False
     )
-    user = ResourceRelatedField (
-        queryset = User.objects,
-        required = False
+    user = ResourceRelatedField(
+        queryset=User.objects,
+        required=False
     )
     included_serializers = {
         "stand": "common.serializers.StandSerializer",
@@ -194,18 +198,19 @@ class UserFavoriteStandSerializer(HyperlinkedModelSerializer):
 
 
 class UserAddressSerializer(HyperlinkedModelSerializer):
-    user = ResourceRelatedField (
-        queryset = User.objects,
-        required = False
+    user = ResourceRelatedField(
+        queryset=User.objects,
+        required=False
     )
-    city = ResourceRelatedField (
-        queryset = City.objects,
-        required = False
+    city = ResourceRelatedField(
+        queryset=City.objects,
+        required=False
     )
     included_serializers = {
         "city": "common.serializers.CitySerializer",
         "user": "users.serializers.UserSerializer"
     }
+
     class Meta:
         model = UserAddress
         fields = "__all__"
@@ -223,37 +228,37 @@ class UserAddressSerializer(HyperlinkedModelSerializer):
 
 
 class UserCartBuyableItemSerializer(HyperlinkedModelSerializer):
-    user = ResourceRelatedField (
-        queryset = User.objects
+    user = ResourceRelatedField(
+        queryset=User.objects
     )
-    product = ResourceRelatedField (
-        queryset = Product.objects,
+    product = ResourceRelatedField(
+        queryset=Product.objects,
         required=False,
         allow_null=True
     )
-    service = ResourceRelatedField (
-        queryset = Service.objects,
+    service = ResourceRelatedField(
+        queryset=Service.objects,
         required=False,
         allow_null=True
     )
-    meal = ResourceRelatedField (
-        queryset = Meal.objects,
+    meal = ResourceRelatedField(
+        queryset=Meal.objects,
         required=False,
         allow_null=True
     )
-    meal_addons = ResourceRelatedField (
-        queryset = MealAddon.objects,
+    meal_addons = ResourceRelatedField(
+        queryset=MealAddon.objects,
         many=True,
         required=False,
         allow_null=True
     )
-    real_estate = ResourceRelatedField (
-        queryset = RealEstate.objects,
+    real_estate = ResourceRelatedField(
+        queryset=RealEstate.objects,
         required=False,
         allow_null=True
     )
-    vehicle = ResourceRelatedField (
-        queryset = Vehicle.objects,
+    vehicle = ResourceRelatedField(
+        queryset=Vehicle.objects,
         required=False,
         allow_null=True
     )
@@ -266,6 +271,7 @@ class UserCartBuyableItemSerializer(HyperlinkedModelSerializer):
         "real_estate": "real_estate.serializers.RealEstateSerializer",
         "vehicle": "vehicle.serializers.VehicleSerializer"
     }
+
     class Meta:
         model = UserCartBuyableItem
         fields = "__all__"
@@ -280,38 +286,38 @@ class UserCartBuyableItemSerializer(HyperlinkedModelSerializer):
 
 
 class UserFavoriteBuyableItemSerializer(HyperlinkedModelSerializer):
-    user = ResourceRelatedField (
-        queryset = User.objects,
-        required = True
+    user = ResourceRelatedField(
+        queryset=User.objects,
+        required=True
     )
-    product = ResourceRelatedField (
-        queryset = Product.objects,
+    product = ResourceRelatedField(
+        queryset=Product.objects,
         required=False,
         allow_null=True
     )
-    service = ResourceRelatedField (
-        queryset = Service.objects,
+    service = ResourceRelatedField(
+        queryset=Service.objects,
         required=False,
         allow_null=True
     )
-    meal = ResourceRelatedField (
-        queryset = Meal.objects,
+    meal = ResourceRelatedField(
+        queryset=Meal.objects,
         required=False,
         allow_null=True
     )
-    meal_addons = ResourceRelatedField (
-        queryset = MealAddon.objects,
+    meal_addons = ResourceRelatedField(
+        queryset=MealAddon.objects,
         required=False,
         allow_null=True,
         many=True
     )
-    real_estate = ResourceRelatedField (
-        queryset = RealEstate.objects,
+    real_estate = ResourceRelatedField(
+        queryset=RealEstate.objects,
         required=False,
         allow_null=True
     )
-    vehicle = ResourceRelatedField (
-        queryset = Vehicle.objects,
+    vehicle = ResourceRelatedField(
+        queryset=Vehicle.objects,
         required=False,
         allow_null=True
     )
@@ -324,6 +330,7 @@ class UserFavoriteBuyableItemSerializer(HyperlinkedModelSerializer):
         "real_estate": "real_estate.serializers.RealEstateSerializer",
         "vehicle": "vehicle.serializers.VehicleSerializer"
     }
+
     class Meta:
         model = UserFavoriteBuyableItem
         fields = "__all__"
@@ -338,42 +345,42 @@ class UserFavoriteBuyableItemSerializer(HyperlinkedModelSerializer):
 
 
 class UserOrderBuyableItemSerializer(HyperlinkedModelSerializer):
-    user = ResourceRelatedField (
-        queryset = User.objects,
-        required = True
+    user = ResourceRelatedField(
+        queryset=User.objects,
+        required=True
     )
-    purchase_order = ResourceRelatedField (
-        queryset = UserOrder.objects,
+    purchase_order = ResourceRelatedField(
+        queryset=UserOrder.objects,
         required=False,
         allow_null=True
     )
-    product = ResourceRelatedField (
-        queryset = Product.objects,
+    product = ResourceRelatedField(
+        queryset=Product.objects,
         required=False,
         allow_null=True
     )
-    service = ResourceRelatedField (
-        queryset = Service.objects,
+    service = ResourceRelatedField(
+        queryset=Service.objects,
         required=False,
         allow_null=True
     )
-    meal = ResourceRelatedField (
-        queryset = Meal.objects,
-        required = False
+    meal = ResourceRelatedField(
+        queryset=Meal.objects,
+        required=False
     )
-    meal_addons = ResourceRelatedField (
-        queryset = MealAddon.objects,
+    meal_addons = ResourceRelatedField(
+        queryset=MealAddon.objects,
         required=False,
         allow_null=True,
         many=True
     )
-    real_estate = ResourceRelatedField (
-        queryset = RealEstate.objects,
+    real_estate = ResourceRelatedField(
+        queryset=RealEstate.objects,
         required=False,
         allow_null=True
     )
-    vehicle = ResourceRelatedField (
-        queryset = Vehicle.objects,
+    vehicle = ResourceRelatedField(
+        queryset=Vehicle.objects,
         required=False,
         allow_null=True
     )
@@ -386,6 +393,7 @@ class UserOrderBuyableItemSerializer(HyperlinkedModelSerializer):
         "real_estate": "real_estate.serializers.RealEstateSerializer",
         "vehicle": "vehicle.serializers.VehicleSerializer"
     }
+
     class Meta:
         model = UserOrderBuyableItem
         fields = "__all__"
@@ -400,19 +408,20 @@ class UserOrderBuyableItemSerializer(HyperlinkedModelSerializer):
 
 
 class UserOrderSerializer(HyperlinkedModelSerializer):
-    user = ResourceRelatedField (
-        queryset = User.objects,
-        required = True
+    user = ResourceRelatedField(
+        queryset=User.objects,
+        required=True
     )
-    order_items = ResourceRelatedField (
-        queryset = UserOrderBuyableItem.objects,
-        required = False,
+    order_items = ResourceRelatedField(
+        queryset=UserOrderBuyableItem.objects,
+        required=False,
         many=True
     )
     included_serializers = {
         "user": "users.serializers.UserSerializer",
         "order_items": "users.serializers.UserOrderBuyableItemSerializer"
     }
+
     class Meta:
         model = UserOrder
         fields = "__all__"

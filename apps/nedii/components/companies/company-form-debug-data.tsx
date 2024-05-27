@@ -28,7 +28,7 @@ const CompanyFormDebugData = ({
         </Grid>
         <Grid item xs={4}>
           <Typography variant="body1">
-            Group: {stand.relationships.group.data.id}
+            Category: {stand.relationships.category.data.id}
           </Typography>
         </Grid>
         <Grid item xs={4}>
@@ -49,6 +49,28 @@ const CompanyFormDebugData = ({
             Short description: {stand.attributes.short_description}
           </Typography>
         </Grid>
+
+        <Grid item xs={4}>
+          <Typography variant="body1">
+            Restaurant: {stand.attributes.restaurant ? 'Yes' : 'No'}
+          </Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="body1">
+            Booking active: {stand.attributes.booking_active ? 'Yes' : 'No'}
+          </Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="body1">
+            Booking fee: {stand.attributes.booking_fee}
+          </Typography>
+        </Grid>
+        <Grid item xs={4}>
+          <Typography variant="body1">
+            Booking email: {stand.attributes.booking_email}
+          </Typography>
+        </Grid>
+
         <Grid item xs={4}>
           <Typography variant="body1">
             City: {stand.relationships.city.data.id}
@@ -76,7 +98,7 @@ const CompanyFormDebugData = ({
         </Grid>
         <Grid item xs={4}>
           <Typography variant="body1">
-            Phone: {stand.relationships.phone}
+            {/* Phone: {stand.relationships.phone.} */}
           </Typography>
         </Grid>
 

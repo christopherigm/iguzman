@@ -60,7 +60,7 @@ const ExpoSelector = ({
         {expos.value.map((expo: Expo, index: number) => {
           expo.selected = expo.id === expoSelectedID;
           return (
-            <Grid item xs={12} md={6} lg={4} key={index}>
+            <Grid item xs={6} md={4} key={index}>
               <ExpoItem
                 onClick={() => {
                   expos.value.map((i) => (i.selected = false));

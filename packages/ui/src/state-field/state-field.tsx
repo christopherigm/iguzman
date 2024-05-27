@@ -14,6 +14,7 @@ type Props = {
   language: 'en' | 'es';
   country: number;
   state: number;
+  defaultStateID?: number;
   onChange: (value: number) => void;
 };
 
@@ -27,6 +28,7 @@ const StateField = ({
   language = 'en',
   country,
   state,
+  defaultStateID,
   onChange,
 }: Props): ReactElement => {
   const [states, setStates] = useState<Array<StateInterface>>([]);
@@ -38,7 +40,7 @@ const StateField = ({
   useEffect(() => {
     setIsLoading(true);
     GetStates();
-  }, [country]);
+  }, [country, defaultStateID]);
 
   const GetStates = (): Promise<StateInterface> => {
     return new Promise((_res, rej) => {
@@ -58,8 +60,10 @@ const StateField = ({
               };
             })
           );
-          if (!state && data.length && data[0]) {
+          if (!state && data.length && data[0] && !defaultStateID) {
             onChange(data[0].id);
+          } else if (defaultStateID) {
+            onChange(defaultStateID);
           }
         })
         .catch((e: any) => rej(e));
@@ -170,7 +174,7 @@ const StateField = ({
                 id="demo-simple-select"
                 value={String(state)}
                 label={getLabel()}
-                disabled={isLoading}
+                disabled={isLoading || !options.length}
                 size="small"
                 onChange={(e: SelectChangeEvent) =>
                   onChange(Number(e.target.value))

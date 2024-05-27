@@ -11,6 +11,34 @@ export class BasePicture {
     return BasePicture.instance || new BasePicture();
   }
 
+  public getPlainAttributes(): Object {
+    return {
+      ...(this.attributes.img_picture && {
+        img_picture: this.attributes.img_picture,
+      }),
+      ...(this.attributes.name && {
+        name: this.attributes.name,
+      }),
+      ...(this.attributes.description && {
+        description: this.attributes.description,
+      }),
+      ...(this.attributes.href && {
+        href: this.attributes.href,
+      }),
+      ...(this.attributes.full_size && {
+        full_size: this.attributes.full_size,
+      }),
+    };
+  }
+
+  public getPlainObject(): Object {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.getPlainAttributes(),
+    };
+  }
+
   public get id() {
     return this._id.value;
   }
@@ -25,6 +53,16 @@ export class BasePictureAttributes extends CommonFields {
   private _description: Signal<string> = signal('');
   private _href: Signal<string> = signal('');
   private _full_size: Signal<boolean> = signal(false);
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      this.img_picture = object.attributes.img_picture ?? this.img_picture;
+      this.name = object.attributes.name ?? this.name;
+      this.description = object.attributes.description ?? this.description;
+      this.href = object.attributes.href ?? this.href;
+      this.full_size = object.attributes.full_size;
+    }
+  }
 
   public get img_picture() {
     return this._img_picture.value;

@@ -3,7 +3,7 @@ from rest_framework_json_api.relations import ResourceRelatedField
 from rest_framework_json_api import serializers
 from stand.models import (
     Expo,
-    Group,
+    Category,
     StandPhone,
     StandRating,
     StandPicture,
@@ -27,183 +27,190 @@ from common.models import City, NediiPlan
 
 
 class ExpoSerializer(HyperlinkedModelSerializer):
-    groups=ResourceRelatedField(
-        queryset=Group.objects,
+    categories = ResourceRelatedField(
+        queryset=Category.objects,
         many=True
     )
 
-    included_serializers={
-        'groups': 'stand.serializers.GroupSerializer'
+    included_serializers = {
+        'categories': 'stand.serializers.CategorySerializer'
     }
 
     class Meta:
-        model=Expo
-        fields='__all__'
+        model = Expo
+        fields = '__all__'
 
 
-class GroupSerializer(HyperlinkedModelSerializer):
+class CategorySerializer(HyperlinkedModelSerializer):
     class Meta:
-        model=Group
-        fields='__all__'
+        model = Category
+        fields = '__all__'
 
 
 class StandBookingQuestionOptionSerializer(HyperlinkedModelSerializer):
     class Meta:
-        model=StandBookingQuestionOption
-        fields='__all__'
+        model = StandBookingQuestionOption
+        fields = '__all__'
 
 
 class StandBookingQuestionSerializer(HyperlinkedModelSerializer):
-    options=ResourceRelatedField(
+    options = ResourceRelatedField(
         queryset=StandBookingQuestionOption.objects,
         many=True
     )
-    included_serializers={
+    included_serializers = {
         'options': 'stand.serializers.StandBookingQuestionOptionsSerializer',
     }
+
     class Meta:
-        model=StandBookingQuestion
-        fields='__all__'
+        model = StandBookingQuestion
+        fields = '__all__'
 
 
 class StandNewSerializer(HyperlinkedModelSerializer):
-    stand=ResourceRelatedField( queryset=Stand.objects )
-    included_serializers={
+    stand = ResourceRelatedField(queryset=Stand.objects)
+    included_serializers = {
         'stand': 'stand.serializers.StandSerializer'
     }
+
     class Meta:
-        model=StandNew
-        fields='__all__'
+        model = StandNew
+        fields = '__all__'
 
 
 class StandPhoneSerializer(HyperlinkedModelSerializer):
-    stand=ResourceRelatedField( queryset=Stand.objects )
+    stand = ResourceRelatedField(queryset=Stand.objects)
+
     class Meta:
-        model=StandPhone
-        fields='__all__'
+        model = StandPhone
+        fields = '__all__'
 
 
 class StandPictureSerializer(HyperlinkedModelSerializer):
-    stand=ResourceRelatedField( queryset=Stand.objects )
+    stand = ResourceRelatedField(queryset=Stand.objects)
+
     class Meta:
-        model=StandPicture
-        fields='__all__'
+        model = StandPicture
+        fields = '__all__'
 
 
 class StandPromotionSerializer(HyperlinkedModelSerializer):
-    stand=ResourceRelatedField( queryset=Stand.objects )
-    meal=ResourceRelatedField( queryset=Meal.objects )
-    included_serializers={
+    stand = ResourceRelatedField(queryset=Stand.objects)
+    meal = ResourceRelatedField(queryset=Meal.objects)
+    included_serializers = {
         'meal': 'meal.serializers.MealSerializer',
         'stand': 'stand.serializers.StandSerializer'
     }
+
     class Meta:
-        model=StandPromotion
-        fields='__all__'
+        model = StandPromotion
+        fields = '__all__'
 
 
 class StandRatingSerializer(HyperlinkedModelSerializer):
-    stand=ResourceRelatedField( queryset=Stand.objects )
-    author=ResourceRelatedField( queryset=User.objects )
-    included_serializers={
+    stand = ResourceRelatedField(queryset=Stand.objects)
+    author = ResourceRelatedField(queryset=User.objects)
+    included_serializers = {
         'author': 'users.serializers.UserSerializer',
     }
+
     class Meta:
-        model=StandRating
-        fields='__all__'
+        model = StandRating
+        fields = '__all__'
 
 
 class SurveyQuestionSerializer(HyperlinkedModelSerializer):
     class Meta:
-        model=SurveyQuestion
-        fields='__all__'
+        model = SurveyQuestion
+        fields = '__all__'
 
 
 class VideoLinkSerializer(HyperlinkedModelSerializer):
-    stand=ResourceRelatedField( queryset=Stand.objects )
+    stand = ResourceRelatedField(queryset=Stand.objects)
+
     class Meta:
-        model=VideoLink
-        fields='__all__'
+        model = VideoLink
+        fields = '__all__'
 
 
 class StandSerializer(HyperlinkedModelSerializer):
-    owner=ResourceRelatedField(
+    owner = ResourceRelatedField(
         queryset=User.objects
     )
-    group=ResourceRelatedField(
-        queryset=Group.objects
+    category = ResourceRelatedField(
+        queryset=Category.objects
     )
-    expo=ResourceRelatedField(
+    expo = ResourceRelatedField(
         queryset=Expo.objects
     )
-    plan=ResourceRelatedField(
+    plan = ResourceRelatedField(
         queryset=NediiPlan.objects
     )
-    panorama=ResourceRelatedField(
+    panorama = ResourceRelatedField(
         queryset=StandPicture.objects,
         many=True
     )
-    video_links=ResourceRelatedField(
+    video_links = ResourceRelatedField(
         queryset=VideoLink.objects,
         many=True
     )
-    pictures=ResourceRelatedField(
+    pictures = ResourceRelatedField(
         queryset=StandPicture.objects,
         many=True
     )
-    phones=ResourceRelatedField(
+    phones = ResourceRelatedField(
         queryset=StandPhone.objects,
         many=True
     )
-    city=ResourceRelatedField(
+    city = ResourceRelatedField(
         queryset=City.objects
     )
-    stand_booking_questions=ResourceRelatedField(
+    stand_booking_questions = ResourceRelatedField(
         queryset=StandBookingQuestion.objects,
         many=True
     )
-    stand_news=ResourceRelatedField(
+    stand_news = ResourceRelatedField(
         queryset=StandNew.objects,
         many=True
     )
-    promotions=ResourceRelatedField(
+    promotions = ResourceRelatedField(
         queryset=StandPromotion.objects,
         many=True
     )
-    survey_questions=ResourceRelatedField(
+    survey_questions = ResourceRelatedField(
         queryset=SurveyQuestion.objects,
         many=True
     )
-    ratings=ResourceRelatedField(
+    ratings = ResourceRelatedField(
         queryset=StandRating.objects,
         many=True
     )
-    highlighted_products=ResourceRelatedField(
+    highlighted_products = ResourceRelatedField(
         queryset=Product.objects,
         many=True
     )
-    highlighted_services=ResourceRelatedField(
+    highlighted_services = ResourceRelatedField(
         queryset=Service.objects,
         many=True
     )
-    highlighted_meals=ResourceRelatedField(
+    highlighted_meals = ResourceRelatedField(
         queryset=Meal.objects,
         many=True
     )
-    highlighted_real_estates=ResourceRelatedField(
+    highlighted_real_estates = ResourceRelatedField(
         queryset=RealEstate.objects,
         many=True
     )
-    highlighted_vehicles=ResourceRelatedField(
+    highlighted_vehicles = ResourceRelatedField(
         queryset=Vehicle.objects,
         many=True
     )
 
-    included_serializers={
+    included_serializers = {
         'plan': 'common.serializers.NediiPlanSerializer',
         'owner': 'users.serializers.UserSerializer',
         'expo': 'stand.serializers.ExpoSerializer',
-        'group': 'stand.serializers.GroupSerializer',
+        'category': 'stand.serializers.CategorySerializer',
         'panorama': 'stand.serializers.StandPictureSerializer',
         'video_links': 'stand.serializers.VideoLinkSerializer',
         'pictures': 'stand.serializers.StandPictureSerializer',
@@ -221,40 +228,39 @@ class StandSerializer(HyperlinkedModelSerializer):
         'highlighted_vehicles': 'vehicle.serializers.VehicleSerializer'
     }
 
-    products=serializers.SerializerMethodField()
-    meals=serializers.SerializerMethodField()
-    services=serializers.SerializerMethodField()
-    vehicles=serializers.SerializerMethodField()
-    real_estate=serializers.SerializerMethodField()
+    products = serializers.SerializerMethodField()
+    meals = serializers.SerializerMethodField()
+    services = serializers.SerializerMethodField()
+    vehicles = serializers.SerializerMethodField()
+    real_estate = serializers.SerializerMethodField()
 
     def get_products(self, stand):
-        products=Product.objects.filter(stand=stand.id)
+        products = Product.objects.filter(stand=stand.id)
         return len(products)
 
     def get_meals(self, stand):
-        meals=Meal.objects.filter(stand=stand.id)
+        meals = Meal.objects.filter(stand=stand.id)
         return len(meals)
 
     def get_services(self, stand):
-        services=Service.objects.filter(stand=stand.id)
+        services = Service.objects.filter(stand=stand.id)
         return len(services)
 
     def get_vehicles(self, stand):
-        services=Vehicle.objects.filter(stand=stand.id)
+        services = Vehicle.objects.filter(stand=stand.id)
         return len(services)
 
     def get_real_estate(self, stand):
-        services=RealEstate.objects.filter(stand=stand.id)
+        services = RealEstate.objects.filter(stand=stand.id)
         return len(services)
 
     class Meta:
-        model=Stand
-        fields='__all__'
-        meta_fields=(
+        model = Stand
+        fields = '__all__'
+        meta_fields = (
             'products',
             'meals',
             'services',
             'vehicles',
             'real_estate'
         )
-

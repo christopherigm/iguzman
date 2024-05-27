@@ -1,12 +1,9 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { BasePictureAttributes } from '@repo/utils';
-import Stand from 'classes/stand';
+import { BasePicture } from '@repo/utils';
 
-export default class StandPicture {
+export default class StandPicture extends BasePicture {
   public static instance: StandPicture;
-  protected type = 'StandPicture';
-  private _id: Signal<number> = signal(0);
-  public attributes: BasePictureAttributes = new BasePictureAttributes();
+  public type = 'StandPicture';
   public relationships: StandPictureRelationships =
     new StandPictureRelationships();
 
@@ -14,17 +11,46 @@ export default class StandPicture {
     return StandPicture.instance || new StandPicture();
   }
 
-  public get id() {
-    return this._id.value;
+  public getPlainRelationships(): Object {
+    return {
+      ...(this.relationships.stand.data.id && {
+        stand: {
+          data: this.relationships.stand.data,
+        },
+      }),
+    };
   }
-  public set id(value) {
-    this._id.value = value;
+
+  public getPlainObject(): Object {
+    return {
+      ...(this.id && { id: this.id }),
+      type: this.type,
+      attributes: this.getPlainAttributes(),
+      relationships: this.getPlainRelationships(),
+    };
+  }
+
+  public setDataFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.attributes.setAttributesFromPlainObject(object);
+    // Relationships
+    if (object.relationships?.stand?.data) {
+      this.relationships.stand.data.id = object.relationships.stand.data.id;
+    }
   }
 }
 
 class StandPictureRelationships {
-  public _stand: Signal<{ data: Stand }> = signal({
-    data: new Stand(),
+  public _stand: Signal<{
+    data: {
+      id: number;
+      type: 'Stand';
+    };
+  }> = signal({
+    data: {
+      id: 0,
+      type: 'Stand',
+    },
   });
 
   public get stand() {
