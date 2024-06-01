@@ -216,7 +216,8 @@ export default class User extends BaseUser {
   public getUserCompaniesFromAPI(): Promise<Array<any>> {
     return new Promise((res, rej) => {
       let url = `${this.URLBase}/v1/stands/?filter[owner]=${this.id}`;
-      url += '&include=city,city.state,city.state.country,phones';
+      url += '&include=city,city.state,city.state.country,phones,';
+      url += 'pictures';
       API.Get({
         url,
         jwt: this.access,
@@ -236,8 +237,6 @@ export default class User extends BaseUser {
             this.companies.push(newItem);
           });
           this.companies = [...this.companies];
-          console.log('> Companies URL:', url);
-          console.log('> Companies:', rawData);
           res(rawData);
         })
         .catch((error) => rej(error));

@@ -1,49 +1,22 @@
 import { Signal, signal } from '@preact/signals-react';
 import CommonFields from './common-fields';
+import BaseAPIClass from './base-class';
 
-export class BasePicture {
+export class BasePicture extends BaseAPIClass {
   public static instance: BasePicture;
   public type: string = 'BasePicture';
-  private _id: Signal<number> = signal(0);
   public attributes: BasePictureAttributes = new BasePictureAttributes();
 
   public static getInstance(): BasePicture {
     return BasePicture.instance || new BasePicture();
   }
 
-  public getPlainAttributes(): Object {
-    return {
-      ...(this.attributes.img_picture && {
-        img_picture: this.attributes.img_picture,
-      }),
-      ...(this.attributes.name && {
-        name: this.attributes.name,
-      }),
-      ...(this.attributes.description && {
-        description: this.attributes.description,
-      }),
-      ...(this.attributes.href && {
-        href: this.attributes.href,
-      }),
-      ...(this.attributes.full_size && {
-        full_size: this.attributes.full_size,
-      }),
-    };
-  }
-
   public getPlainObject(): Object {
     return {
       id: this.id,
       type: this.type,
-      attributes: this.getPlainAttributes(),
+      attributes: this.attributes.getPlainAttributes(),
     };
-  }
-
-  public get id() {
-    return this._id.value;
-  }
-  public set id(value) {
-    this._id.value = value;
   }
 }
 
@@ -56,12 +29,32 @@ export class BasePictureAttributes extends CommonFields {
 
   public setAttributesFromPlainObject(object: any) {
     if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
       this.img_picture = object.attributes.img_picture ?? this.img_picture;
       this.name = object.attributes.name ?? this.name;
       this.description = object.attributes.description ?? this.description;
       this.href = object.attributes.href ?? this.href;
       this.full_size = object.attributes.full_size;
     }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.img_picture && {
+        img_picture: this.img_picture,
+      }),
+      ...(this.name && {
+        name: this.name,
+      }),
+      ...(this.description && {
+        description: this.description,
+      }),
+      ...(this.href && {
+        href: this.href,
+      }),
+      full_size: this.full_size,
+    };
   }
 
   public get img_picture() {

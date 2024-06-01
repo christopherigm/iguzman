@@ -6,6 +6,8 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import LinearProgress from '@mui/material/LinearProgress';
 import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import Grid from '@mui/material/Grid';
 import { MenuItemWithIcon } from '@repo/ui';
@@ -17,16 +19,14 @@ import CompanyFormExpoInfo from 'components/companies/company-form-expo-info';
 import CompanyFormBasicInfo from 'components/companies/company-form-basic-info';
 import CompanyFormContactInfo from 'components/companies/company-form-contact-info';
 import CompanyFormGallery from 'components/companies/company-form-gallery';
-import menuItems from './company-form-menu';
+import { NewStandMenu, EditStandMenu } from './company-form-menu';
 import CompanyFormButtons from './company-form-buttons';
 import Button from '@mui/material/Button';
+import Products from 'components/product/products';
 
-const itemSelected: Signal<Array<VerticalMenuItemProps>> = signal(
-  menuItems.value.filter((i: VerticalMenuItemProps) => i.selected)
-);
-const itemSelectedId: Signal<number> = signal(
-  (itemSelected.value.length ? itemSelected.value[0]?.id : -1) || -1
-);
+const menuItems: Signal<Array<VerticalMenuItemProps>> = signal([]);
+const itemSelected: Signal<Array<VerticalMenuItemProps>> = signal([]);
+const itemSelectedId: Signal<number> = signal(0);
 
 const addOrEditCompany: Signal<boolean> = signal(false);
 const currentCompany: Signal<Stand> = signal(new Stand());
@@ -51,24 +51,16 @@ const Companies = ({
       ? itemSelected.value[0].id
       : -1;
 
-  useEffect(() => {
-    console.log('Companies.tsx > renders');
-    menuItems.value.map((i) => (i.completed = false));
-    addOrEditCompany.value = false;
-    isLoading.value = true;
-    user.getNediiUserFromLocalStorage();
-    user.URLBase = URLBase;
-    user.getUserCompaniesFromAPI().finally(() => {
-      isLoading.value = false;
-      addOrEditCompany.value = false;
+  const ResetMenu = () => {
+    if (currentCompany.value.id) {
+      menuItems.value = [...EditStandMenu];
+    } else {
+      menuItems.value = [...NewStandMenu];
+    }
+    menuItems.value.map((i) => {
+      i.selected = i.id === 0;
+      i.completed = false;
     });
-  }, []);
-
-  const onComplete = () => {
-    // addOrEditCompany.value = false;
-    // isLoading.value = true;
-    // user.getUserCompaniesFromAPI().finally(() => (isLoading.value = false));
-    // console.log('stand', currentCompany.value.getPlainObject());
   };
 
   const goToNextMenuItem = (id?: number) => {
@@ -88,26 +80,57 @@ const Companies = ({
       return i;
     });
     menuItems.value = [...menuItems.value];
-    onComplete();
   };
+
+  useEffect(() => {
+    console.log('Companies.tsx > renders');
+    addOrEditCompany.value = false;
+    isLoading.value = true;
+    user.getNediiUserFromLocalStorage();
+    user.URLBase = URLBase;
+    user.getUserCompaniesFromAPI().finally(() => {
+      isLoading.value = false;
+      addOrEditCompany.value = false;
+    });
+    ResetMenu();
+  }, []);
 
   return (
     <>
       {addOrEditCompany.value ? (
         <Grid container marginTop={1} columnSpacing={2} rowSpacing={2}>
-          <Grid item xs={12}>
-            <Typography variant="body1">
-              {currentCompany.value.id
-                ? `Editar empresa ${currentCompany.value.attributes.name ?? ''}`
-                : currentCompany.value.attributes.name
-                  ? `Agregando nueva empresa "${currentCompany.value.attributes.name}"`
-                  : 'Agregar nueva empresa'}
-            </Typography>
-          </Grid>
           <Grid item xs={12} sm={4} md={3}>
+            <Box
+              marginBottom={2}
+              display="flex"
+              flexDirection="row"
+              justifyContent="start"
+            >
+              <IconButton
+                aria-label="back"
+                sx={{ marginRight: 2 }}
+                onClick={() => (addOrEditCompany.value = false)}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+              <Typography variant="body1" marginTop={1}>
+                Regresar{' '}
+              </Typography>
+            </Box>
             <VerticalMenu darkMode={darkMode} items={menuItems} />
           </Grid>
           <Grid item xs={12} sm={8} md={9}>
+            <Box marginTop={1.5} marginBottom={2.5}>
+              <Typography variant="body1">
+                {currentCompany.value.id
+                  ? `Editar empresa ${
+                      currentCompany.value.attributes.name ?? ''
+                    }`
+                  : currentCompany.value.attributes.name
+                    ? `Agregando nueva empresa "${currentCompany.value.attributes.name}"`
+                    : 'Agregar nueva empresa'}
+              </Typography>
+            </Box>
             <Paper elevation={1}>
               <Box padding={1.5}>
                 {itemSelectedId.value === 0 ? (
@@ -144,6 +167,17 @@ const Companies = ({
                 ) : null}
                 {itemSelectedId.value === 3 ? (
                   <CompanyFormGallery
+                    isLoading={isLoading.value}
+                    darkMode={darkMode}
+                    URLBase={URLBase}
+                    stand={currentCompany.value}
+                    onCancel={() => updateCompletenessMenuItem(false)}
+                    onIncomplete={() => updateCompletenessMenuItem(false)}
+                    onComplete={() => updateCompletenessMenuItem(true)}
+                  />
+                ) : null}
+                {itemSelectedId.value === 4 ? (
+                  <Products
                     isLoading={isLoading.value}
                     darkMode={darkMode}
                     URLBase={URLBase}
@@ -213,7 +247,7 @@ const Companies = ({
         <>
           <Paper elevation={1}>
             <Box padding={1.5}>
-              <Typography variant="body2">Mis empresas</Typography>
+              <Typography variant="body1">Mis empresas</Typography>
               <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
                 <Grid item xs={4} sm={2}>
                   <MenuItemWithIcon
@@ -233,6 +267,7 @@ const Companies = ({
                       currentCompany.value.relationships.owner.data.id =
                         user.id;
                       addOrEditCompany.value = true;
+                      ResetMenu();
                     }}
                   />
                 </Grid>
@@ -251,6 +286,7 @@ const Companies = ({
                           currentCompany.value.relationships.owner.data.id =
                             user.id;
                           addOrEditCompany.value = true;
+                          ResetMenu();
                         }}
                         sx={{
                           cursor: 'pointer',

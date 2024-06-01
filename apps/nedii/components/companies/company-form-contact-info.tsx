@@ -213,8 +213,13 @@ const CompanyFormContactInfo = ({
               URLBase={URLBase}
               access={user.access}
               onChnage={(): void => {
+                isLoadingLocal.value = true;
                 phones.value = [...phones.value];
                 stand.relationships.phones.data = [...phones.value];
+                stand
+                  .save()
+                  .catch((e) => {})
+                  .finally(() => (isLoadingLocal.value = false));
               }}
             />
           </Grid>

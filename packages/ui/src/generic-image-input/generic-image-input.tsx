@@ -43,6 +43,7 @@ const GenericImageInput = ({
           width: width,
           height: height,
           boxShadow: '1px 1px 5px rgba(0,0,0,0.5)',
+          opacity: isLoading ? 0.5 : 1,
         }}
       />
       <Box

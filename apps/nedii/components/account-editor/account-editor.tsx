@@ -12,11 +12,15 @@ const menuItems: Signal<Array<VerticalMenuItemProps>> = signal([
     id: 0,
     label: 'Informacion de usuario',
     selected: true,
+    completeIcon: null,
+    incompleteIcon: null,
   },
   {
     id: 1,
     label: 'Direcciones de usuario',
     selected: false,
+    completeIcon: null,
+    incompleteIcon: null,
   },
 ]);
 

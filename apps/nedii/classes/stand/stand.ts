@@ -1,5 +1,5 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { City, API, removeImagesForAPICall } from '@repo/utils';
+import { City, API, removeImagesForAPICall, RebuildData } from '@repo/utils';
 import NediiPlan from 'classes/nedii-plan';
 import User from 'classes/user';
 import Category from 'classes/category';
@@ -13,14 +13,19 @@ import StandRating from 'classes/stand/stand-rating';
 import StandPicture from 'classes/stand/stand-picture';
 import StandPhone from 'classes/stand/stand-phone';
 
+import Product from 'classes/product/product';
+
 export default class Stand {
   public static instance: Stand;
   protected type: string = 'Stand';
+  protected endpoint = 'v1/stands/';
   private _id: Signal<number> = signal(0);
   private _URLBase: Signal<string> = signal('');
   private _access: Signal<string> = signal('');
   public attributes: StandAttributes = new StandAttributes();
   public relationships: StandRelationships = new StandRelationships();
+
+  private _products: Signal<Array<Product>> = signal([]);
 
   public static getInstance(): Stand {
     return Stand.instance || new Stand();
@@ -29,43 +34,15 @@ export default class Stand {
   public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
     this.attributes.setAttributesFromPlainObject(object);
-    // Relationships
-    if (object.relationships?.city?.data) {
-      this.relationships.city.data.setAttributesFromPlainObject(
-        object.relationships?.city?.data
-      );
-    }
-    if (object.relationships?.category?.data) {
-      this.relationships.category.data.setAttributesFromPlainObject(
-        object.relationships?.category?.data
-      );
-    }
-    if (object.relationships?.expo?.data) {
-      this.relationships.expo.data.setAttributesFromPlainObject(
-        object.relationships?.expo?.data
-      );
-    }
-    if (object.relationships?.phones?.data) {
-      object.relationships.phones.data.map((i: any) => {
-        const newPhone = new StandPhone();
-        newPhone.setDataFromPlainObject(i);
-        this.relationships.phones.data.push(newPhone);
-      });
-      this.relationships.phones.data = [...this.relationships.phones.data];
-    }
-    this.relationships.owner = {
-      data: User.getInstance(),
-    };
+    this.relationships.setRelationshipsFromPlainObject(object);
   }
 
   public getPlainObject(): any {
     return {
       ...(this.id && { id: this.id }),
       type: this.type,
-      attributes: this.attributes.getStandPlainAttributes(),
-      relationships: this.relationships.getStandRelationshipsPlainAttributes(
-        this.id
-      ),
+      attributes: this.attributes.getPlainAttributes(),
+      relationships: this.relationships.getPlainRelationships(this.id),
     };
   }
 
@@ -78,7 +55,9 @@ export default class Stand {
 
   public save(): Promise<void> {
     return new Promise((res, rej) => {
-      const url = `${this.URLBase}/v1/stands/${this.id ? this.id + '/' : ''}`;
+      const url = `${this.URLBase}/${this.endpoint}${
+        this.id ? this.id + '/' : ''
+      }`;
       const data = {
         url,
         jwt: this.access,
@@ -104,6 +83,36 @@ export default class Stand {
     });
   }
 
+  public getProductsFromAPI(): Promise<Array<any>> {
+    return new Promise((res, rej) => {
+      let url = `${this.URLBase}/v1/products/?filter[owner]=${this.id}`;
+      url += '&include=city,city.state,city.state.country,phones,';
+      url += 'pictures';
+      API.Get({
+        url,
+        jwt: this.access,
+      })
+        .then((response: { data: Array<any> }) => {
+          const rawData =
+            response && response.data && response.data.length
+              ? RebuildData(response).data
+              : [];
+          this.products = [];
+          rawData.forEach((i: any) => {
+            const newItem = new Product();
+            newItem.id = Number(i.id);
+            newItem.URLBase = this.URLBase;
+            newItem.access = this.access;
+            // newItem.setDataFromPlainObject(i);
+            this.products.push(newItem);
+          });
+          this.products = [...this.products];
+          res(rawData);
+        })
+        .catch((error) => rej(error));
+    });
+  }
+
   public get id() {
     return this._id.value;
   }
@@ -124,79 +133,16 @@ export default class Stand {
   public set access(value) {
     this._access.value = value;
   }
+
+  public get products() {
+    return this._products.value;
+  }
+  public set products(value) {
+    this._products.value = value;
+  }
 }
 
 class StandRelationships {
-  public getStandRelationshipsPlainAttributes(id = 0): Object {
-    return {
-      plan: {
-        data: this.plan.data.id
-          ? this.plan.data.getPlainObject()
-          : {
-              id: 1,
-              type: 'NediiPlan',
-            },
-      },
-      owner: {
-        data: this.owner?.data.getPlainObject(),
-      },
-      category: {
-        data: this.category.data.getPlainObject(),
-      },
-      expo: {
-        data: this.expo.data.getPlainObject(),
-      },
-      ...(this.city.data.id && {
-        city: {
-          data: this.city.data.getPlainObject(),
-        },
-      }),
-
-      phones: {
-        data: id ? this.phones.data.map((i) => i.getPlainObject()) : [],
-      },
-      pictures: {
-        data: id ? this.pictures.data.map((i) => i.getPlainObject()) : [],
-      },
-      highlighted_meals: {
-        data: [],
-      },
-      highlighted_products: {
-        data: [],
-      },
-      highlighted_real_estates: {
-        data: [],
-      },
-      highlighted_services: {
-        data: [],
-      },
-      highlighted_vehicles: {
-        data: [],
-      },
-      panorama: {
-        data: [],
-      },
-      promotions: {
-        data: [],
-      },
-      ratings: {
-        data: [],
-      },
-      stand_booking_questions: {
-        data: [],
-      },
-      stand_news: {
-        data: [],
-      },
-      survey_questions: {
-        data: [],
-      },
-      video_links: {
-        data: [],
-      },
-    };
-  }
-
   public _plan: Signal<{ data: NediiPlan }> = signal({
     data: NediiPlan.getInstance(),
   });
@@ -316,6 +262,113 @@ class StandRelationships {
   }
   public set ratings(value) {
     this._ratings.value = value;
+  }
+
+  public setRelationshipsFromPlainObject(object: any) {
+    if (object.relationships?.city?.data) {
+      this.city.data.setAttributesFromPlainObject(
+        object.relationships?.city?.data
+      );
+    }
+    if (object.relationships?.category?.data) {
+      this.category.data.setAttributesFromPlainObject(
+        object.relationships?.category?.data
+      );
+    }
+    if (object.relationships?.expo?.data) {
+      this.expo.data.setAttributesFromPlainObject(
+        object.relationships?.expo?.data
+      );
+    }
+    if (object.relationships?.phones?.data) {
+      object.relationships.phones.data.map((i: any) => {
+        const newPhone = new StandPhone();
+        newPhone.setDataFromPlainObject(i);
+        this.phones.data.push(newPhone);
+      });
+      this.phones.data = [...this.phones.data];
+    }
+    if (object.relationships?.pictures?.data) {
+      object.relationships.pictures.data.map((i: any) => {
+        const newPicture = new StandPicture();
+        newPicture.setDataFromPlainObject(i);
+        this.pictures.data.push(newPicture);
+      });
+      this.pictures.data = [...this.pictures.data];
+    }
+    this.owner = {
+      data: User.getInstance(),
+    };
+  }
+
+  public getPlainRelationships(standID = 0): any {
+    return {
+      plan: {
+        data: this.plan.data.id
+          ? this.plan.data.getPlainObject()
+          : {
+              id: 1,
+              type: 'NediiPlan',
+            },
+      },
+      owner: {
+        data: this.owner?.data.getPlainObject(),
+      },
+      category: {
+        data: this.category.data.getPlainObject(),
+      },
+      expo: {
+        data: this.expo.data.getPlainObject(),
+      },
+      ...(this.city.data.id && {
+        city: {
+          data: this.city.data.getPlainObject(),
+        },
+      }),
+
+      phones: {
+        data: standID ? this.phones.data.map((i) => i.getPlainObject()) : [],
+      },
+      pictures: {
+        data: standID ? this.pictures.data.map((i) => i.getPlainObject()) : [],
+      },
+      highlighted_meals: {
+        data: [],
+      },
+      highlighted_products: {
+        data: [],
+      },
+      highlighted_real_estates: {
+        data: [],
+      },
+      highlighted_services: {
+        data: [],
+      },
+      highlighted_vehicles: {
+        data: [],
+      },
+      panorama: {
+        data: [],
+      },
+      promotions: {
+        data: [],
+      },
+      ratings: {
+        data: [],
+      },
+      stand_booking_questions: {
+        data: [],
+      },
+      stand_news: {
+        data: [],
+      },
+      survey_questions: {
+        data: [],
+      },
+      video_links: {
+        data: [],
+      },
+    };
   }
 }
 

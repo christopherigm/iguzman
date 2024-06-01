@@ -1,17 +1,17 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { BasePicture, BasePictureAttributes, API } from '@repo/utils';
-import Stand from 'classes/stand';
+import { BaseAPIClass, BasePictureAttributes, API } from '@repo/utils';
 
-export default class StandPromotion extends BasePicture {
-  public static instance: StandPromotion;
-  public type = 'StandPromotion';
-  public endpoint = 'v1/stand-promotions/';
-  public attributes: StandPromotionAttributes = new StandPromotionAttributes();
-  public relationships: StandPromotionRelationships =
-    new StandPromotionRelationships();
+export default class ProductClassification extends BaseAPIClass {
+  public static instance: ProductClassification;
+  public type = 'ProductClassification';
+  public endpoint = 'v1/product-classifications/';
+  public attributes: ProductClassificationAttributes =
+    new ProductClassificationAttributes();
+  public relationships: ProductClassificationRelationships =
+    new ProductClassificationRelationships();
 
-  public static getInstance(): StandPromotion {
-    return StandPromotion.instance || new StandPromotion();
+  public static getInstance(): ProductClassification {
+    return ProductClassification.instance || new ProductClassification();
   }
 
   public setDataFromPlainObject(object: any) {
@@ -39,7 +39,6 @@ export default class StandPromotion extends BasePicture {
       };
       API.Post(data)
         .then((response) => {
-          console.log(`Resource ${this.type} added:`, response);
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }
@@ -51,7 +50,7 @@ export default class StandPromotion extends BasePicture {
   }
 }
 
-class StandPromotionAttributes extends BasePictureAttributes {
+class ProductClassificationAttributes extends BasePictureAttributes {
   private _slug: Signal<string> = signal('');
 
   public setAttributesFromPlainObject(object: any) {
@@ -78,22 +77,7 @@ class StandPromotionAttributes extends BasePictureAttributes {
   }
 }
 
-class StandPromotionRelationships {
-  // public _product: Signal<{ data: Stand }> = signal({
-  //   data: new Stand(),
-  // });
-  // public _service: Signal<{ data: Stand }> = signal({
-  //   data: new Stand(),
-  // });
-  // public _meal: Signal<{ data: Stand }> = signal({
-  //   data: new Stand(),
-  // });
-  // public _real_estate: Signal<{ data: Stand }> = signal({
-  //   data: new Stand(),
-  // });
-  // public _vehicle: Signal<{ data: Stand }> = signal({
-  //   data: new Stand(),
-  // });
+class ProductClassificationRelationships {
   public _stand: Signal<{
     data: {
       id: number;
@@ -106,7 +90,7 @@ class StandPromotionRelationships {
     },
   });
 
-  public setRelationshipsFromPlainObject(object: any): any {
+  public setRelationshipsFromPlainObject(object: any) {
     if (object.relationships) {
       if (object.relationships.stand?.data) {
         this.stand.data.id = object.relationships.stand.data.id;
@@ -117,9 +101,7 @@ class StandPromotionRelationships {
   public getPlainRelationships(): any {
     return {
       ...(this.stand.data.id && {
-        stand: {
-          data: this.stand.data,
-        },
+        stand: this.stand,
       }),
     };
   }
@@ -132,6 +114,6 @@ class StandPromotionRelationships {
   }
 }
 
-export const standPromotion = signal<StandPromotion>(
-  StandPromotion.getInstance()
+export const productClassification = signal<ProductClassification>(
+  ProductClassification.getInstance()
 ).value;

@@ -1,12 +1,10 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { CommonFields, API } from '@repo/utils';
+import { BaseAPIClass, CommonFields, API } from '@repo/utils';
 
-export default class StandPhone {
+export default class StandPhone extends BaseAPIClass {
   public static instance: StandPhone;
-  protected type = 'StandPhone';
-  private _id: Signal<number> = signal(0);
-  private _URLBase: Signal<string> = signal('');
-  private _access: Signal<string> = signal('');
+  public type = 'StandPhone';
+  public endpoint = 'v1/stand-phones/';
   public attributes: StandPhoneAttributes = new StandPhoneAttributes();
   public relationships: StandPhoneRelationships = new StandPhoneRelationships();
 
@@ -14,43 +12,24 @@ export default class StandPhone {
     return StandPhone.instance || new StandPhone();
   }
 
-  public getPlainAttributes(): Object {
-    return {
-      ...(this.attributes.phone && { phone: this.attributes.phone }),
-    };
-  }
-
-  public getPlainRelationships(): Object {
-    return {
-      ...(this.relationships.stand.data.id && {
-        stand: {
-          data: this.relationships.stand.data,
-        },
-      }),
-    };
+  public setDataFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.attributes.setAttributesFromPlainObject(object);
+    this.relationships.setRelationshipsFromPlainObject(object);
   }
 
   public getPlainObject(): Object {
     return {
       ...(this.id && { id: this.id }),
       type: this.type,
-      attributes: this.getPlainAttributes(),
-      relationships: this.getPlainRelationships(),
+      attributes: this.attributes.getPlainAttributes(),
+      relationships: this.relationships.getPlainRelationships(),
     };
-  }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-    // Relationships
-    if (object.relationships?.stand?.data) {
-      this.relationships.stand.data.id = object.relationships.stand.data.id;
-    }
   }
 
   public getPhoneByStandID(): Promise<void> {
     return new Promise((res, rej) => {
-      let url = `${this.URLBase}/v1/stand-phones/`;
+      let url = `${this.URLBase}/${this.endpoint}`;
       url += `?filter[stand]=${this.relationships.stand.data.id}`;
       url += `&filter[phone]=${this.attributes.phone}`;
       const data = {
@@ -73,7 +52,7 @@ export default class StandPhone {
 
   public save(): Promise<void> {
     return new Promise((res, rej) => {
-      const url = `${this.URLBase}/v1/stand-phones/`;
+      const url = `${this.URLBase}/${this.endpoint}`;
       const data = {
         url,
         jwt: this.access,
@@ -93,27 +72,6 @@ export default class StandPhone {
         .catch((error) => rej(error));
     });
   }
-
-  public get id() {
-    return this._id.value;
-  }
-  public set id(value) {
-    this._id.value = value;
-  }
-
-  public get URLBase() {
-    return this._URLBase.value;
-  }
-  public set URLBase(value) {
-    this._URLBase.value = value;
-  }
-
-  public get access() {
-    return this._access.value;
-  }
-  public set access(value) {
-    this._access.value = value;
-  }
 }
 
 class StandPhoneAttributes extends CommonFields {
@@ -121,8 +79,16 @@ class StandPhoneAttributes extends CommonFields {
 
   public setAttributesFromPlainObject(object: any) {
     if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
       this.phone = object.attributes.phone ?? this.phone;
     }
+  }
+
+  public getPlainAttributes(): Object {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.phone && { phone: this.phone }),
+    };
   }
 
   public get phone() {
@@ -145,6 +111,24 @@ class StandPhoneRelationships {
       type: 'Stand',
     },
   });
+
+  public setRelationshipsFromPlainObject(object: any): any {
+    if (object.relationships) {
+      if (object.relationships.stand?.data) {
+        this.stand.data.id = object.relationships.stand.data.id;
+      }
+    }
+  }
+
+  public getPlainRelationships(): Object {
+    return {
+      ...(this.stand.data.id && {
+        stand: {
+          data: this.stand.data,
+        },
+      }),
+    };
+  }
 
   public get stand() {
     return this._stand.value;

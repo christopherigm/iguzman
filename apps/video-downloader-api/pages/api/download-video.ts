@@ -157,6 +157,9 @@ const downloadVideo = (
             .catch((e) => rej(e));
         } else {
           console.log('Final catch');
+          if (url.search('si=')) {
+            url = url.split('si=')[0];
+          }
           if (isTiktok(url)) {
             url += '?is_from_webapp=1&sender_device=pc';
           }

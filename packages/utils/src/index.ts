@@ -66,7 +66,7 @@ export { GetLocalStorageData, SetLocalStorageData } from './lib/local-storage';
 /**
  * Classes
  */
-export { default as BaseClass } from './classes/base-class';
+export { default as BaseAPIClass } from './classes/base-class';
 export { default as CommonFields } from './classes/common-fields';
 export { default as TimeFields } from './classes/time-fields';
 export { default as WeekSchedule } from './classes/week-schedule';

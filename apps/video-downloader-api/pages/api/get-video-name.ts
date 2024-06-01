@@ -21,6 +21,9 @@ export const getVideoName = (
     if (isX(url)) {
       URL = URL.replaceAll('x.com', 'twitter.com');
     }
+    if (URL.search('si=')) {
+      URL = URL.split('si=')[0];
+    }
     getOrCreateItem({ url: URL, justAudio })
       .then((i: Item) => {
         const item = { ...i };

@@ -1,11 +1,11 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { BasePictureAttributes } from '@repo/utils';
+import { BaseAPIClass, BasePictureAttributes, API } from '@repo/utils';
 import Stand from 'classes/stand';
 
-export default class StandNew {
+export default class StandNew extends BaseAPIClass {
   public static instance: StandNew;
-  protected type = 'StandNew';
-  private _id: Signal<number> = signal(0);
+  public type = 'StandNew';
+  public endpoint = 'v1/product-news/';
   public attributes: StandNewAttributes = new StandNewAttributes();
   public relationships: StandNewRelationships = new StandNewRelationships();
 
@@ -13,16 +13,60 @@ export default class StandNew {
     return StandNew.instance || new StandNew();
   }
 
-  public get id() {
-    return this._id.value;
+  public setDataFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.attributes.setAttributesFromPlainObject(object);
+    this.relationships.setRelationshipsFromPlainObject(object);
   }
-  public set id(value) {
-    this._id.value = value;
+
+  public getPlainObject(): any {
+    return {
+      ...(this.id && { id: this.id }),
+      type: this.type,
+      attributes: this.attributes.getPlainAttributes(),
+      relationships: this.relationships.getPlainRelationships(),
+    };
+  }
+
+  public save(): Promise<void> {
+    return new Promise((res, rej) => {
+      const url = `${this.URLBase}/${this.endpoint}`;
+      const data = {
+        url,
+        jwt: this.access,
+        data: this.getPlainObject(),
+      };
+      API.Post(data)
+        .then((response) => {
+          if (response.errors && response.errors.length) {
+            return rej(response.errors);
+          }
+          this.id = response.data?.id ?? this.id;
+          return res();
+        })
+        .catch((error) => rej(error));
+    });
   }
 }
 
 class StandNewAttributes extends BasePictureAttributes {
   private _slug: Signal<string> = signal('');
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.slug = object.attributes.slug ?? this.slug;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.slug && {
+        slug: this.slug,
+      }),
+    };
+  }
 
   public get slug() {
     return this._slug.value;
@@ -36,6 +80,22 @@ class StandNewRelationships {
   public _stand: Signal<{ data: Stand }> = signal({
     data: new Stand(),
   });
+
+  public setRelationshipsFromPlainObject(object: any) {
+    if (object.relationships) {
+      if (object.relationships.stand?.data) {
+        this.stand.data.id = object.relationships.stand.data.id;
+      }
+    }
+  }
+
+  public getPlainRelationships(): any {
+    return {
+      ...(this.stand.data.id && {
+        stand: this.stand,
+      }),
+    };
+  }
 
   public get stand() {
     return this._stand.value;
