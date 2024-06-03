@@ -1,12 +1,12 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { CommonFields } from '@repo/utils';
+import { BaseAPIClass, CommonFields, API } from '@repo/utils';
 import Stand from 'classes/stand';
 import User from 'classes/user';
 
-export default class StandRating {
+export default class StandRating extends BaseAPIClass {
   public static instance: StandRating;
-  protected type = 'StandRating';
-  private _id: Signal<number> = signal(0);
+  public type = 'StandRating';
+  public endpoint = 'v1/stand-ratings/';
   public attributes: StandRatingAttributes = new StandRatingAttributes();
   public relationships: StandRatingRelationships =
     new StandRatingRelationships();
@@ -15,17 +15,63 @@ export default class StandRating {
     return StandRating.instance || new StandRating();
   }
 
-  public get id() {
-    return this._id.value;
+  public setDataFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.attributes.setAttributesFromPlainObject(object);
   }
-  public set id(value) {
-    this._id.value = value;
+
+  public getPlainObject(): Object {
+    return {
+      ...(this.id && { id: this.id }),
+      type: this.type,
+      attributes: this.attributes.getPlainAttributes(),
+    };
+  }
+
+  public save(): Promise<void> {
+    return new Promise((res, rej) => {
+      const url = `${this.URLBase}/${this.endpoint}`;
+      const data = {
+        url,
+        jwt: this.access,
+        data: this.getPlainObject(),
+      };
+      API.Post(data)
+        .then((response) => {
+          if (response.errors && response.errors.length) {
+            return rej(response.errors);
+          }
+          this.id = response.data?.id ?? this.id;
+          return res();
+        })
+        .catch((error) => rej(error));
+    });
   }
 }
 
 class StandRatingAttributes extends CommonFields {
   private _rating: Signal<number> = signal(0);
   private _description: Signal<string> = signal('');
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.rating = object.attributes.rating ?? this.rating;
+      this.description = object.attributes.description ?? this.description;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.rating && {
+        rating: this.rating,
+      }),
+      ...(this.description && {
+        description: this.description,
+      }),
+    };
+  }
 
   public get rating() {
     return this._rating.value;
@@ -43,12 +89,42 @@ class StandRatingAttributes extends CommonFields {
 }
 
 class StandRatingRelationships {
-  public _stand: Signal<{ data: Stand }> = signal({
-    data: new Stand(),
+  public _stand: Signal<{
+    data: {
+      id: number;
+      type: 'Stand';
+    };
+  }> = signal({
+    data: {
+      id: 0,
+      type: 'Stand',
+    },
   });
   public _author: Signal<{ data: User }> = signal({
     data: new User(),
   });
+
+  public setRelationshipsFromPlainObject(object: any) {
+    if (object.relationships) {
+      if (object.relationships.stand?.data) {
+        this.stand.data.id = object.relationships.stand.data.id;
+      }
+      if (object.relationships.author?.data) {
+        this.author.data.id = object.relationships.author.data.id;
+      }
+    }
+  }
+
+  public getPlainRelationships(): any {
+    return {
+      ...(this.stand.data.id && {
+        stand: this.stand,
+      }),
+      ...(this.author.data.id && {
+        author: this.author,
+      }),
+    };
+  }
 
   public get stand() {
     return this._stand.value;

@@ -39,7 +39,6 @@ export default class StandPromotion extends BasePicture {
       };
       API.Post(data)
         .then((response) => {
-          console.log(`Resource ${this.type} added:`, response);
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }

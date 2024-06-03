@@ -77,8 +77,16 @@ class StandNewAttributes extends BasePictureAttributes {
 }
 
 class StandNewRelationships {
-  public _stand: Signal<{ data: Stand }> = signal({
-    data: new Stand(),
+  public _stand: Signal<{
+    data: {
+      id: number;
+      type: 'Stand';
+    };
+  }> = signal({
+    data: {
+      id: 0,
+      type: 'Stand',
+    },
   });
 
   public setRelationshipsFromPlainObject(object: any) {
