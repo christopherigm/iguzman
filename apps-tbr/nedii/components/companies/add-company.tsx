@@ -31,7 +31,7 @@ const AddCompanies = ({ URLBase, language, jwt }: Props): ReactElement => {
   // const [activeStep, setActiveStep] = useState<number>(0);
 
   useEffect(() => {
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
   });
 
   return (

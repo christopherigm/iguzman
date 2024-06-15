@@ -1,4 +1,5 @@
 import { ReactElement, useEffect, useState } from 'react';
+import { Signal, signal } from '@preact-signals/safe-react';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -7,13 +8,16 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
-import { API, CityInterface } from '@repo/utils';
+import LinearProgress from '@mui/material/LinearProgress';
+import { City } from '@repo/utils';
+
+const city = signal<City>(City.getInstance()).value;
 
 type Props = {
   URLBase: string;
   language: 'en' | 'es';
-  state: number;
-  city: number;
+  dependentID: number;
+  value: number;
   onChange: (value: number) => void;
 };
 
@@ -22,70 +26,84 @@ type Option = {
   label: string;
 };
 
+const valueIsInOptions: Signal<boolean> = signal(false);
+
 const CityField = ({
   URLBase,
   language = 'en',
-  state,
-  city,
+  dependentID,
+  value,
   onChange,
 }: Props): ReactElement => {
-  const [cities, setCities] = useState<Array<CityInterface>>([]);
   const [options, setOptions] = useState<Array<Option>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [newEntry, setNewEntry] = useState<boolean>(false);
-  const [newName, setNewName] = useState<string>('');
+  const [previousID, setPreviousID] = useState<number>(0);
+  valueIsInOptions.value = options.map((i) => i.id).indexOf(value) >= 0;
+  city.URLBase = URLBase;
 
   useEffect(() => {
-    setIsLoading(true);
-    GetCities();
-  }, [state]);
-
-  const GetCities = (): Promise<CityInterface> => {
-    return new Promise((_res, rej) => {
-      API.GetCitiesByStateID({
-        URLBase,
-        stateID: state,
-      })
-        .then((data: Array<CityInterface>) => {
-          setIsLoading(false);
-          setNewEntry(false);
-          setCities(data);
-          setOptions(
-            data.map((i: CityInterface) => {
-              return {
-                id: i.id,
-                label: i.attributes.name,
-              };
-            })
-          );
-          if (!city && data.length && data[0]) {
-            onChange(data[0].id);
+    city.relationships.state.data.id = Number(dependentID);
+    if (
+      ((!options.length && dependentID) ||
+        Number(dependentID) !== previousID) &&
+      !isLoading
+    ) {
+      setIsLoading(true);
+      setPreviousID(Number(dependentID));
+      city
+        .GetCitiesByStateID(Number(dependentID))
+        .then((response: { data: Array<City> }) => {
+          const newOptions = response.data.map((i: City) => {
+            return {
+              id: Number(i.id),
+              label: i.attributes.name,
+            };
+          });
+          setOptions(newOptions);
+          valueIsInOptions.value =
+            newOptions.map((i) => i.id).indexOf(value) >= 0;
+          // console.log('==================================');
+          // console.log('Loading cities');
+          // console.log('state:', dependentID);
+          // console.log('previousID:', previousID);
+          // console.log('city:', value);
+          // console.log('options:', newOptions);
+          // console.log('==================================');
+          if (!value && newOptions.length && newOptions[0]) {
+            onChange(newOptions[0].id);
+          } else if (
+            !valueIsInOptions.value &&
+            newOptions.length &&
+            newOptions[0]
+          ) {
+            onChange(newOptions[0].id);
           }
         })
-        .catch((e: any) => rej(e));
-    });
-  };
+        .catch((e: any) => console.log(e))
+        .finally(() => setIsLoading(false));
+    }
+  }, [dependentID, value, previousID, options.length]);
 
   const CreateCity = () => {
     setIsLoading(true);
-    API.CreateCity({
-      URLBase,
-      name: newName,
-      state,
-    })
-      .then((d: CityInterface) => onChange(d.id))
-      .then(() =>
-        API.GetCitiesByStateID({
-          URLBase,
-          stateID: state,
-        })
-      )
-      .then(GetCities)
-      .catch((_e: any) => setIsLoading(false));
+    city
+      .save()
+      .then(() => {
+        city.attributes.name = '';
+        onChange(city.id);
+        setPreviousID(0);
+        setOptions([]);
+      })
+      .catch((e: any) => console.log(e))
+      .finally(() => {
+        setNewEntry(false);
+        setIsLoading(false);
+      });
   };
 
   const getLabel = (): string => {
-    return !cities.length && isLoading
+    return !options.length && isLoading
       ? language === 'en'
         ? 'Loading cities'
         : 'Cargando ciudades'
@@ -94,9 +112,17 @@ const CityField = ({
         : 'Ciudad';
   };
 
+  if (isLoading || (isLoading && !valueIsInOptions.value)) {
+    return (
+      <Box sx={{ width: '100%' }} marginTop={2}>
+        <LinearProgress />
+      </Box>
+    );
+  }
+
   return (
     <>
-      {newEntry ? (
+      {newEntry || !options.length ? (
         <>
           <Box display="flex" flexDirection="column">
             <TextField
@@ -104,9 +130,9 @@ const CityField = ({
               variant="outlined"
               size="small"
               type="text"
-              value={newName}
+              value={city.attributes.name}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setNewName(e.target.value)
+                (city.attributes.name = e.target.value)
               }
               disabled={isLoading}
               sx={{ width: '100%' }}
@@ -139,7 +165,7 @@ const CityField = ({
                 type="submit"
                 size="small"
                 color="success"
-                disabled={isLoading || newName.length < 3}
+                disabled={isLoading || city.attributes.name.length < 3}
                 sx={{
                   marginLeft: '15px',
                   textTransform: 'initial',
@@ -150,6 +176,11 @@ const CityField = ({
                 {language === 'en' ? 'Save' : 'Guardar'}
               </Button>
             </Box>
+            {isLoading ? (
+              <Box sx={{ width: '100%' }} marginTop={2}>
+                <LinearProgress />
+              </Box>
+            ) : null}
           </Box>
         </>
       ) : (
@@ -168,13 +199,15 @@ const CityField = ({
               <Select
                 labelId="demo-simple-select-label"
                 id="demo-simple-select"
-                value={String(city)}
+                value={String(value)}
                 label={getLabel()}
-                disabled={isLoading}
+                disabled={isLoading || !options.length}
                 size="small"
-                onChange={(e: SelectChangeEvent) => {
-                  onChange(Number(e.target.value));
-                }}
+                onChange={(e: SelectChangeEvent) =>
+                  Number(e.target.value) && options.length
+                    ? onChange(Number(e.target.value))
+                    : null
+                }
               >
                 {options.map((i: Option, index: number) => {
                   return (
@@ -188,15 +221,15 @@ const CityField = ({
             <Button
               variant="contained"
               type="submit"
-              size="small"
               disabled={false}
               sx={{
-                marginLeft: '20px',
+                marginLeft: '10px',
                 textTransform: 'initial',
               }}
               onClick={() => {
                 setNewEntry(true);
-                setNewName('');
+                city.id = 0;
+                city.attributes.name = '';
               }}
             >
               Nueva
@@ -215,6 +248,11 @@ const CityField = ({
               </>
             )}
           </Typography>
+          {isLoading ? (
+            <Box sx={{ width: '100%' }} marginTop={2}>
+              <LinearProgress />
+            </Box>
+          ) : null}
         </Box>
       )}
     </>

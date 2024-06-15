@@ -16,4 +16,11 @@ data:
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
       }
+
+      location /d5c9d7c98-nz7cr {
+        autoindex on;
+        add_header Vary Accept-Encoding;
+        access_log off;
+        alias /shared-media/movies/;
+      }
     }

@@ -8,16 +8,24 @@ import {
   isTiktok,
   isFacebook,
   isTwitter,
+  isPinterest,
 } from '@repo/utils';
 
-type Status = 'downloading' | 'none' | 'ready' | 'error' | 'canceled';
+type Status =
+  | 'downloading'
+  | 'none'
+  | 'ready'
+  | 'error'
+  | 'deleted'
+  | 'canceled';
 export type VideoType =
   | 'audio'
   | 'youtube'
   | 'instagram'
   | 'tiktok'
   | 'facebook'
-  | 'twitter';
+  | 'twitter'
+  | 'pinterest';
 export type DownloadOptions = {
   justAudio: boolean;
 };
@@ -43,7 +51,6 @@ export default class Item {
   }
 
   private handleResponse(response: Item) {
-    // console.log('handleResponse', response);
     this.id = response.id;
     if (response.filename) {
       this.filename = response.filename;
@@ -76,6 +83,8 @@ export default class Item {
       this.type = 'facebook';
     } else if (isTwitter(this.url)) {
       this.type = 'twitter';
+    } else if (isPinterest(this.url)) {
+      this.type = 'pinterest';
     }
   }
 
@@ -139,7 +148,8 @@ export default class Item {
       !this.URLBase ||
       !this.url ||
       this.status === 'ready' ||
-      this.status === 'canceled'
+      this.status === 'canceled' ||
+      this.status === 'deleted'
     ) {
       return;
     }

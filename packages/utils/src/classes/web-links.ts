@@ -1,3 +1,5 @@
+// DEPRECATED <POSSIBLE>
+
 import { Signal, signal } from '@preact/signals-react';
 
 type Type =
@@ -29,6 +31,17 @@ export default class WebLinks {
       this._links.value[type] = '';
     }
     this._links.value[type] = value;
+  }
+
+  public getLinkFormat(url: string): Link {
+    if (!url || !url.length) {
+      return '';
+    }
+    if (url.search('https://') < 0) {
+      return '';
+    }
+    const foo = url.split('https://')[1];
+    return `https://${foo}`;
   }
 
   public get web_link() {

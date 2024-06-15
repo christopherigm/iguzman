@@ -32,7 +32,7 @@ type Props = {
 
 const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
   useEffect(() => {
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
     user.URLBase = URLBase;
     newPassword.value = '';
     repeatPassword.value = '';
@@ -122,7 +122,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
       <Box marginTop={2}></Box>
       <Paper elevation={1}>
         <Box padding={1.5}>
-          <Typography variant="caption">Informacion basica</Typography>
+          <Typography variant="body1">Informacion basica</Typography>
           <Grid container rowSpacing={2} columnSpacing={2} marginTop={1}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -130,6 +130,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                 variant="outlined"
                 size="small"
                 type="text"
+                name="name"
                 value={user.attributes.first_name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   (user.attributes.first_name = e.target.value)
@@ -144,6 +145,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                 variant="outlined"
                 size="small"
                 type="text"
+                name="lastname"
                 value={user.attributes.last_name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   (user.attributes.last_name = e.target.value)
@@ -158,6 +160,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                 variant="outlined"
                 size="small"
                 type="text"
+                name="email"
                 value={user.attributes.email}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   (user.attributes.email = e.target.value)
@@ -167,12 +170,11 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
               />
             </Grid>
           </Grid>
+
           <Box marginTop={3} marginBottom={2}>
             <Divider />
           </Box>
-          <Typography variant="caption">
-            Preferencias de comunicacion
-          </Typography>
+          <Typography variant="body1">Preferencias de comunicacion</Typography>
 
           <Grid container rowSpacing={2} columnSpacing={2} marginTop={0}>
             <Grid item xs={12} sm={6}>
@@ -186,6 +188,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                       }
                     />
                   }
+                  name="promotions"
                   label="Promociones"
                   disabled={isLoading.value}
                 />
@@ -198,6 +201,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                       }
                     />
                   }
+                  name="newsletter"
                   label="Comunicados"
                   disabled={isLoading.value}
                 />
@@ -244,12 +248,12 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
           <Box marginTop={2} marginBottom={2}>
             <Divider />
           </Box>
-          <Typography variant="caption">Cambiar contraseña</Typography>
+          <Typography variant="body1">Cambiar contraseña</Typography>
           <Grid container rowSpacing={2} columnSpacing={2} marginTop={1}>
             <Grid item xs={12} sm={6}>
               <PasswordField
                 label="Nueva contraseña"
-                name="newPassword"
+                name="new-Password"
                 value={newPassword.value}
                 onChange={(v: string) => (newPassword.value = v)}
                 disabled={isLoading.value}

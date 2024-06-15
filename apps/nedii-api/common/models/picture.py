@@ -3,33 +3,36 @@ from common.models import CommonFields
 from common.tools import set_media_url
 from django_resized import ResizedImageField
 
+
 def picture(instance, filename):
-    return set_media_url( "CommonPicture", filename)
+    return set_media_url("CommonPicture", filename)
+
 
 class BasePicture(CommonFields):
-    name=models.CharField(
+    name = models.CharField(
         max_length=64,
         null=True,
         blank=True
     )
-    description=models.TextField(
+    description = models.TextField(
         null=True,
         blank=True
     )
-    href=models.URLField(
+    href = models.URLField(
         null=True,
         blank=True
     )
-    full_size=models.BooleanField(
+    full_size = models.BooleanField(
         blank=False,
         default=True
     )
 
     class Meta:
-        abstract=True
+        abstract = True
+
 
 class SmallPicture(BasePicture):
-    img_picture=ResizedImageField(
+    img_picture = ResizedImageField(
         null=True,
         blank=True,
         size=[256, 256],
@@ -38,10 +41,11 @@ class SmallPicture(BasePicture):
     )
 
     class Meta:
-        abstract=True
+        abstract = True
+
 
 class MediumPicture(BasePicture):
-    img_picture=ResizedImageField(
+    img_picture = ResizedImageField(
         null=True,
         blank=True,
         size=[512, 512],
@@ -50,10 +54,11 @@ class MediumPicture(BasePicture):
     )
 
     class Meta:
-        abstract=True
+        abstract = True
+
 
 class RegularPicture(BasePicture):
-    img_picture=ResizedImageField(
+    img_picture = ResizedImageField(
         null=True,
         blank=True,
         size=[1080, 1080],
@@ -62,10 +67,11 @@ class RegularPicture(BasePicture):
     )
 
     class Meta:
-        abstract=True
+        abstract = True
+
 
 class LargePicture(BasePicture):
-    img_picture=ResizedImageField(
+    img_picture = ResizedImageField(
         null=True,
         blank=True,
         size=[1920, 1920],
@@ -74,4 +80,4 @@ class LargePicture(BasePicture):
     )
 
     class Meta:
-        abstract=True
+        abstract = True

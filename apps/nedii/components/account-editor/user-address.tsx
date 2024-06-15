@@ -29,7 +29,7 @@ const UserAddress = ({ darkMode, URLBase }: Props): ReactElement => {
   useEffect(() => {
     addOrEditAddress.value = false;
     isLoading.value = true;
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
     user.URLBase = URLBase;
     user.getUserAddressesFromAPI().finally(() => (isLoading.value = false));
   }, []);
@@ -43,7 +43,7 @@ const UserAddress = ({ darkMode, URLBase }: Props): ReactElement => {
   return (
     <Paper elevation={1}>
       <Box padding={1.5}>
-        <Typography variant="body2">Direcciones de entrega</Typography>
+        <Typography variant="body1">Direcciones de entrega</Typography>
         <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
           {addOrEditAddress.value ? (
             <Grid item xs={12}>

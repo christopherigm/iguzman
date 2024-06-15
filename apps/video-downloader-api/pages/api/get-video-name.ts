@@ -5,6 +5,7 @@ import os from 'node:os';
 import { winBinary, linuxBinary } from '@/config';
 import { getOrCreateItem, updateItem } from '@/lib/item';
 import type Item from '@/types/items';
+import { isX, isYoutube } from '@repo/utils';
 
 const onData = (data: any) => {
   console.log('>>>', data);
@@ -16,26 +17,37 @@ export const getVideoName = (
   force: boolean = false
 ): Promise<Item> => {
   return new Promise((res, rej) => {
-    getOrCreateItem({ url, justAudio })
+    let URL = url;
+    if (isX(url)) {
+      URL = URL.replaceAll('x.com', 'twitter.com');
+    }
+    if (URL.search('si=')) {
+      URL = URL.split('si=')[0];
+    }
+    getOrCreateItem({ url: URL, justAudio })
       .then((i: Item) => {
         const item = { ...i };
         // console.log('>', item);
         if (item.name && !force) {
           return res(item);
         }
-        const dataToPrint =
-          '%(title)s:-:%(artist)s:-:%(album)s:-:%(album_artist)s';
+        const dataToPrint = isYoutube(url)
+          ? '%(title)s:-:%(artist)s:-:%(album)s:-:%(album_artist)s'
+          : '%(title)s';
         let command =
           os.platform() === 'win32'
-            ? `${winBinary} "${url}" --print "${dataToPrint}"`
-            : `${linuxBinary} "${url}" --print "${dataToPrint}"`;
+            ? `${winBinary} "${URL}" --print "${dataToPrint}"`
+            : `${linuxBinary} "${URL}" --print "${dataToPrint}"`;
         if (os.platform() !== 'win32') {
           command += ' --cookies /app/netscape-cookies.txt';
+        }
+        if (isYoutube(URL)) {
+          command += ' --no-playlist ';
         }
         exec(command, (err, videoName: string) => {
           if (err) {
             console.log('Error, getVideoName:', err);
-            return rej(err);
+            videoName = url;
           }
           let metadata = videoName
             .replace(/\n/g, '')
@@ -86,7 +98,7 @@ export const getVideoName = (
           updateItem(item).finally(() => res(item));
         }).stdout?.on('data', onData);
       })
-      .catch((error) => console.log(error));
+      .catch((error) => rej(error.toString()));
   });
 };
 

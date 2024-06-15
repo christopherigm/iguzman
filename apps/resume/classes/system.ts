@@ -46,7 +46,7 @@ export default class System extends BaseSystem {
     });
   }
 
-  public getResumePlainAttributes(): Object {
+  public getResumePlainAttributes(): any {
     return {
       ...this.getPlainAttributes(),
       users: this.users,

@@ -7,19 +7,20 @@ from common.serializers import CountrySerializer
 
 # Create your views here.
 
+
 class CountryViewSet (ModelViewSet):
-    queryset=Country.objects.all()
-    serializer_class=CountrySerializer
-    permission_classes=[AllowAny]
-    authentication_classes=[]
+    queryset = Country.objects.all()
+    serializer_class = CountrySerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
     # permission_classes=[ IsAuthenticated ]
     # authentication_classes=[
     #     JWTAuthentication,
     #     SessionAuthentication
     # ]
-    ordering=['id']
-    ordering_fields='__all__'
-    filterset_fields={
+    ordering = ['id']
+    ordering_fields = '__all__'
+    filterset_fields = {
         'enabled': ('exact',),
         'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
         'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
@@ -27,4 +28,4 @@ class CountryViewSet (ModelViewSet):
         'code': ('exact', 'in'),
         'name': ('exact', 'in')
     }
-    search_fields=[ 'name', 'code' ]
+    search_fields = ['name', 'code']

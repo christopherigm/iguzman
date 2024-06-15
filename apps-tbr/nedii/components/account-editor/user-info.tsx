@@ -35,7 +35,7 @@ const UserInfo = ({
   switchLoading,
 }: Props): ReactElement => {
   useEffect(() => {
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
     user.URLBase = URLBase;
   }, [URLBase]);
 

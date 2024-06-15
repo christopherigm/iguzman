@@ -22,6 +22,77 @@ export default class StandAttributes extends Mixin(
   private _vehicles_max_price: Signal<number> = signal(0);
   private _real_state_max_price: Signal<number> = signal(0);
 
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      this.setWebLinksFromPlainObject(object.attributes);
+      this.name = object.attributes.name ?? this.name;
+      this.slug = object.attributes.slug ?? this.slug;
+      this.img_logo = object.attributes.img_logo ?? this.img_logo;
+      this.img_cover = object.attributes.img_cover ?? this.img_cover;
+      this.average_rating =
+        object.attributes.average_rating ?? this.average_rating;
+      this.products_max_price =
+        object.attributes.products_max_price ?? this.products_max_price;
+      this.meals_max_price =
+        object.attributes.meals_max_price ?? this.meals_max_price;
+      this.services_max_price =
+        object.attributes.services_max_price ?? this.services_max_price;
+      this.vehicles_max_price =
+        object.attributes.vehicles_max_price ?? this.vehicles_max_price;
+      this.real_state_max_price =
+        object.attributes.real_state_max_price ?? this.real_state_max_price;
+
+      this.restaurant = object.attributes.restaurant ?? this.restaurant;
+      this.bar_code = object.attributes.bar_code ?? this.bar_code;
+      this.description = object.attributes.description ?? this.description;
+      this.short_description =
+        object.attributes.short_description ?? this.short_description;
+      this.booking_active =
+        object.attributes.booking_active ?? this.booking_active;
+      this.booking_fee = object.attributes.booking_fee ?? this.booking_fee;
+      this.about = object.attributes.about ?? this.about;
+      this.booking_email =
+        object.attributes.booking_email ?? this.booking_email;
+
+      this.slogan = object.attributes.slogan ?? this.slogan;
+      this.mission = object.attributes.mission ?? this.mission;
+      this.vision = object.attributes.vision ?? this.vision;
+      this.contact_email =
+        object.attributes.contact_email ?? this.contact_email;
+      this.support_email =
+        object.attributes.support_email ?? this.support_email;
+      this.zip_code = object.attributes.zip_code ?? this.zip_code;
+      this.address = object.attributes.address ?? this.address;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...this.getWebLinksPlainAttributes(),
+      ...(this.name && { name: this.name }),
+      ...(this.slug && { slug: this.slug }),
+      ...(this.img_logo && { img_logo: this.img_logo }),
+      ...(this.img_cover && { img_cover: this.img_cover }),
+      ...(this.restaurant && { restaurant: this.restaurant }),
+      ...(this.bar_code && { bar_code: this.bar_code }),
+      ...(this.description && { description: this.description }),
+      ...(this.short_description && {
+        short_description: this.short_description,
+      }),
+      ...(this.booking_active && { booking_active: this.booking_active }),
+      booking_fee: this.booking_fee,
+      ...(this.about && { about: this.about }),
+      ...(this.booking_email && { booking_email: this.booking_email }),
+      ...(this.slogan && { slogan: this.slogan }),
+      ...(this.mission && { mission: this.mission }),
+      ...(this.vision && { vision: this.vision }),
+      ...(this.contact_email && { contact_email: this.contact_email }),
+      ...(this.support_email && { support_email: this.support_email }),
+      ...(this.zip_code && { zip_code: this.zip_code }),
+      ...(this.address && { address: this.address }),
+    };
+  }
+
   public get name() {
     return this._name.value;
   }

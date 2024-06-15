@@ -317,7 +317,6 @@ const UserInfo = ({ user, devMode, darkMode }: Props): ReactElement => {
           </Box>
         </PaperCard>
       )}
-
       <Snackbar
         open={open}
         onClose={() => setOpen(false)}

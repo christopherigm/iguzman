@@ -9,7 +9,7 @@ from enum import Enum
 
 
 class ProductClassification(MediumPicture):
-    stand=models.ForeignKey(
+    stand = models.ForeignKey(
         'stand.Stand',
         related_name='stand_product_classification',
         verbose_name='Empresa',
@@ -18,12 +18,12 @@ class ProductClassification(MediumPicture):
         help_text='Empresa al que pertenece este registro',
         on_delete=models.CASCADE
     )
-    name=models.CharField (
+    name = models.CharField(
         max_length=64,
         null=False,
         blank=False
     )
-    slug=models.SlugField (
+    slug = models.SlugField(
         max_length=64,
         null=True,
         blank=True,
@@ -32,7 +32,7 @@ class ProductClassification(MediumPicture):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug=get_unique_slug(
+            self.slug = get_unique_slug(
                 self.name,
                 ProductClassification
             )
@@ -42,20 +42,20 @@ class ProductClassification(MediumPicture):
         return self.name
 
     class Meta:
-        verbose_name='Categoría de producto'
-        verbose_name_plural='Categorías de productos'
+        verbose_name = 'Categoría de producto'
+        verbose_name_plural = 'Categorías de productos'
 
     class JSONAPIMeta:
-        resource_name='ProductClassification'
+        resource_name = 'ProductClassification'
 
 
 class ProductDeliveryType(MediumPicture):
-    name=models.CharField (
+    name = models.CharField(
         max_length=64,
         null=False,
         blank=False
     )
-    icon=models.CharField (
+    icon = models.CharField(
         verbose_name='Ícono',
         max_length=32,
         null=True,
@@ -67,21 +67,21 @@ class ProductDeliveryType(MediumPicture):
         return self.name
 
     class Meta:
-        verbose_name='Tipo de envío'
-        verbose_name_plural='Tipos de envíos'
+        verbose_name = 'Tipo de envío'
+        verbose_name_plural = 'Tipos de envíos'
 
     class JSONAPIMeta:
-        resource_name='ProductDeliveryType'
+        resource_name = 'ProductDeliveryType'
 
 
 class ProductFeatureOption(CommonFields):
-    name=models.CharField (
+    name = models.CharField(
         max_length=64,
         null=False,
         blank=False,
         unique=True
     )
-    feature=models.ForeignKey(
+    feature = models.ForeignKey(
         'product.ProductFeature',
         verbose_name='Caracteristica del producto',
         null=False,
@@ -97,14 +97,15 @@ class ProductFeatureOption(CommonFields):
         )
 
     class Meta:
-        verbose_name='Opcion de caracteristica del producto'
-        verbose_name_plural='Opciones de caracteristicas del producto'
+        verbose_name = 'Opcion de caracteristica del producto'
+        verbose_name_plural = 'Opciones de caracteristicas del producto'
 
     class JSONAPIMeta:
-        resource_name='ProductFeatureOption'
+        resource_name = 'ProductFeatureOption'
+
 
 class ProductFeature(CommonFields):
-    stand=models.ForeignKey(
+    stand = models.ForeignKey(
         'stand.Stand',
         related_name='stand_product_feature',
         verbose_name='Empresa',
@@ -113,13 +114,13 @@ class ProductFeature(CommonFields):
         help_text='Empresa al que pertenece este registro',
         on_delete=models.CASCADE
     )
-    name=models.CharField (
+    name = models.CharField(
         max_length=64,
         null=False,
         blank=False,
         unique=True
     )
-    options=models.ManyToManyField(
+    options = models.ManyToManyField(
         'product.ProductFeatureOption',
         related_name='product_feature_options',
         verbose_name='Opciones de caractarísticas del producto',
@@ -130,15 +131,15 @@ class ProductFeature(CommonFields):
         return self.name
 
     class Meta:
-        verbose_name='Caracteristica del producto'
-        verbose_name_plural='Caracteristicas de los productos'
+        verbose_name = 'Caracteristica del producto'
+        verbose_name_plural = 'Caracteristicas de los productos'
 
     class JSONAPIMeta:
-        resource_name='ProductFeature'
+        resource_name = 'ProductFeature'
 
 
 class ProductPicture(MediumPicture):
-    stand=models.ForeignKey (
+    stand = models.ForeignKey(
         'stand.Stand',
         verbose_name='Empresa',
         null=True,
@@ -146,7 +147,7 @@ class ProductPicture(MediumPicture):
         help_text='Empresa al que pertenece este registro',
         on_delete=models.CASCADE
     )
-    product=models.ForeignKey(
+    product = models.ForeignKey(
         'product.Product',
         verbose_name='Producto',
         null=False,
@@ -155,75 +156,66 @@ class ProductPicture(MediumPicture):
     )
 
     def __str__(self):
-        name=self.name or 'picture'
+        name = self.name or 'picture'
         return '{} - {}'.format(
             self.product.name,
             name
         )
 
     class Meta:
-        verbose_name='Foto del producto'
-        verbose_name_plural='Fotos de los productos'
+        verbose_name = 'Foto del producto'
+        verbose_name_plural = 'Fotos de los productos'
 
     class JSONAPIMeta:
-        resource_name='ProductPicture'
+        resource_name = 'ProductPicture'
 
-
-
-class ProductStates(Enum):
-    NEW='new'
-    LIKE_NEW='like-new'
-    USED='used'
 
 class Product(RegularPicture):
-    name=models.CharField (
+    name = models.CharField(
         max_length=64,
         null=False,
         blank=False
     )
-    slug=models.SlugField(
+    slug = models.SlugField(
         max_length=64,
         null=True,
         blank=True,
         unique=True
     )
-    classification=models.ForeignKey(
+    classification = models.ForeignKey(
         'product.ProductClassification',
         verbose_name='Clasificación',
         null=True,
         blank=False,
-        help_text='Clasificación al que pertenece este registro',
         on_delete=models.CASCADE
     )
-    stand=models.ForeignKey(
+    stand = models.ForeignKey(
         'stand.Stand',
         related_name='stand_product',
         verbose_name='Empresa',
         null=True,
         blank=False,
-        help_text='Empresa al que pertenece este registro',
         on_delete=models.CASCADE
     )
-    publish_on_the_wall=models.BooleanField(
+    publish_on_the_wall = models.BooleanField(
         verbose_name='Publicar en el muro',
         blank=False,
         default=False
     )
-    state=models.CharField(
+    state = models.CharField(
         null=True,
         blank=True,
         max_length=16,
-        choices=[(i.value, i.value) for i in ProductStates],
         default='new'
     )
-    delivery_type=models.ManyToManyField(
+    delivery_type = models.ManyToManyField(
         'product.ProductDeliveryType',
         related_name='delivery_type',
         verbose_name='Tipo de entrega',
         blank=True,
         help_text='Tipo de entrega'
     )
-    price=models.DecimalField(
+    price = models.DecimalField(
         verbose_name='Precio del producto',
         max_digits=10,
         decimal_places=2,
@@ -232,14 +224,14 @@ class Product(RegularPicture):
         default=5,
         help_text='Precio del producto'
     )
-    discount=models.PositiveSmallIntegerField(
+    discount = models.PositiveSmallIntegerField(
         verbose_name='Descuento',
         null=True,
         blank=True,
         default=0,
         help_text='Descuento de 1% a 99%'
     )
-    final_price=models.DecimalField(
+    final_price = models.DecimalField(
         verbose_name='Precio final',
         max_digits=10,
         decimal_places=2,
@@ -247,99 +239,99 @@ class Product(RegularPicture):
         blank=True,
         default=0
     )
-    brand=models.CharField(
+    brand = models.CharField(
         verbose_name='Marca',
         max_length=64,
         null=True,
         blank=True,
         help_text='Marca del producto'
     )
-    short_description=models.CharField(
+    short_description = models.CharField(
         verbose_name='Descripción corta',
         max_length=90,
         null=True,
         blank=True,
         help_text='Descripción corta (90 carácteres)'
     )
-    unlimited_stock=models.BooleanField(
+    unlimited_stock = models.BooleanField(
         verbose_name='Stock ilimitado?',
         blank=False,
         default=False
     )
-    stock=models.PositiveIntegerField(
+    stock = models.PositiveIntegerField(
         verbose_name='Cantidad de producto',
         null=True,
         blank=True,
         default=0,
         help_text='Cantidad de producto que existe en stock'
     )
-    shipping_cost=models.PositiveIntegerField(
+    shipping_cost = models.PositiveIntegerField(
         verbose_name='Costo de envío',
         null=True,
         blank=True,
         default=0,
     )
-    features=models.ManyToManyField(
+    features = models.ManyToManyField(
         'product.ProductFeatureOption',
         related_name='product_features',
         verbose_name='Caractarísticas del producto',
         blank=True
     )
-    product_pictures=models.ManyToManyField(
+    product_pictures = models.ManyToManyField(
         'product.ProductPicture',
         related_name='product_pictures',
         verbose_name='Fotos',
         blank=True,
         help_text='Fotos del producto'
     )
-    related=models.ManyToManyField(
+    related = models.ManyToManyField(
         'product.Product',
         related_name='related_products',
         verbose_name='Productos relacionados',
         blank=True,
     )
-    video_link=models.CharField(
+    video_link = models.CharField(
         verbose_name='Link del vídeo',
         max_length=512,
         null=True,
         blank=True,
         help_text='Link del vídeo de youtube'
     )
-    support_email=models.EmailField(
+    support_email = models.EmailField(
         verbose_name='Correo de soporte',
         max_length=128,
         null=True,
         blank=True,
         help_text='Correo electrónico de soporte'
     )
-    support_info=models.CharField(
+    support_info = models.CharField(
         verbose_name='Información de soporte',
         max_length=256,
         null=True,
         blank=True,
         help_text='Información de soporte'
     )
-    support_phone=models.CharField(
+    support_phone = models.CharField(
         verbose_name='Teléfono de soporte',
         max_length=12,
         null=True,
         blank=True,
         help_text='Teléfono de soporte'
     )
-    warranty_days=models.PositiveIntegerField(
+    warranty_days = models.PositiveIntegerField(
         verbose_name='Días de garantía',
         null=False,
         blank=True,
         default=0,
         help_text='Días de garantía del producto'
     )
-    times_selled=models.PositiveSmallIntegerField(
+    times_selled = models.PositiveSmallIntegerField(
         verbose_name='Cantidad de veces vendido',
         null=False,
         blank=True,
         default=0
     )
-    views=models.PositiveSmallIntegerField(
+    views = models.PositiveSmallIntegerField(
         verbose_name='Cantidad de veces visto',
         null=False,
         blank=True,
@@ -348,7 +340,7 @@ class Product(RegularPicture):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug=get_unique_slug(
+            self.slug = get_unique_slug(
                 '{}-{}'.format(
                     self.stand.slug,
                     self.name
@@ -356,18 +348,18 @@ class Product(RegularPicture):
                 Product
             )
 
-        final_price=float(self.price)
+        final_price = float(self.price)
 
-        discount=0
+        discount = 0
         if self.discount is not None:
-            discount=int(self.discount)
+            discount = int(self.discount)
 
         if 99 > discount > 0:
-            discount=discount / 100
-            discount=discount * final_price
+            discount = discount / 100
+            discount = discount * final_price
             final_price -= discount
 
-        self.final_price=final_price
+        self.final_price = final_price
 
         if self.final_price > self.stand.products_max_price:
             self.stand.products_max_price = self.final_price
@@ -381,10 +373,9 @@ class Product(RegularPicture):
             self.name
         )
 
-
     class Meta:
-        verbose_name='Producto'
-        verbose_name_plural='Productos'
+        verbose_name = 'Producto'
+        verbose_name_plural = 'Productos'
 
     class JSONAPIMeta:
-        resource_name='Product'
+        resource_name = 'Product'

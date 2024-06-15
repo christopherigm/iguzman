@@ -1,4 +1,8 @@
 from rest_framework import viewsets, mixins
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny
 from common.mixins import (
     CustomCreate,
     CustomUpdate
@@ -21,16 +25,16 @@ from product.serializers import (
 )
 
 
-class ProductClassificationViewSet( CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        viewsets.GenericViewSet
-    ):
-    queryset=ProductClassification.objects.all()
-    serializer_class=ProductClassificationSerializer
-    filterset_fields={
+class ProductClassificationViewSet(CustomCreate,
+                                   CustomUpdate,
+                                   mixins.ListModelMixin,
+                                   mixins.RetrieveModelMixin,
+                                   mixins.DestroyModelMixin,
+                                   viewsets.GenericViewSet
+                                   ):
+    queryset = ProductClassification.objects.all()
+    serializer_class = ProductClassificationSerializer
+    filterset_fields = {
         'enabled': ('exact',),
         'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
         'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
@@ -38,78 +42,79 @@ class ProductClassificationViewSet( CustomCreate,
         'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
         'slug': ('exact',),
     }
-    search_fields=("name",)
-    ordering=( "id", )
+    search_fields = ("name",)
+    ordering = ("id", )
 
 
-class ProductDeliveryTypeViewSet( CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        viewsets.GenericViewSet
-    ):
-    queryset=ProductDeliveryType.objects.all()
-    serializer_class=ProductDeliveryTypeSerializer
-    filterset_fields={
+class ProductDeliveryTypeViewSet(CustomCreate,
+                                 CustomUpdate,
+                                 mixins.ListModelMixin,
+                                 mixins.RetrieveModelMixin,
+                                 mixins.DestroyModelMixin,
+                                 viewsets.GenericViewSet
+                                 ):
+    queryset = ProductDeliveryType.objects.all()
+    serializer_class = ProductDeliveryTypeSerializer
+    filterset_fields = {
         'enabled': ('exact',),
         'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
         'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
         'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
     }
-    search_fields=("name",)
-    ordering=( "id", )
+    search_fields = ("name",)
+    ordering = ("id", )
 
 
-class ProductFeatureViewSet( CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        viewsets.GenericViewSet
-    ):
-    queryset=ProductFeature.objects.all()
-    serializer_class=ProductFeatureSerializer
-    filterset_fields={
+class ProductFeatureViewSet(CustomCreate,
+                            CustomUpdate,
+                            mixins.ListModelMixin,
+                            mixins.RetrieveModelMixin,
+                            mixins.DestroyModelMixin,
+                            viewsets.GenericViewSet
+                            ):
+    queryset = ProductFeature.objects.all()
+    serializer_class = ProductFeatureSerializer
+    filterset_fields = {
         'enabled': ('exact',),
         'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
         'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
         'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
         'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
     }
-    search_fields=("name",)
-    ordering=("id",)
+    search_fields = ("name",)
+    ordering = ("id",)
 
-class ProductFeatureOptionViewSet( CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        viewsets.GenericViewSet
-    ):
-    queryset=ProductFeatureOption.objects.all()
-    serializer_class=ProductFeatureOptionSerializer
-    filterset_fields={
+
+class ProductFeatureOptionViewSet(CustomCreate,
+                                  CustomUpdate,
+                                  mixins.ListModelMixin,
+                                  mixins.RetrieveModelMixin,
+                                  mixins.DestroyModelMixin,
+                                  viewsets.GenericViewSet
+                                  ):
+    queryset = ProductFeatureOption.objects.all()
+    serializer_class = ProductFeatureOptionSerializer
+    filterset_fields = {
         'enabled': ('exact',),
         'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
         'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
         'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
         'feature__stand': ('exact',),
     }
-    search_fields=("name",)
-    ordering=("id",)
+    search_fields = ("name",)
+    ordering = ("id",)
 
 
-class ProductPictureViewSet( CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        viewsets.GenericViewSet
-    ):
-    queryset=ProductPicture.objects.all()
-    serializer_class=ProductPictureSerializer
-    filterset_fields={
+class ProductPictureViewSet(CustomCreate,
+                            CustomUpdate,
+                            mixins.ListModelMixin,
+                            mixins.RetrieveModelMixin,
+                            mixins.DestroyModelMixin,
+                            viewsets.GenericViewSet
+                            ):
+    queryset = ProductPicture.objects.all()
+    serializer_class = ProductPictureSerializer
+    filterset_fields = {
         'enabled': ('exact',),
         'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
         'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
@@ -117,19 +122,27 @@ class ProductPictureViewSet( CustomCreate,
         'stand': ('exact', 'lt', 'gt', 'gte', 'lte'),
         'product': ('exact', 'lt', 'gt', 'gte', 'lte'),
     }
-    ordering=( "id", )
+    ordering = ("id", )
 
 
 class ProductViewSet(CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        viewsets.GenericViewSet
-    ):
-    queryset=Product.objects.all()
-    serializer_class=ProductSerializer
-    filterset_fields={
+                     CustomUpdate,
+                     mixins.ListModelMixin,
+                     mixins.RetrieveModelMixin,
+                     mixins.DestroyModelMixin,
+                     viewsets.GenericViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [AllowAny]
+    authentication_classes = [
+        JWTAuthentication,
+        SessionAuthentication
+    ]
+    # authentication_classes = []
+    ordering = ['id']
+    ordering_fields = '__all__'
+    filterset_fields = {
         "enabled": ("exact",),
         "stand": ("exact",),
         "stand__slug": ("exact",),
@@ -148,8 +161,7 @@ class ProductViewSet(CustomCreate,
         "publish_on_the_wall": ("exact",),
         "discount": ("exact", "lt", "gt", "gte", "lte", "in"),
     }
-    search_fields=(
+    search_fields = [
         "name",
         "short_description"
-    )
-    ordering=( "id", )
+    ]

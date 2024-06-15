@@ -20,18 +20,22 @@ export default class TimeFields {
   private _created: Signal<Date> = signal(new Date());
   private _modified: Signal<Date> = signal(new Date());
 
-  public get created() {
-    return this._created.value;
-  }
-  public set created(value) {
-    this._created.value = value;
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      this.created = object.attributes.created ?? this.created;
+      this.modified = object.attributes.modified ?? this.modified;
+    }
   }
 
-  public get modified() {
-    return this._modified.value;
-  }
-  public set modified(value) {
-    this._modified.value = value;
+  public getPlainAttributes(): any {
+    return {
+      ...(this.created && {
+        created: this.created,
+      }),
+      ...(this.modified && {
+        modified: this.modified,
+      }),
+    };
   }
 
   public time12HoursFormat(type: DateEnum): string {
@@ -64,5 +68,19 @@ export default class TimeFields {
     return shortFormat
       ? `${month}/${day}${showYear ? `/${year}` : ''}${includeTime ? time : ''}`
       : `${month} ${day}, ${year}${includeTime ? time : ''}`;
+  }
+
+  public get created() {
+    return this._created.value;
+  }
+  public set created(value) {
+    this._created.value = value;
+  }
+
+  public get modified() {
+    return this._modified.value;
+  }
+  public set modified(value) {
+    this._modified.value = value;
   }
 }

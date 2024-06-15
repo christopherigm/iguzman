@@ -43,7 +43,7 @@ export default class User extends BaseUser {
     }
   }
 
-  getPlainAttributes(): Object {
+  getPlainAttributes(): any {
     return {
       email: this.attributes.email,
       username: this.attributes.username,

@@ -39,8 +39,11 @@ export { default as isTwitter } from './lib/is-twitter-checker';
 export { default as isFacebook } from './lib/is-facebook-checker';
 export { default as isInstagram } from './lib/is-instagram-checker';
 export { default as isTiktok } from './lib/is-tiktok-checker';
+export { default as isX } from './lib/is-x-checker';
 export { default as InnerSort } from './lib/inner-sort';
+export { default as isPinterest } from './lib/is-pinterest-checker';
 export type { InnerSortOrderTypes } from './lib/inner-sort';
+export { default as removeImagesForAPICall } from './lib/remove-images-for-api-call';
 
 /**
  * API
@@ -63,11 +66,11 @@ export { GetLocalStorageData, SetLocalStorageData } from './lib/local-storage';
 /**
  * Classes
  */
-export { default as BaseClass } from './classes/base-class';
+export { default as BaseAPIClass } from './classes/base-class';
 export { default as CommonFields } from './classes/common-fields';
 export { default as TimeFields } from './classes/time-fields';
 export { default as WeekSchedule } from './classes/week-schedule';
-export { default as WebLinks } from './classes/web-links';
+export { default as WebLinks } from './classes/web-links-common';
 export { BaseUser, BaseUserAttributes } from './classes/base-user';
 export { default as Country } from './classes/country';
 export { default as State } from './classes/state';

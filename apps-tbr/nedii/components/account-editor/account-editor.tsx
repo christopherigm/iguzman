@@ -21,7 +21,7 @@ const AccountEditor = ({
   switchLoading,
 }: Props): ReactElement => {
   useEffect(() => {
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
   }, []);
 
   return (

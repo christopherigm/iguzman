@@ -2,6 +2,7 @@ import { Signal, signal } from '@preact-signals/safe-react';
 import { GetLocalStorageData, SetLocalStorageData } from '../lib/local-storage';
 import type { JWTPayload } from '../interfaces/jwt-interface';
 import API from '../api';
+import CommonFields from './common-fields';
 
 export class BaseUser {
   public static instance: BaseUser;
@@ -32,38 +33,37 @@ export class BaseUser {
     }
   }
 
-  public setUserAttributesFromPlainObject(object: any) {
+  public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
     this.jwt = object.jwt ?? this.jwt;
     this.access = object.access ?? this.access;
-    this.attributes.email = object.attributes?.email ?? this.attributes.email;
-    this.attributes.username =
-      object.attributes?.username ?? this.attributes.username;
-    this.attributes.first_name =
-      object.attributes?.first_name ?? this.attributes.first_name;
-    this.attributes.last_name =
-      object.attributes?.last_name ?? this.attributes.last_name;
-    this.attributes.img_picture =
-      object.attributes?.img_picture ?? this.attributes.img_picture;
-    this.attributes.theme = object.attributes?.theme ?? this.attributes.theme;
-    this.attributes.theme_color =
-      object.attributes?.theme_color ?? this.attributes.theme_color;
-    this.attributes.profile_picture_shape =
-      object.attributes?.profile_picture_shape ??
-      this.attributes.profile_picture_shape;
-    this.attributes.phone_number =
-      object.attributes?.phone_number ?? this.attributes.phone_number;
+    this.attributes.setAttributesFromPlainObject(object);
   }
 
-  public getUserFromLocalStorage() {
+  public getPlainObject(): any {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.attributes.getPlainAttributes(),
+    };
+  }
+
+  public getMinimumPlainObject(): any {
+    return {
+      id: this.id,
+      type: this.type,
+    };
+  }
+
+  public setDataFromLocalStorage() {
     let cachedUser: any = GetLocalStorageData(this.type);
     if (cachedUser) {
-      this.setUserAttributesFromPlainObject(JSON.parse(cachedUser));
+      this.setDataFromPlainObject(JSON.parse(cachedUser));
     }
   }
 
   public saveUserToLocalStorage() {
-    let attributes: any = this.getPlainAttributes();
+    let attributes: any = this.attributes.getPlainAttributes();
     attributes.password = '';
     SetLocalStorageData(
       this.type,
@@ -77,28 +77,13 @@ export class BaseUser {
     );
   }
 
-  public getPlainAttributes(): Object {
-    return {
-      email: this.attributes.email,
-      username: this.attributes.username,
-      password: this.attributes.password,
-      first_name: this.attributes.first_name,
-      last_name: this.attributes.last_name,
-      img_picture: this.attributes.img_picture,
-      theme: this.attributes.theme,
-      theme_color: this.attributes.theme_color,
-      profile_picture_shape: this.attributes.profile_picture_shape,
-      phone_number: this.attributes.phone_number,
-    };
-  }
-
   public updateUserData(urlBase?: string): Promise<void> {
     return new Promise((res, rej) => {
       const URLBase = urlBase ?? this.URLBase;
       if (!URLBase || URLBase === '') {
         return rej(new Error('No URLBase'));
       }
-      const attributes: any = this.getPlainAttributes();
+      const attributes: any = this.attributes.getPlainAttributes();
       if (this.attributes.img_picture.search(';base64') < 0) {
         delete attributes.img_picture;
       }
@@ -120,7 +105,7 @@ export class BaseUser {
         )
         .then(() => {
           this.saveUserToLocalStorage();
-          this.getUserFromLocalStorage();
+          this.setDataFromLocalStorage();
           res();
         })
         .catch((error) => rej(error));
@@ -201,7 +186,7 @@ export class BaseUser {
   }
 }
 
-export class BaseUserAttributes {
+export class BaseUserAttributes extends CommonFields {
   private _email: Signal<string> = signal('');
   private _username: Signal<string> = signal('');
   private _password: Signal<string> = signal('');
@@ -212,6 +197,55 @@ export class BaseUserAttributes {
   private _theme_color: Signal<string> = signal('');
   private _profile_picture_shape: Signal<string> = signal('');
   private _phone_number: Signal<string> = signal('');
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.email = object.attributes.email ?? this.email;
+      this.username = object.attributes.username ?? this.username;
+      this.first_name = object.attributes.first_name ?? this.first_name;
+      this.last_name = object.attributes.last_name ?? this.last_name;
+      this.img_picture = object.attributes.img_picture ?? this.img_picture;
+      this.theme = object.attributes.theme ?? this.theme;
+      this.theme_color = object.attributes.theme_color ?? this.theme_color;
+      this.profile_picture_shape =
+        object.attributes.profile_picture_shape ?? this.profile_picture_shape;
+      this.phone_number = object.attributes.phone_number ?? this.phone_number;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.email && {
+        email: this.email,
+      }),
+      ...(this.username && {
+        username: this.username,
+      }),
+      ...(this.first_name && {
+        first_name: this.first_name,
+      }),
+      ...(this.last_name && {
+        last_name: this.last_name,
+      }),
+      ...(this.img_picture && {
+        img_picture: this.img_picture,
+      }),
+      ...(this.theme && {
+        theme: this.theme,
+      }),
+      ...(this.theme_color && {
+        theme_color: this.theme_color,
+      }),
+      ...(this.profile_picture_shape && {
+        profile_picture_shape: this.profile_picture_shape,
+      }),
+      ...(this.phone_number && {
+        phone_number: this.phone_number,
+      }),
+    };
+  }
 
   public get email() {
     return this._email.value;

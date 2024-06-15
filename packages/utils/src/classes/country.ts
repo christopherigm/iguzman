@@ -11,23 +11,16 @@ export default class Country {
     return Country.instance || new Country();
   }
 
-  public setAttributesFromPlainObject(object: any) {
+  public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
-    // Attributes
-    this.attributes.name = object.attributes?.name ?? this.attributes.name;
-    this.attributes.code = object.attributes?.code ?? this.attributes.code;
-    this.attributes.phone_code =
-      object.attributes?.phone_code ?? this.attributes.phone_code;
-    this.attributes.img_flag =
-      object.attributes?.img_flag ?? this.attributes.img_flag;
+    this.attributes.setAttributesFromPlainObject(object);
   }
 
-  public getPlainAttributes(): Object {
+  public getPlainObject(): any {
     return {
-      name: this.attributes.name,
-      code: this.attributes.code,
-      phone_code: this.attributes.phone_code,
-      img_flag: this.attributes.img_flag,
+      ...(this.id && { id: this.id }),
+      type: this.type,
+      attributes: this.attributes.getPlainAttributes(),
     };
   }
 
@@ -44,6 +37,34 @@ class CountryAttributes extends CommonFields {
   private _code: Signal<string> = signal('');
   private _phone_code: Signal<string> = signal('');
   private _img_flag: Signal<string> = signal('');
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.name = object.attributes?.name ?? this.name;
+      this.code = object.attributes?.code ?? this.code;
+      this.phone_code = object.attributes?.phone_code ?? this.phone_code;
+      this.img_flag = object.attributes?.img_flag ?? this.img_flag;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.name && {
+        name: this.name,
+      }),
+      ...(this.code && {
+        code: this.code,
+      }),
+      ...(this.phone_code && {
+        phone_code: this.phone_code,
+      }),
+      ...(this.img_flag && {
+        img_flag: this.img_flag,
+      }),
+    };
+  }
 
   public get name() {
     return this._name.value;

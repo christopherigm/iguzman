@@ -15,7 +15,7 @@ type Response = {
 
 export const GetCities = ({ URLBase, jwt }: Props): Promise<any> => {
   return new Promise((res, rej) => {
-    const url = `${URLBase}/v1/cities/`;
+    const url = `${URLBase}/v1/cities/?page[size]=100`;
     Get({ url, jwt })
       .then((response: Response) => res(response.data))
       .catch((error) => rej(error));
@@ -34,9 +34,9 @@ export const GetCitiesByStateID = ({
   jwt,
 }: PropsCitiesByState): Promise<any> => {
   return new Promise((res, rej) => {
-    const url = `${URLBase}/v1/cities/?filter[state]=${stateID}`;
+    const url = `${URLBase}/v1/cities/?filter[state]=${stateID}&page[size]=100`;
     Get({ url, jwt })
-      .then((response: Response) => res(response.data))
+      .then((response: Response) => res(response))
       .catch((error) => rej(error));
   });
 };

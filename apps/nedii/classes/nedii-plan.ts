@@ -1,15 +1,36 @@
 import { Signal, signal } from '@preact-signals/safe-react';
+import { API, CommonFields } from '@repo/utils';
 
 export type Exposure = 'basic' | 'medium' | 'high' | 'full';
 
 export default class NediiPlan {
   public static instance: NediiPlan;
-  protected type: string = 'NediiPlan';
+  public type: string = 'NediiPlan';
   private _id: Signal<number> = signal(0);
   public attributes: NediiPlanAttributes = new NediiPlanAttributes();
 
   public static getInstance(): NediiPlan {
     return NediiPlan.instance || new NediiPlan();
+  }
+
+  public setDataFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.attributes.setAttributesFromPlainObject(object);
+  }
+
+  public getPlainObject(): any {
+    return {
+      id: this.id,
+      type: this.type,
+      attributes: this.attributes.getPlainAttributes(),
+    };
+  }
+
+  public getMinimumPlainObject(): any {
+    return {
+      id: this.id,
+      type: this.type,
+    };
   }
 
   public get id() {
@@ -20,7 +41,7 @@ export default class NediiPlan {
   }
 }
 
-class NediiPlanAttributes {
+class NediiPlanAttributes extends CommonFields {
   private _name: Signal<string> = signal('');
   private _unlimited_items: Signal<boolean> = signal(false);
   private _number_of_items: Signal<number> = signal(0);
@@ -30,6 +51,48 @@ class NediiPlanAttributes {
   private _billed_monthly: Signal<boolean> = signal(false);
   private _exposure: Signal<Exposure> = signal('basic');
   private _price: Signal<number> = signal(0);
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.name = object.attributes.name ?? this.name;
+      this.unlimited_items = object.attributes.unlimited_items;
+      this.number_of_items =
+        object.attributes.number_of_items ?? this.number_of_items;
+      this.advertising_days =
+        object.attributes.advertising_days ?? this.advertising_days;
+      this.stand_enabled = object.attributes.stand_enabled;
+      this.digital_card = object.attributes.digital_card;
+      this.billed_monthly = object.attributes.billed_monthly;
+      this.exposure = object.attributes.exposure ?? this.exposure;
+      this.price = object.attributes.price ?? this.price;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.name && {
+        name: this.name,
+      }),
+      unlimited_items: this.unlimited_items,
+      ...(this.number_of_items && {
+        number_of_items: this.number_of_items,
+      }),
+      ...(this.advertising_days && {
+        advertising_days: this.advertising_days,
+      }),
+      stand_enabled: this.stand_enabled,
+      digital_card: this.digital_card,
+      billed_monthly: this.billed_monthly,
+      ...(this.exposure && {
+        exposure: this.exposure,
+      }),
+      ...(this.price && {
+        price: this.price,
+      }),
+    };
+  }
 
   public get name() {
     return this._name.value;

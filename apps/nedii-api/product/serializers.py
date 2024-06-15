@@ -10,71 +10,74 @@ from product.models import (
 )
 from stand.models import Stand
 
+
 class ProductClassificationSerializer(HyperlinkedModelSerializer):
-    stand=ResourceRelatedField( queryset=Stand.objects )
+    stand = ResourceRelatedField(queryset=Stand.objects)
 
     class Meta:
-        model=ProductClassification
-        fields="__all__"
+        model = ProductClassification
+        fields = "__all__"
+
 
 class ProductDeliveryTypeSerializer(HyperlinkedModelSerializer):
 
     class Meta:
-        model=ProductDeliveryType
-        fields="__all__"
+        model = ProductDeliveryType
+        fields = "__all__"
 
 
 class ProductFeatureOptionSerializer(HyperlinkedModelSerializer):
-    feature=ResourceRelatedField( queryset=ProductFeature.objects )
+    feature = ResourceRelatedField(queryset=ProductFeature.objects)
 
     class Meta:
-        model=ProductFeatureOption
-        fields="__all__"
+        model = ProductFeatureOption
+        fields = "__all__"
 
 
 class ProductFeatureSerializer(HyperlinkedModelSerializer):
-    stand=ResourceRelatedField( queryset=Stand.objects )
-    options=ResourceRelatedField( queryset=ProductFeatureOption.objects )
+    stand = ResourceRelatedField(queryset=Stand.objects)
+    options = ResourceRelatedField(queryset=ProductFeatureOption.objects)
 
     included_serializers = {
         "options": "product.serializers.ProductFeatureOptionSerializer"
     }
 
     class Meta:
-        model=ProductFeature
-        fields="__all__"
+        model = ProductFeature
+        fields = "__all__"
 
 
 class ProductPictureSerializer(HyperlinkedModelSerializer):
-    stand=ResourceRelatedField( queryset=Stand.objects )
-    product=ResourceRelatedField( queryset=Product.objects )
+    stand = ResourceRelatedField(queryset=Stand.objects)
+    product = ResourceRelatedField(queryset=Product.objects)
 
     class Meta:
-        model=ProductPicture
-        fields="__all__"
+        model = ProductPicture
+        fields = "__all__"
 
 
 class ProductSerializer(HyperlinkedModelSerializer):
-    classification=ResourceRelatedField( queryset=ProductClassification.objects )
-    stand=ResourceRelatedField( queryset=Stand.objects )
-    delivery_type=ResourceRelatedField(
+    classification = ResourceRelatedField(
+        queryset=ProductClassification.objects)
+    stand = ResourceRelatedField(queryset=Stand.objects)
+    delivery_type = ResourceRelatedField(
         queryset=ProductDeliveryType.objects,
         many=True
     )
-    features=ResourceRelatedField(
+    features = ResourceRelatedField(
         queryset=ProductFeatureOption.objects,
         many=True
     )
-    product_pictures=ResourceRelatedField(
+    product_pictures = ResourceRelatedField(
         queryset=ProductPicture.objects,
         many=True
     )
-    related=ResourceRelatedField(
+    related = ResourceRelatedField(
         queryset=Product.objects,
         many=True
     )
 
-    included_serializers={
+    included_serializers = {
         "stand": "stand.serializers.StandSerializer",
         "classification": "product.serializers.ProductClassificationSerializer",
         "delivery_type": "product.serializers.ProductDeliveryTypeSerializer",
@@ -84,5 +87,5 @@ class ProductSerializer(HyperlinkedModelSerializer):
     }
 
     class Meta:
-        model=Product
-        fields="__all__"
+        model = Product
+        fields = "__all__"

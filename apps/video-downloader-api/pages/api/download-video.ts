@@ -14,7 +14,8 @@ import { getVideoName } from '@/pages/api/get-video-name';
 import type Item from '@/types/items';
 import type DownloadOptions from '@/types/download-options';
 import type Metadata from '@/types/metadata';
-import { isYoutube } from '@repo/utils';
+import { isYoutube, isInstagram, isTiktok } from '@repo/utils';
+import requestIp from 'request-ip';
 
 const onData = (data: any) => {
   console.log('>>>', data);
@@ -115,7 +116,22 @@ const downloadVideo = (
           !options.force
         ) {
           console.log('First catch');
-          res(item);
+          item.created = new Date();
+          updateItem(item)
+            .then((item) => res(item))
+            .catch((e) => rej(e));
+        } else if (
+          item.filename &&
+          fs.existsSync(`media/${item.filename}`) &&
+          item.status === 'downloading'
+        ) {
+          console.log('First and half catch');
+          item.status = 'ready';
+          item.created = new Date();
+          delete item.error;
+          updateItem(item)
+            .then((item) => res(item))
+            .catch((e) => rej(e));
         } else if (
           fs.existsSync(`media/${item.id}.${item.extention}`) &&
           !fs.existsSync(`media/${item.filename}`) &&
@@ -131,11 +147,8 @@ const downloadVideo = (
                 .then((item) => res(item))
                 .catch((e) => rej(e));
             })
-            .catch((e) => rej(e));
-        } else if (
-          fs.existsSync(`media/${item.filename}`) &&
-          (item.status === 'error' || item.status === 'downloading')
-        ) {
+            .catch((e) => rej(e)); /////// update status!
+        } else if (fs.existsSync(`media/${item.filename}`)) {
           console.log('Third catch');
           item.status = 'ready';
           delete item.error;
@@ -144,11 +157,22 @@ const downloadVideo = (
             .catch((e) => rej(e));
         } else {
           console.log('Final catch');
+          if (url.search('si=')) {
+            url = url.split('si=')[0];
+          }
+          if (isTiktok(url)) {
+            url += '?is_from_webapp=1&sender_device=pc';
+          }
+          const iOS =
+            metadata &&
+            metadata.userAgent &&
+            (metadata.userAgent.indexOf('iPad') > -1 ||
+              metadata.userAgent.indexOf('iPhone') > -1);
           let command =
             os.platform() === 'win32'
               ? `${winBinary} "${url}" `
               : `${linuxBinary} "${url}" `;
-          if (isYoutube(url)) {
+          if (isYoutube(url) && !iOS) {
             command += `-f "${
               options.justAudio ? '' : 'bestvideo[ext=mp4]+'
             }bestaudio[ext=m4a]/${
@@ -157,38 +181,44 @@ const downloadVideo = (
           } else {
             command += `--add-header "user-agent:Mozilla/5.0" -vU `;
           }
+          if (isYoutube(url)) {
+            command += ' --no-playlist ';
+          }
+          // if (isTiktok(url)) {
+          //   command += ' -f 0 ';
+          // }
+          if (isInstagram(url) || iOS) {
+            command += ' -S "codec:h264" ';
+          }
           if (os.platform() !== 'win32') {
             command += '--cookies /app/netscape-cookies.txt ';
           }
           // command += '--write-sub --write-auto-sub --sub-lang "en.*" ';
-          const iOS =
-            metadata.userAgent.indexOf('iPad') > -1 ||
-            metadata.userAgent.indexOf('iPhone') > -1; // Windows <- Improve!
           if (!options.justAudio) {
-            if (iOS) {
-              command += ' --remux-video mov --merge-output-format mov ';
-              command += ' --postprocessor-args "-acodec aac -vcodec libx264" ';
-            } else {
-              command += ' --merge-output-format mp4 ';
-            }
+            command += ' --merge-output-format mp4 ';
           }
-          command += `-o "media/${item.id}.%(ext)s"`;
+          command += ` -o "media/${item.id}.%(ext)s"`;
+          command += ' --quiet';
+          console.log('command:', command);
           item.remoteAddress = metadata.remoteAddress;
           item.justAudio = options.justAudio;
           item.status = 'downloading';
           item.created = new Date();
-          item.extention = options.justAudio ? 'm4a' : iOS ? 'mov' : 'mp4';
+          item.extention = options.justAudio ? 'm4a' : 'mp4';
           delete item.error;
           updateItem(item)
             .then((item) => {
               res(item);
-              exec(command, (error, _stdout) => {
+              exec(command, { maxBuffer: 1024 * 2048 }, (error, _stdout) => {
                 if (error) {
-                  console.log(' download error', error);
-                  item.status = 'error';
+                  console.log('>> download error:', error);
+                  const videoDeleted =
+                    error.toString().search('Video not available') > -1;
+                  console.log('>> videoDeleted:', videoDeleted);
+                  item.status = videoDeleted ? 'deleted' : 'error';
                   item.error = String(error);
                   updateItem(item).catch((e) =>
-                    console.log('updateItem error:', e)
+                    console.log('>>> updateItem error:', e)
                   );
                 } else {
                   writeMetadataToFile(item, options.force)
@@ -196,7 +226,7 @@ const downloadVideo = (
                       item.status = 'ready';
                       delete item.error;
                       updateItem(item).catch((e) =>
-                        console.log('updateItem error:', e)
+                        console.log('>>> updateItem error:', e)
                       );
                     })
                     .catch((e) =>
@@ -208,7 +238,10 @@ const downloadVideo = (
             .catch((e) => rej(e));
         }
       })
-      .catch((error) => updateItem({ url, error, status: 'error' }));
+      .catch((error) => {
+        updateItem({ url, error, status: 'error' });
+        rej(error);
+      });
   });
 };
 
@@ -233,10 +266,12 @@ export default function handler(
         justAudio,
         force,
       };
-      console.log('> device', req.headers['user-agent']);
       const userAgent = req.headers['user-agent'] ?? '';
       const metadata: Metadata = {
-        remoteAddress: req.socket.remoteAddress?.toString() ?? '',
+        remoteAddress:
+          (requestIp.getClientIp(req)?.toString() ||
+            req.socket.remoteAddress?.toString()) ??
+          '',
         userAgent,
       };
       getVideoName(url, justAudio, force)
@@ -245,7 +280,7 @@ export default function handler(
             .then((item) => res.status(201).json(item))
             .catch((error) => res.status(400).send(error.toString()));
           downloadVideo(url, options, metadata)
-            .then(() => console.log('downloadVideo success'))
+            .then(() => console.log('downloadVideo request processing'))
             .catch((e) => console.log('downloadVideo error:', e));
         })
         .catch((error) => res.status(400).send(error.toString()));

@@ -52,7 +52,7 @@ from users.views import (
 )
 from stand.views import (
     ExpoViewSet,
-    StandGroupViewSet,
+    StandCategoryViewSet,
     StandBookingQuestionViewSet,
     StandBookingQuestionOptionsViewSet,
     StandNewsViewSet,
@@ -100,10 +100,9 @@ from vehicle.views import (
     VehicleViewSet
 )
 
-router=routers.DefaultRouter()
+router = routers.DefaultRouter()
 
 router.register(r'system-configurations', SystemViewSet)
-router.register(r'countries', CountryViewSet)
 router.register(r'countries', CountryViewSet)
 router.register(r'states', StateViewSet)
 router.register(r'cities', CityViewSet)
@@ -119,10 +118,11 @@ router.register(r'user-orders', UserOrderViewSet)
 
 router.register(r'nedii-plans', NediiPlanViewSet)
 router.register(r'expos', ExpoViewSet)
-router.register(r'groups', StandGroupViewSet)
+router.register(r'categories', StandCategoryViewSet)
 
 router.register(r'stand-booking-questions', StandBookingQuestionViewSet)
-router.register(r'stand-booking-question-options', StandBookingQuestionOptionsViewSet)
+router.register(r'stand-booking-question-options',
+                StandBookingQuestionOptionsViewSet)
 router.register(r'stand-news', StandNewsViewSet)
 router.register(r'stand-phones', StandPhonesViewSet)
 router.register(r'stand-pictures', StandPicturesViewSet)
@@ -144,7 +144,8 @@ router.register(r'product-feature-options', ProductFeatureOptionViewSet)
 router.register(r'product-images', ProductPictureViewSet)
 router.register(r'products', ProductViewSet)
 
-router.register(r'real-estate-classifications', RealEstateClassificationViewSet)
+router.register(r'real-estate-classifications',
+                RealEstateClassificationViewSet)
 router.register(r'real-estate-features', RealEstateFeatureViewSet)
 router.register(r'real-estate-pictures', RealEstatePictureViewSet)
 router.register(r'real-estates', RealEstateViewSet)
@@ -162,7 +163,7 @@ router.register(r'vehicle-models', VehicleModelViewSet)
 router.register(r'vehicles', VehicleViewSet)
 
 # https://github.com/axnsan12/drf-yasg
-schema_view=get_schema_view(
+schema_view = get_schema_view(
     openapi.Info(
         title='API Docs',
         default_version='v1',
@@ -179,15 +180,22 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     re_path(r'^v1/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    re_path(r'^v1/token/$', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    re_path(r'^v1/token/refresh/$', TokenRefreshView.as_view(), name='token_refresh'),
-    re_path(r'^v1/token/verify/$', TokenVerifyView.as_view(), name='token_verify'),
-    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    re_path(r'^v1/token/$', TokenObtainPairView.as_view(),
+            name='token_obtain_pair'),
+    re_path(r'^v1/token/refresh/$',
+            TokenRefreshView.as_view(), name='token_refresh'),
+    re_path(r'^v1/token/verify/$',
+            TokenVerifyView.as_view(), name='token_verify'),
+    re_path(r'^swagger(?P<format>\.json|\.yaml)$',
+            schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    re_path(r'^swagger/$', schema_view.with_ui('swagger',
+            cache_timeout=0), name='schema-swagger-ui'),
+    re_path(r'^redoc/$', schema_view.with_ui('redoc',
+            cache_timeout=0), name='schema-redoc'),
     path('v1/system-information', System.as_view()),
     re_path(r'^v1/activate-user', ActivateUser.as_view(), name='activate-user'),
-    re_path(r'^v1/reset-password', ResetPassword.as_view(), name='reset-password'),
+    re_path(r'^v1/reset-password', ResetPassword.as_view(),
+            name='reset-password'),
     re_path(r'^v1/set-password', SetPassword.as_view(), name='set-password'),
     re_path(r'^v1/post-rating', PostRating.as_view(), name='post-rating'),
 ]

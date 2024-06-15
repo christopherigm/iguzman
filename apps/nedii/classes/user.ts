@@ -7,74 +7,41 @@ import {
   BaseUserAddress,
   GetLocalStorageData,
   SetLocalStorageData,
+  removeImagesForAPICall,
 } from '@repo/utils';
+import Stand from 'classes/stand';
 
 export default class User extends BaseUser {
   public static instance: User;
   public attributes: UserAttributes = new UserAttributes();
   private _addresses: Signal<Array<BaseUserAddress>> = signal([]);
+  private _companies: Signal<Array<Stand>> = signal([]);
 
   public static getInstance(): User {
     return User.instance || new User();
   }
 
-  public setNediiUserAttributesFromPlainObject(object: any) {
-    this.setUserAttributesFromPlainObject(object ?? {});
-    this.attributes.token = object?.attributes?.token ?? this.attributes.token;
-    this.attributes.is_seller =
-      object?.attributes?.is_seller ?? this.attributes.is_seller;
-    this.attributes.newsletter =
-      object?.attributes?.newsletter ?? this.attributes.newsletter;
-    this.attributes.promotions =
-      object?.attributes?.promotions ?? this.attributes.promotions;
-    this.attributes.biography =
-      object?.attributes?.biography ?? this.attributes.biography;
-    this.attributes.owner_position =
-      object?.attributes?.owner_position ?? this.attributes.owner_position;
-    this.attributes.owner_position_description =
-      object?.attributes?.owner_position_description ??
-      this.attributes.owner_position_description;
-    this.attributes.owner_phone =
-      object?.attributes?.owner_phone ?? this.attributes.owner_phone;
-    this.attributes.biography =
-      object?.attributes?.biography ?? this.attributes.biography;
-    this.attributes.owner_office_phone =
-      object?.attributes?.owner_office_phone ??
-      this.attributes.owner_office_phone;
-    this.attributes.owner_email =
-      object?.attributes?.owner_email ?? this.attributes.owner_email;
-    this.attributes.owner_whatsapp =
-      object?.attributes?.owner_whatsapp ?? this.attributes.owner_whatsapp;
-    this.attributes.owner_address =
-      object?.attributes?.owner_address ?? this.attributes.owner_address;
+  public setDataFromPlainObject(object: any) {
+    this.id = Number(object.id ?? 0) ?? this.id;
+    this.jwt = object.jwt ?? this.jwt;
+    this.access = object.access ?? this.access;
+    this.attributes.setAttributesFromPlainObject(object);
   }
 
-  public getNediiUserFromLocalStorage() {
-    this.getUserFromLocalStorage();
-    let cachedUser: any = GetLocalStorageData(this.type);
-    if (cachedUser) {
-      cachedUser = JSON.parse(cachedUser);
-      this.setNediiUserAttributesFromPlainObject(cachedUser);
-    }
-  }
+  // public getPlainObject(): any {
+  //   return {
+  //     id: this.id,
+  //     type: this.type,
+  //     attributes: this.attributes.getPlainAttributes(),
+  //   };
+  // }
 
-  public getNediiUserPlainAttributes(): Object {
-    return {
-      ...this.getPlainAttributes(),
-      token: this.attributes.token,
-      is_seller: this.attributes.is_seller,
-      newsletter: this.attributes.newsletter,
-      promotions: this.attributes.promotions,
-      biography: this.attributes.biography,
-      owner_position: this.attributes.owner_position,
-      owner_position_description: this.attributes.owner_position_description,
-      owner_phone: this.attributes.owner_phone,
-      owner_office_phone: this.attributes.owner_office_phone,
-      owner_email: this.attributes.owner_email,
-      owner_whatsapp: this.attributes.owner_whatsapp,
-      owner_address: this.attributes.owner_address,
-    };
-  }
+  // public setDataFromLocalStorage() {
+  //   let cachedUser: any = GetLocalStorageData(this.type);
+  //   if (cachedUser) {
+  //     this.setDataFromPlainObject(JSON.parse(cachedUser));
+  //   }
+  // }
 
   public getNediiUserFromAPI(urlBase?: string): Promise<any> {
     return new Promise((res, rej) => {
@@ -110,10 +77,8 @@ export default class User extends BaseUser {
       if (!URLBase || URLBase === '') {
         return rej(new Error('No URLBase'));
       }
-      const attributes: any = this.getNediiUserPlainAttributes();
-      if (this.attributes.img_picture.search(';base64') < 0) {
-        delete attributes.img_picture;
-      }
+      const attributes: any = this.attributes.getPlainAttributes();
+      removeImagesForAPICall(attributes);
       if (attributes.password === '') {
         delete attributes.password;
       }
@@ -131,16 +96,16 @@ export default class User extends BaseUser {
           })
         )
         .then(() => {
-          this.saveNediiUserToLocalStorage();
-          this.getNediiUserFromLocalStorage();
+          this.saveUserToLocalStorage();
+          this.setDataFromLocalStorage();
           res();
         })
         .catch((error) => rej(error));
     });
   }
 
-  public saveNediiUserToLocalStorage() {
-    let attributes: any = this.getNediiUserPlainAttributes();
+  public saveUserToLocalStorage() {
+    let attributes: any = this.attributes.getPlainAttributes();
     attributes.password = '';
     SetLocalStorageData(
       this.type,
@@ -163,20 +128,50 @@ export default class User extends BaseUser {
         jwt: this.access,
       })
         .then((response: { data: Array<any> }) => {
-          const rawAddresses = response.data.length
+          const rawData = response.data.length
             ? RebuildData(response).data
             : [];
           this.addresses = [];
-          rawAddresses.forEach((i: any) => {
+          rawData.forEach((i: any) => {
             const newItem = new BaseUserAddress();
             newItem.id = Number(i.id);
             newItem.URLBase = this.URLBase;
             newItem.access = this.access;
-            newItem.setAddressAttributesFromPlainObject(i);
+            newItem.setAttributesFromPlainObject(i);
             this.addresses.push(newItem);
           });
           this.addresses = [...this.addresses];
-          res(rawAddresses);
+          res(rawData);
+        })
+        .catch((error) => rej(error));
+    });
+  }
+
+  public getUserCompaniesFromAPI(): Promise<Array<any>> {
+    return new Promise((res, rej) => {
+      let url = `${this.URLBase}/v1/stands/?filter[owner]=${this.id}`;
+      url += '&include=city,city.state,city.state.country,phones,';
+      url += 'pictures';
+      API.Get({
+        url,
+        jwt: this.access,
+      })
+        .then((response: { data: Array<any> }) => {
+          const rawData =
+            response && response.data && response.data.length
+              ? RebuildData(response).data
+              : [];
+          this.companies = [];
+          rawData.forEach((i: any) => {
+            const newItem = new Stand();
+            newItem.id = Number(i.id);
+            newItem.URLBase = this.URLBase;
+            newItem.access = this.access;
+            newItem.setDataFromPlainObject(i);
+            this.companies.push(newItem);
+          });
+          this.companies = [...this.companies];
+          res(rawData);
         })
         .catch((error) => rej(error));
     });
@@ -187,6 +182,13 @@ export default class User extends BaseUser {
   }
   public set addresses(value) {
     this._addresses.value = value;
+  }
+
+  public get companies() {
+    return this._companies.value;
+  }
+  public set companies(value) {
+    this._companies.value = value;
   }
 }
 
@@ -203,6 +205,65 @@ class UserAttributes extends BaseUserAttributes {
   private _owner_email: Signal<string> = signal('');
   private _owner_whatsapp: Signal<string> = signal('');
   private _owner_address: Signal<string> = signal('');
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.token = object.attributes.token ?? this.token;
+      this.is_seller = object.attributes.is_seller ?? this.is_seller;
+      this.newsletter = object.attributes.newsletter ?? this.newsletter;
+      this.promotions = object.attributes.promotions ?? this.promotions;
+      this.biography = object.attributes.biography ?? this.biography;
+      this.owner_position =
+        object.attributes.owner_position ?? this.owner_position;
+      this.owner_position_description =
+        object.attributes.owner_position_description ??
+        this.owner_position_description;
+      this.owner_phone = object.attributes.owner_phone ?? this.owner_phone;
+      this.biography = object.attributes.biography ?? this.biography;
+      this.owner_office_phone =
+        object.attributes.owner_office_phone ?? this.owner_office_phone;
+      this.owner_email = object.attributes.owner_email ?? this.owner_email;
+      this.owner_whatsapp =
+        object.attributes.owner_whatsapp ?? this.owner_whatsapp;
+      this.owner_address =
+        object.attributes.owner_address ?? this.owner_address;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.token && { token: this.token }),
+      is_seller: this.is_seller,
+      newsletter: this.newsletter,
+      promotions: this.promotions,
+      ...(this.biography && {
+        biography: this.biography,
+      }),
+      ...(this.owner_position && {
+        owner_position: this.owner_position,
+      }),
+      ...(this.owner_position_description && {
+        owner_position_description: this.owner_position_description,
+      }),
+      ...(this.owner_phone && {
+        owner_phone: this.owner_phone,
+      }),
+      ...(this.owner_office_phone && {
+        owner_office_phone: this.owner_office_phone,
+      }),
+      ...(this.owner_email && {
+        owner_email: this.owner_email,
+      }),
+      ...(this.owner_whatsapp && {
+        owner_whatsapp: this.owner_whatsapp,
+      }),
+      ...(this.owner_address && {
+        owner_address: this.owner_address,
+      }),
+    };
+  }
 
   public get token() {
     return this._token.value;

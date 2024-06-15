@@ -3,6 +3,8 @@ import Head from 'next/head';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
 import { BaseUser } from '@repo/utils';
 import { MainLayout } from '@repo/ui';
 import System, { system } from 'classes/system';
@@ -14,7 +16,7 @@ const user = BaseUser.getInstance();
 
 const Page = (props: any) => {
   useEffect(() => {
-    system.setSystemAttributesFromPlainObject(props);
+    system.setVDSystemAttributesFromPlainObject(props);
     system.getItemsFromLocalStorage();
     user.getUserFromLocalStorage();
   }, [props]);
@@ -55,25 +57,35 @@ const Page = (props: any) => {
       <Box marginTop={1.5}>
         <Divider />
       </Box>
-      <DownloadForm
-        URLBase={props.URLBase}
-        callback={(url: string, options: DownloadOptions) =>
-          system.addItem(url, options)
-        }
-      />
-      {system.items.length ? (
+      {system.supported ? (
         <>
-          <Box marginTop={1.5} marginBottom={2}>
-            <Divider />
-          </Box>
-          <GridOfItems
-            items={system.items}
-            onDeleteItem={(id: string) => system.deleteItem(id)}
-            devMode={system.devMode}
-            darkMode={system.darkMode}
+          <DownloadForm
+            URLBase={props.URLBase}
+            callback={(url: string, options: DownloadOptions) =>
+              system.addItem(url, options)
+            }
           />
+          {system.items.length ? (
+            <>
+              <Box marginTop={1.5} marginBottom={2}>
+                <Divider />
+              </Box>
+              <GridOfItems
+                items={system.items}
+                onDeleteItem={(id: string) => system.deleteItem(id)}
+                devMode={system.devMode}
+                darkMode={system.darkMode}
+              />
+            </>
+          ) : null}
         </>
-      ) : null}
+      ) : (
+        <Stack marginTop={2} sx={{ width: '100%' }} spacing={2}>
+          <Alert severity="error">
+            Browser not supported, please switch to Safari.
+          </Alert>
+        </Stack>
+      )}
     </MainLayout>
   );
 };
@@ -81,7 +93,9 @@ const Page = (props: any) => {
 export async function getServerSideProps({ req }: any) {
   const system = System.getInstance();
   system.parseCookies(req.cookies);
-  return { props: system.getPlainAttributes() };
+  system.userAgent = req.headers['user-agent'] ?? '';
+  system.checkForiOS();
+  return { props: system.getVDPlainAttributes() };
 }
 
 export default Page;

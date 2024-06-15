@@ -6,14 +6,14 @@ echo "RUN_FIXTURES: $RUN_FIXTURES"
 # then
 # fi
 
+# Apply database migrations
+echo "Apply database migrations"
+python3 manage.py migrate
 
 # Collect static files
 echo "Collect static files"
 python3 manage.py collectstatic --noinput
 
-# Apply database migrations
-echo "Apply database migrations"
-python3 manage.py migrate
 
 # Start server
 echo "Starting server"

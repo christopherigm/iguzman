@@ -9,8 +9,9 @@
     "migrations": "python manage.py makemigrations",
     "migrate": "python manage.py migrate",
     "freeze": "python -m pip freeze -l > requirements.txt",
+    "fixtures": "python manage.py loaddata system skill-categories 9000-skills-backend 9100-skills-frontend 9200-skills-languages 9300-skills-mobile 9400-skills-data-bases 9500-skills-ci-cd 9600-skills-platforms 9700-skills-iot schools companies countries states cities user user-schools user-jobs user-skills",
     "deploy": "node build-and-deploy.js",
-    "deploy:prod": "node build-and-deploy.js --production"
+    "deploy-only": "node deploy.js"
   },
   "repository": {
     "type": "git",

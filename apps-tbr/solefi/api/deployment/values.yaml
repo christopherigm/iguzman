@@ -3,13 +3,20 @@ volumeMountPath: "shared-volume"
 nginxServiceName: "nginx-api"
 
 config:
-  ENVIRONMENT: staging
-  BRANCH_NAME: integration
   SECRET_KEY: default
+  ENVIRONMENT: production
+  BRANCH: integration
   DB_HOST: postgres-api.solefi.svc.cluster.local
   DB_NAME: default
   DB_USER: default
   DB_PASSWORD: default
+  EMAIL_HOST_USER: email@gmail.com
+  EMAIL_HOST_PASSWORD: password
+  JWT_ACCESS_EXPIRATION_DAYS: 7
+  JWT_REFRESH_EXPIRATION_DAYS: 30
+  API_URL: http://127.0.0.1:8000/
+  WEB_APP_URL: http://127.0.0.1:3000/
+  RUN_FIXTURES: false
 
 image:
   registry: christopherguzman
@@ -23,13 +30,13 @@ service:
   internalPort: 8000
 
 ingress:
-  enabled: false
-  host: myapp.com
+  enabled: true
+  host: api.solefi.iguzman.com.mx
 
 resources:
   limits:
-    cpu: 200m
-    memory: 256Mi
+    cpu: 300m
+    memory: 512Mi
   requests:
     cpu: 100m
     memory: 128Mi

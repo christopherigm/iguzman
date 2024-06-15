@@ -18,9 +18,10 @@ export default function handler(
         item._id = new ObjectId(req.query.id?.toString());
       }
       getAllItems(item)
-        .then((item) => {
-          if (item) {
-            res.status(200).json(item);
+        .then((items: Array<Document>) => {
+          if (items && items.length) {
+            items.map((i) => (i.version = process.env.VERSION));
+            res.status(200).json(items);
           } else {
             res.status(400).end();
           }

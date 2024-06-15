@@ -17,10 +17,9 @@ export default function handler(
       getItem(queryItem)
         .then((item) => {
           if (item) {
-            res.status(200).json(item);
-          } else {
-            res.status(400).end();
+            return res.status(200).json(item);
           }
+          res.status(400).end();
         })
         .catch((error) => res.status(400).send(error.toString()));
     })
