@@ -1,4 +1,5 @@
 import { ReactElement, useEffect, useState } from 'react';
+import { Signal, signal } from '@preact-signals/safe-react';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -7,14 +8,16 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
-import { API, StateInterface } from '@repo/utils';
+import LinearProgress from '@mui/material/LinearProgress';
+import { State } from '@repo/utils';
+
+const state = signal<State>(State.getInstance()).value;
 
 type Props = {
   URLBase: string;
   language: 'en' | 'es';
-  country: number;
-  state: number;
-  defaultStateID?: number;
+  dependentID: number;
+  value: number;
   onChange: (value: number) => void;
 };
 
@@ -23,73 +26,77 @@ type Option = {
   label: string;
 };
 
+const valueIsInOptions: Signal<boolean> = signal(false);
+
 const StateField = ({
   URLBase,
   language = 'en',
-  country,
-  state,
-  defaultStateID,
+  dependentID,
+  value,
   onChange,
 }: Props): ReactElement => {
-  const [states, setStates] = useState<Array<StateInterface>>([]);
   const [options, setOptions] = useState<Array<Option>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [newEntry, setNewEntry] = useState<boolean>(false);
-  const [newName, setNewName] = useState<string>('');
+  const [previousID, setPreviousID] = useState<number>(0);
+  valueIsInOptions.value = options.map((i) => i.id).indexOf(value) >= 0;
+  state.URLBase = URLBase;
 
   useEffect(() => {
-    setIsLoading(true);
-    GetStates();
-  }, [country, defaultStateID]);
-
-  const GetStates = (): Promise<StateInterface> => {
-    return new Promise((_res, rej) => {
-      API.GetStatesByCountryID({
-        URLBase,
-        countryID: country,
-      })
-        .then((data: Array<StateInterface>) => {
-          setIsLoading(false);
-          setNewEntry(false);
-          setStates(data);
-          setOptions(
-            data.map((i: StateInterface) => {
-              return {
-                id: i.id,
-                label: i.attributes.name,
-              };
-            })
-          );
-          if (!state && data.length && data[0] && !defaultStateID) {
-            onChange(data[0].id);
-          } else if (defaultStateID) {
-            onChange(defaultStateID);
+    state.relationships.country.data.id = Number(dependentID);
+    if (
+      ((!options.length && dependentID) ||
+        Number(dependentID) !== previousID) &&
+      !isLoading
+    ) {
+      setIsLoading(true);
+      setPreviousID(Number(dependentID));
+      state
+        .GetStatesByCountryID(Number(dependentID))
+        .then((response: { data: Array<State> }) => {
+          const newOptions = response.data.map((i: State) => {
+            return {
+              id: Number(i.id),
+              label: i.attributes.name,
+            };
+          });
+          setOptions(newOptions);
+          valueIsInOptions.value =
+            newOptions.map((i) => i.id).indexOf(value) >= 0;
+          if (!value && newOptions.length && newOptions[0]) {
+            onChange(newOptions[0].id);
+          } else if (
+            !valueIsInOptions.value &&
+            newOptions.length &&
+            newOptions[0]
+          ) {
+            onChange(newOptions[0].id);
           }
         })
-        .catch((e: any) => rej(e));
-    });
-  };
+        .catch((e: any) => console.log(e))
+        .finally(() => setIsLoading(false));
+    }
+  }, [dependentID, value, previousID, options.length]);
 
   const CreateState = () => {
     setIsLoading(true);
-    API.CreateState({
-      URLBase,
-      name: newName,
-      country,
-    })
-      .then((data: StateInterface) => onChange(data.id))
-      .then(() =>
-        API.GetStatesByCountryID({
-          URLBase,
-          countryID: country,
-        })
-      )
-      .then(GetStates)
-      .catch((_e: any) => setIsLoading(false));
+    state
+      .save()
+      .then(() => {
+        state.attributes.name = '';
+        onChange(state.id);
+        setPreviousID(0);
+        setOptions([]);
+      })
+      .catch((e: any) => console.log(e))
+      .finally(() => {
+        setNewEntry(false);
+        setIsLoading(false);
+      });
   };
 
   const getLabel = (): string => {
-    return !states.length && isLoading
+    return !options.length && isLoading
       ? language === 'en'
         ? 'Loading states'
         : 'Cargando estados'
@@ -98,9 +105,17 @@ const StateField = ({
         : 'Estado';
   };
 
+  if (isLoading || (isLoading && !valueIsInOptions.value)) {
+    return (
+      <Box sx={{ width: '100%' }} marginTop={2}>
+        <LinearProgress />
+      </Box>
+    );
+  }
+
   return (
     <>
-      {newEntry ? (
+      {newEntry || !options.length ? (
         <>
           <Box display="flex" flexDirection="column">
             <TextField
@@ -108,9 +123,9 @@ const StateField = ({
               variant="outlined"
               size="small"
               type="text"
-              value={newName}
+              value={state.attributes.name}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setNewName(e.target.value)
+                (state.attributes.name = e.target.value)
               }
               disabled={isLoading}
               sx={{ width: '100%' }}
@@ -143,7 +158,7 @@ const StateField = ({
                 type="submit"
                 size="small"
                 color="success"
-                disabled={isLoading || newName.length < 3}
+                disabled={isLoading || state.attributes.name.length < 3}
                 sx={{
                   marginLeft: '15px',
                   textTransform: 'initial',
@@ -154,6 +169,11 @@ const StateField = ({
                 {language === 'en' ? 'Save' : 'Guardar'}
               </Button>
             </Box>
+            {isLoading ? (
+              <Box sx={{ width: '100%' }} marginTop={2}>
+                <LinearProgress />
+              </Box>
+            ) : null}
           </Box>
         </>
       ) : (
@@ -172,7 +192,7 @@ const StateField = ({
               <Select
                 labelId="demo-simple-select-label"
                 id="demo-simple-select"
-                value={String(state)}
+                value={String(value)}
                 label={getLabel()}
                 disabled={isLoading || !options.length}
                 size="small"
@@ -200,7 +220,9 @@ const StateField = ({
               }}
               onClick={() => {
                 setNewEntry(true);
-                setNewName('');
+                state.id = 0;
+                state.attributes.name = '';
+                onChange(state.id);
               }}
             >
               Nuevo
@@ -220,6 +242,11 @@ const StateField = ({
                 </>
               )}
             </Typography>
+          ) : null}
+          {isLoading ? (
+            <Box sx={{ width: '100%' }} marginTop={2}>
+              <LinearProgress />
+            </Box>
           ) : null}
         </Box>
       )}

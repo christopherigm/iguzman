@@ -15,9 +15,9 @@ type Response = {
 
 const GetCountries = ({ URLBase, jwt }: Props): Promise<any> => {
   return new Promise((res, rej) => {
-    const url = `${URLBase}/v1/countries/`;
+    const url = `${URLBase}/v1/countries/?page[size]=100`;
     Get({ url, jwt })
-      .then((response: Response) => res(response.data))
+      .then((response: Response) => res(response))
       .catch((error) => rej(error));
   });
 };

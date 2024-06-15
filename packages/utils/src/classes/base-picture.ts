@@ -11,7 +11,7 @@ export class BasePicture extends BaseAPIClass {
     return BasePicture.instance || new BasePicture();
   }
 
-  public getPlainObject(): Object {
+  public getPlainObject(): any {
     return {
       id: this.id,
       type: this.type,

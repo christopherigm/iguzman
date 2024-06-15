@@ -7,13 +7,15 @@ from common.models import (
 
 # Create your serializers here.
 
+
 class CitySerializer(HyperlinkedModelSerializer):
-    state=ResourceRelatedField (
-        queryset=State.objects   
+    state = ResourceRelatedField(
+        queryset=State.objects
     )
-    included_serializers={
+    included_serializers = {
         'state': 'common.serializers.StateSerializer'
     }
+
     class Meta:
-        model=City
-        fields='__all__'
+        model = City
+        fields = '__all__'

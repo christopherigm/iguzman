@@ -5,17 +5,21 @@ from rest_framework import status
 from rest_framework.response import Response
 from common import tools
 
+
 class CustomCreate(mixins.CreateModelMixin):
     """
     Create a model instance.
     """
+
     def create(self, request, *args, **kwargs):
+        request._mutable = True
         userId = request.user.id
         token = None
         if 'Authorization' in request.headers:
             token = self.request.headers['Authorization'].split(" ")[1]
         if token:
-            user = jwt.decode(token, settings.SECRET_KEY, algorithms='HS256', do_time_check=True)
+            user = jwt.decode(token, settings.SECRET_KEY,
+                              algorithms='HS256', do_time_check=True)
             userId = user['user_id']
         request.data.__setitem__('user', {
             'type': 'User',
@@ -30,44 +34,48 @@ class CustomCreate(mixins.CreateModelMixin):
 
 
 class CustomUpdate(mixins.UpdateModelMixin):
-  """
-  Update a model instance.
-  """
-  def update(self, request, *args, **kwargs):
-    partial = kwargs.pop('partial', False)
-    instance = self.get_object()
-    if 'user' in request.data:
-        del request.data['user']
-    request = tools.save_base64_picture(request)
-    serializer = self.get_serializer(instance, data=request.data, partial=partial)
-    serializer.is_valid(raise_exception=True)
-    self.perform_update(serializer)
+    """
+    Update a model instance.
+    """
 
-    if getattr(instance, '_prefetched_objects_cache', None):
-        # If 'prefetch_related' has been applied to a queryset, we need to
-        # forcibly invalidate the prefetch cache on the instance.
-        instance._prefetched_objects_cache = {}
+    def update(self, request, *args, **kwargs):
+        request._mutable = True
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        if 'user' in request.data:
+            del request.data['user']
+        request = tools.save_base64_picture(request)
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
 
-    return Response(serializer.data)
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
 
 
 class CountRetrieve(mixins.RetrieveModelMixin):
-  """
-  Retrieve a model instance.
-  """
-  def retrieve(self, request, *args, **kwargs):
-    instance = self.get_object()
-    serializer = self.get_serializer(instance)
-    if 'views' in serializer.data:
-        views = instance.views
-        views += 1
-        serializer = self.get_serializer(
-            instance,
-            data = {
-                'views': views 
-            },
-            partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-    return Response(serializer.data)
+    """
+    Retrieve a model instance.
+    """
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        if 'views' in serializer.data:
+            views = instance.views
+            views += 1
+            serializer = self.get_serializer(
+                instance,
+                data={
+                    'views': views
+                },
+                partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        return Response(serializer.data)

@@ -73,7 +73,7 @@ export default class User extends BaseUser {
     }
   }
 
-  public getResumePlainAttributes(): Object {
+  public getResumePlainAttributes(): any {
     return {
       ...this.getPlainAttributes(),
       token: this.attributes.token,

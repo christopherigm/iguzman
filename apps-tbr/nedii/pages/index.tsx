@@ -10,7 +10,7 @@ import { user } from 'classes/user';
 const Page = (props: any): ReactElement => {
   useEffect(() => {
     system.setServerSideProps(props);
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
   }, [props]);
 
   return (

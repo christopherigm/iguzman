@@ -1,11 +1,12 @@
 import { Signal, signal } from '@preact/signals-react';
 import CommonFields from './common-fields';
 import Country from './country';
+import API from '../api';
+import BaseAPIClass from './base-class';
 
-export default class State {
+export default class State extends BaseAPIClass {
   public static instance: State;
   public type: string = 'State';
-  private _id: Signal<number> = signal(0);
   public attributes: StateAttributes = new StateAttributes();
   public relationships: StateRelationships = new StateRelationships();
 
@@ -13,54 +14,82 @@ export default class State {
     return State.instance || new State();
   }
 
-  public setAttributesFromPlainObject(object: any) {
+  public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
-    // Attributes
-    this.attributes.name = object.attributes?.name ?? this.attributes.name;
-    this.attributes.code = object.attributes?.code ?? this.attributes.code;
-    // Relationships
-    if (object.relationships?.country.data) {
-      this.relationships.country.data.setAttributesFromPlainObject(
-        object.relationships?.country?.data
-      );
-    }
-  }
-
-  public getPlainAttributes(): any {
-    return {
-      name: this.attributes.name,
-      code: this.attributes.code,
-    };
-  }
-
-  public getPlainRelationships(): any {
-    return {
-      country: {
-        data: this.relationships.country.data.getPlainAttributes(),
-      },
-    };
+    this.attributes.setAttributesFromPlainObject(object);
+    this.relationships.setRelationshipsFromPlainObject(object);
   }
 
   public getPlainObject(): any {
     return {
-      id: this.id,
+      ...(this.id && { id: this.id }),
       type: this.type,
-      attributes: this.getPlainAttributes(),
-      relationships: this.getPlainRelationships(),
+      attributes: this.attributes.getPlainAttributes(),
+      relationships: this.relationships.getPlainRelationships(),
     };
   }
 
-  public get id() {
-    return this._id.value;
+  public save(): Promise<void> {
+    return new Promise((res, rej) => {
+      API.CreateState({
+        URLBase: this.URLBase,
+        name: this.attributes.name,
+        country: this.relationships.country.data.id,
+      })
+        .then((data) => {
+          console.log('response', data);
+          if (data.errors && data.errors.length) {
+            return rej(data.errors);
+          }
+          this.id = Number(data?.id ?? this.id);
+          return res();
+        })
+        .catch((e) => rej(e));
+    });
   }
-  public set id(value) {
-    this._id.value = value;
+
+  public GetStatesByCountryID(
+    countryID: number
+  ): Promise<{ data: Array<State> }> {
+    return new Promise((res, rej) => {
+      API.GetStatesByCountryID({
+        URLBase: this.URLBase,
+        countryID: Number(countryID),
+      })
+        .then((response) => {
+          if (response.errors && response.errors.length) {
+            return rej(response.errors);
+          }
+          res(response);
+        })
+        .catch((e) => rej(e));
+    });
   }
 }
 
 class StateAttributes extends CommonFields {
   private _name: Signal<string> = signal('');
   private _code: Signal<string> = signal('');
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.name = object.attributes.name ?? this.name;
+      this.code = object.attributes.code ?? this.code;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.name && {
+        name: this.name,
+      }),
+      ...(this.code && {
+        code: this.code,
+      }),
+    };
+  }
 
   public get name() {
     return this._name.value;
@@ -81,6 +110,26 @@ class StateRelationships {
   public _country: Signal<{ data: Country }> = signal({
     data: Country.getInstance(),
   });
+
+  public setRelationshipsFromPlainObject(object: any) {
+    if (object.relationships) {
+      if (object.relationships.country?.data) {
+        this.country.data.setDataFromPlainObject(
+          object.relationships.country.data
+        );
+      }
+    }
+  }
+
+  public getPlainRelationships(): any {
+    return {
+      ...(this.country.data.id && {
+        state: {
+          data: this.country.data.getPlainObject(),
+        },
+      }),
+    };
+  }
 
   public get country() {
     return this._country.value;

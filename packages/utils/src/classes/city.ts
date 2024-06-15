@@ -1,11 +1,12 @@
 import { Signal, signal } from '@preact/signals-react';
 import CommonFields from './common-fields';
 import State from './state';
+import API from '../api';
+import BaseAPIClass from './base-class';
 
-export default class City {
+export default class City extends BaseAPIClass {
   public static instance: City;
   public type: string = 'City';
-  private _id: Signal<number> = signal(0);
   public attributes: CityAttributes = new CityAttributes();
   public relationships: CityRelationships = new CityRelationships();
 
@@ -13,59 +14,75 @@ export default class City {
     return City.instance || new City();
   }
 
-  public setAttributesFromPlainObject(object: any) {
+  public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
-    // Attributes
-    if (object.attributes) {
-      this.attributes.name = object.attributes.name ?? this.attributes.name;
-    }
-    // Relationships
-    if (object.relationships) {
-      if (object.relationships.state?.data) {
-        this.relationships.state.data.setAttributesFromPlainObject(
-          object.relationships.state.data
-        );
-      }
-    }
-  }
-
-  public getPlainAttributes(): any {
-    return {
-      ...(this.attributes.name && {
-        name: this.attributes.name,
-      }),
-    };
-  }
-
-  public getPlainRelationships(): any {
-    return {
-      ...(this.relationships.state.data.id && {
-        state: {
-          data: this.relationships.state.data.getPlainAttributes(),
-        },
-      }),
-    };
+    this.attributes.setAttributesFromPlainObject(object);
+    this.relationships.setRelationshipsFromPlainObject(object);
   }
 
   public getPlainObject(): any {
     return {
-      id: this.id,
+      ...(this.id && { id: this.id }),
       type: this.type,
-      attributes: this.getPlainAttributes(),
-      relationships: this.getPlainRelationships(),
+      attributes: this.attributes.getPlainAttributes(),
+      relationships: this.relationships.getPlainRelationships(),
     };
   }
 
-  public get id() {
-    return this._id.value;
+  public save(): Promise<void> {
+    return new Promise((res, rej) => {
+      API.CreateCity({
+        URLBase: this.URLBase,
+        name: this.attributes.name,
+        state: this.relationships.state.data.id,
+      })
+        .then((data) => {
+          console.log('response', data);
+          if (data.errors && data.errors.length) {
+            return rej(data.errors);
+          }
+          this.id = Number(data?.id ?? this.id);
+          return res();
+        })
+        .catch((e) => rej(e));
+    });
   }
-  public set id(value) {
-    this._id.value = value;
+
+  public GetCitiesByStateID(stateID: number): Promise<{ data: Array<City> }> {
+    return new Promise((res, rej) => {
+      API.GetCitiesByStateID({
+        URLBase: this.URLBase,
+        stateID: Number(stateID),
+      })
+        .then((response) => {
+          if (response.errors && response.errors.length) {
+            return rej(response.errors);
+          }
+          res(response);
+        })
+        .catch((e) => rej(e));
+    });
   }
 }
 
 class CityAttributes extends CommonFields {
   private _name: Signal<string> = signal('');
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.name = object.attributes.name ?? this.name;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.name && {
+        name: this.name,
+      }),
+    };
+  }
 
   public get name() {
     return this._name.value;
@@ -80,6 +97,24 @@ class CityRelationships {
     data: State.getInstance(),
   });
 
+  public setRelationshipsFromPlainObject(object: any) {
+    if (object.relationships) {
+      if (object.relationships.state?.data) {
+        this.state.data.setDataFromPlainObject(object.relationships.state.data);
+      }
+    }
+  }
+
+  public getPlainRelationships(): any {
+    return {
+      ...(this.state.data.id && {
+        state: {
+          data: this.state.data.getPlainObject(),
+        },
+      }),
+    };
+  }
+
   public get state() {
     return this._state.value;
   }
@@ -87,3 +122,5 @@ class CityRelationships {
     this._state.value = value;
   }
 }
+
+export const city = signal<City>(City.getInstance()).value;

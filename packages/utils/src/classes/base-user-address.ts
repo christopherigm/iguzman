@@ -94,13 +94,13 @@ export class BaseUserAddress {
       this.attributes.delivery_instructions;
     // Relationships
     if (object.relationships?.city?.data) {
-      this.relationships.city.data.setAttributesFromPlainObject(
+      this.relationships.city.data.setDataFromPlainObject(
         object.relationships?.city?.data
       );
     }
   }
 
-  public getPlainAttributes(): Object {
+  public getPlainAttributes(): any {
     return {
       alias: this.attributes.alias,
       receptor_name: this.attributes.receptor_name,
@@ -115,13 +115,13 @@ export class BaseUserAddress {
     };
   }
 
-  public getPlainRelationships(): Object {
+  public getPlainRelationships(): any {
     return {
-      city: this.relationships.city.data.getPlainAttributes(),
+      city: this.relationships.city.data.getPlainObject(),
     };
   }
 
-  public getPlainObject(): Object {
+  public getPlainObject(): any {
     return {
       id: this.id,
       type: this.type,
@@ -130,7 +130,7 @@ export class BaseUserAddress {
     };
   }
 
-  public getPlainRelationshipsForAPI(): Object {
+  public getPlainRelationshipsForAPI(): any {
     const obj: any = {};
     if (this.relationships.city.data.id) {
       obj.city = {

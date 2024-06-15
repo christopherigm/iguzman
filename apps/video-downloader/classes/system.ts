@@ -24,7 +24,7 @@ export default class System extends BaseSystem {
     this.paths = ['/', '/account'];
   }
 
-  public getVDPlainAttributes(): Object {
+  public getVDPlainAttributes(): any {
     return {
       ...this.getPlainAttributes(),
       userAgent: this.userAgent,

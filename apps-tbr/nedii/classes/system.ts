@@ -15,7 +15,7 @@ export default class System extends BaseSystem {
     this.paths = ['/', '/account'];
   }
 
-  public getServerSideProps(): Object {
+  public getServerSideProps(): any {
     return {
       hostName: this.hostName,
       URLBase: this.URLBase,

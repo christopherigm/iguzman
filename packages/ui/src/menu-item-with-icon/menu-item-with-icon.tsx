@@ -33,7 +33,7 @@ const MenuItemWithIcon = ({
       <Box
         display="flex"
         justifyContent="space-evenly"
-        color={selected ? '#2196f3' : '#777'}
+        color={selected ? '#2196f3' : '#333'}
       >
         {icon}
       </Box>
@@ -44,7 +44,7 @@ const MenuItemWithIcon = ({
         variant="body1"
         textAlign="center"
         color={
-          darkMode ? 'primary.contrastText' : selected ? '#2196f3' : '#777'
+          darkMode ? 'primary.contrastText' : selected ? '#2196f3' : '#333'
         }
         paddingTop={1}
         noWrap={true}

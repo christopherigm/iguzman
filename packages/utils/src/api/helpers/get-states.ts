@@ -15,7 +15,7 @@ type Response = {
 
 export const GetStates = ({ URLBase, jwt }: Props): Promise<any> => {
   return new Promise((res, rej) => {
-    const url = `${URLBase}/v1/states/`;
+    const url = `${URLBase}/v1/states/?page[size]=100`;
     Get({ url, jwt })
       .then((response: Response) => res(response.data))
       .catch((error) => rej(error));
@@ -34,9 +34,9 @@ export const GetStatesByCountryID = ({
   jwt,
 }: PropsByCountry): Promise<any> => {
   return new Promise((res, rej) => {
-    const url = `${URLBase}/v1/states/?filter[country]=${countryID}`;
+    const url = `${URLBase}/v1/states/?filter[country]=${countryID}&page[size]=100`;
     Get({ url, jwt })
-      .then((response: Response) => res(response.data))
+      .then((response: Response) => res(response))
       .catch((error) => rej(error));
   });
 };

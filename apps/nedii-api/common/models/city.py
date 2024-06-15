@@ -2,8 +2,9 @@ from django.db import models
 from common.models import CommonFields
 from common.validators import ModelValidators
 
+
 class City(CommonFields):
-    name=models.CharField(
+    name = models.CharField(
         max_length=32,
         null=False,
         blank=False,
@@ -12,7 +13,7 @@ class City(CommonFields):
             ModelValidators.name,
         ]
     )
-    state=models.ForeignKey(
+    state = models.ForeignKey(
         'common.State',
         null=False,
         blank=False,
@@ -26,4 +27,4 @@ class City(CommonFields):
         )
 
     class JSONAPIMeta:
-        resource_name="City"
+        resource_name = "City"

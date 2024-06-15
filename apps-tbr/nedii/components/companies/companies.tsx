@@ -21,7 +21,7 @@ const Companies = ({ darkMode, URLBase, language }: Props): ReactElement => {
   const [addCompany, setAddCompany] = useState(false);
 
   useEffect(() => {
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
     user.URLBase = URLBase;
     if (user.access) {
       GetUserCompanies({
