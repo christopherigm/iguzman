@@ -47,7 +47,7 @@ export default class StandBookingQuestion extends BaseAPIClass {
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }
-          this.id = response.data?.id ?? this.id;
+          this.id = Number(response.data?.id ?? this.id);
           return res();
         })
         .catch((error) => rej(error));
@@ -173,7 +173,7 @@ export class StandBookingQuestionOption extends BaseAPIClass {
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }
-          this.id = response.data?.id ?? this.id;
+          this.id = Number(response.data?.id ?? this.id);
           return res();
         })
         .catch((error) => rej(error));

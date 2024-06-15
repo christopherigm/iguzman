@@ -10,13 +10,13 @@ const Page = (props: any): ReactElement => {
   const router = useRouter();
 
   useEffect(() => {
-    system.setNediiSystemAttributesFromPlainObject(props);
+    system.setDataFromPlainObject(props);
     user.URLBase = system.URLBase;
   }, [props]);
 
   const callback = (data: any) => {
-    user.setNediiUserAttributesFromPlainObject(data);
-    user.saveNediiUserToLocalStorage();
+    user.setDataFromPlainObject(data);
+    user.saveUserToLocalStorage();
     router.push('/');
   };
 
@@ -58,7 +58,7 @@ const Page = (props: any): ReactElement => {
 export async function getServerSideProps({ req }: any) {
   const props = System.getInstance();
   props.parseCookies(req.cookies);
-  return { props: system.getNediiPlainAttributes() };
+  return { props: system.getPlainObject() };
 }
 
 export default Page;

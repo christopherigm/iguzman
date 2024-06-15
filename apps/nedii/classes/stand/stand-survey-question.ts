@@ -37,11 +37,10 @@ export default class SurveyQuestion {
       };
       API.Post(data)
         .then((response) => {
-          console.log(`Resource ${this.type} added:`, response);
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }
-          this.id = response.data?.id ?? this.id;
+          this.id = Number(response.data?.id ?? this.id);
           return res();
         })
         .catch((error) => rej(error));

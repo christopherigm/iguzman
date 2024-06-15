@@ -6,7 +6,7 @@ import System, { system } from 'classes/system';
 
 const Page = (props: any): ReactElement => {
   useEffect(() => {
-    system.setNediiSystemAttributesFromPlainObject(props);
+    system.setDataFromPlainObject(props);
   }, [props]);
 
   return (
@@ -47,7 +47,7 @@ const Page = (props: any): ReactElement => {
 export async function getServerSideProps({ req }: any) {
   const props = System.getInstance();
   props.parseCookies(req.cookies);
-  return { props: system.getNediiPlainAttributes() };
+  return { props: system.getPlainObject() };
 }
 
 export default Page;

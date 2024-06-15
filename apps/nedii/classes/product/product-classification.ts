@@ -1,12 +1,10 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { BaseAPIClass, BasePictureAttributes, API } from '@repo/utils';
+import { BasePicture, API } from '@repo/utils';
 
-export default class ProductClassification extends BaseAPIClass {
+export default class ProductClassification extends BasePicture {
   public static instance: ProductClassification;
   public type = 'ProductClassification';
   public endpoint = 'v1/product-classifications/';
-  public attributes: ProductClassificationAttributes =
-    new ProductClassificationAttributes();
   public relationships: ProductClassificationRelationships =
     new ProductClassificationRelationships();
 
@@ -39,41 +37,15 @@ export default class ProductClassification extends BaseAPIClass {
       };
       API.Post(data)
         .then((response) => {
+          console.log('response', response);
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }
-          this.id = response.data?.id ?? this.id;
+          this.id = Number(response.data?.id ?? this.id);
           return res();
         })
         .catch((error) => rej(error));
     });
-  }
-}
-
-class ProductClassificationAttributes extends BasePictureAttributes {
-  private _slug: Signal<string> = signal('');
-
-  public setAttributesFromPlainObject(object: any) {
-    if (object.attributes) {
-      super.setAttributesFromPlainObject(object);
-      this.slug = object.attributes.slug ?? this.slug;
-    }
-  }
-
-  public getPlainAttributes(): any {
-    return {
-      ...super.getPlainAttributes(),
-      ...(this.slug && {
-        slug: this.slug,
-      }),
-    };
-  }
-
-  public get slug() {
-    return this._slug.value;
-  }
-  public set slug(value) {
-    this._slug.value = value;
   }
 }
 

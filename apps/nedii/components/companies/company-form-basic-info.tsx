@@ -1,7 +1,6 @@
 import { ReactElement, FormEvent, useEffect } from 'react';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import { Signal, signal } from '@preact-signals/safe-react';
@@ -11,6 +10,7 @@ import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import InputAdornment from '@mui/material/InputAdornment';
+import { system } from 'classes/system';
 
 const isLoadingLocal: Signal<boolean> = signal(false);
 const complete: Signal<boolean> = signal(false);
@@ -18,8 +18,6 @@ const error: Signal<string> = signal('');
 
 type Props = {
   isLoading: boolean;
-  darkMode: boolean;
-  URLBase: string;
   stand: Stand;
   onCancel: () => void;
   onIncomplete: () => void;
@@ -28,8 +26,6 @@ type Props = {
 
 const CompanyFormBasicInfo = ({
   isLoading = false,
-  darkMode = false,
-  URLBase,
   stand,
   onCancel,
   onIncomplete,
@@ -37,6 +33,7 @@ const CompanyFormBasicInfo = ({
 }: Props): ReactElement => {
   useEffect(() => {
     console.log('CompanyFormBasicInfo.tsx > renders');
+    system.setDataFromLocalStorage();
     isLoadingLocal.value = false;
     complete.value = false;
     error.value = '';
@@ -82,6 +79,7 @@ const CompanyFormBasicInfo = ({
             variant="outlined"
             size="small"
             type="text"
+            required={true}
             value={stand.attributes.name}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.name = e.target.value;
@@ -116,6 +114,7 @@ const CompanyFormBasicInfo = ({
             multiline={true}
             rows={4}
             name="description"
+            required={true}
             value={stand.attributes.description}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.description = e.target.value;
@@ -132,6 +131,7 @@ const CompanyFormBasicInfo = ({
             size="small"
             type="text"
             name="short-description"
+            required={true}
             value={stand.attributes.short_description}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               stand.attributes.short_description = e.target.value;

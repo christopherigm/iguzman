@@ -1,15 +1,17 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { BaseAPIClass, CommonFields, API } from '@repo/utils';
+import { CommonFields, BaseAPIClass, API } from '@repo/utils';
+import ProductFeatureOption from 'classes/product/product-feature-option';
 
-export default class StandPhone extends BaseAPIClass {
-  public static instance: StandPhone;
-  public type = 'StandPhone';
-  public endpoint = 'v1/stand-phones/';
-  public attributes: StandPhoneAttributes = new StandPhoneAttributes();
-  public relationships: StandPhoneRelationships = new StandPhoneRelationships();
+export default class ProductFeature extends BaseAPIClass {
+  public static instance: ProductFeature;
+  public type = 'ProductFeature';
+  public endpoint = 'v1/product-features/';
+  public attributes: ProductFeatureAttributes = new ProductFeatureAttributes();
+  public relationships: ProductFeatureRelationships =
+    new ProductFeatureRelationships();
 
-  public static getInstance(): StandPhone {
-    return StandPhone.instance || new StandPhone();
+  public static getInstance(): ProductFeature {
+    return ProductFeature.instance || new ProductFeature();
   }
 
   public setDataFromPlainObject(object: any) {
@@ -27,29 +29,6 @@ export default class StandPhone extends BaseAPIClass {
     };
   }
 
-  public getPhoneByStandID(): Promise<void> {
-    return new Promise((res, rej) => {
-      let url = `${this.URLBase}/${this.endpoint}`;
-      url += `?filter[stand]=${this.relationships.stand.data.id}`;
-      url += `&filter[phone]=${this.attributes.phone}`;
-      const data = {
-        url,
-        jwt: this.access,
-      };
-      API.Get(data)
-        .then((response) => {
-          if (response.errors && response.errors.length) {
-            return rej(response.errors);
-          } else if (!response.data || !response.data.length) {
-            return rej(new Error('No Data'));
-          }
-          this.id = response.data[0].id ?? this.id;
-          return res();
-        })
-        .catch((error) => rej(error));
-    });
-  }
-
   public save(): Promise<void> {
     return new Promise((res, rej) => {
       const url = `${this.URLBase}/${this.endpoint}`;
@@ -61,9 +40,6 @@ export default class StandPhone extends BaseAPIClass {
       API.Post(data)
         .then((response) => {
           if (response.errors && response.errors.length) {
-            if (response.errors[0].code === 'unique') {
-              return this.getPhoneByStandID().then(() => res());
-            }
             return rej(response.errors);
           }
           this.id = Number(response.data?.id ?? this.id);
@@ -74,32 +50,34 @@ export default class StandPhone extends BaseAPIClass {
   }
 }
 
-class StandPhoneAttributes extends CommonFields {
-  private _phone: Signal<string> = signal('');
+class ProductFeatureAttributes extends CommonFields {
+  private _name: Signal<string> = signal('');
 
   public setAttributesFromPlainObject(object: any) {
     if (object.attributes) {
       super.setAttributesFromPlainObject(object);
-      this.phone = object.attributes.phone ?? this.phone;
+      this.name = object.attributes.name ?? this.name;
     }
   }
 
   public getPlainAttributes(): any {
     return {
       ...super.getPlainAttributes(),
-      ...(this.phone && { phone: this.phone }),
+      ...(this.name && {
+        name: this.name,
+      }),
     };
   }
 
-  public get phone() {
-    return this._phone.value;
+  public get name() {
+    return this._name.value;
   }
-  public set phone(value) {
-    this._phone.value = value;
+  public set name(value) {
+    this._name.value = value;
   }
 }
 
-class StandPhoneRelationships {
+class ProductFeatureRelationships {
   public _stand: Signal<{
     data: {
       id: number;
@@ -111,11 +89,23 @@ class StandPhoneRelationships {
       type: 'Stand',
     },
   });
+  public _options: Signal<{ data: Array<ProductFeatureOption> }> = signal({
+    data: [],
+  });
 
   public setRelationshipsFromPlainObject(object: any): any {
     if (object.relationships) {
       if (object.relationships.stand?.data) {
         this.stand.data.id = object.relationships.stand.data.id;
+      }
+      if (object.relationships.options?.data) {
+        const newArray: Array<ProductFeatureOption> = [];
+        object.relationships.options.data.map((i: any) => {
+          const newOption = new ProductFeatureOption();
+          newOption.setDataFromPlainObject(i);
+          newArray.push(newOption);
+        });
+        this.options.data = [...newArray];
       }
     }
   }
@@ -127,6 +117,11 @@ class StandPhoneRelationships {
           data: this.stand.data,
         },
       }),
+      ...(this.options.data.length && {
+        options: {
+          data: this.options.data.map((i) => i.getPlainObject()),
+        },
+      }),
     };
   }
 
@@ -136,6 +131,15 @@ class StandPhoneRelationships {
   public set stand(value) {
     this._stand.value = value;
   }
+
+  public get options() {
+    return this._options.value;
+  }
+  public set options(value) {
+    this._options.value = value;
+  }
 }
 
-export const standPhone = signal<StandPhone>(StandPhone.getInstance()).value;
+export const productFeature = signal<ProductFeature>(
+  ProductFeature.getInstance()
+).value;

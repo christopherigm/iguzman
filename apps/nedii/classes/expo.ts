@@ -28,7 +28,7 @@ export default class Expo {
           const expos: Array<Expo> = [];
           response.data.map((rawExpo: any) => {
             const newExpo = new Expo();
-            newExpo.setAttributesFromPlainObject(rawExpo);
+            newExpo.setDataFromPlainObject(rawExpo);
             expos.push(newExpo);
           });
           res(expos);
@@ -37,45 +37,20 @@ export default class Expo {
     });
   }
 
-  public setAttributesFromPlainObject(object: any) {
+  public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
-    if (object.attributes) {
-      this.attributes.name = object.attributes.name ?? this.attributes.name;
-      this.attributes.img_picture =
-        object.attributes.img_picture ?? this.attributes.img_picture;
-      this.attributes.slug = object.attributes.slug ?? this.attributes.slug;
-    }
+    this.attributes.setAttributesFromPlainObject(object);
   }
 
-  public getPlainAttributes(): Object {
-    return {
-      ...(this.attributes.name && {
-        name: this.attributes.name,
-      }),
-      ...(this.attributes.slug && {
-        slug: this.attributes.slug,
-      }),
-      ...(this.attributes.img_picture && {
-        img_picture: this.attributes.img_picture,
-      }),
-      ...(this.attributes.email && {
-        email: this.attributes.email,
-      }),
-      ...(this.attributes.is_real && {
-        is_real: this.attributes.is_real,
-      }),
-    };
-  }
-
-  public getPlainObject(): Object {
+  public getPlainObject(): any {
     return {
       id: this.id,
       type: this.type,
-      attributes: this.getPlainAttributes(),
+      attributes: this.attributes.getPlainAttributes(),
     };
   }
 
-  public getMinimumPlainObject(): Object {
+  public getMinimumPlainObject(): any {
     return {
       id: this.id,
       type: this.type,
@@ -110,6 +85,36 @@ class ExpoAttributes extends CommonFields {
   private _img_picture: Signal<string> = signal('');
   private _email: Signal<string> = signal('');
   private _is_real: Signal<boolean> = signal(false);
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.name = object.attributes.name ?? this.name;
+      this.img_picture = object.attributes.img_picture ?? this.img_picture;
+      this.slug = object.attributes.slug ?? this.slug;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.name && {
+        name: this.name,
+      }),
+      ...(this.slug && {
+        slug: this.slug,
+      }),
+      ...(this.img_picture && {
+        img_picture: this.img_picture,
+      }),
+      ...(this.email && {
+        email: this.email,
+      }),
+      ...(this.is_real && {
+        is_real: this.is_real,
+      }),
+    };
+  }
 
   public get name() {
     return this._name.value;

@@ -11,8 +11,8 @@ const user = User.getInstance();
 
 const Page = (props: any): ReactElement => {
   useEffect(() => {
-    system.setNediiSystemAttributesFromPlainObject(props);
-    user.getNediiUserFromLocalStorage();
+    system.setDataFromPlainObject(props);
+    user.setDataFromLocalStorage();
   }, [props]);
 
   return (
@@ -62,7 +62,7 @@ const Page = (props: any): ReactElement => {
 export async function getServerSideProps({ req }: any) {
   const system = System.getInstance();
   system.parseCookies(req.cookies);
-  return { props: system.getNediiPlainAttributes() };
+  return { props: system.getPlainObject() };
 }
 
 export default Page;

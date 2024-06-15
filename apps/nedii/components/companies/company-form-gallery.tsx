@@ -4,7 +4,6 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
-import TextField from '@mui/material/TextField';
 import { Signal, signal } from '@preact-signals/safe-react';
 import Divider from '@mui/material/Divider';
 import Stand from 'classes/stand';
@@ -40,7 +39,7 @@ const CompanyFormGallery = ({
     isLoadingLocal.value = false;
     complete.value = false;
     error.value = '';
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
     user.URLBase = URLBase;
   }, []);
 

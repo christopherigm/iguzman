@@ -9,8 +9,6 @@ import Expo from 'classes/expo';
 import { useEffect } from '@preact-signals/safe-react/react';
 
 type Props = {
-  darkMode: boolean;
-  URLBase: string;
   stand: Stand;
   onCancel: () => void;
   onIncomplete: () => void;
@@ -18,8 +16,6 @@ type Props = {
 };
 
 const CompanyFormExpoInfo = ({
-  darkMode = false,
-  URLBase,
   stand,
   onCancel,
   onIncomplete,
@@ -34,8 +30,7 @@ const CompanyFormExpoInfo = ({
   return (
     <>
       <CategorySelector
-        URLBase={URLBase}
-        categorySelectedID={stand.relationships.category.data.id ?? 0}
+        categorySelectedID={stand.relationships.category.data.id}
         onSelect={(category: Category) => {
           stand.relationships.category.data.id = category.id;
           stand.relationships.category.data.attributes = category.attributes;
@@ -48,9 +43,8 @@ const CompanyFormExpoInfo = ({
             <Divider />
           </Box>
           <ExpoSelector
-            URLBase={URLBase}
             groupID={stand.relationships.category.data.id}
-            expoSelectedID={stand.relationships.expo.data.id ?? 0}
+            expoSelectedID={stand.relationships.expo.data.id}
             onSelect={(expo: Expo) => {
               stand.relationships.expo.data.id = expo.id;
               stand.relationships.expo.data.attributes = expo.attributes;

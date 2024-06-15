@@ -20,7 +20,7 @@ import System, { system } from 'classes/system';
 
 const Page = (props: any): ReactElement => {
   useEffect(() => {
-    system.setNediiSystemAttributesFromPlainObject(props);
+    system.setDataFromPlainObject(props);
   }, [props]);
 
   const [success, setSuccess] = useState<boolean>(false);
@@ -70,11 +70,11 @@ const Page = (props: any): ReactElement => {
 };
 
 export async function getServerSideProps({ req, params }: any) {
-  const props = System.getInstance();
-  props.parseCookies(req.cookies);
+  const system = System.getInstance();
+  system.parseCookies(req.cookies);
   return {
     props: {
-      ...props.getNediiPlainAttributes(),
+      ...system.getPlainObject(),
       token: params.token || '',
     },
   };

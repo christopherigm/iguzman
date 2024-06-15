@@ -5,14 +5,16 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import LinearProgress from '@mui/material/LinearProgress';
-import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import Grid from '@mui/material/Grid';
-import { MenuItemWithIcon } from '@repo/ui';
-import { VerticalMenu } from '@repo/ui';
-import type { VerticalMenuItemProps } from '@repo/ui';
+import {
+  MenuItemWithIcon,
+  GenericFormButtons,
+  VerticalMenuItemProps,
+  VerticalMenu,
+} from '@repo/ui';
 import Stand from 'classes/stand';
 import CompanyFormDebugData from 'components/companies/company-form-debug-data';
 import CompanyFormExpoInfo from 'components/companies/company-form-expo-info';
@@ -20,9 +22,9 @@ import CompanyFormBasicInfo from 'components/companies/company-form-basic-info';
 import CompanyFormContactInfo from 'components/companies/company-form-contact-info';
 import CompanyFormGallery from 'components/companies/company-form-gallery';
 import { NewStandMenu, EditStandMenu } from './company-form-menu';
-import CompanyFormButtons from './company-form-buttons';
 import Button from '@mui/material/Button';
 import Products from 'components/product/products';
+import { system } from 'classes/system';
 
 const menuItems: Signal<Array<VerticalMenuItemProps>> = signal([]);
 const itemSelected: Signal<Array<VerticalMenuItemProps>> = signal([]);
@@ -32,17 +34,7 @@ const addOrEditCompany: Signal<boolean> = signal(false);
 const currentCompany: Signal<Stand> = signal(new Stand());
 const isLoading: Signal<boolean> = signal(false);
 
-type Props = {
-  darkMode: boolean;
-  devMode: boolean;
-  URLBase: string;
-};
-
-const Companies = ({
-  darkMode = false,
-  devMode = false,
-  URLBase,
-}: Props): ReactElement => {
+const Companies = (): ReactElement => {
   itemSelected.value = menuItems.value.filter(
     (i: VerticalMenuItemProps) => i.selected
   );
@@ -84,21 +76,25 @@ const Companies = ({
 
   useEffect(() => {
     console.log('Companies.tsx > renders');
+    system.setDataFromLocalStorage();
     addOrEditCompany.value = false;
     isLoading.value = true;
-    user.getNediiUserFromLocalStorage();
-    user.URLBase = URLBase;
-    user.getUserCompaniesFromAPI().finally(() => {
-      isLoading.value = false;
-      addOrEditCompany.value = false;
-    });
+    user.setDataFromLocalStorage();
+    user.URLBase = system.URLBase;
+    user.getUserCompaniesFromAPI().finally(() => (isLoading.value = false));
     ResetMenu();
   }, []);
 
   return (
     <>
       {addOrEditCompany.value ? (
-        <Grid container marginTop={1} columnSpacing={2} rowSpacing={2}>
+        <Grid
+          container
+          marginTop={1}
+          marginBottom={2}
+          columnSpacing={2}
+          rowSpacing={2}
+        >
           <Grid item xs={12} sm={4} md={3}>
             <Box
               marginBottom={2}
@@ -117,7 +113,7 @@ const Companies = ({
                 Regresar{' '}
               </Typography>
             </Box>
-            <VerticalMenu darkMode={darkMode} items={menuItems} />
+            <VerticalMenu darkMode={system.darkMode} items={menuItems} />
           </Grid>
           <Grid item xs={12} sm={8} md={9}>
             <Box marginTop={1.5} marginBottom={2.5}>
@@ -135,8 +131,6 @@ const Companies = ({
               <Box padding={1.5}>
                 {itemSelectedId.value === 0 ? (
                   <CompanyFormExpoInfo
-                    darkMode={darkMode}
-                    URLBase={URLBase}
                     stand={currentCompany.value}
                     onCancel={() => updateCompletenessMenuItem(false)}
                     onIncomplete={() => updateCompletenessMenuItem(false)}
@@ -146,8 +140,6 @@ const Companies = ({
                 {itemSelectedId.value === 1 ? (
                   <CompanyFormBasicInfo
                     isLoading={isLoading.value}
-                    darkMode={darkMode}
-                    URLBase={URLBase}
                     stand={currentCompany.value}
                     onCancel={() => updateCompletenessMenuItem(false)}
                     onIncomplete={() => updateCompletenessMenuItem(false)}
@@ -157,8 +149,8 @@ const Companies = ({
                 {itemSelectedId.value === 2 ? (
                   <CompanyFormContactInfo
                     isLoading={isLoading.value}
-                    darkMode={darkMode}
-                    URLBase={URLBase}
+                    darkMode={system.darkMode}
+                    URLBase={system.URLBase}
                     stand={currentCompany.value}
                     onCancel={() => updateCompletenessMenuItem(false)}
                     onIncomplete={() => updateCompletenessMenuItem(false)}
@@ -168,8 +160,8 @@ const Companies = ({
                 {itemSelectedId.value === 3 ? (
                   <CompanyFormGallery
                     isLoading={isLoading.value}
-                    darkMode={darkMode}
-                    URLBase={URLBase}
+                    darkMode={system.darkMode}
+                    URLBase={system.URLBase}
                     stand={currentCompany.value}
                     onCancel={() => updateCompletenessMenuItem(false)}
                     onIncomplete={() => updateCompletenessMenuItem(false)}
@@ -179,8 +171,7 @@ const Companies = ({
                 {itemSelectedId.value === 4 ? (
                   <Products
                     isLoading={isLoading.value}
-                    darkMode={darkMode}
-                    URLBase={URLBase}
+                    darkMode={system.darkMode}
                     stand={currentCompany.value}
                     onCancel={() => updateCompletenessMenuItem(false)}
                     onIncomplete={() => updateCompletenessMenuItem(false)}
@@ -219,26 +210,26 @@ const Companies = ({
               </Box>
             </Grid>
           ) : null}
-          <Grid item xs={12} marginBottom={2}>
-            <CompanyFormButtons
-              standID={currentCompany.value.id}
-              isLoading={isLoading.value}
-              complete={currentCompany.value.id ? true : false}
-              canSubmit={() => true}
-              onCancel={() => (addOrEditCompany.value = false)}
-              onDelete={() => {}}
-              onComplete={() => {
-                isLoading.value = true;
-                currentCompany.value
-                  .save()
-                  .catch((e) => console.log('error:', e))
-                  .finally(() => (isLoading.value = false));
-              }}
-            />
-          </Grid>
-          {devMode ? (
+          <GenericFormButtons
+            language={system.language}
+            label="Empresa"
+            canDelete={true}
+            id={currentCompany.value.id}
+            isLoading={isLoading.value}
+            complete={currentCompany.value.id ? true : false}
+            onCancel={() => (addOrEditCompany.value = false)}
+            onDelete={() => {}}
+            onComplete={() => {
+              isLoading.value = true;
+              currentCompany.value
+                .save()
+                .catch((e) => console.log('error:', e))
+                .finally(() => (isLoading.value = false));
+            }}
+          />
+          {system.devMode ? (
             <CompanyFormDebugData
-              darkMode={darkMode}
+              darkMode={system.darkMode}
               stand={currentCompany.value}
             />
           ) : null}
@@ -249,9 +240,9 @@ const Companies = ({
             <Box padding={1.5}>
               <Typography variant="body1">Mis empresas</Typography>
               <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
-                <Grid item xs={4} sm={2}>
+                <Grid item xs={12} sm={3}>
                   <MenuItemWithIcon
-                    darkMode={darkMode}
+                    darkMode={system.darkMode}
                     icon={<AddIcon />}
                     label="Agregar empresa"
                     selected={false}
@@ -273,7 +264,7 @@ const Companies = ({
                 </Grid>
                 {user.companies.map((i: Stand, index: number) => {
                   return (
-                    <Grid item xs={4} sm={2} key={index}>
+                    <Grid item xs={6} sm={3} key={index}>
                       <Paper
                         elevation={2}
                         onClick={() => {

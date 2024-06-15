@@ -24,7 +24,7 @@ export default class Category {
           const categories: Array<Category> = [];
           response.data.map((rawCategory: any) => {
             const newCategory = new Category();
-            newCategory.setAttributesFromPlainObject(rawCategory);
+            newCategory.setDataFromPlainObject(rawCategory);
             categories.push(newCategory);
           });
           res(categories);
@@ -33,47 +33,20 @@ export default class Category {
     });
   }
 
-  public setAttributesFromPlainObject(object: any) {
+  public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
-    if (object.attributes) {
-      this.attributes.name = object.attributes.name ?? this.attributes.name;
-      this.attributes.img_picture =
-        object.attributes.img_picture ?? this.attributes.img_picture;
-      this.attributes.slug = object.attributes.slug ?? this.attributes.slug;
-      this.attributes.icon = object.attributes.icon ?? this.attributes.icon;
-      this.attributes.color = object.attributes.color ?? this.attributes.color;
-    }
+    this.attributes.setAttributesFromPlainObject(object);
   }
 
-  public getPlainAttributes(): Object {
-    return {
-      ...(this.attributes.name && {
-        name: this.attributes.name,
-      }),
-      ...(this.attributes.slug && {
-        slug: this.attributes.slug,
-      }),
-      ...(this.attributes.img_picture && {
-        img_picture: this.attributes.img_picture,
-      }),
-      ...(this.attributes.icon && {
-        icon: this.attributes.icon,
-      }),
-      ...(this.attributes.color && {
-        color: this.attributes.color,
-      }),
-    };
-  }
-
-  public getPlainObject(): Object {
+  public getPlainObject(): any {
     return {
       id: this.id,
       type: this.type,
-      attributes: this.getPlainAttributes(),
+      attributes: this.attributes.getPlainAttributes(),
     };
   }
 
-  public getMinimumPlainObject(): Object {
+  public getMinimumPlainObject(): any {
     return {
       id: this.id,
       type: this.type,
@@ -108,6 +81,38 @@ class CategoryAttributes extends CommonFields {
   private _slug: Signal<string> = signal('');
   private _icon: Signal<string> = signal('');
   private _color: Signal<string> = signal('');
+
+  public setAttributesFromPlainObject(object: any) {
+    if (object.attributes) {
+      super.setAttributesFromPlainObject(object);
+      this.name = object.attributes.name ?? this.name;
+      this.img_picture = object.attributes.img_picture ?? this.img_picture;
+      this.slug = object.attributes.slug ?? this.slug;
+      this.icon = object.attributes.icon ?? this.icon;
+      this.color = object.attributes.color ?? this.color;
+    }
+  }
+
+  public getPlainAttributes(): any {
+    return {
+      ...super.getPlainAttributes(),
+      ...(this.name && {
+        name: this.name,
+      }),
+      ...(this.slug && {
+        slug: this.slug,
+      }),
+      ...(this.img_picture && {
+        img_picture: this.img_picture,
+      }),
+      ...(this.icon && {
+        icon: this.icon,
+      }),
+      ...(this.color && {
+        color: this.color,
+      }),
+    };
+  }
 
   public get name() {
     return this._name.value;

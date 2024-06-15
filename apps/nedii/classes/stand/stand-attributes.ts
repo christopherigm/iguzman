@@ -66,7 +66,7 @@ export default class StandAttributes extends Mixin(
     }
   }
 
-  public getPlainAttributes(): Object {
+  public getPlainAttributes(): any {
     return {
       ...this.getWebLinksPlainAttributes(),
       ...(this.name && { name: this.name }),

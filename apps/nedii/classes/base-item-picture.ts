@@ -1,17 +1,9 @@
 import { Signal, signal } from '@preact-signals/safe-react';
 import { BasePicture, API } from '@repo/utils';
-import Product from 'classes/product/product';
 
-export default class StandPromotion extends BasePicture {
-  public static instance: StandPromotion;
-  public type = 'StandPromotion';
-  public endpoint = 'v1/stand-promotions/';
-  public relationships: StandPromotionRelationships =
-    new StandPromotionRelationships();
-
-  public static getInstance(): StandPromotion {
-    return StandPromotion.instance || new StandPromotion();
-  }
+export default abstract class BaseItemPicture extends BasePicture {
+  public relationships: BaseItemPictureRelationships =
+    new BaseItemPictureRelationships();
 
   public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
@@ -49,7 +41,7 @@ export default class StandPromotion extends BasePicture {
   }
 }
 
-class StandPromotionRelationships {
+class BaseItemPictureRelationships {
   public _stand: Signal<{
     data: {
       id: number;
@@ -61,21 +53,28 @@ class StandPromotionRelationships {
       type: 'Stand',
     },
   });
-  public _product: Signal<{ data: Product }> = signal({
-    data: new Product(),
+  public _product: Signal<{
+    data: {
+      id: number;
+      type: 'Product';
+    };
+  }> = signal({
+    data: {
+      id: 0,
+      type: 'Product',
+    },
   });
-  // public _service: Signal<{ data: Stand }> = signal({
-  //   data: new Stand(),
-  // });
-  // public _meal: Signal<{ data: Stand }> = signal({
-  //   data: new Stand(),
-  // });
-  // public _real_estate: Signal<{ data: Stand }> = signal({
-  //   data: new Stand(),
-  // });
-  // public _vehicle: Signal<{ data: Stand }> = signal({
-  //   data: new Stand(),
-  // });
+  public _service: Signal<{
+    data: {
+      id: number;
+      type: 'Service';
+    };
+  }> = signal({
+    data: {
+      id: 0,
+      type: 'Service',
+    },
+  });
 
   public setRelationshipsFromPlainObject(object: any): any {
     if (object.relationships) {
@@ -83,7 +82,10 @@ class StandPromotionRelationships {
         this.stand.data.id = object.relationships.stand.data.id;
       }
       if (object.relationships.product?.data) {
-        this.product.data.setDataFromPlainObject(object);
+        this.product.data.id = object.relationships.product.data.id;
+      }
+      if (object.relationships.service?.data) {
+        this.service.data.id = object.relationships.service.data.id;
       }
     }
   }
@@ -98,6 +100,11 @@ class StandPromotionRelationships {
       ...(this.product.data.id && {
         product: {
           data: this.product.data,
+        },
+      }),
+      ...(this.service.data.id && {
+        service: {
+          data: this.service.data,
         },
       }),
     };
@@ -116,8 +123,11 @@ class StandPromotionRelationships {
   public set product(value) {
     this._product.value = value;
   }
-}
 
-export const standPromotion = signal<StandPromotion>(
-  StandPromotion.getInstance()
-).value;
+  public get service() {
+    return this._service.value;
+  }
+  public set service(value) {
+    this._service.value = value;
+  }
+}

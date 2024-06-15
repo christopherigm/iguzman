@@ -11,11 +11,11 @@ import { Country, State, City } from '@repo/utils';
 import StandPhone from 'classes/stand/stand-phone';
 import PhonesForm from 'components/companies/phones-form';
 
-const country = signal<Country>(Country.getInstance()).value;
-const defaultCountry = signal<Country>(Country.getInstance()).value;
-const state = signal<State>(State.getInstance()).value;
-const defaultState = signal<State>(State.getInstance()).value;
-const defaultCity = signal<City>(City.getInstance()).value;
+// const country = signal<Country>(Country.getInstance()).value;
+// const defaultCountry = signal<Country>(Country.getInstance()).value;
+// const state = signal<State>(State.getInstance()).value;
+// const defaultState = signal<State>(State.getInstance()).value;
+// const defaultCity = signal<City>(City.getInstance()).value;
 
 const isLoadingLocal: Signal<boolean> = signal(false);
 const complete: Signal<boolean> = signal(false);
@@ -47,22 +47,22 @@ const CompanyFormContactInfo = ({
     complete.value = false;
     error.value = '';
     phones.value = [...stand.relationships.phones.data];
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
     user.URLBase = URLBase;
-    if (stand.relationships.city.data.id) {
-      defaultCity.id = stand.relationships.city.data.id;
-      if (stand.relationships.city.data.relationships?.state?.data?.id) {
-        defaultState.id =
-          stand.relationships.city.data.relationships.state.data.id;
-        if (
-          stand.relationships.city.data.relationships.state.data.relationships
-            ?.country?.data?.id
-        ) {
-          defaultCountry.id =
-            stand.relationships.city.data.relationships.state.data.relationships.country.data.id;
-        }
-      }
-    }
+    // if (stand.relationships.city.data.id) {
+    //   defaultCity.id = stand.relationships.city.data.id;
+    //   if (stand.relationships.city.data.relationships?.state?.data?.id) {
+    //     defaultState.id =
+    //       stand.relationships.city.data.relationships.state.data.id;
+    //     if (
+    //       stand.relationships.city.data.relationships.state.data.relationships
+    //         ?.country?.data?.id
+    //     ) {
+    //       defaultCountry.id =
+    //         stand.relationships.city.data.relationships.state.data.relationships.country.data.id;
+    //     }
+    //   }
+    // }
   }, []);
 
   const onSubmit = (e: FormEvent) => {
@@ -99,43 +99,49 @@ const CompanyFormContactInfo = ({
       <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
         <Grid item xs={12} sm={6} md={4}>
           <CountryField
-            country={country.id}
+            value={
+              stand.relationships.city.data.relationships.state.data
+                .relationships.country.data.id
+            }
             language="es"
             URLBase={URLBase}
-            defaultCountryID={defaultCountry.id}
             onChange={(value) => {
-              country.id = value;
-              state.id = 0;
+              stand.relationships.city.data.relationships.state.data.relationships.country.data.id =
+                Number(value);
+              stand.relationships.city.data.relationships.state.data.id = 0;
               stand.relationships.city.data.id = 0;
             }}
           />
         </Grid>
-        {country.id ? (
+        {stand.relationships.city.data.relationships.state.data.relationships
+          .country.data.id ? (
           <Grid item xs={12} sm={6} md={4}>
             <StateField
-              country={country.id}
+              dependentID={
+                stand.relationships.city.data.relationships.state.data
+                  .relationships.country.data.id
+              }
               language="es"
               URLBase={URLBase}
-              state={state.id}
-              defaultStateID={defaultState.id}
+              value={stand.relationships.city.data.relationships.state.data.id}
               onChange={(value) => {
-                state.id = value;
-                stand.relationships.city.data.id = 0;
+                stand.relationships.city.data.relationships.state.data.id =
+                  Number(value);
               }}
             />
           </Grid>
         ) : null}
-        {state.id ? (
+        {stand.relationships.city.data.relationships.state.data.id ? (
           <Grid item xs={12} sm={6} md={4}>
             <CityField
-              state={state.id}
+              dependentID={
+                stand.relationships.city.data.relationships.state.data.id
+              }
               language="es"
               URLBase={URLBase}
-              city={stand.relationships.city.data.id}
-              defaultCityID={defaultCity.id}
+              value={stand.relationships.city.data.id}
               onChange={(value) => {
-                console.log('Update city value:', value);
-                stand.relationships.city.data.id = value;
+                stand.relationships.city.data.id = Number(value);
                 checkCompleteness();
               }}
             />

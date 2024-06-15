@@ -7,9 +7,9 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Category, { category } from 'classes/category';
 import { useEffect } from '@preact-signals/safe-react/react';
 import CategoryItem from 'components/companies/category-item';
+import { system } from 'classes/system';
 
 type Props = {
-  URLBase: string;
   categorySelectedID: number;
   onSelect: (category: Category) => void;
 };
@@ -18,13 +18,13 @@ const categories: Signal<Array<Category>> = signal([]);
 const isLoading: Signal<boolean> = signal(false);
 
 const CategorySelector = ({
-  URLBase,
   categorySelectedID = 0,
   onSelect,
 }: Props): ReactElement => {
   useEffect(() => {
+    system.setDataFromLocalStorage();
     isLoading.value = true;
-    category.URLBase = URLBase;
+    category.URLBase = system.URLBase;
     category
       .getCategories()
       .then((data) => (categories.value = data))
@@ -44,28 +44,30 @@ const CategorySelector = ({
           </Grid>
         </>
       ) : (
-        <Typography variant="body1">
-          Seleccione una categoria para la empresa
-        </Typography>
+        <>
+          <Typography variant="body1">
+            Seleccione una categoria para la empresa
+          </Typography>
+          <Grid container spacing={2} marginTop={0.5}>
+            {categories.value.map((category: Category, index: number) => {
+              category.selected = category.id === categorySelectedID;
+              return (
+                <Grid item xs={6} md={4} key={index}>
+                  <CategoryItem
+                    onClick={() => {
+                      categories.value.map((i) => (i.selected = false));
+                      category.selected = !category.selected;
+                      onSelect(category);
+                    }}
+                    category={category}
+                    selected={category.selected}
+                  />
+                </Grid>
+              );
+            })}
+          </Grid>
+        </>
       )}
-      <Grid container spacing={2} marginTop={0.5}>
-        {categories.value.map((category: Category, index: number) => {
-          category.selected = category.id === categorySelectedID;
-          return (
-            <Grid item xs={6} md={4} key={index}>
-              <CategoryItem
-                onClick={() => {
-                  categories.value.map((i) => (i.selected = false));
-                  category.selected = !category.selected;
-                  onSelect(category);
-                }}
-                category={category}
-                selected={category.selected}
-              />
-            </Grid>
-          );
-        })}
-      </Grid>
     </>
   );
 };

@@ -29,7 +29,7 @@ const UserAddress = ({ darkMode, URLBase }: Props): ReactElement => {
   useEffect(() => {
     addOrEditAddress.value = false;
     isLoading.value = true;
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
     user.URLBase = URLBase;
     user.getUserAddressesFromAPI().finally(() => (isLoading.value = false));
   }, []);

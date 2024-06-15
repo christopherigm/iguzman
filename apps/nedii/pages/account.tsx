@@ -20,8 +20,8 @@ const Page = (props: any): ReactElement => {
       i.href === path ? (i.selected = true) : (i.selected = false)
     );
     menu.value = [...menu.value];
-    system.setNediiSystemAttributesFromPlainObject(props);
-    user.getNediiUserFromLocalStorage();
+    system.setDataFromPlainObject(props);
+    user.setDataFromLocalStorage();
     if (!user.id) {
       router.push('/');
     }
@@ -83,7 +83,7 @@ const Page = (props: any): ReactElement => {
 export async function getServerSideProps({ req }: any) {
   const system = System.getInstance();
   system.parseCookies(req.cookies);
-  return { props: system.getNediiPlainAttributes() };
+  return { props: system.getPlainObject() };
 }
 
 export default Page;

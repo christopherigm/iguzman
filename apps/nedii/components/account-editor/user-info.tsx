@@ -32,7 +32,7 @@ type Props = {
 
 const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
   useEffect(() => {
-    user.getNediiUserFromLocalStorage();
+    user.setDataFromLocalStorage();
     user.URLBase = URLBase;
     newPassword.value = '';
     repeatPassword.value = '';
@@ -253,7 +253,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
             <Grid item xs={12} sm={6}>
               <PasswordField
                 label="Nueva contraseña"
-                name="newPassword"
+                name="new-Password"
                 value={newPassword.value}
                 onChange={(v: string) => (newPassword.value = v)}
                 disabled={isLoading.value}

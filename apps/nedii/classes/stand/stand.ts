@@ -64,20 +64,13 @@ export default class Stand {
         data: this.getPlainObject(),
       };
       removeImagesForAPICall(data.data.attributes);
-      console.log('saveStand:', data);
       if (this.id) {
         API.Patch(data)
-          .then((response) => {
-            console.log('response:', response);
-            res(response);
-          })
+          .then((response) => res(response))
           .catch((error) => rej(error));
       } else {
         API.Post(data)
-          .then((response) => {
-            console.log('response:', response);
-            res(response);
-          })
+          .then((response) => res(response))
           .catch((error) => rej(error));
       }
     });
@@ -85,9 +78,9 @@ export default class Stand {
 
   public getProductsFromAPI(): Promise<Array<any>> {
     return new Promise((res, rej) => {
-      let url = `${this.URLBase}/v1/products/?filter[owner]=${this.id}`;
-      url += '&include=city,city.state,city.state.country,phones,';
-      url += 'pictures';
+      let url = `${this.URLBase}/v1/products/?filter[stand]=${this.id}`;
+      url += '&include=classification,stand,delivery_type,';
+      url += 'features,product_pictures,related';
       API.Get({
         url,
         jwt: this.access,
@@ -103,7 +96,7 @@ export default class Stand {
             newItem.id = Number(i.id);
             newItem.URLBase = this.URLBase;
             newItem.access = this.access;
-            // newItem.setDataFromPlainObject(i);
+            newItem.setDataFromPlainObject(i);
             this.products.push(newItem);
           });
           this.products = [...this.products];
@@ -265,36 +258,36 @@ class StandRelationships {
   }
 
   public setRelationshipsFromPlainObject(object: any) {
-    if (object.relationships?.city?.data) {
-      this.city.data.setAttributesFromPlainObject(
-        object.relationships?.city?.data
-      );
-    }
-    if (object.relationships?.category?.data) {
-      this.category.data.setAttributesFromPlainObject(
-        object.relationships?.category?.data
-      );
-    }
-    if (object.relationships?.expo?.data) {
-      this.expo.data.setAttributesFromPlainObject(
-        object.relationships?.expo?.data
-      );
-    }
-    if (object.relationships?.phones?.data) {
-      object.relationships.phones.data.map((i: any) => {
-        const newPhone = new StandPhone();
-        newPhone.setDataFromPlainObject(i);
-        this.phones.data.push(newPhone);
-      });
-      this.phones.data = [...this.phones.data];
-    }
-    if (object.relationships?.pictures?.data) {
-      object.relationships.pictures.data.map((i: any) => {
-        const newPicture = new StandPicture();
-        newPicture.setDataFromPlainObject(i);
-        this.pictures.data.push(newPicture);
-      });
-      this.pictures.data = [...this.pictures.data];
+    if (object.relationships) {
+      if (object.relationships.city?.data) {
+        this.city.data.setDataFromPlainObject(object.relationships.city.data);
+      }
+      if (object.relationships.category?.data) {
+        this.category.data.setDataFromPlainObject(
+          object.relationships.category.data
+        );
+      }
+      if (object.relationships.expo?.data) {
+        this.expo.data.setDataFromPlainObject(object.relationships.expo.data);
+      }
+      if (object.relationships.phones?.data) {
+        const newPhoneArray: Array<StandPhone> = [];
+        object.relationships.phones.data.map((i: any) => {
+          const newPhone = new StandPhone();
+          newPhone.setDataFromPlainObject(i);
+          newPhoneArray.push(newPhone);
+        });
+        this.phones.data = [...newPhoneArray];
+      }
+      if (object.relationships.pictures?.data) {
+        const newPictureArray: Array<StandPicture> = [];
+        object.relationships.pictures.data.map((i: any) => {
+          const newPicture = new StandPicture();
+          newPicture.setDataFromPlainObject(i);
+          newPictureArray.push(newPicture);
+        });
+        this.pictures.data = [...newPictureArray];
+      }
     }
     this.owner = {
       data: User.getInstance(),

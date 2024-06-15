@@ -20,7 +20,7 @@ export default class StandRating extends BaseAPIClass {
     this.attributes.setAttributesFromPlainObject(object);
   }
 
-  public getPlainObject(): Object {
+  public getPlainObject(): any {
     return {
       ...(this.id && { id: this.id }),
       type: this.type,
@@ -41,7 +41,7 @@ export default class StandRating extends BaseAPIClass {
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }
-          this.id = response.data?.id ?? this.id;
+          this.id = Number(response.data?.id ?? this.id);
           return res();
         })
         .catch((error) => rej(error));
