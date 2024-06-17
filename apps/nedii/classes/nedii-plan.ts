@@ -76,21 +76,15 @@ class NediiPlanAttributes extends CommonFields {
         name: this.name,
       }),
       unlimited_items: this.unlimited_items,
-      ...(this.number_of_items && {
-        number_of_items: this.number_of_items,
-      }),
-      ...(this.advertising_days && {
-        advertising_days: this.advertising_days,
-      }),
+      number_of_items: this.number_of_items,
+      advertising_days: this.advertising_days,
       stand_enabled: this.stand_enabled,
       digital_card: this.digital_card,
       billed_monthly: this.billed_monthly,
       ...(this.exposure && {
         exposure: this.exposure,
       }),
-      ...(this.price && {
-        price: this.price,
-      }),
+      price: this.price,
     };
   }
 

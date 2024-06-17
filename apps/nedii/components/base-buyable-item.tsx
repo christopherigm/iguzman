@@ -16,7 +16,11 @@ import Service from 'classes/service/service';
 import InputAdornment from '@mui/material/InputAdornment';
 import Paper from '@mui/material/Paper';
 import Avatar from '@mui/material/Avatar';
-import { useMediaQuery, useTheme } from '@mui/material';
+import { IconButton, useMediaQuery, useTheme } from '@mui/material';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import Link from 'next/link';
 
 const complete: Signal<boolean> = signal(false);
@@ -53,7 +57,7 @@ const BaseBuyableItem = ({
           cursor: 'pointer',
         }}
       >
-        <Box position="absolute" top={0} left={0}>
+        <Box position="absolute" width="100%" top={0} left={0}>
           <Avatar
             alt={item.attributes.name}
             src={item.attributes.img_picture}
@@ -69,7 +73,16 @@ const BaseBuyableItem = ({
             <Ribbon
               borderColor="#f4511e"
               color="#ff5722"
-              text={`-${item.attributes.discount}% desc.`}
+              text={`-${item.attributes.discount}%`}
+            />
+          </Box>
+        ) : null}
+        {!item.attributes.shipping_cost ? (
+          <Box position="absolute" top={height - 40} right={0}>
+            <Ribbon
+              borderColor="#f4511e"
+              color="#ff5722"
+              text="Envio gratis!"
             />
           </Box>
         ) : null}
@@ -112,6 +125,44 @@ const BaseBuyableItem = ({
         <Typography variant="body1" sx={{ fontWeight: '600' }}>
           ${item.attributes.final_price}
         </Typography>
+      </Box>
+      <Box paddingLeft={1} paddingRight={1} width="100%">
+        <Divider />
+      </Box>
+      <Box display="flex" alignItems="center" paddingLeft={1} paddingRight={1}>
+        {item.type === 'Product' || item.type === 'Service' ? (
+          <Typography variant="body2">
+            {item.attributes.unlimited_stock ? (
+              'Disponible!'
+            ) : item.attributes.stock ? (
+              <>
+                Solo <b>{item.attributes.stock}</b> disponibles!
+              </>
+            ) : (
+              'Agotado'
+            )}
+          </Typography>
+        ) : null}
+        <Box flexGrow={1}></Box>
+        <Box display="flex">
+          <IconButton
+            aria-label="add-to-favorites"
+            onClick={() => item.switchFavorite()}
+          >
+            <FavoriteIcon
+              sx={{ color: item.isFavorite ? '#d32f2f' : '#777' }}
+            />
+          </IconButton>
+          <Box padding={0.3}></Box>
+          <IconButton
+            aria-label="add-to-cart"
+            onClick={() => item.switchIsInCart()}
+          >
+            <ShoppingBagIcon
+              sx={{ color: item.isInCart ? '#ffa000' : '#777' }}
+            />
+          </IconButton>
+        </Box>
       </Box>
       <Box paddingLeft={1} paddingRight={1} width="100%">
         <Divider />

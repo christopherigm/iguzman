@@ -170,12 +170,8 @@ const Companies = (): ReactElement => {
                 ) : null}
                 {itemSelectedId.value === 4 ? (
                   <Products
-                    isLoading={isLoading.value}
                     darkMode={system.darkMode}
                     stand={currentCompany.value}
-                    onCancel={() => updateCompletenessMenuItem(false)}
-                    onIncomplete={() => updateCompletenessMenuItem(false)}
-                    onComplete={() => updateCompletenessMenuItem(true)}
                   />
                 ) : null}
               </Box>

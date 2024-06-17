@@ -1,6 +1,5 @@
 import { Signal, signal } from '@preact-signals/safe-react';
 import { BaseAPIClass, CommonFields, API } from '@repo/utils';
-import Stand from 'classes/stand';
 import User from 'classes/user';
 
 export default class StandRating extends BaseAPIClass {

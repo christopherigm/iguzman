@@ -52,7 +52,6 @@ export default class Product extends BaseBuyableItem {
         data: this.getPlainObject(),
       };
       removeImagesForAPICall(data.data.attributes);
-      console.log('Data to save', data);
       if (this.id) {
         API.Patch(data)
           .then((response) => {

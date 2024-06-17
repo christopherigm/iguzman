@@ -110,9 +110,7 @@ class ExpoAttributes extends CommonFields {
       ...(this.email && {
         email: this.email,
       }),
-      ...(this.is_real && {
-        is_real: this.is_real,
-      }),
+      is_real: this.is_real,
     };
   }
 

@@ -41,6 +41,8 @@ const ProductClassificationField = ({
   value,
   onChange,
 }: Props): ReactElement => {
+  system.setDataFromLocalStorage();
+  user.setDataFromLocalStorage();
   const [options, setOptions] = useState<Array<Option>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [newEntry, setNewEntry] = useState<boolean>(false);
@@ -56,18 +58,12 @@ const ProductClassificationField = ({
     return image;
   };
 
-  useEffect(() => {
-    system.setDataFromLocalStorage();
-    user.setDataFromLocalStorage();
-    instance.URLBase = system.URLBase;
-    instance.access = user.access;
-    instance.relationships.stand.data.id = standID;
-    if (!options.length && !isLoading) {
+  const loadItems = (): Promise<void> => {
+    return new Promise((res, rej) => {
       setIsLoading(true);
       let url = `${system.URLBase}/${Schema.getInstance().endpoint}`;
       url += `?filter[stand]=${standID}`;
       url += '&page[size]=100';
-      // console.log('>>> classifications URL', url);
       API.Get({
         url,
         jwt: user.access,
@@ -97,9 +93,20 @@ const ProductClassificationField = ({
           ) {
             onChange(newOptions[0].id);
           }
+          res();
         })
-        .catch((e: any) => console.log(e))
+        .catch((e: any) => rej(e))
         .finally(() => setIsLoading(false));
+    });
+  };
+
+  useEffect(() => {
+    instance.URLBase = system.URLBase;
+    instance.access = user.access;
+    instance.attributes.name = '';
+    instance.relationships.stand.data.id = standID;
+    if (!options.length && !isLoading) {
+      loadItems().catch((e: any) => console.log(e));
     }
   }, [value, instance.id, options.length]);
 
@@ -107,16 +114,10 @@ const ProductClassificationField = ({
     setIsLoading(true);
     instance
       .save()
-      .then(() => {
-        onChange(instance.id);
-        setIsLoading(false);
-        setOptions([]);
-      })
-      .catch((e: any) => console.log(e))
-      .finally(() => {
-        setNewEntry(false);
-        setIsLoading(false);
-      });
+      .then(() => onChange(instance.id))
+      .then(() => loadItems())
+      .then(() => setNewEntry(false))
+      .catch((e: any) => console.log(e));
   };
 
   const getLabel = (): string => {

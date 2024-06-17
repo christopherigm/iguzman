@@ -79,7 +79,7 @@ export default class StandAttributes extends Mixin(
       ...(this.short_description && {
         short_description: this.short_description,
       }),
-      ...(this.booking_active && { booking_active: this.booking_active }),
+      booking_active: this.booking_active,
       booking_fee: this.booking_fee,
       ...(this.about && { about: this.about }),
       ...(this.booking_email && { booking_email: this.booking_email }),

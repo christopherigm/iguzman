@@ -34,9 +34,12 @@ export const writeMetadataToFile = (
       console.log('No tiem', item);
       return rej('No item');
     }
+    console.log('>>> writeMetadataToFile -> Item:', item);
     if (fs.existsSync(`media/${item.filename}`) && !force) {
       item.status = 'ready';
-      return updateItem(item).finally(() => res(item));
+      return updateItem(item)
+        .catch((error) => rej(error))
+        .finally(() => res(item));
     }
     if (item.justAudio) {
       item.filename = `${item.name}.${item.extention}`;
@@ -58,6 +61,7 @@ export const writeMetadataToFile = (
     } else {
       item.filename = `${item.name}-${item.id}.${item.extention}`;
     }
+    console.log('>>> writeMetadataToFile -> Item (final):', item);
     updateItem(item)
       .finally(() => {
         let command = '';
@@ -108,6 +112,7 @@ const downloadVideo = (
     getOrCreateItem({ url, justAudio: options.justAudio })
       .then((i: Item) => {
         const item = { ...i };
+        console.log('>>> downloadVideo (getOrCreateItem):', item);
         if (
           item.filename &&
           fs.existsSync(`media/${item.filename}`) &&
@@ -221,6 +226,7 @@ const downloadVideo = (
                     console.log('>>> updateItem error:', e)
                   );
                 } else {
+                  console.log('>>> downloadVideo (done):', item);
                   writeMetadataToFile(item, options.force)
                     .then((item) => {
                       item.status = 'ready';
@@ -279,7 +285,8 @@ export default function handler(
           updateItem({ ...item, status: 'downloading' })
             .then((item) => res.status(201).json(item))
             .catch((error) => res.status(400).send(error.toString()));
-          downloadVideo(url, options, metadata)
+          const newURL = item.url || url;
+          downloadVideo(newURL, options, metadata)
             .then(() => console.log('downloadVideo request processing'))
             .catch((e) => console.log('downloadVideo error:', e));
         })

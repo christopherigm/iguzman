@@ -96,11 +96,14 @@ export default class Stand {
             newItem.id = Number(i.id);
             newItem.URLBase = this.URLBase;
             newItem.access = this.access;
+            newItem.userName =
+              this.relationships.owner?.data.attributes.first_name || 'none';
+            newItem.userID = this.relationships.owner?.data.id || 0;
             newItem.setDataFromPlainObject(i);
             this.products.push(newItem);
           });
           this.products = [...this.products];
-          res(rawData);
+          res([...this.products]);
         })
         .catch((error) => rej(error));
     });
@@ -291,6 +294,19 @@ class StandRelationships {
     }
     this.owner = {
       data: User.getInstance(),
+    };
+    // const user = User.getInstance();
+    // user.setDataFromLocalStorage();
+    // this.owner = {
+    //   data: user,
+    // };
+  }
+
+  public setOwnerFromPlainObject(object: any) {
+    const user = User.getInstance();
+    user.setDataFromPlainObject(object);
+    this.owner = {
+      data: user,
     };
   }
 

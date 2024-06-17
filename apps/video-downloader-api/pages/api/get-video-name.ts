@@ -27,13 +27,14 @@ export const getVideoName = (
     getOrCreateItem({ url: URL, justAudio })
       .then((i: Item) => {
         const item = { ...i };
-        // console.log('>', item);
+        console.log('>>> getOrCreateItem -> Item:', item);
         if (item.name && !force) {
           return res(item);
         }
-        const dataToPrint = isYoutube(url)
-          ? '%(title)s:-:%(artist)s:-:%(album)s:-:%(album_artist)s'
-          : '%(title)s';
+        const dataToPrint =
+          isYoutube(url) && justAudio
+            ? '%(title)s:-:%(artist)s:-:%(album)s:-:%(album_artist)s'
+            : '%(title)s';
         let command =
           os.platform() === 'win32'
             ? `${winBinary} "${URL}" --print "${dataToPrint}"`
@@ -87,6 +88,7 @@ export const getVideoName = (
           if (name[name.length - 1] === ' ') {
             name = name.slice(0, name.length - 1);
           }
+          // https://youtu.be/5GzzUPUAxeQ?si=0Zp2TWJ3-O9tnR1w
           item.name = name;
           if (album) {
             item.album = album;
@@ -95,7 +97,10 @@ export const getVideoName = (
             item.artist = artist;
             item.albumArtist = albumArtist === 'NA' ? artist : albumArtist;
           }
-          updateItem(item).finally(() => res(item));
+          console.log('>>> getOrCreateItem -> Item (final):', item);
+          updateItem(item)
+            .catch((error) => rej(error))
+            .finally(() => res(item));
         }).stdout?.on('data', onData);
       })
       .catch((error) => rej(error.toString()));

@@ -37,7 +37,6 @@ export default class ProductClassification extends BasePicture {
       };
       API.Post(data)
         .then((response) => {
-          console.log('response', response);
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }

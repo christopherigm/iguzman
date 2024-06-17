@@ -1,5 +1,5 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { BasePicture, BasePictureAttributes } from '@repo/utils';
+import { API, BasePicture, BasePictureAttributes } from '@repo/utils';
 import StandAttributes from 'classes/stand/stand-attributes';
 
 export default abstract class BaseBuyableItem extends BasePicture {
@@ -7,6 +7,93 @@ export default abstract class BaseBuyableItem extends BasePicture {
     new BaseBuyableItemRelationships();
   public attributes: BaseBuyableItemAttributes =
     new BaseBuyableItemAttributes();
+  private _userID: Signal<number> = signal(0);
+  private _userName: Signal<string> = signal('none');
+  private _isFavorite: Signal<boolean> = signal(false);
+  private _isInCart: Signal<boolean> = signal(false);
+
+  public switchFavorite = (): Promise<void> => {
+    return new Promise((res, rej) => {
+      const url = `${this.URLBase}/v1/user-cart-items/`;
+      const data = {
+        url,
+        jwt: this.access,
+        data: {
+          type: 'UserCartBuyableItem',
+          attributes: {
+            backup_name: this.attributes.name,
+            backup_user_name: this.userName || 'none',
+            backup_final_price: this.attributes.final_price,
+            quantity: 1,
+          },
+          relationships: {
+            product: {
+              data: {
+                type: this.type,
+                id: this.id,
+              },
+            },
+            service: {
+              data: null,
+            },
+            meal: {
+              data: null,
+            },
+            vehicle: {
+              data: null,
+            },
+            real_estate: {
+              data: null,
+            },
+          },
+        },
+      };
+      API.Post(data)
+        .then((response) => {
+          console.log('response', response);
+          if (response.errors && response.errors.length) {
+            // return rej(response.errors);
+          } else {
+            // this.id = Number(response.data?.id ?? this.id);
+            this.isFavorite = !this.isFavorite;
+            return res();
+          }
+        })
+        .catch((error) => rej(error));
+    });
+  };
+
+  public switchIsInCart = (): void => {
+    this.isInCart = !this.isInCart;
+  };
+
+  public get userID() {
+    return this._userID.value;
+  }
+  public set userID(value) {
+    this._userID.value = value;
+  }
+
+  public get userName() {
+    return this._userName.value;
+  }
+  public set userName(value) {
+    this._userName.value = value;
+  }
+
+  public get isFavorite() {
+    return this._isFavorite.value;
+  }
+  public set isFavorite(value) {
+    this._isFavorite.value = value;
+  }
+
+  public get isInCart() {
+    return this._isInCart.value;
+  }
+  public set isInCart(value) {
+    this._isInCart.value = value;
+  }
 }
 
 export class BaseBuyableItemAttributes extends BasePictureAttributes {
@@ -66,18 +153,10 @@ export class BaseBuyableItemAttributes extends BasePictureAttributes {
       ...(this.unlimited_stock && {
         unlimited_stock: this.unlimited_stock,
       }),
-      ...(this.price && {
-        price: this.price,
-      }),
-      ...(this.discount && {
-        discount: this.discount,
-      }),
-      ...(this.final_price && {
-        final_price: this.final_price,
-      }),
-      ...(this.shipping_cost && {
-        shipping_cost: this.shipping_cost,
-      }),
+      price: this.price,
+      discount: this.discount,
+      final_price: this.final_price,
+      shipping_cost: this.shipping_cost,
       ...(this.video_link && {
         video_link: this.video_link,
       }),
@@ -90,12 +169,8 @@ export class BaseBuyableItemAttributes extends BasePictureAttributes {
       ...(this.support_phone && {
         support_phone: this.support_phone,
       }),
-      ...(this.warranty_days && {
-        warranty_days: this.warranty_days,
-      }),
-      ...(this.times_selled && {
-        times_selled: this.times_selled,
-      }),
+      warranty_days: this.warranty_days,
+      times_selled: this.times_selled,
       ...(this.views && {
         views: this.views,
       }),
