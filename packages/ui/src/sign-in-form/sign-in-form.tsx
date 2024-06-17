@@ -97,6 +97,13 @@ const SignInForm = ({ URLBase, callback }: Props) => {
             Acceder
           </Button>
         </Grid>
+        {isLoading.value ? (
+          <Grid item xs={12} marginTop={1}>
+            <Box sx={{ width: '100%' }}>
+              <LinearProgress />
+            </Box>
+          </Grid>
+        ) : null}
         {!error.value.length ? (
           <Grid item xs={12} marginTop={2}>
             <Stack sx={{ width: '100%' }} spacing={2}>
@@ -137,13 +144,6 @@ const SignInForm = ({ URLBase, callback }: Props) => {
                 </Alert>
               </Link>
             </Stack>
-          </Grid>
-        ) : null}
-        {isLoading.value ? (
-          <Grid item xs={12} marginTop={1}>
-            <Box sx={{ width: '100%' }}>
-              <LinearProgress />
-            </Box>
           </Grid>
         ) : null}
       </Grid>

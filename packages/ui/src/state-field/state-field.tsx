@@ -1,4 +1,4 @@
-import { ReactElement, useEffect, useState } from 'react';
+import { ReactElement, useCallback, useEffect, useState } from 'react';
 import { Signal, signal } from '@preact-signals/safe-react';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -42,15 +42,9 @@ const StateField = ({
   valueIsInOptions.value = options.map((i) => i.id).indexOf(value) >= 0;
   state.URLBase = URLBase;
 
-  useEffect(() => {
-    state.relationships.country.data.id = Number(dependentID);
-    if (
-      ((!options.length && dependentID) ||
-        Number(dependentID) !== previousID) &&
-      !isLoading
-    ) {
+  const loadItems = (value: number): Promise<void> => {
+    return new Promise((res, rej) => {
       setIsLoading(true);
-      setPreviousID(Number(dependentID));
       state
         .GetStatesByCountryID(Number(dependentID))
         .then((response: { data: Array<State> }) => {
@@ -72,11 +66,24 @@ const StateField = ({
           ) {
             onChange(newOptions[0].id);
           }
+          res();
         })
-        .catch((e: any) => console.log(e))
+        .catch((e: any) => rej(e))
         .finally(() => setIsLoading(false));
+    });
+  };
+
+  useEffect(() => {
+    state.relationships.country.data.id = Number(dependentID);
+    if (
+      ((!options.length && dependentID) ||
+        Number(dependentID) !== previousID) &&
+      !isLoading
+    ) {
+      setPreviousID(Number(dependentID));
+      loadItems(value);
     }
-  }, [dependentID, value, previousID, options.length]);
+  }, [dependentID, value, state.id, previousID, options.length]);
 
   const CreateState = () => {
     setIsLoading(true);
@@ -85,14 +92,10 @@ const StateField = ({
       .then(() => {
         state.attributes.name = '';
         onChange(state.id);
-        setPreviousID(0);
-        setOptions([]);
       })
-      .catch((e: any) => console.log(e))
-      .finally(() => {
-        setNewEntry(false);
-        setIsLoading(false);
-      });
+      .then(() => loadItems(state.id))
+      .then(() => setNewEntry(false))
+      .catch((e: any) => console.log(e));
   };
 
   const getLabel = (): string => {
@@ -196,9 +199,10 @@ const StateField = ({
                 label={getLabel()}
                 disabled={isLoading || !options.length}
                 size="small"
-                onChange={(e: SelectChangeEvent) =>
-                  onChange(Number(e.target.value))
-                }
+                onChange={(e: SelectChangeEvent) => {
+                  console.log('>>> button change');
+                  onChange(Number(e.target.value));
+                }}
               >
                 {options.map((i: Option, index: number) => {
                   return (

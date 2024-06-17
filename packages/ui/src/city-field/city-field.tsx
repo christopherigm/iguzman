@@ -42,15 +42,9 @@ const CityField = ({
   valueIsInOptions.value = options.map((i) => i.id).indexOf(value) >= 0;
   city.URLBase = URLBase;
 
-  useEffect(() => {
-    city.relationships.state.data.id = Number(dependentID);
-    if (
-      ((!options.length && dependentID) ||
-        Number(dependentID) !== previousID) &&
-      !isLoading
-    ) {
+  const loadItems = (value: number): Promise<void> => {
+    return new Promise((res, rej) => {
       setIsLoading(true);
-      setPreviousID(Number(dependentID));
       city
         .GetCitiesByStateID(Number(dependentID))
         .then((response: { data: Array<City> }) => {
@@ -82,6 +76,18 @@ const CityField = ({
         })
         .catch((e: any) => console.log(e))
         .finally(() => setIsLoading(false));
+    });
+  };
+
+  useEffect(() => {
+    city.relationships.state.data.id = Number(dependentID);
+    if (
+      ((!options.length && dependentID) ||
+        Number(dependentID) !== previousID) &&
+      !isLoading
+    ) {
+      setPreviousID(Number(dependentID));
+      loadItems(value);
     }
   }, [dependentID, value, previousID, options.length]);
 
@@ -92,14 +98,21 @@ const CityField = ({
       .then(() => {
         city.attributes.name = '';
         onChange(city.id);
-        setPreviousID(0);
-        setOptions([]);
       })
-      .catch((e: any) => console.log(e))
-      .finally(() => {
-        setNewEntry(false);
-        setIsLoading(false);
-      });
+      .then(() => loadItems(city.id))
+      .then(() => setNewEntry(false))
+      .catch((e: any) => console.log(e));
+    // .then(() => {
+    //   city.attributes.name = '';
+    //   onChange(city.id);
+    //   setPreviousID(0);
+    //   setOptions([]);
+    // })
+    // .catch((e: any) => console.log(e))
+    // .finally(() => {
+    //   setNewEntry(false);
+    //   setIsLoading(false);
+    // });
   };
 
   const getLabel = (): string => {

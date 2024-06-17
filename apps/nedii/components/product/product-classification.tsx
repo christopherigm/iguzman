@@ -58,7 +58,7 @@ const ProductClassificationField = ({
     return image;
   };
 
-  const loadItems = (): Promise<void> => {
+  const loadItems = (value: number): Promise<void> => {
     return new Promise((res, rej) => {
       setIsLoading(true);
       let url = `${system.URLBase}/${Schema.getInstance().endpoint}`;
@@ -106,7 +106,7 @@ const ProductClassificationField = ({
     instance.attributes.name = '';
     instance.relationships.stand.data.id = standID;
     if (!options.length && !isLoading) {
-      loadItems().catch((e: any) => console.log(e));
+      loadItems(value).catch((e: any) => console.log(e));
     }
   }, [value, instance.id, options.length]);
 
@@ -115,7 +115,7 @@ const ProductClassificationField = ({
     instance
       .save()
       .then(() => onChange(instance.id))
-      .then(() => loadItems())
+      .then(() => loadItems(instance.id))
       .then(() => setNewEntry(false))
       .catch((e: any) => console.log(e));
   };
