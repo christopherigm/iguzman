@@ -1,4 +1,4 @@
-import { ReactElement, FormEvent, useEffect } from 'react';
+import { ReactElement, FormEvent, useEffect, useState } from 'react';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -33,7 +33,9 @@ type Props = {
 const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
   useEffect(() => {
     user.setDataFromLocalStorage();
-    user.URLBase = URLBase;
+    user.getUserFromAPI().catch((error) => {
+      console.log(error);
+    });
     newPassword.value = '';
     repeatPassword.value = '';
     currentPassword.value = '';
@@ -47,7 +49,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
   const UpdateUserData = () => {
     isLoading.value = true;
     user
-      .updateNediiUserData()
+      .updateUserData()
       .then(() => {
         if (newPassword.value) {
           passwordComplete.value = true;
@@ -175,14 +177,13 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
             <Divider />
           </Box>
           <Typography variant="body1">Preferencias de comunicacion</Typography>
-
           <Grid container rowSpacing={2} columnSpacing={2} marginTop={0}>
             <Grid item xs={12} sm={6}>
               <FormGroup>
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={user.attributes.promotions}
+                      checked={user.attributes.promotions || false}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         (user.attributes.promotions = e.target.checked)
                       }
@@ -195,7 +196,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={user.attributes.newsletter}
+                      checked={user.attributes.newsletter || false}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         (user.attributes.newsletter = e.target.checked)
                       }

@@ -99,6 +99,7 @@ class ProductFeatureOptionViewSet(CustomCreate,
         'id': ('exact', 'lt', 'gt', 'gte', 'lte'),
         'created': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
         'modified': ('exact', 'lt', 'gt', 'gte', 'lte', 'in'),
+        'feature': ('exact',),
         'feature__stand': ('exact',),
     }
     search_fields = ("name",)

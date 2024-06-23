@@ -4,6 +4,9 @@ import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import Divider from '@mui/material/Divider';
 import { Languages } from '@repo/utils';
+import LoadingButton from '@mui/lab/LoadingButton';
+import SaveIcon from '@mui/icons-material/Save';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 type Props = {
   language: Languages;
@@ -42,13 +45,14 @@ const GenericFormButtons = ({
         xs={12}
         sx={{
           display: 'flex',
-          justifyContent: 'right',
+          justifyContent: 'end',
         }}
       >
         <Button
           variant="contained"
           size="small"
           onClick={() => onCancel()}
+          disabled={isLoading}
           color="inherit"
           sx={{ textTransform: 'initial' }}
         >
@@ -59,11 +63,11 @@ const GenericFormButtons = ({
           <Button
             variant="contained"
             size="small"
-            disabled={isLoading || !canSubmit}
+            disabled={isLoading}
             onClick={() => onDelete()}
             color="error"
             sx={{
-              marginLeft: '15px',
+              marginLeft: '10px',
               textTransform: 'initial',
             }}
           >
@@ -71,28 +75,23 @@ const GenericFormButtons = ({
             {language === 'es' ? <>Eliminar </> : null}
           </Button>
         ) : null}
-        <Button
+        <LoadingButton
           variant="contained"
           type="submit"
           size="small"
           disabled={isLoading || !canSubmit}
           sx={{
-            marginLeft: '15px',
+            marginLeft: '10px',
             textTransform: 'initial',
           }}
           onClick={() => onComplete()}
+          loading={isLoading}
+          loadingPosition="start"
+          startIcon={<SaveIcon />}
         >
-          {language === 'en' ? (
-            <>
-              {id ? 'Update' : 'Create'} {label}
-            </>
-          ) : null}
-          {language === 'es' ? (
-            <>
-              {id ? 'Actualizar' : 'Crear'} {label}
-            </>
-          ) : null}
-        </Button>
+          {language === 'en' ? <>Save</> : null}
+          {language === 'es' ? <>Guardar</> : null}
+        </LoadingButton>
       </Grid>
     </Grid>
   );

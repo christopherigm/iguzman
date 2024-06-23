@@ -1,6 +1,6 @@
 import { ReactElement, ReactNode } from 'react';
 import { Signal } from '@preact-signals/safe-react';
-import { Grid, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Grid, useMediaQuery, useTheme } from '@mui/material';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Paper from '@mui/material/Paper';
@@ -48,6 +48,7 @@ const ButtonItem = ({
         fontWeight: selected ? 'bold' : 'none',
         backgroundColor: selected && darkMode ? 'white' : 'none',
         borderBottom: selected ? '3px solid #1E88E5' : '',
+        height: '100%',
       }}
       startIcon={
         completed && completeIcon
@@ -87,7 +88,7 @@ const VerticalMenu = ({ darkMode = false, items }: Props): ReactElement => {
             {items.value.map((i: VerticalMenuItemProps, index: number) => {
               return (
                 <Grid item xs={4} key={index}>
-                  <Paper elevation={1}>
+                  <Paper elevation={1} sx={{ height: '100%' }}>
                     <ButtonItem
                       {...i}
                       darkMode={darkMode}

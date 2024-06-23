@@ -4,7 +4,7 @@ import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import LinearProgress from '@mui/material/LinearProgress';
 import { Signal, signal } from '@preact/signals-react';
-import { FormEvent, useEffect } from 'react';
+import { FormEvent } from 'react';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Link from 'next/link';
@@ -17,15 +17,10 @@ const isLoading: Signal<boolean> = signal(false);
 const error: Signal<Array<APIPostCreationError>> = signal([]);
 
 type Props = {
-  URLBase: string;
-  callback: (data: any) => void;
+  callback: () => void;
 };
 
-const SignInForm = ({ URLBase, callback }: Props) => {
-  useEffect(() => {
-    user.URLBase = URLBase;
-  }, [URLBase]);
-
+const SignInForm = ({ callback }: Props) => {
   const canSubmit = (): boolean => {
     return user.attributes.email !== '' && user.attributes.password !== '';
   };
@@ -35,14 +30,7 @@ const SignInForm = ({ URLBase, callback }: Props) => {
     isLoading.value = true;
     user
       .login()
-      .then(() => user.getUserFromAPI())
-      .then((data) =>
-        callback({
-          ...data,
-          jwt: user.jwt,
-          access: user.access,
-        })
-      )
+      .then(() => callback())
       .catch((e) => (error.value = e))
       .finally(() => (isLoading.value = false));
   };
@@ -97,6 +85,13 @@ const SignInForm = ({ URLBase, callback }: Props) => {
             Acceder
           </Button>
         </Grid>
+        {isLoading.value ? (
+          <Grid item xs={12} marginTop={1}>
+            <Box sx={{ width: '100%' }}>
+              <LinearProgress />
+            </Box>
+          </Grid>
+        ) : null}
         {!error.value.length ? (
           <Grid item xs={12} marginTop={2}>
             <Stack sx={{ width: '100%' }} spacing={2}>
@@ -137,13 +132,6 @@ const SignInForm = ({ URLBase, callback }: Props) => {
                 </Alert>
               </Link>
             </Stack>
-          </Grid>
-        ) : null}
-        {isLoading.value ? (
-          <Grid item xs={12} marginTop={1}>
-            <Box sx={{ width: '100%' }}>
-              <LinearProgress />
-            </Box>
           </Grid>
         ) : null}
       </Grid>

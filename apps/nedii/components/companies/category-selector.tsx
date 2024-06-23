@@ -8,6 +8,7 @@ import Category, { category } from 'classes/category';
 import { useEffect } from '@preact-signals/safe-react/react';
 import CategoryItem from 'components/companies/category-item';
 import { system } from 'classes/system';
+import Divider from '@mui/material/Divider';
 
 type Props = {
   categorySelectedID: number;
@@ -45,9 +46,12 @@ const CategorySelector = ({
         </>
       ) : (
         <>
-          <Typography variant="body1">
+          <Typography variant="body1" marginTop={1}>
             Seleccione una categoria para la empresa
           </Typography>
+          <Box marginTop={2}>
+            <Divider />
+          </Box>
           <Grid container spacing={2} marginTop={0.5}>
             {categories.value.map((category: Category, index: number) => {
               category.selected = category.id === categorySelectedID;

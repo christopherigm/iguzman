@@ -37,11 +37,11 @@ export default class State extends BaseAPIClass {
         country: this.relationships.country.data.id,
       })
         .then((data) => {
-          console.log('response', data);
           if (data.errors && data.errors.length) {
             return rej(data.errors);
           }
           this.id = Number(data?.id ?? this.id);
+          console.log('>>> state new ID:', this.id);
           return res();
         })
         .catch((e) => rej(e));

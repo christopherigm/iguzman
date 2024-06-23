@@ -7,15 +7,9 @@ import TextField from '@mui/material/TextField';
 import { Signal, signal } from '@preact-signals/safe-react';
 import Stand from 'classes/stand';
 import { CountryField, StateField, CityField } from '@repo/ui';
-import { Country, State, City } from '@repo/utils';
 import StandPhone from 'classes/stand/stand-phone';
 import PhonesForm from 'components/companies/phones-form';
-
-// const country = signal<Country>(Country.getInstance()).value;
-// const defaultCountry = signal<Country>(Country.getInstance()).value;
-// const state = signal<State>(State.getInstance()).value;
-// const defaultState = signal<State>(State.getInstance()).value;
-// const defaultCity = signal<City>(City.getInstance()).value;
+import Divider from '@mui/material/Divider';
 
 const isLoadingLocal: Signal<boolean> = signal(false);
 const complete: Signal<boolean> = signal(false);
@@ -43,26 +37,16 @@ const CompanyFormContactInfo = ({
 }: Props): ReactElement => {
   useEffect(() => {
     console.log('CompanyFormContactInfo.tsx > renders');
+    console.log(
+      'Parent State:',
+      stand.relationships.city.data.relationships.state.data.id
+    );
     isLoadingLocal.value = false;
     complete.value = false;
     error.value = '';
     phones.value = [...stand.relationships.phones.data];
     user.setDataFromLocalStorage();
     user.URLBase = URLBase;
-    // if (stand.relationships.city.data.id) {
-    //   defaultCity.id = stand.relationships.city.data.id;
-    //   if (stand.relationships.city.data.relationships?.state?.data?.id) {
-    //     defaultState.id =
-    //       stand.relationships.city.data.relationships.state.data.id;
-    //     if (
-    //       stand.relationships.city.data.relationships.state.data.relationships
-    //         ?.country?.data?.id
-    //     ) {
-    //       defaultCountry.id =
-    //         stand.relationships.city.data.relationships.state.data.relationships.country.data.id;
-    //     }
-    //   }
-    // }
   }, []);
 
   const onSubmit = (e: FormEvent) => {
@@ -93,9 +77,12 @@ const CompanyFormContactInfo = ({
       autoComplete="on"
       onSubmit={(e: FormEvent) => onSubmit(e)}
     >
-      <Typography variant="body1">
+      <Typography variant="body1" marginTop={1}>
         Informacion de contacto de la empresa
       </Typography>
+      <Box marginTop={2}>
+        <Divider />
+      </Box>
       <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
         <Grid item xs={12} sm={6} md={4}>
           <CountryField
@@ -124,10 +111,9 @@ const CompanyFormContactInfo = ({
               language="es"
               URLBase={URLBase}
               value={stand.relationships.city.data.relationships.state.data.id}
-              onChange={(value) => {
-                stand.relationships.city.data.relationships.state.data.id =
-                  Number(value);
-              }}
+              onChange={(id: number) =>
+                (stand.relationships.city.data.relationships.state.data.id = id)
+              }
             />
           </Grid>
         ) : null}

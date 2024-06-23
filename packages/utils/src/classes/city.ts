@@ -37,7 +37,6 @@ export default class City extends BaseAPIClass {
         state: this.relationships.state.data.id,
       })
         .then((data) => {
-          console.log('response', data);
           if (data.errors && data.errors.length) {
             return rej(data.errors);
           }

@@ -30,3 +30,6 @@ export type { VerticalMenuItemProps } from './vertical-menu';
 export { default as ReturnButtonArrow } from './return-arrow-button';
 export { default as GenericFormButtons } from './generic-form-buttons';
 export { default as Ribbon } from './ribbon';
+export { default as DropDownField } from './dropdown-field';
+export type { DropDownFieldOption } from './dropdown-field';
+export { default as Dialog } from './dialog';

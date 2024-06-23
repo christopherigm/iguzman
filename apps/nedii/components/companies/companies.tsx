@@ -14,6 +14,7 @@ import {
   GenericFormButtons,
   VerticalMenuItemProps,
   VerticalMenu,
+  ReturnButtonArrow,
 } from '@repo/ui';
 import Stand from 'classes/stand';
 import CompanyFormDebugData from 'components/companies/company-form-debug-data';
@@ -25,6 +26,8 @@ import { NewStandMenu, EditStandMenu } from './company-form-menu';
 import Button from '@mui/material/Button';
 import Products from 'components/product/products';
 import { system } from 'classes/system';
+import Divider from '@mui/material/Divider';
+import { useMediaQuery, useTheme } from '@mui/material';
 
 const menuItems: Signal<Array<VerticalMenuItemProps>> = signal([]);
 const itemSelected: Signal<Array<VerticalMenuItemProps>> = signal([]);
@@ -35,6 +38,10 @@ const currentCompany: Signal<Stand> = signal(new Stand());
 const isLoading: Signal<boolean> = signal(false);
 
 const Companies = (): ReactElement => {
+  system.setDataFromLocalStorage();
+  user.setDataFromLocalStorage();
+  const theme = useTheme();
+  const isXSSize: boolean = useMediaQuery(theme.breakpoints.only('xs'));
   itemSelected.value = menuItems.value.filter(
     (i: VerticalMenuItemProps) => i.selected
   );
@@ -76,10 +83,8 @@ const Companies = (): ReactElement => {
 
   useEffect(() => {
     console.log('Companies.tsx > renders');
-    system.setDataFromLocalStorage();
     addOrEditCompany.value = false;
     isLoading.value = true;
-    user.setDataFromLocalStorage();
     user.URLBase = system.URLBase;
     user.getUserCompaniesFromAPI().finally(() => (isLoading.value = false));
     ResetMenu();
@@ -96,90 +101,67 @@ const Companies = (): ReactElement => {
           rowSpacing={2}
         >
           <Grid item xs={12} sm={4} md={3}>
-            <Box
-              marginBottom={2}
-              display="flex"
-              flexDirection="row"
-              justifyContent="start"
-            >
-              <IconButton
-                aria-label="back"
-                sx={{ marginRight: 2 }}
-                onClick={() => (addOrEditCompany.value = false)}
-              >
-                <ArrowBackIcon />
-              </IconButton>
-              <Typography variant="body1" marginTop={1}>
-                Regresar{' '}
-              </Typography>
-            </Box>
+            <ReturnButtonArrow
+              language={system.language}
+              prevLabel="mis empresas"
+              onClick={() => (addOrEditCompany.value = false)}
+            />
+
             <VerticalMenu darkMode={system.darkMode} items={menuItems} />
           </Grid>
           <Grid item xs={12} sm={8} md={9}>
-            <Box marginTop={1.5} marginBottom={2.5}>
-              <Typography variant="body1">
-                {currentCompany.value.id
-                  ? `Editar empresa ${
-                      currentCompany.value.attributes.name ?? ''
-                    }`
-                  : currentCompany.value.attributes.name
-                    ? `Agregando nueva empresa "${currentCompany.value.attributes.name}"`
-                    : 'Agregar nueva empresa'}
-              </Typography>
-            </Box>
-            <Paper elevation={1}>
-              <Box padding={1.5}>
-                {itemSelectedId.value === 0 ? (
-                  <CompanyFormExpoInfo
-                    stand={currentCompany.value}
-                    onCancel={() => updateCompletenessMenuItem(false)}
-                    onIncomplete={() => updateCompletenessMenuItem(false)}
-                    onComplete={() => updateCompletenessMenuItem(true)}
-                  />
-                ) : null}
-                {itemSelectedId.value === 1 ? (
-                  <CompanyFormBasicInfo
-                    isLoading={isLoading.value}
-                    stand={currentCompany.value}
-                    onCancel={() => updateCompletenessMenuItem(false)}
-                    onIncomplete={() => updateCompletenessMenuItem(false)}
-                    onComplete={() => updateCompletenessMenuItem(true)}
-                  />
-                ) : null}
-                {itemSelectedId.value === 2 ? (
-                  <CompanyFormContactInfo
-                    isLoading={isLoading.value}
-                    darkMode={system.darkMode}
-                    URLBase={system.URLBase}
-                    stand={currentCompany.value}
-                    onCancel={() => updateCompletenessMenuItem(false)}
-                    onIncomplete={() => updateCompletenessMenuItem(false)}
-                    onComplete={() => updateCompletenessMenuItem(true)}
-                  />
-                ) : null}
-                {itemSelectedId.value === 3 ? (
-                  <CompanyFormGallery
-                    isLoading={isLoading.value}
-                    darkMode={system.darkMode}
-                    URLBase={system.URLBase}
-                    stand={currentCompany.value}
-                    onCancel={() => updateCompletenessMenuItem(false)}
-                    onIncomplete={() => updateCompletenessMenuItem(false)}
-                    onComplete={() => updateCompletenessMenuItem(true)}
-                  />
-                ) : null}
-                {itemSelectedId.value === 4 ? (
-                  <Products
-                    isLoading={isLoading.value}
-                    darkMode={system.darkMode}
-                    stand={currentCompany.value}
-                    onCancel={() => updateCompletenessMenuItem(false)}
-                    onIncomplete={() => updateCompletenessMenuItem(false)}
-                    onComplete={() => updateCompletenessMenuItem(true)}
-                  />
-                ) : null}
+            {isXSSize ? (
+              <Box marginTop={1} marginBottom={2}>
+                <Divider />
               </Box>
-            </Paper>
+            ) : null}
+            <>
+              {itemSelectedId.value === 0 ? (
+                <CompanyFormExpoInfo
+                  stand={currentCompany.value}
+                  onCancel={() => updateCompletenessMenuItem(false)}
+                  onIncomplete={() => updateCompletenessMenuItem(false)}
+                  onComplete={() => updateCompletenessMenuItem(true)}
+                />
+              ) : null}
+              {itemSelectedId.value === 1 ? (
+                <CompanyFormBasicInfo
+                  isLoading={isLoading.value}
+                  stand={currentCompany.value}
+                  onCancel={() => updateCompletenessMenuItem(false)}
+                  onIncomplete={() => updateCompletenessMenuItem(false)}
+                  onComplete={() => updateCompletenessMenuItem(true)}
+                />
+              ) : null}
+              {itemSelectedId.value === 2 ? (
+                <CompanyFormContactInfo
+                  isLoading={isLoading.value}
+                  darkMode={system.darkMode}
+                  URLBase={system.URLBase}
+                  stand={currentCompany.value}
+                  onCancel={() => updateCompletenessMenuItem(false)}
+                  onIncomplete={() => updateCompletenessMenuItem(false)}
+                  onComplete={() => updateCompletenessMenuItem(true)}
+                />
+              ) : null}
+              {itemSelectedId.value === 3 ? (
+                <CompanyFormGallery
+                  isLoading={isLoading.value}
+                  darkMode={system.darkMode}
+                  URLBase={system.URLBase}
+                  stand={currentCompany.value}
+                  onCancel={() => updateCompletenessMenuItem(false)}
+                  onIncomplete={() => updateCompletenessMenuItem(false)}
+                  onComplete={() => updateCompletenessMenuItem(true)}
+                />
+              ) : null}
+              {itemSelectedId.value === 4 ? (
+                <Products
+                  darkMode={system.darkMode}
+                  stand={currentCompany.value}
+                />
+              ) : null}
+            </>
             <Box
               display="flex"
               flexDirection="row"
@@ -210,23 +192,25 @@ const Companies = (): ReactElement => {
               </Box>
             </Grid>
           ) : null}
-          <GenericFormButtons
-            language={system.language}
-            label="Empresa"
-            canDelete={true}
-            id={currentCompany.value.id}
-            isLoading={isLoading.value}
-            complete={currentCompany.value.id ? true : false}
-            onCancel={() => (addOrEditCompany.value = false)}
-            onDelete={() => {}}
-            onComplete={() => {
-              isLoading.value = true;
-              currentCompany.value
-                .save()
-                .catch((e) => console.log('error:', e))
-                .finally(() => (isLoading.value = false));
-            }}
-          />
+          {itemSelectedId.value < 4 ? (
+            <GenericFormButtons
+              language={system.language}
+              label="Empresa"
+              canDelete={true}
+              id={currentCompany.value.id}
+              isLoading={isLoading.value}
+              complete={currentCompany.value.id ? true : false}
+              onCancel={() => (addOrEditCompany.value = false)}
+              onDelete={() => {}}
+              onComplete={() => {
+                isLoading.value = true;
+                currentCompany.value
+                  .save()
+                  .catch((e) => console.log('error:', e))
+                  .finally(() => (isLoading.value = false));
+              }}
+            />
+          ) : null}
           {system.devMode ? (
             <CompanyFormDebugData
               darkMode={system.darkMode}
@@ -236,20 +220,36 @@ const Companies = (): ReactElement => {
         </Grid>
       ) : (
         <>
-          <Paper elevation={1}>
-            <Box padding={1.5}>
-              <Typography variant="body1">Mis empresas</Typography>
-              <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
-                <Grid item xs={12} sm={3}>
-                  <MenuItemWithIcon
-                    darkMode={system.darkMode}
-                    icon={<AddIcon />}
-                    label="Agregar empresa"
-                    selected={false}
-                    isLoading={isLoading.value}
+          <Typography variant="body1">Mis empresas</Typography>
+          <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
+            <Grid item xs={12} sm={3}>
+              <MenuItemWithIcon
+                darkMode={system.darkMode}
+                icon={<AddIcon />}
+                label="Agregar empresa"
+                selected={false}
+                isLoading={isLoading.value}
+                onClick={() => {
+                  goToNextMenuItem(0);
+                  currentCompany.value = new Stand();
+                  currentCompany.value.URLBase = user.URLBase;
+                  currentCompany.value.access = user.access;
+                  currentCompany.value.relationships.owner = {
+                    data: new User(),
+                  };
+                  currentCompany.value.relationships.owner.data.id = user.id;
+                  addOrEditCompany.value = true;
+                  ResetMenu();
+                }}
+              />
+            </Grid>
+            {user.companies.map((i: Stand, index: number) => {
+              return (
+                <Grid item xs={6} sm={3} key={index}>
+                  <Paper
+                    elevation={2}
                     onClick={() => {
-                      goToNextMenuItem(0);
-                      currentCompany.value = new Stand();
+                      currentCompany.value = i;
                       currentCompany.value.URLBase = user.URLBase;
                       currentCompany.value.access = user.access;
                       currentCompany.value.relationships.owner = {
@@ -260,49 +260,28 @@ const Companies = (): ReactElement => {
                       addOrEditCompany.value = true;
                       ResetMenu();
                     }}
-                  />
-                </Grid>
-                {user.companies.map((i: Stand, index: number) => {
-                  return (
-                    <Grid item xs={6} sm={3} key={index}>
-                      <Paper
-                        elevation={2}
-                        onClick={() => {
-                          currentCompany.value = i;
-                          currentCompany.value.URLBase = user.URLBase;
-                          currentCompany.value.access = user.access;
-                          currentCompany.value.relationships.owner = {
-                            data: new User(),
-                          };
-                          currentCompany.value.relationships.owner.data.id =
-                            user.id;
-                          addOrEditCompany.value = true;
-                          ResetMenu();
-                        }}
-                        sx={{
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Box
-                          padding={1.5}
-                          sx={{ opacity: isLoading ? '0.5' : '1' }}
-                        >
-                          {i.attributes.name}
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  );
-                })}
-                {isLoading.value ? (
-                  <Grid item xs={12}>
-                    <Box sx={{ width: '100%' }}>
-                      <LinearProgress />
+                    sx={{
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Box
+                      padding={1.5}
+                      sx={{ opacity: isLoading ? '0.5' : '1' }}
+                    >
+                      {i.attributes.name}
                     </Box>
-                  </Grid>
-                ) : null}
+                  </Paper>
+                </Grid>
+              );
+            })}
+            {isLoading.value ? (
+              <Grid item xs={12}>
+                <Box sx={{ width: '100%' }}>
+                  <LinearProgress />
+                </Box>
               </Grid>
-            </Box>
-          </Paper>
+            ) : null}
+          </Grid>
         </>
       )}
     </>

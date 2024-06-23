@@ -284,6 +284,13 @@ const SignUpForm = ({ URLBase, callback }: Props) => {
             Crear cuenta
           </Button>
         </Grid>
+        {state.isLoading ? (
+          <Grid item xs={12} marginTop={1}>
+            <Box sx={{ width: '100%' }}>
+              <LinearProgress />
+            </Box>
+          </Grid>
+        ) : null}
         {state.error.length &&
         state.error[0] &&
         state.error[0].status === 400 &&
@@ -301,13 +308,6 @@ const SignUpForm = ({ URLBase, callback }: Props) => {
                 <Alert severity="success">Restablece tu contraseña aqui.</Alert>
               </Link>
             </Stack>
-          </Grid>
-        ) : null}
-        {state.isLoading ? (
-          <Grid item xs={12} marginTop={1}>
-            <Box sx={{ width: '100%' }}>
-              <LinearProgress />
-            </Box>
           </Grid>
         ) : null}
       </Grid>

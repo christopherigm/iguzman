@@ -1,102 +1,86 @@
-import { ReactElement, useEffect } from 'react';
+import { ReactElement, useEffect, useState } from 'react';
 import { user } from 'classes/user';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
-import Box from '@mui/material/Box';
 import { Signal, signal } from '@preact-signals/safe-react';
-import {
-  GenericFormButtons,
-  MenuItemWithIcon,
-  ReturnButtonArrow,
-} from '@repo/ui';
+import { MenuItemWithIcon, ReturnButtonArrow } from '@repo/ui';
 import AddIcon from '@mui/icons-material/Add';
 import Stand from 'classes/stand';
 import Product from 'classes/product/product';
-
 import ProductFormInfo from 'components/product/product-form-info';
 import { system } from 'classes/system';
 import BaseBuyableItem from 'components/base-buyable-item';
+import LinearProgress from '@mui/material/LinearProgress';
+import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 
-const isLoadingLocal: Signal<boolean> = signal(false);
-const complete: Signal<boolean> = signal(false);
-const error: Signal<string> = signal('');
-
-const addOrEdit: Signal<boolean> = signal(false);
 const currentItem: Signal<Product> = signal(new Product());
 
 type Props = {
-  isLoading: boolean;
   darkMode: boolean;
   stand: Stand;
-  onCancel: () => void;
-  onIncomplete: () => void;
-  onComplete: () => void;
 };
 
-const Products = ({
-  isLoading = false,
-  darkMode = false,
-  stand,
-  onCancel,
-  onIncomplete,
-  onComplete,
-}: Props): ReactElement => {
-  useEffect(() => {
-    console.log('CompanyFormGallery.tsx > renders');
-    system.setDataFromLocalStorage();
-    user.setDataFromLocalStorage();
-    // console.log('>>> stand.products.length:', stand.products.length);
-    // console.log('>>> isLoadingLocal:', isLoadingLocal.value);
-    // addOrEdit.value = false;
-    if (!stand.products.length && !isLoadingLocal.value) {
-      isLoadingLocal.value = true;
-      complete.value = false;
-      error.value = '';
+const Products = ({ darkMode = false, stand }: Props): ReactElement => {
+  system.setDataFromLocalStorage();
+  user.setDataFromLocalStorage();
+  stand.relationships.setOwnerFromPlainObject(user.getPlainObject());
+  const [items, setItems] = useState<Array<Product>>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [newEntry, setNewEntry] = useState<boolean>(false);
+
+  const loadItems = (): Promise<void> => {
+    return new Promise((res, rej) => {
+      setIsLoading(true);
       stand
         .getProductsFromAPI()
-        .then((data) => {
-          // console.log('data', data);
-        })
-        .catch((e) => console.log('error', e))
-        .finally(() => (isLoadingLocal.value = false));
+        .then((data) => res(setItems(data)))
+        .catch((e) => rej(e))
+        .finally(() => setIsLoading(false));
+    });
+  };
+
+  useEffect(() => {
+    if (!items.length && !isLoading) {
+      loadItems().catch((e: any) => console.log(e));
     }
-  }, [stand.products.length]);
+  }, [items.length]);
 
   const saveProduct = () => {
-    isLoadingLocal.value = true;
+    setIsLoading(true);
     currentItem.value
       .save()
-      .then(() => {
-        console.log('Item created');
-        addOrEdit.value = false;
-        isLoadingLocal.value = false;
-        stand.products = [];
-      })
-      .catch((e) => console.log(e))
-      .finally(() => (isLoadingLocal.value = false));
+      .then(() => loadItems())
+      .catch((e) => console.log(e));
   };
 
   return (
     <>
-      {addOrEdit.value ? (
+      {newEntry ? (
         <>
           <ReturnButtonArrow
             language={system.language}
-            onClick={() => (addOrEdit.value = !addOrEdit.value)}
+            prevLabel="mis productos"
+            onClick={() => setNewEntry(false)}
           />
           <ProductFormInfo
             isLoading={isLoading}
             darkMode={darkMode}
             standID={stand.id}
             item={currentItem.value}
-            onCancel={() => (addOrEdit.value = !addOrEdit.value)}
+            onCancel={() => setNewEntry(false)}
             onIncomplete={() => {}}
             onComplete={() => saveProduct()}
           />
         </>
       ) : (
         <>
-          <Typography variant="body1">Productos</Typography>
+          <Typography variant="body1" marginTop={1}>
+            Productos
+          </Typography>
+          <Box marginTop={2}>
+            <Divider />
+          </Box>
           <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
             <Grid item xs={12} sm={4}>
               <MenuItemWithIcon
@@ -104,38 +88,49 @@ const Products = ({
                 icon={<AddIcon />}
                 label="Agregar producto"
                 selected={false}
-                isLoading={isLoadingLocal.value}
+                isLoading={isLoading}
                 onClick={() => {
                   currentItem.value = new Product();
+                  currentItem.value.userID = user.id;
+                  currentItem.value.userName = user.attributes.first_name;
                   currentItem.value.URLBase = system.URLBase;
                   currentItem.value.access = user.access;
                   currentItem.value.relationships.stand.data.id = stand.id;
                   currentItem.value.relationships.stand.data.attributes.setAttributesFromPlainObject(
                     stand.attributes.getPlainAttributes()
                   );
-                  addOrEdit.value = true;
+                  setNewEntry(true);
                 }}
               />
             </Grid>
-            {stand.products.map((i: Product, index: number) => {
+            {items.map((i: Product, index: number) => {
               return (
-                <Grid item xs={6} sm={4} key={index}>
+                <Grid item xs={12} sm={4} key={index}>
                   <BaseBuyableItem
                     item={i}
                     onClick={() => {
                       currentItem.value.id = i.id;
+                      currentItem.value.userID = user.id;
+                      currentItem.value.userName = 'user.attributes.first_name';
                       currentItem.value.URLBase = system.URLBase;
                       currentItem.value.access = user.access;
                       currentItem.value.relationships.stand.data.id = stand.id;
                       currentItem.value.setDataFromPlainObject(
                         i.getPlainObject()
                       );
-                      addOrEdit.value = true;
+                      setNewEntry(true);
                     }}
                   />
                 </Grid>
               );
             })}
+            {isLoading ? (
+              <Grid item xs={12}>
+                <Box sx={{ width: '100%' }}>
+                  <LinearProgress />
+                </Box>
+              </Grid>
+            ) : null}
           </Grid>
         </>
       )}

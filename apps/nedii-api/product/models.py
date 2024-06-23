@@ -78,8 +78,7 @@ class ProductFeatureOption(CommonFields):
     name = models.CharField(
         max_length=64,
         null=False,
-        blank=False,
-        unique=True
+        blank=False
     )
     feature = models.ForeignKey(
         'product.ProductFeature',
@@ -117,8 +116,7 @@ class ProductFeature(CommonFields):
     name = models.CharField(
         max_length=64,
         null=False,
-        blank=False,
-        unique=True
+        blank=False
     )
     options = models.ManyToManyField(
         'product.ProductFeatureOption',

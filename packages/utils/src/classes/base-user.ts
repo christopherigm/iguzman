@@ -1,8 +1,10 @@
 import { Signal, signal } from '@preact-signals/safe-react';
 import { GetLocalStorageData, SetLocalStorageData } from '../lib/local-storage';
+import { DeleteCookie } from '../lib/cookie-handler';
 import type { JWTPayload } from '../interfaces/jwt-interface';
 import API from '../api';
 import CommonFields from './common-fields';
+import removeImagesForAPICall from '../lib/remove-images-for-api-call';
 
 export class BaseUser {
   public static instance: BaseUser;
@@ -19,7 +21,13 @@ export class BaseUser {
     refresh: '',
   });
   private _access: Signal<string> = signal('');
+  private _refresh: Signal<string> = signal('');
   public attributes: BaseUserAttributes = new BaseUserAttributes();
+
+  constructor() {
+    const system: any = JSON.parse(GetLocalStorageData('System') || '{}');
+    this.URLBase = system.URLBase || this.URLBase;
+  }
 
   public static getInstance(): BaseUser {
     return BaseUser.instance || new BaseUser();
@@ -37,6 +45,7 @@ export class BaseUser {
     this.id = Number(object.id ?? 0) ?? this.id;
     this.jwt = object.jwt ?? this.jwt;
     this.access = object.access ?? this.access;
+    this.refresh = object.refresh ?? this.refresh;
     this.attributes.setAttributesFromPlainObject(object);
   }
 
@@ -55,54 +64,67 @@ export class BaseUser {
     };
   }
 
+  public setAccessFromLocalStorage() {
+    let cachedUser: any = GetLocalStorageData(this.type);
+    if (cachedUser) {
+      cachedUser = JSON.parse(cachedUser);
+      this.id = Number(cachedUser.id ?? 0) ?? this.id;
+      this.access = cachedUser.access ?? this.access;
+      this.refresh = cachedUser.refresh ?? this.refresh;
+    }
+  }
+
   public setDataFromLocalStorage() {
     let cachedUser: any = GetLocalStorageData(this.type);
     if (cachedUser) {
-      this.setDataFromPlainObject(JSON.parse(cachedUser));
+      cachedUser = JSON.parse(cachedUser);
+      this.setDataFromPlainObject(cachedUser);
     }
   }
 
   public saveUserToLocalStorage() {
-    let attributes: any = this.attributes.getPlainAttributes();
-    attributes.password = '';
+    let cachedUser: any = GetLocalStorageData(this.type);
+    if (cachedUser) {
+      cachedUser = JSON.parse(cachedUser);
+    } else {
+      cachedUser = {};
+    }
+    let attributes: any = {
+      ...this.attributes.getPlainAttributes(),
+      ...(cachedUser.attributes && {
+        ...cachedUser.attributes,
+      }),
+    };
+    delete attributes.password;
     SetLocalStorageData(
       this.type,
       JSON.stringify({
         id: this.id,
         type: this.type,
         access: this.access,
+        refresh: this.refresh,
         jwt: this.jwt,
         attributes,
       })
     );
   }
 
-  public updateUserData(urlBase?: string): Promise<void> {
+  public updateUserData(): Promise<void> {
     return new Promise((res, rej) => {
-      const URLBase = urlBase ?? this.URLBase;
-      if (!URLBase || URLBase === '') {
+      if (!this.URLBase || this.URLBase === '' || !this.access) {
         return rej(new Error('No URLBase'));
       }
       const attributes: any = this.attributes.getPlainAttributes();
-      if (this.attributes.img_picture.search(';base64') < 0) {
-        delete attributes.img_picture;
-      }
+      removeImagesForAPICall(attributes);
       if (attributes.password === '') {
         delete attributes.password;
       }
       API.UpdateUser({
-        URLBase,
+        URLBase: this.URLBase,
         jwt: this.access,
         id: this.id,
         attributes,
       })
-        .then(() =>
-          API.GetUser({
-            URLBase,
-            userID: this.id,
-            jwt: this.access,
-          })
-        )
         .then(() => {
           this.saveUserToLocalStorage();
           this.setDataFromLocalStorage();
@@ -112,7 +134,7 @@ export class BaseUser {
     });
   }
 
-  public login(urlBase?: string): Promise<JWTPayload> {
+  public login(urlBase?: string): Promise<void> {
     return new Promise((res, rej) => {
       const URLBase = urlBase ?? this.URLBase;
       if (!URLBase || URLBase === '') {
@@ -132,27 +154,77 @@ export class BaseUser {
           this.jwt = data;
           this.id = data.user_id;
           this.access = data.access;
-          res(data);
+          this.refresh = data.refresh;
+          return this.getUserFromAPI();
         })
+        .then(() => res())
         .catch((error) => rej(error));
     });
   }
 
-  public getUserFromAPI(urlBase?: string): Promise<any> {
+  public getUserFromAPI(): Promise<any> {
     return new Promise((res, rej) => {
-      const URLBase = urlBase ?? this.URLBase;
-      if (!URLBase || URLBase === '') {
+      if (!this.URLBase || this.URLBase === '') {
         return rej(new Error('No URL Base'));
       }
-      if (!this.access || !this.id) {
+      if (!this.access) {
         return rej(new Error('No credentials'));
       }
-      API.GetUser({
-        URLBase,
-        jwt: this.access,
-        userID: this.id,
+      if (this.id) {
+        API.GetUser({
+          URLBase: this.URLBase,
+          jwt: this.access,
+          userID: this.id,
+        })
+          .then((data: any) => {
+            this.setDataFromPlainObject(data);
+            this.saveUserToLocalStorage();
+            res(data);
+          })
+          .catch((error) => rej(error));
+      } else if (this.attributes.username) {
+        let url = `${this.URLBase}/v1/users/?filter[username]=${this.attributes.username}`;
+        API.Get({ url })
+          .then((response) => res(response.data.length ? response.data[0] : {}))
+          .catch((error) => rej(error));
+      } else {
+        rej('No user id or username');
+      }
+    });
+  }
+
+  public refreshToken(): Promise<void> {
+    return new Promise((res, rej) => {
+      this.setAccessFromLocalStorage();
+      if (!this.URLBase || this.URLBase === '') {
+        return res();
+      }
+      if (!this.refresh) {
+        return rej('No refresh token');
+      }
+      const url = `${this.URLBase}/v1/token/refresh/`;
+      const data = {
+        type: 'TokenRefreshView',
+        attributes: {
+          refresh: this.refresh,
+        },
+      };
+      API.Post({
+        url,
+        data,
       })
-        .then((data: any) => res(data))
+        .then((response: any) => {
+          if (response.errors && response.errors.length) {
+            if (response.errors[0].code === 'token_not_valid') {
+              DeleteCookie('User');
+              SetLocalStorageData('User', '');
+            }
+            return rej(response.errors);
+          }
+          this.access = response.data.access;
+          this.saveUserToLocalStorage();
+          res();
+        })
         .catch((error) => rej(error));
     });
   }
@@ -176,6 +248,13 @@ export class BaseUser {
   }
   public set access(value) {
     this._access.value = value;
+  }
+
+  public get refresh() {
+    return this._refresh.value;
+  }
+  public set refresh(value) {
+    this._refresh.value = value;
   }
 
   public get jwt() {

@@ -71,7 +71,12 @@ const CompanyFormBasicInfo = ({
       autoComplete="on"
       onSubmit={(e: FormEvent) => onSubmit(e)}
     >
-      <Typography variant="body1">Informacion de la empresa</Typography>
+      <Typography variant="body1" marginTop={1}>
+        Informacion de la empresa
+      </Typography>
+      <Box marginTop={2}>
+        <Divider />
+      </Box>
       <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
         <Grid item xs={12} sm={6}>
           <TextField
@@ -153,7 +158,7 @@ const CompanyFormBasicInfo = ({
         <Grid item xs={12}>
           <FormGroup>
             <Grid container columnSpacing={2}>
-              <Grid item xs={6}>
+              <Grid item xs={12} sm={6}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -168,7 +173,7 @@ const CompanyFormBasicInfo = ({
                 />
               </Grid>
               {stand.attributes.restaurant ? (
-                <Grid item xs={6}>
+                <Grid item xs={12} sm={6}>
                   <FormControlLabel
                     control={
                       <Switch

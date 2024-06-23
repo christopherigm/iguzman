@@ -6,7 +6,7 @@ import BaseBuyableItem, {
 } from 'classes/base-buyable-item';
 import ProductClassification from 'classes/product/product-classification';
 import ProductDeliveryType from 'classes/product/product-delivery-type';
-import ProductFeature from 'classes/product/product-feature';
+import ProductFeatureOption from 'classes/product/product-feature-option';
 import ProductPicture from 'classes/product/product-picture';
 
 enum ProductState {
@@ -52,7 +52,6 @@ export default class Product extends BaseBuyableItem {
         data: this.getPlainObject(),
       };
       removeImagesForAPICall(data.data.attributes);
-      console.log('Data to save', data);
       if (this.id) {
         API.Patch(data)
           .then((response) => {
@@ -122,7 +121,7 @@ class ProductRelationships extends BaseBuyableItemRelationships {
   public _delivery_type: Signal<{ data: ProductDeliveryType }> = signal({
     data: ProductDeliveryType.getInstance(),
   });
-  public _features: Signal<{ data: Array<ProductFeature> }> = signal({
+  public _features: Signal<{ data: Array<ProductFeatureOption> }> = signal({
     data: [],
   });
   public _product_pictures: Signal<{ data: Array<ProductPicture> }> = signal({
@@ -147,13 +146,13 @@ class ProductRelationships extends BaseBuyableItemRelationships {
         );
       }
       if (object.relationships.features?.data) {
-        const newProductFeatureArray: Array<ProductFeature> = [];
+        const newProductFeatureOptionArray: Array<ProductFeatureOption> = [];
         object.relationships.features.data.map((i: any) => {
-          const newOption = new ProductFeature();
+          const newOption = new ProductFeatureOption();
           newOption.setDataFromPlainObject(i);
-          newProductFeatureArray.push(newOption);
+          newProductFeatureOptionArray.push(newOption);
         });
-        this.features.data = [...newProductFeatureArray];
+        this.features.data = [...newProductFeatureOptionArray];
       }
       if (object.relationships.product_pictures?.data) {
         const newProductPicturesArray: Array<ProductPicture> = [];

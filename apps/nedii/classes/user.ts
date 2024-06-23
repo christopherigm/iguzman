@@ -21,12 +21,14 @@ export default class User extends BaseUser {
     return User.instance || new User();
   }
 
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.jwt = object.jwt ?? this.jwt;
-    this.access = object.access ?? this.access;
-    this.attributes.setAttributesFromPlainObject(object);
-  }
+  // public setDataFromPlainObject(object: any) {
+  //   // this.id = Number(object.id ?? 0) ?? this.id;
+  //   // this.jwt = object.jwt ?? this.jwt;
+  //   // this.access = object.access ?? this.access;
+  //   // this.refresh = object.access ?? this.refresh;
+  //   super.setDataFromPlainObject(object);
+  //   this.attributes.setAttributesFromPlainObject(object);
+  // }
 
   // public getPlainObject(): any {
   //   return {
@@ -39,85 +41,49 @@ export default class User extends BaseUser {
   // public setDataFromLocalStorage() {
   //   let cachedUser: any = GetLocalStorageData(this.type);
   //   if (cachedUser) {
-  //     this.setDataFromPlainObject(JSON.parse(cachedUser));
+  //     cachedUser = JSON.parse(cachedUser);
+  //     console.log('>> cachedUser - refresh:', cachedUser.refresh);
+  //     this.setDataFromPlainObject(cachedUser);
   //   }
   // }
 
-  public getNediiUserFromAPI(urlBase?: string): Promise<any> {
+  public getUserFromAPI(): Promise<any> {
     return new Promise((res, rej) => {
-      this.URLBase = urlBase ?? this.URLBase;
-      if (!this.URLBase || this.URLBase === '') {
-        return rej(new Error('No URL Base'));
-      }
-      if (this.id) {
-        API.GetUser({
-          URLBase: this.URLBase,
-          jwt: '',
-          userID: this.id,
-        })
-          .then((response: any) => res(RebuildData(response).data))
-          .catch((error) => rej(error));
-      } else if (this.attributes.username) {
-        let url = `${this.URLBase}/v1/users/?filter[username]=${this.attributes.username}`;
-        // url += '&include=city,city.state,city.state.country';
-        API.Get({ url })
-          .then((response) =>
-            res(response.data.length ? RebuildData(response).data[0] : {})
-          )
-          .catch((error) => rej(error));
-      } else {
-        rej('No user id or username');
-      }
-    });
-  }
-
-  public updateNediiUserData(urlBase?: string): Promise<void> {
-    return new Promise((res, rej) => {
-      const URLBase = urlBase ?? this.URLBase;
-      if (!URLBase || URLBase === '') {
-        return rej(new Error('No URLBase'));
-      }
-      const attributes: any = this.attributes.getPlainAttributes();
-      removeImagesForAPICall(attributes);
-      if (attributes.password === '') {
-        delete attributes.password;
-      }
-      API.UpdateUser({
-        URLBase,
-        jwt: this.access,
-        id: this.id,
-        attributes,
-      })
-        .then(() =>
-          API.GetUser({
-            URLBase,
-            userID: this.id,
-            jwt: this.access,
-          })
-        )
-        .then(() => {
+      super
+        .getUserFromAPI()
+        .then((data) => {
+          this.setDataFromPlainObject(data);
           this.saveUserToLocalStorage();
-          this.setDataFromLocalStorage();
-          res();
+          res(data);
         })
-        .catch((error) => rej(error));
+        .catch((e) => rej(e));
     });
   }
 
-  public saveUserToLocalStorage() {
-    let attributes: any = this.attributes.getPlainAttributes();
-    attributes.password = '';
-    SetLocalStorageData(
-      this.type,
-      JSON.stringify({
-        id: this.id,
-        type: this.type,
-        access: this.access,
-        jwt: this.jwt,
-        attributes,
-      })
-    );
+  public updateUserData(): Promise<void> {
+    return new Promise((res, rej) => {
+      super
+        .updateUserData()
+        .then(() => res(this.getUserFromAPI()))
+        .catch((e) => rej(e));
+    });
   }
+
+  // public saveUserToLocalStorage() {
+  //   let attributes: any = this.attributes.getPlainAttributes();
+  //   attributes.password = '';
+  //   SetLocalStorageData(
+  //     this.type,
+  //     JSON.stringify({
+  //       id: this.id,
+  //       type: this.type,
+  //       access: this.access,
+  //       refresh: this.refresh,
+  //       jwt: this.jwt,
+  //       attributes,
+  //     })
+  //   );
+  // }
 
   public getUserAddressesFromAPI(): Promise<Array<any>> {
     return new Promise((res, rej) => {
@@ -145,6 +111,9 @@ export default class User extends BaseUser {
         })
         .catch((error) => rej(error));
     });
+  }
+  public test(): Promise<void> {
+    return new Promise((res, rej) => {});
   }
 
   public getUserCompaniesFromAPI(): Promise<Array<any>> {
@@ -210,9 +179,9 @@ class UserAttributes extends BaseUserAttributes {
     if (object.attributes) {
       super.setAttributesFromPlainObject(object);
       this.token = object.attributes.token ?? this.token;
-      this.is_seller = object.attributes.is_seller ?? this.is_seller;
-      this.newsletter = object.attributes.newsletter ?? this.newsletter;
-      this.promotions = object.attributes.promotions ?? this.promotions;
+      this.is_seller = object.attributes.is_seller;
+      this.newsletter = object.attributes.newsletter;
+      this.promotions = object.attributes.promotions;
       this.biography = object.attributes.biography ?? this.biography;
       this.owner_position =
         object.attributes.owner_position ?? this.owner_position;

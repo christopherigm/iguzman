@@ -17,7 +17,7 @@ const complete: Signal<boolean> = signal(false);
 const error: Signal<string> = signal('');
 
 type Props = {
-  children?: ReactElement | Array<ReactElement>;
+  children?: ReactElement | Array<ReactElement | null> | null;
   isLoading: boolean;
   darkMode: boolean;
   label: string;
@@ -269,8 +269,6 @@ const BaseBuyableItemForm = ({
             ) : null}
           </>
         ) : null}
-
-        <Grid item xs={12}></Grid>
 
         {children}
 
