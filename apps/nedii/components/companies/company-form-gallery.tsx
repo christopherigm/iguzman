@@ -65,7 +65,12 @@ const CompanyFormGallery = ({
       autoComplete="on"
       onSubmit={(e: FormEvent) => onSubmit(e)}
     >
-      <Typography variant="body1">Imagenes de la empresa</Typography>
+      <Typography variant="body1" marginTop={1}>
+        Imagenes de la empresa
+      </Typography>
+      <Box marginTop={2}>
+        <Divider />
+      </Box>
       <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
         <Grid item xs={12}>
           <Box width={200} margin="0 auto">

@@ -9,6 +9,7 @@ import Stand from 'classes/stand';
 import { CountryField, StateField, CityField } from '@repo/ui';
 import StandPhone from 'classes/stand/stand-phone';
 import PhonesForm from 'components/companies/phones-form';
+import Divider from '@mui/material/Divider';
 
 const isLoadingLocal: Signal<boolean> = signal(false);
 const complete: Signal<boolean> = signal(false);
@@ -76,9 +77,12 @@ const CompanyFormContactInfo = ({
       autoComplete="on"
       onSubmit={(e: FormEvent) => onSubmit(e)}
     >
-      <Typography variant="body1">
+      <Typography variant="body1" marginTop={1}>
         Informacion de contacto de la empresa
       </Typography>
+      <Box marginTop={2}>
+        <Divider />
+      </Box>
       <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
         <Grid item xs={12} sm={6} md={4}>
           <CountryField

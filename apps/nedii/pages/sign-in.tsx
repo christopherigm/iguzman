@@ -4,21 +4,13 @@ import Typography from '@mui/material/Typography';
 import { useRouter } from 'next/router';
 import { SignInForm, MainLayout } from '@repo/ui';
 import System, { system } from 'classes/system';
-import { user } from 'classes/user';
 
 const Page = (props: any): ReactElement => {
   const router = useRouter();
 
   useEffect(() => {
     system.setDataFromPlainObject(props);
-    user.URLBase = system.URLBase;
   }, [props]);
-
-  const callback = (data: any) => {
-    user.setDataFromPlainObject(data);
-    user.saveUserToLocalStorage();
-    router.push('/');
-  };
 
   return (
     <MainLayout
@@ -50,7 +42,7 @@ const Page = (props: any): ReactElement => {
       >
         Acceder a mi cuenta
       </Typography>
-      <SignInForm URLBase={props.URLBase} callback={callback} />
+      <SignInForm callback={() => router.push('/')} />
     </MainLayout>
   );
 };

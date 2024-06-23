@@ -15,13 +15,13 @@ const Page = (props: any): ReactElement => {
   const router = useRouter();
 
   useEffect(() => {
+    system.setDataFromPlainObject(props);
+    user.setDataFromLocalStorage();
     const path = router.pathname.replace(/\//g, '');
     menu.value.forEach((i) =>
       i.href === path ? (i.selected = true) : (i.selected = false)
     );
     menu.value = [...menu.value];
-    system.setDataFromPlainObject(props);
-    user.setDataFromLocalStorage();
     if (!user.id) {
       router.push('/');
     }

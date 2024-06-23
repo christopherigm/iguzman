@@ -1,5 +1,11 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { BasePicture, API } from '@repo/utils';
+import {
+  BasePicture,
+  API,
+  removeImagesForAPICall,
+  RebuildData,
+} from '@repo/utils';
+import type { DropDownFieldOption } from '@repo/ui';
 
 export default class ProductClassification extends BasePicture {
   public static instance: ProductClassification;
@@ -27,21 +33,69 @@ export default class ProductClassification extends BasePicture {
     };
   }
 
-  public save(): Promise<void> {
+  public getItems(): Promise<Array<ProductClassification>> {
     return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}`;
+      let url = `${this.URLBase}/${this.endpoint}`;
+      url += `?filter[stand]=${this.relationships.stand.data.id}`;
+      url += '&page[size]=1000';
+      API.Get({
+        url,
+        jwt: this.access,
+      })
+        .then((response: { data: Array<any> }) => {
+          const data = RebuildData(response);
+          const newOptions = data.data.map((i: any) => {
+            const newItem = new ProductClassification();
+            newItem.setDataFromPlainObject(i);
+            newItem.URLBase = this.URLBase;
+            newItem.access = this.access;
+            newItem.relationships.stand.data.id =
+              this.relationships.stand.data.id;
+            return newItem;
+          });
+          res(newOptions);
+        })
+        .catch((e: any) => rej(e));
+    });
+  }
+
+  public getDropDownItems(): Promise<Array<DropDownFieldOption>> {
+    return new Promise((res, rej) => {
+      this.getItems()
+        .then((items: Array<ProductClassification>) => {
+          const newOptions = items.map((i: ProductClassification) => {
+            const newItem: DropDownFieldOption = {
+              id: i.id,
+              name: i.attributes.name,
+              img_picture: i.attributes.img_picture,
+            };
+            return newItem;
+          });
+          res(newOptions);
+        })
+        .catch((e: any) => rej(e));
+    });
+  }
+
+  public save(): Promise<any> {
+    return new Promise((res, rej) => {
+      const url = `${this.URLBase}/${this.endpoint}${
+        this.id ? `${this.id}/` : ''
+      }`;
       const data = {
         url,
         jwt: this.access,
         data: this.getPlainObject(),
       };
-      API.Post(data)
+      removeImagesForAPICall(data.data.attributes);
+      const method = this.id ? API.Patch : API.Post;
+      method(data)
         .then((response) => {
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }
           this.id = Number(response.data?.id ?? this.id);
-          return res();
+          return res(response);
         })
         .catch((error) => rej(error));
     });

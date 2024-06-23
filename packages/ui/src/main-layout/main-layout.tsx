@@ -1,7 +1,7 @@
 'use-client';
 
 import Head from 'next/head';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Breakpoint, createTheme, ThemeProvider } from '@mui/material/styles';
 import { blue, indigo, grey } from '@mui/material/colors';
 import { Languages } from '@repo/utils';
@@ -11,6 +11,14 @@ import CircularProgress from '@mui/material/CircularProgress';
 import NavBar from '../nav-bar';
 import Footer from '../footer';
 import type { SignInMenuUser } from '../nav-bar/sign-in-menu';
+import { useRouter } from 'next/router';
+import {
+  DeleteCookie,
+  SetLocalStorageData,
+  BaseUser,
+  GetLocalStorageData,
+} from '@repo/utils';
+// import System, { system } from 'classes/system';
 
 const lightTheme = createTheme({
   palette: {
@@ -81,7 +89,17 @@ const MainLayout = ({
   menu,
   maxWidth = 'lg',
 }: Props) => {
+  const router = useRouter();
   const setIsLoading = () => null;
+
+  useEffect(() => {
+    const user = new BaseUser();
+    user.refreshToken().catch((e: any) => {
+      if (e && e.length && e[0].code === 'token_not_valid') {
+        router.reload();
+      }
+    });
+  }, []);
 
   return (
     <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>

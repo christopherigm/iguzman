@@ -38,13 +38,15 @@
   ],
   "dependencies": {
     "@fontsource/roboto": "^5.0.8",
-    "@preact-signals/safe-react": "^0.5.1",
-    "@preact/signals": "^1.2.2",
+    "@mui/lab": "^5.0.0-alpha.170",
+    "@preact-signals/safe-react": "^0.6.1",
+    "@preact/signals": "^1.2.3",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "mongodb": "^6.3.0",
     "request-ip": "^3.3.0",
+    "sharp": "^0.33.4",
     "uuid": "^9.0.1"
   }
 }

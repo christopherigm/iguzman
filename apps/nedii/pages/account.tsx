@@ -22,6 +22,7 @@ const Page = (props: any): ReactElement => {
     menu.value = [...menu.value];
     system.setDataFromPlainObject(props);
     user.setDataFromLocalStorage();
+    user.getUserFromAPI().catch(() => {});
     if (!user.id) {
       router.push('/');
     }

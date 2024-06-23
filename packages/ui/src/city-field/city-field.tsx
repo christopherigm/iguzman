@@ -73,8 +73,9 @@ const CityField = ({
           ) {
             onChange(newOptions[0].id);
           }
+          res();
         })
-        .catch((e: any) => console.log(e))
+        .catch((e: any) => rej(e))
         .finally(() => setIsLoading(false));
     });
   };
@@ -86,6 +87,7 @@ const CityField = ({
         Number(dependentID) !== previousID) &&
       !isLoading
     ) {
+      setNewEntry(false);
       setPreviousID(Number(dependentID));
       loadItems(value);
     }
@@ -102,17 +104,6 @@ const CityField = ({
       .then(() => loadItems(city.id))
       .then(() => setNewEntry(false))
       .catch((e: any) => console.log(e));
-    // .then(() => {
-    //   city.attributes.name = '';
-    //   onChange(city.id);
-    //   setPreviousID(0);
-    //   setOptions([]);
-    // })
-    // .catch((e: any) => console.log(e))
-    // .finally(() => {
-    //   setNewEntry(false);
-    //   setIsLoading(false);
-    // });
   };
 
   const getLabel = (): string => {

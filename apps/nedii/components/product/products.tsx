@@ -12,6 +12,7 @@ import { system } from 'classes/system';
 import BaseBuyableItem from 'components/base-buyable-item';
 import LinearProgress from '@mui/material/LinearProgress';
 import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 
 const currentItem: Signal<Product> = signal(new Product());
 
@@ -31,9 +32,6 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
   const loadItems = (): Promise<void> => {
     return new Promise((res, rej) => {
       setIsLoading(true);
-      // stand.relationships.owner = {
-      //   data: user,
-      // };
       stand
         .getProductsFromAPI()
         .then((data) => res(setItems(data)))
@@ -43,7 +41,6 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
   };
 
   useEffect(() => {
-    console.log('CompanyFormGallery.tsx > renders');
     if (!items.length && !isLoading) {
       loadItems().catch((e: any) => console.log(e));
     }
@@ -54,7 +51,6 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
     currentItem.value
       .save()
       .then(() => loadItems())
-      .then(() => setNewEntry(false))
       .catch((e) => console.log(e));
   };
 
@@ -64,6 +60,7 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
         <>
           <ReturnButtonArrow
             language={system.language}
+            prevLabel="mis productos"
             onClick={() => setNewEntry(false)}
           />
           <ProductFormInfo
@@ -78,7 +75,12 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
         </>
       ) : (
         <>
-          <Typography variant="body1">Productos</Typography>
+          <Typography variant="body1" marginTop={1}>
+            Productos
+          </Typography>
+          <Box marginTop={2}>
+            <Divider />
+          </Box>
           <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
             <Grid item xs={12} sm={4}>
               <MenuItemWithIcon

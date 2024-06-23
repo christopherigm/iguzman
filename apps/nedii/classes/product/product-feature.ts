@@ -1,5 +1,12 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { CommonFields, BaseAPIClass, API } from '@repo/utils';
+import {
+  CommonFields,
+  BaseAPIClass,
+  API,
+  removeImagesForAPICall,
+  RebuildData,
+} from '@repo/utils';
+import type { DropDownFieldOption } from '@repo/ui';
 import ProductFeatureOption from 'classes/product/product-feature-option';
 
 export default class ProductFeature extends BaseAPIClass {
@@ -29,21 +36,69 @@ export default class ProductFeature extends BaseAPIClass {
     };
   }
 
-  public save(): Promise<void> {
+  public getItems(): Promise<Array<ProductFeature>> {
     return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}`;
+      let url = `${this.URLBase}/${this.endpoint}`;
+      url += `?filter[stand]=${this.relationships.stand.data.id}`;
+      url += '&include=options';
+      url += '&page[size]=1000';
+      API.Get({
+        url,
+        jwt: this.access,
+      })
+        .then((response: { data: Array<any> }) => {
+          const data = RebuildData(response);
+          const newOptions = data.data.map((i: any) => {
+            const newItem = new ProductFeature();
+            newItem.setDataFromPlainObject(i);
+            newItem.URLBase = this.URLBase;
+            newItem.access = this.access;
+            newItem.relationships.stand.data.id =
+              this.relationships.stand.data.id;
+            return newItem;
+          });
+          res(newOptions);
+        })
+        .catch((e: any) => rej(e));
+    });
+  }
+
+  public getDropDownItems(): Promise<Array<DropDownFieldOption>> {
+    return new Promise((res, rej) => {
+      this.getItems()
+        .then((items: Array<ProductFeature>) => {
+          const newOptions = items.map((i: ProductFeature) => {
+            const newItem: DropDownFieldOption = {
+              id: i.id,
+              name: i.attributes.name,
+            };
+            return newItem;
+          });
+          res(newOptions);
+        })
+        .catch((e: any) => rej(e));
+    });
+  }
+
+  public save(): Promise<any> {
+    return new Promise((res, rej) => {
+      const url = `${this.URLBase}/${this.endpoint}${
+        this.id ? `${this.id}/` : ''
+      }`;
       const data = {
         url,
         jwt: this.access,
         data: this.getPlainObject(),
       };
-      API.Post(data)
+      removeImagesForAPICall(data.data.attributes);
+      const method = this.id ? API.Patch : API.Post;
+      method(data)
         .then((response) => {
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }
           this.id = Number(response.data?.id ?? this.id);
-          return res();
+          return res(response);
         })
         .catch((error) => rej(error));
     });
@@ -117,11 +172,11 @@ class ProductFeatureRelationships {
           data: this.stand.data,
         },
       }),
-      ...(this.options.data.length && {
-        options: {
-          data: this.options.data.map((i) => i.getPlainObject()),
-        },
-      }),
+      options: {
+        data: this.options.data.length
+          ? this.options.data.map((i) => i.getPlainObject())
+          : [],
+      },
     };
   }
 

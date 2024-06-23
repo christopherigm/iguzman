@@ -80,6 +80,7 @@ const StateField = ({
         Number(dependentID) !== previousID) &&
       !isLoading
     ) {
+      setNewEntry(false);
       setPreviousID(Number(dependentID));
       loadItems(value);
     }
@@ -199,10 +200,9 @@ const StateField = ({
                 label={getLabel()}
                 disabled={isLoading || !options.length}
                 size="small"
-                onChange={(e: SelectChangeEvent) => {
-                  console.log('>>> button change');
-                  onChange(Number(e.target.value));
-                }}
+                onChange={(e: SelectChangeEvent) =>
+                  onChange(Number(e.target.value))
+                }
               >
                 {options.map((i: Option, index: number) => {
                   return (

@@ -116,13 +116,11 @@ export class BaseBuyableItemAttributes extends BasePictureAttributes {
   public setAttributesFromPlainObject(object: any) {
     if (object.attributes) {
       super.setAttributesFromPlainObject(object);
-      this.publish_on_the_wall =
-        object.attributes.publish_on_the_wall ?? this.publish_on_the_wall;
+      this.publish_on_the_wall = object.attributes.publish_on_the_wall;
       this.short_description =
         object.attributes.short_description ?? this.short_description;
       this.stock = object.attributes.stock ?? this.stock;
-      this.unlimited_stock =
-        object.attributes.unlimited_stock ?? this.unlimited_stock;
+      this.unlimited_stock = object.attributes.unlimited_stock;
       this.price = object.attributes.price ?? this.price;
       this.discount = object.attributes.discount ?? this.discount;
       this.final_price = object.attributes.final_price ?? this.final_price;
@@ -150,9 +148,8 @@ export class BaseBuyableItemAttributes extends BasePictureAttributes {
       ...(this.stock && {
         stock: this.stock,
       }),
-      ...(this.unlimited_stock && {
-        unlimited_stock: this.unlimited_stock,
-      }),
+      publish_on_the_wall: this.publish_on_the_wall,
+      unlimited_stock: this.unlimited_stock,
       price: this.price,
       discount: this.discount,
       final_price: this.final_price,
@@ -174,7 +171,6 @@ export class BaseBuyableItemAttributes extends BasePictureAttributes {
       ...(this.views && {
         views: this.views,
       }),
-      publish_on_the_wall: this.publish_on_the_wall,
     };
   }
 

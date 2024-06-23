@@ -38,20 +38,15 @@ const CompanyFormExpoInfo = ({
         }}
       />
       {stand.relationships.category.data.id ? (
-        <>
-          <Box marginTop={3} marginBottom={2}>
-            <Divider />
-          </Box>
-          <ExpoSelector
-            groupID={stand.relationships.category.data.id}
-            expoSelectedID={stand.relationships.expo.data.id}
-            onSelect={(expo: Expo) => {
-              stand.relationships.expo.data.id = expo.id;
-              stand.relationships.expo.data.attributes = expo.attributes;
-              onComplete();
-            }}
-          />
-        </>
+        <ExpoSelector
+          groupID={stand.relationships.category.data.id}
+          expoSelectedID={stand.relationships.expo.data.id}
+          onSelect={(expo: Expo) => {
+            stand.relationships.expo.data.id = expo.id;
+            stand.relationships.expo.data.attributes = expo.attributes;
+            onComplete();
+          }}
+        />
       ) : null}
     </>
   );

@@ -1,5 +1,11 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { CommonFields, BaseAPIClass, API } from '@repo/utils';
+import {
+  CommonFields,
+  BaseAPIClass,
+  API,
+  removeImagesForAPICall,
+} from '@repo/utils';
+import type { DropDownFieldOption } from '@repo/ui';
 
 export default class ProductFeatureOption extends BaseAPIClass {
   public static instance: ProductFeatureOption;
@@ -29,21 +35,70 @@ export default class ProductFeatureOption extends BaseAPIClass {
     };
   }
 
+  public getItems(): Promise<Array<ProductFeatureOption>> {
+    return new Promise((res, rej) => {
+      if (!this.relationships.feature.data.id) {
+        return res([]);
+      }
+      let url = `${this.URLBase}/${this.endpoint}`;
+      url += `?filter[feature]=${this.relationships.feature.data.id}`;
+      url += '&page[size]=1000';
+      API.Get({
+        url,
+        jwt: this.access,
+      })
+        .then((response: { data: Array<any> }) => {
+          const newOptions = response.data.map((i: any) => {
+            const newItem = new ProductFeatureOption();
+            newItem.setDataFromPlainObject(i);
+            newItem.URLBase = this.URLBase;
+            newItem.access = this.access;
+            newItem.relationships.feature.data.id =
+              this.relationships.feature.data.id;
+            return newItem;
+          });
+          res(newOptions);
+        })
+        .catch((e: any) => rej(e));
+    });
+  }
+
+  public getDropDownItems(): Promise<Array<DropDownFieldOption>> {
+    return new Promise((res, rej) => {
+      this.getItems()
+        .then((items: Array<ProductFeatureOption>) => {
+          const newOptions = items.map((i: ProductFeatureOption) => {
+            const newItem: DropDownFieldOption = {
+              id: i.id,
+              name: i.attributes.name,
+            };
+            return newItem;
+          });
+          res(newOptions);
+        })
+        .catch((e: any) => rej(e));
+    });
+  }
+
   public save(): Promise<void> {
     return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}`;
+      const url = `${this.URLBase}/${this.endpoint}${
+        this.id ? `${this.id}/` : ''
+      }`;
       const data = {
         url,
         jwt: this.access,
         data: this.getPlainObject(),
       };
-      API.Post(data)
+      removeImagesForAPICall(data.data.attributes);
+      const method = this.id ? API.Patch : API.Post;
+      method(data)
         .then((response) => {
           if (response.errors && response.errors.length) {
             return rej(response.errors);
           }
           this.id = Number(response.data?.id ?? this.id);
-          return res();
+          return res(response);
         })
         .catch((error) => rej(error));
     });
@@ -78,17 +133,6 @@ class ProductFeatureOptionAttributes extends CommonFields {
 }
 
 class ProductFeatureOptionRelationships {
-  public _stand: Signal<{
-    data: {
-      id: number;
-      type: 'Stand';
-    };
-  }> = signal({
-    data: {
-      id: 0,
-      type: 'Stand',
-    },
-  });
   public _feature: Signal<{
     data: {
       id: number;
@@ -103,9 +147,6 @@ class ProductFeatureOptionRelationships {
 
   public setRelationshipsFromPlainObject(object: any): any {
     if (object.relationships) {
-      if (object.relationships.stand?.data) {
-        this.stand.data.id = object.relationships.stand.data.id;
-      }
       if (object.relationships.feature?.data) {
         this.feature.data.id = object.relationships.feature.data.id;
       }
@@ -114,24 +155,12 @@ class ProductFeatureOptionRelationships {
 
   public getPlainRelationships(): any {
     return {
-      ...(this.stand.data.id && {
-        stand: {
-          data: this.stand.data,
-        },
-      }),
       ...(this.feature.data.id && {
         feature: {
           data: this.feature.data,
         },
       }),
     };
-  }
-
-  public get stand() {
-    return this._stand.value;
-  }
-  public set stand(value) {
-    this._stand.value = value;
   }
 
   public get feature() {
@@ -142,6 +171,6 @@ class ProductFeatureOptionRelationships {
   }
 }
 
-export const productFeature = signal<ProductFeatureOption>(
+export const productFeatureOption = signal<ProductFeatureOption>(
   ProductFeatureOption.getInstance()
 ).value;

@@ -36,7 +36,10 @@ class ProductFeatureOptionSerializer(HyperlinkedModelSerializer):
 
 class ProductFeatureSerializer(HyperlinkedModelSerializer):
     stand = ResourceRelatedField(queryset=Stand.objects)
-    options = ResourceRelatedField(queryset=ProductFeatureOption.objects)
+    options = ResourceRelatedField(
+        queryset=ProductFeatureOption.objects,
+        many=True
+    )
 
     included_serializers = {
         "options": "product.serializers.ProductFeatureOptionSerializer"

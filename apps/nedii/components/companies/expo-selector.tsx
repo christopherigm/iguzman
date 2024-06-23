@@ -8,6 +8,7 @@ import Expo, { expo } from 'classes/expo';
 import { useEffect } from '@preact-signals/safe-react/react';
 import ExpoItem from 'components/companies/expo-item';
 import { system } from 'classes/system';
+import Divider from '@mui/material/Divider';
 
 type Props = {
   groupID: number;
@@ -47,13 +48,16 @@ const ExpoSelector = ({
         </>
       ) : (
         <>
-          <Typography variant="body1">
+          <Typography variant="body1" marginTop={3}>
             {expos.value.length ? (
               <>Seleccione una Expo para la empresa</>
             ) : (
               <>No hay Expos en esta categoria aun {':('}</>
             )}
           </Typography>
+          <Box marginTop={2}>
+            <Divider />
+          </Box>
           <Grid container spacing={2} marginTop={0.5}>
             {expos.value.map((expo: Expo, index: number) => {
               expo.selected = expo.id === expoSelectedID;
