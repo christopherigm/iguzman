@@ -1,5 +1,4 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { API, removeImagesForAPICall, RebuildData } from '@repo/utils';
 import BaseBuyableItem, {
   BaseBuyableItemAttributes,
   BaseBuyableItemRelationships,
@@ -24,55 +23,6 @@ export default class Product extends BaseBuyableItem {
 
   public static getInstance(): Product {
     return Product.instance || new Product();
-  }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-    this.relationships.setRelationshipsFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-      relationships: this.relationships.getPlainRelationships(),
-    };
-  }
-
-  public save(): Promise<void> {
-    return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}${
-        this.id ? this.id + '/' : ''
-      }`;
-      const data = {
-        url,
-        jwt: this.access,
-        data: this.getPlainObject(),
-      };
-      removeImagesForAPICall(data.data.attributes);
-      if (this.id) {
-        API.Patch(data)
-          .then((response) => {
-            if (response.errors && response.errors.length) {
-              return rej(response.errors);
-            }
-            return res();
-          })
-          .catch((error) => rej(error));
-      } else {
-        API.Post(data)
-          .then((response) => {
-            if (response.errors && response.errors.length) {
-              return rej(response.errors);
-            }
-            this.id = Number(response.data?.id ?? this.id);
-            return res();
-          })
-          .catch((error) => rej(error));
-      }
-    });
   }
 }
 
@@ -133,12 +83,6 @@ class ProductRelationships extends BaseBuyableItemRelationships {
 
   public setRelationshipsFromPlainObject(object: any): any {
     if (object.relationships) {
-      // if (object.relationships.stand?.data) {
-      //   this.stand.data.id = object.relationships.stand.data.id;
-      //   this.stand.data.attributes.setAttributesFromPlainObject(
-      //     object.relationships.stand.data
-      //   );
-      // }
       super.setRelationshipsFromPlainObject(object);
       if (object.relationships.classification?.data) {
         this.classification.data.setDataFromPlainObject(

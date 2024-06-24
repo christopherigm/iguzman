@@ -1,15 +1,14 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { API, CommonFields } from '@repo/utils';
+import { API, BasePicture, BasePictureAttributes } from '@repo/utils';
 import Category from 'classes/category';
 
-export default class Expo {
+export default class Expo extends BasePicture {
   public static instance: Expo;
-  protected type: string = 'Expo';
-  private _id: Signal<number> = signal(0);
-  private _URLBase: Signal<string> = signal('');
-  private _selected: Signal<boolean> = signal(false);
+  public type: string = 'Expo';
+  public endpoint: string = 'v1/expos/';
   public attributes: ExpoAttributes = new ExpoAttributes();
   public relationships: ExpoRelationships = new ExpoRelationships();
+  private _selected: Signal<boolean> = signal(false);
 
   public static getInstance(): Expo {
     return Expo.instance || new Expo();
@@ -20,9 +19,9 @@ export default class Expo {
       if (!this.URLBase) {
         return rej('No URLBase');
       }
-      const url = `${
-        this.URLBase
-      }/v1/expos/?filter[categories__id__in]=${categories.join(',')}`;
+      const url = `${this.URLBase}/${
+        this.endpoint
+      }?filter[categories__id__in]=${categories.join(',')}`;
       API.Get({ url })
         .then((response) => {
           const expos: Array<Expo> = [];
@@ -57,20 +56,6 @@ export default class Expo {
     };
   }
 
-  public get id() {
-    return this._id.value;
-  }
-  public set id(value) {
-    this._id.value = value;
-  }
-
-  public get URLBase() {
-    return this._URLBase.value;
-  }
-  public set URLBase(value) {
-    this._URLBase.value = value;
-  }
-
   public get selected() {
     return this._selected.value;
   }
@@ -79,33 +64,25 @@ export default class Expo {
   }
 }
 
-class ExpoAttributes extends CommonFields {
-  private _name: Signal<string> = signal('');
+class ExpoAttributes extends BasePictureAttributes {
   private _slug: Signal<string> = signal('');
-  private _img_picture: Signal<string> = signal('');
   private _email: Signal<string> = signal('');
   private _is_real: Signal<boolean> = signal(false);
 
   public setAttributesFromPlainObject(object: any) {
     if (object.attributes) {
       super.setAttributesFromPlainObject(object);
-      this.name = object.attributes.name ?? this.name;
-      this.img_picture = object.attributes.img_picture ?? this.img_picture;
       this.slug = object.attributes.slug ?? this.slug;
+      this.email = object.attributes.email ?? this.email;
+      this.is_real = object.attributes.is_real;
     }
   }
 
   public getPlainAttributes(): any {
     return {
       ...super.getPlainAttributes(),
-      ...(this.name && {
-        name: this.name,
-      }),
       ...(this.slug && {
         slug: this.slug,
-      }),
-      ...(this.img_picture && {
-        img_picture: this.img_picture,
       }),
       ...(this.email && {
         email: this.email,
@@ -114,25 +91,11 @@ class ExpoAttributes extends CommonFields {
     };
   }
 
-  public get name() {
-    return this._name.value;
-  }
-  public set name(value) {
-    this._name.value = value;
-  }
-
   public get slug() {
     return this._slug.value;
   }
   public set slug(value) {
     this._slug.value = value;
-  }
-
-  public get img_picture() {
-    return this._img_picture.value;
-  }
-  public set img_picture(value) {
-    this._img_picture.value = value;
   }
 
   public get email() {

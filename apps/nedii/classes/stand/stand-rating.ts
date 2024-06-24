@@ -13,39 +13,6 @@ export default class StandRating extends BaseAPIClass {
   public static getInstance(): StandRating {
     return StandRating.instance || new StandRating();
   }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-    };
-  }
-
-  public save(): Promise<void> {
-    return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}`;
-      const data = {
-        url,
-        jwt: this.access,
-        data: this.getPlainObject(),
-      };
-      API.Post(data)
-        .then((response) => {
-          if (response.errors && response.errors.length) {
-            return rej(response.errors);
-          }
-          this.id = Number(response.data?.id ?? this.id);
-          return res();
-        })
-        .catch((error) => rej(error));
-    });
-  }
 }
 
 class StandRatingAttributes extends CommonFields {

@@ -12,13 +12,7 @@ import NavBar from '../nav-bar';
 import Footer from '../footer';
 import type { SignInMenuUser } from '../nav-bar/sign-in-menu';
 import { useRouter } from 'next/router';
-import {
-  DeleteCookie,
-  SetLocalStorageData,
-  BaseUser,
-  GetLocalStorageData,
-} from '@repo/utils';
-// import System, { system } from 'classes/system';
+import { BaseUser } from '@repo/utils';
 
 const lightTheme = createTheme({
   palette: {

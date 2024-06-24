@@ -12,21 +12,6 @@ export default class StandPhone extends BaseAPIClass {
     return StandPhone.instance || new StandPhone();
   }
 
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-    this.relationships.setRelationshipsFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-      relationships: this.relationships.getPlainRelationships(),
-    };
-  }
-
   public getPhoneByStandID(): Promise<void> {
     return new Promise((res, rej) => {
       let url = `${this.URLBase}/${this.endpoint}`;

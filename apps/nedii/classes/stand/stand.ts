@@ -1,5 +1,5 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { City, API, removeImagesForAPICall, RebuildData } from '@repo/utils';
+import { City, API, RebuildData, BaseAPIClass } from '@repo/utils';
 import NediiPlan from 'classes/nedii-plan';
 import User from 'classes/user';
 import Category from 'classes/category';
@@ -15,13 +15,10 @@ import StandPhone from 'classes/stand/stand-phone';
 
 import Product from 'classes/product/product';
 
-export default class Stand {
+export default class Stand extends BaseAPIClass {
   public static instance: Stand;
-  protected type: string = 'Stand';
-  protected endpoint = 'v1/stands/';
-  private _id: Signal<number> = signal(0);
-  private _URLBase: Signal<string> = signal('');
-  private _access: Signal<string> = signal('');
+  public type: string = 'Stand';
+  public endpoint = 'v1/stands/';
   public attributes: StandAttributes = new StandAttributes();
   public relationships: StandRelationships = new StandRelationships();
 
@@ -29,51 +26,6 @@ export default class Stand {
 
   public static getInstance(): Stand {
     return Stand.instance || new Stand();
-  }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-    this.relationships.setRelationshipsFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-      relationships: this.relationships.getPlainRelationships(this.id),
-    };
-  }
-
-  public getMinimumPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-    };
-  }
-
-  public save(): Promise<void> {
-    return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}${
-        this.id ? this.id + '/' : ''
-      }`;
-      const data = {
-        url,
-        jwt: this.access,
-        data: this.getPlainObject(),
-      };
-      removeImagesForAPICall(data.data.attributes);
-      if (this.id) {
-        API.Patch(data)
-          .then((response) => res(response))
-          .catch((error) => rej(error));
-      } else {
-        API.Post(data)
-          .then((response) => res(response))
-          .catch((error) => rej(error));
-      }
-    });
   }
 
   public getProductsFromAPI(): Promise<Array<any>> {
@@ -107,27 +59,6 @@ export default class Stand {
         })
         .catch((error) => rej(error));
     });
-  }
-
-  public get id() {
-    return this._id.value;
-  }
-  public set id(value) {
-    this._id.value = value;
-  }
-
-  public get URLBase() {
-    return this._URLBase.value;
-  }
-  public set URLBase(value) {
-    this._URLBase.value = value;
-  }
-
-  public get access() {
-    return this._access.value;
-  }
-  public set access(value) {
-    this._access.value = value;
   }
 
   public get products() {
@@ -295,11 +226,6 @@ class StandRelationships {
     this.owner = {
       data: User.getInstance(),
     };
-    // const user = User.getInstance();
-    // user.setDataFromLocalStorage();
-    // this.owner = {
-    //   data: user,
-    // };
   }
 
   public setOwnerFromPlainObject(object: any) {

@@ -38,8 +38,6 @@ const currentCompany: Signal<Stand> = signal(new Stand());
 const isLoading: Signal<boolean> = signal(false);
 
 const Companies = (): ReactElement => {
-  system.setDataFromLocalStorage();
-  user.setDataFromLocalStorage();
   const theme = useTheme();
   const isXSSize: boolean = useMediaQuery(theme.breakpoints.only('xs'));
   itemSelected.value = menuItems.value.filter(
@@ -49,6 +47,17 @@ const Companies = (): ReactElement => {
     itemSelected.value.length && itemSelected.value[0]
       ? itemSelected.value[0].id
       : -1;
+
+  useEffect(() => {
+    console.log('Companies.tsx > renders');
+    system.setDataFromLocalStorage();
+    user.setDataFromLocalStorage();
+    addOrEditCompany.value = false;
+    isLoading.value = true;
+    user.URLBase = system.URLBase;
+    user.getUserCompaniesFromAPI().finally(() => (isLoading.value = false));
+    ResetMenu();
+  }, []);
 
   const ResetMenu = () => {
     if (currentCompany.value.id) {
@@ -80,15 +89,6 @@ const Companies = (): ReactElement => {
     });
     menuItems.value = [...menuItems.value];
   };
-
-  useEffect(() => {
-    console.log('Companies.tsx > renders');
-    addOrEditCompany.value = false;
-    isLoading.value = true;
-    user.URLBase = system.URLBase;
-    user.getUserCompaniesFromAPI().finally(() => (isLoading.value = false));
-    ResetMenu();
-  }, []);
 
   return (
     <>

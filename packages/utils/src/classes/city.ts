@@ -7,26 +7,12 @@ import BaseAPIClass from './base-class';
 export default class City extends BaseAPIClass {
   public static instance: City;
   public type: string = 'City';
+  public endpoint: string = '/v1/cities/';
   public attributes: CityAttributes = new CityAttributes();
   public relationships: CityRelationships = new CityRelationships();
 
   public static getInstance(): City {
     return City.instance || new City();
-  }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-    this.relationships.setRelationshipsFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-      relationships: this.relationships.getPlainRelationships(),
-    };
   }
 
   public save(): Promise<void> {

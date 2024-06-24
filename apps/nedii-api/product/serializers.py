@@ -29,6 +29,10 @@ class ProductDeliveryTypeSerializer(HyperlinkedModelSerializer):
 class ProductFeatureOptionSerializer(HyperlinkedModelSerializer):
     feature = ResourceRelatedField(queryset=ProductFeature.objects)
 
+    included_serializers = {
+        "feature": "product.serializers.ProductFeatureSerializer"
+    }
+
     class Meta:
         model = ProductFeatureOption
         fields = "__all__"

@@ -7,6 +7,7 @@ import BaseAPIClass from './base-class';
 export default class State extends BaseAPIClass {
   public static instance: State;
   public type: string = 'State';
+  public endpoint: string = '/v1/states/';
   public attributes: StateAttributes = new StateAttributes();
   public relationships: StateRelationships = new StateRelationships();
 
@@ -41,7 +42,6 @@ export default class State extends BaseAPIClass {
             return rej(data.errors);
           }
           this.id = Number(data?.id ?? this.id);
-          console.log('>>> state new ID:', this.id);
           return res();
         })
         .catch((e) => rej(e));

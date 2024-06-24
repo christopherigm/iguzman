@@ -140,6 +140,7 @@ export class StandBookingQuestionOption extends BaseAPIClass {
   public endpoint = 'v1/stand-booking-question-options/';
   public attributes: StandBookingQuestionOptionAttributes =
     new StandBookingQuestionOptionAttributes();
+  public relationships = null;
 
   public static getInstance(): StandBookingQuestionOption {
     return (

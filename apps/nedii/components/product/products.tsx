@@ -22,12 +22,18 @@ type Props = {
 };
 
 const Products = ({ darkMode = false, stand }: Props): ReactElement => {
-  system.setDataFromLocalStorage();
-  user.setDataFromLocalStorage();
-  stand.relationships.setOwnerFromPlainObject(user.getPlainObject());
   const [items, setItems] = useState<Array<Product>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [newEntry, setNewEntry] = useState<boolean>(false);
+
+  useEffect(() => {
+    system.setDataFromLocalStorage();
+    user.setDataFromLocalStorage();
+    stand.relationships.setOwnerFromPlainObject(user.getPlainObject());
+    if (!items.length && !isLoading) {
+      loadItems().catch((e: any) => console.log(e));
+    }
+  }, [items.length]);
 
   const loadItems = (): Promise<void> => {
     return new Promise((res, rej) => {
@@ -39,12 +45,6 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
         .finally(() => setIsLoading(false));
     });
   };
-
-  useEffect(() => {
-    if (!items.length && !isLoading) {
-      loadItems().catch((e: any) => console.log(e));
-    }
-  }, [items.length]);
 
   const saveProduct = () => {
     setIsLoading(true);

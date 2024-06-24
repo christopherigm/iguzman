@@ -33,9 +33,7 @@ type Props = {
 const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
   useEffect(() => {
     user.setDataFromLocalStorage();
-    user.getUserFromAPI().catch((error) => {
-      console.log(error);
-    });
+    user.getUserFromAPI().catch(() => {});
     newPassword.value = '';
     repeatPassword.value = '';
     currentPassword.value = '';
@@ -44,7 +42,7 @@ const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
     passwordComplete.value = false;
     error.value = '';
     passwordError.value = '';
-  }, [URLBase]);
+  }, []);
 
   const UpdateUserData = () => {
     isLoading.value = true;

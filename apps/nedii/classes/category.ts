@@ -1,13 +1,13 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { API, CommonFields } from '@repo/utils';
+import { API, BasePicture, BasePictureAttributes } from '@repo/utils';
 
-export default class Category {
+export default class Category extends BasePicture {
   public static instance: Category;
-  protected type: string = 'Category';
-  private _id: Signal<number> = signal(0);
-  private _URLBase: Signal<string> = signal('');
-  private _selected: Signal<boolean> = signal(false);
+  public type: string = 'Category';
+  public endpoint: string = 'v1/categories/';
   public attributes: CategoryAttributes = new CategoryAttributes();
+  public relationships = null;
+  private _selected: Signal<boolean> = signal(false);
 
   public static getInstance(): Category {
     return Category.instance || new Category();
@@ -18,7 +18,7 @@ export default class Category {
       if (!this.URLBase) {
         return rej('No URLBase');
       }
-      const url = `${this.URLBase}/v1/categories/`;
+      const url = `${this.URLBase}/${this.endpoint}`;
       API.Get({ url })
         .then((response) => {
           const categories: Array<Category> = [];
@@ -29,42 +29,8 @@ export default class Category {
           });
           res(categories);
         })
-        .catch((e) => rej(e.toString()));
+        .catch((e) => rej(e));
     });
-  }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      id: this.id,
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-    };
-  }
-
-  public getMinimumPlainObject(): any {
-    return {
-      id: this.id,
-      type: this.type,
-    };
-  }
-
-  public get id() {
-    return this._id.value;
-  }
-  public set id(value) {
-    this._id.value = value;
-  }
-
-  public get URLBase() {
-    return this._URLBase.value;
-  }
-  public set URLBase(value) {
-    this._URLBase.value = value;
   }
 
   public get selected() {
@@ -75,9 +41,7 @@ export default class Category {
   }
 }
 
-class CategoryAttributes extends CommonFields {
-  private _name: Signal<string> = signal('');
-  private _img_picture: Signal<string> = signal('');
+class CategoryAttributes extends BasePictureAttributes {
   private _slug: Signal<string> = signal('');
   private _icon: Signal<string> = signal('');
   private _color: Signal<string> = signal('');
@@ -85,8 +49,6 @@ class CategoryAttributes extends CommonFields {
   public setAttributesFromPlainObject(object: any) {
     if (object.attributes) {
       super.setAttributesFromPlainObject(object);
-      this.name = object.attributes.name ?? this.name;
-      this.img_picture = object.attributes.img_picture ?? this.img_picture;
       this.slug = object.attributes.slug ?? this.slug;
       this.icon = object.attributes.icon ?? this.icon;
       this.color = object.attributes.color ?? this.color;
@@ -96,14 +58,8 @@ class CategoryAttributes extends CommonFields {
   public getPlainAttributes(): any {
     return {
       ...super.getPlainAttributes(),
-      ...(this.name && {
-        name: this.name,
-      }),
       ...(this.slug && {
         slug: this.slug,
-      }),
-      ...(this.img_picture && {
-        img_picture: this.img_picture,
       }),
       ...(this.icon && {
         icon: this.icon,
@@ -112,20 +68,6 @@ class CategoryAttributes extends CommonFields {
         color: this.color,
       }),
     };
-  }
-
-  public get name() {
-    return this._name.value;
-  }
-  public set name(value) {
-    this._name.value = value;
-  }
-
-  public get img_picture() {
-    return this._img_picture.value;
-  }
-  public set img_picture(value) {
-    this._img_picture.value = value;
   }
 
   public get slug() {

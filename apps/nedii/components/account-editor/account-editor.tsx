@@ -40,6 +40,7 @@ const AccountEditor = ({ darkMode = false, URLBase }: Props): ReactElement => {
   useEffect(() => {
     user.setDataFromLocalStorage();
   }, []);
+
   itemSelected.value = menuItems.value.filter(
     (i: VerticalMenuItemProps) => i.selected
   );

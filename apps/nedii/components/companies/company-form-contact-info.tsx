@@ -37,16 +37,12 @@ const CompanyFormContactInfo = ({
 }: Props): ReactElement => {
   useEffect(() => {
     console.log('CompanyFormContactInfo.tsx > renders');
-    console.log(
-      'Parent State:',
-      stand.relationships.city.data.relationships.state.data.id
-    );
+    user.setDataFromLocalStorage();
+    user.URLBase = URLBase;
     isLoadingLocal.value = false;
     complete.value = false;
     error.value = '';
     phones.value = [...stand.relationships.phones.data];
-    user.setDataFromLocalStorage();
-    user.URLBase = URLBase;
   }, []);
 
   const onSubmit = (e: FormEvent) => {

@@ -1,43 +1,17 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { API, CommonFields } from '@repo/utils';
+import { BaseAPIClass, CommonFields } from '@repo/utils';
 
 export type Exposure = 'basic' | 'medium' | 'high' | 'full';
 
-export default class NediiPlan {
+export default class NediiPlan extends BaseAPIClass {
   public static instance: NediiPlan;
   public type: string = 'NediiPlan';
-  private _id: Signal<number> = signal(0);
+  public endpoint = 'v1/product-features/';
   public attributes: NediiPlanAttributes = new NediiPlanAttributes();
+  public relationships = null;
 
   public static getInstance(): NediiPlan {
     return NediiPlan.instance || new NediiPlan();
-  }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      id: this.id,
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-    };
-  }
-
-  public getMinimumPlainObject(): any {
-    return {
-      id: this.id,
-      type: this.type,
-    };
-  }
-
-  public get id() {
-    return this._id.value;
-  }
-  public set id(value) {
-    this._id.value = value;
   }
 }
 

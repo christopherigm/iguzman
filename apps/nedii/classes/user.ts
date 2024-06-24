@@ -5,9 +5,6 @@ import {
   BaseUser,
   BaseUserAttributes,
   BaseUserAddress,
-  GetLocalStorageData,
-  SetLocalStorageData,
-  removeImagesForAPICall,
 } from '@repo/utils';
 import Stand from 'classes/stand';
 
@@ -20,32 +17,6 @@ export default class User extends BaseUser {
   public static getInstance(): User {
     return User.instance || new User();
   }
-
-  // public setDataFromPlainObject(object: any) {
-  //   // this.id = Number(object.id ?? 0) ?? this.id;
-  //   // this.jwt = object.jwt ?? this.jwt;
-  //   // this.access = object.access ?? this.access;
-  //   // this.refresh = object.access ?? this.refresh;
-  //   super.setDataFromPlainObject(object);
-  //   this.attributes.setAttributesFromPlainObject(object);
-  // }
-
-  // public getPlainObject(): any {
-  //   return {
-  //     id: this.id,
-  //     type: this.type,
-  //     attributes: this.attributes.getPlainAttributes(),
-  //   };
-  // }
-
-  // public setDataFromLocalStorage() {
-  //   let cachedUser: any = GetLocalStorageData(this.type);
-  //   if (cachedUser) {
-  //     cachedUser = JSON.parse(cachedUser);
-  //     console.log('>> cachedUser - refresh:', cachedUser.refresh);
-  //     this.setDataFromPlainObject(cachedUser);
-  //   }
-  // }
 
   public getUserFromAPI(): Promise<any> {
     return new Promise((res, rej) => {
@@ -68,22 +39,6 @@ export default class User extends BaseUser {
         .catch((e) => rej(e));
     });
   }
-
-  // public saveUserToLocalStorage() {
-  //   let attributes: any = this.attributes.getPlainAttributes();
-  //   attributes.password = '';
-  //   SetLocalStorageData(
-  //     this.type,
-  //     JSON.stringify({
-  //       id: this.id,
-  //       type: this.type,
-  //       access: this.access,
-  //       refresh: this.refresh,
-  //       jwt: this.jwt,
-  //       attributes,
-  //     })
-  //   );
-  // }
 
   public getUserAddressesFromAPI(): Promise<Array<any>> {
     return new Promise((res, rej) => {
@@ -111,9 +66,6 @@ export default class User extends BaseUser {
         })
         .catch((error) => rej(error));
     });
-  }
-  public test(): Promise<void> {
-    return new Promise((res, rej) => {});
   }
 
   public getUserCompaniesFromAPI(): Promise<Array<any>> {

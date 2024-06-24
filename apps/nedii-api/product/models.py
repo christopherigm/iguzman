@@ -83,6 +83,7 @@ class ProductFeatureOption(CommonFields):
     feature = models.ForeignKey(
         'product.ProductFeature',
         verbose_name='Caracteristica del producto',
+        related_name='option_product_feature',
         null=False,
         blank=False,
         help_text='Caracteristica del producto',

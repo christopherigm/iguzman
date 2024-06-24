@@ -1,34 +1,16 @@
 import { Signal, signal } from '@preact/signals-react';
 import CommonFields from './common-fields';
+import BaseAPIClass from './base-class';
 
-export default class Country {
+export default class Country extends BaseAPIClass {
   public static instance: Country;
   public type: string = 'Country';
-  private _id: Signal<number> = signal(0);
+  public endpoint: string = '/v1/countries/';
   public attributes: CountryAttributes = new CountryAttributes();
+  public relationships = null;
 
   public static getInstance(): Country {
     return Country.instance || new Country();
-  }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-    };
-  }
-
-  public get id() {
-    return this._id.value;
-  }
-  public set id(value) {
-    this._id.value = value;
   }
 }
 

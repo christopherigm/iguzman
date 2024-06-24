@@ -49,41 +49,18 @@ const ProductFormInfo = ({
   onIncomplete,
   onComplete,
 }: Props): ReactElement => {
-  system.setDataFromLocalStorage();
-  user.setDataFromLocalStorage();
   productClassification.URLBase = system.URLBase;
   productClassification.access = user.access;
   productClassification.relationships.stand.data.id = standID;
 
-  const [productFeatures, setProductFeatures] = useState<Array<any>>([]);
-  const [productFeatureOptions, setProductFeatureOptions] = useState<
-    Array<any>
-  >([]);
-
   useEffect(() => {
     console.log('ProductFormInfo.tsx > renders');
+    system.setDataFromLocalStorage();
+    user.setDataFromLocalStorage();
     isLoadingLocal.value = false;
     complete.value = false;
     error.value = '';
-    // checkCompleteness();
   }, []);
-
-  const updateProductFeatureOptions = (options: Array<any> = [], id = 0) => {
-    setProductFeatureOptions([]);
-    options.map((i: any) => {
-      if (Number(i.id) === id && i.relationships?.options?.data?.length) {
-        const newOptions = i.relationships.options.data.map((i: any) => {
-          const newItem = {
-            id: Number(i.id),
-            label: i.attributes.name,
-            image: i.attributes.img_picture,
-          };
-          return newItem;
-        });
-        setProductFeatureOptions(newOptions);
-      }
-    });
-  };
 
   const checkCompleteness = (): void => {
     // if (
@@ -142,7 +119,9 @@ const ProductFormInfo = ({
       <ProductFeatureField
         disabled={isLoading}
         standID={standID}
-        onChange={(id) => {}}
+        onChange={(items: Array<number>) => {
+          console.log('New Items:', items);
+        }}
       />
     </BaseBuyableItemForm>
   );

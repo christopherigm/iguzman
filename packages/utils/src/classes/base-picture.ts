@@ -5,18 +5,12 @@ import BaseAPIClass from './base-class';
 export class BasePicture extends BaseAPIClass {
   public static instance: BasePicture;
   public type: string = 'BasePicture';
+  public endpoint = '';
   public attributes: BasePictureAttributes = new BasePictureAttributes();
+  public relationships: any;
 
   public static getInstance(): BasePicture {
     return BasePicture.instance || new BasePicture();
-  }
-
-  public getPlainObject(): any {
-    return {
-      id: this.id,
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-    };
   }
 }
 

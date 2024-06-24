@@ -18,21 +18,6 @@ export default class ProductClassification extends BasePicture {
     return ProductClassification.instance || new ProductClassification();
   }
 
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-    this.relationships.setRelationshipsFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-      relationships: this.relationships.getPlainRelationships(),
-    };
-  }
-
   public getItems(): Promise<Array<ProductClassification>> {
     return new Promise((res, rej) => {
       let url = `${this.URLBase}/${this.endpoint}`;
@@ -74,30 +59,6 @@ export default class ProductClassification extends BasePicture {
           res(newOptions);
         })
         .catch((e: any) => rej(e));
-    });
-  }
-
-  public save(): Promise<any> {
-    return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}${
-        this.id ? `${this.id}/` : ''
-      }`;
-      const data = {
-        url,
-        jwt: this.access,
-        data: this.getPlainObject(),
-      };
-      removeImagesForAPICall(data.data.attributes);
-      const method = this.id ? API.Patch : API.Post;
-      method(data)
-        .then((response) => {
-          if (response.errors && response.errors.length) {
-            return rej(response.errors);
-          }
-          this.id = Number(response.data?.id ?? this.id);
-          return res(response);
-        })
-        .catch((error) => rej(error));
     });
   }
 }

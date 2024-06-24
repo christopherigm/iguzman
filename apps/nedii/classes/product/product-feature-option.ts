@@ -1,11 +1,7 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import {
-  CommonFields,
-  BaseAPIClass,
-  API,
-  removeImagesForAPICall,
-} from '@repo/utils';
+import { CommonFields, BaseAPIClass, API, RebuildData } from '@repo/utils';
 import type { DropDownFieldOption } from '@repo/ui';
+import ProductFeature from 'classes/product/product-feature';
 
 export default class ProductFeatureOption extends BaseAPIClass {
   public static instance: ProductFeatureOption;
@@ -20,21 +16,6 @@ export default class ProductFeatureOption extends BaseAPIClass {
     return ProductFeatureOption.instance || new ProductFeatureOption();
   }
 
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-    this.relationships.setRelationshipsFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-      relationships: this.relationships.getPlainRelationships(),
-    };
-  }
-
   public getItems(): Promise<Array<ProductFeatureOption>> {
     return new Promise((res, rej) => {
       if (!this.relationships.feature.data.id) {
@@ -42,13 +23,15 @@ export default class ProductFeatureOption extends BaseAPIClass {
       }
       let url = `${this.URLBase}/${this.endpoint}`;
       url += `?filter[feature]=${this.relationships.feature.data.id}`;
+      url += '&include=feature';
       url += '&page[size]=1000';
       API.Get({
         url,
         jwt: this.access,
       })
         .then((response: { data: Array<any> }) => {
-          const newOptions = response.data.map((i: any) => {
+          const data = RebuildData(response);
+          const newOptions = data.data.map((i: any) => {
             const newItem = new ProductFeatureOption();
             newItem.setDataFromPlainObject(i);
             newItem.URLBase = this.URLBase;
@@ -67,40 +50,19 @@ export default class ProductFeatureOption extends BaseAPIClass {
     return new Promise((res, rej) => {
       this.getItems()
         .then((items: Array<ProductFeatureOption>) => {
-          const newOptions = items.map((i: ProductFeatureOption) => {
+          const newOptions = items.map((i: any) => {
+            let name = `[${i.relationships.feature.data.attributes.name}]`;
+            name += ': ';
+            name += i.attributes.name;
             const newItem: DropDownFieldOption = {
               id: i.id,
-              name: i.attributes.name,
+              name,
             };
             return newItem;
           });
           res(newOptions);
         })
         .catch((e: any) => rej(e));
-    });
-  }
-
-  public save(): Promise<void> {
-    return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}${
-        this.id ? `${this.id}/` : ''
-      }`;
-      const data = {
-        url,
-        jwt: this.access,
-        data: this.getPlainObject(),
-      };
-      removeImagesForAPICall(data.data.attributes);
-      const method = this.id ? API.Patch : API.Post;
-      method(data)
-        .then((response) => {
-          if (response.errors && response.errors.length) {
-            return rej(response.errors);
-          }
-          this.id = Number(response.data?.id ?? this.id);
-          return res(response);
-        })
-        .catch((error) => rej(error));
     });
   }
 }
@@ -133,22 +95,16 @@ class ProductFeatureOptionAttributes extends CommonFields {
 }
 
 class ProductFeatureOptionRelationships {
-  public _feature: Signal<{
-    data: {
-      id: number;
-      type: 'ProductFeature';
-    };
-  }> = signal({
-    data: {
-      id: 0,
-      type: 'ProductFeature',
-    },
+  public _feature: Signal<{ data: ProductFeature }> = signal({
+    data: ProductFeature.getInstance(),
   });
 
   public setRelationshipsFromPlainObject(object: any): any {
     if (object.relationships) {
       if (object.relationships.feature?.data) {
-        this.feature.data.id = object.relationships.feature.data.id;
+        this.feature.data.setDataFromPlainObject(
+          object.relationships.feature.data
+        );
       }
     }
   }
@@ -157,7 +113,7 @@ class ProductFeatureOptionRelationships {
     return {
       ...(this.feature.data.id && {
         feature: {
-          data: this.feature.data,
+          data: this.feature.data.getPlainObject(),
         },
       }),
     };
