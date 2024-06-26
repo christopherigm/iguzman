@@ -17,6 +17,7 @@ import Stack from '@mui/material/Stack';
 import Link from 'next/link';
 import { MainLayout } from '@repo/ui';
 import System, { system } from 'classes/system';
+import { user } from 'classes/user';
 
 const Page = (props: any): ReactElement => {
   useEffect(() => {
@@ -29,6 +30,7 @@ const Page = (props: any): ReactElement => {
   return (
     <MainLayout
       darkMode={system.darkMode}
+      refreshToken={() => user.refreshToken()}
       switchTheme={() => system.switchTheme()}
       devMode={system.devMode}
       switchDevMode={() => system.switchDevMode()}

@@ -36,26 +36,6 @@ export default class Expo extends BasePicture {
     });
   }
 
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      id: this.id,
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-    };
-  }
-
-  public getMinimumPlainObject(): any {
-    return {
-      id: this.id,
-      type: this.type,
-    };
-  }
-
   public get selected() {
     return this._selected.value;
   }
@@ -115,6 +95,30 @@ class ExpoAttributes extends BasePictureAttributes {
 
 class ExpoRelationships {
   public _categories: Signal<{ data: Array<Category> }> = signal({ data: [] });
+
+  public setRelationshipsFromPlainObject(object: any): any {
+    if (object.relationships) {
+      if (object.relationships.categories?.data) {
+        const newArray: Array<Category> = [];
+        object.relationships.categories.data.map((i: any) => {
+          const newOption = new Category();
+          newOption.setDataFromPlainObject(i);
+          newArray.push(newOption);
+        });
+        this.categories.data = [...newArray];
+      }
+    }
+  }
+
+  public getPlainRelationships(): any {
+    return {
+      options: {
+        data: this.categories.data.length
+          ? this.categories.data.map((i) => i.getPlainObject())
+          : [],
+      },
+    };
+  }
 
   public get categories() {
     return this._categories.value;

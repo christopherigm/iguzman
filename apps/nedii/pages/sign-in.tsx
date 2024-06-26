@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography';
 import { useRouter } from 'next/router';
 import { SignInForm, MainLayout } from '@repo/ui';
 import System, { system } from 'classes/system';
+import { user } from 'classes/user';
 
 const Page = (props: any): ReactElement => {
   const router = useRouter();
@@ -15,6 +16,7 @@ const Page = (props: any): ReactElement => {
   return (
     <MainLayout
       darkMode={system.darkMode}
+      refreshToken={() => user.refreshToken()}
       switchTheme={() => system.switchTheme()}
       devMode={system.devMode}
       switchDevMode={() => system.switchDevMode()}
@@ -42,7 +44,13 @@ const Page = (props: any): ReactElement => {
       >
         Acceder a mi cuenta
       </Typography>
-      <SignInForm callback={() => router.push('/')} />
+      <SignInForm
+        login={(data) => {
+          user.setDataFromPlainObject(data);
+          return user.login();
+        }}
+        callback={() => router.push('/')}
+      />
     </MainLayout>
   );
 };

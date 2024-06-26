@@ -12,7 +12,6 @@ import NavBar from '../nav-bar';
 import Footer from '../footer';
 import type { SignInMenuUser } from '../nav-bar/sign-in-menu';
 import { useRouter } from 'next/router';
-import { BaseUser } from '@repo/utils';
 
 const lightTheme = createTheme({
   palette: {
@@ -53,6 +52,7 @@ const darkTheme = createTheme({
 interface Props {
   children: any;
   darkMode: boolean;
+  refreshToken: () => Promise<void>;
   switchTheme: () => void;
   devMode: boolean;
   switchDevMode: () => void;
@@ -70,6 +70,7 @@ interface Props {
 const MainLayout = ({
   children,
   darkMode = false,
+  refreshToken,
   switchTheme,
   devMode = false,
   switchDevMode,
@@ -87,9 +88,12 @@ const MainLayout = ({
   const setIsLoading = () => null;
 
   useEffect(() => {
-    const user = new BaseUser();
-    user.refreshToken().catch((e: any) => {
-      if (e && e.length && e[0].code === 'token_not_valid') {
+    refreshToken().catch((e: any) => {
+      console.log('e', e);
+      if (
+        (e && e.length && e[0].code === 'token_not_valid') ||
+        (e && e === 'not-valid-user')
+      ) {
         router.reload();
       }
     });

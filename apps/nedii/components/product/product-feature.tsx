@@ -8,29 +8,25 @@ import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import ProductFeature, {
-  productFeature as parent,
-} from 'classes/product/product-feature';
+import { productFeature as parent } from 'classes/product/product-feature';
 import { productFeatureOption as option } from 'classes/product/product-feature-option';
 
 type Props = {
   standID: number;
-  disabled?: boolean;
+  value: Array<DropDownFieldOption>;
   onChange: (items: Array<number>) => void;
+  disabled?: boolean;
 };
 
 const ProductFeatureField = ({
   standID,
-  disabled,
+  value,
   onChange,
+  disabled,
 }: Props): ReactElement => {
   system.setDataFromLocalStorage();
   user.setDataFromLocalStorage();
-  parent.URLBase = system.URLBase;
-  parent.access = user.access;
   parent.relationships.stand.data.id = standID;
-  option.URLBase = system.URLBase;
-  option.access = user.access;
   option.relationships.feature.data.id = parent.id;
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -42,16 +38,20 @@ const ProductFeatureField = ({
   >([]);
 
   useEffect(() => {
-    loadProductFeatureOptions().catch((e) => console.log(e));
-  }, [parent.id]);
+    setSelectedOptions(value);
+    if (!productFeatureOptions.length) {
+      loadProductFeatureOptions().catch((e) => console.log(e));
+    }
+  }, [value.length, parent.id, productFeatureOptions.length]);
 
   const loadProductFeatureOptions = (): Promise<Array<DropDownFieldOption>> => {
     return new Promise((res, rej) => {
       setIsLoading(true);
-      option.id = 0;
+      // console.log('>>> parent:', parent.id);
       option
         .getDropDownItems()
         .then((items) => {
+          // console.log('>>> new item:', items);
           setProductFeatureOptions(items);
           // checkSelectedOptions(items);
           res(items);
@@ -121,7 +121,7 @@ const ProductFeatureField = ({
         value={parent.id}
         onChange={(id: number) => {
           parent.id = id;
-          option.id = 0;
+          setProductFeatureOptions([]);
         }}
         imageEnabled={false}
         onSave={(data) => {
@@ -145,6 +145,7 @@ const ProductFeatureField = ({
         imageEnabled={false}
         onSave={(data) => {
           setProductFeatureOptions([]);
+          option.id = 0;
           option.setDataFromPlainObject(data);
           return option.save();
         }}
@@ -189,6 +190,7 @@ const ProductFeatureField = ({
                     label={i.name}
                     variant="outlined"
                     onDelete={() => updateSelectedOptions(i.id, 'remove')}
+                    disabled={disabled || isLoading}
                   />
                 </Box>
               );

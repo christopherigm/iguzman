@@ -6,8 +6,7 @@ import Divider from '@mui/material/Divider';
 import User from 'classes/user';
 import { MainLayout } from '@repo/ui';
 import System, { system } from 'classes/system';
-
-const user = User.getInstance();
+import { user } from 'classes/user';
 
 const Page = (props: any): ReactElement => {
   useEffect(() => {
@@ -18,6 +17,7 @@ const Page = (props: any): ReactElement => {
   return (
     <MainLayout
       darkMode={system.darkMode}
+      refreshToken={() => user.refreshToken()}
       switchTheme={() => system.switchTheme()}
       devMode={system.devMode}
       switchDevMode={() => system.switchDevMode()}

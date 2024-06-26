@@ -24,7 +24,7 @@ export default class User extends BaseUser {
         .getUserFromAPI()
         .then((data) => {
           this.setDataFromPlainObject(data);
-          this.saveUserToLocalStorage();
+          this.saveLocalStorage();
           res(data);
         })
         .catch((e) => rej(e));
@@ -46,7 +46,7 @@ export default class User extends BaseUser {
       url += '&include=city,city.state,city.state.country';
       API.Get({
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
       })
         .then((response: { data: Array<any> }) => {
           const rawData = response.data.length
@@ -56,8 +56,6 @@ export default class User extends BaseUser {
           rawData.forEach((i: any) => {
             const newItem = new BaseUserAddress();
             newItem.id = Number(i.id);
-            newItem.URLBase = this.URLBase;
-            newItem.access = this.access;
             newItem.setAttributesFromPlainObject(i);
             this.addresses.push(newItem);
           });
@@ -75,7 +73,7 @@ export default class User extends BaseUser {
       url += 'pictures';
       API.Get({
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
       })
         .then((response: { data: Array<any> }) => {
           const rawData =
@@ -86,8 +84,6 @@ export default class User extends BaseUser {
           rawData.forEach((i: any) => {
             const newItem = new Stand();
             newItem.id = Number(i.id);
-            newItem.URLBase = this.URLBase;
-            newItem.access = this.access;
             newItem.setDataFromPlainObject(i);
             this.companies.push(newItem);
           });

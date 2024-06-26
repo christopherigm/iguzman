@@ -32,10 +32,19 @@ export default class Stand extends BaseAPIClass {
     return new Promise((res, rej) => {
       let url = `${this.URLBase}/v1/products/?filter[stand]=${this.id}`;
       url += '&include=classification,stand,delivery_type,';
-      url += 'features,product_pictures,related';
+      url += 'features,features.feature,product_pictures,related';
+
+      url += '&fields[Product]=id,name,img_picture,full_size,';
+      url += 'stock,unlimited_stock,price,discount,final_price,shipping_cost,';
+      url += 'times_selled';
+
+      url += '&fields[ProductClassification]=id,name,img_picture';
+      url += '&fields[ProductFeature]=id,name';
+      url += '&fields[ProductFeatureOption]=id,name';
+      url += '&fields[Stand]=id,name,img_logo';
       API.Get({
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
       })
         .then((response: { data: Array<any> }) => {
           const rawData =
@@ -46,8 +55,6 @@ export default class Stand extends BaseAPIClass {
           rawData.forEach((i: any) => {
             const newItem = new Product();
             newItem.id = Number(i.id);
-            newItem.URLBase = this.URLBase;
-            newItem.access = this.access;
             newItem.userName =
               this.relationships.owner?.data.attributes.first_name || 'none';
             newItem.userID = this.relationships.owner?.data.id || 0;

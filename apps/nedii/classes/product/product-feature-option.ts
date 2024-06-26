@@ -27,15 +27,13 @@ export default class ProductFeatureOption extends BaseAPIClass {
       url += '&page[size]=1000';
       API.Get({
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
       })
         .then((response: { data: Array<any> }) => {
           const data = RebuildData(response);
           const newOptions = data.data.map((i: any) => {
             const newItem = new ProductFeatureOption();
             newItem.setDataFromPlainObject(i);
-            newItem.URLBase = this.URLBase;
-            newItem.access = this.access;
             newItem.relationships.feature.data.id =
               this.relationships.feature.data.id;
             return newItem;
@@ -63,6 +61,39 @@ export default class ProductFeatureOption extends BaseAPIClass {
           res(newOptions);
         })
         .catch((e: any) => rej(e));
+    });
+  }
+
+  public updateParentOptions(): Promise<ProductFeature> {
+    return new Promise((res, rej) => {
+      if (!this.relationships.feature.data.id) {
+        return rej('no-parent-id');
+      }
+      const parent = new ProductFeature();
+      parent.id = this.relationships.feature.data.id;
+      parent
+        .setItemByIDFromAPI()
+        .then(() => {
+          parent.relationships.addOptionFromPlainObject(this.getPlainObject());
+          parent
+            .save()
+            .then(() => res(parent))
+            .catch((e) => rej(e));
+        })
+        .catch((e) => rej(e));
+    });
+  }
+
+  public save(): Promise<any> {
+    return new Promise((res, rej) => {
+      super
+        .save()
+        .then((data) => {
+          this.updateParentOptions()
+            .then(() => res(data))
+            .catch((e) => rej(e));
+        })
+        .catch((e) => rej(e));
     });
   }
 }

@@ -198,8 +198,6 @@ const CompanyFormContactInfo = ({
               isLoading={isLoadingLocal.value}
               phones={phones.value}
               standId={stand.id}
-              URLBase={URLBase}
-              access={user.access}
               onChnage={(): void => {
                 isLoadingLocal.value = true;
                 phones.value = [...phones.value];

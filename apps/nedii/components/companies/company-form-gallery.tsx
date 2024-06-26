@@ -128,8 +128,6 @@ const CompanyFormGallery = ({
                     onChange={(img: string) => {
                       isLoadingLocal.value = true;
                       const newPicture = new StandPicture();
-                      newPicture.URLBase = URLBase;
-                      newPicture.access = user.access;
                       newPicture.attributes.img_picture = img;
                       newPicture.relationships.stand.data.id = stand.id;
                       newPicture

@@ -18,9 +18,10 @@ const error: Signal<Array<APIPostCreationError>> = signal([]);
 
 type Props = {
   callback: () => void;
+  login: (data: any) => Promise<void>;
 };
 
-const SignInForm = ({ callback }: Props) => {
+const SignInForm = ({ login, callback }: Props) => {
   const canSubmit = (): boolean => {
     return user.attributes.email !== '' && user.attributes.password !== '';
   };
@@ -28,8 +29,7 @@ const SignInForm = ({ callback }: Props) => {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     isLoading.value = true;
-    user
-      .login()
+    login(user.getPlainObject())
       .then(() => callback())
       .catch((e) => (error.value = e))
       .finally(() => (isLoading.value = false));
@@ -62,6 +62,7 @@ const SignInForm = ({ callback }: Props) => {
         </Grid>
         <Grid item xs={12} md={6}>
           <PasswordField
+            name="password"
             value={user.attributes.password}
             onChange={(v: string) => (user.attributes.password = v)}
             disabled={isLoading.value}

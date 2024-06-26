@@ -1,117 +1,34 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { GetLocalStorageData, SetLocalStorageData } from '../lib/local-storage';
+import { SetLocalStorageData } from '../lib/local-storage';
 import { DeleteCookie } from '../lib/cookie-handler';
 import type { JWTPayload } from '../interfaces/jwt-interface';
 import API from '../api';
 import CommonFields from './common-fields';
 import removeImagesForAPICall from '../lib/remove-images-for-api-call';
+import BaseAPIClass from './base-class';
 
-export class BaseUser {
+export class BaseUser extends BaseAPIClass {
   public static instance: BaseUser;
   public type = 'User';
-  private _id: Signal<number> = signal(0);
-  private _URLBase: Signal<string> = signal('');
-  private _jwt: Signal<JWTPayload> = signal({
-    exp: 0,
-    iat: 0,
-    jti: '',
-    token_type: '',
-    user_id: 0,
-    access: '',
-    refresh: '',
-  });
-  private _access: Signal<string> = signal('');
-  private _refresh: Signal<string> = signal('');
+  public endpoint = 'v1/users/';
   public attributes: BaseUserAttributes = new BaseUserAttributes();
-
-  constructor() {
-    const system: any = JSON.parse(GetLocalStorageData('System') || '{}');
-    this.URLBase = system.URLBase || this.URLBase;
-  }
+  public relationships = null;
 
   public static getInstance(): BaseUser {
     return BaseUser.instance || new BaseUser();
   }
 
-  public sayHello() {
-    if (this.attributes && this.attributes.first_name) {
-      console.log(`Hello ${this.attributes.first_name}!`);
-    } else {
-      console.log('Hello!');
-    }
+  public saveJWTToLocalStorage() {
+    SetLocalStorageData('jwt', JSON.stringify(this.jwt));
   }
 
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.jwt = object.jwt ?? this.jwt;
-    this.access = object.access ?? this.access;
-    this.refresh = object.refresh ?? this.refresh;
-    this.attributes.setAttributesFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      id: this.id,
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-    };
-  }
-
-  public getMinimumPlainObject(): any {
-    return {
-      id: this.id,
-      type: this.type,
-    };
-  }
-
-  public setAccessFromLocalStorage() {
-    let cachedUser: any = GetLocalStorageData(this.type);
-    if (cachedUser) {
-      cachedUser = JSON.parse(cachedUser);
-      this.id = Number(cachedUser.id ?? 0) ?? this.id;
-      this.access = cachedUser.access ?? this.access;
-      this.refresh = cachedUser.refresh ?? this.refresh;
-    }
-  }
-
-  public setDataFromLocalStorage() {
-    let cachedUser: any = GetLocalStorageData(this.type);
-    if (cachedUser) {
-      cachedUser = JSON.parse(cachedUser);
-      this.setDataFromPlainObject(cachedUser);
-    }
-  }
-
-  public saveUserToLocalStorage() {
-    let cachedUser: any = GetLocalStorageData(this.type);
-    if (cachedUser) {
-      cachedUser = JSON.parse(cachedUser);
-    } else {
-      cachedUser = {};
-    }
-    let attributes: any = {
-      ...this.attributes.getPlainAttributes(),
-      ...(cachedUser.attributes && {
-        ...cachedUser.attributes,
-      }),
-    };
-    delete attributes.password;
-    SetLocalStorageData(
-      this.type,
-      JSON.stringify({
-        id: this.id,
-        type: this.type,
-        access: this.access,
-        refresh: this.refresh,
-        jwt: this.jwt,
-        attributes,
-      })
-    );
+  public deleteJWTFromLocalStorage() {
+    SetLocalStorageData('jwt', '');
   }
 
   public updateUserData(): Promise<void> {
     return new Promise((res, rej) => {
-      if (!this.URLBase || this.URLBase === '' || !this.access) {
+      if (!this.URLBase || this.URLBase === '' || !this.jwt.access) {
         return rej(new Error('No URLBase'));
       }
       const attributes: any = this.attributes.getPlainAttributes();
@@ -121,12 +38,12 @@ export class BaseUser {
       }
       API.UpdateUser({
         URLBase: this.URLBase,
-        jwt: this.access,
+        jwt: this.jwt.access,
         id: this.id,
         attributes,
       })
         .then(() => {
-          this.saveUserToLocalStorage();
+          this.saveLocalStorage();
           this.setDataFromLocalStorage();
           res();
         })
@@ -134,17 +51,16 @@ export class BaseUser {
     });
   }
 
-  public login(urlBase?: string): Promise<void> {
+  public login(): Promise<void> {
     return new Promise((res, rej) => {
-      const URLBase = urlBase ?? this.URLBase;
-      if (!URLBase || URLBase === '') {
+      if (!this.URLBase || this.URLBase === '') {
         return rej(new Error('No URL Base'));
       }
       if (!this.attributes.email || !this.attributes.password) {
         return rej(new Error('No credentials'));
       }
       API.Login({
-        URLBase,
+        URLBase: this.URLBase,
         attributes: {
           username: this.attributes.email,
           password: this.attributes.password,
@@ -152,9 +68,8 @@ export class BaseUser {
       })
         .then((data: JWTPayload) => {
           this.jwt = data;
-          this.id = data.user_id;
-          this.access = data.access;
-          this.refresh = data.refresh;
+          this.id = Number(data.user_id);
+          this.saveJWTToLocalStorage();
           return this.getUserFromAPI();
         })
         .then(() => res())
@@ -167,18 +82,18 @@ export class BaseUser {
       if (!this.URLBase || this.URLBase === '') {
         return rej(new Error('No URL Base'));
       }
-      if (!this.access) {
+      if (!this.jwt.access) {
         return rej(new Error('No credentials'));
       }
       if (this.id) {
         API.GetUser({
           URLBase: this.URLBase,
-          jwt: this.access,
+          jwt: this.jwt.access,
           userID: this.id,
         })
           .then((data: any) => {
             this.setDataFromPlainObject(data);
-            this.saveUserToLocalStorage();
+            this.saveLocalStorage();
             res(data);
           })
           .catch((error) => rej(error));
@@ -195,18 +110,21 @@ export class BaseUser {
 
   public refreshToken(): Promise<void> {
     return new Promise((res, rej) => {
-      this.setAccessFromLocalStorage();
+      this.setDataFromLocalStorage();
       if (!this.URLBase || this.URLBase === '') {
         return res();
-      }
-      if (!this.refresh) {
-        return rej('No refresh token');
+      } else if (this.id && !this.jwt.refresh) {
+        this.deleteJWTFromLocalStorage();
+        this.deleteLocalStorage();
+        return rej('not-valid-user');
+      } else if (!this.jwt.refresh) {
+        return rej('no-refresh-token');
       }
       const url = `${this.URLBase}/v1/token/refresh/`;
       const data = {
         type: 'TokenRefreshView',
         attributes: {
-          refresh: this.refresh,
+          refresh: this.jwt.refresh,
         },
       };
       API.Post({
@@ -216,52 +134,19 @@ export class BaseUser {
         .then((response: any) => {
           if (response.errors && response.errors.length) {
             if (response.errors[0].code === 'token_not_valid') {
+              this.deleteJWTFromLocalStorage();
+              this.deleteLocalStorage();
               DeleteCookie('User');
-              SetLocalStorageData('User', '');
             }
             return rej(response.errors);
           }
-          this.access = response.data.access;
-          this.saveUserToLocalStorage();
+          const newAccessToken = String(response.data.access || '');
+          this.jwt.access = newAccessToken;
+          this.saveJWTToLocalStorage();
           res();
         })
         .catch((error) => rej(error));
     });
-  }
-
-  public get id() {
-    return this._id.value;
-  }
-  public set id(value) {
-    this._id.value = value;
-  }
-
-  public get URLBase() {
-    return this._URLBase.value;
-  }
-  public set URLBase(value) {
-    this._URLBase.value = value;
-  }
-
-  public get access() {
-    return this._access.value;
-  }
-  public set access(value) {
-    this._access.value = value;
-  }
-
-  public get refresh() {
-    return this._refresh.value;
-  }
-  public set refresh(value) {
-    this._refresh.value = value;
-  }
-
-  public get jwt() {
-    return this._jwt.value;
-  }
-  public set jwt(value) {
-    this._jwt.value = value;
   }
 }
 
@@ -281,6 +166,7 @@ export class BaseUserAttributes extends CommonFields {
     if (object.attributes) {
       super.setAttributesFromPlainObject(object);
       this.email = object.attributes.email ?? this.email;
+      this.password = object.attributes.password ?? this.password;
       this.username = object.attributes.username ?? this.username;
       this.first_name = object.attributes.first_name ?? this.first_name;
       this.last_name = object.attributes.last_name ?? this.last_name;
@@ -301,6 +187,9 @@ export class BaseUserAttributes extends CommonFields {
       }),
       ...(this.username && {
         username: this.username,
+      }),
+      ...(this.password && {
+        password: this.password,
       }),
       ...(this.first_name && {
         first_name: this.first_name,

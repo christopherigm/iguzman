@@ -25,7 +25,6 @@ const CategorySelector = ({
   useEffect(() => {
     system.setDataFromLocalStorage();
     isLoading.value = true;
-    category.URLBase = system.URLBase;
     category
       .getCategories()
       .then((data) => (categories.value = data))

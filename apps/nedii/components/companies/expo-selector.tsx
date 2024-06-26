@@ -27,7 +27,6 @@ const ExpoSelector = ({
   useEffect(() => {
     system.setDataFromLocalStorage();
     isLoading.value = true;
-    expo.URLBase = system.URLBase;
     expo
       .getExpos([groupID])
       .then((data) => (expos.value = data))

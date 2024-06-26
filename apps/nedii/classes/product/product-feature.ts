@@ -21,18 +21,15 @@ export default class ProductFeature extends BaseAPIClass {
       url += `?filter[stand]=${this.relationships.stand.data.id}`;
       url += '&include=options';
       url += '&page[size]=1000';
-      // console.log('> URL', url);
       API.Get({
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
       })
         .then((response: { data: Array<any> }) => {
           const data = RebuildData(response);
           const newOptions = data.data.map((i: any) => {
             const newItem = new ProductFeature();
             newItem.setDataFromPlainObject(i);
-            newItem.URLBase = this.URLBase;
-            newItem.access = this.access;
             newItem.relationships.stand.data.id =
               this.relationships.stand.data.id;
             return newItem;
@@ -103,6 +100,30 @@ class ProductFeatureRelationships {
   public _options: Signal<{ data: Array<ProductFeatureOption> }> = signal({
     data: [],
   });
+
+  public addOptionFromPlainObject(object: any): void {
+    if (object.id) {
+      const newOption = new ProductFeatureOption();
+      newOption.setDataFromPlainObject(object);
+      const newArray: Array<ProductFeatureOption> = [...this.options.data];
+      newArray.push(newOption);
+      this.options.data = [...newArray];
+    }
+  }
+
+  // public removeOptionByID(id: number): void {
+  //   if (id) {
+  //     const newArray: Array<ProductFeatureOption> = [...this.options.data];
+  //     const option = newArray.filter((i) => i.id === id);
+  //     if (option && option.length && option[0]) {
+  //       const indexToDelete = newArray.indexOf(option[0]);
+  //       if (indexToDelete > -1) {
+  //         newArray.splice(indexToDelete, 1);;
+  //         this.options.data = [...newArray];
+  //       }
+  //     }
+  //   }
+  // }
 
   public setRelationshipsFromPlainObject(object: any): any {
     if (object.relationships) {

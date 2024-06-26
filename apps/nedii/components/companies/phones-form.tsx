@@ -17,8 +17,6 @@ type Props = {
   isLoading: boolean;
   phones: Array<StandPhone>;
   standId: number;
-  URLBase: string;
-  access: string;
   onChnage: () => void;
 };
 
@@ -26,8 +24,6 @@ const PhonesForm = ({
   isLoading = false,
   phones,
   standId,
-  URLBase,
-  access,
   onChnage,
 }: Props): ReactElement => {
   useEffect(() => {}, [phones.length]);
@@ -80,8 +76,6 @@ const PhonesForm = ({
             onClick={() => {
               isLoadingLocal.value = true;
               const newPhone = new StandPhone();
-              newPhone.URLBase = URLBase;
-              newPhone.access = access;
               newPhone.attributes.phone = tempPhone.value;
               newPhone.relationships.stand.data.id = standId;
               newPhone

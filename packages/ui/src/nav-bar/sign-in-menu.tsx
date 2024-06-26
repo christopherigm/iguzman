@@ -40,6 +40,7 @@ const SignInMenu = ({ user, language = 'en', darkMode = false }: Props) => {
     setAnchorEl(null);
     DeleteCookie('User');
     SetLocalStorageData('User', '');
+    SetLocalStorageData('jwt', '');
     router.reload();
   };
 

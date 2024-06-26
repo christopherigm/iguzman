@@ -24,41 +24,6 @@ export default class Service extends BaseBuyableItem {
   public static getInstance(): Service {
     return Service.instance || new Service();
   }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-    this.relationships.setRelationshipsFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-      relationships: this.relationships.getPlainRelationships(),
-    };
-  }
-
-  public save(): Promise<void> {
-    return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}`;
-      const data = {
-        url,
-        jwt: this.access,
-        data: this.getPlainObject(),
-      };
-      API.Post(data)
-        .then((response) => {
-          if (response.errors && response.errors.length) {
-            return rej(response.errors);
-          }
-          this.id = Number(response.data?.id ?? this.id);
-          return res();
-        })
-        .catch((error) => rej(error));
-    });
-  }
 }
 
 class ServiceAttributes extends BaseBuyableItemAttributes {

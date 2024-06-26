@@ -50,8 +50,14 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
     setIsLoading(true);
     currentItem.value
       .save()
-      .then(() => loadItems())
-      .catch((e) => console.log(e));
+      // .then(() => loadItems())
+      // .then(() => {
+      //   currentItem.value.setURLParametersForWholeObject();
+      //   currentItem.value.setStandFilterInURLParameters();
+      //   return currentItem.value.setItemByIDFromAPI();
+      // })
+      .catch((e) => console.log(e))
+      .finally(() => setIsLoading(false));
   };
 
   return (
@@ -61,10 +67,13 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
           <ReturnButtonArrow
             language={system.language}
             prevLabel="mis productos"
-            onClick={() => setNewEntry(false)}
+            onClick={() => {
+              setNewEntry(false);
+              loadItems();
+            }}
           />
           <ProductFormInfo
-            isLoading={isLoading}
+            disabled={isLoading}
             darkMode={darkMode}
             standID={stand.id}
             item={currentItem.value}
@@ -93,8 +102,6 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
                   currentItem.value = new Product();
                   currentItem.value.userID = user.id;
                   currentItem.value.userName = user.attributes.first_name;
-                  currentItem.value.URLBase = system.URLBase;
-                  currentItem.value.access = user.access;
                   currentItem.value.relationships.stand.data.id = stand.id;
                   currentItem.value.relationships.stand.data.attributes.setAttributesFromPlainObject(
                     stand.attributes.getPlainAttributes()
@@ -112,14 +119,13 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
                       currentItem.value.id = i.id;
                       currentItem.value.userID = user.id;
                       currentItem.value.userName = 'user.attributes.first_name';
-                      currentItem.value.URLBase = system.URLBase;
-                      currentItem.value.access = user.access;
                       currentItem.value.relationships.stand.data.id = stand.id;
                       currentItem.value.setDataFromPlainObject(
                         i.getPlainObject()
                       );
                       setNewEntry(true);
                     }}
+                    disabled={isLoading}
                   />
                 </Grid>
               );

@@ -98,8 +98,13 @@ const DropDownField = ({
 
   useEffect(() => {
     if (!isLoading) {
+      setNewEntry(false);
+      // console.log('==========DropDownField============');
+      // console.log('> label:', label);
+      // console.log('> value:', value);
+      // console.log('> options:', options);
+      // console.log('> predefinedOptions:', predefinedOptions);
       if (!options.length && predefinedOptions === undefined) {
-        setNewEntry(false);
         onLoadItems().then((options: Array<DropDownFieldOption>) => {
           setOptions(options);
           updateDefaultOptionSelected(options, value);
@@ -109,11 +114,7 @@ const DropDownField = ({
         updateDefaultOptionSelected(predefinedOptions, value);
       }
     }
-  }, [
-    value,
-    options.length,
-    predefinedOptions !== undefined && predefinedOptions.length,
-  ]);
+  }, [value, options.length, predefinedOptions?.length]);
 
   if ((isLoading || (isLoading && !valueIsInOptions.value)) && !newEntry) {
     return (
@@ -198,11 +199,15 @@ const DropDownField = ({
                     onChange(newID);
                     onLoadItems().then(
                       (options: Array<DropDownFieldOption>) => {
+                        // onChange(newID);
                         setOptions(options);
                         updateDefaultOptionSelected(options, newID);
                       }
                     );
                   })
+                  .catch((e) =>
+                    console.log(`Dropdown Field, error saving: ${e.toString()}`)
+                  )
                   .finally(() => {
                     setIsLoading(false);
                     setNewEntry(false);
@@ -344,6 +349,7 @@ const DropDownField = ({
                 onAgreed={() => {
                   setDeleteDialogOpen(false);
                   setIsLoading(true);
+                  onChange(0);
                   onDelete(value)
                     .then(() => {
                       onLoadItems().then(

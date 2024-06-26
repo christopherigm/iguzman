@@ -22,7 +22,7 @@ const PasswordField = ({
   label,
   variant,
   value,
-  name = 'password',
+  name,
   onChange,
   disabled,
 }: Props) => {
@@ -41,6 +41,7 @@ const PasswordField = ({
       <OutlinedInput
         id={name}
         autoComplete={name}
+        name={name}
         type={showPassword ? 'text' : 'password'}
         endAdornment={
           <InputAdornment position="end">

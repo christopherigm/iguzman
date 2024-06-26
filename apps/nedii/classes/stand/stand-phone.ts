@@ -19,7 +19,7 @@ export default class StandPhone extends BaseAPIClass {
       url += `&filter[phone]=${this.attributes.phone}`;
       const data = {
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
       };
       API.Get(data)
         .then((response) => {
@@ -40,7 +40,7 @@ export default class StandPhone extends BaseAPIClass {
       const url = `${this.URLBase}/${this.endpoint}`;
       const data = {
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
         data: this.getPlainObject(),
       };
       API.Post(data)

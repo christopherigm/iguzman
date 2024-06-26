@@ -54,7 +54,6 @@ const Companies = (): ReactElement => {
     user.setDataFromLocalStorage();
     addOrEditCompany.value = false;
     isLoading.value = true;
-    user.URLBase = system.URLBase;
     user.getUserCompaniesFromAPI().finally(() => (isLoading.value = false));
     ResetMenu();
   }, []);
@@ -232,8 +231,6 @@ const Companies = (): ReactElement => {
                 onClick={() => {
                   goToNextMenuItem(0);
                   currentCompany.value = new Stand();
-                  currentCompany.value.URLBase = user.URLBase;
-                  currentCompany.value.access = user.access;
                   currentCompany.value.relationships.owner = {
                     data: new User(),
                   };
@@ -250,8 +247,6 @@ const Companies = (): ReactElement => {
                     elevation={2}
                     onClick={() => {
                       currentCompany.value = i;
-                      currentCompany.value.URLBase = user.URLBase;
-                      currentCompany.value.access = user.access;
                       currentCompany.value.relationships.owner = {
                         data: new User(),
                       };

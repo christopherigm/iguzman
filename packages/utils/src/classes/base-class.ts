@@ -1,5 +1,12 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { API, removeImagesForAPICall } from '@repo/utils';
+import {
+  API,
+  GetLocalStorageData,
+  JWTPayload,
+  RebuildData,
+  SetLocalStorageData,
+  removeImagesForAPICall,
+} from '@repo/utils';
 
 export default abstract class BaseAPIClass {
   abstract type: string;
@@ -8,31 +15,71 @@ export default abstract class BaseAPIClass {
   abstract relationships: any;
   private _id: Signal<number> = signal(0);
   private _URLBase: Signal<string> = signal('');
-  private _access: Signal<string> = signal('');
+  private _URLParameters: Signal<string> = signal('');
+  private _jwt: Signal<JWTPayload> = signal({
+    exp: 0,
+    iat: 0,
+    jti: '',
+    token_type: '',
+    user_id: 0,
+    access: '',
+    refresh: '',
+  });
 
-  setAttributesFromPlainObject(object: any) {
-    this.attributes && this.attributes.setAttributesFromPlainObject(object);
+  constructor() {
+    const jwt: JWTPayload = JSON.parse(GetLocalStorageData('jwt') || '{}');
+    this.jwt = jwt.access ? jwt : this.jwt;
+    const system: any = JSON.parse(GetLocalStorageData('System') || '{}');
+    this.URLBase = system.URLBase || this.URLBase;
   }
 
-  setRelationshipsFromPlainObject(object: any) {
-    this.relationships &&
-      this.relationships.setRelationshipsFromPlainObject(object);
+  public setURLParametersForWholeObject(): void {
+    this.URLParameters = '';
   }
 
-  getPlainAttributes(): any {
+  public setURLParametersForMinimumObject(): void {
+    this.URLParameters = '';
+  }
+
+  public setItemByIDFromAPI(): Promise<void> {
+    return new Promise((res, rej) => {
+      if (!this.id) {
+        return rej('no-id');
+      }
+      let url = `${this.URLBase}/${this.endpoint}${this.id}/`;
+      if (this.URLParameters) {
+        url += `?${this.URLParameters}`;
+      }
+      API.Get({
+        url,
+        jwt: this.jwt.access,
+      })
+        .then((response: any) => {
+          const data =
+            url.search('include') > -1 ? RebuildData(response) : response;
+          this.setDataFromPlainObject(data.data);
+          this.URLParameters = '';
+          res();
+        })
+        .catch((e: any) => rej(e));
+    });
+  }
+
+  public getPlainAttributes(): any {
     return (this.attributes && this.attributes.getPlainAttributes()) || {};
   }
 
-  getPlainRelationships(): any {
+  public getPlainRelationships(): any {
     return (
       (this.relationships && this.relationships.getPlainRelationships()) || {}
     );
   }
 
-  setDataFromPlainObject(object: any) {
+  public setDataFromPlainObject(object: any) {
     this.id = Number(object.id ?? 0) ?? this.id;
-    this.setAttributesFromPlainObject(object);
-    this.setRelationshipsFromPlainObject(object);
+    this.attributes && this.attributes.setAttributesFromPlainObject(object);
+    this.relationships &&
+      this.relationships.setRelationshipsFromPlainObject(object);
   }
 
   public getMinimumPlainObject(): any {
@@ -57,12 +104,32 @@ export default abstract class BaseAPIClass {
     };
   }
 
+  public saveLocalStorage() {
+    const data = this.getPlainObject();
+    if (data.attributes.password) {
+      delete data.attributes.password;
+    }
+    SetLocalStorageData(this.type, JSON.stringify(data));
+  }
+
+  public deleteLocalStorage() {
+    SetLocalStorageData(this.type, '');
+  }
+
+  public setDataFromLocalStorage() {
+    let cached: any = GetLocalStorageData(this.type);
+    if (cached) {
+      cached = JSON.parse(cached);
+      this.setDataFromPlainObject(cached);
+    }
+  }
+
   public setItemFromAPI(): Promise<any> {
     return new Promise((res, rej) => {
       let url = `${this.URLBase}/${this.endpoint}${this.id}`;
       API.Get({
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
       })
         .then((response: any) => this.setDataFromPlainObject(response.data))
         .catch((e: any) => rej(e));
@@ -76,7 +143,7 @@ export default abstract class BaseAPIClass {
       }`;
       const data: any = {
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
         data: this.getPlainObject(),
       };
       removeImagesForAPICall(data.data.attributes);
@@ -101,7 +168,7 @@ export default abstract class BaseAPIClass {
       const url = `${this.URLBase}/${this.endpoint}${this.id}/`;
       const data = {
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
       };
       API.Delete(data)
         .then(() => res())
@@ -123,10 +190,17 @@ export default abstract class BaseAPIClass {
     this._URLBase.value = value;
   }
 
-  public get access() {
-    return this._access.value;
+  public get URLParameters() {
+    return this._URLParameters.value;
   }
-  public set access(value) {
-    this._access.value = value;
+  public set URLParameters(value) {
+    this._URLParameters.value = value;
+  }
+
+  public get jwt() {
+    return this._jwt.value;
+  }
+  public set jwt(value) {
+    this._jwt.value = value;
   }
 }

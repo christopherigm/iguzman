@@ -1,37 +1,18 @@
-import { ReactElement, FormEvent, useEffect, useState } from 'react';
-import Typography from '@mui/material/Typography';
+import { ReactElement, useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
-import { Signal, signal } from '@preact-signals/safe-react';
-import Divider from '@mui/material/Divider';
-import Stand, { stand } from 'classes/stand';
-import FormGroup from '@mui/material/FormGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
-import InputAdornment from '@mui/material/InputAdornment';
-import { DropDownField, DropDownFieldOption } from '@repo/ui';
-
-// import BaseBuyableItemClass from 'classes/base-buyable-item';
+import { DropDownField } from '@repo/ui';
 import BaseBuyableItemForm from 'components/base-buyable-item-form';
 import Product from 'classes/product/product';
-
-// import ProductClassificationField from 'components/product/product-classification';
 import ProductFeatureField from 'components/product/product-feature';
-
-// import { productFeature } from 'classes/product/product-feature';
-// import { productFeatureOption } from 'classes/product/product-feature-option';
 import { productClassification } from 'classes/product/product-classification';
 import { user } from 'classes/user';
 import { system } from 'classes/system';
-
-const isLoadingLocal: Signal<boolean> = signal(false);
-const complete: Signal<boolean> = signal(false);
-const error: Signal<string> = signal('');
+import LinearProgress from '@mui/material/LinearProgress';
 
 type Props = {
-  isLoading: boolean;
+  disabled: boolean;
   darkMode: boolean;
   standID: number;
   item: Product;
@@ -41,7 +22,7 @@ type Props = {
 };
 
 const ProductFormInfo = ({
-  isLoading = false,
+  disabled = false,
   darkMode = false,
   standID,
   item,
@@ -49,17 +30,20 @@ const ProductFormInfo = ({
   onIncomplete,
   onComplete,
 }: Props): ReactElement => {
-  productClassification.URLBase = system.URLBase;
-  productClassification.access = user.access;
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   productClassification.relationships.stand.data.id = standID;
 
   useEffect(() => {
     console.log('ProductFormInfo.tsx > renders');
+    setIsLoading(true);
     system.setDataFromLocalStorage();
     user.setDataFromLocalStorage();
-    isLoadingLocal.value = false;
-    complete.value = false;
-    error.value = '';
+    item.setURLParametersForWholeObject();
+    item.setStandFilterInURLParameters();
+    item
+      .setItemByIDFromAPI()
+      .catch((e) => console.log('e:', e))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const checkCompleteness = (): void => {
@@ -74,9 +58,19 @@ const ProductFormInfo = ({
     // }
   };
 
+  if (isLoading) {
+    return (
+      <Grid item xs={12}>
+        <Box sx={{ width: '100%' }}>
+          <LinearProgress />
+        </Box>
+      </Grid>
+    );
+  }
+
   return (
     <BaseBuyableItemForm
-      isLoading={isLoading || isLoadingLocal.value}
+      isLoading={disabled}
       darkMode={darkMode}
       label="Producto"
       item={item}
@@ -94,7 +88,7 @@ const ProductFormInfo = ({
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             (item.attributes.brand = e.target.value)
           }
-          disabled={isLoading}
+          disabled={disabled}
           style={{ width: '100%' }}
         />
       </Grid>
@@ -114,14 +108,15 @@ const ProductFormInfo = ({
           productClassification.id = id;
           return productClassification.delete();
         }}
-        disabled={isLoading}
+        disabled={disabled}
       />
       <ProductFeatureField
-        disabled={isLoading}
         standID={standID}
-        onChange={(items: Array<number>) => {
-          console.log('New Items:', items);
-        }}
+        value={item.relationships.getProductFeatureOptionDropDownItems()}
+        onChange={(items: Array<number>) =>
+          item.relationships.updateProductFeatureOptions(items)
+        }
+        disabled={disabled}
       />
     </BaseBuyableItemForm>
   );

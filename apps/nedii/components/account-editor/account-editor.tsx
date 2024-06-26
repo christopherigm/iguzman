@@ -58,12 +58,12 @@ const AccountEditor = ({ darkMode = false, URLBase }: Props): ReactElement => {
           </Grid>
           {itemSelectedId.value === 0 ? (
             <Grid item xs={12} sm={8} md={9} marginBottom={2}>
-              <UserInfo darkMode={darkMode} URLBase={URLBase} />
+              <UserInfo darkMode={darkMode} />
             </Grid>
           ) : null}
           {itemSelectedId.value === 1 ? (
             <Grid item xs={12} sm={8} md={9} marginBottom={2}>
-              <UserAddress darkMode={darkMode} URLBase={URLBase} />
+              <UserAddress darkMode={darkMode} />
             </Grid>
           ) : null}
         </Grid>

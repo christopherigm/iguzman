@@ -22,15 +22,13 @@ const isLoading: Signal<boolean> = signal(false);
 
 interface Props {
   darkMode: boolean;
-  URLBase: string;
 }
 
-const UserAddress = ({ darkMode, URLBase }: Props): ReactElement => {
+const UserAddress = ({ darkMode }: Props): ReactElement => {
   useEffect(() => {
     addOrEditAddress.value = false;
     isLoading.value = true;
     user.setDataFromLocalStorage();
-    user.URLBase = URLBase;
     user.getUserAddressesFromAPI().finally(() => (isLoading.value = false));
   }, []);
 
@@ -75,8 +73,6 @@ const UserAddress = ({ darkMode, URLBase }: Props): ReactElement => {
                   isLoading={isLoading.value}
                   onClick={() => {
                     currentAddress.value = new BaseUserAddress();
-                    currentAddress.value.URLBase = user.URLBase;
-                    currentAddress.value.access = user.access;
                     addOrEditAddress.value = true;
                   }}
                 />

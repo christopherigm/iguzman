@@ -17,11 +17,13 @@ class SurveyQuestionAttributes extends CommonFields {
   private _name: Signal<string> = signal('');
 
   public setAttributesFromPlainObject(object: any) {
+    super.setAttributesFromPlainObject(object);
     this.name = object.attributes.alias ?? this.name;
   }
 
   public getPlainAttributes(): any {
     return {
+      ...super.getPlainAttributes(),
       ...(this.name && {
         name: this.name,
       }),

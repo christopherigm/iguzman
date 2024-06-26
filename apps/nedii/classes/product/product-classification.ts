@@ -25,15 +25,15 @@ export default class ProductClassification extends BasePicture {
       url += '&page[size]=1000';
       API.Get({
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
       })
         .then((response: { data: Array<any> }) => {
           const data = RebuildData(response);
           const newOptions = data.data.map((i: any) => {
             const newItem = new ProductClassification();
             newItem.setDataFromPlainObject(i);
-            newItem.URLBase = this.URLBase;
-            newItem.access = this.access;
+            // newItem.URLBase = this.URLBase;
+            // newItem.access = this.access;
             newItem.relationships.stand.data.id =
               this.relationships.stand.data.id;
             return newItem;

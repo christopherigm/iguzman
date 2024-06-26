@@ -29,6 +29,7 @@ const error: Signal<string> = signal('');
 type Props = {
   children?: ReactElement | Array<ReactElement>;
   item: Product | Service;
+  disabled: boolean;
   height?: number;
   onClick: () => void;
 };
@@ -36,6 +37,7 @@ type Props = {
 const BaseBuyableItem = ({
   children,
   item,
+  disabled,
   height = 170,
   onClick,
 }: Props): ReactElement => {
@@ -52,7 +54,7 @@ const BaseBuyableItem = ({
         position="relative"
         width="100%"
         height={height}
-        onClick={() => onClick()}
+        onClick={() => (disabled ? null : onClick())}
         sx={{
           cursor: 'pointer',
         }}
@@ -89,7 +91,7 @@ const BaseBuyableItem = ({
       </Box>
       <Box
         padding={1}
-        onClick={() => onClick()}
+        onClick={() => (disabled ? null : onClick())}
         sx={{
           cursor: 'pointer',
         }}
@@ -105,7 +107,7 @@ const BaseBuyableItem = ({
         display="flex"
         justifyContent="center"
         padding={1}
-        onClick={() => onClick()}
+        onClick={() => (disabled ? null : onClick())}
         sx={{
           cursor: 'pointer',
         }}
@@ -147,7 +149,7 @@ const BaseBuyableItem = ({
         <Box display="flex">
           <IconButton
             aria-label="add-to-favorites"
-            onClick={() => item.switchFavorite()}
+            onClick={() => (disabled ? null : item.switchFavorite())}
           >
             <FavoriteIcon
               sx={{ color: item.isFavorite ? '#d32f2f' : '#777' }}
@@ -156,7 +158,7 @@ const BaseBuyableItem = ({
           <Box padding={0.3}></Box>
           <IconButton
             aria-label="add-to-cart"
-            onClick={() => item.switchIsInCart()}
+            onClick={() => (disabled ? null : item.switchIsInCart())}
           >
             <ShoppingBagIcon
               sx={{ color: item.isInCart ? '#ffa000' : '#777' }}

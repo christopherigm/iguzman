@@ -31,6 +31,7 @@ const Page = (props: any): ReactElement => {
   return (
     <MainLayout
       darkMode={system.darkMode}
+      refreshToken={() => user.refreshToken()}
       switchTheme={() => system.switchTheme()}
       devMode={system.devMode}
       switchDevMode={() => system.switchDevMode()}

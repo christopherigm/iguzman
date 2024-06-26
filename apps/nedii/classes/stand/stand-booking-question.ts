@@ -13,46 +13,6 @@ export default class StandBookingQuestion extends BaseAPIClass {
   public static getInstance(): StandBookingQuestion {
     return StandBookingQuestion.instance || new StandBookingQuestion();
   }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-    this.relationships.setRelationshipsFromPlainObject(
-      object,
-      this.URLBase,
-      this.access
-    );
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-      relationships: this.relationships.getPlainRelationships(),
-    };
-  }
-
-  public save(): Promise<void> {
-    return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}`;
-      const data = {
-        url,
-        jwt: this.access,
-        data: this.getPlainObject(),
-      };
-      API.Post(data)
-        .then((response) => {
-          console.log(`Resource ${this.type} added:`, response);
-          if (response.errors && response.errors.length) {
-            return rej(response.errors);
-          }
-          this.id = Number(response.data?.id ?? this.id);
-          return res();
-        })
-        .catch((error) => rej(error));
-    });
-  }
 }
 
 class StandBookingQuestionAttributes extends CommonFields {
@@ -99,18 +59,12 @@ class StandBookingQuestionRelationships {
     }
   );
 
-  public setRelationshipsFromPlainObject(
-    object: any,
-    URLBase = '',
-    access = ''
-  ) {
+  public setRelationshipsFromPlainObject(object: any) {
     if (object.relationships) {
       if (object.relationships.options?.data) {
         const options: Array<StandBookingQuestionOption> = [];
         object.relationships?.options?.data.forEach((i: any) => {
           const newOption = new StandBookingQuestionOption();
-          newOption.URLBase = URLBase;
-          newOption.access = access;
           newOption.setDataFromPlainObject(i);
           options.push(newOption);
         });
@@ -146,39 +100,6 @@ export class StandBookingQuestionOption extends BaseAPIClass {
     return (
       StandBookingQuestionOption.instance || new StandBookingQuestionOption()
     );
-  }
-
-  public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
-    this.attributes.setAttributesFromPlainObject(object);
-  }
-
-  public getPlainObject(): any {
-    return {
-      ...(this.id && { id: this.id }),
-      type: this.type,
-      attributes: this.attributes.getPlainAttributes(),
-    };
-  }
-
-  public save(): Promise<void> {
-    return new Promise((res, rej) => {
-      const url = `${this.URLBase}/${this.endpoint}`;
-      const data = {
-        url,
-        jwt: this.access,
-        data: this.getPlainObject(),
-      };
-      API.Post(data)
-        .then((response) => {
-          if (response.errors && response.errors.length) {
-            return rej(response.errors);
-          }
-          this.id = Number(response.data?.id ?? this.id);
-          return res();
-        })
-        .catch((error) => rej(error));
-    });
   }
 }
 

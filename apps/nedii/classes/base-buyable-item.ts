@@ -12,12 +12,22 @@ export default abstract class BaseBuyableItem extends BasePicture {
   private _isFavorite: Signal<boolean> = signal(false);
   private _isInCart: Signal<boolean> = signal(false);
 
+  public setStandFilterInURLParameters(): void {
+    if (!this.relationships.stand.data.id) {
+      return;
+    }
+    const filter = `&filter[stand]=${this.relationships.stand.data.id}`;
+    if (this.URLParameters.search(filter) < 0) {
+      this.URLParameters += filter;
+    }
+  }
+
   public switchFavorite = (): Promise<void> => {
     return new Promise((res, rej) => {
       const url = `${this.URLBase}/v1/user-cart-items/`;
       const data = {
         url,
-        jwt: this.access,
+        jwt: this.jwt.access,
         data: {
           type: 'UserCartBuyableItem',
           attributes: {

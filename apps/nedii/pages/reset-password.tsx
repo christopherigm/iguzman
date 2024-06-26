@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Typography from '@mui/material/Typography';
 import { ResetPasswordForm, MainLayout } from '@repo/ui';
 import System, { system } from 'classes/system';
+import { user } from 'classes/user';
 
 const Page = (props: any): ReactElement => {
   useEffect(() => {
@@ -12,6 +13,7 @@ const Page = (props: any): ReactElement => {
   return (
     <MainLayout
       darkMode={system.darkMode}
+      refreshToken={() => user.refreshToken()}
       switchTheme={() => system.switchTheme()}
       devMode={system.devMode}
       switchDevMode={() => system.switchDevMode()}

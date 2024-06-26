@@ -25,12 +25,11 @@ const passwordComplete: Signal<boolean> = signal(false);
 const error: Signal<string> = signal('');
 const passwordError: Signal<string> = signal('');
 
-type Props = {
+interface Props {
   darkMode: boolean;
-  URLBase: string;
-};
+}
 
-const UserInfo = ({ darkMode = false, URLBase }: Props): ReactElement => {
+const UserInfo = ({ darkMode }: Props): ReactElement => {
   useEffect(() => {
     user.setDataFromLocalStorage();
     user.getUserFromAPI().catch(() => {});

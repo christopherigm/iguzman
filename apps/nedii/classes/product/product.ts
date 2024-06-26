@@ -1,4 +1,5 @@
 import { Signal, signal } from '@preact-signals/safe-react';
+import { DropDownFieldOption } from '@repo/ui';
 import BaseBuyableItem, {
   BaseBuyableItemAttributes,
   BaseBuyableItemRelationships,
@@ -23,6 +24,32 @@ export default class Product extends BaseBuyableItem {
 
   public static getInstance(): Product {
     return Product.instance || new Product();
+  }
+
+  public setURLParametersForWholeObject(): void {
+    let url = '&include=classification,stand,delivery_type,';
+    url += 'features,features.feature,product_pictures,related';
+
+    url += '&fields[ProductClassification]=id,name,img_picture';
+    url += '&fields[ProductFeature]=id,name';
+    url += '&fields[ProductFeatureOption]=id,name,feature';
+    url += '&fields[Stand]=id,name,img_logo';
+    this.URLParameters = url;
+  }
+
+  public setURLParametersForMinimumObject(): void {
+    let url = '&include=classification,stand,delivery_type,';
+
+    url += '&fields[Product]=id,name,img_picture,full_size,';
+    url += 'stock,unlimited_stock,price,discount,final_price,shipping_cost,';
+    url += 'times_selled';
+    url += 'classification,features,stand';
+
+    url += '&fields[ProductClassification]=id,name,img_picture';
+    url += '&fields[ProductFeature]=id,name';
+    url += '&fields[ProductFeatureOption]=id,name';
+    url += '&fields[Stand]=id,name,img_logo';
+    this.URLParameters = url;
   }
 }
 
@@ -140,6 +167,35 @@ class ProductRelationships extends BaseBuyableItemRelationships {
         data: [],
       },
     };
+  }
+
+  public updateProductFeatureOptions(items: Array<number>): void {
+    if (items.length) {
+      const newProductFeatureOptionArray: Array<ProductFeatureOption> = [];
+      items.map((i: number) => {
+        const newOption = new ProductFeatureOption();
+        newOption.id = i;
+        newProductFeatureOptionArray.push(newOption);
+      });
+      this.features.data = [...newProductFeatureOptionArray];
+    }
+  }
+
+  public getProductFeatureOptionDropDownItems(): Array<DropDownFieldOption> {
+    if (this.features.data.length) {
+      const newOptions = this.features.data.map((i: ProductFeatureOption) => {
+        let name = `[${i.relationships.feature.data.attributes.name}]`;
+        name += ': ';
+        name += i.attributes.name;
+        const newItem: DropDownFieldOption = {
+          id: i.id,
+          name,
+        };
+        return newItem;
+      });
+      return newOptions;
+    }
+    return [];
   }
 
   public get classification() {
