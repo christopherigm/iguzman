@@ -111,20 +111,6 @@ class ProductFeatureRelationships {
     }
   }
 
-  // public removeOptionByID(id: number): void {
-  //   if (id) {
-  //     const newArray: Array<ProductFeatureOption> = [...this.options.data];
-  //     const option = newArray.filter((i) => i.id === id);
-  //     if (option && option.length && option[0]) {
-  //       const indexToDelete = newArray.indexOf(option[0]);
-  //       if (indexToDelete > -1) {
-  //         newArray.splice(indexToDelete, 1);;
-  //         this.options.data = [...newArray];
-  //       }
-  //     }
-  //   }
-  // }
-
   public setRelationshipsFromPlainObject(object: any): any {
     if (object.relationships) {
       if (object.relationships.stand?.data) {

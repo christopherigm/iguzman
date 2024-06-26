@@ -1,10 +1,8 @@
 import uuid
 from django.conf import settings
 from rest_framework_json_api import serializers
-from rest_framework_json_api.serializers import (
-    HyperlinkedModelSerializer,
-    ResourceRelatedField,
-)
+from rest_framework_json_api.serializers import HyperlinkedModelSerializer
+from rest_framework_json_api.relations import ResourceRelatedField
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import Group
 from rest_framework.validators import UniqueValidator
@@ -76,8 +74,27 @@ class UserSerializer(HyperlinkedModelSerializer):
             UniqueValidator(queryset=User.objects.all())
         ]
     )
+    favorite_items = ResourceRelatedField(
+        queryset=UserFavoriteBuyableItem.objects,
+        many=True,
+        required=False
+    )
+    cart_items = ResourceRelatedField(
+        queryset=UserCartBuyableItem.objects,
+        many=True,
+        required=False
+    )
+    favorite_stands = ResourceRelatedField(
+        queryset=UserFavoriteStand.objects,
+        many=True,
+        required=False
+    )
+
     included_serializers = {
-        "groups": "users.serializers.GroupSerializer"
+        "groups": "users.serializers.GroupSerializer",
+        "favorite_items": "users.serializers.UserFavoriteBuyableItemSerializer",
+        "cart_items": "users.serializers.UserCartBuyableItemSerializer",
+        "favorite_stands": "users.serializers.UserFavoriteStandSerializer",
     }
 
     class Meta:
@@ -114,26 +131,25 @@ class UserSerializer(HyperlinkedModelSerializer):
 
     def create(self, validated_data):
         user = User()
-        print('>>> EMAIL_HOST_USER', settings.EMAIL_HOST_USER)
         for i in validated_data:
             setattr(user, i, validated_data[i])
         user.set_password(validated_data["password"])
         user.token = uuid.uuid4()
         user.is_active = False
         subject = "Activa tu cuenta de {0}".format(
-            settings.EMAIL_TEMPLATE_COMPANY_NAME
+            settings.EMAIL_TEMPLATE_COMPANY_NAME or "-"
         )
         from_email = "{0} <{1}>".format(
-            settings.EMAIL_TEMPLATE_COMPANY_NAME,
-            settings.EMAIL_HOST_USER,
+            settings.EMAIL_TEMPLATE_COMPANY_NAME or "-",
+            settings.EMAIL_HOST_USER or "-",
         )
         to = user.email
         text_content = """
             Para verificar tu cuenta de {0} con tu correo electronico
             por favor da click <a href={1}activate/{2}">en este link.</a>
         """.format(
-            settings.EMAIL_TEMPLATE_COMPANY_NAME,
-            settings.WEB_APP_URL,
+            settings.EMAIL_TEMPLATE_COMPANY_NAME or "-",
+            settings.WEB_APP_URL or "-",
             user.token,
         )
         html_content = """
@@ -161,12 +177,9 @@ class UserSerializer(HyperlinkedModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        for i in validated_data:
-            setattr(instance, i, validated_data[i])
         if "password" in validated_data:
             instance.set_password(validated_data["password"])
-        instance.save()
-        return instance
+        return super().update(instance, validated_data)
 
 
 ######### Nedii specifics #########

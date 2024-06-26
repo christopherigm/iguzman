@@ -21,7 +21,8 @@ from common.permissions import (
     IsAdminOrBelongsToItSelf,
 )
 from rest_framework.viewsets import GenericViewSet
-import json, jwt
+import json
+import jwt
 from rest_framework import mixins
 from django.conf import settings
 from common.mixins import (
@@ -55,12 +56,12 @@ class GroupViewSet (ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     ordering = ["id"]
-    permission_classes = [ IsAuthenticated ]
+    permission_classes = [IsAuthenticated]
     authentication_classes = [
         JWTAuthentication,
         SessionAuthentication
     ]
-    ordering_fields = [ "id", "name" ]
+    ordering_fields = ["id", "name"]
     filterset_fields = {
         "id": ("exact",),
         "name": ("exact", "in")
@@ -70,15 +71,19 @@ class GroupViewSet (ReadOnlyModelViewSet):
     ]
 
 
-class UserViewSet(
-        CustomCreate,
-        CustomUpdate,
-        GenericViewSet,
-    ):
+class UserViewSet(CustomCreate,
+                  CustomUpdate,
+                  GenericViewSet,
+                  ):
     queryset = User.objects.filter(
         is_active=True,
     )
     serializer_class = UserSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    authentication_classes = [
+        JWTAuthentication,
+        SessionAuthentication
+    ]
     ordering = ["id"]
     ordering_fields = [
         "id", "first_name", "last_name", "last_login"
@@ -139,69 +144,71 @@ class UserViewSet(
 @method_decorator(csrf_exempt, name="dispatch")
 class Login(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        is_valid = False  
+        is_valid = False
         body_unicode = request.body.decode("utf-8")
         body = json.loads(body_unicode)
         if "email" in body["data"] and "password" in body["data"]:
             user = get_object_or_404(
                 User,
-                is_active = True,
-                email = body["data"]["email"]
+                is_active=True,
+                email=body["data"]["email"]
             )
         if "username" in body["data"] and "password" in body["data"]:
             user = get_object_or_404(
                 User,
-                is_active = True,
-                username = body["data"]["username"]
+                is_active=True,
+                username=body["data"]["username"]
             )
         if user:
-            is_valid = authenticate(username=user.username, password=body["data"]["password"])
+            is_valid = authenticate(
+                username=user.username, password=body["data"]["password"])
         if not is_valid:
-            return Response( data = [{
+            return Response(data=[{
                 "detail": "Wrong credentials",
                 "status": 400
-            }], status = status.HTTP_400_BAD_REQUEST )
+            }], status=status.HTTP_400_BAD_REQUEST)
         else:
             user.user_agent = self.request.META.get("HTTP_USER_AGENT")
             user.remote_addr = self.request.META.get("REMOTE_ADDR")
-            user = UserLoginSerializer(user, many=False, context={"request": request})
+            user = UserLoginSerializer(
+                user, many=False, context={"request": request})
             return Response(user.data)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class ActivateUser(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        body_unicode=request.body.decode("utf-8")
+        body_unicode = request.body.decode("utf-8")
         body = json.loads(body_unicode)
         user = None
         if "token" in body["data"]["attributes"]:
             user = get_object_or_404(
                 User,
-                token = body["data"]["attributes"]["token"]
+                token=body["data"]["attributes"]["token"]
             )
             user.is_active = True
             user.token = None
             user.save()
-            return Response( data = {
+            return Response(data={
                 "success": True
-            }, status = 200 )
-        return Response( data = [{
+            }, status=200)
+        return Response(data=[{
             "detail": "Wrong credentials",
             "status": 400
-        }], status = status.HTTP_400_BAD_REQUEST )
+        }], status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class SetPassword(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        body_unicode=request.body.decode("utf-8")
+        body_unicode = request.body.decode("utf-8")
         body = json.loads(body_unicode)
         user = None
         if "token" in body["data"]["attributes"] and "password" in body["data"]["attributes"]:
             user = get_object_or_404(
                 User,
-                is_active = True,
-                token = body["data"]["attributes"]["token"]
+                is_active=True,
+                token=body["data"]["attributes"]["token"]
             )
             user.token = None
             user.set_password(body["data"]["attributes"]["password"])
@@ -244,27 +251,28 @@ class SetPassword(TokenObtainPairView):
                 settings.EMAIL_TEMPLATE_COMPANY_NAME,
                 settings.EMAIL_TEMPLATE_COMPANY_LOGO,
             )
-            msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
+            msg = EmailMultiAlternatives(
+                subject, text_content, from_email, [to])
             msg.attach_alternative(html_content, "text/html")
             msg.send()
-            return Response( data = {
+            return Response(data={
                 "success": True
-            }, status = 200 )
-        return Response( data = [{
+            }, status=200)
+        return Response(data=[{
             "status": 400
-        }], status = status.HTTP_400_BAD_REQUEST )
+        }], status=status.HTTP_400_BAD_REQUEST)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
 class ResetPassword(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        body_unicode=request.body.decode("utf-8")
+        body_unicode = request.body.decode("utf-8")
         body = json.loads(body_unicode)
         user = None
         if "email" in body["data"]["attributes"]:
             user = get_object_or_404(
                 User,
-                email = body["data"]["attributes"]["email"]
+                email=body["data"]["attributes"]["email"]
             )
             user.token = uuid.uuid4()
             user.save()
@@ -315,25 +323,26 @@ class ResetPassword(TokenObtainPairView):
                 settings.EMAIL_TEMPLATE_COMPANY_NAME,
                 settings.EMAIL_TEMPLATE_COMPANY_LOGO,
             )
-            msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
+            msg = EmailMultiAlternatives(
+                subject, text_content, from_email, [to])
             msg.attach_alternative(html_content, "text/html")
             msg.send()
-            return Response( data = {
+            return Response(data={
                 "success": True
-            }, status = 200 )
-        return Response( data = [{
+            }, status=200)
+        return Response(data=[{
             "status": 400
-        }], status = status.HTTP_400_BAD_REQUEST )
+        }], status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserAddressViewSet (
-        CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        GenericViewSet,
-    ):
+    CustomCreate,
+    CustomUpdate,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet,
+):
     queryset = UserAddress.objects.all()
     serializer_class = UserAddressSerializer
     ordering = ["id"]
@@ -367,7 +376,8 @@ class UserAddressViewSet (
         if "Authorization" in self.request.headers:
             token = self.request.headers["Authorization"].split(" ")[1]
         if token:
-            decoded = jwt.decode(token, settings.SECRET_KEY, algorithms="HS256", do_time_check=True)
+            decoded = jwt.decode(token, settings.SECRET_KEY,
+                                 algorithms="HS256", do_time_check=True)
             user = User.objects.get(id=decoded["user_id"])
         if user.is_anonymous:
             raise Http404("No MyModel matches the given query.")
@@ -377,13 +387,13 @@ class UserAddressViewSet (
 
 
 class UserCartBuyableItemsViewSet (
-        CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        GenericViewSet
-    ):
+    CustomCreate,
+    CustomUpdate,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet
+):
     queryset = UserCartBuyableItem.objects.all()
     serializer_class = UserCartBuyableItemSerializer
     ordering = ["id"]
@@ -409,13 +419,13 @@ class UserCartBuyableItemsViewSet (
 
 
 class UserFavoriteBuyableItemsViewSet (
-        CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        GenericViewSet
-    ):
+    CustomCreate,
+    CustomUpdate,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet
+):
     queryset = UserFavoriteBuyableItem.objects.all()
     serializer_class = UserFavoriteBuyableItemSerializer
     ordering = ["id"]
@@ -441,13 +451,13 @@ class UserFavoriteBuyableItemsViewSet (
 
 
 class UserFavoriteStandsViewSet (
-        CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        GenericViewSet
-    ):
+    CustomCreate,
+    CustomUpdate,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet
+):
     queryset = UserFavoriteStand.objects.all()
     serializer_class = UserFavoriteStandSerializer
     ordering = ["id"]
@@ -465,13 +475,13 @@ class UserFavoriteStandsViewSet (
 
 
 class UserOrderBuyableItemViewSet (
-        CustomCreate,
-        CustomUpdate,
-        mixins.ListModelMixin,
-        mixins.RetrieveModelMixin,
-        mixins.DestroyModelMixin,
-        GenericViewSet
-    ):
+    CustomCreate,
+    CustomUpdate,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet
+):
     queryset = UserOrderBuyableItem.objects.all()
     serializer_class = UserOrderBuyableItemSerializer
     ordering = ["id"]
@@ -497,13 +507,13 @@ class UserOrderBuyableItemViewSet (
 
 
 class UserOrderViewSet (
-      CustomCreate,
-      CustomUpdate,
-      mixins.ListModelMixin,
-      mixins.RetrieveModelMixin,
-      mixins.DestroyModelMixin,
-      GenericViewSet
-    ):
+    CustomCreate,
+    CustomUpdate,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet
+):
     queryset = UserOrder.objects.all()
     serializer_class = UserOrderSerializer
     ordering = ["id"]

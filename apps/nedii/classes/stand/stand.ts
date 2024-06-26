@@ -22,57 +22,8 @@ export default class Stand extends BaseAPIClass {
   public attributes: StandAttributes = new StandAttributes();
   public relationships: StandRelationships = new StandRelationships();
 
-  private _products: Signal<Array<Product>> = signal([]);
-
   public static getInstance(): Stand {
     return Stand.instance || new Stand();
-  }
-
-  public getProductsFromAPI(): Promise<Array<any>> {
-    return new Promise((res, rej) => {
-      let url = `${this.URLBase}/v1/products/?filter[stand]=${this.id}`;
-      url += '&include=classification,stand,delivery_type,';
-      url += 'features,features.feature,product_pictures,related';
-
-      url += '&fields[Product]=id,name,img_picture,full_size,';
-      url += 'stock,unlimited_stock,price,discount,final_price,shipping_cost,';
-      url += 'times_selled';
-
-      url += '&fields[ProductClassification]=id,name,img_picture';
-      url += '&fields[ProductFeature]=id,name';
-      url += '&fields[ProductFeatureOption]=id,name';
-      url += '&fields[Stand]=id,name,img_logo';
-      API.Get({
-        url,
-        jwt: this.jwt.access,
-      })
-        .then((response: { data: Array<any> }) => {
-          const rawData =
-            response && response.data && response.data.length
-              ? RebuildData(response).data
-              : [];
-          this.products = [];
-          rawData.forEach((i: any) => {
-            const newItem = new Product();
-            newItem.id = Number(i.id);
-            newItem.userName =
-              this.relationships.owner?.data.attributes.first_name || 'none';
-            newItem.userID = this.relationships.owner?.data.id || 0;
-            newItem.setDataFromPlainObject(i);
-            this.products.push(newItem);
-          });
-          this.products = [...this.products];
-          res([...this.products]);
-        })
-        .catch((error) => rej(error));
-    });
-  }
-
-  public get products() {
-    return this._products.value;
-  }
-  public set products(value) {
-    this._products.value = value;
   }
 }
 

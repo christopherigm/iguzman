@@ -38,8 +38,11 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
   const loadItems = (): Promise<void> => {
     return new Promise((res, rej) => {
       setIsLoading(true);
-      stand
-        .getProductsFromAPI()
+      currentItem.value.relationships.stand.data.id = stand.id;
+      currentItem.value.setURLParametersForMinimumObject();
+      currentItem.value.setStandFilterInURLParameters();
+      currentItem.value
+        .getItemsFromAPI()
         .then((data) => res(setItems(data)))
         .catch((e) => rej(e))
         .finally(() => setIsLoading(false));
@@ -95,8 +98,6 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
                 isLoading={isLoading}
                 onClick={() => {
                   currentItem.value = new Product();
-                  currentItem.value.userID = user.id;
-                  currentItem.value.userName = user.attributes.first_name;
                   currentItem.value.relationships.stand.data.id = stand.id;
                   currentItem.value.relationships.stand.data.attributes.setAttributesFromPlainObject(
                     stand.attributes.getPlainAttributes()
@@ -111,13 +112,7 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
                   <BaseBuyableItem
                     item={i}
                     onClick={() => {
-                      currentItem.value.id = i.id;
-                      currentItem.value.userID = user.id;
-                      currentItem.value.userName = 'user.attributes.first_name';
-                      currentItem.value.relationships.stand.data.id = stand.id;
-                      currentItem.value.setDataFromPlainObject(
-                        i.getPlainObject()
-                      );
+                      currentItem.value = i;
                       setNewEntry(true);
                     }}
                     disabled={isLoading}

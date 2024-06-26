@@ -38,18 +38,34 @@ export default class Product extends BaseBuyableItem {
   }
 
   public setURLParametersForMinimumObject(): void {
-    let url = '&include=classification,stand,delivery_type,';
+    let url = '&include=classification,stand';
 
     url += '&fields[Product]=id,name,img_picture,full_size,';
     url += 'stock,unlimited_stock,price,discount,final_price,shipping_cost,';
-    url += 'times_selled';
-    url += 'classification,features,stand';
+    url += 'times_selled,classification,stand,';
 
     url += '&fields[ProductClassification]=id,name,img_picture';
     url += '&fields[ProductFeature]=id,name';
     url += '&fields[ProductFeatureOption]=id,name';
     url += '&fields[Stand]=id,name,img_logo';
     this.URLParameters = url;
+  }
+
+  public getItemsFromAPI(): Promise<Array<Product>> {
+    return new Promise((res, rej) => {
+      super
+        .getItemsFromAPI()
+        .then((data: Array<any>) => {
+          const items: Array<Product> = [];
+          data.forEach((i: any) => {
+            const newItem = new Product();
+            newItem.setDataFromPlainObject(i);
+            items.push(newItem);
+          });
+          res(items);
+        })
+        .catch((e: any) => rej(e));
+    });
   }
 }
 

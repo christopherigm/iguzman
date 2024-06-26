@@ -41,6 +41,25 @@ export default abstract class BaseAPIClass {
     this.URLParameters = '';
   }
 
+  public getItemsFromAPI(): Promise<Array<any>> {
+    return new Promise((res, rej) => {
+      let url = `${this.URLBase}/${this.endpoint}`;
+      if (this.URLParameters) {
+        url += `?${this.URLParameters}`;
+      }
+      API.Get({
+        url,
+        jwt: this.jwt.access,
+      })
+        .then((response: any) => {
+          const data =
+            url.search('include') > -1 ? RebuildData(response) : response;
+          res(data.data);
+        })
+        .catch((error) => rej(error));
+    });
+  }
+
   public setItemByIDFromAPI(): Promise<void> {
     return new Promise((res, rej) => {
       if (!this.id) {

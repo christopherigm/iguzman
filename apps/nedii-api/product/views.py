@@ -2,7 +2,7 @@ from rest_framework import viewsets, mixins
 from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from common.mixins import (
     CustomCreate,
     CustomUpdate
@@ -134,13 +134,13 @@ class ProductViewSet(CustomCreate,
                      viewsets.GenericViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
     # permission_classes = [AllowAny]
+    # authentication_classes = []
+    permission_classes = [IsAuthenticatedOrReadOnly]
     authentication_classes = [
         JWTAuthentication,
         SessionAuthentication
     ]
-    # authentication_classes = []
     ordering = ['id']
     ordering_fields = '__all__'
     filterset_fields = {
