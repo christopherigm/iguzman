@@ -169,12 +169,12 @@ class ProductRelationships extends BaseBuyableItemRelationships {
     };
   }
 
-  public updateProductFeatureOptions(items: Array<number>): void {
+  public updateProductFeatureOptions(items: Array<DropDownFieldOption>): void {
     if (items.length) {
       const newProductFeatureOptionArray: Array<ProductFeatureOption> = [];
-      items.map((i: number) => {
+      items.map((i: DropDownFieldOption) => {
         const newOption = new ProductFeatureOption();
-        newOption.id = i;
+        newOption.id = i.id;
         newProductFeatureOptionArray.push(newOption);
       });
       this.features.data = [...newProductFeatureOptionArray];

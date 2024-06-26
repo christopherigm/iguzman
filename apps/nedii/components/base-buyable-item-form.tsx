@@ -1,9 +1,8 @@
-import { ReactElement, useEffect } from 'react';
+import { ReactElement } from 'react';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
-import { Signal, signal } from '@preact-signals/safe-react';
 import Divider from '@mui/material/Divider';
 import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -12,9 +11,6 @@ import { GenericFormButtons, GenericImageInput } from '@repo/ui';
 import Product from 'classes/product/product';
 import Service from 'classes/service/service';
 import InputAdornment from '@mui/material/InputAdornment';
-
-const complete: Signal<boolean> = signal(false);
-const error: Signal<string> = signal('');
 
 type Props = {
   children?: ReactElement | Array<ReactElement | null> | null;
@@ -37,15 +33,14 @@ const BaseBuyableItemForm = ({
   onCancel,
   onComplete,
 }: Props): ReactElement => {
-  useEffect(() => {
-    console.log('BaseBuyableItemForm.tsx > renders');
-    complete.value = false;
-    error.value = '';
-  }, []);
-
   return (
     <>
-      <Typography variant="body1">Informacion basica del {label}</Typography>
+      <Typography variant="body1">
+        Informacion basica del {label} <b>"{item.attributes.name}"</b>
+      </Typography>
+      <Typography variant="caption" fontStyle="italic" fontWeight="600">
+        (Version {item.attributes.version})
+      </Typography>
       <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
         <Grid item xs={12}>
           <Box width={250} margin="0 auto">

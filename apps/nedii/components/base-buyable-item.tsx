@@ -44,10 +44,6 @@ const BaseBuyableItem = ({
   const theme = useTheme();
   const isXSSize: boolean = useMediaQuery(theme.breakpoints.only('xs'));
 
-  useEffect(() => {
-    console.log('BaseBuyableItem.tsx > renders');
-  }, []);
-
   return (
     <Paper elevation={1} sx={{ overflow: 'hidden' }}>
       <Box

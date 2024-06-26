@@ -35,7 +35,6 @@ const CompanyFormGallery = ({
   onComplete,
 }: Props): ReactElement => {
   useEffect(() => {
-    console.log('CompanyFormGallery.tsx > renders');
     isLoadingLocal.value = false;
     complete.value = false;
     error.value = '';

@@ -14,7 +14,7 @@ import { productFeatureOption as option } from 'classes/product/product-feature-
 type Props = {
   standID: number;
   value: Array<DropDownFieldOption>;
-  onChange: (items: Array<number>) => void;
+  onChange: (items: Array<DropDownFieldOption>) => void;
   disabled?: boolean;
 };
 
@@ -38,7 +38,9 @@ const ProductFeatureField = ({
   >([]);
 
   useEffect(() => {
-    setSelectedOptions(value);
+    if (!productFeatureOptions.length) {
+      setSelectedOptions(value);
+    }
     if (!productFeatureOptions.length) {
       loadProductFeatureOptions().catch((e) => console.log(e));
     }
@@ -47,34 +49,16 @@ const ProductFeatureField = ({
   const loadProductFeatureOptions = (): Promise<Array<DropDownFieldOption>> => {
     return new Promise((res, rej) => {
       setIsLoading(true);
-      // console.log('>>> parent:', parent.id);
       option
         .getDropDownItems()
         .then((items) => {
-          // console.log('>>> new item:', items);
           setProductFeatureOptions(items);
-          // checkSelectedOptions(items);
           res(items);
         })
         .catch((e) => rej(e))
         .finally(() => setIsLoading(false));
     });
   };
-
-  // const checkSelectedOptions = (items: Array<DropDownFieldOption>) => {
-  //   parent
-  //     .getItems()
-  //     .then((items: Array<ProductFeature>) => {
-  //       console.log(
-  //         '>>> checkSelectedOptions:',
-  //         items.map((i) => i.getPlainObject())
-  //       );
-  //     })
-  //     .catch((e) => console.log('Error, checkSelectedOptions:', e));
-  //   const newSelectedItemsArray: Array<DropDownFieldOption> = [
-  //     ...selectedOptions,
-  //   ];
-  // };
 
   const updateSelectedOptions = (
     id: number,
@@ -96,7 +80,7 @@ const ProductFeatureField = ({
         }
       }
       setSelectedOptions(newSelectedOptionsArray);
-      onChange(newSelectedOptionsArray.map((i: DropDownFieldOption) => i.id));
+      onChange(newSelectedOptionsArray);
     }
   };
 

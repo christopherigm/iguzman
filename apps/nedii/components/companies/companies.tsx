@@ -49,7 +49,6 @@ const Companies = (): ReactElement => {
       : -1;
 
   useEffect(() => {
-    console.log('Companies.tsx > renders');
     system.setDataFromLocalStorage();
     user.setDataFromLocalStorage();
     addOrEditCompany.value = false;

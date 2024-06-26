@@ -2,7 +2,7 @@ import { ReactElement, useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
-import { DropDownField } from '@repo/ui';
+import { DropDownField, DropDownFieldOption } from '@repo/ui';
 import BaseBuyableItemForm from 'components/base-buyable-item-form';
 import Product from 'classes/product/product';
 import ProductFeatureField from 'components/product/product-feature';
@@ -34,7 +34,6 @@ const ProductFormInfo = ({
   productClassification.relationships.stand.data.id = standID;
 
   useEffect(() => {
-    console.log('ProductFormInfo.tsx > renders');
     setIsLoading(true);
     system.setDataFromLocalStorage();
     user.setDataFromLocalStorage();
@@ -44,21 +43,11 @@ const ProductFormInfo = ({
       .setItemByIDFromAPI()
       .catch((e) => console.log('e:', e))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [item.attributes.version]);
 
-  const checkCompleteness = (): void => {
-    // if (
-    //   item.attributes.name &&
-    //   item.attributes.description &&
-    //   item.attributes.short_description
-    // ) {
-    //   onComplete();
-    // } else {
-    //   onIncomplete();
-    // }
-  };
+  const checkCompleteness = (): void => {};
 
-  if (isLoading) {
+  if (isLoading || disabled) {
     return (
       <Grid item xs={12}>
         <Box sx={{ width: '100%' }}>
@@ -113,7 +102,7 @@ const ProductFormInfo = ({
       <ProductFeatureField
         standID={standID}
         value={item.relationships.getProductFeatureOptionDropDownItems()}
-        onChange={(items: Array<number>) =>
+        onChange={(items: Array<DropDownFieldOption>) =>
           item.relationships.updateProductFeatureOptions(items)
         }
         disabled={disabled}

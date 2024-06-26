@@ -50,12 +50,7 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
     setIsLoading(true);
     currentItem.value
       .save()
-      // .then(() => loadItems())
-      // .then(() => {
-      //   currentItem.value.setURLParametersForWholeObject();
-      //   currentItem.value.setStandFilterInURLParameters();
-      //   return currentItem.value.setItemByIDFromAPI();
-      // })
+      .then(() => (currentItem.value.attributes.version = 0))
       .catch((e) => console.log(e))
       .finally(() => setIsLoading(false));
   };
