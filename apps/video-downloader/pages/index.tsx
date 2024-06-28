@@ -16,14 +16,15 @@ const user = BaseUser.getInstance();
 
 const Page = (props: any) => {
   useEffect(() => {
-    system.setVDSystemAttributesFromPlainObject(props);
+    system.setDataFromPlainObject(props);
     system.getItemsFromLocalStorage();
-    user.getUserFromLocalStorage();
+    user.setDataFromLocalStorage();
   }, [props]);
 
   return (
     <MainLayout
       darkMode={system.darkMode}
+      refreshToken={() => user.refreshToken()}
       switchTheme={() => system.switchTheme()}
       devMode={system.devMode}
       switchDevMode={() => system.switchDevMode()}

@@ -195,22 +195,22 @@ class UserAbstractBuyableItem(CommonFields):
     )
     backup_name = models.CharField(
         verbose_name='Nombre de elemento comprado',
-        null=False,
-        blank=False,
+        blank=True,
+        null=True,
         max_length=64,
     )
     backup_user_name = models.CharField(
         verbose_name='Nombre del comprador',
-        null=False,
-        blank=False,
+        blank=True,
+        null=True,
         max_length=64,
     )
     backup_final_price = models.DecimalField(
         verbose_name='Precio final',
         max_digits=10,
         decimal_places=2,
-        null=False,
-        blank=False,
+        blank=True,
+        null=True,
         default=0
     )
 
@@ -218,13 +218,13 @@ class UserAbstractBuyableItem(CommonFields):
         name = ''
         if self.product is not None:
             name = self.product.name
-        if self.service is not None:
+        elif self.service is not None:
             name = self.service.name
-        if self.meal is not None:
+        elif self.meal is not None:
             name = self.meal.name
-        if self.real_estate is not None:
+        elif self.real_estate is not None:
             name = self.real_estate.name
-        if self.vehicle is not None:
+        elif self.vehicle is not None:
             name = '{} {} {}'.format(
                 self.vehicle.model.make.name,
                 self.vehicle.model.name,
@@ -234,33 +234,28 @@ class UserAbstractBuyableItem(CommonFields):
 
     def save(self, *args, **kwargs):
         name = ''
+        final_price = 0
         if self.product is not None:
             name = self.product.name
-        if self.service is not None:
+            final_price = self.product.final_price
+        elif self.service is not None:
             name = self.service.name
-        if self.meal is not None:
+            final_price = self.service.final_price
+        elif self.meal is not None:
             name = self.meal.name
-        if self.real_estate is not None:
+            final_price = self.meal.final_price
+        elif self.real_estate is not None:
             name = self.real_estate.name
-        if self.vehicle is not None:
+            final_price = self.real_estate.final_price
+        elif self.vehicle is not None:
             name = '{} {} {}'.format(
                 self.vehicle.model.make.name,
                 self.vehicle.model.name,
                 self.vehicle.year,
             )
-        self.backup_name = name
-
-        final_price = 0
-        if self.product is not None:
-            final_price = self.product.final_price
-        if self.service is not None:
-            final_price = self.service.final_price
-        if self.meal is not None:
-            final_price = self.meal.final_price
-        if self.real_estate is not None:
-            final_price = self.real_estate.final_price
-        if self.vehicle is not None:
             final_price = self.vehicle.final_price
+
+        self.backup_name = name
         self.backup_final_price = final_price
 
         backup_user_name = '{} {}'.format(

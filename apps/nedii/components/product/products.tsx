@@ -89,44 +89,47 @@ const Products = ({ darkMode = false, stand }: Props): ReactElement => {
             <Divider />
           </Box>
           <Grid container marginTop={0} columnSpacing={2} rowSpacing={2}>
-            <Grid item xs={12} sm={4}>
-              <MenuItemWithIcon
-                darkMode={darkMode}
-                icon={<AddIcon />}
-                label="Agregar producto"
-                selected={false}
-                isLoading={isLoading}
-                onClick={() => {
-                  currentItem.value = new Product();
-                  currentItem.value.relationships.stand.data.id = stand.id;
-                  currentItem.value.relationships.stand.data.attributes.setAttributesFromPlainObject(
-                    stand.attributes.getPlainAttributes()
-                  );
-                  setNewEntry(true);
-                }}
-              />
-            </Grid>
-            {items.map((i: Product, index: number) => {
-              return (
-                <Grid item xs={12} sm={4} key={index}>
-                  <BaseBuyableItem
-                    item={i}
-                    onClick={() => {
-                      currentItem.value = i;
-                      setNewEntry(true);
-                    }}
-                    disabled={isLoading}
-                  />
-                </Grid>
-              );
-            })}
             {isLoading ? (
               <Grid item xs={12}>
                 <Box sx={{ width: '100%' }}>
                   <LinearProgress />
                 </Box>
               </Grid>
-            ) : null}
+            ) : (
+              <>
+                <Grid item xs={12} sm={4}>
+                  <MenuItemWithIcon
+                    darkMode={darkMode}
+                    icon={<AddIcon />}
+                    label="Agregar producto"
+                    selected={false}
+                    isLoading={isLoading}
+                    onClick={() => {
+                      currentItem.value = new Product();
+                      currentItem.value.relationships.stand.data.id = stand.id;
+                      currentItem.value.relationships.stand.data.attributes.setAttributesFromPlainObject(
+                        stand.attributes.getPlainAttributes()
+                      );
+                      setNewEntry(true);
+                    }}
+                  />
+                </Grid>
+                {items.map((i: Product, index: number) => {
+                  return (
+                    <Grid item xs={12} sm={4} key={index}>
+                      <BaseBuyableItem
+                        item={i}
+                        onClick={() => {
+                          currentItem.value = i;
+                          setNewEntry(true);
+                        }}
+                        disabled={isLoading}
+                      />
+                    </Grid>
+                  );
+                })}
+              </>
+            )}
           </Grid>
         </>
       )}

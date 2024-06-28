@@ -14,6 +14,7 @@ const onData = (data: any) => {
 export const getVideoName = (
   url: string,
   justAudio: boolean = false,
+  hdTikTok: boolean = true,
   force: boolean = false
 ): Promise<Item> => {
   return new Promise((res, rej) => {
@@ -24,7 +25,7 @@ export const getVideoName = (
     if (URL.search('si=')) {
       URL = URL.split('si=')[0];
     }
-    getOrCreateItem({ url: URL, justAudio })
+    getOrCreateItem({ url: URL, justAudio, hdTikTok })
       .then((i: Item) => {
         const item = { ...i };
         console.log('>>> getOrCreateItem -> Item:', item);
@@ -123,7 +124,9 @@ export default function handler(
         });
       }
       const justAudio = req.body?.data?.justAudio ?? false;
-      getVideoName(url, justAudio)
+      const hdTikTok =
+        req.body?.data?.hdTikTok !== undefined ? req.body.data.hdTikTok : true;
+      getVideoName(url, justAudio, hdTikTok)
         .then((item: Item) => res.status(200).json(item))
         .catch((error) => res.status(400).send(error.toString()));
     })

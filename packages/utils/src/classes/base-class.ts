@@ -95,7 +95,8 @@ export default abstract class BaseAPIClass {
   }
 
   public setDataFromPlainObject(object: any) {
-    this.id = Number(object.id ?? 0) ?? this.id;
+    const id = object.id || 0;
+    this.id = Number(id) ?? this.id;
     this.attributes && this.attributes.setAttributesFromPlainObject(object);
     this.relationships &&
       this.relationships.setRelationshipsFromPlainObject(object);
@@ -103,7 +104,7 @@ export default abstract class BaseAPIClass {
 
   public getMinimumPlainObject(): any {
     return {
-      ...(this.id && { id: this.id }),
+      ...(this.id && { id: Number(this.id) }),
       type: this.type,
     };
   }
@@ -112,7 +113,7 @@ export default abstract class BaseAPIClass {
     const attributes = this.getPlainAttributes();
     const relationships = this.getPlainRelationships();
     return {
-      ...(this.id && { id: this.id }),
+      ...(this.id && { id: Number(this.id) }),
       type: this.type,
       ...(attributes && {
         attributes,

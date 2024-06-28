@@ -7,10 +7,12 @@ import {
   BaseUserAddress,
 } from '@repo/utils';
 import Stand from 'classes/stand';
+import UserFavoriteItem from 'classes/user-favorite-item';
 
 export default class User extends BaseUser {
   public static instance: User;
   public attributes: UserAttributes = new UserAttributes();
+  public relationships: UserRelationships = new UserRelationships();
   private _addresses: Signal<Array<BaseUserAddress>> = signal([]);
   private _companies: Signal<Array<Stand>> = signal([]);
 
@@ -18,26 +20,23 @@ export default class User extends BaseUser {
     return User.instance || new User();
   }
 
-  public getUserFromAPI(): Promise<any> {
-    return new Promise((res, rej) => {
-      super
-        .getUserFromAPI()
-        .then((data) => {
-          this.setDataFromPlainObject(data);
-          this.saveLocalStorage();
-          res(data);
-        })
-        .catch((e) => rej(e));
-    });
+  public setURLParametersForWholeObject(): void {
+    let url = '&include=favorite_items,';
+    url += 'favorite_items.product,favorite_items.service,';
+    url += 'favorite_items.meal,favorite_items.real_estate,';
+    url += 'favorite_items.vehicle,favorite_items.meal_addons';
+
+    url += '&fields[Product]=id,name,img_picture';
+    url += '&fields[Service]=id,name,img_picture';
+    url += '&fields[Meal]=id,name,img_picture';
+    url += '&fields[RealEstate]=id,name,img_picture';
+    url += '&fields[Vehicle]=id,name,img_picture';
+
+    this.URLParameters = url;
   }
 
-  public updateUserData(): Promise<void> {
-    return new Promise((res, rej) => {
-      super
-        .updateUserData()
-        .then(() => res(this.getUserFromAPI()))
-        .catch((e) => rej(e));
-    });
+  public setURLParametersForMinimumObject(): void {
+    this.setURLParametersForWholeObject();
   }
 
   public getUserAddressesFromAPI(): Promise<Array<any>> {
@@ -264,6 +263,63 @@ class UserAttributes extends BaseUserAttributes {
   }
   public set owner_address(value) {
     this._owner_address.value = value;
+  }
+}
+
+class UserRelationships {
+  public _favorite_items: Signal<{ data: Array<UserFavoriteItem> }> = signal({
+    data: [],
+  });
+
+  public addFavoriteItemFromPlainObject(object: any): void {
+    if (object.id) {
+      const newOption = new UserFavoriteItem();
+      newOption.setDataFromPlainObject(object);
+      const newArray: Array<UserFavoriteItem> = [...this.favorite_items.data];
+      newArray.push(newOption);
+      this.favorite_items.data = [...newArray];
+    }
+  }
+
+  // public removeFavoriteItemFromPlainObject(id: number): void {
+  //   if (id) {
+  //     const newOption = new UserFavoriteItem();
+  //     newOption.setDataFromPlainObject(object);
+  //     const newArray: Array<UserFavoriteItem> = [...this.favorite_items.data];
+  //     newArray.push(newOption);
+  //     this.favorite_items.data = [...newArray];
+  //   }
+  // }
+
+  public setRelationshipsFromPlainObject(object: any): any {
+    if (object.relationships) {
+      if (object.relationships.favorite_items?.data) {
+        const newArray: Array<UserFavoriteItem> = [];
+        object.relationships.favorite_items.data.map((i: any) => {
+          const newOption = new UserFavoriteItem();
+          newOption.setDataFromPlainObject(i);
+          newArray.push(newOption);
+        });
+        this.favorite_items.data = [...newArray];
+      }
+    }
+  }
+
+  public getPlainRelationships(): any {
+    return {
+      favorite_items: {
+        data: this.favorite_items.data.length
+          ? this.favorite_items.data.map((i) => i.getPlainObject())
+          : [],
+      },
+    };
+  }
+
+  public get favorite_items() {
+    return this._favorite_items.value;
+  }
+  public set favorite_items(value) {
+    this._favorite_items.value = value;
   }
 }
 

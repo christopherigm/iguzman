@@ -26,14 +26,14 @@ export default class System extends BaseSystem {
 
   public getVDPlainAttributes(): any {
     return {
-      ...this.getPlainAttributes(),
+      ...this.getPlainObject(),
       userAgent: this.userAgent,
       iOS: this.iOS,
     };
   }
 
-  public setVDSystemAttributesFromPlainObject(object: any): void {
-    this.setSystemAttributesFromPlainObject(object);
+  public setDataFromPlainObject(object: any): void {
+    super.setDataFromPlainObject(object);
     this.userAgent = object.userAgent ?? this.userAgent;
     this.iOS = object.iOS ?? this.iOS;
     this.supported = !(system.userAgent.includes('CriOS') && system.iOS);

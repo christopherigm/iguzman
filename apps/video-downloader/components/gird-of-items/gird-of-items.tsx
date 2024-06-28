@@ -24,7 +24,7 @@ import SplitscreenIcon from '@mui/icons-material/Splitscreen';
 import ErrorIcon from '@mui/icons-material/Error';
 import LinearProgress from '@mui/material/LinearProgress';
 import { signal } from '@preact-signals/safe-react';
-import { PaperCard } from '@repo/ui';
+import { PaperCard, Ribbon } from '@repo/ui';
 import { InnerSort, DateParser, HourParser } from '@repo/utils';
 import Item, { VideoType } from 'classes/item';
 import { ReactElement, ReactNode, useEffect, useState } from 'react';
@@ -149,6 +149,7 @@ const GridItem = ({
   return (
     <PaperCard>
       <Box
+        position="relative"
         marginBottom={1}
         display="flex"
         flexDirection="row"
@@ -156,6 +157,11 @@ const GridItem = ({
         alignItems="center"
         paddingTop={0}
       >
+        {item.hdTikTok ? (
+          <Box position="absolute" top={50} right={-13}>
+            <Ribbon borderColor="#f4511e" color="#ff5722" text="h264" />
+          </Box>
+        ) : null}
         {item.type ? (
           <Box
             marginRight={1}

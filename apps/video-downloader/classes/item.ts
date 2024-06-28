@@ -28,6 +28,7 @@ export type VideoType =
   | 'pinterest';
 export type DownloadOptions = {
   justAudio: boolean;
+  hdTikTok: boolean;
 };
 
 export default class Item {
@@ -44,6 +45,7 @@ export default class Item {
   private _error: Signal<string | null> = signal(null);
   private _created: Signal<Date | null> = signal(null);
   private _justAudio: Signal<boolean> = signal(false);
+  private _hdTikTok: Signal<boolean> = signal(false);
   private timeout: NodeJS.Timeout = setTimeout(() => {}, 100000);
 
   public static getInstance(): Item {
@@ -105,11 +107,13 @@ export default class Item {
     }
     if (options) {
       this.justAudio = options?.justAudio ?? false;
+      this.hdTikTok = options?.hdTikTok ?? false;
     }
     const url = `${this.URLBase}/download-video`;
     let data: any = {
       url: this.url,
       justAudio: this.justAudio,
+      hdTikTok: this.hdTikTok,
       force,
     };
     if (this.id) {
@@ -182,6 +186,7 @@ export default class Item {
         data: {
           url: this.url,
           justAudio: this.justAudio,
+          hdTikTok: this.hdTikTok,
         },
       })
         .then((response: Item) => this.handleResponse(response))
@@ -229,6 +234,7 @@ export default class Item {
       error: this.error,
       created: this.created,
       justAudio: this.justAudio,
+      hdTikTok: this.hdTikTok,
     };
   }
 
@@ -307,6 +313,13 @@ export default class Item {
   }
   public set justAudio(value) {
     this._justAudio.value = value;
+  }
+
+  public get hdTikTok() {
+    return this._hdTikTok.value;
+  }
+  public set hdTikTok(value) {
+    this._hdTikTok.value = value;
   }
 
   public get type() {

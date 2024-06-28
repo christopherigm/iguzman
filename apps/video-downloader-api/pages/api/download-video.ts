@@ -87,14 +87,24 @@ export const writeMetadataToFile = (
             res(item);
           }).stdout?.on('data', onData);
         } else {
-          command += ` mv "media/${item.id}.${item.extention}" "media/${item.filename}" `;
+          if (isTiktok(item.url || '') && item.hdTikTok) {
+            command +=
+              os.platform() === 'win32' ? ffmpegWinBinary : ffmpegLinuxBinary;
+            command += ` -i "media/${item.id}.${item.extention}" -map 0 -c:v libx264 -crf 25 -c:a copy "media/${item.filename}" -loglevel verbose `;
+            command += ` && rm -rf "media/${item.id}.${item.extention}" `;
+          } else {
+            command += ` mv "media/${item.id}.${item.extention}" "media/${item.filename}" `;
+          }
           if (os.platform() === 'win32') {
             command += ` && cp "media/${item.filename}" public/media `;
           }
+          console.log('Final Command:', command);
           exec(command, (error) => {
             if (error) {
+              console.log('Final Command [error]:', error);
               return rej(error);
             }
+            console.log('Final Command [done]:', item);
             res(item);
           }).stdout?.on('data', onData);
         }
@@ -109,7 +119,11 @@ const downloadVideo = (
   metadata: Metadata
 ): Promise<Item> => {
   return new Promise((res, rej) => {
-    getOrCreateItem({ url, justAudio: options.justAudio })
+    getOrCreateItem({
+      url,
+      justAudio: options.justAudio,
+      hdTikTok: options.hdTikTok,
+    })
       .then((i: Item) => {
         const item = { ...i };
         console.log('>>> downloadVideo (getOrCreateItem):', item);
@@ -189,10 +203,7 @@ const downloadVideo = (
           if (isYoutube(url)) {
             command += ' --no-playlist ';
           }
-          // if (isTiktok(url)) {
-          //   command += ' -f 0 ';
-          // }
-          if (isInstagram(url) || iOS) {
+          if (isInstagram(url) || iOS || (isTiktok(url) && !item.hdTikTok)) {
             command += ' -S "codec:h264" ';
           }
           if (os.platform() !== 'win32') {
@@ -231,13 +242,18 @@ const downloadVideo = (
                     .then((item) => {
                       item.status = 'ready';
                       delete item.error;
+                      updateItem(item)
+                        .then(() => console.log('>>> Item COMPLETE:', item))
+                        .catch((e) => console.log('>>> updateItem error:', e));
+                    })
+                    .catch((e) => {
+                      console.log('??? writeMetadataToFile error:', e);
+                      item.status = 'error';
+                      item.error = e;
                       updateItem(item).catch((e) =>
                         console.log('>>> updateItem error:', e)
                       );
-                    })
-                    .catch((e) =>
-                      console.log('??? writeMetadataToFile error:', e)
-                    );
+                    });
                 }
               }).stdout?.on('data', onData);
             })
@@ -267,9 +283,12 @@ export default function handler(
         });
       }
       const justAudio = req.body?.data?.justAudio ?? false;
+      const hdTikTok =
+        req.body?.data?.hdTikTok !== undefined ? req.body.data.hdTikTok : true;
       const force = req.body?.data?.force ?? false;
       const options: DownloadOptions = {
         justAudio,
+        hdTikTok,
         force,
       };
       const userAgent = req.headers['user-agent'] ?? '';
@@ -280,7 +299,7 @@ export default function handler(
           '',
         userAgent,
       };
-      getVideoName(url, justAudio, force)
+      getVideoName(url, justAudio, hdTikTok, force)
         .then((item: Item) => {
           updateItem({ ...item, status: 'downloading' })
             .then((item) => res.status(201).json(item))

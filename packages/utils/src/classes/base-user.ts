@@ -4,7 +4,6 @@ import { DeleteCookie } from '../lib/cookie-handler';
 import type { JWTPayload } from '../interfaces/jwt-interface';
 import API from '../api';
 import CommonFields from './common-fields';
-import removeImagesForAPICall from '../lib/remove-images-for-api-call';
 import BaseAPIClass from './base-class';
 
 export class BaseUser extends BaseAPIClass {
@@ -12,7 +11,7 @@ export class BaseUser extends BaseAPIClass {
   public type = 'User';
   public endpoint = 'v1/users/';
   public attributes: BaseUserAttributes = new BaseUserAttributes();
-  public relationships = null;
+  public relationships: any;
 
   public static getInstance(): BaseUser {
     return BaseUser.instance || new BaseUser();
@@ -26,28 +25,25 @@ export class BaseUser extends BaseAPIClass {
     SetLocalStorageData('jwt', '');
   }
 
-  public updateUserData(): Promise<void> {
+  public setItemByIDFromAPI(): Promise<void> {
     return new Promise((res, rej) => {
-      if (!this.URLBase || this.URLBase === '' || !this.jwt.access) {
-        return rej(new Error('No URLBase'));
-      }
-      const attributes: any = this.attributes.getPlainAttributes();
-      removeImagesForAPICall(attributes);
-      if (attributes.password === '') {
-        delete attributes.password;
-      }
-      API.UpdateUser({
-        URLBase: this.URLBase,
-        jwt: this.jwt.access,
-        id: this.id,
-        attributes,
-      })
+      this.setURLParametersForWholeObject();
+      super
+        .setItemByIDFromAPI()
         .then(() => {
           this.saveLocalStorage();
-          this.setDataFromLocalStorage();
           res();
         })
-        .catch((error) => rej(error));
+        .catch((e) => rej(e));
+    });
+  }
+
+  public save(): Promise<any> {
+    return new Promise((res, rej) => {
+      super
+        .save()
+        .then(() => res(this.setItemByIDFromAPI()))
+        .catch((e) => rej(e));
     });
   }
 
@@ -70,41 +66,10 @@ export class BaseUser extends BaseAPIClass {
           this.jwt = data;
           this.id = Number(data.user_id);
           this.saveJWTToLocalStorage();
-          return this.getUserFromAPI();
+          return this.setItemByIDFromAPI();
         })
         .then(() => res())
         .catch((error) => rej(error));
-    });
-  }
-
-  public getUserFromAPI(): Promise<any> {
-    return new Promise((res, rej) => {
-      if (!this.URLBase || this.URLBase === '') {
-        return rej(new Error('No URL Base'));
-      }
-      if (!this.jwt.access) {
-        return rej(new Error('No credentials'));
-      }
-      if (this.id) {
-        API.GetUser({
-          URLBase: this.URLBase,
-          jwt: this.jwt.access,
-          userID: this.id,
-        })
-          .then((data: any) => {
-            this.setDataFromPlainObject(data);
-            this.saveLocalStorage();
-            res(data);
-          })
-          .catch((error) => rej(error));
-      } else if (this.attributes.username) {
-        let url = `${this.URLBase}/v1/users/?filter[username]=${this.attributes.username}`;
-        API.Get({ url })
-          .then((response) => res(response.data.length ? response.data[0] : {}))
-          .catch((error) => rej(error));
-      } else {
-        rej('No user id or username');
-      }
     });
   }
 

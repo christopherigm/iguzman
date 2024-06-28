@@ -4,7 +4,9 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "14.0.4",
+    "next": "^14.2.4",
+    "sharp": "^0.33.4",
+    "flag-icons": "^7.1.0",
     "react": "^18",
     "react-dom": "^18",
     "react-player": "^2.14.1",
@@ -13,7 +15,9 @@
     "ts-mixer": "^6.0.3",
     "copy-to-clipboard": "^3.3.3",
     "@fontsource/roboto": "^5.0.8",
-    "@preact-signals/safe-react": "^0.5.1",
+    "@mui/lab": "^5.0.0-alpha.170",
+    "@preact-signals/safe-react": "^0.6.1",
+    "@preact/signals": "^1.2.3",
     "@mui/icons-material": "^5.15.1",
     "@mui/material": "^5.15.1",
     "@emotion/react": "^11.11.3",

@@ -1,6 +1,8 @@
 import { Signal, signal } from '@preact-signals/safe-react';
-import { API, BasePicture, BasePictureAttributes } from '@repo/utils';
+import { BasePicture, BasePictureAttributes } from '@repo/utils';
 import StandAttributes from 'classes/stand/stand-attributes';
+
+import UserFavoriteItem from 'classes/user-favorite-item';
 
 export default abstract class BaseBuyableItem extends BasePicture {
   public relationships: BaseBuyableItemRelationships =
@@ -22,54 +24,23 @@ export default abstract class BaseBuyableItem extends BasePicture {
     }
   }
 
+  public setFavorite() {
+    this.isFavorite = UserFavoriteItem.getInstance().checkFavoriteItem(
+      this.id,
+      this.type
+    );
+  }
+
   public switchFavorite = (): Promise<void> => {
     return new Promise((res, rej) => {
-      const url = `${this.URLBase}/v1/user-cart-items/`;
-      const data = {
-        url,
-        jwt: this.jwt.access,
-        data: {
-          type: 'UserCartBuyableItem',
-          attributes: {
-            backup_name: this.attributes.name,
-            backup_user_name: this.userName || 'none',
-            backup_final_price: this.attributes.final_price,
-            quantity: 1,
-          },
-          relationships: {
-            product: {
-              data: {
-                type: this.type,
-                id: this.id,
-              },
-            },
-            service: {
-              data: null,
-            },
-            meal: {
-              data: null,
-            },
-            vehicle: {
-              data: null,
-            },
-            real_estate: {
-              data: null,
-            },
-          },
-        },
-      };
-      API.Post(data)
-        .then((response) => {
-          console.log('response', response);
-          if (response.errors && response.errors.length) {
-            // return rej(response.errors);
-          } else {
-            // this.id = Number(response.data?.id ?? this.id);
-            this.isFavorite = !this.isFavorite;
-            return res();
-          }
+      const userFavoriteItem = UserFavoriteItem.getInstance();
+      userFavoriteItem
+        .setFavoriteItem(this.id, this.type, this.isFavorite)
+        .then(() => {
+          this.setFavorite();
+          res();
         })
-        .catch((error) => rej(error));
+        .catch((e) => rej(e));
     });
   };
 

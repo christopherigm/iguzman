@@ -32,7 +32,7 @@ interface Props {
 const UserInfo = ({ darkMode }: Props): ReactElement => {
   useEffect(() => {
     user.setDataFromLocalStorage();
-    user.getUserFromAPI().catch(() => {});
+    user.setItemByIDFromAPI().catch(() => {});
     newPassword.value = '';
     repeatPassword.value = '';
     currentPassword.value = '';
@@ -46,7 +46,7 @@ const UserInfo = ({ darkMode }: Props): ReactElement => {
   const UpdateUserData = () => {
     isLoading.value = true;
     user
-      .updateUserData()
+      .save()
       .then(() => {
         if (newPassword.value) {
           passwordComplete.value = true;

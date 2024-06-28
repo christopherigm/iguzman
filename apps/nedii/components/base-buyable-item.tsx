@@ -1,4 +1,4 @@
-import { ReactElement, useEffect } from 'react';
+import { ReactElement, useEffect, useState } from 'react';
 import { user } from 'classes/user';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -16,7 +16,12 @@ import Service from 'classes/service/service';
 import InputAdornment from '@mui/material/InputAdornment';
 import Paper from '@mui/material/Paper';
 import Avatar from '@mui/material/Avatar';
-import { IconButton, useMediaQuery, useTheme } from '@mui/material';
+import {
+  IconButton,
+  LinearProgress,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import EditIcon from '@mui/icons-material/Edit';
@@ -43,6 +48,11 @@ const BaseBuyableItem = ({
 }: Props): ReactElement => {
   const theme = useTheme();
   const isXSSize: boolean = useMediaQuery(theme.breakpoints.only('xs'));
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    item.setFavorite();
+  }, []);
 
   return (
     <Paper elevation={1} sx={{ overflow: 'hidden' }}>
@@ -50,7 +60,7 @@ const BaseBuyableItem = ({
         position="relative"
         width="100%"
         height={height}
-        onClick={() => (disabled ? null : onClick())}
+        onClick={() => (disabled || isLoading ? null : onClick())}
         sx={{
           cursor: 'pointer',
         }}
@@ -87,7 +97,7 @@ const BaseBuyableItem = ({
       </Box>
       <Box
         padding={1}
-        onClick={() => (disabled ? null : onClick())}
+        onClick={() => (disabled || isLoading ? null : onClick())}
         sx={{
           cursor: 'pointer',
         }}
@@ -103,7 +113,7 @@ const BaseBuyableItem = ({
         display="flex"
         justifyContent="center"
         padding={1}
-        onClick={() => (disabled ? null : onClick())}
+        onClick={() => (disabled || isLoading ? null : onClick())}
         sx={{
           cursor: 'pointer',
         }}
@@ -145,7 +155,18 @@ const BaseBuyableItem = ({
         <Box display="flex">
           <IconButton
             aria-label="add-to-favorites"
-            onClick={() => (disabled ? null : item.switchFavorite())}
+            onClick={
+              disabled || isLoading
+                ? () => null
+                : () => {
+                    setIsLoading(true);
+                    item
+                      .switchFavorite()
+                      .catch((e) => console.log(e))
+                      .finally(() => setIsLoading(false));
+                  }
+            }
+            disabled={disabled || isLoading}
           >
             <FavoriteIcon
               sx={{ color: item.isFavorite ? '#d32f2f' : '#777' }}
@@ -154,7 +175,23 @@ const BaseBuyableItem = ({
           <Box padding={0.3}></Box>
           <IconButton
             aria-label="add-to-cart"
-            onClick={() => (disabled ? null : item.switchIsInCart())}
+            onClick={
+              disabled || isLoading
+                ? () => null
+                : () => {
+                    // setIsLoading(true);
+                    // item
+                    //   .switchIsInCart()
+                    //   .catch((e) =>
+                    //     console.log(
+                    //       'Base Buyable Item Error, set favorites:',
+                    //       e
+                    //     )
+                    //   )
+                    //   .finally(() => setIsLoading(false))
+                  }
+            }
+            disabled={disabled || isLoading}
           >
             <ShoppingBagIcon
               sx={{ color: item.isInCart ? '#ffa000' : '#777' }}
@@ -162,6 +199,11 @@ const BaseBuyableItem = ({
           </IconButton>
         </Box>
       </Box>
+      {isLoading ? (
+        <Box sx={{ width: '100%' }}>
+          <LinearProgress />
+        </Box>
+      ) : null}
       <Box paddingLeft={1} paddingRight={1} width="100%">
         <Divider />
       </Box>
