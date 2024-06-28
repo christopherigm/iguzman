@@ -16,6 +16,7 @@ type Status =
   | 'none'
   | 'ready'
   | 'error'
+  | 'processing-h264'
   | 'deleted'
   | 'canceled';
 export type VideoType =

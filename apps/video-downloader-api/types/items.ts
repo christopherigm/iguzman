@@ -11,7 +11,14 @@ type Item = {
   extention?: 'm4a' | 'mp4' | 'mov';
   justAudio?: boolean;
   hdTikTok?: boolean;
-  status?: 'none' | 'downloading' | 'ready' | 'error' | 'deleted' | 'canceled';
+  status?:
+    | 'none'
+    | 'downloading'
+    | 'ready'
+    | 'error'
+    | 'deleted'
+    | 'canceled'
+    | 'processing-h264';
   url?: string;
   error?: string;
   created?: Date;

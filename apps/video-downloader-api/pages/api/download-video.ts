@@ -62,6 +62,10 @@ export const writeMetadataToFile = (
       item.filename = `${item.name}-${item.id}.${item.extention}`;
     }
     console.log('>>> writeMetadataToFile -> Item (final):', item);
+
+    if (isTiktok(item.url || '') && item.hdTikTok) {
+      item.status = 'processing-h264';
+    }
     updateItem(item)
       .finally(() => {
         let command = '';

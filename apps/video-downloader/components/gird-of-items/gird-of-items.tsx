@@ -157,7 +157,7 @@ const GridItem = ({
         alignItems="center"
         paddingTop={0}
       >
-        {item.hdTikTok ? (
+        {item.hdTikTok && item.status === 'ready' ? (
           <Box position="absolute" top={50} right={-13}>
             <Ribbon borderColor="#f4511e" color="#ff5722" text="h264" />
           </Box>
@@ -222,8 +222,10 @@ const GridItem = ({
             <>Error!</>
           ) : item.status === 'canceled' ? (
             <>Canceled</>
+          ) : item.status === 'processing-h264' ? (
+            <>Processing h264 video</>
           ) : item.status === 'deleted' ? (
-            <>Video deleted {" :'c"}</>
+            <>Video deleted</>
           ) : (
             <>Processing...</>
           )}
