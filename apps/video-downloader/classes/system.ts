@@ -88,7 +88,9 @@ export default class System extends BaseSystem {
         newItem.url = i.url;
         newItem.error = i.error;
         newItem.created = i.created;
+        newItem.completed = i.completed;
         newItem.justAudio = i.justAudio;
+        newItem.hdTikTok = i.hdTikTok;
         if (!i.type) {
           newItem.setType();
         } else {

@@ -15,7 +15,7 @@ type Props = {
 const PaperCard = ({
   children,
   elevation = 1,
-  marginTop = 3,
+  marginTop = 0,
   marginBottom = 0,
   padding = 1.5,
   overflow = 'hidden',

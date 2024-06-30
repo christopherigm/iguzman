@@ -170,7 +170,7 @@ const downloadVideo = (
                 .then((item) => res(item))
                 .catch((e) => rej(e));
             })
-            .catch((e) => rej(e)); /////// update status!
+            .catch((e) => rej(e));
         } else if (fs.existsSync(`media/${item.filename}`)) {
           console.log('Third catch');
           item.status = 'ready';
@@ -218,7 +218,7 @@ const downloadVideo = (
             command += ' --merge-output-format mp4 ';
           }
           command += ` -o "media/${item.id}.%(ext)s"`;
-          command += ' --quiet';
+          command += ' --quiet ';
           console.log('command:', command);
           item.remoteAddress = metadata.remoteAddress;
           item.justAudio = options.justAudio;
@@ -237,6 +237,7 @@ const downloadVideo = (
                   console.log('>> videoDeleted:', videoDeleted);
                   item.status = videoDeleted ? 'deleted' : 'error';
                   item.error = String(error);
+                  item.completed = new Date();
                   updateItem(item).catch((e) =>
                     console.log('>>> updateItem error:', e)
                   );
@@ -245,6 +246,7 @@ const downloadVideo = (
                   writeMetadataToFile(item, options.force)
                     .then((item) => {
                       item.status = 'ready';
+                      item.completed = new Date();
                       delete item.error;
                       updateItem(item)
                         .then(() => console.log('>>> Item COMPLETE:', item))
@@ -254,6 +256,7 @@ const downloadVideo = (
                       console.log('??? writeMetadataToFile error:', e);
                       item.status = 'error';
                       item.error = e;
+                      item.completed = new Date();
                       updateItem(item).catch((e) =>
                         console.log('>>> updateItem error:', e)
                       );
@@ -264,10 +267,7 @@ const downloadVideo = (
             .catch((e) => rej(e));
         }
       })
-      .catch((error) => {
-        updateItem({ url, error, status: 'error' });
-        rej(error);
-      });
+      .catch((error) => rej(error));
   });
 };
 
@@ -275,7 +275,7 @@ export default function handler(
   req: NextApiRequest,
   res: NextApiResponse<Item | string>
 ) {
-  NextCors(req, res)
+  NextCors(req, res, { origin: '*' })
     .then(() => {
       const url = req.body?.data?.url ?? null;
       if (!url) {
@@ -288,7 +288,7 @@ export default function handler(
       }
       const justAudio = req.body?.data?.justAudio ?? false;
       const hdTikTok =
-        req.body?.data?.hdTikTok !== undefined ? req.body.data.hdTikTok : true;
+        req.body?.data?.hdTikTok !== undefined ? req.body.data.hdTikTok : false;
       const force = req.body?.data?.force ?? false;
       const options: DownloadOptions = {
         justAudio,
@@ -311,7 +311,12 @@ export default function handler(
           const newURL = item.url || url;
           downloadVideo(newURL, options, metadata)
             .then(() => console.log('downloadVideo request processing'))
-            .catch((e) => console.log('downloadVideo error:', e));
+            .catch((e) => {
+              item.status = 'error';
+              item.completed = new Date();
+              updateItem(item).catch((e) => console.log(e));
+              console.log('downloadVideo error:', e);
+            });
         })
         .catch((error) => res.status(400).send(error.toString()));
     })

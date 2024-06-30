@@ -22,6 +22,7 @@ type Item = {
   url?: string;
   error?: string;
   created?: Date;
+  completed?: Date;
   remoteAddress?: string;
 };
 

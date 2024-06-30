@@ -22,7 +22,6 @@ import GridViewIcon from '@mui/icons-material/GridView';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 import SplitscreenIcon from '@mui/icons-material/Splitscreen';
 import ErrorIcon from '@mui/icons-material/Error';
-import LinearProgress from '@mui/material/LinearProgress';
 import { signal } from '@preact-signals/safe-react';
 import { PaperCard, Ribbon } from '@repo/ui';
 import { InnerSort, DateParser, HourParser } from '@repo/utils';
@@ -32,6 +31,8 @@ import ReactPlayer from 'react-player';
 import copy from 'copy-to-clipboard';
 import Link from 'next/link';
 import Snackbar from '@mui/material/Snackbar';
+import MenuIcon from '@mui/icons-material/Menu';
+import CloseIcon from '@mui/icons-material/Close';
 
 type IconColorType = Record<VideoType, string>;
 const iconColor: IconColorType = {
@@ -85,11 +86,8 @@ const GridItem = ({
   devMode,
   darkMode,
 }: GridItemProps) => {
-  const URLBase = item.URLBase.substring(0, item.URLBase.length - 4);
-
-  const videoLink = item.filename
-    ? `${URLBase}/media/${item.filename}`
-    : `${URLBase}/media/${item.id}.${item.justAudio ? 'm4a' : 'mp4'}`;
+  const [expandName, setExpandName] = useState<boolean>(false);
+  // const URLBase = item.URLBase.substring(0, item.URLBase.length - 4);
 
   const actionButtons = (
     <>
@@ -119,7 +117,9 @@ const GridItem = ({
           </Box>
         </>
       ) : null}
-      {item.status === 'downloading' || item.status === 'none' ? (
+      {item.status === 'downloading' ||
+      item.status === 'none' ||
+      item.status === 'processing-h264' ? (
         <Box marginLeft={0.5} paddingLeft={1} borderLeft="solid 1px #666">
           <IconButton
             aria-label="delete"
@@ -149,7 +149,6 @@ const GridItem = ({
   return (
     <PaperCard>
       <Box
-        position="relative"
         marginBottom={1}
         display="flex"
         flexDirection="row"
@@ -157,11 +156,6 @@ const GridItem = ({
         alignItems="center"
         paddingTop={0}
       >
-        {item.hdTikTok && item.status === 'ready' ? (
-          <Box position="absolute" top={50} right={-13}>
-            <Ribbon borderColor="#f4511e" color="#ff5722" text="h264" />
-          </Box>
-        ) : null}
         {item.type ? (
           <Box
             marginRight={1}
@@ -217,13 +211,16 @@ const GridItem = ({
           {item.status === 'downloading' ? (
             <>Downloading...</>
           ) : item.status === 'ready' ? (
-            <>{item.name ? item.name : ''}</>
+            <>
+              Completed{' '}
+              {item.completedTime ? ` (in ${item.completedTime} seconds)` : ''}
+            </>
           ) : item.status === 'error' ? (
             <>Error!</>
           ) : item.status === 'canceled' ? (
             <>Canceled</>
           ) : item.status === 'processing-h264' ? (
-            <>Processing h264 video</>
+            <>Processing h264 video...</>
           ) : item.status === 'deleted' ? (
             <>Video deleted</>
           ) : (
@@ -239,32 +236,81 @@ const GridItem = ({
           </>
         ) : null}
       </Box>
-      <Box marginTop={1} marginBottom={1}>
-        <Divider />
-      </Box>
-      {item.status === 'ready' ? (
-        <Box
-          display="flex"
-          justifyContent="center"
-          maxHeight={270}
-          maxWidth="100%"
-        >
-          <ReactPlayer
-            url={
-              item.filename
-                ? `${URLBase}/media/${item.filename}`
-                : `${URLBase}/media/${item.id}.${
-                    item.justAudio ? 'm4a' : 'mp4'
-                  }`
-            }
-            width="100%"
-            height={item.justAudio ? '50px' : miniMode ? '160px' : '270px'}
-            playing={false}
-            controls
-            loop
-          />
-        </Box>
+
+      {item.name || item.error ? (
+        <>
+          <Box marginTop={1} marginBottom={1}>
+            <Divider />
+          </Box>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            justifyItems="center"
+            alignItems="center"
+          >
+            <Box marginRight={1} marginLeft={-0.8}>
+              <IconButton
+                aria-label="copy"
+                size="small"
+                onClick={() => setExpandName(!expandName)}
+                color="default"
+              >
+                {expandName ? (
+                  <CloseIcon fontSize="small" />
+                ) : (
+                  <MenuIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Box>
+            <Typography
+              variant={miniMode ? 'body2' : 'body1'}
+              height={'auto'}
+              marginRight={2}
+              noWrap={!expandName}
+              paddingLeft={1}
+              borderLeft="solid 1px #666"
+            >
+              {item.name
+                ? item.name
+                : item.status === 'error'
+                  ? `Error details: ${item.error}`
+                  : null}
+            </Typography>
+            <Box flexGrow={1}></Box>
+            {item.hdTikTok && item.status === 'ready' ? (
+              <Box width={50} marginRight={-2} marginTop={-1}>
+                <Ribbon borderColor="#f4511e" color="#ff5722" text="h264" />
+              </Box>
+            ) : null}
+          </Box>
+        </>
       ) : null}
+
+      {item.status === 'ready' && item.videoLink ? (
+        <>
+          <Box marginTop={1} marginBottom={1}>
+            <Divider />
+          </Box>
+          <Box
+            display="flex"
+            justifyContent="center"
+            maxHeight={270}
+            maxWidth="100%"
+          >
+            {item.status === 'ready' ? (
+              <ReactPlayer
+                url={item.videoLink}
+                width="100%"
+                height={item.justAudio ? '50px' : miniMode ? '160px' : '270px'}
+                playing={false}
+                controls
+                loop
+              />
+            ) : null}
+          </Box>
+        </>
+      ) : null}
+
       <Box marginTop={1} marginBottom={1}>
         <Divider />
       </Box>
@@ -305,24 +351,61 @@ const GridItem = ({
           <Box marginTop={1} marginBottom={1}>
             <Divider />
           </Box>
-          <Link href={videoLink} download={true}>
-            <Box
-              display="flex"
-              flexDirection="row"
-              justifyContent="space-between"
-              alignItems="center"
-              color={darkMode ? 'white' : 'black'}
+          <Box
+            display="flex"
+            flexDirection="row"
+            justifyContent="space-between"
+            alignItems="center"
+            color={darkMode ? 'white' : 'black'}
+          >
+            <Link
+              href={item.videoLink}
+              download={true}
+              style={{ width: 'calc(100% - 50px)' }}
             >
-              <Typography variant="body2" noWrap={true}>
-                Direct video link: {videoLink}
+              <Typography variant="body2" noWrap={true} color="black">
+                Direct video link: {item.videoLink}
               </Typography>
-              <Box marginLeft={1} paddingLeft={1} borderLeft="solid 1px #666">
-                <IconButton aria-label="copy" size="small" color="default">
-                  <AttachFileIcon fontSize="small" />
-                </IconButton>
-              </Box>
+            </Link>
+            <Box marginLeft={1} paddingLeft={1} borderLeft="solid 1px #666">
+              <IconButton
+                aria-label="copy"
+                size="small"
+                color="default"
+                onClick={() => {
+                  copy(item.videoLink);
+                  setOpen();
+                }}
+              >
+                <AttachFileIcon fontSize="small" />
+              </IconButton>
             </Box>
-          </Link>
+          </Box>
+        </>
+      ) : null}
+      {item.processingStatus ? (
+        <>
+          <Box marginTop={1} marginBottom={1}>
+            <Divider />
+          </Box>
+          <Box
+            display="flex"
+            flexDirection="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography variant="body2">
+              <Link
+                href={item.url}
+                target="_blank"
+                style={{
+                  color: darkMode ? 'white' : 'black',
+                }}
+              >
+                {item.processingStatus}
+              </Link>
+            </Typography>
+          </Box>
         </>
       ) : null}
 
@@ -396,15 +479,7 @@ const GridItem = ({
             </Box>
             <Box display="flex" marginTop={1}>
               <Typography variant="body2" noWrap={false}>
-                {item.filename
-                  ? `${item.URLBase.substring(
-                      0,
-                      item.URLBase.length - 4
-                    )}/media/${item.filename}`
-                  : `${item.URLBase.substring(
-                      0,
-                      item.URLBase.length - 4
-                    )}/media/${item.id}.${item.justAudio ? 'm4a' : 'mp4'}`}
+                {item.videoLink}
               </Typography>
             </Box>
           </>
@@ -414,7 +489,7 @@ const GridItem = ({
             </Box>
             <Box display="flex" marginTop={1}>
               <Typography variant="body2" noWrap={true}>
-                URLBase: {item.URLBase.substring(0, item.URLBase.length - 4)}
+                URLBase: {item.URLBase}
               </Typography>
             </Box>
           </>
@@ -633,7 +708,7 @@ const GridOfItems = ({
           </Box>
         </>
       ) : null}
-      <Grid container columnSpacing={2}>
+      <Grid container columnSpacing={2} rowSpacing={3} marginTop={0}>
         {filteredItems.value
           .slice(offset.value, offset.value + itemsToDisplay.value)
           .map((i: Item, index: number) => (

@@ -1,4 +1,11 @@
+'use-client';
+
 import { Signal, signal } from '@preact-signals/safe-react';
+import { SubstractDates } from '@repo/utils';
+//https://ffmpegwasm.netlify.app/docs/getting-started/usage/
+//
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import {
   API,
   GetLocalStorageData,
@@ -40,14 +47,18 @@ export default class Item {
   private _name: Signal<string> = signal('');
   private _filename: Signal<string> = signal('');
   private _status: Signal<Status> = signal('none');
+  private _processingStatus: Signal<string> = signal('');
   private _url: Signal<string> = signal('');
   private _type: Signal<VideoType | null> = signal(null);
   private _blob: Signal<Blob> = signal(new Blob());
   private _error: Signal<string | null> = signal(null);
   private _created: Signal<Date | null> = signal(null);
+  private _completed: Signal<Date | null> = signal(null);
   private _justAudio: Signal<boolean> = signal(false);
   private _hdTikTok: Signal<boolean> = signal(false);
+  private _processedVideoLink: Signal<string> = signal('');
   private timeout: NodeJS.Timeout = setTimeout(() => {}, 100000);
+  private _ffmpeg: FFmpeg | undefined;
 
   public static getInstance(): Item {
     return Item.instance || new Item();
@@ -67,6 +78,7 @@ export default class Item {
     this.message = response.message;
     this.error = response.error;
     this.created = response.created || null;
+    this.completed = response.completed || null;
     this.updateLocalStorageItem();
   }
 
@@ -147,21 +159,90 @@ export default class Item {
     clearTimeout(this.timeout);
   }
 
+  public load(): Promise<void> {
+    return new Promise(async (res, _rej) => {
+      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+      // this.ffmpeg = new FFmpeg();
+      this.ffmpeg.on('log', ({ message }) => {
+        // messageRef.current.innerHTML = message;
+        console.log(message);
+        this.processingStatus = message;
+      });
+      // toBlobURL is used to bypass CORS issue, urls with the same
+      // domain can be used directly.
+      await this.ffmpeg.load({
+        coreURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.js`,
+          'text/javascript'
+        ),
+        wasmURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.wasm`,
+          'application/wasm'
+        ),
+      });
+      // setLoaded(true);
+      res();
+    });
+  }
+
   public checkStatus() {
     this.clearTimeout();
+    // console.log('>>> checkStatus');
+    // console.log('>>> status:', this.status);
+    // console.log('>>> hdTikTok:', this.hdTikTok);
+    // if (
+    //   this.status === 'ready' &&
+    //   // this.videoLink &&
+    //   // this.ffmpeg &&
+    //   this.hdTikTok
+    //   // this.id === '667ee424150ca254e77b1b0f'
+    // ) {
+    //   console.log('>>> this.videoLink:', this.videoLink);
+
+    //   this.processingStatus = 'started';
+    //   this.load()
+    //     .then(() => {
+    //       fetchFile(this.videoLink)
+    //         .then((video) => {
+    //           this.processingStatus = 'Writing file';
+    //           this.ffmpeg
+    //             .writeFile('input.mp4', video)
+    //             .then(async (d: boolean) => {
+    //               console.log('ffmpeg.writeFile:', d);
+
+    //               // this.url = '';
+    //               this.processingStatus = 'Starting processing';
+
+    //               await this.ffmpeg.exec(['-i', 'input.mp4', 'output.mp4']);
+    //               const data: any = await this.ffmpeg.readFile('output.mp4');
+    //               this.processedVideoLink = URL.createObjectURL(
+    //                 new Blob([data.buffer], { type: 'video/mp4' })
+    //               );
+    //               // console.log('>>> data.buffer', data);
+    //               this.processingStatus = 'Done';
+    //             })
+    //             .catch((e) => console.log('ffmpeg.writeFile [error]:', e));
+    //         })
+    //         .catch((e) => console.log('fetchFile [error]:', e));
+    //     })
+    //     .catch((e) => console.log('load [error]:', e));
+    //   return;
+    // }
     if (
       !this.URLBase ||
       !this.url ||
       this.status === 'ready' ||
       this.status === 'canceled' ||
-      this.status === 'deleted'
+      this.status === 'deleted' ||
+      this.status === 'error'
     ) {
       return;
     }
-    if (this.status === 'error') {
-      this.status = 'none';
-      this.updateLocalStorageItem();
-    }
+    // if (this.status === 'error') {
+    //   // this.status = 'none';
+    //   this.updateLocalStorageItem();
+    //   return;
+    // }
     if (this.id) {
       API.Get({
         url: `${this.URLBase}/get-videos/${this.id}`,
@@ -174,6 +255,7 @@ export default class Item {
             if (this.error) {
               this.status = 'error';
             }
+            this.completed = e.completed || this.completed;
             this.updateLocalStorageItem();
           }
         })
@@ -234,9 +316,17 @@ export default class Item {
       type: this.type,
       error: this.error,
       created: this.created,
+      completed: this.completed,
       justAudio: this.justAudio,
       hdTikTok: this.hdTikTok,
     };
+  }
+
+  public get ffmpeg(): FFmpeg {
+    if (!this._ffmpeg) {
+      this._ffmpeg = new FFmpeg();
+    }
+    return this._ffmpeg;
   }
 
   public get id() {
@@ -281,6 +371,13 @@ export default class Item {
     this._status.value = value;
   }
 
+  public get processingStatus() {
+    return this._processingStatus.value;
+  }
+  public set processingStatus(value) {
+    this._processingStatus.value = value;
+  }
+
   public get url() {
     return this._url.value;
   }
@@ -309,6 +406,13 @@ export default class Item {
     this._created.value = value;
   }
 
+  public get completed() {
+    return this._completed.value;
+  }
+  public set completed(value) {
+    this._completed.value = value;
+  }
+
   public get justAudio() {
     return this._justAudio.value;
   }
@@ -321,6 +425,36 @@ export default class Item {
   }
   public set hdTikTok(value) {
     this._hdTikTok.value = value;
+  }
+
+  public get videoLink() {
+    let videoLink = '';
+    if (this.URLBase && this.id && this.status === 'ready') {
+      videoLink = this.filename
+        ? `${this.URLBase}/media/${this.filename}`
+        : `${this.URLBase}/media/${this.id}.${this.justAudio ? 'm4a' : 'mp4'}`;
+      videoLink = videoLink.replaceAll('api/', '');
+    }
+    return videoLink;
+  }
+
+  public get completedTime(): string {
+    let time = '';
+    if (this.created && this.completed) {
+      const diff = SubstractDates(
+        new Date(this.completed),
+        new Date(this.created)
+      );
+      time = diff.getSeconds().toString();
+    }
+    return time;
+  }
+
+  public get processedVideoLink() {
+    return this._processedVideoLink.value;
+  }
+  public set processedVideoLink(value) {
+    this._processedVideoLink.value = value;
   }
 
   public get type() {

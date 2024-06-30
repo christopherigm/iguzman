@@ -112,7 +112,7 @@ export default function handler(
   req: NextApiRequest,
   res: NextApiResponse<Item | string>
 ) {
-  NextCors(req, res)
+  NextCors(req, res, { origin: '*' })
     .then(() => {
       const url = req.body?.data?.url ?? null;
       if (!url) {
@@ -125,7 +125,7 @@ export default function handler(
       }
       const justAudio = req.body?.data?.justAudio ?? false;
       const hdTikTok =
-        req.body?.data?.hdTikTok !== undefined ? req.body.data.hdTikTok : true;
+        req.body?.data?.hdTikTok !== undefined ? req.body.data.hdTikTok : false;
       getVideoName(url, justAudio, hdTikTok)
         .then((item: Item) => res.status(200).json(item))
         .catch((error) => res.status(400).send(error.toString()));

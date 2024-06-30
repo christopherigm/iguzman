@@ -22,13 +22,17 @@ ingress:
   host: api.vd.iguzman.com.mx
 
 resources:
-  limits:
-    cpu: 2
-    memory: 2Gi
+  # limits:
+    # cpu: 1
+    # memory: 1Gi
   requests:
     cpu: 1
     memory: 1Gi
+    # cpu: 500m
+    # memory: 512Mi
 
 deployment:
   nodeSelector:
-    nodeProjects: real-clients
+    performaceNode: "true"
+    # nodeName: node2
+    # nodeProjects: real-clients

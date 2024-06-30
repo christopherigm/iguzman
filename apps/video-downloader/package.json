@@ -11,6 +11,8 @@
     "deploy-only": "node deploy.js"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.10",
+    "@ffmpeg/util": "^0.12.1",
     "@repo/ui": "*",
     "@repo/utils": "*",
     "next": "^14.2.4"

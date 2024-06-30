@@ -27,7 +27,7 @@ const downloadJustAudio: Signal<boolean> = signal(false);
 const downloadHDTikTok: Signal<boolean> = signal(false);
 
 const h264VideoInfo =
-  'h264 video feature enable, makes videos more compatible to share. If enabled, download will take longer to complete.';
+  'h264 video feature, makes videos more compatible to share. If enabled, download will take longer to complete.';
 
 type Props = {
   URLBase: string;
@@ -83,6 +83,11 @@ const DownloadForm = ({ URLBase, callback }: Props) => {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const value = e.target.value;
                 link.value = value;
+                if (isTiktok(value)) {
+                  downloadHDTikTok.value = true;
+                } else {
+                  downloadHDTikTok.value = false;
+                }
               }}
               disabled={isLoading.value}
               style={{ width: '100%' }}
@@ -130,24 +135,26 @@ const DownloadForm = ({ URLBase, callback }: Props) => {
               </Tooltip>
             </Box>
           ) : null}
-          <Box width={140} marginLeft={1} border="0px solid red">
-            <FormGroup>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={downloadJustAudio.value}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      (downloadJustAudio.value = e.target.checked)
-                    }
-                  />
-                }
-                color="primary.contrastText"
-                label="Just audio"
-                labelPlacement="start"
-                disabled={isLoading.value}
-              />
-            </FormGroup>
-          </Box>
+          {link.value && isYoutube(link.value) ? (
+            <Box width={140} marginLeft={1} border="0px solid red">
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={downloadJustAudio.value}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        (downloadJustAudio.value = e.target.checked)
+                      }
+                    />
+                  }
+                  color="primary.contrastText"
+                  label="Just audio"
+                  labelPlacement="start"
+                  disabled={isLoading.value}
+                />
+              </FormGroup>
+            </Box>
+          ) : null}
         </Grid>
 
         {link.value && isTiktok(link.value) ? (
