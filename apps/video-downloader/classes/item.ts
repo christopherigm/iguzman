@@ -445,7 +445,9 @@ export default class Item {
         new Date(this.completed),
         new Date(this.created)
       );
-      time = diff.getSeconds().toString();
+      const seconds = diff.getSeconds();
+      const minutesToSeconds = diff.getMinutes() * 60;
+      time = (seconds + minutesToSeconds).toString();
     }
     return time;
   }
