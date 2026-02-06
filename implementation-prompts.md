@@ -59,12 +59,25 @@ Add a comprehensive readme.md file to Turbo monorepo /home/christopher/Documents
 
 ### Migration
 
-Read @www/packages/helpers/src/add-audio-to-video-in-time.ts file, analyze it and copy an improved version of the file to package "helpers" inside a new folder: /home/christopher/Documents/iguzman/packages/helpers/src/add-audio-to-video-in-time/ following the next requirements:
+Read packages/helpers/src/json-api-rebuild.ts file, analyze it and improve it inside a new folder: packages/helpers/src/json-api-rebuild following the next requirements:
 
 - Improve the code
 - Improve readability
 - Fix any possible bug
 - Add inline documentation
 - Improve typing
+
 - Add unit tests
 - Add a readme.md file
+- Add a llm.txt file
+
+I want to create a typescript file that handles HTTP requests (GET, POST, etc.) using promises for each method. It should support JSONAPI specification and implement the function "rebuildJsonApiResponse" in packages/helpers/src/json-api-rebuild/json-api-rebuild.ts file for HTTP methods that return data when jsonapi parameter is true.
+
+Each HTTP Method function should recieve the appropriate parameters in adition to the following mandatory parameters:
+
+- BaseURL: string (default to process.env.BASE_URL)
+- URL: string
+- JWT Access token: string
+- jsonapi: boolean (default to false)
+
+I want you to implement proper typing for paramaters and responses. Implement proper error handling too and add inline documentation. Add a readme.md file for its usage.
