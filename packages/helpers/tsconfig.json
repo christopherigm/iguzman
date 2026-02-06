@@ -1,0 +1,9 @@
+{
+  "extends": "@ai-www/typescript-config/base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src"],
+  "exclude": ["**/*.test.ts", "node_modules"]
+}
