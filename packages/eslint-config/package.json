@@ -1,0 +1,16 @@
+{
+  "name": "@ai-www/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "author": {
+    "name": "Christopher Guzman",
+    "email": "chris@iguzman.com.mx"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "files": ["base.js", "next.js", "react-internal.js"],
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "eslint-config-prettier": "^10",
+    "typescript-eslint": "^8"
+  }
+}

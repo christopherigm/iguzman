@@ -1,0 +1,3 @@
+{
+  "extends": "@ai-www/typescript-config/base.json"
+}
