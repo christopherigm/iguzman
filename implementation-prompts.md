@@ -53,6 +53,10 @@ Add the Button inside of UI package "@iguzman/ui" to the UI of "Hello World" app
 
 ---
 
+Add a comprehensive readme.md file to Turbo monorepo /home/christopher/Documents/iguzman considering its content
+
+---
+
 ### Migration
 
 Read @www/packages/helpers/src/add-audio-to-video-in-time.ts file, analyze it and copy an improved version of the file to package "helpers" inside a new folder: /home/christopher/Documents/iguzman/packages/helpers/src/add-audio-to-video-in-time/ following the next requirements:

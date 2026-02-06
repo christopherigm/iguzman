@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@ai-www/ui"],
+  transpilePackages: ['@iguzman/ui'],
 };
 
 export default nextConfig;

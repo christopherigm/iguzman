@@ -1,5 +1,5 @@
 {
-  "name": "@ai-www/helpers",
+  "name": "@iguzman/helpers",
   "version": "0.0.0",
   "private": true,
   "author": {
@@ -23,8 +23,8 @@
     "test": "jest"
   },
   "devDependencies": {
-    "@ai-www/jest-config": "workspace:*",
-    "@ai-www/typescript-config": "workspace:*",
+    "@iguzman/jest-config": "workspace:*",
+    "@iguzman/typescript-config": "workspace:*",
     "@types/jest": "^29.5.14",
     "@types/node": "^22",
     "jest": "^29.7.0",

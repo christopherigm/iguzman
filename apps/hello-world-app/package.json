@@ -1,5 +1,5 @@
 {
-  "name": "@ai-www/hello-world-app",
+  "name": "@iguzman/hello-world-app",
   "version": "0.0.0",
   "private": true,
   "author": {
@@ -15,7 +15,7 @@
     "clean": "rm -rf .next"
   },
   "dependencies": {
-    "@ai-www/ui": "workspace:*",
+    "@iguzman/ui": "workspace:*",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.3.7",
@@ -24,7 +24,7 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
-    "@ai-www/typescript-config": "workspace:*",
+    "@iguzman/typescript-config": "workspace:*",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "typescript": "^5"

@@ -1,5 +1,5 @@
 {
-  "name": "@ai-www/typescript-config",
+  "name": "@iguzman/typescript-config",
   "version": "0.0.0",
   "private": true,
   "author": {
@@ -7,5 +7,9 @@
     "email": "chris@iguzman.com.mx"
   },
   "license": "SEE LICENSE IN LICENSE",
-  "files": ["base.json", "nextjs.json", "react-library.json"]
+  "files": [
+    "base.json",
+    "nextjs.json",
+    "react-library.json"
+  ]
 }

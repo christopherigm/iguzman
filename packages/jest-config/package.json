@@ -1,5 +1,5 @@
 {
-  "name": "@ai-www/jest-config",
+  "name": "@iguzman/jest-config",
   "version": "0.0.0",
   "private": true,
   "author": {
@@ -8,7 +8,9 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "main": "jest.config.ts",
-  "files": ["jest.config.ts"],
+  "files": [
+    "jest.config.ts"
+  ],
   "dependencies": {
     "ts-jest": "^29",
     "@types/jest": "^29"

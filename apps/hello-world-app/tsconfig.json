@@ -1,5 +1,5 @@
 {
-  "extends": "@ai-www/typescript-config/nextjs.json",
+  "extends": "@iguzman/typescript-config/nextjs.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

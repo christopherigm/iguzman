@@ -1,5 +1,5 @@
 {
-  "extends": "@ai-www/typescript-config/base.json",
+  "extends": "@iguzman/typescript-config/base.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist"

@@ -1,5 +1,5 @@
 {
-  "extends": "@ai-www/typescript-config/react-library.json",
+  "extends": "@iguzman/typescript-config/react-library.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist"

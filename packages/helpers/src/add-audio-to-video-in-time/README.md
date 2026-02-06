@@ -9,7 +9,7 @@ Merges an audio file into a video at a specified time offset using **ffmpeg**.
 ## Usage
 
 ```ts
-import { addAudioToVideoInTime } from '@ai-www/helpers';
+import { addAudioToVideoInTime } from '@iguzman/helpers';
 
 const result = await addAudioToVideoInTime({
   srcVideo: 'intro.mp4',
@@ -18,20 +18,20 @@ const result = await addAudioToVideoInTime({
   offset: 5, // audio starts at 5 seconds
 });
 
-console.log(result.mediaPath);   // 'media/intro-with-narration.mp4'
+console.log(result.mediaPath); // 'media/intro-with-narration.mp4'
 console.log(result.absolutePath); // '/app/media/intro-with-narration.mp4'
 ```
 
 ## Options
 
-| Parameter      | Type                        | Default                                              | Description                                                     |
-| -------------- | --------------------------- | ---------------------------------------------------- | --------------------------------------------------------------- |
-| `srcVideo`     | `string`                    | *required*                                           | Path to the source video file (relative to the media folder).   |
-| `srcAudio`     | `string`                    | *required*                                           | Path to the source audio file (relative to the media folder).   |
-| `dest`         | `string`                    | *required*                                           | Output file path (relative to the media folder).                |
-| `offset`       | `number`                    | `0`                                                  | Time offset (seconds) at which the audio begins in the video.   |
-| `format`       | `'wav' \| 'mp3' \| 'ogg'`  | `'wav'`                                              | Source audio format. WAV is re-encoded to AAC; others are copied.|
-| `outputFolder` | `string`                    | `'/app/media'` (prod) or `'public/media'` (non-prod) | Base directory for all media files.                             |
+| Parameter      | Type                      | Default                                              | Description                                                       |
+| -------------- | ------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| `srcVideo`     | `string`                  | _required_                                           | Path to the source video file (relative to the media folder).     |
+| `srcAudio`     | `string`                  | _required_                                           | Path to the source audio file (relative to the media folder).     |
+| `dest`         | `string`                  | _required_                                           | Output file path (relative to the media folder).                  |
+| `offset`       | `number`                  | `0`                                                  | Time offset (seconds) at which the audio begins in the video.     |
+| `format`       | `'wav' \| 'mp3' \| 'ogg'` | `'wav'`                                              | Source audio format. WAV is re-encoded to AAC; others are copied. |
+| `outputFolder` | `string`                  | `'/app/media'` (prod) or `'public/media'` (non-prod) | Base directory for all media files.                               |
 
 ## How it works
 
