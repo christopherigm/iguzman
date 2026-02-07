@@ -57,20 +57,32 @@ Add a comprehensive readme.md file to Turbo monorepo /home/christopher/Documents
 
 ---
 
-### Migration
-
-Read packages/helpers/src/download-video.ts file, analyze it and improve it following the next requirements:
+Read packages/helpers/src/types folder analyze the files in the folder and merge them in a single file, improve it following the next requirements:
 
 - Improve the code
 - Improve readability
 - Fix any possible bug
 - Add inline documentation
 - Improve typing
+- Remove unnecesary code
+
+### Migration
+
+Read packages/helpers/src/get-env-variables.ts file, analyze it and improve it following the next requirements:
+
+- Improve the code
+- Improve readability
+- Fix any possible bug
+- Add inline documentation
+- Improve typing
+- Remove unnecesary code
 
 Fill the missing dependencies using the following local modules:
 
-- packages/helpers/src/checkers.ts
-- packages/helpers/src/get-final-url.ts
+- packages/helpers/src/types.ts
+- packages/helpers/src/get-boolean-from-string.ts
+- packages/helpers/src/copy-file.ts
+- packages/helpers/src/delete-media-file.ts
 
 - Add unit tests
 - Add a readme.md file
