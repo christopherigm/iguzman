@@ -1,5 +1,5 @@
 {
-  "extends": "@iguzman/typescript-config/base.json",
+  "extends": "@iguzman/typescript-config/react-library.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist"
