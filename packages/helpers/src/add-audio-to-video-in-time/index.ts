@@ -1,5 +1,5 @@
 import { execFile } from 'child_process';
-import path from 'path';
+import * as path from 'path';
 
 /** Supported audio encoding formats for the output. */
 export type AudioFormat = 'wav' | 'mp3' | 'ogg';

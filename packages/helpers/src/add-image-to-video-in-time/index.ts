@@ -1,5 +1,5 @@
 import { execFile } from 'child_process';
-import path from 'path';
+import * as path from 'path';
 
 /**
  * Supported ffmpeg overlay position expressions.
@@ -102,9 +102,12 @@ export function buildFfmpegArgs(
 
   return [
     '-y',
-    '-i', srcVideoFile,
-    '-i', srcImageFile,
-    '-filter_complex', filterComplex,
+    '-i',
+    srcVideoFile,
+    '-i',
+    srcImageFile,
+    '-filter_complex',
+    filterComplex,
     destFile,
   ];
 }
@@ -167,14 +170,10 @@ export function addImageToVideoInTime({
     );
   }
   if (start >= end) {
-    return Promise.reject(
-      new Error('start must be less than end'),
-    );
+    return Promise.reject(new Error('start must be less than end'));
   }
   if (typeof width !== 'number' || !Number.isFinite(width) || width <= 0) {
-    return Promise.reject(
-      new Error('width must be a positive finite number'),
-    );
+    return Promise.reject(new Error('width must be a positive finite number'));
   }
 
   // --- Resolve absolute file paths ---
@@ -185,19 +184,31 @@ export function addImageToVideoInTime({
 
   // --- Execute ffmpeg via execFile (safe from shell injection) ---
   const args = buildFfmpegArgs(
-    srcVideoFile, srcImageFile, destFile, start, end, x, y, width,
+    srcVideoFile,
+    srcImageFile,
+    destFile,
+    start,
+    end,
+    x,
+    y,
+    width,
   );
 
   return new Promise((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error: Error | null) => {
-      if (error) {
-        reject(new Error(`ffmpeg failed: ${error.message}`));
-        return;
-      }
-      resolve({
-        mediaPath: `media/${destClean}`,
-        absolutePath: destFile,
-      });
-    });
+    execFile(
+      'ffmpeg',
+      args,
+      { maxBuffer: 1024 * 2048 },
+      (error: Error | null) => {
+        if (error) {
+          reject(new Error(`ffmpeg failed: ${error.message}`));
+          return;
+        }
+        resolve({
+          mediaPath: `media/${destClean}`,
+          absolutePath: destFile,
+        });
+      },
+    );
   });
 }

@@ -1,5 +1,5 @@
 import { execFile } from 'child_process';
-import path from 'path';
+import * as path from 'path';
 
 /**
  * Supported ffmpeg overlay position expressions.
@@ -102,20 +102,35 @@ function resolveImageDefaults(image: ImageOverlay): ResolvedImageOverlay {
  * @param index - Zero-based index of the image in the array (used in error messages).
  * @returns An error message string if validation fails, or `null` if valid.
  */
-function validateImage(image: ResolvedImageOverlay, index: number): string | null {
+function validateImage(
+  image: ResolvedImageOverlay,
+  index: number,
+): string | null {
   if (!image.srcImage) {
     return `images[${index}].srcImage is required`;
   }
-  if (typeof image.start !== 'number' || !Number.isFinite(image.start) || image.start < 0) {
+  if (
+    typeof image.start !== 'number' ||
+    !Number.isFinite(image.start) ||
+    image.start < 0
+  ) {
     return `images[${index}].start must be a non-negative finite number`;
   }
-  if (typeof image.end !== 'number' || !Number.isFinite(image.end) || image.end < 0) {
+  if (
+    typeof image.end !== 'number' ||
+    !Number.isFinite(image.end) ||
+    image.end < 0
+  ) {
     return `images[${index}].end must be a non-negative finite number`;
   }
   if (image.start >= image.end) {
     return `images[${index}].start must be less than end`;
   }
-  if (typeof image.width !== 'number' || !Number.isFinite(image.width) || image.width <= 0) {
+  if (
+    typeof image.width !== 'number' ||
+    !Number.isFinite(image.width) ||
+    image.width <= 0
+  ) {
     return `images[${index}].width must be a positive finite number`;
   }
   return null;
@@ -234,25 +249,35 @@ export function addImagesToVideo({
 
   // --- Resolve absolute file paths ---
   const srcVideoFile = path.join(outputFolder, stripMediaPrefix(srcVideo));
-  const srcImageFiles = resolvedImages.map(
-    (img) => path.join(outputFolder, 'people', stripMediaPrefix(img.srcImage)),
+  const srcImageFiles = resolvedImages.map((img) =>
+    path.join(outputFolder, 'people', stripMediaPrefix(img.srcImage)),
   );
   const destClean = stripMediaPrefix(dest);
   const destFile = path.join(outputFolder, destClean);
 
   // --- Execute ffmpeg via execFile (safe from shell injection) ---
-  const args = buildMultiImageFfmpegArgs(srcVideoFile, srcImageFiles, destFile, resolvedImages);
+  const args = buildMultiImageFfmpegArgs(
+    srcVideoFile,
+    srcImageFiles,
+    destFile,
+    resolvedImages,
+  );
 
   return new Promise((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error: Error | null) => {
-      if (error) {
-        reject(new Error(`ffmpeg failed: ${error.message}`));
-        return;
-      }
-      resolve({
-        mediaPath: `media/${destClean}`,
-        absolutePath: destFile,
-      });
-    });
+    execFile(
+      'ffmpeg',
+      args,
+      { maxBuffer: 1024 * 2048 },
+      (error: Error | null) => {
+        if (error) {
+          reject(new Error(`ffmpeg failed: ${error.message}`));
+          return;
+        }
+        resolve({
+          mediaPath: `media/${destClean}`,
+          absolutePath: destFile,
+        });
+      },
+    );
   });
 }

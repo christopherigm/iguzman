@@ -20,6 +20,7 @@
     "test": "jest"
   },
   "devDependencies": {
+    "@iguzman/eslint-config": "workspace:^",
     "@iguzman/jest-config": "workspace:*",
     "@iguzman/typescript-config": "workspace:*",
     "@types/jest": "^29.5.14",
