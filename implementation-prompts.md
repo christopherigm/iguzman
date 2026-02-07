@@ -59,7 +59,7 @@ Add a comprehensive readme.md file to Turbo monorepo /home/christopher/Documents
 
 ### Migration
 
-Read packages/helpers/src/json-api-rebuild.ts file, analyze it and improve it inside a new folder: packages/helpers/src/json-api-rebuild following the next requirements:
+Read packages/helpers/src/concat-wav-files.ts file, analyze it and improve it following the next requirements:
 
 - Improve the code
 - Improve readability
@@ -70,6 +70,8 @@ Read packages/helpers/src/json-api-rebuild.ts file, analyze it and improve it in
 - Add unit tests
 - Add a readme.md file
 - Add a llm.txt file
+
+### API Library prompt
 
 I want to create a typescript file that handles HTTP requests (GET, POST, etc.) using promises for each method. It should support JSONAPI specification and implement the function "rebuildJsonApiResponse" in packages/helpers/src/json-api-rebuild/json-api-rebuild.ts file for HTTP methods that return data when jsonapi parameter is true.
 
