@@ -17,8 +17,9 @@ export type QueryParams = Record<string, QueryParamValue>;
 export interface HttpRequestOptions {
   baseUrl?: string;
   url: string;
-  token: string;
+  token?: string;
   jsonapi?: boolean;
+  timeoutMs?: number;
 }
 
 export interface HttpRequestWithBodyOptions extends HttpRequestOptions {
@@ -97,15 +98,18 @@ const buildUrl = (
 };
 
 const buildHeaders = (
-  token: string,
+  token: string | undefined,
   jsonapi: boolean,
   hasBody: boolean,
 ): Record<string, string> => {
   const mediaType = jsonapi ? 'application/vnd.api+json' : 'application/json';
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
     Accept: mediaType,
   };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   if (hasBody) {
     headers['Content-Type'] = mediaType;
@@ -128,10 +132,9 @@ const executeRequest = async <T>(
   body?: unknown,
   query?: QueryParams,
 ): Promise<HttpClientResult<T>> => {
-  const { url: path, token, jsonapi = false, baseUrl } = options;
+  const { url: path, token, jsonapi = false, baseUrl, timeoutMs } = options;
 
   if (!path) throw new Error('http-client: url is required.');
-  if (!token) throw new Error('http-client: token is required.');
 
   const resolvedBase = resolveBaseUrl(baseUrl);
   const fullUrl = buildUrl(resolvedBase, path, query);
@@ -142,7 +145,20 @@ const executeRequest = async <T>(
     init.body = JSON.stringify(body);
   }
 
-  const response = await fetch(fullUrl, init);
+  let controller: AbortController | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  if (timeoutMs !== undefined) {
+    controller = new AbortController();
+    init.signal = controller.signal;
+    timeoutId = setTimeout(() => controller!.abort(), timeoutMs);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(fullUrl, init);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     let errorData: unknown = null;

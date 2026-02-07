@@ -68,7 +68,7 @@ Read packages/helpers/src/types folder analyze the files in the folder and merge
 
 ### Migration
 
-Read packages/helpers/src/download-video-and-loop.ts file, analyze it and improve it following the next requirements:
+Read packages/helpers/src/ollama.ts file, analyze it and improve it following the next requirements:
 
 - Improve the code
 - Improve readability
@@ -78,8 +78,15 @@ Read packages/helpers/src/download-video-and-loop.ts file, analyze it and improv
 - Remove unnecesary code
 - Rename the file and/or functions with better names if needed
 - When importing modules don't use relative paths, use monorepo syntaxt instead, example: "@iguzman/<package>/<module>"
+- Use packages/helpers/src/http-client for http calls
+- Use packages/helpers/src/types for common types
+- use packages/helpers/src/constants for common constants
 
 Use the following modules if needed:
+
+- packages/helpers/src/types.ts
+- packages/helpers/src/constants.ts
+- packages/helpers/src/http-client.ts
 
 - packages/helpers/src/download-video.ts
 - packages/helpers/src/duplicate-video-time-length.ts
@@ -94,7 +101,6 @@ Use the following modules if needed:
 - packages/helpers/src/delete-media-file.ts
 - packages/helpers/src/extract-audio-from-video.ts
 
-- packages/helpers/src/types.ts
 - packages/helpers/src/get-env-variables.ts
 - packages/helpers/src/local-storage.ts
 
