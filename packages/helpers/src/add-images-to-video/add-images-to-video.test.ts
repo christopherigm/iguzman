@@ -3,7 +3,7 @@ import {
   addImagesToVideo,
   stripMediaPrefix,
   buildMultiImageFfmpegArgs,
-} from './add-images-to-video';
+} from './index';
 
 jest.mock('child_process', () => ({
   execFile: jest.fn(),
@@ -349,7 +349,9 @@ describe('addImagesToVideo', () => {
       const filterValue = args[fcIndex + 1]!;
       expect(filterValue).toContain('scale=200:-1');
       expect(filterValue).toContain("enable='between(t,0,2)'");
-      expect(filterValue).toContain('overlay=(main_w-overlay_w)/2:main_h-overlay_h');
+      expect(filterValue).toContain(
+        'overlay=(main_w-overlay_w)/2:main_h-overlay_h',
+      );
     });
 
     it('uses custom values for image fields', async () => {
@@ -358,7 +360,16 @@ describe('addImagesToVideo', () => {
       await addImagesToVideo({
         srcVideo: 'v.mp4',
         dest: 'out.mp4',
-        images: [{ srcImage: 'logo.png', start: 3, end: 10, x: '50', y: '60', width: 400 }],
+        images: [
+          {
+            srcImage: 'logo.png',
+            start: 3,
+            end: 10,
+            x: '50',
+            y: '60',
+            width: 400,
+          },
+        ],
         outputFolder: '/test',
       });
 
@@ -420,7 +431,11 @@ describe('addImagesToVideo', () => {
       });
 
       const args: string[] = mockedExecFile.mock.calls[0][1];
-      expect(args.some((a) => a.startsWith('/app/media/') || a.includes('/app/media/'))).toBe(true);
+      expect(
+        args.some(
+          (a) => a.startsWith('/app/media/') || a.includes('/app/media/'),
+        ),
+      ).toBe(true);
     });
 
     it('uses public/media outside production', async () => {
@@ -434,7 +449,11 @@ describe('addImagesToVideo', () => {
       });
 
       const args: string[] = mockedExecFile.mock.calls[0][1];
-      expect(args.some((a) => a.startsWith('public/media/') || a.includes('public/media/'))).toBe(true);
+      expect(
+        args.some(
+          (a) => a.startsWith('public/media/') || a.includes('public/media/'),
+        ),
+      ).toBe(true);
     });
   });
 });
