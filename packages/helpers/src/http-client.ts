@@ -2,7 +2,7 @@
 import {
   rebuildJsonApiResponse,
   type JsonApiResponse,
-} from './json-api-rebuild';
+} from '@iguzman/helpers/json-api-rebuild';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */

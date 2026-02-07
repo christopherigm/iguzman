@@ -68,7 +68,7 @@ Read packages/helpers/src/types folder analyze the files in the folder and merge
 
 ### Migration
 
-Read packages/helpers/src/get-env-variables.ts file, analyze it and improve it following the next requirements:
+Read packages/helpers/src/download-audio-and-loop.ts file, analyze it and improve it following the next requirements:
 
 - Improve the code
 - Improve readability
@@ -76,10 +76,22 @@ Read packages/helpers/src/get-env-variables.ts file, analyze it and improve it f
 - Add inline documentation
 - Improve typing
 - Remove unnecesary code
+- Rename the file and/or functions with better names if needed
+- When importing modules don't use relative paths, use monorepo syntaxt instead, example: "@iguzman/<package>/<module>"
+
+Use the following modules if needed:
+
+- packages/helpers/src/download-video.ts
+- packages/helpers/src/duplicate-audio-time-length.ts
+- packages/helpers/src/delete-media-file.ts
+- packages/helpers/src/extract-audio-from-video.ts
+
+- packages/helpers/src/types.ts
+- packages/helpers/src/get-env-variables.ts
+- packages/helpers/src/local-storage.ts
 
 Fill the missing dependencies using the following local modules:
 
-- packages/helpers/src/types.ts
 - packages/helpers/src/get-boolean-from-string.ts
 - packages/helpers/src/copy-file.ts
 - packages/helpers/src/delete-media-file.ts

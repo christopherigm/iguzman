@@ -1,4 +1,4 @@
-import { apiReplaceImageBaseUrl } from './api-replace-image-base-url';
+import { apiReplaceImageBaseUrl } from '@iguzman/helpers/api-replace-image-base-url';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */

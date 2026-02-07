@@ -4,6 +4,7 @@ export const ollamaPCServerURL = 'http://iguzman.com.mx:37002';
 export const ollamaServerURL = 'http://iguzman.com.mx:36000';
 
 export enum AccessStorageKeys {
+  JWT = 'JWT',
   USER = 'USER',
   ACCESS = 'ACCESS',
   REFRESH = 'REFRESH',

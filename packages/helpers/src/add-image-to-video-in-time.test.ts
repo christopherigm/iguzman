@@ -70,8 +70,14 @@ describe('buildFfmpegArgs', () => {
   function buildDefault(overrides: Partial<typeof defaults> = {}): string[] {
     const o = { ...defaults, ...overrides };
     return buildFfmpegArgs(
-      o.srcVideoFile, o.srcImageFile, o.destFile,
-      o.start, o.end, o.x, o.y, o.width,
+      o.srcVideoFile,
+      o.srcImageFile,
+      o.destFile,
+      o.start,
+      o.end,
+      o.x,
+      o.y,
+      o.width,
     );
   }
 
@@ -389,7 +395,9 @@ describe('addImageToVideoInTime', () => {
       const args: string[] = mockedExecFile.mock.calls[0][1];
       const fcIndex = args.indexOf('-filter_complex');
       const filterValue = args[fcIndex + 1]!;
-      expect(filterValue).toContain('overlay=(main_w-overlay_w)/2:main_h-overlay_h');
+      expect(filterValue).toContain(
+        'overlay=(main_w-overlay_w)/2:main_h-overlay_h',
+      );
     });
   });
 
@@ -428,7 +436,11 @@ describe('addImageToVideoInTime', () => {
       });
 
       const args: string[] = mockedExecFile.mock.calls[0][1];
-      expect(args.some((a) => a.startsWith('/app/media/') || a.includes('/app/media/'))).toBe(true);
+      expect(
+        args.some(
+          (a) => a.startsWith('/app/media/') || a.includes('/app/media/'),
+        ),
+      ).toBe(true);
     });
 
     it('uses public/media outside production', async () => {
@@ -442,7 +454,11 @@ describe('addImageToVideoInTime', () => {
       });
 
       const args: string[] = mockedExecFile.mock.calls[0][1];
-      expect(args.some((a) => a.startsWith('public/media/') || a.includes('public/media/'))).toBe(true);
+      expect(
+        args.some(
+          (a) => a.startsWith('public/media/') || a.includes('public/media/'),
+        ),
+      ).toBe(true);
     });
   });
 });

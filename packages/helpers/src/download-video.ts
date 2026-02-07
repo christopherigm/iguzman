@@ -1,6 +1,6 @@
 import { execFile } from 'child_process';
 import { isInstagram, isTiktok, isYoutube } from './checkers';
-import getFinalURL from './get-final-url';
+import getFinalURL from '@iguzman/helpers/get-final-url';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -14,11 +14,12 @@ const DEFAULT_OUTPUT_FOLDER =
 
 /** Default Netscape cookies file path for authenticated downloads. */
 const DEFAULT_COOKIES =
-  NODE_ENV === 'production' ? '/app/netscape-cookies.txt' : './netscape-cookies.txt';
+  NODE_ENV === 'production'
+    ? '/app/netscape-cookies.txt'
+    : './netscape-cookies.txt';
 
 /** Default yt-dlp binary path. */
-const DEFAULT_BINARY =
-  NODE_ENV === 'production' ? 'yt-dlp' : './yt-dlp';
+const DEFAULT_BINARY = NODE_ENV === 'production' ? 'yt-dlp' : './yt-dlp';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -88,7 +89,8 @@ const downloadVideo = async ({
 
   if (isYoutube(finalURL)) {
     args.push(
-      '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio',
+      '-f',
+      'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio',
       '--no-abort-on-error',
       '--no-playlist',
     );
@@ -104,11 +106,7 @@ const downloadVideo = async ({
     args.push('--cookies', cookies);
   }
 
-  args.push(
-    '--merge-output-format', 'mp4',
-    '-o', outputPath,
-    '--quiet',
-  );
+  args.push('--merge-output-format', 'mp4', '-o', outputPath, '--quiet');
 
   return new Promise<string>((resolve, reject) => {
     execFile(binary, args, { maxBuffer: 1024 * 2048 }, (error) => {
