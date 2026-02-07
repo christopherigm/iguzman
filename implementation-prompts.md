@@ -59,7 +59,7 @@ Add a comprehensive readme.md file to Turbo monorepo /home/christopher/Documents
 
 ### Migration
 
-Read packages/helpers/src/crop-images.ts file, analyze it and improve it following the next requirements:
+Read packages/helpers/src/build-and-deploy.js file, analyze it and improve it following the next requirements:
 
 - Improve the code
 - Improve readability

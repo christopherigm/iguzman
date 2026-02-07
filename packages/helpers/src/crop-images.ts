@@ -1,5 +1,6 @@
 import { mkdir, readdir } from 'fs/promises';
 import path from 'path';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const sharp = require('sharp');
 
 /* ------------------------------------------------------------------ */

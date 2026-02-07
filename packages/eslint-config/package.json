@@ -7,6 +7,7 @@
     "email": "chris@iguzman.com.mx"
   },
   "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
   "files": [
     "base.js",
     "next.js",

@@ -1,4 +1,3 @@
-import { config } from '@iguzman/eslint-config/react-internal';
+import config from "@iguzman/eslint-config/base.js";
 
-/** @type {import("eslint").Linter.Config} */
 export default config;

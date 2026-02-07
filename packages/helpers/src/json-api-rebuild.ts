@@ -1,4 +1,4 @@
-import { apiReplaceImageBaseUrl } from '../api-replace-image-base-url/api-replace-image-base-url';
+import { apiReplaceImageBaseUrl } from './api-replace-image-base-url';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -58,9 +58,9 @@ interface RelationshipItem {
  * Returns a deep-enough clone of a {@link JsonApiAttributes} object so that
  * mutations to the clone never affect the original.
  */
-const cloneAttributes = (
-  attributes: JsonApiAttributes,
-): JsonApiAttributes => ({ ...attributes });
+const cloneAttributes = (attributes: JsonApiAttributes): JsonApiAttributes => ({
+  ...attributes,
+});
 
 /**
  * Replaces internal K8s image URLs with public URLs in every **string** value
@@ -117,7 +117,10 @@ export const replaceImageUrls = <T extends RelationshipItem>(rawItem: T): T => {
   if (Array.isArray(item.data)) {
     item.data = item.data.map((entry) =>
       entry.attributes
-        ? { ...entry, attributes: replaceImageUrlsInAttributes(entry.attributes) }
+        ? {
+            ...entry,
+            attributes: replaceImageUrlsInAttributes(entry.attributes),
+          }
         : { ...entry },
     );
   }
@@ -136,8 +139,14 @@ export const replaceImageUrls = <T extends RelationshipItem>(rawItem: T): T => {
 const extractIdentifier = (
   item: RelationshipItem,
 ): { id: string | null; type: string | null } => {
-  const id = item.id ?? (item.data && !Array.isArray(item.data) ? item.data.id : null) ?? null;
-  const type = item.type ?? (item.data && !Array.isArray(item.data) ? item.data.type : null) ?? null;
+  const id =
+    item.id ??
+    (item.data && !Array.isArray(item.data) ? item.data.id : null) ??
+    null;
+  const type =
+    item.type ??
+    (item.data && !Array.isArray(item.data) ? item.data.type : null) ??
+    null;
   return { id, type };
 };
 
@@ -165,9 +174,7 @@ const resolveIncludedResource = (
 
   if (!id || !type) return resolved;
 
-  const match = included.find(
-    (inc) => inc.id === id && inc.type === type,
-  );
+  const match = included.find((inc) => inc.id === id && inc.type === type);
 
   if (match) {
     if (resolved.id) {
@@ -217,8 +224,9 @@ const denormalizeResource = (
   for (const [name, rel] of Object.entries(resource.relationships)) {
     if (Array.isArray(rel.data)) {
       resolvedRelationships[name] = {
-        data: rel.data.map((ref) =>
-          resolveIncludedResource({ ...ref }, included) as JsonApiResource,
+        data: rel.data.map(
+          (ref) =>
+            resolveIncludedResource({ ...ref }, included) as JsonApiResource,
         ),
       };
     } else {
@@ -252,7 +260,9 @@ const denormalizeResource = (
  * const denormalized = rebuildJsonApiResponse(raw);
  * ```
  */
-export const rebuildJsonApiResponse = (response: JsonApiResponse): JsonApiResponse => {
+export const rebuildJsonApiResponse = (
+  response: JsonApiResponse,
+): JsonApiResponse => {
   const included = response.included ?? [];
 
   if (Array.isArray(response.data)) {

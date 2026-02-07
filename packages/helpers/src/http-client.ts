@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   rebuildJsonApiResponse,
   type JsonApiResponse,
-} from '../json-api-rebuild/json-api-rebuild';
+} from './json-api-rebuild';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -51,12 +52,7 @@ export class HttpClientError extends Error {
   readonly url: string;
   readonly data: unknown;
 
-  constructor(
-    status: number,
-    statusText: string,
-    url: string,
-    data: unknown,
-  ) {
+  constructor(status: number, statusText: string, url: string, data: unknown) {
     super(`HTTP ${status} ${statusText} — ${url}`);
     this.name = 'HttpClientError';
     this.status = status;
@@ -80,7 +76,11 @@ const resolveBaseUrl = (baseUrl?: string): string => {
   return resolved;
 };
 
-const buildUrl = (baseUrl: string, path: string, query?: QueryParams): string => {
+const buildUrl = (
+  baseUrl: string,
+  path: string,
+  query?: QueryParams,
+): string => {
   const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const url = new URL(`${base}${normalizedPath}`);
@@ -171,7 +171,9 @@ const executeRequest = async <T>(
   let data: T = await response.json();
 
   if (jsonapi) {
-    data = rebuildJsonApiResponse(data as unknown as JsonApiResponse) as unknown as T;
+    data = rebuildJsonApiResponse(
+      data as unknown as JsonApiResponse,
+    ) as unknown as T;
   }
 
   return {

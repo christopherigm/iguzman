@@ -3,7 +3,7 @@ import {
   addImagesToVideo,
   stripMediaPrefix,
   buildMultiImageFfmpegArgs,
-} from './index';
+} from './add-images-to-video';
 
 jest.mock('child_process', () => ({
   execFile: jest.fn(),
