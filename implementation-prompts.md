@@ -59,13 +59,18 @@ Add a comprehensive readme.md file to Turbo monorepo /home/christopher/Documents
 
 ### Migration
 
-Read packages/helpers/src/build-and-deploy.js file, analyze it and improve it following the next requirements:
+Read packages/helpers/src/download-video.ts file, analyze it and improve it following the next requirements:
 
 - Improve the code
 - Improve readability
 - Fix any possible bug
 - Add inline documentation
 - Improve typing
+
+Fill the missing dependencies using the following local modules:
+
+- packages/helpers/src/checkers.ts
+- packages/helpers/src/get-final-url.ts
 
 - Add unit tests
 - Add a readme.md file
