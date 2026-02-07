@@ -1,7 +1,7 @@
 'use client';
 
 import { Container, Typography, Box } from '@mui/material';
-import { Button } from '@iguzman/ui';
+import { Button } from '@iguzman/ui/Button';
 
 export default function Home() {
   return (
