@@ -68,7 +68,7 @@ Read packages/helpers/src/types folder analyze the files in the folder and merge
 
 ### Migration
 
-Read packages/helpers/src/download-audio-and-loop.ts file, analyze it and improve it following the next requirements:
+Read packages/helpers/src/download-video-and-loop.ts file, analyze it and improve it following the next requirements:
 
 - Improve the code
 - Improve readability
@@ -82,6 +82,14 @@ Read packages/helpers/src/download-audio-and-loop.ts file, analyze it and improv
 Use the following modules if needed:
 
 - packages/helpers/src/download-video.ts
+- packages/helpers/src/duplicate-video-time-length.ts
+- packages/helpers/src/delete-media-file.ts
+- packages/helpers/src/copy-file.ts
+- packages/helpers/src/video-upscale-fps.ts
+- packages/helpers/src/add-audio-to-video-in-time.ts
+- packages/helpers/src/extract-audio-from-video.ts
+- packages/helpers/src/duplicate-audio-time-length.ts
+
 - packages/helpers/src/duplicate-audio-time-length.ts
 - packages/helpers/src/delete-media-file.ts
 - packages/helpers/src/extract-audio-from-video.ts

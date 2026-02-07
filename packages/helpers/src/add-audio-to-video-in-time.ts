@@ -64,14 +64,20 @@ export function buildFfmpegArgs(
 ): string[] {
   const args: string[] = [
     '-y',
-    '-i', srcVideoFile,
-    '-itsoffset', String(offset),
-    '-i', srcAudioFile,
+    '-i',
+    srcVideoFile,
+    '-itsoffset',
+    String(offset),
+    '-i',
+    srcAudioFile,
     // Always map video from the first input and audio from the second
-    '-map', '0:v',
-    '-map', '1:a',
+    '-map',
+    '0:v',
+    '-map',
+    '1:a',
     // Video stream is always copied without re-encoding
-    '-c:v', 'copy',
+    '-c:v',
+    'copy',
   ];
 
   // WAV audio must be re-encoded (AAC) because WAV is not a valid
@@ -142,18 +148,31 @@ export function addAudioToVideoInTime({
   const destFile = path.join(outputFolder, destClean);
 
   // --- Execute ffmpeg via execFile (safe from shell injection) ---
-  const args = buildFfmpegArgs(srcVideoFile, srcAudioFile, destFile, offset, format);
+  const args = buildFfmpegArgs(
+    srcVideoFile,
+    srcAudioFile,
+    destFile,
+    offset,
+    format,
+  );
 
   return new Promise((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error: Error | null) => {
-      if (error) {
-        reject(new Error(`ffmpeg failed: ${error.message}`));
-        return;
-      }
-      resolve({
-        mediaPath: `media/${destClean}`,
-        absolutePath: destFile,
-      });
-    });
+    execFile(
+      'ffmpeg',
+      args,
+      { maxBuffer: 1024 * 2048 },
+      (error: Error | null) => {
+        if (error) {
+          reject(new Error(`ffmpeg failed: ${error.message}`));
+          return;
+        }
+        resolve({
+          mediaPath: `media/${destClean}`,
+          absolutePath: destFile,
+        });
+      },
+    );
   });
 }
+
+export default addAudioToVideoInTime;
