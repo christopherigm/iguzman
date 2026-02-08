@@ -133,7 +133,9 @@ I want you to implement proper typing for paramaters and responses. Implement pr
 
 ### UI Package Migration
 
-Read packages/ui/src/horizontal-divisor.tsx, analyze it and improve it following the next requirements:
+## Instrucctions and requirements
+
+Read and analyze the code and improve it following the next requirements:
 
 - Follow React best practices (https://vercel.com/blog/introducing-react-best-practices)
 - Follow clean code design pattern
@@ -141,6 +143,7 @@ Read packages/ui/src/horizontal-divisor.tsx, analyze it and improve it following
 - Refactor functions if needed
 - Extract constants and types outide functions
 - Improve readability
+- Fix broken dependencies
 - Fix any possible bug
 - Add inline JSDoc documentation and @example
 - Improve typing
@@ -151,7 +154,40 @@ Read packages/ui/src/horizontal-divisor.tsx, analyze it and improve it following
 - Use packages/helpers/src/http-client for http calls
 - Use packages/helpers/src/types for common types
 - Use packages/helpers/src/constants for common constants
+- Use llm-skills files
+
+## Work Directory
+
+Work Directory should follow the path: @iguzman/<package>/<module>/<ComponentName>
+
+## References
 
 Use "Code.tsx" file as reference for code style and best practices
 
 Create a Storybook file for the new component, use "Code.stories.tsx" file as reference
+
+## LLM Text File
+
+Add a llm txt file for the component and save it in the same directory, the name of the llm text file should:
+
+- match the component's name
+- follow the next naming convention: <ComponentName>.llm.txt
+- include title, e.g. # <ComponentName> Component Documentation
+- include purpose, e.g. ## Purpose
+- include props, e.g. ## Props
+- include usage, e.g. ## Usage ```tsx ...
+- include implementation details, e.g. ## Implementation Details
+
+## Readme.md File
+
+Add a README.MD file for the component and save it in the same directory, the name of the md file should:
+
+- include title, e.g. # <ComponentName> Component Documentation
+- include purpose, e.g. ## Purpose
+- include props, e.g. ## Props
+- include usage, e.g. ## Usage: ```tsx ...
+- include implementation details, e.g. ## Implementation Details
+
+## index.ts File
+
+Add an index.ts file in Work Directory to export the new component

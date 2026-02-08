@@ -1,0 +1,35 @@
+# ThemeModeToggle Component Documentation
+
+## Purpose
+The ThemeModeToggle component provides a UI interface for switching between light, dark, and system color modes. It uses MUI's useColorScheme hook to manage theme state and provides both full buttons and mini icon options for different use cases.
+
+## Props
+- `mini` (boolean, optional): Whether to display mini icons instead of full buttons. Defaults to false.
+- `fullWidth` (boolean, optional): Whether to make the button group full width. Defaults to true.
+- `language` (Language, optional): Language for button labels. Defaults to 'en'.
+
+## Usage
+```tsx
+import { ThemeModeToggle } from '@iguzman/ui/ThemeModeToggle';
+
+function Example() {
+  return (
+    <>
+      <ThemeModeToggle language="es" mini={true} />
+      <ThemeModeToggle language="en" />
+    </>
+  );
+}
+```
+
+## Implementation Details
+- Uses MUI's useColorScheme hook for theme management
+- Implements useEffect to handle system mode by defaulting to light mode
+- Uses useMemo for performance optimization of mode and labels
+- Supports both mini icon view and full button view
+- Provides internationalized labels for light and dark modes
+- Uses IconButton for mini mode and ButtonGroup with Buttons for full mode
+- Handles theme state transitions properly
+- Includes proper aria labels for accessibility
+- Defaults to light mode when system mode is selected
+- Extends MUI's ButtonGroup and Button components for consistent styling

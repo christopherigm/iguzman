@@ -260,3 +260,20 @@ export interface MetaTagsProps extends EnvironmentVariables {
 
 /** Generic callback that receives data of type {@link T} and returns nothing. */
 export type VoidCallback<T> = (data: T) => void;
+
+/* ------------------------------------------------------------------ */
+/*  Login Response                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Response shape from the login API endpoint. */
+export type LoginResponse = {
+  access: string;
+  refresh: string;
+};
+
+export type MUISizes = {
+  xs?: number | string;
+  sm?: number | string;
+  md?: number | string;
+  lg?: number | string;
+};

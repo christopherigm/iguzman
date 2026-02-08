@@ -1,0 +1,34 @@
+# GenericImage Component Documentation
+
+## Purpose
+The GenericImage component is a flexible image rendering component that supports responsive images, overlay text, and blur effects. It provides a consistent way to display images with various styling options in a React application.
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `imgPicture` | `string` | `undefined` | Image source URL (required) |
+| `name` | `string` | `undefined` | Image name/title |
+| `fit` | `'fill' \| 'contain' \| 'cover' \| 'none' \| 'scale-down'` | `'cover'` | Image object fit property |
+| `blurOverlay` | `number` | `0` | Blur overlay intensity (0-20px) |
+| `backgroundColor` | `string` | `''` | Background color for the container |
+| `borderRadius` | `number` | `0` | Border radius for the container |
+| `imgLoading` | `'eager' \| 'lazy'` | `'lazy'` | Image loading strategy |
+| `opacity` | `number` | `1` | Image opacity |
+| `width` | `MUISizes` | `{ xs: '100%' }` | Image width |
+| `height` | `MUISizes` | `{ xs: 350, sm: 450, md: 350 }` | Image height |
+| `quality` | `50 \| 70 \| 90 \| 100` | `90` | Image quality |
+| `sizes` | `string` | `'(max-width: 768px) 100vw, (max-width: 2048px) 50vw, 33vw'` | Image sizes attribute |
+| `maxHeight` | `string` | `undefined` | Maximum height for the image container |
+| `unoptimized` | `boolean` | `false` | Whether to use unoptimized images |
+| `overflow` | `string` | `'hidden'` | Overflow behavior |
+| `className` | `string` | `''` | CSS class name |
+
+## Usage Examples
+
+### Basic Usage
+```tsx
+<GenericImage 
+  imgPicture="/path/to/image.jpg"
+  name="Image Title"
+/>
