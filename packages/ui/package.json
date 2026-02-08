@@ -15,9 +15,11 @@
   "scripts": {
     "build": "tsc --build",
     "dev": "tsc --build --watch",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist storybook-static",
     "lint": "eslint .",
-    "test": "jest"
+    "test": "jest",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -29,9 +31,20 @@
     "@iguzman/eslint-config": "workspace:^",
     "@iguzman/helpers": "workspace:*",
     "@iguzman/typescript-config": "workspace:*",
+    "@storybook/addon-essentials": "^8",
+    "@storybook/addon-themes": "^8",
+    "@storybook/blocks": "^8",
+    "@storybook/react": "^8",
+    "@storybook/react-vite": "^8",
+    "@storybook/test": "^8",
+    "@types/node": "^22",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^5"
+    "react": "^19",
+    "react-dom": "^19",
+    "storybook": "^8",
+    "typescript": "^5",
+    "vite": "^6"
   },
   "peerDependencies": {
     "react": "^19",

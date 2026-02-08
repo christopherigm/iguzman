@@ -44,7 +44,7 @@ Create a new Turbo package to contain ts files (libraries, functions, helpers) c
 
 Create a "Hello World" NextJS app inside /home/christopher/Documents/iguzman/apps folder called "hello-world-app" with the following requirements:
 
-- NextJS (App Router)
+- NextJS
 - React
 - Typescript
 - MUI Framework
@@ -68,16 +68,22 @@ Read packages/helpers/src/types folder analyze the files in the folder and merge
 
 ### Migration
 
-Read packages/helpers/src/server-get-browser-language.ts file, analyze it and improve it following the next requirements:
+Read packages/helpers/src/server-get-base-url.ts file, analyze it and improve it following the next requirements:
 
+- Follow clean code design pattern
 - Improve the code
+- Refactor functions if needed
+- Extract constants and types outide functions
 - Improve readability
 - Fix any possible bug
-- Add inline JSDoc documentation with @example
+- Add inline JSDoc documentation and @example
 - Improve typing
 - Remove unnecesary code
 - Rename the file and/or functions with better names if needed
 - Add checks for possible undefined values
+
+Use "video-upscale-fps.ts" file as reference for code style and best practices
+
 - Add unit tests with Jest
 - When importing modules don't use relative paths, use monorepo syntaxt instead, example: "@iguzman/<package>/<module>"
 - Use packages/helpers/src/http-client for http calls
@@ -108,13 +114,9 @@ Use the following modules if needed:
 
 Fill the missing dependencies using the following local modules:
 
-- packages/helpers/src/get-boolean-from-string.ts
+- packages/helpers/src/server-get-host.ts
 - packages/helpers/src/copy-file.ts
 - packages/helpers/src/delete-media-file.ts
-
-- Add unit tests
-- Add a readme.md file
-- Add a llm.txt file
 
 ### API Library prompt
 
@@ -129,44 +131,27 @@ Each HTTP Method function should recieve the appropriate parameters in adition t
 
 I want you to implement proper typing for paramaters and responses. Implement proper error handling too and add inline documentation. Add a readme.md file for its usage.
 
----
+### UI Package Migration
 
-### Local LLM code improvement
+Read packages/ui/src/dialog.ts file, analyze it and improve it following the next requirements:
 
-Given the following typescript code:
-
-```typescript
-'use server';
-
-import { cookies } from 'next/headers';
-import { AccessStorageKeys } from '@repo/helpers/constants';
-
-const GetAccessCookie = async (): Promise<string | null> => {
-  const CookieStore = await cookies();
-  const AccessCookie = (
-    CookieStore.get(AccessStorageKeys.ACCESS)?.value ?? ''
-  ).replaceAll('"', '');
-  if (!AccessCookie) {
-    return null;
-  }
-  return AccessCookie;
-};
-export default GetAccessCookie;
-```
-
-Analyze it and improve it following the next requirements:
-
+- Follow React best practices (https://vercel.com/blog/introducing-react-best-practices)
+- Follow clean code design pattern
 - Improve the code
+- Refactor functions if needed
+- Extract constants and types outide functions
 - Improve readability
 - Fix any possible bug
-- Add inline JSDoc documentation with @example
+- Add inline JSDoc documentation and @example
 - Improve typing
 - Remove unnecesary code
 - Rename the file and/or functions with better names if needed
 - Add checks for possible undefined values
-- Add unit tests with Jest
 - When importing modules don't use relative paths, use monorepo syntaxt instead, example: "@iguzman/<package>/<module>"
+- Use packages/helpers/src/http-client for http calls
+- Use packages/helpers/src/types for common types
+- Use packages/helpers/src/constants for common constants
 
-Restrictions:
+Use "Code.tsx" file as reference for code style and best practices
 
-- Only use React and MUI libraries, and Jest for testing
+Create a Storybook file for the new component, use "Code.stories.tsx" file as reference
