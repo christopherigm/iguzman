@@ -83,8 +83,6 @@ export function Logo({
           xs: 40,
           sm: 45,
         }}
-        marginTop={1}
-        marginBottom={0.5}
         display={{
           xs: fullWidth || showAlways ? 'inline-flex' : 'none',
           sm: 'inline-flex',

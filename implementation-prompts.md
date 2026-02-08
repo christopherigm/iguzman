@@ -133,7 +133,7 @@ I want you to implement proper typing for paramaters and responses. Implement pr
 
 ### UI Package Migration
 
-Read packages/ui/src/dialog.ts file, analyze it and improve it following the next requirements:
+Read packages/ui/src/scroll-to-bottom.tsx file, analyze it and improve it following the next requirements:
 
 - Follow React best practices (https://vercel.com/blog/introducing-react-best-practices)
 - Follow clean code design pattern

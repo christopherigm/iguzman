@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Logo } from './Logo';
 
+const src =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Flag_of_Colorado.svg/1920px-Flag_of_Colorado.svg.png';
+
 const meta = {
   title: 'Components/Logo',
   component: Logo,
@@ -12,7 +15,7 @@ const meta = {
     showAlways: { control: 'boolean' },
   },
   args: {
-    src: '/logo.svg',
+    src,
     width: 100,
     fullWidth: false,
     showAlways: false,
@@ -24,27 +27,27 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    src: '/logo.svg',
+    src,
   },
 };
 
 export const FullWidth: Story = {
   args: {
-    src: '/logo.svg',
+    src,
     fullWidth: true,
   },
 };
 
 export const WithCustomWidth: Story = {
   args: {
-    src: '/logo.svg',
+    src,
     width: 150,
   },
 };
 
 export const ShowAlways: Story = {
   args: {
-    src: '/logo.svg',
+    src,
     showAlways: true,
   },
 };
