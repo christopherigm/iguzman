@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@iguzman/eslint-config": "workspace:^",
+    "@iguzman/helpers": "workspace:*",
     "@iguzman/typescript-config": "workspace:*",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",

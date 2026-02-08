@@ -68,15 +68,17 @@ Read packages/helpers/src/types folder analyze the files in the folder and merge
 
 ### Migration
 
-Read packages/helpers/src/save-base-64-images.ts file, analyze it and improve it following the next requirements:
+Read packages/helpers/src/server-get-browser-language.ts file, analyze it and improve it following the next requirements:
 
 - Improve the code
 - Improve readability
 - Fix any possible bug
-- Add inline documentation
+- Add inline JSDoc documentation with @example
 - Improve typing
 - Remove unnecesary code
 - Rename the file and/or functions with better names if needed
+- Add checks for possible undefined values
+- Add unit tests with Jest
 - When importing modules don't use relative paths, use monorepo syntaxt instead, example: "@iguzman/<package>/<module>"
 - Use packages/helpers/src/http-client for http calls
 - Use packages/helpers/src/types for common types
@@ -134,15 +136,22 @@ I want you to implement proper typing for paramaters and responses. Implement pr
 Given the following typescript code:
 
 ```typescript
-import { headers } from 'next/headers';
+'use server';
 
-const GetHostFromServer = async (): Promise<string> => {
-  const headerList = await headers();
-  const host = headerList.get('x-forwarded-host');
-  return host ?? '';
+import { cookies } from 'next/headers';
+import { AccessStorageKeys } from '@repo/helpers/constants';
+
+const GetAccessCookie = async (): Promise<string | null> => {
+  const CookieStore = await cookies();
+  const AccessCookie = (
+    CookieStore.get(AccessStorageKeys.ACCESS)?.value ?? ''
+  ).replaceAll('"', '');
+  if (!AccessCookie) {
+    return null;
+  }
+  return AccessCookie;
 };
-
-export default GetHostFromServer;
+export default GetAccessCookie;
 ```
 
 Analyze it and improve it following the next requirements:
@@ -155,4 +164,9 @@ Analyze it and improve it following the next requirements:
 - Remove unnecesary code
 - Rename the file and/or functions with better names if needed
 - Add checks for possible undefined values
+- Add unit tests with Jest
 - When importing modules don't use relative paths, use monorepo syntaxt instead, example: "@iguzman/<package>/<module>"
+
+Restrictions:
+
+- Only use React and MUI libraries, and Jest for testing
