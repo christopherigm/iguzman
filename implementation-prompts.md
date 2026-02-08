@@ -68,7 +68,7 @@ Read packages/helpers/src/types folder analyze the files in the folder and merge
 
 ### Migration
 
-Read packages/helpers/src/ollama.ts file, analyze it and improve it following the next requirements:
+Read packages/helpers/src/save-base-64-images.ts file, analyze it and improve it following the next requirements:
 
 - Improve the code
 - Improve readability
@@ -116,7 +116,7 @@ Fill the missing dependencies using the following local modules:
 
 ### API Library prompt
 
-I want to create a typescript file that handles HTTP requests (GET, POST, etc.) using promises for each method. It should support JSONAPI specification and implement the function "rebuildJsonApiResponse" in packages/helpers/src/json-api-rebuild/json-api-rebuild.ts file for HTTP methods that return data when jsonapi parameter is true.
+I want to create a typescript file that handles HTTP requests (GET, POST, etc.) using promises for each method. It should support JSONAPI specification
 
 Each HTTP Method function should recieve the appropriate parameters in adition to the following mandatory parameters:
 
@@ -126,3 +126,33 @@ Each HTTP Method function should recieve the appropriate parameters in adition t
 - jsonapi: boolean (default to false)
 
 I want you to implement proper typing for paramaters and responses. Implement proper error handling too and add inline documentation. Add a readme.md file for its usage.
+
+---
+
+### Local LLM code improvement
+
+Given the following typescript code:
+
+```typescript
+import { headers } from 'next/headers';
+
+const GetHostFromServer = async (): Promise<string> => {
+  const headerList = await headers();
+  const host = headerList.get('x-forwarded-host');
+  return host ?? '';
+};
+
+export default GetHostFromServer;
+```
+
+Analyze it and improve it following the next requirements:
+
+- Improve the code
+- Improve readability
+- Fix any possible bug
+- Add inline JSDoc documentation with @example
+- Improve typing
+- Remove unnecesary code
+- Rename the file and/or functions with better names if needed
+- Add checks for possible undefined values
+- When importing modules don't use relative paths, use monorepo syntaxt instead, example: "@iguzman/<package>/<module>"
