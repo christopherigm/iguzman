@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { HorizontalDivisor } from './HorizontalDivisor';
-import Box from '@mui/material/Box';
+import HorizontalDivisor from './HorizontalDivisor';
 
 const meta = {
   title: 'Components/HorizontalDivisor',

@@ -42,13 +42,13 @@ export interface LogoProps extends Omit<
  * @param props - The props for the Logo component
  * @returns The rendered Logo component or null if no logo source is provided
  */
-export function Logo({
+const Logo = ({
   src = '',
   width = 100,
   fullWidth = false,
   showAlways = false,
   ...rest
-}: LogoProps) {
+}: LogoProps) => {
   // Get base URLs from environment
   const baseURL = APIGetBaseURLFromEnv();
   const k8sBaseURL = APIGetK8sBaseURLFromEnv();
@@ -91,4 +91,6 @@ export function Logo({
       />
     </Link>
   );
-}
+};
+
+export default Logo;

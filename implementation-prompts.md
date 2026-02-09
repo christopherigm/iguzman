@@ -131,11 +131,21 @@ Each HTTP Method function should recieve the appropriate parameters in adition t
 
 I want you to implement proper typing for paramaters and responses. Implement proper error handling too and add inline documentation. Add a readme.md file for its usage.
 
-### UI Package Migration
+# React Component Enhancements
+
+## Context
+
+Read and analyze the code and improve it following the next indications and specs:
+
+### ComponentName
+
+Component name "<ComponentName>" is the current attached file
+
+### Work directory
+
+Work Directory should follow the path: packages/ui/src/<ComponentName>/
 
 ## Instrucctions and requirements
-
-Read and analyze the code and improve it following the next requirements:
 
 - Follow React best practices (https://vercel.com/blog/introducing-react-best-practices)
 - Follow clean code design pattern
@@ -154,23 +164,24 @@ Read and analyze the code and improve it following the next requirements:
 - Use packages/helpers/src/http-client for http calls
 - Use packages/helpers/src/types for common types
 - Use packages/helpers/src/constants for common constants
-- Use llm-skills files
+- Always use functional React components with arrow functions
+- Add "export default <ComponentName>" at the end of the file
 
-## Work Directory
+### References
 
-Work Directory should follow the path: @iguzman/<package>/<module>/<ComponentName>
+- Use "packages/ui/src/Code/Code.tsx" file as reference for code style and best practices
+- Use "packages/ui/src/Dialog/Dialog.stories.tsx" file as reference for Storybook
 
-## References
+## Files to Create
 
-Use "Code.tsx" file as reference for code style and best practices
+### Storybook File
 
-Create a Storybook file for the new component, use "Code.stories.tsx" file as reference
+Create a Storybook file for the new component <ComponentName>, use "packages/ui/src/Dialog/Dialog.stories.tsx" file as reference.
 
-## LLM Text File
+### LLM Text File
 
-Add a llm txt file for the component and save it in the same directory, the name of the llm text file should:
+Create a llm txt file for the component in Work Directory, the content of the llm text file should:
 
-- match the component's name
 - follow the next naming convention: <ComponentName>.llm.txt
 - include title, e.g. # <ComponentName> Component Documentation
 - include purpose, e.g. ## Purpose
@@ -178,9 +189,9 @@ Add a llm txt file for the component and save it in the same directory, the name
 - include usage, e.g. ## Usage ```tsx ...
 - include implementation details, e.g. ## Implementation Details
 
-## Readme.md File
+### Readme.md File
 
-Add a README.MD file for the component and save it in the same directory, the name of the md file should:
+Create a readme file called "README.MD" in Work Directory, the content of the md file should:
 
 - include title, e.g. # <ComponentName> Component Documentation
 - include purpose, e.g. ## Purpose
@@ -188,6 +199,6 @@ Add a README.MD file for the component and save it in the same directory, the na
 - include usage, e.g. ## Usage: ```tsx ...
 - include implementation details, e.g. ## Implementation Details
 
-## index.ts File
+### index.ts File
 
-Add an index.ts file in Work Directory to export the new component
+Create an index.ts file in Work Directory to export the default component, e.g. export { default } from './<ComponentName>';

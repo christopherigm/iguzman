@@ -55,7 +55,7 @@ export interface DialogProps {
  * }
  * ```
  */
-export const Dialog = ({
+const Dialog = ({
   children,
   language,
   title,
@@ -97,3 +97,5 @@ export const Dialog = ({
     </MUIDialog>
   );
 };
+
+export default Dialog;

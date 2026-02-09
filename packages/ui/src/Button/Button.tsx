@@ -4,6 +4,8 @@ import MuiButton, {
 
 export type ButtonProps = MuiButtonProps;
 
-export function Button(props: ButtonProps) {
+const Button = (props: ButtonProps) => {
   return <MuiButton {...props} />;
-}
+};
+
+export default Button;

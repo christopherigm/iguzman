@@ -1,0 +1,41 @@
+# useModal Component Documentation
+
+## Purpose
+The useModal hook is a custom React hook that provides modal functionality with state management. It returns a component that can be rendered to display a modal, along with functions to control its visibility.
+
+## Props
+- `children`: The content to display inside the modal (ReactNode or Array<ReactNode>)
+- `title`: The title to display at the top of the modal (string)
+- `OKButtonText`: Text for the OK button (optional string)
+- `OKButtonCallback`: Callback function to execute when the OK button is clicked (optional function)
+- `cancelButtonText`: Text for the cancel button (optional string)
+
+## Usage
+```tsx
+const { Component: ModalComponent, open, setOpen } = useModal();
+
+function MyComponent() {
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Open Modal</button>
+      <ModalComponent
+        title="Example Modal"
+        OKButtonText="Confirm"
+        OKButtonCallback={() => console.log('Confirmed')}
+        cancelButtonText="Close"
+      >
+        <p>Modal content goes here.</p>
+      </ModalComponent>
+    </>
+  );
+}
+```
+
+## Implementation Details
+The hook uses React's useState to manage the modal's open/closed state. It returns a Component function that renders a Material UI Modal with:
+- A title header with close button
+- Horizontal divider
+- Custom content area
+- Optional action buttons (cancel and OK)
+- Proper styling with Paper component and Box layout
+- Responsive design with centered positioning

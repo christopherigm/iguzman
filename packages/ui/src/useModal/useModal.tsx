@@ -3,7 +3,7 @@
 import { ReactNode, useState } from 'react';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import Box from '@mui/material/Box';
-import HorizontalDivisor from '@iguzman/ui/HorizontalDivisor';
+import HorizontalDivisor from '@iguzman/ui/HorizontalDivisor/index';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import MUIModal from '@mui/material/Modal';

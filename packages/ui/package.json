@@ -30,6 +30,7 @@
   "devDependencies": {
     "@iguzman/eslint-config": "workspace:^",
     "@iguzman/helpers": "workspace:*",
+    "@iguzman/ui": "workspace:*",
     "@iguzman/typescript-config": "workspace:*",
     "@storybook/addon-essentials": "^8",
     "@storybook/addon-themes": "^8",

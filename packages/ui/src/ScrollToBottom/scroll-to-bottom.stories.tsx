@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ScrollToBottom } from './scroll-to-bottom';
+import ScrollToBottom from './scroll-to-bottom';
 
 const meta = {
   title: 'Components/ScrollToBottom',

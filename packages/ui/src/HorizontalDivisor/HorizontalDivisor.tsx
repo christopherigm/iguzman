@@ -38,7 +38,7 @@ export interface HorizontalDivisorProps {
  * }
  * ```
  */
-export function HorizontalDivisor({ margin = 0, sx }: HorizontalDivisorProps) {
+const HorizontalDivisor = ({ margin = 0, sx }: HorizontalDivisorProps) => {
   return (
     <Box
       marginTop={margin}
@@ -48,6 +48,6 @@ export function HorizontalDivisor({ margin = 0, sx }: HorizontalDivisorProps) {
       sx={sx}
     />
   );
-}
+};
 
 export default HorizontalDivisor;

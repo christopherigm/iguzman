@@ -39,11 +39,11 @@ export interface ScrollToBottomProps {
  * }
  * ```
  */
-export function ScrollToBottom({
+const ScrollToBottom = ({
   scrollToBottomOnMount = true,
   scrollToBottomOnUpdate = false,
   scrollBehavior = 'smooth',
-}: ScrollToBottomProps) {
+}: ScrollToBottomProps) => {
   const elementRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -77,6 +77,6 @@ export function ScrollToBottom({
   };
 
   return <div ref={elementRef} />;
-}
+};
 
 export default ScrollToBottom;

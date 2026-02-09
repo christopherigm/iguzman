@@ -40,11 +40,13 @@ export interface CodeProps extends Omit<
  * }
  * ```
  */
-export function Code({ children, ...rest }: CodeProps) {
+const Code = ({ children, ...rest }: CodeProps) => {
   // Handle case where children might be undefined or null
   if (children === undefined || children === null) {
     return <code {...rest} />;
   }
 
   return <code {...rest}>{children}</code>;
-}
+};
+
+export default Code;

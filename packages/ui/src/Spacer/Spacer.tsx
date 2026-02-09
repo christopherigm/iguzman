@@ -34,7 +34,7 @@ export interface SpacerProps extends BoxProps {
  * }
  * ```
  */
-export const Spacer = ({ height = 15, ...rest }: SpacerProps) => {
+const Spacer = ({ height = 15, ...rest }: SpacerProps) => {
   // Validate height to ensure it's a positive number
   const validatedHeight = height > 0 ? height : 0;
 

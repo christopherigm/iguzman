@@ -1,0 +1,34 @@
+# Button Component Documentation
+
+## Purpose
+The Button component is a wrapper around Material-UI's Button component that provides a consistent button implementation across the application. It allows for customization of button appearance and behavior while maintaining Material-UI's design system.
+
+## Props
+The Button component accepts all props that are available in Material-UI's Button component, including:
+- variant: 'text' | 'outlined' | 'contained'
+- color: 'primary' | 'secondary' | 'inherit' | 'error' | 'info' | 'success' | 'warning'
+- size: 'small' | 'medium' | 'large'
+- disabled: boolean
+- fullWidth: boolean
+- href: string
+- onClick: (event: React.MouseEvent<HTMLButtonElement>) => void
+- children: React.ReactNode
+- and all other standard HTML button attributes
+
+## Usage
+```tsx
+import { Button } from '@mui/material';
+
+// Basic usage
+<Button>Click me</Button>
+
+// With variant and color
+<Button variant="contained" color="primary">
+  Primary Button
+</Button>
+
+// With onClick handler
+<Button onClick={() => console.log('Clicked!')}>
+  Click Handler
+</Button>
+```

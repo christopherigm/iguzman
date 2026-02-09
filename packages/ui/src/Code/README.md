@@ -1,0 +1,28 @@
+# Code Component Documentation
+
+## Purpose
+
+The Code component is designed to render `<code>` elements for displaying code blocks or snippets. It provides consistent styling and accessibility features for inline code elements.
+
+## Props
+
+- `children`: Content to render inside the `<code>` element. Type: `ReactNode`
+- All other props are spread to the underlying `<code>` element
+
+## Usage
+
+```tsx
+import { Code } from '@iguzman/ui/Code';
+
+function Example() {
+  return (
+    <p>
+      The function <Code>calculateTotal()</Code> returns the sum.
+    </p>
+  );
+}
+```
+
+## Implementation Details
+
+The component is implemented as an arrow function that accepts props and spreads the rest of the props to the underlying `<code>` element. It handles cases where children might be undefined or null by returning an empty `<code>` element in those cases.
