@@ -54,8 +54,10 @@ interface FooterSection {
  * />
  * ```
  */
-export interface FooterProps
-  extends Omit<HTMLAttributes<HTMLElement>, 'children'> {
+export interface FooterProps extends Omit<
+  HTMLAttributes<HTMLElement>,
+  'children'
+> {
   /** Active language code. Defaults to `"en"`. */
   language?: Language;
   /** Brand / company name shown in the footer. */
@@ -370,10 +372,7 @@ const Footer = ({
 
           {/* Navigation columns */}
           {resolvedSections.map((section) => (
-            <Grid
-              key={section.title}
-              size={{ xs: 6, sm: 3, md: 'grow' }}
-            >
+            <Grid key={section.title} size={{ xs: 6, sm: 3, md: 'grow' }}>
               <FooterColumn section={section} />
             </Grid>
           ))}
@@ -388,10 +387,6 @@ const Footer = ({
           justifyContent="space-between"
           spacing={2}
         >
-          <Typography variant="caption" color="text.secondary">
-            &copy; {currentYear} {brandName}. {t.rights}
-          </Typography>
-
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
             alignItems={{ xs: 'flex-start', sm: 'center' }}
@@ -399,10 +394,7 @@ const Footer = ({
           >
             {/* Language toggle */}
             <Stack direction="row" alignItems="center" spacing={1}>
-              <LanguageIcon
-                fontSize="small"
-                sx={{ color: 'text.secondary' }}
-              />
+              <LanguageIcon fontSize="small" sx={{ color: 'text.secondary' }} />
               <ButtonGroup size="small" variant="outlined">
                 <Button
                   variant={language === 'en' ? 'contained' : 'outlined'}
@@ -419,11 +411,16 @@ const Footer = ({
                   ES
                 </Button>
               </ButtonGroup>
+              {/* Theme toggle */}
+              <ThemeModeToggle language={language} mini fullWidth={false} />
             </Stack>
-
-            {/* Theme toggle */}
-            <ThemeModeToggle language={language} mini fullWidth={false} />
           </Stack>
+
+          <Divider sx={{ my: { xs: 4, md: 5 } }} />
+
+          <Typography variant="caption" color="text.secondary">
+            &copy; {currentYear} {brandName}. {t.rights}
+          </Typography>
         </Stack>
       </Container>
     </Box>
