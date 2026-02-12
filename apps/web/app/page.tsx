@@ -1,7 +1,8 @@
 import { ThemeSwitch } from '@repo/ui/theme-switch';
-import { Switch } from '@repo/ui/switch';
-import { Icon } from '@repo/ui/icon';
-import { Box } from '@repo/ui/box';
+import { Switch } from '@repo/ui/core-elements/switch';
+import { Icon } from '@repo/ui/core-elements/icon';
+import { Box } from '@repo/ui/core-elements/box';
+import Button from '@repo/ui/core-elements/button';
 
 export default function Home() {
   return (
@@ -47,6 +48,7 @@ export default function Home() {
           padding={10}
         >
           Content
+          <Button text="Go to docs" href="/docs" />
         </Box>
       </Box>
     </Box>

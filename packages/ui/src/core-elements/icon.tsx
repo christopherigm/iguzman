@@ -1,4 +1,6 @@
 import React from 'react';
+import type { UIComponentProps } from './utils';
+import { createSafeStyle } from './utils';
 
 export type BackgroundShape = 'circle' | 'square' | 'triangle' | '';
 
@@ -7,7 +9,7 @@ export type BackgroundShape = 'circle' | 'square' | 'triangle' | '';
  * More Icons: https://www.svgrepo.com/
  */
 
-interface IconProps {
+export interface IconProps extends UIComponentProps {
   icon: string; // required - path to SVG file
   color?: string; // fill color for the SVG mask
   size?: string | number; // CSS size (e.g. "24px", "1.5rem")
@@ -15,8 +17,6 @@ interface IconProps {
   backgroundColor?: string; // optional background color
   backgroundShape?: BackgroundShape; // optional background shape
   shadow?: boolean; // optional drop-shadow for the background
-  className?: string;
-  style?: React.CSSProperties;
 }
 
 export const Icon = ({
@@ -28,7 +28,7 @@ export const Icon = ({
   backgroundShape = '',
   shadow = false,
   className,
-  style,
+  ...props
 }: IconProps) => {
   const outerRadius =
     backgroundShape === 'circle' ? '50%' : backgroundShape === 'square' ? 6 : 0;
@@ -38,19 +38,26 @@ export const Icon = ({
       ? 'polygon(50% 6%, 94% 88%, 6% 88%)'
       : undefined;
 
-  const outerStyle: React.CSSProperties = {
+  // Use createSafeStyle to build a defensive base style from UI props,
+  // then merge in shape-specific helpers and the `style` override.
+  const safeBase = createSafeStyle({
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     width: size,
     height: size,
     padding,
-    background: backgroundColor || 'transparent',
+    backgroundColor: backgroundColor || 'transparent',
     borderRadius: outerRadius,
+    shadow,
+    ...props,
+  } as UIComponentProps);
+
+  const outerStyle: React.CSSProperties = {
+    ...safeBase,
     clipPath: triangleClip,
     boxSizing: 'border-box',
     filter: shadow ? 'drop-shadow(0 6px 10px rgba(0,0,0,0.12))' : undefined,
-    ...style,
   };
 
   const maskStyle: React.CSSProperties = {

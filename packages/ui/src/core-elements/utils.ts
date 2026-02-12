@@ -1,9 +1,9 @@
-import React, { CSSProperties, memo } from 'react';
+import { CSSProperties } from 'react';
 
 /**
- * Props for the `Box` component.
+ * Props for the `UI Components` component (extracted for reuse).
  */
-export interface BoxProps {
+export interface UIComponentProps {
   display?: CSSProperties['display'];
   flexDirection?: CSSProperties['flexDirection'];
   justifyContent?: CSSProperties['justifyContent'];
@@ -37,60 +37,42 @@ export interface BoxProps {
   elevation?: number;
   /** Inline style object that overrides other computed styles */
   styles?: CSSProperties;
-  children?: React.ReactNode;
+  children?: any;
   className?: string;
   id?: string;
 }
 
 /**
  * Compute a more realistic box-shadow from an elevation value.
- * Produces a two-layer shadow (key + ambient) tuned for UI elevation levels.
- * - `elevation` is a small integer where larger values increase offset/blur/alpha.
- * - Values are clamped so shadows stay visually pleasant for high elevations.
  */
-const getBoxShadow = (elevation?: number): string | undefined => {
+export const getBoxShadow = (elevation?: number): string | undefined => {
   if (!elevation || elevation <= 0) return undefined;
 
-  // Normalize & clamp elevation to a reasonable range for UI shadows
   const e = Math.min(24, Math.round(elevation));
 
-  // Key (directional) shadow — gives the object a crisp contact shadow
   const keyOffsetY = Math.max(1, Math.round(e * 0.5));
   const keyBlur = Math.min(64, Math.round(e * 1.25) + 2);
+  const reducedKeyBlur = Math.max(1, Math.round(keyBlur * 0.6));
   const keySpread = Math.floor(e / 10);
   const keyAlpha = Math.min(0.36, 0.06 + e * 0.03);
 
-  // Ambient (diffuse) shadow — soft, larger blur for global depth
   const ambientOffsetY = Math.max(0, Math.round(e * 0.8));
   const ambientBlur = Math.min(120, Math.round(e * 2.5) + 6);
+  const reducedAmbientBlur = Math.max(1, Math.round(ambientBlur * 0.6));
   const ambientSpread = Math.floor(e / 14);
   const ambientAlpha = Math.min(0.2, 0.03 + e * 0.015);
 
-  const key = `0 ${keyOffsetY}px ${keyBlur}px ${keySpread}px rgba(0,0,0,${keyAlpha.toFixed(3)})`;
-  const ambient = `0 ${ambientOffsetY}px ${ambientBlur}px ${ambientSpread}px rgba(0,0,0,${ambientAlpha.toFixed(3)})`;
+  const key = `0 ${keyOffsetY}px ${reducedKeyBlur}px ${keySpread}px rgba(0,0,0,${keyAlpha.toFixed(3)})`;
+  const ambient = `0 ${ambientOffsetY}px ${reducedAmbientBlur}px ${ambientSpread}px rgba(0,0,0,${ambientAlpha.toFixed(3)})`;
 
   return `${key}, ${ambient}`;
 };
 
 /**
- * Box — a small, flexible div wrapper that accepts inline layout props and merges styles.
- *
- * JSDoc & example:
- * @example
- * <Box
- *   display="flex"
- *   flexDirection="row"
- *   gap={8}
- *   width="100%"
- *   backgroundColor="#fff"
- *   shadow
- *   elevation={2}
- *   styles={{ borderRadius: 8 }}
- * >
- *   Content
- * </Box>
+ * Build a defensive style object from `UIComponentProps`.
+ * Returns only defined CSS properties and applies computed shadow.
  */
-export const Box: React.FC<BoxProps> = memo((props) => {
+export const createSafeStyle = (props: UIComponentProps): CSSProperties => {
   const {
     display,
     flexDirection,
@@ -121,14 +103,8 @@ export const Box: React.FC<BoxProps> = memo((props) => {
     backgroundColor,
     shadow,
     elevation,
-    styles,
-    children,
-    className,
-    id,
-    ...rest
   } = props;
 
-  // Defensive checks: avoid applying undefined values
   const safeStyle: CSSProperties = {};
   if (display !== undefined) safeStyle.display = display;
   if (flexDirection !== undefined) safeStyle.flexDirection = flexDirection;
@@ -161,20 +137,11 @@ export const Box: React.FC<BoxProps> = memo((props) => {
   if (backgroundColor !== undefined)
     safeStyle.backgroundColor = backgroundColor;
 
-  // Shadow/elevation handling: `elevation` wins when provided; otherwise fallback to shadow boolean.
   const effectiveElevation = elevation ?? (shadow ? 1 : 0);
   const boxShadow = getBoxShadow(effectiveElevation);
   if (boxShadow) safeStyle.boxShadow = boxShadow;
 
-  // Merge: computed styles first, then user-provided `styles` override them.
-  const merged: CSSProperties = { ...safeStyle, ...(styles ?? {}) };
+  return safeStyle;
+};
 
-  return (
-    // Spread `rest` so consumers can pass ARIA or data-* attributes safely.
-    <div id={id} className={className} style={merged} {...(rest as any)}>
-      {children}
-    </div>
-  );
-});
-
-export default Box;
+export default {};
