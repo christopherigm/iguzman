@@ -1,28 +1,24 @@
 import { ThemeSwitch } from '@repo/ui/theme-switch';
 import { Switch } from '@repo/ui/switch';
+import { Icon } from '@repo/ui/icon';
+import { Box } from '@repo/ui/box';
 
 export default function Home() {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+    <Box
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      styles={{
         minHeight: '100vh',
       }}
     >
-      <div
-        style={{
-          width: 360,
-          padding: 32,
-          borderRadius: 12,
-          border: '1px solid var(--border, #e5e7eb)',
-          background: 'var(--surface-1, #f5f5f5)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 24,
-        }}
+      <Box
+        width={360}
+        padding={32}
+        borderRadius={12}
+        flexDirection="column"
+        alignItems="center"
       >
         <h2
           style={{
@@ -36,7 +32,23 @@ export default function Home() {
         </h2>
         <ThemeSwitch />
         <Switch />
-      </div>
-    </div>
+        <Icon
+          icon="/icons/cloud-rain-alt-svgrepo-com.svg"
+          size={50}
+          padding={5}
+          backgroundColor="var(--surface-2)"
+          backgroundShape="circle"
+        />
+        <Box
+          marginTop={20}
+          width="100%"
+          elevation={5}
+          borderRadius={8}
+          padding={10}
+        >
+          Content
+        </Box>
+      </Box>
+    </Box>
   );
 }
