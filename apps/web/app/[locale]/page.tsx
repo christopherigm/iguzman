@@ -1,3 +1,4 @@
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { ThemeSwitch } from '@repo/ui/theme-switch';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
@@ -5,7 +6,16 @@ import { Box } from '@repo/ui/core-elements/box';
 import Button from '@repo/ui/core-elements/button';
 import { add } from '@repo/helpers/add';
 
-export default function Home() {
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function Home({ params }: Props) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations('HomePage');
+
   return (
     <Box
       display="flex"
@@ -30,7 +40,7 @@ export default function Home() {
             margin: 0,
           }}
         >
-          Theme Mode {add(2, 3)}
+          {t('themeMode')} {add(2, 3)}
         </h2>
         <ThemeSwitch />
         <Switch />
@@ -48,8 +58,8 @@ export default function Home() {
           borderRadius={8}
           padding={10}
         >
-          Content
-          <Button text="Go to docs" />
+          {t('content')}
+          <Button text={t('goToDocs')} />
         </Box>
       </Box>
     </Box>

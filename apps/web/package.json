@@ -11,8 +11,10 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@repo/ui": "workspace:*",
     "@repo/helpers": "workspace:*",
+    "@repo/i18n": "workspace:^",
+    "@repo/ui": "workspace:*",
+    "next-intl": "^4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

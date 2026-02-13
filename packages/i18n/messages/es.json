@@ -1,0 +1,11 @@
+{
+  "Metadata": {
+    "title": "Crear Aplicacion Next",
+    "description": "Generado por create next app"
+  },
+  "HomePage": {
+    "themeMode": "Modo de Tema",
+    "content": "Contenido",
+    "goToDocs": "Ir a la documentacion"
+  }
+}
