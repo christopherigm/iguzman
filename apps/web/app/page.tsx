@@ -3,6 +3,7 @@ import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { Box } from '@repo/ui/core-elements/box';
 import Button from '@repo/ui/core-elements/button';
+import { add } from '@repo/helpers/add';
 
 export default function Home() {
   return (
@@ -29,7 +30,7 @@ export default function Home() {
             margin: 0,
           }}
         >
-          Theme Mode
+          Theme Mode {add(2, 3)}
         </h2>
         <ThemeSwitch />
         <Switch />
