@@ -23,8 +23,14 @@
       "types": "./src/request.ts",
       "default": "./src/request.ts"
     },
-    "./messages/en": "./messages/en.json",
-    "./messages/es": "./messages/es.json"
+    "./messages/en": {
+      "types": "./messages/en.json",
+      "default": "./messages/en.json"
+    },
+    "./messages/es": {
+      "types": "./messages/es.json",
+      "default": "./messages/es.json"
+    }
   },
   "dependencies": {
     "next-intl": "^4"

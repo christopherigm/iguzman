@@ -15,6 +15,7 @@ export default async function Home({ params }: Props) {
   setRequestLocale(locale);
 
   const t = await getTranslations('HomePage');
+  const tCommon = await getTranslations('Common');
 
   return (
     <Box
@@ -58,8 +59,8 @@ export default async function Home({ params }: Props) {
           borderRadius={8}
           padding={10}
         >
-          {t('content')}
-          <Button text={t('goToDocs')} />
+          {t('content')} {t('goToAbout')}
+          <Button text={tCommon('save')} />
         </Box>
       </Box>
     </Box>
