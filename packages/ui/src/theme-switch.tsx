@@ -2,6 +2,7 @@
 
 import { useTheme } from './theme-provider';
 import type { ThemeMode } from './theme-provider';
+import Button from './core-elements/button';
 
 const modes: { value: ThemeMode; label: string }[] = [
   { value: 'light', label: 'Light' },
@@ -26,11 +27,17 @@ export function ThemeSwitch() {
       {modes.map(({ value, label }) => {
         const active = state.mode === value;
         return (
-          <button
+          <Button
             key={value}
             type="button"
+            text={label}
             onClick={() => actions.setMode(value)}
-            style={{
+            color={
+              active
+                ? 'var(--accent-foreground, #fff)'
+                : 'var(--foreground, #171717)'
+            }
+            styles={{
               padding: '6px 14px',
               borderRadius: 6,
               border: 'none',
@@ -38,14 +45,8 @@ export function ThemeSwitch() {
               fontSize: 13,
               fontWeight: active ? 600 : 400,
               background: active ? 'var(--accent, #06b6d4)' : 'transparent',
-              color: active
-                ? 'var(--accent-foreground, #fff)'
-                : 'var(--foreground, #171717)',
-              transition: 'background 150ms ease, color 150ms ease',
             }}
-          >
-            {label}
-          </button>
+          />
         );
       })}
     </div>

@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { CSSProperties } from 'react';
 import { UIComponentProps, createSafeStyle, getBoxShadow } from './utils';
+import './button.css';
 
 /**
  * Allowed HTML button types.
@@ -64,7 +65,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
     backgroundColor: 'var(--accent, #06b6d4)',
     color: 'var(--accent-foreground, #171717)',
     transition:
-      'background 150ms ease, color 150ms ease, box-shadow 200ms ease',
+      'background 150ms ease, color 150ms ease, box-shadow 450ms ease',
   };
 
   const computed = createSafeStyle(props as UIComponentProps) as CSSProperties;
@@ -89,6 +90,8 @@ export const Button: React.FC<ButtonProps> = (props) => {
   const finalStyle: CSSProperties = {
     ...mergedStyle,
     boxShadow: computedBoxShadow ?? 'none',
+    position: 'relative',
+    overflow: 'hidden',
   };
 
   // If an explicit onClick handler is provided, prefer it and ignore href.
@@ -103,12 +106,13 @@ export const Button: React.FC<ButtonProps> = (props) => {
         <button
           aria-pressed="false"
           id={id}
-          className={className}
+          className={['ui-button-wave', className].filter(Boolean).join(' ')}
           style={finalStyle}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
           {text}
+          <span aria-hidden className="ui-wave" />
         </button>
       </Link>
     );
@@ -123,13 +127,14 @@ export const Button: React.FC<ButtonProps> = (props) => {
     <button
       type={type}
       id={id}
-      className={className}
+      className={['ui-button-wave', className].filter(Boolean).join(' ')}
       style={finalStyle}
       onClick={typeof onClick === 'function' ? handleClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {text}
+      <span aria-hidden className="ui-wave" />
     </button>
   );
 };

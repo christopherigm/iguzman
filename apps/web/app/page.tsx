@@ -48,7 +48,7 @@ export default function Home() {
           padding={10}
         >
           Content
-          <Button text="Go to docs" href="/docs" />
+          <Button text="Go to docs" />
         </Box>
       </Box>
     </Box>
