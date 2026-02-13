@@ -1,9 +1,9 @@
 {
-  "extends": "@iguzman/typescript-config/react-library.json",
+  "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "rootDir": "src"
   },
   "include": ["src"],
-  "exclude": ["**/*.test.ts", "node_modules"]
+  "exclude": ["node_modules", "dist"]
 }

@@ -1,161 +1,135 @@
-# iguzman
+# Turborepo starter
 
-A Turborepo monorepo for building full-stack web applications with Next.js, React, and shared packages.
+This Turborepo starter is maintained by the Turborepo core team.
 
-## Tech Stack
+## Using this example
 
-- **Runtime:** Node.js, React 19, Next.js 16
-- **UI:** Material-UI 7, Emotion
-- **Data:** MongoDB, Redis
-- **AI:** Ollama
-- **Validation:** Zod
-- **Auth:** Jose (JWT)
-- **Analytics:** Plausible
-- **Build:** Turborepo, TypeScript 5, pnpm 10
+Run the following command:
 
-## Project Structure
-
-```
-iguzman/
-├── apps/
-│   └── hello-world-app/         # Next.js demo application
-├── packages/
-│   ├── ui/                      # Shared React UI component library
-│   ├── helpers/                 # TypeScript utility library (FFmpeg, media processing)
-│   ├── typescript-config/       # Shared TypeScript configurations
-│   ├── eslint-config/           # Shared ESLint configurations
-│   └── jest-config/             # Shared Jest configuration
-├── turbo.json                   # Turborepo task configuration
-├── pnpm-workspace.yaml          # pnpm workspace definition
-└── package.json                 # Root package with shared dependencies
+```sh
+npx create-turbo@latest
 ```
 
-## Getting Started
+## What's inside?
 
-### Prerequisites
+This Turborepo includes the following packages/apps:
 
-- [Node.js](https://nodejs.org/) (ES2022+ compatible)
-- [pnpm](https://pnpm.io/) 10.4.1+
-- [FFmpeg](https://ffmpeg.org/) (required by `@iguzman/helpers` for media processing)
+### Apps and Packages
 
-### Installation
+- `docs`: a [Next.js](https://nextjs.org/) app
+- `web`: another [Next.js](https://nextjs.org/) app
+- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
+- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
+- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
 
-```bash
-pnpm install
-```
+Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
 
-### Development
+### Utilities
 
-Start all apps and packages in watch mode:
+This Turborepo has some additional tools already setup for you:
 
-```bash
-pnpm dev
-```
-
-The hello-world-app will be available at `http://localhost:3000`.
+- [TypeScript](https://www.typescriptlang.org/) for static type checking
+- [ESLint](https://eslint.org/) for code linting
+- [Prettier](https://prettier.io) for code formatting
 
 ### Build
 
-```bash
-pnpm build
+To build all apps and packages, run the following command:
+
+```
+cd my-turborepo
+
+# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
+turbo build
+
+# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
+npx turbo build
+yarn dlx turbo build
+pnpm exec turbo build
 ```
 
-### Test
+You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
 
-```bash
-pnpm test
+```
+# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
+turbo build --filter=docs
+
+# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
+npx turbo build --filter=docs
+yarn exec turbo build --filter=docs
+pnpm exec turbo build --filter=docs
 ```
 
-### Lint
+### Develop
 
-```bash
-pnpm lint
+To develop all apps and packages, run the following command:
+
+```
+cd my-turborepo
+
+# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
+turbo dev
+
+# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
+npx turbo dev
+yarn exec turbo dev
+pnpm exec turbo dev
 ```
 
-### Clean
+You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
 
-Remove all build artifacts (`dist/`, `.next/`):
+```
+# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
+turbo dev --filter=web
 
-```bash
-pnpm clean
+# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
+npx turbo dev --filter=web
+yarn exec turbo dev --filter=web
+pnpm exec turbo dev --filter=web
 ```
 
-## Apps
+### Remote Caching
 
-### hello-world-app
+> [!TIP]
+> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
 
-A Next.js 16 application using the App Router that demonstrates the monorepo setup. It consumes the shared `@iguzman/ui` component library and uses Material-UI with a custom ThemeRegistry for styling.
+Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
 
-**Key files:**
+By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
 
-- `src/app/layout.tsx` — Root layout with ThemeRegistry
-- `src/app/page.tsx` — Home page
-- `src/app/ThemeRegistry.tsx` — MUI theme provider setup
+```
+cd my-turborepo
 
-## Packages
+# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
+turbo login
 
-### @iguzman/ui
-
-Shared React UI component library built on Material-UI.
-
-**Exports:**
-
-- `Button` — Type-safe wrapper around MUI Button
-
-### @iguzman/helpers
-
-TypeScript utility library with media processing capabilities.
-
-**Exports:**
-
-- `addAudioToVideoInTime()` — Merges audio into video at a given time offset using FFmpeg. Supports WAV, MP3, and OGG formats.
-- `stripMediaPrefix()` — Removes leading `media/` from file paths.
-- `buildFfmpegArgs()` — Constructs FFmpeg CLI arguments for audio/video merging.
-
-### @iguzman/typescript-config
-
-Shared TypeScript compiler configurations:
-
-| Config               | Purpose                         |
-| -------------------- | ------------------------------- |
-| `base.json`          | Strict base config (ES2022)     |
-| `nextjs.json`        | Next.js apps (DOM, Next plugin) |
-| `react-library.json` | React component libraries (JSX) |
-
-### @iguzman/eslint-config
-
-Shared ESLint configuration using `@eslint/js`, `typescript-eslint`, and `eslint-config-prettier`.
-
-### @iguzman/jest-config
-
-Shared Jest configuration using `ts-jest` with Node.js test environment.
-
-## Turborepo Tasks
-
-| Task    | Depends On | Cached | Description                    |
-| ------- | ---------- | ------ | ------------------------------ |
-| `build` | `^build`   | Yes    | Compile all packages/apps      |
-| `dev`   | —          | No     | Start dev servers (persistent) |
-| `lint`  | `^build`   | Yes    | Run ESLint across workspace    |
-| `test`  | `^build`   | Yes    | Run Jest tests                 |
-| `clean` | —          | No     | Remove build artifacts         |
-
-### Filtering
-
-Run tasks for a specific package:
-
-```bash
-pnpm turbo run build --filter=@iguzman/helpers
-pnpm turbo run test --filter=@iguzman/ui
+# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
+npx turbo login
+yarn exec turbo login
+pnpm exec turbo login
 ```
 
-## Architecture
+This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
 
-- **pnpm workspaces** manage dependencies across packages with hoisting and deduplication.
-- **Turborepo** orchestrates builds with a dependency-aware task graph and remote caching support.
-- **Shared configs** (TypeScript, ESLint, Jest) are centralized in dedicated packages to ensure consistency.
-- **Workspace protocol** (`workspace:*`) links internal packages without version pinning.
+Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
 
-## License
+```
+# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
+turbo link
 
-Copyright (c) 2026 Christopher Guzman. All rights reserved.
+# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
+npx turbo link
+yarn exec turbo link
+pnpm exec turbo link
+```
+
+## Useful Links
+
+Learn more about the power of Turborepo:
+
+- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
+- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
+- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
+- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
+- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
+- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)

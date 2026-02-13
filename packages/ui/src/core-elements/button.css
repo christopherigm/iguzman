@@ -1,0 +1,28 @@
+.ui-button-wave {
+  overflow: hidden;
+}
+.ui-button-wave .ui-wave {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--wave-color, rgba(255, 255, 255, 0.35));
+}
+.ui-button-wave:active .ui-wave {
+  animation: ui-wave 600ms ease-out;
+}
+@keyframes ui-wave {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(8);
+    opacity: 0;
+  }
+}

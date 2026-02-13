@@ -1,9 +1,8 @@
 {
-  "extends": "@iguzman/typescript-config/react-library.json",
+  "extends": "@repo/typescript-config/react-library.json",
   "compilerOptions": {
-    "rootDir": "src",
     "outDir": "dist"
   },
   "include": ["src"],
-  "exclude": ["src/**/*.stories.tsx", "src/**/*.stories.ts"]
+  "exclude": ["node_modules", "dist"]
 }

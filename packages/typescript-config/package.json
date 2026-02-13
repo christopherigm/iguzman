@@ -1,15 +1,9 @@
 {
-  "name": "@iguzman/typescript-config",
+  "name": "@repo/typescript-config",
   "version": "0.0.0",
   "private": true,
-  "author": {
-    "name": "Christopher Guzman",
-    "email": "chris@iguzman.com.mx"
-  },
-  "license": "SEE LICENSE IN LICENSE",
-  "files": [
-    "base.json",
-    "nextjs.json",
-    "react-library.json"
-  ]
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
 }
