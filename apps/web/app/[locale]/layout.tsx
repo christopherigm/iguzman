@@ -2,7 +2,11 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
-import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
+import {
+  getMessages,
+  getTranslations,
+  setRequestLocale,
+} from 'next-intl/server';
 import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
@@ -24,7 +28,9 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'Metadata' });
+  const t = (await getTranslations({ locale, namespace: 'Metadata' })) as (
+    key: string,
+  ) => string;
 
   return {
     title: t('title'),

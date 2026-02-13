@@ -1,8 +1,10 @@
 {
   "extends": "@repo/typescript-config/nextjs.json",
   "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
     "noEmit": true
   },
   "include": ["src", "messages", "global.d.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
