@@ -50,8 +50,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
   if (text === undefined || text === null) {
     // Defensive guard for required value
     // Do not throw — keep render resilient but warn the developer.
-    // eslint-disable-next-line no-console
-    console.warn('Button: `text` prop is required but was not provided.');
+    return null;
   }
 
   // Compute styles defensively and allow `styles` override from props.

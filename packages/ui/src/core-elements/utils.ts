@@ -144,4 +144,20 @@ export const createSafeStyle = (props: UIComponentProps): CSSProperties => {
   return safeStyle;
 };
 
+/**
+ * Breakpoint keys for the responsive grid system.
+ */
+export type Breakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+
+/**
+ * Breakpoint minimum-width values in pixels (mobile-first).
+ */
+export const BREAKPOINTS: Record<Breakpoint, number> = {
+  xs: 0,
+  sm: 600,
+  md: 900,
+  lg: 1200,
+  xl: 1536,
+};
+
 export default {};

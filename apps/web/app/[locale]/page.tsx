@@ -5,6 +5,7 @@ import { Icon } from '@repo/ui/core-elements/icon';
 import { Box } from '@repo/ui/core-elements/box';
 import Button from '@repo/ui/core-elements/button';
 import { add } from '@repo/helpers/add';
+import { Grid } from '@repo/ui/core-elements/grid';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -62,6 +63,53 @@ export default async function Home({ params }: Props) {
           {t('content')} {t('goToAbout')}
           <Button text={tCommon('save')} />
         </Box>
+        <Grid spacing={1} marginTop={10} container>
+          <Grid item size={{ xs: 4 }}>
+            <Box
+              padding={20}
+              backgroundColor="var(--surface-2)"
+              borderRadius={8}
+            >
+              Left Column
+            </Box>
+          </Grid>
+          <Grid item size={{ xs: 4 }}>
+            <Box
+              padding={20}
+              backgroundColor="var(--surface-1)"
+              borderRadius={8}
+            >
+              Center
+            </Box>
+          </Grid>
+          <Grid item size={{ xs: 4 }}>
+            <Box
+              padding={20}
+              backgroundColor="var(--surface-2)"
+              borderRadius={8}
+            >
+              Right Column
+            </Box>
+          </Grid>
+          <Grid item size={{ xs: 4 }}>
+            <Box
+              padding={20}
+              backgroundColor="var(--surface-2)"
+              borderRadius={8}
+            >
+              4th Column
+            </Box>
+          </Grid>
+          <Grid item size={{ xs: 4 }}>
+            <Box
+              padding={20}
+              backgroundColor="var(--surface-2)"
+              borderRadius={8}
+            >
+              5 th Column
+            </Box>
+          </Grid>
+        </Grid>
       </Box>
     </Box>
   );
