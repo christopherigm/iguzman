@@ -7,6 +7,7 @@ import Button from '@repo/ui/core-elements/button';
 import { add } from '@repo/helpers/add';
 import { Grid } from '@repo/ui/core-elements/grid';
 import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Container } from '@repo/ui/core-elements/container';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -20,7 +21,7 @@ export default async function Home({ params }: Props) {
   const tCommon = await getTranslations('Common');
 
   return (
-    <Box
+    <Container
       display="flex"
       alignItems="center"
       justifyContent="center"
@@ -57,7 +58,7 @@ export default async function Home({ params }: Props) {
         <Box
           marginTop={20}
           width="100%"
-          elevation={5}
+          elevation={3}
           borderRadius={8}
           padding={10}
         >
@@ -113,6 +114,6 @@ export default async function Home({ params }: Props) {
         </Grid>
         <TextInput name="name" lable="My input" multirow rows={5} />
       </Box>
-    </Box>
+    </Container>
   );
 }
