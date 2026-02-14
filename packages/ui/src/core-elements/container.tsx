@@ -1,7 +1,7 @@
-import React, { CSSProperties, memo } from 'react';
+import React, { CSSProperties } from 'react';
 import {
   UIComponentProps,
-  createSafeStyle,
+  buildStyleProps,
   Breakpoint,
   BREAKPOINTS,
 } from './utils';
@@ -23,50 +23,11 @@ export interface ContainerProps extends UIComponentProps {
  * @example
  * <Container size="lg" paddingX={5}>Hello World!</Container>
  */
-export const Container: React.FC<ContainerProps> = memo((props) => {
-  const {
-    size = 'lg',
-    paddingX,
-    styles,
-    children,
-    display,
-    flexDirection,
-    justifyContent,
-    alignItems,
-    flexWrap,
-    gap,
-    flex,
-    alignSelf,
-    order,
-    width,
-    height,
-    minWidth,
-    maxWidth,
-    minHeight,
-    maxHeight,
-    padding,
-    margin,
-    marginTop,
-    marginBottom,
-    marginLeft,
-    marginRight,
-    marginInlineStart,
-    marginInlineEnd,
-    border,
-    borderRadius,
-    color,
-    backgroundColor,
-    shadow,
-    elevation,
-    className,
-    id,
-    ...rest
-  } = props;
-
-  const safeStyle: CSSProperties = createSafeStyle(props);
+export const Container: React.FC<ContainerProps> = (props) => {
+  const { size = 'lg', paddingX, styles, children, className, id } = props;
 
   const containerStyle: CSSProperties = {
-    ...safeStyle,
+    ...buildStyleProps(props),
     width: '100%',
     maxWidth: BREAKPOINTS[size],
     marginLeft: 'auto',
@@ -75,19 +36,14 @@ export const Container: React.FC<ContainerProps> = memo((props) => {
       paddingLeft: paddingX,
       paddingRight: paddingX,
     }),
-    ...(styles ?? {}),
+    ...styles,
   };
 
   return (
-    <div
-      id={id}
-      className={className}
-      style={containerStyle}
-      {...(rest as any)}
-    >
+    <div id={id} className={className} style={containerStyle}>
       {children}
     </div>
   );
-});
+};
 
 export default Container;

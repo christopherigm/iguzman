@@ -1,5 +1,5 @@
-import React, { CSSProperties, memo } from 'react';
-import { UIComponentProps, createSafeStyle } from './utils';
+import React, { CSSProperties } from 'react';
+import { UIComponentProps, buildStyleProps } from './utils';
 import type { Breakpoint } from './utils';
 import './grid.css';
 
@@ -79,7 +79,7 @@ function buildGridClasses(
  *   <Grid size={{ xs: 12, sm: 6, md: 4 }}>Column 3</Grid>
  * </Grid>
  */
-export const Grid: React.FC<GridProps> = memo((props) => {
+export const Grid: React.FC<GridProps> = (props) => {
   const {
     container = false,
     item,
@@ -91,65 +91,31 @@ export const Grid: React.FC<GridProps> = memo((props) => {
     className,
     id,
     styles,
-    display,
-    flexDirection,
-    justifyContent,
-    alignItems,
-    flexWrap,
-    gap,
-    flex,
-    alignSelf,
-    order,
-    width,
-    height,
-    minWidth,
-    maxWidth,
-    minHeight,
-    maxHeight,
-    padding,
-    margin,
-    marginTop,
-    marginBottom,
-    marginLeft,
-    marginRight,
-    marginInlineStart,
-    marginInlineEnd,
-    border,
-    borderRadius,
-    color,
-    backgroundColor,
-    shadow,
-    elevation,
-    ...rest
   } = props;
 
   const isItem = item === true || size !== undefined;
-
   const gridClassName = buildGridClasses(container, isItem, size, className);
 
-  const safeStyle: CSSProperties = createSafeStyle(props);
+  const style: Record<string, unknown> = { ...buildStyleProps(props) };
 
   if (container) {
     const resolvedX = spacingX ?? spacing;
     const resolvedY = spacingY ?? spacing;
-
     if (resolvedX !== undefined) {
-      (safeStyle as Record<string, unknown>)['--ui-grid-spacing-x'] =
-        `${resolvedX * SPACING_UNIT}px`;
+      style['--ui-grid-spacing-x'] = `${resolvedX * SPACING_UNIT}px`;
     }
     if (resolvedY !== undefined) {
-      (safeStyle as Record<string, unknown>)['--ui-grid-spacing-y'] =
-        `${resolvedY * SPACING_UNIT}px`;
+      style['--ui-grid-spacing-y'] = `${resolvedY * SPACING_UNIT}px`;
     }
   }
 
-  const merged: CSSProperties = { ...safeStyle, ...(styles ?? {}) };
+  const finalStyle = { ...style, ...styles } as CSSProperties;
 
   return (
-    <div id={id} className={gridClassName} style={merged} {...(rest as any)}>
+    <div id={id} className={gridClassName} style={finalStyle}>
       {children}
     </div>
   );
-});
+};
 
 export default Grid;

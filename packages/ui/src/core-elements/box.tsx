@@ -1,10 +1,9 @@
-import React, { CSSProperties, memo } from 'react';
-import { UIComponentProps, createSafeStyle } from './utils';
+import React, { CSSProperties } from 'react';
+import { UIComponentProps, buildStyleProps } from './utils';
 
 /**
- * Box — a small, flexible div wrapper that accepts inline layout props and merges styles.
+ * Box — a small, flexible div wrapper that accepts inline layout props.
  *
- * JSDoc & example:
  * @example
  * <Box
  *   display="flex"
@@ -14,61 +13,20 @@ import { UIComponentProps, createSafeStyle } from './utils';
  *   backgroundColor="#fff"
  *   shadow
  *   elevation={2}
- *   styles={{ borderRadius: 8 }}
  * >
  *   Content
  * </Box>
  */
-export const Box: React.FC<UIComponentProps> = memo((props) => {
-  const {
-    display,
-    flexDirection,
-    justifyContent,
-    alignItems,
-    flexWrap,
-    gap,
-    flex,
-    alignSelf,
-    order,
-    width,
-    height,
-    minWidth,
-    maxWidth,
-    minHeight,
-    maxHeight,
-    padding,
-    margin,
-    marginTop,
-    marginBottom,
-    marginLeft,
-    marginRight,
-    marginInlineStart,
-    marginInlineEnd,
-    border,
-    borderRadius,
-    color,
-    backgroundColor,
-    shadow,
-    elevation,
-    styles,
-    children,
-    className,
-    id,
-    ...rest
-  } = props;
+export const Box: React.FC<UIComponentProps> = (props) => {
+  const { styles, children, className, id } = props;
 
-  // Build safe style using shared utility
-  const safeStyle: CSSProperties = createSafeStyle(props);
-
-  // Merge: computed styles first, then user-provided `styles` override them.
-  const merged: CSSProperties = { ...safeStyle, ...(styles ?? {}) };
+  const style: CSSProperties = { ...buildStyleProps(props), ...styles };
 
   return (
-    // Spread `rest` so consumers can pass ARIA or data-* attributes safely.
-    <div id={id} className={className} style={merged} {...(rest as any)}>
+    <div id={id} className={className} style={style}>
       {children}
     </div>
   );
-});
+};
 
 export default Box;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, CSSProperties, InputHTMLAttributes } from 'react';
-import { UIComponentProps, createSafeStyle } from './utils';
+import { UIComponentProps, buildStyleProps } from './utils';
 import './text-input.css';
 
 /**
@@ -88,7 +88,7 @@ export const TextInput = ({
 
   // ── Layout style from UIComponentProps ────────────────────────
   const uiProps = rest as UIComponentProps;
-  const safeStyle: CSSProperties = createSafeStyle(uiProps);
+  const safeStyle: CSSProperties = buildStyleProps(uiProps);
 
   // ── Handlers ──────────────────────────────────────────────────
   const handleChange = (

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { UIComponentProps } from './utils';
-import { createSafeStyle } from './utils';
+import { buildStyleProps } from './utils';
 
 export type BackgroundShape = 'circle' | 'square' | 'triangle' | '';
 
@@ -38,9 +38,8 @@ export const Icon = ({
       ? 'polygon(50% 6%, 94% 88%, 6% 88%)'
       : undefined;
 
-  // Use createSafeStyle to build a defensive base style from UI props,
-  // then merge in shape-specific helpers and the `style` override.
-  const safeBase = createSafeStyle({
+  // Build base style from UI props, then merge in shape-specific helpers.
+  const safeBase = buildStyleProps({
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',

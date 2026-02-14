@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, CSSProperties } from 'react';
-import { UIComponentProps, createSafeStyle } from './utils';
+import { UIComponentProps, buildStyleProps } from './utils';
 
 interface SwitchProps extends UIComponentProps {
   checked?: boolean;
@@ -23,7 +23,7 @@ export const Switch = ({
   const [internalChecked, setInternalChecked] = useState(defaultChecked);
   const value = isControlled ? checked : internalChecked;
 
-  const safeStyle: CSSProperties = createSafeStyle(props);
+  const safeStyle: CSSProperties = buildStyleProps(props);
 
   const toggle = () => {
     const next = !value;

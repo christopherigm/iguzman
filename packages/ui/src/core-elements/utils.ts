@@ -68,81 +68,27 @@ export const getBoxShadow = (elevation?: number): string | undefined => {
   return `${key}, ${ambient}`;
 };
 
+const CSS_PROP_KEYS: (keyof UIComponentProps & keyof CSSProperties)[] = [
+  'display', 'flexDirection', 'justifyContent', 'alignItems', 'flexWrap',
+  'gap', 'flex', 'alignSelf', 'order', 'width', 'height', 'minWidth',
+  'maxWidth', 'minHeight', 'maxHeight', 'padding', 'margin', 'marginTop',
+  'marginBottom', 'marginLeft', 'marginRight', 'marginInlineStart',
+  'marginInlineEnd', 'border', 'borderRadius', 'color', 'backgroundColor',
+];
+
 /**
- * Build a defensive style object from `UIComponentProps`.
- * Returns only defined CSS properties and applies computed shadow.
+ * Extract CSS style properties from UIComponentProps.
+ * Picks only defined CSS props and computes boxShadow from shadow/elevation.
  */
-export const createSafeStyle = (props: UIComponentProps): CSSProperties => {
-  const {
-    display,
-    flexDirection,
-    justifyContent,
-    alignItems,
-    flexWrap,
-    gap,
-    flex,
-    alignSelf,
-    order,
-    width,
-    height,
-    minWidth,
-    maxWidth,
-    minHeight,
-    maxHeight,
-    padding,
-    margin,
-    marginTop,
-    marginBottom,
-    marginLeft,
-    marginRight,
-    marginInlineStart,
-    marginInlineEnd,
-    border,
-    borderRadius,
-    color,
-    backgroundColor,
-    shadow,
-    elevation,
-  } = props;
-
-  const safeStyle: CSSProperties = {};
-  if (display !== undefined) safeStyle.display = display;
-  if (flexDirection !== undefined) safeStyle.flexDirection = flexDirection;
-  if (justifyContent !== undefined) safeStyle.justifyContent = justifyContent;
-  if (alignItems !== undefined) safeStyle.alignItems = alignItems;
-  if (flexWrap !== undefined) safeStyle.flexWrap = flexWrap;
-  if (gap !== undefined) safeStyle.gap = gap;
-  if (flex !== undefined) safeStyle.flex = flex;
-  if (alignSelf !== undefined) safeStyle.alignSelf = alignSelf;
-  if (order !== undefined) safeStyle.order = order;
-  if (width !== undefined) safeStyle.width = width;
-  if (height !== undefined) safeStyle.height = height;
-  if (minWidth !== undefined) safeStyle.minWidth = minWidth;
-  if (maxWidth !== undefined) safeStyle.maxWidth = maxWidth;
-  if (minHeight !== undefined) safeStyle.minHeight = minHeight;
-  if (maxHeight !== undefined) safeStyle.maxHeight = maxHeight;
-  if (padding !== undefined) safeStyle.padding = padding;
-  if (margin !== undefined) safeStyle.margin = margin;
-  if (marginTop !== undefined) safeStyle.marginTop = marginTop;
-  if (marginBottom !== undefined) safeStyle.marginBottom = marginBottom;
-  if (marginLeft !== undefined) safeStyle.marginLeft = marginLeft;
-  if (marginRight !== undefined) safeStyle.marginRight = marginRight;
-  if (marginInlineStart !== undefined)
-    safeStyle.marginInlineStart = marginInlineStart;
-  if (marginInlineEnd !== undefined)
-    safeStyle.marginInlineEnd = marginInlineEnd;
-  if (border !== undefined) safeStyle.border = border;
-  if (borderRadius !== undefined) safeStyle.borderRadius = borderRadius;
-  if (color !== undefined) safeStyle.color = color;
-  if (backgroundColor !== undefined)
-    safeStyle.backgroundColor = backgroundColor;
-
-  const effectiveElevation = elevation ?? (shadow ? 1 : 0);
-  const boxShadow = getBoxShadow(effectiveElevation);
-  if (boxShadow) safeStyle.boxShadow = boxShadow;
-
-  return safeStyle;
-};
+export function buildStyleProps(props: UIComponentProps): CSSProperties {
+  const style: Record<string, unknown> = {};
+  for (const key of CSS_PROP_KEYS) {
+    if (props[key] !== undefined) style[key] = props[key];
+  }
+  const boxShadow = getBoxShadow(props.elevation ?? (props.shadow ? 1 : 0));
+  if (boxShadow) style.boxShadow = boxShadow;
+  return style as CSSProperties;
+}
 
 /**
  * Breakpoint keys for the responsive grid system.
