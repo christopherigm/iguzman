@@ -6,6 +6,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import Button from '@repo/ui/core-elements/button';
 import { add } from '@repo/helpers/add';
 import { Grid } from '@repo/ui/core-elements/grid';
+import { TextInput } from '@repo/ui/core-elements/text-input';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -106,10 +107,11 @@ export default async function Home({ params }: Props) {
               backgroundColor="var(--surface-2)"
               borderRadius={8}
             >
-              5 th Column
+              sss
             </Box>
           </Grid>
         </Grid>
+        <TextInput name="name" lable="My input" multirow rows={5} />
       </Box>
     </Box>
   );
