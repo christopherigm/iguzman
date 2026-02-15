@@ -9,6 +9,7 @@ export interface UIComponentProps {
   justifyContent?: CSSProperties['justifyContent'];
   alignItems?: CSSProperties['alignItems'];
   flexWrap?: CSSProperties['flexWrap'];
+  flexGrow?: CSSProperties['flexGrow'];
   gap?: CSSProperties['gap'];
   flex?: CSSProperties['flex'];
   alignSelf?: CSSProperties['alignSelf'];
@@ -69,11 +70,34 @@ export const getBoxShadow = (elevation?: number): string | undefined => {
 };
 
 const CSS_PROP_KEYS: (keyof UIComponentProps & keyof CSSProperties)[] = [
-  'display', 'flexDirection', 'justifyContent', 'alignItems', 'flexWrap',
-  'gap', 'flex', 'alignSelf', 'order', 'width', 'height', 'minWidth',
-  'maxWidth', 'minHeight', 'maxHeight', 'padding', 'margin', 'marginTop',
-  'marginBottom', 'marginLeft', 'marginRight', 'marginInlineStart',
-  'marginInlineEnd', 'border', 'borderRadius', 'color', 'backgroundColor',
+  'display',
+  'flexDirection',
+  'justifyContent',
+  'alignItems',
+  'flexWrap',
+  'flexGrow',
+  'gap',
+  'flex',
+  'alignSelf',
+  'order',
+  'width',
+  'height',
+  'minWidth',
+  'maxWidth',
+  'minHeight',
+  'maxHeight',
+  'padding',
+  'margin',
+  'marginTop',
+  'marginBottom',
+  'marginLeft',
+  'marginRight',
+  'marginInlineStart',
+  'marginInlineEnd',
+  'border',
+  'borderRadius',
+  'color',
+  'backgroundColor',
 ];
 
 /**

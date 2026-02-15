@@ -21,14 +21,7 @@ export default async function Home({ params }: Props) {
   const tCommon = await getTranslations('Common');
 
   return (
-    <Container
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      styles={{
-        minHeight: '100vh',
-      }}
-    >
+    <Container display="flex" alignItems="center" justifyContent="center">
       <Box
         width={360}
         padding={32}

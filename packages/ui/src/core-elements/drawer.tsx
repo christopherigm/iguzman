@@ -6,6 +6,7 @@ import { UIComponentProps, buildStyleProps, type MenuItem } from './utils';
 import { Icon } from './icon';
 import { TextInput } from './text-input';
 import './drawer.css';
+import getImageDimensionsFromBase64 from '@repo/helpers/get-image-dimensions-from-base64';
 
 /**
  * Props for the `Drawer` component.
@@ -18,7 +19,7 @@ export interface DrawerProps extends UIComponentProps {
   /** Menu items to display. */
   items: MenuItem[];
   /** Logo image src (rendered with next/Image). */
-  logo?: string;
+  logo: string;
   /** Alt text for the logo image. */
   logoAlt?: string;
   /** Logo width in pixels. Defaults to `120`. */
@@ -60,7 +61,8 @@ const DrawerItem: React.FC<{
   };
 
   const Tag = item.href && !hasChildren ? 'a' : 'button';
-  const linkProps = Tag === 'a' ? { href: item.href } : { type: 'button' as const };
+  const linkProps =
+    Tag === 'a' ? { href: item.href } : { type: 'button' as const };
 
   return (
     <>
@@ -82,7 +84,9 @@ const DrawerItem: React.FC<{
             className={[
               'ui-drawer-chevron',
               expanded ? 'ui-drawer-chevron--open' : '',
-            ].filter(Boolean).join(' ')}
+            ]
+              .filter(Boolean)
+              .join(' ')}
           />
         )}
       </Tag>
@@ -163,7 +167,26 @@ export const Drawer: React.FC<DrawerProps> = ({
   id,
   ...uiProps
 }) => {
+  const [computedLogoWidth, setComputedLogoWidth] = useState(logoWidth);
   const panelRef = useRef<HTMLElement>(null);
+
+  // Calculate logo width from aspect ratio to preserve proportions
+  useEffect(() => {
+    let cancelled = false;
+    getImageDimensionsFromBase64(logo)
+      .then(({ aspectRatio }) => {
+        if (!cancelled) {
+          setComputedLogoWidth(Math.round(logoHeight * aspectRatio));
+        }
+      })
+      .catch(() => {
+        // If dimension detection fails (e.g. non-base64 src), fall back to logoWidth
+        if (!cancelled) setComputedLogoWidth(logoWidth);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [logo, logoHeight, logoWidth]);
 
   // Prevent body scroll when drawer is open
   useEffect(() => {
@@ -205,7 +228,7 @@ export const Drawer: React.FC<DrawerProps> = ({
             <Image
               src={logo}
               alt={logoAlt}
-              width={logoWidth}
+              width={computedLogoWidth}
               height={logoHeight}
             />
           )}

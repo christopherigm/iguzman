@@ -154,10 +154,16 @@
   background-color: var(--surface-1, rgba(0, 0, 0, 0.04));
 }
 
-/* ── SearchBox ────────────────────────────────────── */
+/* ── SearchBox (hidden at xs/sm, visible at md+) ─── */
 .ui-navbar-search {
-  display: flex;
+  display: none;
   align-items: center;
+}
+
+@media (min-width: 900px) {
+  .ui-navbar-search {
+    display: flex;
+  }
 }
 
 .ui-navbar-search-trigger {

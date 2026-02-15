@@ -7,6 +7,7 @@ import { Container } from './container';
 import { Icon } from './icon';
 import { TextInput } from './text-input';
 import { Drawer } from './drawer';
+import getImageDimensionsFromBase64 from '@repo/helpers/get-image-dimensions-from-base64';
 import './navbar.css';
 import { Box } from './box';
 
@@ -252,8 +253,25 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [computedLogoWidth, setComputedLogoWidth] = useState(logoWidth);
   const scrollDirection = useScrollDirection();
   const navRef = useRef<HTMLElement>(null);
+
+  // Calculate logo width from aspect ratio to preserve proportions
+  useEffect(() => {
+    let cancelled = false;
+    getImageDimensionsFromBase64(logo)
+      .then(({ aspectRatio }) => {
+        if (!cancelled) {
+          setComputedLogoWidth(Math.round(logoHeight * aspectRatio));
+        }
+      })
+      .catch(() => {
+        // If dimension detection fails (e.g. non-base64 src), fall back to logoWidth
+        if (!cancelled) setComputedLogoWidth(logoWidth);
+      });
+    return () => { cancelled = true; };
+  }, [logo, logoHeight, logoWidth]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -287,7 +305,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     <div className="ui-navbar-inner">
       {/* Logo */}
       <div className="ui-navbar-logo">
-        <Image src={logo} alt={logoAlt} width={logoWidth} height={logoHeight} />
+        <Image src={logo} alt={logoAlt} width={computedLogoWidth} height={logoHeight} />
       </div>
 
       {/* Spacer */}
