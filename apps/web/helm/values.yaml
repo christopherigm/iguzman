@@ -31,14 +31,14 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
   hosts:
-    - host: web.example.com
+    - host: web.iguzman.com.mx
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: web-tls-cert
+    - secretName: web-tls
       hosts:
-        - web.example.com
+        - web.iguzman.com.mx
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.

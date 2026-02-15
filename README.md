@@ -138,14 +138,14 @@ alias helm='microk8s helm3'
 alias kubectl='microk8s kubectl'
 
 # Install (first time)
-helm -n test-web install web ./apps/web/helm/web \
+helm -n test-web install web ./apps/web/helm \
   --set image.repository=<REGISTRY>/web \
   --set image.tag=latest \
   --set ingress.hosts[0].host=web.example.com \
   --set ingress.tls[0].hosts[0]=web.example.com
 
 # Upgrade (subsequent deploys)
-helm -n test-web upgrade web ./apps/web/helm/web \
+helm -n test-web upgrade web ./apps/web/helm \
   --set image.tag=<NEW_TAG>
 ```
 
@@ -168,7 +168,7 @@ Or include the health-file creation in your application startup script.
 helm -n test-web list
 
 # View rendered templates without deploying
-helm template web ./apps/web/helm/web -n test-web
+helm template web ./apps/web/helm -n test-web
 
 # Uninstall the release
 helm -n test-web uninstall web
