@@ -96,7 +96,7 @@ export default async function Home({ params }: Props) {
           <Grid item size={{ xs: 4 }}>
             <Box
               padding={20}
-              backgroundColor="var(--surface-2)"
+              backgroundColor="var(--surface-1)"
               borderRadius={8}
             >
               4th Column

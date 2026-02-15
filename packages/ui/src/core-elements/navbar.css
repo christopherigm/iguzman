@@ -104,13 +104,19 @@
   }
 }
 
+/* ── Menu item wrapper (for dropdown positioning) ─── */
+.ui-navbar-menu-item-wrapper {
+  position: relative;
+}
+
 /* ── Dropdown panel ───────────────────────────────── */
 .ui-navbar-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  right: 0;
-  border-bottom: 1px solid var(--border, #e5e7eb);
+  max-width: 200px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   animation: ui-navbar-dropdown-in 200ms ease-out;
   z-index: 999;

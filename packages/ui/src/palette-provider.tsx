@@ -65,9 +65,9 @@ function PaletteProvider({
 
   return (
     <PaletteContext value={contextValue}>
-      <div style={style} className={className}>
+      <body style={style} className={className}>
         {children}
-      </div>
+      </body>
     </PaletteContext>
   );
 }

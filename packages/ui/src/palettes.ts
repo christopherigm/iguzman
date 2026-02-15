@@ -34,10 +34,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--accent-foreground': '#ffffff',
     },
     dark: {
-      '--background': '#0a0a0a',
+      '--background': '#202020',
       '--foreground': '#ededed',
-      '--surface-1': '#171717',
-      '--surface-2': '#262626',
+      '--surface-1': '#1e1e1e',
+      '--surface-2': '#2f2f2f',
       '--border': '#333333',
       '--accent': '#22d3ee',
       '--accent-foreground': '#0a0a0a',

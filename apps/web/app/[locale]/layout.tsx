@@ -68,33 +68,32 @@ export default async function LocaleLayout({ children, params }: Props) {
       <head>
         <ThemeScript />
       </head>
-      <body>
-        <Navbar
-          logo="/logo.png"
-          items={[
-            { label: 'Home', href: '/' },
-            {
-              label: 'Products',
-              children: [
-                { label: 'Widget', href: '/products/widget' },
-                { label: 'Gadget', href: '/products/gadget' },
-              ],
-            },
-          ]}
-          fixedItems={[{ label: 'Login', href: '/login' }]}
-          // onSearch={(query) => console.log(query)}
-          version="v1.0.0"
-          searchBox
-        />
-        <NextIntlClientProvider messages={messages}>
-          <ThemeProvider
-            initialMode={initialMode}
-            initialResolved={initialResolved}
-          >
-            <PaletteProvider palette="cyan">{children}</PaletteProvider>
-          </ThemeProvider>
-        </NextIntlClientProvider>
-      </body>
+      <NextIntlClientProvider messages={messages}>
+        <ThemeProvider
+          initialMode={initialMode}
+          initialResolved={initialResolved}
+        >
+          <PaletteProvider palette="cyan">
+            <Navbar
+              logo="/logo.png"
+              items={[
+                { label: 'Home', href: '/' },
+                {
+                  label: 'Products',
+                  children: [
+                    { label: 'Widget', href: '/products/widget' },
+                    { label: 'Gadget', href: '/products/gadget' },
+                  ],
+                },
+              ]}
+              fixedItems={[{ label: 'Login', href: '/login' }]}
+              version="v1.0.0"
+              searchBox
+            />
+            {children}
+          </PaletteProvider>
+        </ThemeProvider>
+      </NextIntlClientProvider>
     </html>
   );
 }

@@ -8,6 +8,7 @@ import { Icon } from './icon';
 import { TextInput } from './text-input';
 import { Drawer } from './drawer';
 import './navbar.css';
+import { Box } from './box';
 
 export type { MenuItem };
 
@@ -115,7 +116,7 @@ const DropdownPanel: React.FC<{
   items: MenuItem[];
   onClose: () => void;
 }> = ({ items, onClose }) => (
-  <div className="ui-navbar-dropdown">
+  <Box className="ui-navbar-dropdown">
     {items.map((child) => {
       const handleClick = () => {
         child.onClick?.();
@@ -138,7 +139,7 @@ const DropdownPanel: React.FC<{
         </Tag>
       );
     })}
-  </div>
+  </Box>
 );
 
 // ── SearchBox ────────────────────────────────────────────────────────
@@ -282,11 +283,6 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     ...(uiProps as UIComponentProps).styles,
   };
 
-  // Find the active dropdown item's children
-  const dropdownItem = activeDropdown
-    ? items.find((i) => i.label === activeDropdown && i.children?.length)
-    : null;
-
   const content = (
     <div className="ui-navbar-inner">
       {/* Logo */}
@@ -299,17 +295,25 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
 
       {/* Regular menu items (hidden xs/sm) */}
       <div className="ui-navbar-menu">
-        {items.map((item) => (
-          <NavbarItem
-            key={item.label}
-            item={item}
-            onToggleDropdown={
-              item.children?.length ? setActiveDropdown : undefined
-            }
-            isDropdownOpen={activeDropdown === item.label}
-            chevronIcon={chevronIcon}
-          />
-        ))}
+        {items.map((item) => {
+          const hasChildren = item.children && item.children.length > 0;
+          return (
+            <div key={item.label} className="ui-navbar-menu-item-wrapper">
+              <NavbarItem
+                item={item}
+                onToggleDropdown={hasChildren ? setActiveDropdown : undefined}
+                isDropdownOpen={activeDropdown === item.label}
+                chevronIcon={chevronIcon}
+              />
+              {hasChildren && activeDropdown === item.label && (
+                <DropdownPanel
+                  items={item.children!}
+                  onClose={() => setActiveDropdown(null)}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Fixed menu items (always visible) */}
@@ -344,27 +348,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
   return (
     <>
       <nav ref={navRef} id={id} className={navClasses} style={navStyle}>
-        {container ? (
-          <Container>
-            {content}
-            {dropdownItem && (
-              <DropdownPanel
-                items={dropdownItem.children!}
-                onClose={() => setActiveDropdown(null)}
-              />
-            )}
-          </Container>
-        ) : (
-          <>
-            {content}
-            {dropdownItem && (
-              <DropdownPanel
-                items={dropdownItem.children!}
-                onClose={() => setActiveDropdown(null)}
-              />
-            )}
-          </>
-        )}
+        {container ? <Container>{content}</Container> : content}
       </nav>
 
       <Drawer
