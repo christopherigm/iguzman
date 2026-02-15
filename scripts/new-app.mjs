@@ -9,8 +9,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const APPS_DIR = join(ROOT, 'apps');
 const VALID_PALETTES = [
-  'cyan', 'ocean', 'rose', 'emerald', 'amber',
-  'violet', 'slate', 'coral', 'teal', 'fuchsia',
+  'cyan',
+  'ocean',
+  'rose',
+  'emerald',
+  'amber',
+  'violet',
+  'slate',
+  'coral',
+  'teal',
+  'fuchsia',
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -67,7 +75,7 @@ function packageJson(name, port, includeI18n) {
     dependencies: {
       '@repo/helpers': 'workspace:*',
       '@repo/ui': 'workspace:*',
-      'react': '^19.2.0',
+      react: '^19.2.0',
       'react-dom': '^19.2.0',
     },
     devDependencies: {
@@ -76,8 +84,8 @@ function packageJson(name, port, includeI18n) {
       '@types/node': '^22.15.3',
       '@types/react': '19.2.2',
       '@types/react-dom': '19.2.2',
-      'eslint': '^9.39.1',
-      'typescript': '5.9.2',
+      eslint: '^9.39.1',
+      typescript: '5.9.2',
     },
   };
 
@@ -110,25 +118,27 @@ export default nextConfig;
 }
 
 function tsConfig() {
-  return JSON.stringify(
-    {
-      extends: '@repo/typescript-config/nextjs.json',
-      compilerOptions: {
-        plugins: [{ name: 'next' }],
-        allowArbitraryExtensions: true,
+  return (
+    JSON.stringify(
+      {
+        extends: '@repo/typescript-config/nextjs.json',
+        compilerOptions: {
+          plugins: [{ name: 'next' }],
+          allowArbitraryExtensions: true,
+        },
+        include: [
+          '**/*.ts',
+          '**/*.tsx',
+          'next-env.d.ts',
+          'next.config.js',
+          '.next/types/**/*.ts',
+        ],
+        exclude: ['node_modules'],
       },
-      include: [
-        '**/*.ts',
-        '**/*.tsx',
-        'next-env.d.ts',
-        'next.config.js',
-        '.next/types/**/*.ts',
-      ],
-      exclude: ['node_modules'],
-    },
-    null,
-    2,
-  ) + '\n';
+      null,
+      2,
+    ) + '\n'
+  );
 }
 
 function eslintConfig() {
@@ -178,10 +188,15 @@ next-env.d.ts
 }
 
 function globalsCss() {
-  return `html,
+  return `@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
+html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  font-family: 'Roboto', sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
 }
 
 body {
@@ -217,6 +232,7 @@ import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
+import { Navbar } from '@repo/ui/core-elements/navbar';
 import '../globals.css';
 
 type Props = {
@@ -273,16 +289,21 @@ export default async function LocaleLayout({ children, params }: Props) {
       <head>
         <ThemeScript />
       </head>
-      <body>
-        <NextIntlClientProvider messages={messages}>
-          <ThemeProvider
-            initialMode={initialMode}
-            initialResolved={initialResolved}
-          >
-            <PaletteProvider palette="${palette}">{children}</PaletteProvider>
-          </ThemeProvider>
-        </NextIntlClientProvider>
-      </body>
+      <NextIntlClientProvider messages={messages}>
+        <ThemeProvider
+          initialMode={initialMode}
+          initialResolved={initialResolved}
+        >
+          <PaletteProvider palette="${palette}">
+            <Navbar
+              logo="/logo.png"
+              items={[{ label: 'Home', href: '/' }]}
+              version="v0.1.0"
+            />
+            {children}
+          </PaletteProvider>
+        </ThemeProvider>
+      </NextIntlClientProvider>
     </html>
   );
 }
@@ -294,6 +315,7 @@ import { cookies } from 'next/headers';
 import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
+import { Navbar } from '@repo/ui/core-elements/navbar';
 import './globals.css';
 
 type Props = {
@@ -324,14 +346,19 @@ export default async function RootLayout({ children }: Props) {
       <head>
         <ThemeScript />
       </head>
-      <body>
-        <ThemeProvider
-          initialMode={initialMode}
-          initialResolved={initialResolved}
-        >
-          <PaletteProvider palette="${palette}">{children}</PaletteProvider>
-        </ThemeProvider>
-      </body>
+      <ThemeProvider
+        initialMode={initialMode}
+        initialResolved={initialResolved}
+      >
+        <PaletteProvider palette="${palette}">
+          <Navbar
+            logo="/logo.png"
+            items={[{ label: 'Home', href: '/' }]}
+            version="v0.1.0"
+          />
+          {children}
+        </PaletteProvider>
+      </ThemeProvider>
     </html>
   );
 }
@@ -479,24 +506,28 @@ function messagesJson(lang, name) {
   const title = toTitleCase(name);
 
   if (lang === 'en') {
-    return JSON.stringify(
+    return (
+      JSON.stringify(
+        {
+          Metadata: { title, description: '' },
+          HomePage: { title },
+        },
+        null,
+        2,
+      ) + '\n'
+    );
+  }
+
+  return (
+    JSON.stringify(
       {
         Metadata: { title, description: '' },
         HomePage: { title },
       },
       null,
       2,
-    ) + '\n';
-  }
-
-  return JSON.stringify(
-    {
-      Metadata: { title, description: '' },
-      HomePage: { title },
-    },
-    null,
-    2,
-  ) + '\n';
+    ) + '\n'
+  );
 }
 
 // ── Main ───────────────────────────────────────────────────────────────
