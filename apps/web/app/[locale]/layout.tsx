@@ -74,7 +74,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           initialMode={initialMode}
           initialResolved={initialResolved}
         >
-          <PaletteProvider palette="cyan">
+          <PaletteProvider palette="cyan" accent="#68c3f7">
             <Navbar
               logo="/logo.png"
               items={[
@@ -89,7 +89,6 @@ export default async function LocaleLayout({ children, params }: Props) {
               ]}
               fixedItems={[{ label: 'Login', href: '/login' }]}
               version={`v${packageJson.version}`}
-              searchBox
             />
             {children}
           </PaletteProvider>

@@ -21,92 +21,65 @@ export default async function Home({ params }: Props) {
   const tCommon = await getTranslations('Common');
 
   return (
-    <Container display="flex" alignItems="center" justifyContent="center">
-      <Box
-        width={360}
-        padding={32}
-        borderRadius={12}
-        flexDirection="column"
-        alignItems="center"
+    <Container display="flex" flexDirection="column" paddingX={10}>
+      <h2
+        style={{
+          fontSize: 18,
+          fontWeight: 600,
+          color: 'var(--foreground)',
+          margin: 0,
+        }}
       >
-        <h2
-          style={{
-            fontSize: 18,
-            fontWeight: 600,
-            color: 'var(--foreground)',
-            margin: 0,
-          }}
-        >
-          {t('themeMode')} {add(2, 3)}
-        </h2>
+        {t('themeMode')} {add(2, 3)}
+      </h2>
+      <Box>
         <ThemeSwitch />
-        <Switch />
-        <Icon
-          icon="/icons/cloud-rain-alt-svgrepo-com.svg"
-          size={50}
-          padding={5}
-          backgroundColor="var(--surface-2)"
-          backgroundShape="circle"
-        />
-        <Box
-          marginTop={20}
-          width="100%"
-          elevation={3}
-          borderRadius={8}
-          padding={10}
-        >
-          {t('content')} {t('goToAbout')}
-          <Button text={tCommon('save')} />
-        </Box>
-        <Grid spacing={1} marginTop={10} container>
-          <Grid item size={{ xs: 4 }}>
-            <Box
-              padding={20}
-              backgroundColor="var(--surface-2)"
-              borderRadius={8}
-            >
-              Left Column
-            </Box>
-          </Grid>
-          <Grid item size={{ xs: 4 }}>
-            <Box
-              padding={20}
-              backgroundColor="var(--surface-1)"
-              borderRadius={8}
-            >
-              Center column
-            </Box>
-          </Grid>
-          <Grid item size={{ xs: 4 }}>
-            <Box
-              padding={20}
-              backgroundColor="var(--surface-2)"
-              borderRadius={8}
-            >
-              Right Column
-            </Box>
-          </Grid>
-          <Grid item size={{ xs: 4 }}>
-            <Box
-              padding={20}
-              backgroundColor="var(--surface-1)"
-              borderRadius={8}
-            >
-              4th Column
-            </Box>
-          </Grid>
-          <Grid item size={{ xs: 4 }}>
-            <Box
-              padding={20}
-              backgroundColor="var(--surface-2)"
-              borderRadius={8}
-            >
-              sss
-            </Box>
-          </Grid>
-        </Grid>
-        <TextInput name="name" lable="My input" multirow rows={5} />
       </Box>
+      <Switch />
+      <Icon
+        icon="/icons/cloud-rain-alt-svgrepo-com.svg"
+        size={50}
+        padding={5}
+        backgroundColor="var(--surface-2)"
+        backgroundShape="circle"
+      />
+      <Box
+        marginTop={20}
+        width="100%"
+        elevation={3}
+        borderRadius={8}
+        padding={10}
+      >
+        <Button text={tCommon('save')} />
+      </Box>
+      <Grid spacing={1} marginTop={10} container>
+        <Grid item size={{ xs: 4 }}>
+          <Box padding={20} backgroundColor="var(--surface-2)" borderRadius={8}>
+            Left Column
+          </Box>
+        </Grid>
+        <Grid item size={{ xs: 4 }}>
+          <Box padding={20} backgroundColor="var(--surface-1)" borderRadius={8}>
+            Center column
+          </Box>
+        </Grid>
+        <Grid item size={{ xs: 4 }}>
+          <Box padding={20} backgroundColor="var(--surface-2)" borderRadius={8}>
+            Right Column
+          </Box>
+        </Grid>
+        <Grid item size={{ xs: 4 }}>
+          <Box padding={20} backgroundColor="var(--surface-1)" borderRadius={8}>
+            4th Column
+          </Box>
+        </Grid>
+        <Grid item size={{ xs: 4 }}>
+          <Box padding={20} backgroundColor="var(--surface-2)" borderRadius={8}>
+            {t('content')}
+          </Box>
+        </Grid>
+      </Grid>
+      <TextInput name="name" lable="My input" multirow rows={5} />
     </Container>
   );
 }
