@@ -9,7 +9,6 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const APPS_DIR = join(ROOT, 'apps');
-const ENV_FILE = join(ROOT, '.env');
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -30,13 +29,15 @@ function readAppVersion(appDir) {
   return pkg.version;
 }
 
-function readDockerRegistry() {
-  if (!existsSync(ENV_FILE)) {
-    console.error('\n  Error: .env file not found at project root\n');
+function readDockerRegistry(appDir) {
+  const envFile = join(appDir, '.env');
+
+  if (!existsSync(envFile)) {
+    console.error(`\n  Error: .env file not found in ${appDir}\n`);
     process.exit(1);
   }
 
-  const content = readFileSync(ENV_FILE, 'utf-8');
+  const content = readFileSync(envFile, 'utf-8');
   const match = content.match(/^DOCKER_REGISTRY=(.+)$/m);
 
   if (!match || !match[1].trim()) {
@@ -98,7 +99,7 @@ console.log(`  Tagged ${appName}:${tag}\n`);
 const publishInput = await prompt('  Do you want to publish it? [y/n]', 'y');
 
 if (publishInput.toLowerCase().startsWith('y')) {
-  const registry = readDockerRegistry();
+  const registry = readDockerRegistry(appDir);
   const remoteImage = `${registry}/${appName}:${tag}`;
 
   execSync(`docker tag ${appName}:${tag} ${remoteImage}`, {
