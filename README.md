@@ -2,64 +2,6 @@
 
 This Turborepo starter is maintained by the Turborepo core team.
 
-## Using this example
-
-Run the following command:
-
-```sh
-npx create-turbo@latest
-```
-
-## What's inside?
-
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
-
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
 ### Develop
 
 To develop all apps and packages, run the following command:
@@ -88,48 +30,149 @@ yarn exec turbo dev --filter=web
 pnpm exec turbo dev --filter=web
 ```
 
-### Remote Caching
+---
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+## Deploying `web` to MicroK8s with Helm
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+The Helm chart lives in `apps/web/helm/web/`.
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+### Prerequisites
 
+1. **MicroK8s** installed on every node ([snap install guide](https://microk8s.io/docs/getting-started)):
+
+   ```bash
+   sudo snap install microk8s --classic --channel=1.31/stable
+   sudo microk8s status --wait-ready
+   ```
+
+2. **Enable required addons** (run on the control-plane node):
+
+   ```bash
+   microk8s enable dns
+   microk8s enable ingress          # NGINX Ingress controller
+   microk8s enable cert-manager     # cert-manager for TLS
+   microk8s enable helm3            # Helm 3
+   microk8s enable hostpath-storage # default StorageClass
+   ```
+
+   > For **shared storage across multiple nodes** (ReadWriteMany), enable an
+   > NFS-based storage class or OpenEBS:
+   >
+   > ```bash
+   > # Option A – NFS CSI driver (recommended for multi-node RWX)
+   > microk8s enable nfs
+   >
+   > # Option B – Community NFS provisioner
+   > microk8s helm3 repo add nfs-subdir https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+   > microk8s helm3 install nfs-provisioner nfs-subdir/nfs-subdir-external-provisioner \
+   >   --set nfs.server=<NFS_SERVER_IP> \
+   >   --set nfs.path=<NFS_EXPORT_PATH>
+   > ```
+
+3. **Create a ClusterIssuer** for Let's Encrypt (one-time setup):
+
+   ```yaml
+   # letsencrypt-prod.yaml
+   apiVersion: cert-manager.io/v1
+   kind: ClusterIssuer
+   metadata:
+     name: letsencrypt-prod
+   spec:
+     acme:
+       server: https://acme-v02.api.letsencrypt.org/directory
+       email: you@example.com
+       privateKeySecretRef:
+         name: letsencrypt-prod
+       solvers:
+         - http01:
+             ingress:
+               class: nginx
+   ```
+
+   ```bash
+   microk8s kubectl apply -f letsencrypt-prod.yaml
+   ```
+
+4. **Join worker nodes** to the cluster:
+
+   ```bash
+   # On the control-plane node, generate a join token:
+   microk8s add-node
+
+   # On each worker node, run the join command printed above:
+   microk8s join <control-plane-ip>:<port>/<token>
+   ```
+
+### Build & push the Docker image
+
+```bash
+# From the repository root
+docker build -f apps/web/Dockerfile -t <REGISTRY>/web:latest .
+docker push <REGISTRY>/web:latest
 ```
-cd my-turborepo
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
+### Configure the chart
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+Edit `apps/web/helm/web/values.yaml` (or pass overrides via `--set` / `-f`):
+
+| Key                          | Description                         | Default           |
+| ---------------------------- | ----------------------------------- | ----------------- |
+| `replicaCount`               | Number of pod replicas              | `2`               |
+| `image.repository`           | Container image (no tag)            | `docker/web`      |
+| `image.tag`                  | Image tag                           | `latest`          |
+| `ingress.enabled`            | Create an Ingress resource          | `true`            |
+| `ingress.hosts[0].host`      | Public hostname                     | `web.example.com` |
+| `env`                        | Plain environment variables (map)   | see values.yaml   |
+| `envFromSecret`              | Env vars from existing Secrets      | `[]`              |
+| `sharedStorage.enabled`      | Create a ReadWriteMany PVC          | `true`            |
+| `sharedStorage.storageClass` | StorageClass name (empty = default) | `""`              |
+| `sharedStorage.size`         | PVC size                            | `1Gi`             |
+| `nodeAffinity.enabled`       | Restrict pods to specific nodes     | `false`           |
+| `nodeAffinity.nodeNames`     | List of allowed node names          | `[]`              |
+
+### Deploy
+
+```bash
+# Alias for convenience (optional)
+alias helm='microk8s helm3'
+alias kubectl='microk8s kubectl'
+
+# Install (first time)
+helm -n test-web install web ./apps/web/helm/web \
+  --set image.repository=<REGISTRY>/web \
+  --set image.tag=latest \
+  --set ingress.hosts[0].host=web.example.com \
+  --set ingress.tls[0].hosts[0]=web.example.com
+
+# Upgrade (subsequent deploys)
+helm -n test-web upgrade web ./apps/web/helm/web \
+  --set image.tag=<NEW_TAG>
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+### Create the health file
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+The startup and liveness probes check for a file in the shared volume.
+After the application starts, create it so probes pass:
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+```bash
+# From any pod in the deployment
+kubectl exec deploy/web -n test-web -- touch /app/shared/.healthy
 ```
 
-## Useful Links
+Or include the health-file creation in your application startup script.
 
-Learn more about the power of Turborepo:
+### Useful commands
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+```bash
+# Check release status
+helm -n test-web list
+
+# View rendered templates without deploying
+helm template web ./apps/web/helm/web -n test-web
+
+# Uninstall the release
+helm -n test-web uninstall web
+
+# View pod logs
+kubectl logs -n test-web -l app.kubernetes.io/name=web --tail=50 -f
+```
