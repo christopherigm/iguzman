@@ -11,6 +11,7 @@ import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
+import { Navbar } from '@repo/ui/core-elements/navbar';
 import '../globals.css';
 
 type Props = {
@@ -68,6 +69,23 @@ export default async function LocaleLayout({ children, params }: Props) {
         <ThemeScript />
       </head>
       <body>
+        <Navbar
+          logo="/logo.png"
+          items={[
+            { label: 'Home', href: '/' },
+            {
+              label: 'Products',
+              children: [
+                { label: 'Widget', href: '/products/widget' },
+                { label: 'Gadget', href: '/products/gadget' },
+              ],
+            },
+          ]}
+          fixedItems={[{ label: 'Login', href: '/login' }]}
+          // onSearch={(query) => console.log(query)}
+          version="v1.0.0"
+          searchBox
+        />
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider
             initialMode={initialMode}

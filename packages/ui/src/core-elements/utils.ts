@@ -106,4 +106,15 @@ export const BREAKPOINTS: Record<Breakpoint, number> = {
   xl: 1536,
 };
 
+/**
+ * Represents a navigation menu item.
+ */
+export interface MenuItem {
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  icon?: string;
+  children?: MenuItem[];
+}
+
 export default {};
