@@ -1,13 +1,6 @@
-import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-// ── Constants ──────────────────────────────────────────────────────────
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
-const APPS_DIR = join(ROOT, 'apps');
+import { join } from 'node:path';
+import { resolveApp, readAppVersion, runCommand, createPrompt } from './utils.mjs';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -32,32 +25,10 @@ function updateAppVersion(appDir) {
   return { oldVersion, newVersion };
 }
 
-function runCommand(command, description) {
-  console.log(`\n  ${description}...\n`);
-  try {
-    execSync(command, { cwd: ROOT, stdio: 'inherit' });
-    console.log(`\n  ✓ ${description} completed\n`);
-  } catch (error) {
-    console.error(`\n  ✗ ${description} failed\n`);
-    process.exit(1);
-  }
-}
-
 // ── Main ───────────────────────────────────────────────────────────────
 
 const appName = process.argv[2];
-
-if (!appName) {
-  console.error('\n  Usage: pnpm deployment <app-name>\n');
-  process.exit(1);
-}
-
-const appDir = join(APPS_DIR, appName);
-
-if (!existsSync(appDir)) {
-  console.error(`\n  Error: App "${appName}" not found at apps/${appName}/\n`);
-  process.exit(1);
-}
+const appDir = resolveApp(appName, 'pnpm deployment <app-name>');
 
 const pkgPath = join(appDir, 'package.json');
 if (!existsSync(pkgPath)) {
@@ -72,8 +43,19 @@ console.log('  ═════════════════════�
 
 // Step 1: Bump version
 console.log('  [1/4] Bumping version number');
-const { oldVersion, newVersion } = updateAppVersion(appDir);
-console.log(`        ${oldVersion} → ${newVersion}\n`);
+const { rl, prompt } = createPrompt();
+const answer = await prompt('        Bump app version? [y/n]', 'y');
+rl.close();
+
+let oldVersion, newVersion;
+if (answer.toLowerCase() === 'n') {
+  oldVersion = readAppVersion(appDir);
+  newVersion = oldVersion;
+  console.log(`        Skipping version bump (staying at ${newVersion})\n`);
+} else {
+  ({ oldVersion, newVersion } = updateAppVersion(appDir));
+  console.log(`        ${oldVersion} → ${newVersion}\n`);
+}
 
 // Step 2: Build Next.js app
 console.log('  [2/4] Building Next.js application');

@@ -1,69 +1,14 @@
 import { execSync } from 'node:child_process';
-import { createInterface } from 'node:readline';
-import { existsSync, readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-// ── Constants ──────────────────────────────────────────────────────────
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
-const APPS_DIR = join(ROOT, 'apps');
-
-// ── Helpers ────────────────────────────────────────────────────────────
-
-const rl = createInterface({ input: process.stdin, output: process.stdout });
-
-function prompt(question, defaultValue) {
-  const suffix = defaultValue ? ` (${defaultValue})` : '';
-  return new Promise((resolve) => {
-    rl.question(`${question}${suffix}: `, (answer) => {
-      resolve(answer.trim() || defaultValue || '');
-    });
-  });
-}
-
-function readAppVersion(appDir) {
-  const pkgPath = join(appDir, 'package.json');
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-  return pkg.version;
-}
-
-function readDockerRegistry(appDir) {
-  const envFile = join(appDir, '.env');
-
-  if (!existsSync(envFile)) {
-    console.error(`\n  Error: .env file not found in ${appDir}\n`);
-    process.exit(1);
-  }
-
-  const content = readFileSync(envFile, 'utf-8');
-  const match = content.match(/^DOCKER_REGISTRY=(.+)$/m);
-
-  if (!match || !match[1].trim()) {
-    console.error('\n  Error: DOCKER_REGISTRY not found in .env file\n');
-    process.exit(1);
-  }
-
-  return match[1].trim();
-}
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { resolveApp, readAppVersion, readEnvFile, createPrompt, ROOT } from './utils.mjs';
 
 // ── Main ───────────────────────────────────────────────────────────────
 
 const appName = process.argv[2];
+const appDir = resolveApp(appName, 'pnpm docker <app-name>');
 
-if (!appName) {
-  console.error('\n  Usage: pnpm docker <app-name>\n');
-  process.exit(1);
-}
-
-const appDir = join(APPS_DIR, appName);
 const dockerfile = join(appDir, 'Dockerfile');
-
-if (!existsSync(appDir)) {
-  console.error(`\n  Error: App "${appName}" not found at apps/${appName}/\n`);
-  process.exit(1);
-}
 
 if (!existsSync(dockerfile)) {
   console.error(
@@ -87,6 +32,7 @@ try {
 // ── Tag & Publish ──────────────────────────────────────────────────────
 
 const defaultVersion = readAppVersion(appDir);
+const { rl, prompt } = createPrompt();
 
 const tag = await prompt('  Tag of the new docker image', defaultVersion);
 
@@ -99,8 +45,16 @@ console.log(`  Tagged ${appName}:${tag}\n`);
 const publishInput = await prompt('  Do you want to publish it? [y/n]', 'y');
 
 if (publishInput.toLowerCase().startsWith('y')) {
-  const registry = readDockerRegistry(appDir);
-  const remoteImage = `${registry}/${appName}:${tag}`;
+  const envPath = join(appDir, '.env');
+  const env = readEnvFile(envPath);
+
+  if (!env.DOCKER_REGISTRY) {
+    console.error('\n  Error: DOCKER_REGISTRY not found in .env file\n');
+    rl.close();
+    process.exit(1);
+  }
+
+  const remoteImage = `${env.DOCKER_REGISTRY}/${appName}:${tag}`;
 
   execSync(`docker tag ${appName}:${tag} ${remoteImage}`, {
     cwd: ROOT,

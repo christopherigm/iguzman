@@ -81,7 +81,7 @@ export default async function Home({ params }: Props) {
               backgroundColor="var(--surface-1)"
               borderRadius={8}
             >
-              Center column OK.
+              Center column
             </Box>
           </Grid>
           <Grid item size={{ xs: 4 }}>

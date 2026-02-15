@@ -1,51 +1,9 @@
 import { execSync } from 'node:child_process';
-import { createInterface } from 'node:readline';
-import { existsSync, readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-// ── Constants ──────────────────────────────────────────────────────────
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
-const APPS_DIR = join(ROOT, 'apps');
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { resolveApp, readAppVersion, readEnvFile, createPrompt, ROOT } from './utils.mjs';
 
 // ── Helpers ────────────────────────────────────────────────────────────
-
-const rl = createInterface({ input: process.stdin, output: process.stdout });
-
-function prompt(question, defaultValue) {
-  const suffix = defaultValue ? ` (${defaultValue})` : '';
-  return new Promise((resolve) => {
-    rl.question(`${question}${suffix}: `, (answer) => {
-      resolve(answer.trim() || defaultValue || '');
-    });
-  });
-}
-
-function readAppVersion(appDir) {
-  const pkgPath = join(appDir, 'package.json');
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-  return pkg.version;
-}
-
-function readEnvFile(envPath) {
-  if (!existsSync(envPath)) return {};
-
-  const content = readFileSync(envPath, 'utf-8');
-  const env = {};
-
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const match = trimmed.match(/^([A-Z_]+)=(.*)$/);
-    if (match) {
-      env[match[1]] = match[2].trim().replace(/^['"]|['"]$/g, '');
-    }
-  }
-
-  return env;
-}
 
 function releaseExists(releaseName, namespace) {
   try {
@@ -59,19 +17,9 @@ function releaseExists(releaseName, namespace) {
 // ── Main ───────────────────────────────────────────────────────────────
 
 const appName = process.argv[2];
+const appDir = resolveApp(appName, 'pnpm deploy <app-name>');
 
-if (!appName) {
-  console.error('\n  Usage: pnpm deploy <app-name>\n');
-  process.exit(1);
-}
-
-const appDir = join(APPS_DIR, appName);
 const helmDir = join(appDir, 'helm');
-
-if (!existsSync(appDir)) {
-  console.error(`\n  Error: App "${appName}" not found at apps/${appName}/\n`);
-  process.exit(1);
-}
 
 if (!existsSync(helmDir)) {
   console.error(`\n  Error: No Helm chart found at apps/${appName}/helm/\n`);
@@ -85,6 +33,8 @@ const appVersion = readAppVersion(appDir);
 console.log(`\n  Deploying "${appName}" via Helm\n`);
 
 // ── Interactive Prompts ────────────────────────────────────────────────
+
+const { rl, prompt } = createPrompt();
 
 const namespace = await prompt(`  Namespace`, env.NAMESPACE || '');
 

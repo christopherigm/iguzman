@@ -86,7 +86,8 @@ probes:
 nodeAffinity:
   enabled: false
   # List of node names where the pods should be scheduled.
-  nodeNames: []
+  nodeNames: #[]
+    -node1
   # - node-1
   # - node-2
   # - node-3
