@@ -7,6 +7,7 @@
   border-bottom: 1px solid var(--border, #e5e7eb);
   transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
   transform: translateY(0);
+  background-color: var(--accent-foreground, #ffffff);
 }
 
 .ui-navbar--fullwidth {
@@ -120,6 +121,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   animation: ui-navbar-dropdown-in 200ms ease-out;
   z-index: 999;
+  background-color: var(--accent-foreground, #ffffff);
 }
 
 @keyframes ui-navbar-dropdown-in {

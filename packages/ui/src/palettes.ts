@@ -25,7 +25,7 @@ const palettes: Record<string, PaletteDefinition> = {
     name: 'cyan',
     label: 'Cyan',
     light: {
-      '--background': '#ffffff',
+      '--background': '#fafafa',
       '--foreground': '#171717',
       '--surface-1': '#f5f5f5',
       '--surface-2': '#e5e5e5',

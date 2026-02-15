@@ -7,7 +7,8 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "new-app": "node scripts/new-app.mjs"
+    "new-app": "node scripts/new-app.mjs",
+    "docker": "node scripts/docker-build.mjs"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
