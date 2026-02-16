@@ -60,17 +60,17 @@ function packageJson(name, port, includeI18n) {
     dependencies: {
       '@repo/helpers': 'workspace:*',
       '@repo/ui': 'workspace:*',
-      react: '^19.2.0',
-      'react-dom': '^19.2.0',
+      react: '^19.2.4',
+      'react-dom': '^19.2.4',
     },
     devDependencies: {
       '@repo/eslint-config': 'workspace:*',
       '@repo/typescript-config': 'workspace:*',
-      '@types/node': '^22.15.3',
-      '@types/react': '19.2.2',
-      '@types/react-dom': '19.2.2',
-      eslint: '^9.39.1',
-      typescript: '5.9.2',
+      '@types/node': '^25.2.3',
+      '@types/react': '19.2.14',
+      '@types/react-dom': '19.2.3',
+      eslint: '^9.39.2',
+      typescript: '5.9.3',
     },
   };
 
@@ -1084,7 +1084,10 @@ async function main() {
   writeFile(appPath('helm/Chart.yaml'), helmChartYaml(name));
   writeFile(appPath('helm/values.yaml'), helmValuesYaml(name, registryUser));
   writeFile(appPath('helm/templates/_helpers.tpl'), helmHelpersTpl(name));
-  writeFile(appPath('helm/templates/deployment.yaml'), helmDeploymentYaml(name));
+  writeFile(
+    appPath('helm/templates/deployment.yaml'),
+    helmDeploymentYaml(name),
+  );
   writeFile(appPath('helm/templates/service.yaml'), helmServiceYaml(name));
   writeFile(appPath('helm/templates/ingress.yaml'), helmIngressYaml(name));
   writeFile(appPath('helm/templates/pvc.yaml'), helmPvcYaml(name));
