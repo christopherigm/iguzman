@@ -138,14 +138,14 @@ alias helm='microk8s helm3'
 alias kubectl='microk8s kubectl'
 
 # Install (first time)
-helm -n test-web install web ./apps/web/helm \
+helm -n web install web ./apps/web/helm \
   --set image.repository=<REGISTRY>/web \
   --set image.tag=latest \
   --set ingress.hosts[0].host=web.example.com \
   --set ingress.tls[0].hosts[0]=web.example.com
 
 # Upgrade (subsequent deploys)
-helm -n test-web upgrade web ./apps/web/helm \
+helm -n web upgrade web ./apps/web/helm \
   --set image.tag=<NEW_TAG>
 ```
 
@@ -156,7 +156,7 @@ After the application starts, create it so probes pass:
 
 ```bash
 # From any pod in the deployment
-kubectl exec deploy/web -n test-web -- touch /app/shared/.healthy
+kubectl exec deploy/web -n web -- touch /app/shared/.healthy
 ```
 
 Or include the health-file creation in your application startup script.
@@ -165,14 +165,14 @@ Or include the health-file creation in your application startup script.
 
 ```bash
 # Check release status
-helm -n test-web list
+helm -n web list
 
 # View rendered templates without deploying
-helm template web ./apps/web/helm -n test-web
+helm template web ./apps/web/helm -n web
 
 # Uninstall the release
-helm -n test-web uninstall web
+helm -n web uninstall web
 
 # View pod logs
-kubectl logs -n test-web -l app.kubernetes.io/name=web --tail=50 -f
+kubectl logs -n web -l app.kubernetes.io/name=web --tail=50 -f
 ```

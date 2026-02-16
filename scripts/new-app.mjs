@@ -2,6 +2,9 @@ import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { APPS_DIR, createPrompt } from './utils.mjs';
 
+// ── Update prompt ──────────────────────────────────────────────────────
+// Update new-app.mjs file to reflect changes made in apps/web and its dependencies
+
 // ── Constants ──────────────────────────────────────────────────────────
 
 const VALID_PALETTES = [
@@ -621,6 +624,9 @@ function helmValuesYaml(name, registryUser) {
 # ${toTitleCase(name)} Application – Helm Values
 # ─────────────────────────────────────────────────────────────
 
+# -- Number of old ReplicaSets to keep for rollbacks (default: 2)
+revisionHistoryLimit: 2 # how many old ReplicaSets to keep for rollbacks
+
 # -- Number of pod replicas
 replicaCount: 2
 
@@ -790,6 +796,7 @@ metadata:
   labels:
     {{- include "${name}.labels" . | nindent 4 }}
 spec:
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:

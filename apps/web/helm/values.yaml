@@ -2,6 +2,9 @@
 # Web Application – Helm Values
 # ─────────────────────────────────────────────────────────────
 
+# -- Number of old ReplicaSets to keep for rollbacks (default: 2)
+revisionHistoryLimit: 2 # how many old ReplicaSets to keep for rollbacks
+
 # -- Number of pod replicas
 replicaCount: 2
 

@@ -78,7 +78,7 @@ const mergeAudios = async (
     queue.push(dest);
   }
 
-  return queue[0];
+  return queue[0] ?? '';
 };
 
 /**
