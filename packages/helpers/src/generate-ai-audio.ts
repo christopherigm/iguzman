@@ -1,4 +1,4 @@
-import { ttsServerURL } from '@iguzman/helpers/constants';
+import { ttsServerURL } from '@repo/helpers/constants';
 
 /* ------------------------------------------------------------------ */
 /*  Configuration                                                      */
@@ -57,9 +57,7 @@ const delay = (ms: number): Promise<void> =>
  * If the server responds with a `busy` status the request is retried
  * automatically after {@link RETRY_DELAY_MS}.
  */
-const sendTtsRequest = async (
-  payload: TtsRequestPayload,
-): Promise<string> => {
+const sendTtsRequest = async (payload: TtsRequestPayload): Promise<string> => {
   const response = await fetch(ttsServerURL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

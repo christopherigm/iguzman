@@ -1,6 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { getAudioDuration } from '@iguzman/helpers/get-audio-duration';
+import { getAudioDuration } from '@repo/helpers/get-audio-duration';
 
 const execAsync = promisify(exec);
 
@@ -11,8 +11,7 @@ const MAX_BUFFER = 1024 * 2048;
  * Resolves the current Node environment, defaulting to `"localhost"`
  * when `NODE_ENV` is not set.
  */
-const getNodeEnv = (): string =>
-  process.env.NODE_ENV?.trim() ?? 'localhost';
+const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? 'localhost';
 
 /**
  * Removes a leading `media/` prefix from a file path so it can be
@@ -114,9 +113,7 @@ export const joinVideosWithTransition = async ({
   dest,
   duration = 3,
   transition = 'dissolve',
-  outputFolder = getNodeEnv() === 'production'
-    ? '/app/media'
-    : 'public/media',
+  outputFolder = getNodeEnv() === 'production' ? '/app/media' : 'public/media',
 }: JoinVideosWithTransitionOptions): Promise<string> => {
   if (!src1 || typeof src1 !== 'string') {
     throw new Error('First source file path must be a non-empty string');
@@ -130,7 +127,11 @@ export const joinVideosWithTransition = async ({
     throw new Error('Destination file path must be a non-empty string');
   }
 
-  if (typeof duration !== 'number' || duration <= 0 || !Number.isFinite(duration)) {
+  if (
+    typeof duration !== 'number' ||
+    duration <= 0 ||
+    !Number.isFinite(duration)
+  ) {
     throw new Error('Duration must be a positive finite number');
   }
 

@@ -53,15 +53,14 @@ const concatWavFiles = ({
   const streamLabels: string[] = [];
 
   for (let i = 0; i < files.length; i++) {
-    const srcFile = `${outputFolder}/${stripMediaPrefix(files[i])}`;
+    const srcFile = `${outputFolder}/${stripMediaPrefix(files[i] ?? '')}`;
     inputArgs.push('-i', srcFile);
     streamLabels.push(`[${i}:a]`);
   }
 
   // Concat filter: join all audio streams sequentially.
   // @see https://trac.ffmpeg.org/wiki/Concatenate#filterdemuxer
-  const filterComplex =
-    `${streamLabels.join('')}concat=n=${files.length}:v=0:a=1[out]`;
+  const filterComplex = `${streamLabels.join('')}concat=n=${files.length}:v=0:a=1[out]`;
 
   const args = [
     '-y',

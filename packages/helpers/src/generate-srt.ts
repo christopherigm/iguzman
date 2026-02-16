@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises';
-import { srtServerURL } from '@iguzman/helpers/constants';
-import copyFile from '@iguzman/helpers/copy-file';
-import deleteMediaFile from '@iguzman/helpers/delete-media-file';
+import { srtServerURL } from '@repo/helpers/constants';
+import copyFile from '@repo/helpers/copy-file';
+import deleteMediaFile from '@repo/helpers/delete-media-file';
 
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 

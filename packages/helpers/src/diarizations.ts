@@ -38,12 +38,10 @@ const MIN_SEGMENT_DURATION = 1;
  * @param diarizations - Raw diarization segments to normalize.
  * @returns A new array of normalized segments.
  */
-const normalizeDiarizations = (
-  diarizations: Diarization[],
-): Diarization[] => {
+const normalizeDiarizations = (diarizations: Diarization[]): Diarization[] => {
   if (diarizations.length === 0) return [];
 
-  const needsSwap = diarizations[0].speaker === 1;
+  const needsSwap = diarizations[0]?.speaker === 1;
 
   const swapped = needsSwap
     ? diarizations.map((segment) => ({

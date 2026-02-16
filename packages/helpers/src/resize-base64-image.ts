@@ -1,4 +1,4 @@
-import base64ToImage from '@iguzman/helpers/base64-to-image';
+import base64ToImage from '@repo/helpers/base64-to-image';
 
 /** Valid rotation angles (in degrees, clockwise). */
 type RotationDegrees = 0 | 90 | 180 | 270;
@@ -35,7 +35,11 @@ interface ResizeBase64ImageOptions {
  */
 const resizeBase64Image = async (
   base64Image: string,
-  { maxWidth = 100, maxHeight = 100, degrees = 0 }: ResizeBase64ImageOptions = {},
+  {
+    maxWidth = 100,
+    maxHeight = 100,
+    degrees = 0,
+  }: ResizeBase64ImageOptions = {},
 ): Promise<string> => {
   const img = await base64ToImage(base64Image);
 
@@ -60,7 +64,13 @@ const resizeBase64Image = async (
   /** Translate to center, rotate, then draw the image centered. */
   ctx.translate(canvas.width / 2, canvas.height / 2);
   ctx.rotate((degrees * Math.PI) / 180);
-  ctx.drawImage(img, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+  ctx.drawImage(
+    img,
+    -scaledWidth / 2,
+    -scaledHeight / 2,
+    scaledWidth,
+    scaledHeight,
+  );
 
   return canvas.toDataURL();
 };

@@ -1,5 +1,5 @@
 import { execFile } from 'child_process';
-import getRandomNumber from '@iguzman/helpers/random-number';
+import getRandomNumber from '@repo/helpers/random-number';
 
 const nodeEnv = process.env.NODE_ENV?.trim() ?? 'localhost';
 

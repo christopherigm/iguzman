@@ -1,5 +1,5 @@
-import { getLocalStorageItem } from '@iguzman/helpers/local-storage';
-import type { JwtPayload } from '@iguzman/helpers/types';
+import { getLocalStorageItem } from '@repo/helpers/local-storage';
+import type { JwtPayload } from '@repo/helpers/types';
 
 /** The `localStorage` key where the JWT payload is persisted. */
 const JWT_STORAGE_KEY = 'jwt';

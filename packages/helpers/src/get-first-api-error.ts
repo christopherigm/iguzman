@@ -1,4 +1,4 @@
-import type { ApiError } from '@iguzman/helpers/types';
+import type { ApiError } from '@repo/helpers/types';
 
 /** Fallback error returned when no valid error is found in the array. */
 const EMPTY_ERROR: ApiError = {

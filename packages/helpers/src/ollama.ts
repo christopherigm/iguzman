@@ -1,6 +1,6 @@
-import { httpPost } from '@iguzman/helpers/http-client';
-import { ollamaServerURL } from '@iguzman/helpers/constants';
-import getRandomNumber from '@iguzman/helpers/random-number';
+import { httpPost } from '@repo/helpers/http-client';
+import { ollamaServerURL } from '@repo/helpers/constants';
+import getRandomNumber from '@repo/helpers/random-number';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */

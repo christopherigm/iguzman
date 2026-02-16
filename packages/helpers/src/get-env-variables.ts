@@ -1,5 +1,5 @@
-import type { EnvironmentVariables, Language } from '@iguzman/helpers/types';
-import getBooleanFromString from '@iguzman/helpers/get-boolean-from-string';
+import type { EnvironmentVariables, Language } from '@repo/helpers/types';
+import getBooleanFromString from '@repo/helpers/get-boolean-from-string';
 
 /* ------------------------------------------------------------------ */
 /*  Env-reading helpers                                               */

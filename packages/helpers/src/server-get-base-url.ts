@@ -1,6 +1,6 @@
 'use server';
 
-import getHostFromServer from '@iguzman/helpers/server-get-host';
+import getHostFromServer from '@repo/helpers/server-get-host';
 
 /** Environment variable for Node.js environment */
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'development';

@@ -1,14 +1,13 @@
 import { mkdir, rm } from 'fs/promises';
-import { joinAudiosWithCrossfade } from '@iguzman/helpers/join-2-audios-with-transition';
-import copyFile from '@iguzman/helpers/copy-file';
-import getRandomNumber from '@iguzman/helpers/random-number';
+import { joinAudiosWithCrossfade } from '@repo/helpers/join-2-audios-with-transition';
+import copyFile from '@repo/helpers/copy-file';
+import getRandomNumber from '@repo/helpers/random-number';
 
 /**
  * Resolves the current Node environment, defaulting to `"localhost"`
  * when `NODE_ENV` is not set.
  */
-const getNodeEnv = (): string =>
-  process.env.NODE_ENV?.trim() ?? 'localhost';
+const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? 'localhost';
 
 /**
  * Removes a leading `media/` prefix from a file path so it can be
@@ -111,9 +110,7 @@ export const duplicateAudio = async ({
   src,
   dest,
   times = 2,
-  outputFolder = getNodeEnv() === 'production'
-    ? '/app/media'
-    : 'public/media',
+  outputFolder = getNodeEnv() === 'production' ? '/app/media' : 'public/media',
 }: DuplicateAudioOptions): Promise<string> => {
   if (!src || typeof src !== 'string') {
     throw new Error('Source file path must be a non-empty string');

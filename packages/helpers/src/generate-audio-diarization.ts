@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
-import { diarizationServerURL } from '@iguzman/helpers/constants';
-import type { Diarization } from '@iguzman/helpers/diarizations';
+import { diarizationServerURL } from '@repo/helpers/constants';
+import type { Diarization } from '@repo/helpers/diarizations';
 
 /* ------------------------------------------------------------------ */
 /*  Configuration                                                      */
@@ -128,10 +128,7 @@ const generateAudioDiarization = async ({
 
   const outputFile = await sendDiarizationRequest(payload);
 
-  const rawDiarization = await readFile(
-    `${MEDIA_ROOT}/${outputFile}`,
-    'utf-8',
-  );
+  const rawDiarization = await readFile(`${MEDIA_ROOT}/${outputFile}`, 'utf-8');
   const diarization: Diarization[] = JSON.parse(rawDiarization);
 
   return {

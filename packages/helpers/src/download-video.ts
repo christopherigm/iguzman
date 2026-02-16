@@ -1,6 +1,6 @@
 import { execFile } from 'child_process';
 import { isInstagram, isTiktok, isYoutube } from './checkers';
-import getFinalURL from '@iguzman/helpers/get-final-url';
+import getFinalURL from '@repo/helpers/get-final-url';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */

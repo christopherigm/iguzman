@@ -1,7 +1,7 @@
-import duplicateAudio from '@iguzman/helpers/duplicate-audio-x-times';
-import getAudioDuration from '@iguzman/helpers/get-audio-duration';
-import cutVideoLength from '@iguzman/helpers/cut-video-length';
-import deleteMediaFile from '@iguzman/helpers/delete-media-file';
+import duplicateAudio from '@repo/helpers/duplicate-audio-x-times';
+import getAudioDuration from '@repo/helpers/get-audio-duration';
+import cutVideoLength from '@repo/helpers/cut-video-length';
+import deleteMediaFile from '@repo/helpers/delete-media-file';
 
 /**
  * Default crossfade overlap (in seconds) applied by

@@ -7,11 +7,11 @@ import {
   rmSync,
   writeFileSync,
 } from 'fs';
-import getRandomNumber from '@iguzman/helpers/random-number';
-import { isTiktok, isYoutube } from '@iguzman/helpers/checkers';
-import generateSrt from '@iguzman/helpers/generate-srt';
-import srtToText from '@iguzman/helpers/srt-to-text';
-import copyFile from '@iguzman/helpers/copy-file';
+import getRandomNumber from '@repo/helpers/random-number';
+import { isTiktok, isYoutube } from '@repo/helpers/checkers';
+import generateSrt from '@repo/helpers/generate-srt';
+import srtToText from '@repo/helpers/srt-to-text';
+import copyFile from '@repo/helpers/copy-file';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -157,7 +157,9 @@ const fetchVideoMetadata = async (
   url: string,
   binary: string,
 ): Promise<VideoMetadata> => {
-  const output = await execAsync(`${binary} --dump-json "${url}" | jq --raw-output`);
+  const output = await execAsync(
+    `${binary} --dump-json "${url}" | jq --raw-output`,
+  );
   if (!output) throw new Error('yt-dlp returned empty metadata');
   return JSON.parse(output) as VideoMetadata;
 };
@@ -420,9 +422,7 @@ const downloadSubtitles = async ({
     };
   }
 
-  throw new Error(
-    `No subtitles found and no local link provided for "${url}"`,
-  );
+  throw new Error(`No subtitles found and no local link provided for "${url}"`);
 };
 
 export default downloadSubtitles;

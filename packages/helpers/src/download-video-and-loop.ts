@@ -1,11 +1,11 @@
-import downloadVideo from '@iguzman/helpers/download-video';
-import loopVideoToLength from '@iguzman/helpers/duplicate-video-time-length';
-import deleteMediaFile from '@iguzman/helpers/delete-media-file';
-import upscaleVideoFps from '@iguzman/helpers/video-upscale-fps';
-import copyFile from '@iguzman/helpers/copy-file';
-import addAudioToVideoInTime from '@iguzman/helpers/add-audio-to-video-in-time';
-import extractAudioFromVideo from '@iguzman/helpers/extract-audio-from-video';
-import loopAudioToLength from '@iguzman/helpers/duplicate-audio-time-length';
+import downloadVideo from '@repo/helpers/download-video';
+import loopVideoToLength from '@repo/helpers/duplicate-video-time-length';
+import deleteMediaFile from '@repo/helpers/delete-media-file';
+import upscaleVideoFps from '@repo/helpers/video-upscale-fps';
+import copyFile from '@repo/helpers/copy-file';
+import addAudioToVideoInTime from '@repo/helpers/add-audio-to-video-in-time';
+import extractAudioFromVideo from '@repo/helpers/extract-audio-from-video';
+import loopAudioToLength from '@repo/helpers/duplicate-audio-time-length';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */

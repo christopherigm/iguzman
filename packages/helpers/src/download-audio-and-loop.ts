@@ -1,7 +1,7 @@
-import downloadVideo from '@iguzman/helpers/download-video';
-import loopAudioToLength from '@iguzman/helpers/duplicate-audio-time-length';
-import deleteMediaFile from '@iguzman/helpers/delete-media-file';
-import extractAudioFromVideo from '@iguzman/helpers/extract-audio-from-video';
+import downloadVideo from '@repo/helpers/download-video';
+import loopAudioToLength from '@repo/helpers/duplicate-audio-time-length';
+import deleteMediaFile from '@repo/helpers/delete-media-file';
+import extractAudioFromVideo from '@repo/helpers/extract-audio-from-video';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */

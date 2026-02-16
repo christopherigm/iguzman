@@ -1,8 +1,8 @@
 'use server';
 
 import { headers, cookies } from 'next/headers';
-import type { Language } from '@iguzman/helpers/types';
-import { AccessStorageKeys } from '@iguzman/helpers/constants';
+import type { Language } from '@repo/helpers/types';
+import { AccessStorageKeys } from '@repo/helpers/constants';
 
 /**
  * Detects the browser language on the server side

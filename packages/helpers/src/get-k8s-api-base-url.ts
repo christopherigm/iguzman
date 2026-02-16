@@ -1,4 +1,4 @@
-import getEnvVariables from '@iguzman/helpers/get-env-variables';
+import getEnvVariables from '@repo/helpers/get-env-variables';
 
 /** Default API base URL used in non-production environments. */
 const DEV_API_URL = 'http://127.0.0.1:8000';
