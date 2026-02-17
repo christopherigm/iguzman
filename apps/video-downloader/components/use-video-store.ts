@@ -45,6 +45,8 @@ export interface StoredVideo {
   uploader: string | null;
   /** Timestamp when the item was created. */
   createdAt: number;
+  /** Whether FPS interpolation has been applied successfully. */
+  fpsApplied: boolean;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -57,7 +59,26 @@ function readStorage(): StoredVideo[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as StoredVideo[];
+    const videos = JSON.parse(raw) as StoredVideo[];
+
+    /* Recover entries stuck in transient states from a previous session. */
+    return videos.map((v) => {
+      /* Backwards-compat: assume done videos were fully processed. */
+      const video: StoredVideo = {
+        ...v,
+        fpsApplied: v.fpsApplied ?? v.status === 'done',
+      };
+
+      if (video.status === 'downloading') {
+        /* Download interrupted — reset so auto-retry kicks in. */
+        return { ...video, status: 'pending' as VideoStatus, error: null };
+      }
+      if (video.status === 'processing' && !video.file) {
+        /* Processing without a server file shouldn't happen — reset. */
+        return { ...video, status: 'pending' as VideoStatus, error: null };
+      }
+      return video;
+    });
   } catch {
     return [];
   }
@@ -120,6 +141,7 @@ export function useVideoStore() {
         duration: null,
         uploader: null,
         createdAt: Date.now(),
+        fpsApplied: false,
       };
       setVideos((prev) => [entry, ...prev]);
       return uuid;

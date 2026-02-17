@@ -27,7 +27,7 @@
     "ffmpegProcessing": "Interpolando fotogramas… {progress}%",
     "errorFfmpegFailed": "La interpolación de FPS falló. Descargando el original.",
     "fpsBoostTitle": "Aviso de aumento de FPS",
-    "fpsBoostText": "Aumentar los FPS a {fps} usa el navegador de tu dispositivo para procesar el video, lo cual puede tardar más en completarse. Por favor, no cierres el navegador ni la aplicación o se cancelará el procesamiento."
+    "fpsBoostText": "Aumentar los FPS a {fps} usa el navegador de tu dispositivo para procesar el video, lo cual puede tardar más en completarse. Si cierras o actualizas la página, el procesamiento se reanudará automáticamente en tu próxima visita."
   },
   "VideoGrid": {
     "title": "Descargas",

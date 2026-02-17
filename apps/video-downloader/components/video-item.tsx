@@ -64,6 +64,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const [uploading, setUploading] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const downloadTriggered = useRef(false);
+  const resumeChecked = useRef(false);
 
   /* FFmpeg WASM (lazy-loaded for client-side FPS interpolation) */
   const {
@@ -117,7 +118,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
               Number(video.fps),
             );
             downloadHref = objectUrl;
-            onUpdate(video.uuid, { status: 'done' });
+            onUpdate(video.uuid, { status: 'done', fpsApplied: true });
 
             /* Upload the processed video back to the server in parallel
                with the browser download so the server file stays in sync */
@@ -181,13 +182,108 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     t,
   ]);
 
+  /* ── Resume interrupted FPS interpolation ───────── */
+  const handleResumeInterpolation = useCallback(async () => {
+    if (!video.file || video.justAudio) return;
+
+    try {
+      onUpdate(video.uuid, { status: 'processing', error: null });
+      const sourceUrl = `${window.location.origin}/api/media/${video.file}`;
+      const { objectUrl, blob } = await interpolateFps(
+        sourceUrl,
+        Number(video.fps),
+      );
+
+      onUpdate(video.uuid, { status: 'done', fpsApplied: true });
+
+      /* Upload processed video back to the server */
+      setUploading(true);
+      const uploadPromise = fetch(
+        `${window.location.origin}/api/media/${video.file}`,
+        { method: 'PUT', body: blob },
+      )
+        .catch((uploadErr) => {
+          console.error(
+            'Failed to upload processed video to server:',
+            uploadErr,
+          );
+        })
+        .finally(() => {
+          setUploading(false);
+        });
+
+      /* Trigger browser download */
+      if (video.autoDownload) {
+        const downloadName = `${video.name ?? 'video'}-${Date.now()}-${video.file}`;
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = downloadName;
+        link.click();
+      }
+
+      await uploadPromise;
+    } catch (ffErr) {
+      console.error('FFmpeg interpolation failed:', ffErr);
+      onUpdate(video.uuid, {
+        status: 'error',
+        error: t('errorFfmpegFailed'),
+      });
+    }
+  }, [
+    video.uuid,
+    video.file,
+    video.fps,
+    video.justAudio,
+    video.autoDownload,
+    video.name,
+    onUpdate,
+    interpolateFps,
+    t,
+  ]);
+
   /* ── Auto-trigger download for newly added (pending) items ── */
   useEffect(() => {
     if (video.status === 'pending' && !downloadTriggered.current) {
       downloadTriggered.current = true;
-      handleDownload();
+      queueMicrotask(() => handleDownload());
     }
   }, [video.status, handleDownload]);
+
+  /* ── Resume interrupted FPS interpolation on mount ── */
+  useEffect(() => {
+    if (resumeChecked.current) return;
+    resumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      video.fps !== 'original' &&
+      !video.justAudio &&
+      !video.fpsApplied &&
+      (video.status === 'done' || video.status === 'processing');
+
+    if (needsResume) {
+      queueMicrotask(() => handleResumeInterpolation());
+    }
+  }, [
+    video.file,
+    video.fps,
+    video.justAudio,
+    video.fpsApplied,
+    video.status,
+    handleResumeInterpolation,
+  ]);
+
+  /* ── Warn before closing during active processing ── */
+  useEffect(() => {
+    if (video.status !== 'downloading' && video.status !== 'processing') return;
+
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [video.status]);
 
   /* ── Copy link ──────────────────────────────────── */
   const handleCopy = useCallback(async () => {

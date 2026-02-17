@@ -27,7 +27,7 @@
     "ffmpegProcessing": "Frames werden interpoliert… {progress}%",
     "errorFfmpegFailed": "FPS-Interpolation fehlgeschlagen. Original wird heruntergeladen.",
     "fpsBoostTitle": "FPS-Erhöhung Warnung",
-    "fpsBoostText": "Die FPS-Erhöhung auf {fps} nutzt den Browser Ihres Geräts zur Videoverarbeitung, was länger dauern kann. Bitte schließen Sie weder den Browser noch die App, da sonst die Verarbeitung abgebrochen wird."
+    "fpsBoostText": "Die FPS-Erhöhung auf {fps} nutzt den Browser Ihres Geräts zur Videoverarbeitung, was länger dauern kann. Wenn Sie die Seite schließen oder aktualisieren, wird die Verarbeitung bei Ihrem nächsten Besuch automatisch fortgesetzt."
   },
   "VideoGrid": {
     "title": "Downloads",

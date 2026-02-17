@@ -27,7 +27,7 @@
     "ffmpegProcessing": "Interpolating frames… {progress}%",
     "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead.",
     "fpsBoostTitle": "FPS Boost Warning",
-    "fpsBoostText": "FPS boosting to {fps} uses your device's browser to process the video, which can take longer to complete. Please don't close the browser or the app, or it will cancel the processing."
+    "fpsBoostText": "FPS boosting to {fps} uses your device's browser to process the video, which can take longer to complete. If you close or refresh the page, processing will automatically resume on your next visit."
   },
   "VideoGrid": {
     "title": "Downloads",
