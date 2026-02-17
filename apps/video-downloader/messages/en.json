@@ -22,6 +22,9 @@
     "fps60": "60 FPS",
     "fps90": "90 FPS",
     "fps120": "120 FPS",
-    "errorGeneric": "Something went wrong. Please try again."
+    "errorGeneric": "Something went wrong. Please try again.",
+    "ffmpegLoading": "Loading video processor…",
+    "ffmpegProcessing": "Interpolating frames… {progress}%",
+    "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead."
   }
 }

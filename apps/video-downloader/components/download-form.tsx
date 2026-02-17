@@ -13,6 +13,7 @@ import type {
   DownloadVideoResult,
   DownloadVideoError,
 } from '@repo/helpers/download-video';
+import { useFFmpeg } from './use-ffmpeg';
 import './download-form.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -120,6 +121,13 @@ export function DownloadForm() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  /* FFmpeg WASM (lazy-loaded for client-side FPS interpolation) */
+  const {
+    status: ffmpegStatus,
+    progress: ffmpegProgress,
+    interpolateFps,
+  } = useFFmpeg();
+
   const fpsOptions = useMemo(
     () => [
       { value: 'original' as FPSValue, label: t('fpsOriginal') },
@@ -172,9 +180,28 @@ export function DownloadForm() {
       console.log('Download success:', { file, name });
 
       if (autoDownload && file) {
+        let downloadHref = `/api/media/${file}`;
+
+        /* ── FPS interpolation via FFmpeg WASM ──────── */
+        if (effectiveFps !== 'original' && !justAudio) {
+          try {
+            const sourceUrl = `${window.location.origin}/api/media/${file}`;
+            const processedUrl = await interpolateFps(
+              sourceUrl,
+              Number(effectiveFps),
+            );
+            downloadHref = processedUrl;
+          } catch (ffErr) {
+            console.error('FFmpeg interpolation failed:', ffErr);
+            setErrorMessage(t('errorFfmpegFailed'));
+            setLoading(false);
+            return;
+          }
+        }
+
         const downloadName = `${name ?? (justAudio ? 'audio' : 'video')}-${Date.now()}-${file}`;
         const link = document.createElement('a');
-        link.href = `/api/media/${file}`;
+        link.href = downloadHref;
         link.download = downloadName;
         link.click();
       }
@@ -188,7 +215,16 @@ export function DownloadForm() {
     } finally {
       setLoading(false);
     }
-  }, [url, justAudio, autoDownload, validPlatformUrl, loading, t]);
+  }, [
+    url,
+    justAudio,
+    autoDownload,
+    validPlatformUrl,
+    loading,
+    effectiveFps,
+    interpolateFps,
+    t,
+  ]);
 
   /* Hint text below input */
   const hint = useMemo(() => {
@@ -274,6 +310,16 @@ export function DownloadForm() {
 
       {/* ── Loading indicator ────────────────────────── */}
       {loading ? <ProgressBar margin="4px 0" /> : null}
+
+      {/* ── FFmpeg status ────────────────────────────── */}
+      {ffmpegStatus === 'loading' ? (
+        <span className="df-hint df-hint--muted">{t('ffmpegLoading')}</span>
+      ) : null}
+      {ffmpegStatus === 'processing' ? (
+        <span className="df-hint df-hint--muted">
+          {t('ffmpegProcessing', { progress: ffmpegProgress })}
+        </span>
+      ) : null}
 
       {/* ── Error message ────────────────────────────── */}
       {errorMessage ? (

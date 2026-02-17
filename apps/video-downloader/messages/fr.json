@@ -22,6 +22,9 @@
     "fps60": "60 IPS",
     "fps90": "90 IPS",
     "fps120": "120 IPS",
-    "errorGeneric": "Une erreur est survenue. Veuillez réessayer."
+    "errorGeneric": "Une erreur est survenue. Veuillez réessayer.",
+    "ffmpegLoading": "Chargement du processeur vidéo…",
+    "ffmpegProcessing": "Interpolation des images… {progress}%",
+    "errorFfmpegFailed": "L'interpolation FPS a échoué. Téléchargement de l'original."
   }
 }
