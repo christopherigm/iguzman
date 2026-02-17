@@ -10,6 +10,7 @@ import type {
   DownloadVideoResult,
   DownloadVideoError,
 } from '@repo/helpers/download-video';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { useFFmpeg } from './use-ffmpeg';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import './video-item.css';
@@ -61,6 +62,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [copying, setCopying] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const downloadTriggered = useRef(false);
 
   /* FFmpeg WASM (lazy-loaded for client-side FPS interpolation) */
@@ -400,7 +402,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           <button
             type="button"
             className="vi-icon-btn vi-icon-btn--danger"
-            onClick={() => onRemove(video.uuid)}
+            onClick={() => setConfirmRemove(true)}
             aria-label={t('delete')}
             title={t('delete')}
           >
@@ -408,6 +410,19 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           </button>
         </Box>
       </Box>
+
+      {/* ── Delete confirmation modal ─────────────── */}
+      {confirmRemove ? (
+        <ConfirmationModal
+          title={t('confirmDeleteTitle')}
+          text={t('confirmDeleteText')}
+          okCallback={() => {
+            setConfirmRemove(false);
+            onRemove(video.uuid);
+          }}
+          cancelCallback={() => setConfirmRemove(false)}
+        />
+      ) : null}
     </Box>
   );
 }

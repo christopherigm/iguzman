@@ -6,6 +6,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { detectPlatform, type Platform } from '@repo/helpers/checkers';
 import './download-form.css';
 
@@ -121,6 +122,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   const [justAudio, setJustAudio] = useState(false);
   const [enhance, setEnhance] = useState(false);
   const [fps, setFps] = useState<FPSValue>('original');
+  const [showFpsWarning, setShowFpsWarning] = useState(false);
 
   const fpsOptions = useMemo(
     () => [
@@ -156,9 +158,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     setUrl('');
   }, []);
 
-  const handleSubmit = useCallback(() => {
-    if (!validPlatformUrl) return;
-
+  const submitDownload = useCallback(() => {
     onVideoAdded?.({
       originalURL: url,
       platform,
@@ -174,12 +174,32 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     url,
     justAudio,
     autoDownload,
-    validPlatformUrl,
     effectiveFps,
     effectiveEnhance,
     platform,
     onVideoAdded,
   ]);
+
+  const handleSubmit = useCallback(() => {
+    if (!validPlatformUrl) return;
+
+    if (effectiveFps !== 'original') {
+      setShowFpsWarning(true);
+      return;
+    }
+
+    submitDownload();
+  }, [validPlatformUrl, effectiveFps, submitDownload]);
+
+  const handleFpsWarningCancel = useCallback(() => {
+    setShowFpsWarning(false);
+    setFps('original');
+  }, []);
+
+  const handleFpsWarningOk = useCallback(() => {
+    setShowFpsWarning(false);
+    submitDownload();
+  }, [submitDownload]);
 
   /* Hint text below input */
   const hint = useMemo(() => {
@@ -196,7 +216,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
 
   const platformIcon = PLATFORM_ICONS[platform];
 
-  return (
+  const formContent = (
     <Box
       elevation={4}
       borderRadius={16}
@@ -280,12 +300,12 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
           />
         </OptionRow>
 
-        <OptionRow label={t('enhance')} disabled={enhanceDisabled}>
+        {/* <OptionRow label={t('enhance')} disabled={enhanceDisabled}>
           <Switch
             checked={effectiveEnhance}
             onChange={enhanceDisabled ? undefined : setEnhance}
           />
-        </OptionRow>
+        </OptionRow> */}
 
         <OptionRow label={t('fps')} disabled={fpsDisabled}>
           <FPSSelect
@@ -297,6 +317,22 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
         </OptionRow>
       </div>
     </Box>
+  );
+
+  return (
+    <>
+      {formContent}
+
+      {/* ── FPS Boost Confirmation Modal ──────────── */}
+      {showFpsWarning ? (
+        <ConfirmationModal
+          title={t('fpsBoostTitle')}
+          text={t('fpsBoostText', { fps: effectiveFps })}
+          okCallback={handleFpsWarningOk}
+          cancelCallback={handleFpsWarningCancel}
+        />
+      ) : null}
+    </>
   );
 }
 

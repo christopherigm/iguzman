@@ -25,7 +25,9 @@
     "errorGeneric": "Une erreur est survenue. Veuillez réessayer.",
     "ffmpegLoading": "Chargement du processeur vidéo…",
     "ffmpegProcessing": "Interpolation des images… {progress}%",
-    "errorFfmpegFailed": "L'interpolation FPS a échoué. Téléchargement de l'original."
+    "errorFfmpegFailed": "L'interpolation FPS a échoué. Téléchargement de l'original.",
+    "fpsBoostTitle": "Avertissement d'augmentation des IPS",
+    "fpsBoostText": "L'augmentation des IPS à {fps} utilise le navigateur de votre appareil pour traiter la vidéo, ce qui peut prendre plus de temps. Veuillez ne pas fermer le navigateur ni l'application, sinon le traitement sera annulé."
   },
   "VideoGrid": {
     "title": "Téléchargements",
@@ -37,6 +39,8 @@
     "retry": "Réessayer",
     "redownload": "Re-télécharger",
     "delete": "Supprimer",
+    "confirmDeleteTitle": "Supprimer la vidéo ?",
+    "confirmDeleteText": "La vidéo sera supprimée de vos téléchargements. Cette action est irréversible.",
     "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
     "detailStatus": "Statut",
     "detailError": "Erreur",

@@ -25,7 +25,9 @@
     "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
     "ffmpegLoading": "Cargando procesador de video…",
     "ffmpegProcessing": "Interpolando fotogramas… {progress}%",
-    "errorFfmpegFailed": "La interpolación de FPS falló. Descargando el original."
+    "errorFfmpegFailed": "La interpolación de FPS falló. Descargando el original.",
+    "fpsBoostTitle": "Aviso de aumento de FPS",
+    "fpsBoostText": "Aumentar los FPS a {fps} usa el navegador de tu dispositivo para procesar el video, lo cual puede tardar más en completarse. Por favor, no cierres el navegador ni la aplicación o se cancelará el procesamiento."
   },
   "VideoGrid": {
     "title": "Descargas",
@@ -37,6 +39,8 @@
     "retry": "Reintentar descarga",
     "redownload": "Re-descargar",
     "delete": "Eliminar",
+    "confirmDeleteTitle": "¿Eliminar video?",
+    "confirmDeleteText": "Esto eliminará el video de tus descargas. Esta acción no se puede deshacer.",
     "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
     "detailStatus": "Estado",
     "detailError": "Error",

@@ -25,7 +25,9 @@
     "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
     "ffmpegLoading": "Videoprozessor wird geladen…",
     "ffmpegProcessing": "Frames werden interpoliert… {progress}%",
-    "errorFfmpegFailed": "FPS-Interpolation fehlgeschlagen. Original wird heruntergeladen."
+    "errorFfmpegFailed": "FPS-Interpolation fehlgeschlagen. Original wird heruntergeladen.",
+    "fpsBoostTitle": "FPS-Erhöhung Warnung",
+    "fpsBoostText": "Die FPS-Erhöhung auf {fps} nutzt den Browser Ihres Geräts zur Videoverarbeitung, was länger dauern kann. Bitte schließen Sie weder den Browser noch die App, da sonst die Verarbeitung abgebrochen wird."
   },
   "VideoGrid": {
     "title": "Downloads",
@@ -37,6 +39,8 @@
     "retry": "Erneut versuchen",
     "redownload": "Erneut herunterladen",
     "delete": "Löschen",
+    "confirmDeleteTitle": "Video löschen?",
+    "confirmDeleteText": "Das Video wird aus deinen Downloads entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
     "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
     "detailStatus": "Status",
     "detailError": "Fehler",

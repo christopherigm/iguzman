@@ -1,0 +1,73 @@
+/* ── Overlay ──────────────────────────────────────── */
+.ui-confirmation-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  animation: ui-confirmation-modal-overlay-in 200ms ease-out;
+}
+
+@keyframes ui-confirmation-modal-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Panel ────────────────────────────────────────── */
+.ui-confirmation-modal-panel {
+  position: relative;
+  width: 90%;
+  max-width: 420px;
+  background: var(--background, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  animation: ui-confirmation-modal-scale-in 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1101;
+  overflow: hidden;
+}
+
+@keyframes ui-confirmation-modal-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Body ─────────────────────────────────────────── */
+.ui-confirmation-modal-body {
+  padding: 24px;
+}
+
+.ui-confirmation-modal-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--foreground, #1a1a1a);
+  font-family: inherit;
+}
+
+.ui-confirmation-modal-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted, #757575);
+  font-family: inherit;
+}
+
+/* ── Actions ──────────────────────────────────────── */
+.ui-confirmation-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 24px 20px;
+}

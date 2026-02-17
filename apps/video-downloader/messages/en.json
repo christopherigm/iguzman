@@ -25,7 +25,9 @@
     "errorGeneric": "Something went wrong. Please try again.",
     "ffmpegLoading": "Loading video processor…",
     "ffmpegProcessing": "Interpolating frames… {progress}%",
-    "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead."
+    "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead.",
+    "fpsBoostTitle": "FPS Boost Warning",
+    "fpsBoostText": "FPS boosting to {fps} uses your device's browser to process the video, which can take longer to complete. Please don't close the browser or the app, or it will cancel the processing."
   },
   "VideoGrid": {
     "title": "Downloads",
@@ -37,6 +39,8 @@
     "retry": "Retry download",
     "redownload": "Re-download",
     "delete": "Delete",
+    "confirmDeleteTitle": "Delete video?",
+    "confirmDeleteText": "This will remove the video from your downloads. This action cannot be undone.",
     "errorGeneric": "Something went wrong. Please try again.",
     "detailStatus": "Status",
     "detailError": "Error",
