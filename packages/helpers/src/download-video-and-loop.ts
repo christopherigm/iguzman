@@ -1,4 +1,4 @@
-import downloadVideo from '@repo/helpers/download-video';
+import downloadVideo from './download-video-legacy';
 import loopVideoToLength from '@repo/helpers/duplicate-video-time-length';
 import deleteMediaFile from '@repo/helpers/delete-media-file';
 import upscaleVideoFps from '@repo/helpers/video-upscale-fps';

@@ -1,4 +1,4 @@
-import downloadVideo from '@repo/helpers/download-video';
+import downloadVideo from './download-video-legacy';
 import loopAudioToLength from '@repo/helpers/duplicate-audio-time-length';
 import deleteMediaFile from '@repo/helpers/delete-media-file';
 import extractAudioFromVideo from '@repo/helpers/extract-audio-from-video';

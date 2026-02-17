@@ -1,0 +1,27 @@
+{
+  "Metadata": {
+    "title": "Téléchargeur de Vidéos",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Téléchargeur de Vidéos"
+  },
+  "DownloadForm": {
+    "inputLabel": "Collez l'URL de la vidéo",
+    "clearUrl": "Effacer l'URL",
+    "download": "Télécharger",
+    "hintEmpty": "Collez un lien pour commencer",
+    "hintInvalidUrl": "Entrez une URL valide",
+    "hintUnsupported": "Plateforme non supportée",
+    "hintDetected": "Lien {platform} détecté",
+    "autoDownload": "Téléchargement automatique",
+    "justAudio": "Audio uniquement",
+    "enhance": "Améliorer",
+    "fps": "IPS",
+    "fpsOriginal": "Original",
+    "fps60": "60 IPS",
+    "fps90": "90 IPS",
+    "fps120": "120 IPS",
+    "errorGeneric": "Une erreur est survenue. Veuillez réessayer."
+  }
+}

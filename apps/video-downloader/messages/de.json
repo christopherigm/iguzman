@@ -1,0 +1,27 @@
+{
+  "Metadata": {
+    "title": "Video-Downloader",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Video-Downloader"
+  },
+  "DownloadForm": {
+    "inputLabel": "Video-URL einfügen",
+    "clearUrl": "URL löschen",
+    "download": "Herunterladen",
+    "hintEmpty": "Füge einen Link ein, um zu beginnen",
+    "hintInvalidUrl": "Gib eine gültige URL ein",
+    "hintUnsupported": "Nicht unterstützte Plattform",
+    "hintDetected": "{platform}-Link erkannt",
+    "autoDownload": "Automatischer Download",
+    "justAudio": "Nur Audio",
+    "enhance": "Verbessern",
+    "fps": "FPS",
+    "fpsOriginal": "Original",
+    "fps60": "60 FPS",
+    "fps90": "90 FPS",
+    "fps120": "120 FPS",
+    "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+  }
+}

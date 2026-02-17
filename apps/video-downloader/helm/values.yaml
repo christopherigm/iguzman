@@ -1,0 +1,104 @@
+# ─────────────────────────────────────────────────────────────
+# Video Downloader Application – Helm Values
+# ─────────────────────────────────────────────────────────────
+
+# -- Number of old ReplicaSets to keep for rollbacks (default: 2)
+revisionHistoryLimit: 2 # how many old ReplicaSets to keep for rollbacks
+
+# -- Number of pod replicas
+replicaCount: 1
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: christopherguzman/video-downloader # registry/image (no tag)
+  tag: 'latest' # overrides Chart.appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+# - name: my-registry-secret
+
+# ─── Name overrides ─────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80 # port exposed by the Service
+  targetPort: 3000 # port the container listens on
+
+# ─── Ingress ────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: 'nginx' # MicroK8s uses the nginx ingress class
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: vd2.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: vd2-tls
+      hosts:
+        - vd2.iguzman.com.mx
+
+# ─── Environment variables ──────────────────────────────────
+# Plain environment variables injected into the container.
+env:
+  NODE_ENV: 'production'
+  NEXT_TELEMETRY_DISABLED: '1'
+  # Add your own env vars here, for example:
+  # API_URL: "https://api.example.com"
+
+# Sensitive values – reference existing Kubernetes Secrets.
+# envFromSecret:
+#   - name: DATABASE_URL
+#     secretName: vd2-secrets
+#     secretKey: database-url
+
+# ─── Shared storage (ReadWriteMany) ─────────────────────────
+sharedStorage:
+  enabled: true
+  storageClass: '' # leave empty for the cluster default
+  accessModes:
+    - ReadWriteMany
+  size: 1Gi
+  mountPath: /app/shared # path inside each container
+
+# ─── Health probes (file-based in shared storage) ───────────
+probes:
+  # File that both probes check for existence.
+  healthFile: /app/shared/.healthy
+
+  startupProbe:
+    exec:
+      command: ['test', '-f', '/app/shared/.healthy']
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 30 # allow up to ~150 s for first boot
+
+  livenessProbe:
+    exec:
+      command: ['test', '-f', '/app/shared/.healthy']
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    failureThreshold: 3
+
+# ─── Node affinity (schedule on specific nodes) ─────────────
+nodeAffinity:
+  enabled: false
+  # List of node names where the pods should be scheduled.
+  nodeNames: []
+  # - node-1
+  # - node-2
+  # - node-3
+
+# ─── Resources ──────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

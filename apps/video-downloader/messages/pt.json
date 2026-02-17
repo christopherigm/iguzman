@@ -1,0 +1,27 @@
+{
+  "Metadata": {
+    "title": "Baixador de Vídeos",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Baixador de Vídeos"
+  },
+  "DownloadForm": {
+    "inputLabel": "Cole a URL do vídeo",
+    "clearUrl": "Limpar URL",
+    "download": "Baixar",
+    "hintEmpty": "Cole um link para começar",
+    "hintInvalidUrl": "Insira uma URL válida",
+    "hintUnsupported": "Plataforma não suportada",
+    "hintDetected": "Link do {platform} detectado",
+    "autoDownload": "Download automático",
+    "justAudio": "Apenas áudio",
+    "enhance": "Melhorar",
+    "fps": "FPS",
+    "fpsOriginal": "Original",
+    "fps60": "60 FPS",
+    "fps90": "90 FPS",
+    "fps120": "120 FPS",
+    "errorGeneric": "Algo deu errado. Por favor, tente novamente."
+  }
+}

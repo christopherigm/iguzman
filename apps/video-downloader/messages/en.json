@@ -1,0 +1,27 @@
+{
+  "Metadata": {
+    "title": "Video Downloader",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Video Downloader"
+  },
+  "DownloadForm": {
+    "inputLabel": "Paste video URL",
+    "clearUrl": "Clear URL",
+    "download": "Download",
+    "hintEmpty": "Paste a link to get started",
+    "hintInvalidUrl": "Enter a valid URL",
+    "hintUnsupported": "Unsupported platform",
+    "hintDetected": "{platform} link detected",
+    "autoDownload": "Auto download",
+    "justAudio": "Just audio",
+    "enhance": "Enhance",
+    "fps": "FPS",
+    "fpsOriginal": "Original",
+    "fps60": "60 FPS",
+    "fps90": "90 FPS",
+    "fps120": "120 FPS",
+    "errorGeneric": "Something went wrong. Please try again."
+  }
+}

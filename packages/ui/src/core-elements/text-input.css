@@ -4,7 +4,8 @@
   position: relative;
   display: inline-flex;
   flex-direction: column;
-  min-width: 220px;
+  width: 100%;
+  min-width: 100px;
   font-family: inherit;
 }
 

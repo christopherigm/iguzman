@@ -1,0 +1,6 @@
+apiVersion: v2
+name: video-downloader
+description: Helm chart for the Next.js video-downloader application
+type: application
+version: 0.1.0
+appVersion: '0.1.0'

@@ -1,0 +1,205 @@
+/* ── DownloadForm ─────────────────────────────────────── */
+
+.df-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.df-platform-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--surface-2, #f4f4f5);
+  transition:
+    background 250ms ease,
+    transform 250ms ease;
+}
+
+.df-platform-badge--active {
+  background: color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent);
+  transform: scale(1.05);
+}
+
+.df-input-wrapper {
+  flex: 1;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+/* ── Icon Buttons ────────────────────────────────────── */
+
+.df-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  transition:
+    background 180ms ease,
+    opacity 180ms ease,
+    transform 120ms ease;
+}
+
+.df-icon-btn:hover:not(:disabled) {
+  background: var(--surface-2, #f0f0f0);
+  transform: scale(1.06);
+}
+
+.df-icon-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.df-icon-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.df-icon-btn--download {
+  background: var(--accent, #06b6d4);
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+}
+
+.df-icon-btn--download:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent, #06b6d4) 85%, black);
+  transform: scale(1.06);
+}
+
+.df-icon-btn--download:disabled {
+  opacity: 0.35;
+}
+
+/* ── Divider ─────────────────────────────────────────── */
+
+.df-divider {
+  height: 1px;
+  background: var(--surface-2, #e5e7eb);
+  border: none;
+  margin: 0;
+}
+
+/* ── Options Section ─────────────────────────────────── */
+
+.df-options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.df-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 4px;
+  border-radius: 8px;
+  transition:
+    opacity 200ms ease,
+    background 200ms ease;
+}
+
+.df-option-row:hover {
+  background: color-mix(in srgb, var(--foreground, #111) 3%, transparent);
+}
+
+.df-option-row--disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.df-option-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground, #171717);
+  letter-spacing: 0.01em;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.df-option-control {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Custom Select (FPS) ─────────────────────────────── */
+
+.df-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.df-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--surface-2, #f4f4f5);
+  color: var(--foreground, #171717);
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  padding: 5px 30px 5px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease;
+  min-width: 100px;
+}
+
+.df-select:focus {
+  border-color: var(--accent, #06b6d4);
+  background: color-mix(in srgb, var(--accent, #06b6d4) 6%, transparent);
+}
+
+.df-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.df-select-chevron {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Validation message ──────────────────────────────── */
+
+.df-hint {
+  font-size: 12px;
+  font-weight: 400;
+  padding: 0 4px;
+  min-height: 18px;
+  line-height: 18px;
+  transition:
+    color 200ms ease,
+    opacity 200ms ease;
+}
+
+.df-hint--error {
+  color: #ef4444;
+}
+
+.df-hint--success {
+  color: var(--accent, #06b6d4);
+}
+
+.df-hint--muted {
+  color: var(--foreground-muted, #999);
+  opacity: 0.6;
+}
