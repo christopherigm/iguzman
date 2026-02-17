@@ -11,7 +11,7 @@ body {
 
 body {
   color: var(--foreground);
-  background: var(--background, red);
+  background: var(--background);
 }
 
 * {

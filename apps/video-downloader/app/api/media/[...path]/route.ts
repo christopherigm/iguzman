@@ -14,9 +14,7 @@ const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const IS_PRODUCTION = NODE_ENV === 'production';
 
 /** Directory where downloaded media is stored at runtime. */
-const MEDIA_DIR = IS_PRODUCTION
-  ? '/app/apps/video-downloader/public/media'
-  : './public/media';
+const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
 
 /** Minimal MIME-type map for the formats we serve. */
 const MIME_TYPES: Record<string, string> = {

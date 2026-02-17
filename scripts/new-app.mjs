@@ -45,7 +45,7 @@ function toTitleCase(str) {
 
 // ── Template Functions ─────────────────────────────────────────────────
 
-function packageJson(name, port, includeI18n) {
+function packageJson(name, port, includeI18n, includePwa) {
   const pkg = {
     name,
     version: '0.1.0',
@@ -82,10 +82,40 @@ function packageJson(name, port, includeI18n) {
     pkg.dependencies['next-intl'] = '^4';
   }
 
+  if (includePwa) {
+    pkg.dependencies['@ducanh2912/next-pwa'] = '^10.2.9';
+  }
+
   return JSON.stringify(pkg, null, 2) + '\n';
 }
 
-function nextConfig(includeI18n) {
+function nextConfig(includeI18n, includePwa) {
+  if (includeI18n && includePwa) {
+    return `import createNextIntlPlugin from 'next-intl/plugin';
+import withPWAInit from '@ducanh2912/next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+  cacheOnFrontendNav: true,
+  fallbacks: {
+    document: '/~offline',
+  },
+});
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'standalone',
+};
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
+export default withPWA(withNextIntl(nextConfig));
+`;
+  }
+
   if (includeI18n) {
     return `import createNextIntlPlugin from 'next-intl/plugin';
 
@@ -97,6 +127,29 @@ const nextConfig = {
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 export default withNextIntl(nextConfig);
+`;
+  }
+
+  if (includePwa) {
+    return `import withPWAInit from '@ducanh2912/next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+  cacheOnFrontendNav: true,
+  fallbacks: {
+    document: '/~offline',
+  },
+});
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'standalone',
+};
+
+export default withPWA(nextConfig);
 `;
   }
 
@@ -141,8 +194,8 @@ export default nextJsConfig;
 `;
 }
 
-function gitignore() {
-  return `# dependencies
+function gitignore(includePwa) {
+  let content = `# dependencies
 /node_modules
 /.pnp
 .pnp.js
@@ -177,6 +230,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 `;
+
+  if (includePwa) {
+    content += `
+# PWA generated files
+public/sw.js
+public/sw.js.map
+`;
+  }
+
+  return content;
 }
 
 function globalsCss() {
@@ -209,9 +272,40 @@ a {
 `;
 }
 
-function layoutTsx(palette, includeI18n) {
+function layoutTsx(name, palette, includeI18n, includePwa) {
+  const title = toTitleCase(name);
+
   if (includeI18n) {
-    return `import type { Metadata } from 'next';
+    const metaImport = includePwa
+      ? "import type { Metadata, Viewport } from 'next';"
+      : "import type { Metadata } from 'next';";
+
+    const viewportExport = includePwa
+      ? `
+export const viewport: Viewport = {
+  themeColor: '#68c3f7',
+};
+`
+      : '';
+
+    const extendedMeta = includePwa
+      ? `
+    manifest: '/manifest.json',
+    icons: {
+      icon: '/favicon.ico',
+      apple: '/icons/icon-192x192.png',
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: t('title'),
+    },
+    formatDetection: {
+      telephone: false,
+    },`
+      : '';
+
+    return `${metaImport}
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
@@ -225,6 +319,7 @@ import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
 import { Navbar } from '@repo/ui/core-elements/navbar';
+import packageJson from '../../package.json';
 import '../globals.css';
 
 type Props = {
@@ -235,7 +330,7 @@ type Props = {
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
-
+${viewportExport}
 export async function generateMetadata({
   params,
 }: {
@@ -248,7 +343,7 @@ export async function generateMetadata({
 
   return {
     title: t('title'),
-    description: t('description'),
+    description: t('description'),${extendedMeta}
   };
 }
 
@@ -290,7 +385,8 @@ export default async function LocaleLayout({ children, params }: Props) {
             <Navbar
               logo="/logo.png"
               items={[{ label: 'Home', href: '/' }]}
-              version="v0.1.0"
+              fixedItems={[]}
+              version={\`v\${packageJson.version}\`}
             />
             {children}
           </PaletteProvider>
@@ -302,21 +398,51 @@ export default async function LocaleLayout({ children, params }: Props) {
 `;
   }
 
-  return `import type { Metadata } from 'next';
+  const metaImport = includePwa
+    ? "import type { Metadata, Viewport } from 'next';"
+    : "import type { Metadata } from 'next';";
+
+  const viewportExport = includePwa
+    ? `
+export const viewport: Viewport = {
+  themeColor: '#68c3f7',
+};
+`
+    : '';
+
+  const extendedMeta = includePwa
+    ? `
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/icons/icon-192x192.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: '${title}',
+  },
+  formatDetection: {
+    telephone: false,
+  },`
+    : '';
+
+  return `${metaImport}
 import { cookies } from 'next/headers';
 import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { Navbar } from '@repo/ui/core-elements/navbar';
+import packageJson from '../package.json';
 import './globals.css';
 
 type Props = {
   children: React.ReactNode;
 };
-
+${viewportExport}
 export const metadata: Metadata = {
-  title: '${palette}',
-  description: '',
+  title: '${title}',
+  description: '',${extendedMeta}
 };
 
 export default async function RootLayout({ children }: Props) {
@@ -346,7 +472,8 @@ export default async function RootLayout({ children }: Props) {
           <Navbar
             logo="/logo.png"
             items={[{ label: 'Home', href: '/' }]}
-            version="v0.1.0"
+            fixedItems={[]}
+            version={\`v\${packageJson.version}\`}
           />
           {children}
         </PaletteProvider>
@@ -515,6 +642,84 @@ function messagesJson(lang, name) {
       {
         Metadata: { title, description: '' },
         HomePage: { title },
+      },
+      null,
+      2,
+    ) + '\n'
+  );
+}
+
+// ── PWA Template Functions ────────────────────────────────────────────
+
+function offlinePageTsx() {
+  return `export default function OfflinePage() {
+  return (
+    <body>
+      <main
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100dvh',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          textAlign: 'center',
+          padding: '2rem',
+        }}
+      >
+        <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>
+          You are offline
+        </h1>
+        <p style={{ fontSize: '1.125rem', opacity: 0.7, maxWidth: '28rem' }}>
+          It looks like you lost your internet connection. Please check your
+          network and try again.
+        </p>
+      </main>
+    </body>
+  );
+}
+`;
+}
+
+function manifestJson(name) {
+  const title = toTitleCase(name);
+  return (
+    JSON.stringify(
+      {
+        name: title,
+        short_name: title,
+        description: `${title} application`,
+        start_url: '/',
+        display: 'standalone',
+        background_color: '#000000',
+        theme_color: '#68c3f7',
+        orientation: 'portrait-primary',
+        icons: [
+          {
+            src: '/icons/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icons/icon-maskable-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: '/icons/icon-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
       },
       null,
       2,
@@ -1032,6 +1237,10 @@ async function main() {
   const i18nInput = await prompt('  Include i18n (next-intl)? [y/n]', 'y');
   const includeI18n = i18nInput.toLowerCase().startsWith('y');
 
+  // PWA
+  const pwaInput = await prompt('  Include PWA (next-pwa)? [y/n]', 'y');
+  const includePwa = pwaInput.toLowerCase().startsWith('y');
+
   // Palette
   let palette = 'cyan';
   while (true) {
@@ -1058,11 +1267,14 @@ async function main() {
   console.log(`\n  Creating apps/${name}...\n`);
 
   // Static files (always created)
-  writeFile(appPath('package.json'), packageJson(name, port, includeI18n));
-  writeFile(appPath('next.config.js'), nextConfig(includeI18n));
+  writeFile(
+    appPath('package.json'),
+    packageJson(name, port, includeI18n, includePwa),
+  );
+  writeFile(appPath('next.config.js'), nextConfig(includeI18n, includePwa));
   writeFile(appPath('tsconfig.json'), tsConfig());
   writeFile(appPath('eslint.config.js'), eslintConfig());
-  writeFile(appPath('.gitignore'), gitignore());
+  writeFile(appPath('.gitignore'), gitignore(includePwa));
   writeFile(appPath('app/globals.css'), globalsCss());
 
   // Create empty public directory
@@ -1070,17 +1282,36 @@ async function main() {
 
   if (includeI18n) {
     // i18n variant: files go under app/[locale]/
-    writeFile(appPath('app/[locale]/layout.tsx'), layoutTsx(palette, true));
+    writeFile(
+      appPath('app/[locale]/layout.tsx'),
+      layoutTsx(name, palette, true, includePwa),
+    );
     writeFile(appPath('app/[locale]/page.tsx'), pageTsx(name, true));
     writeFile(appPath('proxy.ts'), proxyTs());
     writeFile(appPath('i18n/request.ts'), i18nRequestTs());
     writeFile(appPath('global.d.ts'), globalDts());
     writeFile(appPath('messages/en.json'), messagesJson('en', name));
     writeFile(appPath('messages/es.json'), messagesJson('es', name));
+
+    if (includePwa) {
+      writeFile(appPath('app/[locale]/~offline/page.tsx'), offlinePageTsx());
+    }
   } else {
     // No i18n: files go directly under app/
-    writeFile(appPath('app/layout.tsx'), layoutTsx(palette, false));
+    writeFile(
+      appPath('app/layout.tsx'),
+      layoutTsx(name, palette, false, includePwa),
+    );
     writeFile(appPath('app/page.tsx'), pageTsx(name, false));
+
+    if (includePwa) {
+      writeFile(appPath('app/~offline/page.tsx'), offlinePageTsx());
+    }
+  }
+
+  // PWA files
+  if (includePwa) {
+    writeFile(appPath('public/manifest.json'), manifestJson(name));
   }
 
   // Deployment files
@@ -1103,6 +1334,7 @@ async function main() {
   console.log(`  Done! Created apps/${name} with the following setup:`);
   console.log(`    Port:     ${port}`);
   console.log(`    i18n:     ${includeI18n ? 'yes' : 'no'}`);
+  console.log(`    PWA:      ${includePwa ? 'yes' : 'no'}`);
   console.log(`    Palette:  ${palette}`);
   console.log(`    Registry: ${registryUser}/${name}`);
   console.log('');

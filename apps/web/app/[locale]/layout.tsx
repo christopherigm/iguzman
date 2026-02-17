@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
@@ -24,6 +24,10 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+export const viewport: Viewport = {
+  themeColor: '#68c3f7',
+};
+
 export async function generateMetadata({
   params,
 }: {
@@ -37,6 +41,19 @@ export async function generateMetadata({
   return {
     title: t('title'),
     description: t('description'),
+    manifest: '/manifest.json',
+    icons: {
+      icon: '/favicon.ico',
+      apple: '/icons/icon-192x192.png',
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: t('title'),
+    },
+    formatDetection: {
+      telephone: false,
+    },
   };
 }
 

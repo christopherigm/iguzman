@@ -82,15 +82,16 @@ spec:
           {{- end }}
 
           {{- /* ── Volume mounts ── */}}
-          {{- if .Values.sharedStorage.enabled }}
+          {{- if .Values.hostPathVolume.enabled }}
           volumeMounts:
-            - name: shared-data
-              mountPath: {{ .Values.sharedStorage.mountPath }}
+            - name: media-data
+              mountPath: {{ .Values.hostPathVolume.mountPath }}
           {{- end }}
 
-      {{- if .Values.sharedStorage.enabled }}
+      {{- if .Values.hostPathVolume.enabled }}
       volumes:
-        - name: shared-data
-          persistentVolumeClaim:
-            claimName: {{ include "video-downloader.pvcName" . }}
+        - name: media-data
+          hostPath:
+            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Chart.Name }}/media
+            type: DirectoryOrCreate
       {{- end }}

@@ -57,30 +57,27 @@ env:
 #     secretName: vd2-secrets
 #     secretKey: database-url
 
-# ─── Shared storage (ReadWriteMany) ─────────────────────────
-sharedStorage:
+# ─── Host-path volume (media storage) ───────────────────────
+hostPathVolume:
   enabled: true
-  storageClass: '' # leave empty for the cluster default
-  accessModes:
-    - ReadWriteMany
-  size: 1Gi
-  mountPath: /app/shared # path inside each container
+  volumeMountPath: /shared-master # base path on the host node
+  mountPath: /app/media # path inside each container
 
 # ─── Health probes (file-based in shared storage) ───────────
 probes:
   # File that both probes check for existence.
-  healthFile: /app/shared/.healthy
+  healthFile: /app/media/.healthy
 
   startupProbe:
     exec:
-      command: ['test', '-f', '/app/shared/.healthy']
+      command: ['test', '-f', '/app/media/.healthy']
     initialDelaySeconds: 5
     periodSeconds: 5
     failureThreshold: 30 # allow up to ~150 s for first boot
 
   livenessProbe:
     exec:
-      command: ['test', '-f', '/app/shared/.healthy']
+      command: ['test', '-f', '/app/media/.healthy']
     initialDelaySeconds: 0
     periodSeconds: 10
     failureThreshold: 3

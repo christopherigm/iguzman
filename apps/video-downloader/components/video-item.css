@@ -118,8 +118,6 @@
   color: var(--foreground, #171717);
   margin: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-family: 'Roboto Mono', monospace;
   font-size: 10.5px;
 }

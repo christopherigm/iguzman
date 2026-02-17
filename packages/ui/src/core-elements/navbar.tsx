@@ -58,7 +58,11 @@ function useScrollDirection(threshold = 5): 'up' | 'down' | null {
   useEffect(() => {
     const handleScroll = () => {
       const currentY = window.scrollY;
-      if (Math.abs(currentY - lastScrollY.current) < threshold) return;
+      if (
+        Math.abs(currentY - lastScrollY.current) < threshold ||
+        currentY < 300
+      )
+        return;
       setDirection(currentY > lastScrollY.current ? 'down' : 'up');
       lastScrollY.current = currentY;
     };
@@ -270,7 +274,9 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         // If dimension detection fails (e.g. non-base64 src), fall back to logoWidth
         if (!cancelled) setComputedLogoWidth(logoWidth);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [logo, logoHeight, logoWidth]);
 
   // Close dropdown on outside click
@@ -305,7 +311,12 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     <div className="ui-navbar-inner">
       {/* Logo */}
       <div className="ui-navbar-logo">
-        <Image src={logo} alt={logoAlt} width={computedLogoWidth} height={logoHeight} />
+        <Image
+          src={logo}
+          alt={logoAlt}
+          width={computedLogoWidth}
+          height={logoHeight}
+        />
       </div>
 
       {/* Spacer */}

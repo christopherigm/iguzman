@@ -302,7 +302,12 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       ) : null}
 
       {/* ── Loading indicator ─────────────────────── */}
-      {isProcessing ? <ProgressBar margin="0" /> : null}
+      {isProcessing ? (
+        <ProgressBar
+          value={ffmpegProgress ? ffmpegProgress : undefined}
+          margin="0"
+        />
+      ) : null}
 
       {/* ── FFmpeg status ─────────────────────────── */}
       {ffmpegStatus === 'loading' ? (

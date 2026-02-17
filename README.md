@@ -156,7 +156,7 @@ After the application starts, create it so probes pass:
 
 ```bash
 # From any pod in the deployment
-kubectl exec deploy/web -n web -- touch /app/shared/.healthy
+kubectl exec deploy/web -n web -- touch /app/media/.healthy
 ```
 
 Or include the health-file creation in your application startup script.

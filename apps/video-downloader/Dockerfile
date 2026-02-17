@@ -58,21 +58,24 @@ RUN apk add --no-cache \
     pip install --break-system-packages "yt-dlp[default,curl-cffi]"
 
 # Non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+# RUN addgroup --system --gid 1001 nodejs && \
+#     adduser --system --uid 1001 nextjs
 
-# Copy only what the standalone server needs
+# Copy only what the standalone server needsg
 COPY --from=builder /app/apps/video-downloader/public ./apps/video-downloader/public
-COPY --from=builder --chown=nextjs:nodejs /app/apps/video-downloader/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/video-downloader/.next/static ./apps/video-downloader/.next/static
+COPY --from=builder /app/apps/video-downloader/.next/standalone ./
+COPY --from=builder /app/apps/video-downloader/.next/static ./apps/video-downloader/.next/static
+# COPY --from=builder --chown=nextjs:nodejs /app/apps/video-downloader/.next/standalone ./
+# COPY --from=builder --chown=nextjs:nodejs /app/apps/video-downloader/.next/static ./apps/video-downloader/.next/static
 
-RUN chown nextjs:nodejs /app/apps/video-downloader/public/media
+# RUN mkdir -p /app/media/test && chown nextjs:nodejs /app/media/test
 
-COPY --chown=nextjs:nodejs apps/video-downloader/netscape-cookies.txt /app/netscape-cookies.txt
+COPY apps/video-downloader/netscape-cookies.txt /app/netscape-cookies.txt
+# COPY --chown=nextjs:nodejs apps/video-downloader/netscape-cookies.txt /app/netscape-cookies.txt
 RUN chmod 644 /app/netscape-cookies.txt
 
 
-USER nextjs
+# USER nextjs
 
 EXPOSE 3000
 

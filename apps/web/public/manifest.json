@@ -1,7 +1,7 @@
 {
-  "name": "Video Downloader",
-  "short_name": "VidDL2",
-  "description": "Download videos from popular platforms",
+  "name": "Web",
+  "short_name": "Web",
+  "description": "Web application",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

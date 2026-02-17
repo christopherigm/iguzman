@@ -56,9 +56,7 @@ export async function POST(
   const result = await downloadVideo({
     url,
     justAudio,
-    outputFolder: IS_PRODUCTION
-      ? '/app/apps/video-downloader/public/media'
-      : './public/media',
+    outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
     cookies: IS_PRODUCTION
       ? '/app/netscape-cookies.txt'
       : './netscape-cookies.txt',
