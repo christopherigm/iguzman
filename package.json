@@ -8,6 +8,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "new-app": "node scripts/new-app.mjs",
+    "new-mobile-app": "node scripts/new-mobile-app.mjs",
     "docker": "node scripts/docker-build.mjs",
     "helm": "node scripts/helm-deploy.mjs",
     "deployment": "node scripts/deployment.mjs"
