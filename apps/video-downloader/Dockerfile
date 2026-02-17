@@ -55,7 +55,7 @@ RUN apk add --no-cache \
     wget \
     python3 \
     py3-pip && \
-    pip install --break-system-packages yt-dlp
+    pip install --break-system-packages "yt-dlp[default,curl-cffi]"
 
 # Non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
