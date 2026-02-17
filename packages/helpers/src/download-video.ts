@@ -25,8 +25,31 @@ const DEFAULT_BINARY = 'yt-dlp';
 /** Default ffmpeg binary path. */
 const DEFAULT_FFMPEG = 'ffmpeg';
 
+/** Default Node.js binary path for yt-dlp's `--js-runtimes` flag. */
+const DEFAULT_JS_RUNTIMES = IS_PRODUCTION
+  ? '/usr/local/bin/node'
+  : '/usr/bin/node';
+
 /** Maximum buffer size for command output (2 MB). */
 const EXEC_MAX_BUFFER = 1024 * 2048;
+
+/**
+ * Video extensions compatible with web browsers, Android, and iOS.
+ * Ordered by preference — the first match wins during format selection.
+ */
+const PREFERRED_VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov'] as const;
+
+/**
+ * Audio extensions compatible with web browsers, Android, and iOS.
+ * Ordered by preference — the first match wins during format selection.
+ */
+const PREFERRED_AUDIO_EXTENSIONS = [
+  'm4a',
+  'mp3',
+  'aac',
+  'opus',
+  'webm',
+] as const;
 
 /**
  * Language prefixes used to select a preferred SRT file when multiple
@@ -60,6 +83,7 @@ const PREFERRED_LANG_PREFIXES = [
  * - `DOWNLOAD_FAILED` — yt-dlp exited with a non-zero code.
  * - `METADATA_FAILED` — Could not retrieve video metadata.
  * - `SUBTITLES_FAILED` — Could not retrieve subtitles / captions.
+ * - `FORMAT_DETECTION_FAILED` — Could not list available formats.
  */
 export type DownloadVideoErrorCode =
   | 'BINARY_NOT_FOUND'
@@ -68,7 +92,8 @@ export type DownloadVideoErrorCode =
   | 'UNSUPPORTED_PLATFORM'
   | 'DOWNLOAD_FAILED'
   | 'METADATA_FAILED'
-  | 'SUBTITLES_FAILED';
+  | 'SUBTITLES_FAILED'
+  | 'FORMAT_DETECTION_FAILED';
 
 /** Structured error object returned by {@link downloadVideo}. */
 export interface DownloadVideoError {
@@ -114,6 +139,58 @@ export interface DownloadVideoOptions {
    * @defaultValue false
    */
   justAudio?: boolean;
+  /**
+   * Absolute path to the Node.js binary used by yt-dlp's
+   * `--js-runtimes` flag for JavaScript-based extractors.
+   * @defaultValue `/usr/local/bin/node` in production, `/usr/bin/node` otherwise.
+   */
+  jsRuntimes?: string;
+}
+
+/** A single format entry from yt-dlp's `--dump-json` output. */
+export interface FormatInfo {
+  /** Unique identifier for the format (e.g. `"137"`, `"248"`). */
+  format_id: string;
+  /** File extension (e.g. `"mp4"`, `"webm"`, `"m4a"`). */
+  ext: string;
+  /** Video codec name, or `"none"` when the format is audio-only. */
+  vcodec: string;
+  /** Audio codec name, or `"none"` when the format is video-only. */
+  acodec: string;
+  /** Video height in pixels (e.g. `1080`). `null` for audio-only. */
+  height: number | null;
+  /** Video width in pixels (e.g. `1920`). `null` for audio-only. */
+  width: number | null;
+  /** Frames per second. `null` when unavailable. */
+  fps: number | null;
+  /** Total bitrate in KBit/s. `null` when unavailable. */
+  tbr: number | null;
+  /** Audio bitrate in KBit/s. `null` when unavailable. */
+  abr: number | null;
+  /** Audio sample rate in Hz. `null` when unavailable. */
+  asr: number | null;
+  /** Approximate file size in bytes. `null` when unavailable. */
+  filesize_approx: number | null;
+  /** Exact file size in bytes. `null` when unavailable. */
+  filesize: number | null;
+  /** Resolution string (e.g. `"1920x1080"`). */
+  resolution: string;
+  /** Human-readable format note (e.g. `"1080p"`, `"tiny"`). */
+  format_note: string;
+  /** Download protocol (e.g. `"https"`, `"m3u8_native"`). */
+  protocol: string;
+}
+
+/** The result of format detection for a video URL. */
+export interface FormatSelection {
+  /** The best video-only format, or `null` if none found. */
+  bestVideo: FormatInfo | null;
+  /** The best audio-only format, or `null` if none found. */
+  bestAudio: FormatInfo | null;
+  /** The best combined (video + audio) format, or `null` if none found. */
+  bestCombined: FormatInfo | null;
+  /** All available formats returned by yt-dlp. */
+  allFormats: FormatInfo[];
 }
 
 /** Relevant fields from the yt-dlp `--dump-json` output. */
@@ -138,6 +215,8 @@ export interface VideoMetadata {
   automatic_captions: Record<string, { ext: string; url: string }[]>;
   /** Manual subtitles keyed by language code. */
   subtitles: Record<string, { ext: string; url: string }[]>;
+  /** Available formats returned by yt-dlp. */
+  formats?: FormatInfo[];
 }
 
 /** Result returned by {@link downloadVideo}. */
@@ -168,6 +247,11 @@ export interface DownloadVideoResult {
    * were available.
    */
   captions?: string;
+  /**
+   * Format selection details. Present only when format detection
+   * succeeds. Useful for debugging or inspecting chosen formats.
+   */
+  formatSelection?: FormatSelection;
   /**
    * Structured error object. Present when something goes wrong.
    * When set, `file` and `name` will be absent.
@@ -260,14 +344,21 @@ const removeFolder = (folder: string): void => {
 /**
  * Fetches video metadata using `yt-dlp --dump-json`.
  *
+ * The `--dump-json` output includes a `formats` array with all
+ * available streams — this is reused by {@link fetchAvailableFormats}
+ * to avoid a redundant network call.
+ *
  * @returns Parsed metadata object from the JSON output.
  */
 const fetchMetadata = async (
   url: string,
   binary: string,
   cookies: string,
+  jsRuntimes: string,
 ): Promise<VideoMetadata> => {
   const args = ['--dump-json', '--no-playlist'];
+
+  args.push('--js-runtimes', `node:${jsRuntimes}`);
 
   if (cookies) {
     args.push('--cookies', cookies);
@@ -280,22 +371,223 @@ const fetchMetadata = async (
   return JSON.parse(output) as VideoMetadata;
 };
 
+/* ------------------------------------------------------------------ */
+/*  Format detection & selection                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Fetches all available formats for a URL using `yt-dlp --dump-json`.
+ *
+ * When metadata has already been fetched (and includes a `formats`
+ * field) it is reused to avoid a second network round-trip.
+ *
+ * @returns An array of {@link FormatInfo} objects.
+ */
+const fetchAvailableFormats = async (
+  url: string,
+  binary: string,
+  cookies: string,
+  jsRuntimes: string,
+  existingMetadata?: VideoMetadata,
+): Promise<FormatInfo[]> => {
+  // Re-use formats from metadata when available
+  if (existingMetadata?.formats && existingMetadata.formats.length > 0) {
+    return existingMetadata.formats;
+  }
+
+  const meta = await fetchMetadata(url, binary, cookies, jsRuntimes);
+  return (meta as VideoMetadata & { formats?: FormatInfo[] }).formats ?? [];
+};
+
+/**
+ * Returns `true` when the extension is in the preferred list.
+ */
+const isPreferredVideoExt = (ext: string): boolean =>
+  (PREFERRED_VIDEO_EXTENSIONS as readonly string[]).includes(ext);
+
+const isPreferredAudioExt = (ext: string): boolean =>
+  (PREFERRED_AUDIO_EXTENSIONS as readonly string[]).includes(ext);
+
+/**
+ * Selects the best video-only, audio-only, and combined formats
+ * from the available format list.
+ *
+ * **Selection strategy:**
+ * 1. Filters to web-compatible extensions (`mp4`, `webm`, `mov` for
+ *    video; `m4a`, `mp3`, `aac`, `opus`, `webm` for audio).
+ * 2. Prefers the highest resolution (height × width), then highest
+ *    bitrate, then preferred extension order.
+ * 3. For audio, prefers the highest bitrate, then preferred extension.
+ * 4. A "combined" format has both video and audio codecs — useful for
+ *    platforms that serve muxed streams (e.g. TikTok, Instagram).
+ */
+const selectBestFormats = (formats: FormatInfo[]): FormatSelection => {
+  const videoOnly: FormatInfo[] = [];
+  const audioOnly: FormatInfo[] = [];
+  const combined: FormatInfo[] = [];
+
+  for (const f of formats) {
+    const hasVideo = f.vcodec !== 'none' && f.vcodec !== undefined;
+    const hasAudio = f.acodec !== 'none' && f.acodec !== undefined;
+
+    if (hasVideo && hasAudio) {
+      combined.push(f);
+    } else if (hasVideo && !hasAudio) {
+      videoOnly.push(f);
+    } else if (hasAudio && !hasVideo) {
+      audioOnly.push(f);
+    }
+  }
+
+  // --- Best video-only (max resolution → max bitrate → preferred ext) ---
+  const filteredVideo = videoOnly.filter((f) => isPreferredVideoExt(f.ext));
+  const videoPool = filteredVideo.length > 0 ? filteredVideo : videoOnly;
+
+  const bestVideo =
+    videoPool.length > 0
+      ? videoPool.sort((a, b) => {
+          // 1. Max resolution (height)
+          const aH = a.height ?? 0;
+          const bH = b.height ?? 0;
+          if (bH !== aH) return bH - aH;
+
+          // 2. Max width (for same height)
+          const aW = a.width ?? 0;
+          const bW = b.width ?? 0;
+          if (bW !== aW) return bW - aW;
+
+          // 3. Max bitrate
+          const aTbr = a.tbr ?? 0;
+          const bTbr = b.tbr ?? 0;
+          if (bTbr !== aTbr) return bTbr - aTbr;
+
+          // 4. Prefer mp4 > webm > mov
+          const extOrder = (ext: string) => {
+            const idx = (
+              PREFERRED_VIDEO_EXTENSIONS as readonly string[]
+            ).indexOf(ext);
+            return idx === -1 ? 999 : idx;
+          };
+          return extOrder(a.ext) - extOrder(b.ext);
+        })[0]!
+      : null;
+
+  // --- Best audio-only (max bitrate → preferred ext) ---
+  const filteredAudio = audioOnly.filter((f) => isPreferredAudioExt(f.ext));
+  const audioPool = filteredAudio.length > 0 ? filteredAudio : audioOnly;
+
+  const bestAudio =
+    audioPool.length > 0
+      ? audioPool.sort((a, b) => {
+          // 1. Max audio bitrate
+          const aAbr = a.abr ?? a.tbr ?? 0;
+          const bAbr = b.abr ?? b.tbr ?? 0;
+          if (bAbr !== aAbr) return bAbr - aAbr;
+
+          // 2. Higher sample rate
+          const aAsr = a.asr ?? 0;
+          const bAsr = b.asr ?? 0;
+          if (bAsr !== aAsr) return bAsr - aAsr;
+
+          // 3. Prefer m4a > mp3 > aac > opus > webm
+          const extOrder = (ext: string) => {
+            const idx = (
+              PREFERRED_AUDIO_EXTENSIONS as readonly string[]
+            ).indexOf(ext);
+            return idx === -1 ? 999 : idx;
+          };
+          return extOrder(a.ext) - extOrder(b.ext);
+        })[0]!
+      : null;
+
+  // --- Best combined (max resolution → max bitrate → preferred ext) ---
+  const filteredCombined = combined.filter((f) => isPreferredVideoExt(f.ext));
+  const combinedPool =
+    filteredCombined.length > 0 ? filteredCombined : combined;
+
+  const bestCombined =
+    combinedPool.length > 0
+      ? combinedPool.sort((a, b) => {
+          const aH = a.height ?? 0;
+          const bH = b.height ?? 0;
+          if (bH !== aH) return bH - aH;
+
+          const aTbr = a.tbr ?? 0;
+          const bTbr = b.tbr ?? 0;
+          if (bTbr !== aTbr) return bTbr - aTbr;
+
+          const extOrder = (ext: string) => {
+            const idx = (
+              PREFERRED_VIDEO_EXTENSIONS as readonly string[]
+            ).indexOf(ext);
+            return idx === -1 ? 999 : idx;
+          };
+          return extOrder(a.ext) - extOrder(b.ext);
+        })[0]!
+      : null;
+
+  return { bestVideo, bestAudio, bestCombined, allFormats: formats };
+};
+
+/**
+ * Builds the `-f` format selector string used by yt-dlp,
+ * based on detected best formats.
+ *
+ * - If both a video-only and audio-only format were found,
+ *   returns `"<videoId>+<audioId>"` so yt-dlp merges them.
+ * - If only a combined format exists, returns its `format_id`.
+ * - Falls back to yt-dlp's built-in `"bv*+ba/b"` selector.
+ */
+const buildFormatSelector = (
+  selection: FormatSelection,
+  justAudio: boolean,
+): string => {
+  if (justAudio) {
+    if (selection.bestAudio) {
+      return selection.bestAudio.format_id;
+    }
+    return 'bestaudio/best';
+  }
+
+  // Prefer explicit video + audio merge
+  if (selection.bestVideo && selection.bestAudio) {
+    return `${selection.bestVideo.format_id}+${selection.bestAudio.format_id}`;
+  }
+
+  // Fall back to best combined stream
+  if (selection.bestCombined) {
+    return selection.bestCombined.format_id;
+  }
+
+  // Ultimate fallback — let yt-dlp decide
+  return 'bv*+ba/b';
+};
+
 /**
  * Builds the yt-dlp argument list for downloading **only the audio track**.
  *
- * Uses `-f bestaudio` combined with `--extract-audio --audio-format m4a`
- * so yt-dlp downloads the best available audio stream and ffmpeg
- * converts it to M4A.
+ * When a {@link FormatSelection} is provided and a best audio format
+ * was detected, its `format_id` is used directly with `-f`. Otherwise
+ * falls back to `bestaudio/best`.
+ *
+ * Uses `--extract-audio --audio-format m4a` so ffmpeg converts the
+ * downloaded stream to M4A.
  */
 const buildAudioDownloadArgs = (
   url: string,
   outputPath: string,
   cookies: string,
+  jsRuntimes: string,
+  formatSelection?: FormatSelection,
 ): string[] => {
+  const formatSelector = formatSelection
+    ? buildFormatSelector(formatSelection, true)
+    : 'bestaudio/best';
+
   const args: string[] = [
     url,
     '-f',
-    'bestaudio/best',
+    formatSelector,
     '--extract-audio',
     '--audio-format',
     'm4a',
@@ -305,7 +597,7 @@ const buildAudioDownloadArgs = (
   ];
 
   args.push('--add-header', 'user-agent:Mozilla/5.0');
-  args.push('--js-runtimes', 'node:/usr/local/bin/node');
+  args.push('--js-runtimes', `node:${jsRuntimes}`);
 
   if (cookies) {
     args.push('--cookies', cookies);
@@ -319,20 +611,31 @@ const buildAudioDownloadArgs = (
 /**
  * Builds the yt-dlp argument list for downloading a video.
  *
+ * When a {@link FormatSelection} is provided the explicit
+ * `format_id` combination is used, guaranteeing the best
+ * resolution + best audio detected from `--dump-json`.
+ *
  * Platform-specific behaviour:
- * - **YouTube** — Requests the best MP4 video + M4A audio combination,
+ * - **YouTube** — Falls back to
+ *   `bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio`,
  *   disables playlists, and tolerates per-fragment errors.
- * - **TikTok** — Prefers the H.264 codec.
- * - **Instagram** — No special handling (URL is passed as-is).
+ * - **TikTok** — Appends `-S codec:h264` as a secondary sort.
+ * - **Other platforms** — No special handling.
  */
 const buildDownloadArgs = (
   url: string,
   outputPath: string,
   cookies: string,
+  jsRuntimes: string,
+  formatSelection?: FormatSelection,
 ): string[] => {
   const args: string[] = [url];
 
-  if (isYoutube(url)) {
+  if (formatSelection) {
+    // Use the explicitly-detected best format combination
+    const selector = buildFormatSelector(formatSelection, false);
+    args.push('-f', selector, '--no-abort-on-error', '--no-playlist');
+  } else if (isYoutube(url)) {
     args.push(
       '-f',
       'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio',
@@ -342,7 +645,7 @@ const buildDownloadArgs = (
   }
 
   args.push('--add-header', 'user-agent:Mozilla/5.0');
-  args.push('--js-runtimes', 'node:/usr/local/bin/node');
+  args.push('--js-runtimes', `node:${jsRuntimes}`);
 
   if (isTiktok(url)) {
     args.push('-S', 'codec:h264');
@@ -386,6 +689,7 @@ const fetchSrt = async (
   url: string,
   binary: string,
   cookies: string,
+  jsRuntimes: string,
   outputFolder: string,
 ): Promise<string | null> => {
   const tmpFolder = `${outputFolder}/_srt_${randomUUID()}`;
@@ -406,6 +710,8 @@ const fetchSrt = async (
     } else if (isYoutube(url)) {
       args.push('--sub-langs', 'en,es');
     }
+
+    args.push('--js-runtimes', `node:${jsRuntimes}`);
 
     if (cookies) {
       args.push('--cookies', cookies);
@@ -547,6 +853,7 @@ const downloadVideo = async ({
   srt: requestSrt = false,
   captions: requestCaptions = false,
   justAudio = false,
+  jsRuntimes = DEFAULT_JS_RUNTIMES,
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
@@ -618,38 +925,82 @@ const downloadVideo = async ({
 
   let videoMetadata: VideoMetadata | undefined;
 
-  if (requestMetadata || requestCaptions) {
-    try {
-      videoMetadata = await fetchMetadata(url, binary, cookies);
-    } catch (error) {
-      if (requestMetadata) {
-        return {
-          error: {
-            code: 'METADATA_FAILED',
-            message: `Failed to retrieve video metadata: ${error instanceof Error ? error.message : String(error)}`,
-          },
-        };
-      }
-      // If only captions were requested and metadata fails, we continue
-      // without captions rather than failing the entire download.
+  // We always fetch metadata now because --dump-json also returns the
+  // `formats` array, which we reuse for format selection (step 4b).
+  try {
+    videoMetadata = await fetchMetadata(url, binary, cookies, jsRuntimes);
+  } catch (error) {
+    if (requestMetadata) {
+      return {
+        error: {
+          code: 'METADATA_FAILED',
+          message: `Failed to retrieve video metadata: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      };
     }
+    // Metadata failed but wasn't strictly required — continue anyway.
+  }
+
+  /* ---- 4b. Detect available formats & select best streams ---- */
+
+  let formatSelection: FormatSelection | undefined;
+
+  try {
+    const formats = await fetchAvailableFormats(
+      url,
+      binary,
+      cookies,
+      jsRuntimes,
+      videoMetadata,
+    );
+
+    if (formats.length > 0) {
+      formatSelection = selectBestFormats(formats);
+    }
+  } catch {
+    // Format detection is best-effort. When it fails we fall back to
+    // yt-dlp's built-in format selection in the download step.
   }
 
   /* ---- 5. Download the video (or audio only) ---- */
 
   const args = justAudio
-    ? buildAudioDownloadArgs(url, outputPath, cookies)
-    : buildDownloadArgs(url, outputPath, cookies);
+    ? buildAudioDownloadArgs(
+        url,
+        outputPath,
+        cookies,
+        jsRuntimes,
+        formatSelection,
+      )
+    : buildDownloadArgs(url, outputPath, cookies, jsRuntimes, formatSelection);
 
   try {
     await execFileAsync(binary, args);
   } catch (error) {
-    return {
-      error: {
-        code: 'DOWNLOAD_FAILED',
-        message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
-      },
-    };
+    // If download failed with format selection, retry without it
+    // (let yt-dlp pick the best format on its own).
+    if (formatSelection) {
+      try {
+        const fallbackArgs = justAudio
+          ? buildAudioDownloadArgs(url, outputPath, cookies, jsRuntimes)
+          : buildDownloadArgs(url, outputPath, cookies, jsRuntimes);
+        await execFileAsync(binary, fallbackArgs);
+      } catch (fallbackError) {
+        return {
+          error: {
+            code: 'DOWNLOAD_FAILED',
+            message: `yt-dlp download failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+          },
+        };
+      }
+    } else {
+      return {
+        error: {
+          code: 'DOWNLOAD_FAILED',
+          message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      };
+    }
   }
 
   /* ---- 6. Extract video title ---- */
@@ -661,7 +1012,7 @@ const downloadVideo = async ({
   } else {
     // Fetch title separately when metadata wasn't requested
     try {
-      const titleMeta = await fetchMetadata(url, binary, cookies);
+      const titleMeta = await fetchMetadata(url, binary, cookies, jsRuntimes);
       videoName = titleMeta.fulltitle || titleMeta.title;
     } catch {
       // Title is best-effort; proceed without it.
@@ -673,6 +1024,7 @@ const downloadVideo = async ({
   const result: DownloadVideoResult = {
     file: fileName,
     ...(videoName && { name: videoName }),
+    ...(formatSelection && { formatSelection }),
   };
 
   /* ---- 8. Attach metadata ---- */
@@ -685,7 +1037,13 @@ const downloadVideo = async ({
 
   if (requestSrt) {
     try {
-      const srtContent = await fetchSrt(url, binary, cookies, outputFolder);
+      const srtContent = await fetchSrt(
+        url,
+        binary,
+        cookies,
+        jsRuntimes,
+        outputFolder,
+      );
       if (srtContent) {
         result.srt = srtContent;
       }

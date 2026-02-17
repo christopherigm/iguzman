@@ -172,9 +172,10 @@ export function DownloadForm() {
       console.log('Download success:', { file, name });
 
       if (autoDownload && file) {
+        const downloadName = `${name ?? (justAudio ? 'audio' : 'video')}-${Date.now()}-${file}`;
         const link = document.createElement('a');
         link.href = `/api/media/${file}`;
-        link.download = name ?? file;
+        link.download = downloadName;
         link.click();
       }
     } catch (err) {

@@ -5,6 +5,13 @@ import type {
   DownloadVideoError,
 } from '@repo/helpers/download-video';
 
+/* ------------------------------------------------------------------ */
+/*  Constants                                                         */
+/* ------------------------------------------------------------------ */
+
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const IS_PRODUCTION = NODE_ENV === 'production';
+
 interface RequestBody {
   url: string;
   justAudio?: boolean;
@@ -49,7 +56,12 @@ export async function POST(
   const result = await downloadVideo({
     url,
     justAudio,
-    outputFolder: '/app/apps/video-downloader/public/media',
+    outputFolder: IS_PRODUCTION
+      ? '/app/apps/video-downloader/public/media'
+      : './public/media',
+    cookies: IS_PRODUCTION
+      ? '/app/netscape-cookies.txt'
+      : './netscape-cookies.txt',
   });
 
   if (result.error) {
