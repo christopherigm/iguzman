@@ -60,6 +60,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const t = useTranslations('VideoGrid');
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const downloadTriggered = useRef(false);
 
   /* FFmpeg WASM (lazy-loaded for client-side FPS interpolation) */
@@ -109,12 +110,40 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           try {
             onUpdate(video.uuid, { status: 'processing' });
             const sourceUrl = `${window.location.origin}/api/media/${file}`;
-            const processedUrl = await interpolateFps(
+            const { objectUrl, blob } = await interpolateFps(
               sourceUrl,
               Number(video.fps),
             );
-            downloadHref = processedUrl;
+            downloadHref = objectUrl;
             onUpdate(video.uuid, { status: 'done' });
+
+            /* Upload the processed video back to the server in parallel
+               with the browser download so the server file stays in sync */
+            setUploading(true);
+            const uploadPromise = fetch(
+              `${window.location.origin}/api/media/${file}`,
+              { method: 'PUT', body: blob },
+            )
+              .catch((uploadErr) => {
+                console.error(
+                  'Failed to upload processed video to server:',
+                  uploadErr,
+                );
+              })
+              .finally(() => {
+                setUploading(false);
+              });
+
+            /* Trigger browser download immediately (don't wait for upload) */
+            const downloadName = `${name ?? 'video'}-${Date.now()}-${file}`;
+            const link = document.createElement('a');
+            link.href = downloadHref;
+            link.download = downloadName;
+            link.click();
+
+            /* Await upload so we don't lose error logs if the tab closes */
+            await uploadPromise;
+            return;
           } catch (ffErr) {
             console.error('FFmpeg interpolation failed:', ffErr);
             onUpdate(video.uuid, {
@@ -283,6 +312,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         <span className="vi-ffmpeg-hint">
           {t('ffmpegProcessing', { progress: ffmpegProgress })}
         </span>
+      ) : null}
+      {uploading ? (
+        <span className="vi-ffmpeg-hint">{t('uploadingProcessed')}</span>
       ) : null}
 
       {/* ── Footer actions ────────────────────────── */}

@@ -50,8 +50,19 @@
     "status_processing": "Processing",
     "status_done": "Done",
     "status_error": "Error",
+    "filterAll": "All platforms",
+    "filterPlatform": "Filter by platform",
+    "filterAudioOnly": "Audio only",
+    "filterStatus": "Filter by status",
+    "filterStatusAll": "All statuses",
+    "perPage": "Items per page",
+    "perPageLabel": "page",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "noResults": "No videos match the current filters",
     "ffmpegLoading": "Loading video processor…",
     "ffmpegProcessing": "Interpolating frames… {progress}%",
+    "uploadingProcessed": "Uploading processed video to server…",
     "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead."
   }
 }

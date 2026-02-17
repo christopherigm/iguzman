@@ -53,10 +53,14 @@ export function useFFmpeg() {
    *
    * @param videoUrl   URL (or object-URL) of the source video
    * @param targetFps  Target frame-rate (e.g. 60, 90, 120)
-   * @returns          Object-URL pointing to the processed video blob
+   * @returns          `{ objectUrl, blob }` – object-URL for immediate use
+   *                   and the raw Blob for uploading back to the server.
    */
   const interpolateFps = useCallback(
-    async (videoUrl: string, targetFps: number): Promise<string> => {
+    async (
+      videoUrl: string,
+      targetFps: number,
+    ): Promise<{ objectUrl: string; blob: Blob }> => {
       const ffmpeg = await ensureLoaded();
       setStatus('processing');
       setProgress(0);
@@ -93,7 +97,7 @@ export function useFFmpeg() {
       await ffmpeg.deleteFile(outputName);
 
       setStatus('ready');
-      return objectUrl;
+      return { objectUrl, blob };
     },
     [ensureLoaded],
   );

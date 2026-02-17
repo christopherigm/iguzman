@@ -64,11 +64,11 @@
 
 .vi-icon-btn:hover:not(:disabled) {
   background: var(--surface-2, #f0f0f0);
-  transform: scale(1.08);
+  /* transform: scale(1.08); */
 }
 
 .vi-icon-btn:active:not(:disabled) {
-  transform: scale(0.92);
+  /* transform: scale(0.92); */
 }
 
 .vi-icon-btn:disabled {

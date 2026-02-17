@@ -82,3 +82,58 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
+
+/**
+ * PUT /api/media/:filename
+ *
+ * Replaces an existing media file on disk with the uploaded body.
+ * Used after client-side FFmpeg processing (e.g. FPS interpolation)
+ * so the server copy stays in sync. The filename is kept identical
+ * so all existing URLs remain valid.
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
+  const { writeFile } = await import('node:fs/promises');
+  const segments = (await params).path;
+
+  if (!segments || segments.length !== 1 || !segments[0]) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const fileName: string = segments[0];
+
+  if (fileName.includes('..') || fileName.includes('/')) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const filePath = join(MEDIA_DIR, fileName);
+
+  /* Only allow replacing a file that already exists */
+  try {
+    const info = await fsStat(filePath);
+    if (!info.isFile()) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+  } catch {
+    return NextResponse.json(
+      { error: 'Original file not found — nothing to replace' },
+      { status: 404 },
+    );
+  }
+
+  /* Read the incoming body as bytes and overwrite the file */
+  try {
+    const buffer = Buffer.from(await request.arrayBuffer());
+    await writeFile(filePath, buffer);
+
+    return NextResponse.json({ ok: true, file: fileName }, { status: 200 });
+  } catch (err) {
+    console.error('PUT /api/media – write failed:', err);
+    return NextResponse.json(
+      { error: 'Failed to write file' },
+      { status: 500 },
+    );
+  }
+}

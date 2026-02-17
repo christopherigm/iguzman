@@ -10,8 +10,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   border-radius: 10px;
   background: var(--surface-2, #f4f4f5);
@@ -22,7 +22,6 @@
 
 .df-platform-badge--active {
   background: color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent);
-  transform: scale(1.05);
 }
 
 .df-input-wrapper {
@@ -52,11 +51,9 @@
 
 .df-icon-btn:hover:not(:disabled) {
   background: var(--surface-2, #f0f0f0);
-  transform: scale(1.06);
 }
 
 .df-icon-btn:active:not(:disabled) {
-  transform: scale(0.95);
 }
 
 .df-icon-btn:disabled {
@@ -73,7 +70,6 @@
 
 .df-icon-btn--download:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent, #06b6d4) 85%, black);
-  transform: scale(1.06);
 }
 
 .df-icon-btn--download:disabled {

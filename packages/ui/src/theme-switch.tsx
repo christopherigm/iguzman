@@ -6,8 +6,8 @@ import Button from './core-elements/button';
 
 const modes: { value: ThemeMode; label: string }[] = [
   { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
   { value: 'system', label: 'System' },
+  { value: 'dark', label: 'Dark' },
 ];
 
 export function ThemeSwitch() {

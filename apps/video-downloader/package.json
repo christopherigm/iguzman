@@ -1,6 +1,6 @@
 {
   "name": "video-downloader",
-  "version": "0.1.17",
+  "version": "0.1.22",
   "type": "module",
   "private": true,
   "scripts": {
@@ -11,6 +11,7 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@repo/helpers": "workspace:*",

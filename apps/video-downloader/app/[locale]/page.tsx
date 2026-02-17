@@ -19,10 +19,12 @@ export default async function Home({ params }: Props) {
       paddingX={10}
     >
       <br />
+      <br />
+      <br />
+      <br />
       <DownloadPage />
       <br />
       <ThemeSwitch />
-      <br />
       <br />
     </Container>
   );

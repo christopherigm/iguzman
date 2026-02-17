@@ -78,7 +78,13 @@ function FPSSelect({
         aria-label="FPS"
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <option
+            key={opt.value}
+            value={opt.value}
+            style={{
+              backgroundColor: 'var(--surface-1, #f4f4f5)',
+            }}
+          >
             {opt.label}
           </option>
         ))}
@@ -197,6 +203,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
       padding={10}
       flexDirection="column"
       styles={{ maxWidth: 400, width: '100%' }}
+      backgroundColor="var(--surface-1, #fff)"
     >
       {/* ── URL Input Row ────────────────────────────── */}
       <div className="df-input-row">
@@ -220,19 +227,21 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
           <TextInput value={url} onChange={setUrl} lable={t('inputLabel')} />
         </div>
 
-        <button
-          type="button"
-          className="df-icon-btn"
-          onClick={handleClear}
-          disabled={!hasText}
-          aria-label={t('clearUrl')}
-        >
-          <Icon
-            icon="/icons/delete.svg"
-            size={18}
-            color="var(--foreground, #171717)"
-          />
-        </button>
+        {url && (
+          <button
+            type="button"
+            className="df-icon-btn"
+            onClick={handleClear}
+            disabled={!hasText}
+            aria-label={t('clearUrl')}
+          >
+            <Icon
+              icon="/icons/delete.svg"
+              size={18}
+              color="var(--foreground, #171717)"
+            />
+          </button>
+        )}
 
         <button
           type="button"

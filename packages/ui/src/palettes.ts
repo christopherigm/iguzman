@@ -36,8 +36,8 @@ const palettes: Record<string, PaletteDefinition> = {
     dark: {
       '--background': '#202020',
       '--foreground': '#ededed',
-      '--surface-1': '#1e1e1e',
-      '--surface-2': '#2f2f2f',
+      '--surface-1': '#333333',
+      '--surface-2': '#3c3c3c',
       '--border': '#333333',
       '--accent': '#22d3ee',
       '--accent-foreground': '#0a0a0a',

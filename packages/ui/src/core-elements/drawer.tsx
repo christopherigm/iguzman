@@ -7,6 +7,8 @@ import { Icon } from './icon';
 import { TextInput } from './text-input';
 import './drawer.css';
 import getImageDimensionsFromBase64 from '@repo/helpers/get-image-dimensions-from-base64';
+import { ThemeSwitch } from '../theme-switch';
+import { Box } from './box';
 
 /**
  * Props for the `Drawer` component.
@@ -262,6 +264,14 @@ export const Drawer: React.FC<DrawerProps> = ({
           ))}
         </nav>
 
+        <Box
+          display="flex"
+          justifyContent="center"
+          width="100%"
+          marginBottom={10}
+        >
+          <ThemeSwitch />
+        </Box>
         {/* Footer: version */}
         {version && (
           <div className="ui-drawer-footer">

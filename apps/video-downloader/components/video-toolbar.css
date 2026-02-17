@@ -1,0 +1,248 @@
+/* ── VideoToolbar ─────────────────────────────────────── */
+
+.vt-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  margin-bottom: 4px;
+  animation: vt-slide-in 280ms ease-out;
+}
+
+@keyframes vt-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Filter group (platform icons + audio) ───────────── */
+
+.vt-filters {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--foreground, #111) 4%, transparent);
+}
+
+/* ── Icon toggle button ──────────────────────────────── */
+
+.vt-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  position: relative;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    transform 120ms ease,
+    box-shadow 200ms ease;
+}
+
+.vt-icon-btn:hover {
+  background: color-mix(in srgb, var(--foreground, #111) 7%, transparent);
+  /* transform: scale(1.06); */
+}
+
+.vt-icon-btn:active {
+  /* transform: scale(0.93); */
+}
+
+.vt-icon-btn[data-active='true'] {
+  background: var(--accent, #06b6d4);
+  border-color: var(--accent, #06b6d4);
+  box-shadow: 0 2px 8px
+    color-mix(in srgb, var(--accent, #06b6d4) 30%, transparent);
+}
+
+.vt-icon-btn[data-active='true'] .vt-icon {
+  background-color: var(--accent-foreground, #fff) !important;
+}
+
+/* ── CSS-mask icon (reuses pattern from Icon component) ─ */
+
+.vt-icon {
+  width: 18px;
+  height: 18px;
+  background-color: var(--foreground-muted, #888);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  transition: background-color 200ms ease;
+}
+
+/* ── Divider between filter groups ───────────────────── */
+
+.vt-divider {
+  width: 1px;
+  height: 20px;
+  background: color-mix(in srgb, var(--foreground, #111) 10%, transparent);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* ── Native select wrapper (styled dropdown) ─────────── */
+
+.vt-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.vt-select {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground, #171717);
+  background: color-mix(in srgb, var(--foreground, #111) 4%, transparent);
+  border: 1.5px solid
+    color-mix(in srgb, var(--foreground, #111) 8%, transparent);
+  border-radius: 8px;
+  padding: 6px 28px 6px 10px;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  transition:
+    border-color 200ms ease,
+    background 200ms ease,
+    box-shadow 200ms ease;
+  min-width: 0;
+}
+
+.vt-select:hover {
+  border-color: color-mix(in srgb, var(--accent, #06b6d4) 40%, transparent);
+  background: color-mix(in srgb, var(--foreground, #111) 3%, transparent);
+}
+
+.vt-select:focus-visible {
+  outline: none;
+  border-color: var(--accent, #06b6d4);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--accent, #06b6d4) 14%, transparent);
+}
+
+.vt-select-chevron {
+  position: absolute;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+  background-color: var(--foreground-muted, #888);
+  mask-image: url('/icons/chevron-down.svg');
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-image: url('/icons/chevron-down.svg');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  pointer-events: none;
+  transition: transform 200ms ease;
+}
+
+/* ── Spacer pushes pagination to the right ───────────── */
+
+.vt-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+/* ── Pagination controls ─────────────────────────────── */
+
+.vt-pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.vt-page-info {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--foreground-muted, #888);
+  letter-spacing: -0.01em;
+  padding: 0 6px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.vt-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1.5px solid
+    color-mix(in srgb, var(--foreground, #111) 8%, transparent);
+  border-radius: 8px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--foreground, #111) 3%, transparent);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 120ms ease,
+    opacity 180ms ease;
+}
+
+.vt-page-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent, #06b6d4) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #06b6d4) 30%, transparent);
+  /* transform: scale(1.06); */
+}
+
+.vt-page-btn:active:not(:disabled) {
+  /* transform: scale(0.93); */
+}
+
+.vt-page-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.vt-page-btn .vt-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.vt-page-btn--prev .vt-icon {
+  transform: rotate(90deg);
+}
+
+.vt-page-btn--next .vt-icon {
+  transform: rotate(-90deg);
+}
+
+/* ── Responsive: stack on narrow screens ─────────────── */
+
+@media (max-width: 540px) {
+  .vt-bar {
+    gap: 6px;
+  }
+
+  .vt-spacer {
+    display: none;
+  }
+
+  .vt-pagination {
+    width: 100%;
+    justify-content: center;
+    padding-top: 4px;
+  }
+}

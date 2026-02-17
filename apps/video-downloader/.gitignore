@@ -35,3 +35,12 @@ next-env.d.ts
 
 public/media/*.mp4
 public/media/*.m4a
+
+# PWA generated files
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/precache.*.js
+public/precache.*.js.map
+public/swe-worker-*.js

@@ -63,3 +63,10 @@
   opacity: 0.6;
   font-weight: 500;
 }
+
+/* ── Filtered empty (smaller, inline) ────────────────── */
+
+.vg-empty--filtered {
+  padding: 24px 16px;
+  margin-top: 0;
+}
