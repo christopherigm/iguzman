@@ -1,0 +1,220 @@
+/* ── VideoItem Card ───────────────────────────────────── */
+
+.vi-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1, #fff);
+  border: 1px solid color-mix(in srgb, var(--foreground, #111) 6%, transparent);
+  transition:
+    box-shadow 280ms ease,
+    border-color 280ms ease,
+    transform 200ms ease;
+  position: relative;
+}
+
+/* ── Status bar (top 3px accent strip) ───────────────── */
+
+.vi-status-bar {
+  height: 3px;
+  width: 100%;
+  border-radius: 14px 14px 0 0;
+  transition: background-color 300ms ease;
+}
+
+/* ── Header ──────────────────────────────────────────── */
+
+.vi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 4px;
+  gap: 8px;
+}
+
+.vi-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground, #171717);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  letter-spacing: -0.01em;
+}
+
+/* ── Icon buttons ────────────────────────────────────── */
+
+.vi-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  transition:
+    background 180ms ease,
+    opacity 180ms ease,
+    transform 120ms ease;
+}
+
+.vi-icon-btn:hover:not(:disabled) {
+  background: var(--surface-2, #f0f0f0);
+  transform: scale(1.08);
+}
+
+.vi-icon-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.vi-icon-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.vi-icon-btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+}
+
+/* ── Collapsible details panel ───────────────────────── */
+
+.vi-details {
+  padding: 2px 12px 8px;
+  animation: vi-slide-down 200ms ease-out;
+}
+
+@keyframes vi-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vi-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.vi-dl dt {
+  color: var(--foreground-muted, #888);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
+.vi-dl dd {
+  color: var(--foreground, #171717);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 10.5px;
+}
+
+.vi-status-badge {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.vi-error-text {
+  color: #ef4444 !important;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* ── Media (video / audio) ───────────────────────────── */
+
+.vi-media-wrapper {
+  position: relative;
+  width: 100%;
+  background: var(--surface-2, #f4f4f5);
+  border-top: 1px solid
+    color-mix(in srgb, var(--foreground, #111) 5%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--foreground, #111) 5%, transparent);
+}
+
+.vi-video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.vi-audio-wrapper {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vi-audio {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+}
+
+/* ── Footer ──────────────────────────────────────────── */
+
+.vi-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 10px;
+}
+
+.vi-link-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.vi-original-link {
+  font-size: 11px;
+  color: var(--foreground-muted, #888);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 180ms ease;
+}
+
+.vi-original-link:hover {
+  color: var(--accent, #06b6d4);
+  text-decoration: underline;
+}
+
+/* ── Action buttons row ──────────────────────────────── */
+
+.vi-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.vi-actions .ui-button-wave {
+  font-size: 11px !important;
+}
+
+/* ── FFmpeg status hint ──────────────────────────────── */
+
+.vi-ffmpeg-hint {
+  font-size: 11px;
+  color: var(--foreground-muted, #999);
+  padding: 2px 12px 4px;
+  letter-spacing: -0.01em;
+}

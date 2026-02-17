@@ -26,5 +26,32 @@
     "ffmpegLoading": "Chargement du processeur vidéo…",
     "ffmpegProcessing": "Interpolation des images… {progress}%",
     "errorFfmpegFailed": "L'interpolation FPS a échoué. Téléchargement de l'original."
+  },
+  "VideoGrid": {
+    "title": "Téléchargements",
+    "emptyState": "Aucun téléchargement",
+    "untitledVideo": "Vidéo sans titre",
+    "toggleDetails": "Afficher les détails",
+    "copyLink": "Copier le lien",
+    "copied": "Copié !",
+    "retry": "Réessayer",
+    "redownload": "Re-télécharger",
+    "delete": "Supprimer",
+    "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
+    "detailStatus": "Statut",
+    "detailError": "Erreur",
+    "detailJustAudio": "Audio uniquement",
+    "detailEnhance": "Amélioré",
+    "detailDuration": "Durée",
+    "yes": "Oui",
+    "no": "Non",
+    "status_pending": "En attente",
+    "status_downloading": "Téléchargement",
+    "status_processing": "Traitement",
+    "status_done": "Terminé",
+    "status_error": "Erreur",
+    "ffmpegLoading": "Chargement du processeur vidéo…",
+    "ffmpegProcessing": "Interpolation des images… {progress}%",
+    "errorFfmpegFailed": "L'interpolation FPS a échoué. Téléchargement de l'original."
   }
 }

@@ -409,6 +409,27 @@ const isPreferredAudioExt = (ext: string): boolean =>
   (PREFERRED_AUDIO_EXTENSIONS as readonly string[]).includes(ext);
 
 /**
+ * Returns `true` when the video codec is H.264 (AVC).
+ *
+ * yt-dlp reports the codec as `"avc1.xxxxxx"`, `"h264"`, or similar
+ * strings — all of which contain `"avc"` or `"h264"` as a substring.
+ */
+const isH264Codec = (vcodec: string | undefined): boolean => {
+  if (!vcodec || vcodec === 'none') return false;
+  const lower = vcodec.toLowerCase();
+  return lower.includes('h264') || lower.includes('avc');
+};
+
+/**
+ * Returns `true` when the video codec is H.265 (HEVC).
+ */
+const isH265Codec = (vcodec: string | undefined): boolean => {
+  if (!vcodec || vcodec === 'none') return false;
+  const lower = vcodec.toLowerCase();
+  return lower.includes('h265') || lower.includes('hevc');
+};
+
+/**
  * Selects the best video-only, audio-only, and combined formats
  * from the available format list.
  *
@@ -420,8 +441,15 @@ const isPreferredAudioExt = (ext: string): boolean =>
  * 3. For audio, prefers the highest bitrate, then preferred extension.
  * 4. A "combined" format has both video and audio codecs — useful for
  *    platforms that serve muxed streams (e.g. TikTok, Instagram).
+ *
+ * When `preferH264` is `true` (e.g. for TikTok), H.264 formats are
+ * strongly preferred over H.265 / HEVC. H.265 TikTok streams are
+ * known to cause missing-audio issues in many players and browsers.
  */
-const selectBestFormats = (formats: FormatInfo[]): FormatSelection => {
+const selectBestFormats = (
+  formats: FormatInfo[],
+  preferH264: boolean = false,
+): FormatSelection => {
   const videoOnly: FormatInfo[] = [];
   const audioOnly: FormatInfo[] = [];
   const combined: FormatInfo[] = [];
@@ -446,6 +474,14 @@ const selectBestFormats = (formats: FormatInfo[]): FormatSelection => {
   const bestVideo =
     videoPool.length > 0
       ? videoPool.sort((a, b) => {
+          // 0. When preferH264, strongly prefer H.264 over H.265
+          if (preferH264) {
+            const aH264 = isH264Codec(a.vcodec);
+            const bH264 = isH264Codec(b.vcodec);
+            if (aH264 && !bH264) return -1;
+            if (!aH264 && bH264) return 1;
+          }
+
           // 1. Max resolution (height)
           const aH = a.height ?? 0;
           const bH = b.height ?? 0;
@@ -508,6 +544,14 @@ const selectBestFormats = (formats: FormatInfo[]): FormatSelection => {
   const bestCombined =
     combinedPool.length > 0
       ? combinedPool.sort((a, b) => {
+          // 0. When preferH264, strongly prefer H.264 over H.265
+          if (preferH264) {
+            const aH264 = isH264Codec(a.vcodec);
+            const bH264 = isH264Codec(b.vcodec);
+            if (aH264 && !bH264) return -1;
+            if (!aH264 && bH264) return 1;
+          }
+
           const aH = a.height ?? 0;
           const bH = b.height ?? 0;
           if (bH !== aH) return bH - aH;
@@ -955,7 +999,7 @@ const downloadVideo = async ({
     );
 
     if (formats.length > 0) {
-      formatSelection = selectBestFormats(formats);
+      formatSelection = selectBestFormats(formats, isTiktok(url));
     }
   } catch {
     // Format detection is best-effort. When it fails we fall back to

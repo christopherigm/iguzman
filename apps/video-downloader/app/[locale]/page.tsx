@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import { Container } from '@repo/ui/core-elements/container';
-import { DownloadForm } from '../../components/download-form';
+import { DownloadPage } from '../../components/download-page';
 import { ThemeSwitch } from '@repo/ui/theme-switch';
 
 type Props = {
@@ -19,9 +19,11 @@ export default async function Home({ params }: Props) {
       paddingX={10}
     >
       <br />
-      <DownloadForm />
+      <DownloadPage />
       <br />
       <ThemeSwitch />
+      <br />
+      <br />
     </Container>
   );
 }

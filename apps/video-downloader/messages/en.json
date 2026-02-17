@@ -26,5 +26,32 @@
     "ffmpegLoading": "Loading video processor…",
     "ffmpegProcessing": "Interpolating frames… {progress}%",
     "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead."
+  },
+  "VideoGrid": {
+    "title": "Downloads",
+    "emptyState": "No downloads yet",
+    "untitledVideo": "Untitled video",
+    "toggleDetails": "Toggle details",
+    "copyLink": "Copy link",
+    "copied": "Copied!",
+    "retry": "Retry download",
+    "redownload": "Re-download",
+    "delete": "Delete",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "detailStatus": "Status",
+    "detailError": "Error",
+    "detailJustAudio": "Audio only",
+    "detailEnhance": "Enhanced",
+    "detailDuration": "Duration",
+    "yes": "Yes",
+    "no": "No",
+    "status_pending": "Pending",
+    "status_downloading": "Downloading",
+    "status_processing": "Processing",
+    "status_done": "Done",
+    "status_error": "Error",
+    "ffmpegLoading": "Loading video processor…",
+    "ffmpegProcessing": "Interpolating frames… {progress}%",
+    "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead."
   }
 }

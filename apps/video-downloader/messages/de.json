@@ -26,5 +26,32 @@
     "ffmpegLoading": "Videoprozessor wird geladen…",
     "ffmpegProcessing": "Frames werden interpoliert… {progress}%",
     "errorFfmpegFailed": "FPS-Interpolation fehlgeschlagen. Original wird heruntergeladen."
+  },
+  "VideoGrid": {
+    "title": "Downloads",
+    "emptyState": "Noch keine Downloads",
+    "untitledVideo": "Unbenanntes Video",
+    "toggleDetails": "Details anzeigen",
+    "copyLink": "Link kopieren",
+    "copied": "Kopiert!",
+    "retry": "Erneut versuchen",
+    "redownload": "Erneut herunterladen",
+    "delete": "Löschen",
+    "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "detailStatus": "Status",
+    "detailError": "Fehler",
+    "detailJustAudio": "Nur Audio",
+    "detailEnhance": "Verbessert",
+    "detailDuration": "Dauer",
+    "yes": "Ja",
+    "no": "Nein",
+    "status_pending": "Ausstehend",
+    "status_downloading": "Wird heruntergeladen",
+    "status_processing": "Verarbeitung",
+    "status_done": "Fertig",
+    "status_error": "Fehler",
+    "ffmpegLoading": "Videoprozessor wird geladen…",
+    "ffmpegProcessing": "Frames werden interpoliert… {progress}%",
+    "errorFfmpegFailed": "FPS-Interpolation fehlgeschlagen. Original wird heruntergeladen."
   }
 }

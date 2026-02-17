@@ -6,14 +6,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { httpPost, HttpClientError } from '@repo/helpers/http-client';
 import { detectPlatform, type Platform } from '@repo/helpers/checkers';
-import type {
-  DownloadVideoResult,
-  DownloadVideoError,
-} from '@repo/helpers/download-video';
-import { useFFmpeg } from './use-ffmpeg';
 import './download-form.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -26,7 +19,7 @@ const PLATFORM_ICONS: Record<Platform, string> = {
   tidal: '/icons/tidal.svg',
   tiktok: '/icons/tiktok.svg',
   x: '/icons/x.svg',
-  youtube: '/icons/youtube-168-svgrepo-com.svg',
+  youtube: '/icons/youtube.svg',
   unknown: '/icons/url.svg',
 };
 
@@ -103,30 +96,25 @@ function FPSSelect({
 
 /* ── Main Component ─────────────────────────────────── */
 
-interface ApiSuccessResponse {
-  data: DownloadVideoResult;
+export interface DownloadFormProps {
+  /** Called when the user submits a URL — creates a pending entry for VideoGrid. */
+  onVideoAdded?: (entry: {
+    originalURL: string;
+    platform: Platform;
+    fps: string;
+    justAudio: boolean;
+    enhance: boolean;
+    autoDownload: boolean;
+  }) => void;
 }
 
-interface ApiErrorResponse {
-  error: DownloadVideoError;
-}
-
-export function DownloadForm() {
+export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   const t = useTranslations('DownloadForm');
   const [url, setUrl] = useState('');
   const [autoDownload, setAutoDownload] = useState(true);
   const [justAudio, setJustAudio] = useState(false);
   const [enhance, setEnhance] = useState(false);
   const [fps, setFps] = useState<FPSValue>('original');
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  /* FFmpeg WASM (lazy-loaded for client-side FPS interpolation) */
-  const {
-    status: ffmpegStatus,
-    progress: ffmpegProgress,
-    interpolateFps,
-  } = useFFmpeg();
 
   const fpsOptions = useMemo(
     () => [
@@ -149,7 +137,7 @@ export function DownloadForm() {
   const validPlatformUrl = validUrl && knownPlatform;
 
   /* Disabled flags */
-  const switchesDisabled = !validPlatformUrl || loading;
+  const switchesDisabled = !validPlatformUrl;
   const enhanceDisabled = switchesDisabled || justAudio;
   const fpsDisabled = switchesDisabled || justAudio;
 
@@ -160,70 +148,31 @@ export function DownloadForm() {
   /* Handlers */
   const handleClear = useCallback(() => {
     setUrl('');
-    setErrorMessage(null);
   }, []);
 
-  const handleDownload = useCallback(async () => {
-    if (!validPlatformUrl || loading) return;
+  const handleSubmit = useCallback(() => {
+    if (!validPlatformUrl) return;
 
-    setLoading(true);
-    setErrorMessage(null);
+    onVideoAdded?.({
+      originalURL: url,
+      platform,
+      fps: effectiveFps,
+      justAudio,
+      enhance: effectiveEnhance,
+      autoDownload,
+    });
 
-    try {
-      const result = await httpPost<ApiSuccessResponse>({
-        baseUrl: window.location.origin,
-        url: '/api/download-video',
-        body: { url, justAudio },
-      });
-
-      const { file, name } = result.data.data;
-      console.log('Download success:', { file, name });
-
-      if (autoDownload && file) {
-        let downloadHref = `/api/media/${file}`;
-
-        /* ── FPS interpolation via FFmpeg WASM ──────── */
-        if (effectiveFps !== 'original' && !justAudio) {
-          try {
-            const sourceUrl = `${window.location.origin}/api/media/${file}`;
-            const processedUrl = await interpolateFps(
-              sourceUrl,
-              Number(effectiveFps),
-            );
-            downloadHref = processedUrl;
-          } catch (ffErr) {
-            console.error('FFmpeg interpolation failed:', ffErr);
-            setErrorMessage(t('errorFfmpegFailed'));
-            setLoading(false);
-            return;
-          }
-        }
-
-        const downloadName = `${name ?? (justAudio ? 'audio' : 'video')}-${Date.now()}-${file}`;
-        const link = document.createElement('a');
-        link.href = downloadHref;
-        link.download = downloadName;
-        link.click();
-      }
-    } catch (err) {
-      if (err instanceof HttpClientError) {
-        const body = err.data as ApiErrorResponse | null;
-        setErrorMessage(body?.error?.message ?? err.message);
-      } else {
-        setErrorMessage(t('errorGeneric'));
-      }
-    } finally {
-      setLoading(false);
-    }
+    /* Reset the URL field after submission */
+    setUrl('');
   }, [
     url,
     justAudio,
     autoDownload,
     validPlatformUrl,
-    loading,
     effectiveFps,
-    interpolateFps,
-    t,
+    effectiveEnhance,
+    platform,
+    onVideoAdded,
   ]);
 
   /* Hint text below input */
@@ -257,7 +206,7 @@ export function DownloadForm() {
           >
             <Icon
               icon={platformIcon}
-              size={18}
+              size={22}
               color={
                 knownPlatform
                   ? 'var(--accent, #06b6d4)'
@@ -268,19 +217,14 @@ export function DownloadForm() {
         ) : null}
 
         <div className="df-input-wrapper">
-          <TextInput
-            value={url}
-            onChange={setUrl}
-            lable={t('inputLabel')}
-            disabled={loading}
-          />
+          <TextInput value={url} onChange={setUrl} lable={t('inputLabel')} />
         </div>
 
         <button
           type="button"
           className="df-icon-btn"
           onClick={handleClear}
-          disabled={!hasText || loading}
+          disabled={!hasText}
           aria-label={t('clearUrl')}
         >
           <Icon
@@ -293,8 +237,8 @@ export function DownloadForm() {
         <button
           type="button"
           className="df-icon-btn df-icon-btn--download"
-          onClick={handleDownload}
-          disabled={!validPlatformUrl || loading}
+          onClick={handleSubmit}
+          disabled={!validPlatformUrl}
           aria-label={t('download')}
         >
           <Icon
@@ -307,24 +251,6 @@ export function DownloadForm() {
 
       {/* ── Hint ─────────────────────────────────────── */}
       <span className={`df-hint df-hint--${hint.variant}`}>{hint.text}</span>
-
-      {/* ── Loading indicator ────────────────────────── */}
-      {loading ? <ProgressBar margin="4px 0" /> : null}
-
-      {/* ── FFmpeg status ────────────────────────────── */}
-      {ffmpegStatus === 'loading' ? (
-        <span className="df-hint df-hint--muted">{t('ffmpegLoading')}</span>
-      ) : null}
-      {ffmpegStatus === 'processing' ? (
-        <span className="df-hint df-hint--muted">
-          {t('ffmpegProcessing', { progress: ffmpegProgress })}
-        </span>
-      ) : null}
-
-      {/* ── Error message ────────────────────────────── */}
-      {errorMessage ? (
-        <span className="df-hint df-hint--error">{errorMessage}</span>
-      ) : null}
 
       {/* ── Divider ──────────────────────────────────── */}
       <hr className="df-divider" />

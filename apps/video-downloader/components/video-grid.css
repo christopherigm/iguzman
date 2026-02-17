@@ -1,0 +1,65 @@
+/* ── VideoGrid ───────────────────────────────────────── */
+
+.vg-wrapper {
+  width: 100%;
+  margin-top: 16px;
+  animation: vg-fade-in 350ms ease-out;
+}
+
+@keyframes vg-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vg-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.vg-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--foreground, #171717);
+  letter-spacing: -0.02em;
+}
+
+.vg-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-foreground, white);
+  background: var(--accent, #06b6d4);
+  letter-spacing: 0.02em;
+}
+
+/* ── Empty state ─────────────────────────────────────── */
+
+.vg-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  margin-top: 16px;
+}
+
+.vg-empty-text {
+  font-size: 13px;
+  color: var(--foreground-muted, #999);
+  opacity: 0.6;
+  font-weight: 500;
+}

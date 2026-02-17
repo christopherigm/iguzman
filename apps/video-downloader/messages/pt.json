@@ -26,5 +26,32 @@
     "ffmpegLoading": "Carregando processador de vídeo…",
     "ffmpegProcessing": "Interpolando quadros… {progress}%",
     "errorFfmpegFailed": "A interpolação de FPS falhou. Baixando o original."
+  },
+  "VideoGrid": {
+    "title": "Downloads",
+    "emptyState": "Nenhum download ainda",
+    "untitledVideo": "Vídeo sem título",
+    "toggleDetails": "Ver detalhes",
+    "copyLink": "Copiar link",
+    "copied": "Copiado!",
+    "retry": "Tentar novamente",
+    "redownload": "Baixar novamente",
+    "delete": "Excluir",
+    "errorGeneric": "Algo deu errado. Por favor, tente novamente.",
+    "detailStatus": "Status",
+    "detailError": "Erro",
+    "detailJustAudio": "Apenas áudio",
+    "detailEnhance": "Aprimorado",
+    "detailDuration": "Duração",
+    "yes": "Sim",
+    "no": "Não",
+    "status_pending": "Pendente",
+    "status_downloading": "Baixando",
+    "status_processing": "Processando",
+    "status_done": "Concluído",
+    "status_error": "Erro",
+    "ffmpegLoading": "Carregando processador de vídeo…",
+    "ffmpegProcessing": "Interpolando quadros… {progress}%",
+    "errorFfmpegFailed": "A interpolação de FPS falhou. Baixando o original."
   }
 }
