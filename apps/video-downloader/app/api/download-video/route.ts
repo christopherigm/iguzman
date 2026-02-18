@@ -15,6 +15,7 @@ const IS_PRODUCTION = NODE_ENV === 'production';
 interface RequestBody {
   url: string;
   justAudio?: boolean;
+  checkCodec?: boolean;
 }
 
 interface SuccessResponse {
@@ -39,7 +40,7 @@ export async function POST(
     );
   }
 
-  const { url, justAudio } = body;
+  const { url, justAudio, checkCodec } = body;
 
   if (!url || typeof url !== 'string') {
     return NextResponse.json(
@@ -56,6 +57,7 @@ export async function POST(
   const result = await downloadVideo({
     url,
     justAudio,
+    checkCodec,
     outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
     cookies: IS_PRODUCTION
       ? '/app/netscape-cookies.txt'

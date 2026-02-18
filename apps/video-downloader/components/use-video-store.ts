@@ -47,6 +47,8 @@ export interface StoredVideo {
   createdAt: number;
   /** Whether FPS interpolation has been applied successfully. */
   fpsApplied: boolean;
+  /** Whether the video uses H.265 (HEVC) codec. */
+  isH265: boolean;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -67,6 +69,7 @@ function readStorage(): StoredVideo[] {
       const video: StoredVideo = {
         ...v,
         fpsApplied: v.fpsApplied ?? v.status === 'done',
+        isH265: v.isH265 ?? false,
       };
 
       if (video.status === 'downloading') {
@@ -142,6 +145,7 @@ export function useVideoStore() {
         uploader: null,
         createdAt: Date.now(),
         fpsApplied: false,
+        isH265: false,
       };
       setVideos((prev) => [entry, ...prev]);
       return uuid;

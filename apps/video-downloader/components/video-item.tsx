@@ -11,6 +11,7 @@ import type {
   DownloadVideoError,
 } from '@repo/helpers/download-video';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import { Badge } from '@repo/ui/core-elements/badge';
 import { useFFmpeg } from './use-ffmpeg';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import './video-item.css';
@@ -87,10 +88,14 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       const result = await httpPost<ApiSuccessResponse>({
         baseUrl: window.location.origin,
         url: '/api/download-video',
-        body: { url: video.originalURL, justAudio: video.justAudio },
+        body: {
+          url: video.originalURL,
+          justAudio: video.justAudio,
+          checkCodec: video.platform === 'tiktok',
+        },
       });
 
-      const { file, name, metadata } = result.data.data;
+      const { file, name, metadata, isH265 } = result.data.data;
 
       const downloadURL = file ? `/api/media/${file}` : null;
 
@@ -102,6 +107,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         thumbnail: metadata?.thumbnail ?? null,
         duration: metadata?.duration ?? null,
         uploader: metadata?.uploader ?? null,
+        isH265: isH265 ?? false,
       });
 
       /* Auto-trigger browser download */
@@ -324,6 +330,11 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         <span className="vi-name" title={displayName}>
           {displayName}
         </span>
+        {video.isH265 ? (
+          <Badge variant="subtle" size="sm" color="#f59e0b">
+            H265
+          </Badge>
+        ) : null}
         <button
           type="button"
           className="vi-icon-btn"

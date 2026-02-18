@@ -145,6 +145,14 @@ export interface DownloadVideoOptions {
    * @defaultValue `/usr/local/bin/node` in production, `/usr/bin/node` otherwise.
    */
   jsRuntimes?: string;
+  /**
+   * When `true`, the downloaded file is probed with ffmpeg to
+   * determine whether its video stream uses the H.265 (HEVC) codec.
+   * The result is returned as `isH265` in {@link DownloadVideoResult}.
+   * Requires **ffmpeg** to be installed on the system.
+   * @defaultValue false
+   */
+  checkCodec?: boolean;
 }
 
 /** A single format entry from yt-dlp's `--dump-json` output. */
@@ -252,6 +260,12 @@ export interface DownloadVideoResult {
    * succeeds. Useful for debugging or inspecting chosen formats.
    */
   formatSelection?: FormatSelection;
+  /**
+   * `true` when the downloaded video uses the H.265 (HEVC) codec,
+   * `false` when it does not. Present only when the `checkCodec`
+   * option is `true` and the probe succeeds.
+   */
+  isH265?: boolean;
   /**
    * Structured error object. Present when something goes wrong.
    * When set, `file` and `name` will be absent.
@@ -409,27 +423,6 @@ const isPreferredAudioExt = (ext: string): boolean =>
   (PREFERRED_AUDIO_EXTENSIONS as readonly string[]).includes(ext);
 
 /**
- * Returns `true` when the video codec is H.264 (AVC).
- *
- * yt-dlp reports the codec as `"avc1.xxxxxx"`, `"h264"`, or similar
- * strings — all of which contain `"avc"` or `"h264"` as a substring.
- */
-const isH264Codec = (vcodec: string | undefined): boolean => {
-  if (!vcodec || vcodec === 'none') return false;
-  const lower = vcodec.toLowerCase();
-  return lower.includes('h264') || lower.includes('avc');
-};
-
-/**
- * Returns `true` when the video codec is H.265 (HEVC).
- */
-const isH265Codec = (vcodec: string | undefined): boolean => {
-  if (!vcodec || vcodec === 'none') return false;
-  const lower = vcodec.toLowerCase();
-  return lower.includes('h265') || lower.includes('hevc');
-};
-
-/**
  * Selects the best video-only, audio-only, and combined formats
  * from the available format list.
  *
@@ -440,16 +433,9 @@ const isH265Codec = (vcodec: string | undefined): boolean => {
  *    bitrate, then preferred extension order.
  * 3. For audio, prefers the highest bitrate, then preferred extension.
  * 4. A "combined" format has both video and audio codecs — useful for
- *    platforms that serve muxed streams (e.g. TikTok, Instagram).
- *
- * When `preferH264` is `true` (e.g. for TikTok), H.264 formats are
- * strongly preferred over H.265 / HEVC. H.265 TikTok streams are
- * known to cause missing-audio issues in many players and browsers.
+ *    platforms that serve muxed streams (e.g. Instagram).
  */
-const selectBestFormats = (
-  formats: FormatInfo[],
-  preferH264: boolean = false,
-): FormatSelection => {
+const selectBestFormats = (formats: FormatInfo[]): FormatSelection => {
   const videoOnly: FormatInfo[] = [];
   const audioOnly: FormatInfo[] = [];
   const combined: FormatInfo[] = [];
@@ -474,14 +460,6 @@ const selectBestFormats = (
   const bestVideo =
     videoPool.length > 0
       ? videoPool.sort((a, b) => {
-          // 0. When preferH264, strongly prefer H.264 over H.265
-          if (preferH264) {
-            const aH264 = isH264Codec(a.vcodec);
-            const bH264 = isH264Codec(b.vcodec);
-            if (aH264 && !bH264) return -1;
-            if (!aH264 && bH264) return 1;
-          }
-
           // 1. Max resolution (height)
           const aH = a.height ?? 0;
           const bH = b.height ?? 0;
@@ -544,14 +522,6 @@ const selectBestFormats = (
   const bestCombined =
     combinedPool.length > 0
       ? combinedPool.sort((a, b) => {
-          // 0. When preferH264, strongly prefer H.264 over H.265
-          if (preferH264) {
-            const aH264 = isH264Codec(a.vcodec);
-            const bH264 = isH264Codec(b.vcodec);
-            if (aH264 && !bH264) return -1;
-            if (!aH264 && bH264) return 1;
-          }
-
           const aH = a.height ?? 0;
           const bH = b.height ?? 0;
           if (bH !== aH) return bH - aH;
@@ -571,6 +541,71 @@ const selectBestFormats = (
       : null;
 
   return { bestVideo, bestAudio, bestCombined, allFormats: formats };
+};
+
+/**
+ * Selects the best combined (video + audio) format for TikTok downloads.
+ *
+ * TikTok serves muxed streams where video and audio are combined in a
+ * single format. Instead of merging separate streams, this function
+ * picks the combined format with the **highest resolution** directly.
+ *
+ * This avoids H.265/HEVC streams that are known to cause missing-audio
+ * issues in many players and browsers.
+ *
+ * @returns A {@link FormatSelection} with only `bestCombined` populated.
+ */
+const selectBestTikTokFormat = (formats: FormatInfo[]): FormatSelection => {
+  const combined: FormatInfo[] = [];
+
+  for (const f of formats) {
+    const hasVideo = f.vcodec !== 'none' && f.vcodec !== undefined;
+    const hasAudio = f.acodec !== 'none' && f.acodec !== undefined;
+
+    if (hasVideo && hasAudio) {
+      combined.push(f);
+    }
+  }
+
+  // Filter to web-compatible extensions when possible
+  const filteredCombined = combined.filter((f) => isPreferredVideoExt(f.ext));
+  const pool = filteredCombined.length > 0 ? filteredCombined : combined;
+
+  const bestCombined =
+    pool.length > 0
+      ? pool.sort((a, b) => {
+          // 1. Max resolution (height)
+          const aH = a.height ?? 0;
+          const bH = b.height ?? 0;
+          if (bH !== aH) return bH - aH;
+
+          // 2. Max width (for same height)
+          const aW = a.width ?? 0;
+          const bW = b.width ?? 0;
+          if (bW !== aW) return bW - aW;
+
+          // 3. Max bitrate
+          const aTbr = a.tbr ?? 0;
+          const bTbr = b.tbr ?? 0;
+          if (bTbr !== aTbr) return bTbr - aTbr;
+
+          // 4. Prefer mp4 > webm > mov
+          const extOrder = (ext: string) => {
+            const idx = (
+              PREFERRED_VIDEO_EXTENSIONS as readonly string[]
+            ).indexOf(ext);
+            return idx === -1 ? 999 : idx;
+          };
+          return extOrder(a.ext) - extOrder(b.ext);
+        })[0]!
+      : null;
+
+  return {
+    bestVideo: null,
+    bestAudio: null,
+    bestCombined,
+    allFormats: formats,
+  };
 };
 
 /**
@@ -690,10 +725,6 @@ const buildDownloadArgs = (
 
   args.push('--add-header', 'user-agent:Mozilla/5.0');
   args.push('--js-runtimes', `node:${jsRuntimes}`);
-
-  if (isTiktok(url)) {
-    args.push('-S', 'codec:h264');
-  }
 
   if (cookies) {
     args.push('--cookies', cookies);
@@ -845,6 +876,40 @@ const downloadCaptionContent = async (
   }
 };
 
+/**
+ * Probes a media file with ffmpeg to check whether its video stream
+ * uses the H.265 / HEVC codec.
+ *
+ * Runs `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name`
+ * and checks whether the output contains `hevc` or `h265`.
+ *
+ * @returns `true` when H.265 is detected, `false` otherwise.
+ */
+const isH265Codec = async (
+  filePath: string,
+  ffmpegBinary: string,
+): Promise<boolean> => {
+  try {
+    // Derive ffprobe path from ffmpeg path
+    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
+    const output = await execFileAsync(ffprobeBinary, [
+      '-v',
+      'error',
+      '-select_streams',
+      'v:0',
+      '-show_entries',
+      'stream=codec_name',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      filePath,
+    ]);
+    const codec = output.trim().toLowerCase();
+    return codec === 'hevc' || codec === 'h265';
+  } catch {
+    return false;
+  }
+};
+
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
 /* ------------------------------------------------------------------ */
@@ -898,6 +963,7 @@ const downloadVideo = async ({
   captions: requestCaptions = false,
   justAudio = false,
   jsRuntimes = DEFAULT_JS_RUNTIMES,
+  checkCodec = false,
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
@@ -999,7 +1065,10 @@ const downloadVideo = async ({
     );
 
     if (formats.length > 0) {
-      formatSelection = selectBestFormats(formats, isTiktok(url));
+      formatSelection =
+        isTiktok(url) && !justAudio
+          ? selectBestTikTokFormat(formats)
+          : selectBestFormats(formats);
     }
   } catch {
     // Format detection is best-effort. When it fails we fall back to
@@ -1075,6 +1144,19 @@ const downloadVideo = async ({
 
   if (requestMetadata && videoMetadata) {
     result.metadata = videoMetadata;
+  }
+
+  /* ---- 8b. Check H.265 codec ---- */
+
+  if (checkCodec) {
+    try {
+      result.isH265 = await isH265Codec(
+        `${outputFolder}/${fileName}`,
+        ffmpegBinary,
+      );
+    } catch {
+      // Codec check is best-effort; swallow the error.
+    }
   }
 
   /* ---- 9. Fetch SRT subtitles ---- */

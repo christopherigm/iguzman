@@ -120,7 +120,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   const [url, setUrl] = useState('');
   const [autoDownload, setAutoDownload] = useState(true);
   const [justAudio, setJustAudio] = useState(false);
-  const [enhance, setEnhance] = useState(false);
+  const [enhance] = useState(false);
   const [fps, setFps] = useState<FPSValue>('original');
   const [showFpsWarning, setShowFpsWarning] = useState(false);
 
@@ -146,7 +146,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
 
   /* Disabled flags */
   const switchesDisabled = !validPlatformUrl;
-  const enhanceDisabled = switchesDisabled || justAudio;
+  // const _enhanceDisabled = switchesDisabled || justAudio;
   const fpsDisabled = switchesDisabled || justAudio;
 
   /* Effective values (justAudio overrides enhance & fps) */

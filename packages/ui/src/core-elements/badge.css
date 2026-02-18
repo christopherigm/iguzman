@@ -1,0 +1,57 @@
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+
+/* ── Variant: filled (default) ────────────────────── */
+.ui-badge--filled {
+  background-color: var(--badge-bg, var(--accent, #06b6d4));
+  color: var(--badge-fg, var(--accent-foreground, #fff));
+}
+
+/* ── Variant: outlined ────────────────────────────── */
+.ui-badge--outlined {
+  background-color: transparent;
+  border: 1px solid var(--badge-bg, var(--accent, #06b6d4));
+  color: var(--badge-bg, var(--accent, #06b6d4));
+}
+
+/* ── Variant: subtle ──────────────────────────────── */
+.ui-badge--subtle {
+  background-color: color-mix(
+    in srgb,
+    var(--badge-bg, var(--accent, #06b6d4)) 15%,
+    transparent
+  );
+  color: var(--badge-bg, var(--accent, #06b6d4));
+}
+
+/* ── Sizes ────────────────────────────────────────── */
+.ui-badge--sm {
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.ui-badge--md {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.ui-badge--lg {
+  padding: 3px 10px;
+  font-size: 13px;
+}
