@@ -1,0 +1,132 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "redis.fullname" . }}
+  labels:
+    {{- include "redis.labels" . | nindent 4 }}
+spec:
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "redis.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "redis.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if .Values.nodeAffinity.enabled }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      {{- toYaml .Values.nodeAffinity.nodeNames | nindent 22 }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - name: redis
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+
+          {{- /* ── Command with custom config ── */}}
+          {{- if or .Values.customConfig .Values.auth.password }}
+          command: ['redis-server']
+          args:
+            {{- if .Values.customConfig }}
+            - '/etc/redis/redis.conf'
+            {{- end }}
+            {{- if .Values.auth.password }}
+            - '--requirepass'
+            - '$(REDIS_PASSWORD)'
+            {{- end }}
+          {{- end }}
+
+          {{- /* ── Environment variables ── */}}
+          {{- if or .Values.auth.password .Values.env .Values.envFromSecret }}
+          env:
+            {{- if .Values.auth.password }}
+            - name: REDIS_PASSWORD
+              value: {{ .Values.auth.password | quote }}
+            {{- end }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range .Values.envFromSecret }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .secretKey }}
+            {{- end }}
+          {{- end }}
+
+          {{- /* ── Probes ── */}}
+          startupProbe:
+            exec:
+              command:
+                {{- toYaml .Values.probes.startupProbe.exec.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.probes.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startupProbe.failureThreshold }}
+
+          livenessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.probes.livenessProbe.exec.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.probes.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.probes.livenessProbe.failureThreshold }}
+
+          readinessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.probes.readinessProbe.exec.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.probes.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readinessProbe.failureThreshold }}
+
+          {{- /* ── Resources ── */}}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- /* ── Volume mounts ── */}}
+          volumeMounts:
+            {{- if .Values.hostPathVolume.enabled }}
+            - name: redis-data
+              mountPath: {{ .Values.hostPathVolume.mountPath }}
+            {{- end }}
+            {{- if .Values.customConfig }}
+            - name: redis-config
+              mountPath: /etc/redis
+              readOnly: true
+            {{- end }}
+
+      volumes:
+        {{- if .Values.hostPathVolume.enabled }}
+        - name: redis-data
+          hostPath:
+            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Chart.Name }}/data
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if .Values.customConfig }}
+        - name: redis-config
+          configMap:
+            name: {{ include "redis.fullname" . }}-config
+        {{- end }}

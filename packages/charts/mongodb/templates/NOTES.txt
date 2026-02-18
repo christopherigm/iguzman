@@ -1,0 +1,23 @@
+──────────────────────────────────────────────────────────────
+  {{ include "mongodb.fullname" . }} has been deployed!
+──────────────────────────────────────────────────────────────
+
+MongoDB is accessible within the cluster at:
+
+  Host: {{ include "mongodb.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  Port: {{ .Values.service.port }}
+
+To connect from your local machine, run:
+
+  kubectl port-forward svc/{{ include "mongodb.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.targetPort }} -n {{ .Release.Namespace }}
+
+Then connect with:
+
+  mongosh "mongodb://127.0.0.1:{{ .Values.service.port }}"
+
+Replicas: {{ .Values.replicaCount }}
+
+{{- if .Values.hostPathVolume.enabled }}
+
+Host path volume: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Chart.Name }}/data
+{{- end }}

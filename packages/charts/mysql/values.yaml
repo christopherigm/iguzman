@@ -1,0 +1,100 @@
+# ─────────────────────────────────────────────────────────────
+# MySQL – Helm Values
+# ─────────────────────────────────────────────────────────────
+
+# -- Number of old ReplicaSets to keep for rollbacks (default: 2)
+revisionHistoryLimit: 2
+
+# -- Number of pod replicas
+replicaCount: 1
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: mysql
+  tag: '8.0'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+# - name: my-registry-secret
+
+# ─── Name overrides ─────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 3306 # port exposed by the Service
+  targetPort: 3306 # port the container listens on
+
+# ─── MySQL configuration ────────────────────────────────────
+auth:
+  rootPassword: '' # set via --set or envFromSecret
+  database: '' # optional: create a default database
+  user: '' # optional: create a non-root user
+  password: '' # optional: password for the non-root user
+
+# ─── Environment variables ──────────────────────────────────
+# Plain environment variables injected into the container.
+env: {}
+  # MYSQL_ROOT_HOST: '%'
+
+# Sensitive values – reference existing Kubernetes Secrets.
+# envFromSecret:
+#   - name: MYSQL_ROOT_PASSWORD
+#     secretName: mysql-secrets
+#     secretKey: root-password
+
+# ─── Host-path volume (data storage) ────────────────────────
+hostPathVolume:
+  enabled: true
+  volumeMountPath: /shared-master # base path on the host node
+  mountPath: /var/lib/mysql # path inside the container
+
+# ─── Health probes ──────────────────────────────────────────
+probes:
+  startupProbe:
+    exec:
+      command: ['mysqladmin', 'ping', '-h', 'localhost']
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 30
+
+  livenessProbe:
+    exec:
+      command: ['mysqladmin', 'ping', '-h', 'localhost']
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    failureThreshold: 3
+
+  readinessProbe:
+    exec:
+      command: ['mysqladmin', 'ping', '-h', 'localhost']
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+
+# ─── Node affinity (schedule on specific nodes) ─────────────
+nodeAffinity:
+  enabled: false
+  nodeNames: []
+  # - node-1
+  # - node-2
+
+# ─── Custom MySQL configuration ─────────────────────────────
+# Extra my.cnf configuration injected via ConfigMap.
+customConfig: |
+  [mysqld]
+  default-authentication-plugin=mysql_native_password
+  max_connections=200
+  character-set-server=utf8mb4
+  collation-server=utf8mb4_unicode_ci
+
+# ─── Resources ──────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi

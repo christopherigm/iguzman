@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "mongodb.fullname" . }}
+  labels:
+    {{- include "mongodb.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "mongodb.fullname" . }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mongodb.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mongodb.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if .Values.nodeAffinity.enabled }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      {{- toYaml .Values.nodeAffinity.nodeNames | nindent 22 }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - name: mongodb
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+
+          {{- /* ── Environment variables ── */}}
+          env:
+            {{- if .Values.auth.rootUsername }}
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: {{ .Values.auth.rootUsername | quote }}
+            {{- end }}
+            {{- if .Values.auth.rootPassword }}
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: {{ .Values.auth.rootPassword | quote }}
+            {{- end }}
+            {{- if .Values.auth.database }}
+            - name: MONGO_INITDB_DATABASE
+              value: {{ .Values.auth.database | quote }}
+            {{- end }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range .Values.envFromSecret }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .secretKey }}
+            {{- end }}
+
+          {{- /* ── Probes ── */}}
+          startupProbe:
+            exec:
+              command:
+                {{- toYaml .Values.probes.startupProbe.exec.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.probes.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startupProbe.failureThreshold }}
+
+          livenessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.probes.livenessProbe.exec.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.probes.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.probes.livenessProbe.failureThreshold }}
+
+          readinessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.probes.readinessProbe.exec.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.probes.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readinessProbe.failureThreshold }}
+
+          {{- /* ── Resources ── */}}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- /* ── Volume mounts ── */}}
+          volumeMounts:
+            {{- if .Values.hostPathVolume.enabled }}
+            - name: mongodb-data
+              mountPath: {{ .Values.hostPathVolume.mountPath }}
+            {{- end }}
+            {{- if .Values.customConfig }}
+            - name: mongodb-config
+              mountPath: /etc/mongo
+              readOnly: true
+            {{- end }}
+
+          {{- if .Values.customConfig }}
+          command: ['mongod']
+          args:
+            - '--config'
+            - '/etc/mongo/mongod.conf'
+            - '--bind_ip_all'
+          {{- end }}
+
+      volumes:
+        {{- if .Values.hostPathVolume.enabled }}
+        - name: mongodb-data
+          hostPath:
+            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Chart.Name }}/data
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if .Values.customConfig }}
+        - name: mongodb-config
+          configMap:
+            name: {{ include "mongodb.fullname" . }}-config
+        {{- end }}

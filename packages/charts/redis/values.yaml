@@ -1,0 +1,95 @@
+# ─────────────────────────────────────────────────────────────
+# Redis – Helm Values
+# ─────────────────────────────────────────────────────────────
+
+# -- Number of old ReplicaSets to keep for rollbacks (default: 2)
+revisionHistoryLimit: 2
+
+# -- Number of pod replicas
+replicaCount: 1
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: redis
+  tag: '7.2-alpine'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+# - name: my-registry-secret
+
+# ─── Name overrides ─────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 6379 # port exposed by the Service
+  targetPort: 6379 # port the container listens on
+
+# ─── Redis configuration ────────────────────────────────────
+auth:
+  password: '' # set via --set or envFromSecret
+
+# ─── Environment variables ──────────────────────────────────
+# Plain environment variables injected into the container.
+env: {}
+
+# Sensitive values – reference existing Kubernetes Secrets.
+# envFromSecret:
+#   - name: REDIS_PASSWORD
+#     secretName: redis-secrets
+#     secretKey: password
+
+# ─── Host-path volume (data storage) ────────────────────────
+hostPathVolume:
+  enabled: true
+  volumeMountPath: /shared-master # base path on the host node
+  mountPath: /data # path inside the container
+
+# ─── Health probes ──────────────────────────────────────────
+probes:
+  startupProbe:
+    exec:
+      command: ['redis-cli', 'ping']
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 30
+
+  livenessProbe:
+    exec:
+      command: ['redis-cli', 'ping']
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    failureThreshold: 3
+
+  readinessProbe:
+    exec:
+      command: ['redis-cli', 'ping']
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 3
+
+# ─── Node affinity (schedule on specific nodes) ─────────────
+nodeAffinity:
+  enabled: false
+  nodeNames: []
+  # - node-1
+  # - node-2
+
+# ─── Custom Redis configuration ─────────────────────────────
+# Extra redis.conf injected via ConfigMap.
+customConfig: |
+  maxmemory 256mb
+  maxmemory-policy allkeys-lru
+  appendonly yes
+  appendfsync everysec
+
+# ─── Resources ──────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 512Mi

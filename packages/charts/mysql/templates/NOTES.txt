@@ -1,0 +1,23 @@
+──────────────────────────────────────────────────────────────
+  {{ include "mysql.fullname" . }} has been deployed!
+──────────────────────────────────────────────────────────────
+
+MySQL is accessible within the cluster at:
+
+  Host: {{ include "mysql.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  Port: {{ .Values.service.port }}
+
+To connect from your local machine, run:
+
+  kubectl port-forward svc/{{ include "mysql.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.targetPort }} -n {{ .Release.Namespace }}
+
+Then connect with:
+
+  mysql -h 127.0.0.1 -P {{ .Values.service.port }} -u root -p
+
+Replicas: {{ .Values.replicaCount }}
+
+{{- if .Values.hostPathVolume.enabled }}
+
+Host path volume: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Chart.Name }}/data
+{{- end }}

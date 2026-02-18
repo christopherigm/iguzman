@@ -1,0 +1,6 @@
+{
+  "name": "@iguzman/charts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Helm charts for infrastructure services"
+}

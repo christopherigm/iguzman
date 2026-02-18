@@ -1,0 +1,11 @@
+{{- if .Values.customConfig }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "redis.fullname" . }}-config
+  labels:
+    {{- include "redis.labels" . | nindent 4 }}
+data:
+  redis.conf: |
+{{ .Values.customConfig | indent 4 }}
+{{- end }}

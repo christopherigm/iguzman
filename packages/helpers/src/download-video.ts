@@ -61,6 +61,13 @@ const PREFERRED_AUDIO_EXTENSIONS = [
 ] as const;
 
 /**
+ * High-quality / lossless audio output formats supported by yt-dlp's
+ * FFmpegExtractAudio post-processor. Ordered by quality preference —
+ * FLAC is lossless, the rest are high-bitrate lossy.
+ */
+const LOSSLESS_AUDIO_FORMATS = ['flac', 'wav', 'alac', 'aiff'] as const;
+
+/**
  * Language prefixes used to select a preferred SRT file when multiple
  * subtitle files are downloaded. Checked in order — the first match wins.
  */
@@ -94,6 +101,27 @@ const PREFERRED_LANG_PREFIXES = [
  * - `SUBTITLES_FAILED` — Could not retrieve subtitles / captions.
  * - `FORMAT_DETECTION_FAILED` — Could not list available formats.
  */
+
+/**
+ * Supported audio output formats for the `justAudio` download mode.
+ *
+ * - `flac` — Lossless. Highest quality; preserves every sample bit.
+ * - `wav`  — Uncompressed PCM. Lossless but very large files.
+ * - `alac` — Apple Lossless. Lossless, best for Apple ecosystems.
+ * - `aiff` — Uncompressed PCM (Apple). Similar to WAV.
+ * - `m4a`  — AAC in an MP4 container. High-quality lossy.
+ * - `mp3`  — Ubiquitous lossy format.
+ * - `opus` — Modern, efficient lossy codec.
+ */
+export type AudioOutputFormat =
+  | 'flac'
+  | 'wav'
+  | 'alac'
+  | 'aiff'
+  | 'm4a'
+  | 'mp3'
+  | 'opus';
+
 export type DownloadVideoErrorCode =
   | 'BINARY_NOT_FOUND'
   | 'FFMPEG_NOT_FOUND'
@@ -141,13 +169,29 @@ export interface DownloadVideoOptions {
    */
   captions?: boolean;
   /**
-   * When `true`, only the audio track is extracted and saved as an
-   * `.m4a` file instead of a full video download. Uses yt-dlp with
-   * `--extract-audio` and the `FFmpegExtractAudio` post-processor,
-   * so **ffmpeg must be installed** on the system.
+   * When `true`, only the audio track is extracted and saved as a
+   * high-quality audio file instead of a full video download.
+   *
+   * Uses yt-dlp with `--extract-audio`, `--embed-metadata`, and
+   * `--embed-thumbnail` post-processors, so **ffmpeg must be
+   * installed** on the system.
+   *
+   * Music metadata (artist, album, cover art, etc.) is automatically
+   * fetched and embedded into the output file.
+   *
    * @defaultValue false
    */
   justAudio?: boolean;
+  /**
+   * Audio output format used when `justAudio` is `true`.
+   *
+   * Prefer lossless formats (`flac`, `wav`, `alac`) for maximum
+   * quality. FLAC is recommended as it is lossless, widely supported
+   * by audio players, and supports embedded metadata & cover art.
+   *
+   * @defaultValue 'flac'
+   */
+  audioFormat?: AudioOutputFormat;
   /**
    * Absolute path to the Node.js binary used by yt-dlp's
    * `--js-runtimes` flag for JavaScript-based extractors.
@@ -210,6 +254,36 @@ export interface FormatSelection {
   allFormats: FormatInfo[];
 }
 
+/** Music-specific metadata extracted from yt-dlp `--dump-json`. */
+export interface AudioMetadata {
+  /** Track title (cleaned, without the "Artist - " prefix). */
+  title: string;
+  /** Artist / performer / channel name. */
+  artist: string;
+  /** Album name, when available. */
+  album?: string;
+  /** Album artist, when different from the track artist. */
+  albumArtist?: string;
+  /** Track number within the album. */
+  track?: string;
+  /** Disc number. */
+  disc?: string;
+  /** Release year (e.g. `2024`). */
+  releaseYear?: number;
+  /** Release date as `YYYYMMDD`. */
+  releaseDate?: string;
+  /** Music genre. */
+  genre?: string;
+  /** Composer name. */
+  composer?: string;
+  /** Thumbnail / cover-art URL (highest resolution available). */
+  coverUrl?: string;
+  /** Duration in seconds. */
+  duration?: number;
+  /** Description or comment. */
+  description?: string;
+}
+
 /** Relevant fields from the yt-dlp `--dump-json` output. */
 export interface VideoMetadata {
   /** Video identifier on the source platform. */
@@ -253,6 +327,13 @@ export interface DownloadVideoResult {
    * is `true` and metadata was successfully retrieved.
    */
   metadata?: VideoMetadata;
+  /**
+   * Music-specific metadata extracted from yt-dlp's JSON output.
+   * Present only when `justAudio` is `true` and metadata was
+   * successfully retrieved. Contains structured fields such as
+   * artist, album, genre, cover URL, etc.
+   */
+  audioMetadata?: AudioMetadata;
   /**
    * Raw SRT subtitle text. Present only when the `srt` option is
    * `true` and subtitles were found.
@@ -652,20 +733,28 @@ const buildFormatSelector = (
 };
 
 /**
- * Builds the yt-dlp argument list for downloading **only the audio track**.
+ * Builds the yt-dlp argument list for downloading **only the audio track**
+ * with full metadata and cover-art embedding.
  *
  * When a {@link FormatSelection} is provided and a best audio format
  * was detected, its `format_id` is used directly with `-f`. Otherwise
  * falls back to `bestaudio/best`.
  *
- * Uses `--extract-audio --audio-format m4a` so ffmpeg converts the
- * downloaded stream to M4A.
+ * Post-processing pipeline:
+ * 1. `--extract-audio`        — strip the video stream.
+ * 2. `--audio-format <fmt>`   — convert to the target format (default FLAC).
+ * 3. `--audio-quality 0`      — highest quality transcoding.
+ * 4. `--embed-metadata`       — write ID3/Vorbis tags (title, artist, album…).
+ * 5. `--embed-thumbnail`      — embed cover art into the audio file.
+ * 6. `--convert-thumbnails jpg` — ensure thumbnail is JPEG for broad compat.
+ * 7. `--parse-metadata`       — map uploader → artist when no artist field.
  */
 const buildAudioDownloadArgs = (
   url: string,
   outputPath: string,
   cookies: string,
   jsRuntimes: string,
+  audioFormat: AudioOutputFormat = 'flac',
   formatSelection?: FormatSelection,
 ): string[] => {
   const formatSelector = formatSelection
@@ -676,11 +765,34 @@ const buildAudioDownloadArgs = (
     url,
     '-f',
     formatSelector,
+
+    // ── Audio extraction & format ──────────────────────────────────
     '--extract-audio',
     '--audio-format',
-    'm4a',
+    audioFormat,
     '--audio-quality',
     '0',
+
+    // ── Metadata & cover-art embedding ─────────────────────────────
+    '--embed-metadata',
+    '--embed-thumbnail',
+    '--convert-thumbnails',
+    'jpg',
+
+    // Map uploader → artist so the tag is always populated.
+    // yt-dlp already exposes `artist` when the extractor provides it;
+    // this acts as a fallback for platforms that only set `uploader`.
+    '--parse-metadata',
+    '%(artist,uploader)s:%(meta_artist)s',
+
+    // Map track → title when available (music platforms set `track`).
+    '--parse-metadata',
+    '%(track,title)s:%(meta_title)s',
+
+    // Map album if present.
+    '--parse-metadata',
+    '%(album,playlist_title)s:%(meta_album)s',
+
     '--no-playlist',
   ];
 
@@ -694,6 +806,152 @@ const buildAudioDownloadArgs = (
   args.push('-o', outputPath, '--quiet');
 
   return args;
+};
+
+/**
+ * Extracts structured {@link AudioMetadata} from yt-dlp's raw
+ * `--dump-json` output.
+ *
+ * Falls back through several fields so that the result is as complete
+ * as possible regardless of which extractor produced the metadata.
+ */
+const extractAudioMetadata = (
+  meta: VideoMetadata & Record<string, unknown>,
+): AudioMetadata => {
+  // ── Artist ────────────────────────────────────────────────────────
+  const artist =
+    str(meta.artist) ??
+    str(meta.creator) ??
+    str(meta.uploader) ??
+    'Unknown Artist';
+
+  // ── Title (prefer track name over video title) ───────────────────
+  const title =
+    str(meta.track) ?? cleanTitle(meta.fulltitle || meta.title, artist);
+
+  // ── Album ────────────────────────────────────────────────────────
+  const album = str(meta.album) ?? str(meta.playlist_title) ?? undefined;
+
+  // ── Release info ─────────────────────────────────────────────────
+  const releaseYear =
+    num(meta.release_year) ??
+    yearFromDate(str(meta.release_date) ?? str(meta.upload_date));
+
+  const releaseDate =
+    str(meta.release_date) ?? str(meta.upload_date) ?? undefined;
+
+  // ── Cover art (best thumbnail) ───────────────────────────────────
+  const coverUrl = bestThumbnailUrl(meta);
+
+  return {
+    title,
+    artist,
+    ...(album && { album }),
+    ...(str(meta.album_artist) && { albumArtist: str(meta.album_artist)! }),
+    ...(str(meta.track_number) && { track: str(meta.track_number)! }),
+    ...(str(meta.disc_number) && { disc: str(meta.disc_number)! }),
+    ...(releaseYear && { releaseYear }),
+    ...(releaseDate && { releaseDate }),
+    ...(str(meta.genre) && { genre: str(meta.genre)! }),
+    ...(str(meta.composer) && { composer: str(meta.composer)! }),
+    ...(coverUrl && { coverUrl }),
+    ...(meta.duration && { duration: meta.duration }),
+    ...(meta.description && { description: meta.description }),
+  };
+};
+
+/* -- tiny helpers for extractAudioMetadata ── */
+
+/** Coerce an unknown value to a non-empty string or `null`. */
+const str = (v: unknown): string | null => {
+  if (typeof v === 'string' && v.trim().length > 0) return v.trim();
+  return null;
+};
+
+/** Coerce an unknown value to a number or `null`. */
+const num = (v: unknown): number | null => {
+  if (typeof v === 'number' && !Number.isNaN(v)) return v;
+  return null;
+};
+
+/** Extract a four-digit year from a `YYYYMMDD` string. */
+const yearFromDate = (d: string | null): number | null => {
+  if (!d) return null;
+  const y = parseInt(d.slice(0, 4), 10);
+  return Number.isNaN(y) ? null : y;
+};
+
+/**
+ * Regex that matches parenthetical / bracket noise commonly appended
+ * to music-video titles on YouTube, TikTok, and similar platforms.
+ *
+ * Examples of strings that will be removed:
+ * - `(Official Music Video)`, `[Official Audio]`
+ * - `(Audio Oficial)`, `(Video Oficial)`, `(Clip Officiel)`
+ * - `(Lyrics)`, `(Lyric Video)`, `(Visualizer)`
+ * - `(Just Audio)`, `(Audio Only)`
+ * - `(Official)`, `(Oficial)`, `(Audio)`, `(Video)`
+ * - `(HD)`, `(HQ)`, `(4K)`, `(Remastered 2024)`
+ *
+ * Matched **case-insensitively**. Longer alternatives are listed
+ * first so the regex engine matches greedily.
+ */
+const TITLE_NOISE_RE =
+  // prettier-ignore
+  /\s*[(\[]\s*(?:official\s+music\s+video|official\s+lyric\s+video|official\s+visualizer|official\s+audio|official\s+video|offizielles?\s+musikvideo|music\s+video|lyric\s+video|(?:audio|video|videoclip|clip|música|musica)\s+(?:oficial|official|officiel(?:le)?|ufficiale)|(?:oficial|official|officiel(?:le)?|ufficiale)\s+(?:audio|video|videoclip|clip|música|musica)|just\s+audio|audio\s+only|visualizer|lyrics?|remastered(?:\s+\d{4})?|oficial|official|audio|video|hd|hq|4k)\s*[)\]]/gi;
+
+/**
+ * Remove a leading "Artist - " prefix and parenthetical noise from a
+ * video title so that the embedded `title` tag contains only the
+ * clean track name.
+ *
+ * Stripping order:
+ * 1. Remove "Artist - " / "Artist — " / "Artist – " prefix.
+ * 2. Remove bracketed noise like "(Official Audio)", "[Lyrics]", etc.
+ */
+const cleanTitle = (raw: string, artist: string): string => {
+  if (!raw) return 'Unknown Title';
+
+  let title = raw;
+
+  // 1. Strip leading "Artist - Title" prefix
+  const separators = [' - ', ' — ', ' – '];
+  for (const sep of separators) {
+    const idx = title.indexOf(sep);
+    if (idx !== -1) {
+      const before = title.slice(0, idx).trim();
+      // Only strip if the prefix matches the artist (case-insensitive)
+      if (before.toLowerCase() === artist.toLowerCase()) {
+        title = title.slice(idx + sep.length).trim();
+        break;
+      }
+    }
+  }
+
+  // 2. Strip parenthetical / bracket noise (Official Video, Lyrics, etc.)
+  title = title.replace(TITLE_NOISE_RE, '').trim();
+
+  return title || 'Unknown Title';
+};
+
+/**
+ * Picks the highest-resolution thumbnail URL from the metadata.
+ * yt-dlp returns an array of `thumbnails` sorted by preference;
+ * we pick the last (highest quality) entry.
+ */
+const bestThumbnailUrl = (
+  meta: VideoMetadata & Record<string, unknown>,
+): string | null => {
+  const thumbnails = meta.thumbnails as
+    | { url: string; width?: number; height?: number }[]
+    | undefined;
+
+  if (thumbnails && thumbnails.length > 0) {
+    // Last entry is typically the highest resolution
+    return thumbnails[thumbnails.length - 1]!.url;
+  }
+
+  return str(meta.thumbnail);
 };
 
 /**
@@ -1151,11 +1409,13 @@ const downloadVideo = async ({
   srt: requestSrt = false,
   captions: requestCaptions = false,
   justAudio = false,
+  audioFormat,
   jsRuntimes = DEFAULT_JS_RUNTIMES,
   checkCodec = false,
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
+  const audioFmt: AudioOutputFormat = audioFormat ?? 'flac';
 
   /* ---- 1. Check yt-dlp availability ---- */
 
@@ -1183,7 +1443,8 @@ const downloadVideo = async ({
         error: {
           code: 'FFMPEG_NOT_FOUND',
           message:
-            'ffmpeg binary was not found. It is required for audio extraction. ' +
+            'ffmpeg binary was not found. It is required for audio extraction ' +
+            'and metadata embedding. ' +
             'Install it via: brew install ffmpeg (macOS), ' +
             'sudo apt install ffmpeg (Debian/Ubuntu), ' +
             'or download from https://ffmpeg.org/download.html',
@@ -1216,7 +1477,7 @@ const downloadVideo = async ({
   ensureFolder(outputFolder);
 
   const fileId = randomUUID();
-  const fileExt = justAudio ? 'm4a' : 'mp4';
+  const fileExt = justAudio ? audioFmt : 'mp4';
   const fileName = `${fileId}.${fileExt}`;
   const outputPath = `${outputFolder}/${fileName}`;
 
@@ -1226,10 +1487,13 @@ const downloadVideo = async ({
 
   // We always fetch metadata now because --dump-json also returns the
   // `formats` array, which we reuse for format selection (step 4b).
+  // For audio downloads, metadata is essential so that artist, album,
+  // cover art, etc. can be embedded into the output file by yt-dlp's
+  // post-processors.
   try {
     videoMetadata = await fetchMetadata(url, binary, cookies, jsRuntimes);
   } catch (error) {
-    if (requestMetadata) {
+    if (requestMetadata || justAudio) {
       return {
         error: {
           code: 'METADATA_FAILED',
@@ -1272,6 +1536,7 @@ const downloadVideo = async ({
         outputPath,
         cookies,
         jsRuntimes,
+        audioFmt,
         formatSelection,
       )
     : buildDownloadArgs(url, outputPath, cookies, jsRuntimes, formatSelection);
@@ -1284,7 +1549,13 @@ const downloadVideo = async ({
     if (formatSelection) {
       try {
         const fallbackArgs = justAudio
-          ? buildAudioDownloadArgs(url, outputPath, cookies, jsRuntimes)
+          ? buildAudioDownloadArgs(
+              url,
+              outputPath,
+              cookies,
+              jsRuntimes,
+              audioFmt,
+            )
           : buildDownloadArgs(url, outputPath, cookies, jsRuntimes);
         await execFileAsync(binary, fallbackArgs);
       } catch (fallbackError) {
@@ -1346,6 +1617,18 @@ const downloadVideo = async ({
     ...(videoName && { name: videoName }),
     ...(formatSelection && { formatSelection }),
   };
+
+  /* ---- 7b. Attach audio metadata ---- */
+
+  if (justAudio && videoMetadata) {
+    try {
+      result.audioMetadata = extractAudioMetadata(
+        videoMetadata as VideoMetadata & Record<string, unknown>,
+      );
+    } catch {
+      // Audio metadata extraction is best-effort.
+    }
+  }
 
   /* ---- 8. Attach metadata ---- */
 
