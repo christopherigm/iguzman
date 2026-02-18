@@ -28,6 +28,17 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
+          {{- /* ── Nginx: serve media files directly ── */}}
+          {{- if $.Values.nginx.enabled }}
+          - path: /api/media/
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "video-downloader.fullname" $ }}
+                port:
+                  name: nginx
+          {{- end }}
+          {{- /* ── Next.js: everything else ── */}}
           {{- $paths := .paths | default (list (dict "path" "/" "pathType" "Prefix")) }}
           {{- range $paths }}
           - path: {{ .path }}

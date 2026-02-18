@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stat, createReadStream } from 'node:fs';
+import { stat } from 'node:fs';
 import { promisify } from 'node:util';
-import { join, extname } from 'node:path';
-import { Readable } from 'node:stream';
+import { join } from 'node:path';
 
 const fsStat = promisify(stat);
 
@@ -16,39 +15,50 @@ const IS_PRODUCTION = NODE_ENV === 'production';
 /** Directory where downloaded media is stored at runtime. */
 const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
 
-/** Minimal MIME-type map for the formats we serve. */
-const MIME_TYPES: Record<string, string> = {
-  '.mp4': 'video/mp4',
-  '.m4a': 'audio/mp4',
-  '.webm': 'video/webm',
-  '.mp3': 'audio/mpeg',
-  '.wav': 'audio/wav',
-  '.ogg': 'audio/ogg',
-  '.mkv': 'video/x-matroska',
-  '.srt': 'text/plain; charset=utf-8',
-};
-
 /**
  * GET /api/media/:path+
  *
- * Serves files that yt-dlp writes to the media directory at runtime.
- * The Next.js standalone server only serves static assets known at build
- * time, so runtime-generated files need an explicit route handler.
+ * In production, static media files are served by the nginx sidecar
+ * container (the ingress routes /api/media/* there directly).
+ *
+ * In development, we still need this handler because there is no nginx.
  */
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
+  /* ── Production: nginx handles this ── */
+  if (IS_PRODUCTION) {
+    return NextResponse.json(
+      { error: 'Media files are served by nginx in production' },
+      { status: 404 },
+    );
+  }
+
+  /* ── Development: serve files from the local filesystem ── */
+  const { createReadStream } = await import('node:fs');
+  const { extname } = await import('node:path');
+  const { Readable } = await import('node:stream');
+
+  const MIME_TYPES: Record<string, string> = {
+    '.mp4': 'video/mp4',
+    '.m4a': 'audio/mp4',
+    '.webm': 'video/webm',
+    '.mp3': 'audio/mpeg',
+    '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg',
+    '.mkv': 'video/x-matroska',
+    '.srt': 'text/plain; charset=utf-8',
+  };
+
   const segments = (await params).path;
 
-  // Only allow a single filename – no traversal
   if (!segments || segments.length !== 1 || !segments[0]) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
   const fileName: string = segments[0];
 
-  // Block path-traversal attempts
   if (fileName.includes('..') || fileName.includes('/')) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }

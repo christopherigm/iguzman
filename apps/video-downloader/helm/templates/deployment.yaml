@@ -88,10 +88,60 @@ spec:
               mountPath: {{ .Values.hostPathVolume.mountPath }}
           {{- end }}
 
-      {{- if .Values.hostPathVolume.enabled }}
+        {{- /* ── Nginx sidecar container ── */}}
+        {{- if .Values.nginx.enabled }}
+        - name: nginx
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+
+          ports:
+            - name: nginx
+              containerPort: {{ .Values.nginx.port }}
+              protocol: TCP
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: nginx
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: nginx
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            failureThreshold: 3
+
+          {{- with .Values.nginx.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          volumeMounts:
+            {{- if .Values.hostPathVolume.enabled }}
+            - name: media-data
+              mountPath: {{ .Values.hostPathVolume.mountPath }}
+              readOnly: true
+            {{- end }}
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+        {{- end }}
+
+      {{- if or .Values.hostPathVolume.enabled .Values.nginx.enabled }}
       volumes:
+        {{- if .Values.hostPathVolume.enabled }}
         - name: media-data
           hostPath:
             path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Chart.Name }}/media
             type: DirectoryOrCreate
+        {{- end }}
+        {{- if .Values.nginx.enabled }}
+        - name: nginx-config
+          configMap:
+            name: {{ include "video-downloader.fullname" . }}-nginx
+        {{- end }}
       {{- end }}

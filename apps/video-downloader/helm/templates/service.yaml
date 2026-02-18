@@ -11,5 +11,11 @@ spec:
       targetPort: {{ .Values.service.targetPort }}
       protocol: TCP
       name: http
+    {{- if .Values.nginx.enabled }}
+    - port: {{ .Values.nginx.servicePort }}
+      targetPort: {{ .Values.nginx.port }}
+      protocol: TCP
+      name: nginx
+    {{- end }}
   selector:
     {{- include "video-downloader.selectorLabels" . | nindent 4 }}

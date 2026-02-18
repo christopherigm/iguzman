@@ -1,0 +1,55 @@
+{{- if .Values.nginx.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "video-downloader.fullname" . }}-nginx
+  labels:
+    {{- include "video-downloader.labels" . | nindent 4 }}
+data:
+  default.conf: |
+    server {
+        listen {{ .Values.nginx.port }};
+        server_name _;
+
+        # ── Serve media files at the same path the Next.js API used ──
+        location /api/media/ {
+            alias {{ .Values.hostPathVolume.mountPath }}/;
+
+            # Only the formats video-downloader produces
+            types {
+                video/mp4                  mp4;
+                audio/mp4                  m4a;
+                video/webm                 webm;
+                audio/mpeg                 mp3;
+                audio/wav                  wav;
+                audio/ogg                  ogg;
+                video/x-matroska           mkv;
+                text/plain                 srt;
+            }
+            default_type application/octet-stream;
+
+            # Match the caching header the old API route returned
+            add_header Cache-Control "public, max-age=3600";
+
+            # Block directory listings
+            autoindex off;
+
+            # Optimise large-file delivery
+            sendfile    on;
+            tcp_nopush  on;
+            tcp_nodelay on;
+        }
+
+        # Health check endpoint for k8s probes
+        location = /healthz {
+            access_log off;
+            return 200 'ok';
+            add_header Content-Type text/plain;
+        }
+
+        # Reject everything else
+        location / {
+            return 404;
+        }
+    }
+{{- end }}

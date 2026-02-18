@@ -91,6 +91,25 @@ nodeAffinity:
   # - node-2
   # - node-3
 
+# ─── Nginx sidecar (serves media files) ─────────────────────
+# Replaces the Next.js GET /api/media/* endpoint with a high-
+# performance static-file server that shares the same volume.
+nginx:
+  enabled: true
+  image:
+    repository: nginx
+    tag: 'alpine'
+    pullPolicy: IfNotPresent
+  port: 8080 # port the nginx container listens on
+  servicePort: 8080 # port exposed by the Service for nginx
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
 # ─── Resources ──────────────────────────────────────────────
 resources:
   requests:
