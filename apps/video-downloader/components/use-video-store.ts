@@ -8,7 +8,9 @@ import type { Platform } from '@repo/helpers/checkers';
 export type VideoStatus =
   | 'pending'
   | 'downloading'
+  | 'queued'
   | 'processing'
+  | 'converting'
   | 'done'
   | 'error';
 
@@ -49,6 +51,8 @@ export interface StoredVideo {
   fpsApplied: boolean;
   /** Whether the video uses H.265 (HEVC) codec. */
   isH265: boolean;
+  /** Whether the H.265→H.264 conversion has been applied successfully. */
+  h264Converted: boolean;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -70,8 +74,17 @@ function readStorage(): StoredVideo[] {
         ...v,
         fpsApplied: v.fpsApplied ?? v.status === 'done',
         isH265: v.isH265 ?? false,
+        h264Converted: v.h264Converted ?? false,
       };
 
+      if (video.status === 'queued') {
+        /* Queue state is transient — reset to a resumable status.
+           The resume effects will re-enqueue as needed. */
+        if (video.isH265 && !video.h264Converted) {
+          return { ...video, status: 'converting' as VideoStatus };
+        }
+        return { ...video, status: 'done' as VideoStatus };
+      }
       if (video.status === 'downloading') {
         /* Download interrupted — reset so auto-retry kicks in. */
         return { ...video, status: 'pending' as VideoStatus, error: null };
@@ -79,6 +92,10 @@ function readStorage(): StoredVideo[] {
       if (video.status === 'processing' && !video.file) {
         /* Processing without a server file shouldn't happen — reset. */
         return { ...video, status: 'pending' as VideoStatus, error: null };
+      }
+      /* Converting interrupted — keep status so resume logic picks it up. */
+      if (video.status === 'converting' && !video.file) {
+        return { ...video, status: 'done' as VideoStatus, error: null };
       }
       return video;
     });
@@ -146,6 +163,7 @@ export function useVideoStore() {
         createdAt: Date.now(),
         fpsApplied: false,
         isH265: false,
+        h264Converted: false,
       };
       setVideos((prev) => [entry, ...prev]);
       return uuid;

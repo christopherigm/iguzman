@@ -25,7 +25,9 @@ const STATUS_OPTIONS: (VideoStatus | 'all')[] = [
   'all',
   'pending',
   'downloading',
+  'queued',
   'processing',
+  'converting',
   'done',
   'error',
 ];

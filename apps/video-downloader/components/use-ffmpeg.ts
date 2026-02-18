@@ -102,5 +102,59 @@ export function useFFmpeg() {
     [ensureLoaded],
   );
 
-  return { status, progress, interpolateFps } as const;
+  /**
+   * Convert an H.265 (HEVC) video to H.264 (AVC) using FFmpeg WASM.
+   *
+   * @param videoUrl   URL (or object-URL) of the source H.265 video
+   * @returns          `{ objectUrl, blob }` – object-URL for immediate use
+   *                   and the raw Blob for uploading back to the server.
+   */
+  const convertToH264 = useCallback(
+    async (videoUrl: string): Promise<{ objectUrl: string; blob: Blob }> => {
+      const ffmpeg = await ensureLoaded();
+      setStatus('processing');
+      setProgress(0);
+
+      const inputName = 'input_h265.mp4';
+      const outputName = 'output_h264.mp4';
+
+      /* Write the source video into the WASM virtual FS */
+      await ffmpeg.writeFile(inputName, await fetchFile(videoUrl));
+
+      /* Transcode H.265 → H.264 with libx264, copy audio stream */
+      const exitCode = await ffmpeg.exec([
+        '-i',
+        inputName,
+        '-c:v',
+        'libx264',
+        '-preset',
+        'fast',
+        '-crf',
+        '23',
+        '-c:a',
+        'copy',
+        outputName,
+      ]);
+
+      if (exitCode !== 0) {
+        setStatus('ready');
+        throw new Error(`FFmpeg exited with code ${exitCode}`);
+      }
+
+      /* Read the result back and create a blob URL */
+      const data = (await ffmpeg.readFile(outputName)) as Uint8Array;
+      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      const objectUrl = URL.createObjectURL(blob);
+
+      /* Clean up virtual FS */
+      await ffmpeg.deleteFile(inputName);
+      await ffmpeg.deleteFile(outputName);
+
+      setStatus('ready');
+      return { objectUrl, blob };
+    },
+    [ensureLoaded],
+  );
+
+  return { status, progress, interpolateFps, convertToH264 } as const;
 }

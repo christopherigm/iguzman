@@ -13,6 +13,7 @@ import type {
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { useFFmpeg } from './use-ffmpeg';
+import { useProcessingQueue } from './use-processing-queue';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import './video-item.css';
 
@@ -33,7 +34,9 @@ const PLATFORM_ICONS: Record<string, string> = {
 const STATUS_COLORS: Record<VideoStatus, string> = {
   pending: 'var(--foreground-muted, #999)',
   downloading: 'var(--accent, #06b6d4)',
+  queued: '#6366f1',
   processing: '#f59e0b',
+  converting: '#8b5cf6',
   done: '#22c55e',
   error: '#ef4444',
 };
@@ -64,20 +67,28 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const [copying, setCopying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [confirmConvert, setConfirmConvert] = useState(false);
   const downloadTriggered = useRef(false);
   const resumeChecked = useRef(false);
+  const convertResumeChecked = useRef(false);
 
   /* FFmpeg WASM (lazy-loaded for client-side FPS interpolation) */
   const {
     status: ffmpegStatus,
     progress: ffmpegProgress,
     interpolateFps,
+    convertToH264,
   } = useFFmpeg();
+
+  const { enqueue, cancel } = useProcessingQueue();
 
   const platformIcon =
     PLATFORM_ICONS[video.platform] ?? PLATFORM_ICONS.unknown!;
   const isProcessing =
-    video.status === 'downloading' || video.status === 'processing';
+    video.status === 'downloading' ||
+    video.status === 'processing' ||
+    video.status === 'converting';
+  const isBusy = isProcessing || video.status === 'queued';
   const displayName = video.name ?? video.uploader ?? t('untitledVideo');
 
   /* ── Download handler (each item independent) ───── */
@@ -112,46 +123,48 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
 
       /* Auto-trigger browser download */
       if (file && video.autoDownload) {
-        let downloadHref = downloadURL!;
+        const downloadHref = downloadURL!;
 
-        /* ── FPS interpolation via FFmpeg WASM ──────── */
+        /* ── FPS interpolation via FFmpeg WASM (queued) ── */
         if (video.fps !== 'original' && !video.justAudio) {
           try {
-            onUpdate(video.uuid, { status: 'processing' });
-            const sourceUrl = `${window.location.origin}/api/media/${file}`;
-            const { objectUrl, blob } = await interpolateFps(
-              sourceUrl,
-              Number(video.fps),
-            );
-            downloadHref = objectUrl;
-            onUpdate(video.uuid, { status: 'done', fpsApplied: true });
+            onUpdate(video.uuid, { status: 'queued' });
+            await enqueue(video.uuid, async () => {
+              onUpdate(video.uuid, { status: 'processing' });
+              const sourceUrl = `${window.location.origin}/api/media/${file}`;
+              const { objectUrl, blob } = await interpolateFps(
+                sourceUrl,
+                Number(video.fps),
+              );
+              onUpdate(video.uuid, { status: 'done', fpsApplied: true });
 
-            /* Upload the processed video back to the server in parallel
-               with the browser download so the server file stays in sync */
-            setUploading(true);
-            const uploadPromise = fetch(
-              `${window.location.origin}/api/media/${file}`,
-              { method: 'PUT', body: blob },
-            )
-              .catch((uploadErr) => {
-                console.error(
-                  'Failed to upload processed video to server:',
-                  uploadErr,
-                );
-              })
-              .finally(() => {
-                setUploading(false);
-              });
+              /* Upload the processed video back to the server in parallel
+                 with the browser download so the server file stays in sync */
+              setUploading(true);
+              const uploadPromise = fetch(
+                `${window.location.origin}/api/media/${file}`,
+                { method: 'PUT', body: blob },
+              )
+                .catch((uploadErr) => {
+                  console.error(
+                    'Failed to upload processed video to server:',
+                    uploadErr,
+                  );
+                })
+                .finally(() => {
+                  setUploading(false);
+                });
 
-            /* Trigger browser download immediately (don't wait for upload) */
-            const downloadName = `${name ?? 'video'}-${Date.now()}-${file}`;
-            const link = document.createElement('a');
-            link.href = downloadHref;
-            link.download = downloadName;
-            link.click();
+              /* Trigger browser download immediately (don't wait for upload) */
+              const downloadName = `${name ?? 'video'}-${Date.now()}-${file}`;
+              const link = document.createElement('a');
+              link.href = objectUrl;
+              link.download = downloadName;
+              link.click();
 
-            /* Await upload so we don't lose error logs if the tab closes */
-            await uploadPromise;
+              /* Await upload so we don't lose error logs if the tab closes */
+              await uploadPromise;
+            });
             return;
           } catch (ffErr) {
             console.error('FFmpeg interpolation failed:', ffErr);
@@ -178,12 +191,14 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       onUpdate(video.uuid, { status: 'error', error: message });
     }
   }, [
+    onUpdate,
     video.uuid,
     video.originalURL,
     video.justAudio,
+    video.platform,
     video.autoDownload,
     video.fps,
-    onUpdate,
+    enqueue,
     interpolateFps,
     t,
   ]);
@@ -193,41 +208,44 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     if (!video.file || video.justAudio) return;
 
     try {
-      onUpdate(video.uuid, { status: 'processing', error: null });
-      const sourceUrl = `${window.location.origin}/api/media/${video.file}`;
-      const { objectUrl, blob } = await interpolateFps(
-        sourceUrl,
-        Number(video.fps),
-      );
+      onUpdate(video.uuid, { status: 'queued', error: null });
+      await enqueue(video.uuid, async () => {
+        onUpdate(video.uuid, { status: 'processing', error: null });
+        const sourceUrl = `${window.location.origin}/api/media/${video.file}`;
+        const { objectUrl, blob } = await interpolateFps(
+          sourceUrl,
+          Number(video.fps),
+        );
 
-      onUpdate(video.uuid, { status: 'done', fpsApplied: true });
+        onUpdate(video.uuid, { status: 'done', fpsApplied: true });
 
-      /* Upload processed video back to the server */
-      setUploading(true);
-      const uploadPromise = fetch(
-        `${window.location.origin}/api/media/${video.file}`,
-        { method: 'PUT', body: blob },
-      )
-        .catch((uploadErr) => {
-          console.error(
-            'Failed to upload processed video to server:',
-            uploadErr,
-          );
-        })
-        .finally(() => {
-          setUploading(false);
-        });
+        /* Upload processed video back to the server */
+        setUploading(true);
+        const uploadPromise = fetch(
+          `${window.location.origin}/api/media/${video.file}`,
+          { method: 'PUT', body: blob },
+        )
+          .catch((uploadErr) => {
+            console.error(
+              'Failed to upload processed video to server:',
+              uploadErr,
+            );
+          })
+          .finally(() => {
+            setUploading(false);
+          });
 
-      /* Trigger browser download */
-      if (video.autoDownload) {
-        const downloadName = `${video.name ?? 'video'}-${Date.now()}-${video.file}`;
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = downloadName;
-        link.click();
-      }
+        /* Trigger browser download */
+        if (video.autoDownload) {
+          const downloadName = `${video.name ?? 'video'}-${Date.now()}-${video.file}`;
+          const link = document.createElement('a');
+          link.href = objectUrl;
+          link.download = downloadName;
+          link.click();
+        }
 
-      await uploadPromise;
+        await uploadPromise;
+      });
     } catch (ffErr) {
       console.error('FFmpeg interpolation failed:', ffErr);
       onUpdate(video.uuid, {
@@ -243,6 +261,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     video.autoDownload,
     video.name,
     onUpdate,
+    enqueue,
     interpolateFps,
     t,
   ]);
@@ -281,7 +300,12 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
 
   /* ── Warn before closing during active processing ── */
   useEffect(() => {
-    if (video.status !== 'downloading' && video.status !== 'processing') return;
+    if (
+      video.status !== 'downloading' &&
+      video.status !== 'processing' &&
+      video.status !== 'converting'
+    )
+      return;
 
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -290,6 +314,93 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [video.status]);
+
+  /* ── H.265 → H.264 conversion handler ───────────── */
+  const handleConvertH264 = useCallback(async () => {
+    if (!video.file || video.justAudio) return;
+
+    try {
+      onUpdate(video.uuid, { status: 'queued', error: null });
+      await enqueue(video.uuid, async () => {
+        onUpdate(video.uuid, { status: 'converting', error: null });
+        const sourceUrl = `${window.location.origin}/api/media/${video.file}`;
+        const { objectUrl, blob } = await convertToH264(sourceUrl);
+
+        onUpdate(video.uuid, {
+          status: 'done',
+          h264Converted: true,
+          isH265: false,
+        });
+
+        /* Upload converted video back to the server */
+        setUploading(true);
+        const uploadPromise = fetch(
+          `${window.location.origin}/api/media/${video.file}`,
+          { method: 'PUT', body: blob },
+        )
+          .catch((uploadErr) => {
+            console.error(
+              'Failed to upload H.264-converted video to server:',
+              uploadErr,
+            );
+          })
+          .finally(() => {
+            setUploading(false);
+          });
+
+        /* Trigger browser download */
+        if (video.autoDownload) {
+          const downloadName = `${video.name ?? 'video'}-h264-${Date.now()}-${video.file}`;
+          const link = document.createElement('a');
+          link.href = objectUrl;
+          link.download = downloadName;
+          link.click();
+        }
+
+        await uploadPromise;
+      });
+    } catch (convertErr) {
+      console.error('H.265→H.264 conversion failed:', convertErr);
+      onUpdate(video.uuid, {
+        status: 'error',
+        error: t('errorConvertFailed'),
+      });
+    }
+  }, [
+    video.uuid,
+    video.file,
+    video.justAudio,
+    video.autoDownload,
+    video.name,
+    onUpdate,
+    enqueue,
+    convertToH264,
+    t,
+  ]);
+
+  /* ── Resume interrupted H.264 conversion on mount ── */
+  useEffect(() => {
+    if (convertResumeChecked.current) return;
+    convertResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      video.isH265 &&
+      !video.justAudio &&
+      !video.h264Converted &&
+      video.status === 'converting';
+
+    if (needsResume) {
+      queueMicrotask(() => handleConvertH264());
+    }
+  }, [
+    video.file,
+    video.isH265,
+    video.justAudio,
+    video.h264Converted,
+    video.status,
+    handleConvertH264,
+  ]);
 
   /* ── Copy link ──────────────────────────────────── */
   const handleCopy = useCallback(async () => {
@@ -362,6 +473,12 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
             >
               {t(`status_${video.status}`)}
             </dd>
+            {video.h264Converted ? (
+              <>
+                <dt>{t('detailCodec')}</dt>
+                <dd>H.264 ({t('converted')})</dd>
+              </>
+            ) : null}
             {video.error ? (
               <>
                 <dt>{t('detailError')}</dt>
@@ -422,10 +539,18 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       {ffmpegStatus === 'loading' ? (
         <span className="vi-ffmpeg-hint">{t('ffmpegLoading')}</span>
       ) : null}
-      {ffmpegStatus === 'processing' ? (
+      {ffmpegStatus === 'processing' && video.status === 'converting' ? (
+        <span className="vi-ffmpeg-hint">
+          {t('convertingH264', { progress: ffmpegProgress })}
+        </span>
+      ) : null}
+      {ffmpegStatus === 'processing' && video.status !== 'converting' ? (
         <span className="vi-ffmpeg-hint">
           {t('ffmpegProcessing', { progress: ffmpegProgress })}
         </span>
+      ) : null}
+      {video.status === 'queued' ? (
+        <span className="vi-ffmpeg-hint">{t('queueWaiting')}</span>
       ) : null}
       {uploading ? (
         <span className="vi-ffmpeg-hint">{t('uploadingProcessed')}</span>
@@ -475,7 +600,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
             type="button"
             className="vi-icon-btn"
             onClick={handleDownload}
-            disabled={isProcessing}
+            disabled={isBusy}
             aria-label={t('retry')}
             title={t('retry')}
           >
@@ -506,6 +631,19 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
             </button>
           ) : null}
 
+          {video.isH265 && video.downloadURL && !video.h264Converted ? (
+            <button
+              type="button"
+              className="vi-icon-btn"
+              onClick={() => setConfirmConvert(true)}
+              disabled={isBusy}
+              aria-label={t('convertH264')}
+              title={t('convertH264')}
+            >
+              <Icon icon="/icons/convert.svg" size={15} color="#8b5cf6" />
+            </button>
+          ) : null}
+
           <button
             type="button"
             className="vi-icon-btn vi-icon-btn--danger"
@@ -518,6 +656,19 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         </Box>
       </Box>
 
+      {/* ── H.264 conversion confirmation modal ──── */}
+      {confirmConvert ? (
+        <ConfirmationModal
+          title={t('confirmConvertTitle')}
+          text={t('confirmConvertText')}
+          okCallback={() => {
+            setConfirmConvert(false);
+            handleConvertH264();
+          }}
+          cancelCallback={() => setConfirmConvert(false)}
+        />
+      ) : null}
+
       {/* ── Delete confirmation modal ─────────────── */}
       {confirmRemove ? (
         <ConfirmationModal
@@ -525,6 +676,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           text={t('confirmDeleteText')}
           okCallback={() => {
             setConfirmRemove(false);
+            cancel(video.uuid);
             onRemove(video.uuid);
           }}
           cancelCallback={() => setConfirmRemove(false)}

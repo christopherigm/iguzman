@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { DownloadForm } from './download-form';
 import { VideoGrid } from './video-grid';
+import { ProcessingQueueProvider } from './use-processing-queue';
 import { useVideoStore } from './use-video-store';
 import type { Platform } from '@repo/helpers/checkers';
 
@@ -37,7 +38,7 @@ export function DownloadPage() {
   );
 
   return (
-    <>
+    <ProcessingQueueProvider>
       <DownloadForm onVideoAdded={handleVideoAdded} />
       <br />
       <VideoGrid
@@ -45,7 +46,7 @@ export function DownloadPage() {
         onUpdate={updateVideo}
         onRemove={removeVideo}
       />
-    </>
+    </ProcessingQueueProvider>
   );
 }
 

@@ -41,6 +41,8 @@
     "delete": "Delete",
     "confirmDeleteTitle": "Delete video?",
     "confirmDeleteText": "This will remove the video from your downloads. This action cannot be undone.",
+    "confirmConvertTitle": "Convert to H.264?",
+    "confirmConvertText": "This will re-encode the video from H.265 to H.264 in your browser. The process may take a while depending on the video length and your device performance.",
     "errorGeneric": "Something went wrong. Please try again.",
     "detailStatus": "Status",
     "detailError": "Error",
@@ -51,7 +53,9 @@
     "no": "No",
     "status_pending": "Pending",
     "status_downloading": "Downloading",
+    "status_queued": "Queued",
     "status_processing": "Processing",
+    "status_converting": "Converting to H.264",
     "status_done": "Done",
     "status_error": "Error",
     "filterAll": "All platforms",
@@ -66,7 +70,13 @@
     "noResults": "No videos match the current filters",
     "ffmpegLoading": "Loading video processor…",
     "ffmpegProcessing": "Interpolating frames… {progress}%",
+    "queueWaiting": "Waiting in processing queue…",
     "uploadingProcessed": "Uploading processed video to server…",
-    "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead."
+    "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead.",
+    "convertH264": "Convert to H.264",
+    "convertingH264": "Converting H.265 → H.264… {progress}%",
+    "errorConvertFailed": "H.265 to H.264 conversion failed.",
+    "detailCodec": "Codec",
+    "converted": "converted"
   }
 }

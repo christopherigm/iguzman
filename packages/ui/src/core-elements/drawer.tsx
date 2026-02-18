@@ -38,6 +38,8 @@ export interface DrawerProps extends UIComponentProps {
   searchBox?: boolean;
   /** Callback fired when the user submits a search query. */
   onSearch?: (search: string) => void;
+  /** Callback fired on every keystroke in the search box (real-time). */
+  onSearchChange?: (search: string) => void;
   /** SVG path for the search icon. */
   searchIcon?: string;
 }
@@ -113,9 +115,15 @@ const DrawerItem: React.FC<{
 
 const DrawerSearch: React.FC<{
   onSearch?: (value: string) => void;
+  onSearchChange?: (value: string) => void;
   searchIcon?: string;
-}> = ({ onSearch, searchIcon }) => {
+}> = ({ onSearch, onSearchChange, searchIcon }) => {
   const [value, setValue] = useState('');
+
+  const handleChange = (v: string) => {
+    setValue(v);
+    onSearchChange?.(v);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && value.trim()) {
@@ -127,7 +135,7 @@ const DrawerSearch: React.FC<{
     <div className="ui-drawer-search">
       <TextInput
         value={value}
-        onChange={setValue}
+        onChange={handleChange}
         placeholder="Search..."
         onKeyDown={handleKeyDown}
         minWidth={0}
@@ -164,6 +172,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   closeIcon,
   searchBox = false,
   onSearch,
+  onSearchChange,
   searchIcon,
   className,
   id,
@@ -249,7 +258,7 @@ export const Drawer: React.FC<DrawerProps> = ({
 
         {/* Search */}
         {searchBox && (
-          <DrawerSearch onSearch={onSearch} searchIcon={searchIcon} />
+          <DrawerSearch onSearch={onSearch} onSearchChange={onSearchChange} searchIcon={searchIcon} />
         )}
 
         {/* Menu items */}

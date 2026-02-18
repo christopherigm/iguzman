@@ -7,6 +7,7 @@ import type { Platform } from '@repo/helpers/checkers';
 import { VideoItem } from './video-item';
 import { VideoToolbar } from './video-toolbar';
 import type { StoredVideo, VideoStatus } from './use-video-store';
+import { useSearchQuery } from './use-search-store';
 import './video-grid.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -25,6 +26,7 @@ export interface VideoGridProps {
 
 export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
   const t = useTranslations('VideoGrid');
+  const searchQuery = useSearchQuery();
 
   /* ── Filter + pagination state ──────────────────── */
   const [activePlatform, setActivePlatform] = useState<Platform | null>(null);
@@ -37,6 +39,17 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
   const filtered = useMemo(() => {
     let list = videos;
 
+    /* Text search by name / uploader / URL */
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (v) =>
+          v.name?.toLowerCase().includes(q) ||
+          v.uploader?.toLowerCase().includes(q) ||
+          v.originalURL?.toLowerCase().includes(q),
+      );
+    }
+
     if (audioOnly) {
       list = list.filter((v) => v.justAudio);
     } else if (activePlatform) {
@@ -48,7 +61,7 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
     }
 
     return list;
-  }, [videos, activePlatform, audioOnly, statusFilter]);
+  }, [videos, activePlatform, audioOnly, statusFilter, searchQuery]);
 
   /* ── Derived: pagination ────────────────────────── */
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));

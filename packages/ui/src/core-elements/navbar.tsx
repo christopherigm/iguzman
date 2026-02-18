@@ -31,8 +31,10 @@ export interface NavbarProps extends UIComponentProps {
   fixedItems?: MenuItem[];
   /** Enable the search box. Defaults to `false`. */
   searchBox?: boolean;
-  /** Callback fired when the user submits a search query. */
+  /** Callback fired when the user submits a search query (Enter). */
   onSearch?: (search: string) => void;
+  /** Callback fired on every keystroke in the search box (real-time). */
+  onSearchChange?: (search: string) => void;
   /** Wrap inner content in a `Container`. Defaults to `true`. */
   container?: boolean;
   /** Set the navbar width to 100%. Defaults to `true`. */
@@ -151,9 +153,10 @@ const DropdownPanel: React.FC<{
 
 const SearchBox: React.FC<{
   onSearch?: (value: string) => void;
+  onSearchChange?: (value: string) => void;
   searchIcon?: string;
   closeIcon?: string;
-}> = ({ onSearch, searchIcon, closeIcon }) => {
+}> = ({ onSearch, onSearchChange, searchIcon, closeIcon }) => {
   const [expanded, setExpanded] = useState(false);
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -164,6 +167,11 @@ const SearchBox: React.FC<{
     }
   }, [expanded]);
 
+  const handleChange = (v: string) => {
+    setValue(v);
+    onSearchChange?.(v);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && value.trim()) {
       onSearch?.(value.trim());
@@ -171,12 +179,16 @@ const SearchBox: React.FC<{
     if (e.key === 'Escape') {
       setExpanded(false);
       setValue('');
+      onSearchChange?.('');
+      onSearch?.('');
     }
   };
 
   const handleClose = () => {
     setExpanded(false);
     setValue('');
+    onSearchChange?.('');
+    onSearch?.('');
   };
 
   return (
@@ -201,7 +213,7 @@ const SearchBox: React.FC<{
             <TextInput
               ref={inputRef as React.Ref<HTMLInputElement>}
               value={value}
-              onChange={setValue}
+              onChange={handleChange}
               lable="Search"
               onKeyDown={handleKeyDown}
               minWidth={180}
@@ -243,6 +255,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     fixedItems = [],
     searchBox = false,
     onSearch,
+    onSearchChange,
     container = true,
     fullwidth = true,
     version,
@@ -358,6 +371,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
       {searchBox && (
         <SearchBox
           onSearch={onSearch}
+          onSearchChange={onSearchChange}
           searchIcon={searchIcon}
           closeIcon={closeIcon}
         />
@@ -393,6 +407,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         closeIcon={closeIcon}
         searchBox={searchBox}
         onSearch={onSearch}
+        onSearchChange={onSearchChange}
         searchIcon={searchIcon}
       />
     </>

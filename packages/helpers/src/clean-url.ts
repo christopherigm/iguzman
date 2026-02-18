@@ -27,3 +27,25 @@ export const extractUrl = (text: string): string => {
  */
 export const isCleanUrl = (url: string): boolean =>
   !url.includes(' ') && url.startsWith('http');
+
+/**
+ * Removes all query parameters (and the fragment) from a URL, returning only
+ * the origin + pathname.
+ *
+ * If the input is not a valid URL the original string is returned unchanged.
+ *
+ * @param url - The URL string to strip
+ * @returns The URL without query parameters or fragment
+ *
+ * @example
+ * stripQueryParams('https://example.com/video?id=123&ref=home#top')
+ * // → 'https://example.com/video'
+ */
+export const stripQueryParams = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return url;
+  }
+};

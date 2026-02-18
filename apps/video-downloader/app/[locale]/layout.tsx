@@ -11,7 +11,7 @@ import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
-import { Navbar } from '@repo/ui/core-elements/navbar';
+import { NavbarWithSearch } from '../../components/navbar-with-search';
 import packageJson from '../../package.json';
 import '../globals.css';
 
@@ -92,10 +92,11 @@ export default async function LocaleLayout({ children, params }: Props) {
           initialResolved={initialResolved}
         >
           <PaletteProvider palette="cyan" accent="#68c3f7">
-            <Navbar
+            <NavbarWithSearch
               logo="/logo.png"
               items={[{ label: 'Home', href: '/' }]}
               version={`v${packageJson.version}`}
+              searchBox
             />
             {children}
           </PaletteProvider>

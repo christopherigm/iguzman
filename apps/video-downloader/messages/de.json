@@ -41,6 +41,8 @@
     "delete": "Löschen",
     "confirmDeleteTitle": "Video löschen?",
     "confirmDeleteText": "Das Video wird aus deinen Downloads entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirmConvertTitle": "In H.264 konvertieren?",
+    "confirmConvertText": "Das Video wird in deinem Browser von H.265 nach H.264 umgewandelt. Der Vorgang kann je nach Videolänge und Geräteleistung einige Zeit dauern.",
     "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
     "detailStatus": "Status",
     "detailError": "Fehler",
@@ -51,7 +53,9 @@
     "no": "Nein",
     "status_pending": "Ausstehend",
     "status_downloading": "Wird heruntergeladen",
+    "status_queued": "In Warteschlange",
     "status_processing": "Verarbeitung",
+    "status_converting": "Konvertierung zu H.264",
     "status_done": "Fertig",
     "status_error": "Fehler",
     "filterAll": "Alle Plattformen",
@@ -67,6 +71,12 @@
     "uploadingProcessed": "Verarbeitetes Video wird auf den Server hochgeladen…",
     "ffmpegLoading": "Videoprozessor wird geladen…",
     "ffmpegProcessing": "Frames werden interpoliert… {progress}%",
-    "errorFfmpegFailed": "FPS-Interpolation fehlgeschlagen. Original wird heruntergeladen."
+    "queueWaiting": "Wartet in der Verarbeitungswarteschlange…",
+    "errorFfmpegFailed": "FPS-Interpolation fehlgeschlagen. Original wird heruntergeladen.",
+    "convertH264": "In H.264 konvertieren",
+    "convertingH264": "H.265 → H.264 konvertieren… {progress}%",
+    "errorConvertFailed": "H.265-zu-H.264-Konvertierung fehlgeschlagen.",
+    "detailCodec": "Codec",
+    "converted": "konvertiert"
   }
 }

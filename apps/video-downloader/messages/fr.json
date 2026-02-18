@@ -41,6 +41,8 @@
     "delete": "Supprimer",
     "confirmDeleteTitle": "Supprimer la vidéo ?",
     "confirmDeleteText": "La vidéo sera supprimée de vos téléchargements. Cette action est irréversible.",
+    "confirmConvertTitle": "Convertir en H.264 ?",
+    "confirmConvertText": "Cela réencodera la vidéo de H.265 en H.264 dans votre navigateur. Le processus peut prendre du temps selon la durée de la vidéo et les performances de votre appareil.",
     "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
     "detailStatus": "Statut",
     "detailError": "Erreur",
@@ -51,7 +53,9 @@
     "no": "Non",
     "status_pending": "En attente",
     "status_downloading": "Téléchargement",
+    "status_queued": "En file d'attente",
     "status_processing": "Traitement",
+    "status_converting": "Conversion en H.264",
     "status_done": "Terminé",
     "status_error": "Erreur",
     "filterAll": "Toutes les plateformes",
@@ -67,6 +71,12 @@
     "uploadingProcessed": "Téléversement de la vidéo traitée vers le serveur…",
     "ffmpegLoading": "Chargement du processeur vidéo…",
     "ffmpegProcessing": "Interpolation des images… {progress}%",
-    "errorFfmpegFailed": "L'interpolation FPS a échoué. Téléchargement de l'original."
+    "queueWaiting": "En attente dans la file de traitement…",
+    "errorFfmpegFailed": "L'interpolation FPS a échoué. Téléchargement de l'original.",
+    "convertH264": "Convertir en H.264",
+    "convertingH264": "Conversion H.265 → H.264… {progress}%",
+    "errorConvertFailed": "La conversion H.265 vers H.264 a échoué.",
+    "detailCodec": "Codec",
+    "converted": "converti"
   }
 }

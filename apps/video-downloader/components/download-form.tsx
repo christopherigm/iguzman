@@ -8,6 +8,7 @@ import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { detectPlatform, type Platform } from '@repo/helpers/checkers';
+import { stripQueryParams } from '@repo/helpers/clean-url';
 import './download-form.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -244,7 +245,11 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
         ) : null}
 
         <div className="df-input-wrapper">
-          <TextInput value={url} onChange={setUrl} lable={t('inputLabel')} />
+          <TextInput
+            value={url}
+            onChange={(v: string) => setUrl(stripQueryParams(v))}
+            lable={t('inputLabel')}
+          />
         </div>
 
         {url && (

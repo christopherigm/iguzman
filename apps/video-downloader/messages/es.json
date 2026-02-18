@@ -41,6 +41,8 @@
     "delete": "Eliminar",
     "confirmDeleteTitle": "¿Eliminar video?",
     "confirmDeleteText": "Esto eliminará el video de tus descargas. Esta acción no se puede deshacer.",
+    "confirmConvertTitle": "¿Convertir a H.264?",
+    "confirmConvertText": "Esto recodificará el video de H.265 a H.264 en tu navegador. El proceso puede tardar dependiendo de la duración del video y el rendimiento de tu dispositivo.",
     "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
     "detailStatus": "Estado",
     "detailError": "Error",
@@ -51,7 +53,9 @@
     "no": "No",
     "status_pending": "Pendiente",
     "status_downloading": "Descargando",
+    "status_queued": "En cola",
     "status_processing": "Procesando",
+    "status_converting": "Convirtiendo a H.264",
     "status_done": "Listo",
     "status_error": "Error",
     "filterAll": "Todas las plataformas",
@@ -67,6 +71,12 @@
     "uploadingProcessed": "Subiendo video procesado al servidor…",
     "ffmpegLoading": "Cargando procesador de video…",
     "ffmpegProcessing": "Interpolando fotogramas… {progress}%",
-    "errorFfmpegFailed": "La interpolación de FPS falló. Descargando el original."
+    "queueWaiting": "Esperando en la cola de procesamiento…",
+    "errorFfmpegFailed": "La interpolación de FPS falló. Descargando el original.",
+    "convertH264": "Convertir a H.264",
+    "convertingH264": "Convirtiendo H.265 → H.264… {progress}%",
+    "errorConvertFailed": "La conversión de H.265 a H.264 falló.",
+    "detailCodec": "Códec",
+    "converted": "convertido"
   }
 }
