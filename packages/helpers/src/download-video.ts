@@ -1,8 +1,17 @@
 import { execFile } from 'child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+} from 'fs';
 import { randomUUID } from 'crypto';
 import { detectPlatform, isTiktok, isYoutube } from './checkers';
 import type { Platform } from './checkers';
+import { extractAudioFromVideo } from './extract-audio-from-video';
+import { addAudioToVideoInTime } from './add-audio-to-video-in-time';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -910,6 +919,186 @@ const isH265Codec = async (
   }
 };
 
+/**
+ * Probes a media file with ffprobe to check whether it contains an
+ * audio stream.
+ *
+ * @returns `true` when at least one audio stream is found, `false` otherwise.
+ */
+const hasAudioStream = async (
+  filePath: string,
+  ffmpegBinary: string,
+): Promise<boolean> => {
+  try {
+    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
+    const output = await execFileAsync(ffprobeBinary, [
+      '-v',
+      'error',
+      '-select_streams',
+      'a:0',
+      '-show_entries',
+      'stream=codec_name',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      filePath,
+    ]);
+    return output.trim().length > 0;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Downloads an H.264-encoded version of a TikTok video using yt-dlp
+ * with `-S "codec:h264"` to prefer H.264 streams.
+ *
+ * @param url        - TikTok video URL.
+ * @param outputPath - Absolute path where the file will be saved.
+ * @param cookies    - Path to the Netscape cookies file.
+ * @param jsRuntimes - Path to the Node.js binary for yt-dlp.
+ */
+const downloadTikTokH264Video = async (
+  url: string,
+  outputPath: string,
+  cookies: string,
+  jsRuntimes: string,
+): Promise<void> => {
+  const args: string[] = [
+    url,
+    '-S',
+    'codec:h264',
+    '--no-abort-on-error',
+    '--no-playlist',
+    '--add-header',
+    'user-agent:Mozilla/5.0',
+    '--js-runtimes',
+    `node:${jsRuntimes}`,
+  ];
+
+  if (cookies) {
+    args.push('--cookies', cookies);
+  }
+
+  args.push('--merge-output-format', 'mp4', '-o', outputPath, '--quiet');
+
+  await execFileAsync(DEFAULT_BINARY, args);
+};
+
+/**
+ * Repairs a TikTok H.265 video that has no audio by downloading a
+ * secondary H.264 version, extracting its audio track, and merging
+ * that audio into the original H.265 video.
+ *
+ * **Flow:**
+ * 1. Probe the downloaded file — skip if it is not H.265 or already has audio.
+ * 2. Download an H.264 copy of the same TikTok URL (`-S codec:h264`).
+ * 3. Extract the audio track from the H.264 video (WAV via ffmpeg).
+ * 4. Merge the extracted audio into the H.265 video.
+ * 5. Replace the original file with the merged result.
+ * 6. Clean up temporary H.264 video and WAV files.
+ *
+ * @returns `true` when the repair was performed, `false` when skipped
+ *          (not H.265, already has audio, or a step failed).
+ */
+const repairTikTokH265Audio = async (
+  h265FilePath: string,
+  h265FileName: string,
+  url: string,
+  outputFolder: string,
+  cookies: string,
+  jsRuntimes: string,
+  ffmpegBinary: string,
+): Promise<boolean> => {
+  /* ---- 1. Check codec & audio presence ---- */
+
+  const isH265 = await isH265Codec(h265FilePath, ffmpegBinary);
+  if (!isH265) return false;
+
+  const audioPresent = await hasAudioStream(h265FilePath, ffmpegBinary);
+  if (audioPresent) return false;
+
+  /* ---- 2. Download H.264 version ---- */
+
+  const h264Id = randomUUID();
+  const h264FileName = `${h264Id}.mp4`;
+  const h264FilePath = `${outputFolder}/${h264FileName}`;
+  const audioFileName = `${h264Id}.wav`;
+  const audioFilePath = `${outputFolder}/${audioFileName}`;
+
+  const cleanup = () => {
+    try {
+      rmSync(h264FilePath, { force: true });
+    } catch {
+      /* ignore */
+    }
+    try {
+      rmSync(audioFilePath, { force: true });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  try {
+    await downloadTikTokH264Video(url, h264FilePath, cookies, jsRuntimes);
+  } catch {
+    cleanup();
+    return false;
+  }
+
+  /* ---- 3. Extract audio from H.264 video ---- */
+
+  try {
+    await extractAudioFromVideo({
+      src: h264FileName,
+      dest: audioFileName,
+      outputFolder,
+    });
+  } catch {
+    cleanup();
+    return false;
+  }
+
+  /* ---- 4. Merge audio into H.265 video ---- */
+
+  const mergedFileName = `merged_${h265FileName}`;
+  const mergedFilePath = `${outputFolder}/${mergedFileName}`;
+
+  try {
+    await addAudioToVideoInTime({
+      srcVideo: h265FileName,
+      srcAudio: audioFileName,
+      dest: mergedFileName,
+      offset: 0,
+      format: 'wav',
+      outputFolder,
+    });
+  } catch {
+    cleanup();
+    try {
+      rmSync(mergedFilePath, { force: true });
+    } catch {
+      /* ignore */
+    }
+    return false;
+  }
+
+  /* ---- 5. Replace original with merged file ---- */
+
+  try {
+    rmSync(h265FilePath, { force: true });
+    renameSync(mergedFilePath, h265FilePath);
+  } catch {
+    // If replacement fails, try to keep whichever file exists.
+    return false;
+  }
+
+  /* ---- 6. Cleanup temporary files ---- */
+
+  cleanup();
+
+  return true;
+};
+
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
 /* ------------------------------------------------------------------ */
@@ -1113,6 +1302,24 @@ const downloadVideo = async ({
           message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
         },
       };
+    }
+  }
+
+  /* ---- 5b. Repair TikTok H.265 videos with missing audio ---- */
+
+  if (isTiktok(url) && !justAudio) {
+    try {
+      await repairTikTokH265Audio(
+        outputPath,
+        fileName,
+        url,
+        outputFolder,
+        cookies,
+        jsRuntimes,
+        ffmpegBinary,
+      );
+    } catch {
+      // Repair is best-effort; continue with the original download.
     }
   }
 
