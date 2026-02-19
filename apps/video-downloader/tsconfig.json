@@ -6,7 +6,10 @@
         "name": "next"
       }
     ],
-    "allowArbitraryExtensions": true
+    "allowArbitraryExtensions": true,
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
   "include": [
     "**/*.ts",

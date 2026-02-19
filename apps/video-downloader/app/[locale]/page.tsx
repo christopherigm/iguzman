@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import { Container } from '@repo/ui/core-elements/container';
-import { DownloadPage } from '../../components/download-page';
+import { DownloadPage } from '@/components/download-page';
 import { ThemeSwitch } from '@repo/ui/theme-switch';
 
 type Props = {

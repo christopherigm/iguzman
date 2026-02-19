@@ -12,7 +12,7 @@ import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
 import { Navbar } from '@repo/ui/core-elements/navbar';
-import packageJson from '../../package.json';
+import packageJson from '@/package.json';
 import '../globals.css';
 
 type Props = {

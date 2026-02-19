@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import downloadVideo from '@repo/helpers/download-video';
-import type {
-  DownloadVideoResult,
-  DownloadVideoError,
-} from '@repo/helpers/download-video';
+import { createTask, updateTask } from '@/lib/video-task-db';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -18,17 +15,7 @@ interface RequestBody {
   checkCodec?: boolean;
 }
 
-interface SuccessResponse {
-  data: DownloadVideoResult;
-}
-
-interface ErrorResponse {
-  error: DownloadVideoError;
-}
-
-export async function POST(
-  request: Request,
-): Promise<NextResponse<SuccessResponse | ErrorResponse>> {
+export async function POST(request: Request) {
   let body: RequestBody;
 
   try {
@@ -40,7 +27,7 @@ export async function POST(
     );
   }
 
-  const { url, justAudio, checkCodec } = body;
+  const { url, justAudio = false, checkCodec = false } = body;
 
   if (!url || typeof url !== 'string') {
     return NextResponse.json(
@@ -54,19 +41,63 @@ export async function POST(
     );
   }
 
-  const result = await downloadVideo({
-    url,
-    justAudio,
-    checkCodec,
-    outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
-    cookies: IS_PRODUCTION
-      ? '/app/netscape-cookies.txt'
-      : './netscape-cookies.txt',
-  });
+  /* 1. Create the task document immediately */
+  const task = await createTask({ url, justAudio, checkCodec });
+  const taskId = task._id.toHexString();
 
-  if (result.error) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
-  }
+  /* 2. Fire-and-forget: launch async download, update MongoDB when done */
+  updateTask(taskId, { status: 'downloading' })
+    .then(() =>
+      downloadVideo({
+        url,
+        justAudio,
+        checkCodec,
+        outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
+        cookies: IS_PRODUCTION
+          ? '/app/netscape-cookies.txt'
+          : './netscape-cookies.txt',
+      }),
+    )
+    .then((result) => {
+      if (result.error) {
+        return updateTask(taskId, {
+          status: 'error',
+          error: result.error,
+          result,
+        });
+      }
+      return updateTask(taskId, {
+        status: 'done',
+        result,
+        file: result.file ?? null,
+        name: result.name ?? null,
+        isH265: result.isH265 ?? null,
+        thumbnail: result.metadata?.thumbnail ?? null,
+        duration: result.metadata?.duration ?? null,
+        uploader: result.metadata?.uploader ?? null,
+      });
+    })
+    .catch((err) => {
+      updateTask(taskId, {
+        status: 'error',
+        error: {
+          code: 'DOWNLOAD_FAILED',
+          message: err instanceof Error ? err.message : String(err),
+        },
+      }).catch(console.error);
+    });
 
-  return NextResponse.json({ data: result });
+  /* 3. Respond immediately with the task document */
+  return NextResponse.json(
+    {
+      task: {
+        _id: taskId,
+        status: 'pending',
+        url,
+        justAudio,
+        checkCodec,
+      },
+    },
+    { status: 202 },
+  );
 }

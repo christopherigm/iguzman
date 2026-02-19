@@ -5,15 +5,12 @@ import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { httpPost, HttpClientError } from '@repo/helpers/http-client';
-import type {
-  DownloadVideoResult,
-  DownloadVideoError,
-} from '@repo/helpers/download-video';
+import type { DownloadVideoError } from '@repo/helpers/download-video';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { useFFmpeg } from './use-ffmpeg';
 import { useProcessingQueue } from './use-processing-queue';
+import { usePollTask, type TaskData } from './use-poll-task';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import './video-item.css';
 
@@ -43,12 +40,9 @@ const STATUS_COLORS: Record<VideoStatus, string> = {
 
 /* ── API types ──────────────────────────────────────── */
 
-interface ApiSuccessResponse {
-  data: DownloadVideoResult;
-}
-
-interface ApiErrorResponse {
-  error: DownloadVideoError;
+interface TaskCreateResponse {
+  task: { _id: string; status: string };
+  error?: DownloadVideoError;
 }
 
 /* ── Props ──────────────────────────────────────────── */
@@ -81,6 +75,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   } = useFFmpeg();
 
   const { enqueue, cancel } = useProcessingQueue();
+  const { startPolling, stopPolling } = usePollTask();
 
   const platformIcon =
     PLATFORM_ICONS[video.platform] ?? PLATFORM_ICONS.unknown!;
@@ -91,23 +86,11 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const isBusy = isProcessing || video.status === 'queued';
   const displayName = video.name ?? video.uploader ?? t('untitledVideo');
 
-  /* ── Download handler (each item independent) ───── */
-  const handleDownload = useCallback(async () => {
-    onUpdate(video.uuid, { status: 'downloading', error: null });
-
-    try {
-      const result = await httpPost<ApiSuccessResponse>({
-        baseUrl: window.location.origin,
-        url: '/api/download-video',
-        body: {
-          url: video.originalURL,
-          justAudio: video.justAudio,
-          checkCodec: video.platform === 'tiktok',
-        },
-      });
-
-      const { file, name, metadata, isH265 } = result.data.data;
-
+  /* ── Handle completed task from polling ────────────── */
+  const handleTaskDone = useCallback(
+    (task: TaskData) => {
+      const file = task.file;
+      const name = task.name;
       const downloadURL = file ? `/api/media/${file}` : null;
 
       onUpdate(video.uuid, {
@@ -115,80 +98,140 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         file: file ?? null,
         name: name ?? null,
         downloadURL,
-        thumbnail: metadata?.thumbnail ?? null,
-        duration: metadata?.duration ?? null,
-        uploader: metadata?.uploader ?? null,
-        isH265: isH265 ?? false,
+        thumbnail: task.thumbnail ?? null,
+        duration: task.duration ?? null,
+        uploader: task.uploader ?? null,
+        isH265: task.isH265 ?? false,
       });
 
       /* Auto-trigger browser download */
       if (file && video.autoDownload) {
-        const downloadHref = downloadURL!;
-
         /* ── FPS interpolation via FFmpeg WASM (queued) ── */
         if (video.fps !== 'original' && !video.justAudio) {
-          try {
-            onUpdate(video.uuid, { status: 'queued' });
-            await enqueue(video.uuid, async () => {
-              onUpdate(video.uuid, { status: 'processing' });
-              const sourceUrl = `${window.location.origin}/api/media/${file}`;
-              const { objectUrl, blob } = await interpolateFps(
-                sourceUrl,
-                Number(video.fps),
-              );
-              onUpdate(video.uuid, { status: 'done', fpsApplied: true });
+          onUpdate(video.uuid, { status: 'queued' });
+          enqueue(video.uuid, async () => {
+            onUpdate(video.uuid, { status: 'processing' });
+            const sourceUrl = `${window.location.origin}/api/media/${file}`;
+            const { objectUrl, blob } = await interpolateFps(
+              sourceUrl,
+              Number(video.fps),
+            );
+            onUpdate(video.uuid, { status: 'done', fpsApplied: true });
 
-              /* Upload the processed video back to the server in parallel
-                 with the browser download so the server file stays in sync */
-              setUploading(true);
-              const uploadPromise = fetch(
-                `${window.location.origin}/api/media/${file}`,
-                { method: 'PUT', body: blob },
-              )
-                .catch((uploadErr) => {
-                  console.error(
-                    'Failed to upload processed video to server:',
-                    uploadErr,
-                  );
-                })
-                .finally(() => {
-                  setUploading(false);
-                });
+            setUploading(true);
+            const uploadPromise = fetch(
+              `${window.location.origin}/api/media/${file}`,
+              {
+                method: 'PUT',
+                body: blob,
+                headers: {
+                  'X-Task-Update': JSON.stringify({ fpsApplied: true }),
+                },
+              },
+            )
+              .catch((uploadErr) => {
+                console.error(
+                  'Failed to upload processed video to server:',
+                  uploadErr,
+                );
+              })
+              .finally(() => {
+                setUploading(false);
+              });
 
-              /* Trigger browser download immediately (don't wait for upload) */
-              const downloadName = `${name ?? 'video'}-${Date.now()}-${file}`;
-              const link = document.createElement('a');
-              link.href = objectUrl;
-              link.download = downloadName;
-              link.click();
+            const downloadName = `${name ?? 'video'}-${Date.now()}-${file}`;
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = downloadName;
+            link.click();
 
-              /* Await upload so we don't lose error logs if the tab closes */
-              await uploadPromise;
-            });
-            return;
-          } catch (ffErr) {
+            await uploadPromise;
+          }).catch((ffErr) => {
             console.error('FFmpeg interpolation failed:', ffErr);
             onUpdate(video.uuid, {
               status: 'error',
               error: t('errorFfmpegFailed'),
             });
-            return;
-          }
+          });
+          return;
         }
 
         const downloadName = `${name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}-${file}`;
         const link = document.createElement('a');
-        link.href = downloadHref;
+        link.href = downloadURL!;
         link.download = downloadName;
         link.click();
       }
-    } catch (err) {
-      const message =
-        err instanceof HttpClientError
-          ? ((err.data as ApiErrorResponse | null)?.error?.message ??
-            err.message)
-          : t('errorGeneric');
-      onUpdate(video.uuid, { status: 'error', error: message });
+    },
+    [
+      onUpdate,
+      video.uuid,
+      video.autoDownload,
+      video.fps,
+      video.justAudio,
+      enqueue,
+      interpolateFps,
+      t,
+    ],
+  );
+
+  /* ── Start polling for a given task ID ───────────── */
+  const pollForTask = useCallback(
+    (taskId: string) => {
+      startPolling({
+        taskId,
+        onUpdate: (task) => {
+          if (task.status === 'done') {
+            handleTaskDone(task);
+          } else if (task.status === 'error') {
+            onUpdate(video.uuid, {
+              status: 'error',
+              error: task.error?.message ?? 'Download failed',
+            });
+          }
+        },
+        onError: (errorMsg) => {
+          onUpdate(video.uuid, { status: 'error', error: errorMsg });
+        },
+      });
+    },
+    [startPolling, handleTaskDone, onUpdate, video.uuid],
+  );
+
+  /* ── Download handler (each item independent) ───── */
+  const handleDownload = useCallback(async () => {
+    onUpdate(video.uuid, { status: 'downloading', error: null });
+
+    try {
+      const res = await fetch('/api/download-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: video.originalURL,
+          justAudio: video.justAudio,
+          checkCodec: video.platform === 'tiktok',
+        }),
+      });
+
+      const data: TaskCreateResponse = await res.json();
+
+      if (!res.ok || data.error) {
+        onUpdate(video.uuid, {
+          status: 'error',
+          error: data.error?.message ?? 'Failed to start download',
+        });
+        return;
+      }
+
+      const taskId = data.task._id;
+      onUpdate(video.uuid, { taskId });
+
+      pollForTask(taskId);
+    } catch {
+      onUpdate(video.uuid, {
+        status: 'error',
+        error: t('errorGeneric'),
+      });
     }
   }, [
     onUpdate,
@@ -196,10 +239,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     video.originalURL,
     video.justAudio,
     video.platform,
-    video.autoDownload,
-    video.fps,
-    enqueue,
-    interpolateFps,
+    pollForTask,
     t,
   ]);
 
@@ -223,7 +263,13 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         setUploading(true);
         const uploadPromise = fetch(
           `${window.location.origin}/api/media/${video.file}`,
-          { method: 'PUT', body: blob },
+          {
+            method: 'PUT',
+            body: blob,
+            headers: {
+              'X-Task-Update': JSON.stringify({ fpsApplied: true }),
+            },
+          },
         )
           .catch((uploadErr) => {
             console.error(
@@ -273,6 +319,17 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       queueMicrotask(() => handleDownload());
     }
   }, [video.status, handleDownload]);
+
+  /* ── Resume polling after page refresh ─────────────── */
+  const pollResumeChecked = useRef(false);
+  useEffect(() => {
+    if (pollResumeChecked.current) return;
+    pollResumeChecked.current = true;
+
+    if (video.status === 'downloading' && video.taskId) {
+      pollForTask(video.taskId);
+    }
+  }, [video.status, video.taskId, pollForTask]);
 
   /* ── Resume interrupted FPS interpolation on mount ── */
   useEffect(() => {
@@ -336,7 +393,13 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         setUploading(true);
         const uploadPromise = fetch(
           `${window.location.origin}/api/media/${video.file}`,
-          { method: 'PUT', body: blob },
+          {
+            method: 'PUT',
+            body: blob,
+            headers: {
+              'X-Task-Update': JSON.stringify({ isH265: false }),
+            },
+          },
         )
           .catch((uploadErr) => {
             console.error(
@@ -682,6 +745,12 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           okCallback={() => {
             setConfirmRemove(false);
             cancel(video.uuid);
+            if (video.taskId) {
+              stopPolling(video.taskId);
+              fetch(`/api/download-video/${video.taskId}`, {
+                method: 'DELETE',
+              }).catch(console.error);
+            }
             onRemove(video.uuid);
           }}
           cancelCallback={() => setConfirmRemove(false)}

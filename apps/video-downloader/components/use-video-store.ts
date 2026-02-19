@@ -53,6 +53,8 @@ export interface StoredVideo {
   isH265: boolean;
   /** Whether the H.265→H.264 conversion has been applied successfully. */
   h264Converted: boolean;
+  /** MongoDB task ID (for polling and deletion). */
+  taskId: string | null;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -75,6 +77,7 @@ function readStorage(): StoredVideo[] {
         fpsApplied: v.fpsApplied ?? v.status === 'done',
         isH265: v.isH265 ?? false,
         h264Converted: v.h264Converted ?? false,
+        taskId: v.taskId ?? null,
       };
 
       if (video.status === 'queued') {
@@ -86,7 +89,10 @@ function readStorage(): StoredVideo[] {
         return { ...video, status: 'done' as VideoStatus };
       }
       if (video.status === 'downloading') {
-        /* Download interrupted — reset so auto-retry kicks in. */
+        /* If we have a taskId the server is still working — keep as
+           downloading so the resume-polling effect restarts polling. */
+        if (video.taskId) return video;
+        /* Otherwise reset so auto-retry kicks in. */
         return { ...video, status: 'pending' as VideoStatus, error: null };
       }
       if (video.status === 'processing' && !video.file) {
@@ -164,6 +170,7 @@ export function useVideoStore() {
         fpsApplied: false,
         isH265: false,
         h264Converted: false,
+        taskId: null,
       };
       setVideos((prev) => [entry, ...prev]);
       return uuid;

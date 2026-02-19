@@ -39,10 +39,10 @@ env: {}
   # MONGO_INITDB_DATABASE: mydb
 
 # Sensitive values – reference existing Kubernetes Secrets.
-envFromSecret:
-  - name: MONGO_INITDB_ROOT_PASSWORD
-    secretName: mongodb-secrets
-    secretKey: root-password
+# envFromSecret:
+#   - name: MONGO_INITDB_ROOT_PASSWORD
+#     secretName: mongodb-secrets
+#     secretKey: root-password
 
 # ─── Host-path volume (data storage) ────────────────────────
 hostPathVolume:
@@ -55,23 +55,26 @@ probes:
   startupProbe:
     exec:
       command: ['mongosh', '--eval', 'db.adminCommand("ping")']
-    initialDelaySeconds: 10
+    initialDelaySeconds: 15
     periodSeconds: 10
     failureThreshold: 30
+    timeoutSeconds: 10
 
   livenessProbe:
     exec:
       command: ['mongosh', '--eval', 'db.adminCommand("ping")']
     initialDelaySeconds: 30
     periodSeconds: 10
-    failureThreshold: 3
+    failureThreshold: 20
+    timeoutSeconds: 10
 
   readinessProbe:
     exec:
       command: ['mongosh', '--eval', 'db.adminCommand("ping")']
     initialDelaySeconds: 5
-    periodSeconds: 10
-    failureThreshold: 3
+    periodSeconds: 30
+    failureThreshold: 20
+    timeoutSeconds: 10
 
 # ─── Node affinity (schedule on specific nodes) ─────────────
 nodeAffinity:

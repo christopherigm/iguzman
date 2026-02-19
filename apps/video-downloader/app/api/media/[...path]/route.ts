@@ -136,6 +136,20 @@ export async function PUT(
     const buffer = Buffer.from(await request.arrayBuffer());
     await writeFile(filePath, buffer);
 
+    /* Best-effort MongoDB sync — the file write already succeeded */
+    const taskUpdateHeader = request.headers.get('X-Task-Update');
+    if (taskUpdateHeader) {
+      try {
+        const { updateTaskByFile } = await import(
+          '@/lib/video-task-db'
+        );
+        const patch = JSON.parse(taskUpdateHeader);
+        await updateTaskByFile(fileName, patch);
+      } catch {
+        /* MongoDB update is best-effort */
+      }
+    }
+
     return NextResponse.json({ ok: true, file: fileName }, { status: 200 });
   } catch (err) {
     console.error('PUT /api/media – write failed:', err);
