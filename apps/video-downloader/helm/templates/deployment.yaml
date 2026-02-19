@@ -136,7 +136,7 @@ spec:
         {{- if .Values.hostPathVolume.enabled }}
         - name: media-data
           hostPath:
-            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Chart.Name }}/media
+            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/media
             type: DirectoryOrCreate
         {{- end }}
         {{- if .Values.nginx.enabled }}

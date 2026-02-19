@@ -446,6 +446,11 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
             H265
           </Badge>
         ) : null}
+        {video.fps !== 'original' ? (
+          <Badge variant="subtle" size="sm" color="#f59e0b">
+            {video.fps} FPS
+          </Badge>
+        ) : null}
         <button
           type="button"
           className="vi-icon-btn"

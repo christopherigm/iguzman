@@ -114,6 +114,90 @@ envFromSecret:
     secretKey: root-password
 ```
 
+## Kubernetes Secrets
+
+### Creating a Secret
+
+**Imperative** (quickest for dev/one-off use):
+
+```bash
+kubectl create secret generic mongodb-secrets \
+  --from-literal=root-password=my-secure-password \
+  --namespace databases
+```
+
+**Declarative** (YAML — base64-encode the value first):
+
+```bash
+echo -n 'my-secure-password' | base64
+# → bXktc2VjdXJlLXBhc3N3b3Jk
+```
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-secrets
+  namespace: databases
+type: Opaque
+data:
+  root-password: bXktc2VjdXJlLXBhc3N3b3Jk
+```
+
+```bash
+kubectl apply -f secret.yaml
+```
+
+### Updating a Secret
+
+**Option A — patch a single key in-place:**
+
+```bash
+NEW_VALUE=$(echo -n 'new-secure-password' | base64)
+kubectl patch secret mongodb-secrets \
+  --namespace databases \
+  --type='json' \
+  -p="[{\"op\":\"replace\",\"path\":\"/data/root-password\",\"value\":\"${NEW_VALUE}\"}]"
+```
+
+**Option B — delete and recreate (simpler):**
+
+```bash
+kubectl delete secret mongodb-secrets -n databases
+kubectl create secret generic mongodb-secrets \
+  --from-literal=root-password=new-secure-password \
+  --namespace databases
+```
+
+After updating, restart the pod to pick up the new value:
+
+```bash
+kubectl rollout restart statefulset/<release-name>-mongodb -n databases
+```
+
+### Using the Secret with this chart
+
+Via `--set` flags at install/upgrade time:
+
+```bash
+helm install my-mongodb ./packages/charts/mongodb \
+  --namespace databases --create-namespace \
+  --set envFromSecret[0].name=MONGO_INITDB_ROOT_PASSWORD \
+  --set envFromSecret[0].secretName=mongodb-secrets \
+  --set envFromSecret[0].secretKey=root-password
+```
+
+Or in a values file:
+
+```yaml
+envFromSecret:
+  - name: MONGO_INITDB_ROOT_PASSWORD
+    secretName: mongodb-secrets
+    secretKey: root-password
+```
+
+> **Note:** When using `envFromSecret` for the root password, leave `auth.rootPassword` empty (the default). If both are set, the plain `auth.rootPassword` value will override the secret in the container's env block.
+
 ## Connecting
 
 ### From within the cluster

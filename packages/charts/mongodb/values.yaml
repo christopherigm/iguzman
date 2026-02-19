@@ -39,10 +39,10 @@ env: {}
   # MONGO_INITDB_DATABASE: mydb
 
 # Sensitive values – reference existing Kubernetes Secrets.
-# envFromSecret:
-#   - name: MONGO_INITDB_ROOT_PASSWORD
-#     secretName: mongodb-secrets
-#     secretKey: root-password
+envFromSecret:
+  - name: MONGO_INITDB_ROOT_PASSWORD
+    secretName: mongodb-secrets
+    secretKey: root-password
 
 # ─── Host-path volume (data storage) ────────────────────────
 hostPathVolume:
@@ -75,8 +75,9 @@ probes:
 
 # ─── Node affinity (schedule on specific nodes) ─────────────
 nodeAffinity:
-  enabled: false
-  nodeNames: []
+  enabled: true
+  nodeNames:
+    - master
   # - node-1
   # - node-2
 

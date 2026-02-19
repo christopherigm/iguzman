@@ -122,7 +122,7 @@ spec:
         {{- if .Values.hostPathVolume.enabled }}
         - name: redis-data
           hostPath:
-            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Chart.Name }}/data
+            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
             type: DirectoryOrCreate
         {{- end }}
         {{- if .Values.customConfig }}

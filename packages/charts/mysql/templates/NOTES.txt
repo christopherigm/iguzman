@@ -19,5 +19,5 @@ Replicas: {{ .Values.replicaCount }}
 
 {{- if .Values.hostPathVolume.enabled }}
 
-Host path volume: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Chart.Name }}/data
+Host path volume: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
 {{- end }}
