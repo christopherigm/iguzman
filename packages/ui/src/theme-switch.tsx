@@ -3,6 +3,7 @@
 import { useTheme } from './theme-provider';
 import type { ThemeMode } from './theme-provider';
 import Button from './core-elements/button';
+import './theme-switch.css';
 
 const modes: { value: ThemeMode; label: string }[] = [
   { value: 'light', label: 'Light' },
@@ -10,11 +11,16 @@ const modes: { value: ThemeMode; label: string }[] = [
   { value: 'dark', label: 'Dark' },
 ];
 
-export function ThemeSwitch() {
+interface ThemeSwitchProps {
+  hideOnMobile?: boolean;
+}
+
+export function ThemeSwitch({ hideOnMobile = false }: ThemeSwitchProps) {
   const { state, actions } = useTheme();
 
   return (
     <div
+      className={hideOnMobile ? 'theme-switch-desktop-only' : undefined}
       style={{
         display: 'inline-flex',
         borderRadius: 8,

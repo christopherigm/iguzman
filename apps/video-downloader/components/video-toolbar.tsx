@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import type { Platform } from '@repo/helpers/checkers';
 import type { VideoStatus, StoredVideo } from './use-video-store';
 import './video-toolbar.css';
+import Box from '@repo/ui/core-elements/box';
 
 /* ── Platform icon map (mirrors video-item.tsx) ──────── */
 
@@ -177,7 +178,6 @@ export function VideoToolbar({
           </>
         )}
       </div>
-
       {/* ── Status filter dropdown ────────────────────── */}
       <div className="vt-select-wrap">
         <select
@@ -196,66 +196,77 @@ export function VideoToolbar({
         </select>
         <span className="vt-select-chevron" aria-hidden />
       </div>
-
       {/* ── Per-page dropdown ─────────────────────────── */}
-      <div className="vt-select-wrap">
-        <select
-          className="vt-select"
-          value={perPage}
-          onChange={(e) => onPerPageChange(Number(e.target.value))}
-          aria-label={t('perPage')}
-        >
-          {PER_PAGE_OPTIONS.map((n) => (
-            <option key={n} value={n}>
-              {n} / {t('perPageLabel')}
-            </option>
-          ))}
-        </select>
-        <span className="vt-select-chevron" aria-hidden />
-      </div>
-
+      {filteredCount > perPage && (
+        <div className="vt-select-wrap">
+          <select
+            className="vt-select"
+            value={perPage}
+            onChange={(e) => onPerPageChange(Number(e.target.value))}
+            aria-label={t('perPage')}
+          >
+            {PER_PAGE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n} / {t('perPageLabel')}
+              </option>
+            ))}
+          </select>
+          <span className="vt-select-chevron" aria-hidden />
+        </div>
+      )}
       {/* ── Spacer ────────────────────────────────────── */}
       <span className="vt-spacer" />
-
       {/* ── Pagination ────────────────────────────────── */}
-      <div className="vt-pagination">
-        <button
-          type="button"
-          className="vt-page-btn vt-page-btn--prev"
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-          aria-label={t('prevPage')}
-        >
-          <span
-            className="vt-icon"
-            style={{
-              maskImage: 'url(/icons/chevron-down.svg)',
-              WebkitMaskImage: 'url(/icons/chevron-down.svg)',
-            }}
-          />
-        </button>
+      {totalPages > 1 && (
+        <Box className="vt-pagination">
+          <Box
+            display="flex"
+            alignItems="center"
+            backgroundColor="var(--surface-1)"
+            padding={7}
+            borderRadius={10}
+          >
+            <button
+              type="button"
+              className="vt-page-btn vt-page-btn--prev"
+              disabled={page <= 1}
+              onClick={() => onPageChange(page - 1)}
+              aria-label={t('prevPage')}
+            >
+              <span
+                className="vt-icon"
+                style={{
+                  maskImage: 'url(/icons/chevron-down.svg)',
+                  WebkitMaskImage: 'url(/icons/chevron-down.svg)',
+                }}
+              />
+            </button>
 
-        <span className="vt-page-info">
-          {page} / {totalPages}
-          <span style={{ opacity: 0.5, marginLeft: 4 }}>({filteredCount})</span>
-        </span>
+            <span className="vt-page-info">
+              {page} / {totalPages}
+              <span style={{ opacity: 0.5, marginLeft: 4 }}>
+                ({filteredCount})
+              </span>
+            </span>
 
-        <button
-          type="button"
-          className="vt-page-btn vt-page-btn--next"
-          disabled={page >= totalPages}
-          onClick={() => onPageChange(page + 1)}
-          aria-label={t('nextPage')}
-        >
-          <span
-            className="vt-icon"
-            style={{
-              maskImage: 'url(/icons/chevron-down.svg)',
-              WebkitMaskImage: 'url(/icons/chevron-down.svg)',
-            }}
-          />
-        </button>
-      </div>
+            <button
+              type="button"
+              className="vt-page-btn vt-page-btn--next"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(page + 1)}
+              aria-label={t('nextPage')}
+            >
+              <span
+                className="vt-icon"
+                style={{
+                  maskImage: 'url(/icons/chevron-down.svg)',
+                  WebkitMaskImage: 'url(/icons/chevron-down.svg)',
+                }}
+              />
+            </button>
+          </Box>
+        </Box>
+      )}
     </div>
   );
 }

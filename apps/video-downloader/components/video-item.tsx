@@ -505,7 +505,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           {displayName}
         </span>
         {video.isH265 ? (
-          <Badge variant="subtle" size="sm" color="#f59e0b">
+          <Badge variant="subtle" size="sm" color="#16dd00">
             H265
           </Badge>
         ) : null}

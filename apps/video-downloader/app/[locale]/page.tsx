@@ -24,7 +24,8 @@ export default async function Home({ params }: Props) {
       <br />
       <DownloadPage />
       <br />
-      <ThemeSwitch />
+      <ThemeSwitch hideOnMobile />
+      <br />
       <br />
     </Container>
   );

@@ -126,6 +126,7 @@ export function AdminTaskTable({ tasks }: AdminTaskTableProps) {
           className="admin-search"
         />
         <select
+          title="status"
           name="status"
           className="admin-filter-select"
           value={statusFilter}

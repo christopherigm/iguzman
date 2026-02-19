@@ -43,6 +43,8 @@ export default async function AdminLayout({
         >
           <PaletteProvider palette="cyan" accent="#68c3f7">
             <Navbar logo="/logo.png" items={[{ label: 'Home', href: '/' }]} />
+            <br />
+            <br />
             {children}
           </PaletteProvider>
         </ThemeProvider>

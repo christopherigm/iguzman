@@ -104,6 +104,7 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  max-width: 100px;
 }
 
 .vt-select {
@@ -241,8 +242,14 @@
   }
 
   .vt-pagination {
+    position: fixed;
+    z-index: 1;
+    display: flex;
     width: 100%;
+    background-color: rgba(var(--surface-1), 0.95);
+    bottom: 0;
     justify-content: center;
-    padding-top: 4px;
+    padding-bottom: 10px;
+    padding-top: 10px;
   }
 }
