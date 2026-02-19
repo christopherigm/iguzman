@@ -1,19 +1,18 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
+import type {
+  TaskStatus,
+  VideoResultFields,
+  DownloadVideoError,
+} from '@/lib/types';
 
 /* ── Types ──────────────────────────────────────────── */
 
-export interface TaskData {
+export interface TaskData extends VideoResultFields {
   _id: string;
-  status: 'pending' | 'downloading' | 'done' | 'error';
-  file: string | null;
-  name: string | null;
-  isH265: boolean | null;
-  thumbnail: string | null;
-  duration: number | null;
-  uploader: string | null;
-  error: { code: string; message: string } | null;
+  status: TaskStatus;
+  error: DownloadVideoError | null;
 }
 
 interface PollOptions {

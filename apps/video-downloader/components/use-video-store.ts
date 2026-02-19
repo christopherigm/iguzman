@@ -2,19 +2,13 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Platform } from '@repo/helpers/checkers';
+import type { VideoResultFields, VideoStatus } from '@/lib/types';
 
 /* ── Types ──────────────────────────────────────────── */
 
-export type VideoStatus =
-  | 'pending'
-  | 'downloading'
-  | 'queued'
-  | 'processing'
-  | 'converting'
-  | 'done'
-  | 'error';
+export type { VideoStatus };
 
-export interface StoredVideo {
+export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   /** Unique identifier (crypto.randomUUID). */
   uuid: string;
   /** Current download / processing status. */
@@ -35,21 +29,11 @@ export interface StoredVideo {
   originalURL: string;
   /** Detected platform. */
   platform: Platform;
-  /** Server-side filename (UUID-based). */
-  file: string | null;
-  /** Video title / name. */
-  name: string | null;
-  /** Thumbnail URL from metadata. */
-  thumbnail: string | null;
-  /** Duration in seconds. */
-  duration: number | null;
-  /** Uploader name. */
-  uploader: string | null;
   /** Timestamp when the item was created. */
   createdAt: number;
   /** Whether FPS interpolation has been applied successfully. */
   fpsApplied: boolean;
-  /** Whether the video uses H.265 (HEVC) codec. */
+  /** Whether the video uses H.265 (HEVC) codec (defaults to false on client). */
   isH265: boolean;
   /** Whether the H.265→H.264 conversion has been applied successfully. */
   h264Converted: boolean;

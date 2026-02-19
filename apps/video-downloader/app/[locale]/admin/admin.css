@@ -1,0 +1,244 @@
+/* ── Admin Dashboard ─────────────────────────────────── */
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 0 20px;
+}
+
+.admin-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--foreground, #171717);
+  letter-spacing: -0.02em;
+}
+
+/* ── Stat Cards ──────────────────────────────────────── */
+
+.admin-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 12px;
+  background: var(--surface-1, #fff);
+  border: 1px solid color-mix(in srgb, var(--foreground, #111) 6%, transparent);
+  border-radius: 12px;
+  text-align: center;
+  transition: border-color 280ms ease;
+  animation: admin-fade-in 350ms ease;
+}
+
+.admin-stat-card:hover {
+  border-color: color-mix(in srgb, var(--foreground, #111) 14%, transparent);
+}
+
+.admin-stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.admin-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--foreground-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+}
+
+/* ── Toolbar ─────────────────────────────────────────── */
+
+.admin-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.admin-search {
+  flex: 1;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.admin-filter-select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground, #111) 12%, transparent);
+  background: var(--surface-1, #fff);
+  color: var(--foreground, #171717);
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 200ms ease;
+}
+
+.admin-filter-select:focus {
+  border-color: var(--accent, #06b6d4);
+}
+
+.admin-result-count {
+  font-size: 13px;
+  color: var(--foreground-muted, #888);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* ── Table ───────────────────────────────────────────── */
+
+.admin-table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--foreground, #111) 6%, transparent);
+  background: var(--surface-1, #fff);
+  animation: admin-fade-in 350ms ease;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.admin-th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--foreground-muted, #888);
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground, #111) 8%, transparent);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: color 200ms ease;
+}
+
+.admin-th:hover {
+  color: var(--foreground, #171717);
+}
+
+.admin-th--active {
+  color: var(--accent, #06b6d4);
+}
+
+.admin-th--active:hover {
+  color: var(--accent, #06b6d4);
+}
+
+.admin-td {
+  padding: 10px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground, #111) 4%, transparent);
+  color: var(--foreground, #171717);
+}
+
+.admin-td--mono {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--foreground-muted, #888);
+}
+
+.admin-td--name {
+  max-width: 360px;
+}
+
+.admin-td--empty {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--foreground-muted, #888);
+}
+
+.admin-task-name {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-task-url {
+  display: block;
+  font-size: 11px;
+  color: var(--foreground-muted, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.admin-task-error {
+  display: block;
+  font-size: 11px;
+  color: #ef4444;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-tr:hover {
+  background: color-mix(in srgb, var(--foreground, #111) 2%, transparent);
+}
+
+.admin-tr--error {
+  background: color-mix(in srgb, #ef4444 4%, transparent);
+}
+
+.admin-tr--error:hover {
+  background: color-mix(in srgb, #ef4444 7%, transparent);
+}
+
+.admin-type-badges {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* ── Animation ───────────────────────────────────────── */
+
+@keyframes admin-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .admin-title {
+    font-size: 20px;
+  }
+
+  .admin-stat-value {
+    font-size: 24px;
+  }
+
+  .admin-stat-label {
+    font-size: 10px;
+  }
+
+  .admin-th,
+  .admin-td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .admin-td--name {
+    max-width: 200px;
+  }
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import downloadVideo from '@repo/helpers/download-video';
 import { createTask, updateTask } from '@/lib/video-task-db';
+import type { VideoDownloadInput } from '@/lib/types';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -9,11 +10,7 @@ import { createTask, updateTask } from '@/lib/video-task-db';
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const IS_PRODUCTION = NODE_ENV === 'production';
 
-interface RequestBody {
-  url: string;
-  justAudio?: boolean;
-  checkCodec?: boolean;
-}
+type RequestBody = Partial<VideoDownloadInput> & Pick<VideoDownloadInput, 'url'>;
 
 export async function POST(request: Request) {
   let body: RequestBody;

@@ -1,27 +1,21 @@
 import { ObjectId, type Collection, type WithId } from 'mongodb';
 import { connectToDatabase } from '@repo/helpers/mongo-db';
+import type { DownloadVideoResult } from '@repo/helpers/download-video';
 import type {
-  DownloadVideoResult,
+  TaskStatus,
+  VideoDownloadInput,
+  VideoResultFields,
   DownloadVideoError,
-} from '@repo/helpers/download-video';
+} from '@/lib/types';
 
 /* ── Document schema ──────────────────────────────── */
 
-export type TaskStatus = 'pending' | 'downloading' | 'done' | 'error';
+export type { TaskStatus };
 
-export interface VideoTaskDocument {
-  url: string;
-  justAudio: boolean;
-  checkCodec: boolean;
+export interface VideoTaskDocument extends VideoDownloadInput, VideoResultFields {
   status: TaskStatus;
   result: DownloadVideoResult | null;
   error: DownloadVideoError | null;
-  file: string | null;
-  name: string | null;
-  isH265: boolean | null;
-  thumbnail: string | null;
-  duration: number | null;
-  uploader: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,11 +37,9 @@ async function getTasksCollection(): Promise<
   return db.collection<VideoTaskDocument>(COLLECTION_NAME);
 }
 
-export async function createTask(params: {
-  url: string;
-  justAudio: boolean;
-  checkCodec: boolean;
-}): Promise<WithId<VideoTaskDocument>> {
+export async function createTask(
+  params: VideoDownloadInput,
+): Promise<WithId<VideoTaskDocument>> {
   const col = await getTasksCollection();
   const now = new Date();
   const doc: VideoTaskDocument = {
@@ -68,6 +60,11 @@ export async function createTask(params: {
   };
   const { insertedId } = await col.insertOne(doc);
   return { ...doc, _id: insertedId };
+}
+
+export async function getAllTasks(): Promise<WithId<VideoTaskDocument>[]> {
+  const col = await getTasksCollection();
+  return col.find().sort({ createdAt: -1 }).toArray();
 }
 
 export async function getTask(
