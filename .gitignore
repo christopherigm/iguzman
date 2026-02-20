@@ -37,3 +37,8 @@ yarn-error.log*
 .DS_Store
 *.pem
 netscape-cookies.txt
+
+skills
+skills/**
+.github/skills/
+.github/skills/**
