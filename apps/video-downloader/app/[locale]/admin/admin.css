@@ -114,8 +114,12 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--foreground-muted, #888);
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground, #111) 8%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--foreground, #111) 8%, transparent);
   cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   user-select: none;
   white-space: nowrap;
   transition: color 200ms ease;
@@ -136,7 +140,8 @@
 .admin-td {
   padding: 10px 16px;
   vertical-align: middle;
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground, #111) 4%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--foreground, #111) 4%, transparent);
   color: var(--foreground, #171717);
 }
 
@@ -219,7 +224,7 @@
 
 /* ── Responsive ──────────────────────────────────────── */
 
-@media (max-width: 768px) {
+@media (--bp-sm-down) {
   .admin-title {
     font-size: 20px;
   }

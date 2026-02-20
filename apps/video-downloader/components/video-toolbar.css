@@ -248,6 +248,7 @@
     width: 100%;
     background-color: rgba(var(--surface-1), 0.95);
     bottom: 0;
+    left: 0;
     justify-content: center;
     padding-bottom: 10px;
     padding-top: 10px;
