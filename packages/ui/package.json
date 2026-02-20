@@ -4,7 +4,8 @@
   "private": true,
   "exports": {
     "./*": "./src/*.tsx",
-    "./palettes": "./src/palettes.ts"
+    "./palettes": "./src/palettes.ts",
+    "./use-ffmpeg": "./src/use-ffmpeg.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -21,6 +22,8 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@repo/helpers": "workspace:*",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

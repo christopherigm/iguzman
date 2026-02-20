@@ -8,7 +8,7 @@ import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import type { DownloadVideoError } from '@repo/helpers/download-video';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Badge } from '@repo/ui/core-elements/badge';
-import { useFFmpeg } from './use-ffmpeg';
+import { useFFmpeg } from '@repo/ui/use-ffmpeg';
 import { useProcessingQueue } from './use-processing-queue';
 import { usePollTask, type TaskData } from './use-poll-task';
 import type { StoredVideo, VideoStatus } from './use-video-store';
