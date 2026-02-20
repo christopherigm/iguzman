@@ -44,10 +44,12 @@ env: {}
 #     secretName: postgres-secrets
 #     secretKey: password
 
-# ─── Host-path volume (data storage) ────────────────────────
-hostPathVolume:
+# ─── Persistent storage (PVC) ───────────────────────────────
+persistence:
   enabled: true
-  volumeMountPath: /shared-master # base path on the host node
+  size: 1Gi           # size of the PersistentVolumeClaim
+  storageClass: ''    # leave empty to use the cluster default StorageClass
+  accessMode: ReadWriteOnce
   mountPath: /var/lib/postgresql/data # path inside the container
 
 # ─── Health probes ──────────────────────────────────────────
@@ -91,6 +93,14 @@ customConfig: |
   shared_buffers = 128MB
   log_timezone = 'UTC'
   timezone = 'UTC'
+
+# ─── Security context ──────────────────────────────────────
+# postgres image requires running as uid/gid 999 (non-root).
+podSecurityContext:
+  fsGroup: 999
+  runAsUser: 999
+  runAsGroup: 999
+  runAsNonRoot: true
 
 # ─── Resources ──────────────────────────────────────────────
 resources:

@@ -21,6 +21,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
       {{- if .Values.nodeAffinity.enabled }}
       affinity:
         nodeAffinity:
@@ -45,7 +50,6 @@ spec:
 
           {{- /* ── Command with custom config ── */}}
           {{- if .Values.customConfig }}
-          command: ['postgres']
           args:
             - '-c'
             - 'config_file=/etc/postgresql/postgresql.conf'
@@ -65,9 +69,9 @@ spec:
             - name: POSTGRES_DB
               value: {{ .Values.auth.database | quote }}
             {{- end }}
-            {{- if .Values.hostPathVolume.enabled }}
+            {{- if .Values.persistence.enabled }}
             - name: PGDATA
-              value: {{ .Values.hostPathVolume.mountPath }}/pgdata
+              value: {{ .Values.persistence.mountPath }}/pgdata
             {{- end }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
@@ -117,9 +121,9 @@ spec:
 
           {{- /* ── Volume mounts ── */}}
           volumeMounts:
-            {{- if .Values.hostPathVolume.enabled }}
+            {{- if .Values.persistence.enabled }}
             - name: postgres-data
-              mountPath: {{ .Values.hostPathVolume.mountPath }}
+              mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
             {{- if .Values.customConfig }}
             - name: postgres-config
@@ -127,15 +131,22 @@ spec:
               readOnly: true
             {{- end }}
 
+      {{- if .Values.customConfig }}
       volumes:
-        {{- if .Values.hostPathVolume.enabled }}
-        - name: postgres-data
-          hostPath:
-            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
-            type: DirectoryOrCreate
-        {{- end }}
-        {{- if .Values.customConfig }}
         - name: postgres-config
           configMap:
             name: {{ include "postgres.fullname" . }}-config
+      {{- end }}
+
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode | quote }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
         {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | quote }}

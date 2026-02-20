@@ -1,6 +1,6 @@
 apiVersion: v2
 name: mysql
-description: Helm chart for a MySQL database with hostPath-based persistent storage
+description: Helm chart for a MySQL database with PVC-based persistent storage
 type: application
 version: 0.1.0
 appVersion: '8.0'

@@ -10,7 +10,11 @@
     "new-app": "node scripts/new-app.mjs",
     "docker": "node scripts/docker-build.mjs",
     "helm": "node scripts/helm-deploy.mjs",
-    "deploy-app": "node scripts/deploy-app.mjs"
+    "deploy-app": "node scripts/deploy-app.mjs",
+    "deploy-postgres": "node scripts/deploy-postgres.mjs",
+    "deploy-mongodb": "node scripts/deploy-mongodb.mjs",
+    "deploy-mysql": "node scripts/deploy-mysql.mjs",
+    "deploy-redis": "node scripts/deploy-redis.mjs"
   },
   "devDependencies": {
     "prettier": "^3.8.1",

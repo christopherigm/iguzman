@@ -104,9 +104,9 @@ spec:
 
           {{- /* ── Volume mounts ── */}}
           volumeMounts:
-            {{- if .Values.hostPathVolume.enabled }}
+            {{- if .Values.persistence.enabled }}
             - name: mongodb-data
-              mountPath: {{ .Values.hostPathVolume.mountPath }}
+              mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
             {{- if .Values.customConfig }}
             - name: mongodb-config
@@ -122,15 +122,22 @@ spec:
             - '--bind_ip_all'
           {{- end }}
 
+      {{- if .Values.customConfig }}
       volumes:
-        {{- if .Values.hostPathVolume.enabled }}
-        - name: mongodb-data
-          hostPath:
-            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
-            type: DirectoryOrCreate
-        {{- end }}
-        {{- if .Values.customConfig }}
         - name: mongodb-config
           configMap:
             name: {{ include "mongodb.fullname" . }}-config
+      {{- end }}
+
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode | quote }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
         {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | quote }}

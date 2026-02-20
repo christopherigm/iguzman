@@ -108,9 +108,9 @@ spec:
 
           {{- /* ── Volume mounts ── */}}
           volumeMounts:
-            {{- if .Values.hostPathVolume.enabled }}
+            {{- if .Values.persistence.enabled }}
             - name: redis-data
-              mountPath: {{ .Values.hostPathVolume.mountPath }}
+              mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
             {{- if .Values.customConfig }}
             - name: redis-config
@@ -119,11 +119,10 @@ spec:
             {{- end }}
 
       volumes:
-        {{- if .Values.hostPathVolume.enabled }}
+        {{- if .Values.persistence.enabled }}
         - name: redis-data
-          hostPath:
-            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
-            type: DirectoryOrCreate
+          persistentVolumeClaim:
+            claimName: {{ include "redis.fullname" . }}-data
         {{- end }}
         {{- if .Values.customConfig }}
         - name: redis-config

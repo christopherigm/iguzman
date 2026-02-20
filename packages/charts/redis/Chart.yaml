@@ -1,6 +1,6 @@
 apiVersion: v2
 name: redis
-description: Helm chart for a Redis in-memory data store with hostPath-based persistent storage
+description: Helm chart for a Redis in-memory data store with PVC-based persistent storage
 type: application
 version: 0.1.0
 appVersion: '7.2'

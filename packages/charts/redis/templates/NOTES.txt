@@ -16,8 +16,3 @@ Then connect with:
   redis-cli -h 127.0.0.1 -p {{ .Values.service.port }}
 
 Replicas: {{ .Values.replicaCount }}
-
-{{- if .Values.hostPathVolume.enabled }}
-
-Host path volume: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
-{{- end }}

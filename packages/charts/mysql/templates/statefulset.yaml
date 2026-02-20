@@ -106,9 +106,9 @@ spec:
 
           {{- /* ── Volume mounts ── */}}
           volumeMounts:
-            {{- if .Values.hostPathVolume.enabled }}
+            {{- if .Values.persistence.enabled }}
             - name: mysql-data
-              mountPath: {{ .Values.hostPathVolume.mountPath }}
+              mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
             {{- if .Values.customConfig }}
             - name: mysql-config
@@ -116,15 +116,22 @@ spec:
               readOnly: true
             {{- end }}
 
+      {{- if .Values.customConfig }}
       volumes:
-        {{- if .Values.hostPathVolume.enabled }}
-        - name: mysql-data
-          hostPath:
-            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
-            type: DirectoryOrCreate
-        {{- end }}
-        {{- if .Values.customConfig }}
         - name: mysql-config
           configMap:
             name: {{ include "mysql.fullname" . }}-config
+      {{- end }}
+
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode | quote }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass | quote }}
         {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size | quote }}

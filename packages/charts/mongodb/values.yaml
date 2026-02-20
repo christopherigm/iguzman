@@ -44,10 +44,12 @@ env: {}
 #     secretName: mongodb-secrets
 #     secretKey: root-password
 
-# ─── Host-path volume (data storage) ────────────────────────
-hostPathVolume:
+# ─── Persistent storage (PVC) ───────────────────────────────
+persistence:
   enabled: true
-  volumeMountPath: /shared-master # base path on the host node
+  size: 1Gi           # size of the PersistentVolumeClaim
+  storageClass: ''    # leave empty to use the cluster default StorageClass
+  accessMode: ReadWriteOnce
   mountPath: /data/db # path inside the container
 
 # ─── Health probes ──────────────────────────────────────────

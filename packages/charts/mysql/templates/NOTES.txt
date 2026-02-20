@@ -16,8 +16,3 @@ Then connect with:
   mysql -h 127.0.0.1 -P {{ .Values.service.port }} -u root -p
 
 Replicas: {{ .Values.replicaCount }}
-
-{{- if .Values.hostPathVolume.enabled }}
-
-Host path volume: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
-{{- end }}
