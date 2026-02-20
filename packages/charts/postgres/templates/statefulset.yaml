@@ -1,0 +1,141 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "postgres.fullname" . }}
+  labels:
+    {{- include "postgres.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "postgres.fullname" . }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "postgres.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "postgres.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if .Values.nodeAffinity.enabled }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      {{- toYaml .Values.nodeAffinity.nodeNames | nindent 22 }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - name: postgres
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+
+          {{- /* ── Command with custom config ── */}}
+          {{- if .Values.customConfig }}
+          command: ['postgres']
+          args:
+            - '-c'
+            - 'config_file=/etc/postgresql/postgresql.conf'
+          {{- end }}
+
+          {{- /* ── Environment variables ── */}}
+          env:
+            {{- if .Values.auth.password }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.auth.password | quote }}
+            {{- end }}
+            {{- if .Values.auth.user }}
+            - name: POSTGRES_USER
+              value: {{ .Values.auth.user | quote }}
+            {{- end }}
+            {{- if .Values.auth.database }}
+            - name: POSTGRES_DB
+              value: {{ .Values.auth.database | quote }}
+            {{- end }}
+            {{- if .Values.hostPathVolume.enabled }}
+            - name: PGDATA
+              value: {{ .Values.hostPathVolume.mountPath }}/pgdata
+            {{- end }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range .Values.envFromSecret }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .secretKey }}
+            {{- end }}
+
+          {{- /* ── Probes ── */}}
+          startupProbe:
+            exec:
+              command:
+                {{- toYaml .Values.probes.startupProbe.exec.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.probes.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startupProbe.failureThreshold }}
+            timeoutSeconds: {{ .Values.probes.startupProbe.timeoutSeconds | default 5 }}
+
+          livenessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.probes.livenessProbe.exec.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.probes.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.probes.livenessProbe.failureThreshold }}
+            timeoutSeconds: {{ .Values.probes.livenessProbe.timeoutSeconds | default 5 }}
+
+          readinessProbe:
+            exec:
+              command:
+                {{- toYaml .Values.probes.readinessProbe.exec.command | nindent 16 }}
+            initialDelaySeconds: {{ .Values.probes.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readinessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readinessProbe.failureThreshold }}
+            timeoutSeconds: {{ .Values.probes.readinessProbe.timeoutSeconds | default 5 }}
+
+          {{- /* ── Resources ── */}}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- /* ── Volume mounts ── */}}
+          volumeMounts:
+            {{- if .Values.hostPathVolume.enabled }}
+            - name: postgres-data
+              mountPath: {{ .Values.hostPathVolume.mountPath }}
+            {{- end }}
+            {{- if .Values.customConfig }}
+            - name: postgres-config
+              mountPath: /etc/postgresql
+              readOnly: true
+            {{- end }}
+
+      volumes:
+        {{- if .Values.hostPathVolume.enabled }}
+        - name: postgres-data
+          hostPath:
+            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if .Values.customConfig }}
+        - name: postgres-config
+          configMap:
+            name: {{ include "postgres.fullname" . }}-config
+        {{- end }}

@@ -1,7 +1,13 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveApp, readAppVersion, readEnvFile, createPrompt, ROOT } from './utils.mjs';
+import {
+  resolveApp,
+  readAppVersion,
+  readEnvFile,
+  createPrompt,
+  ROOT,
+} from './utils.mjs';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -16,7 +22,12 @@ function releaseExists(releaseName, namespace) {
 
 // ── Main ───────────────────────────────────────────────────────────────
 
-const appName = process.argv[2];
+const rawArgs = process.argv.slice(2);
+const yesIndex = rawArgs.indexOf('-y');
+const autoYes = yesIndex !== -1;
+if (autoYes) rawArgs.splice(yesIndex, 1);
+
+const appName = rawArgs[0];
 const appDir = resolveApp(appName, 'pnpm deploy <app-name>');
 
 const helmDir = join(appDir, 'helm');
@@ -34,7 +45,7 @@ console.log(`\n  Deploying "${appName}" via Helm\n`);
 
 // ── Interactive Prompts ────────────────────────────────────────────────
 
-const { rl, prompt } = createPrompt();
+const { rl, prompt } = createPrompt({ defaultYes: autoYes });
 
 const namespace = await prompt(`  Namespace`, env.NAMESPACE || '');
 

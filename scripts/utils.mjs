@@ -12,7 +12,19 @@ export const APPS_DIR = join(ROOT, 'apps');
 
 // ── Prompting ─────────────────────────────────────────────────────────
 
-export function createPrompt() {
+export function createPrompt(options = {}) {
+  const { defaultYes = false } = options;
+
+  if (defaultYes) {
+    const rl = { close: () => {} };
+
+    function prompt(_question, defaultValue) {
+      return Promise.resolve(defaultValue || '');
+    }
+
+    return { rl, prompt };
+  }
+
   const rl = createInterface({ input: process.stdin, output: process.stdout });
 
   function prompt(question, defaultValue) {
@@ -51,7 +63,9 @@ export function resolveApp(appName, usage) {
   const appDir = join(APPS_DIR, appName);
 
   if (!existsSync(appDir)) {
-    console.error(`\n  Error: App "${appName}" not found at apps/${appName}/\n`);
+    console.error(
+      `\n  Error: App "${appName}" not found at apps/${appName}/\n`,
+    );
     process.exit(1);
   }
 

@@ -1,0 +1,102 @@
+# ─────────────────────────────────────────────────────────────
+# PostgreSQL – Helm Values
+# ─────────────────────────────────────────────────────────────
+
+# -- Number of old ReplicaSets to keep for rollbacks (default: 2)
+revisionHistoryLimit: 2
+
+# -- Number of pod replicas
+replicaCount: 1
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: postgres
+  tag: '17'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+# - name: my-registry-secret
+
+# ─── Name overrides ─────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 5432 # port exposed by the Service
+  targetPort: 5432 # port the container listens on
+
+# ─── PostgreSQL configuration ───────────────────────────────
+auth:
+  password: '' # POSTGRES_PASSWORD – set via --set or envFromSecret
+  user: 'postgres' # POSTGRES_USER (default superuser)
+  database: '' # optional: POSTGRES_DB (creates a default database)
+
+# ─── Environment variables ──────────────────────────────────
+# Plain environment variables injected into the container.
+env: {}
+  # POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+
+# Sensitive values – reference existing Kubernetes Secrets.
+# envFromSecret:
+#   - name: POSTGRES_PASSWORD
+#     secretName: postgres-secrets
+#     secretKey: password
+
+# ─── Host-path volume (data storage) ────────────────────────
+hostPathVolume:
+  enabled: true
+  volumeMountPath: /shared-master # base path on the host node
+  mountPath: /var/lib/postgresql/data # path inside the container
+
+# ─── Health probes ──────────────────────────────────────────
+probes:
+  startupProbe:
+    exec:
+      command: ['pg_isready', '-U', 'postgres']
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 30
+    timeoutSeconds: 5
+
+  livenessProbe:
+    exec:
+      command: ['pg_isready', '-U', 'postgres']
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 5
+
+  readinessProbe:
+    exec:
+      command: ['pg_isready', '-U', 'postgres']
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+    timeoutSeconds: 5
+
+# ─── Node affinity (schedule on specific nodes) ─────────────
+nodeAffinity:
+  enabled: true
+  nodeNames:
+    - master
+  # - node-1
+  # - node-2
+
+# ─── Custom PostgreSQL configuration ────────────────────────
+# Extra postgresql.conf injected via ConfigMap.
+customConfig: |
+  max_connections = 200
+  shared_buffers = 128MB
+  log_timezone = 'UTC'
+  timezone = 'UTC'
+
+# ─── Resources ──────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi

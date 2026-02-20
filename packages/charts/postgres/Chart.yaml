@@ -1,0 +1,6 @@
+apiVersion: v2
+name: postgres
+description: Helm chart for a PostgreSQL database with hostPath-based persistent storage
+type: application
+version: 0.1.0
+appVersion: '17'

@@ -1,0 +1,23 @@
+──────────────────────────────────────────────────────────────
+  {{ include "postgres.fullname" . }} has been deployed!
+──────────────────────────────────────────────────────────────
+
+PostgreSQL is accessible within the cluster at:
+
+  Host: {{ include "postgres.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  Port: {{ .Values.service.port }}
+
+To connect from your local machine, run:
+
+  kubectl port-forward svc/{{ include "postgres.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.targetPort }} -n {{ .Release.Namespace }}
+
+Then connect with:
+
+  psql -h 127.0.0.1 -p {{ .Values.service.port }} -U {{ .Values.auth.user | default "postgres" }}
+
+Replicas: {{ .Values.replicaCount }}
+
+{{- if .Values.hostPathVolume.enabled }}
+
+Host path volume: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/{{ .Chart.Name }}/data
+{{- end }}

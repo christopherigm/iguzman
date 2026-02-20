@@ -1,11 +1,22 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveApp, readAppVersion, readEnvFile, createPrompt, ROOT } from './utils.mjs';
+import {
+  resolveApp,
+  readAppVersion,
+  readEnvFile,
+  createPrompt,
+  ROOT,
+} from './utils.mjs';
 
 // ── Main ───────────────────────────────────────────────────────────────
 
-const appName = process.argv[2];
+const rawArgs = process.argv.slice(2);
+const yesIndex = rawArgs.indexOf('-y');
+const autoYes = yesIndex !== -1;
+if (autoYes) rawArgs.splice(yesIndex, 1);
+
+const appName = rawArgs[0];
 const appDir = resolveApp(appName, 'pnpm docker <app-name>');
 
 const dockerfile = join(appDir, 'Dockerfile');
@@ -32,7 +43,7 @@ try {
 // ── Tag & Publish ──────────────────────────────────────────────────────
 
 const defaultVersion = readAppVersion(appDir);
-const { rl, prompt } = createPrompt();
+const { rl, prompt } = createPrompt({ defaultYes: autoYes });
 
 const tag = await prompt('  Tag of the new docker image', defaultVersion);
 

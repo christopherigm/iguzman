@@ -10,7 +10,7 @@
     "new-app": "node scripts/new-app.mjs",
     "docker": "node scripts/docker-build.mjs",
     "helm": "node scripts/helm-deploy.mjs",
-    "deployment": "node scripts/deployment.mjs"
+    "deploy-app": "node scripts/deploy-app.mjs"
   },
   "devDependencies": {
     "prettier": "^3.8.1",
