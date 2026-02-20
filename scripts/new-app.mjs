@@ -528,7 +528,7 @@ export default async function Home({ params }: Props) {
         >
           ${title}
         </h1>
-        <ThemeSwitch />
+        <ThemeSwitch hideOnMobile />
       </Box>
     </Container>
   );

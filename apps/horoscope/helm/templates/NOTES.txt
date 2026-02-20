@@ -1,0 +1,22 @@
+──────────────────────────────────────────────────────────────
+  {{ include "horoscope.fullname" . }} has been deployed!
+──────────────────────────────────────────────────────────────
+
+{{- if .Values.ingress.enabled }}
+The application is accessible at:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else }}
+
+To access the application, run:
+
+  kubectl port-forward svc/{{ include "horoscope.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.targetPort }}
+
+Then open http://localhost:{{ .Values.service.port }} in your browser.
+{{- end }}
+
+Replicas: {{ .Values.replicaCount }}
+{{- if .Values.sharedStorage.enabled }}
+Shared volume: {{ .Values.sharedStorage.mountPath }} ({{ .Values.sharedStorage.size }})
+{{- end }}
