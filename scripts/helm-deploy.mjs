@@ -112,6 +112,15 @@ try {
   console.log(
     `\n  Done! "${appName}" deployed successfully to namespace "${namespace}".\n`,
   );
+  console.log(
+    `  You can check the deployment status with:\n    helm status ${appName} -n ${namespace}\n`,
+  );
+  console.log(
+    `  To view logs:\n    kubectl logs deploy/${appName} -n ${namespace}\n`,
+  );
+  console.log(
+    `  To patch the deployment:\n    kubectl exec deploy/${appName} -n ${namespace} -- touch /app/shared/.healthy\n`,
+  );
 } catch {
   console.error(`\n  Error: Helm deployment failed\n`);
   process.exit(1);
