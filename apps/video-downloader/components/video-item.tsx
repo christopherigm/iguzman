@@ -54,25 +54,29 @@ function triggerBrowserDownload(url: string, filename: string) {
   link.click();
 }
 
-function uploadProcessedVideo(
+async function uploadProcessedVideo(
   file: string,
   blob: Blob,
   taskUpdate: Record<string, unknown>,
   setUploading: (v: boolean) => void,
 ): Promise<void> {
   setUploading(true);
-  return fetch(`${window.location.origin}/api/media/${file}`, {
-    method: 'PUT',
-    body: blob,
-    headers: { 'X-Task-Update': JSON.stringify(taskUpdate) },
-  })
-    .catch((err) => {
-      console.error('Failed to upload processed video to server:', err);
-    })
-    .then(() => undefined)
-    .finally(() => {
-      setUploading(false);
+  try {
+    const res = await fetch(`${window.location.origin}/api/media/${file}`, {
+      method: 'PUT',
+      body: blob,
+      headers: { 'X-Task-Update': JSON.stringify(taskUpdate) },
     });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error(`Failed to upload processed video (${res.status}):`, text);
+    }
+  } catch (err) {
+    console.error('Failed to upload processed video to server:', err);
+  } finally {
+    setUploading(false);
+  }
 }
 
 /* ── Props ──────────────────────────────────────────── */

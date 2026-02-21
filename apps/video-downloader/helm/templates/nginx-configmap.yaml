@@ -13,6 +13,15 @@ data:
 
         # ── Serve media files at the same path the Next.js API used ──
         location /api/media/ {
+            # Write operations (PUT) → forward to the Next.js app server
+            # so client-side processed videos are stored on disk.
+            if ($request_method !~ ^(GET|HEAD)$) {
+                proxy_pass http://127.0.0.1:{{ $.Values.service.targetPort }};
+            }
+
+            # Allow large video uploads (client-side FFmpeg output)
+            client_max_body_size 500m;
+
             alias {{ .Values.hostPathVolume.mountPath }}/;
 
             # Only the formats video-downloader produces
