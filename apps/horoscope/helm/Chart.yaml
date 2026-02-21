@@ -1,0 +1,6 @@
+apiVersion: v2
+name: horoscope
+description: Helm chart for the Next.js horoscope application
+type: application
+version: 0.1.0
+appVersion: '0.1.0'

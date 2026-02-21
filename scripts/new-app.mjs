@@ -528,7 +528,7 @@ export default async function Home({ params }: Props) {
         >
           ${title}
         </h1>
-        <ThemeSwitch />
+        <ThemeSwitch hideOnMobile />
       </Box>
     </Container>
   );
@@ -811,8 +811,8 @@ CMD ["node", "apps/${name}/server.js"]
 `;
 }
 
-function envExample(name) {
-  return `DOCKER_REGISTRY=docker
+function envExample(name, registryUser = 'my-dockerhub-username') {
+  return `DOCKER_REGISTRY=${registryUser}
 NAMESPACE=${name}
 `;
 }
@@ -1293,8 +1293,11 @@ async function main() {
     writeFile(appPath('proxy.ts'), proxyTs());
     writeFile(appPath('i18n/request.ts'), i18nRequestTs());
     writeFile(appPath('global.d.ts'), globalDts());
+    writeFile(appPath('messages/de.json'), messagesJson('de', name));
     writeFile(appPath('messages/en.json'), messagesJson('en', name));
     writeFile(appPath('messages/es.json'), messagesJson('es', name));
+    writeFile(appPath('messages/fr.json'), messagesJson('fr', name));
+    writeFile(appPath('messages/pt.json'), messagesJson('pt', name));
 
     if (includePwa) {
       writeFile(appPath('app/[locale]/~offline/page.tsx'), offlinePageTsx());
@@ -1319,7 +1322,7 @@ async function main() {
 
   // Deployment files
   writeFile(appPath('Dockerfile'), dockerfile(name));
-  writeFile(appPath('env.example'), envExample(name));
+  writeFile(appPath('env.example'), envExample(name, registryUser));
 
   // Helm chart
   writeFile(appPath('helm/Chart.yaml'), helmChartYaml(name));
@@ -1345,6 +1348,9 @@ async function main() {
   console.log('    1. pnpm install');
   console.log(`    2. pnpm --filter ${name} dev`);
   console.log(`    3. cp apps/${name}/env.example apps/${name}/.env`);
+  console.log(
+    `    4. Update the .env file with your Docker registry credentials`,
+  );
   console.log('');
 }
 
