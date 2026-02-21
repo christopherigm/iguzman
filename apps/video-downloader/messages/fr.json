@@ -33,6 +33,7 @@
     "title": "Téléchargements",
     "emptyState": "Aucun téléchargement",
     "untitledVideo": "Vidéo sans titre",
+    "untitledAudio": "Audio sans titre",
     "toggleDetails": "Afficher les détails",
     "copyLink": "Copier le lien",
     "copied": "Copié !",

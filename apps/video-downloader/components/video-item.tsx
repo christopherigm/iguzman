@@ -123,7 +123,10 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     video.status === 'processing' ||
     video.status === 'converting';
   const isBusy = isProcessing || video.status === 'queued';
-  const displayName = video.name ?? video.uploader ?? t('untitledVideo');
+  const displayName =
+    video.name ??
+    video.uploader ??
+    (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
 
   /* ── Enqueue FFmpeg processing (shared by FPS & H.264) ── */
   const enqueueProcessing = useCallback(
