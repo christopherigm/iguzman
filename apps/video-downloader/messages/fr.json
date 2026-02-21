@@ -77,6 +77,10 @@
     "convertingH264": "Conversion H.265 → H.264… {progress}%",
     "errorConvertFailed": "La conversion H.265 vers H.264 a échoué.",
     "detailCodec": "Codec",
-    "converted": "converti"
+    "converted": "converti",
+    "removeBlackBars": "Supprimer les bandes noires",
+    "removingBlackBars": "Suppression des bandes noires… {progress}%",
+    "errorRemoveBlackBarsFailed": "Échec de la suppression des bandes noires.",
+    "toggleExtraActions": "Plus d'actions"
   }
 }

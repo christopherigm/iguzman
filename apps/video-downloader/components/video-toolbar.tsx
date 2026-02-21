@@ -217,15 +217,9 @@ export function VideoToolbar({
       {/* ── Spacer ────────────────────────────────────── */}
       <span className="vt-spacer" />
       {/* ── Pagination ────────────────────────────────── */}
-      {totalPages > 1 && (
+      {totalPages > 0 && (
         <Box className="vt-pagination">
-          <Box
-            display="flex"
-            alignItems="center"
-            backgroundColor="var(--surface-1)"
-            padding={7}
-            borderRadius={10}
-          >
+          <Box className="vt-pagination-inner">
             <button
               type="button"
               className="vt-page-btn vt-page-btn--prev"
@@ -244,7 +238,7 @@ export function VideoToolbar({
 
             <span className="vt-page-info">
               {page} / {totalPages}
-              <span style={{ opacity: 0.5, marginLeft: 4 }}>
+              <span style={{ opacity: 0.7, marginLeft: 4 }}>
                 ({filteredCount})
               </span>
             </span>

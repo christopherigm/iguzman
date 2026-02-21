@@ -77,6 +77,10 @@
     "convertingH264": "Converting H.265 → H.264… {progress}%",
     "errorConvertFailed": "H.265 to H.264 conversion failed.",
     "detailCodec": "Codec",
-    "converted": "converted"
+    "converted": "converted",
+    "removeBlackBars": "Remove Black Bars",
+    "removingBlackBars": "Removing black bars… {progress}%",
+    "errorRemoveBlackBarsFailed": "Black bar removal failed.",
+    "toggleExtraActions": "More actions"
   }
 }

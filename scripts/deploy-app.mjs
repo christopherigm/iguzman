@@ -27,6 +27,17 @@ function updateAppVersion(appDir) {
   pkg.version = newVersion;
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8');
 
+  const manifestPath = join(appDir, 'public', 'manifest.json');
+  if (existsSync(manifestPath)) {
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+    manifest.version = newVersion;
+    writeFileSync(
+      manifestPath,
+      JSON.stringify(manifest, null, 2) + '\n',
+      'utf-8',
+    );
+  }
+
   return { oldVersion, newVersion };
 }
 

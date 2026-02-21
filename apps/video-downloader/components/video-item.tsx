@@ -88,6 +88,7 @@ export interface VideoItemProps {
 export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const t = useTranslations('VideoGrid');
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [extraActionsOpen, setExtraActionsOpen] = useState(false);
   const [copying, setCopying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -103,6 +104,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     progress: ffmpegProgress,
     interpolateFps,
     convertToH264,
+    removeBlackBars,
   } = useFFmpeg();
 
   const { enqueue, cancel } = useProcessingQueue();
@@ -121,7 +123,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const enqueueProcessing = useCallback(
     async (opts: {
       activeStatus: VideoStatus;
-      process: (sourceUrl: string) => Promise<{ objectUrl: string; blob: Blob }>;
+      process: (
+        sourceUrl: string,
+      ) => Promise<{ objectUrl: string; blob: Blob }>;
       donePatch: Partial<StoredVideo>;
       taskUpdate: Record<string, unknown>;
       errorKey: string;
@@ -198,6 +202,32 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         downloadPrefix: 'video',
       }),
     [enqueueProcessing, convertToH264],
+  );
+
+  /* ── Remove black bars handler ──────────────────────── */
+  const handleRemoveBlackBars = useCallback(
+    () =>
+      enqueueProcessing({
+        activeStatus: 'processing',
+        process: (url) => removeBlackBars(url),
+        donePatch: { blackBarsRemoved: true },
+        taskUpdate: { blackBarsRemoved: true },
+        errorKey: 'errorRemoveBlackBarsFailed',
+      }),
+    [enqueueProcessing, removeBlackBars],
+  );
+
+  /* ── Manual FPS interpolation handler ───────────────── */
+  const handleInterpolateFpsManual = useCallback(
+    (targetFps: number) =>
+      enqueueProcessing({
+        activeStatus: 'processing',
+        process: (url) => interpolateFps(url, targetFps),
+        donePatch: { fpsApplied: true, fps: String(targetFps) },
+        taskUpdate: { fpsApplied: true },
+        errorKey: 'errorFfmpegFailed',
+      }),
+    [enqueueProcessing, interpolateFps],
   );
 
   /* ── Handle completed task from polling ────────────── */
@@ -483,9 +513,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       </div>
 
       {/* ── Details panel (collapsible) ───────────── */}
-      {detailsOpen ? (
-        <VideoDetailsPanel video={video} t={t} />
-      ) : null}
+      {detailsOpen ? <VideoDetailsPanel video={video} t={t} /> : null}
 
       {/* ── Media preview ─────────────────────────── */}
       <VideoMediaPreview
@@ -529,14 +557,27 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           video={video}
           isBusy={isBusy}
           copying={copying}
+          extraActionsOpen={extraActionsOpen}
           onCopy={handleCopy}
           onRetry={handleDownload}
           onRedownload={handleRedownload}
-          onConvert={() => setConfirmConvert(true)}
+          onToggleExtra={() => setExtraActionsOpen((p) => !p)}
           onDelete={() => setConfirmRemove(true)}
           t={t}
         />
       </Box>
+
+      {/* ── Extra actions panel (collapsible) ─────────── */}
+      {extraActionsOpen ? (
+        <VideoExtraActions
+          video={video}
+          isBusy={isBusy}
+          onRemoveBlackBars={handleRemoveBlackBars}
+          onInterpolateFps={handleInterpolateFpsManual}
+          onConvert={() => setConfirmConvert(true)}
+          t={t}
+        />
+      ) : null}
 
       {/* ── Confirmation modals ───────────────────── */}
       {confirmConvert ? (
@@ -700,45 +741,35 @@ function VideoActions({
   video,
   isBusy,
   copying,
+  extraActionsOpen,
   onCopy,
   onRetry,
   onRedownload,
-  onConvert,
+  onToggleExtra,
   onDelete,
   t,
 }: {
   video: StoredVideo;
   isBusy: boolean;
   copying: boolean;
+  extraActionsOpen: boolean;
   onCopy: () => void;
   onRetry: () => void;
   onRedownload: () => void;
-  onConvert: () => void;
+  onToggleExtra: () => void;
   onDelete: () => void;
   t: ReturnType<typeof useTranslations<'VideoGrid'>>;
 }) {
   return (
-    <Box
-      className="vi-actions"
-      display="flex"
-      justifyContent="space-evenly"
-    >
+    <Box className="vi-actions" display="flex" justifyContent="space-evenly">
       <button
         type="button"
-        className="vi-icon-btn"
-        onClick={onCopy}
-        aria-label={t('copyLink')}
-        title={copying ? t('copied') : t('copyLink')}
+        className="vi-icon-btn vi-icon-btn--danger"
+        onClick={onDelete}
+        aria-label={t('delete')}
+        title={t('delete')}
       >
-        <Icon
-          icon="/icons/copy.svg"
-          size={15}
-          color={
-            copying
-              ? 'var(--accent, #06b6d4)'
-              : 'var(--foreground, #171717)'
-          }
-        />
+        <Icon icon="/icons/delete-video.svg" size={15} color="#ef4444" />
       </button>
 
       <button
@@ -756,6 +787,22 @@ function VideoActions({
         />
       </button>
 
+      <button
+        type="button"
+        className="vi-icon-btn"
+        onClick={onCopy}
+        aria-label={t('copyLink')}
+        title={copying ? t('copied') : t('copyLink')}
+      >
+        <Icon
+          icon="/icons/copy.svg"
+          size={15}
+          color={
+            copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+          }
+        />
+      </button>
+
       {video.downloadURL ? (
         <button
           type="button"
@@ -768,37 +815,111 @@ function VideoActions({
             icon="/icons/download.svg"
             size={15}
             color={
-              copying
-                ? 'var(--accent, #06b6d4)'
-                : 'var(--foreground, #171717)'
+              copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
             }
           />
         </button>
       ) : null}
 
-      {video.isH265 && video.downloadURL && !video.h264Converted ? (
+      <button
+        type="button"
+        className="vi-icon-btn"
+        onClick={onToggleExtra}
+        aria-label={t('toggleExtraActions')}
+        title={t('toggleExtraActions')}
+      >
+        <Icon
+          icon="/icons/chevron-down.svg"
+          size={15}
+          color="var(--foreground, #171717)"
+          className={
+            extraActionsOpen ? 'vi-chevron--open' : 'vi-chevron--closed'
+          }
+        />
+      </button>
+    </Box>
+  );
+}
+
+/* ── Extra actions panel ─────────────────────────────── */
+
+const FPS_OPTIONS = [
+  { value: 60, label: '60 FPS' },
+  { value: 90, label: '90 FPS' },
+  { value: 120, label: '120 FPS' },
+] as const;
+
+function VideoExtraActions({
+  video,
+  isBusy,
+  onRemoveBlackBars,
+  onInterpolateFps,
+  onConvert,
+  t,
+}: {
+  video: StoredVideo;
+  isBusy: boolean;
+  onRemoveBlackBars: () => void;
+  onInterpolateFps: (fps: number) => void;
+  onConvert: () => void;
+  t: ReturnType<typeof useTranslations<'VideoGrid'>>;
+}) {
+  const canProcess = !isBusy && !!video.downloadURL && !video.justAudio;
+
+  return (
+    <div className="vi-extra-actions">
+      {video.isH265 && !video.h264Converted ? (
         <button
           type="button"
-          className="vi-icon-btn"
+          className="vi-fps-btn"
           onClick={onConvert}
           disabled={isBusy}
           aria-label={t('convertH264')}
           title={t('convertH264')}
         >
-          <Icon icon="/icons/convert.svg" size={15} color="#8b5cf6" />
+          <Icon
+            icon="/icons/convert.svg"
+            size={14}
+            color="var(--accent, #8b5cf6)"
+          />
+          {t('convertH264')}
         </button>
       ) : null}
 
       <button
         type="button"
-        className="vi-icon-btn vi-icon-btn--danger"
-        onClick={onDelete}
-        aria-label={t('delete')}
-        title={t('delete')}
+        className="vi-fps-btn"
+        onClick={onRemoveBlackBars}
+        disabled={!canProcess || video.blackBarsRemoved}
+        aria-label={t('removeBlackBars')}
+        title={t('removeBlackBars')}
       >
-        <Icon icon="/icons/delete-video.svg" size={15} color="#ef4444" />
+        <Icon
+          icon="/icons/remove-black-bars.svg"
+          size={14}
+          color="var(--accent, #8b5cf6)"
+        />
+        {t('removeBlackBars')}
       </button>
-    </Box>
+
+      <Box>
+        {FPS_OPTIONS.map(({ value, label }) => {
+          const alreadyApplied = video.fpsApplied && value <= Number(video.fps);
+          return (
+            <button
+              key={value}
+              type="button"
+              className="vi-fps-btn"
+              onClick={() => onInterpolateFps(value)}
+              disabled={!canProcess || alreadyApplied}
+              title={label}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </Box>
+    </div>
   );
 }
 

@@ -77,6 +77,10 @@
     "convertingH264": "H.265 → H.264 konvertieren… {progress}%",
     "errorConvertFailed": "H.265-zu-H.264-Konvertierung fehlgeschlagen.",
     "detailCodec": "Codec",
-    "converted": "konvertiert"
+    "converted": "konvertiert",
+    "removeBlackBars": "Schwarze Balken entfernen",
+    "removingBlackBars": "Schwarze Balken werden entfernt… {progress}%",
+    "errorRemoveBlackBarsFailed": "Entfernung der schwarzen Balken fehlgeschlagen.",
+    "toggleExtraActions": "Mehr Aktionen"
   }
 }

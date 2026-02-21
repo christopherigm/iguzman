@@ -49,6 +49,10 @@ export interface NavbarProps extends UIComponentProps {
   closeIcon?: string;
   /** SVG path for the chevron icon. */
   chevronIcon?: string;
+  /** Enable theme switch in drawer. Defaults to `false`. */
+  themeSwitch?: boolean;
+  /** Make the navbar background semi-transparent with a backdrop blur. Defaults to `false`. */
+  translucent?: boolean;
 }
 
 // ── useScrollDirection ───────────────────────────────────────────────
@@ -265,6 +269,8 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     chevronIcon,
     className,
     id,
+    themeSwitch = true,
+    translucent = false,
     ...uiProps
   } = props;
 
@@ -310,6 +316,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     'ui-navbar',
     isHidden ? 'ui-navbar--hidden' : '',
     fullwidth ? 'ui-navbar--fullwidth' : '',
+    translucent ? 'ui-navbar--translucent' : '',
     className,
   ]
     .filter(Boolean)
@@ -409,6 +416,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         onSearch={onSearch}
         onSearchChange={onSearchChange}
         searchIcon={searchIcon}
+        themeSwitch={themeSwitch}
       />
     </>
   );

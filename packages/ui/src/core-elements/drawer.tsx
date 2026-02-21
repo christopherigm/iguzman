@@ -42,6 +42,8 @@ export interface DrawerProps extends UIComponentProps {
   onSearchChange?: (search: string) => void;
   /** SVG path for the search icon. */
   searchIcon?: string;
+  /** Enable theme switch in drawer. Defaults to `false`. */
+  themeSwitch?: boolean;
 }
 
 // ── DrawerItem ───────────────────────────────────────────────────────
@@ -176,6 +178,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   searchIcon,
   className,
   id,
+  themeSwitch = true,
   ...uiProps
 }) => {
   const [computedLogoWidth, setComputedLogoWidth] = useState(logoWidth);
@@ -258,7 +261,11 @@ export const Drawer: React.FC<DrawerProps> = ({
 
         {/* Search */}
         {searchBox && (
-          <DrawerSearch onSearch={onSearch} onSearchChange={onSearchChange} searchIcon={searchIcon} />
+          <DrawerSearch
+            onSearch={onSearch}
+            onSearchChange={onSearchChange}
+            searchIcon={searchIcon}
+          />
         )}
 
         {/* Menu items */}
@@ -273,14 +280,16 @@ export const Drawer: React.FC<DrawerProps> = ({
           ))}
         </nav>
 
-        <Box
-          display="flex"
-          justifyContent="center"
-          width="100%"
-          marginBottom={10}
-        >
-          <ThemeSwitch />
-        </Box>
+        {themeSwitch && (
+          <Box
+            display="flex"
+            justifyContent="center"
+            width="100%"
+            marginBottom={10}
+          >
+            <ThemeSwitch />
+          </Box>
+        )}
         {/* Footer: version */}
         {version && (
           <div className="ui-drawer-footer">

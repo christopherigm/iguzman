@@ -97,6 +97,7 @@ export default async function LocaleLayout({ children, params }: Props) {
               items={[{ label: 'Home', href: '/' }]}
               version={`v${packageJson.version}`}
               searchBox
+              translucent
             />
             {children}
           </PaletteProvider>

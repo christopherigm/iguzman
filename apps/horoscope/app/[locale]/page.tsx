@@ -1,289 +1,209 @@
-import { setRequestLocale } from 'next-intl/server';
-import { ThemeSwitch } from '@repo/ui/theme-switch';
-import { Switch } from '@repo/ui/core-elements/switch';
-import { Box } from '@repo/ui/core-elements/box';
-import { Container } from '@repo/ui/core-elements/container';
-import { Grid } from '@repo/ui/core-elements/grid';
-import Button from '@repo/ui/core-elements/button';
-
-type Props = {
-  params: Promise<{ locale: string }>;
-};
-
-export default async function Home({ params }: Props) {
-  const { locale } = await params;
-  setRequestLocale(locale);
-
+export default async function Home() {
   const features = [
     {
-      title: 'Personalized Daily Horoscopes',
-      description:
-        'Receive daily guidance tuned to your sign, mood, and current planetary aspects.',
-      accent: 'Daily',
+      emoji: '☀️',
+      color: '#ffb347',
+      bg: '#fff8ee',
+      border: '#ffd080',
+      title: 'Daily Horoscopes',
+      desc: 'Personalized daily guidance tuned to your sign, mood, and current planetary aspects.',
     },
     {
+      emoji: '🌙',
+      color: '#a0c4ff',
+      bg: '#eef6ff',
+      border: '#80b4ff',
       title: 'Lunar Calendar',
-      description:
-        'Track moon phases, eclipses, and ideal days for intention-setting and reflection.',
-      accent: 'Moon',
+      desc: 'Track moon phases, eclipses, and ideal days for intention-setting and reflection.',
     },
     {
+      emoji: '⭐',
+      color: '#c8a0e8',
+      bg: '#f5eeff',
+      border: '#b888e0',
       title: 'Birthchart',
-      description:
-        'Explore your natal blueprint with houses, aspects, and planetary placements.',
-      accent: 'Chart',
+      desc: 'Explore your natal blueprint with houses, aspects, and planetary placements.',
     },
     {
+      emoji: '💕',
+      color: '#ff8fab',
+      bg: '#fff0f4',
+      border: '#ffb3c6',
       title: 'Compatibility',
-      description:
-        'Understand relationship dynamics across love, friendship, and collaboration.',
-      accent: 'Match',
+      desc: 'Understand relationship dynamics across love, friendship, and collaboration.',
     },
     {
+      emoji: '🔮',
+      color: '#9bb0ff',
+      bg: '#eef0ff',
+      border: '#8898ff',
       title: 'Forecast',
-      description:
-        'See short and long-range astrological forecasts to plan with confidence.',
-      accent: 'Future',
+      desc: 'See short and long-range astrological forecasts to plan with confidence.',
     },
     {
+      emoji: '🌿',
+      color: '#7ecfa0',
+      bg: '#edfff4',
+      border: '#60c080',
       title: 'Meditations',
-      description:
-        'Guided meditations designed around the sky of the day and your inner rhythm.',
-      accent: 'Calm',
+      desc: 'Guided meditations designed around the sky of the day and your inner rhythm.',
     },
     {
+      emoji: '✨',
+      color: '#f0a0c0',
+      bg: '#fff4f8',
+      border: '#e888b0',
       title: 'Dreamings',
-      description:
-        'Capture dreams, decode recurring symbols, and reveal subconscious patterns.',
-      accent: 'Dream',
+      desc: 'Capture dreams, decode recurring symbols, and reveal subconscious patterns.',
     },
   ];
 
+  const signs = [
+    { sign: '♈', name: 'Aries' },
+    { sign: '♉', name: 'Taurus' },
+    { sign: '♊', name: 'Gemini' },
+    { sign: '♋', name: 'Cancer' },
+    { sign: '♌', name: 'Leo' },
+    { sign: '♍', name: 'Virgo' },
+    { sign: '♎', name: 'Libra' },
+    { sign: '♏', name: 'Scorpio' },
+    { sign: '♐', name: 'Sagittarius' },
+    { sign: '♑', name: 'Capricorn' },
+    { sign: '♒', name: 'Aquarius' },
+    { sign: '♓', name: 'Pisces' },
+  ];
+
   return (
-    <Container
-      size="xl"
-      display="flex"
-      flexDirection="column"
-      paddingX={24}
-      styles={{
-        minHeight: '100vh',
-        paddingTop: 100,
-        paddingBottom: 64,
-        position: 'relative',
-      }}
-    >
-      <Box
-        styles={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          background:
-            'radial-gradient(80rem 40rem at 20% -10%, color-mix(in oklab, var(--accent) 28%, transparent), transparent), radial-gradient(70rem 40rem at 90% 10%, color-mix(in oklab, var(--surface-2) 70%, transparent), transparent)',
-          opacity: 0.9,
-        }}
-      />
+    <div className="dk">
+      {/* Background layers */}
+      <div className="dk-orb dk-orb-1" />
+      <div className="dk-orb dk-orb-2" />
+      <div className="dk-orb dk-orb-3" />
 
-      <Box
-        display="flex"
-        flexDirection="column"
-        gap={28}
-        styles={{ position: 'relative', zIndex: 1 }}
-      >
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          flexWrap="wrap"
-          gap={12}
-          styles={{
-            padding: 12,
-            borderRadius: 12,
-            border: '1px solid var(--surface-2)',
-            backgroundColor:
-              'color-mix(in oklab, var(--surface-1) 78%, transparent)',
-            backdropFilter: 'blur(6px)',
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={10}>
-            <Box
-              width={10}
-              height={10}
-              borderRadius={999}
-              backgroundColor="var(--accent)"
-            />
-            <span style={{ fontSize: 12, letterSpacing: 1.2, opacity: 0.8 }}>
-              COSMIC INTELLIGENCE FOR EVERY DAY
-            </span>
-          </Box>
-          <ThemeSwitch hideOnMobile />
-        </Box>
+      {/* Sparkle stars */}
+      <div className="dk-sparkles">
+        {['✦', '✧', '⋆', '✦', '✧', '⋆', '✦', '✧', '⋆', '✦'].map((s, i) => (
+          <span key={i} className="dk-spark">
+            {s}
+          </span>
+        ))}
+      </div>
 
-        <Box
-          display="flex"
-          flexDirection="column"
-          gap={22}
-          styles={{
-            borderRadius: 22,
-            border: '1px solid var(--surface-2)',
-            backgroundColor:
-              'color-mix(in oklab, var(--surface-1) 84%, transparent)',
-            boxShadow:
-              '0 40px 80px -55px color-mix(in oklab, var(--accent) 60%, transparent)',
-            padding: 32,
-          }}
-        >
-          <h1
-            style={{
-              fontSize: 'clamp(2rem, 5vw, 4rem)',
-              lineHeight: 1.04,
-              letterSpacing: -1.5,
-              fontWeight: 700,
-              margin: 0,
-              maxWidth: 900,
-            }}
-          >
-            Horoscope designed for clarity, intuition, and cosmic rhythm.
+      <div className="dk-wrap">
+        {/* Top badge */}
+        <div className="dk-topbar">
+          <div className="dk-badge">
+            <span>✨</span>
+            <span>Cosmic Intelligence for Every Day</span>
+            <span>✨</span>
+          </div>
+        </div>
+
+        {/* Hero */}
+        <div className="dk-hero">
+          <h1 className="dk-headline">
+            Your Cosmic
+            <span className="dk-headline-accent">Best Friend ✨</span>
           </h1>
-          <p
-            style={{
-              margin: 0,
-              maxWidth: 700,
-              fontSize: 18,
-              opacity: 0.86,
-              lineHeight: 1.6,
-            }}
-          >
+          <p className="dk-body">
             Personalized guidance, moon timing, compatibility insights, and calm
-            daily rituals—beautifully delivered in one focused experience.
+            daily rituals—delivered with love, for every sign.
           </p>
+          <div className="dk-btns">
+            <a href={`/`} className="dk-btn-primary">
+              ✨ Start My Reading
+            </a>
+            <a href={`/#features`} className="dk-btn-ghost">
+              🌙 Explore Features
+            </a>
+          </div>
+        </div>
 
-          <Box display="flex" gap={10} flexWrap="wrap" alignItems="center">
-            <Button
-              text="Start Daily Reading"
-              href={`/${locale}`}
-              padding={10}
-            />
-            <Button
-              text="Explore Forecast"
-              href={`/${locale}#features`}
-              padding={10}
-              backgroundColor="var(--surface-2)"
-              color="var(--foreground)"
-            />
-          </Box>
-
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            flexWrap="wrap"
-            gap={10}
-            styles={{
-              border: '1px solid var(--surface-2)',
-              borderRadius: 12,
-              padding: 12,
-            }}
-          >
-            <Box>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
-                Cosmic notifications
-              </h3>
-              <p style={{ margin: 0, opacity: 0.75, fontSize: 13 }}>
-                Get a gentle reminder when your daily horoscope is ready.
-              </p>
-            </Box>
-            <Switch defaultChecked />
-          </Box>
-        </Box>
-
-        <Grid container spacing={2} id="features">
-          {features.map((feature) => (
-            <Grid key={feature.title} item size={{ xs: 12, sm: 6, md: 4 }}>
-              <Box
-                display="flex"
-                flexDirection="column"
-                gap={10}
-                styles={{
-                  height: '100%',
-                  borderRadius: 16,
-                  border: '1px solid var(--surface-2)',
-                  backgroundColor:
-                    'color-mix(in oklab, var(--surface-1) 88%, transparent)',
-                  padding: 18,
-                }}
-              >
-                <Box
-                  display="inline-flex"
-                  alignSelf="flex-start"
-                  borderRadius={999}
-                  styles={{
-                    backgroundColor:
-                      'color-mix(in oklab, var(--accent) 25%, transparent)',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    padding: '4px 10px',
-                    letterSpacing: 0.6,
-                  }}
-                >
-                  {feature.accent}
-                </Box>
-                <h2 style={{ margin: 0, fontSize: 21, letterSpacing: -0.4 }}>
-                  {feature.title}
-                </h2>
-                <p style={{ margin: 0, opacity: 0.82, lineHeight: 1.6 }}>
-                  {feature.description}
-                </p>
-              </Box>
-            </Grid>
+        {/* Moon pills */}
+        <div className="dk-moon-row">
+          {[
+            '🌑 New Moon',
+            '🌓 First Quarter',
+            '🌕 Full Moon',
+            '🌗 Last Quarter',
+            '☀️ Solar Return',
+          ].map((m) => (
+            <div key={m} className="dk-moon-pill">
+              {m}
+            </div>
           ))}
-        </Grid>
+        </div>
 
-        <Grid container spacing={2}>
-          <Grid item size={{ xs: 12, md: 8 }}>
-            <Box
-              display="flex"
-              flexDirection="column"
-              gap={8}
-              styles={{
-                height: '100%',
-                borderRadius: 16,
-                border: '1px solid var(--surface-2)',
-                backgroundColor: 'var(--surface-1)',
-                padding: 20,
+        {/* Notification */}
+        <div className="dk-notif">
+          <div className="dk-notif-text">
+            <h3>🔔 Cosmic Notifications</h3>
+            <p>Get a gentle reminder when your daily horoscope is ready.</p>
+          </div>
+          <div className="dk-toggle" />
+        </div>
+
+        {/* Features */}
+        <div className="dk-section-label">
+          <span className="dk-section-title">Your Cosmic Toolkit</span>
+          <span className="dk-section-sub">
+            Everything you need to live in alignment with the stars ✦
+          </span>
+        </div>
+
+        <div className="dk-features" id="features">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="dk-feature"
+              style={{
+                background: f.bg,
+                borderColor: f.border,
+                color: f.color,
               }}
             >
-              <h2 style={{ margin: 0, fontSize: 24 }}>
-                Your daily cosmic dashboard
-              </h2>
-              <p style={{ margin: 0, lineHeight: 1.7, opacity: 0.84 }}>
-                Start every day with one clear ritual: check your horoscope,
-                align with the moon, and set your intention before the noise
-                begins.
-              </p>
-            </Box>
-          </Grid>
-          <Grid item size={{ xs: 12, md: 4 }}>
-            <Box
-              display="flex"
-              flexDirection="column"
-              gap={8}
-              styles={{
-                height: '100%',
-                borderRadius: 16,
-                border: '1px solid var(--surface-2)',
-                backgroundColor: 'var(--surface-1)',
-                padding: 20,
-              }}
+              <span className="dk-feature-emoji">{f.emoji}</span>
+              <span className="dk-feature-tag">{f.title.split(' ')[0]}</span>
+              <h2 className="dk-feature-title">{f.title}</h2>
+              <p className="dk-feature-desc">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom */}
+        <div className="dk-bottom">
+          <div className="dk-bottom-card">
+            <span>🌅</span>
+            <h2 className="dk-bottom-title">Your Daily Cosmic Dashboard</h2>
+            <p className="dk-bottom-body">
+              Start every day with one clear ritual: check your horoscope, align
+              with the moon, and set your intention before the noise begins.
+            </p>
+          </div>
+          <div className="dk-bottom-card dk-bottom-card-signs">
+            <span style={{ fontSize: '48px', lineHeight: 1 }}>🌙</span>
+            <h3
+              className="dk-bottom-title"
+              style={{ fontSize: '1.5rem', margin: '12px 0 8px' }}
             >
-              <h3 style={{ margin: 0, fontSize: 18 }}>Built for all signs</h3>
-              <p style={{ margin: 0, opacity: 0.84, lineHeight: 1.7 }}>
-                Aries to Pisces, personalized guidance keeps your day centered
-                and intentional.
-              </p>
-            </Box>
-          </Grid>
-        </Grid>
-      </Box>
-    </Container>
+              All 12 Signs
+            </h3>
+            <p className="dk-bottom-body" style={{ fontSize: '14px' }}>
+              Aries to Pisces—personalized guidance for every soul.
+            </p>
+            <div className="dk-signs-grid">
+              {signs.map((s) => (
+                <div key={s.sign} className="dk-sign-bubble">
+                  <span className="dk-sign-bubble-glyph">{s.sign}</span>
+                  <span className="dk-sign-bubble-name">
+                    {s.name.slice(0, 3)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

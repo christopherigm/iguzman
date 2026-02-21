@@ -14,7 +14,8 @@
     "deploy-postgres": "node scripts/deploy-postgres.mjs",
     "deploy-mongodb": "node scripts/deploy-mongodb.mjs",
     "deploy-mysql": "node scripts/deploy-mysql.mjs",
-    "deploy-redis": "node scripts/deploy-redis.mjs"
+    "deploy-redis": "node scripts/deploy-redis.mjs",
+    "generate-icons": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {
     "prettier": "^3.8.1",

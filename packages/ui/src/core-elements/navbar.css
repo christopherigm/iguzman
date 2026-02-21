@@ -14,6 +14,22 @@
   width: 100%;
 }
 
+.ui-navbar--translucent {
+  background-color: var(--accent-foreground, #ffffff);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+@supports (background-color: color-mix(in srgb, white 20%, transparent)) {
+  .ui-navbar--translucent {
+    background-color: color-mix(
+      in srgb,
+      var(--accent-foreground, #ffffff) 20%,
+      transparent
+    );
+  }
+}
+
 .ui-navbar--hidden {
   transform: translateY(-100%);
 }

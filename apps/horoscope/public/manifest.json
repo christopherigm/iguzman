@@ -2,10 +2,11 @@
   "name": "Horoscope",
   "short_name": "Horoscope",
   "description": "Horoscope application",
+  "version": "0.1.4",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#68c3f7",
+  "theme_color": "#3d1c60",
   "orientation": "portrait-primary",
   "icons": [
     {

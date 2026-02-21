@@ -216,3 +216,56 @@
   padding: 2px 12px 4px;
   letter-spacing: -0.01em;
 }
+
+/* ── Extra actions panel (collapsible) ───────────────── */
+
+.vi-extra-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px 10px;
+  border-top: 1px solid
+    color-mix(in srgb, var(--foreground, #111) 5%, transparent);
+  animation: vi-slide-down 200ms ease-out;
+}
+
+.vi-fps-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+  height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--foreground, #171717);
+  transition:
+    background 180ms ease,
+    opacity 180ms ease;
+}
+
+.vi-fps-btn:hover:not(:disabled) {
+  background: var(--surface-2, #f0f0f0);
+}
+
+.vi-fps-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+/* ── Chevron rotation for extra-actions toggle ───────── */
+
+.vi-chevron--open {
+  transform: rotate(180deg);
+  transition: transform 200ms ease;
+}
+
+.vi-chevron--closed {
+  transform: rotate(0deg);
+  transition: transform 200ms ease;
+}

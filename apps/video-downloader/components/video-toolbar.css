@@ -173,11 +173,31 @@
   gap: 4px;
   flex-shrink: 0;
 }
+.vt-pagination-inner {
+  display: flex;
+  align-items: center;
+  background-color: var(--surface-1);
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+@supports (background-color: color-mix(in srgb, white 70%, transparent)) {
+  .vt-pagination-inner {
+    background-color: color-mix(
+      in srgb,
+      var(--accent-foreground, #ffffff) 70%,
+      transparent
+    );
+  }
+}
 
 .vt-page-info {
   font-size: 11px;
   font-weight: 600;
-  color: var(--foreground-muted, #888);
+  color: var(--foreground, #888);
   letter-spacing: -0.01em;
   padding: 0 6px;
   white-space: nowrap;
