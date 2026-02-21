@@ -256,5 +256,83 @@ export function useFFmpeg() {
     [ensureLoaded],
   );
 
-  return { status, progress, interpolateFps, convertToH264, removeBlackBars } as const;
+  /**
+   * Detect whether a video contains horizontal bars (letterboxing) that can be
+   * cropped away.  Supports both **black bars** (`limit` ≤ 24) and **white
+   * bars** (`limit` set high, e.g. 230).
+   *
+   * Runs `cropdetect` inside the WASM sandbox and compares the detected crop
+   * rectangle against the original video dimensions.
+   *
+   * @param videoUrl  URL (or object-URL) of the source video.
+   * @param options   Optional overrides:
+   *   - `limit`  – pixel intensity threshold (0-255). Pixels **above** this
+   *                value are considered non-bar. Default `24` (black bars).
+   *                Use a high value like `230` for white bars.
+   *   - `round` – crop dimension rounding. @default 16
+   * @returns `{ hasBars, crop }` – whether bars were detected and the raw
+   *          `W:H:X:Y` crop string for informational use.
+   */
+  const detectBars = useCallback(
+    async (
+      videoUrl: string,
+      options?: { limit?: number; round?: number },
+    ): Promise<{ hasBars: boolean; crop: string | null }> => {
+      const { limit = 24, round = 16 } = options ?? {};
+      const ffmpeg = await ensureLoaded();
+
+      const inputName = 'detect_bars_input.mp4';
+
+      await ffmpeg.writeFile(inputName, await fetchFile(videoUrl));
+
+      /* Capture cropdetect log output */
+      let cropLogs = '';
+      const logHandler = ({ message }: { message: string }) => {
+        cropLogs += message + '\n';
+      };
+      ffmpeg.on('log', logHandler);
+
+      await ffmpeg.exec([
+        '-i',
+        inputName,
+        '-vf',
+        `cropdetect=limit=${limit}:round=${round}:reset=0`,
+        '-f',
+        'null',
+        '-',
+      ]);
+
+      ffmpeg.off('log', logHandler);
+      await ffmpeg.deleteFile(inputName);
+
+      /* Parse the last "crop=W:H:X:Y" token */
+      const matches = [...cropLogs.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)];
+      if (matches.length === 0) {
+        return { hasBars: false, crop: null };
+      }
+
+      const last = matches[matches.length - 1]!;
+      const [, w, h, x, y] = last;
+      const crop = `${w}:${h}:${x}:${y}`;
+
+      /* Determine original dimensions from ffmpeg log (look for "Video: …
+         WxH" or the SAR/DAR line).  If the crop rectangle is smaller than
+         the source, bars are present. */
+      const dimMatch = cropLogs.match(/(\d{2,5})x(\d{2,5})/);
+      if (!dimMatch) {
+        /* Cannot determine source size – assume bars exist if crop offset
+           is non-zero */
+        return { hasBars: Number(x) > 0 || Number(y) > 0, crop };
+      }
+
+      const srcW = Number(dimMatch[1]);
+      const srcH = Number(dimMatch[2]);
+      const hasBars = Number(w) < srcW || Number(h) < srcH;
+
+      return { hasBars, crop };
+    },
+    [ensureLoaded],
+  );
+
+  return { status, progress, interpolateFps, convertToH264, removeBlackBars, detectBars } as const;
 }

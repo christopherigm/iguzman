@@ -16,6 +16,7 @@ export interface VideoTaskDocument extends VideoDownloadInput, VideoResultFields
   status: TaskStatus;
   result: DownloadVideoResult | null;
   error: DownloadVideoError | null;
+  hasBars: boolean | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +50,7 @@ export async function createTask(
     status: 'pending',
     result: null,
     error: null,
+    hasBars: null,
     file: null,
     name: null,
     isH265: null,

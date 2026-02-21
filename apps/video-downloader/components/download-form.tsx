@@ -135,6 +135,19 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     [t],
   );
 
+  /* Paste from clipboard when the URL input is focused */
+  const handleInputFocus = useCallback(async () => {
+    if (url) return;
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (isValidUrl(text)) {
+        setUrl(stripQueryParams(text));
+      }
+    } catch {
+      // Clipboard permission denied — silently ignore
+    }
+  }, [url]);
+
   /* Derived state */
   const hasText = url.length > 0;
   const validUrl = useMemo(() => isValidUrl(url), [url]);
@@ -248,6 +261,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
           <TextInput
             value={url}
             onChange={(v: string) => setUrl(stripQueryParams(v))}
+            onFocus={handleInputFocus}
             lable={t('inputLabel')}
           />
         </div>

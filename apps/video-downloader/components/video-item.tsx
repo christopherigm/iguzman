@@ -97,6 +97,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const [uploading, setUploading] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmConvert, setConfirmConvert] = useState(false);
+  const [hasBars, setHasBars] = useState<boolean | null>(video.hasBars);
   const downloadTriggered = useRef(false);
   const resumeChecked = useRef(false);
   const convertResumeChecked = useRef(false);
@@ -109,6 +110,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     interpolateFps,
     convertToH264,
     removeBlackBars,
+    detectBars,
   } = useFFmpeg();
 
   const { enqueue, cancel } = useProcessingQueue();
@@ -237,6 +239,44 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     [enqueueProcessing, interpolateFps],
   );
 
+  /* ── Check for black/white bars and persist result ── */
+  const checkBars = useCallback(
+    async (file: string, taskId: string | null) => {
+      const sourceUrl = `${window.location.origin}/api/media/${file}`;
+      try {
+        const black = await detectBars(sourceUrl, { limit: 24 });
+        if (black.hasBars) {
+          setHasBars(true);
+          onUpdate(video.uuid, { hasBars: true });
+          if (taskId) {
+            fetch(`/api/download-video/${taskId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ hasBars: true }),
+            }).catch(() => {});
+          }
+          return;
+        }
+        const white = await detectBars(sourceUrl, { limit: 230 });
+        const result = white.hasBars;
+        setHasBars(result);
+        onUpdate(video.uuid, { hasBars: result });
+        if (taskId) {
+          fetch(`/api/download-video/${taskId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hasBars: result }),
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.error('Bar detection failed:', err);
+        setHasBars(false);
+        onUpdate(video.uuid, { hasBars: false });
+      }
+    },
+    [detectBars, onUpdate, video.uuid],
+  );
+
   /* ── Handle completed task from polling ────────────── */
   const handleTaskDone = useCallback(
     (task: TaskData) => {
@@ -254,6 +294,11 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         uploader: task.uploader ?? null,
         isH265: task.isH265 ?? false,
       });
+
+      /* Run bar detection in the background for non-audio videos */
+      if (file && !video.justAudio) {
+        checkBars(file, video.taskId);
+      }
 
       if (!file || !video.autoDownload) return;
 
@@ -307,6 +352,8 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       video.autoDownload,
       video.fps,
       video.justAudio,
+      video.taskId,
+      checkBars,
       enqueue,
       interpolateFps,
       t,
@@ -582,6 +629,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         <VideoExtraActions
           video={video}
           isBusy={isBusy}
+          hasBars={hasBars}
           onRemoveBlackBars={handleRemoveBlackBars}
           onInterpolateFps={handleInterpolateFpsManual}
           onConvert={() => setConfirmConvert(true)}
@@ -862,6 +910,7 @@ const FPS_OPTIONS = [
 function VideoExtraActions({
   video,
   isBusy,
+  hasBars,
   onRemoveBlackBars,
   onInterpolateFps,
   onConvert,
@@ -869,6 +918,7 @@ function VideoExtraActions({
 }: {
   video: StoredVideo;
   isBusy: boolean;
+  hasBars: boolean | null;
   onRemoveBlackBars: () => void;
   onInterpolateFps: (fps: number) => void;
   onConvert: () => void;
@@ -896,21 +946,23 @@ function VideoExtraActions({
         </button>
       ) : null}
 
-      <button
-        type="button"
-        className="vi-fps-btn"
-        onClick={onRemoveBlackBars}
-        disabled={!canProcess || video.blackBarsRemoved}
-        aria-label={t('removeBlackBars')}
-        title={t('removeBlackBars')}
-      >
-        <Icon
-          icon="/icons/remove-black-bars.svg"
-          size={14}
-          color="var(--accent, #8b5cf6)"
-        />
-        {t('removeBlackBars')}
-      </button>
+      {hasBars ? (
+        <button
+          type="button"
+          className="vi-fps-btn"
+          onClick={onRemoveBlackBars}
+          disabled={!canProcess || video.blackBarsRemoved}
+          aria-label={t('removeBlackBars')}
+          title={t('removeBlackBars')}
+        >
+          <Icon
+            icon="/icons/remove-black-bars.svg"
+            size={14}
+            color="var(--accent, #8b5cf6)"
+          />
+          {t('removeBlackBars')}
+        </button>
+      ) : null}
 
       <Box>
         {FPS_OPTIONS.map(({ value, label }) => {

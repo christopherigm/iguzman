@@ -39,6 +39,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   h264Converted: boolean;
   /** Whether black bars have been removed from the video. */
   blackBarsRemoved: boolean;
+  /** Whether the video has black/white bars (null = not checked yet). */
+  hasBars: boolean | null;
   /** MongoDB task ID (for polling and deletion). */
   taskId: string | null;
 }
@@ -64,6 +66,7 @@ function readStorage(): StoredVideo[] {
         isH265: v.isH265 ?? false,
         h264Converted: v.h264Converted ?? false,
         blackBarsRemoved: v.blackBarsRemoved ?? false,
+        hasBars: v.hasBars ?? null,
         taskId: v.taskId ?? null,
       };
 
@@ -158,6 +161,7 @@ export function useVideoStore() {
         isH265: false,
         h264Converted: false,
         blackBarsRemoved: false,
+        hasBars: null,
         taskId: null,
       };
       setVideos((prev) => [entry, ...prev]);
