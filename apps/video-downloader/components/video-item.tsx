@@ -160,6 +160,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           }
 
           await uploadPromise;
+          onUpdate(video.uuid, {
+            downloadURL: `/api/media/${video.file}?v=${Date.now()}`,
+          });
         });
       } catch (err) {
         console.error(`${opts.errorKey} failed:`, err);
@@ -279,6 +282,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           );
 
           await uploadPromise;
+          onUpdate(video.uuid, {
+            downloadURL: `/api/media/${file}?v=${Date.now()}`,
+          });
         }).catch((ffErr) => {
           console.error('FFmpeg interpolation failed:', ffErr);
           onUpdate(video.uuid, {
