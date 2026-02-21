@@ -295,15 +295,19 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         isH265: task.isH265 ?? false,
       });
 
-      /* Run bar detection in the background for non-audio videos */
-      if (file && !video.justAudio) {
+      /* Run bar detection in the background for non-audio videos,
+         but skip when FPS interpolation will run — both use the same
+         FFmpeg WASM instance and cannot execute concurrently. */
+      const willInterpolateFps =
+        video.fps !== 'original' && !video.justAudio && file;
+      if (file && !video.justAudio && !willInterpolateFps) {
         checkBars(file, video.taskId);
       }
 
       if (!file || !video.autoDownload) return;
 
       /* FPS interpolation via FFmpeg WASM (queued) */
-      if (video.fps !== 'original' && !video.justAudio) {
+      if (willInterpolateFps) {
         onUpdate(video.uuid, { status: 'queued' });
         enqueue(video.uuid, async () => {
           onUpdate(video.uuid, { status: 'processing' });

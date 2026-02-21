@@ -17,35 +17,54 @@ export type FFmpegStatus = 'idle' | 'loading' | 'processing' | 'ready';
  */
 export function useFFmpeg() {
   const ffmpegRef = useRef<FFmpeg | null>(null);
+  const loadingRef = useRef<Promise<FFmpeg> | null>(null);
   const [status, setStatus] = useState<FFmpegStatus>('idle');
   const [progress, setProgress] = useState(0);
 
-  /** Ensure ffmpeg-core is loaded (idempotent). */
+  /** Ensure ffmpeg-core is loaded (idempotent, safe against concurrent calls). */
   const ensureLoaded = useCallback(async () => {
     if (ffmpegRef.current?.loaded) return ffmpegRef.current;
 
-    setStatus('loading');
-    const ffmpeg = new FFmpeg();
+    /* Prevent concurrent loading — return the in-flight promise if one exists */
+    if (loadingRef.current) return loadingRef.current;
 
-    ffmpeg.on('progress', ({ progress: p }) => {
-      setProgress(Math.round(p * 100));
-    });
+    const loadPromise = (async () => {
+      setStatus('loading');
+      const ffmpeg = new FFmpeg();
 
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${BASE_URL}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(
-        `${BASE_URL}/ffmpeg-core.wasm`,
-        'application/wasm',
-      ),
-      workerURL: await toBlobURL(
-        `${BASE_URL}/ffmpeg-core.worker.js`,
-        'text/javascript',
-      ),
-    });
+      ffmpeg.on('progress', ({ progress: p }) => {
+        setProgress(Math.round(p * 100));
+      });
 
-    ffmpegRef.current = ffmpeg;
-    setStatus('ready');
-    return ffmpeg;
+      await ffmpeg.load({
+        coreURL: await toBlobURL(
+          `${BASE_URL}/ffmpeg-core.js`,
+          'text/javascript',
+        ),
+        wasmURL: await toBlobURL(
+          `${BASE_URL}/ffmpeg-core.wasm`,
+          'application/wasm',
+        ),
+        workerURL: await toBlobURL(
+          `${BASE_URL}/ffmpeg-core.worker.js`,
+          'text/javascript',
+        ),
+      });
+
+      ffmpegRef.current = ffmpeg;
+      setStatus('ready');
+      return ffmpeg;
+    })();
+
+    loadingRef.current = loadPromise;
+
+    try {
+      return await loadPromise;
+    } catch (err) {
+      /* Reset so a subsequent call can retry */
+      loadingRef.current = null;
+      throw err;
+    }
   }, []);
 
   /**
@@ -334,5 +353,12 @@ export function useFFmpeg() {
     [ensureLoaded],
   );
 
-  return { status, progress, interpolateFps, convertToH264, removeBlackBars, detectBars } as const;
+  return {
+    status,
+    progress,
+    interpolateFps,
+    convertToH264,
+    removeBlackBars,
+    detectBars,
+  } as const;
 }
