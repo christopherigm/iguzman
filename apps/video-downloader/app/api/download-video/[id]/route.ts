@@ -58,8 +58,8 @@ export async function DELETE(
       }
     }
 
-    if (task.thumbnailFile) {
-      const thumbPath = join(MEDIA_DIR, task.thumbnailFile);
+    if (task.thumbnail) {
+      const thumbPath = join(MEDIA_DIR, task.thumbnail);
       try {
         await unlink(thumbPath);
       } catch {

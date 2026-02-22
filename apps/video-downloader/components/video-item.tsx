@@ -309,7 +309,6 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         name: name ?? null,
         downloadURL,
         thumbnail: task.thumbnail ?? null,
-        thumbnailFile: task.thumbnailFile ?? null,
         duration: task.duration ?? null,
         uploader: task.uploader ?? null,
         isH265: task.isH265 ?? false,
@@ -372,9 +371,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
 
       /* Auto-download thumbnail image for audio-only items */
       if (video.justAudio) {
-        const thumbSrc = task.thumbnailFile
-          ? `/api/media/${task.thumbnailFile}`
-          : task.thumbnail;
+        const thumbSrc = task.thumbnail ? `/api/media/${task.thumbnail}` : null;
         if (thumbSrc) {
           downloadThumbnail(thumbSrc, name);
         }
@@ -481,20 +478,12 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
     );
     if (video.justAudio) {
-      const thumbSrc = video.thumbnailFile
-        ? `/api/media/${video.thumbnailFile}`
-        : video.thumbnail;
+      const thumbSrc = video.thumbnail ? `/api/media/${video.thumbnail}` : null;
       if (thumbSrc) {
         downloadThumbnail(thumbSrc, video.name);
       }
     }
-  }, [
-    video.downloadURL,
-    video.name,
-    video.justAudio,
-    video.thumbnail,
-    video.thumbnailFile,
-  ]);
+  }, [video.downloadURL, video.name, video.justAudio, video.thumbnail]);
 
   /* ── Auto-trigger download for newly added (pending) items ── */
   useEffect(() => {
@@ -625,7 +614,6 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         downloadURL={video.downloadURL}
         justAudio={video.justAudio}
         thumbnail={video.thumbnail}
-        thumbnailFile={video.thumbnailFile}
       />
 
       {/* ── Loading indicator ─────────────────────── */}
@@ -776,18 +764,14 @@ function VideoMediaPreview({
   downloadURL,
   justAudio,
   thumbnail,
-  thumbnailFile,
 }: {
   downloadURL: string | null;
   justAudio: boolean;
   thumbnail: string | null;
-  thumbnailFile: string | null;
 }) {
   if (!downloadURL) return null;
 
-  const thumbnailSrc = thumbnailFile
-    ? `/api/media/${thumbnailFile}`
-    : thumbnail;
+  const thumbnailSrc = thumbnail ? `/api/media/${thumbnail}` : null;
 
   if (justAudio) {
     return (

@@ -68,7 +68,10 @@ function readStorage(): StoredVideo[] {
         blackBarsRemoved: v.blackBarsRemoved ?? false,
         hasBars: v.hasBars ?? null,
         taskId: v.taskId ?? null,
-        thumbnailFile: v.thumbnailFile ?? null,
+        thumbnail:
+          v.thumbnail ??
+          ((v as unknown as Record<string, unknown>).thumbnailFile as string) ??
+          null,
       };
 
       if (video.status === 'queued') {
@@ -155,7 +158,6 @@ export function useVideoStore() {
         file: null,
         name: null,
         thumbnail: null,
-        thumbnailFile: null,
         duration: null,
         uploader: null,
         createdAt: Date.now(),

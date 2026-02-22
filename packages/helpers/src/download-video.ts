@@ -363,8 +363,11 @@ export interface DownloadVideoResult {
    * Filename of the locally-saved thumbnail image (UUID-based).
    * Present when a thumbnail or cover-art URL was available and
    * the image was successfully downloaded to the output folder.
+   *
+   * For videos this is the video thumbnail; for audio-only
+   * downloads this is the cover-art image.
    */
-  thumbnailFile?: string;
+  thumbnail?: string;
   /**
    * Structured error object. Present when something goes wrong.
    * When set, `file` and `name` will be absent.
@@ -1740,7 +1743,7 @@ const downloadVideo = async ({
       try {
         const thumbFile = await downloadThumbnailFile(thumbUrl, outputFolder);
         if (thumbFile) {
-          result.thumbnailFile = thumbFile;
+          result.thumbnail = thumbFile;
         }
       } catch {
         // Thumbnail download is best-effort.

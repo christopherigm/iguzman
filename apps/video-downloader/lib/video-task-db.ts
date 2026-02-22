@@ -54,7 +54,6 @@ export async function createTask(
     name: null,
     isH265: null,
     thumbnail: null,
-    thumbnailFile: null,
     duration: null,
     uploader: null,
     createdAt: now,
