@@ -353,6 +353,10 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           onUpdate(video.uuid, {
             downloadURL: `/api/media/${file}?v=${Date.now()}`,
           });
+
+          if (file && !video.justAudio) {
+            checkBars(file, video.taskId);
+          }
         }).catch((ffErr) => {
           console.error('FFmpeg interpolation failed:', ffErr);
           onUpdate(video.uuid, {
