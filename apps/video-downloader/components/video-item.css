@@ -151,6 +151,12 @@
   height: auto;
 }
 
+.vi-thumbnail {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .vi-audio-wrapper {
   padding: 12px;
   display: flex;

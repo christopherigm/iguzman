@@ -13,6 +13,7 @@ import { useProcessingQueue } from './use-processing-queue';
 import { usePollTask, type TaskData } from './use-poll-task';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import './video-item.css';
+import Image from 'next/image';
 
 /* ── Constants ──────────────────────────────────────── */
 
@@ -52,6 +53,21 @@ function triggerBrowserDownload(url: string, filename: string) {
   link.href = url;
   link.download = filename;
   link.click();
+}
+
+function downloadThumbnail(url: string, name: string | null) {
+  fetch(url)
+    .then((res) => res.blob())
+    .then((blob) => {
+      const ext = url.match(/\.(jpe?g|png|webp)/i)?.[1] ?? 'jpg';
+      const objectUrl = URL.createObjectURL(blob);
+      triggerBrowserDownload(
+        objectUrl,
+        `${name ?? 'thumbnail'}-${Date.now()}.${ext}`,
+      );
+      URL.revokeObjectURL(objectUrl);
+    })
+    .catch((err) => console.error('Thumbnail download failed:', err));
 }
 
 async function uploadProcessedVideo(
@@ -352,6 +368,11 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         downloadURL!,
         `${name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}-${file}`,
       );
+
+      /* Auto-download thumbnail image for audio-only items */
+      if (video.justAudio && task.thumbnail) {
+        downloadThumbnail(task.thumbnail, name);
+      }
     },
     [
       onUpdate,
@@ -451,9 +472,12 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     if (!video.downloadURL) return;
     triggerBrowserDownload(
       video.downloadURL,
-      `${video.name ?? 'video'}-${Date.now()}`,
+      `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
     );
-  }, [video.downloadURL, video.name]);
+    if (video.justAudio && video.thumbnail) {
+      downloadThumbnail(video.thumbnail, video.name);
+    }
+  }, [video.downloadURL, video.name, video.justAudio, video.thumbnail]);
 
   /* ── Auto-trigger download for newly added (pending) items ── */
   useEffect(() => {
@@ -583,6 +607,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       <VideoMediaPreview
         downloadURL={video.downloadURL}
         justAudio={video.justAudio}
+        thumbnail={video.thumbnail}
       />
 
       {/* ── Loading indicator ─────────────────────── */}
@@ -732,23 +757,38 @@ function VideoDetailsPanel({
 function VideoMediaPreview({
   downloadURL,
   justAudio,
+  thumbnail,
 }: {
   downloadURL: string | null;
   justAudio: boolean;
+  thumbnail: string | null;
 }) {
   if (!downloadURL) return null;
 
   if (justAudio) {
     return (
-      <div className="vi-media-wrapper vi-audio-wrapper">
-        <audio
-          className="vi-audio"
-          src={downloadURL}
-          loop
-          controls
-          preload="metadata"
-        />
-      </div>
+      <>
+        {thumbnail ? (
+          <div className="vi-media-wrapper">
+            <Image
+              className="vi-thumbnail"
+              src={thumbnail}
+              alt=""
+              loading="lazy"
+              unoptimized
+            />
+          </div>
+        ) : null}
+        <div className="vi-media-wrapper vi-audio-wrapper">
+          <audio
+            className="vi-audio"
+            src={downloadURL}
+            loop
+            controls
+            preload="metadata"
+          />
+        </div>
+      </>
     );
   }
 

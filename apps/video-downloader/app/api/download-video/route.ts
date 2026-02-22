@@ -10,7 +10,8 @@ import type { VideoDownloadInput } from '@/lib/types';
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const IS_PRODUCTION = NODE_ENV === 'production';
 
-type RequestBody = Partial<VideoDownloadInput> & Pick<VideoDownloadInput, 'url'>;
+type RequestBody = Partial<VideoDownloadInput> &
+  Pick<VideoDownloadInput, 'url'>;
 
 export async function POST(request: Request) {
   let body: RequestBody;
@@ -69,7 +70,8 @@ export async function POST(request: Request) {
         file: result.file ?? null,
         name: result.name ?? null,
         isH265: result.isH265 ?? null,
-        thumbnail: result.metadata?.thumbnail ?? null,
+        thumbnail:
+          result.metadata?.thumbnail ?? result.audioMetadata?.coverUrl ?? null,
         duration: result.metadata?.duration ?? null,
         uploader: result.metadata?.uploader ?? null,
       });
