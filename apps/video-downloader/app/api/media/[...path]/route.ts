@@ -49,6 +49,11 @@ export async function GET(
     '.ogg': 'audio/ogg',
     '.mkv': 'video/x-matroska',
     '.srt': 'text/plain; charset=utf-8',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+    '.avif': 'image/avif',
   };
 
   const segments = (await params).path;
@@ -140,9 +145,7 @@ export async function PUT(
     const taskUpdateHeader = request.headers.get('X-Task-Update');
     if (taskUpdateHeader) {
       try {
-        const { updateTaskByFile } = await import(
-          '@/lib/video-task-db'
-        );
+        const { updateTaskByFile } = await import('@/lib/video-task-db');
         const patch = JSON.parse(taskUpdateHeader);
         await updateTaskByFile(fileName, patch);
       } catch {

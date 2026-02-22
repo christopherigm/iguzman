@@ -58,6 +58,15 @@ export async function DELETE(
       }
     }
 
+    if (task.thumbnailFile) {
+      const thumbPath = join(MEDIA_DIR, task.thumbnailFile);
+      try {
+        await unlink(thumbPath);
+      } catch {
+        /* Thumbnail may already be gone — acceptable */
+      }
+    }
+
     await deleteTask(id);
 
     return NextResponse.json({ ok: true });

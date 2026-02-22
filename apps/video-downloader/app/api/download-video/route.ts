@@ -72,6 +72,7 @@ export async function POST(request: Request) {
         isH265: result.isH265 ?? null,
         thumbnail:
           result.metadata?.thumbnail ?? result.audioMetadata?.coverUrl ?? null,
+        thumbnailFile: result.thumbnailFile ?? null,
         duration: result.metadata?.duration ?? null,
         uploader: result.metadata?.uploader ?? null,
       });

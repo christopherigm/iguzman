@@ -1,5 +1,6 @@
 import { execFile } from 'child_process';
 import {
+  createWriteStream,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -7,6 +8,8 @@ import {
   renameSync,
   rmSync,
 } from 'fs';
+import { get as httpsGet } from 'https';
+import { get as httpGet } from 'http';
 import { randomUUID } from 'crypto';
 import { detectPlatform, isTiktok, isYoutube } from './checkers';
 import type { Platform } from './checkers';
@@ -356,6 +359,12 @@ export interface DownloadVideoResult {
    * option is `true` and the probe succeeds.
    */
   isH265?: boolean;
+  /**
+   * Filename of the locally-saved thumbnail image (UUID-based).
+   * Present when a thumbnail or cover-art URL was available and
+   * the image was successfully downloaded to the output folder.
+   */
+  thumbnailFile?: string;
   /**
    * Structured error object. Present when something goes wrong.
    * When set, `file` and `name` will be absent.
@@ -953,6 +962,93 @@ const bestThumbnailUrl = (
 
   return str(meta.thumbnail);
 };
+
+/**
+ * Downloads a thumbnail image from a URL and saves it to the output
+ * folder with a UUID-based filename.
+ *
+ * Follows up to 5 redirects. The file extension is inferred from the
+ * URL path or `Content-Type` header, defaulting to `.jpg`.
+ *
+ * @returns The saved filename (e.g. `"abc123.jpg"`), or `null` on failure.
+ */
+const downloadThumbnailFile = (
+  thumbnailUrl: string,
+  outputFolder: string,
+): Promise<string | null> =>
+  new Promise((resolve) => {
+    try {
+      const parsed = new URL(thumbnailUrl);
+      const getter = parsed.protocol === 'https:' ? httpsGet : httpGet;
+
+      const doRequest = (url: string, redirects = 0): void => {
+        if (redirects > 5) {
+          resolve(null);
+          return;
+        }
+
+        getter(url, (res) => {
+          // Follow redirects
+          if (
+            res.statusCode &&
+            res.statusCode >= 300 &&
+            res.statusCode < 400 &&
+            res.headers.location
+          ) {
+            doRequest(res.headers.location, redirects + 1);
+            return;
+          }
+
+          if (!res.statusCode || res.statusCode >= 400) {
+            res.resume();
+            resolve(null);
+            return;
+          }
+
+          // Determine file extension from URL path or Content-Type
+          const urlExt = url
+            .match(/\.(jpe?g|png|webp|avif)/i)?.[1]
+            ?.toLowerCase();
+          const ctMap: Record<string, string> = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/webp': 'webp',
+            'image/avif': 'avif',
+          };
+          const ct = res.headers['content-type']?.split(';')[0]?.trim() ?? '';
+          const ext = urlExt ?? ctMap[ct] ?? 'jpg';
+
+          const thumbId = randomUUID();
+          const thumbName = `${thumbId}.${ext}`;
+          const thumbPath = `${outputFolder}/${thumbName}`;
+
+          const fileStream = createWriteStream(thumbPath);
+          res.pipe(fileStream);
+
+          fileStream.on('finish', () => {
+            fileStream.close();
+            resolve(thumbName);
+          });
+
+          fileStream.on('error', () => {
+            fileStream.close();
+            try {
+              rmSync(thumbPath, { force: true });
+            } catch {
+              /* ignore */
+            }
+            resolve(null);
+          });
+        }).on('error', () => {
+          resolve(null);
+        });
+      };
+
+      doRequest(thumbnailUrl);
+    } catch {
+      resolve(null);
+    }
+  });
 
 /**
  * Builds the yt-dlp argument list for downloading a video.
@@ -1627,6 +1723,28 @@ const downloadVideo = async ({
       );
     } catch {
       // Audio metadata extraction is best-effort.
+    }
+  }
+
+  /* ---- 7c. Download thumbnail / cover-art image to output folder ---- */
+
+  {
+    const thumbUrl = justAudio
+      ? (result.audioMetadata?.coverUrl ?? videoMetadata?.thumbnail)
+      : (videoMetadata?.thumbnail ??
+        bestThumbnailUrl(
+          (videoMetadata ?? {}) as VideoMetadata & Record<string, unknown>,
+        ));
+
+    if (thumbUrl) {
+      try {
+        const thumbFile = await downloadThumbnailFile(thumbUrl, outputFolder);
+        if (thumbFile) {
+          result.thumbnailFile = thumbFile;
+        }
+      } catch {
+        // Thumbnail download is best-effort.
+      }
     }
   }
 

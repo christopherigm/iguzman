@@ -309,6 +309,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         name: name ?? null,
         downloadURL,
         thumbnail: task.thumbnail ?? null,
+        thumbnailFile: task.thumbnailFile ?? null,
         duration: task.duration ?? null,
         uploader: task.uploader ?? null,
         isH265: task.isH265 ?? false,
@@ -370,8 +371,13 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       );
 
       /* Auto-download thumbnail image for audio-only items */
-      if (video.justAudio && task.thumbnail) {
-        downloadThumbnail(task.thumbnail, name);
+      if (video.justAudio) {
+        const thumbSrc = task.thumbnailFile
+          ? `/api/media/${task.thumbnailFile}`
+          : task.thumbnail;
+        if (thumbSrc) {
+          downloadThumbnail(thumbSrc, name);
+        }
       }
     },
     [
@@ -474,10 +480,21 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       video.downloadURL,
       `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
     );
-    if (video.justAudio && video.thumbnail) {
-      downloadThumbnail(video.thumbnail, video.name);
+    if (video.justAudio) {
+      const thumbSrc = video.thumbnailFile
+        ? `/api/media/${video.thumbnailFile}`
+        : video.thumbnail;
+      if (thumbSrc) {
+        downloadThumbnail(thumbSrc, video.name);
+      }
     }
-  }, [video.downloadURL, video.name, video.justAudio, video.thumbnail]);
+  }, [
+    video.downloadURL,
+    video.name,
+    video.justAudio,
+    video.thumbnail,
+    video.thumbnailFile,
+  ]);
 
   /* ── Auto-trigger download for newly added (pending) items ── */
   useEffect(() => {
@@ -608,6 +625,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         downloadURL={video.downloadURL}
         justAudio={video.justAudio}
         thumbnail={video.thumbnail}
+        thumbnailFile={video.thumbnailFile}
       />
 
       {/* ── Loading indicator ─────────────────────── */}
@@ -758,21 +776,27 @@ function VideoMediaPreview({
   downloadURL,
   justAudio,
   thumbnail,
+  thumbnailFile,
 }: {
   downloadURL: string | null;
   justAudio: boolean;
   thumbnail: string | null;
+  thumbnailFile: string | null;
 }) {
   if (!downloadURL) return null;
+
+  const thumbnailSrc = thumbnailFile
+    ? `/api/media/${thumbnailFile}`
+    : thumbnail;
 
   if (justAudio) {
     return (
       <>
-        {thumbnail ? (
+        {thumbnailSrc ? (
           <div className="vi-media-wrapper">
             <Image
               className="vi-thumbnail"
-              src={thumbnail}
+              src={thumbnailSrc}
               alt=""
               loading="lazy"
               unoptimized
@@ -801,6 +825,7 @@ function VideoMediaPreview({
         playsInline
         preload="metadata"
         controls
+        poster={thumbnailSrc ?? undefined}
       />
     </div>
   );

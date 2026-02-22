@@ -12,7 +12,8 @@ import type {
 
 export type { TaskStatus };
 
-export interface VideoTaskDocument extends VideoDownloadInput, VideoResultFields {
+export interface VideoTaskDocument
+  extends VideoDownloadInput, VideoResultFields {
   status: TaskStatus;
   result: DownloadVideoResult | null;
   error: DownloadVideoError | null;
@@ -31,9 +32,7 @@ const MONGO_URI =
 
 /* ── Helpers ──────────────────────────────────────── */
 
-async function getTasksCollection(): Promise<
-  Collection<VideoTaskDocument>
-> {
+async function getTasksCollection(): Promise<Collection<VideoTaskDocument>> {
   const db = await connectToDatabase(DB_NAME, MONGO_URI);
   return db.collection<VideoTaskDocument>(COLLECTION_NAME);
 }
@@ -55,6 +54,7 @@ export async function createTask(
     name: null,
     isH265: null,
     thumbnail: null,
+    thumbnailFile: null,
     duration: null,
     uploader: null,
     createdAt: now,

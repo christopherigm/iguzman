@@ -19,6 +19,7 @@ export interface VideoResultFields {
   name: string | null;
   isH265: boolean | null;
   thumbnail: string | null;
+  thumbnailFile: string | null;
   duration: number | null;
   uploader: string | null;
 }
