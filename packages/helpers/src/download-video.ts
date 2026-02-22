@@ -243,6 +243,20 @@ export interface FormatInfo {
   format_note: string;
   /** Download protocol (e.g. `"https"`, `"m3u8_native"`). */
   protocol: string;
+  /**
+   * Language code of the audio track (e.g. `"en"`, `"es"`, `"ja"`).
+   * `null` when the format has no language tag.
+   */
+  language: string | null;
+  /**
+   * Numeric language preference assigned by yt-dlp.
+   * Higher values indicate a more preferred / original audio track.
+   * The video's default (original) audio track typically has the
+   * highest value (e.g. `10`), while dubbed tracks have lower
+   * values (e.g. `-1`).
+   * `null` when unavailable.
+   */
+  language_preference: number | null;
 }
 
 /** The result of format detection for a video URL. */
@@ -588,24 +602,54 @@ const selectBestFormats = (formats: FormatInfo[]): FormatSelection => {
         })[0]!
       : null;
 
-  // --- Best audio-only (max bitrate → preferred ext) ---
+  // --- Best audio-only (original language → max bitrate → preferred ext) ---
+  //
+  // YouTube (and some other platforms) serve multiple audio tracks for
+  // the same video — e.g. the original language plus dubbed versions.
+  // yt-dlp assigns a `language_preference` score to each track: the
+  // original / default track gets the highest value (typically `10`),
+  // while dubbed tracks get lower values (e.g. `-1`).
+  //
+  // When `language_preference` data is available we first narrow the
+  // pool to tracks with the highest `language_preference` so that
+  // only the original audio is considered, then sort by quality.
+
   const filteredAudio = audioOnly.filter((f) => isPreferredAudioExt(f.ext));
-  const audioPool = filteredAudio.length > 0 ? filteredAudio : audioOnly;
+  let audioPool = filteredAudio.length > 0 ? filteredAudio : audioOnly;
+
+  // Prefer the original / default audio track when language info exists
+  const hasLangInfo = audioPool.some((f) => f.language_preference != null);
+  if (hasLangInfo) {
+    const maxLangPref = Math.max(
+      ...audioPool.map((f) => f.language_preference ?? -Infinity),
+    );
+    const originalAudioPool = audioPool.filter(
+      (f) => (f.language_preference ?? -Infinity) === maxLangPref,
+    );
+    if (originalAudioPool.length > 0) {
+      audioPool = originalAudioPool;
+    }
+  }
 
   const bestAudio =
     audioPool.length > 0
       ? audioPool.sort((a, b) => {
-          // 1. Max audio bitrate
+          // 1. Prefer original / default audio track (highest language_preference)
+          const aLang = a.language_preference ?? -Infinity;
+          const bLang = b.language_preference ?? -Infinity;
+          if (bLang !== aLang) return bLang - aLang;
+
+          // 2. Max audio bitrate
           const aAbr = a.abr ?? a.tbr ?? 0;
           const bAbr = b.abr ?? b.tbr ?? 0;
           if (bAbr !== aAbr) return bAbr - aAbr;
 
-          // 2. Higher sample rate
+          // 3. Higher sample rate
           const aAsr = a.asr ?? 0;
           const bAsr = b.asr ?? 0;
           if (bAsr !== aAsr) return bAsr - aAsr;
 
-          // 3. Prefer m4a > mp3 > aac > opus > webm
+          // 4. Prefer m4a > mp3 > aac > opus > webm
           const extOrder = (ext: string) => {
             const idx = (
               PREFERRED_AUDIO_EXTENSIONS as readonly string[]
@@ -727,6 +771,8 @@ const buildFormatSelector = (
     if (selection.bestAudio) {
       return selection.bestAudio.format_id;
     }
+    // Fallback: prefer the original / default audio track via
+    // yt-dlp's language_preference sort (highest = original).
     return 'bestaudio/best';
   }
 
@@ -777,6 +823,15 @@ const buildAudioDownloadArgs = (
     url,
     '-f',
     formatSelector,
+
+    // ── Prefer original / default audio track ──────────────────────
+    // YouTube videos may have multiple audio tracks (original +
+    // dubbed). The `-S` flag with `lang` tells yt-dlp to prefer
+    // the track with the highest `language_preference` (i.e. the
+    // original audio) when the format selector matches several
+    // candidates.
+    '-S',
+    'lang',
 
     // ── Audio extraction & format ──────────────────────────────────
     '--extract-audio',
