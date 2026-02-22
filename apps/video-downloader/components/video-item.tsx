@@ -75,7 +75,7 @@ async function uploadProcessedVideo(
   blob: Blob,
   taskUpdate: Record<string, unknown>,
   setUploading: (v: boolean) => void,
-): Promise<void> {
+): Promise<string | null> {
   setUploading(true);
   try {
     const res = await fetch(`${window.location.origin}/api/media/${file}`, {
@@ -87,9 +87,14 @@ async function uploadProcessedVideo(
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       console.error(`Failed to upload processed video (${res.status}):`, text);
+      return null;
     }
+
+    const data = await res.json();
+    return (data.file as string) ?? null;
   } catch (err) {
     console.error('Failed to upload processed video to server:', err);
+    return null;
   } finally {
     setUploading(false);
   }
@@ -180,10 +185,16 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
             triggerBrowserDownload(objectUrl, downloadName);
           }
 
-          await uploadPromise;
-          onUpdate(video.uuid, {
-            downloadURL: `/api/media/${video.file}?v=${Date.now()}`,
-          });
+          const newFile = await uploadPromise;
+          if (newFile) {
+            onUpdate(video.uuid, {
+              file: newFile,
+              downloadURL: `/api/media/${newFile}`,
+            });
+            if (newFile && !video.justAudio) {
+              checkBars(newFile, video.taskId);
+            }
+          }
         });
       } catch (err) {
         console.error(`${opts.errorKey} failed:`, err);
@@ -349,13 +360,15 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
             `${name ?? 'video'}-${Date.now()}-${file}`,
           );
 
-          await uploadPromise;
-          onUpdate(video.uuid, {
-            downloadURL: `/api/media/${file}?v=${Date.now()}`,
-          });
-
-          if (file && !video.justAudio) {
-            checkBars(file, video.taskId);
+          const newFile = await uploadPromise;
+          if (newFile) {
+            onUpdate(video.uuid, {
+              file: newFile,
+              downloadURL: `/api/media/${newFile}`,
+            });
+            if (newFile && !video.justAudio) {
+              checkBars(newFile, video.taskId);
+            }
           }
         }).catch((ffErr) => {
           console.error('FFmpeg interpolation failed:', ffErr);

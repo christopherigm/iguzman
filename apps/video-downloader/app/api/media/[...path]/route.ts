@@ -99,33 +99,37 @@ export async function GET(
 /**
  * PUT /api/media/:filename
  *
- * Replaces an existing media file on disk with the uploaded body.
- * Used after client-side FFmpeg processing (e.g. FPS interpolation)
- * so the server copy stays in sync. The filename is kept identical
- * so all existing URLs remain valid.
+ * Saves the uploaded body as a *new* file (new unique name, same
+ * extension), deletes the old file, updates the MongoDB record so
+ * `file` points to the new name, and returns the new filename.
+ *
+ * The fresh filename guarantees browser caches are automatically
+ * invalidated — no query-string cache-busting needed.
  */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  const { writeFile } = await import('node:fs/promises');
+  const { writeFile, unlink } = await import('node:fs/promises');
+  const { randomUUID } = await import('node:crypto');
+  const { extname } = await import('node:path');
   const segments = (await params).path;
 
   if (!segments || segments.length !== 1 || !segments[0]) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const fileName: string = segments[0];
+  const oldFileName: string = segments[0];
 
-  if (fileName.includes('..') || fileName.includes('/')) {
+  if (oldFileName.includes('..') || oldFileName.includes('/')) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const filePath = join(MEDIA_DIR, fileName);
+  const oldFilePath = join(MEDIA_DIR, oldFileName);
 
   /* Only allow replacing a file that already exists */
   try {
-    const info = await fsStat(filePath);
+    const info = await fsStat(oldFilePath);
     if (!info.isFile()) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -136,10 +140,17 @@ export async function PUT(
     );
   }
 
-  /* Read the incoming body as bytes and overwrite the file */
+  /* Write to a new file and remove the old one */
   try {
+    const ext = extname(oldFileName); // e.g. ".mp4"
+    const newFileName = `${randomUUID()}${ext}`; // e.g. "a1b2c3d4-…-ef56.mp4"
+    const newFilePath = join(MEDIA_DIR, newFileName);
+
     const buffer = Buffer.from(await request.arrayBuffer());
-    await writeFile(filePath, buffer);
+    await writeFile(newFilePath, buffer);
+
+    /* Best-effort: delete old file */
+    unlink(oldFilePath).catch(() => {});
 
     /* Best-effort MongoDB sync — the file write already succeeded */
     const taskUpdateHeader = request.headers.get('X-Task-Update');
@@ -147,13 +158,16 @@ export async function PUT(
       try {
         const { updateTaskByFile } = await import('@/lib/video-task-db');
         const patch = JSON.parse(taskUpdateHeader);
-        await updateTaskByFile(fileName, patch);
+        await updateTaskByFile(oldFileName, { ...patch, file: newFileName });
       } catch {
         /* MongoDB update is best-effort */
       }
     }
 
-    return NextResponse.json({ ok: true, file: fileName }, { status: 200 });
+    return NextResponse.json(
+      { ok: true, file: newFileName, oldFile: oldFileName },
+      { status: 200 },
+    );
   } catch (err) {
     console.error('PUT /api/media – write failed:', err);
     return NextResponse.json(
