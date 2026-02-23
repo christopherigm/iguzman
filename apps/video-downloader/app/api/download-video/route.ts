@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         checkCodec,
         outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
         cookies: IS_PRODUCTION
-          ? '/app/netscape-cookies.txt'
+          ? '/app/media/netscape-cookies.txt'
           : './netscape-cookies.txt',
       }),
     )

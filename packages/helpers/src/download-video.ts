@@ -863,7 +863,9 @@ const buildAudioDownloadArgs = (
     '--no-playlist',
   ];
 
-  args.push('--add-header', 'user-agent:Mozilla/5.0');
+  if (!isTiktok(url)) {
+    args.push('--add-header', 'user-agent:Mozilla/5.0');
+  }
   args.push('--js-runtimes', `node:${jsRuntimes}`);
 
   if (cookies) {
@@ -1144,7 +1146,9 @@ const buildDownloadArgs = (
     );
   }
 
-  args.push('--add-header', 'user-agent:Mozilla/5.0');
+  if (!isTiktok(url)) {
+    args.push('--add-header', 'user-agent:Mozilla/5.0');
+  }
   args.push('--js-runtimes', `node:${jsRuntimes}`);
 
   if (cookies) {
@@ -1381,8 +1385,6 @@ const downloadTikTokH264Video = async (
     'codec:h264',
     '--no-abort-on-error',
     '--no-playlist',
-    '--add-header',
-    'user-agent:Mozilla/5.0',
     '--js-runtimes',
     `node:${jsRuntimes}`,
   ];
