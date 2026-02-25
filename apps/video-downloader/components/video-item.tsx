@@ -9,7 +9,7 @@ import type { DownloadVideoError } from '@repo/helpers/download-video';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { useFFmpeg } from '@repo/ui/use-ffmpeg';
-import { useProcessingQueue } from './use-processing-queue';
+import { useProcessingQueue, useFFmpegState } from './use-processing-queue';
 import { usePollTask, type TaskData } from './use-poll-task';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import './video-item.css';
@@ -133,14 +133,26 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const {
     status: ffmpegStatus,
     progress: ffmpegProgress,
+    lastError: ffmpegLastError,
+    lastProcessingTime: ffmpegProcessingTime,
+    cores: ffmpegCores,
     interpolateFps,
     convertToH264,
     removeBlackBars,
     detectBars,
   } = useFFmpeg();
 
-  const { enqueue, cancel } = useProcessingQueue();
+  const { enqueue, cancel, setFFmpegState, getFFmpegState } =
+    useProcessingQueue();
   const { startPolling, stopPolling } = usePollTask();
+
+  /* ── Shared FFmpeg state (survives pinned-grid remount) ──
+   *  Uses useSyncExternalStore under the hood so that only THIS
+   *  VideoItem re-renders when its progress changes — other items
+   *  in the grid are completely unaffected. */
+  const queueFFmpegState = useFFmpegState(video.uuid);
+  const displayFFmpegStatus = queueFFmpegState?.status ?? 'idle';
+  const displayFFmpegProgress = queueFFmpegState?.progress ?? null;
 
   const platformIcon =
     PLATFORM_ICONS[video.platform] ?? PLATFORM_ICONS.unknown!;
@@ -204,6 +216,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       activeStatus: VideoStatus;
       process: (
         sourceUrl: string,
+        onProgress?: (p: number) => void,
       ) => Promise<{ objectUrl: string; blob: Blob }>;
       donePatch: Partial<StoredVideo>;
       taskUpdate: Record<string, unknown>;
@@ -219,7 +232,11 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         await enqueue(video.uuid, async () => {
           onUpdate(video.uuid, { status: opts.activeStatus, error: null });
           const sourceUrl = `${window.location.origin}/api/media/${file}`;
-          const { objectUrl, blob } = await opts.process(sourceUrl);
+          setFFmpegState(video.uuid, { status: 'loading', progress: 0 });
+          const { objectUrl, blob } = await opts.process(sourceUrl, (p) => {
+            setFFmpegState(video.uuid, { status: 'processing', progress: p });
+          });
+          setFFmpegState(video.uuid, null);
 
           onUpdate(video.uuid, { status: 'done', ...opts.donePatch });
 
@@ -249,6 +266,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         });
       } catch (err) {
         console.error(`${opts.errorKey} failed:`, err);
+        setFFmpegState(video.uuid, null);
         onUpdate(video.uuid, {
           status: 'error',
           error: t(opts.errorKey),
@@ -267,6 +285,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       enqueue,
       t,
       checkBars,
+      setFFmpegState,
     ],
   );
 
@@ -275,7 +294,8 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     () =>
       enqueueProcessing({
         activeStatus: 'processing',
-        process: (url) => interpolateFps(url, Number(video.fps)),
+        process: (url, onProgress) =>
+          interpolateFps(url, Number(video.fps), onProgress),
         donePatch: { fpsApplied: true },
         taskUpdate: { fpsApplied: true },
         errorKey: 'errorFfmpegFailed',
@@ -289,7 +309,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     () =>
       enqueueProcessing({
         activeStatus: 'converting',
-        process: (url) => convertToH264(url),
+        process: (url, onProgress) => convertToH264(url, onProgress),
         donePatch: { h264Converted: true, isH265: false },
         taskUpdate: { isH265: false },
         errorKey: 'errorConvertFailed',
@@ -305,7 +325,8 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       enqueueProcessing({
         activeStatus: 'processing',
         /* Pass the pre-computed crop string to skip the redundant cropdetect pass. */
-        process: (url) => removeBlackBars(url, 24, 16, cropString ?? undefined),
+        process: (url, onProgress) =>
+          removeBlackBars(url, 24, 16, cropString ?? undefined, onProgress),
         donePatch: { blackBarsRemoved: true },
         taskUpdate: { blackBarsRemoved: true },
         errorKey: 'errorRemoveBlackBarsFailed',
@@ -319,7 +340,8 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     (targetFps: number) =>
       enqueueProcessing({
         activeStatus: 'processing',
-        process: (url) => interpolateFps(url, targetFps),
+        process: (url, onProgress) =>
+          interpolateFps(url, targetFps, onProgress),
         donePatch: { fpsApplied: true, fps: String(targetFps) },
         taskUpdate: { fpsApplied: true },
         errorKey: 'errorFfmpegFailed',
@@ -364,7 +386,8 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         void enqueueProcessing({
           sourceFile: file,
           activeStatus: 'processing',
-          process: (url) => interpolateFps(url, Number(video.fps)),
+          process: (url, onProgress) =>
+            interpolateFps(url, Number(video.fps), onProgress),
           donePatch: { fpsApplied: true },
           taskUpdate: { fpsApplied: true },
           errorKey: 'errorFfmpegFailed',
@@ -531,7 +554,10 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       video.fps !== 'original' &&
       !video.justAudio &&
       !video.fpsApplied &&
-      (video.status === 'done' || video.status === 'processing');
+      (video.status === 'done' || video.status === 'processing') &&
+      /* Don't re-enqueue if FFmpeg is already actively processing this video
+         (e.g. VideoItem remounted due to pinned-grid toggle / pagination). */
+      !getFFmpegState(video.uuid);
 
     if (needsResume) {
       queueMicrotask(() => handleInterpolateFps());
@@ -542,7 +568,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     video.justAudio,
     video.fpsApplied,
     video.status,
+    video.uuid,
     handleInterpolateFps,
+    getFFmpegState,
   ]);
 
   /* ── Resume interrupted H.264 conversion on mount ── */
@@ -555,7 +583,10 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       video.isH265 &&
       !video.justAudio &&
       !video.h264Converted &&
-      video.status === 'converting';
+      video.status === 'converting' &&
+      /* Don't re-enqueue if FFmpeg is already actively processing this video
+         (e.g. VideoItem remounted due to pinned-grid toggle / pagination). */
+      !getFFmpegState(video.uuid);
 
     if (needsResume) {
       queueMicrotask(() => handleConvertH264());
@@ -566,7 +597,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     video.justAudio,
     video.h264Converted,
     video.status,
+    video.uuid,
     handleConvertH264,
+    getFFmpegState,
   ]);
 
   /* ── Stop polling when this card unmounts (e.g. pagination / filter) ── */
@@ -633,27 +666,39 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       </div>
 
       {/* ── Details panel (collapsible) ───────────── */}
-      {detailsOpen ? <VideoDetailsPanel video={video} t={t} /> : null}
+      {detailsOpen ? (
+        <VideoDetailsPanel
+          video={video}
+          ffmpegStatus={displayFFmpegStatus}
+          ffmpegProgress={displayFFmpegProgress}
+          ffmpegLastError={ffmpegLastError}
+          ffmpegProcessingTime={ffmpegProcessingTime}
+          ffmpegCores={ffmpegCores}
+          uploading={uploading}
+          t={t}
+        />
+      ) : null}
 
       {/* ── Media preview ─────────────────────────── */}
       <VideoMediaPreview
         downloadURL={video.downloadURL}
         justAudio={video.justAudio}
         thumbnail={video.thumbnail}
+        compact={isBusy}
       />
 
       {/* ── Loading indicator ─────────────────────── */}
-      {isProcessing ? (
+      {isProcessing || displayFFmpegStatus !== 'idle' ? (
         <ProgressBar
-          value={ffmpegProgress ? ffmpegProgress : undefined}
+          value={displayFFmpegProgress ? displayFFmpegProgress : undefined}
           margin="0"
         />
       ) : null}
 
       {/* ── Status hints ──────────────────────────── */}
       <VideoStatusHints
-        ffmpegStatus={ffmpegStatus}
-        ffmpegProgress={ffmpegProgress}
+        ffmpegStatus={displayFFmpegStatus}
+        ffmpegProgress={displayFFmpegProgress}
         videoStatus={video.status}
         uploading={uploading}
         t={t}
@@ -741,13 +786,35 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
 
 /* ── Sub-components ─────────────────────────────────── */
 
+function formatProcessingTime(seconds: number): string {
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}m ${s}s`;
+}
+
 function VideoDetailsPanel({
   video,
+  ffmpegStatus,
+  ffmpegProgress,
+  ffmpegLastError,
+  ffmpegProcessingTime,
+  ffmpegCores,
+  uploading,
   t,
 }: {
   video: StoredVideo;
+  ffmpegStatus: string;
+  ffmpegProgress: number | null;
+  ffmpegLastError: string | null;
+  ffmpegProcessingTime: number | null;
+  ffmpegCores: number | null;
+  uploading: boolean;
   t: ReturnType<typeof useTranslations<'VideoGrid'>>;
 }) {
+  const ffmpegActive =
+    ffmpegStatus === 'loading' || ffmpegStatus === 'processing';
+
   return (
     <div className="vi-details">
       <dl className="vi-dl">
@@ -784,6 +851,44 @@ function VideoDetailsPanel({
             <dd>{Math.round(video.duration)}s</dd>
           </>
         ) : null}
+
+        {/* ── FFmpeg live state ── */}
+        <dt>FFmpeg</dt>
+        <dd>
+          {ffmpegStatus === 'loading'
+            ? t('ffmpegLoading')
+            : ffmpegStatus === 'processing'
+              ? video.status === 'converting'
+                ? t('convertingH264', { progress: ffmpegProgress })
+                : t('ffmpegProcessing', { progress: ffmpegProgress })
+              : uploading
+                ? t('uploadingProcessed')
+                : ffmpegStatus}
+        </dd>
+        {ffmpegActive && ffmpegProgress !== null ? (
+          <>
+            <dt>{t('detailProgress')}</dt>
+            <dd>{ffmpegProgress}%</dd>
+          </>
+        ) : null}
+        {ffmpegLastError ? (
+          <>
+            <dt>{t('detailFfmpegError')}</dt>
+            <dd className="vi-error-text">{ffmpegLastError}</dd>
+          </>
+        ) : null}
+        {ffmpegProcessingTime !== null ? (
+          <>
+            <dt>{t('detailProcessingTime')}</dt>
+            <dd>{formatProcessingTime(ffmpegProcessingTime)}</dd>
+          </>
+        ) : null}
+        {ffmpegCores !== null ? (
+          <>
+            <dt>{t('detailCores')}</dt>
+            <dd>{ffmpegCores}</dd>
+          </>
+        ) : null}
       </dl>
     </div>
   );
@@ -793,10 +898,12 @@ function VideoMediaPreview({
   downloadURL,
   justAudio,
   thumbnail,
+  compact,
 }: {
   downloadURL: string | null;
   justAudio: boolean;
   thumbnail: string | null;
+  compact?: boolean;
 }) {
   if (!downloadURL) return null;
 
@@ -832,7 +939,7 @@ function VideoMediaPreview({
   return (
     <div className="vi-media-wrapper">
       <video
-        className="vi-video"
+        className={`vi-video${compact ? ' vi-video--compact' : ''}`}
         src={downloadURL}
         loop
         playsInline

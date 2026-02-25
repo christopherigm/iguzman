@@ -107,12 +107,66 @@ self.onmessage = async (
           const input = 'input.mp4';
           const output = 'output.mp4';
           await ff.writeFile(input, videoData);
+
+          // Probe input resolution. FFmpeg exits 1 with no output specified
+          // but still logs stream info – ignore the exit code.
+          let probeLog = '';
+          const probeHandler = ({ message }: { message: string }) => {
+            probeLog += message + '\n';
+          };
+          ff.on('log', probeHandler);
+          await ff.exec(['-i', input]);
+          ff.off('log', probeHandler);
+
+          const dimMatch = probeLog.match(/(\d{2,5})x(\d{2,5})/);
+          const origW = dimMatch ? Number(dimMatch[1]) : 0;
+          const origH = dimMatch ? Number(dimMatch[2]) : 0;
+
+          if (origW > 2560 || origH > 1440) {
+            await ff.deleteFile(input);
+            throw new Error(
+              `Video resolution ${origW}x${origH} exceeds QHD+ (2560×1440). FPS interpolation is not supported for resolutions above QHD+.`,
+            );
+          }
+
+          const videoFilter = `minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1`;
+
+          // minterpolate does not reliably fire FFmpeg progress events, so
+          // parse frame numbers from the log as a fallback progress source.
+          const durMatch = probeLog.match(
+            /Duration:\s+(\d+):(\d+):(\d+(?:\.\d+)?)/,
+          );
+          const durationSec = durMatch
+            ? Number(durMatch[1]) * 3600 +
+              Number(durMatch[2]) * 60 +
+              Number(durMatch[3])
+            : 0;
+          const estimatedFrames = durationSec > 0 ? durationSec * targetFps : 0;
+          let lastReportedFrame = 0;
+          const frameLogHandler = ({ message }: { message: string }) => {
+            const m = message.match(/frame=\s*(\d+)/);
+            if (!m) return;
+            const frame = Number(m[1]);
+            if (frame <= lastReportedFrame) return;
+            lastReportedFrame = frame;
+            if (estimatedFrames > 0) {
+              sendProgress(
+                Math.min(99, Math.round((frame / estimatedFrames) * 100)),
+              );
+            }
+          };
+          ff.on('log', frameLogHandler);
+
           const code = await ff.exec([
-            '-i', input,
+            '-i',
+            input,
             '-filter:v',
-            `minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1`,
+            videoFilter,
+            '-c:a',
+            'copy',
             output,
           ]);
+          ff.off('log', frameLogHandler);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
           const result = (await ff.readFile(output)) as Uint8Array;
           await ff.deleteFile(input);
@@ -130,11 +184,16 @@ self.onmessage = async (
           const output = 'output_h264.mp4';
           await ff.writeFile(input, videoData);
           const code = await ff.exec([
-            '-i', input,
-            '-c:v', 'libx264',
-            '-preset', 'fast',
-            '-crf', '23',
-            '-c:a', 'copy',
+            '-i',
+            input,
+            '-c:v',
+            'libx264',
+            '-preset',
+            'fast',
+            '-crf',
+            '23',
+            '-c:a',
+            'copy',
             output,
           ]);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
@@ -149,7 +208,12 @@ self.onmessage = async (
         }
 
         case 'removeBlackBars': {
-          const { videoData, limit = 24, round = 16, cropString } = payload as {
+          const {
+            videoData,
+            limit = 24,
+            round = 16,
+            cropString,
+          } = payload as {
             videoData: Uint8Array;
             limit?: number;
             round?: number;
@@ -169,9 +233,13 @@ self.onmessage = async (
             };
             ff.on('log', logHandler);
             await ff.exec([
-              '-i', input,
-              '-vf', `cropdetect=limit=${limit}:round=${round}:reset=0`,
-              '-f', 'null', '-',
+              '-i',
+              input,
+              '-vf',
+              `cropdetect=limit=${limit}:round=${round}:reset=0`,
+              '-f',
+              'null',
+              '-',
             ]);
             ff.off('log', logHandler);
 
@@ -189,9 +257,12 @@ self.onmessage = async (
 
           /* Step 2: apply crop */
           const code = await ff.exec([
-            '-i', input,
-            '-vf', `crop=${crop}`,
-            '-c:a', 'copy',
+            '-i',
+            input,
+            '-vf',
+            `crop=${crop}`,
+            '-c:a',
+            'copy',
             output,
           ]);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
@@ -206,7 +277,11 @@ self.onmessage = async (
         }
 
         case 'detectBars': {
-          const { videoData, limit = 24, round = 16 } = payload as {
+          const {
+            videoData,
+            limit = 24,
+            round = 16,
+          } = payload as {
             videoData: Uint8Array;
             limit?: number;
             round?: number;
@@ -220,9 +295,13 @@ self.onmessage = async (
           };
           ff.on('log', logHandler);
           await ff.exec([
-            '-i', input,
-            '-vf', `cropdetect=limit=${limit}:round=${round}:reset=0`,
-            '-f', 'null', '-',
+            '-i',
+            input,
+            '-vf',
+            `cropdetect=limit=${limit}:round=${round}:reset=0`,
+            '-f',
+            'null',
+            '-',
           ]);
           ff.off('log', logHandler);
           await ff.deleteFile(input);

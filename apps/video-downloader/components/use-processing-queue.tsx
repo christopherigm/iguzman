@@ -7,6 +7,7 @@ import {
   useRef,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 
@@ -14,14 +15,14 @@ import {
 
 /**
  * Maximum number of FFmpeg tasks that can run concurrently.
- * Derived from logical CPU count: floor(cores / 4), clamped to [1, 4].
- * Examples: 4 cores → 1, 8 cores → 2, 12 cores → 3, 16+ cores → 4.
+ * Derived from logical CPU count: floor(cores / 4), clamped to [2, 4].
+ * Examples: 4 cores → 2, 8 cores → 2, 12 cores → 3, 16+ cores → 4.
  * Falls back to 2 in non-browser environments.
  */
 function deriveMaxConcurrent(): number {
   if (typeof navigator === 'undefined') return 2;
   const cores = navigator.hardwareConcurrency ?? 4;
-  return Math.max(1, Math.min(4, Math.floor(cores / 4)));
+  return Math.max(2, Math.min(4, Math.floor(cores / 4)));
 }
 
 const MAX_CONCURRENT = deriveMaxConcurrent();
@@ -33,6 +34,11 @@ interface QueueItem {
   execute: () => Promise<void>;
   resolve: () => void;
   reject: (err: Error) => void;
+}
+
+export interface FFmpegState {
+  status: 'loading' | 'processing';
+  progress: number;
 }
 
 interface ProcessingQueueContextValue {
@@ -49,6 +55,12 @@ interface ProcessingQueueContextValue {
   queueSize: number;
   /** Number of tasks currently running. */
   activeCount: number;
+  /** Write FFmpeg status/progress for a video (null clears it). */
+  setFFmpegState: (uuid: string, state: FFmpegState | null) => void;
+  /** Read the current FFmpeg status/progress for a video (imperative). */
+  getFFmpegState: (uuid: string) => FFmpegState | null;
+  /** Subscribe to FFmpegState changes (for useSyncExternalStore). */
+  subscribeFFmpegStore: (listener: () => void) => () => void;
 }
 
 /* ── Context ────────────────────────────────────────── */
@@ -63,8 +75,49 @@ export function ProcessingQueueProvider({ children }: { children: ReactNode }) {
   const activeRef = useRef(0);
   const [tick, setTick] = useState(0);
 
-  /** Trigger a re-render so consumers see updated counts. */
+  /* ── FFmpeg state store (separate from queue tick) ─────────────
+   *  Progress updates are very frequent (every frame).  Using a
+   *  dedicated subscriber list + useSyncExternalStore lets us
+   *  re-render ONLY the VideoItem whose progress actually changed,
+   *  instead of every context consumer.
+   */
+  const ffmpegDataRef = useRef(new Map<string, FFmpegState>());
+  const ffmpegListenersRef = useRef(new Set<() => void>());
+
+  /** Trigger a re-render so consumers see updated queue counts. */
   const flush = useCallback(() => setTick((n) => n + 1), []);
+
+  /** Notify useSyncExternalStore subscribers (FFmpeg state only). */
+  const notifyFFmpegListeners = useCallback(() => {
+    for (const listener of ffmpegListenersRef.current) {
+      listener();
+    }
+  }, []);
+
+  const subscribeFFmpegStore = useCallback((listener: () => void) => {
+    ffmpegListenersRef.current.add(listener);
+    return () => {
+      ffmpegListenersRef.current.delete(listener);
+    };
+  }, []);
+
+  const setFFmpegState = useCallback(
+    (uuid: string, state: FFmpegState | null) => {
+      if (state === null) {
+        ffmpegDataRef.current.delete(uuid);
+      } else {
+        ffmpegDataRef.current.set(uuid, state);
+      }
+      notifyFFmpegListeners();
+    },
+    [notifyFFmpegListeners],
+  );
+
+  const getFFmpegState = useCallback(
+    (uuid: string): FFmpegState | null =>
+      ffmpegDataRef.current.get(uuid) ?? null,
+    [],
+  );
 
   /** Start queued tasks until we hit the concurrency limit. */
   const processNext = useCallback(() => {
@@ -118,7 +171,10 @@ export function ProcessingQueueProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  /* Recompute on every tick so consumers see updated counts. */
+  /* Recompute on every tick so consumers see updated queue counts.
+   * FFmpeg progress is intentionally NOT included here — it uses
+   * useSyncExternalStore via useFFmpegState() to avoid re-rendering
+   * every consumer on every progress tick. */
   const value = useMemo<ProcessingQueueContextValue>(
     () => ({
       enqueue,
@@ -126,9 +182,20 @@ export function ProcessingQueueProvider({ children }: { children: ReactNode }) {
       isQueued,
       queueSize: queueRef.current.length,
       activeCount: activeRef.current,
+      setFFmpegState,
+      getFFmpegState,
+      subscribeFFmpegStore,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [enqueue, cancel, isQueued, tick],
+    [
+      enqueue,
+      cancel,
+      isQueued,
+      tick,
+      setFFmpegState,
+      getFFmpegState,
+      subscribeFFmpegStore,
+    ],
   );
 
   return (
@@ -138,7 +205,7 @@ export function ProcessingQueueProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/* ── Consumer hook ──────────────────────────────────── */
+/* ── Consumer hooks ─────────────────────────────────── */
 
 export function useProcessingQueue() {
   const ctx = useContext(ProcessingQueueContext);
@@ -148,4 +215,35 @@ export function useProcessingQueue() {
     );
   }
   return ctx;
+}
+
+/**
+ * Subscribe to a single video's FFmpeg processing state.
+ *
+ * Uses `useSyncExternalStore` so that only the VideoItem whose
+ * UUID's state actually changed re-renders — other items in the
+ * grid are completely unaffected by progress ticks.
+ */
+const SERVER_SNAPSHOT: FFmpegState | null = null;
+
+export function useFFmpegState(uuid: string): FFmpegState | null {
+  const ctx = useContext(ProcessingQueueContext);
+  if (!ctx) {
+    throw new Error(
+      'useFFmpegState must be used within a <ProcessingQueueProvider>',
+    );
+  }
+
+  const getSnapshot = useCallback(
+    () => ctx.getFFmpegState(uuid),
+    [ctx.getFFmpegState, uuid],
+  );
+
+  const getServerSnapshot = useCallback(() => SERVER_SNAPSHOT, []);
+
+  return useSyncExternalStore(
+    ctx.subscribeFFmpegStore,
+    getSnapshot,
+    getServerSnapshot,
+  );
 }

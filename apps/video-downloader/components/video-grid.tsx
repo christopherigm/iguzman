@@ -50,10 +50,7 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
     () => videos.filter((v) => BUSY_STATUSES.has(v.status)),
     [videos],
   );
-  const pinnedSet = useMemo(
-    () => new Set(pinned.map((v) => v.uuid)),
-    [pinned],
-  );
+  const pinnedSet = useMemo(() => new Set(pinned.map((v) => v.uuid)), [pinned]);
 
   /* ── Derived: filtered list ─────────────────────── */
   const filtered = useMemo(() => {

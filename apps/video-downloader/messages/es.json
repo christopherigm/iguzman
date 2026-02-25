@@ -78,11 +78,15 @@
     "convertingH264": "Convirtiendo H.265 → H.264… {progress}%",
     "errorConvertFailed": "La conversión de H.265 a H.264 falló.",
     "detailCodec": "Códec",
+    "detailProgress": "Progreso",
+    "detailFfmpegError": "Error de FFmpeg",
     "converted": "convertido",
     "removeBlackBars": "Eliminar barras negras",
     "removingBlackBars": "Eliminando barras negras… {progress}%",
     "errorRemoveBlackBarsFailed": "Error al eliminar las barras negras.",
     "toggleExtraActions": "Más acciones",
-    "processingTitle": "En Proceso"
+    "processingTitle": "En Proceso",
+    "detailProcessingTime": "Tiempo de procesamiento",
+    "detailCores": "Hilos de CPU"
   }
 }

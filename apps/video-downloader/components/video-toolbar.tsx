@@ -217,7 +217,7 @@ export function VideoToolbar({
       {/* ── Spacer ────────────────────────────────────── */}
       <span className="vt-spacer" />
       {/* ── Pagination ────────────────────────────────── */}
-      {totalPages > 0 && (
+      {totalPages > 1 && (
         <Box className="vt-pagination">
           <Box className="vt-pagination-inner">
             <button

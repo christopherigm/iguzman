@@ -32,16 +32,23 @@ export function useFFmpeg() {
   const workerRef = useRef<Worker | null>(null);
   const loadPromiseRef = useRef<Promise<void> | null>(null);
   const pendingRef = useRef(new Map<string, PendingOp>());
+  const processingStartRef = useRef<number | null>(null);
   const [status, setStatus] = useState<FFmpegStatus>('idle');
   const [progress, setProgress] = useState(0);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [lastProcessingTime, setLastProcessingTime] = useState<number | null>(
+    null,
+  );
+  const cores =
+    typeof navigator !== 'undefined'
+      ? (navigator.hardwareConcurrency ?? 1)
+      : null;
 
   /** Get or create the worker, attaching a single persistent message handler. */
   const getWorker = useCallback((): Worker => {
     if (workerRef.current) return workerRef.current;
 
-    const worker = new Worker(
-      new URL('./ffmpeg-worker.ts', import.meta.url),
-    );
+    const worker = new Worker(new URL('./ffmpeg-worker.ts', import.meta.url));
 
     worker.onmessage = ({
       data,
@@ -66,9 +73,25 @@ export function useFFmpeg() {
         pendingRef.current.delete(id);
         pending.resolve(undefined);
       } else if (type === 'error') {
+        const msg = (payload as { message: string }).message;
         pendingRef.current.delete(id);
-        pending.reject(new Error((payload as { message: string }).message));
+        setLastError(msg);
+        pending.reject(new Error(msg));
       }
+    };
+
+    worker.onerror = (event) => {
+      const msg = event.message ?? 'FFmpeg worker crashed';
+      setLastError(msg);
+      // Reject every in-flight operation so callers don't hang.
+      for (const [, pending] of pendingRef.current) {
+        pending.reject(new Error(msg));
+      }
+      pendingRef.current.clear();
+      setStatus('ready');
+      // Discard the crashed worker; next op will create a fresh one.
+      workerRef.current = null;
+      loadPromiseRef.current = null;
     };
 
     workerRef.current = worker;
@@ -86,7 +109,11 @@ export function useFFmpeg() {
       worker.postMessage({
         id,
         type: 'load',
-        payload: { coreURL: CORE_URL, wasmURL: WASM_URL, workerURL: WORKER_URL },
+        payload: {
+          coreURL: CORE_URL,
+          wasmURL: WASM_URL,
+          workerURL: WORKER_URL,
+        },
       });
     });
 
@@ -113,10 +140,12 @@ export function useFFmpeg() {
       type: string,
       videoUrl: string,
       extraPayload: Record<string, unknown> = {},
+      externalOnProgress?: (p: number) => void,
     ): Promise<Uint8Array> => {
       await ensureLoaded();
       setStatus('processing');
       setProgress(0);
+      processingStartRef.current = Date.now();
 
       const videoData = await fetchFile(videoUrl);
 
@@ -126,7 +155,14 @@ export function useFFmpeg() {
         pendingRef.current.set(id, {
           resolve: (data) => resolve(data as Uint8Array),
           reject,
-          onProgress: (p) => setProgress(p),
+          onProgress: (p) => {
+            /* Only forward to the external callback (queue's setFFmpegState).
+             * We intentionally skip the hook-local setProgress(p) here —
+             * progress display is driven entirely by the processing queue's
+             * per-UUID FFmpegState, and updating the hook's own React state
+             * on every tick caused redundant re-renders of every VideoItem. */
+            externalOnProgress?.(p);
+          },
         });
         worker.postMessage(
           {
@@ -142,7 +178,15 @@ export function useFFmpeg() {
           },
           [videoData.buffer as ArrayBuffer],
         );
-      }).finally(() => setStatus('ready'));
+      }).finally(() => {
+        setStatus('ready');
+        if (processingStartRef.current !== null) {
+          setLastProcessingTime(
+            (Date.now() - processingStartRef.current) / 1000,
+          );
+          processingStartRef.current = null;
+        }
+      });
     },
     [ensureLoaded, getWorker],
   );
@@ -159,8 +203,14 @@ export function useFFmpeg() {
     async (
       videoUrl: string,
       targetFps: number,
+      onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {
-      const data = await sendVideoOp('interpolateFps', videoUrl, { targetFps });
+      const data = await sendVideoOp(
+        'interpolateFps',
+        videoUrl,
+        { targetFps },
+        onProgress,
+      );
       const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
       return { objectUrl: URL.createObjectURL(blob), blob };
     },
@@ -175,8 +225,11 @@ export function useFFmpeg() {
    *                   and the raw Blob for uploading back to the server.
    */
   const convertToH264 = useCallback(
-    async (videoUrl: string): Promise<{ objectUrl: string; blob: Blob }> => {
-      const data = await sendVideoOp('convertToH264', videoUrl);
+    async (
+      videoUrl: string,
+      onProgress?: (p: number) => void,
+    ): Promise<{ objectUrl: string; blob: Blob }> => {
+      const data = await sendVideoOp('convertToH264', videoUrl, {}, onProgress);
       const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
       return { objectUrl: URL.createObjectURL(blob), blob };
     },
@@ -200,12 +253,18 @@ export function useFFmpeg() {
       limit = 24,
       round = 16,
       cropString?: string,
+      onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {
-      const data = await sendVideoOp('removeBlackBars', videoUrl, {
-        limit,
-        round,
-        ...(cropString !== undefined && { cropString }),
-      });
+      const data = await sendVideoOp(
+        'removeBlackBars',
+        videoUrl,
+        {
+          limit,
+          round,
+          ...(cropString !== undefined && { cropString }),
+        },
+        onProgress,
+      );
       const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
       return { objectUrl: URL.createObjectURL(blob), blob };
     },
@@ -263,6 +322,9 @@ export function useFFmpeg() {
   return {
     status,
     progress,
+    lastError,
+    lastProcessingTime,
+    cores,
     interpolateFps,
     convertToH264,
     removeBlackBars,

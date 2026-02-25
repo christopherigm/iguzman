@@ -151,6 +151,11 @@
   height: auto;
 }
 
+.vi-video--compact {
+  height: 150px;
+  object-fit: cover;
+}
+
 .vi-thumbnail {
   display: block;
   width: 100%;
