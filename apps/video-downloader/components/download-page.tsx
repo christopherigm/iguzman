@@ -3,7 +3,6 @@
 import { useCallback } from 'react';
 import { DownloadForm } from './download-form';
 import { VideoGrid } from './video-grid';
-import { ProcessingQueueProvider } from './use-processing-queue';
 import { useVideoStore } from './use-video-store';
 import type { Platform } from '@repo/helpers/checkers';
 
@@ -21,12 +20,22 @@ interface VideoAddedEntry {
 /* ── Component ──────────────────────────────────────── */
 
 export function DownloadPage() {
-  const { videos, addVideo, updateVideo, removeVideo, storageError } =
-    useVideoStore();
+  const {
+    pinned,
+    completed,
+    addToPinned,
+    updatePinned,
+    completeVideo,
+    reprocessVideo,
+    updateCompleted,
+    removePinned,
+    removeCompleted,
+    storageError,
+  } = useVideoStore();
 
   const handleVideoAdded = useCallback(
     (entry: VideoAddedEntry) => {
-      addVideo({
+      addToPinned({
         originalURL: entry.originalURL,
         platform: entry.platform,
         fps: entry.fps,
@@ -35,11 +44,11 @@ export function DownloadPage() {
         autoDownload: entry.autoDownload,
       });
     },
-    [addVideo],
+    [addToPinned],
   );
 
   return (
-    <ProcessingQueueProvider>
+    <>
       <DownloadForm onVideoAdded={handleVideoAdded} />
       {storageError ? (
         <p
@@ -56,11 +65,16 @@ export function DownloadPage() {
       ) : null}
       <br />
       <VideoGrid
-        videos={videos}
-        onUpdate={updateVideo}
-        onRemove={removeVideo}
+        pinned={pinned}
+        completed={completed}
+        onUpdatePinned={updatePinned}
+        onCompletePinned={completeVideo}
+        onRemovePinned={removePinned}
+        onUpdateCompleted={updateCompleted}
+        onReprocessCompleted={reprocessVideo}
+        onRemoveCompleted={removeCompleted}
       />
-    </ProcessingQueueProvider>
+    </>
   );
 }
 

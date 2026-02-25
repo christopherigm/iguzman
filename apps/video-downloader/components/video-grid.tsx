@@ -4,7 +4,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Grid } from '@repo/ui/core-elements/grid';
 import type { Platform } from '@repo/helpers/checkers';
-import { VideoItem } from './video-item';
+import { PinnedVideoItem } from './pinned-video-item';
+import { ReadOnlyVideoItem, type ReprocessAction } from './readonly-video-item';
 import { VideoToolbar } from './video-toolbar';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import { useSearchQuery } from './use-search-store';
@@ -14,27 +15,31 @@ import './video-grid.css';
 
 const DEFAULT_PER_PAGE = 8;
 
-/** Statuses that represent active client- or server-side work.
- *  VideoItems in these states are pinned to a separate grid so that
- *  pagination or filter changes cannot unmount them mid-processing. */
-const BUSY_STATUSES = new Set<VideoStatus>([
-  'downloading',
-  'queued',
-  'processing',
-  'converting',
-]);
-
 /* ── Props ──────────────────────────────────────────── */
 
 export interface VideoGridProps {
-  videos: StoredVideo[];
-  onUpdate: (uuid: string, patch: Partial<StoredVideo>) => void;
-  onRemove: (uuid: string) => void;
+  pinned: StoredVideo[];
+  completed: StoredVideo[];
+  onUpdatePinned: (uuid: string, patch: Partial<StoredVideo>) => void;
+  onCompletePinned: (uuid: string) => void;
+  onRemovePinned: (uuid: string) => void;
+  onUpdateCompleted: (uuid: string, patch: Partial<StoredVideo>) => void;
+  onReprocessCompleted: (uuid: string, patch: Partial<StoredVideo>) => void;
+  onRemoveCompleted: (uuid: string) => void;
 }
 
 /* ── Component ──────────────────────────────────────── */
 
-export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
+export function VideoGrid({
+  pinned,
+  completed,
+  onUpdatePinned,
+  onCompletePinned,
+  onRemovePinned,
+  onUpdateCompleted,
+  onReprocessCompleted,
+  onRemoveCompleted,
+}: VideoGridProps) {
   const t = useTranslations('VideoGrid');
   const searchQuery = useSearchQuery();
 
@@ -45,17 +50,11 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [page, setPage] = useState(1);
 
-  /* ── Derived: pinned (active processing) ────────── */
-  const pinned = useMemo(
-    () => videos.filter((v) => BUSY_STATUSES.has(v.status)),
-    [videos],
-  );
-  const pinnedSet = useMemo(() => new Set(pinned.map((v) => v.uuid)), [pinned]);
+  const totalCount = pinned.length + completed.length;
 
-  /* ── Derived: filtered list ─────────────────────── */
+  /* ── Derived: filtered completed list ────────────── */
   const filtered = useMemo(() => {
-    /* Exclude pinned items — they are always rendered in the pinned grid. */
-    let list = videos.filter((v) => !pinnedSet.has(v.uuid));
+    let list = completed;
 
     /* Text search by name / uploader / URL */
     if (searchQuery) {
@@ -79,7 +78,7 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
     }
 
     return list;
-  }, [videos, pinnedSet, activePlatform, audioOnly, statusFilter, searchQuery]);
+  }, [completed, activePlatform, audioOnly, statusFilter, searchQuery]);
 
   /* ── Derived: pagination ────────────────────────── */
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
@@ -108,8 +107,44 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
     setPage(1);
   }, []);
 
+  /* ── Reprocess handler: move completed → pinned ──── */
+  const handleReprocess = useCallback(
+    (uuid: string, action: ReprocessAction, targetFps?: number) => {
+      switch (action) {
+        case 'fps':
+          onReprocessCompleted(uuid, {
+            status: 'processing' as VideoStatus,
+            fps: String(targetFps),
+            fpsApplied: false,
+          });
+          break;
+        case 'h264':
+          onReprocessCompleted(uuid, {
+            status: 'converting' as VideoStatus,
+          });
+          break;
+        case 'bars':
+          onReprocessCompleted(uuid, {
+            status: 'processing' as VideoStatus,
+            blackBarsRemoved: false,
+          });
+          break;
+        case 'retry':
+          onReprocessCompleted(uuid, {
+            status: 'pending' as VideoStatus,
+            error: null,
+            taskId: null,
+            file: null,
+            downloadURL: null,
+          });
+          break;
+      }
+    },
+    [onReprocessCompleted],
+  );
+
   /* ── Empty state ────────────────────────────────── */
-  if (videos.length === 0) {
+  if (totalCount === 0) {
     return (
       <div className="vg-empty">
         <span className="vg-empty-text">{t('emptyState')}</span>
@@ -121,10 +156,10 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
     <div className="vg-wrapper">
       <div className="vg-header">
         <span className="vg-title">{t('title')}</span>
-        <span className="vg-count">{videos.length}</span>
+        <span className="vg-count">{totalCount}</span>
       </div>
 
-      {/* ── Pinned: active-processing items are always mounted ── */}
+      {/* ── Pinned: active-processing items with own FFmpeg instances ── */}
       {pinned.length > 0 ? (
         <div className="vg-pinned">
           <div className="vg-pinned-header">
@@ -134,10 +169,11 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
           <Grid container spacing={2}>
             {pinned.map((video) => (
               <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-                <VideoItem
+                <PinnedVideoItem
                   video={video}
-                  onUpdate={onUpdate}
-                  onRemove={onRemove}
+                  onUpdate={onUpdatePinned}
+                  onComplete={onCompletePinned}
+                  onRemove={onRemovePinned}
                 />
               </Grid>
             ))}
@@ -146,7 +182,7 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
       ) : null}
 
       <VideoToolbar
-        videos={videos}
+        videos={completed}
         activePlatform={activePlatform}
         onPlatformChange={handlePlatformChange}
         audioOnly={audioOnly}
@@ -169,10 +205,10 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
         <Grid container spacing={2}>
           {pageVideos.map((video) => (
             <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-              <VideoItem
+              <ReadOnlyVideoItem
                 video={video}
-                onUpdate={onUpdate}
-                onRemove={onRemove}
+                onReprocess={handleReprocess}
+                onRemove={onRemoveCompleted}
               />
             </Grid>
           ))}

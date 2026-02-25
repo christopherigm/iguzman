@@ -156,11 +156,7 @@ export function useFFmpeg() {
           resolve: (data) => resolve(data as Uint8Array),
           reject,
           onProgress: (p) => {
-            /* Only forward to the external callback (queue's setFFmpegState).
-             * We intentionally skip the hook-local setProgress(p) here —
-             * progress display is driven entirely by the processing queue's
-             * per-UUID FFmpegState, and updating the hook's own React state
-             * on every tick caused redundant re-renders of every VideoItem. */
+            setProgress(p);
             externalOnProgress?.(p);
           },
         });
