@@ -105,11 +105,7 @@ function readStorage(): StoredVideo[] {
 }
 
 function writeStorage(videos: StoredVideo[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
-  } catch {
-    /* quota exceeded — silently fail */
-  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
 }
 
 /* ── Hook ───────────────────────────────────────────── */
@@ -119,12 +115,20 @@ export function useVideoStore() {
     if (typeof window === 'undefined') return [];
     return readStorage();
   });
+  const [storageError, setStorageError] = useState<string | null>(null);
   const initialized = useRef(typeof window !== 'undefined');
 
   /* Persist every time videos change (skip SSR). */
   useEffect(() => {
     if (initialized.current) {
-      writeStorage(videos);
+      try {
+        writeStorage(videos);
+        setStorageError(null);
+      } catch {
+        setStorageError(
+          'Storage is full — your video list may not be saved across page reloads.',
+        );
+      }
     } else {
       initialized.current = true;
     }
@@ -189,5 +193,5 @@ export function useVideoStore() {
     setVideos((prev) => prev.filter((v) => v.uuid !== uuid));
   }, []);
 
-  return { videos, addVideo, updateVideo, removeVideo } as const;
+  return { videos, addVideo, updateVideo, removeVideo, storageError } as const;
 }

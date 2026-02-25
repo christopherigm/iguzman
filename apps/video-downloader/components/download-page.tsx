@@ -21,7 +21,8 @@ interface VideoAddedEntry {
 /* ── Component ──────────────────────────────────────── */
 
 export function DownloadPage() {
-  const { videos, addVideo, updateVideo, removeVideo } = useVideoStore();
+  const { videos, addVideo, updateVideo, removeVideo, storageError } =
+    useVideoStore();
 
   const handleVideoAdded = useCallback(
     (entry: VideoAddedEntry) => {
@@ -40,6 +41,19 @@ export function DownloadPage() {
   return (
     <ProcessingQueueProvider>
       <DownloadForm onVideoAdded={handleVideoAdded} />
+      {storageError ? (
+        <p
+          role="alert"
+          style={{
+            color: '#ef4444',
+            fontSize: '0.8rem',
+            textAlign: 'center',
+            margin: '8px 0 0',
+          }}
+        >
+          {storageError}
+        </p>
+      ) : null}
       <br />
       <VideoGrid
         videos={videos}

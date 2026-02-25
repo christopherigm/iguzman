@@ -65,7 +65,8 @@ function downloadThumbnail(url: string, name: string | null) {
         objectUrl,
         `${name ?? 'thumbnail'}-${Date.now()}.${ext}`,
       );
-      URL.revokeObjectURL(objectUrl);
+      /* Defer revocation so the browser has time to initiate the download. */
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
     })
     .catch((err) => console.error('Thumbnail download failed:', err));
 }
@@ -119,6 +120,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmConvert, setConfirmConvert] = useState(false);
   const [hasBars, setHasBars] = useState<boolean | null>(video.hasBars);
+  const [cropString, setCropString] = useState<string | null>(null);
   const [fpsError, setFpsError] = useState(false);
   const [h264Error, setH264Error] = useState(false);
   const [blackBarsError, setBlackBarsError] = useState(false);
@@ -152,9 +154,53 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     video.uploader ??
     (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
 
-  /* ── Enqueue FFmpeg processing (shared by FPS & H.264) ── */
+  /* ── Detect black/white bars, cache crop string, persist result ─── */
+  const checkBars = useCallback(
+    async (file: string, taskId: string | null) => {
+      const sourceUrl = `${window.location.origin}/api/media/${file}`;
+      try {
+        const black = await detectBars(sourceUrl, { limit: 24 });
+        if (black.hasBars) {
+          setHasBars(true);
+          /* Cache the crop string so removeBlackBars can skip cropdetect. */
+          setCropString(black.crop);
+          onUpdate(video.uuid, { hasBars: true });
+          if (taskId) {
+            fetch(`/api/download-video/${taskId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ hasBars: true }),
+            }).catch(() => {});
+          }
+          return;
+        }
+        const white = await detectBars(sourceUrl, { limit: 230 });
+        const result = white.hasBars;
+        if (result) setCropString(white.crop);
+        setHasBars(result);
+        onUpdate(video.uuid, { hasBars: result });
+        if (taskId) {
+          fetch(`/api/download-video/${taskId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hasBars: result }),
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.error('Bar detection failed:', err);
+        setHasBars(false);
+        onUpdate(video.uuid, { hasBars: false });
+      }
+    },
+    [detectBars, onUpdate, video.uuid],
+  );
+
+  /* ── Enqueue FFmpeg processing (shared by FPS, H.264, bar removal) ── */
   const enqueueProcessing = useCallback(
     async (opts: {
+      /** Override the source file; defaults to video.file (used when calling
+       *  from handleTaskDone before the state update has propagated). */
+      sourceFile?: string;
       activeStatus: VideoStatus;
       process: (
         sourceUrl: string,
@@ -165,19 +211,20 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       downloadPrefix?: string;
       onError?: () => void;
     }) => {
-      if (!video.file || video.justAudio) return;
+      const file = opts.sourceFile ?? video.file;
+      if (!file || video.justAudio) return;
 
       try {
         onUpdate(video.uuid, { status: 'queued', error: null });
         await enqueue(video.uuid, async () => {
           onUpdate(video.uuid, { status: opts.activeStatus, error: null });
-          const sourceUrl = `${window.location.origin}/api/media/${video.file}`;
+          const sourceUrl = `${window.location.origin}/api/media/${file}`;
           const { objectUrl, blob } = await opts.process(sourceUrl);
 
           onUpdate(video.uuid, { status: 'done', ...opts.donePatch });
 
           const uploadPromise = uploadProcessedVideo(
-            video.file!,
+            file,
             blob,
             opts.taskUpdate,
             setUploading,
@@ -185,7 +232,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
 
           if (video.autoDownload) {
             const prefix = opts.downloadPrefix ?? 'video';
-            const downloadName = `${video.name ?? prefix}-${Date.now()}-${video.file}`;
+            const downloadName = `${video.name ?? prefix}-${Date.now()}-${file}`;
             triggerBrowserDownload(objectUrl, downloadName);
           }
 
@@ -195,7 +242,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
               file: newFile,
               downloadURL: `/api/media/${newFile}`,
             });
-            if (newFile && !video.justAudio) {
+            if (!video.justAudio) {
               checkBars(newFile, video.taskId);
             }
           }
@@ -215,9 +262,11 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       video.justAudio,
       video.autoDownload,
       video.name,
+      video.taskId,
       onUpdate,
       enqueue,
       t,
+      checkBars,
     ],
   );
 
@@ -255,13 +304,14 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     () =>
       enqueueProcessing({
         activeStatus: 'processing',
-        process: (url) => removeBlackBars(url),
+        /* Pass the pre-computed crop string to skip the redundant cropdetect pass. */
+        process: (url) => removeBlackBars(url, 24, 16, cropString ?? undefined),
         donePatch: { blackBarsRemoved: true },
         taskUpdate: { blackBarsRemoved: true },
         errorKey: 'errorRemoveBlackBarsFailed',
         onError: () => setBlackBarsError(true),
       }),
-    [enqueueProcessing, removeBlackBars],
+    [enqueueProcessing, removeBlackBars, cropString],
   );
 
   /* ── Manual FPS interpolation handler ───────────────── */
@@ -276,44 +326,6 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         onError: () => setFpsError(true),
       }),
     [enqueueProcessing, interpolateFps],
-  );
-
-  /* ── Check for black/white bars and persist result ── */
-  const checkBars = useCallback(
-    async (file: string, taskId: string | null) => {
-      const sourceUrl = `${window.location.origin}/api/media/${file}`;
-      try {
-        const black = await detectBars(sourceUrl, { limit: 24 });
-        if (black.hasBars) {
-          setHasBars(true);
-          onUpdate(video.uuid, { hasBars: true });
-          if (taskId) {
-            fetch(`/api/download-video/${taskId}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ hasBars: true }),
-            }).catch(() => {});
-          }
-          return;
-        }
-        const white = await detectBars(sourceUrl, { limit: 230 });
-        const result = white.hasBars;
-        setHasBars(result);
-        onUpdate(video.uuid, { hasBars: result });
-        if (taskId) {
-          fetch(`/api/download-video/${taskId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hasBars: result }),
-          }).catch(() => {});
-        }
-      } catch (err) {
-        console.error('Bar detection failed:', err);
-        setHasBars(false);
-        onUpdate(video.uuid, { hasBars: false });
-      }
-    },
-    [detectBars, onUpdate, video.uuid],
   );
 
   /* ── Handle completed task from polling ────────────── */
@@ -345,46 +357,18 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
 
       if (!file || !video.autoDownload) return;
 
-      /* FPS interpolation via FFmpeg WASM (queued) */
+      /* FPS interpolation via FFmpeg WASM — delegate to enqueueProcessing so
+         the logic lives in exactly one place. sourceFile is passed explicitly
+         because the state update above hasn't propagated yet. */
       if (willInterpolateFps) {
-        onUpdate(video.uuid, { status: 'queued' });
-        enqueue(video.uuid, async () => {
-          onUpdate(video.uuid, { status: 'processing' });
-          const sourceUrl = `${window.location.origin}/api/media/${file}`;
-          const { objectUrl, blob } = await interpolateFps(
-            sourceUrl,
-            Number(video.fps),
-          );
-          onUpdate(video.uuid, { status: 'done', fpsApplied: true });
-
-          const uploadPromise = uploadProcessedVideo(
-            file,
-            blob,
-            { fpsApplied: true },
-            setUploading,
-          );
-
-          triggerBrowserDownload(
-            objectUrl,
-            `${name ?? 'video'}-${Date.now()}-${file}`,
-          );
-
-          const newFile = await uploadPromise;
-          if (newFile) {
-            onUpdate(video.uuid, {
-              file: newFile,
-              downloadURL: `/api/media/${newFile}`,
-            });
-            if (newFile && !video.justAudio) {
-              checkBars(newFile, video.taskId);
-            }
-          }
-        }).catch((ffErr) => {
-          console.error('FFmpeg interpolation failed:', ffErr);
-          onUpdate(video.uuid, {
-            status: 'error',
-            error: t('errorFfmpegFailed'),
-          });
+        void enqueueProcessing({
+          sourceFile: file,
+          activeStatus: 'processing',
+          process: (url) => interpolateFps(url, Number(video.fps)),
+          donePatch: { fpsApplied: true },
+          taskUpdate: { fpsApplied: true },
+          errorKey: 'errorFfmpegFailed',
+          downloadPrefix: 'video',
         });
         return;
       }
@@ -411,7 +395,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       video.justAudio,
       video.taskId,
       checkBars,
-      enqueue,
+      enqueueProcessing,
       interpolateFps,
       t,
     ],
@@ -445,7 +429,10 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     setFpsError(false);
     setH264Error(false);
     setBlackBarsError(false);
-    onUpdate(video.uuid, { status: 'downloading', error: null });
+    /* Clear any previous error immediately for UX, but stay in 'pending'
+       until we receive the taskId — prevents a race where the page is
+       refreshed between setting 'downloading' and writing taskId to storage. */
+    onUpdate(video.uuid, { error: null });
 
     try {
       const res = await fetch('/api/download-video', {
@@ -469,7 +456,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       }
 
       const taskId = data.task._id;
-      onUpdate(video.uuid, { taskId });
+      /* Atomic write: status and taskId are persisted together so a page
+         refresh never produces a 'downloading' entry with taskId === null. */
+      onUpdate(video.uuid, { status: 'downloading', taskId, error: null });
 
       pollForTask(taskId);
     } catch {
@@ -579,6 +568,14 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
     video.status,
     handleConvertH264,
   ]);
+
+  /* ── Stop polling when this card unmounts (e.g. pagination / filter) ── */
+  useEffect(() => {
+    const taskId = video.taskId;
+    return () => {
+      if (taskId) stopPolling(taskId);
+    };
+  }, [video.taskId, stopPolling]);
 
   /* ── Warn before closing during active processing ── */
   useEffect(() => {

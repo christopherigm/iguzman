@@ -32,9 +32,24 @@ const MONGO_URI =
 
 /* ── Helpers ──────────────────────────────────────── */
 
+/** Guard so index creation runs at most once per process lifetime. */
+let indexesEnsured = false;
+
 async function getTasksCollection(): Promise<Collection<VideoTaskDocument>> {
   const db = await connectToDatabase(DB_NAME, MONGO_URI);
-  return db.collection<VideoTaskDocument>(COLLECTION_NAME);
+  const col = db.collection<VideoTaskDocument>(COLLECTION_NAME);
+
+  if (!indexesEnsured) {
+    await col.createIndexes([
+      { key: { createdAt: -1 } },
+      { key: { file: 1 }, sparse: true },
+      { key: { status: 1 } },
+      { key: { url: 1, status: 1 } },
+    ]);
+    indexesEnsured = true;
+  }
+
+  return col;
 }
 
 export async function createTask(
@@ -63,9 +78,24 @@ export async function createTask(
   return { ...doc, _id: insertedId };
 }
 
-export async function getAllTasks(): Promise<WithId<VideoTaskDocument>[]> {
+export async function getAllTasks(
+  limit = 500,
+  skip = 0,
+): Promise<WithId<VideoTaskDocument>[]> {
   const col = await getTasksCollection();
-  return col.find().sort({ createdAt: -1 }).toArray();
+  return col.find().sort({ createdAt: -1 }).skip(skip).limit(limit).toArray();
+}
+
+export async function getTaskCount(): Promise<number> {
+  const col = await getTasksCollection();
+  return col.countDocuments();
+}
+
+export async function findActiveTaskByUrl(
+  url: string,
+): Promise<WithId<VideoTaskDocument> | null> {
+  const col = await getTasksCollection();
+  return col.findOne({ url, status: { $in: ['pending', 'downloading'] } });
 }
 
 export async function getTask(

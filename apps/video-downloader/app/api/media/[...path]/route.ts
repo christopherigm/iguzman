@@ -80,6 +80,36 @@ export async function GET(
     const ext = extname(fileName).toLowerCase();
     const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
 
+    /* ── Range request (seek support for video/audio elements) ── */
+    const rangeHeader = _request.headers.get('range');
+    if (rangeHeader) {
+      const match = /bytes=(\d+)-(\d*)/.exec(rangeHeader);
+      if (match) {
+        const start = parseInt(match[1]!, 10);
+        const end = match[2] ? parseInt(match[2], 10) : info.size - 1;
+        const safeStart = Math.min(start, info.size - 1);
+        const safeEnd = Math.min(end, info.size - 1);
+        const chunkSize = safeEnd - safeStart + 1;
+
+        const rangeStream = createReadStream(filePath, {
+          start: safeStart,
+          end: safeEnd,
+        });
+        const rangeWebStream = Readable.toWeb(rangeStream) as ReadableStream;
+
+        return new NextResponse(rangeWebStream, {
+          status: 206,
+          headers: {
+            'Content-Type': contentType,
+            'Content-Length': String(chunkSize),
+            'Content-Range': `bytes ${safeStart}-${safeEnd}/${info.size}`,
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'public, max-age=3600',
+          },
+        });
+      }
+    }
+
     const stream = createReadStream(filePath);
     const webStream = Readable.toWeb(stream) as ReadableStream;
 
@@ -88,6 +118,7 @@ export async function GET(
       headers: {
         'Content-Type': contentType,
         'Content-Length': String(info.size),
+        'Accept-Ranges': 'bytes',
         'Cache-Control': 'public, max-age=3600',
       },
     });
@@ -110,7 +141,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  const { writeFile, unlink } = await import('node:fs/promises');
+  const { unlink } = await import('node:fs/promises');
   const { randomUUID } = await import('node:crypto');
   const { extname } = await import('node:path');
   const segments = (await params).path;
@@ -146,8 +177,29 @@ export async function PUT(
     const newFileName = `${randomUUID()}${ext}`; // e.g. "a1b2c3d4-…-ef56.mp4"
     const newFilePath = join(MEDIA_DIR, newFileName);
 
-    const buffer = Buffer.from(await request.arrayBuffer());
-    await writeFile(newFilePath, buffer);
+    if (!request.body) {
+      return NextResponse.json({ error: 'Empty body' }, { status: 400 });
+    }
+
+    /* Stream the request body directly to disk — avoids buffering the entire
+       file in Node.js heap, which would OOM on large videos. */
+    const { createWriteStream } = await import('node:fs');
+    const { pipeline } = await import('node:stream/promises');
+    const { Readable } = await import('node:stream');
+
+    const writeStream = createWriteStream(newFilePath);
+    try {
+      await pipeline(
+        Readable.fromWeb(
+          request.body as Parameters<typeof Readable.fromWeb>[0],
+        ),
+        writeStream,
+      );
+    } catch (pipeErr) {
+      /* Clean up the partial file on stream failure. */
+      unlink(newFilePath).catch(() => {});
+      throw pipeErr;
+    }
 
     /* Best-effort: delete old file */
     unlink(oldFilePath).catch(() => {});

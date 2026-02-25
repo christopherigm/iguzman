@@ -13,7 +13,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  if (!id || id.length !== 24) {
+  if (!id || !/^[0-9a-f]{24}$/i.test(id)) {
     return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
   }
 
@@ -39,7 +39,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
 
-  if (!id || id.length !== 24) {
+  if (!id || !/^[0-9a-f]{24}$/i.test(id)) {
     return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
   }
 
@@ -84,7 +84,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
 
-  if (!id || id.length !== 24) {
+  if (!id || !/^[0-9a-f]{24}$/i.test(id)) {
     return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
   }
 

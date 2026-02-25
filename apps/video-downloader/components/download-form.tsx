@@ -236,7 +236,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
       borderRadius={16}
       padding={10}
       flexDirection="column"
-      styles={{ maxWidth: 400, width: '100%' }}
+      width="100%"
       backgroundColor="var(--surface-1, #fff)"
     >
       {/* ── URL Input Row ────────────────────────────── */}
@@ -283,9 +283,8 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
         )}
 
         <button
-          type="button"
+          type="submit"
           className="df-icon-btn df-icon-btn--download"
-          onClick={handleSubmit}
           disabled={!validPlatformUrl}
           aria-label={t('download')}
         >
@@ -340,7 +339,16 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
 
   return (
     <>
-      {formContent}
+      {/* Wrapping in a <form> lets the browser submit on Enter key. */}
+      <form
+        style={{ maxWidth: 400, width: '100%' }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmit();
+        }}
+      >
+        {formContent}
+      </form>
 
       {/* ── FPS Boost Confirmation Modal ──────────── */}
       {showFpsWarning ? (

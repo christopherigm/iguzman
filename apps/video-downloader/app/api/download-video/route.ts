@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import downloadVideo from '@repo/helpers/download-video';
-import { createTask, updateTask } from '@/lib/video-task-db';
+import { createTask, updateTask, findActiveTaskByUrl } from '@/lib/video-task-db';
 import type { VideoDownloadInput } from '@/lib/types';
 
 /* ------------------------------------------------------------------ */
@@ -39,14 +39,36 @@ export async function POST(request: Request) {
     );
   }
 
-  /* 1. Create the task document immediately */
+  /* 1. Deduplicate: return the existing task if one is already running */
+  const existing = await findActiveTaskByUrl(url);
+  if (existing) {
+    return NextResponse.json(
+      {
+        task: {
+          _id: existing._id.toHexString(),
+          status: existing.status,
+          url,
+          justAudio,
+          checkCodec,
+        },
+      },
+      { status: 202 },
+    );
+  }
+
+  /* 2. Create the task document immediately */
   const task = await createTask({ url, justAudio, checkCodec });
   const taskId = task._id.toHexString();
 
-  /* 2. Fire-and-forget: launch async download, update MongoDB when done */
-  updateTask(taskId, { status: 'downloading' })
-    .then(() =>
-      downloadVideo({
+  /* 3. Fire-and-forget: the download runs independently of the status update
+        so a transient DB hiccup on the first updateTask cannot prevent the
+        download from starting. */
+  void (async () => {
+    /* Best-effort status update — does NOT gate the download. */
+    updateTask(taskId, { status: 'downloading' }).catch(console.error);
+
+    try {
+      const result = await downloadVideo({
         url,
         justAudio,
         checkCodec,
@@ -54,38 +76,38 @@ export async function POST(request: Request) {
         cookies: IS_PRODUCTION
           ? '/app/media/netscape-cookies.txt'
           : './netscape-cookies.txt',
-      }),
-    )
-    .then((result) => {
+      });
+
       if (result.error) {
-        return updateTask(taskId, {
+        await updateTask(taskId, {
           status: 'error',
           error: result.error,
           result,
         });
+      } else {
+        await updateTask(taskId, {
+          status: 'done',
+          result,
+          file: result.file ?? null,
+          name: result.name ?? null,
+          isH265: result.isH265 ?? null,
+          thumbnail: result.thumbnail ?? null,
+          duration: result.metadata?.duration ?? null,
+          uploader: result.metadata?.uploader ?? null,
+        });
       }
-      return updateTask(taskId, {
-        status: 'done',
-        result,
-        file: result.file ?? null,
-        name: result.name ?? null,
-        isH265: result.isH265 ?? null,
-        thumbnail: result.thumbnail ?? null,
-        duration: result.metadata?.duration ?? null,
-        uploader: result.metadata?.uploader ?? null,
-      });
-    })
-    .catch((err) => {
-      updateTask(taskId, {
+    } catch (err) {
+      await updateTask(taskId, {
         status: 'error',
         error: {
           code: 'DOWNLOAD_FAILED',
           message: err instanceof Error ? err.message : String(err),
         },
       }).catch(console.error);
-    });
+    }
+  })();
 
-  /* 3. Respond immediately with the task document */
+  /* 4. Respond immediately with the task document */
   return NextResponse.json(
     {
       task: {

@@ -68,9 +68,11 @@ export function ProcessingQueueProvider({ children }: { children: ReactNode }) {
 
   /** Start queued tasks until we hit the concurrency limit. */
   const processNext = useCallback(() => {
+    let dispatched = false;
     while (activeRef.current < MAX_CONCURRENT && queueRef.current.length > 0) {
       const item = queueRef.current.shift()!;
       activeRef.current += 1;
+      dispatched = true;
 
       item
         .execute()
@@ -84,7 +86,8 @@ export function ProcessingQueueProvider({ children }: { children: ReactNode }) {
           processNext();
         });
     }
-    flush();
+    /* Only re-render when something actually changed. */
+    if (dispatched) flush();
   }, [flush]);
 
   const enqueue = useCallback(

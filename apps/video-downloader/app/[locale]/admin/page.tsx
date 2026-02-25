@@ -15,7 +15,7 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 };
 
 export default async function AdminPage() {
-  const tasks = await getAllTasks();
+  const tasks = await getAllTasks(500);
 
   const total = tasks.length;
   const counts: Record<TaskStatus, number> = {
