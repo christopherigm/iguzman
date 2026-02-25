@@ -14,6 +14,16 @@ import './video-grid.css';
 
 const DEFAULT_PER_PAGE = 8;
 
+/** Statuses that represent active client- or server-side work.
+ *  VideoItems in these states are pinned to a separate grid so that
+ *  pagination or filter changes cannot unmount them mid-processing. */
+const BUSY_STATUSES = new Set<VideoStatus>([
+  'downloading',
+  'queued',
+  'processing',
+  'converting',
+]);
+
 /* ── Props ──────────────────────────────────────────── */
 
 export interface VideoGridProps {
@@ -35,9 +45,20 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [page, setPage] = useState(1);
 
+  /* ── Derived: pinned (active processing) ────────── */
+  const pinned = useMemo(
+    () => videos.filter((v) => BUSY_STATUSES.has(v.status)),
+    [videos],
+  );
+  const pinnedSet = useMemo(
+    () => new Set(pinned.map((v) => v.uuid)),
+    [pinned],
+  );
+
   /* ── Derived: filtered list ─────────────────────── */
   const filtered = useMemo(() => {
-    let list = videos;
+    /* Exclude pinned items — they are always rendered in the pinned grid. */
+    let list = videos.filter((v) => !pinnedSet.has(v.uuid));
 
     /* Text search by name / uploader / URL */
     if (searchQuery) {
@@ -61,7 +82,7 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
     }
 
     return list;
-  }, [videos, activePlatform, audioOnly, statusFilter, searchQuery]);
+  }, [videos, pinnedSet, activePlatform, audioOnly, statusFilter, searchQuery]);
 
   /* ── Derived: pagination ────────────────────────── */
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
@@ -105,6 +126,27 @@ export function VideoGrid({ videos, onUpdate, onRemove }: VideoGridProps) {
         <span className="vg-title">{t('title')}</span>
         <span className="vg-count">{videos.length}</span>
       </div>
+
+      {/* ── Pinned: active-processing items are always mounted ── */}
+      {pinned.length > 0 ? (
+        <div className="vg-pinned">
+          <div className="vg-pinned-header">
+            <span className="vg-pinned-label">{t('processingTitle')}</span>
+            <span className="vg-count">{pinned.length}</span>
+          </div>
+          <Grid container spacing={2}>
+            {pinned.map((video) => (
+              <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <VideoItem
+                  video={video}
+                  onUpdate={onUpdate}
+                  onRemove={onRemove}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        </div>
+      ) : null}
 
       <VideoToolbar
         videos={videos}

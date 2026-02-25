@@ -47,6 +47,30 @@
   letter-spacing: 0.02em;
 }
 
+/* ── Pinned / in-progress section ────────────────────── */
+
+.vg-pinned {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border, rgba(0 0 0 / 0.08));
+}
+
+.vg-pinned-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.vg-pinned-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--foreground-muted, #999);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 /* ── Empty state ─────────────────────────────────────── */
 
 .vg-empty {

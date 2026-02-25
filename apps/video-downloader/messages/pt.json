@@ -82,6 +82,7 @@
     "removeBlackBars": "Remover barras pretas",
     "removingBlackBars": "Removendo barras pretas… {progress}%",
     "errorRemoveBlackBarsFailed": "Falha ao remover as barras pretas.",
-    "toggleExtraActions": "Mais ações"
+    "toggleExtraActions": "Mais ações",
+    "processingTitle": "Em Processamento"
   }
 }

@@ -82,6 +82,7 @@
     "removeBlackBars": "Schwarze Balken entfernen",
     "removingBlackBars": "Schwarze Balken werden entfernt… {progress}%",
     "errorRemoveBlackBarsFailed": "Entfernung der schwarzen Balken fehlgeschlagen.",
-    "toggleExtraActions": "Mehr Aktionen"
+    "toggleExtraActions": "Mehr Aktionen",
+    "processingTitle": "In Bearbeitung"
   }
 }

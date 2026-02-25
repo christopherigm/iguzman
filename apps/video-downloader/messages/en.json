@@ -82,6 +82,7 @@
     "removeBlackBars": "Remove Black Bars",
     "removingBlackBars": "Removing black bars… {progress}%",
     "errorRemoveBlackBarsFailed": "Black bar removal failed.",
-    "toggleExtraActions": "More actions"
+    "toggleExtraActions": "More actions",
+    "processingTitle": "In Progress"
   }
 }
