@@ -119,6 +119,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmConvert, setConfirmConvert] = useState(false);
   const [hasBars, setHasBars] = useState<boolean | null>(video.hasBars);
+  const [fpsError, setFpsError] = useState(false);
+  const [h264Error, setH264Error] = useState(false);
+  const [blackBarsError, setBlackBarsError] = useState(false);
   const downloadTriggered = useRef(false);
   const resumeChecked = useRef(false);
   const convertResumeChecked = useRef(false);
@@ -160,6 +163,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
       taskUpdate: Record<string, unknown>;
       errorKey: string;
       downloadPrefix?: string;
+      onError?: () => void;
     }) => {
       if (!video.file || video.justAudio) return;
 
@@ -202,6 +206,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           status: 'error',
           error: t(opts.errorKey),
         });
+        opts.onError?.();
       }
     },
     [
@@ -225,6 +230,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         donePatch: { fpsApplied: true },
         taskUpdate: { fpsApplied: true },
         errorKey: 'errorFfmpegFailed',
+        onError: () => setFpsError(true),
       }),
     [enqueueProcessing, interpolateFps, video.fps],
   );
@@ -239,6 +245,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         taskUpdate: { isH265: false },
         errorKey: 'errorConvertFailed',
         downloadPrefix: 'video',
+        onError: () => setH264Error(true),
       }),
     [enqueueProcessing, convertToH264],
   );
@@ -252,6 +259,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         donePatch: { blackBarsRemoved: true },
         taskUpdate: { blackBarsRemoved: true },
         errorKey: 'errorRemoveBlackBarsFailed',
+        onError: () => setBlackBarsError(true),
       }),
     [enqueueProcessing, removeBlackBars],
   );
@@ -265,6 +273,7 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
         donePatch: { fpsApplied: true, fps: String(targetFps) },
         taskUpdate: { fpsApplied: true },
         errorKey: 'errorFfmpegFailed',
+        onError: () => setFpsError(true),
       }),
     [enqueueProcessing, interpolateFps],
   );
@@ -433,6 +442,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
 
   /* ── Download handler (each item independent) ───── */
   const handleDownload = useCallback(async () => {
+    setFpsError(false);
+    setH264Error(false);
+    setBlackBarsError(false);
     onUpdate(video.uuid, { status: 'downloading', error: null });
 
     try {
@@ -685,6 +697,9 @@ export function VideoItem({ video, onUpdate, onRemove }: VideoItemProps) {
           video={video}
           isBusy={isBusy}
           hasBars={hasBars}
+          fpsError={fpsError}
+          h264Error={h264Error}
+          blackBarsError={blackBarsError}
           onRemoveBlackBars={handleRemoveBlackBars}
           onInterpolateFps={handleInterpolateFpsManual}
           onConvert={() => setConfirmConvert(true)}
@@ -984,6 +999,9 @@ function VideoExtraActions({
   video,
   isBusy,
   hasBars,
+  fpsError,
+  h264Error,
+  blackBarsError,
   onRemoveBlackBars,
   onInterpolateFps,
   onConvert,
@@ -992,6 +1010,9 @@ function VideoExtraActions({
   video: StoredVideo;
   isBusy: boolean;
   hasBars: boolean | null;
+  fpsError: boolean;
+  h264Error: boolean;
+  blackBarsError: boolean;
   onRemoveBlackBars: () => void;
   onInterpolateFps: (fps: number) => void;
   onConvert: () => void;
@@ -1006,7 +1027,7 @@ function VideoExtraActions({
           type="button"
           className="vi-fps-btn"
           onClick={onConvert}
-          disabled={isBusy}
+          disabled={isBusy || h264Error}
           aria-label={t('convertH264')}
           title={t('convertH264')}
         >
@@ -1024,7 +1045,7 @@ function VideoExtraActions({
           type="button"
           className="vi-fps-btn"
           onClick={onRemoveBlackBars}
-          disabled={!canProcess || video.blackBarsRemoved}
+          disabled={!canProcess || video.blackBarsRemoved || blackBarsError}
           aria-label={t('removeBlackBars')}
           title={t('removeBlackBars')}
         >
@@ -1046,7 +1067,7 @@ function VideoExtraActions({
               type="button"
               className="vi-fps-btn"
               onClick={() => onInterpolateFps(value)}
-              disabled={!canProcess || alreadyApplied}
+              disabled={!canProcess || alreadyApplied || fpsError}
               title={label}
             >
               {label}

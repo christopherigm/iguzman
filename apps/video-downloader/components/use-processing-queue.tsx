@@ -12,8 +12,19 @@ import {
 
 /* ── Constants ──────────────────────────────────────── */
 
-/** Maximum number of FFmpeg tasks that can run concurrently. */
-const MAX_CONCURRENT = 2;
+/**
+ * Maximum number of FFmpeg tasks that can run concurrently.
+ * Derived from logical CPU count: floor(cores / 4), clamped to [1, 4].
+ * Examples: 4 cores → 1, 8 cores → 2, 12 cores → 3, 16+ cores → 4.
+ * Falls back to 2 in non-browser environments.
+ */
+function deriveMaxConcurrent(): number {
+  if (typeof navigator === 'undefined') return 2;
+  const cores = navigator.hardwareConcurrency ?? 4;
+  return Math.max(1, Math.min(4, Math.floor(cores / 4)));
+}
+
+const MAX_CONCURRENT = deriveMaxConcurrent();
 
 /* ── Types ──────────────────────────────────────────── */
 
