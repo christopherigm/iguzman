@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "website-api.fullname" . }}
+  labels:
+    {{- include "website-api.labels" . | nindent 4 }}
+spec:
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "website-api.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "website-api.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if .Values.nodeAffinity.enabled }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      {{- toYaml .Values.nodeAffinity.nodeNames | nindent 22 }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+
+          {{- /* ── Plain environment variables ── */}}
+          {{- if or .Values.env .Values.envFromSecret }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range .Values.envFromSecret }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .secretKey }}
+            {{- end }}
+          {{- end }}
+
+          {{- /* ── Probes ── */}}
+          startupProbe:
+            {{- toYaml .Values.probes.startupProbe | nindent 12 }}
+
+          livenessProbe:
+            {{- toYaml .Values.probes.livenessProbe | nindent 12 }}
+
+          {{- /* ── Resources ── */}}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- /* ── Volume mounts ── */}}
+          {{- if .Values.hostPathVolume.enabled }}
+          volumeMounts:
+            - name: media-data
+              mountPath: {{ .Values.hostPathVolume.mountPath }}
+          {{- end }}
+
+        {{- /* ── Nginx sidecar container ── */}}
+        {{- if .Values.nginx.enabled }}
+        - name: nginx
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+
+          ports:
+            - name: nginx
+              containerPort: {{ .Values.nginx.port }}
+              protocol: TCP
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: nginx
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: nginx
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            failureThreshold: 3
+
+          {{- with .Values.nginx.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          volumeMounts:
+            {{- if .Values.hostPathVolume.enabled }}
+            - name: media-data
+              mountPath: {{ .Values.hostPathVolume.mountPath }}
+              readOnly: true
+            {{- end }}
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+        {{- end }}
+
+      {{- if or .Values.hostPathVolume.enabled .Values.nginx.enabled }}
+      volumes:
+        {{- if .Values.hostPathVolume.enabled }}
+        - name: media-data
+          hostPath:
+            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/media
+            type: DirectoryOrCreate
+        {{- end }}
+        {{- if .Values.nginx.enabled }}
+        - name: nginx-config
+          configMap:
+            name: {{ include "website-api.fullname" . }}-nginx
+        {{- end }}
+      {{- end }}

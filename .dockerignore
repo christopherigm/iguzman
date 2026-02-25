@@ -17,3 +17,13 @@
 **/.idea
 **/.DS_Store
 apps/*/public/media/*.*
+
+# Python
+**/venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/db.sqlite3
+**/db.sqlite3-journal
+apps/website-api/media
+apps/website-api/staticfiles

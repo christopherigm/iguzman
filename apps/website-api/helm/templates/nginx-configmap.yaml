@@ -1,0 +1,69 @@
+{{- if .Values.nginx.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "website-api.fullname" . }}-nginx
+  labels:
+    {{- include "website-api.labels" . | nindent 4 }}
+data:
+  default.conf: |
+    server {
+        listen {{ .Values.nginx.port }};
+        server_name _;
+
+        # ── Serve Django media files ──────────────────────────────────────
+        location /media/ {
+            # Write operations → forward to the Django app so uploads
+            # are handled by the application layer.
+            if ($request_method !~ ^(GET|HEAD)$) {
+                proxy_pass http://127.0.0.1:{{ $.Values.service.targetPort }};
+            }
+
+            # Allow large file uploads
+            client_max_body_size 500m;
+
+            alias {{ .Values.hostPathVolume.mountPath }}/;
+
+            # Common media types
+            types {
+                image/jpeg                 jpg jpeg;
+                image/png                  png;
+                image/gif                  gif;
+                image/webp                 webp;
+                image/svg+xml             svg;
+                video/mp4                  mp4;
+                audio/mp4                  m4a;
+                video/webm                 webm;
+                audio/mpeg                 mp3;
+                audio/wav                  wav;
+                audio/ogg                  ogg;
+                video/x-matroska           mkv;
+                application/pdf            pdf;
+                text/plain                 txt srt;
+            }
+            default_type application/octet-stream;
+
+            add_header Cache-Control "public, max-age=3600";
+
+            # Block directory listings
+            autoindex off;
+
+            # Optimise large-file delivery
+            sendfile    on;
+            tcp_nopush  on;
+            tcp_nodelay on;
+        }
+
+        # Health check endpoint for k8s probes
+        location = /healthz {
+            access_log off;
+            return 200 'ok';
+            add_header Content-Type text/plain;
+        }
+
+        # Reject everything else
+        location / {
+            return 404;
+        }
+    }
+{{- end }}

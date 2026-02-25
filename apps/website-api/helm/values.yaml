@@ -1,0 +1,127 @@
+# ─────────────────────────────────────────────────────────────
+# Website API (Django) – Helm Values
+# ─────────────────────────────────────────────────────────────
+
+# -- Number of old ReplicaSets to keep for rollbacks (default: 2)
+revisionHistoryLimit: 2
+
+# -- Number of pod replicas
+replicaCount: 1
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: christopherguzman/website-api # registry/image (no tag)
+  tag: 'latest' # overrides Chart.appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+# - name: my-registry-secret
+
+# ─── Name overrides ─────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80 # port exposed by the Service
+  targetPort: 8000 # port the container listens on (gunicorn)
+
+# ─── Ingress ────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: website-api.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: website-api-tls
+      hosts:
+        - website-api.iguzman.com.mx
+
+# ─── Environment variables ──────────────────────────────────
+# Plain environment variables injected into the container.
+env:
+  DJANGO_SETTINGS_MODULE: 'website_api.settings'
+  MEDIA_ROOT: '/app/media'
+  # ── Database ──────────────────────────────────────────────
+  DB_HOST: 'postgres.website.svc.cluster.local'
+  DB_PORT: '5432'
+  DB_NAME: 'postgres'
+  DB_USER: 'postgres'
+  # ── Optional overrides ────────────────────────────────────
+  # SECRET_KEY: 'change-me-in-production'
+  # DEBUG: 'False'
+  # ALLOWED_HOSTS: 'website-api.iguzman.com.mx'
+
+# Sensitive values – reference existing Kubernetes Secrets.
+envFromSecret:
+  - name: DB_PASSWORD
+    secretName: website-api-secrets
+    secretKey: db-password
+  # - name: SECRET_KEY
+  #   secretName: website-api-secrets
+  #   secretKey: secret-key
+
+# ─── Host-path volume (media storage) ───────────────────────
+hostPathVolume:
+  enabled: true
+  volumeMountPath: /shared-master # base path on the host node
+  mountPath: /app/media # path inside each container
+
+# ─── Health probes ──────────────────────────────────────────
+probes:
+  startupProbe:
+    httpGet:
+      path: /admin/
+      port: 8000
+    initialDelaySeconds: 15
+    periodSeconds: 5
+    failureThreshold: 30 # allow up to ~150 s for first boot
+
+  livenessProbe:
+    httpGet:
+      path: /admin/
+      port: 8000
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    failureThreshold: 3
+
+# ─── Node affinity (schedule on specific nodes) ─────────────
+nodeAffinity:
+  enabled: false
+  # List of node names where the pods should be scheduled.
+  nodeNames: []
+  # - node-1
+  # - node-2
+
+# ─── Nginx sidecar (serves media files) ─────────────────────
+# High-performance static-file server that shares the same volume.
+nginx:
+  enabled: true
+  image:
+    repository: nginx
+    tag: 'alpine'
+    pullPolicy: IfNotPresent
+  port: 8080 # port the nginx container listens on
+  servicePort: 8080 # port exposed by the Service for nginx
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# ─── Resources ──────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

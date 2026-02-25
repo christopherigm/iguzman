@@ -340,3 +340,117 @@ Missing or expired token returns `401 Unauthorized`:
 5. GET  /api/auth/profile/          → retrieve user profile data
 6. POST /api/auth/profile/picture/  → upload / update profile picture (base64)
 ```
+
+---
+
+## Deployment
+
+The app is containerized with Docker and deployed to MicroK8s via a Helm chart located at `helm/`.
+
+### Prerequisites
+
+- Docker
+- `kubectl` connected to the target cluster
+- `helm` 3.x
+- `pnpm` (for monorepo scripts run from the repo root)
+
+### Environment variables
+
+Configure production values as a Kubernetes Secret and reference them in `helm/values.yaml` via `envFromSecret`:
+
+| Variable                 | Source          | Description                                 |
+| ------------------------ | --------------- | ------------------------------------------- |
+| `DB_HOST`                | `env`           | PostgreSQL host (set by Helm chart)         |
+| `DB_PORT`                | `env`           | PostgreSQL port (default: `5432`)           |
+| `DB_NAME`                | `env`           | Database name (default: `website`)          |
+| `DB_USER`                | `env`           | Database user (default: `website`)          |
+| `DB_PASSWORD`            | `envFromSecret` | Database password — stored in K8s Secret    |
+| `MEDIA_ROOT`             | `env`           | Override media path (default: `/app/media`) |
+| `SECRET_KEY`             | `envFromSecret` | Django secret key (required in production)  |
+| `DEBUG`                  | `env`           | Set to `False` in production                |
+| `ALLOWED_HOSTS`          | `env`           | Comma-separated list of allowed hostnames   |
+| `DJANGO_SETTINGS_MODULE` | `env`           | Set automatically by the Helm chart         |
+
+Create the secret on the cluster before deploying:
+
+```bash
+kubectl create secret generic website-api-secrets \
+  --namespace website \
+  --from-literal=db-password='postgres' \
+  --from-literal=secret-key='your-production-secret-key'
+```
+
+The `DB_PASSWORD` secret key (`db-password`) is already wired in `helm/values.yaml` via `envFromSecret` and will be injected automatically on deployment.
+
+### 1. Build and publish the Docker image
+
+Run from the **monorepo root**:
+
+```bash
+pnpm docker website-api
+```
+
+This builds the multi-stage image, tags it, and optionally pushes it to the registry defined in `apps/website-api/.env`:
+
+```bash
+# apps/website-api/.env
+DOCKER_REGISTRY=christopherguzman
+NAMESPACE=website
+```
+
+The image is built in three stages:
+
+1. **deps** — installs Python packages (including `psycopg2-binary`)
+2. **builder** — runs `collectstatic` (WhiteNoise gzip-compresses assets)
+3. **runner** — minimal production image with non-root user, gunicorn on port `8000`
+
+### 2. Run database migrations
+
+Migrations must be applied before (or immediately after) deploying a new version:
+
+```bash
+kubectl exec deploy/website-api -n website -- python manage.py migrate
+```
+
+### 3. Deploy with Helm
+
+```bash
+pnpm helm website-api
+```
+
+Or use the full one-command workflow (bump version → build → docker → helm):
+
+```bash
+pnpm deploy-app website-api
+```
+
+You will be prompted for the target namespace and image tag.
+
+### Helm values
+
+Key values to override in `helm/values.yaml` or via `--set`:
+
+| Key                        | Default                      | Description                       |
+| -------------------------- | ---------------------------- | --------------------------------- |
+| `image.tag`                | `latest`                     | Docker image tag to deploy        |
+| `replicaCount`             | `1`                          | Number of pod replicas            |
+| `ingress.hosts[0].host`    | `website-api.iguzman.com.mx` | Public hostname                   |
+| `hostPathVolume.enabled`   | `true`                       | Mount shared media volume         |
+| `hostPathVolume.mountPath` | `/app/media`                 | Container path for media files    |
+| `nginx.enabled`            | `true`                       | Nginx sidecar for `/media/`       |
+| `resources.limits.cpu`     | `500m`                       | CPU limit for Django container    |
+| `resources.limits.memory`  | `512Mi`                      | Memory limit for Django container |
+
+### Checking deployment status
+
+```bash
+# Release status
+helm status website-api -n website
+
+# Pod logs
+kubectl logs deploy/website-api -n website
+kubectl logs deploy/website-api -n website -c nginx   # nginx sidecar
+
+# Live resource status
+kubectl get pods,svc,ingress -n website -l app.kubernetes.io/name=website-api
+```
