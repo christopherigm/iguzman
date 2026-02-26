@@ -23,7 +23,7 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   enhance: boolean;
   /** Whether to auto-trigger browser save after download completes. */
   autoDownload: boolean;
-  /** The download URL (blob or /api/media/*). */
+  /** The download URL (blob or /media/*). */
   downloadURL: string | null;
   /** Original URL pasted by the user. */
   originalURL: string;
@@ -39,8 +39,6 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   h264Converted: boolean;
   /** Whether black bars have been removed from the video. */
   blackBarsRemoved: boolean;
-  /** Whether the video has black/white bars (null = not checked yet). */
-  hasBars: boolean | null;
   /** MongoDB task ID (for polling and deletion). */
   taskId: string | null;
 }
@@ -69,7 +67,6 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     isH265: v.isH265 ?? false,
     h264Converted: v.h264Converted ?? false,
     blackBarsRemoved: v.blackBarsRemoved ?? false,
-    hasBars: v.hasBars ?? null,
     taskId: v.taskId ?? null,
     thumbnail:
       v.thumbnail ??
@@ -224,6 +221,9 @@ export function useVideoStore() {
         | 'autoDownload'
       >,
     ): string => {
+      const existing = pinned.find((v) => v.originalURL === partial.originalURL);
+      if (existing) return existing.uuid;
+
       const uuid = crypto.randomUUID();
       const entry: StoredVideo = {
         uuid,
@@ -246,13 +246,12 @@ export function useVideoStore() {
         isH265: false,
         h264Converted: false,
         blackBarsRemoved: false,
-        hasBars: null,
         taskId: null,
       };
       setPinned((prev) => [entry, ...prev]);
       return uuid;
     },
-    [],
+    [pinned],
   );
 
   /** Patch a single pinned video entry by uuid. */

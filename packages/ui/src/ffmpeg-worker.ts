@@ -12,12 +12,10 @@
  *   { id, type: 'interpolateFps',  payload: { videoData: Uint8Array, targetFps: number } }
  *   { id, type: 'convertToH264',   payload: { videoData: Uint8Array } }
  *   { id, type: 'removeBlackBars', payload: { videoData: Uint8Array, limit?: number, round?: number, cropString?: string } }
- *   { id, type: 'detectBars',      payload: { videoData: Uint8Array, limit?: number, round?: number } }
  *
  * Outgoing (worker → main):
  *   { id, type: 'progress',  payload: { progress: number } }
  *   { id, type: 'result',    payload: { data: Uint8Array } }          – transfer
- *   { id, type: 'detect',    payload: { hasBars: boolean, crop: string | null } }
  *   { id, type: 'error',     payload: { message: string } }
  */
 
@@ -208,6 +206,10 @@ self.onmessage = async (
         }
 
         case 'removeBlackBars': {
+          /* Unregister the global progress handler — this case uses
+             its own frame-based progress for both detection and crop. */
+          ff.off('progress', progressHandler);
+
           const {
             videoData,
             limit = 24,
@@ -223,15 +225,58 @@ self.onmessage = async (
           const output = 'output_cropped.mp4';
           await ff.writeFile(input, videoData);
 
+          /* Probe input dimensions + duration for progress reporting. */
+          let probeLog = '';
+          const probeHandler = ({ message }: { message: string }) => {
+            probeLog += message + '\n';
+          };
+          ff.on('log', probeHandler);
+          await ff.exec(['-i', input]);
+          ff.off('log', probeHandler);
+
+          const dimMatch = probeLog.match(/(\d{2,5})x(\d{2,5})/);
+          const origW = dimMatch ? Number(dimMatch[1]) : 0;
+          const origH = dimMatch ? Number(dimMatch[2]) : 0;
+
+          const durMatch = probeLog.match(
+            /Duration:\s+(\d+):(\d+):(\d+(?:\.\d+)?)/,
+          );
+          const durationSec = durMatch
+            ? Number(durMatch[1]) * 3600 +
+              Number(durMatch[2]) * 60 +
+              Number(durMatch[3])
+            : 0;
+
           let crop = cropString;
 
           if (!crop) {
-            /* Step 1: detect crop dimensions */
+            /* Step 1: detect crop dimensions.
+               -f null produces no encoding output, so FFmpeg's built-in
+               progress event does not fire. Use frame-count log parsing
+               instead (same approach as interpolateFps). */
             let cropLogs = '';
-            const logHandler = ({ message }: { message: string }) => {
+            const fpsMatch = probeLog.match(/(\d+(?:\.\d+)?)\s*(?:fps|tbr)/);
+            const srcFps = fpsMatch ? Number(fpsMatch[1]) : 30;
+            const estimatedFrames = durationSec > 0 ? durationSec * srcFps : 0;
+            let lastReportedFrame = 0;
+
+            const detectLogHandler = ({ message }: { message: string }) => {
               cropLogs += message + '\n';
+              if (estimatedFrames > 0) {
+                const m = message.match(/frame=\s*(\d+)/);
+                if (m) {
+                  const frame = Number(m[1]);
+                  if (frame > lastReportedFrame) {
+                    lastReportedFrame = frame;
+                    /* Detection is ~half the work; report 0-49%. */
+                    sendProgress(
+                      Math.min(49, Math.round((frame / estimatedFrames) * 50)),
+                    );
+                  }
+                }
+              }
             };
-            ff.on('log', logHandler);
+            ff.on('log', detectLogHandler);
             await ff.exec([
               '-i',
               input,
@@ -241,7 +286,7 @@ self.onmessage = async (
               'null',
               '-',
             ]);
-            ff.off('log', logHandler);
+            ff.off('log', detectLogHandler);
 
             const matches = [
               ...cropLogs.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g),
@@ -252,10 +297,46 @@ self.onmessage = async (
             }
             const last = matches[matches.length - 1]!;
             const [, w, h, x, y] = last;
+
+            /* If detected crop matches original dimensions → no bars. */
+            if (
+              origW > 0 &&
+              origH > 0 &&
+              Number(w) >= origW &&
+              Number(h) >= origH
+            ) {
+              await ff.deleteFile(input);
+              throw new Error('No black bars detected');
+            }
             crop = `${w}:${h}:${x}:${y}`;
           }
 
-          /* Step 2: apply crop */
+          sendProgress(50);
+
+          /* Step 2: apply crop — use frame-based progress for 50-100%. */
+          const cropEstFrames =
+            durationSec > 0
+              ? durationSec *
+                (probeLog.match(/(\d+(?:\.\d+)?)\s*(?:fps|tbr)/)
+                  ? Number(probeLog.match(/(\d+(?:\.\d+)?)\s*(?:fps|tbr)/)![1])
+                  : 30)
+              : 0;
+          let lastCropFrame = 0;
+          const cropLogHandler = ({ message }: { message: string }) => {
+            if (cropEstFrames > 0) {
+              const m = message.match(/frame=\s*(\d+)/);
+              if (m) {
+                const frame = Number(m[1]);
+                if (frame > lastCropFrame) {
+                  lastCropFrame = frame;
+                  sendProgress(
+                    Math.min(99, 50 + Math.round((frame / cropEstFrames) * 50)),
+                  );
+                }
+              }
+            }
+          };
+          ff.on('log', cropLogHandler);
           const code = await ff.exec([
             '-i',
             input,
@@ -265,74 +346,16 @@ self.onmessage = async (
             'copy',
             output,
           ]);
+          ff.off('log', cropLogHandler);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
           const result = (await ff.readFile(output)) as Uint8Array;
           await ff.deleteFile(input);
           await ff.deleteFile(output);
+          sendProgress(100);
           self.postMessage(
             { id, type: 'result', payload: { data: result } },
             { transfer: [result.buffer as ArrayBuffer] },
           );
-          break;
-        }
-
-        case 'detectBars': {
-          const {
-            videoData,
-            limit = 24,
-            round = 16,
-          } = payload as {
-            videoData: Uint8Array;
-            limit?: number;
-            round?: number;
-          };
-          const input = 'detect_bars_input.mp4';
-          await ff.writeFile(input, videoData);
-
-          let cropLogs = '';
-          const logHandler = ({ message }: { message: string }) => {
-            cropLogs += message + '\n';
-          };
-          ff.on('log', logHandler);
-          await ff.exec([
-            '-i',
-            input,
-            '-vf',
-            `cropdetect=limit=${limit}:round=${round}:reset=0`,
-            '-f',
-            'null',
-            '-',
-          ]);
-          ff.off('log', logHandler);
-          await ff.deleteFile(input);
-
-          const matches = [
-            ...cropLogs.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g),
-          ];
-          if (matches.length === 0) {
-            self.postMessage({
-              id,
-              type: 'detect',
-              payload: { hasBars: false, crop: null },
-            });
-            break;
-          }
-
-          const last = matches[matches.length - 1]!;
-          const [, w, h, x, y] = last;
-          const crop = `${w}:${h}:${x}:${y}`;
-
-          const dimMatch = cropLogs.match(/(\d{2,5})x(\d{2,5})/);
-          let hasBars: boolean;
-          if (!dimMatch) {
-            hasBars = Number(x) > 0 || Number(y) > 0;
-          } else {
-            hasBars =
-              Number(w) < Number(dimMatch[1]) ||
-              Number(h) < Number(dimMatch[2]);
-          }
-
-          self.postMessage({ id, type: 'detect', payload: { hasBars, crop } });
           break;
         }
 

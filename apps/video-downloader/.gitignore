@@ -35,6 +35,20 @@ next-env.d.ts
 
 public/media/*.mp4
 public/media/*.m4a
+public/media/*.flac
+public/media/*.jpg
+public/media/*.jpeg
+public/media/*.png
+public/media/*.webp
+public/media/*.svg
+public/media/*.gif
+public/media/*.ico
+public/media/*.bmp
+public/media/*.tiff
+public/media/*.avif
+public/media/*.mp3
+public/media/*.wav
+public/media/*.ogg
 
 # PWA generated files
 public/sw.js

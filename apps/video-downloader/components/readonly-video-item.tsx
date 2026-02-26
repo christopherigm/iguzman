@@ -148,7 +148,6 @@ export function ReadOnlyVideoItem({
         <VideoExtraActions
           video={video}
           isBusy={false}
-          hasBars={video.hasBars}
           fpsError={false}
           h264Error={false}
           blackBarsError={false}

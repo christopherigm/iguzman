@@ -66,9 +66,6 @@ export function useFFmpeg() {
       } else if (type === 'result') {
         pendingRef.current.delete(id);
         pending.resolve((payload as { data: Uint8Array }).data);
-      } else if (type === 'detect') {
-        pendingRef.current.delete(id);
-        pending.resolve(payload);
       } else if (type === 'loaded') {
         pendingRef.current.delete(id);
         pending.resolve(undefined);
@@ -267,54 +264,6 @@ export function useFFmpeg() {
     [sendVideoOp],
   );
 
-  /**
-   * Detect whether a video contains horizontal bars that can be cropped away.
-   *
-   * @param videoUrl  URL (or object-URL) of the source video.
-   * @param options   Optional overrides: `limit` (default 24), `round` (default 16).
-   * @returns `{ hasBars, crop }` – whether bars were detected and the raw
-   *          `W:H:X:Y` crop string for informational use.
-   */
-  const detectBars = useCallback(
-    async (
-      videoUrl: string,
-      options?: { limit?: number; round?: number },
-    ): Promise<{ hasBars: boolean; crop: string | null }> => {
-      const { limit = 24, round = 16 } = options ?? {};
-      await ensureLoaded();
-
-      const videoData = await fetchFile(videoUrl);
-
-      return new Promise<{ hasBars: boolean; crop: string | null }>(
-        (resolve, reject) => {
-          const id = nextId();
-          const worker = getWorker();
-          pendingRef.current.set(id, {
-            resolve: (result) =>
-              resolve(result as { hasBars: boolean; crop: string | null }),
-            reject,
-          });
-          worker.postMessage(
-            {
-              id,
-              type: 'detectBars',
-              payload: {
-                coreURL: CORE_URL,
-                wasmURL: WASM_URL,
-                workerURL: WORKER_URL,
-                videoData,
-                limit,
-                round,
-              },
-            },
-            [videoData.buffer as ArrayBuffer],
-          );
-        },
-      );
-    },
-    [ensureLoaded, getWorker],
-  );
-
   return {
     status,
     progress,
@@ -324,6 +273,5 @@ export function useFFmpeg() {
     interpolateFps,
     convertToH264,
     removeBlackBars,
-    detectBars,
   } as const;
 }

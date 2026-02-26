@@ -90,7 +90,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/helpers
       '@repo/i18n':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../packages/i18n
       '@repo/ui':
         specifier: workspace:*
@@ -172,6 +172,8 @@ importers:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
+
+  apps/website-api: {}
 
   packages/charts: {}
 

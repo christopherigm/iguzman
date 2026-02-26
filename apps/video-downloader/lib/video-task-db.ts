@@ -8,6 +8,13 @@ import type {
   DownloadVideoError,
 } from '@/lib/types';
 
+/* ------------------------------------------------------------------ */
+/*  Constants                                                         */
+/* ------------------------------------------------------------------ */
+
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const IS_PRODUCTION = NODE_ENV === 'production';
+
 /* ── Document schema ──────────────────────────────── */
 
 export type { TaskStatus };
@@ -17,7 +24,6 @@ export interface VideoTaskDocument
   status: TaskStatus;
   result: DownloadVideoResult | null;
   error: DownloadVideoError | null;
-  hasBars: boolean | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,9 +32,10 @@ export interface VideoTaskDocument
 
 const DB_NAME = 'videos';
 const COLLECTION_NAME = 'tasks';
-const MONGO_URI =
-  process.env.MONGO_URI ??
-  'mongodb://mongodb.video-downloader-2.svc.cluster.local:27017';
+const MONGO_URI = IS_PRODUCTION
+  ? (process.env.MONGO_URI ??
+    'mongodb://mongodb.video-downloader-2.svc.cluster.local:27017')
+  : 'mongodb://127.0.0.1:27017';
 
 /* ── Helpers ──────────────────────────────────────── */
 
@@ -64,7 +71,6 @@ export async function createTask(
     status: 'pending',
     result: null,
     error: null,
-    hasBars: null,
     file: null,
     name: null,
     isH265: null,

@@ -18,7 +18,6 @@ import {
   VideoMediaPreview,
   VideoStatusHints,
   VideoActions,
-  VideoExtraActions,
   VideoCardHeader,
   VideoFooterLink,
 } from './video-item-shared';
@@ -50,16 +49,9 @@ export function PinnedVideoItem({
 }: PinnedVideoItemProps) {
   const t = useTranslations('VideoGrid');
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [extraActionsOpen, setExtraActionsOpen] = useState(false);
   const [copying, setCopying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [confirmConvert, setConfirmConvert] = useState(false);
-  const [hasBars, setHasBars] = useState<boolean | null>(video.hasBars);
-  const [cropString, setCropString] = useState<string | null>(null);
-  const [fpsError, setFpsError] = useState(false);
-  const [h264Error, setH264Error] = useState(false);
-  const [blackBarsError, setBlackBarsError] = useState(false);
   const [localProgress, setLocalProgress] = useState<{
     status: 'loading' | 'processing';
     progress: number;
@@ -67,6 +59,7 @@ export function PinnedVideoItem({
   const downloadTriggered = useRef(false);
   const resumeChecked = useRef(false);
   const convertResumeChecked = useRef(false);
+  const blackBarsResumeChecked = useRef(false);
   const pollResumeChecked = useRef(false);
 
   /* Own FFmpeg WASM instance (dedicated Web Worker for this item) */
@@ -79,7 +72,6 @@ export function PinnedVideoItem({
     interpolateFps,
     convertToH264,
     removeBlackBars,
-    detectBars,
   } = useFFmpeg();
 
   const { startPolling, stopPolling } = usePollTask();
@@ -107,46 +99,6 @@ export function PinnedVideoItem({
       onComplete(uuid);
     },
     [onComplete],
-  );
-
-  /* ── Detect black/white bars, cache crop string, persist result ─── */
-  const checkBars = useCallback(
-    async (file: string, taskId: string | null) => {
-      const sourceUrl = `${window.location.origin}/api/media/${file}`;
-      try {
-        const black = await detectBars(sourceUrl, { limit: 24 });
-        if (black.hasBars) {
-          setHasBars(true);
-          setCropString(black.crop);
-          onUpdate(video.uuid, { hasBars: true });
-          if (taskId) {
-            fetch(`/api/download-video/${taskId}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ hasBars: true }),
-            }).catch(() => {});
-          }
-          return;
-        }
-        const white = await detectBars(sourceUrl, { limit: 230 });
-        const result = white.hasBars;
-        if (result) setCropString(white.crop);
-        setHasBars(result);
-        onUpdate(video.uuid, { hasBars: result });
-        if (taskId) {
-          fetch(`/api/download-video/${taskId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hasBars: result }),
-          }).catch(() => {});
-        }
-      } catch (err) {
-        console.error('Bar detection failed:', err);
-        setHasBars(false);
-        onUpdate(video.uuid, { hasBars: false });
-      }
-    },
-    [detectBars, onUpdate, video.uuid],
   );
 
   /* ── Run FFmpeg processing (own instance, no shared queue) ── */
@@ -199,9 +151,6 @@ export function PinnedVideoItem({
             file: newFile,
             downloadURL: `/api/media/${newFile}`,
           });
-          if (!video.justAudio) {
-            await checkBars(newFile, video.taskId);
-          }
         }
 
         if (opts.completeAfter) {
@@ -223,10 +172,8 @@ export function PinnedVideoItem({
       video.justAudio,
       video.autoDownload,
       video.name,
-      video.taskId,
       onUpdate,
       t,
-      checkBars,
       tryComplete,
     ],
   );
@@ -241,7 +188,6 @@ export function PinnedVideoItem({
         donePatch: { fpsApplied: true },
         taskUpdate: { fpsApplied: true },
         errorKey: 'errorFfmpegFailed',
-        onError: () => setFpsError(true),
         completeAfter,
       }),
     [runProcessing, interpolateFps, video.fps],
@@ -257,42 +203,24 @@ export function PinnedVideoItem({
         taskUpdate: { isH265: false },
         errorKey: 'errorConvertFailed',
         downloadPrefix: 'video',
-        onError: () => setH264Error(true),
         completeAfter: true,
       }),
     [runProcessing, convertToH264],
   );
 
-  /* ── Remove black bars handler ──────────────────────── */
+  /* ── Remove black bars handler ───────────────────── */
   const handleRemoveBlackBars = useCallback(
     () =>
       runProcessing({
         activeStatus: 'processing',
         process: (url, onProgress) =>
-          removeBlackBars(url, 24, 16, cropString ?? undefined, onProgress),
+          removeBlackBars(url, undefined, undefined, undefined, onProgress),
         donePatch: { blackBarsRemoved: true },
         taskUpdate: { blackBarsRemoved: true },
-        errorKey: 'errorRemoveBlackBarsFailed',
-        onError: () => setBlackBarsError(true),
-        completeAfter: true,
-      }),
-    [runProcessing, removeBlackBars, cropString],
-  );
-
-  /* ── Manual FPS interpolation handler ───────────────── */
-  const handleInterpolateFpsManual = useCallback(
-    (targetFps: number) =>
-      runProcessing({
-        activeStatus: 'processing',
-        process: (url, onProgress) =>
-          interpolateFps(url, targetFps, onProgress),
-        donePatch: { fpsApplied: true, fps: String(targetFps) },
-        taskUpdate: { fpsApplied: true },
         errorKey: 'errorFfmpegFailed',
-        onError: () => setFpsError(true),
         completeAfter: true,
       }),
-    [runProcessing, interpolateFps],
+    [runProcessing, removeBlackBars],
   );
 
   /* ── Handle completed task from polling ────────────── */
@@ -317,8 +245,7 @@ export function PinnedVideoItem({
       const willInterpolateFps =
         video.fps !== 'original' && !video.justAudio && file;
       if (willInterpolateFps) {
-        /* Run bar detection in background, but don't block on it since
-           FPS interpolation uses the same FFmpeg instance. */
+        /* Chain FPS interpolation before completing. */
         void runProcessing({
           sourceFile: file,
           activeStatus: 'processing',
@@ -333,31 +260,7 @@ export function PinnedVideoItem({
         return;
       }
 
-      /* Run bar detection before completing. */
-      if (file && !video.justAudio) {
-        checkBars(file, video.taskId).then(() => {
-          /* Direct browser download */
-          if (video.autoDownload && downloadURL) {
-            triggerBrowserDownload(
-              downloadURL,
-              `${name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}-${file}`,
-            );
-
-            if (video.justAudio) {
-              const thumbSrc = task.thumbnail
-                ? `/api/media/${task.thumbnail}`
-                : null;
-              if (thumbSrc) {
-                downloadThumbnail(thumbSrc, name);
-              }
-            }
-          }
-          tryComplete(video.uuid);
-        });
-        return;
-      }
-
-      /* Audio or no file — complete immediately. */
+      /* Complete — auto-download if configured. */
       if (video.autoDownload && downloadURL && file) {
         triggerBrowserDownload(
           downloadURL,
@@ -380,8 +283,6 @@ export function PinnedVideoItem({
       video.autoDownload,
       video.fps,
       video.justAudio,
-      video.taskId,
-      checkBars,
       runProcessing,
       interpolateFps,
       tryComplete,
@@ -413,9 +314,6 @@ export function PinnedVideoItem({
 
   /* ── Download handler ───────────────────────────── */
   const handleDownload = useCallback(async () => {
-    setFpsError(false);
-    setH264Error(false);
-    setBlackBarsError(false);
     onUpdate(video.uuid, { error: null });
 
     try {
@@ -550,6 +448,32 @@ export function PinnedVideoItem({
     handleConvertH264,
   ]);
 
+  /* ── Resume interrupted black-bar removal on mount ── */
+  useEffect(() => {
+    if (blackBarsResumeChecked.current) return;
+    blackBarsResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.justAudio &&
+      !video.blackBarsRemoved &&
+      video.status === 'processing' &&
+      // Not waiting for FPS interpolation, which also uses 'processing'
+      (video.fps === 'original' || !!video.fpsApplied);
+
+    if (needsResume) {
+      queueMicrotask(() => handleRemoveBlackBars());
+    }
+  }, [
+    video.file,
+    video.justAudio,
+    video.blackBarsRemoved,
+    video.status,
+    video.fps,
+    video.fpsApplied,
+    handleRemoveBlackBars,
+  ]);
+
   /* ── Stop polling when this card unmounts ── */
   useEffect(() => {
     const taskId = video.taskId;
@@ -646,45 +570,17 @@ export function PinnedVideoItem({
           video={video}
           isBusy={isBusy}
           copying={copying}
-          extraActionsOpen={extraActionsOpen}
           onCopy={handleCopy}
           onRetry={handleDownload}
           onRedownload={handleRedownload}
-          onToggleExtra={() => setExtraActionsOpen((p) => !p)}
           onDelete={() => setConfirmRemove(true)}
           t={t}
+          extraActionsOpen={false}
+          onToggleExtra={() => null}
         />
       </Box>
 
-      {/* ── Extra actions panel (collapsible) ─────────── */}
-      {extraActionsOpen ? (
-        <VideoExtraActions
-          video={video}
-          isBusy={isBusy}
-          hasBars={hasBars}
-          fpsError={fpsError}
-          h264Error={h264Error}
-          blackBarsError={blackBarsError}
-          onRemoveBlackBars={handleRemoveBlackBars}
-          onInterpolateFps={handleInterpolateFpsManual}
-          onConvert={() => setConfirmConvert(true)}
-          t={t}
-        />
-      ) : null}
-
       {/* ── Confirmation modals ───────────────────── */}
-      {confirmConvert ? (
-        <ConfirmationModal
-          title={t('confirmConvertTitle')}
-          text={t('confirmConvertText')}
-          okCallback={() => {
-            setConfirmConvert(false);
-            handleConvertH264();
-          }}
-          cancelCallback={() => setConfirmConvert(false)}
-        />
-      ) : null}
-
       {confirmRemove ? (
         <ConfirmationModal
           title={t('confirmDeleteTitle')}

@@ -79,7 +79,7 @@ const buildLoopedAudio = async (
  */
 const cleanupTempFiles = async (files: string[]): Promise<void> => {
   await Promise.allSettled(
-    files.map((file) => deleteMediaFile(`media/${file}`)),
+    files.map((file) => deleteMediaFile(`api/media/${file}`)),
   );
 };
 

@@ -387,6 +387,7 @@ export function VideoActions({
         onClick={onToggleExtra}
         aria-label={t('toggleExtraActions')}
         title={t('toggleExtraActions')}
+        disabled={isBusy}
       >
         <Icon
           icon="/icons/chevron-down.svg"
@@ -406,7 +407,6 @@ export function VideoActions({
 export function VideoExtraActions({
   video,
   isBusy,
-  hasBars,
   fpsError,
   h264Error,
   blackBarsError,
@@ -417,7 +417,6 @@ export function VideoExtraActions({
 }: {
   video: StoredVideo;
   isBusy: boolean;
-  hasBars: boolean | null;
   fpsError: boolean;
   h264Error: boolean;
   blackBarsError: boolean;
@@ -448,12 +447,12 @@ export function VideoExtraActions({
         </button>
       ) : null}
 
-      {hasBars ? (
+      {!video.justAudio && !video.blackBarsRemoved ? (
         <button
           type="button"
           className="vi-fps-btn"
           onClick={onRemoveBlackBars}
-          disabled={!canProcess || video.blackBarsRemoved || blackBarsError}
+          disabled={!canProcess || blackBarsError}
           aria-label={t('removeBlackBars')}
           title={t('removeBlackBars')}
         >
