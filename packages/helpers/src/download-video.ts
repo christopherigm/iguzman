@@ -11,7 +11,7 @@ import {
 import { get as httpsGet } from 'https';
 import { get as httpGet } from 'http';
 import { randomUUID } from 'crypto';
-import { detectPlatform, isTiktok, isYoutube } from './checkers';
+import { detectPlatform, isInstagram, isTiktok, isYoutube } from './checkers';
 import type { Platform } from './checkers';
 import { extractAudioFromVideo } from './extract-audio-from-video';
 import { addAudioToVideoInTime } from './add-audio-to-video-in-time';
@@ -36,6 +36,9 @@ const DEFAULT_BINARY = 'yt-dlp';
 
 /** Default ffmpeg binary path. */
 const DEFAULT_FFMPEG = 'ffmpeg';
+
+/** Default gallery-dl binary path. */
+const DEFAULT_GALLERY_DL = 'gallery-dl';
 
 /** Default Node.js binary path for yt-dlp's `--js-runtimes` flag. */
 const DEFAULT_JS_RUNTIMES = IS_PRODUCTION
@@ -97,6 +100,7 @@ const PREFERRED_LANG_PREFIXES = [
  *
  * - `BINARY_NOT_FOUND` — yt-dlp is not installed or not reachable.
  * - `FFMPEG_NOT_FOUND` — ffmpeg is not installed (required for audio extraction).
+ * - `GALLERY_DL_NOT_FOUND` — gallery-dl is not installed (used as fallback for Instagram images).
  * - `INVALID_URL` — The provided string is not a valid URL.
  * - `UNSUPPORTED_PLATFORM` — The URL does not match any supported platform.
  * - `DOWNLOAD_FAILED` — yt-dlp exited with a non-zero code.
@@ -128,6 +132,7 @@ export type AudioOutputFormat =
 export type DownloadVideoErrorCode =
   | 'BINARY_NOT_FOUND'
   | 'FFMPEG_NOT_FOUND'
+  | 'GALLERY_DL_NOT_FOUND'
   | 'INVALID_URL'
   | 'UNSUPPORTED_PLATFORM'
   | 'DOWNLOAD_FAILED'
@@ -1514,6 +1519,570 @@ const repairTikTokH265Audio = async (
 };
 
 /* ------------------------------------------------------------------ */
+/*  Instagram image fallback (gallery-dl)                             */
+/* ------------------------------------------------------------------ */
+
+/** Image extensions recognised when scanning gallery-dl output. */
+const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif']);
+
+/** Audio/video extensions that gallery-dl may download alongside images. */
+const MEDIA_EXTENSIONS = new Set([
+  'mp4',
+  'mp3',
+  'm4a',
+  'aac',
+  'ogg',
+  'wav',
+  'webm',
+]);
+
+/**
+ * Downloads media from an Instagram URL using gallery-dl.
+ *
+ * gallery-dl saves files into a directory structure; this helper
+ * scans the output folder recursively for image and media files.
+ *
+ * @returns An object with arrays of downloaded image and media paths.
+ */
+const galleryDlDownload = async (
+  url: string,
+  outputFolder: string,
+  cookies: string,
+): Promise<{ images: string[]; media: string[] }> => {
+  const tmpFolder = `${outputFolder}/_gallery_dl_${randomUUID()}`;
+  ensureFolder(tmpFolder);
+
+  const args: string[] = [url, '-d', tmpFolder, '--no-mtime'];
+
+  if (cookies && existsSync(cookies)) {
+    args.push('--cookies', cookies);
+  }
+
+  await execFileAsync(DEFAULT_GALLERY_DL, args);
+
+  // Recursively collect all downloaded files
+  const collectFiles = (dir: string): string[] => {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    const files: string[] = [];
+    for (const entry of entries) {
+      const full = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        files.push(...collectFiles(full));
+      } else {
+        files.push(full);
+      }
+    }
+    return files;
+  };
+
+  const allFiles = collectFiles(tmpFolder);
+
+  const images: string[] = [];
+  const media: string[] = [];
+
+  for (const file of allFiles) {
+    const ext = file.split('.').pop()?.toLowerCase() ?? '';
+    if (IMAGE_EXTENSIONS.has(ext)) {
+      images.push(file);
+    } else if (MEDIA_EXTENSIONS.has(ext)) {
+      media.push(file);
+    }
+  }
+
+  return { images, media };
+};
+
+/**
+ * Creates an MP4 video from a still image and an optional audio file
+ * using ffmpeg.
+ *
+ * When audio is provided the video duration matches the audio length.
+ * When no audio is available a short silent video (5 s) is produced.
+ *
+ * The image is scaled to fit 1080 px width (preserving aspect ratio,
+ * height divisible by 2) and encoded as H.264 baseline with AAC audio.
+ *
+ * @returns Absolute path to the created MP4 file.
+ */
+const createVideoFromImage = async (
+  imagePath: string,
+  audioPath: string | null,
+  outputPath: string,
+  ffmpegBinary: string,
+): Promise<void> => {
+  const args: string[] = ['-y'];
+
+  if (audioPath) {
+    // Loop image for the duration of the audio
+    args.push(
+      '-loop',
+      '1',
+      '-i',
+      imagePath,
+      '-i',
+      audioPath,
+      '-c:v',
+      'libx264',
+      '-tune',
+      'stillimage',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '192k',
+      '-pix_fmt',
+      'yuv420p',
+      '-vf',
+      'scale=1080:-2',
+      '-shortest',
+      outputPath,
+    );
+  } else {
+    // No audio — produce a 5-second silent video
+    args.push(
+      '-loop',
+      '1',
+      '-i',
+      imagePath,
+      '-t',
+      '5',
+      '-c:v',
+      'libx264',
+      '-tune',
+      'stillimage',
+      '-pix_fmt',
+      'yuv420p',
+      '-vf',
+      'scale=1080:-2',
+      '-an',
+      outputPath,
+    );
+  }
+
+  await execFileAsync(ffmpegBinary, args);
+};
+
+/**
+ * Downloads a URL to a local file using Node.js HTTP(S).
+ *
+ * Follows up to 5 redirects. Resolves to `true` on success,
+ * `false` on failure.
+ */
+const downloadUrlToFile = (url: string, destPath: string): Promise<boolean> =>
+  new Promise((resolve) => {
+    try {
+      const parsed = new URL(url);
+      const getter = parsed.protocol === 'https:' ? httpsGet : httpGet;
+
+      const doRequest = (reqUrl: string, redirects = 0): void => {
+        if (redirects > 5) {
+          resolve(false);
+          return;
+        }
+
+        getter(reqUrl, (res) => {
+          if (
+            res.statusCode &&
+            res.statusCode >= 300 &&
+            res.statusCode < 400 &&
+            res.headers.location
+          ) {
+            doRequest(res.headers.location, redirects + 1);
+            return;
+          }
+
+          if (!res.statusCode || res.statusCode >= 400) {
+            res.resume();
+            resolve(false);
+            return;
+          }
+
+          const fileStream = createWriteStream(destPath);
+          res.pipe(fileStream);
+
+          fileStream.on('finish', () => {
+            fileStream.close();
+            resolve(true);
+          });
+
+          fileStream.on('error', () => {
+            fileStream.close();
+            try {
+              rmSync(destPath, { force: true });
+            } catch {
+              /* ignore */
+            }
+            resolve(false);
+          });
+        }).on('error', () => {
+          resolve(false);
+        });
+      };
+
+      doRequest(url);
+    } catch {
+      resolve(false);
+    }
+  });
+
+/**
+ * Extracts the audio track from an Instagram post.
+ *
+ * Instagram image posts with music have an audio stream, but yt-dlp's
+ * standard audio extraction (`-f bestaudio -x`) often fails for these.
+ * This function uses multiple strategies in sequence:
+ *
+ * 1. **Metadata + direct download** — Uses `yt-dlp --dump-json` to
+ *    discover format URLs that contain audio, downloads the stream
+ *    directly via HTTP, and extracts audio with ffmpeg when needed.
+ * 2. **Download best available + ffmpeg extract** — Downloads any
+ *    available format (often a combined video+audio stream) and
+ *    extracts the audio track from it with ffmpeg.
+ * 3. **Classic yt-dlp audio extraction** — Falls back to the standard
+ *    `-f bestaudio/best -x` pipeline as a last resort.
+ *
+ * @returns Absolute path to the extracted audio file, or `null` on failure.
+ */
+const extractInstagramAudio = async (
+  url: string,
+  outputFolder: string,
+  binary: string,
+  cookies: string,
+  jsRuntimes: string,
+  ffmpegBinary: string,
+): Promise<string | null> => {
+  const audioId = randomUUID();
+  const audioFile = `${outputFolder}/${audioId}.m4a`;
+
+  const baseBinaryArgs = [
+    '--no-playlist',
+    '--js-runtimes',
+    `node:${jsRuntimes}`,
+  ];
+  if (cookies) {
+    baseBinaryArgs.push('--cookies', cookies);
+  }
+
+  /* ---- Strategy 1: metadata → direct HTTP download → ffmpeg ---- */
+  try {
+    const metaArgs = ['--dump-json', ...baseBinaryArgs, url];
+    const output = await execFileAsync(binary, metaArgs);
+
+    if (output) {
+      const meta = JSON.parse(output) as Record<string, unknown>;
+      const formats = (meta.formats ?? []) as Array<Record<string, unknown>>;
+
+      // Prefer audio-only format, fall back to any format with audio
+      const audioOnly = formats.find(
+        (f) =>
+          typeof f.url === 'string' &&
+          f.acodec !== 'none' &&
+          f.acodec !== undefined &&
+          (f.vcodec === 'none' || f.vcodec === undefined),
+      );
+      const withAudio = formats.find(
+        (f) =>
+          typeof f.url === 'string' &&
+          f.acodec !== 'none' &&
+          f.acodec !== undefined,
+      );
+      const target = audioOnly ?? withAudio;
+
+      if (target?.url && typeof target.url === 'string') {
+        const tmpMedia = `${outputFolder}/${randomUUID()}.tmp`;
+        const downloaded = await downloadUrlToFile(target.url, tmpMedia);
+
+        if (downloaded && existsSync(tmpMedia)) {
+          if (audioOnly) {
+            // Already audio-only — extract/convert to m4a with ffmpeg
+            try {
+              await execFileAsync(ffmpegBinary, [
+                '-y',
+                '-i',
+                tmpMedia,
+                '-vn',
+                '-acodec',
+                'aac',
+                '-b:a',
+                '192k',
+                audioFile,
+              ]);
+              rmSync(tmpMedia, { force: true });
+              if (existsSync(audioFile)) return audioFile;
+            } catch {
+              rmSync(tmpMedia, { force: true });
+            }
+          } else {
+            // Combined stream — strip video, keep audio
+            try {
+              await execFileAsync(ffmpegBinary, [
+                '-y',
+                '-i',
+                tmpMedia,
+                '-vn',
+                '-acodec',
+                'aac',
+                '-b:a',
+                '192k',
+                audioFile,
+              ]);
+              rmSync(tmpMedia, { force: true });
+              if (existsSync(audioFile)) return audioFile;
+            } catch {
+              rmSync(tmpMedia, { force: true });
+            }
+          }
+        } else {
+          try {
+            rmSync(tmpMedia, { force: true });
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    }
+  } catch {
+    // dump-json or download failed — continue to next strategy
+  }
+
+  /* ---- Strategy 2: yt-dlp download best → extract audio with ffmpeg ---- */
+  try {
+    const tmpVideo = `${outputFolder}/${randomUUID()}.mp4`;
+    const dlArgs: string[] = [
+      url,
+      '-f',
+      'best',
+      ...baseBinaryArgs,
+      '-o',
+      tmpVideo,
+      '--quiet',
+    ];
+
+    await execFileAsync(binary, dlArgs);
+
+    if (existsSync(tmpVideo)) {
+      try {
+        await execFileAsync(ffmpegBinary, [
+          '-y',
+          '-i',
+          tmpVideo,
+          '-vn',
+          '-acodec',
+          'aac',
+          '-b:a',
+          '192k',
+          audioFile,
+        ]);
+        rmSync(tmpVideo, { force: true });
+        if (existsSync(audioFile)) return audioFile;
+      } catch {
+        rmSync(tmpVideo, { force: true });
+      }
+    }
+  } catch {
+    // yt-dlp download failed — continue to next strategy
+  }
+
+  /* ---- Strategy 3: classic yt-dlp audio extraction (last resort) ---- */
+  try {
+    const args: string[] = [
+      url,
+      '-f',
+      'bestaudio/best',
+      '-x',
+      '--audio-format',
+      'm4a',
+      ...baseBinaryArgs,
+      '-o',
+      audioFile,
+      '--quiet',
+    ];
+
+    await execFileAsync(binary, args);
+
+    if (existsSync(audioFile)) {
+      return audioFile;
+    }
+  } catch {
+    // All strategies exhausted
+  }
+
+  // Clean up on total failure
+  try {
+    rmSync(audioFile, { force: true });
+  } catch {
+    /* ignore */
+  }
+  return null;
+};
+
+/**
+ * Full fallback pipeline for Instagram image posts.
+ *
+ * 1. Check that gallery-dl and ffmpeg are available.
+ * 2. Download the image via gallery-dl.
+ * 3. Attempt to extract audio from the post via yt-dlp.
+ * 4. Compose a video (image + audio) using ffmpeg.
+ * 5. Clean up temporary files.
+ *
+ * @returns A partial {@link DownloadVideoResult} on success, or `null`
+ *          when the fallback cannot produce a result.
+ */
+const instagramImageFallback = async (
+  url: string,
+  outputPath: string,
+  outputFolder: string,
+  cookies: string,
+  binary: string,
+  ffmpegBinary: string,
+  jsRuntimes: string,
+): Promise<
+  { file: string; thumbnail?: string } | DownloadVideoError | null
+> => {
+  /* ---- Check gallery-dl availability ---- */
+  const galleryDlExists = await isBinaryAvailable(
+    DEFAULT_GALLERY_DL,
+    '--version',
+  );
+  if (!galleryDlExists) {
+    return {
+      code: 'GALLERY_DL_NOT_FOUND',
+      message:
+        'gallery-dl binary was not found. It is required to download ' +
+        'Instagram image posts. ' +
+        'Install it via: pip install gallery-dl, ' +
+        'pipx install gallery-dl, ' +
+        'or see https://github.com/mikf/gallery-dl#installation',
+    };
+  }
+
+  /* ---- Check ffmpeg availability ---- */
+  const ffmpegExists = await isBinaryAvailable(ffmpegBinary, '-version');
+  if (!ffmpegExists) {
+    return {
+      code: 'FFMPEG_NOT_FOUND',
+      message:
+        'ffmpeg binary was not found. It is required to create a video ' +
+        'from Instagram image posts. ' +
+        'Install it via: brew install ffmpeg (macOS), ' +
+        'sudo apt install ffmpeg (Debian/Ubuntu), ' +
+        'or download from https://ffmpeg.org/download.html',
+    };
+  }
+
+  let galleryResult: { images: string[]; media: string[] };
+  let tmpCleanup: string[] = [];
+
+  try {
+    galleryResult = await galleryDlDownload(url, outputFolder, cookies);
+  } catch {
+    return null; // gallery-dl failed — cannot recover
+  }
+
+  if (galleryResult.images.length === 0) {
+    // No images found — clean up and signal failure
+    for (const f of [...galleryResult.media]) {
+      try {
+        rmSync(f, { force: true });
+      } catch {
+        /* ignore */
+      }
+    }
+    return null;
+  }
+
+  const imagePath = galleryResult.images[0]!;
+  tmpCleanup = [...galleryResult.images, ...galleryResult.media];
+
+  /* ---- Save the image as the thumbnail ---- */
+  let thumbnail: string | undefined;
+  let imageForVideo: string = imagePath;
+  try {
+    const thumbExt = imagePath.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const thumbName = `${randomUUID()}.${thumbExt}`;
+    const thumbDest = `${outputFolder}/${thumbName}`;
+    renameSync(imagePath, thumbDest);
+    // Update tmpCleanup — the original path no longer exists
+    tmpCleanup = tmpCleanup.filter((f) => f !== imagePath);
+    thumbnail = thumbName;
+    // Use the moved image for video creation
+    imageForVideo = thumbDest;
+  } catch {
+    // If rename fails, use the original path (already set above)
+  }
+
+  /* ---- Try to get audio ---- */
+  // First check if gallery-dl downloaded any media (audio/video)
+  let audioPath: string | null = galleryResult.media[0] ?? null;
+
+  // If no media from gallery-dl, try yt-dlp audio extraction
+  if (!audioPath) {
+    audioPath = await extractInstagramAudio(
+      url,
+      outputFolder,
+      binary,
+      cookies,
+      jsRuntimes,
+      ffmpegBinary,
+    );
+    if (audioPath) {
+      tmpCleanup.push(audioPath);
+    }
+  }
+
+  /* ---- Create video from image + audio ---- */
+  try {
+    await createVideoFromImage(
+      imageForVideo,
+      audioPath,
+      outputPath,
+      ffmpegBinary,
+    );
+  } catch {
+    // Clean up on failure
+    for (const f of tmpCleanup) {
+      try {
+        rmSync(f, { force: true });
+      } catch {
+        /* ignore */
+      }
+    }
+    return null;
+  }
+
+  /* ---- Clean up temporary files (keep thumbnail & output) ---- */
+  for (const f of tmpCleanup) {
+    // Don't delete the thumbnail or image used for video
+    if (f === imageForVideo) continue;
+    try {
+      rmSync(f, { force: true });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Clean up gallery-dl temp directories
+  try {
+    const galleryDirs = readdirSync(outputFolder).filter((d) =>
+      d.startsWith('_gallery_dl_'),
+    );
+    for (const dir of galleryDirs) {
+      removeFolder(`${outputFolder}/${dir}`);
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const result: { file: string; thumbnail?: string } = {
+    file: outputPath.split('/').pop()!,
+  };
+  if (thumbnail) {
+    result.thumbnail = thumbnail;
+  }
+
+  return result;
+};
+
+/* ------------------------------------------------------------------ */
 /*  Public API                                                        */
 /* ------------------------------------------------------------------ */
 
@@ -1697,6 +2266,8 @@ const downloadVideo = async ({
       )
     : buildDownloadArgs(url, outputPath, cookies, jsRuntimes, formatSelection);
 
+  let ytDlpFailed = false;
+
   try {
     await execFileAsync(binary, args);
   } catch (error) {
@@ -1715,18 +2286,108 @@ const downloadVideo = async ({
           : buildDownloadArgs(url, outputPath, cookies, jsRuntimes);
         await execFileAsync(binary, fallbackArgs);
       } catch (fallbackError) {
+        ytDlpFailed = true;
+
+        // For Instagram links, try gallery-dl fallback for image posts
+        if (isInstagram(url) && !justAudio) {
+          const igFallback = await instagramImageFallback(
+            url,
+            outputPath,
+            outputFolder,
+            cookies,
+            binary,
+            ffmpegBinary,
+            jsRuntimes,
+          );
+
+          if (igFallback && 'file' in igFallback) {
+            // Fallback succeeded — continue to step 6 with the result
+            // (thumbnail is handled inside instagramImageFallback)
+          } else if (igFallback && 'code' in igFallback) {
+            return { error: igFallback };
+          } else {
+            return {
+              error: {
+                code: 'DOWNLOAD_FAILED',
+                message: `yt-dlp download failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+              },
+            };
+          }
+        } else {
+          return {
+            error: {
+              code: 'DOWNLOAD_FAILED',
+              message: `yt-dlp download failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+            },
+          };
+        }
+      }
+    } else {
+      ytDlpFailed = true;
+
+      // For Instagram links, try gallery-dl fallback for image posts
+      if (isInstagram(url) && !justAudio) {
+        const igFallback = await instagramImageFallback(
+          url,
+          outputPath,
+          outputFolder,
+          cookies,
+          binary,
+          ffmpegBinary,
+          jsRuntimes,
+        );
+
+        if (igFallback && 'file' in igFallback) {
+          // Fallback succeeded — continue to step 6
+        } else if (igFallback && 'code' in igFallback) {
+          return { error: igFallback };
+        } else {
+          return {
+            error: {
+              code: 'DOWNLOAD_FAILED',
+              message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          };
+        }
+      } else {
         return {
           error: {
             code: 'DOWNLOAD_FAILED',
-            message: `yt-dlp download failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+            message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
           },
         };
       }
-    } else {
+    }
+  }
+
+  /* ---- 5c. Instagram image fallback: verify output exists ---- */
+
+  // When yt-dlp succeeded for Instagram but produced no file (rare edge
+  // case where it exits 0 but writes nothing), also try the fallback.
+  if (
+    !ytDlpFailed &&
+    isInstagram(url) &&
+    !justAudio &&
+    !existsSync(outputPath)
+  ) {
+    const igFallback = await instagramImageFallback(
+      url,
+      outputPath,
+      outputFolder,
+      cookies,
+      binary,
+      ffmpegBinary,
+      jsRuntimes,
+    );
+
+    if (igFallback && 'code' in igFallback) {
+      return { error: igFallback };
+    }
+    if (!igFallback) {
       return {
         error: {
           code: 'DOWNLOAD_FAILED',
-          message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
+          message: 'yt-dlp produced no output and gallery-dl fallback failed.',
         },
       };
     }

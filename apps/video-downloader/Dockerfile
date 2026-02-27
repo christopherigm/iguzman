@@ -55,13 +55,13 @@ RUN apk add --no-cache \
     wget \
     python3 \
     py3-pip && \
-    pip install --break-system-packages "yt-dlp[default,curl-cffi]"
+    pip install --break-system-packages "yt-dlp[default,curl-cffi]" gallery-dl
 
 # Non-root user for security
 # RUN addgroup --system --gid 1001 nodejs && \
 #     adduser --system --uid 1001 nextjs
 
-# Copy only what the standalone server needsg
+# Copy only what the standalone server needs
 COPY --from=builder /app/apps/video-downloader/public ./apps/video-downloader/public
 COPY --from=builder /app/apps/video-downloader/.next/standalone ./
 COPY --from=builder /app/apps/video-downloader/.next/static ./apps/video-downloader/.next/static
