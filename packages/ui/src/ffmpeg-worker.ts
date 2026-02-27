@@ -12,6 +12,7 @@
  *   { id, type: 'interpolateFps',  payload: { videoData: Uint8Array, targetFps: number } }
  *   { id, type: 'convertToH264',   payload: { videoData: Uint8Array } }
  *   { id, type: 'removeBlackBars', payload: { videoData: Uint8Array, limit?: number, round?: number, cropString?: string } }
+ *   { id, type: 'extractAudio',    payload: { videoData: Uint8Array, format?: string } }
  *
  * Outgoing (worker → main):
  *   { id, type: 'progress',  payload: { progress: number } }
@@ -293,7 +294,7 @@ self.onmessage = async (
             ];
             if (matches.length === 0) {
               await ff.deleteFile(input);
-              throw new Error('No crop parameters detected');
+              throw new Error('No black bars detected');
             }
             const last = matches[matches.length - 1]!;
             const [, w, h, x, y] = last;
@@ -352,6 +353,129 @@ self.onmessage = async (
           await ff.deleteFile(input);
           await ff.deleteFile(output);
           sendProgress(100);
+          self.postMessage(
+            { id, type: 'result', payload: { data: result } },
+            { transfer: [result.buffer as ArrayBuffer] },
+          );
+          break;
+        }
+
+        case 'extractAudio': {
+          const { videoData, format = 'wav' } = payload as {
+            videoData: Uint8Array;
+            format?: string;
+          };
+          const input = 'input_audio_extract.mp4';
+          const output = `output_audio.${format}`;
+          await ff.writeFile(input, videoData);
+
+          const args =
+            format === 'wav'
+              ? [
+                  '-i',
+                  input,
+                  '-vn',
+                  '-acodec',
+                  'pcm_s16le',
+                  '-ar',
+                  '16000',
+                  '-ac',
+                  '1',
+                  output,
+                ]
+              : ['-i', input, '-vn', '-c:a', 'copy', output];
+
+          const code = await ff.exec(args);
+          if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
+          const result = (await ff.readFile(output)) as Uint8Array;
+          await ff.deleteFile(input);
+          await ff.deleteFile(output);
+          sendProgress(100);
+          self.postMessage(
+            { id, type: 'result', payload: { data: result } },
+            { transfer: [result.buffer as ArrayBuffer] },
+          );
+          break;
+        }
+
+        case 'burnSubtitles': {
+          const {
+            videoData,
+            srtContent,
+            alignment = 2,
+            marginV = 40,
+          } = payload as {
+            videoData: Uint8Array;
+            srtContent: string;
+            alignment?: number;
+            marginV?: number;
+          };
+
+          const input = 'input_subs.mp4';
+          const srtFile = 'subs.srt';
+          const output = 'output_subs.mp4';
+
+          await ff.writeFile(input, videoData);
+          await ff.writeFile(srtFile, new TextEncoder().encode(srtContent));
+
+          /* Probe duration for progress reporting. */
+          let probeLog = '';
+          const probeHandler = ({ message }: { message: string }) => {
+            probeLog += message + '\n';
+          };
+          ff.on('log', probeHandler);
+          await ff.exec(['-i', input]);
+          ff.off('log', probeHandler);
+
+          const durMatch = probeLog.match(
+            /Duration:\s+(\d+):(\d+):(\d+(?:\.\d+)?)/,
+          );
+          const durationSec = durMatch
+            ? Number(durMatch[1]) * 3600 +
+              Number(durMatch[2]) * 60 +
+              Number(durMatch[3])
+            : 0;
+          const fpsMatch = probeLog.match(/(\d+(?:\.\d+)?)\s*(?:fps|tbr)/);
+          const srcFps = fpsMatch ? Number(fpsMatch[1]) : 30;
+          const estimatedFrames = durationSec > 0 ? durationSec * srcFps : 0;
+          let lastFrame = 0;
+
+          const burnLogHandler = ({ message }: { message: string }) => {
+            if (estimatedFrames > 0) {
+              const m = message.match(/frame=\s*(\d+)/);
+              if (m) {
+                const frame = Number(m[1]);
+                if (frame > lastFrame) {
+                  lastFrame = frame;
+                  sendProgress(
+                    Math.min(99, Math.round((frame / estimatedFrames) * 100)),
+                  );
+                }
+              }
+            }
+          };
+          ff.on('log', burnLogHandler);
+
+          const forceStyle = `Alignment=${alignment},MarginV=${marginV}`;
+          const code = await ff.exec([
+            '-i',
+            input,
+            '-vf',
+            `subtitles=${srtFile}:force_style='${forceStyle}'`,
+            '-c:a',
+            'copy',
+            output,
+          ]);
+          ff.off('log', burnLogHandler);
+
+          if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
+
+          const result = (await ff.readFile(output)) as Uint8Array;
+          await ff.deleteFile(input);
+          await ff.deleteFile(srtFile);
+          await ff.deleteFile(output);
+          sendProgress(100);
+
           self.postMessage(
             { id, type: 'result', payload: { data: result } },
             { transfer: [result.buffer as ArrayBuffer] },

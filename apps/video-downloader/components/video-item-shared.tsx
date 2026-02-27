@@ -39,6 +39,11 @@ export const FPS_OPTIONS = [
 
 /* ── Helpers ────────────────────────────────────────── */
 
+export function resolveMediaUrl(url: string): string {
+  if (process.env.NODE_ENV !== 'development') return url;
+  return url.replace('/api/media/', '/media/');
+}
+
 export function triggerBrowserDownload(url: string, filename: string) {
   const link = document.createElement('a');
   link.href = url;
@@ -217,7 +222,10 @@ export function VideoMediaPreview({
 }) {
   if (!downloadURL) return null;
 
-  const thumbnailSrc = thumbnail ? `/api/media/${thumbnail}` : null;
+  const src = resolveMediaUrl(downloadURL);
+  const thumbnailSrc = thumbnail
+    ? resolveMediaUrl(`/api/media/${thumbnail}`)
+    : null;
 
   if (justAudio) {
     return (
@@ -236,7 +244,7 @@ export function VideoMediaPreview({
         <div className="vi-media-wrapper vi-audio-wrapper">
           <audio
             className="vi-audio"
-            src={downloadURL}
+            src={src}
             loop
             controls
             preload="metadata"
@@ -250,7 +258,7 @@ export function VideoMediaPreview({
     <div className="vi-media-wrapper">
       <video
         className={`vi-video${compact ? ' vi-video--compact' : ''}`}
-        src={downloadURL}
+        src={src}
         loop
         playsInline
         preload="metadata"

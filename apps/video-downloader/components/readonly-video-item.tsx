@@ -7,6 +7,7 @@ import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import type { StoredVideo } from './use-video-store';
 import {
   STATUS_COLORS,
+  resolveMediaUrl,
   triggerBrowserDownload,
   downloadThumbnail,
   VideoDetailsPanel,
@@ -27,9 +28,10 @@ export interface ReadOnlyVideoItemProps {
   onReprocess: (
     uuid: string,
     action: ReprocessAction,
-    targetFps?: number,
+    extra?: number,
   ) => void;
   onRemove: (uuid: string) => void;
+  onUpdate: (uuid: string, patch: Partial<StoredVideo>) => void;
 }
 
 /* ── Component ──────────────────────────────────────── */
@@ -70,7 +72,7 @@ export function ReadOnlyVideoItem({
       `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
     );
     if (video.justAudio) {
-      const thumbSrc = video.thumbnail ? `/api/media/${video.thumbnail}` : null;
+      const thumbSrc = video.thumbnail ? resolveMediaUrl(`/api/media/${video.thumbnail}`) : null;
       if (thumbSrc) {
         downloadThumbnail(thumbSrc, video.name);
       }

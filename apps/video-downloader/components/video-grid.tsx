@@ -109,12 +109,12 @@ export function VideoGrid({
 
   /* ── Reprocess handler: move completed → pinned ──── */
   const handleReprocess = useCallback(
-    (uuid: string, action: ReprocessAction, targetFps?: number) => {
+    (uuid: string, action: ReprocessAction, extra?: number) => {
       switch (action) {
         case 'fps':
           onReprocessCompleted(uuid, {
             status: 'processing' as VideoStatus,
-            fps: String(targetFps),
+            fps: String(extra as number),
             fpsApplied: false,
           });
           break;
@@ -209,6 +209,7 @@ export function VideoGrid({
                 video={video}
                 onReprocess={handleReprocess}
                 onRemove={onRemoveCompleted}
+                onUpdate={onUpdateCompleted}
               />
             </Grid>
           ))}

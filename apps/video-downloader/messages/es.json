@@ -87,6 +87,6 @@
     "toggleExtraActions": "Más acciones",
     "processingTitle": "En Proceso",
     "detailProcessingTime": "Tiempo de procesamiento",
-    "detailCores": "Hilos de CPU"
+    "detailCores": "Hilos de CPU",
   }
 }

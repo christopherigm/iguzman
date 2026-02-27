@@ -11,6 +11,7 @@ import { usePollTask, type TaskData } from './use-poll-task';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import {
   STATUS_COLORS,
+  resolveMediaUrl,
   triggerBrowserDownload,
   downloadThumbnail,
   uploadProcessedVideo,
@@ -123,7 +124,7 @@ export function PinnedVideoItem({
 
       try {
         onUpdate(video.uuid, { status: opts.activeStatus, error: null });
-        const sourceUrl = `${window.location.origin}/api/media/${file}`;
+        const sourceUrl = `${window.location.origin}${resolveMediaUrl(`/api/media/${file}`)}`;
         setLocalProgress({ status: 'loading', progress: 0 });
         const { objectUrl, blob } = await opts.process(sourceUrl, (p) => {
           setLocalProgress({ status: 'processing', progress: p });
@@ -217,7 +218,7 @@ export function PinnedVideoItem({
           removeBlackBars(url, undefined, undefined, undefined, onProgress),
         donePatch: { blackBarsRemoved: true },
         taskUpdate: { blackBarsRemoved: true },
-        errorKey: 'errorFfmpegFailed',
+        errorKey: 'errorRemoveBlackBarsFailed',
         completeAfter: true,
       }),
     [runProcessing, removeBlackBars],
@@ -268,7 +269,7 @@ export function PinnedVideoItem({
         );
         if (video.justAudio) {
           const thumbSrc = task.thumbnail
-            ? `/api/media/${task.thumbnail}`
+            ? resolveMediaUrl(`/api/media/${task.thumbnail}`)
             : null;
           if (thumbSrc) {
             downloadThumbnail(thumbSrc, name);
@@ -375,7 +376,9 @@ export function PinnedVideoItem({
       `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
     );
     if (video.justAudio) {
-      const thumbSrc = video.thumbnail ? `/api/media/${video.thumbnail}` : null;
+      const thumbSrc = video.thumbnail
+        ? resolveMediaUrl(`/api/media/${video.thumbnail}`)
+        : null;
       if (thumbSrc) {
         downloadThumbnail(thumbSrc, video.name);
       }
@@ -561,7 +564,6 @@ export function PinnedVideoItem({
         uploading={uploading}
         t={t}
       />
-
       {/* ── Footer actions ────────────────────────── */}
       <Box className="vi-footer">
         <VideoFooterLink video={video} />

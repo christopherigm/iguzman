@@ -5,8 +5,7 @@
   "exports": {
     "./*": "./src/*.tsx",
     "./palettes": "./src/palettes.ts",
-    "./use-ffmpeg": "./src/use-ffmpeg.ts",
-    "./use-whisper": "./src/use-whisper.ts"
+    "./use-ffmpeg": "./src/use-ffmpeg.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -24,7 +23,6 @@
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
-    "@huggingface/transformers": "^3.3.3",
     "@ffmpeg/util": "^0.12.2",
     "@repo/helpers": "workspace:*",
     "react": "^19.2.4",

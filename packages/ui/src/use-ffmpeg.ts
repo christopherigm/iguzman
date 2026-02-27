@@ -264,6 +264,72 @@ export function useFFmpeg() {
     [sendVideoOp],
   );
 
+  /**
+   * Extract the audio track from a video file.
+   *
+   * By default outputs a 16 kHz mono WAV suitable for Whisper transcription.
+   *
+   * @param videoUrl  URL (or object-URL) of the source video.
+   * @param format    Output container: `'wav'` (default, 16 kHz mono PCM) or
+   *                  `'aac'` / `'mp3'` etc. (copy codec when non-wav).
+   * @returns         `{ objectUrl, blob }` – object-URL for immediate use
+   *                  and the raw Blob for downstream processing.
+   */
+  const extractAudio = useCallback(
+    async (
+      videoUrl: string,
+      format: string = 'wav',
+      onProgress?: (p: number) => void,
+    ): Promise<{ objectUrl: string; blob: Blob }> => {
+      const mimeMap: Record<string, string> = {
+        wav: 'audio/wav',
+        mp3: 'audio/mpeg',
+        aac: 'audio/aac',
+        ogg: 'audio/ogg',
+      };
+      const data = await sendVideoOp(
+        'extractAudio',
+        videoUrl,
+        { format },
+        onProgress,
+      );
+      const mime = mimeMap[format] ?? 'audio/wav';
+      const blob = new Blob([new Uint8Array(data)], { type: mime });
+      return { objectUrl: URL.createObjectURL(blob), blob };
+    },
+    [sendVideoOp],
+  );
+
+  /**
+   * Burn SRT subtitles into a video using the FFmpeg `subtitles` filter.
+   *
+   * @param videoUrl    URL (or object-URL) of the source video.
+   * @param srtContent  Raw SRT subtitle string.
+   * @param alignment   SSA alignment value (numpad layout 1–9). @default 2
+   * @param marginV     Vertical margin in pixels from the subtitle position. @default 40
+   * @returns           `{ objectUrl, blob }` – object-URL for immediate use
+   *                    and the raw Blob for uploading back to the server.
+   */
+  const burnSubtitles = useCallback(
+    async (
+      videoUrl: string,
+      srtContent: string,
+      alignment = 2,
+      marginV = 40,
+      onProgress?: (p: number) => void,
+    ): Promise<{ objectUrl: string; blob: Blob }> => {
+      const data = await sendVideoOp(
+        'burnSubtitles',
+        videoUrl,
+        { srtContent, alignment, marginV },
+        onProgress,
+      );
+      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      return { objectUrl: URL.createObjectURL(blob), blob };
+    },
+    [sendVideoOp],
+  );
+
   return {
     status,
     progress,
@@ -273,5 +339,7 @@ export function useFFmpeg() {
     interpolateFps,
     convertToH264,
     removeBlackBars,
+    extractAudio,
+    burnSubtitles,
   } as const;
 }

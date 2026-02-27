@@ -248,7 +248,12 @@ export function useVideoStore() {
         blackBarsRemoved: false,
         taskId: null,
       };
-      setPinned((prev) => [entry, ...prev]);
+      setPinned((prev) => {
+        /* Guard against React Strict Mode double-invocation of functional
+           updaters: if the URL is already in pinned, skip the add. */
+        if (prev.some((v) => v.originalURL === partial.originalURL)) return prev;
+        return [entry, ...prev];
+      });
       return uuid;
     },
     [pinned],
@@ -270,7 +275,12 @@ export function useVideoStore() {
     setPinned((prev) => {
       const video = prev.find((v) => v.uuid === uuid);
       if (video) {
-        setCompleted((c) => [{ ...video }, ...c]);
+        setCompleted((c) => {
+          /* Guard against React Strict Mode double-invocation of functional
+             updaters: if the video is already in completed, skip the add. */
+          if (c.some((v) => v.uuid === uuid)) return c;
+          return [{ ...video }, ...c];
+        });
       }
       return prev.filter((v) => v.uuid !== uuid);
     });
@@ -282,7 +292,12 @@ export function useVideoStore() {
       setCompleted((prev) => {
         const video = prev.find((v) => v.uuid === uuid);
         if (video) {
-          setPinned((p) => [{ ...video, ...patch }, ...p]);
+          setPinned((p) => {
+            /* Guard against React Strict Mode double-invocation of functional
+               updaters: if the video is already in pinned, skip the add. */
+            if (p.some((v) => v.uuid === uuid)) return p;
+            return [{ ...video, ...patch }, ...p];
+          });
         }
         return prev.filter((v) => v.uuid !== uuid);
       });
