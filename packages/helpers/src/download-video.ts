@@ -1149,6 +1149,20 @@ const buildDownloadArgs = (
       '--no-abort-on-error',
       '--no-playlist',
     );
+  } else if (isInstagram(url)) {
+    // Instagram can serve both combined (muxed) and separate streams.
+    // Prefer merging separate mp4 video + m4a audio for maximum quality;
+    // fall back to any best video+audio merge, then to the best single stream.
+    // -S ensures yt-dlp sub-sorts by resolution → fps → total bitrate when
+    // the format selector matches multiple candidates.
+    args.push(
+      '-f',
+      'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
+      '-S',
+      'res,fps,tbr',
+      '--no-abort-on-error',
+      '--no-playlist',
+    );
   }
 
   if (!isTiktok(url)) {
