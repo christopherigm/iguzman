@@ -89,6 +89,7 @@ nodeAffinity:
 # ─── Custom PostgreSQL configuration ────────────────────────
 # Extra postgresql.conf injected via ConfigMap.
 customConfig: |
+  listen_addresses = '*'
   max_connections = 200
   shared_buffers = 128MB
   log_timezone = 'UTC'
