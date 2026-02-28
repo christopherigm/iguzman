@@ -87,6 +87,6 @@
     "toggleExtraActions": "Plus d'actions",
     "processingTitle": "En Cours",
     "detailProcessingTime": "Temps de traitement",
-    "detailCores": "Threads CPU",
+    "detailCores": "Threads CPU"
   }
 }

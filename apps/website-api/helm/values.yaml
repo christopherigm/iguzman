@@ -55,17 +55,18 @@ env:
   DB_USER: 'postgres'
   # ── Optional overrides ────────────────────────────────────
   # SECRET_KEY: 'change-me-in-production'
-  # DEBUG: 'False'
-  # ALLOWED_HOSTS: 'website-api.iguzman.com.mx'
+  DEBUG: 'False' # set to 'True' for debugging, 'False' for production
+  ALLOWED_HOSTS: 'website-api.iguzman.com.mx,website.iguzman.com.mx,localhost,127.0.0.1'
+  CSRF_TRUSTED_ORIGINS: 'https://website-api.iguzman.com.mx,https://website.iguzman.com.mx'
 
 # Sensitive values – reference existing Kubernetes Secrets.
 envFromSecret:
   - name: DB_PASSWORD
     secretName: website-api-secrets
     secretKey: db-password
-  # - name: SECRET_KEY
-  #   secretName: website-api-secrets
-  #   secretKey: secret-key
+  - name: SECRET_KEY
+    secretName: website-api-secrets
+    secretKey: secret-key
 
 # ─── Host-path volume (media storage) ───────────────────────
 hostPathVolume:
@@ -79,6 +80,9 @@ probes:
     httpGet:
       path: /admin/
       port: 8000
+      httpHeaders:
+        - name: Host
+          value: 127.0.0.1
     initialDelaySeconds: 15
     periodSeconds: 5
     failureThreshold: 30 # allow up to ~150 s for first boot
@@ -87,6 +91,9 @@ probes:
     httpGet:
       path: /admin/
       port: 8000
+      httpHeaders:
+        - name: Host
+          value: 127.0.0.1
     initialDelaySeconds: 0
     periodSeconds: 10
     failureThreshold: 3

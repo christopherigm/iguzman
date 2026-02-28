@@ -22,18 +22,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-71g@hbib=qymsg2oub@*lf*qokt0laj-s(3fh4bm-$%rf5y7@2'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['website-api.iguzman.com.mx', 'website.iguzman.com.mx', '*']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS',
+        'https://website-api.iguzman.com.mx,https://website.iguzman.com.mx',
+    ).split(',')
+    if origin.strip()
+]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -157,17 +165,6 @@ MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Django Jazzmin
-# https://django-jazzmin.readthedocs.io/configuration/
-
-JAZZMIN_SETTINGS = {
-    'site_title': 'Website API Admin',
-    'site_header': 'Website API',
-    'site_brand': 'Website API',
-    'welcome_sign': 'Welcome to the Website API Admin',
-    'show_ui_builder': False,
-}
 
 # Django REST Framework
 # https://www.django-rest-framework.org/api-guide/settings/
