@@ -53,6 +53,8 @@ env:
   DB_PORT: '5432'
   DB_NAME: 'postgres'
   DB_USER: 'postgres'
+  # ── Redis ──────────────────────────────────────────────────
+  REDIS_URL: 'redis://redis.website.svc.cluster.local:6379/0'
   # ── Optional overrides ────────────────────────────────────
   # SECRET_KEY: 'change-me-in-production'
   DEBUG: 'False' # set to 'True' for debugging, 'False' for production
@@ -67,6 +69,10 @@ envFromSecret:
   - name: SECRET_KEY
     secretName: website-api-secrets
     secretKey: secret-key
+  # Uncomment if Redis auth is enabled (see packages/charts/redis auth.password).
+  - name: REDIS_PASSWORD
+    secretName: website-api-secrets
+    secretKey: redis-password
 
 # ─── Host-path volume (media storage) ───────────────────────
 hostPathVolume:

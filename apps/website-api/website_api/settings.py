@@ -181,6 +181,33 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 100,
 }
 
+# Cache
+# https://github.com/jazzband/django-redis
+#
+# Uses Redis when REDIS_URL is set (production/staging).
+# Falls back to the local-memory cache for local development.
+
+_REDIS_URL = os.environ.get('REDIS_URL', '')
+
+if _REDIS_URL:
+    _redis_options: dict = {
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+    }
+    _redis_password = os.environ.get('REDIS_PASSWORD', '')
+    if _redis_password:
+        _redis_options['PASSWORD'] = _redis_password
+
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': _REDIS_URL,
+            'OPTIONS': _redis_options,
+        }
+    }
+
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    SESSION_CACHE_ALIAS = 'default'
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),

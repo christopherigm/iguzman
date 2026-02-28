@@ -9,6 +9,7 @@ Django REST Framework backend with JWT authentication.
 - djangorestframework
 - djangorestframework-simplejwt
 - Pillow
+- django-redis
 
 ## Setup
 
@@ -47,12 +48,10 @@ Authorization: Bearer <access_token>
 
 ### Admin & Internal
 
-| URL               | Description                                   |
-| ----------------- | --------------------------------------------- |
-| `/admin/`         | Django admin panel                            |
-| `/api-auth/`      | DRF browsable API login/logout (session auth) |
-| `/jet/`           | Django JET admin skin URLs                    |
-| `/jet/dashboard/` | Django JET dashboard URLs                     |
+| URL          | Description                                   |
+| ------------ | --------------------------------------------- |
+| `/admin/`    | Django admin panel                            |
+| `/api-auth/` | DRF browsable API login/logout (session auth) |
 
 ---
 
@@ -268,6 +267,55 @@ curl http://localhost:8000/api/auth/profile/ \
 
 ---
 
+#### `PUT /api/auth/profile/`
+
+Update the authenticated user's profile fields. All fields are optional — only send the ones you want to change.
+
+**Requires:** `Authorization: Bearer <access_token>`
+
+**Request body (all fields optional):**
+
+```json
+{
+  "username": "newusername",
+  "email": "new@example.com",
+  "first_name": "Jane",
+  "last_name": "Smith"
+}
+```
+
+**Successful response — `200 OK`:** *(same shape as `GET /api/auth/profile/`)*
+
+```json
+{
+  "id": 1,
+  "username": "newusername",
+  "email": "new@example.com",
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "profile_picture": "http://localhost:8000/media/profile_pictures/user_1/profile_1.jpg"
+}
+```
+
+**Validation error — `400 Bad Request`:**
+
+```json
+{
+  "username": ["This username is already taken."]
+}
+```
+
+**cURL example:**
+
+```bash
+curl -X PUT http://localhost:8000/api/auth/profile/ \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{"first_name": "Jane", "last_name": "Smith"}'
+```
+
+---
+
 #### `POST /api/auth/profile/picture/`
 
 Upload a profile picture as a **base64-encoded image**. The image is automatically resized to a maximum of **512×512 px** at **90% JPEG quality** before being stored.
@@ -338,7 +386,8 @@ Missing or expired token returns `401 Unauthorized`:
 3. GET  /api/<protected>/           → use access token in Authorization header
 4. POST /api/auth/token/refresh/    → when access token expires, get a new one
 5. GET  /api/auth/profile/          → retrieve user profile data
-6. POST /api/auth/profile/picture/  → upload / update profile picture (base64)
+6. PUT  /api/auth/profile/          → update username, email, first_name, last_name
+7. POST /api/auth/profile/picture/  → upload / update profile picture (base64)
 ```
 
 ---
@@ -358,18 +407,70 @@ The app is containerized with Docker and deployed to MicroK8s via a Helm chart l
 
 Configure production values as a Kubernetes Secret and reference them in `helm/values.yaml` via `envFromSecret`:
 
-| Variable                 | Source          | Description                                 |
-| ------------------------ | --------------- | ------------------------------------------- |
-| `DB_HOST`                | `env`           | PostgreSQL host (set by Helm chart)         |
-| `DB_PORT`                | `env`           | PostgreSQL port (default: `5432`)           |
-| `DB_NAME`                | `env`           | Database name (default: `website`)          |
-| `DB_USER`                | `env`           | Database user (default: `website`)          |
-| `DB_PASSWORD`            | `envFromSecret` | Database password — stored in K8s Secret    |
-| `MEDIA_ROOT`             | `env`           | Override media path (default: `/app/media`) |
-| `SECRET_KEY`             | `envFromSecret` | Django secret key (required in production)  |
-| `DEBUG`                  | `env`           | Set to `False` in production                |
-| `ALLOWED_HOSTS`          | `env`           | Comma-separated list of allowed hostnames   |
-| `DJANGO_SETTINGS_MODULE` | `env`           | Set automatically by the Helm chart         |
+| Variable                 | Source          | Description                                                                      |
+| ------------------------ | --------------- | -------------------------------------------------------------------------------- |
+| `DB_HOST`                | `env`           | PostgreSQL host (set by Helm chart)                                              |
+| `DB_PORT`                | `env`           | PostgreSQL port (default: `5432`)                                                |
+| `DB_NAME`                | `env`           | Database name (default: `website`)                                               |
+| `DB_USER`                | `env`           | Database user (default: `website`)                                               |
+| `DB_PASSWORD`            | `envFromSecret` | Database password — stored in K8s Secret                                         |
+| `REDIS_URL`              | `env`           | Redis connection URL (default: `redis://redis.website.svc.cluster.local:6379/0`) |
+| `REDIS_PASSWORD`         | `envFromSecret` | Redis password — required only when Redis auth is enabled                        |
+| `MEDIA_ROOT`             | `env`           | Override media path (default: `/app/media`)                                      |
+| `SECRET_KEY`             | `envFromSecret` | Django secret key (required in production)                                       |
+| `DEBUG`                  | `env`           | Set to `False` in production                                                     |
+| `ALLOWED_HOSTS`          | `env`           | Comma-separated list of allowed hostnames                                        |
+| `CSRF_TRUSTED_ORIGINS`   | `env`           | Comma-separated list of allowed origins                                          |
+| `DJANGO_SETTINGS_MODULE` | `env`           | Set automatically by the Helm chart                                              |
+
+### Redis
+
+Redis is deployed as a **standalone service** using the shared Helm chart at `packages/charts/redis/`. It must be running in the same namespace before the Django app starts.
+
+Django connects to Redis via the `REDIS_URL` environment variable (default: `redis://redis.website.svc.cluster.local:6379/0`). When `REDIS_URL` is set:
+
+- `CACHES['default']` uses `django_redis.cache.RedisCache` (in-memory cache falls back when Redis is absent in local dev).
+- `SESSION_ENGINE` is switched to `django.contrib.sessions.backends.cache`, storing sessions in Redis instead of the database.
+
+#### Deploy Redis
+
+```bash
+# Without authentication (development clusters)
+helm install redis ./packages/charts/redis --namespace website --create-namespace
+
+# With password authentication (recommended for production)
+helm install redis ./packages/charts/redis \
+  --namespace website --create-namespace \
+  --set auth.password=your-redis-password
+```
+
+#### Enable Redis auth in website-api
+
+If you deploy Redis with a password, uncomment the `REDIS_PASSWORD` entry in `helm/values.yaml`:
+
+```yaml
+envFromSecret:
+  - name: REDIS_PASSWORD
+    secretName: website-api-secrets
+    secretKey: redis-password
+```
+
+Then add the Redis password to the existing secret (or recreate it):
+
+```bash
+kubectl create secret generic website-api-secrets \
+  --namespace website \
+  --from-literal=db-password='postgres' \
+  --from-literal=secret-key='your-production-secret-key' \
+  --from-literal=redis-password='your-redis-password'
+```
+
+#### Verify Redis is reachable
+
+```bash
+kubectl exec deploy/website-api -n website -- \
+  python -c "from django.core.cache import cache; cache.set('ping','pong',10); print(cache.get('ping'))"
+```
 
 Create the secret on the cluster before deploying:
 
@@ -377,7 +478,8 @@ Create the secret on the cluster before deploying:
 kubectl create secret generic website-api-secrets \
   --namespace website \
   --from-literal=db-password='postgres' \
-  --from-literal=secret-key='your-production-secret-key'
+  --from-literal=secret-key='your-production-secret-key' \
+  --from-literal=redis-password='your-redis-password'
 ```
 
 The `DB_PASSWORD` secret key (`db-password`) is already wired in `helm/values.yaml` via `envFromSecret` and will be injected automatically on deployment.
@@ -430,16 +532,17 @@ You will be prompted for the target namespace and image tag.
 
 Key values to override in `helm/values.yaml` or via `--set`:
 
-| Key                        | Default                      | Description                       |
-| -------------------------- | ---------------------------- | --------------------------------- |
-| `image.tag`                | `latest`                     | Docker image tag to deploy        |
-| `replicaCount`             | `1`                          | Number of pod replicas            |
-| `ingress.hosts[0].host`    | `website-api.iguzman.com.mx` | Public hostname                   |
-| `hostPathVolume.enabled`   | `true`                       | Mount shared media volume         |
-| `hostPathVolume.mountPath` | `/app/media`                 | Container path for media files    |
-| `nginx.enabled`            | `true`                       | Nginx sidecar for `/media/`       |
-| `resources.limits.cpu`     | `500m`                       | CPU limit for Django container    |
-| `resources.limits.memory`  | `512Mi`                      | Memory limit for Django container |
+| Key                        | Default                                          | Description                       |
+| -------------------------- | ------------------------------------------------ | --------------------------------- |
+| `image.tag`                | `latest`                                         | Docker image tag to deploy        |
+| `replicaCount`             | `1`                                              | Number of pod replicas            |
+| `ingress.hosts[0].host`    | `website-api.iguzman.com.mx`                     | Public hostname                   |
+| `env.REDIS_URL`            | `redis://redis.website.svc.cluster.local:6379/0` | Redis connection URL              |
+| `hostPathVolume.enabled`   | `true`                                           | Mount shared media volume         |
+| `hostPathVolume.mountPath` | `/app/media`                                     | Container path for media files    |
+| `nginx.enabled`            | `true`                                           | Nginx sidecar for `/media/`       |
+| `resources.limits.cpu`     | `500m`                                           | CPU limit for Django container    |
+| `resources.limits.memory`  | `512Mi`                                          | Memory limit for Django container |
 
 ### Checking deployment status
 

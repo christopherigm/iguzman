@@ -94,6 +94,30 @@ class ProfilePictureSerializer(serializers.Serializer):
         return profile
 
 
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    """Writable serializer for updating username, email, first_name, and last_name."""
+
+    class Meta:
+        model = User
+        fields = ("username", "email", "first_name", "last_name")
+        extra_kwargs = {
+            "username": {"required": False},
+            "email": {"required": False},
+        }
+
+    def validate_username(self, value):
+        qs = User.objects.exclude(pk=self.instance.pk).filter(username=value)
+        if qs.exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+
+    def validate_email(self, value):
+        qs = User.objects.exclude(pk=self.instance.pk).filter(email=value)
+        if qs.exists():
+            raise serializers.ValidationError("This email is already in use.")
+        return value
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """Read-only serializer that returns user data plus the profile picture URL."""
 

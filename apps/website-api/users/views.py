@@ -10,6 +10,7 @@ from .serializers import (
     ProfilePictureSerializer,
     SignUpSerializer,
     UserProfileSerializer,
+    UserProfileUpdateSerializer,
 )
 
 
@@ -51,6 +52,16 @@ class ProfileView(APIView):
     def get(self, request):
         serializer = UserProfileSerializer(request.user, context={"request": request})
         return Response(serializer.data)
+
+    def put(self, request):
+        serializer = UserProfileUpdateSerializer(
+            request.user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            UserProfileSerializer(request.user, context={"request": request}).data
+        )
 
 
 class ProfilePictureView(APIView):
