@@ -11,7 +11,13 @@ import {
 import { get as httpsGet } from 'https';
 import { get as httpGet } from 'http';
 import { randomUUID } from 'crypto';
-import { detectPlatform, isInstagram, isTiktok, isYoutube } from './checkers';
+import {
+  detectPlatform,
+  isFacebook,
+  isInstagram,
+  isTiktok,
+  isYoutube,
+} from './checkers';
 import type { Platform } from './checkers';
 import { extractAudioFromVideo } from './extract-audio-from-video';
 import { addAudioToVideoInTime } from './add-audio-to-video-in-time';
@@ -388,6 +394,12 @@ export interface DownloadVideoResult {
    */
   thumbnail?: string;
   /**
+   * Frames per second of the downloaded video stream, as reported
+   * by ffprobe. Present for video downloads when the probe succeeds.
+   * `undefined` for audio-only downloads or when the probe fails.
+   */
+  fps?: number;
+  /**
    * Structured error object. Present when something goes wrong.
    * When set, `file` and `name` will be absent.
    */
@@ -408,7 +420,10 @@ export interface DownloadVideoResult {
 const execFileAsync = (bin: string, args: string[]): Promise<string> =>
   new Promise((resolve, reject) => {
     execFile(bin, args, { maxBuffer: EXEC_MAX_BUFFER }, (error, stdout) => {
-      if (error) return reject(error);
+      if (error) {
+        console.log('execFileAsync error:', error);
+        return reject(error);
+      }
       resolve(stdout);
     });
   });
@@ -1355,6 +1370,43 @@ const isH265Codec = async (
 };
 
 /**
+ * Probes a media file with ffprobe to read the frame rate of its first
+ * video stream.
+ *
+ * Runs `ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate`
+ * and evaluates the returned rational (e.g. `"30000/1001"` → `29.97`).
+ *
+ * @returns The FPS as a number rounded to two decimal places, or `undefined`
+ *          when the probe fails or no video stream is present.
+ */
+const getVideoFps = async (
+  filePath: string,
+  ffmpegBinary: string,
+): Promise<number | undefined> => {
+  try {
+    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
+    const output = await execFileAsync(ffprobeBinary, [
+      '-v',
+      'error',
+      '-select_streams',
+      'v:0',
+      '-show_entries',
+      'stream=r_frame_rate',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      filePath,
+    ]);
+    const raw = output.trim();
+    if (!raw) return undefined;
+    const [num, den] = raw.split('/').map(Number);
+    if (!den || isNaN(num ?? 0) || isNaN(den)) return undefined;
+    return Math.round(((num ?? 0) / den) * 100) / 100;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
  * Probes a media file with ffprobe to check whether it contains an
  * audio stream.
  *
@@ -2097,6 +2149,140 @@ const instagramImageFallback = async (
 };
 
 /* ------------------------------------------------------------------ */
+/*  Separate-stream download (Instagram / Facebook)                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Downloads a video and audio stream separately using yt-dlp, then
+ * merges them into a single MP4 file via ffmpeg.
+ *
+ * **Steps:**
+ * 1. Download the best video-only stream (typically VP9/H.264).
+ * 2. Download the best audio-only stream.
+ * 3. Merge both into the target `outputPath` using ffmpeg.
+ *
+ * Temporary stream files are written next to `outputPath` with a
+ * UUID prefix and are always deleted, even on failure.
+ *
+ * @throws When any step (yt-dlp video, yt-dlp audio, or ffmpeg) fails.
+ */
+const downloadSeparateStreams = async (
+  url: string,
+  outputPath: string,
+  outputFolder: string,
+  cookies: string,
+  jsRuntimes: string,
+  binary: string,
+  ffmpegBinary: string,
+  formatSelection?: FormatSelection,
+): Promise<void> => {
+  const videoId = randomUUID();
+  const combinedId = randomUUID();
+
+  const videoTemplate = `${outputFolder}/${videoId}.%(ext)s`;
+  const combinedTemplate = `${outputFolder}/${combinedId}.%(ext)s`;
+
+  /** Finds the file created by yt-dlp using the UUID prefix. */
+  const findDownloadedFile = (prefix: string): string | null => {
+    try {
+      const match = readdirSync(outputFolder).find((f) => f.startsWith(prefix));
+      return match ? `${outputFolder}/${match}` : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const cleanupFiles = (paths: (string | null)[]): void => {
+    for (const p of paths) {
+      if (p) {
+        try {
+          rmSync(p, { force: true });
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  };
+
+  const buildStreamArgs = (
+    formatSelector: string,
+    outputTemplate: string,
+  ): string[] => {
+    const args: string[] = [
+      url,
+      '-f',
+      formatSelector,
+      '--no-playlist',
+      '--js-runtimes',
+      `node:${jsRuntimes}`,
+    ];
+    if (cookies) args.push('--cookies', cookies);
+    args.push('-o', outputTemplate, '--quiet');
+    return args;
+  };
+
+  // Use detected format IDs when available; otherwise let yt-dlp choose.
+  const videoSelector = formatSelection?.bestVideo
+    ? formatSelection.bestVideo.format_id
+    : 'bestvideo';
+
+  // Prefer a known combined format for the audio source; fall back to 'best'.
+  const combinedSelector = formatSelection?.bestCombined
+    ? formatSelection.bestCombined.format_id
+    : 'best';
+
+  /* ---- Step 1: Download video-only stream (high resolution) ---- */
+  await execFileAsync(binary, buildStreamArgs(videoSelector, videoTemplate));
+  const videoFile = findDownloadedFile(videoId);
+  if (!videoFile) throw new Error('Video stream download produced no output');
+
+  let combinedFile: string | null = null;
+  const extractedAudioPath = `${outputFolder}/${randomUUID()}.aac`;
+
+  try {
+    /* ---- Step 2: Download combined video+audio stream ---- */
+    await execFileAsync(
+      binary,
+      buildStreamArgs(combinedSelector, combinedTemplate),
+    );
+    combinedFile = findDownloadedFile(combinedId);
+    if (!combinedFile)
+      throw new Error('Combined stream download produced no output');
+
+    /* ---- Step 3: Extract audio from the combined stream ---- */
+    await execFileAsync(ffmpegBinary, [
+      '-y',
+      '-i',
+      combinedFile,
+      '-vn',
+      '-acodec',
+      'aac',
+      '-b:a',
+      '192k',
+      extractedAudioPath,
+    ]);
+
+    /* ---- Step 4: Merge high-res video + extracted audio ---- */
+    await execFileAsync(ffmpegBinary, [
+      '-y',
+      '-i',
+      videoFile,
+      '-i',
+      extractedAudioPath,
+      '-c:v',
+      'copy',
+      '-c:a',
+      'copy',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ]);
+  } finally {
+    cleanupFiles([combinedFile, extractedAudioPath, videoFile]);
+  }
+};
+
+/* ------------------------------------------------------------------ */
 /*  Public API                                                        */
 /* ------------------------------------------------------------------ */
 
@@ -2269,65 +2455,131 @@ const downloadVideo = async ({
 
   /* ---- 5. Download the video (or audio only) ---- */
 
-  const args = justAudio
-    ? buildAudioDownloadArgs(
+  let ytDlpFailed = false;
+
+  if (!justAudio && (isInstagram(url) || isFacebook(url))) {
+    /* ---- 5a. Instagram / Facebook: 3-step separate-stream download ---- */
+    //
+    // 1. Download best video-only stream (typically VP9 or H.264).
+    // 2. Download best audio-only stream.
+    // 3. Merge into MP4 via ffmpeg.
+    //
+    // Falls back to yt-dlp's built-in merge on failure, and then to
+    // the Instagram image fallback (gallery-dl) for image posts.
+
+    let separateStreamsOk = false;
+
+    try {
+      await downloadSeparateStreams(
+        url,
+        outputPath,
+        outputFolder,
+        cookies,
+        jsRuntimes,
+        binary,
+        ffmpegBinary,
+        formatSelection,
+      );
+      separateStreamsOk = true;
+    } catch {
+      // Separate-streams approach failed — fall through to yt-dlp merge.
+    }
+
+    if (!separateStreamsOk) {
+      // Fallback: yt-dlp built-in merge (with and without formatSelection)
+      const mergeArgs = buildDownloadArgs(
         url,
         outputPath,
         cookies,
         jsRuntimes,
-        audioFmt,
         formatSelection,
-      )
-    : buildDownloadArgs(url, outputPath, cookies, jsRuntimes, formatSelection);
+      );
 
-  let ytDlpFailed = false;
-
-  try {
-    await execFileAsync(binary, args);
-  } catch (error) {
-    // If download failed with format selection, retry without it
-    // (let yt-dlp pick the best format on its own).
-    if (formatSelection) {
       try {
-        const fallbackArgs = justAudio
-          ? buildAudioDownloadArgs(
+        await execFileAsync(binary, mergeArgs);
+      } catch {
+        // Retry without explicit format selection
+        try {
+          await execFileAsync(
+            binary,
+            buildDownloadArgs(url, outputPath, cookies, jsRuntimes),
+          );
+        } catch (finalError) {
+          ytDlpFailed = true;
+
+          if (isInstagram(url)) {
+            const igFallback = await instagramImageFallback(
               url,
               outputPath,
+              outputFolder,
               cookies,
+              binary,
+              ffmpegBinary,
               jsRuntimes,
-              audioFmt,
-            )
-          : buildDownloadArgs(url, outputPath, cookies, jsRuntimes);
-        await execFileAsync(binary, fallbackArgs);
-      } catch (fallbackError) {
-        ytDlpFailed = true;
+            );
 
-        // For Instagram links, try gallery-dl fallback for image posts
-        if (isInstagram(url) && !justAudio) {
-          const igFallback = await instagramImageFallback(
-            url,
-            outputPath,
-            outputFolder,
-            cookies,
-            binary,
-            ffmpegBinary,
-            jsRuntimes,
-          );
-
-          if (igFallback && 'file' in igFallback) {
-            // Fallback succeeded — continue to step 6 with the result
-            // (thumbnail is handled inside instagramImageFallback)
-          } else if (igFallback && 'code' in igFallback) {
-            return { error: igFallback };
+            if (igFallback && 'file' in igFallback) {
+              // Image fallback succeeded — continue to step 6.
+            } else if (igFallback && 'code' in igFallback) {
+              return { error: igFallback };
+            } else {
+              return {
+                error: {
+                  code: 'DOWNLOAD_FAILED',
+                  message: `Download failed: ${finalError instanceof Error ? finalError.message : String(finalError)}`,
+                },
+              };
+            }
           } else {
             return {
               error: {
                 code: 'DOWNLOAD_FAILED',
-                message: `yt-dlp download failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+                message: `Download failed: ${finalError instanceof Error ? finalError.message : String(finalError)}`,
               },
             };
           }
-        } else {
+        }
+      }
+    }
+  } else {
+    /* ---- 5b. All other platforms: standard yt-dlp download ---- */
+
+    const args = justAudio
+      ? buildAudioDownloadArgs(
+          url,
+          outputPath,
+          cookies,
+          jsRuntimes,
+          audioFmt,
+          formatSelection,
+        )
+      : buildDownloadArgs(
+          url,
+          outputPath,
+          cookies,
+          jsRuntimes,
+          formatSelection,
+        );
+
+    try {
+      await execFileAsync(binary, args);
+    } catch (error) {
+      // If download failed with format selection, retry without it
+      // (let yt-dlp pick the best format on its own).
+      if (formatSelection) {
+        try {
+          const fallbackArgs = justAudio
+            ? buildAudioDownloadArgs(
+                url,
+                outputPath,
+                cookies,
+                jsRuntimes,
+                audioFmt,
+              )
+            : buildDownloadArgs(url, outputPath, cookies, jsRuntimes);
+          await execFileAsync(binary, fallbackArgs);
+        } catch (fallbackError) {
+          ytDlpFailed = true;
           return {
             error: {
               code: 'DOWNLOAD_FAILED',
@@ -2335,35 +2587,8 @@ const downloadVideo = async ({
             },
           };
         }
-      }
-    } else {
-      ytDlpFailed = true;
-
-      // For Instagram links, try gallery-dl fallback for image posts
-      if (isInstagram(url) && !justAudio) {
-        const igFallback = await instagramImageFallback(
-          url,
-          outputPath,
-          outputFolder,
-          cookies,
-          binary,
-          ffmpegBinary,
-          jsRuntimes,
-        );
-
-        if (igFallback && 'file' in igFallback) {
-          // Fallback succeeded — continue to step 6
-        } else if (igFallback && 'code' in igFallback) {
-          return { error: igFallback };
-        } else {
-          return {
-            error: {
-              code: 'DOWNLOAD_FAILED',
-              message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          };
-        }
       } else {
+        ytDlpFailed = true;
         return {
           error: {
             code: 'DOWNLOAD_FAILED',
@@ -2499,6 +2724,15 @@ const downloadVideo = async ({
       );
     } catch {
       // Codec check is best-effort; swallow the error.
+    }
+  }
+
+  /* ---- 8c. Probe FPS ---- */
+
+  if (!justAudio && fileName) {
+    const fps = await getVideoFps(`${outputFolder}/${fileName}`, ffmpegBinary);
+    if (fps !== undefined) {
+      result.fps = fps;
     }
   }
 

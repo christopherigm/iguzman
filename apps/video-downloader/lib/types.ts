@@ -21,6 +21,8 @@ export interface VideoResultFields {
   thumbnail: string | null;
   duration: number | null;
   uploader: string | null;
+  /** Source video FPS as detected by ffprobe. `null` when unavailable. */
+  sourceFps: number | null;
 }
 
 /* ── Status ────────────────────────────────────────── */

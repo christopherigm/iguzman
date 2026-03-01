@@ -68,6 +68,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     h264Converted: v.h264Converted ?? false,
     blackBarsRemoved: v.blackBarsRemoved ?? false,
     taskId: v.taskId ?? null,
+    sourceFps: v.sourceFps ?? null,
     thumbnail:
       v.thumbnail ??
       ((v as unknown as Record<string, unknown>).thumbnailFile as string) ??
@@ -247,6 +248,7 @@ export function useVideoStore() {
         h264Converted: false,
         blackBarsRemoved: false,
         taskId: null,
+        sourceFps: null,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional

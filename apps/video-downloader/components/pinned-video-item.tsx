@@ -240,6 +240,7 @@ export function PinnedVideoItem({
         duration: task.duration ?? null,
         uploader: task.uploader ?? null,
         isH265: task.isH265 ?? false,
+        sourceFps: task.sourceFps ?? null,
       });
 
       /* FPS interpolation requested — chain into processing before completing. */

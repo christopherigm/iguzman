@@ -94,6 +94,7 @@ export async function POST(request: Request) {
           thumbnail: result.thumbnail ?? null,
           duration: result.metadata?.duration ?? null,
           uploader: result.metadata?.uploader ?? null,
+          sourceFps: result.fps ?? null,
         });
       }
     } catch (err) {

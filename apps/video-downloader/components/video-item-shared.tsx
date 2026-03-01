@@ -154,8 +154,14 @@ export function VideoDetailsPanel({
             <dd className="vi-error-text">{video.error}</dd>
           </>
         ) : null}
-        <dt>FPS</dt>
+        <dt>FPS (target)</dt>
         <dd>{video.fps}</dd>
+        {video.sourceFps != null ? (
+          <>
+            <dt>FPS (source)</dt>
+            <dd>{video.sourceFps}</dd>
+          </>
+        ) : null}
         <dt>{t('detailJustAudio')}</dt>
         <dd>{video.justAudio ? t('yes') : t('no')}</dd>
         <dt>{t('detailEnhance')}</dt>
@@ -263,7 +269,6 @@ export function VideoMediaPreview({
         playsInline
         preload="metadata"
         controls
-        poster={thumbnailSrc ?? undefined}
       />
     </div>
   );
@@ -517,7 +522,11 @@ export function VideoCardHeader({
           H265
         </Badge>
       ) : null}
-      {video.fps !== 'original' ? (
+      {video.sourceFps != null ? (
+        <Badge variant="subtle" size="sm" color="#f59e0b">
+          {video.sourceFps} FPS
+        </Badge>
+      ) : video.fps !== 'original' ? (
         <Badge variant="subtle" size="sm" color="#f59e0b">
           {video.fps} FPS
         </Badge>

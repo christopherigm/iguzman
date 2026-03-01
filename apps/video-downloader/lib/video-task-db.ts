@@ -77,6 +77,7 @@ export async function createTask(
     thumbnail: null,
     duration: null,
     uploader: null,
+    sourceFps: null,
     createdAt: now,
     updatedAt: now,
   };
