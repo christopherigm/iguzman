@@ -32,7 +32,26 @@ class SignUpSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop("password2")
         user = User.objects.create_user(**validated_data)
+        user.is_active = False
+        user.save(update_fields=["is_active"])
         return user
+
+
+class ResendVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            user = User.objects.get(email=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("__not_found__")
+        if user.is_active:
+            raise serializers.ValidationError("This account is already verified.")
+        self._user = user
+        return value
+
+    def get_user(self):
+        return self._user
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

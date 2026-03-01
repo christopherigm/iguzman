@@ -208,6 +208,26 @@ if _REDIS_URL:
     SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
     SESSION_CACHE_ALIAS = 'default'
 
+# Email
+# https://docs.djangoproject.com/en/5.2/topics/email/
+#
+# Uses SMTP via IONOS when EMAIL_HOST_USER is set.
+# Falls back to the console backend for local development.
+
+_EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+
+if _EMAIL_HOST_USER:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.ionos.com')
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+    EMAIL_HOST_USER = _EMAIL_HOST_USER
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+    DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'noreply@localhost'
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -219,3 +239,6 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
 }
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS = int(os.environ.get('EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS', '24'))

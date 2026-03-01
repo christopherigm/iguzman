@@ -55,6 +55,9 @@ COPY --from=builder /app/ .
 RUN mkdir -p /app/media \
     && chown -R django:django /app/media /app/staticfiles
 
+COPY apps/website-api/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 USER django
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -65,6 +68,7 @@ EXPOSE 8000
 
 # 2 sync workers is appropriate for a 0.5-CPU container.
 # Increase via GUNICORN_WORKERS env var or by editing the Helm values.
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "website_api.wsgi:application", \
      "--bind", "0.0.0.0:8000", \
      "--workers", "2", \

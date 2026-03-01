@@ -55,11 +55,17 @@ env:
   DB_USER: 'postgres'
   # ── Redis ──────────────────────────────────────────────────
   REDIS_URL: 'redis://redis.website.svc.cluster.local:6379/0'
+  # ── Email ──────────────────────────────────────────────────
+  EMAIL_HOST: 'smtp.ionos.com'
+  EMAIL_PORT: '587'
+  EMAIL_USE_TLS: 'True'
+  FRONTEND_URL: 'https://website.iguzman.com.mx'
   # ── Optional overrides ────────────────────────────────────
   # SECRET_KEY: 'change-me-in-production'
-  DEBUG: 'False' # set to 'True' for debugging, 'False' for production
+  DEBUG: 'True' # set to 'True' for debugging, 'False' for production
   ALLOWED_HOSTS: 'website-api.iguzman.com.mx,website.iguzman.com.mx,localhost,127.0.0.1'
   CSRF_TRUSTED_ORIGINS: 'https://website-api.iguzman.com.mx,https://website.iguzman.com.mx'
+  EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
 
 # Sensitive values – reference existing Kubernetes Secrets.
 envFromSecret:
@@ -73,6 +79,12 @@ envFromSecret:
   - name: REDIS_PASSWORD
     secretName: website-api-secrets
     secretKey: redis-password
+  - name: EMAIL_HOST_USER
+    secretName: website-api-secrets
+    secretKey: email-host-user
+  - name: EMAIL_HOST_PASSWORD
+    secretName: website-api-secrets
+    secretKey: email-host-password
 
 # ─── Host-path volume (media storage) ───────────────────────
 hostPathVolume:

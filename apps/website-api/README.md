@@ -422,6 +422,11 @@ Configure production values as a Kubernetes Secret and reference them in `helm/v
 | `ALLOWED_HOSTS`          | `env`           | Comma-separated list of allowed hostnames                                        |
 | `CSRF_TRUSTED_ORIGINS`   | `env`           | Comma-separated list of allowed origins                                          |
 | `DJANGO_SETTINGS_MODULE` | `env`           | Set automatically by the Helm chart                                              |
+| `EMAIL_HOST`             | `env`           | SMTP host (default: `smtp.ionos.com`)                                            |
+| `EMAIL_PORT`             | `env`           | SMTP port (default: `587`)                                                       |
+| `EMAIL_USE_TLS`          | `env`           | Enable STARTTLS (default: `True`)                                                |
+| `EMAIL_HOST_USER`        | `envFromSecret` | SMTP username — stored in K8s Secret; enables SMTP when set                     |
+| `EMAIL_HOST_PASSWORD`    | `envFromSecret` | SMTP password — stored in K8s Secret                                             |
 
 ### Redis
 
@@ -462,7 +467,9 @@ kubectl create secret generic website-api-secrets \
   --namespace website \
   --from-literal=db-password='postgres' \
   --from-literal=secret-key='your-production-secret-key' \
-  --from-literal=redis-password='your-redis-password'
+  --from-literal=redis-password='your-redis-password' \
+  --from-literal=email-host-user='your-smtp-username' \
+  --from-literal=email-host-password='your-smtp-password'
 ```
 
 #### Verify Redis is reachable
@@ -479,7 +486,9 @@ kubectl create secret generic website-api-secrets \
   --namespace website \
   --from-literal=db-password='postgres' \
   --from-literal=secret-key='your-production-secret-key' \
-  --from-literal=redis-password='your-redis-password'
+  --from-literal=redis-password='your-redis-password' \
+  --from-literal=email-host-user='your-smtp-username' \
+  --from-literal=email-host-password='your-smtp-password'
 ```
 
 The `DB_PASSWORD` secret key (`db-password`) is already wired in `helm/values.yaml` via `envFromSecret` and will be injected automatically on deployment.
@@ -543,6 +552,9 @@ Key values to override in `helm/values.yaml` or via `--set`:
 | `nginx.enabled`            | `true`                                           | Nginx sidecar for `/media/`       |
 | `resources.limits.cpu`     | `500m`                                           | CPU limit for Django container    |
 | `resources.limits.memory`  | `512Mi`                                          | Memory limit for Django container |
+| `env.EMAIL_HOST`           | `smtp.ionos.com`                                 | SMTP server hostname              |
+| `env.EMAIL_PORT`           | `587`                                            | SMTP port                         |
+| `env.EMAIL_USE_TLS`        | `True`                                           | Enable STARTTLS                   |
 
 ### Checking deployment status
 
