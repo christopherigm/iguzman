@@ -9,15 +9,28 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import EmailVerificationToken
+from .models import EmailVerificationToken, PasswordResetToken
 from .serializers import (
     CustomTokenObtainPairSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     ProfilePictureSerializer,
     ResendVerificationSerializer,
     SignUpSerializer,
     UserProfileSerializer,
     UserProfileUpdateSerializer,
 )
+
+
+def _send_password_reset_email(user, token_obj):
+    expiry_hours = getattr(settings, 'PASSWORD_RESET_TOKEN_EXPIRY_HOURS', 1)
+    reset_url = f"{settings.FRONTEND_URL}/reset-password/{token_obj.token}"
+    body = render_to_string('users/password_reset_email.txt', {
+        'first_name': user.first_name or user.username,
+        'reset_url': reset_url,
+        'expiry_hours': expiry_hours,
+    })
+    send_mail('Reset your password', body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
 
 
 def _send_verification_email(user, token_obj):
@@ -114,6 +127,56 @@ class ResendVerificationView(APIView):
         except Exception:
             pass
         return generic_response
+
+
+class PasswordResetRequestView(APIView):
+    """Send a password-reset email. Always returns a generic response to avoid user enumeration."""
+
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        generic_response = Response(
+            {"detail": "If an account with that email exists, a password reset link has been sent."},
+            status=status.HTTP_200_OK,
+        )
+        user = serializer.get_user()
+        if user is None:
+            return generic_response
+        PasswordResetToken.objects.filter(user=user).delete()
+        token_obj = PasswordResetToken.objects.create(user=user)
+        try:
+            _send_password_reset_email(user, token_obj)
+        except Exception:
+            pass
+        return generic_response
+
+
+class PasswordResetConfirmView(APIView):
+    """Consume a password-reset token and set the user's new password."""
+
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            token_obj = PasswordResetToken.objects.select_related("user").get(
+                token=serializer.validated_data["token"]
+            )
+        except PasswordResetToken.DoesNotExist:
+            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if token_obj.is_expired():
+            token_obj.delete()
+            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = token_obj.user
+        user.set_password(serializer.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        token_obj.delete()
+        return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
 
 
 class LoginView(TokenObtainPairView):

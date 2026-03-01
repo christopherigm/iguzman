@@ -37,6 +37,31 @@ class SignUpSerializer(serializers.ModelSerializer):
         return user
 
 
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            self._user = User.objects.get(email=value, is_active=True)
+        except User.DoesNotExist:
+            self._user = None
+        return value
+
+    def get_user(self):
+        return self._user
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    token = serializers.UUIDField()
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+    new_password2 = serializers.CharField(write_only=True, label="Confirm new password")
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password2"]:
+            raise serializers.ValidationError({"new_password": "Passwords do not match."})
+        return attrs
+
+
 class ResendVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
 

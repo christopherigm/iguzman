@@ -316,6 +316,90 @@ curl -X PUT http://localhost:8000/api/auth/profile/ \
 
 ---
 
+#### `POST /api/auth/password-reset/`
+
+Request a password-reset email. Always returns a generic `200` response regardless of whether an account exists, to prevent user enumeration.
+
+**Request body:**
+
+```json
+{
+  "email": "john@example.com"
+}
+```
+
+**Response — `200 OK`:**
+
+```json
+{
+  "detail": "If an account with that email exists, a password reset link has been sent."
+}
+```
+
+> The reset link points to `{FRONTEND_URL}/reset-password/{token}` and expires in **1 hour** (configurable via `PASSWORD_RESET_TOKEN_EXPIRY_HOURS`).
+
+**cURL example:**
+
+```bash
+curl -X POST http://localhost:8000/api/auth/password-reset/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "john@example.com"}'
+```
+
+---
+
+#### `POST /api/auth/password-reset/confirm/`
+
+Set a new password using the token received by email. The token is one-time use and is deleted after a successful reset.
+
+**Request body:**
+
+```json
+{
+  "token": "d3b07384-d9a0-4b5a-8c1e-2f5a3b4c5d6e",
+  "new_password": "NewStrongPass123!",
+  "new_password2": "NewStrongPass123!"
+}
+```
+
+**Successful response — `200 OK`:**
+
+```json
+{
+  "detail": "Password has been reset successfully."
+}
+```
+
+**Invalid or expired token — `400 Bad Request`:**
+
+```json
+{
+  "detail": "Invalid or expired token."
+}
+```
+
+**Passwords don't match — `400 Bad Request`:**
+
+```json
+{
+  "new_password": ["Passwords do not match."]
+}
+```
+
+**cURL example:**
+
+```bash
+curl -X POST http://localhost:8000/api/auth/password-reset/confirm/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "d3b07384-d9a0-4b5a-8c1e-2f5a3b4c5d6e",
+    "new_password": "NewStrongPass123!",
+    "new_password2": "NewStrongPass123!"
+  }'
+```
+
+---
+
 #### `POST /api/auth/profile/picture/`
 
 Upload a profile picture as a **base64-encoded image**. The image is automatically resized to a maximum of **512×512 px** at **90% JPEG quality** before being stored.
@@ -381,13 +465,15 @@ Missing or expired token returns `401 Unauthorized`:
 ## Typical Authentication Flow
 
 ```
-1. POST /api/auth/signup/           → create account
-2. POST /api/auth/login/            → receive access + refresh tokens
-3. GET  /api/<protected>/           → use access token in Authorization header
-4. POST /api/auth/token/refresh/    → when access token expires, get a new one
-5. GET  /api/auth/profile/          → retrieve user profile data
-6. PUT  /api/auth/profile/          → update username, email, first_name, last_name
-7. POST /api/auth/profile/picture/  → upload / update profile picture (base64)
+1. POST /api/auth/signup/                   → create account
+2. POST /api/auth/login/                    → receive access + refresh tokens
+3. GET  /api/<protected>/                   → use access token in Authorization header
+4. POST /api/auth/token/refresh/            → when access token expires, get a new one
+5. GET  /api/auth/profile/                  → retrieve user profile data
+6. PUT  /api/auth/profile/                  → update username, email, first_name, last_name
+7. POST /api/auth/profile/picture/          → upload / update profile picture (base64)
+8. POST /api/auth/password-reset/           → request a password-reset email
+9. POST /api/auth/password-reset/confirm/   → set new password using the emailed token
 ```
 
 ---
