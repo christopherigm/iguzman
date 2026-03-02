@@ -27,6 +27,7 @@ pnpm deploy-app             # Deploy a specific application
 ```
 
 Each app runs on port 3000 locally. To run a specific app, use Turborepo filter syntax:
+
 ```bash
 pnpm dev --filter=apps/video-downloader
 ```
@@ -38,7 +39,6 @@ This is a **Turborepo monorepo** with three Next.js applications and shared pack
 ### Apps (`apps/`)
 
 - **web** — General-purpose Next.js app
-- **horoscope** — Astrology app; see `apps/horoscope/STYLE_GUIDE.md` for the required visual language (fonts, colors, glassmorphism, layout patterns)
 - **video-downloader** — The most actively maintained app; client-side video editing using FFmpeg WASM. Requires `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers (already configured in `next.config.ts`) for SharedArrayBuffer support
 
 ### Packages (`packages/`)
@@ -53,6 +53,7 @@ This is a **Turborepo monorepo** with three Next.js applications and shared pack
 ### Key Component Architecture
 
 `VideoItem` is the main card component. Its logic is split across two hooks:
+
 - `use-video-processing.ts` — FFmpeg queue, `checkBars`, `cropString` state, all media processing handlers. Accepts `t` (translation fn) to set error messages.
 - `use-video-download.ts` — download trigger, SSE-based task polling, all resume effects on mount.
 

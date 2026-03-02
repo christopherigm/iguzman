@@ -1,12 +1,9 @@
-import base64
-from io import BytesIO
-
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from django.core.files.base import ContentFile
-from PIL import Image
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+from core.serializers import ImageProcessingSerializer
 
 
 class SignUpSerializer(serializers.ModelSerializer):
@@ -89,52 +86,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
 
-class ProfilePictureSerializer(serializers.Serializer):
+class ProfilePictureSerializer(ImageProcessingSerializer):
     """Accepts a base64-encoded image, resizes it to max 512x512 at 90% JPEG quality."""
 
-    base64_image = serializers.CharField(write_only=True)
-
-    def validate_base64_image(self, value):
-        # Strip optional data URI header, e.g. "data:image/png;base64,..."
-        if "," in value:
-            value = value.split(",", 1)[1]
-        try:
-            image_bytes = base64.b64decode(value)
-        except Exception:
-            raise serializers.ValidationError("Invalid base64 encoding.")
-        try:
-            img = Image.open(BytesIO(image_bytes))
-            img.verify()  # Checks the file is a valid image
-        except Exception:
-            raise serializers.ValidationError("The provided file is not a valid image.")
-        return value
-
     def save(self, user):
-        raw = self.validated_data["base64_image"]
-        if "," in raw:
-            raw = raw.split(",", 1)[1]
-        image_bytes = base64.b64decode(raw)
-
-        img = Image.open(BytesIO(image_bytes))
-        # Convert palette/transparency modes to RGB for JPEG output
-        if img.mode in ("RGBA", "P", "LA"):
-            img = img.convert("RGB")
-        elif img.mode != "RGB":
-            img = img.convert("RGB")
-
-        # Resize while preserving aspect ratio — will not enlarge the image
-        img.thumbnail((512, 512), Image.Resampling.LANCZOS)
-
-        output = BytesIO()
-        img.save(output, format="JPEG", quality=90, optimize=True)
-        output.seek(0)
-
         profile = user.profile
-        profile.profile_picture.save(
-            f"profile_{user.id}.jpg",
-            ContentFile(output.read()),
-            save=True,
-        )
+        self.save_to_field(profile.profile_picture, f"profile_{user.id}.jpg")
+        profile.save(update_fields=["profile_picture"])
         return profile
 
 

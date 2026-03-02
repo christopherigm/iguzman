@@ -44,11 +44,69 @@ export function resolveMediaUrl(url: string): string {
   return url.replace('/api/media/', '/media/');
 }
 
-export function triggerBrowserDownload(url: string, filename: string) {
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    // iPadOS 13+ reports as MacIntel with touch support
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
+function getMimeType(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  const map: Record<string, string> = {
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    ogv: 'video/ogg',
+    mp3: 'audio/mpeg',
+    m4a: 'audio/x-m4a',
+    ogg: 'audio/ogg',
+    wav: 'audio/wav',
+    flac: 'audio/flac',
+  };
+  return map[ext] ?? 'application/octet-stream';
+}
+
+/**
+ * Triggers a browser download for the given URL or Blob.
+ *
+ * On iOS Safari the `download` attribute is ignored, so we fall back to the
+ * Web Share API which opens the native share sheet and lets users save to the
+ * Files app.  The share path requires a transient user activation (i.e. a
+ * click); auto-downloads triggered after task completion will silently fall
+ * through to the anchor method.
+ */
+export async function triggerBrowserDownload(
+  urlOrBlob: string | Blob,
+  filename: string,
+): Promise<void> {
+  if (isIOS() && navigator.canShare) {
+    try {
+      const blob =
+        urlOrBlob instanceof Blob
+          ? urlOrBlob
+          : await fetch(urlOrBlob).then((r) => r.blob());
+      const type = blob.type || getMimeType(filename);
+      const file = new File([blob], filename, { type });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      }
+    } catch {
+      // No transient activation (auto-download) or share cancelled — fall through.
+    }
+  }
+
+  const url =
+    urlOrBlob instanceof Blob ? URL.createObjectURL(urlOrBlob) : urlOrBlob;
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   link.click();
+  if (urlOrBlob instanceof Blob) {
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
 }
 
 export function downloadThumbnail(url: string, name: string | null) {
@@ -56,13 +114,12 @@ export function downloadThumbnail(url: string, name: string | null) {
     .then((res) => res.blob())
     .then((blob) => {
       const ext = url.match(/\.(jpe?g|png|webp)/i)?.[1] ?? 'jpg';
-      const objectUrl = URL.createObjectURL(blob);
+      // Pass the blob directly so triggerBrowserDownload controls the object
+      // URL lifetime (important for the async iOS share path).
       triggerBrowserDownload(
-        objectUrl,
+        blob,
         `${name ?? 'thumbnail'}-${Date.now()}.${ext}`,
       );
-      /* Defer revocation so the browser has time to initiate the download. */
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
     })
     .catch((err) => console.error('Thumbnail download failed:', err));
 }
