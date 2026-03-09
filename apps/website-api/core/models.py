@@ -120,8 +120,15 @@ class Buyable(RegularPicture):
       - RegularPicture: image (max 1200px)
     """
 
+    system = models.ForeignKey(
+        "core.System",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
     brand = models.ForeignKey(
-        Brand,
+        "core.Brand",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

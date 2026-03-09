@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'colorfield',
     'core',
     'users',
+    'catalog',
 ]
 
 MIDDLEWARE = [

@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import System
+from .models import Brand, System
+
+
+@admin.register(Brand)
+class BrandAdmin(admin.ModelAdmin):
+    list_display = ("name", "enabled", "modified")
+    list_filter = ("enabled",)
+    search_fields = ("name",)
+    readonly_fields = ("created", "modified", "version")
 
 
 @admin.register(System)
