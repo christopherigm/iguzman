@@ -1,17 +1,21 @@
 from rest_framework import serializers
 
-from core.models import Brand, System
+from core.models import Brand, System, CURRENCY_CHOICES
 from core.serializers import ImageProcessingSerializer
-from .models import Category, Product, ProductImage, CURRENCY_CHOICES, DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES
+from .models import (
+    ProductCategory, Product, ProductImage,
+    ServiceCategory, Service,
+    DIMENSION_UNIT_CHOICES, WEIGHT_UNIT_CHOICES, MODALITY_CHOICES,
+)
 
 
 # ---------------------------------------------------------------------------
-# Category serializers
+# ProductCategory serializers
 # ---------------------------------------------------------------------------
 
-class CategorySerializer(serializers.ModelSerializer):
+class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:
-        model = Category
+        model = ProductCategory
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
@@ -20,20 +24,20 @@ class CategorySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created', 'modified', 'version']
 
 
-class CategoryWriteSerializer(serializers.ModelSerializer):
+class ProductCategoryWriteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Category
+        model = ProductCategory
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
             'description', 'en_description', 'enabled',
         ]
 
     def validate_slug(self, value):
-        qs = Category.objects.filter(slug=value)
+        qs = ProductCategory.objects.filter(slug=value)
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise serializers.ValidationError('A category with this slug already exists.')
+            raise serializers.ValidationError('A product category with this slug already exists.')
         return value
 
 
@@ -148,7 +152,7 @@ class ProductWriteSerializer(serializers.Serializer):
         queryset=Brand.objects.all(), required=False, allow_null=True,
     )
     category = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(), required=False, allow_null=True,
+        queryset=ProductCategory.objects.all(), required=False, allow_null=True,
     )
 
     # Product-specific fields
@@ -245,3 +249,176 @@ class ProductWriteSerializer(serializers.Serializer):
         proc.is_valid()
         proc.save_to_field(product.image, f'product_{product.pk}.jpg')
         product.save(update_fields=['image'])
+
+
+# ---------------------------------------------------------------------------
+# ServiceCategory serializers
+# ---------------------------------------------------------------------------
+
+class ServiceCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceCategory
+        fields = [
+            'id', 'enabled', 'created', 'modified', 'version',
+            'system', 'parent', 'name', 'en_name', 'slug',
+            'description', 'en_description',
+        ]
+        read_only_fields = ['id', 'created', 'modified', 'version']
+
+
+class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceCategory
+        fields = [
+            'system', 'parent', 'name', 'en_name', 'slug',
+            'description', 'en_description', 'enabled',
+        ]
+
+    def validate_slug(self, value):
+        qs = ServiceCategory.objects.filter(slug=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('A service category with this slug already exists.')
+        return value
+
+
+# ---------------------------------------------------------------------------
+# Service serializers
+# ---------------------------------------------------------------------------
+
+class ServiceSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
+    category_name = serializers.CharField(source='category.name', read_only=True, default=None)
+
+    class Meta:
+        model = Service
+        fields = [
+            'id', 'enabled', 'created', 'modified', 'version',
+            'system', 'category', 'category_name',
+            'brand', 'brand_name',
+            'name', 'en_name', 'description', 'en_description',
+            'slug', 'sku',
+            'image',
+            'href', 'fit', 'background_color',
+            'price', 'compare_price', 'cost_price', 'currency',
+            'is_featured', 'duration', 'modality',
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+
+class ServiceWriteSerializer(serializers.Serializer):
+    # BasePicture fields
+    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    href = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    fit = serializers.ChoiceField(
+        choices=[c[0] for c in [('cover', ''), ('contain', ''), ('fill', ''), ('scale-down', ''), ('none', '')]],
+        required=False, allow_null=True,
+    )
+    background_color = serializers.CharField(max_length=25, required=False, allow_null=True, allow_blank=True)
+
+    # FK relations
+    system = serializers.PrimaryKeyRelatedField(
+        queryset=System.objects.all(), required=False, allow_null=True,
+    )
+    brand = serializers.PrimaryKeyRelatedField(
+        queryset=Brand.objects.all(), required=False, allow_null=True,
+    )
+    category = serializers.PrimaryKeyRelatedField(
+        queryset=ServiceCategory.objects.all(), required=False, allow_null=True,
+    )
+
+    # Service-specific fields
+    slug = serializers.SlugField(max_length=255)
+    sku = serializers.CharField(max_length=100, required=False, allow_null=True, allow_blank=True)
+
+    price = serializers.DecimalField(max_digits=12, decimal_places=2)
+    compare_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    cost_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    currency = serializers.ChoiceField(choices=[c[0] for c in CURRENCY_CHOICES], required=False, default='USD')
+
+    enabled = serializers.BooleanField(required=False)
+    is_featured = serializers.BooleanField(required=False)
+    duration = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    modality = serializers.ChoiceField(
+        choices=[c[0] for c in MODALITY_CHOICES], required=False, allow_null=True,
+    )
+
+    # Image as base64 string
+    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
+    def validate_image(self, value):
+        if not value:
+            return value
+        sub = ImageProcessingSerializer(
+            data={'base64_image': value},
+            max_size=(1200, 1200),
+            quality=85,
+        )
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def validate_slug(self, value):
+        qs = Service.objects.filter(slug=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('A service with this slug already exists.')
+        return value
+
+    def validate_sku(self, value):
+        if not value:
+            return value
+        qs = Service.objects.filter(sku=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('A service with this SKU already exists.')
+        return value
+
+    _SCALAR_FIELDS = [
+        'name', 'en_name', 'description', 'en_description', 'href', 'fit',
+        'background_color', 'system', 'brand', 'category',
+        'slug', 'sku',
+        'price', 'compare_price', 'cost_price', 'currency',
+        'enabled', 'is_featured', 'duration', 'modality',
+    ]
+
+    def create(self, validated_data):
+        image_data = validated_data.pop('image', None)
+        service = Service(**validated_data)
+        service.save()
+        if image_data:
+            self._save_image(service, image_data)
+        return service
+
+    def update(self, instance, validated_data):
+        image_data = validated_data.pop('image', None)
+        for field_name, value in validated_data.items():
+            setattr(instance, field_name, value)
+        instance.save()
+        if image_data:
+            self._save_image(instance, image_data)
+        return instance
+
+    def _save_image(self, service, image_data):
+        proc = ImageProcessingSerializer(
+            data={'base64_image': image_data},
+            max_size=(1200, 1200),
+            quality=85,
+        )
+        proc.is_valid()
+        proc.save_to_field(service.image, f'service_{service.pk}.jpg')
+        service.save(update_fields=['image'])

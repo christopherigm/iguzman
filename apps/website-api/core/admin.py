@@ -8,6 +8,7 @@ class BrandAdmin(admin.ModelAdmin):
     list_display = ("name", "enabled", "modified")
     list_filter = ("enabled",)
     search_fields = ("name",)
+    prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ("created", "modified", "version")
 
 

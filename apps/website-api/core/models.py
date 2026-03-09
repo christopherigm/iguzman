@@ -31,6 +31,19 @@ FIT_CHOICES = [
 ]
 
 
+CURRENCY_CHOICES = [
+    ("USD", "US Dollar"),
+    ("EUR", "Euro"),
+    ("MXN", "Mexican Peso"),
+    ("GBP", "British Pound"),
+    ("CAD", "Canadian Dollar"),
+    ("ARS", "Argentine Peso"),
+    ("COP", "Colombian Peso"),
+    ("CLP", "Chilean Peso"),
+    ("BRL", "Brazilian Real"),
+]
+
+
 class BasePicture(Common):
     """
     Abstract base for all picture models.
@@ -41,7 +54,9 @@ class BasePicture(Common):
     """
 
     name = models.CharField(max_length=255, null=True, blank=True)
+    en_name = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    en_description = models.TextField(null=True, blank=True)
     href = models.URLField(max_length=255, null=True, blank=True)
     fit = models.CharField(
         max_length=16,
@@ -99,6 +114,7 @@ LargePicture = picture_mixin(3840, quality=90)  # hero images, full-bleed
 
 class Brand(Common):
     name = models.CharField(max_length=255, null=False, blank=False)
+    slug = models.SlugField(max_length=255, unique=True)
     logo = models.ImageField(null=True, blank=True, upload_to=picture)
 
     class Meta:
@@ -116,7 +132,7 @@ class Buyable(RegularPicture):
 
     Inherits from RegularPicture which provides:
       - Common: enabled, created, modified, version
-      - BasePicture: name, description, href, fit, background_color
+      - BasePicture: name, en_name, description, en_description, href, fit, background_color
       - RegularPicture: image (max 1200px)
     """
 
@@ -134,6 +150,12 @@ class Buyable(RegularPicture):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+
+    # Pricing
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    compare_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cost_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="USD")
 
     class Meta:
         abstract = True

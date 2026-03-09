@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Product, ProductImage
+from .models import ProductCategory, Product, ProductImage, ServiceCategory, Service
 
 
 class ProductImageInline(admin.TabularInline):
@@ -10,8 +10,8 @@ class ProductImageInline(admin.TabularInline):
     readonly_fields = ('created', 'modified')
 
 
-@admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+@admin.register(ProductCategory)
+class ProductCategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'system', 'parent', 'enabled', 'modified')
     list_filter = ('enabled', 'system')
     search_fields = ('name', 'en_name', 'slug')
@@ -61,5 +61,55 @@ class ProductAdmin(admin.ModelAdmin):
         ('Dimensions', {
             'fields': ('length', 'width', 'height', 'dimension_unit', 'weight', 'weight_unit'),
             'classes': ('collapse',),
+        }),
+    )
+
+
+@admin.register(ServiceCategory)
+class ServiceCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'system', 'parent', 'enabled', 'modified')
+    list_filter = ('enabled', 'system')
+    search_fields = ('name', 'en_name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created', 'modified', 'version')
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('system', 'parent', 'enabled', 'version', 'created', 'modified'),
+        }),
+        ('Content (ES)', {
+            'fields': ('name', 'slug', 'description'),
+        }),
+        ('Content (EN)', {
+            'fields': ('en_name', 'en_description'),
+            'classes': ('collapse',),
+        }),
+    )
+
+
+@admin.register(Service)
+class ServiceAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'category', 'brand', 'price', 'currency', 'modality', 'is_featured', 'enabled', 'modified')
+    list_filter = ('enabled', 'is_featured', 'currency', 'modality', 'system', 'category', 'brand')
+    search_fields = ('name', 'en_name', 'slug', 'sku')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created', 'modified', 'version')
+
+    fieldsets = (
+        ('Identity', {
+            'fields': ('system', 'category', 'brand', 'enabled', 'is_featured', 'version', 'created', 'modified'),
+        }),
+        ('Content (ES)', {
+            'fields': ('name', 'slug', 'description', 'image', 'fit', 'background_color', 'href'),
+        }),
+        ('Content (EN)', {
+            'fields': ('en_name', 'en_description'),
+            'classes': ('collapse',),
+        }),
+        ('Pricing', {
+            'fields': ('price', 'compare_price', 'cost_price', 'currency'),
+        }),
+        ('Service Details', {
+            'fields': ('sku', 'duration', 'modality'),
         }),
     )

@@ -3,21 +3,25 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Category, Product, ProductImage
+from .models import ProductCategory, Product, ProductImage, ServiceCategory, Service
 from .serializers import (
-    CategorySerializer,
-    CategoryWriteSerializer,
+    ProductCategorySerializer,
+    ProductCategoryWriteSerializer,
     ProductSerializer,
     ProductWriteSerializer,
     ProductImageSerializer,
     ProductImageWriteSerializer,
+    ServiceCategorySerializer,
+    ServiceCategoryWriteSerializer,
+    ServiceSerializer,
+    ServiceWriteSerializer,
 )
 
 
-class CategoryListCreateView(APIView):
+class ProductCategoryListCreateView(APIView):
     """
-    GET  /api/catalog/categories/   — list categories (public).
-    POST /api/catalog/categories/   — create a category (admin only).
+    GET  /api/catalog/product-categories/   — list product categories (public).
+    POST /api/catalog/product-categories/   — create a product category (admin only).
     """
 
     def get_permissions(self):
@@ -26,7 +30,7 @@ class CategoryListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
-        qs = Category.objects.filter(enabled=True)
+        qs = ProductCategory.objects.filter(enabled=True)
 
         system_id = request.query_params.get('system')
         if system_id:
@@ -38,21 +42,21 @@ class CategoryListCreateView(APIView):
         elif parent_id:
             qs = qs.filter(parent_id=parent_id)
 
-        serializer = CategorySerializer(qs, many=True, context={'request': request})
+        serializer = ProductCategorySerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = CategoryWriteSerializer(data=request.data)
+        serializer = ProductCategoryWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         category = serializer.save()
-        return Response(CategorySerializer(category, context={'request': request}).data, status=status.HTTP_201_CREATED)
+        return Response(ProductCategorySerializer(category, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
-class CategoryDetailView(APIView):
+class ProductCategoryDetailView(APIView):
     """
-    GET    /api/catalog/categories/<pk>/  — retrieve (public).
-    PATCH  /api/catalog/categories/<pk>/  — partial update (admin only).
-    DELETE /api/catalog/categories/<pk>/  — delete (admin only).
+    GET    /api/catalog/product-categories/<pk>/  — retrieve (public).
+    PATCH  /api/catalog/product-categories/<pk>/  — partial update (admin only).
+    DELETE /api/catalog/product-categories/<pk>/  — delete (admin only).
     """
 
     def get_permissions(self):
@@ -62,24 +66,24 @@ class CategoryDetailView(APIView):
 
     def _get_object(self, pk):
         try:
-            return Category.objects.get(pk=pk)
-        except Category.DoesNotExist:
+            return ProductCategory.objects.get(pk=pk)
+        except ProductCategory.DoesNotExist:
             return None
 
     def get(self, request, pk):
         category = self._get_object(pk)
         if category is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(CategorySerializer(category, context={'request': request}).data)
+        return Response(ProductCategorySerializer(category, context={'request': request}).data)
 
     def patch(self, request, pk):
         category = self._get_object(pk)
         if category is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = CategoryWriteSerializer(category, data=request.data, partial=True)
+        serializer = ProductCategoryWriteSerializer(category, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         category = serializer.save()
-        return Response(CategorySerializer(category, context={'request': request}).data)
+        return Response(ProductCategorySerializer(category, context={'request': request}).data)
 
     def delete(self, request, pk):
         category = self._get_object(pk)
@@ -250,4 +254,175 @@ class ProductImageDetailView(APIView):
         if image is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         image.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ServiceCategoryListCreateView(APIView):
+    """
+    GET  /api/catalog/service-categories/   — list service categories (public).
+    POST /api/catalog/service-categories/   — create a service category (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def get(self, request):
+        qs = ServiceCategory.objects.filter(enabled=True)
+
+        system_id = request.query_params.get('system')
+        if system_id:
+            qs = qs.filter(system_id=system_id)
+
+        parent_id = request.query_params.get('parent')
+        if parent_id == 'null':
+            qs = qs.filter(parent__isnull=True)
+        elif parent_id:
+            qs = qs.filter(parent_id=parent_id)
+
+        serializer = ServiceCategorySerializer(qs, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = ServiceCategoryWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category = serializer.save()
+        return Response(ServiceCategorySerializer(category, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class ServiceCategoryDetailView(APIView):
+    """
+    GET    /api/catalog/service-categories/<pk>/  — retrieve (public).
+    PATCH  /api/catalog/service-categories/<pk>/  — partial update (admin only).
+    DELETE /api/catalog/service-categories/<pk>/  — delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def _get_object(self, pk):
+        try:
+            return ServiceCategory.objects.get(pk=pk)
+        except ServiceCategory.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        category = self._get_object(pk)
+        if category is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(ServiceCategorySerializer(category, context={'request': request}).data)
+
+    def patch(self, request, pk):
+        category = self._get_object(pk)
+        if category is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ServiceCategoryWriteSerializer(category, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        category = serializer.save()
+        return Response(ServiceCategorySerializer(category, context={'request': request}).data)
+
+    def delete(self, request, pk):
+        category = self._get_object(pk)
+        if category is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        category.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ServiceListCreateView(APIView):
+    """
+    GET  /api/catalog/services/   — list services (public).
+    POST /api/catalog/services/   — create a service (admin only).
+
+    Query params (GET):
+      system    — filter by system pk
+      category  — filter by service category pk
+      brand     — filter by brand pk
+      featured  — 'true' to show only featured services
+      modality  — filter by modality (online/in_person/hybrid)
+      search    — text search on name
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def get(self, request):
+        qs = Service.objects.filter(enabled=True).select_related('brand', 'category', 'system')
+
+        system_id = request.query_params.get('system')
+        if system_id:
+            qs = qs.filter(system_id=system_id)
+
+        category_id = request.query_params.get('category')
+        if category_id:
+            qs = qs.filter(category_id=category_id)
+
+        brand_id = request.query_params.get('brand')
+        if brand_id:
+            qs = qs.filter(brand_id=brand_id)
+
+        if request.query_params.get('featured') == 'true':
+            qs = qs.filter(is_featured=True)
+
+        modality = request.query_params.get('modality')
+        if modality:
+            qs = qs.filter(modality=modality)
+
+        search = request.query_params.get('search')
+        if search:
+            qs = qs.filter(name__icontains=search)
+
+        serializer = ServiceSerializer(qs, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = ServiceWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        service = serializer.create(serializer.validated_data)
+        return Response(ServiceSerializer(service, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class ServiceDetailView(APIView):
+    """
+    GET    /api/catalog/services/<pk>/  — retrieve (public).
+    PATCH  /api/catalog/services/<pk>/  — partial update (admin only).
+    DELETE /api/catalog/services/<pk>/  — delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def _get_object(self, pk):
+        try:
+            return Service.objects.select_related('brand', 'category', 'system').get(pk=pk)
+        except Service.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        service = self._get_object(pk)
+        if service is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(ServiceSerializer(service, context={'request': request}).data)
+
+    def patch(self, request, pk):
+        service = self._get_object(pk)
+        if service is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ServiceWriteSerializer(service, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        service = serializer.update(service, serializer.validated_data)
+        return Response(ServiceSerializer(service, context={'request': request}).data)
+
+    def delete(self, request, pk):
+        service = self._get_object(pk)
+        if service is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        service.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

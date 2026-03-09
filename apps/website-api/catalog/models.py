@@ -1,19 +1,7 @@
 from django.db import models
 
-from core.models import Buyable, MediumPicture, Common
+from core.models import Buyable, MediumPicture, RegularPicture
 
-
-CURRENCY_CHOICES = [
-    ('USD', 'US Dollar'),
-    ('EUR', 'Euro'),
-    ('MXN', 'Mexican Peso'),
-    ('GBP', 'British Pound'),
-    ('CAD', 'Canadian Dollar'),
-    ('ARS', 'Argentine Peso'),
-    ('COP', 'Colombian Peso'),
-    ('CLP', 'Chilean Peso'),
-    ('BRL', 'Brazilian Real'),
-]
 
 DIMENSION_UNIT_CHOICES = [
     ('cm', 'Centimeters'),
@@ -30,13 +18,13 @@ WEIGHT_UNIT_CHOICES = [
 ]
 
 
-class Category(Common):
+class ProductCategory(RegularPicture):
     system = models.ForeignKey(
         'core.System',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='categories',
+        related_name='product_categories',
     )
     parent = models.ForeignKey(
         'self',
@@ -45,15 +33,11 @@ class Category(Common):
         on_delete=models.SET_NULL,
         related_name='children',
     )
-    name = models.CharField(max_length=255)
-    en_name = models.CharField(max_length=255, null=True, blank=True)
     slug = models.SlugField(max_length=255, unique=True)
-    description = models.TextField(null=True, blank=True)
-    en_description = models.TextField(null=True, blank=True)
 
     class Meta:
-        verbose_name = 'Category'
-        verbose_name_plural = 'Categories'
+        verbose_name = 'Product Category'
+        verbose_name_plural = 'Product Categories'
         ordering = ['name']
 
     def __str__(self):
@@ -66,31 +50,23 @@ class Product(Buyable):
 
     Inherits from Buyable which provides:
       - Common: enabled, created, modified, version
-      - BasePicture: name, description, href, fit, background_color
+      - BasePicture: name, en_name, description, en_description, href, fit, background_color
       - RegularPicture: image (max 1200px)
-      - Buyable: system (FK), brand (FK)
+      - Buyable: system (FK), brand (FK), price, compare_price, cost_price, currency
     """
 
     category = models.ForeignKey(
-        Category,
+        ProductCategory,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name='products',
     )
     slug = models.SlugField(max_length=255, unique=True)
-    en_name = models.CharField(max_length=255, null=True, blank=True)
-    en_description = models.TextField(null=True, blank=True)
 
     # Identifiers
     sku = models.CharField(max_length=100, null=True, blank=True, unique=True)
     barcode = models.CharField(max_length=100, null=True, blank=True)
-
-    # Pricing
-    price = models.DecimalField(max_digits=12, decimal_places=2)
-    compare_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    cost_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='USD')
 
     # Inventory
     in_stock = models.BooleanField(default=True)
@@ -112,6 +88,78 @@ class Product(Buyable):
     class Meta:
         verbose_name = 'Product'
         verbose_name_plural = 'Products'
+        ordering = ['-created']
+
+    def __str__(self):
+        return self.name or self.slug
+
+
+MODALITY_CHOICES = [
+    ('online', 'Online'),
+    ('in_person', 'In Person'),
+    ('hybrid', 'Hybrid'),
+]
+
+
+class ServiceCategory(RegularPicture):
+    system = models.ForeignKey(
+        'core.System',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='service_categories',
+    )
+    parent = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='children',
+    )
+    slug = models.SlugField(max_length=255, unique=True)
+
+    class Meta:
+        verbose_name = 'Service Category'
+        verbose_name_plural = 'Service Categories'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Service(Buyable):
+    """
+    Concrete service model.
+
+    Inherits from Buyable which provides:
+      - Common: enabled, created, modified, version
+      - BasePicture: name, en_name, description, en_description, href, fit, background_color
+      - RegularPicture: image (max 1200px)
+      - Buyable: system (FK), brand (FK), price, compare_price, cost_price, currency
+    """
+
+    category = models.ForeignKey(
+        ServiceCategory,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='services',
+    )
+    slug = models.SlugField(max_length=255, unique=True)
+
+    # Identifier
+    sku = models.CharField(max_length=100, null=True, blank=True, unique=True)
+
+    # Service details
+    is_featured = models.BooleanField(default=False)
+    duration = models.PositiveIntegerField(null=True, blank=True, help_text='Duration in minutes')
+    modality = models.CharField(
+        max_length=16, choices=MODALITY_CHOICES, default='in_person', null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = 'Service'
+        verbose_name_plural = 'Services'
         ordering = ['-created']
 
     def __str__(self):
