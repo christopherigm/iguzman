@@ -97,6 +97,41 @@ RegularPicture = picture_mixin(1200)       # content images, banners
 LargePicture = picture_mixin(3840, quality=90)  # hero images, full-bleed
 
 
+class Brand(Common):
+    name = models.CharField(max_length=255, null=False, blank=False)
+    logo = models.ImageField(null=True, blank=True, upload_to=picture)
+
+    class Meta:
+        verbose_name = "Brand"
+        verbose_name_plural = "Brands"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Buyable(RegularPicture):
+    """
+    Abstract base for all buyable items (products, services, meals, houses, cars).
+
+    Inherits from RegularPicture which provides:
+      - Common: enabled, created, modified, version
+      - BasePicture: name, description, href, fit, background_color
+      - RegularPicture: image (max 1200px)
+    """
+
+    brand = models.ForeignKey(
+        Brand,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+    class Meta:
+        abstract = True
+
+
 class System(Common):
     site_name = models.CharField(max_length=32, null=False, blank=False, default="Web Site")
     host = models.CharField(max_length=64, null=False, blank=False, default="127.0.0.1", unique=True)
