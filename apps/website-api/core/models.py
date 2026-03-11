@@ -1,5 +1,6 @@
 import os
 import uuid
+from decimal import Decimal
 
 from colorfield.fields import ColorField
 from django.db import models
@@ -92,8 +93,8 @@ def picture_mixin(max_width: int, quality: int = 85):
         image = ResizedImageField(
             null=True,
             blank=True,
-            max_size=[max_width, None],
-            quality=quality,
+            max_size=[max_width, None], # type: ignore
+            quality=quality, # type: ignore
             upload_to=picture,
         )
 
@@ -152,7 +153,7 @@ class Buyable(RegularPicture):
     )
 
     # Pricing
-    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     compare_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     cost_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="USD")
