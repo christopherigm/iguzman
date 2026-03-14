@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import downloadVideo from '@repo/helpers/download-video';
-import { createTask, updateTask, findActiveTaskByUrl } from '@/lib/video-task-db';
+import {
+  createTask,
+  updateTask,
+  findActiveTaskByUrl,
+} from '@/lib/video-task-db';
+import logger from '@/lib/logger';
 import type { VideoDownloadInput } from '@/lib/types';
+
+const log = logger.child({ module: 'api/download-video' });
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -65,7 +72,11 @@ export async function POST(request: Request) {
         download from starting. */
   void (async () => {
     /* Best-effort status update — does NOT gate the download. */
-    updateTask(taskId, { status: 'downloading' }).catch(console.error);
+    updateTask(taskId, { status: 'downloading' }).catch((err: unknown) =>
+      log.error({ err, taskId }, 'Failed to set task status to downloading'),
+    );
+
+    log.info({ taskId, url, justAudio, checkCodec }, 'Download started');
 
     try {
       const result = await downloadVideo({
@@ -79,12 +90,30 @@ export async function POST(request: Request) {
       });
 
       if (result.error) {
+        log.error(
+          {
+            taskId,
+            url,
+            errorCode: result.error.code,
+            error: result.error.message,
+          },
+          'Download failed',
+        );
         await updateTask(taskId, {
           status: 'error',
           error: result.error,
           result,
         });
       } else {
+        log.info(
+          {
+            taskId,
+            url,
+            file: result.file,
+            duration: result.metadata?.duration,
+          },
+          'Download completed',
+        );
         await updateTask(taskId, {
           status: 'done',
           result,
@@ -98,13 +127,19 @@ export async function POST(request: Request) {
         });
       }
     } catch (err) {
+      log.error({ err, taskId, url }, 'Unexpected error during download');
       await updateTask(taskId, {
         status: 'error',
         error: {
           code: 'DOWNLOAD_FAILED',
           message: err instanceof Error ? err.message : String(err),
         },
-      }).catch(console.error);
+      }).catch((dbErr: unknown) =>
+        log.error(
+          { err: dbErr, taskId },
+          'Failed to update task to error status',
+        ),
+      );
     }
   })();
 

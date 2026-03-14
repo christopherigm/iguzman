@@ -2,6 +2,9 @@ import { unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { NextResponse } from 'next/server';
 import { getTask, deleteTask } from '@/lib/video-task-db';
+import logger from '@/lib/logger';
+
+const log = logger.child({ module: 'api/download-video/[id]' });
 
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const IS_PRODUCTION = NODE_ENV === 'production';
@@ -25,7 +28,8 @@ export async function GET(
     }
 
     return NextResponse.json({ task });
-  } catch {
+  } catch (err) {
+    log.error({ err, taskId: id }, 'Failed to fetch task');
     return NextResponse.json(
       { error: 'Failed to fetch task' },
       { status: 500 },
@@ -69,8 +73,10 @@ export async function DELETE(
 
     await deleteTask(id);
 
+    log.info({ taskId: id, file: task.file }, 'Task deleted');
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    log.error({ err, taskId: id }, 'Failed to delete task');
     return NextResponse.json(
       { error: 'Failed to delete task' },
       { status: 500 },

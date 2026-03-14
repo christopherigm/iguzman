@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stat } from 'node:fs';
 import { promisify } from 'node:util';
 import { join } from 'node:path';
+import logger from '@/lib/logger';
+
+const log = logger.child({ module: 'api/media/[filename]' });
 
 const fsStat = promisify(stat);
 
@@ -103,7 +106,7 @@ export async function PUT(
       { status: 200 },
     );
   } catch (err) {
-    console.error('PUT /api/media – write failed:', err);
+    log.error({ err, oldFileName }, 'PUT /api/media – write failed');
     return NextResponse.json(
       { error: 'Failed to write file' },
       { status: 500 },
