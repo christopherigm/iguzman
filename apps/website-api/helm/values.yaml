@@ -34,14 +34,14 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
   hosts:
-    - host: website-api.iguzman.com.mx
+    - host: api.website.iguzman.com.mx
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: website-api-tls
       hosts:
-        - website-api.iguzman.com.mx
+        - api.website.iguzman.com.mx
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.
@@ -62,9 +62,9 @@ env:
   FRONTEND_URL: 'https://website.iguzman.com.mx'
   # ── Optional overrides ────────────────────────────────────
   # SECRET_KEY: 'change-me-in-production'
-  DEBUG: 'True' # set to 'True' for debugging, 'False' for production
-  ALLOWED_HOSTS: 'website-api.iguzman.com.mx,website.iguzman.com.mx,localhost,127.0.0.1'
-  CSRF_TRUSTED_ORIGINS: 'https://website-api.iguzman.com.mx,https://website.iguzman.com.mx'
+  DEBUG: 'False' # set to 'True' for debugging, 'False' for production
+  ALLOWED_HOSTS: 'api.website.iguzman.com.mx,website.iguzman.com.mx,localhost,127.0.0.1'
+  CSRF_TRUSTED_ORIGINS: 'https://api.website.iguzman.com.mx,https://website.iguzman.com.mx'
   EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
 
 # Sensitive values – reference existing Kubernetes Secrets.

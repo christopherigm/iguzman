@@ -33,7 +33,7 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
         'CSRF_TRUSTED_ORIGINS',
-        'https://website-api.iguzman.com.mx,https://website.iguzman.com.mx',
+        'https://api.website.iguzman.com.mx,https://website.iguzman.com.mx',
     ).split(',')
     if origin.strip()
 ]
