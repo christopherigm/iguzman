@@ -77,6 +77,8 @@ function packageJson(name, port, includeI18n, includePwa) {
     },
   };
 
+  pkg.dependencies['pino'] = '^9';
+
   if (includeI18n) {
     pkg.dependencies['@repo/i18n'] = 'workspace:^';
     pkg.dependencies['next-intl'] = '^4';
@@ -650,6 +652,28 @@ function messagesJson(lang, name) {
       2,
     ) + '\n'
   );
+}
+
+function loggerTs(name) {
+  return `import pino from 'pino';
+
+/**
+ * Root logger for the ${name} app.
+ *
+ * Outputs structured JSON to stdout so container log aggregators
+ * (kubectl logs, Loki, etc.) can parse and query log fields directly.
+ *
+ * LOG_LEVEL env var defaults to "info" in production and "debug" otherwise.
+ */
+const logger = pino({
+  level:
+    process.env.LOG_LEVEL ??
+    (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  base: { app: '${name}' },
+});
+
+export default logger;
+`;
 }
 
 // ── PWA Template Functions ────────────────────────────────────────────
@@ -1319,6 +1343,9 @@ async function main() {
   if (includePwa) {
     writeFile(appPath('public/manifest.json'), manifestJson(name));
   }
+
+  // Logger
+  writeFile(appPath('lib/logger.ts'), loggerTs(name));
 
   // Deployment files
   writeFile(appPath('Dockerfile'), dockerfile(name));

@@ -63,13 +63,13 @@ All authentication endpoints are **public** (no token required).
 
 #### `POST /api/auth/signup/`
 
-Register a new user account.
+Register a new user account. The `username` is set automatically to `{system_id}_{email}`, making registrations unique per system. The same email can be registered across multiple systems.
 
 **Request body:**
 
 ```json
 {
-  "username": "johndoe",
+  "system_id": 1,
   "email": "john@example.com",
   "password": "StrongPass123!",
   "password2": "StrongPass123!",
@@ -78,17 +78,19 @@ Register a new user account.
 }
 ```
 
-> `first_name` and `last_name` are optional. `email` is required.
+> `first_name` and `last_name` are optional. `system_id` and `email` are required.
 
 **Successful response — `201 Created`:**
 
 ```json
 {
   "id": 1,
-  "username": "johndoe",
+  "username": "1_john@example.com",
   "email": "john@example.com",
   "first_name": "John",
-  "last_name": "Doe"
+  "last_name": "Doe",
+  "email_sent": true,
+  "detail": "Account created. Please verify your email to activate your account."
 }
 ```
 
@@ -96,7 +98,7 @@ Register a new user account.
 
 ```json
 {
-  "password": ["Passwords do not match."]
+  "email": ["A user with this email already exists for this system."]
 }
 ```
 
@@ -106,7 +108,7 @@ Register a new user account.
 curl -X POST http://localhost:8000/api/auth/signup/ \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "johndoe",
+    "system_id": 1,
     "email": "john@example.com",
     "password": "StrongPass123!",
     "password2": "StrongPass123!"
@@ -117,15 +119,16 @@ curl -X POST http://localhost:8000/api/auth/signup/ \
 
 #### `POST /api/auth/login/`
 
-Authenticate with username and password. Returns a JWT access token and refresh token.
+Authenticate with email, system, and password. Returns a JWT access token and refresh token.
 
-The access token payload includes custom claims: `username` and `email`.
+The access token payload includes custom claims: `username` (the internal `{system_id}_{email}` identifier) and `email`.
 
 **Request body:**
 
 ```json
 {
-  "username": "johndoe",
+  "system_id": 1,
+  "email": "john@example.com",
   "password": "StrongPass123!"
 }
 ```
@@ -153,7 +156,8 @@ The access token payload includes custom claims: `username` and `email`.
 curl -X POST http://localhost:8000/api/auth/login/ \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "johndoe",
+    "system_id": 1,
+    "email": "john@example.com",
     "password": "StrongPass123!"
   }'
 ```
@@ -248,15 +252,16 @@ Return the authenticated user's profile data, including their profile picture UR
 ```json
 {
   "id": 1,
-  "username": "johndoe",
+  "username": "1_john@example.com",
   "email": "john@example.com",
   "first_name": "John",
   "last_name": "Doe",
-  "profile_picture": "http://localhost:8000/media/profile_pictures/user_1/profile_1.jpg"
+  "profile_picture": "http://localhost:8000/media/profile_pictures/user_1/profile_1.jpg",
+  "system_id": 1
 }
 ```
 
-> `profile_picture` is `null` when no picture has been uploaded yet.
+> `profile_picture` is `null` when no picture has been uploaded yet. `username` is the internal `{system_id}_{email}` identifier.
 
 **cURL example:**
 
@@ -277,23 +282,25 @@ Update the authenticated user's profile fields. All fields are optional — only
 
 ```json
 {
-  "username": "newusername",
   "email": "new@example.com",
   "first_name": "Jane",
   "last_name": "Smith"
 }
 ```
 
+> `username` is system-managed and cannot be set directly. Changing `email` automatically updates the internal username to `{system_id}_{new_email}`.
+
 **Successful response — `200 OK`:** *(same shape as `GET /api/auth/profile/`)*
 
 ```json
 {
   "id": 1,
-  "username": "newusername",
+  "username": "1_new@example.com",
   "email": "new@example.com",
   "first_name": "Jane",
   "last_name": "Smith",
-  "profile_picture": "http://localhost:8000/media/profile_pictures/user_1/profile_1.jpg"
+  "profile_picture": "http://localhost:8000/media/profile_pictures/user_1/profile_1.jpg",
+  "system_id": 1
 }
 ```
 
@@ -301,7 +308,7 @@ Update the authenticated user's profile fields. All fields are optional — only
 
 ```json
 {
-  "username": ["This username is already taken."]
+  "email": ["This email is already in use for this system."]
 }
 ```
 
@@ -316,6 +323,37 @@ curl -X PUT http://localhost:8000/api/auth/profile/ \
 
 ---
 
+#### `POST /api/auth/resend-verification/`
+
+Resend the verification email to an unverified account. Always returns a generic `200` response to prevent user enumeration.
+
+**Request body:**
+
+```json
+{
+  "system_id": 1,
+  "email": "john@example.com"
+}
+```
+
+**Response — `200 OK`:**
+
+```json
+{
+  "detail": "If an unverified account with that email exists, a new verification email has been sent."
+}
+```
+
+**cURL example:**
+
+```bash
+curl -X POST http://localhost:8000/api/auth/resend-verification/ \
+  -H "Content-Type: application/json" \
+  -d '{"system_id": 1, "email": "john@example.com"}'
+```
+
+---
+
 #### `POST /api/auth/password-reset/`
 
 Request a password-reset email. Always returns a generic `200` response regardless of whether an account exists, to prevent user enumeration.
@@ -324,6 +362,7 @@ Request a password-reset email. Always returns a generic `200` response regardle
 
 ```json
 {
+  "system_id": 1,
   "email": "john@example.com"
 }
 ```
@@ -343,7 +382,7 @@ Request a password-reset email. Always returns a generic `200` response regardle
 ```bash
 curl -X POST http://localhost:8000/api/auth/password-reset/ \
   -H "Content-Type: application/json" \
-  -d '{"email": "john@example.com"}'
+  -d '{"system_id": 1, "email": "john@example.com"}'
 ```
 
 ---
@@ -470,7 +509,7 @@ Missing or expired token returns `401 Unauthorized`:
 3. GET  /api/<protected>/                   → use access token in Authorization header
 4. POST /api/auth/token/refresh/            → when access token expires, get a new one
 5. GET  /api/auth/profile/                  → retrieve user profile data
-6. PUT  /api/auth/profile/                  → update username, email, first_name, last_name
+6. PUT  /api/auth/profile/                  → update email, first_name, last_name
 7. POST /api/auth/profile/picture/          → upload / update profile picture (base64)
 8. POST /api/auth/password-reset/           → request a password-reset email
 9. POST /api/auth/password-reset/confirm/   → set new password using the emailed token

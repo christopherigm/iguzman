@@ -12,6 +12,13 @@ def profile_picture_upload_path(instance, filename):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    system = models.ForeignKey(
+        'core.System',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='users',
+    )
     profile_picture = models.ImageField(
         upload_to=profile_picture_upload_path,
         null=True,

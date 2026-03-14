@@ -114,8 +114,8 @@ class ResendVerificationView(APIView):
             status=status.HTTP_200_OK,
         )
         if not serializer.is_valid():
-            errors = serializer.errors.get("email", [])
-            if any("__not_found__" in str(e) for e in errors):
+            errors_str = str(serializer.errors)
+            if "__not_found__" in errors_str:
                 return generic_response
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
