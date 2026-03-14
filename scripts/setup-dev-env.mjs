@@ -339,10 +339,8 @@ function installDjango() {
       ok = runInteractive(
         'sudo apt-get update && sudo apt-get install -y python3-pip',
       );
-    else if (hasDnf())
-      ok = runInteractive('sudo dnf install -y python3-pip');
-    else if (hasYum())
-      ok = runInteractive('sudo yum install -y python3-pip');
+    else if (hasDnf()) ok = runInteractive('sudo dnf install -y python3-pip');
+    else if (hasYum()) ok = runInteractive('sudo yum install -y python3-pip');
 
     if (!ok || tryExec('command -v pip3') === null) {
       console.log(
@@ -354,15 +352,9 @@ function installDjango() {
     }
   }
 
-  // On modern Debian/Ubuntu the Python env is externally managed (PEP 668).
-  // Prefer the distro package; fall back to pip with --break-system-packages.
-  if (hasApt()) {
-    const ok = runInteractive(
-      'sudo apt-get update && sudo apt-get install -y python3-django',
-    );
-    if (ok) return true;
-  }
-  return runInteractive('sudo pip3 install django --break-system-packages');
+  return runInteractive(
+    'python3 -m pip install Django --break-system-packages',
+  );
 }
 
 function installPnpm() {
