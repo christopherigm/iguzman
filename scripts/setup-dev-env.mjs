@@ -11,7 +11,7 @@
 
 import { execSync, spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { existsSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 
@@ -96,9 +96,8 @@ const STRINGS = {
     },
     installNote: {
       bashGitPrompt:
-        'Add this to your ~/.bashrc or ~/.bash_profile to enable bash-git-prompt:\n' +
-        '  GIT_PROMPT_ONLY_IN_REPO=1\n' +
-        '  source ~/.bash-git-prompt/gitprompt.sh',
+        'Source snippet automatically added to ~/.bash_profile (macOS) or ~/.bashrc (Linux).\n' +
+        '  Restart your shell or run: source ~/.bashrc',
     },
   },
   es: {
@@ -150,9 +149,8 @@ const STRINGS = {
     },
     installNote: {
       bashGitPrompt:
-        'Agrega esto a tu ~/.bashrc o ~/.bash_profile para activar bash-git-prompt:\n' +
-        '  GIT_PROMPT_ONLY_IN_REPO=1\n' +
-        '  source ~/.bash-git-prompt/gitprompt.sh',
+        'Snippet de activación agregado automáticamente a ~/.bash_profile (macOS) o ~/.bashrc (Linux).\n' +
+        '  Reinicia tu shell o ejecuta: source ~/.bashrc',
     },
   },
 };
@@ -171,7 +169,6 @@ function runInteractive(cmd) {
   const result = spawnSync('bash', ['-c', cmd], { stdio: 'inherit' });
   return result.status === 0;
 }
-
 
 function isLinux() {
   return platform() === 'linux';
@@ -266,16 +263,52 @@ function installKubectl() {
 
 function installHelm() {
   return runInteractive(
-    'curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash',
+    'curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | sudo bash',
   );
 }
 
 function installBashGitPrompt() {
   const dest = join(homedir(), '.bash-git-prompt');
-  if (existsSync(dest)) return true;
-  return runInteractive(
-    `git clone https://github.com/magicmonty/bash-git-prompt.git ${dest} --depth=1`,
-  );
+  if (!existsSync(dest)) {
+    const ok = runInteractive(
+      `git clone https://github.com/magicmonty/bash-git-prompt.git ${dest} --depth=1`,
+    );
+    if (!ok) return false;
+  }
+
+  const macSnippet = `
+# bash-git-prompt
+if [ -f "$(brew --prefix)/opt/bash-git-prompt/share/gitprompt.sh" ]; then
+  __GIT_PROMPT_DIR=$(brew --prefix)/opt/bash-git-prompt/share
+  GIT_PROMPT_ONLY_IN_REPO=1
+  source "$(brew --prefix)/opt/bash-git-prompt/share/gitprompt.sh"
+fi
+`;
+  const linuxSnippet = `
+# bash-git-prompt
+if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then
+    GIT_PROMPT_ONLY_IN_REPO=1
+    source "$HOME/.bash-git-prompt/gitprompt.sh"
+fi
+`;
+
+  const configFile = isMac()
+    ? join(homedir(), '.bash_profile')
+    : join(homedir(), '.bashrc');
+  const snippet = isMac() ? macSnippet : linuxSnippet;
+
+  let existing = '';
+  try {
+    existing = readFileSync(configFile, 'utf-8');
+  } catch {
+    // file may not exist yet
+  }
+
+  if (!existing.includes('bash-git-prompt')) {
+    appendFileSync(configFile, snippet);
+  }
+
+  return true;
 }
 
 function installPython() {
@@ -297,21 +330,36 @@ function installPython() {
 }
 
 function installDjango() {
-  if (tryExec('command -v pip3') !== null)
-    return runInteractive('pip3 install django');
-  if (tryExec('command -v pip') !== null)
-    return runInteractive('pip install django');
-  console.log(
-    clr.yellow(
-      '  pip not found. Install Python first, then run: pip3 install django',
-    ),
-  );
-  return false;
+  // Ensure pip3 is available before installing Django
+  if (tryExec('command -v pip3') === null) {
+    console.log(clr.dim('  pip3 not found — installing...'));
+    let ok = false;
+    if (isMac() && hasBrew()) ok = runInteractive('brew install python3');
+    else if (hasApt())
+      ok = runInteractive(
+        'sudo apt-get update && sudo apt-get install -y python3-pip',
+      );
+    else if (hasDnf())
+      ok = runInteractive('sudo dnf install -y python3-pip');
+    else if (hasYum())
+      ok = runInteractive('sudo yum install -y python3-pip');
+
+    if (!ok || tryExec('command -v pip3') === null) {
+      console.log(
+        clr.yellow(
+          '  pip3 could not be installed. Install Python first, then run: pip3 install django',
+        ),
+      );
+      return false;
+    }
+  }
+
+  return runInteractive('sudo pip3 install django');
 }
 
 function installPnpm() {
   if (tryExec('command -v npm') !== null)
-    return runInteractive('npm install -g pnpm');
+    return runInteractive('sudo npm install -g pnpm');
   if (isMac() && hasBrew()) return runInteractive('brew install pnpm');
   if (isLinux())
     return runInteractive('curl -fsSL https://get.pnpm.io/install.sh | sh -');
@@ -323,7 +371,7 @@ function installPnpm() {
 
 function installClaude() {
   if (tryExec('command -v npm') !== null)
-    return runInteractive('npm install -g @anthropic-ai/claude-code');
+    return runInteractive('sudo npm install -g @anthropic-ai/claude-code');
   console.log(
     clr.yellow(
       '  npm not found. Install Node.js first, then run: npm install -g @anthropic-ai/claude-code',
@@ -612,7 +660,6 @@ function interactiveSelect(tools) {
 }
 
 // ── Simple readline prompt ────────────────────────────────────────────────────
-
 
 function createPrompt() {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
