@@ -15,6 +15,20 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  allowedDevOrigins: ['127.0.0.1', '*'],
+  images: {
+    qualities: [75, 80, 85, 90],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'api.website.iguzman.com.mx',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+      },
+    ],
+  },
 };
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');

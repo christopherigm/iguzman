@@ -13,7 +13,6 @@ export default async function Home({ params }: Props) {
   setRequestLocale(locale);
 
   const system = await getSystem();
-  console.log('System info:', system);
 
   return (
     <Container

@@ -178,6 +178,10 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
+# Trust the X-Forwarded-Proto header set by the reverse proxy (ingress/nginx)
+# so Django knows requests are HTTPS even though it receives them over HTTP internally.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
     'https://${host},${frontendUrl}',

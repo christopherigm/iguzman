@@ -29,6 +29,10 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
+# Trust the X-Forwarded-Proto header set by the reverse proxy (ingress/nginx)
+# so Django knows requests are HTTPS even though it receives them over HTTP internally.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
@@ -245,7 +249,7 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://website.iguzman.com.mx/')
 EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS = int(os.environ.get('EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS', '24'))
 
 # CORS

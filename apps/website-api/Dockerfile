@@ -43,7 +43,7 @@ FROM python:3.12-slim AS runner
 WORKDIR /app
 
 # Non-root user for security
-RUN groupadd --system django && useradd --system --gid django django
+# RUN groupadd --system django && useradd --system --gid django django
 
 # Runtime packages from the deps stage
 COPY --from=deps /install /usr/local
@@ -52,13 +52,13 @@ COPY --from=deps /install /usr/local
 COPY --from=builder /app/ .
 
 # Media directory — will be overridden by the hostPath volume mount at runtime
-RUN mkdir -p /app/media \
-    && chown -R django:django /app/media /app/staticfiles
+# RUN mkdir -p /app/media \
+#     && chown -R django:django /app/media /app/staticfiles
 
 COPY apps/website-api/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-USER django
+# USER django
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

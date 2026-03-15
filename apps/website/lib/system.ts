@@ -36,7 +36,7 @@ export interface System {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000';
-const SYSTEM_REVALIDATE = process.env.NODE_ENV === 'production' ? 3600 : 0;
+const SYSTEM_REVALIDATE = process.env.NODE_ENV === 'test' ? 3600 : 0;
 
 /**
  * Fetches the System record matching the current request host.

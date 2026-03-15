@@ -110,6 +110,16 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  allowedDevOrigins: ['127.0.0.1', '*'],
+  images: {
+    qualities: [75, 80, 85, 90],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+      },
+    ],
+  },
 };
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
@@ -124,6 +134,16 @@ export default withPWA(withNextIntl(nextConfig));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  allowedDevOrigins: ['127.0.0.1', '*'],
+  images: {
+    qualities: [75, 80, 85, 90],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+      },
+    ],
+  },
 };
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
@@ -149,6 +169,16 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  allowedDevOrigins: ['127.0.0.1', '*'],
+  images: {
+    qualities: [75, 80, 85, 90],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+      },
+    ],
+  },
 };
 
 export default withPWA(nextConfig);
@@ -158,6 +188,16 @@ export default withPWA(nextConfig);
   return `/** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  allowedDevOrigins: ['127.0.0.1', '*'],
+  images: {
+    qualities: [75, 80, 85, 90],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+      },
+    ],
+  },
 };
 
 export default nextConfig;
