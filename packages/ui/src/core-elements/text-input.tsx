@@ -32,14 +32,14 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
   /** Fires with the new string value on every keystroke. */
   onChange?: (value: string) => void;
   /** Floating label text. Acts as placeholder when idle. */
-  lable?: string;
+  label?: string;
   /** HTML input type. Defaults to `"text"`. Ignored when `multirow` is true. */
   type?: string;
   /** Render a `<textarea>` instead of an `<input>`. */
   multirow?: boolean;
   /** Number of visible text rows when `multirow` is enabled. Defaults to `3`. */
   rows?: number;
-  /** Standard placeholder. When omitted the `lable` fills this role. */
+  /** Standard placeholder. When omitted the `label` fills this role. */
   placeholder?: string;
   /** React 19 ref — no forwardRef needed. */
   ref?: React.Ref<HTMLInputElement | HTMLTextAreaElement>;
@@ -53,18 +53,18 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
  *
  * @example
  * ```tsx
- * <TextInput lable="My input" value={text} onChange={(v) => setText(v)} />
+ * <TextInput label="My input" value={text} onChange={(v) => setText(v)} />
  * ```
  *
  * @example
  * ```tsx
- * <TextInput lable="Bio" multirow rows={5} />
+ * <TextInput label="Bio" multirow rows={5} />
  * ```
  */
 export const TextInput = ({
   value,
   onChange,
-  lable,
+  label,
   type = 'text',
   multirow = false,
   rows = 3,
@@ -138,10 +138,10 @@ export const TextInput = ({
     onChange: handleChange,
     onFocus: handleFocus,
     onBlur: handleBlur,
-    // If a placeholder is explicitly provided, use it. Otherwise the lable
+    // If a placeholder is explicitly provided, use it. Otherwise the label
     // visually replaces the placeholder via CSS, so we keep it empty.
-    placeholder: placeholder ?? (isFocused && lable ? lable : undefined),
-    'aria-label': lable ?? undefined,
+    placeholder: placeholder ?? (isFocused && label ? label : undefined),
+    'aria-label': label ?? undefined,
   };
 
   // ── Wrapper class name ────────────────────────────────────────
@@ -170,9 +170,9 @@ export const TextInput = ({
         />
       )}
 
-      {lable && (
+      {label && (
         <label htmlFor={id} className="ui-text-input-label">
-          {lable}
+          {label}
         </label>
       )}
 

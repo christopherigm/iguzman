@@ -1,0 +1,19 @@
+{
+  "Metadata": {
+    "title": "Website",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Website"
+  },
+  "SignInPage": {
+    "title": "Anmelden",
+    "subtitle": "Willkommen zurück",
+    "emailLabel": "E-Mail",
+    "passwordLabel": "Passwort",
+    "submitButton": "Anmelden",
+    "signingIn": "Wird angemeldet…",
+    "errorInvalidCredentials": "Ungültige E-Mail oder falsches Passwort.",
+    "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+  }
+}

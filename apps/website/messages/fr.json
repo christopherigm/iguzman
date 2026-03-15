@@ -1,0 +1,19 @@
+{
+  "Metadata": {
+    "title": "Website",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Website"
+  },
+  "SignInPage": {
+    "title": "Connexion",
+    "subtitle": "Bon retour",
+    "emailLabel": "E-mail",
+    "passwordLabel": "Mot de passe",
+    "submitButton": "Se connecter",
+    "signingIn": "Connexion en cours…",
+    "errorInvalidCredentials": "E-mail ou mot de passe invalide.",
+    "errorGeneric": "Une erreur s'est produite. Veuillez réessayer."
+  }
+}

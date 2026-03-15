@@ -218,7 +218,7 @@ const SearchBox: React.FC<{
               ref={inputRef as React.Ref<HTMLInputElement>}
               value={value}
               onChange={handleChange}
-              lable="Search"
+              label="Search"
               onKeyDown={handleKeyDown}
               minWidth={180}
             />

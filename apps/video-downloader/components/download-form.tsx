@@ -262,7 +262,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
             value={url}
             onChange={(v: string) => setUrl(stripQueryParams(v))}
             onFocus={handleInputFocus}
-            lable={t('inputLabel')}
+            label={t('inputLabel')}
           />
         </div>
 

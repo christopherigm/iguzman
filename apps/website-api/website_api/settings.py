@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'colorfield',
@@ -59,6 +60,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -245,3 +247,15 @@ SIMPLE_JWT = {
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS = int(os.environ.get('EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS', '24'))
+
+# CORS
+# https://github.com/adamchainz/django-cors-headers
+#
+# In production, set CORS_ALLOWED_ORIGINS via env var instead of using CORS_ALLOW_ALL_ORIGINS.
+
+_CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+
+if _CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _CORS_ALLOWED_ORIGINS.split(',') if o.strip()]
+else:
+    CORS_ALLOW_ALL_ORIGINS = DEBUG

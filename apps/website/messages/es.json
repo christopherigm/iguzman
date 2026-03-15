@@ -1,0 +1,19 @@
+{
+  "Metadata": {
+    "title": "Website",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Website"
+  },
+  "SignInPage": {
+    "title": "Iniciar sesión",
+    "subtitle": "Bienvenido de nuevo",
+    "emailLabel": "Correo electrónico",
+    "passwordLabel": "Contraseña",
+    "submitButton": "Iniciar sesión",
+    "signingIn": "Iniciando sesión…",
+    "errorInvalidCredentials": "Correo electrónico o contraseña incorrectos.",
+    "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo."
+  }
+}

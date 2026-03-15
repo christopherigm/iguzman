@@ -79,7 +79,7 @@ export default async function Home({ params }: Props) {
           </Box>
         </Grid>
       </Grid>
-      <TextInput name="name" lable="My input" multirow rows={5} />
+      <TextInput name="name" label="My input" multirow rows={5} />
     </Container>
   );
 }

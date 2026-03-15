@@ -546,6 +546,7 @@ Configure production values as a Kubernetes Secret and reference them in `helm/v
 | `DEBUG`                  | `env`           | Set to `False` in production                                                     |
 | `ALLOWED_HOSTS`          | `env`           | Comma-separated list of allowed hostnames                                        |
 | `CSRF_TRUSTED_ORIGINS`   | `env`           | Comma-separated list of allowed origins                                          |
+| `CORS_ALLOWED_ORIGINS`   | `env`           | Comma-separated list of origins allowed for cross-origin requests (e.g. `https://website.iguzman.com.mx`). When unset and `DEBUG=True`, all origins are allowed. |
 | `DJANGO_SETTINGS_MODULE` | `env`           | Set automatically by the Helm chart                                              |
 | `EMAIL_HOST`             | `env`           | SMTP host (default: `smtp.ionos.com`)                                            |
 | `EMAIL_PORT`             | `env`           | SMTP port (default: `587`)                                                       |
@@ -677,6 +678,7 @@ Key values to override in `helm/values.yaml` or via `--set`:
 | `nginx.enabled`            | `true`                                           | Nginx sidecar for `/media/`       |
 | `resources.limits.cpu`     | `500m`                                           | CPU limit for Django container    |
 | `resources.limits.memory`  | `512Mi`                                          | Memory limit for Django container |
+| `env.CORS_ALLOWED_ORIGINS` | `https://website.iguzman.com.mx`                 | Allowed cross-origin request origins |
 | `env.EMAIL_HOST`           | `smtp.ionos.com`                                 | SMTP server hostname              |
 | `env.EMAIL_PORT`           | `587`                                            | SMTP port                         |
 | `env.EMAIL_USE_TLS`        | `True`                                           | Enable STARTTLS                   |
