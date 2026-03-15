@@ -13,6 +13,7 @@ import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
 import { Navbar } from '@repo/ui/core-elements/navbar';
 import packageJson from '@/package.json';
+import { getSystem } from '@/lib/system';
 import '../globals.css';
 
 type Props = {
@@ -38,13 +39,15 @@ export async function generateMetadata({
     key: string,
   ) => string;
 
+  const system = await getSystem();
+
   return {
     title: t('title'),
     description: t('description'),
-    manifest: '/manifest.json',
+    manifest: '/manifest.webmanifest',
     icons: {
-      icon: '/favicon.ico',
-      apple: '/icons/icon-192x192.png',
+      icon: system?.img_favicon ?? '/favicon.ico',
+      apple: system?.img_manifest_128 ?? '/icons/icon-192x192.png',
     },
     appleWebApp: {
       capable: true,
@@ -66,7 +69,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   setRequestLocale(locale);
 
-  const messages = await getMessages();
+  const [messages, system] = await Promise.all([getMessages(), getSystem()]);
 
   const cookieStore = await cookies();
   const themeModeCookie = cookieStore.get('theme-mode')?.value as
@@ -93,7 +96,7 @@ export default async function LocaleLayout({ children, params }: Props) {
         >
           <PaletteProvider palette="cyan">
             <Navbar
-              logo="/logo.png"
+              logo={system?.img_logo ?? '/logo.png'}
               items={[{ label: 'Home', href: '/' }]}
               fixedItems={[]}
               version={`v${packageJson.version}`}

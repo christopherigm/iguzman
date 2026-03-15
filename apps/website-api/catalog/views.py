@@ -1,7 +1,30 @@
+from django.core.cache import cache
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+CACHE_TTL = 300  # 5 minutes
+
+
+def _list_key(prefix, params):
+    """Stable cache key for a list endpoint from its query params."""
+    flat = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
+    return f"{prefix}:{flat}" if flat else prefix
+
+
+def _invalidate_pattern(pattern):
+    """Delete all keys matching a glob pattern.
+
+    django-redis exposes delete_pattern(); the local-memory cache used in
+    development does not, so we silently skip invalidation there and let
+    the TTL handle expiry instead.
+    """
+    try:
+        cache.delete_pattern(pattern)
+    except AttributeError:
+        pass
 
 from .models import (
     ProductCategory, Product, ProductImage,
@@ -46,6 +69,11 @@ class ProductCategoryListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
+        cache_key = _list_key('catalog:product_categories', request.query_params)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         qs = ProductCategory.objects.filter(enabled=True)
 
         system_id = request.query_params.get('system')
@@ -58,8 +86,9 @@ class ProductCategoryListCreateView(APIView):
         elif parent_id:
             qs = qs.filter(parent_id=parent_id)
 
-        serializer = ProductCategorySerializer(qs, many=True, context={'request': request})
-        return Response(serializer.data)
+        data = ProductCategorySerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request):
         serializer = ProductCategoryWriteSerializer(data=request.data)
@@ -87,10 +116,16 @@ class ProductCategoryDetailView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f'catalog:product_category:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         category = self._get_object(pk)
         if category is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(ProductCategorySerializer(category, context={'request': request}).data)
+        data = ProductCategorySerializer(category, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def patch(self, request, pk):
         category = self._get_object(pk)
@@ -99,6 +134,8 @@ class ProductCategoryDetailView(APIView):
         serializer = ProductCategoryWriteSerializer(category, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         category = serializer.save()
+        cache.delete(f'catalog:product_category:{pk}')
+        _invalidate_pattern('catalog:product_categories:*')
         return Response(ProductCategorySerializer(category, context={'request': request}).data)
 
     def delete(self, request, pk):
@@ -106,6 +143,8 @@ class ProductCategoryDetailView(APIView):
         if category is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         category.delete()
+        cache.delete(f'catalog:product_category:{pk}')
+        _invalidate_pattern('catalog:product_categories:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -129,6 +168,11 @@ class ProductListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
+        cache_key = _list_key('catalog:products', request.query_params)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         qs = Product.objects.filter(enabled=True).select_related('brand', 'category', 'system').prefetch_related('images', 'variants__option_values__option', 'variants__images')
 
         system_id = request.query_params.get('system')
@@ -153,8 +197,9 @@ class ProductListCreateView(APIView):
         if search:
             qs = qs.filter(name__icontains=search)
 
-        serializer = ProductSerializer(qs, many=True, context={'request': request})
-        return Response(serializer.data)
+        data = ProductSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request):
         serializer = ProductWriteSerializer(data=request.data)
@@ -182,10 +227,16 @@ class ProductDetailView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f'catalog:product:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         product = self._get_object(pk)
         if product is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(ProductSerializer(product, context={'request': request}).data)
+        data = ProductSerializer(product, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def patch(self, request, pk):
         product = self._get_object(pk)
@@ -194,6 +245,8 @@ class ProductDetailView(APIView):
         serializer = ProductWriteSerializer(product, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         product = serializer.update(product, serializer.validated_data)
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(ProductSerializer(product, context={'request': request}).data)
 
     def delete(self, request, pk):
@@ -201,6 +254,9 @@ class ProductDetailView(APIView):
         if product is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         product.delete()
+        cache.delete(f'catalog:product:{pk}')
+        cache.delete(f'catalog:product_variants:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -235,6 +291,8 @@ class ProductImageListCreateView(APIView):
         serializer = ProductImageWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         image = serializer.save(product)
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(ProductImageSerializer(image, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -263,6 +321,8 @@ class ProductImageDetailView(APIView):
         if sort_order is not None:
             image.sort_order = sort_order
         image.save(update_fields=[f for f in ['name', 'sort_order'] if f in request.data])
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(ProductImageSerializer(image, context={'request': request}).data)
 
     def delete(self, request, pk, img_pk):
@@ -270,6 +330,8 @@ class ProductImageDetailView(APIView):
         if image is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         image.delete()
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -285,6 +347,11 @@ class ServiceCategoryListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
+        cache_key = _list_key('catalog:service_categories', request.query_params)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         qs = ServiceCategory.objects.filter(enabled=True)
 
         system_id = request.query_params.get('system')
@@ -297,8 +364,9 @@ class ServiceCategoryListCreateView(APIView):
         elif parent_id:
             qs = qs.filter(parent_id=parent_id)
 
-        serializer = ServiceCategorySerializer(qs, many=True, context={'request': request})
-        return Response(serializer.data)
+        data = ServiceCategorySerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request):
         serializer = ServiceCategoryWriteSerializer(data=request.data)
@@ -326,10 +394,16 @@ class ServiceCategoryDetailView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f'catalog:service_category:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         category = self._get_object(pk)
         if category is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(ServiceCategorySerializer(category, context={'request': request}).data)
+        data = ServiceCategorySerializer(category, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def patch(self, request, pk):
         category = self._get_object(pk)
@@ -338,6 +412,8 @@ class ServiceCategoryDetailView(APIView):
         serializer = ServiceCategoryWriteSerializer(category, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         category = serializer.save()
+        cache.delete(f'catalog:service_category:{pk}')
+        _invalidate_pattern('catalog:service_categories:*')
         return Response(ServiceCategorySerializer(category, context={'request': request}).data)
 
     def delete(self, request, pk):
@@ -345,6 +421,8 @@ class ServiceCategoryDetailView(APIView):
         if category is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         category.delete()
+        cache.delete(f'catalog:service_category:{pk}')
+        _invalidate_pattern('catalog:service_categories:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -368,6 +446,11 @@ class ServiceListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
+        cache_key = _list_key('catalog:services', request.query_params)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         qs = Service.objects.filter(enabled=True).select_related('brand', 'category', 'system').prefetch_related('variants__option_values__option')
 
         system_id = request.query_params.get('system')
@@ -393,8 +476,9 @@ class ServiceListCreateView(APIView):
         if search:
             qs = qs.filter(name__icontains=search)
 
-        serializer = ServiceSerializer(qs, many=True, context={'request': request})
-        return Response(serializer.data)
+        data = ServiceSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request):
         serializer = ServiceWriteSerializer(data=request.data)
@@ -422,10 +506,16 @@ class ServiceDetailView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f'catalog:service:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         service = self._get_object(pk)
         if service is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(ServiceSerializer(service, context={'request': request}).data)
+        data = ServiceSerializer(service, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def patch(self, request, pk):
         service = self._get_object(pk)
@@ -434,6 +524,8 @@ class ServiceDetailView(APIView):
         serializer = ServiceWriteSerializer(service, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         service = serializer.update(service, serializer.validated_data)
+        cache.delete(f'catalog:service:{pk}')
+        _invalidate_pattern('catalog:services:*')
         return Response(ServiceSerializer(service, context={'request': request}).data)
 
     def delete(self, request, pk):
@@ -441,6 +533,9 @@ class ServiceDetailView(APIView):
         if service is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         service.delete()
+        cache.delete(f'catalog:service:{pk}')
+        cache.delete(f'catalog:service_variants:{pk}')
+        _invalidate_pattern('catalog:services:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -463,11 +558,17 @@ class VariantOptionListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
+        cache_key = _list_key('catalog:variant_options', request.query_params)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         qs = VariantOption.objects.filter(enabled=True).prefetch_related('values')
         system_id = request.query_params.get('system')
         if system_id:
             qs = qs.filter(system_id=system_id)
-        return Response(VariantOptionSerializer(qs, many=True, context={'request': request}).data)
+        data = VariantOptionSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request):
         serializer = VariantOptionWriteSerializer(data=request.data)
@@ -495,10 +596,16 @@ class VariantOptionDetailView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f'catalog:variant_option:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         option = self._get_object(pk)
         if option is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(VariantOptionSerializer(option, context={'request': request}).data)
+        data = VariantOptionSerializer(option, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def patch(self, request, pk):
         option = self._get_object(pk)
@@ -507,6 +614,8 @@ class VariantOptionDetailView(APIView):
         serializer = VariantOptionWriteSerializer(option, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         option = serializer.save()
+        cache.delete(f'catalog:variant_option:{pk}')
+        _invalidate_pattern('catalog:variant_options:*')
         return Response(VariantOptionSerializer(option, context={'request': request}).data)
 
     def delete(self, request, pk):
@@ -514,6 +623,9 @@ class VariantOptionDetailView(APIView):
         if option is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         option.delete()
+        cache.delete(f'catalog:variant_option:{pk}')
+        cache.delete(f'catalog:variant_option_values:{pk}')
+        _invalidate_pattern('catalog:variant_options:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -535,11 +647,17 @@ class VariantOptionValueListCreateView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f'catalog:variant_option_values:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         option = self._get_option(pk)
         if option is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         qs = option.values.filter(enabled=True)
-        return Response(VariantOptionValueSerializer(qs, many=True, context={'request': request}).data)
+        data = VariantOptionValueSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request, pk):
         option = self._get_option(pk)
@@ -549,6 +667,9 @@ class VariantOptionValueListCreateView(APIView):
         serializer = VariantOptionValueWriteSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         value = serializer.save()
+        # Values are embedded in the parent option serializer, so invalidate it too
+        cache.delete(f'catalog:variant_option:{pk}')
+        _invalidate_pattern('catalog:variant_options:*')
         return Response(VariantOptionValueSerializer(value, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -583,6 +704,9 @@ class VariantOptionValueDetailView(APIView):
         serializer = VariantOptionValueWriteSerializer(value, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         value = serializer.save()
+        cache.delete(f'catalog:variant_option_values:{pk}')
+        cache.delete(f'catalog:variant_option:{pk}')
+        _invalidate_pattern('catalog:variant_options:*')
         return Response(VariantOptionValueSerializer(value, context={'request': request}).data)
 
     def delete(self, request, pk, val_pk):
@@ -590,6 +714,9 @@ class VariantOptionValueDetailView(APIView):
         if value is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         value.delete()
+        cache.delete(f'catalog:variant_option_values:{pk}')
+        cache.delete(f'catalog:variant_option:{pk}')
+        _invalidate_pattern('catalog:variant_options:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -615,11 +742,17 @@ class ProductVariantListCreateView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f'catalog:product_variants:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         product = self._get_product(pk)
         if product is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         qs = product.variants.filter(enabled=True).prefetch_related('option_values__option', 'images')
-        return Response(ProductVariantSerializer(qs, many=True, context={'request': request}).data)
+        data = ProductVariantSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request, pk):
         product = self._get_product(pk)
@@ -628,6 +761,9 @@ class ProductVariantListCreateView(APIView):
         serializer = ProductVariantWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         variant = serializer.create(serializer.validated_data, product=product)
+        # Variants are embedded in the product detail, so invalidate it too
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(ProductVariantSerializer(variant, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -662,6 +798,9 @@ class ProductVariantDetailView(APIView):
         serializer = ProductVariantWriteSerializer(variant, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         variant = serializer.update(variant, serializer.validated_data)
+        cache.delete(f'catalog:product_variants:{pk}')
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(ProductVariantSerializer(variant, context={'request': request}).data)
 
     def delete(self, request, pk, var_pk):
@@ -669,6 +808,9 @@ class ProductVariantDetailView(APIView):
         if variant is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         variant.delete()
+        cache.delete(f'catalog:product_variants:{pk}')
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -702,6 +844,9 @@ class ProductVariantImageListCreateView(APIView):
         serializer = ProductVariantImageWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         image = serializer.save(variant)
+        cache.delete(f'catalog:product_variants:{pk}')
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(ProductVariantImageSerializer(image, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -728,6 +873,9 @@ class ProductVariantImageDetailView(APIView):
         if 'sort_order' in request.data:
             image.sort_order = request.data['sort_order']
         image.save(update_fields=[f for f in ['name', 'sort_order'] if f in request.data])
+        cache.delete(f'catalog:product_variants:{pk}')
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(ProductVariantImageSerializer(image, context={'request': request}).data)
 
     def delete(self, request, pk, var_pk, img_pk):
@@ -735,6 +883,9 @@ class ProductVariantImageDetailView(APIView):
         if image is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         image.delete()
+        cache.delete(f'catalog:product_variants:{pk}')
+        cache.delete(f'catalog:product:{pk}')
+        _invalidate_pattern('catalog:products:*')
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -760,11 +911,17 @@ class ServiceVariantListCreateView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f'catalog:service_variants:{pk}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         service = self._get_service(pk)
         if service is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         qs = service.variants.filter(enabled=True).prefetch_related('option_values__option')
-        return Response(ServiceVariantSerializer(qs, many=True, context={'request': request}).data)
+        data = ServiceVariantSerializer(qs, many=True, context={'request': request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request, pk):
         service = self._get_service(pk)
@@ -773,6 +930,8 @@ class ServiceVariantListCreateView(APIView):
         serializer = ServiceVariantWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         variant = serializer.create(serializer.validated_data, service=service)
+        cache.delete(f'catalog:service:{pk}')
+        _invalidate_pattern('catalog:services:*')
         return Response(ServiceVariantSerializer(variant, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
@@ -807,6 +966,9 @@ class ServiceVariantDetailView(APIView):
         serializer = ServiceVariantWriteSerializer(variant, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         variant = serializer.update(variant, serializer.validated_data)
+        cache.delete(f'catalog:service_variants:{pk}')
+        cache.delete(f'catalog:service:{pk}')
+        _invalidate_pattern('catalog:services:*')
         return Response(ServiceVariantSerializer(variant, context={'request': request}).data)
 
     def delete(self, request, pk, var_pk):
@@ -814,4 +976,7 @@ class ServiceVariantDetailView(APIView):
         if variant is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         variant.delete()
+        cache.delete(f'catalog:service_variants:{pk}')
+        cache.delete(f'catalog:service:{pk}')
+        _invalidate_pattern('catalog:services:*')
         return Response(status=status.HTTP_204_NO_CONTENT)

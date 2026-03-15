@@ -6,7 +6,7 @@
 revisionHistoryLimit: 2 # how many old ReplicaSets to keep for rollbacks
 
 # -- Number of pod replicas
-replicaCount: 2
+replicaCount: 1
 
 # ─── Container image ────────────────────────────────────────
 image:
@@ -48,6 +48,7 @@ ingress:
 env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
+  NEXT_PUBLIC_API_URL: 'https://api.website.iguzman.com.mx'
   # Add your own env vars here, for example:
   # API_URL: "https://api.example.com"
 

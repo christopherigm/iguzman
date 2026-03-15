@@ -2,6 +2,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { ThemeSwitch } from '@repo/ui/theme-switch';
 import { Box } from '@repo/ui/core-elements/box';
 import { Container } from '@repo/ui/core-elements/container';
+import { getSystem } from '@/lib/system';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -10,6 +11,9 @@ type Props = {
 export default async function Home({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  const system = await getSystem();
+  console.log('System info:', system);
 
   return (
     <Container
@@ -33,7 +37,7 @@ export default async function Home({ params }: Props) {
             marginBottom: 16,
           }}
         >
-          Website
+          {system?.site_name ?? 'Website'}
         </h1>
         <ThemeSwitch hideOnMobile />
       </Box>
