@@ -112,6 +112,7 @@ const nextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['127.0.0.1', '*'],
   images: {
+    dangerouslyAllowLocalIP: true,
     qualities: [75, 80, 85, 90],
     remotePatterns: [
       {
@@ -136,6 +137,7 @@ const nextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['127.0.0.1', '*'],
   images: {
+    dangerouslyAllowLocalIP: true,
     qualities: [75, 80, 85, 90],
     remotePatterns: [
       {
@@ -171,6 +173,7 @@ const nextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['127.0.0.1', '*'],
   images: {
+    dangerouslyAllowLocalIP: true,
     qualities: [75, 80, 85, 90],
     remotePatterns: [
       {
@@ -190,6 +193,7 @@ const nextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['127.0.0.1', '*'],
   images: {
+    dangerouslyAllowLocalIP: true,
     qualities: [75, 80, 85, 90],
     remotePatterns: [
       {

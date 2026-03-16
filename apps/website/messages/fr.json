@@ -6,14 +6,53 @@
   "HomePage": {
     "title": "Website"
   },
-  "SignInPage": {
-    "title": "Connexion",
-    "subtitle": "Bon retour",
-    "emailLabel": "E-mail",
-    "passwordLabel": "Mot de passe",
-    "submitButton": "Se connecter",
-    "signingIn": "Connexion en cours…",
-    "errorInvalidCredentials": "E-mail ou mot de passe invalide.",
-    "errorGeneric": "Une erreur s'est produite. Veuillez réessayer."
+  "Navbar": {
+    "accessAccount": "Accéder au compte",
+    "myAccount": "Mon compte",
+    "signOut": "Se déconnecter"
+  },
+  "AuthPage": {
+    "tabSignIn": "Connexion",
+    "tabSignUp": "Inscription",
+    "tabReset": "Réinitialiser le mot de passe",
+    "signIn": {
+      "title": "Connexion",
+      "subtitle": "Bon retour",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Mot de passe",
+      "submitButton": "Se connecter",
+      "submitting": "Connexion en cours…",
+      "errorInvalidCredentials": "E-mail ou mot de passe invalide.",
+      "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
+      "forgotPassword": "Mot de passe oublié ?",
+      "noAccount": "Pas encore de compte ? S'inscrire"
+    },
+    "signUp": {
+      "title": "Créer un compte",
+      "subtitle": "Rejoignez-nous aujourd'hui",
+      "emailLabel": "E-mail",
+      "firstNameLabel": "Prénom",
+      "lastNameLabel": "Nom",
+      "passwordLabel": "Mot de passe",
+      "confirmPasswordLabel": "Confirmer le mot de passe",
+      "submitButton": "Créer un compte",
+      "submitting": "Création en cours…",
+      "successDetail": "Compte créé ! Veuillez vérifier votre e-mail pour activer votre compte.",
+      "errorEmailTaken": "Un compte avec cet e-mail existe déjà.",
+      "errorPasswordMismatch": "Les mots de passe ne correspondent pas.",
+      "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
+      "haveAccount": "Déjà un compte ? Se connecter",
+      "forgotPassword": "Mot de passe oublié ?"
+    },
+    "resetPassword": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Entrez votre e-mail pour recevoir un lien de réinitialisation",
+      "emailLabel": "E-mail",
+      "submitButton": "Envoyer le lien",
+      "submitting": "Envoi en cours…",
+      "successDetail": "Si un compte avec cet e-mail existe, un lien de réinitialisation a été envoyé.",
+      "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
+      "backToSignIn": "Retour à la connexion"
+    }
   }
 }

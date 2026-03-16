@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.core.cache import cache
 
 from .models import (
     ProductCategory, Product, ProductImage,
@@ -7,6 +8,14 @@ from .models import (
     ProductVariant, ProductVariantImage,
     ServiceVariant,
 )
+
+
+def _invalidate_pattern(pattern):
+    """Delete all keys matching a glob pattern (Redis only; silently skipped on LocMemCache)."""
+    try:
+        cache.delete_pattern(pattern)
+    except AttributeError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +101,16 @@ class ProductCategoryAdmin(admin.ModelAdmin):
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:product_category:{obj.pk}')
+        _invalidate_pattern('catalog:product_categories:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:product_category:{obj.pk}')
+        _invalidate_pattern('catalog:product_categories:*')
+        super().delete_model(request, obj)
+
 
 @admin.register(ServiceCategory)
 class ServiceCategoryAdmin(admin.ModelAdmin):
@@ -113,6 +132,16 @@ class ServiceCategoryAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:service_category:{obj.pk}')
+        _invalidate_pattern('catalog:service_categories:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:service_category:{obj.pk}')
+        _invalidate_pattern('catalog:service_categories:*')
+        super().delete_model(request, obj)
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +180,17 @@ class ProductAdmin(admin.ModelAdmin):
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:product:{obj.pk}')
+        _invalidate_pattern('catalog:products:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:product:{obj.pk}')
+        cache.delete(f'catalog:product_variants:{obj.pk}')
+        _invalidate_pattern('catalog:products:*')
+        super().delete_model(request, obj)
+
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
@@ -180,6 +220,17 @@ class ServiceAdmin(admin.ModelAdmin):
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:service:{obj.pk}')
+        _invalidate_pattern('catalog:services:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:service:{obj.pk}')
+        cache.delete(f'catalog:service_variants:{obj.pk}')
+        _invalidate_pattern('catalog:services:*')
+        super().delete_model(request, obj)
+
 
 # ---------------------------------------------------------------------------
 # Variant admins
@@ -203,6 +254,17 @@ class VariantOptionAdmin(admin.ModelAdmin):
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:variant_option:{obj.pk}')
+        _invalidate_pattern('catalog:variant_options:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:variant_option:{obj.pk}')
+        cache.delete(f'catalog:variant_option_values:{obj.pk}')
+        _invalidate_pattern('catalog:variant_options:*')
+        super().delete_model(request, obj)
+
 
 @admin.register(VariantOptionValue)
 class VariantOptionValueAdmin(admin.ModelAdmin):
@@ -220,6 +282,18 @@ class VariantOptionValueAdmin(admin.ModelAdmin):
             'fields': ('name', 'slug', 'en_name', 'color'),
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:variant_option_values:{obj.option_id}')
+        cache.delete(f'catalog:variant_option:{obj.option_id}')
+        _invalidate_pattern('catalog:variant_options:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:variant_option_values:{obj.option_id}')
+        cache.delete(f'catalog:variant_option:{obj.option_id}')
+        _invalidate_pattern('catalog:variant_options:*')
+        super().delete_model(request, obj)
 
 
 @admin.register(ProductVariant)
@@ -260,6 +334,18 @@ class ProductVariantAdmin(admin.ModelAdmin):
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:product_variants:{obj.product_id}')
+        cache.delete(f'catalog:product:{obj.product_id}')
+        _invalidate_pattern('catalog:products:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:product_variants:{obj.product_id}')
+        cache.delete(f'catalog:product:{obj.product_id}')
+        _invalidate_pattern('catalog:products:*')
+        super().delete_model(request, obj)
+
 
 @admin.register(ServiceVariant)
 class ServiceVariantAdmin(admin.ModelAdmin):
@@ -293,3 +379,15 @@ class ServiceVariantAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f'catalog:service_variants:{obj.service_id}')
+        cache.delete(f'catalog:service:{obj.service_id}')
+        _invalidate_pattern('catalog:services:*')
+
+    def delete_model(self, request, obj):
+        cache.delete(f'catalog:service_variants:{obj.service_id}')
+        cache.delete(f'catalog:service:{obj.service_id}')
+        _invalidate_pattern('catalog:services:*')
+        super().delete_model(request, obj)

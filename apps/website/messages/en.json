@@ -6,14 +6,53 @@
   "HomePage": {
     "title": "Website"
   },
-  "SignInPage": {
-    "title": "Sign In",
-    "subtitle": "Welcome back",
-    "emailLabel": "Email",
-    "passwordLabel": "Password",
-    "submitButton": "Sign In",
-    "signingIn": "Signing in…",
-    "errorInvalidCredentials": "Invalid email or password.",
-    "errorGeneric": "Something went wrong. Please try again."
+  "Navbar": {
+    "accessAccount": "Access account",
+    "myAccount": "My Account",
+    "signOut": "Sign out"
+  },
+  "AuthPage": {
+    "tabSignIn": "Sign In",
+    "tabSignUp": "Sign Up",
+    "tabReset": "Reset Password",
+    "signIn": {
+      "title": "Sign In",
+      "subtitle": "Welcome back",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submitButton": "Sign In",
+      "submitting": "Signing in…",
+      "errorInvalidCredentials": "Invalid email or password.",
+      "errorGeneric": "Something went wrong. Please try again.",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account? Sign up"
+    },
+    "signUp": {
+      "title": "Create Account",
+      "subtitle": "Join us today",
+      "emailLabel": "Email",
+      "firstNameLabel": "First Name",
+      "lastNameLabel": "Last Name",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm Password",
+      "submitButton": "Create Account",
+      "submitting": "Creating account…",
+      "successDetail": "Account created! Please check your email to verify your account.",
+      "errorEmailTaken": "An account with this email already exists.",
+      "errorPasswordMismatch": "Passwords do not match.",
+      "errorGeneric": "Something went wrong. Please try again.",
+      "haveAccount": "Already have an account? Sign in",
+      "forgotPassword": "Forgot your password?"
+    },
+    "resetPassword": {
+      "title": "Reset Password",
+      "subtitle": "Enter your email to receive a reset link",
+      "emailLabel": "Email",
+      "submitButton": "Send Reset Link",
+      "submitting": "Sending…",
+      "successDetail": "If an account with that email exists, a password reset link has been sent.",
+      "errorGeneric": "Something went wrong. Please try again.",
+      "backToSignIn": "Back to Sign In"
+    }
   }
 }

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.core.cache import cache
 
 from .models import Brand, System
 
@@ -50,3 +51,11 @@ class SystemAdmin(admin.ModelAdmin):
             "classes": ("collapse",),
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f"system:host:{obj.host}")
+
+    def delete_model(self, request, obj):
+        cache.delete(f"system:host:{obj.host}")
+        super().delete_model(request, obj)

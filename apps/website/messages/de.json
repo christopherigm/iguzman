@@ -6,14 +6,53 @@
   "HomePage": {
     "title": "Website"
   },
-  "SignInPage": {
-    "title": "Anmelden",
-    "subtitle": "Willkommen zurück",
-    "emailLabel": "E-Mail",
-    "passwordLabel": "Passwort",
-    "submitButton": "Anmelden",
-    "signingIn": "Wird angemeldet…",
-    "errorInvalidCredentials": "Ungültige E-Mail oder falsches Passwort.",
-    "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
+  "Navbar": {
+    "accessAccount": "Konto aufrufen",
+    "myAccount": "Mein Konto",
+    "signOut": "Abmelden"
+  },
+  "AuthPage": {
+    "tabSignIn": "Anmelden",
+    "tabSignUp": "Registrieren",
+    "tabReset": "Passwort zurücksetzen",
+    "signIn": {
+      "title": "Anmelden",
+      "subtitle": "Willkommen zurück",
+      "emailLabel": "E-Mail",
+      "passwordLabel": "Passwort",
+      "submitButton": "Anmelden",
+      "submitting": "Wird angemeldet…",
+      "errorInvalidCredentials": "Ungültige E-Mail oder falsches Passwort.",
+      "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+      "forgotPassword": "Passwort vergessen?",
+      "noAccount": "Noch kein Konto? Registrieren"
+    },
+    "signUp": {
+      "title": "Konto erstellen",
+      "subtitle": "Treten Sie uns heute bei",
+      "emailLabel": "E-Mail",
+      "firstNameLabel": "Vorname",
+      "lastNameLabel": "Nachname",
+      "passwordLabel": "Passwort",
+      "confirmPasswordLabel": "Passwort bestätigen",
+      "submitButton": "Konto erstellen",
+      "submitting": "Konto wird erstellt…",
+      "successDetail": "Konto erstellt! Bitte prüfen Sie Ihre E-Mail zur Verifizierung.",
+      "errorEmailTaken": "Ein Konto mit dieser E-Mail-Adresse existiert bereits.",
+      "errorPasswordMismatch": "Passwörter stimmen nicht überein.",
+      "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+      "haveAccount": "Bereits ein Konto? Anmelden",
+      "forgotPassword": "Passwort vergessen?"
+    },
+    "resetPassword": {
+      "title": "Passwort zurücksetzen",
+      "subtitle": "Geben Sie Ihre E-Mail ein, um einen Reset-Link zu erhalten",
+      "emailLabel": "E-Mail",
+      "submitButton": "Reset-Link senden",
+      "submitting": "Wird gesendet…",
+      "successDetail": "Falls ein Konto mit dieser E-Mail existiert, wurde ein Reset-Link gesendet.",
+      "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+      "backToSignIn": "Zurück zur Anmeldung"
+    }
   }
 }

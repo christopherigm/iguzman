@@ -368,9 +368,25 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
       {/* Fixed menu items (always visible) */}
       {fixedItems.length > 0 && (
         <div className="ui-navbar-fixed">
-          {fixedItems.map((item) => (
-            <NavbarItem key={item.label} item={item} />
-          ))}
+          {fixedItems.map((item) => {
+            const hasChildren = item.children && item.children.length > 0;
+            return (
+              <div key={item.label} className="ui-navbar-menu-item-wrapper">
+                <NavbarItem
+                  item={item}
+                  onToggleDropdown={hasChildren ? setActiveDropdown : undefined}
+                  isDropdownOpen={activeDropdown === item.label}
+                  chevronIcon={chevronIcon}
+                />
+                {hasChildren && activeDropdown === item.label && (
+                  <DropdownPanel
+                    items={item.children!}
+                    onClose={() => setActiveDropdown(null)}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

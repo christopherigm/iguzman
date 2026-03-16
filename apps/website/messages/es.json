@@ -6,14 +6,53 @@
   "HomePage": {
     "title": "Website"
   },
-  "SignInPage": {
-    "title": "Iniciar sesión",
-    "subtitle": "Bienvenido de nuevo",
-    "emailLabel": "Correo electrónico",
-    "passwordLabel": "Contraseña",
-    "submitButton": "Iniciar sesión",
-    "signingIn": "Iniciando sesión…",
-    "errorInvalidCredentials": "Correo electrónico o contraseña incorrectos.",
-    "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo."
+  "Navbar": {
+    "accessAccount": "Acceder a la cuenta",
+    "myAccount": "Mi cuenta",
+    "signOut": "Cerrar sesión"
+  },
+  "AuthPage": {
+    "tabSignIn": "Iniciar sesión",
+    "tabSignUp": "Registrarse",
+    "tabReset": "Restablecer contraseña",
+    "signIn": {
+      "title": "Iniciar sesión",
+      "subtitle": "Bienvenido de nuevo",
+      "emailLabel": "Correo electrónico",
+      "passwordLabel": "Contraseña",
+      "submitButton": "Iniciar sesión",
+      "submitting": "Iniciando sesión…",
+      "errorInvalidCredentials": "Correo electrónico o contraseña incorrectos.",
+      "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "noAccount": "¿No tienes cuenta? Regístrate"
+    },
+    "signUp": {
+      "title": "Crear cuenta",
+      "subtitle": "Únete hoy",
+      "emailLabel": "Correo electrónico",
+      "firstNameLabel": "Nombre",
+      "lastNameLabel": "Apellido",
+      "passwordLabel": "Contraseña",
+      "confirmPasswordLabel": "Confirmar contraseña",
+      "submitButton": "Crear cuenta",
+      "submitting": "Creando cuenta…",
+      "successDetail": "¡Cuenta creada! Por favor, revisa tu correo para verificar tu cuenta.",
+      "errorEmailTaken": "Ya existe una cuenta con este correo electrónico.",
+      "errorPasswordMismatch": "Las contraseñas no coinciden.",
+      "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
+      "haveAccount": "¿Ya tienes cuenta? Inicia sesión",
+      "forgotPassword": "¿Olvidaste tu contraseña?"
+    },
+    "resetPassword": {
+      "title": "Restablecer contraseña",
+      "subtitle": "Ingresa tu correo para recibir un enlace de restablecimiento",
+      "emailLabel": "Correo electrónico",
+      "submitButton": "Enviar enlace",
+      "submitting": "Enviando…",
+      "successDetail": "Si existe una cuenta con ese correo, se ha enviado un enlace de restablecimiento.",
+      "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
+      "backToSignIn": "Volver a iniciar sesión"
+    }
   }
 }

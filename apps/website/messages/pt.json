@@ -6,14 +6,53 @@
   "HomePage": {
     "title": "Website"
   },
-  "SignInPage": {
-    "title": "Entrar",
-    "subtitle": "Bem-vindo de volta",
-    "emailLabel": "E-mail",
-    "passwordLabel": "Senha",
-    "submitButton": "Entrar",
-    "signingIn": "Entrando…",
-    "errorInvalidCredentials": "E-mail ou senha inválidos.",
-    "errorGeneric": "Algo deu errado. Por favor, tente novamente."
+  "Navbar": {
+    "accessAccount": "Acessar conta",
+    "myAccount": "Minha conta",
+    "signOut": "Sair"
+  },
+  "AuthPage": {
+    "tabSignIn": "Entrar",
+    "tabSignUp": "Cadastrar",
+    "tabReset": "Redefinir senha",
+    "signIn": {
+      "title": "Entrar",
+      "subtitle": "Bem-vindo de volta",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Senha",
+      "submitButton": "Entrar",
+      "submitting": "Entrando…",
+      "errorInvalidCredentials": "E-mail ou senha inválidos.",
+      "errorGeneric": "Algo deu errado. Por favor, tente novamente.",
+      "forgotPassword": "Esqueceu sua senha?",
+      "noAccount": "Não tem conta? Cadastre-se"
+    },
+    "signUp": {
+      "title": "Criar conta",
+      "subtitle": "Junte-se a nós hoje",
+      "emailLabel": "E-mail",
+      "firstNameLabel": "Nome",
+      "lastNameLabel": "Sobrenome",
+      "passwordLabel": "Senha",
+      "confirmPasswordLabel": "Confirmar senha",
+      "submitButton": "Criar conta",
+      "submitting": "Criando conta…",
+      "successDetail": "Conta criada! Por favor, verifique seu e-mail para ativar sua conta.",
+      "errorEmailTaken": "Já existe uma conta com este e-mail.",
+      "errorPasswordMismatch": "As senhas não coincidem.",
+      "errorGeneric": "Algo deu errado. Por favor, tente novamente.",
+      "haveAccount": "Já tem conta? Entrar",
+      "forgotPassword": "Esqueceu sua senha?"
+    },
+    "resetPassword": {
+      "title": "Redefinir senha",
+      "subtitle": "Digite seu e-mail para receber um link de redefinição",
+      "emailLabel": "E-mail",
+      "submitButton": "Enviar link",
+      "submitting": "Enviando…",
+      "successDetail": "Se existir uma conta com esse e-mail, um link de redefinição foi enviado.",
+      "errorGeneric": "Algo deu errado. Por favor, tente novamente.",
+      "backToSignIn": "Voltar para entrar"
+    }
   }
 }

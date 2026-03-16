@@ -11,7 +11,7 @@ import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
-import { Navbar } from '@repo/ui/core-elements/navbar';
+import { NavbarClient } from './navbar-client';
 import packageJson from '@/package.json';
 import { getSystem } from '@/lib/system';
 import '../globals.css';
@@ -95,10 +95,8 @@ export default async function LocaleLayout({ children, params }: Props) {
           initialResolved={initialResolved}
         >
           <PaletteProvider palette="cyan">
-            <Navbar
+            <NavbarClient
               logo={system?.img_logo ?? '/logo.png'}
-              items={[{ label: 'Home', href: '/' }]}
-              fixedItems={[]}
               version={`v${packageJson.version}`}
             />
             {children}
