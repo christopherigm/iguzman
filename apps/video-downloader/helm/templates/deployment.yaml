@@ -99,6 +99,22 @@ spec:
               containerPort: {{ .Values.nginx.port }}
               protocol: TCP
 
+          startupProbe:
+            {{- if .Values.hostPathVolume.enabled }}
+            exec:
+              command:
+                - test
+                - -d
+                - {{ .Values.hostPathVolume.mountPath }}
+            {{- else }}
+            httpGet:
+              path: /healthz
+              port: nginx
+            {{- end }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+
           livenessProbe:
             httpGet:
               path: /healthz
