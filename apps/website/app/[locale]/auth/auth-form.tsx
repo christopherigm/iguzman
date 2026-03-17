@@ -114,28 +114,6 @@ function SignInTab({
 
   return (
     <>
-      <div>
-        <h1
-          style={{
-            fontSize: 24,
-            fontWeight: 600,
-            color: 'var(--foreground)',
-            marginBottom: 4,
-          }}
-        >
-          {t('signIn.title')}
-        </h1>
-        <p
-          style={{
-            fontSize: 14,
-            color: 'var(--muted-foreground, #6b7280)',
-            marginBottom: 8,
-          }}
-        >
-          {t('signIn.subtitle')}
-        </p>
-      </div>
-
       <form
         onSubmit={handleSubmit}
         style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
@@ -280,28 +258,6 @@ function SignUpTab({
 
   return (
     <>
-      <div>
-        <h1
-          style={{
-            fontSize: 24,
-            fontWeight: 600,
-            color: 'var(--foreground)',
-            marginBottom: 4,
-          }}
-        >
-          {t('signUp.title')}
-        </h1>
-        <p
-          style={{
-            fontSize: 14,
-            color: 'var(--muted-foreground, #6b7280)',
-            marginBottom: 8,
-          }}
-        >
-          {t('signUp.subtitle')}
-        </p>
-      </div>
-
       <form
         onSubmit={handleSubmit}
         style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
@@ -413,28 +369,6 @@ function ResetPasswordTab({
 
   return (
     <>
-      <div>
-        <h1
-          style={{
-            fontSize: 24,
-            fontWeight: 600,
-            color: 'var(--foreground)',
-            marginBottom: 4,
-          }}
-        >
-          {t('resetPassword.title')}
-        </h1>
-        <p
-          style={{
-            fontSize: 14,
-            color: 'var(--muted-foreground, #6b7280)',
-            marginBottom: 8,
-          }}
-        >
-          {t('resetPassword.subtitle')}
-        </p>
-      </div>
-
       {success ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <p
@@ -497,6 +431,15 @@ export function SignInForm({ systemId, apiUrl }: Props) {
   const t = useTranslations('AuthPage');
   const [tab, setTab] = useState<Tab>('sign-in');
 
+  const tabHeadings: Record<Tab, { title: string; subtitle: string }> = {
+    'sign-in': { title: t('signIn.title'), subtitle: t('signIn.subtitle') },
+    'sign-up': { title: t('signUp.title'), subtitle: t('signUp.subtitle') },
+    'reset-password': {
+      title: t('resetPassword.title'),
+      subtitle: t('resetPassword.subtitle'),
+    },
+  };
+
   useEffect(() => {
     const readHash = () => {
       const hash = window.location.hash.replace('#', '');
@@ -522,16 +465,38 @@ export function SignInForm({ systemId, apiUrl }: Props) {
     'reset-password': t('tabReset'),
   };
 
+  const { title, subtitle } = tabHeadings[tab];
+
   return (
     <Container
       display="flex"
       alignItems="center"
-      justifyContent="center"
-      styles={{ minHeight: '100vh' }}
+      styles={{
+        minHeight: '100vh',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        paddingTop: 80,
+      }}
       paddingX={10}
     >
+      <div style={{ width: '100%', maxWidth: 420, marginBottom: 20 }}>
+        <h1
+          style={{
+            fontSize: 24,
+            fontWeight: 600,
+            color: 'var(--foreground)',
+            marginBottom: 4,
+          }}
+        >
+          {title}
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--muted-foreground, #6b7280)' }}>
+          {subtitle}
+        </p>
+      </div>
       <Box
-        width={420}
+        width="100%"
+        maxWidth={420}
         padding={16}
         borderRadius={12}
         flexDirection="column"

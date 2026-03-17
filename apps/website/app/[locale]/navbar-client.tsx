@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Navbar } from '@repo/ui/core-elements/navbar';
-import { getAccessToken, getRefreshToken, clearTokens, getUserFromToken } from '@/lib/auth';
+import {
+  getAccessToken,
+  getRefreshToken,
+  clearTokens,
+  getUserFromToken,
+} from '@/lib/auth';
 
 interface NavbarClientProps {
   logo: string;
@@ -24,7 +29,9 @@ export function NavbarClient({ logo, version }: NavbarClientProps) {
     if (loggedIn) {
       const user = getUserFromToken();
       if (user?.firstName) {
-        setUserName(user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName);
+        setUserName(
+          user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName,
+        );
       } else if (user?.email) {
         setUserName(user.email);
       } else {
@@ -46,7 +53,7 @@ export function NavbarClient({ logo, version }: NavbarClientProps) {
     window.location.reload();
   };
 
-  const MAX_LABEL_LENGTH = 20;
+  const MAX_LABEL_LENGTH = 5;
   const displayName = userName
     ? userName.length > MAX_LABEL_LENGTH
       ? `${userName.slice(0, MAX_LABEL_LENGTH)}…`
