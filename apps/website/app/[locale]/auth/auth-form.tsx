@@ -7,6 +7,8 @@ import { Container } from '@repo/ui/core-elements/container';
 import { Box } from '@repo/ui/core-elements/box';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Button } from '@repo/ui/core-elements/button';
+import { LinkButton } from '@repo/ui/core-elements/link-button';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import {
   login,
   storeTokens,
@@ -39,32 +41,6 @@ function ErrorMessage({ message }: { message: string }) {
     >
       {message}
     </p>
-  );
-}
-
-function LinkButton({
-  onClick,
-  label,
-}: {
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        background: 'none',
-        border: 'none',
-        color: 'var(--muted-foreground, #6b7280)',
-        fontSize: 13,
-        cursor: 'pointer',
-        textDecoration: 'underline',
-        padding: 0,
-      }}
-    >
-      {label}
-    </button>
   );
 }
 
@@ -135,6 +111,7 @@ function SignInTab({
           autoComplete="current-password"
         />
         {error && <ErrorMessage message={error} />}
+        {loading && <ProgressBar label={t('signIn.submitting')} />}
         <Button
           text={loading ? t('signIn.submitting') : t('signIn.submitButton')}
           type="submit"
@@ -303,6 +280,7 @@ function SignUpTab({
           autoComplete="new-password"
         />
         {error && <ErrorMessage message={error} />}
+        {loading && <ProgressBar label={t('signUp.submitting')} />}
         <Button
           text={loading ? t('signUp.submitting') : t('signUp.submitButton')}
           type="submit"
@@ -399,6 +377,7 @@ function ResetPasswordTab({
             autoComplete="email"
           />
           {error && <ErrorMessage message={error} />}
+          {loading && <ProgressBar label={t('resetPassword.submitting')} />}
           <Button
             text={
               loading
@@ -497,7 +476,7 @@ export function SignInForm({ systemId, apiUrl }: Props) {
       <Box
         width="100%"
         maxWidth={420}
-        padding={16}
+        padding={10}
         borderRadius={12}
         flexDirection="column"
         gap={20}

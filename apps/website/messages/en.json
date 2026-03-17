@@ -54,5 +54,32 @@
       "errorGeneric": "Something went wrong. Please try again.",
       "backToSignIn": "Back to Sign In"
     }
+  },
+  "ResetPasswordPage": {
+    "title": "Set New Password",
+    "subtitle": "Enter your new password below",
+    "newPasswordLabel": "New Password",
+    "confirmPasswordLabel": "Confirm New Password",
+    "submitButton": "Reset Password",
+    "submitting": "Resetting password…",
+    "errorPasswordMismatch": "Passwords do not match.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "successTitle": "Password reset!",
+    "successDetail": "Your password has been updated. You can now sign in with your new password.",
+    "backToSignIn": "Back to Sign In",
+    "invalidTitle": "Link invalid or expired",
+    "invalidDetail": "This password reset link is invalid or has expired. Please request a new one.",
+    "requestNewLink": "Request a new reset link"
+  },
+  "VerifyEmailPage": {
+    "loading": "Verifying your account, please wait…",
+    "successTitle": "Email verified!",
+    "successDetail": "Your account has been activated. You will be redirected shortly.",
+    "redirecting": "Redirecting in {seconds}…",
+    "redirectProgress": "Redirect progress",
+    "expiredTitle": "Link expired",
+    "expiredDetail": "This verification link has expired. Please sign up again or request a new verification email.",
+    "invalidTitle": "Invalid link",
+    "invalidDetail": "This verification link is not valid. It may have already been used or does not exist."
   }
 }

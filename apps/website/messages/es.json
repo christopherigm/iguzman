@@ -54,5 +54,32 @@
       "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
       "backToSignIn": "Volver a iniciar sesión"
     }
+  },
+  "ResetPasswordPage": {
+    "title": "Establecer nueva contraseña",
+    "subtitle": "Ingresa tu nueva contraseña a continuación",
+    "newPasswordLabel": "Nueva contraseña",
+    "confirmPasswordLabel": "Confirmar nueva contraseña",
+    "submitButton": "Restablecer contraseña",
+    "submitting": "Restableciendo contraseña…",
+    "errorPasswordMismatch": "Las contraseñas no coinciden.",
+    "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "successTitle": "¡Contraseña restablecida!",
+    "successDetail": "Tu contraseña ha sido actualizada. Ahora puedes iniciar sesión con tu nueva contraseña.",
+    "backToSignIn": "Volver a iniciar sesión",
+    "invalidTitle": "Enlace inválido o expirado",
+    "invalidDetail": "Este enlace para restablecer la contraseña es inválido o ha expirado. Por favor, solicita uno nuevo.",
+    "requestNewLink": "Solicitar un nuevo enlace"
+  },
+  "VerifyEmailPage": {
+    "loading": "Verificando tu cuenta, por favor espera…",
+    "successTitle": "¡Correo verificado!",
+    "successDetail": "Tu cuenta ha sido activada. Serás redirigido en breve.",
+    "redirecting": "Redirigiendo en {seconds}…",
+    "redirectProgress": "Progreso de redirección",
+    "expiredTitle": "Enlace expirado",
+    "expiredDetail": "Este enlace de verificación ha expirado. Por favor, regístrate de nuevo o solicita un nuevo correo de verificación.",
+    "invalidTitle": "Enlace inválido",
+    "invalidDetail": "Este enlace de verificación no es válido. Es posible que ya haya sido utilizado o no exista."
   }
 }

@@ -54,5 +54,32 @@
       "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
       "backToSignIn": "Retour à la connexion"
     }
+  },
+  "ResetPasswordPage": {
+    "title": "Définir un nouveau mot de passe",
+    "subtitle": "Entrez votre nouveau mot de passe ci-dessous",
+    "newPasswordLabel": "Nouveau mot de passe",
+    "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
+    "submitButton": "Réinitialiser le mot de passe",
+    "submitting": "Réinitialisation en cours…",
+    "errorPasswordMismatch": "Les mots de passe ne correspondent pas.",
+    "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
+    "successTitle": "Mot de passe réinitialisé !",
+    "successDetail": "Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+    "backToSignIn": "Retour à la connexion",
+    "invalidTitle": "Lien invalide ou expiré",
+    "invalidDetail": "Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.",
+    "requestNewLink": "Demander un nouveau lien"
+  },
+  "VerifyEmailPage": {
+    "loading": "Vérification de votre compte, veuillez patienter…",
+    "successTitle": "E-mail vérifié !",
+    "successDetail": "Votre compte a été activé. Vous allez être redirigé sous peu.",
+    "redirecting": "Redirection dans {seconds}…",
+    "redirectProgress": "Progression de la redirection",
+    "expiredTitle": "Lien expiré",
+    "expiredDetail": "Ce lien de vérification a expiré. Veuillez vous inscrire à nouveau ou demander un nouvel e-mail de vérification.",
+    "invalidTitle": "Lien invalide",
+    "invalidDetail": "Ce lien de vérification n'est pas valide. Il a peut-être déjà été utilisé ou n'existe pas."
   }
 }

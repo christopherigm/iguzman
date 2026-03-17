@@ -77,6 +77,7 @@ export function NavbarClient({ logo, version }: NavbarClientProps) {
       items={[{ label: 'Home', href: '/' }]}
       fixedItems={[authItem]}
       version={version}
+      translucent
     />
   );
 }

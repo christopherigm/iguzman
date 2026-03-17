@@ -123,6 +123,33 @@ export async function requestPasswordReset(
   }
 }
 
+export async function confirmPasswordReset(
+  token: string,
+  newPassword: string,
+  newPassword2: string,
+  apiUrl = '',
+): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/auth/password-reset/confirm/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, new_password: newPassword, new_password2: newPassword2 }),
+  });
+
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}
+
+export async function verifyEmail(token: string, apiUrl = ''): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/auth/verify-email/${token}/`);
+
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}
+
 export async function login(payload: LoginPayload, apiUrl = ''): Promise<LoginResponse> {
   const res = await fetch(`${apiUrl}/api/auth/login/`, {
     method: 'POST',

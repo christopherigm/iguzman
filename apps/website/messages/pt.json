@@ -54,5 +54,32 @@
       "errorGeneric": "Algo deu errado. Por favor, tente novamente.",
       "backToSignIn": "Voltar para entrar"
     }
+  },
+  "ResetPasswordPage": {
+    "title": "Definir nova senha",
+    "subtitle": "Digite sua nova senha abaixo",
+    "newPasswordLabel": "Nova senha",
+    "confirmPasswordLabel": "Confirmar nova senha",
+    "submitButton": "Redefinir senha",
+    "submitting": "Redefinindo senha…",
+    "errorPasswordMismatch": "As senhas não coincidem.",
+    "errorGeneric": "Algo deu errado. Por favor, tente novamente.",
+    "successTitle": "Senha redefinida!",
+    "successDetail": "Sua senha foi atualizada. Agora você pode entrar com sua nova senha.",
+    "backToSignIn": "Voltar para entrar",
+    "invalidTitle": "Link inválido ou expirado",
+    "invalidDetail": "Este link de redefinição de senha é inválido ou expirou. Por favor, solicite um novo.",
+    "requestNewLink": "Solicitar um novo link"
+  },
+  "VerifyEmailPage": {
+    "loading": "Verificando sua conta, aguarde…",
+    "successTitle": "E-mail verificado!",
+    "successDetail": "Sua conta foi ativada. Você será redirecionado em breve.",
+    "redirecting": "Redirecionando em {seconds}…",
+    "redirectProgress": "Progresso do redirecionamento",
+    "expiredTitle": "Link expirado",
+    "expiredDetail": "Este link de verificação expirou. Por favor, cadastre-se novamente ou solicite um novo e-mail de verificação.",
+    "invalidTitle": "Link inválido",
+    "invalidDetail": "Este link de verificação não é válido. Ele pode já ter sido usado ou não existe."
   }
 }

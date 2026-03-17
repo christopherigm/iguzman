@@ -54,5 +54,32 @@
       "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "backToSignIn": "Zurück zur Anmeldung"
     }
+  },
+  "ResetPasswordPage": {
+    "title": "Neues Passwort festlegen",
+    "subtitle": "Geben Sie unten Ihr neues Passwort ein",
+    "newPasswordLabel": "Neues Passwort",
+    "confirmPasswordLabel": "Neues Passwort bestätigen",
+    "submitButton": "Passwort zurücksetzen",
+    "submitting": "Passwort wird zurückgesetzt…",
+    "errorPasswordMismatch": "Passwörter stimmen nicht überein.",
+    "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "successTitle": "Passwort zurückgesetzt!",
+    "successDetail": "Ihr Passwort wurde aktualisiert. Sie können sich jetzt mit Ihrem neuen Passwort anmelden.",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "invalidTitle": "Link ungültig oder abgelaufen",
+    "invalidDetail": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen an.",
+    "requestNewLink": "Neuen Reset-Link anfordern"
+  },
+  "VerifyEmailPage": {
+    "loading": "Ihr Konto wird verifiziert, bitte warten…",
+    "successTitle": "E-Mail verifiziert!",
+    "successDetail": "Ihr Konto wurde aktiviert. Sie werden in Kürze weitergeleitet.",
+    "redirecting": "Weiterleitung in {seconds}…",
+    "redirectProgress": "Weiterleitungsfortschritt",
+    "expiredTitle": "Link abgelaufen",
+    "expiredDetail": "Dieser Verifizierungslink ist abgelaufen. Bitte registrieren Sie sich erneut oder fordern Sie eine neue Verifizierungs-E-Mail an.",
+    "invalidTitle": "Ungültiger Link",
+    "invalidDetail": "Dieser Verifizierungslink ist nicht gültig. Er wurde möglicherweise bereits verwendet oder existiert nicht."
   }
 }
