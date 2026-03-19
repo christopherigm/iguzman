@@ -32,7 +32,7 @@ class SystemAdmin(admin.ModelAdmin):
             ),
         }),
         ("Media", {
-            "fields": ("video_link", "img_about"),
+            "fields": ("video_link", "img_hero", "img_about"),
         }),
         ("Content (ES)", {
             "fields": ("about", "mission", "vision"),

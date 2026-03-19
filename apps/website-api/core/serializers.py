@@ -97,6 +97,7 @@ _IMAGE_FIELDS = {
     "img_manifest_256": {"max_size": (256, 256),   "quality": 85, "force_format": "PNG"},
     "img_manifest_128": {"max_size": (128, 128),   "quality": 85, "force_format": "PNG"},
     "img_about":        {"max_size": (1200, 1200), "quality": 95, "force_format": "PNG"},
+    "img_hero":         {"max_size": (1920, 1080), "quality": 90, "force_format": "JPEG"},
 }
 
 _EXT = {"JPEG": "jpg", "PNG": "png"}
@@ -117,6 +118,7 @@ class SystemSerializer(serializers.ModelSerializer):
     img_manifest_256 = serializers.SerializerMethodField()
     img_manifest_128 = serializers.SerializerMethodField()
     img_about = serializers.SerializerMethodField()
+    img_hero = serializers.SerializerMethodField()
 
     class Meta:
         model = System
@@ -125,7 +127,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "site_name", "host",
             "img_logo", "img_logo_hero", "img_favicon",
             "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_128",
-            "video_link", "primary_color", "secondary_color",
+            "img_hero", "video_link", "primary_color", "secondary_color",
             "about", "en_about",
             "mission", "en_mission",
             "vision", "en_vision",
@@ -152,6 +154,7 @@ class SystemSerializer(serializers.ModelSerializer):
     def get_img_manifest_256(self, obj): return self._image_url(obj, "img_manifest_256")
     def get_img_manifest_128(self, obj): return self._image_url(obj, "img_manifest_128")
     def get_img_about(self, obj):        return self._image_url(obj, "img_about")
+    def get_img_hero(self, obj):         return self._image_url(obj, "img_hero")
 
 
 _TEXT_FIELDS = [
@@ -197,6 +200,7 @@ class SystemWriteSerializer(serializers.Serializer):
     img_manifest_256  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_manifest_128  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_about         = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    img_hero          = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     def validate(self, attrs):
         for field_name, cfg in _IMAGE_FIELDS.items():

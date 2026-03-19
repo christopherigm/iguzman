@@ -3,6 +3,7 @@ import { ThemeSwitch } from '@repo/ui/theme-switch';
 import { Box } from '@repo/ui/core-elements/box';
 import { Container } from '@repo/ui/core-elements/container';
 import { getSystem } from '@/lib/system';
+import { Hero } from '@/components/hero';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -15,31 +16,29 @@ export default async function Home({ params }: Props) {
   const system = await getSystem();
 
   return (
-    <Container
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      styles={{ minHeight: '100vh' }}
-    >
-      <Box
-        width={360}
-        padding={32}
-        borderRadius={12}
-        flexDirection="column"
-        alignItems="center"
-      >
-        <h1
-          style={{
-            fontSize: 24,
-            fontWeight: 600,
-            color: 'var(--foreground)',
-            marginBottom: 16,
-          }}
+    <>
+      <Hero system={system} />
+      <Container display="flex" alignItems="center" justifyContent="center">
+        <Box
+          width={360}
+          padding={32}
+          borderRadius={12}
+          flexDirection="column"
+          alignItems="center"
         >
-          {system?.site_name ?? 'Website'}
-        </h1>
-        <ThemeSwitch hideOnMobile />
-      </Box>
-    </Container>
+          <h1
+            style={{
+              fontSize: 24,
+              fontWeight: 600,
+              color: 'var(--foreground)',
+              marginBottom: 16,
+            }}
+          >
+            {system?.site_name ?? 'Website'}
+          </h1>
+          <ThemeSwitch hideOnMobile />
+        </Box>
+      </Container>
+    </>
   );
 }

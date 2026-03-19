@@ -26,6 +26,7 @@
     "@ffmpeg/util": "^0.12.2",
     "@repo/helpers": "workspace:*",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "react-player": "^2.16.0"
   }
 }

@@ -17,6 +17,7 @@ export interface System {
   img_manifest_512: string | null;
   img_manifest_256: string | null;
   img_manifest_128: string | null;
+  img_hero: string | null;
   video_link: string | null;
   primary_color: string;
   secondary_color: string;

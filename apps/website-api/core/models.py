@@ -174,6 +174,7 @@ class System(Common):
     img_manifest_256 = models.ImageField(null=True, blank=True, upload_to=picture)
     img_manifest_128 = models.ImageField(null=True, blank=True, upload_to=picture)
 
+    img_hero = models.ImageField(null=True, blank=True, upload_to=picture)
     video_link = models.URLField(max_length=255, null=True, blank=True)
     primary_color = models.CharField(max_length=16, null=False, blank=False, default="#2196f3")
     secondary_color = models.CharField(max_length=16, null=False, blank=False, default="#e040fb")
