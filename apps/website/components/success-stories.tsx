@@ -47,8 +47,6 @@ function StoryCard({
         <img className="story-card__image" src={story.image!} alt={name} />
       )}
 
-      <Box className="story-card__darken" />
-
       <Box
         className={`story-card__overlay${hasImage ? '' : ' story-card__overlay--no-image'}`}
       />
@@ -57,7 +55,12 @@ function StoryCard({
 
       <Box className="story-card__body">
         {name && (
-          <Typography as="h3" variant="none" color="#fff" className="story-card__name">
+          <Typography
+            as="h3"
+            variant="none"
+            color="#fff"
+            className="story-card__name"
+          >
             {name}
           </Typography>
         )}
@@ -94,11 +97,7 @@ function StoryCard({
     );
   }
 
-  return (
-    <article className="story-card">
-      {boxContent}
-    </article>
-  );
+  return <article className="story-card">{boxContent}</article>;
 }
 
 export async function SuccessStories() {
@@ -112,8 +111,10 @@ export async function SuccessStories() {
 
   return (
     <section className="stories-section">
-      <Typography as="h2" variant="none" className="stories-heading">{t('heading')}</Typography>
-      <Box className="stories-track">
+      <Typography as="h2" variant="none" className="section-title">
+        {t('heading')}
+      </Typography>
+      <Box className="stories-track" marginTop={20}>
         {stories.map((story) => (
           <StoryCard
             key={story.id}

@@ -206,6 +206,64 @@ class SuccessStory(MediumPicture):
         return self.name or f"Story #{self.pk}"
 
 
+class CompanyHighlight(MediumPicture):
+    """
+    A company highlight / spec entry linked to a System.
+
+    Examples: "Pioneering Hardware", "AI-Powered Navigation", pilot certifications,
+    tech features, fleet specs. Supports optional sub-items (CompanyHighlightItem)
+    for nested specs or feature icons.
+    """
+
+    system = models.ForeignKey(
+        "core.System",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="highlights",
+    )
+    SIZE_CHOICES = [
+        ("sm", "Small"),
+        ("md", "Medium"),
+        ("lg", "Large"),
+        ("xl", "Extra Large"),
+    ]
+
+    category = models.CharField(max_length=128, null=True, blank=True)
+    en_category = models.CharField(max_length=128, null=True, blank=True)
+    icon = models.CharField(max_length=512, null=True, blank=True)
+    size = models.CharField(max_length=4, choices=SIZE_CHOICES, default="md")
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Company Highlight"
+        verbose_name_plural = "Company Highlights"
+        ordering = ["sort_order", "-created"]
+
+    def __str__(self):
+        return self.name or f"Highlight #{self.pk}"
+
+
+class CompanyHighlightItem(SmallPicture):
+    """A sub-element (spec, feature icon) belonging to a CompanyHighlight."""
+
+    highlight = models.ForeignKey(
+        CompanyHighlight,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+    icon = models.CharField(max_length=512, null=True, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Company Highlight Item"
+        verbose_name_plural = "Company Highlight Items"
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return self.name or f"Item #{self.pk}"
+
+
 class System(Common):
     site_name = models.CharField(max_length=32, null=False, blank=False, default="Web Site")
     host = models.CharField(max_length=64, null=False, blank=False, default="127.0.0.1", unique=True)
@@ -231,6 +289,21 @@ class System(Common):
     vision = models.TextField(null=True, blank=True)
     en_vision = models.TextField(null=True, blank=True)
     img_about = models.ImageField(null=True, blank=True, upload_to=picture)
+
+    highlights_bg = models.CharField(
+        max_length=512,
+        null=True,
+        blank=True,
+        help_text=(
+            "CSS background value for the Company Highlights section "
+            "(e.g. 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' "
+            "or a solid color). Defaults to a gradient from primary/secondary colors."
+        ),
+    )
+    highlights_title = models.CharField(max_length=255, null=True, blank=True)
+    highlights_en_title = models.CharField(max_length=255, null=True, blank=True)
+    highlights_subtitle = models.TextField(null=True, blank=True)
+    highlights_en_subtitle = models.TextField(null=True, blank=True)
 
     privacy_policy = models.TextField(null=True, blank=True)
     en_privacy_policy = models.TextField(null=True, blank=True)

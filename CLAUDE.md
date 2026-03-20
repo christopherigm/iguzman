@@ -157,6 +157,44 @@ This keeps responsive behaviour consistent across every component and ensures a 
 - Name the CSS file after the component: `my-component.css` alongside `my-component.tsx`, then `import './my-component.css'` at the top of the component file.
 - `UIComponentProps` layout props (`padding`, `gap`, `width`, etc.) and the `styles` escape-hatch prop are the only acceptable inline styles — they are part of the `@repo/ui` design system contract.
 
+#### `globals.css` — shared utility classes (`apps/website`)
+
+`apps/website/app/globals.css` is the single source of truth for styles that recur across more than one component (headings, subtitles, shared card patterns, etc.).
+
+**Rules:**
+- **Before adding any style to a component CSS file, check whether an equivalent class already exists in `globals.css`.** If it does, use it.
+- **If a pattern appears in two or more components, move it to `globals.css`** and delete the duplicates from the component files.
+- **Component CSS files are for component-specific overrides only** — layout adjustments, local spacing tweaks, element-specific selectors that only make sense inside that one component.
+- Never redefine a utility class from `globals.css` inside a component file. Use a scoped override (e.g. `.my-header .section-title { margin-bottom: 0; }`) when the shared default needs a local adjustment.
+
+#### Shared utility classes currently in `globals.css`
+
+| Class | Use for |
+|---|---|
+| `.section-title` | `<h2>` (or any heading) that titles a page section |
+| `.section-subtitle` | Supporting paragraph beneath a section title |
+
+```tsx
+<Typography as="h2" variant="none" className="section-title">{title}</Typography>
+<Typography variant="none" className="section-subtitle">{subtitle}</Typography>
+```
+
+When adding a new shared utility class to `globals.css`, update this table so the catalogue stays current.
+
+### Link Convention
+
+- **Always use `Link` from `next/link` with the `prefetch` attribute** for internal navigation links instead of raw `<a>` tags.
+- Reserve `<a>` for external links (i.e. links that open in a new tab with `target="_blank"` or point to an external domain).
+
+```tsx
+// Internal link — use Link
+import Link from 'next/link';
+<Link href="/about" prefetch>About</Link>
+
+// External link — use <a>
+<a href="https://example.com" target="_blank" rel="noopener noreferrer">External</a>
+```
+
 ### Key Conventions
 
 - **Workspace dependencies** use `workspace:*` protocol: `"@repo/ui": "workspace:*"`

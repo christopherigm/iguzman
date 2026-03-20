@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 from PIL import Image
 from rest_framework import serializers
 
-from .models import SuccessStory, SuccessStoryImage, System
+from .models import CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
 
 # ---------------------------------------------------------------------------
 # Image processing
@@ -224,6 +224,157 @@ class SuccessStoryImageWriteSerializer(serializers.Serializer):
 
 
 # ---------------------------------------------------------------------------
+# Company Highlight serializers
+# ---------------------------------------------------------------------------
+
+_HIGHLIGHT_IMAGE_CFG = {"max_size": (512, 512), "quality": 85, "force_format": "JPEG"}
+_HIGHLIGHT_ITEM_IMAGE_CFG = {"max_size": (256, 256), "quality": 85, "force_format": "JPEG"}
+
+
+class CompanyHighlightItemSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CompanyHighlightItem
+        fields = [
+            "id", "enabled", "created", "modified",
+            "name", "en_name", "description", "en_description",
+            "image", "fit", "background_color", "href",
+            "icon", "sort_order",
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+
+class CompanyHighlightSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    items = CompanyHighlightItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CompanyHighlight
+        fields = [
+            "id", "enabled", "created", "modified", "version",
+            "system",
+            "category", "en_category",
+            "name", "en_name", "description", "en_description",
+            "image", "fit", "background_color", "href",
+            "icon", "size", "sort_order",
+            "items",
+        ]
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+
+class CompanyHighlightWriteSerializer(serializers.Serializer):
+    """Write serializer for CompanyHighlight — all fields optional (PATCH semantics)."""
+
+    system       = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
+    category     = serializers.CharField(max_length=128, required=False, allow_null=True, allow_blank=True)
+    en_category  = serializers.CharField(max_length=128, required=False, allow_null=True, allow_blank=True)
+    name         = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name      = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    description  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    href         = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    fit          = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
+    background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    icon         = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
+    size         = serializers.ChoiceField(choices=["sm", "md", "lg", "xl"], required=False)
+    sort_order   = serializers.IntegerField(min_value=0, required=False)
+    enabled      = serializers.BooleanField(required=False)
+    image        = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
+
+    def validate_image(self, value):
+        if value:
+            sub = ImageProcessingSerializer(data={"base64_image": value}, **_HIGHLIGHT_IMAGE_CFG)
+            if not sub.is_valid():
+                raise serializers.ValidationError(sub.errors["base64_image"])
+        return value
+
+    def save(self, instance):
+        scalar_fields = [
+            "system", "category", "en_category",
+            "name", "en_name", "description", "en_description",
+            "href", "fit", "background_color", "icon", "size", "sort_order", "enabled",
+        ]
+        update_fields = []
+        for field_name in scalar_fields:
+            if field_name in self.validated_data:
+                setattr(instance, field_name, self.validated_data[field_name])
+                update_fields.append(field_name)
+
+        image_value = self.validated_data.get("image")
+        if image_value:
+            proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_HIGHLIGHT_IMAGE_CFG)
+            proc.is_valid()
+            proc.save_to_field(instance.image, f"highlight_{instance.pk}.jpg")
+            update_fields.append("image")
+
+        if update_fields:
+            instance.save(update_fields=update_fields)
+
+        return instance
+
+
+class CompanyHighlightItemWriteSerializer(serializers.Serializer):
+    """Write serializer for CompanyHighlightItem — all fields optional (PATCH semantics)."""
+
+    name         = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    en_name      = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    description  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    href         = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    fit          = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
+    background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    icon         = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
+    sort_order   = serializers.IntegerField(min_value=0, required=False)
+    enabled      = serializers.BooleanField(required=False)
+    image        = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
+
+    def validate_image(self, value):
+        if value:
+            sub = ImageProcessingSerializer(data={"base64_image": value}, **_HIGHLIGHT_ITEM_IMAGE_CFG)
+            if not sub.is_valid():
+                raise serializers.ValidationError(sub.errors["base64_image"])
+        return value
+
+    def save(self, instance):
+        scalar_fields = [
+            "name", "en_name", "description", "en_description",
+            "href", "fit", "background_color", "icon", "sort_order", "enabled",
+        ]
+        update_fields = []
+        for field_name in scalar_fields:
+            if field_name in self.validated_data:
+                setattr(instance, field_name, self.validated_data[field_name])
+                update_fields.append(field_name)
+
+        image_value = self.validated_data.get("image")
+        if image_value:
+            proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_HIGHLIGHT_ITEM_IMAGE_CFG)
+            proc.is_valid()
+            proc.save_to_field(instance.image, f"highlightitem_{instance.pk}.jpg")
+            update_fields.append("image")
+
+        if update_fields:
+            instance.save(update_fields=update_fields)
+
+        return instance
+
+
+# ---------------------------------------------------------------------------
 # System image field configuration
 # ---------------------------------------------------------------------------
 
@@ -267,6 +418,9 @@ class SystemSerializer(serializers.ModelSerializer):
             "img_logo", "img_logo_hero", "img_favicon",
             "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_128",
             "img_hero", "video_link", "slogan", "primary_color", "secondary_color",
+            "highlights_bg",
+            "highlights_title", "highlights_en_title",
+            "highlights_subtitle", "highlights_en_subtitle",
             "about", "en_about",
             "mission", "en_mission",
             "vision", "en_vision",
@@ -298,6 +452,9 @@ class SystemSerializer(serializers.ModelSerializer):
 
 _TEXT_FIELDS = [
     "site_name", "host", "video_link", "slogan", "primary_color", "secondary_color",
+    "highlights_bg",
+    "highlights_title", "highlights_en_title",
+    "highlights_subtitle", "highlights_en_subtitle",
     "about", "en_about", "mission", "en_mission", "vision", "en_vision",
     "privacy_policy", "en_privacy_policy",
     "terms_and_conditions", "en_terms_and_conditions",
@@ -316,6 +473,11 @@ class SystemWriteSerializer(serializers.Serializer):
     slogan          = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     primary_color   = serializers.CharField(max_length=16, required=False)
     secondary_color = serializers.CharField(max_length=16, required=False)
+    highlights_bg   = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
+    highlights_title    = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    highlights_en_title = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    highlights_subtitle    = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    highlights_en_subtitle = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     enabled         = serializers.BooleanField(required=False)
 
     about               = serializers.CharField(required=False, allow_null=True, allow_blank=True)

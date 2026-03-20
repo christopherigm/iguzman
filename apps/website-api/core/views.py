@@ -5,8 +5,12 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import SuccessStory, SuccessStoryImage, System
+from .models import CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
 from .serializers import (
+    CompanyHighlightItemSerializer,
+    CompanyHighlightItemWriteSerializer,
+    CompanyHighlightSerializer,
+    CompanyHighlightWriteSerializer,
     SuccessStoryImageSerializer,
     SuccessStoryImageWriteSerializer,
     SuccessStorySerializer,
@@ -194,4 +198,164 @@ class SuccessStoryGalleryView(APIView):
         except SuccessStoryImage.DoesNotExist:
             return Response({"detail": "Image not found in gallery."}, status=status.HTTP_404_NOT_FOUND)
         story.gallery.remove(img)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CompanyHighlightListView(APIView):
+    """
+    GET  /api/highlights/   — list highlights for the current system (public).
+    POST /api/highlights/   — create a new highlight (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def _resolve_system(self, request):
+        host = (
+            request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()
+        ).split(":")[0]
+        return System.objects.filter(host=host, enabled=True).first()
+
+    def get(self, request):
+        system = self._resolve_system(request)
+        if system is None:
+            return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+        qs = CompanyHighlight.objects.filter(system=system, enabled=True).prefetch_related("items")
+        return Response(CompanyHighlightSerializer(qs, many=True, context={"request": request}).data)
+
+    def post(self, request):
+        serializer = CompanyHighlightWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = CompanyHighlight()
+        instance.save()
+        instance = serializer.save(instance)
+        return Response(
+            CompanyHighlightSerializer(instance, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CompanyHighlightDetailView(APIView):
+    """
+    GET    /api/highlights/<pk>/   — retrieve a highlight (public).
+    PATCH  /api/highlights/<pk>/   — partial update (admin only).
+    DELETE /api/highlights/<pk>/   — delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def _get_object(self, pk):
+        try:
+            return CompanyHighlight.objects.prefetch_related("items").get(pk=pk)
+        except CompanyHighlight.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(CompanyHighlightSerializer(instance, context={"request": request}).data)
+
+    def patch(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CompanyHighlightWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save(instance)
+        return Response(CompanyHighlightSerializer(instance, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CompanyHighlightItemsView(APIView):
+    """
+    GET  /api/highlights/<pk>/items/   — list items for a highlight (public).
+    POST /api/highlights/<pk>/items/   — create a new item (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def _get_highlight(self, pk):
+        try:
+            return CompanyHighlight.objects.get(pk=pk)
+        except CompanyHighlight.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        highlight = self._get_highlight(pk)
+        if highlight is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            CompanyHighlightItemSerializer(
+                highlight.items.all(), many=True, context={"request": request}
+            ).data
+        )
+
+    def post(self, request, pk):
+        highlight = self._get_highlight(pk)
+        if highlight is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CompanyHighlightItemWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        item = CompanyHighlightItem(highlight=highlight)
+        item.save()
+        item = serializer.save(item)
+        return Response(
+            CompanyHighlightItemSerializer(item, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CompanyHighlightItemDetailView(APIView):
+    """
+    GET    /api/highlights/<pk>/items/<item_pk>/   — retrieve an item (public).
+    PATCH  /api/highlights/<pk>/items/<item_pk>/   — partial update (admin only).
+    DELETE /api/highlights/<pk>/items/<item_pk>/   — delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def _get_item(self, pk, item_pk):
+        try:
+            return CompanyHighlightItem.objects.get(pk=item_pk, highlight_id=pk)
+        except CompanyHighlightItem.DoesNotExist:
+            return None
+
+    def get(self, request, pk, item_pk):
+        item = self._get_item(pk, item_pk)
+        if item is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(CompanyHighlightItemSerializer(item, context={"request": request}).data)
+
+    def patch(self, request, pk, item_pk):
+        item = self._get_item(pk, item_pk)
+        if item is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CompanyHighlightItemWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        item = serializer.save(item)
+        return Response(CompanyHighlightItemSerializer(item, context={"request": request}).data)
+
+    def delete(self, request, pk, item_pk):
+        item = self._get_item(pk, item_pk)
+        if item is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

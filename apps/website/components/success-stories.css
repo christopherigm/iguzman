@@ -1,16 +1,9 @@
 .stories-section {
   width: 100%;
-  padding: 48px 24px 56px;
+  padding: 48px 0 56px;
   box-sizing: border-box;
 }
 
-.stories-heading {
-  margin: 0 0 20px;
-  font-size: clamp(20px, 2.5vw, 26px);
-  font-weight: 700;
-  color: var(--foreground);
-  letter-spacing: -0.01em;
-}
 
 .stories-track {
   display: flex;
@@ -35,14 +28,15 @@
   display: block;
 }
 
-
-@media (min-width: 600px) { /* sm */
+@media (min-width: 600px) {
+  /* sm */
   .story-card {
     flex: 0 0 calc(44vw - 20px);
   }
 }
 
-@media (min-width: 1200px) { /* lg */
+@media (min-width: 1200px) {
+  /* lg */
   .story-card {
     flex: 0 0 clamp(260px, calc(28vw - 12px), 360px);
   }
@@ -54,25 +48,11 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.35s ease;
 }
 
-/* Upper darkening layer — fades out on hover to reveal the image */
-.story-card__darken {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: linear-gradient(
-    to top,
-    transparent 45%,
-    rgba(0, 0, 0, 0.45) 100%
-  );
-  opacity: 1;
-  transition: opacity 0.35s ease;
-  pointer-events: none;
-}
-
-.story-card:hover .story-card__darken {
-  opacity: 0;
+.story-card:hover .story-card__image {
+  transform: scale(1.1);
 }
 
 /* Bottom gradient — always visible to keep text readable */

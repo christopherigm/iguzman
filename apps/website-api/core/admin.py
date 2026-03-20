@@ -1,7 +1,40 @@
 from django.contrib import admin
 from django.core.cache import cache
 
-from .models import Brand, SuccessStory, SuccessStoryImage, System
+from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
+
+
+class CompanyHighlightItemInline(admin.TabularInline):
+    model = CompanyHighlightItem
+    extra = 0
+    fields = ("name", "en_name", "description", "icon", "image", "href", "sort_order", "enabled")
+    readonly_fields = ("created", "modified", "version")
+
+
+@admin.register(CompanyHighlight)
+class CompanyHighlightAdmin(admin.ModelAdmin):
+    list_display = ("name", "system", "category", "sort_order", "enabled", "modified")
+    list_filter = ("enabled", "system")
+    search_fields = ("name", "en_name", "category")
+    readonly_fields = ("created", "modified", "version")
+    inlines = [CompanyHighlightItemInline]
+    fieldsets = (
+        ("Identity", {
+            "fields": ("system", "enabled", "size", "sort_order", "version", "created", "modified"),
+        }),
+        ("Category", {
+            "fields": ("category", "en_category"),
+        }),
+        ("Content (ES)", {
+            "fields": ("name", "description"),
+        }),
+        ("Content (EN)", {
+            "fields": ("en_name", "en_description"),
+        }),
+        ("Media", {
+            "fields": ("image", "icon", "fit", "background_color", "href"),
+        }),
+    )
 
 
 @admin.register(SuccessStoryImage)
@@ -67,6 +100,13 @@ class SystemAdmin(admin.ModelAdmin):
         }),
         ("Media", {
             "fields": ("video_link", "slogan", "img_hero", "img_about"),
+        }),
+        ("Company Highlights Section", {
+            "fields": (
+                "highlights_bg",
+                "highlights_title", "highlights_en_title",
+                "highlights_subtitle", "highlights_en_subtitle",
+            ),
         }),
         ("Content (ES)", {
             "fields": ("about", "mission", "vision"),

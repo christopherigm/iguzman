@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, CSSProperties } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { UIComponentProps, buildStyleProps, MenuItem } from './utils';
 import { Container } from './container';
 import { Icon } from './icon';
@@ -103,7 +104,7 @@ const NavbarItem: React.FC<{
 
   return (
     <Tag className="ui-navbar-item" onClick={handleClick} {...linkProps}>
-      {item.icon && <Icon icon={item.icon} size="18px" />}
+      {item.icon && <Icon icon={item.icon} size="18px" className="ui-navbar-item-icon" />}
       {item.label}
       {hasChildren && (
         <Icon
@@ -331,12 +332,14 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     <div className="ui-navbar-inner">
       {/* Logo */}
       <div className="ui-navbar-logo">
-        <Image
-          src={logo}
-          alt={logoAlt}
-          width={computedLogoWidth}
-          height={logoHeight}
-        />
+        <Link href="/" prefetch>
+          <Image
+            src={logo}
+            alt={logoAlt}
+            width={computedLogoWidth}
+            height={logoHeight}
+          />
+        </Link>
       </div>
 
       {/* Spacer */}
@@ -420,7 +423,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        items={[...items, ...fixedItems]}
+        items={items}
         logo={logo}
         logoAlt={logoAlt}
         logoWidth={logoWidth}

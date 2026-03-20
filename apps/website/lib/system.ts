@@ -23,6 +23,11 @@ export interface System {
   slogan: string | null;
   primary_color: string;
   secondary_color: string;
+  highlights_bg: string | null;
+  highlights_title: string | null;
+  highlights_en_title: string | null;
+  highlights_subtitle: string | null;
+  highlights_en_subtitle: string | null;
   about: string;
   en_about: string;
   mission: string;
