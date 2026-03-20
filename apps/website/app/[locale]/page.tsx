@@ -4,6 +4,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Container } from '@repo/ui/core-elements/container';
 import { getSystem } from '@/lib/system';
 import { Hero } from '@/components/hero';
+import { SuccessStories } from '@/components/success-stories';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -18,7 +19,10 @@ export default async function Home({ params }: Props) {
   return (
     <>
       <Hero system={system} />
-      <Container display="flex" alignItems="center" justifyContent="center">
+      <Container paddingX={10}>
+        <SuccessStories />
+      </Container>
+      <Container display="flex" paddingX={10}>
         <Box
           width={360}
           padding={32}

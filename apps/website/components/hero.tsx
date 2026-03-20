@@ -12,6 +12,7 @@ export function Hero({ system }: Props) {
       backgroundImage={system?.img_hero}
       logoImage={system?.img_logo_hero}
       logoAlt={system?.site_name}
+      slogan={system?.slogan}
     />
   );
 }

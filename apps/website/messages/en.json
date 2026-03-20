@@ -71,6 +71,10 @@
     "invalidDetail": "This password reset link is invalid or has expired. Please request a new one.",
     "requestNewLink": "Request a new reset link"
   },
+  "SuccessStories": {
+    "heading": "Success Stories",
+    "readMore": "Read More"
+  },
   "VerifyEmailPage": {
     "loading": "Verifying your account, please wait…",
     "successTitle": "Email verified!",

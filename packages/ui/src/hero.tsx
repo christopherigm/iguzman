@@ -12,6 +12,8 @@ export type HeroProps = {
   logoAlt?: string;
   /** Alt text for the background image. */
   backgroundAlt?: string;
+  /** Slogan text rendered centred below the logo (or centred alone if no logo). */
+  slogan?: string | null;
   /** Additional styles applied to the outermost container. */
   style?: CSSProperties;
   className?: string;
@@ -40,6 +42,7 @@ export function Hero({
   logoImage,
   logoAlt = '',
   backgroundAlt = '',
+  slogan,
   style,
   className,
 }: HeroProps) {
@@ -93,28 +96,49 @@ export function Hero({
         }}
       />
 
-      {/* ── Centred logo ─────────────────────────────────────── */}
-      {logoImage && (
+      {/* ── Centred logo + slogan ─────────────────────────────── */}
+      {(logoImage || slogan) && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
+            gap: '1rem',
             zIndex: 2,
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={logoImage}
-            alt={logoAlt}
-            style={{
-              maxWidth: 'min(320px, 50%)',
-              maxHeight: '45%',
-              objectFit: 'contain',
-            }}
-          />
+          {logoImage && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoImage}
+                alt={logoAlt}
+                style={{
+                  maxWidth: 'min(320px, 50%)',
+                  maxHeight: '45%',
+                  objectFit: 'contain',
+                }}
+              />
+            </>
+          )}
+          {slogan && (
+            <p
+              style={{
+                margin: 0,
+                color: '#fff',
+                textAlign: 'center',
+                fontSize: 'clamp(1.25rem, 3vw, 2rem)',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                textShadow: '0 2px 8px rgba(0,0,0,0.7)',
+              }}
+            >
+              {slogan}
+            </p>
+          )}
         </div>
       )}
     </div>

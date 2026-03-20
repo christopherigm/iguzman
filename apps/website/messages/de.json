@@ -71,6 +71,10 @@
     "invalidDetail": "Dieser Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen an.",
     "requestNewLink": "Neuen Reset-Link anfordern"
   },
+  "SuccessStories": {
+    "heading": "Erfolgsgeschichten",
+    "readMore": "Mehr lesen"
+  },
   "VerifyEmailPage": {
     "loading": "Ihr Konto wird verifiziert, bitte warten…",
     "successTitle": "E-Mail verifiziert!",

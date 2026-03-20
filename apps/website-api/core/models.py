@@ -162,6 +162,50 @@ class Buyable(RegularPicture):
         abstract = True
 
 
+class SuccessStoryImage(MediumPicture):
+    """A single gallery image that can be attached to one or more SuccessStory entries."""
+
+    class Meta:
+        verbose_name = "Success Story Image"
+        verbose_name_plural = "Success Story Images"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name or f"Image #{self.pk}"
+
+
+class SuccessStory(MediumPicture):
+    """
+    A company success story linked to a System.
+
+    Inherits from MediumPicture (512 px) which provides:
+      - Common: enabled, created, modified, version
+      - BasePicture: name, en_name, description, en_description, href, fit, background_color
+      - MediumPicture: image (max 512 px)
+    """
+
+    system = models.ForeignKey(
+        "core.System",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="success_stories",
+    )
+    gallery = models.ManyToManyField(
+        SuccessStoryImage,
+        blank=True,
+        related_name="stories",
+    )
+
+    class Meta:
+        verbose_name = "Success Story"
+        verbose_name_plural = "Success Stories"
+        ordering = ["-created"]
+
+    def __str__(self):
+        return self.name or f"Story #{self.pk}"
+
+
 class System(Common):
     site_name = models.CharField(max_length=32, null=False, blank=False, default="Web Site")
     host = models.CharField(max_length=64, null=False, blank=False, default="127.0.0.1", unique=True)
@@ -176,6 +220,7 @@ class System(Common):
 
     img_hero = models.ImageField(null=True, blank=True, upload_to=picture)
     video_link = models.URLField(max_length=255, null=True, blank=True)
+    slogan = models.CharField(max_length=255, null=True, blank=True, default="Company slogan")
     primary_color = models.CharField(max_length=16, null=False, blank=False, default="#2196f3")
     secondary_color = models.CharField(max_length=16, null=False, blank=False, default="#e040fb")
 

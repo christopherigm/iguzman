@@ -1,7 +1,41 @@
 from django.contrib import admin
 from django.core.cache import cache
 
-from .models import Brand, System
+from .models import Brand, SuccessStory, SuccessStoryImage, System
+
+
+@admin.register(SuccessStoryImage)
+class SuccessStoryImageAdmin(admin.ModelAdmin):
+    list_display = ("name", "enabled", "modified")
+    list_filter = ("enabled",)
+    search_fields = ("name",)
+    readonly_fields = ("created", "modified", "version")
+
+
+@admin.register(SuccessStory)
+class SuccessStoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "system", "enabled", "modified")
+    list_filter = ("enabled", "system")
+    search_fields = ("name", "en_name", "description")
+    readonly_fields = ("created", "modified", "version")
+    filter_horizontal = ("gallery",)
+    fieldsets = (
+        ("Identity", {
+            "fields": ("system", "enabled", "version", "created", "modified"),
+        }),
+        ("Content (ES)", {
+            "fields": ("name", "description"),
+        }),
+        ("Content (EN)", {
+            "fields": ("en_name", "en_description"),
+        }),
+        ("Media", {
+            "fields": ("image", "fit", "background_color", "href"),
+        }),
+        ("Gallery", {
+            "fields": ("gallery",),
+        }),
+    )
 
 
 @admin.register(Brand)
@@ -32,7 +66,7 @@ class SystemAdmin(admin.ModelAdmin):
             ),
         }),
         ("Media", {
-            "fields": ("video_link", "img_hero", "img_about"),
+            "fields": ("video_link", "slogan", "img_hero", "img_about"),
         }),
         ("Content (ES)", {
             "fields": ("about", "mission", "vision"),

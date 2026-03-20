@@ -71,6 +71,10 @@
     "invalidDetail": "Este enlace para restablecer la contraseña es inválido o ha expirado. Por favor, solicita uno nuevo.",
     "requestNewLink": "Solicitar un nuevo enlace"
   },
+  "SuccessStories": {
+    "heading": "Historias de Éxito",
+    "readMore": "Leer más"
+  },
   "VerifyEmailPage": {
     "loading": "Verificando tu cuenta, por favor espera…",
     "successTitle": "¡Correo verificado!",

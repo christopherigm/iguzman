@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
+import { API_URL } from './config';
 import logger from './logger';
 
 export interface System {
@@ -19,6 +20,7 @@ export interface System {
   img_manifest_128: string | null;
   img_hero: string | null;
   video_link: string | null;
+  slogan: string | null;
   primary_color: string;
   secondary_color: string;
   about: string;
@@ -36,7 +38,6 @@ export interface System {
   en_user_data: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000';
 const SYSTEM_REVALIDATE = process.env.NODE_ENV === 'test' ? 3600 : 0;
 
 /**
