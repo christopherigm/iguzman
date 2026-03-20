@@ -1,6 +1,7 @@
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getSuccessStories, type SuccessStory } from '@/lib/success-stories';
 import { Box } from '@repo/ui/core-elements/box';
+import { Typography } from '@repo/ui/core-elements/typography';
 import './success-stories.css';
 
 function StoryCard({
@@ -46,27 +47,37 @@ function StoryCard({
         <img className="story-card__image" src={story.image!} alt={name} />
       )}
 
-      <div className="story-card__darken" />
+      <Box className="story-card__darken" />
 
-      <div
+      <Box
         className={`story-card__overlay${hasImage ? '' : ' story-card__overlay--no-image'}`}
       />
 
-      <div className="story-card__date">{date}</div>
+      <Box className="story-card__date">{date}</Box>
 
-      <div className="story-card__body">
-        {name && <h3 className="story-card__name">{name}</h3>}
+      <Box className="story-card__body">
+        {name && (
+          <Typography as="h3" variant="none" color="#fff" className="story-card__name">
+            {name}
+          </Typography>
+        )}
 
         {description && (
-          <p className="story-card__description">{description}</p>
+          <Typography
+            variant="none"
+            color="rgba(255,255,255,0.8)"
+            className="story-card__description"
+          >
+            {description}
+          </Typography>
         )}
 
         {story.href && (
-          <div className="story-card__cta">
+          <Box className="story-card__cta">
             <span className="story-card__cta-btn">{readMore} →</span>
-          </div>
+          </Box>
         )}
-      </div>
+      </Box>
     </Box>
   );
 
@@ -101,8 +112,8 @@ export async function SuccessStories() {
 
   return (
     <section className="stories-section">
-      <h2 className="stories-heading">{t('heading')}</h2>
-      <div className="stories-track">
+      <Typography as="h2" variant="none" className="stories-heading">{t('heading')}</Typography>
+      <Box className="stories-track">
         {stories.map((story) => (
           <StoryCard
             key={story.id}
@@ -111,7 +122,7 @@ export async function SuccessStories() {
             readMore={t('readMore')}
           />
         ))}
-      </div>
+      </Box>
     </section>
   );
 }

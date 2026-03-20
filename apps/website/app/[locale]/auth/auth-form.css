@@ -1,0 +1,38 @@
+.auth-form__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-form__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  margin-bottom: 4px;
+}
+
+.auth-form__tab-btn {
+  flex: 1;
+  padding: 10px 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted-foreground, #6b7280);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: -1px;
+}
+
+.auth-form__tab-btn[data-active='true'] {
+  font-weight: 600;
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+}
+
+.auth-form__error {
+  color: var(--error, #ef4444);
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--error-bg, rgba(239, 68, 68, 0.08));
+}

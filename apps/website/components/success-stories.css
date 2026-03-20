@@ -36,13 +36,13 @@
 }
 
 
-@media (min-width: 640px) {
+@media (min-width: 600px) { /* sm */
   .story-card {
     flex: 0 0 calc(44vw - 20px);
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1200px) { /* lg */
   .story-card {
     flex: 0 0 clamp(260px, calc(28vw - 12px), 360px);
   }

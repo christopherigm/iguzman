@@ -8,7 +8,9 @@ import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Button } from '@repo/ui/core-elements/button';
 import { LinkButton } from '@repo/ui/core-elements/link-button';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Typography } from '@repo/ui/core-elements/typography';
 import { confirmPasswordReset, ApiError } from '@/lib/auth';
+import './reset-password-client.css';
 
 type Status = 'idle' | 'loading' | 'success' | 'invalid';
 
@@ -19,18 +21,9 @@ interface Props {
 
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <p
-      role="alert"
-      style={{
-        fontSize: 13,
-        color: 'var(--error, #ef4444)',
-        padding: '8px 12px',
-        borderRadius: 6,
-        background: 'var(--error-bg, rgba(239,68,68,0.08))',
-      }}
-    >
+    <Typography variant="caption" role="alert" className="auth-form__error">
       {message}
-    </p>
+    </Typography>
   );
 }
 
@@ -94,21 +87,14 @@ export function ResetPasswordClient({ token, apiUrl }: Props) {
       }}
       paddingX={10}
     >
-      <div style={{ width: '100%', maxWidth: 420, marginBottom: 20 }}>
-        <h1
-          style={{
-            fontSize: 24,
-            fontWeight: 600,
-            color: 'var(--foreground)',
-            marginBottom: 4,
-          }}
-        >
+      <Box width="100%" maxWidth={420} marginBottom={20}>
+        <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {t('title')}
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--muted-foreground, #6b7280)' }}>
+        </Typography>
+        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
           {t('subtitle')}
-        </p>
-      </div>
+        </Typography>
+      </Box>
 
       <Box
         width="100%"
@@ -121,88 +107,54 @@ export function ResetPasswordClient({ token, apiUrl }: Props) {
         backgroundColor="var(--surface-1)"
       >
         {status === 'loading' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Box display="flex" flexDirection="column" gap={16}>
             <ProgressBar label={t('submitting')} />
-            <p
-              style={{
-                fontSize: 14,
-                color: 'var(--muted-foreground, #6b7280)',
-                textAlign: 'center',
-              }}
+            <Typography
+              variant="body-sm"
+              color="var(--muted-foreground, #6b7280)"
+              textAlign="center"
             >
               {t('submitting')}
-            </p>
-          </div>
+            </Typography>
+          </Box>
         )}
 
         {status === 'success' && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              alignItems: 'center',
-              textAlign: 'center',
-            }}
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={12}
+            alignItems="center"
+            styles={{ textAlign: 'center' }}
           >
-            <p
-              style={{
-                fontSize: 16,
-                fontWeight: 600,
-                color: 'var(--foreground)',
-              }}
-            >
-              {t('successTitle')}
-            </p>
-            <p
-              style={{
-                fontSize: 14,
-                color: 'var(--muted-foreground, #6b7280)',
-              }}
-            >
+            <Typography variant="h5">{t('successTitle')}</Typography>
+            <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
               {t('successDetail')}
-            </p>
+            </Typography>
             <LinkButton href="/auth" label={t('backToSignIn')} />
-          </div>
+          </Box>
         )}
 
         {status === 'invalid' && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              alignItems: 'center',
-              textAlign: 'center',
-            }}
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={12}
+            alignItems="center"
+            styles={{ textAlign: 'center' }}
           >
-            <p
-              role="alert"
-              style={{
-                fontSize: 16,
-                fontWeight: 600,
-                color: 'var(--error, #ef4444)',
-              }}
-            >
+            <Typography variant="h5" role="alert" color="var(--error, #ef4444)">
               {t('invalidTitle')}
-            </p>
-            <p
-              style={{
-                fontSize: 14,
-                color: 'var(--muted-foreground, #6b7280)',
-              }}
-            >
+            </Typography>
+            <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
               {t('invalidDetail')}
-            </p>
+            </Typography>
             <LinkButton href="/auth#reset-password" label={t('requestNewLink')} />
-          </div>
+          </Box>
         )}
 
         {status === 'idle' && (
-          <form
-            onSubmit={handleSubmit}
-            style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-          >
+          <form onSubmit={handleSubmit} className="reset-password__form">
             <TextInput
               label={t('newPasswordLabel')}
               type="password"
@@ -230,9 +182,9 @@ export function ResetPasswordClient({ token, apiUrl }: Props) {
                 marginTop: 4,
               }}
             />
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <Box display="flex" justifyContent="center">
               <LinkButton href="/auth#reset-password" label={t('requestNewLink')} />
-            </div>
+            </Box>
           </form>
         )}
       </Box>

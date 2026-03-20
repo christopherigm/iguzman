@@ -76,6 +76,7 @@ Most components extend `UIComponentProps`, which maps common CSS properties dire
 
 | Use case | Component | Key props |
 |---|---|---|
+| Headings, body text, labels | `Typography` | `variant?: 'none'\|'h1'…'h6'\|'body'\|'body-sm'\|'caption'\|'label'`, `as?` (HTML element override), `textAlign?`, `fontWeight?`, `role?` + UIComponentProps. Use `variant="none"` when a CSS class already defines all typography for an element. |
 | Generic `<div>` wrapper | `Box` | All `UIComponentProps` |
 | Centered max-width section | `Container` | `size?: 'xs'\|'sm'\|'md'\|'lg'\|'xl'`, `paddingX?` |
 | 12-col responsive layout | `Grid` | `container?`, `item?`, `size?: {xs,sm,md,lg,xl}` (1–12), `spacing?`, `spacingX?`, `spacingY?` |

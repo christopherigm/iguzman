@@ -9,6 +9,8 @@ import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Button } from '@repo/ui/core-elements/button';
 import { LinkButton } from '@repo/ui/core-elements/link-button';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Typography } from '@repo/ui/core-elements/typography';
+import './auth-form.css';
 import {
   login,
   storeTokens,
@@ -29,18 +31,9 @@ interface Props {
 
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <p
-      role="alert"
-      style={{
-        fontSize: 13,
-        color: 'var(--error, #ef4444)',
-        padding: '8px 12px',
-        borderRadius: 6,
-        background: 'var(--error-bg, rgba(239,68,68,0.08))',
-      }}
-    >
+    <Typography variant="caption" role="alert" className="auth-form__error">
       {message}
-    </p>
+    </Typography>
   );
 }
 
@@ -90,10 +83,7 @@ function SignInTab({
 
   return (
     <>
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-      >
+      <form onSubmit={handleSubmit} className="auth-form__form">
         <TextInput
           label={t('signIn.emailLabel')}
           type="email"
@@ -122,14 +112,7 @@ function SignInTab({
             marginTop: 4,
           }}
         />
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-            alignItems: 'center',
-          }}
-        >
+        <Box display="flex" flexDirection="column" gap={8} alignItems="center">
           <LinkButton
             onClick={() => switchTab('reset-password')}
             label={t('signIn.forgotPassword')}
@@ -138,7 +121,7 @@ function SignInTab({
             onClick={() => switchTab('sign-up')}
             label={t('signIn.noAccount')}
           />
-        </div>
+        </Box>
       </form>
     </>
   );
@@ -211,35 +194,26 @@ function SignUpTab({
 
   if (success) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
-          alignItems: 'center',
-          textAlign: 'center',
-        }}
+      <Box
+        display="flex"
+        flexDirection="column"
+        gap={16}
+        alignItems="center"
+        styles={{ textAlign: 'center' }}
       >
-        <p
-          style={{ fontSize: 14, color: 'var(--foreground)', lineHeight: 1.6 }}
-        >
-          {success}
-        </p>
+        <Typography variant="body-sm">{success}</Typography>
         <LinkButton
           onClick={() => switchTab('sign-in')}
           label={t('signUp.haveAccount')}
         />
-      </div>
+      </Box>
     );
   }
 
   return (
     <>
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-      >
-        <div style={{ display: 'flex', gap: 12 }}>
+      <form onSubmit={handleSubmit} className="auth-form__form">
+        <Box display="flex" gap={12}>
           <TextInput
             label={t('signUp.firstNameLabel')}
             type="text"
@@ -254,7 +228,7 @@ function SignUpTab({
             onChange={setLastName}
             autoComplete="family-name"
           />
-        </div>
+        </Box>
         <TextInput
           label={t('signUp.emailLabel')}
           type="email"
@@ -291,14 +265,7 @@ function SignUpTab({
             marginTop: 4,
           }}
         />
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-            alignItems: 'center',
-          }}
-        >
+        <Box display="flex" flexDirection="column" gap={8} alignItems="center">
           <LinkButton
             onClick={() => switchTab('sign-in')}
             label={t('signUp.haveAccount')}
@@ -307,7 +274,7 @@ function SignUpTab({
             onClick={() => switchTab('reset-password')}
             label={t('signUp.forgotPassword')}
           />
-        </div>
+        </Box>
       </form>
     </>
   );
@@ -348,26 +315,15 @@ function ResetPasswordTab({
   return (
     <>
       {success ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <p
-            style={{
-              fontSize: 14,
-              color: 'var(--foreground)',
-              lineHeight: 1.6,
-            }}
-          >
-            {success}
-          </p>
+        <Box display="flex" flexDirection="column" gap={16}>
+          <Typography variant="body-sm">{success}</Typography>
           <LinkButton
             onClick={() => switchTab('sign-in')}
             label={t('resetPassword.backToSignIn')}
           />
-        </div>
+        </Box>
       ) : (
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-        >
+        <form onSubmit={handleSubmit} className="auth-form__form">
           <TextInput
             label={t('resetPassword.emailLabel')}
             type="email"
@@ -392,12 +348,12 @@ function ResetPasswordTab({
               marginTop: 4,
             }}
           />
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <Box display="flex" justifyContent="center">
             <LinkButton
               onClick={() => switchTab('sign-in')}
               label={t('resetPassword.backToSignIn')}
             />
-          </div>
+          </Box>
         </form>
       )}
     </>
@@ -458,21 +414,14 @@ export function SignInForm({ systemId, apiUrl }: Props) {
       }}
       paddingX={10}
     >
-      <div style={{ width: '100%', maxWidth: 420, marginBottom: 20 }}>
-        <h1
-          style={{
-            fontSize: 24,
-            fontWeight: 600,
-            color: 'var(--foreground)',
-            marginBottom: 4,
-          }}
-        >
+      <Box width="100%" maxWidth={420} marginBottom={20}>
+        <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {title}
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--muted-foreground, #6b7280)' }}>
+        </Typography>
+        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
           {subtitle}
-        </p>
-      </div>
+        </Typography>
+      </Box>
       <Box
         width="100%"
         maxWidth={420}
@@ -483,41 +432,18 @@ export function SignInForm({ systemId, apiUrl }: Props) {
         elevation={5}
         backgroundColor="var(--surface-1)"
       >
-        <div
-          style={{
-            display: 'flex',
-            borderBottom: '1px solid var(--border, #e5e7eb)',
-            marginBottom: 4,
-          }}
-        >
+        <Box className="auth-form__tabs">
           {(['sign-in', 'sign-up', 'reset-password'] as Tab[]).map((id) => (
             <button
               key={id}
               onClick={() => switchTab(id)}
-              style={{
-                flex: 1,
-                padding: '10px 4px',
-                fontSize: 13,
-                fontWeight: tab === id ? 600 : 400,
-                color:
-                  tab === id
-                    ? 'var(--foreground)'
-                    : 'var(--muted-foreground, #6b7280)',
-                background: 'none',
-                border: 'none',
-                borderBottom:
-                  tab === id
-                    ? '2px solid var(--foreground)'
-                    : '2px solid transparent',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                marginBottom: -1,
-              }}
+              data-active={String(tab === id)}
+              className="auth-form__tab-btn"
             >
               {tabLabels[id]}
             </button>
           ))}
-        </div>
+        </Box>
 
         {tab === 'sign-in' && (
           <SignInTab

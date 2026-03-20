@@ -6,6 +6,7 @@ import { useRouter } from '@repo/i18n/navigation';
 import { Container } from '@repo/ui/core-elements/container';
 import { Box } from '@repo/ui/core-elements/box';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Typography } from '@repo/ui/core-elements/typography';
 import { verifyEmail, ApiError } from '@/lib/auth';
 
 type Status = 'loading' | 'success' | 'expired' | 'invalid';
@@ -74,88 +75,72 @@ export function VerifyEmailClient({ token, apiUrl }: Props) {
         backgroundColor="var(--surface-1)"
       >
         {status === 'loading' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Box display="flex" flexDirection="column" gap={16}>
             <ProgressBar label={t('loading')} />
-            <p
-              style={{
-                fontSize: 14,
-                color: 'var(--muted-foreground, #6b7280)',
-                textAlign: 'center',
-              }}
+            <Typography
+              variant="body-sm"
+              color="var(--muted-foreground, #6b7280)"
+              textAlign="center"
             >
               {t('loading')}
-            </p>
-          </div>
+            </Typography>
+          </Box>
         )}
 
         {status === 'success' && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              alignItems: 'center',
-              textAlign: 'center',
-            }}
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={12}
+            alignItems="center"
+            styles={{ textAlign: 'center' }}
           >
-            <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--foreground)' }}>
-              {t('successTitle')}
-            </p>
-            <p style={{ fontSize: 14, color: 'var(--muted-foreground, #6b7280)' }}>
+            <Typography variant="h5">{t('successTitle')}</Typography>
+            <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
               {t('successDetail')}
-            </p>
-            <p style={{ fontSize: 13, color: 'var(--muted-foreground, #6b7280)' }}>
+            </Typography>
+            <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
               {t('redirecting', { seconds: countdown })}
-            </p>
+            </Typography>
             <ProgressBar
               value={((REDIRECT_SECONDS - countdown) / REDIRECT_SECONDS) * 100}
               label={t('redirectProgress')}
             />
-          </div>
+          </Box>
         )}
 
         {status === 'expired' && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              alignItems: 'center',
-              textAlign: 'center',
-            }}
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={12}
+            alignItems="center"
+            styles={{ textAlign: 'center' }}
           >
-            <p
-              role="alert"
-              style={{ fontSize: 16, fontWeight: 600, color: 'var(--error, #ef4444)' }}
-            >
+            <Typography variant="h5" role="alert" color="var(--error, #ef4444)">
               {t('expiredTitle')}
-            </p>
-            <p style={{ fontSize: 14, color: 'var(--muted-foreground, #6b7280)' }}>
+            </Typography>
+            <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
               {t('expiredDetail')}
-            </p>
-          </div>
+            </Typography>
+          </Box>
         )}
 
         {status === 'invalid' && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              alignItems: 'center',
-              textAlign: 'center',
-            }}
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={12}
+            alignItems="center"
+            styles={{ textAlign: 'center' }}
           >
-            <p
-              role="alert"
-              style={{ fontSize: 16, fontWeight: 600, color: 'var(--error, #ef4444)' }}
-            >
+            <Typography variant="h5" role="alert" color="var(--error, #ef4444)">
               {t('invalidTitle')}
-            </p>
-            <p style={{ fontSize: 14, color: 'var(--muted-foreground, #6b7280)' }}>
+            </Typography>
+            <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
               {t('invalidDetail')}
-            </p>
-          </div>
+            </Typography>
+          </Box>
         )}
       </Box>
     </Container>
