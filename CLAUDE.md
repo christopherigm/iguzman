@@ -63,6 +63,99 @@ The download polling uses **Server-Sent Events** (`/api/download-video/[id]/stre
 
 Filter state in `VideoGrid` is stored in URL search params (`?platform=`, `?status=`, `?audio=`, `?per=`, `?page=`), making filters bookmarkable/shareable.
 
+### `@repo/ui` Component Library — Use These First
+
+**Rule:** When writing UI code in any app (especially `apps/website`), always prefer `@repo/ui` components over raw HTML elements or one-off implementations. Import from `@repo/ui`.
+
+#### `UIComponentProps` — shared layout props (all core-elements accept these)
+
+Most components extend `UIComponentProps`, which maps common CSS properties directly to props:
+`display`, `flexDirection`, `justifyContent`, `alignItems`, `flexWrap`, `flexGrow`, `gap`, `flex`, `alignSelf`, `order`, `width`, `height`, `minWidth`, `maxWidth`, `minHeight`, `maxHeight`, `padding`, `margin`, `marginTop`, `marginBottom`, `marginLeft`, `marginRight`, `marginInlineStart`, `marginInlineEnd`, `border`, `borderRadius`, `color`, `backgroundColor`, `shadow` (bool), `elevation` (number), `styles` (CSSProperties override), `className`, `id`, `children`.
+
+#### Core Elements (`packages/ui/src/core-elements/`)
+
+| Use case | Component | Key props |
+|---|---|---|
+| Generic `<div>` wrapper | `Box` | All `UIComponentProps` |
+| Centered max-width section | `Container` | `size?: 'xs'\|'sm'\|'md'\|'lg'\|'xl'`, `paddingX?` |
+| 12-col responsive layout | `Grid` | `container?`, `item?`, `size?: {xs,sm,md,lg,xl}` (1–12), `spacing?`, `spacingX?`, `spacingY?` |
+| Clickable button | `Button` | `text` (required), `href?`, `onClick?`, `type?`, `onHover?` + UIComponentProps |
+| Text/underline link | `LinkButton` | `label` (required), `href?`, `onClick?` |
+| Text field / textarea | `TextInput` | `label?`, `value?`, `onChange(v: string)?`, `type?`, `multirow?`, `rows?`, `placeholder?` + UIComponentProps |
+| Toggle / checkbox | `Switch` | `checked?`, `defaultChecked?`, `onChange(checked: boolean)?` |
+| Status tag / label | `Badge` | `children`, `variant?: 'filled'\|'outlined'\|'subtle'`, `size?: 'sm'\|'md'\|'lg'`, `color?`, `textColor?` |
+| SVG icon | `Icon` | `icon` (SVG path, required), `color?`, `size?`, `backgroundColor?`, `backgroundShape?: 'circle'\|'square'\|'triangle'`, `shadow?` |
+| Top navigation bar | `Navbar` | `logo` (required), `items?`, `fixedItems?`, `searchBox?`, `onSearch?`, `translucent?`, `themeSwitch?` |
+| Mobile slide-in menu | `Drawer` | `open`, `onClose`, `items`, `logo`, `themeSwitch?` |
+| Loading / progress | `ProgressBar` | `value?` (0–100, omit for indeterminate), `size?` (px height), `label?` |
+| Confirm dialog | `ConfirmationModal` | `title`, `text`, `okCallback`, `cancelCallback?` |
+
+#### Other UI exports (`packages/ui/src/`)
+
+| Component | Purpose |
+|---|---|
+| `ThemeProvider` | Wraps app; provides `--accent`, `--background`, etc. CSS vars |
+| `PaletteProvider` | Overrides accent palette |
+| `ThemeSwitch` | Light/dark toggle button |
+| `Hero` | Full-width hero section component |
+| `HeroVideo` | Hero section with background video |
+
+#### Import path convention
+
+Each core-element is imported by its individual file path (the wildcard export in `packages/ui/package.json` handles resolution automatically — no index file or registration needed):
+
+```tsx
+import { Box } from '@repo/ui/core-elements/box';
+import { Button } from '@repo/ui/core-elements/button';
+import { Grid } from '@repo/ui/core-elements/grid';
+// etc.
+```
+
+Top-level UI exports use their direct path:
+
+```tsx
+import { ThemeProvider } from '@repo/ui/theme-provider';
+import { Hero } from '@repo/ui/hero';
+```
+
+#### Adding or modifying a core element
+
+When creating a new component in `packages/ui/src/core-elements/` or changing the props of an existing one:
+
+1. **No package registration needed** — the `"./*": "./src/*.tsx"` wildcard export covers it automatically.
+2. **Always create a companion `.css` file** for the component's styles (see Styling Conventions below).
+3. **Update the component table in this file** (`CLAUDE.md`) to reflect the new or changed component and its key props. This must be done in the same task — never leave the table stale.
+
+### Breakpoints
+
+All responsive behaviour must align with the breakpoint scale defined in `packages/ui/src/core-elements/utils.ts`:
+
+```
+xs:   0 px   (mobile base)
+sm: 600 px
+md: 900 px
+lg: 1200 px
+xl: 1536 px
+```
+
+- **In TypeScript/TSX** — use the `Breakpoint` type and `BREAKPOINTS` record directly; never hardcode pixel values for breakpoint logic.
+- **In CSS** — use the same pixel values in `@media` queries and add an inline comment with the breakpoint name so the mapping stays clear:
+
+```css
+@media (min-width: 600px)  { /* sm */ }
+@media (min-width: 900px)  { /* md */ }
+@media (min-width: 1200px) { /* lg */ }
+@media (min-width: 1536px) { /* xl */ }
+```
+
+This keeps responsive behaviour consistent across every component and ensures a single place to update if the scale ever changes.
+
+### Styling Conventions
+
+- **Always use a separate `.css` file** for component-specific styles. Never use inline `style={{}}` objects or CSS-in-JS for custom component styles.
+- Name the CSS file after the component: `my-component.css` alongside `my-component.tsx`, then `import './my-component.css'` at the top of the component file.
+- `UIComponentProps` layout props (`padding`, `gap`, `width`, etc.) and the `styles` escape-hatch prop are the only acceptable inline styles — they are part of the `@repo/ui` design system contract.
+
 ### Key Conventions
 
 - **Workspace dependencies** use `workspace:*` protocol: `"@repo/ui": "workspace:*"`

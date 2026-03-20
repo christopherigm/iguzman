@@ -28,14 +28,9 @@
 
 .story-card {
   flex: 0 0 100%;
-  position: relative;
   height: 400px;
-  border-radius: 16px;
-  overflow: hidden;
   flex-shrink: 0;
   scroll-snap-align: start;
-  background-color: #111827;
-  box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.21), 0 4px 11px 0 rgba(0, 0, 0, 0.105);
   text-decoration: none;
   display: block;
 }
@@ -62,8 +57,7 @@
 }
 
 /* Upper darkening layer — fades out on hover to reveal the image */
-.story-card::before {
-  content: '';
+.story-card__darken {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -77,7 +71,7 @@
   pointer-events: none;
 }
 
-.story-card:hover::before {
+.story-card:hover .story-card__darken {
   opacity: 0;
 }
 

@@ -1,5 +1,6 @@
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getSuccessStories, type SuccessStory } from '@/lib/success-stories';
+import { Box } from '@repo/ui/core-elements/box';
 import './success-stories.css';
 
 function StoryCard({
@@ -28,12 +29,24 @@ function StoryCard({
   });
   const hasImage = Boolean(story.image);
 
-  const cardContent = (
-    <>
+  const boxContent = (
+    <Box
+      elevation={5}
+      borderRadius={12}
+      padding={10}
+      styles={{
+        position: 'relative',
+        height: '100%',
+        overflow: 'hidden',
+        backgroundColor: story.background_color ?? '#111827',
+      }}
+    >
       {hasImage && (
         // eslint-disable-next-line @next/next/no-img-element
         <img className="story-card__image" src={story.image!} alt={name} />
       )}
+
+      <div className="story-card__darken" />
 
       <div
         className={`story-card__overlay${hasImage ? '' : ' story-card__overlay--no-image'}`}
@@ -54,12 +67,8 @@ function StoryCard({
           </div>
         )}
       </div>
-    </>
+    </Box>
   );
-
-  const bgStyle = story.background_color
-    ? { backgroundColor: story.background_color }
-    : undefined;
 
   if (story.href) {
     return (
@@ -68,16 +77,15 @@ function StoryCard({
         target="_blank"
         rel="noopener noreferrer"
         className="story-card"
-        style={bgStyle}
       >
-        {cardContent}
+        {boxContent}
       </a>
     );
   }
 
   return (
-    <article className="story-card" style={bgStyle}>
-      {cardContent}
+    <article className="story-card">
+      {boxContent}
     </article>
   );
 }
