@@ -34,6 +34,10 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
   hosts:
+    - host: bdrone.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
     - host: website.iguzman.com.mx
       paths:
         - path: /
@@ -41,6 +45,7 @@ ingress:
   tls:
     - secretName: website-tls
       hosts:
+        - bdrone.com.mx
         - website.iguzman.com.mx
 
 # ─── Environment variables ──────────────────────────────────

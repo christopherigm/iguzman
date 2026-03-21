@@ -1,6 +1,7 @@
 from django.core.cache import cache
 
 from rest_framework import status
+from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -29,6 +30,21 @@ def _invalidate_pattern(pattern):
         cache.delete_pattern(pattern)
     except AttributeError:
         pass
+
+
+class SystemListView(APIView):
+    """GET /api/systems/ — list all enabled System records (admin only).
+
+    Uses BasicAuthentication so deployment scripts can authenticate without
+    a per-tenant JWT flow.
+    """
+
+    authentication_classes = [BasicAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        systems = System.objects.filter(enabled=True).values("id", "site_name", "host")
+        return Response(list(systems))
 
 
 class SystemView(APIView):

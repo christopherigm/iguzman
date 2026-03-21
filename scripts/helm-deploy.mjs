@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -101,6 +101,20 @@ if (!confirm.toLowerCase().startsWith('y')) {
   console.log('\n  Deployment cancelled.\n');
   rl.close();
   process.exit(0);
+}
+
+// ── Sync ingress hosts (website only) ─────────────────────────────────
+
+if (appName === 'website') {
+  console.log('\n  Syncing ingress hosts from website-api...\n');
+  const syncArgs = ['scripts/sync-website-hosts.mjs'];
+  if (autoYes) syncArgs.push('-y');
+  const syncResult = spawnSync('node', syncArgs, { cwd: ROOT, stdio: 'inherit' });
+  if (syncResult.status !== 0) {
+    console.error('\n  Error: Host sync failed — aborting deployment\n');
+    rl.close();
+    process.exit(1);
+  }
 }
 
 // ── Deploy ─────────────────────────────────────────────────────────────

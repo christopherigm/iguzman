@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.models import System
+
 CACHE_TTL = 300  # 5 minutes
 
 
@@ -25,6 +27,14 @@ def _invalidate_pattern(pattern):
         cache.delete_pattern(pattern)
     except AttributeError:
         pass
+
+
+def _resolve_system(request):
+    """Return the System matching the request host (via X-Website-Host or Host header)."""
+    host = (
+        request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()
+    ).split(":")[0]
+    return System.objects.filter(host=host, enabled=True).first()
 
 from .models import (
     ProductCategory, Product, ProductImage,
@@ -69,16 +79,23 @@ class ProductCategoryListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
-        cache_key = _list_key('catalog:product_categories', request.query_params)
+        system_id = request.query_params.get('system')
+        if system_id:
+            cache_key = _list_key('catalog:product_categories', request.query_params)
+        else:
+            system = _resolve_system(request)
+            if system is None:
+                return Response([], status=status.HTTP_200_OK)
+            system_id = system.id
+            params = dict(request.query_params)
+            params['system'] = system_id
+            cache_key = _list_key('catalog:product_categories', params)
+
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
-        qs = ProductCategory.objects.filter(enabled=True)
-
-        system_id = request.query_params.get('system')
-        if system_id:
-            qs = qs.filter(system_id=system_id)
+        qs = ProductCategory.objects.filter(enabled=True, system_id=system_id)
 
         parent_id = request.query_params.get('parent')
         if parent_id == 'null':
@@ -168,16 +185,23 @@ class ProductListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
-        cache_key = _list_key('catalog:products', request.query_params)
+        system_id = request.query_params.get('system')
+        if system_id:
+            cache_key = _list_key('catalog:products', request.query_params)
+        else:
+            system = _resolve_system(request)
+            if system is None:
+                return Response([], status=status.HTTP_200_OK)
+            system_id = system.id
+            params = dict(request.query_params)
+            params['system'] = system_id
+            cache_key = _list_key('catalog:products', params)
+
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
-        qs = Product.objects.filter(enabled=True).select_related('brand', 'category', 'system').prefetch_related('images', 'variants__option_values__option', 'variants__images')
-
-        system_id = request.query_params.get('system')
-        if system_id:
-            qs = qs.filter(system_id=system_id)
+        qs = Product.objects.filter(enabled=True, system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('images', 'variants__option_values__option', 'variants__images')
 
         category_id = request.query_params.get('category')
         if category_id:
@@ -347,16 +371,23 @@ class ServiceCategoryListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
-        cache_key = _list_key('catalog:service_categories', request.query_params)
+        system_id = request.query_params.get('system')
+        if system_id:
+            cache_key = _list_key('catalog:service_categories', request.query_params)
+        else:
+            system = _resolve_system(request)
+            if system is None:
+                return Response([], status=status.HTTP_200_OK)
+            system_id = system.id
+            params = dict(request.query_params)
+            params['system'] = system_id
+            cache_key = _list_key('catalog:service_categories', params)
+
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
-        qs = ServiceCategory.objects.filter(enabled=True)
-
-        system_id = request.query_params.get('system')
-        if system_id:
-            qs = qs.filter(system_id=system_id)
+        qs = ServiceCategory.objects.filter(enabled=True, system_id=system_id)
 
         parent_id = request.query_params.get('parent')
         if parent_id == 'null':
@@ -446,16 +477,23 @@ class ServiceListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
-        cache_key = _list_key('catalog:services', request.query_params)
+        system_id = request.query_params.get('system')
+        if system_id:
+            cache_key = _list_key('catalog:services', request.query_params)
+        else:
+            system = _resolve_system(request)
+            if system is None:
+                return Response([], status=status.HTTP_200_OK)
+            system_id = system.id
+            params = dict(request.query_params)
+            params['system'] = system_id
+            cache_key = _list_key('catalog:services', params)
+
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
 
-        qs = Service.objects.filter(enabled=True).select_related('brand', 'category', 'system').prefetch_related('variants__option_values__option')
-
-        system_id = request.query_params.get('system')
-        if system_id:
-            qs = qs.filter(system_id=system_id)
+        qs = Service.objects.filter(enabled=True, system_id=system_id).select_related('brand', 'category', 'system').prefetch_related('variants__option_values__option')
 
         category_id = request.query_params.get('category')
         if category_id:
@@ -558,14 +596,22 @@ class VariantOptionListCreateView(APIView):
         return [IsAdminUser()]
 
     def get(self, request):
-        cache_key = _list_key('catalog:variant_options', request.query_params)
+        system_id = request.query_params.get('system')
+        if system_id:
+            cache_key = _list_key('catalog:variant_options', request.query_params)
+        else:
+            system = _resolve_system(request)
+            if system is None:
+                return Response([], status=status.HTTP_200_OK)
+            system_id = system.id
+            params = dict(request.query_params)
+            params['system'] = system_id
+            cache_key = _list_key('catalog:variant_options', params)
+
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
-        qs = VariantOption.objects.filter(enabled=True).prefetch_related('values')
-        system_id = request.query_params.get('system')
-        if system_id:
-            qs = qs.filter(system_id=system_id)
+        qs = VariantOption.objects.filter(enabled=True, system_id=system_id).prefetch_related('values')
         data = VariantOptionSerializer(qs, many=True, context={'request': request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)

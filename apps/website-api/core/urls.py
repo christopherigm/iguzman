@@ -8,10 +8,12 @@ from .views import (
     SuccessStoryDetailView,
     SuccessStoryGalleryView,
     SuccessStoryListView,
+    SystemListView,
     SystemView,
 )
 
 urlpatterns = [
+    path("systems/", SystemListView.as_view(), name="system-list"),
     path("system/", SystemView.as_view(), name="system-detail"),
     path("system/<int:pk>/", SystemView.as_view(), name="system-update"),
 

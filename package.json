@@ -11,6 +11,7 @@
     "new-django-app": "node scripts/new-django-app.mjs",
     "docker": "node scripts/docker-build.mjs",
     "helm": "node scripts/helm-deploy.mjs",
+    "sync-website-hosts": "node scripts/sync-website-hosts.mjs",
     "deploy-app": "node scripts/deploy-app.mjs",
     "deploy-postgres": "node scripts/deploy-postgres.mjs",
     "deploy-mongodb": "node scripts/deploy-mongodb.mjs",
