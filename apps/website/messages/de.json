@@ -72,7 +72,12 @@
     "requestNewLink": "Neuen Reset-Link anfordern"
   },
   "CatalogCategories": {
-    "heading": "Unsere Produkte und Dienstleistungen"
+    "heading": "Kategorien"
+  },
+  "CatalogItems": {
+    "heading": "Empfohlen",
+    "productLabel": "Produkt",
+    "serviceLabel": "Dienst"
   },
   "SuccessStories": {
     "heading": "Erfolgsgeschichten",

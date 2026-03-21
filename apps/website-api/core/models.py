@@ -305,6 +305,17 @@ class System(Common):
     highlights_subtitle = models.TextField(null=True, blank=True)
     highlights_en_subtitle = models.TextField(null=True, blank=True)
 
+    catalog_items_bg = models.CharField(
+        max_length=512,
+        null=True,
+        blank=True,
+        help_text=(
+            "CSS background value for the Catalog Items section "
+            "(e.g. 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' "
+            "or a solid color). Defaults to transparent."
+        ),
+    )
+
     privacy_policy = models.TextField(null=True, blank=True)
     en_privacy_policy = models.TextField(null=True, blank=True)
     terms_and_conditions = models.TextField(null=True, blank=True)

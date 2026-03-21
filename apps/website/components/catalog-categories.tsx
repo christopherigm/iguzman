@@ -1,7 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { getTranslations, getLocale } from 'next-intl/server';
-import { getProductCategories, getServiceCategories, type ProductCategory, type ServiceCategory } from '@/lib/catalog';
+import {
+  getProductCategories,
+  getServiceCategories,
+  type ProductCategory,
+  type ServiceCategory,
+} from '@/lib/catalog';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Grid } from '@repo/ui/core-elements/grid';
@@ -18,35 +23,49 @@ interface CategoryCardProps {
   href: string;
 }
 
-function CategoryCard({ name, description, image, itemCount, type, href }: CategoryCardProps) {
+function CategoryCard({
+  name,
+  description,
+  image,
+  itemCount,
+  type,
+  href,
+}: CategoryCardProps) {
   const label = type === 'product' ? 'Product' : 'Service';
-  const countLabel = type === 'product'
-    ? `${itemCount} product${itemCount !== 1 ? 's' : ''}`
-    : `${itemCount} service${itemCount !== 1 ? 's' : ''}`;
+  const countLabel =
+    type === 'product'
+      ? `${itemCount} product${itemCount !== 1 ? 's' : ''}`
+      : `${itemCount} service${itemCount !== 1 ? 's' : ''}`;
 
   return (
-    <Link href={href} prefetch className={`category-card zoom-on-hover${image ? ' category-card--has-image' : ''}`}>
+    <Link
+      href={href}
+      prefetch
+      className={`category-card elevation-5 zoom-on-hover${image ? ' category-card--has-image' : ''}`}
+    >
       {image && (
         <Image fill className="category-card__image" src={image} alt={name} />
       )}
       {image && <Box className="category-card__overlay" />}
 
       <Box className="category-card__content card-content">
-        <span className={`category-card__badge category-card__badge--${type}`}>{label}</span>
+        <Typography as="span" variant="none" className={`category-card__badge category-card__badge--${type}`}>
+          {label}
+        </Typography>
 
         {name && (
-          <Typography as="h3" variant="none" className="category-card__name">
+          <Typography as="h3" variant="h3" className="category-card__name">
             {name}
           </Typography>
         )}
 
         {description && (
-          <Typography variant="none" className="category-card__description">
+          <Typography variant="body-sm" className="category-card__description">
             {description}
           </Typography>
         )}
 
-        <span className="category-card__count">{countLabel}</span>
+        <Typography as="span" variant="label" className="category-card__count">{countLabel}</Typography>
       </Box>
     </Link>
   );
@@ -60,21 +79,28 @@ export async function CatalogCategories() {
     getTranslations('CatalogCategories'),
   ]);
 
-  if (productCategories.length === 0 && serviceCategories.length === 0) return null;
+  if (productCategories.length === 0 && serviceCategories.length === 0)
+    return null;
 
   return (
     <section className="catalog-section">
       <Box className="highlights-header">
-        <Typography as="h2" variant="none" className="section-title">
+        <Typography as="h2" variant="h2" className="section-title">
           {t('heading')}
         </Typography>
       </Box>
       <Grid container spacing={2}>
         {productCategories.map((cat: ProductCategory) => {
           const name =
-            (locale === 'en' ? cat.en_name : cat.name) ?? cat.name ?? cat.en_name ?? '';
+            (locale === 'en' ? cat.en_name : cat.name) ??
+            cat.name ??
+            cat.en_name ??
+            '';
           const description =
-            (locale === 'en' ? cat.en_description : cat.description) ?? cat.description ?? cat.en_description ?? '';
+            (locale === 'en' ? cat.en_description : cat.description) ??
+            cat.description ??
+            cat.en_description ??
+            '';
           return (
             <Grid key={`product-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
               <CategoryCard
@@ -83,16 +109,22 @@ export async function CatalogCategories() {
                 image={cat.image}
                 itemCount={cat.item_count}
                 type="product"
-                href={`/products/${cat.slug}/`}
+                href={`/categories/products/${cat.slug}/`}
               />
             </Grid>
           );
         })}
         {serviceCategories.map((cat: ServiceCategory) => {
           const name =
-            (locale === 'en' ? cat.en_name : cat.name) ?? cat.name ?? cat.en_name ?? '';
+            (locale === 'en' ? cat.en_name : cat.name) ??
+            cat.name ??
+            cat.en_name ??
+            '';
           const description =
-            (locale === 'en' ? cat.en_description : cat.description) ?? cat.description ?? cat.en_description ?? '';
+            (locale === 'en' ? cat.en_description : cat.description) ??
+            cat.description ??
+            cat.en_description ??
+            '';
           return (
             <Grid key={`service-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
               <CategoryCard
@@ -101,7 +133,7 @@ export async function CatalogCategories() {
                 image={cat.image}
                 itemCount={cat.item_count}
                 type="service"
-                href={`/services/${cat.slug}/`}
+                href={`/categories/services/${cat.slug}/`}
               />
             </Grid>
           );

@@ -107,16 +107,11 @@
 /* Text */
 .highlight-card__name {
   margin: 0;
-  font-size: clamp(18px, 2.2vw, 24px);
-  font-weight: 700;
   color: #fff;
-  line-height: 1.25;
 }
 
 .highlight-card__description {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
   color: rgba(255, 255, 255, 0.72);
 }
 

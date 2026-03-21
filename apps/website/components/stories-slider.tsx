@@ -62,7 +62,7 @@ function StoryCard({
         {name && (
           <Typography
             as="h3"
-            variant="none"
+            variant="h3"
             color="#fff"
             className="story-card__name"
           >
@@ -72,7 +72,7 @@ function StoryCard({
 
         {description && (
           <Typography
-            variant="none"
+            variant="caption"
             color="rgba(255,255,255,0.8)"
             className="story-card__description"
           >
@@ -82,7 +82,7 @@ function StoryCard({
 
         {story.href && (
           <Box className="story-card__cta">
-            <span className="story-card__cta-btn">{readMore} →</span>
+            <Typography as="span" variant="none" className="story-card__cta-btn">{readMore} →</Typography>
           </Box>
         )}
       </Box>

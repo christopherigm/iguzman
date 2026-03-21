@@ -72,7 +72,12 @@
     "requestNewLink": "Demander un nouveau lien"
   },
   "CatalogCategories": {
-    "heading": "Nos produits et services"
+    "heading": "Catégories"
+  },
+  "CatalogItems": {
+    "heading": "En vedette",
+    "productLabel": "Produit",
+    "serviceLabel": "Service"
   },
   "SuccessStories": {
     "heading": "Histoires de Succès",

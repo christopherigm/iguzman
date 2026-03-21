@@ -1,7 +1,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
-import { getHighlights, type CompanyHighlight, type CompanyHighlightItem } from '@/lib/highlights';
+import {
+  getHighlights,
+  type CompanyHighlight,
+  type CompanyHighlightItem,
+} from '@/lib/highlights';
 import { getSystem } from '@/lib/system';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
@@ -26,9 +30,15 @@ function HighlightItemCard({ item }: { item: CompanyHighlightItem }) {
       {item.image ? (
         <Image fill src={item.image} alt={item.name ?? ''} />
       ) : item.icon && isIconPath(item.icon) ? (
-        <Image width={32} height={32} className="highlight-item__icon" src={item.icon} alt={item.name ?? ''} />
+        <Image
+          width={32}
+          height={32}
+          className="highlight-item__icon"
+          src={item.icon}
+          alt={item.name ?? ''}
+        />
       ) : (
-        <span style={{ fontSize: 24 }}>{item.icon ?? ''}</span>
+        <Typography as="span" variant="none" styles={{ fontSize: 24 }}>{item.icon ?? ''}</Typography>
       )}
     </Box>
   );
@@ -59,39 +69,50 @@ function HighlightCard({
 
   const hasImage = Boolean(highlight.image);
   const hasItems = highlight.items.length > 0;
-  const cardClass = `highlight-card highlight-card--${highlight.size}${hasImage ? ' highlight-card--has-image' : ''}`;
+  const cardClass = `highlight-card elevation-5 highlight-card--${highlight.size}${hasImage ? ' highlight-card--has-image' : ''}`;
 
   const cardBody = (
     <>
       {hasImage && (
-        <Image fill className="highlight-card__image" src={highlight.image!} alt={name} />
+        <Image
+          fill
+          className="highlight-card__image"
+          src={highlight.image!}
+          alt={name}
+        />
       )}
       {hasImage && <Box className="highlight-card__overlay" />}
 
       <Box className="highlight-card__content card-content">
         <Box className="highlight-card__left">
           {category && (
-            <span className="highlight-card__category">{category}</span>
+            <Typography as="span" variant="none" className="highlight-card__category">{category}</Typography>
           )}
 
           {highlight.icon && (
             <Box className="highlight-card__icon">
               {isIconPath(highlight.icon) ? (
-                <Image width={26} height={26} src={highlight.icon} alt="" aria-hidden={true} />
+                <Image
+                  width={26}
+                  height={26}
+                  src={highlight.icon}
+                  alt=""
+                  aria-hidden={true}
+                />
               ) : (
-                <span>{highlight.icon}</span>
+                <Typography as="span" variant="none">{highlight.icon}</Typography>
               )}
             </Box>
           )}
 
           {name && (
-            <Typography as="h3" variant="none" className="highlight-card__name">
+            <Typography as="h3" variant="h3" className="highlight-card__name">
               {name}
             </Typography>
           )}
 
           {description && (
-            <Typography variant="none" className="highlight-card__description">
+            <Typography variant="body-sm" className="highlight-card__description">
               {description}
             </Typography>
           )}
@@ -137,13 +158,17 @@ export async function CompanyHighlights() {
   if (highlights.length === 0) return null;
 
   const title =
-    (locale === 'en' ? system?.highlights_en_title : system?.highlights_title) ??
+    (locale === 'en'
+      ? system?.highlights_en_title
+      : system?.highlights_title) ??
     system?.highlights_title ??
     system?.highlights_en_title ??
     null;
 
   const subtitle =
-    (locale === 'en' ? system?.highlights_en_subtitle : system?.highlights_subtitle) ??
+    (locale === 'en'
+      ? system?.highlights_en_subtitle
+      : system?.highlights_subtitle) ??
     system?.highlights_subtitle ??
     system?.highlights_en_subtitle ??
     null;
@@ -153,7 +178,7 @@ export async function CompanyHighlights() {
       {(title || subtitle) && (
         <Box className="highlights-header">
           {title && (
-            <Typography as="h2" variant="none" className="section-title">
+            <Typography as="h2" variant="h2" className="section-title">
               {title}
             </Typography>
           )}
@@ -166,7 +191,10 @@ export async function CompanyHighlights() {
       )}
       <Grid container spacing={2}>
         {highlights.map((highlight) => (
-          <Grid key={highlight.id} size={HIGHLIGHT_GRID_SIZE[highlight.size] ?? { xs: 12 }}>
+          <Grid
+            key={highlight.id}
+            size={HIGHLIGHT_GRID_SIZE[highlight.size] ?? { xs: 12 }}
+          >
             <HighlightCard highlight={highlight} locale={locale} />
           </Grid>
         ))}

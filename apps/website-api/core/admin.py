@@ -150,6 +150,9 @@ class SystemAdmin(admin.ModelAdmin):
                 "highlights_subtitle", "highlights_en_subtitle",
             ),
         }),
+        ("Catalog Items Section", {
+            "fields": ("catalog_items_bg",),
+        }),
         ("Content (ES)", {
             "fields": ("about", "mission", "vision"),
             "classes": ("collapse",),

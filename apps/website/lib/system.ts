@@ -28,6 +28,7 @@ export interface System {
   highlights_en_title: string | null;
   highlights_subtitle: string | null;
   highlights_en_subtitle: string | null;
+  catalog_items_bg: string | null;
   about: string;
   en_about: string;
   mission: string;

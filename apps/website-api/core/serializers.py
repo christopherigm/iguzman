@@ -422,6 +422,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "highlights_bg",
             "highlights_title", "highlights_en_title",
             "highlights_subtitle", "highlights_en_subtitle",
+            "catalog_items_bg",
             "about", "en_about",
             "mission", "en_mission",
             "vision", "en_vision",
@@ -456,6 +457,7 @@ _TEXT_FIELDS = [
     "highlights_bg",
     "highlights_title", "highlights_en_title",
     "highlights_subtitle", "highlights_en_subtitle",
+    "catalog_items_bg",
     "about", "en_about", "mission", "en_mission", "vision", "en_vision",
     "privacy_policy", "en_privacy_policy",
     "terms_and_conditions", "en_terms_and_conditions",
@@ -479,6 +481,7 @@ class SystemWriteSerializer(serializers.Serializer):
     highlights_en_title = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     highlights_subtitle    = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     highlights_en_subtitle = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    catalog_items_bg = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
     enabled         = serializers.BooleanField(required=False)
 
     about               = serializers.CharField(required=False, allow_null=True, allow_blank=True)

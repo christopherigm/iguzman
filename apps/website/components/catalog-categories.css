@@ -91,10 +91,7 @@
 /* Title */
 .category-card__name {
   margin: 0;
-  font-size: clamp(18px, 2vw, 22px);
-  font-weight: 700;
   color: var(--on-surface);
-  line-height: 1.25;
 }
 
 .category-card--has-image .category-card__name {
@@ -104,8 +101,6 @@
 /* Description */
 .category-card__description {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
   color: var(--on-surface-muted, rgba(0, 0, 0, 0.55));
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -119,8 +114,6 @@
 
 /* Item count */
 .category-card__count {
-  font-size: 12px;
-  font-weight: 500;
   color: var(--on-surface-muted, rgba(0, 0, 0, 0.45));
 }
 

@@ -4,6 +4,13 @@
   box-sizing: border-box;
 }
 
+.stories-header {
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 /* Swiper container */
 .stories-swiper {
   padding-bottom: 44px !important; /* room for pagination dots */
@@ -79,10 +86,7 @@
 
 .story-card__name {
   margin: 0;
-  font-size: 17px;
-  font-weight: 700;
   color: #fff;
-  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -91,8 +95,6 @@
 
 .story-card__description {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.55;
   color: rgba(255, 255, 255, 0.8);
   display: -webkit-box;
   -webkit-line-clamp: 2;

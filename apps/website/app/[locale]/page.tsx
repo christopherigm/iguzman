@@ -6,6 +6,7 @@ import { Hero } from '@/components/hero';
 import { SuccessStories } from '@/components/success-stories';
 import { CompanyHighlights } from '@/components/company-highlights';
 import { CatalogCategories } from '@/components/catalog-categories';
+import { CatalogItems } from '@/components/catalog-items';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -21,6 +22,10 @@ export default async function Home({ params }: Props) {
     system?.highlights_bg ??
     `linear-gradient(135deg, ${system?.primary_color ?? '#2196f3'}1a 0%, ${system?.secondary_color ?? '#e040fb'}0d 100%)`;
 
+  const catalogItemsBg =
+    system?.catalog_items_bg ??
+    `linear-gradient(135deg, ${system?.secondary_color ?? '#e040fb'}0d 50%, ${system?.primary_color ?? '#177ed2'}1a 100%)`;
+
   return (
     <>
       <Hero system={system} />
@@ -35,6 +40,11 @@ export default async function Home({ params }: Props) {
       <Container paddingX={10}>
         <CatalogCategories />
       </Container>
+      <Box styles={{ width: '100%', background: catalogItemsBg }}>
+        <Container paddingX={10}>
+          <CatalogItems />
+        </Container>
+      </Box>
     </>
   );
 }

@@ -31,11 +31,6 @@ a {
    ────────────────────────────────────────────────────────────────────────── */
 .section-title {
   margin: 0 0 24px;
-  font-size: clamp(22px, 2.8vw, 32px);
-  font-weight: 700;
-  color: var(--foreground);
-  letter-spacing: -0.02em;
-  line-height: 1.2;
 }
 
 .section-subtitle {
@@ -64,3 +59,34 @@ a {
 .zoom-on-hover:hover img {
   transform: scale(1.1);
 }
+
+/* ── Elevation shadows ───────────────────────────────────────────────────────
+   Mirrors the getBoxShadow() formula from packages/ui/src/core-elements/utils.ts.
+   Use .elevation-<1–24> on any element (Link, div, etc.) to apply the same
+   shadow as Box elevation={n}. Values are pre-computed — do not edit by hand;
+   regenerate by running the formula in utils.ts for the desired range.
+   ────────────────────────────────────────────────────────────────────────── */
+.elevation-1  { box-shadow: 0 1px 2px 0px rgba(0,0,0,0.090), 0 1px 5px 0px rgba(0,0,0,0.045); }
+.elevation-2  { box-shadow: 0 1px 3px 0px rgba(0,0,0,0.120), 0 2px 7px 0px rgba(0,0,0,0.060); }
+.elevation-3  { box-shadow: 0 2px 4px 0px rgba(0,0,0,0.150), 0 2px 8px 0px rgba(0,0,0,0.075); }
+.elevation-4  { box-shadow: 0 2px 4px 0px rgba(0,0,0,0.180), 0 3px 10px 0px rgba(0,0,0,0.090); }
+.elevation-5  { box-shadow: 0 3px 5px 0px rgba(0,0,0,0.210), 0 4px 11px 0px rgba(0,0,0,0.105); }
+.elevation-6  { box-shadow: 0 3px 6px 0px rgba(0,0,0,0.240), 0 5px 13px 0px rgba(0,0,0,0.120); }
+.elevation-7  { box-shadow: 0 4px 7px 0px rgba(0,0,0,0.270), 0 6px 14px 0px rgba(0,0,0,0.135); }
+.elevation-8  { box-shadow: 0 4px 7px 0px rgba(0,0,0,0.300), 0 6px 16px 0px rgba(0,0,0,0.150); }
+.elevation-9  { box-shadow: 0 5px 8px 0px rgba(0,0,0,0.330), 0 7px 17px 0px rgba(0,0,0,0.165); }
+.elevation-10 { box-shadow: 0 5px 9px 1px rgba(0,0,0,0.360), 0 8px 19px 0px rgba(0,0,0,0.180); }
+.elevation-11 { box-shadow: 0 6px 10px 1px rgba(0,0,0,0.360), 0 9px 20px 0px rgba(0,0,0,0.195); }
+.elevation-12 { box-shadow: 0 6px 10px 1px rgba(0,0,0,0.360), 0 10px 22px 0px rgba(0,0,0,0.200); }
+.elevation-13 { box-shadow: 0 7px 11px 1px rgba(0,0,0,0.360), 0 10px 23px 0px rgba(0,0,0,0.200); }
+.elevation-14 { box-shadow: 0 7px 12px 1px rgba(0,0,0,0.360), 0 11px 25px 1px rgba(0,0,0,0.200); }
+.elevation-15 { box-shadow: 0 8px 13px 1px rgba(0,0,0,0.360), 0 12px 26px 1px rgba(0,0,0,0.200); }
+.elevation-16 { box-shadow: 0 8px 13px 1px rgba(0,0,0,0.360), 0 13px 28px 1px rgba(0,0,0,0.200); }
+.elevation-17 { box-shadow: 0 9px 14px 1px rgba(0,0,0,0.360), 0 14px 29px 1px rgba(0,0,0,0.200); }
+.elevation-18 { box-shadow: 0 9px 15px 1px rgba(0,0,0,0.360), 0 14px 31px 1px rgba(0,0,0,0.200); }
+.elevation-19 { box-shadow: 0 10px 16px 1px rgba(0,0,0,0.360), 0 15px 32px 1px rgba(0,0,0,0.200); }
+.elevation-20 { box-shadow: 0 10px 16px 2px rgba(0,0,0,0.360), 0 16px 34px 1px rgba(0,0,0,0.200); }
+.elevation-21 { box-shadow: 0 11px 17px 2px rgba(0,0,0,0.360), 0 17px 35px 1px rgba(0,0,0,0.200); }
+.elevation-22 { box-shadow: 0 11px 18px 2px rgba(0,0,0,0.360), 0 18px 37px 1px rgba(0,0,0,0.200); }
+.elevation-23 { box-shadow: 0 12px 19px 2px rgba(0,0,0,0.360), 0 18px 38px 1px rgba(0,0,0,0.200); }
+.elevation-24 { box-shadow: 0 12px 19px 2px rgba(0,0,0,0.360), 0 19px 40px 1px rgba(0,0,0,0.200); }
