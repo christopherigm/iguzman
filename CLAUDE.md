@@ -70,6 +70,18 @@ Filter state in `VideoGrid` is stored in URL search params (`?platform=`, `?stat
 
 **Rule:** When writing UI code in any Next.js app in `apps/`, always prefer `@repo/ui` components over raw HTML elements or one-off implementations. Import from `@repo/ui`.
 
+#### Mandatory usage rules
+
+These rules make the general preference above concrete. Each one defines the exact trigger that requires a specific component.
+
+| Trigger | Required component | Never do instead |
+|---|---|---|
+| Rendering an array of items in a responsive column grid | `<Grid container>` + `<Grid size={...}>` per item | One-off `display: grid` CSS wrapper in a component file |
+| Any centered, max-width page section | `<Container size="...">` | Custom `max-width` + `margin: auto` div |
+| Any heading, body copy, label, or caption | `<Typography as="h1–h6\|p\|span" variant="...">` | Bare `<h1>`–`<h6>`, `<p>`, `<span>` for content text |
+| Any structural `<div>` wrapper | `<Box>` | Bare `<div>` |
+| Any clickable button or internal-link button | `<Button>` or `<LinkButton>` | Bare `<button>` or `<a>` for internal navigation |
+
 #### `UIComponentProps` — shared layout props (all core-elements accept these)
 
 Most components extend `UIComponentProps`, which maps common CSS properties directly to props:
@@ -177,6 +189,7 @@ Each Next.js app in `apps/` has its own `app/globals.css`, which is the single s
 | `.section-title` | `<h2>` (or any heading) that titles a page section |
 | `.section-subtitle` | Supporting paragraph beneath a section title |
 | `.zoom-on-hover` | Card container with `overflow: hidden` — scales inner `<img>` to 1.1× on hover |
+| `.card-content` | Inner content wrapper of any card — standard padding (`16px` vertical, `10px` horizontal) |
 
 ```tsx
 <Typography as="h2" variant="none" className="section-title">{title}</Typography>
@@ -204,6 +217,33 @@ const t = await getTranslations('MyComponent');
 import { useTranslations } from 'next-intl';
 const t = useTranslations('MyComponent');
 <h2>{t('heading')}</h2>
+```
+
+### Image Convention
+
+- **Always use `<Image>` from `next/image`** instead of bare `<img>` tags for all images in any Next.js app in `apps/`.
+- For images that fill their parent container (background-style cards, cover photos), use the `fill` prop — the parent must have `position: relative`, defined dimensions, and `overflow: hidden`.
+- For images with known fixed dimensions (icons, thumbnails), use explicit `width` and `height` props.
+- **Before using `<Image>` with external URLs**, make sure the image hostname is allowlisted in `next.config.js` under `images.remotePatterns`. Without this, Next.js will refuse to serve the image at runtime.
+
+```tsx
+// External URL — add hostname to next.config.js remotePatterns first
+import Image from 'next/image';
+
+// Fill parent container
+<Image fill className="card__image" src={url} alt={description} />
+
+// Fixed dimensions
+<Image width={32} height={32} src={iconUrl} alt={label} />
+```
+
+```js
+// next.config.js — required for external image domains
+images: {
+  remotePatterns: [
+    { protocol: 'https', hostname: 'your-api-domain.com' },
+  ],
+},
 ```
 
 ### Link Convention

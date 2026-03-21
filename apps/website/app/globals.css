@@ -45,6 +45,14 @@ a {
   color: color-mix(in srgb, var(--foreground) 60%, transparent);
 }
 
+/* ── Card content padding ────────────────────────────────────────────────────
+   Standard inner padding for card content wrappers across apps/website.
+   Use on the content <div> inside any card-like component.
+   ────────────────────────────────────────────────────────────────────────── */
+.card-content {
+  padding: 16px 10px;
+}
+
 /* ── Card image zoom on hover ────────────────────────────────────────────────
    Apply .zoom-on-hover to any card container with overflow: hidden that
    contains an <img>. The image scales to 1.1× on hover.

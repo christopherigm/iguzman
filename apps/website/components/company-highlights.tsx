@@ -1,10 +1,20 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { getHighlights, type CompanyHighlight, type CompanyHighlightItem } from '@/lib/highlights';
 import { getSystem } from '@/lib/system';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
+import { Grid } from '@repo/ui/core-elements/grid';
+import type { GridSize } from '@repo/ui/core-elements/grid';
 import './company-highlights.css';
+
+const HIGHLIGHT_GRID_SIZE: Record<string, GridSize> = {
+  sm: { xs: 12, sm: 6, md: 3 },
+  md: { xs: 12, sm: 6, md: 4 },
+  lg: { xs: 12, sm: 12, md: 8 },
+  xl: { xs: 12 },
+};
 
 function isIconPath(icon: string): boolean {
   return icon.startsWith('/') || icon.startsWith('http');
@@ -14,11 +24,9 @@ function HighlightItemCard({ item }: { item: CompanyHighlightItem }) {
   return (
     <Box className="highlight-item">
       {item.image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.image} alt={item.name ?? ''} />
+        <Image fill src={item.image} alt={item.name ?? ''} />
       ) : item.icon && isIconPath(item.icon) ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="highlight-item__icon" src={item.icon} alt={item.name ?? ''} />
+        <Image width={32} height={32} className="highlight-item__icon" src={item.icon} alt={item.name ?? ''} />
       ) : (
         <span style={{ fontSize: 24 }}>{item.icon ?? ''}</span>
       )}
@@ -56,12 +64,11 @@ function HighlightCard({
   const cardBody = (
     <>
       {hasImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="highlight-card__image" src={highlight.image!} alt={name} />
+        <Image fill className="highlight-card__image" src={highlight.image!} alt={name} />
       )}
       {hasImage && <Box className="highlight-card__overlay" />}
 
-      <Box className="highlight-card__content">
+      <Box className="highlight-card__content card-content">
         <Box className="highlight-card__left">
           {category && (
             <span className="highlight-card__category">{category}</span>
@@ -70,8 +77,7 @@ function HighlightCard({
           {highlight.icon && (
             <Box className="highlight-card__icon">
               {isIconPath(highlight.icon) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={highlight.icon} alt="" aria-hidden="true" />
+                <Image width={26} height={26} src={highlight.icon} alt="" aria-hidden={true} />
               ) : (
                 <span>{highlight.icon}</span>
               )}
@@ -158,11 +164,13 @@ export async function CompanyHighlights() {
           )}
         </Box>
       )}
-      <Box className="highlights-grid">
+      <Grid container spacing={2}>
         {highlights.map((highlight) => (
-          <HighlightCard key={highlight.id} highlight={highlight} locale={locale} />
+          <Grid key={highlight.id} size={HIGHLIGHT_GRID_SIZE[highlight.size] ?? { xs: 12 }}>
+            <HighlightCard highlight={highlight} locale={locale} />
+          </Grid>
         ))}
-      </Box>
+      </Grid>
     </section>
   );
 }

@@ -1,8 +1,10 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getProductCategories, getServiceCategories, type ProductCategory, type ServiceCategory } from '@/lib/catalog';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
+import { Grid } from '@repo/ui/core-elements/grid';
 import './catalog-categories.css';
 
 type CategoryType = 'product' | 'service';
@@ -25,12 +27,11 @@ function CategoryCard({ name, description, image, itemCount, type, href }: Categ
   return (
     <Link href={href} prefetch className={`category-card zoom-on-hover${image ? ' category-card--has-image' : ''}`}>
       {image && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="category-card__image" src={image} alt={name} />
+        <Image fill className="category-card__image" src={image} alt={name} />
       )}
       {image && <Box className="category-card__overlay" />}
 
-      <Box className="category-card__content">
+      <Box className="category-card__content card-content">
         <span className={`category-card__badge category-card__badge--${type}`}>{label}</span>
 
         {name && (
@@ -61,42 +62,6 @@ export async function CatalogCategories() {
 
   if (productCategories.length === 0 && serviceCategories.length === 0) return null;
 
-  const productCards = productCategories.map((cat: ProductCategory) => {
-    const name =
-      (locale === 'en' ? cat.en_name : cat.name) ?? cat.name ?? cat.en_name ?? '';
-    const description =
-      (locale === 'en' ? cat.en_description : cat.description) ?? cat.description ?? cat.en_description ?? '';
-    return (
-      <CategoryCard
-        key={`product-${cat.id}`}
-        name={name}
-        description={description}
-        image={cat.image}
-        itemCount={cat.item_count}
-        type="product"
-        href={`/products/${cat.slug}/`}
-      />
-    );
-  });
-
-  const serviceCards = serviceCategories.map((cat: ServiceCategory) => {
-    const name =
-      (locale === 'en' ? cat.en_name : cat.name) ?? cat.name ?? cat.en_name ?? '';
-    const description =
-      (locale === 'en' ? cat.en_description : cat.description) ?? cat.description ?? cat.en_description ?? '';
-    return (
-      <CategoryCard
-        key={`service-${cat.id}`}
-        name={name}
-        description={description}
-        image={cat.image}
-        itemCount={cat.item_count}
-        type="service"
-        href={`/services/${cat.slug}/`}
-      />
-    );
-  });
-
   return (
     <section className="catalog-section">
       <Box className="highlights-header">
@@ -104,9 +69,44 @@ export async function CatalogCategories() {
           {t('heading')}
         </Typography>
       </Box>
-      <Box className="catalog-grid">
-        {[...productCards, ...serviceCards]}
-      </Box>
+      <Grid container spacing={2}>
+        {productCategories.map((cat: ProductCategory) => {
+          const name =
+            (locale === 'en' ? cat.en_name : cat.name) ?? cat.name ?? cat.en_name ?? '';
+          const description =
+            (locale === 'en' ? cat.en_description : cat.description) ?? cat.description ?? cat.en_description ?? '';
+          return (
+            <Grid key={`product-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
+              <CategoryCard
+                name={name}
+                description={description}
+                image={cat.image}
+                itemCount={cat.item_count}
+                type="product"
+                href={`/products/${cat.slug}/`}
+              />
+            </Grid>
+          );
+        })}
+        {serviceCategories.map((cat: ServiceCategory) => {
+          const name =
+            (locale === 'en' ? cat.en_name : cat.name) ?? cat.name ?? cat.en_name ?? '';
+          const description =
+            (locale === 'en' ? cat.en_description : cat.description) ?? cat.description ?? cat.en_description ?? '';
+          return (
+            <Grid key={`service-${cat.id}`} size={{ xs: 6, sm: 4, lg: 3 }}>
+              <CategoryCard
+                name={name}
+                description={description}
+                image={cat.image}
+                itemCount={cat.item_count}
+                type="service"
+                href={`/services/${cat.slug}/`}
+              />
+            </Grid>
+          );
+        })}
+      </Grid>
     </section>
   );
 }
