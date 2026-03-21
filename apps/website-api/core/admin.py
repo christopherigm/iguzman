@@ -4,6 +4,14 @@ from django.core.cache import cache
 from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
 
 
+def _invalidate_pattern(pattern):
+    """Delete all keys matching a glob pattern (Redis only; silently skipped on LocMemCache)."""
+    try:
+        cache.delete_pattern(pattern)
+    except AttributeError:
+        pass
+
+
 class CompanyHighlightItemInline(admin.TabularInline):
     model = CompanyHighlightItem
     extra = 0
@@ -36,6 +44,20 @@ class CompanyHighlightAdmin(admin.ModelAdmin):
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f"core:highlight:{obj.pk}")
+        cache.delete(f"core:highlight_items:{obj.pk}")
+        _invalidate_pattern("core:highlight_item:*")
+        _invalidate_pattern("core:highlights:*")
+
+    def delete_model(self, request, obj):
+        cache.delete(f"core:highlight:{obj.pk}")
+        cache.delete(f"core:highlight_items:{obj.pk}")
+        _invalidate_pattern("core:highlight_item:*")
+        _invalidate_pattern("core:highlights:*")
+        super().delete_model(request, obj)
+
 
 @admin.register(SuccessStoryImage)
 class SuccessStoryImageAdmin(admin.ModelAdmin):
@@ -43,6 +65,14 @@ class SuccessStoryImageAdmin(admin.ModelAdmin):
     list_filter = ("enabled",)
     search_fields = ("name",)
     readonly_fields = ("created", "modified", "version")
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        _invalidate_pattern("core:success_story*")
+
+    def delete_model(self, request, obj):
+        _invalidate_pattern("core:success_story*")
+        super().delete_model(request, obj)
 
 
 @admin.register(SuccessStory)
@@ -69,6 +99,18 @@ class SuccessStoryAdmin(admin.ModelAdmin):
             "fields": ("gallery",),
         }),
     )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f"core:success_story:{obj.pk}")
+        cache.delete(f"core:success_story_gallery:{obj.pk}")
+        _invalidate_pattern("core:success_stories:*")
+
+    def delete_model(self, request, obj):
+        cache.delete(f"core:success_story:{obj.pk}")
+        cache.delete(f"core:success_story_gallery:{obj.pk}")
+        _invalidate_pattern("core:success_stories:*")
+        super().delete_model(request, obj)
 
 
 @admin.register(Brand)

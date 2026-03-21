@@ -20,6 +20,15 @@ from .serializers import (
 )
 
 SYSTEM_CACHE_TTL = 3600  # 1 hour
+CACHE_TTL = 300  # 5 minutes
+
+
+def _invalidate_pattern(pattern):
+    """Delete all keys matching a glob pattern (Redis only; silently skipped on LocMemCache)."""
+    try:
+        cache.delete_pattern(pattern)
+    except AttributeError:
+        pass
 
 
 class SystemView(APIView):
@@ -90,8 +99,14 @@ class SuccessStoryListView(APIView):
         system = self._resolve_system(request)
         if system is None:
             return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+        cache_key = f"core:success_stories:{system.host}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         qs = SuccessStory.objects.filter(system=system, enabled=True).prefetch_related("gallery")
-        return Response(SuccessStorySerializer(qs, many=True, context={"request": request}).data)
+        data = SuccessStorySerializer(qs, many=True, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request):
         serializer = SuccessStoryWriteSerializer(data=request.data)
@@ -99,6 +114,7 @@ class SuccessStoryListView(APIView):
         instance = SuccessStory()
         instance.save()  # get PK before image upload
         instance = serializer.save(instance)
+        _invalidate_pattern("core:success_stories:*")
         return Response(
             SuccessStorySerializer(instance, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -124,10 +140,16 @@ class SuccessStoryDetailView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f"core:success_story:{pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         instance = self._get_object(pk)
         if instance is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(SuccessStorySerializer(instance, context={"request": request}).data)
+        data = SuccessStorySerializer(instance, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def patch(self, request, pk):
         instance = self._get_object(pk)
@@ -136,6 +158,8 @@ class SuccessStoryDetailView(APIView):
         serializer = SuccessStoryWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save(instance)
+        cache.delete(f"core:success_story:{pk}")
+        _invalidate_pattern("core:success_stories:*")
         return Response(SuccessStorySerializer(instance, context={"request": request}).data)
 
     def delete(self, request, pk):
@@ -143,6 +167,9 @@ class SuccessStoryDetailView(APIView):
         if instance is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         instance.delete()
+        cache.delete(f"core:success_story:{pk}")
+        cache.delete(f"core:success_story_gallery:{pk}")
+        _invalidate_pattern("core:success_stories:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -165,14 +192,18 @@ class SuccessStoryGalleryView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f"core:success_story_gallery:{pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         story = self._get_story(pk)
         if story is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(
-            SuccessStoryImageSerializer(
-                story.gallery.all(), many=True, context={"request": request}
-            ).data
-        )
+        data = SuccessStoryImageSerializer(
+            story.gallery.all(), many=True, context={"request": request}
+        ).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request, pk):
         story = self._get_story(pk)
@@ -184,6 +215,9 @@ class SuccessStoryGalleryView(APIView):
         img.save()
         img = serializer.save(img)
         story.gallery.add(img)
+        cache.delete(f"core:success_story_gallery:{pk}")
+        cache.delete(f"core:success_story:{pk}")
+        _invalidate_pattern("core:success_stories:*")
         return Response(
             SuccessStoryImageSerializer(img, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -198,6 +232,9 @@ class SuccessStoryGalleryView(APIView):
         except SuccessStoryImage.DoesNotExist:
             return Response({"detail": "Image not found in gallery."}, status=status.HTTP_404_NOT_FOUND)
         story.gallery.remove(img)
+        cache.delete(f"core:success_story_gallery:{pk}")
+        cache.delete(f"core:success_story:{pk}")
+        _invalidate_pattern("core:success_stories:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -222,8 +259,14 @@ class CompanyHighlightListView(APIView):
         system = self._resolve_system(request)
         if system is None:
             return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+        cache_key = f"core:highlights:{system.host}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         qs = CompanyHighlight.objects.filter(system=system, enabled=True).prefetch_related("items")
-        return Response(CompanyHighlightSerializer(qs, many=True, context={"request": request}).data)
+        data = CompanyHighlightSerializer(qs, many=True, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request):
         serializer = CompanyHighlightWriteSerializer(data=request.data)
@@ -231,6 +274,7 @@ class CompanyHighlightListView(APIView):
         instance = CompanyHighlight()
         instance.save()
         instance = serializer.save(instance)
+        _invalidate_pattern("core:highlights:*")
         return Response(
             CompanyHighlightSerializer(instance, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -256,10 +300,16 @@ class CompanyHighlightDetailView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f"core:highlight:{pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         instance = self._get_object(pk)
         if instance is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(CompanyHighlightSerializer(instance, context={"request": request}).data)
+        data = CompanyHighlightSerializer(instance, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def patch(self, request, pk):
         instance = self._get_object(pk)
@@ -268,6 +318,8 @@ class CompanyHighlightDetailView(APIView):
         serializer = CompanyHighlightWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save(instance)
+        cache.delete(f"core:highlight:{pk}")
+        _invalidate_pattern("core:highlights:*")
         return Response(CompanyHighlightSerializer(instance, context={"request": request}).data)
 
     def delete(self, request, pk):
@@ -275,6 +327,9 @@ class CompanyHighlightDetailView(APIView):
         if instance is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         instance.delete()
+        cache.delete(f"core:highlight:{pk}")
+        cache.delete(f"core:highlight_items:{pk}")
+        _invalidate_pattern("core:highlights:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -296,14 +351,18 @@ class CompanyHighlightItemsView(APIView):
             return None
 
     def get(self, request, pk):
+        cache_key = f"core:highlight_items:{pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         highlight = self._get_highlight(pk)
         if highlight is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(
-            CompanyHighlightItemSerializer(
-                highlight.items.all(), many=True, context={"request": request}
-            ).data
-        )
+        data = CompanyHighlightItemSerializer(
+            highlight.items.all(), many=True, context={"request": request}
+        ).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def post(self, request, pk):
         highlight = self._get_highlight(pk)
@@ -314,6 +373,9 @@ class CompanyHighlightItemsView(APIView):
         item = CompanyHighlightItem(highlight=highlight)
         item.save()
         item = serializer.save(item)
+        cache.delete(f"core:highlight_items:{pk}")
+        cache.delete(f"core:highlight:{pk}")
+        _invalidate_pattern("core:highlights:*")
         return Response(
             CompanyHighlightItemSerializer(item, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -339,10 +401,16 @@ class CompanyHighlightItemDetailView(APIView):
             return None
 
     def get(self, request, pk, item_pk):
+        cache_key = f"core:highlight_item:{item_pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
         item = self._get_item(pk, item_pk)
         if item is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(CompanyHighlightItemSerializer(item, context={"request": request}).data)
+        data = CompanyHighlightItemSerializer(item, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
     def patch(self, request, pk, item_pk):
         item = self._get_item(pk, item_pk)
@@ -351,6 +419,10 @@ class CompanyHighlightItemDetailView(APIView):
         serializer = CompanyHighlightItemWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         item = serializer.save(item)
+        cache.delete(f"core:highlight_item:{item_pk}")
+        cache.delete(f"core:highlight_items:{pk}")
+        cache.delete(f"core:highlight:{pk}")
+        _invalidate_pattern("core:highlights:*")
         return Response(CompanyHighlightItemSerializer(item, context={"request": request}).data)
 
     def delete(self, request, pk, item_pk):
@@ -358,4 +430,8 @@ class CompanyHighlightItemDetailView(APIView):
         if item is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         item.delete()
+        cache.delete(f"core:highlight_item:{item_pk}")
+        cache.delete(f"core:highlight_items:{pk}")
+        cache.delete(f"core:highlight:{pk}")
+        _invalidate_pattern("core:highlights:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
