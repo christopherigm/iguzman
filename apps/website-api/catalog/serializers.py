@@ -17,14 +17,28 @@ from .models import (
 # ---------------------------------------------------------------------------
 
 class ProductCategorySerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    item_count = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductCategory
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
-            'description', 'en_description',
+            'description', 'en_description', 'image', 'item_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+    def get_item_count(self, obj):
+        return obj.products.filter(enabled=True).count()
 
 
 class ProductCategoryWriteSerializer(serializers.ModelSerializer):
@@ -592,14 +606,28 @@ class ProductWriteSerializer(serializers.Serializer):
 # ---------------------------------------------------------------------------
 
 class ServiceCategorySerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    item_count = serializers.SerializerMethodField()
+
     class Meta:
         model = ServiceCategory
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
             'system', 'parent', 'name', 'en_name', 'slug',
-            'description', 'en_description',
+            'description', 'en_description', 'image', 'item_count',
         ]
         read_only_fields = ['id', 'created', 'modified', 'version']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+    def get_item_count(self, obj):
+        return obj.services.filter(enabled=True).count()
 
 
 class ServiceCategoryWriteSerializer(serializers.ModelSerializer):

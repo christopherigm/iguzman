@@ -48,11 +48,6 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.35s ease;
-}
-
-.story-card:hover .story-card__image {
-  transform: scale(1.1);
 }
 
 /* Bottom gradient — always visible to keep text readable */

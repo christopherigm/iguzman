@@ -43,15 +43,10 @@ export interface System {
   en_user_data: string;
 }
 
-const SYSTEM_REVALIDATE = process.env.NODE_ENV === 'test' ? 3600 : 0;
-
 /**
  * Fetches the System record matching the current request host.
- *
- * - React.cache() deduplicates repeated calls within the same request
- *   (layout + generateMetadata + page all share one fetch).
- * - next: { revalidate: 3600 } caches the response in the Next.js Data
- *   Cache for 1 hour, avoiding repeated upstream calls across requests.
+ * React.cache() deduplicates repeated calls within the same request
+ * (layout + generateMetadata + page all share one fetch).
  */
 export const getSystem = cache(async (): Promise<System | null> => {
   const headersList = await headers();
@@ -64,7 +59,6 @@ export const getSystem = cache(async (): Promise<System | null> => {
         // System record (the Django view reads HTTP_X_WEBSITE_HOST first).
         'X-Website-Host': host,
       },
-      next: { revalidate: SYSTEM_REVALIDATE },
     });
 
     if (!res.ok) {

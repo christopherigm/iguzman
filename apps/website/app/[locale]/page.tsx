@@ -5,6 +5,7 @@ import { getSystem } from '@/lib/system';
 import { Hero } from '@/components/hero';
 import { SuccessStories } from '@/components/success-stories';
 import { CompanyHighlights } from '@/components/company-highlights';
+import { CatalogCategories } from '@/components/catalog-categories';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -31,6 +32,9 @@ export default async function Home({ params }: Props) {
           <CompanyHighlights />
         </Container>
       </Box>
+      <Container paddingX={10}>
+        <CatalogCategories />
+      </Container>
     </>
   );
 }

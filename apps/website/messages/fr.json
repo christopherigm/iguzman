@@ -71,6 +71,9 @@
     "invalidDetail": "Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.",
     "requestNewLink": "Demander un nouveau lien"
   },
+  "CatalogCategories": {
+    "heading": "Nos produits et services"
+  },
   "SuccessStories": {
     "heading": "Histoires de Succès",
     "readMore": "En savoir plus"

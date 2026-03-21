@@ -39,7 +39,6 @@ export const getSuccessStories = cache(async (): Promise<SuccessStory[]> => {
   try {
     const res = await fetch(`${API_URL}/api/success-stories/`, {
       headers: { 'X-Website-Host': host },
-      next: { revalidate: 3600 },
     });
 
     if (!res.ok) {

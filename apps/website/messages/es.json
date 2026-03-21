@@ -71,6 +71,9 @@
     "invalidDetail": "Este enlace para restablecer la contraseña es inválido o ha expirado. Por favor, solicita uno nuevo.",
     "requestNewLink": "Solicitar un nuevo enlace"
   },
+  "CatalogCategories": {
+    "heading": "Nuestros productos y servicios"
+  },
   "SuccessStories": {
     "heading": "Historias de Éxito",
     "readMore": "Leer más"

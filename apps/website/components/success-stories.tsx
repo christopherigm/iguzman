@@ -90,14 +90,14 @@ function StoryCard({
         href={story.href}
         target="_blank"
         rel="noopener noreferrer"
-        className="story-card"
+        className="story-card zoom-on-hover"
       >
         {boxContent}
       </a>
     );
   }
 
-  return <article className="story-card">{boxContent}</article>;
+  return <article className="story-card zoom-on-hover">{boxContent}</article>;
 }
 
 export async function SuccessStories() {

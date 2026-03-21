@@ -71,6 +71,9 @@
     "invalidDetail": "Este link de redefinição de senha é inválido ou expirou. Por favor, solicite um novo.",
     "requestNewLink": "Solicitar um novo link"
   },
+  "CatalogCategories": {
+    "heading": "Nossos produtos e serviços"
+  },
   "SuccessStories": {
     "heading": "Histórias de Sucesso",
     "readMore": "Leia mais"

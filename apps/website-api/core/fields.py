@@ -2,7 +2,7 @@ import io
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import models
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 class ResizedImageField(models.ImageField):
@@ -45,6 +45,7 @@ class ResizedImageField(models.ImageField):
 
         try:
             img = Image.open(file)
+            img = ImageOps.exif_transpose(img)
         except Exception:
             return None
 

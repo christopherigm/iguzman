@@ -46,7 +46,6 @@ export const getHighlights = cache(async (): Promise<CompanyHighlight[]> => {
   try {
     const res = await fetch(`${API_URL}/api/highlights/`, {
       headers: { 'X-Website-Host': host },
-      next: { revalidate: 3600 },
     });
 
     if (!res.ok) {

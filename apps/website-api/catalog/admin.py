@@ -99,6 +99,9 @@ class ProductCategoryAdmin(admin.ModelAdmin):
             'fields': ('en_name', 'en_description'),
             'classes': ('collapse',),
         }),
+        ('Media', {
+            'fields': ('image', 'fit', 'background_color', 'href'),
+        }),
     )
 
     def save_model(self, request, obj, form, change):
@@ -130,6 +133,9 @@ class ServiceCategoryAdmin(admin.ModelAdmin):
         ('Content (EN)', {
             'fields': ('en_name', 'en_description'),
             'classes': ('collapse',),
+        }),
+        ('Media', {
+            'fields': ('image', 'fit', 'background_color', 'href'),
         }),
     )
 

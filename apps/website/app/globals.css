@@ -44,3 +44,15 @@ a {
   line-height: 1.6;
   color: color-mix(in srgb, var(--foreground) 60%, transparent);
 }
+
+/* ── Card image zoom on hover ────────────────────────────────────────────────
+   Apply .zoom-on-hover to any card container with overflow: hidden that
+   contains an <img>. The image scales to 1.1× on hover.
+   ────────────────────────────────────────────────────────────────────────── */
+.zoom-on-hover img {
+  transition: transform 0.35s ease;
+}
+
+.zoom-on-hover:hover img {
+  transform: scale(1.1);
+}

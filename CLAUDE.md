@@ -39,7 +39,10 @@ This is a **Turborepo monorepo** with three Next.js applications and shared pack
 ### Apps (`apps/`)
 
 - **web** — General-purpose Next.js app
+- **website** — Marketing/public-facing Next.js app with catalog, success stories, and highlights sections
+- **horoscope** — Next.js app
 - **video-downloader** — The most actively maintained app; client-side video editing using FFmpeg WASM. Requires `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers (already configured in `next.config.ts`) for SharedArrayBuffer support
+- **website-api** — Django REST API backend for the website app
 
 ### Packages (`packages/`)
 
@@ -65,7 +68,7 @@ Filter state in `VideoGrid` is stored in URL search params (`?platform=`, `?stat
 
 ### `@repo/ui` Component Library — Use These First
 
-**Rule:** When writing UI code in any app (especially `apps/website`), always prefer `@repo/ui` components over raw HTML elements or one-off implementations. Import from `@repo/ui`.
+**Rule:** When writing UI code in any Next.js app in `apps/`, always prefer `@repo/ui` components over raw HTML elements or one-off implementations. Import from `@repo/ui`.
 
 #### `UIComponentProps` — shared layout props (all core-elements accept these)
 
@@ -157,9 +160,9 @@ This keeps responsive behaviour consistent across every component and ensures a 
 - Name the CSS file after the component: `my-component.css` alongside `my-component.tsx`, then `import './my-component.css'` at the top of the component file.
 - `UIComponentProps` layout props (`padding`, `gap`, `width`, etc.) and the `styles` escape-hatch prop are the only acceptable inline styles — they are part of the `@repo/ui` design system contract.
 
-#### `globals.css` — shared utility classes (`apps/website`)
+#### `globals.css` — shared utility classes
 
-`apps/website/app/globals.css` is the single source of truth for styles that recur across more than one component (headings, subtitles, shared card patterns, etc.).
+Each Next.js app in `apps/` has its own `app/globals.css`, which is the single source of truth for styles that recur across more than one component within that app (headings, subtitles, shared card patterns, etc.).
 
 **Rules:**
 - **Before adding any style to a component CSS file, check whether an equivalent class already exists in `globals.css`.** If it does, use it.
@@ -167,12 +170,13 @@ This keeps responsive behaviour consistent across every component and ensures a 
 - **Component CSS files are for component-specific overrides only** — layout adjustments, local spacing tweaks, element-specific selectors that only make sense inside that one component.
 - Never redefine a utility class from `globals.css` inside a component file. Use a scoped override (e.g. `.my-header .section-title { margin-bottom: 0; }`) when the shared default needs a local adjustment.
 
-#### Shared utility classes currently in `globals.css`
+#### Shared utility classes currently in `globals.css` (`apps/website`)
 
 | Class | Use for |
 |---|---|
 | `.section-title` | `<h2>` (or any heading) that titles a page section |
 | `.section-subtitle` | Supporting paragraph beneath a section title |
+| `.zoom-on-hover` | Card container with `overflow: hidden` — scales inner `<img>` to 1.1× on hover |
 
 ```tsx
 <Typography as="h2" variant="none" className="section-title">{title}</Typography>
@@ -180,6 +184,27 @@ This keeps responsive behaviour consistent across every component and ensures a 
 ```
 
 When adding a new shared utility class to `globals.css`, update this table so the catalogue stays current.
+
+### i18n — Static Text
+
+All static text in any Next.js app in `apps/` **must** use `next-intl` translations. Never hardcode user-visible strings directly in JSX.
+
+- In server components, use `getTranslations('Namespace')` from `next-intl/server`.
+- In client components, use `useTranslations('Namespace')` from `next-intl`.
+- Add the key to **all** locale files under the app's `messages/` directory (e.g. `en.json`, `es.json`, `de.json`, `fr.json`, `pt.json`) in the same task.
+- This rule applies only to static text written in the component. Text that comes from the API (model fields, server responses) is already locale-aware at the data layer and is exempt.
+
+```tsx
+// Server component
+import { getTranslations } from 'next-intl/server';
+const t = await getTranslations('MyComponent');
+<h2>{t('heading')}</h2>
+
+// Client component
+import { useTranslations } from 'next-intl';
+const t = useTranslations('MyComponent');
+<h2>{t('heading')}</h2>
+```
 
 ### Link Convention
 

@@ -2,7 +2,7 @@ import base64
 from io import BytesIO
 
 from django.core.files.base import ContentFile
-from PIL import Image
+from PIL import Image, ImageOps
 from rest_framework import serializers
 
 from .models import CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
@@ -58,6 +58,7 @@ class ImageProcessingSerializer(serializers.Serializer):
         image_bytes = base64.b64decode(raw)
 
         img = Image.open(BytesIO(image_bytes))
+        img = ImageOps.exif_transpose(img)
 
         fmt = self.force_format.upper()
         if fmt == "JPEG" and img.mode not in ("RGB",):
