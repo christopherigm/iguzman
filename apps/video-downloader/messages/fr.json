@@ -29,6 +29,23 @@
     "fpsBoostTitle": "Avertissement d'augmentation des IPS",
     "fpsBoostText": "L'augmentation des IPS à {fps} utilise le navigateur de votre appareil pour traiter la vidéo, ce qui peut prendre plus de temps. Si vous fermez ou actualisez la page, le traitement reprendra automatiquement lors de votre prochaine visite."
   },
+  "Admin": {
+    "title": "Tableau de bord admin",
+    "statTotal": "Total",
+    "statPending": "En attente",
+    "statDownloading": "Téléchargement",
+    "statDone": "Terminé",
+    "statErrors": "Erreurs",
+    "statLast24h": "24 dernières h",
+    "searchPlaceholder": "Rechercher par nom, URL ou ID…",
+    "filterAllStatuses": "Tous les statuts",
+    "filterPending": "En attente",
+    "filterDownloading": "Téléchargement",
+    "filterDone": "Terminé",
+    "filterError": "Erreur",
+    "noTasksFound": "Aucune tâche trouvée.",
+    "taskCount": "{count, plural, one {# tâche} other {# tâches}}"
+  },
   "VideoGrid": {
     "title": "Téléchargements",
     "emptyState": "Aucun téléchargement",

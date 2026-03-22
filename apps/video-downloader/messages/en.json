@@ -29,6 +29,23 @@
     "fpsBoostTitle": "FPS Boost Warning",
     "fpsBoostText": "FPS boosting to {fps} uses your device's browser to process the video, which can take longer to complete. If you close or refresh the page, processing will automatically resume on your next visit."
   },
+  "Admin": {
+    "title": "Admin Dashboard",
+    "statTotal": "Total",
+    "statPending": "Pending",
+    "statDownloading": "Downloading",
+    "statDone": "Done",
+    "statErrors": "Errors",
+    "statLast24h": "Last 24h",
+    "searchPlaceholder": "Search by name, URL, or ID…",
+    "filterAllStatuses": "All Statuses",
+    "filterPending": "Pending",
+    "filterDownloading": "Downloading",
+    "filterDone": "Done",
+    "filterError": "Error",
+    "noTasksFound": "No tasks found.",
+    "taskCount": "{count, plural, one {# task} other {# tasks}}"
+  },
   "VideoGrid": {
     "title": "Downloads",
     "emptyState": "No downloads yet",

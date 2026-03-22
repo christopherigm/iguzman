@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { Box } from '@repo/ui/core-elements/box';
+import { Typography } from '@repo/ui/core-elements/typography';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Badge } from '@repo/ui/core-elements/badge';
 import type { TaskStatus } from '@/lib/types';
@@ -51,6 +54,7 @@ function formatDuration(seconds: number | null) {
 }
 
 export function AdminTaskTable({ tasks }: AdminTaskTableProps) {
+  const t = useTranslations('Admin');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [sortField, setSortField] = useState<SortField>('createdAt');
@@ -117,10 +121,10 @@ export function AdminTaskTable({ tasks }: AdminTaskTableProps) {
     `admin-th${sortField === field ? ' admin-th--active' : ''}`;
 
   return (
-    <div style={{ marginTop: 28, marginBottom: 40 }}>
-      <div className="admin-toolbar">
+    <Box marginTop={28} marginBottom={40}>
+      <Box className="admin-toolbar">
         <TextInput
-          placeholder="Search by name, URL, or ID..."
+          placeholder={t('searchPlaceholder')}
           value={search}
           onChange={(value) => setSearch(value)}
           className="admin-search"
@@ -134,18 +138,18 @@ export function AdminTaskTable({ tasks }: AdminTaskTableProps) {
             setStatusFilter(e.target.value as TaskStatus | 'all')
           }
         >
-          <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="downloading">Downloading</option>
-          <option value="done">Done</option>
-          <option value="error">Error</option>
+          <option value="all">{t('filterAllStatuses')}</option>
+          <option value="pending">{t('filterPending')}</option>
+          <option value="downloading">{t('filterDownloading')}</option>
+          <option value="done">{t('filterDone')}</option>
+          <option value="error">{t('filterError')}</option>
         </select>
-        <span className="admin-result-count">
-          {filtered.length} task{filtered.length !== 1 ? 's' : ''}
-        </span>
-      </div>
+        <Typography variant="body-sm" className="admin-result-count">
+          {t('taskCount', { count: filtered.length })}
+        </Typography>
+      </Box>
 
-      <div className="admin-table-wrapper">
+      <Box className="admin-table-wrapper">
         <table className="admin-table">
           <thead>
             <tr>
@@ -200,23 +204,20 @@ export function AdminTaskTable({ tasks }: AdminTaskTableProps) {
                   </Badge>
                 </td>
                 <td className="admin-td admin-td--name">
-                  <span className="admin-task-name">
+                  <Typography variant="body-sm" className="admin-task-name">
                     {task.name ?? task.uploader ?? '--'}
-                  </span>
-                  <span className="admin-task-url" title={task.url}>
+                  </Typography>
+                  <Typography variant="body-sm" className="admin-task-url">
                     {task.url}
-                  </span>
+                  </Typography>
                   {task.error && (
-                    <span
-                      className="admin-task-error"
-                      title={task.error.message}
-                    >
+                    <Typography variant="caption" className="admin-task-error">
                       {task.error.code}: {task.error.message}
-                    </span>
+                    </Typography>
                   )}
                 </td>
                 <td className="admin-td">
-                  <div className="admin-type-badges">
+                  <Box className="admin-type-badges">
                     <Badge
                       variant="outlined"
                       size="sm"
@@ -229,7 +230,7 @@ export function AdminTaskTable({ tasks }: AdminTaskTableProps) {
                         H265
                       </Badge>
                     )}
-                  </div>
+                  </Box>
                 </td>
                 <td className="admin-td admin-td--mono">
                   {formatDuration(task.duration)}
@@ -245,13 +246,13 @@ export function AdminTaskTable({ tasks }: AdminTaskTableProps) {
             {filtered.length === 0 && (
               <tr>
                 <td className="admin-td admin-td--empty" colSpan={6}>
-                  No tasks found.
+                  {t('noTasksFound')}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

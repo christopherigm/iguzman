@@ -2,7 +2,9 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { Box } from '@repo/ui/core-elements/box';
 import { Grid } from '@repo/ui/core-elements/grid';
+import { Typography } from '@repo/ui/core-elements/typography';
 import type { Platform } from '@repo/helpers/checkers';
 import { PinnedVideoItem } from './pinned-video-item';
 import { ReadOnlyVideoItem, type ReprocessAction } from './readonly-video-item';
@@ -146,26 +148,26 @@ export function VideoGrid({
   /* ── Empty state ────────────────────────────────── */
   if (totalCount === 0) {
     return (
-      <div className="vg-empty">
-        <span className="vg-empty-text">{t('emptyState')}</span>
-      </div>
+      <Box className="vg-empty">
+        <Typography variant="body" className="vg-empty-text">{t('emptyState')}</Typography>
+      </Box>
     );
   }
 
   return (
-    <div className="vg-wrapper">
-      <div className="vg-header">
-        <span className="vg-title">{t('title')}</span>
-        <span className="vg-count">{totalCount}</span>
-      </div>
+    <Box className="vg-wrapper">
+      <Box className="vg-header">
+        <Typography as="h2" variant="h2" className="vg-title">{t('title')}</Typography>
+        <Typography variant="body-sm" className="vg-count">{totalCount}</Typography>
+      </Box>
 
       {/* ── Pinned: active-processing items with own FFmpeg instances ── */}
       {pinned.length > 0 ? (
-        <div className="vg-pinned">
-          <div className="vg-pinned-header">
-            <span className="vg-pinned-label">{t('processingTitle')}</span>
-            <span className="vg-count">{pinned.length}</span>
-          </div>
+        <Box className="vg-pinned">
+          <Box className="vg-pinned-header">
+            <Typography as="h3" variant="h3" className="vg-pinned-label">{t('processingTitle')}</Typography>
+            <Typography variant="body-sm" className="vg-count">{pinned.length}</Typography>
+          </Box>
           <Grid container spacing={2}>
             {pinned.map((video) => (
               <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
@@ -178,7 +180,7 @@ export function VideoGrid({
               </Grid>
             ))}
           </Grid>
-        </div>
+        </Box>
       ) : null}
 
       <VideoToolbar
@@ -198,9 +200,9 @@ export function VideoGrid({
       />
 
       {pageVideos.length === 0 ? (
-        <div className="vg-empty vg-empty--filtered">
-          <span className="vg-empty-text">{t('noResults')}</span>
-        </div>
+        <Box className="vg-empty vg-empty--filtered">
+          <Typography variant="body" className="vg-empty-text">{t('noResults')}</Typography>
+        </Box>
       ) : (
         <Grid container spacing={2}>
           {pageVideos.map((video) => (
@@ -215,7 +217,7 @@ export function VideoGrid({
           ))}
         </Grid>
       )}
-    </div>
+    </Box>
   );
 }
 

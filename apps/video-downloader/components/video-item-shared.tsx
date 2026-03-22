@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
+import { Typography } from '@repo/ui/core-elements/typography';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { Badge } from '@repo/ui/core-elements/badge';
 import type { StoredVideo, VideoStatus } from './use-video-store';
@@ -188,7 +189,7 @@ export function VideoDetailsPanel({
     ffmpegStatus === 'loading' || ffmpegStatus === 'processing';
 
   return (
-    <div className="vi-details">
+    <Box className="vi-details">
       <dl className="vi-dl">
         <dt>UUID</dt>
         <dd>{video.uuid}</dd>
@@ -268,7 +269,7 @@ export function VideoDetailsPanel({
           </>
         ) : null}
       </dl>
-    </div>
+    </Box>
   );
 }
 
@@ -294,7 +295,7 @@ export function VideoMediaPreview({
     return (
       <>
         {thumbnailSrc ? (
-          <div className="vi-media-wrapper">
+          <Box className="vi-media-wrapper">
             <Image
               className="vi-thumbnail"
               src={thumbnailSrc}
@@ -302,9 +303,9 @@ export function VideoMediaPreview({
               loading="lazy"
               unoptimized
             />
-          </div>
+          </Box>
         ) : null}
-        <div className="vi-media-wrapper vi-audio-wrapper">
+        <Box className="vi-media-wrapper vi-audio-wrapper">
           <audio
             className="vi-audio"
             src={src}
@@ -312,13 +313,13 @@ export function VideoMediaPreview({
             controls
             preload="metadata"
           />
-        </div>
+        </Box>
       </>
     );
   }
 
   return (
-    <div className="vi-media-wrapper">
+    <Box className="vi-media-wrapper">
       <video
         className={`vi-video${compact ? ' vi-video--compact' : ''}`}
         src={src}
@@ -327,7 +328,7 @@ export function VideoMediaPreview({
         preload="metadata"
         controls
       />
-    </div>
+    </Box>
   );
 }
 
@@ -345,7 +346,11 @@ export function VideoStatusHints({
   t: TranslationFn;
 }) {
   if (ffmpegStatus === 'loading') {
-    return <span className="vi-ffmpeg-hint">{t('ffmpegLoading')}</span>;
+    return (
+      <Typography variant="caption" className="vi-ffmpeg-hint">
+        {t('ffmpegLoading')}
+      </Typography>
+    );
   }
 
   if (ffmpegStatus === 'processing') {
@@ -353,15 +358,27 @@ export function VideoStatusHints({
       videoStatus === 'converting'
         ? t('convertingH264', { progress: ffmpegProgress })
         : t('ffmpegProcessing', { progress: ffmpegProgress });
-    return <span className="vi-ffmpeg-hint">{message}</span>;
+    return (
+      <Typography variant="caption" className="vi-ffmpeg-hint">
+        {message}
+      </Typography>
+    );
   }
 
   if (videoStatus === 'queued') {
-    return <span className="vi-ffmpeg-hint">{t('queueWaiting')}</span>;
+    return (
+      <Typography variant="caption" className="vi-ffmpeg-hint">
+        {t('queueWaiting')}
+      </Typography>
+    );
   }
 
   if (uploading) {
-    return <span className="vi-ffmpeg-hint">{t('uploadingProcessed')}</span>;
+    return (
+      <Typography variant="caption" className="vi-ffmpeg-hint">
+        {t('uploadingProcessed')}
+      </Typography>
+    );
   }
 
   return null;
@@ -444,9 +461,7 @@ export function VideoActions({
           <Icon
             icon="/icons/download.svg"
             size={15}
-            color={
-              copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
-            }
+            color="var(--foreground, #171717)"
           />
         </button>
       ) : null}
@@ -498,7 +513,7 @@ export function VideoExtraActions({
   const canProcess = !isBusy && !!video.downloadURL && !video.justAudio;
 
   return (
-    <div className="vi-extra-actions">
+    <Box className="vi-extra-actions">
       {video.isH265 && !video.h264Converted ? (
         <button
           type="button"
@@ -552,7 +567,7 @@ export function VideoExtraActions({
           );
         })}
       </Box>
-    </div>
+    </Box>
   );
 }
 
@@ -570,10 +585,10 @@ export function VideoCardHeader({
   t: TranslationFn;
 }) {
   return (
-    <div className="vi-header">
-      <span className="vi-name" title={displayName}>
+    <Box className="vi-header">
+      <Typography as="span" variant="body" className="vi-name">
         {displayName}
-      </span>
+      </Typography>
       {video.isH265 ? (
         <Badge variant="subtle" size="sm" color="#16dd00">
           H265
@@ -600,7 +615,7 @@ export function VideoCardHeader({
           color="var(--foreground, #171717)"
         />
       </button>
-    </div>
+    </Box>
   );
 }
 
@@ -611,7 +626,7 @@ export function VideoFooterLink({ video }: { video: StoredVideo }) {
     PLATFORM_ICONS[video.platform] ?? PLATFORM_ICONS.unknown!;
 
   return (
-    <div className="vi-link-row">
+    <Box className="vi-link-row">
       <Icon icon={platformIcon} size={24} color="var(--accent, #06b6d4)" />
       <a
         className="vi-original-link"
@@ -622,6 +637,6 @@ export function VideoFooterLink({ video }: { video: StoredVideo }) {
       >
         {video.originalURL}
       </a>
-    </div>
+    </Box>
   );
 }

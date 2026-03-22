@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback } from 'react';
+import { Typography } from '@repo/ui/core-elements/typography';
 import { DownloadForm } from './download-form';
 import { VideoGrid } from './video-grid';
 import { useVideoStore } from './use-video-store';
 import type { Platform } from '@repo/helpers/checkers';
+import './download-page.css';
 
 /* ── Entry shape from DownloadForm ──────────────────── */
 
@@ -51,17 +53,9 @@ export function DownloadPage() {
     <>
       <DownloadForm onVideoAdded={handleVideoAdded} />
       {storageError ? (
-        <p
-          role="alert"
-          style={{
-            color: '#ef4444',
-            fontSize: '0.8rem',
-            textAlign: 'center',
-            margin: '8px 0 0',
-          }}
-        >
+        <Typography as="p" variant="body-sm" role="alert" className="dp-storage-error">
           {storageError}
-        </p>
+        </Typography>
       ) : null}
       <br />
       <VideoGrid

@@ -11,6 +11,11 @@ data:
         listen {{ .Values.nginx.port }};
         server_name _;
 
+        # Block access to sensitive files inside /api/media/
+        location = /api/media/netscape-cookies.txt {
+            return 403;
+        }
+
         # ── Serve media files at the same path the Next.js API used ──
         location /api/media/ {
             # Write operations (PUT) → forward to the Next.js app server

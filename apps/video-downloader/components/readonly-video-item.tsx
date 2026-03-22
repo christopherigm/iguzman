@@ -93,9 +93,9 @@ export function ReadOnlyVideoItem({
       styles={{ overflow: 'hidden' }}
     >
       {/* ── Status bar ────────────────────────────── */}
-      <div
+      <Box
         className="vi-status-bar"
-        style={{ backgroundColor: STATUS_COLORS[video.status] }}
+        backgroundColor={STATUS_COLORS[video.status]}
       />
 
       {/* ── Header row ────────────────────────────── */}

@@ -29,6 +29,23 @@
     "fpsBoostTitle": "Aviso de aumento de FPS",
     "fpsBoostText": "Aumentar los FPS a {fps} usa el navegador de tu dispositivo para procesar el video, lo cual puede tardar más en completarse. Si cierras o actualizas la página, el procesamiento se reanudará automáticamente en tu próxima visita."
   },
+  "Admin": {
+    "title": "Panel de administración",
+    "statTotal": "Total",
+    "statPending": "Pendiente",
+    "statDownloading": "Descargando",
+    "statDone": "Listo",
+    "statErrors": "Errores",
+    "statLast24h": "Últimas 24h",
+    "searchPlaceholder": "Buscar por nombre, URL o ID…",
+    "filterAllStatuses": "Todos los estados",
+    "filterPending": "Pendiente",
+    "filterDownloading": "Descargando",
+    "filterDone": "Listo",
+    "filterError": "Error",
+    "noTasksFound": "No se encontraron tareas.",
+    "taskCount": "{count, plural, one {# tarea} other {# tareas}}"
+  },
   "VideoGrid": {
     "title": "Descargas",
     "emptyState": "Aún no hay descargas",

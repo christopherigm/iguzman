@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
+import { Typography } from '@repo/ui/core-elements/typography';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
@@ -50,12 +51,12 @@ function OptionRow({
   children: React.ReactNode;
 }) {
   return (
-    <div
+    <Box
       className={`df-option-row${disabled ? ' df-option-row--disabled' : ''}`}
     >
-      <span className="df-option-label">{label}</span>
-      <div className="df-option-control">{children}</div>
-    </div>
+      <Typography variant="label" className="df-option-label">{label}</Typography>
+      <Box className="df-option-control">{children}</Box>
+    </Box>
   );
 }
 
@@ -71,7 +72,7 @@ function FPSSelect({
   options: { value: FPSValue; label: string }[];
 }) {
   return (
-    <div className="df-select-wrapper">
+    <Box className="df-select-wrapper">
       <select
         className="df-select"
         value={disabled ? 'original' : value}
@@ -98,7 +99,7 @@ function FPSSelect({
           color="var(--foreground, #171717)"
         />
       </span>
-    </div>
+    </Box>
   );
 }
 
@@ -240,9 +241,9 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
       backgroundColor="var(--surface-1, #fff)"
     >
       {/* ── URL Input Row ────────────────────────────── */}
-      <div className="df-input-row">
+      <Box className="df-input-row">
         {platform !== 'unknown' ? (
-          <div
+          <Box
             className={`df-platform-badge${knownPlatform ? ' df-platform-badge--active' : ''}`}
           >
             <Icon
@@ -254,17 +255,17 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
                   : 'var(--foreground, #888)'
               }
             />
-          </div>
+          </Box>
         ) : null}
 
-        <div className="df-input-wrapper">
+        <Box className="df-input-wrapper">
           <TextInput
             value={url}
             onChange={(v: string) => setUrl(stripQueryParams(v))}
             onFocus={handleInputFocus}
             label={t('inputLabel')}
           />
-        </div>
+        </Box>
 
         {url && (
           <button
@@ -294,16 +295,16 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
             color="var(--accent-foreground, white)"
           />
         </button>
-      </div>
+      </Box>
 
       {/* ── Hint ─────────────────────────────────────── */}
-      <span className={`df-hint df-hint--${hint.variant}`}>{hint.text}</span>
+      <Typography variant="caption" className={`df-hint df-hint--${hint.variant}`}>{hint.text}</Typography>
 
       {/* ── Divider ──────────────────────────────────── */}
       <hr className="df-divider" />
 
       {/* ── Options ──────────────────────────────────── */}
-      <div className="df-options">
+      <Box className="df-options">
         <OptionRow label={t('autoDownload')} disabled={switchesDisabled}>
           <Switch
             checked={autoDownload}
@@ -333,22 +334,23 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
             options={fpsOptions}
           />
         </OptionRow>
-      </div>
+      </Box>
     </Box>
   );
 
   return (
     <>
       {/* Wrapping in a <form> lets the browser submit on Enter key. */}
-      <form
-        style={{ maxWidth: 400, width: '100%' }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit();
-        }}
-      >
-        {formContent}
-      </form>
+      <Box maxWidth={400} width="100%">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
+          {formContent}
+        </form>
+      </Box>
 
       {/* ── FPS Boost Confirmation Modal ──────────── */}
       {showFpsWarning ? (

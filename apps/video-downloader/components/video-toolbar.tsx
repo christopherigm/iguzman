@@ -6,6 +6,7 @@ import type { Platform } from '@repo/helpers/checkers';
 import type { VideoStatus, StoredVideo } from './use-video-store';
 import './video-toolbar.css';
 import Box from '@repo/ui/core-elements/box';
+import { Typography } from '@repo/ui/core-elements/typography';
 
 /* ── Platform icon map (mirrors video-item.tsx) ──────── */
 
@@ -102,9 +103,9 @@ export function VideoToolbar({
   );
 
   return (
-    <div className="vt-bar">
+    <Box className="vt-bar">
       {/* ── Platform + audio filter icons ─────────────── */}
-      <div className="vt-filters">
+      <Box className="vt-filters">
         {/* "All" button */}
         <button
           type="button"
@@ -177,9 +178,9 @@ export function VideoToolbar({
             </button>
           </>
         )}
-      </div>
+      </Box>
       {/* ── Status filter dropdown ────────────────────── */}
-      <div className="vt-select-wrap">
+      <Box className="vt-select-wrap">
         <select
           className="vt-select"
           value={statusFilter}
@@ -195,10 +196,10 @@ export function VideoToolbar({
           ))}
         </select>
         <span className="vt-select-chevron" aria-hidden />
-      </div>
+      </Box>
       {/* ── Per-page dropdown ─────────────────────────── */}
       {filteredCount > perPage && (
-        <div className="vt-select-wrap">
+        <Box className="vt-select-wrap">
           <select
             className="vt-select"
             value={perPage}
@@ -212,10 +213,10 @@ export function VideoToolbar({
             ))}
           </select>
           <span className="vt-select-chevron" aria-hidden />
-        </div>
+        </Box>
       )}
       {/* ── Spacer ────────────────────────────────────── */}
-      <span className="vt-spacer" />
+      <Box className="vt-spacer" />
       {/* ── Pagination ────────────────────────────────── */}
       {totalPages > 1 && (
         <Box className="vt-pagination">
@@ -236,12 +237,12 @@ export function VideoToolbar({
               />
             </button>
 
-            <span className="vt-page-info">
+            <Typography variant="body-sm" className="vt-page-info">
               {page} / {totalPages}
-              <span style={{ opacity: 0.7, marginLeft: 4 }}>
+              <Typography as="span" variant="none" marginLeft={4} styles={{ opacity: 0.7 }}>
                 ({filteredCount})
-              </span>
-            </span>
+              </Typography>
+            </Typography>
 
             <button
               type="button"
@@ -261,6 +262,6 @@ export function VideoToolbar({
           </Box>
         </Box>
       )}
-    </div>
+    </Box>
   );
 }

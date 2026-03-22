@@ -29,6 +29,23 @@
     "fpsBoostTitle": "FPS-Erhöhung Warnung",
     "fpsBoostText": "Die FPS-Erhöhung auf {fps} nutzt den Browser Ihres Geräts zur Videoverarbeitung, was länger dauern kann. Wenn Sie die Seite schließen oder aktualisieren, wird die Verarbeitung bei Ihrem nächsten Besuch automatisch fortgesetzt."
   },
+  "Admin": {
+    "title": "Admin-Dashboard",
+    "statTotal": "Gesamt",
+    "statPending": "Ausstehend",
+    "statDownloading": "Wird heruntergeladen",
+    "statDone": "Fertig",
+    "statErrors": "Fehler",
+    "statLast24h": "Letzte 24h",
+    "searchPlaceholder": "Nach Name, URL oder ID suchen…",
+    "filterAllStatuses": "Alle Status",
+    "filterPending": "Ausstehend",
+    "filterDownloading": "Wird heruntergeladen",
+    "filterDone": "Fertig",
+    "filterError": "Fehler",
+    "noTasksFound": "Keine Aufgaben gefunden.",
+    "taskCount": "{count, plural, one {# Aufgabe} other {# Aufgaben}}"
+  },
   "VideoGrid": {
     "title": "Downloads",
     "emptyState": "Noch keine Downloads",

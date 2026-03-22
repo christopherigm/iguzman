@@ -100,25 +100,21 @@ spec:
               protocol: TCP
 
           startupProbe:
-            {{- if .Values.hostPathVolume.enabled }}
             exec:
               command:
                 - test
-                - -d
-                - {{ .Values.hostPathVolume.mountPath }}
-            {{- else }}
-            httpGet:
-              path: /healthz
-              port: nginx
-            {{- end }}
+                - -f
+                - {{ .Values.probes.healthFile }}
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 12
 
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: nginx
+            exec:
+              command:
+                - test
+                - -f
+                - {{ .Values.probes.healthFile }}
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 3
