@@ -71,6 +71,33 @@
     "invalidDetail": "Este link de redefinição de senha é inválido ou expirou. Por favor, solicite um novo.",
     "requestNewLink": "Solicitar um novo link"
   },
+  "ItemDetail": {
+    "home": "Início",
+    "brand": "Marca",
+    "category": "Categoria",
+    "sku": "SKU",
+    "barcode": "Código de barras",
+    "currency": "Moeda",
+    "inStock": "Em estoque",
+    "outOfStock": "Fora de estoque",
+    "stockCount": "Apenas {count} restantes",
+    "stockCount2": "Estoque",
+    "addToCart": "Adicionar ao carrinho",
+    "buyNow": "Comprar agora",
+    "bookNow": "Reservar agora",
+    "addToFavorites": "Adicionar aos favoritos",
+    "description": "Sobre este item",
+    "specifications": "Especificações",
+    "physicalDetails": "Detalhes físicos",
+    "weight": "Peso",
+    "dimensions": "Dimensões (C × L × A)",
+    "serviceDetails": "Detalhes do serviço",
+    "modality": "Modalidade",
+    "duration": "Duração",
+    "modalityOnline": "Online",
+    "modalityInPerson": "Presencial",
+    "modalityHybrid": "Híbrido"
+  },
   "CatalogCategories": {
     "heading": "Categorias"
   },

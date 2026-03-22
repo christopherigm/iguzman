@@ -189,6 +189,25 @@ class ProductImage(MediumPicture):
         return f"Image for {self.product} (#{self.sort_order})"
 
 
+class ServiceImage(MediumPicture):
+    """Additional gallery images for a service."""
+
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.CASCADE,
+        related_name='images',
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Service Image'
+        verbose_name_plural = 'Service Images'
+        ordering = ['sort_order']
+
+    def __str__(self):
+        return f"Image for {self.service} (#{self.sort_order})"
+
+
 # ---------------------------------------------------------------------------
 # Variant system
 # ---------------------------------------------------------------------------

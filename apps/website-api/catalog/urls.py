@@ -11,6 +11,8 @@ from .views import (
     ServiceCategoryDetailView,
     ServiceListCreateView,
     ServiceDetailView,
+    ServiceImageListCreateView,
+    ServiceImageDetailView,
     VariantOptionListCreateView,
     VariantOptionDetailView,
     VariantOptionValueListCreateView,
@@ -49,6 +51,10 @@ urlpatterns = [
     # Services
     path('catalog/services/', ServiceListCreateView.as_view(), name='service-list'),
     path('catalog/services/<int:pk>/', ServiceDetailView.as_view(), name='service-detail'),
+
+    # Service images
+    path('catalog/services/<int:pk>/images/', ServiceImageListCreateView.as_view(), name='service-image-list'),
+    path('catalog/services/<int:pk>/images/<int:img_pk>/', ServiceImageDetailView.as_view(), name='service-image-detail'),
 
     # Service variants
     path('catalog/services/<int:pk>/variants/', ServiceVariantListCreateView.as_view(), name='service-variant-list'),

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { UIComponentProps, buildStyleProps, MenuItem } from './utils';
 import { Container } from './container';
 import { Icon } from './icon';
@@ -61,6 +62,12 @@ export interface NavbarProps extends UIComponentProps {
 function useScrollDirection(threshold = 5): 'up' | 'down' | null {
   const [direction, setDirection] = useState<'up' | 'down' | null>(null);
   const lastScrollY = useRef(0);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setDirection(null);
+    lastScrollY.current = 0;
+  }, [pathname]);
 
   useEffect(() => {
     const handleScroll = () => {

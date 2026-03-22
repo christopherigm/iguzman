@@ -3,7 +3,7 @@ from django.core.cache import cache
 
 from .models import (
     ProductCategory, Product, ProductImage,
-    ServiceCategory, Service,
+    ServiceCategory, Service, ServiceImage,
     VariantOption, VariantOptionValue,
     ProductVariant, ProductVariantImage,
     ServiceVariant,
@@ -44,6 +44,13 @@ class ProductVariantInline(admin.StackedInline):
     )
     filter_horizontal = ('option_values',)
     show_change_link = True
+
+
+class ServiceImageInline(admin.TabularInline):
+    model = ServiceImage
+    extra = 0
+    fields = ('image', 'name', 'sort_order', 'enabled')
+    readonly_fields = ('created', 'modified')
 
 
 class ServiceVariantInline(admin.StackedInline):
@@ -205,7 +212,7 @@ class ServiceAdmin(admin.ModelAdmin):
     search_fields = ('name', 'en_name', 'slug', 'sku')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
-    inlines = [ServiceVariantInline]
+    inlines = [ServiceImageInline, ServiceVariantInline]
 
     fieldsets = (
         ('Identity', {

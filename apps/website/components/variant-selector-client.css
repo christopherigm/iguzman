@@ -1,0 +1,71 @@
+.variant-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.variant-selector__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.variant-selector__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.variant-selector__values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Text chip ───────────────────────────────────────────────────────────── */
+
+.variant-selector__chip {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1.5px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.variant-selector__chip:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.variant-selector__chip--selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+/* ── Color swatch ────────────────────────────────────────────────────────── */
+
+.variant-selector__swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, outline 0.15s ease;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.variant-selector__swatch:hover {
+  transform: scale(1.1);
+}
+
+.variant-selector__swatch--selected {
+  outline-color: var(--accent);
+}

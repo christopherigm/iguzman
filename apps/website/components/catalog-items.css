@@ -11,7 +11,7 @@
   flex-direction: column;
   border-radius: 16px;
   overflow: hidden;
-  background-color: var(--surface-2);
+  background-color: var(--surface-1);
   text-decoration: none;
   height: 100%;
 }
@@ -131,4 +131,3 @@
   text-align: right;
   white-space: nowrap;
 }
-

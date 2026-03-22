@@ -79,6 +79,33 @@
     "productLabel": "Product",
     "serviceLabel": "Service"
   },
+  "ItemDetail": {
+    "home": "Home",
+    "brand": "Brand",
+    "category": "Category",
+    "sku": "SKU",
+    "barcode": "Barcode",
+    "currency": "Currency",
+    "inStock": "In Stock",
+    "outOfStock": "Out of Stock",
+    "stockCount": "Only {count} left",
+    "stockCount2": "Stock",
+    "addToCart": "Add to Cart",
+    "buyNow": "Buy Now",
+    "bookNow": "Book Now",
+    "addToFavorites": "Add to favorites",
+    "description": "About this item",
+    "specifications": "Specifications",
+    "physicalDetails": "Physical Details",
+    "weight": "Weight",
+    "dimensions": "Dimensions (L × W × H)",
+    "serviceDetails": "Service Details",
+    "modality": "Modality",
+    "duration": "Duration",
+    "modalityOnline": "Online",
+    "modalityInPerson": "In Person",
+    "modalityHybrid": "Hybrid"
+  },
   "SuccessStories": {
     "heading": "Success Stories",
     "readMore": "Read More"

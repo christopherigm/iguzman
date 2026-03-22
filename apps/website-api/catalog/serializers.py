@@ -4,7 +4,7 @@ from core.models import Brand, System, CURRENCY_CHOICES
 from core.serializers import ImageProcessingSerializer
 from .models import (
     ProductCategory, Product, ProductImage,
-    ServiceCategory, Service,
+    ServiceCategory, Service, ServiceImage,
     VariantOption, VariantOptionValue,
     ProductVariant, ProductVariantImage,
     ServiceVariant,
@@ -455,12 +455,13 @@ class ProductSerializer(serializers.ModelSerializer):
     variants = ProductVariantSerializer(many=True, read_only=True)
     brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
     category_name = serializers.CharField(source='category.name', read_only=True, default=None)
+    category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
 
     class Meta:
         model = Product
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'system', 'category', 'category_name',
+            'system', 'category', 'category_name', 'category_slug',
             'brand', 'brand_name',
             'name', 'en_name', 'description', 'en_description',
             'slug', 'sku', 'barcode',
@@ -602,6 +603,61 @@ class ProductWriteSerializer(serializers.Serializer):
 
 
 # ---------------------------------------------------------------------------
+# Service image serializers
+# ---------------------------------------------------------------------------
+
+class ServiceImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ServiceImage
+        fields = ['id', 'image', 'name', 'fit', 'background_color', 'sort_order']
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if not obj.image:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
+
+
+class ServiceImageWriteSerializer(serializers.Serializer):
+    image = serializers.CharField()
+    name = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+
+    def validate_image(self, value):
+        sub = ImageProcessingSerializer(
+            data={'base64_image': value},
+            max_size=(512, 512),
+            quality=85,
+        )
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def save(self, service):
+        image_data = self.validated_data['image']
+        instance = ServiceImage(
+            service=service,
+            name=self.validated_data.get('name'),
+            sort_order=self.validated_data.get('sort_order', 0),
+        )
+        instance.save()
+
+        proc = ImageProcessingSerializer(
+            data={'base64_image': image_data},
+            max_size=(512, 512),
+            quality=85,
+        )
+        proc.is_valid()
+        proc.save_to_field(instance.image, f'service_{service.pk}_img_{instance.pk}.jpg')
+        instance.save(update_fields=['image'])
+        return instance
+
+
+# ---------------------------------------------------------------------------
 # ServiceCategory serializers
 # ---------------------------------------------------------------------------
 
@@ -653,19 +709,21 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
 
 class ServiceSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
+    images = ServiceImageSerializer(many=True, read_only=True)
     variants = ServiceVariantSerializer(many=True, read_only=True)
     brand_name = serializers.CharField(source='brand.name', read_only=True, default=None)
     category_name = serializers.CharField(source='category.name', read_only=True, default=None)
+    category_slug = serializers.SlugRelatedField(source='category', slug_field='slug', read_only=True)
 
     class Meta:
         model = Service
         fields = [
             'id', 'enabled', 'created', 'modified', 'version',
-            'system', 'category', 'category_name',
+            'system', 'category', 'category_name', 'category_slug',
             'brand', 'brand_name',
             'name', 'en_name', 'description', 'en_description',
             'slug', 'sku',
-            'image', 'variants',
+            'image', 'images', 'variants',
             'href', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
             'is_featured', 'duration', 'modality',

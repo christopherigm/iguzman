@@ -79,6 +79,33 @@
     "productLabel": "Producto",
     "serviceLabel": "Servicio"
   },
+  "ItemDetail": {
+    "home": "Inicio",
+    "brand": "Marca",
+    "category": "Categoría",
+    "sku": "SKU",
+    "barcode": "Código de barras",
+    "currency": "Moneda",
+    "inStock": "En stock",
+    "outOfStock": "Agotado",
+    "stockCount": "Solo quedan {count}",
+    "stockCount2": "Stock",
+    "addToCart": "Agregar al carrito",
+    "buyNow": "Comprar ahora",
+    "bookNow": "Reservar ahora",
+    "addToFavorites": "Agregar a favoritos",
+    "description": "Acerca de este artículo",
+    "specifications": "Especificaciones",
+    "physicalDetails": "Detalles físicos",
+    "weight": "Peso",
+    "dimensions": "Dimensiones (L × W × H)",
+    "serviceDetails": "Detalles del servicio",
+    "modality": "Modalidad",
+    "duration": "Duración",
+    "modalityOnline": "En línea",
+    "modalityInPerson": "En persona",
+    "modalityHybrid": "Híbrido"
+  },
   "SuccessStories": {
     "heading": "Historias de Éxito",
     "readMore": "Leer más"

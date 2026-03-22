@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { CSSProperties } from 'react';
 
@@ -18,6 +19,10 @@ export interface LinkButtonProps {
   onClick?: () => void;
   className?: string;
   id?: string;
+  /** Accessible label when the visible text is not descriptive enough. */
+  'aria-label'?: string;
+  /** Marks this link as the current item in a set (e.g. `"page"` for nav links). */
+  'aria-current'?: React.AriaAttributes['aria-current'];
 }
 
 const baseStyle: CSSProperties = {
@@ -44,7 +49,10 @@ const baseStyle: CSSProperties = {
  * // In-page action
  * <LinkButton onClick={() => switchTab('sign-up')} label="Don't have an account? Sign up" />
  */
-export function LinkButton({ label, href, onClick, className, id }: LinkButtonProps) {
+export function LinkButton({ label, href, onClick, className, id, ...rest }: LinkButtonProps) {
+  const ariaLabel = rest['aria-label'];
+  const ariaCurrent = rest['aria-current'];
+
   if (href !== undefined) {
     return (
       <Link
@@ -53,6 +61,8 @@ export function LinkButton({ label, href, onClick, className, id }: LinkButtonPr
         id={id}
         className={className}
         style={baseStyle}
+        aria-label={ariaLabel}
+        aria-current={ariaCurrent}
       >
         {label}
       </Link>
@@ -66,6 +76,8 @@ export function LinkButton({ label, href, onClick, className, id }: LinkButtonPr
       className={className}
       onClick={onClick}
       style={baseStyle}
+      aria-label={ariaLabel}
+      aria-current={ariaCurrent}
     >
       {label}
     </button>

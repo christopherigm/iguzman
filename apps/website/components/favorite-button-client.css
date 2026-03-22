@@ -1,0 +1,43 @@
+.favorite-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.favorite-btn:hover {
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+  border-color: #ef4444;
+  transform: scale(1.05);
+}
+
+.favorite-btn--active {
+  background: color-mix(in srgb, #ef4444 15%, transparent);
+  border-color: #ef4444;
+}
+
+.favorite-btn__icon {
+  transition: filter 0.2s ease;
+  opacity: 0.6;
+  filter: brightness(0);
+}
+
+[data-theme='dark'] .favorite-btn__icon {
+  filter: brightness(0) invert(1);
+}
+
+.favorite-btn--active .favorite-btn__icon {
+  opacity: 1;
+  filter: invert(28%) sepia(95%) saturate(700%) hue-rotate(330deg) brightness(100%) contrast(90%);
+}
+
+[data-theme='dark'] .favorite-btn--active .favorite-btn__icon {
+  filter: invert(40%) sepia(85%) saturate(600%) hue-rotate(320deg) brightness(110%) contrast(90%);
+}

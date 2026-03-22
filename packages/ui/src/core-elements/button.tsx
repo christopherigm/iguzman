@@ -15,8 +15,11 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * Props for `Button` component.
  */
 export interface ButtonProps extends UIComponentProps {
-  /** Visible label for the button (required). */
-  text: string;
+  /**
+   * Visible label for the button. Either `text` or `children` must be provided.
+   * When both are given, `children` takes precedence.
+   */
+  text?: string;
   /** HTML button `type`. Defaults to `button`. */
   type?: ButtonType;
   /** Navigation target. If provided and no `onClick` is given, the component
@@ -29,6 +32,22 @@ export interface ButtonProps extends UIComponentProps {
   ) => void;
   /** Called when hover state changes: `true` on enter, `false` on leave. */
   onHover?: (hovered: boolean) => void;
+  /**
+   * When `true`, strips all default Button styles and the wave animation so the
+   * element can be fully styled via `className` or `styles`. Use for icon buttons,
+   * color swatches, or any toggle button that requires custom visual treatment.
+   */
+  unstyled?: boolean;
+  /** HTML `title` attribute (tooltip shown on hover). */
+  title?: string;
+  /** Accessible label when visible text is absent or insufficient (e.g. icon-only buttons). */
+  'aria-label'?: string;
+  /** Indicates whether a toggle button is currently pressed. */
+  'aria-pressed'?: React.AriaAttributes['aria-pressed'];
+  /** Indicates whether a control is expanded or collapsed. */
+  'aria-expanded'?: React.AriaAttributes['aria-expanded'];
+  /** IDs of elements whose contents are controlled by this button. */
+  'aria-controls'?: string;
 }
 
 /**
@@ -40,10 +59,19 @@ export interface ButtonProps extends UIComponentProps {
  * <Button text="Go to docs" href="/docs" />
  */
 export const Button: React.FC<ButtonProps> = (props) => {
-  const { text, type = 'button', href, onClick, className, id } = props;
+  const { text, type = 'button', href, onClick, className, id, unstyled, title } = props;
   const [isHovered, setIsHovered] = React.useState(false);
 
-  if (text === undefined || text === null) {
+  const ariaLabel = props['aria-label'];
+  const ariaPressed = props['aria-pressed'];
+  const ariaExpanded = props['aria-expanded'];
+  const ariaControls = props['aria-controls'];
+
+  const content = props.children ?? text;
+
+  // Allow content-less buttons (e.g. color swatches, icon-only) when aria-label provides
+  // the accessible name. Return null only when there is neither content nor a label.
+  if ((content === undefined || content === null) && !ariaLabel) {
     return null;
   }
 
@@ -70,14 +98,19 @@ export const Button: React.FC<ButtonProps> = (props) => {
     if (typeof props.onHover === 'function') props.onHover(false);
   };
 
-  const finalStyle: CSSProperties = {
-    ...defaultStyle,
-    ...buildStyleProps(props as UIComponentProps),
-    ...props.styles,
-    boxShadow: getBoxShadow(isHovered ? 5 : 0) ?? 'none',
-    position: 'relative',
-    overflow: 'hidden',
-  };
+  const finalStyle: CSSProperties = unstyled
+    ? {
+        ...buildStyleProps(props as UIComponentProps),
+        ...props.styles,
+      }
+    : {
+        ...defaultStyle,
+        ...buildStyleProps(props as UIComponentProps),
+        ...props.styles,
+        boxShadow: getBoxShadow(isHovered ? 5 : 0) ?? 'none',
+        position: 'relative',
+        overflow: 'hidden',
+      };
 
   const shouldUseLink = href !== undefined && onClick === undefined;
 
@@ -86,15 +119,19 @@ export const Button: React.FC<ButtonProps> = (props) => {
     return (
       <Link href={hrefString} prefetch>
         <button
-          aria-pressed="false"
           id={id}
-          className={['ui-button-wave', className].filter(Boolean).join(' ')}
+          title={title}
+          className={[unstyled ? undefined : 'ui-button-wave', className].filter(Boolean).join(' ')}
           style={finalStyle}
+          aria-label={ariaLabel}
+          aria-pressed={ariaPressed}
+          aria-expanded={ariaExpanded}
+          aria-controls={ariaControls}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          {text}
-          <span aria-hidden className="ui-wave" />
+          {content}
+          {!unstyled && <span aria-hidden className="ui-wave" />}
         </button>
       </Link>
     );
@@ -108,14 +145,19 @@ export const Button: React.FC<ButtonProps> = (props) => {
     <button
       type={type}
       id={id}
-      className={['ui-button-wave', className].filter(Boolean).join(' ')}
+      title={title}
+      className={[unstyled ? undefined : 'ui-button-wave', className].filter(Boolean).join(' ')}
       style={finalStyle}
       onClick={typeof onClick === 'function' ? handleClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
+      aria-expanded={ariaExpanded}
+      aria-controls={ariaControls}
     >
-      {text}
-      <span aria-hidden className="ui-wave" />
+      {content}
+      {!unstyled && <span aria-hidden className="ui-wave" />}
     </button>
   );
 };

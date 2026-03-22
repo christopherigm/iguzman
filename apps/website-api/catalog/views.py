@@ -38,7 +38,7 @@ def _resolve_system(request):
 
 from .models import (
     ProductCategory, Product, ProductImage,
-    ServiceCategory, Service,
+    ServiceCategory, Service, ServiceImage,
     VariantOption, VariantOptionValue,
     ProductVariant, ProductVariantImage,
     ServiceVariant,
@@ -54,6 +54,8 @@ from .serializers import (
     ServiceCategoryWriteSerializer,
     ServiceSerializer,
     ServiceWriteSerializer,
+    ServiceImageSerializer,
+    ServiceImageWriteSerializer,
     VariantOptionSerializer,
     VariantOptionWriteSerializer,
     VariantOptionValueSerializer,
@@ -216,6 +218,10 @@ class ProductListCreateView(APIView):
 
         if request.query_params.get('in_stock') == 'true':
             qs = qs.filter(in_stock=True)
+
+        slug = request.query_params.get('slug')
+        if slug:
+            qs = qs.filter(slug=slug)
 
         search = request.query_params.get('search')
         if search:
@@ -509,6 +515,10 @@ class ServiceListCreateView(APIView):
         modality = request.query_params.get('modality')
         if modality:
             qs = qs.filter(modality=modality)
+
+        slug = request.query_params.get('slug')
+        if slug:
+            qs = qs.filter(slug=slug)
 
         search = request.query_params.get('search')
         if search:
@@ -1023,6 +1033,81 @@ class ServiceVariantDetailView(APIView):
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         variant.delete()
         cache.delete(f'catalog:service_variants:{pk}')
+        cache.delete(f'catalog:service:{pk}')
+        _invalidate_pattern('catalog:services:*')
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ServiceImageListCreateView(APIView):
+    """
+    GET  /api/catalog/services/<pk>/images/  — list service images (public).
+    POST /api/catalog/services/<pk>/images/  — add an image (admin only, base64).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def _get_service(self, pk):
+        try:
+            return Service.objects.get(pk=pk)
+        except Service.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        service = self._get_service(pk)
+        if service is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ServiceImageSerializer(service.images.all(), many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request, pk):
+        service = self._get_service(pk)
+        if service is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ServiceImageWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        image = serializer.save(service)
+        cache.delete(f'catalog:service:{pk}')
+        _invalidate_pattern('catalog:services:*')
+        return Response(ServiceImageSerializer(image, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class ServiceImageDetailView(APIView):
+    """
+    DELETE /api/catalog/services/<pk>/images/<img_pk>/  — remove an image (admin only).
+    PATCH  /api/catalog/services/<pk>/images/<img_pk>/  — update sort_order / name (admin only).
+    """
+
+    permission_classes = [IsAdminUser]
+
+    def _get_image(self, pk, img_pk):
+        try:
+            return ServiceImage.objects.get(pk=img_pk, service_id=pk)
+        except ServiceImage.DoesNotExist:
+            return None
+
+    def patch(self, request, pk, img_pk):
+        image = self._get_image(pk, img_pk)
+        if image is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        name = request.data.get('name')
+        sort_order = request.data.get('sort_order')
+        if name is not None:
+            image.name = name
+        if sort_order is not None:
+            image.sort_order = sort_order
+        image.save(update_fields=[f for f in ['name', 'sort_order'] if f in request.data])
+        cache.delete(f'catalog:service:{pk}')
+        _invalidate_pattern('catalog:services:*')
+        return Response(ServiceImageSerializer(image, context={'request': request}).data)
+
+    def delete(self, request, pk, img_pk):
+        image = self._get_image(pk, img_pk)
+        if image is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        image.delete()
         cache.delete(f'catalog:service:{pk}')
         _invalidate_pattern('catalog:services:*')
         return Response(status=status.HTTP_204_NO_CONTENT)

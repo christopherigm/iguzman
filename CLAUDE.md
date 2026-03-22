@@ -91,12 +91,12 @@ Most components extend `UIComponentProps`, which maps common CSS properties dire
 
 | Use case | Component | Key props |
 |---|---|---|
-| Headings, body text, labels | `Typography` | `variant?: 'none'\|'h1'…'h6'\|'body'\|'body-sm'\|'caption'\|'label'`, `as?` (HTML element override), `textAlign?`, `fontWeight?`, `role?` + UIComponentProps. Heading variants h1–h5 use fluid `clamp()` sizing (h1 56px→32px hero, h2 32px→22px section titles, h3 22px→17px feature card names, h4 18px→15px secondary, h5 15px→13px compact card names). Use `variant="none"` only when a CSS class must fully control typography (e.g. `.section-subtitle` with its special opacity color). |
-| Generic `<div>` wrapper | `Box` | All `UIComponentProps` |
+| Headings, body text, labels | `Typography` | `variant?: 'none'\|'h1'…'h6'\|'body'\|'body-sm'\|'caption'\|'label'`, `as?` (HTML element override), `textAlign?`, `fontWeight?`, `role?`, `aria-current?`, `aria-hidden?`, `aria-label?` + UIComponentProps. Heading variants h1–h5 use fluid `clamp()` sizing (h1 56px→32px hero, h2 32px→22px section titles, h3 22px→17px feature card names, h4 18px→15px secondary, h5 15px→13px compact card names). Use `variant="none"` only when a CSS class must fully control typography (e.g. `.section-subtitle` with its special opacity color). |
+| Generic `<div>` wrapper | `Box` | `role?`, `aria-label?`, `aria-hidden?`, `aria-labelledby?`, `aria-describedby?` + all `UIComponentProps` |
 | Centered max-width section | `Container` | `size?: 'xs'\|'sm'\|'md'\|'lg'\|'xl'`, `paddingX?` |
 | 12-col responsive layout | `Grid` | `container?`, `item?`, `size?: {xs,sm,md,lg,xl}` (1–12), `spacing?`, `spacingX?`, `spacingY?` |
-| Clickable button | `Button` | `text` (required), `href?`, `onClick?`, `type?`, `onHover?` + UIComponentProps |
-| Text/underline link | `LinkButton` | `label` (required), `href?`, `onClick?` |
+| Clickable button | `Button` | `text?` (or `children`), `href?`, `onClick?`, `type?`, `onHover?`, `unstyled?` (strips default styles/wave — use for icon or toggle buttons with custom CSS), `title?`, `aria-label?`, `aria-pressed?`, `aria-expanded?`, `aria-controls?` + UIComponentProps |
+| Text/underline link | `LinkButton` | `label` (required), `href?`, `onClick?`, `aria-label?`, `aria-current?` |
 | Text field / textarea | `TextInput` | `label?`, `value?`, `onChange(v: string)?`, `type?`, `multirow?`, `rows?`, `placeholder?` + UIComponentProps |
 | Toggle / checkbox | `Switch` | `checked?`, `defaultChecked?`, `onChange(checked: boolean)?` |
 | Status tag / label | `Badge` | `children`, `variant?: 'filled'\|'outlined'\|'subtle'`, `size?: 'sm'\|'md'\|'lg'`, `color?`, `textColor?` |
@@ -105,6 +105,7 @@ Most components extend `UIComponentProps`, which maps common CSS properties dire
 | Mobile slide-in menu | `Drawer` | `open`, `onClose`, `items`, `logo`, `themeSwitch?` |
 | Loading / progress | `ProgressBar` | `value?` (0–100, omit for indeterminate), `size?` (px height), `label?` |
 | Confirm dialog | `ConfirmationModal` | `title`, `text`, `okCallback`, `cancelCallback?` |
+| Page breadcrumb trail | `Breadcrumbs` | `items: BreadcrumbItem[]` — each item has `label: string` and optional `href?: string`; items without `href` render as the current page (aria-current). Also exports `BreadcrumbItem` type. |
 
 #### Other UI exports (`packages/ui/src/`)
 
@@ -191,6 +192,13 @@ Each Next.js app in `apps/` has its own `app/globals.css`, which is the single s
 | `.zoom-on-hover` | Card container with `overflow: hidden` — scales inner `<img>` to 1.1× on hover |
 | `.card-content` | Inner content wrapper of any card — standard padding (`16px` vertical, `10px` horizontal) |
 | `.elevation-<1–24>` | Box shadow matching `Box elevation={n}` — use on any element (Link, div, etc.) to apply the same shadow scale |
+| `.item-price` | Large, bold price display for product/service detail pages |
+| `.item-compare-price` | Muted, line-through compare price for detail pages |
+| `.item-discount-badge` | Small red inline badge showing percentage off (e.g., `-20%`) |
+| `.item-stock-in` | Green "In Stock" indicator text |
+| `.item-stock-out` | Red "Out of Stock" indicator text |
+| `.item-specs-table` | Full-width spec/detail table with alternating borders and label column |
+| `.item-section-heading` | `<h2>` section heading inside a detail page (description, specs, etc.) |
 
 ```tsx
 <Typography as="h2" variant="h2" className="section-title">{title}</Typography>

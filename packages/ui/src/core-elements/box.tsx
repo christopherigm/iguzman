@@ -1,6 +1,19 @@
 import React, { CSSProperties } from 'react';
 import { UIComponentProps, buildStyleProps } from './utils';
 
+export interface BoxProps extends UIComponentProps {
+  /** ARIA role for semantic meaning (e.g. `"nav"`, `"main"`, `"article"`). */
+  role?: string;
+  /** Accessible label for the element when visible text is absent. */
+  'aria-label'?: string;
+  /** Hides element from assistive technology when `true` or `"true"`. */
+  'aria-hidden'?: React.AriaAttributes['aria-hidden'];
+  /** ID of another element that labels this one. */
+  'aria-labelledby'?: string;
+  /** ID of another element that describes this one. */
+  'aria-describedby'?: string;
+}
+
 /**
  * Box — a small, flexible div wrapper that accepts inline layout props.
  *
@@ -17,13 +30,22 @@ import { UIComponentProps, buildStyleProps } from './utils';
  *   Content
  * </Box>
  */
-export const Box: React.FC<UIComponentProps> = (props) => {
-  const { styles, children, className, id } = props;
+export const Box: React.FC<BoxProps> = (props) => {
+  const { styles, children, className, id, role } = props;
 
   const style: CSSProperties = { ...buildStyleProps(props), ...styles };
 
   return (
-    <div id={id} className={className} style={style}>
+    <div
+      id={id}
+      className={className}
+      style={style}
+      role={role}
+      aria-label={props['aria-label']}
+      aria-hidden={props['aria-hidden']}
+      aria-labelledby={props['aria-labelledby']}
+      aria-describedby={props['aria-describedby']}
+    >
       {children}
     </div>
   );

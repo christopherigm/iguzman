@@ -45,6 +45,12 @@ export interface TypographyProps extends UIComponentProps {
   fontWeight?: CSSProperties['fontWeight'];
   /** ARIA role, e.g. `"alert"` for error messages. */
   role?: string;
+  /** Marks the element as the current item in a set (e.g. `"page"` for breadcrumbs). */
+  'aria-current'?: React.AriaAttributes['aria-current'];
+  /** Hides element from assistive technology when `true` or `"true"`. */
+  'aria-hidden'?: React.AriaAttributes['aria-hidden'];
+  /** Accessible label when visible text is absent or insufficient. */
+  'aria-label'?: string;
 }
 
 const VARIANT_ELEMENT: Record<TypographyVariant, TypographyElement> = {
@@ -89,6 +95,9 @@ export const Typography: React.FC<TypographyProps> = ({
   className,
   id,
   styles,
+  'aria-current': ariaCurrent,
+  'aria-hidden': ariaHidden,
+  'aria-label': ariaLabel,
   ...rest
 }) => {
   const Tag = (as ??
@@ -117,6 +126,9 @@ export const Typography: React.FC<TypographyProps> = ({
       role={role}
       className={classes}
       style={Object.keys(finalStyle).length > 0 ? finalStyle : undefined}
+      aria-current={ariaCurrent}
+      aria-hidden={ariaHidden}
+      aria-label={ariaLabel}
     >
       {children}
     </Tag>

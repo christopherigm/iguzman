@@ -90,3 +90,70 @@ a {
 .elevation-22 { box-shadow: 0 11px 18px 2px rgba(0,0,0,0.360), 0 18px 37px 1px rgba(0,0,0,0.200); }
 .elevation-23 { box-shadow: 0 12px 19px 2px rgba(0,0,0,0.360), 0 18px 38px 1px rgba(0,0,0,0.200); }
 .elevation-24 { box-shadow: 0 12px 19px 2px rgba(0,0,0,0.360), 0 19px 40px 1px rgba(0,0,0,0.200); }
+
+/* ── Item detail — shared across product-detail and service-detail ────────────
+   Use on price, stock, and spec elements inside any buyable detail page.
+   ────────────────────────────────────────────────────────────────────────── */
+.item-price {
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+.item-compare-price {
+  font-size: clamp(14px, 1.8vw, 17px);
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+  text-decoration: line-through;
+}
+
+.item-discount-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #ef4444;
+  color: #fff;
+}
+
+.item-stock-in {
+  font-size: 13px;
+  font-weight: 600;
+  color: #22c55e;
+}
+
+.item-stock-out {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ef4444;
+}
+
+.item-specs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.item-specs-table tr {
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.item-specs-table td {
+  padding: 8px 4px;
+  vertical-align: top;
+}
+
+.item-specs-table td:first-child {
+  font-weight: 600;
+  width: 40%;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  padding-right: 16px;
+}
+
+.item-section-heading {
+  font-size: clamp(16px, 2vw, 18px);
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--foreground);
+}
