@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Thumbs, Navigation, FreeMode } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
 import { Box } from '@repo/ui/core-elements/box';
+import getImageDimensionsFromUrl from '@repo/helpers/get-image-dimensions-from-url';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/free-mode';
@@ -27,12 +28,30 @@ export function ItemGalleryClient({
   placeholderColor,
 }: ItemGalleryClientProps) {
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
+  const [slideAspectRatio, setSlideAspectRatio] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (images.length === 0) return;
+    Promise.all(
+      images.map((img) => getImageDimensionsFromUrl(img.url).catch(() => null)),
+    ).then((results) => {
+      const ratios = results
+        .filter((r) => r !== null)
+        .map((r) => r!.aspectRatio);
+      if (ratios.length === 0) return;
+      // Use the most-portrait (smallest width/height ratio) so the tallest
+      // image fills the slide without letterboxing.
+      setSlideAspectRatio(Math.min(...ratios));
+    });
+  }, [images]);
 
   if (images.length === 0) {
     return (
       <Box
         className="item-gallery item-gallery--placeholder"
-        styles={{ backgroundColor: placeholderColor ?? 'var(--surface-1, #e0e0e0)' }}
+        styles={{
+          backgroundColor: placeholderColor ?? 'var(--surface-1, #e0e0e0)',
+        }}
       />
     );
   }
@@ -41,14 +60,24 @@ export function ItemGalleryClient({
     <Box className="item-gallery">
       <Swiper
         modules={[Thumbs, Navigation, FreeMode]}
-        thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
+        thumbs={{
+          swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null,
+        }}
         navigation
         loop={images.length > 1}
+        spaceBetween={15}
         className="item-gallery__main"
       >
         {images.map((img, i) => (
           <SwiperSlide key={i}>
-            <Box className="item-gallery__slide">
+            <Box
+              className="item-gallery__slide"
+              styles={
+                slideAspectRatio !== null
+                  ? { aspectRatio: String(slideAspectRatio) }
+                  : undefined
+              }
+            >
               <Image
                 fill
                 src={img.url}
