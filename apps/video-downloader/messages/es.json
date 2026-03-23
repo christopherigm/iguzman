@@ -54,7 +54,8 @@
     "emptyState": "Sin videos para mostrar",
     "emptyStateHint": "Descarga algunos videos primero para disfrutar la vista de scroll infinito",
     "reshuffleLabel": "Mezclar videos",
-    "homeLabel": "Ir al inicio"
+    "homeLabel": "Ir al inicio",
+    "seekLabel": "Navegar en el video"
   },
   "VideoGrid": {
     "title": "Descargas",

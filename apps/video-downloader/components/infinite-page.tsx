@@ -22,6 +22,9 @@ export function InfinitePage() {
   const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
   const swiperRef = useRef<SwiperType | null>(null);
   const reshuffled = useRef(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   function shuffle(list: StoredVideo[]) {
     const shuffled = [...list];
@@ -77,13 +80,47 @@ export function InfinitePage() {
     }
   }
 
+  useEffect(() => {
+    const el = videoRefs.current.get(activeIndex);
+    if (!el) return;
+
+    const onTimeUpdate = () => setCurrentTime(el.currentTime);
+    const onMetadata = () =>
+      setDuration(isFinite(el.duration) ? el.duration : 0);
+
+    el.addEventListener('timeupdate', onTimeUpdate);
+    el.addEventListener('loadedmetadata', onMetadata);
+    el.addEventListener('durationchange', onMetadata);
+
+    if (isFinite(el.duration)) setDuration(el.duration);
+    setCurrentTime(el.currentTime);
+
+    return () => {
+      el.removeEventListener('timeupdate', onTimeUpdate);
+      el.removeEventListener('loadedmetadata', onMetadata);
+      el.removeEventListener('durationchange', onMetadata);
+    };
+  }, [activeIndex, videos]);
+
+  function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
+    const el = videoRefs.current.get(activeIndex);
+    if (!el) return;
+    const time = Number(e.target.value);
+    el.currentTime = time;
+    setCurrentTime(time);
+  }
+
   function handleSwiper(swiper: SwiperType) {
     swiperRef.current = swiper;
+    setActiveIndex(swiper.activeIndex);
     playAt(swiper.activeIndex);
   }
 
   function handleSlideChange(swiper: SwiperType) {
     pauseAt(swiper.previousIndex);
+    setActiveIndex(swiper.activeIndex);
+    setCurrentTime(0);
+    setDuration(0);
     playAt(swiper.activeIndex);
   }
 
@@ -157,6 +194,27 @@ export function InfinitePage() {
           </SwiperSlide>
         ))}
       </Swiper>
+      {duration > 0 && (
+        <Box
+          className="infinite-progress-container"
+          styles={
+            {
+              '--progress': `${(currentTime / duration) * 100}%`,
+            } as React.CSSProperties
+          }
+        >
+          <input
+            type="range"
+            className="infinite-progress"
+            min={0}
+            max={duration}
+            value={currentTime}
+            step={0.1}
+            onChange={handleSeek}
+            aria-label={t('seekLabel')}
+          />
+        </Box>
+      )}
       <Box className="infinite-actions">
         <Button
           unstyled

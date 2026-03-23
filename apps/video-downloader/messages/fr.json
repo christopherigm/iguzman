@@ -54,7 +54,8 @@
     "emptyState": "Aucune vidéo à afficher",
     "emptyStateHint": "Téléchargez d'abord des vidéos pour profiter du défilement infini",
     "reshuffleLabel": "Mélanger les vidéos",
-    "homeLabel": "Aller à l'accueil"
+    "homeLabel": "Aller à l'accueil",
+    "seekLabel": "Naviguer dans la vidéo"
   },
   "VideoGrid": {
     "title": "Téléchargements",

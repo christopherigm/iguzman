@@ -54,7 +54,8 @@
     "emptyState": "No videos to show",
     "emptyStateHint": "Download some videos first to enjoy the infinite scroll view",
     "reshuffleLabel": "Reshuffle videos",
-    "homeLabel": "Go to home"
+    "homeLabel": "Go to home",
+    "seekLabel": "Seek video"
   },
   "VideoGrid": {
     "title": "Downloads",
