@@ -55,7 +55,9 @@
     "emptyStateHint": "Téléchargez d'abord des vidéos pour profiter du défilement infini",
     "reshuffleLabel": "Mélanger les vidéos",
     "homeLabel": "Aller à l'accueil",
-    "seekLabel": "Naviguer dans la vidéo"
+    "seekLabel": "Naviguer dans la vidéo",
+    "downloadLabel": "Télécharger la vidéo",
+    "originalLabel": "Voir l'original"
   },
   "VideoGrid": {
     "title": "Téléchargements",

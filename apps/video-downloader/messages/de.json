@@ -55,7 +55,9 @@
     "emptyStateHint": "Lade zuerst Videos herunter, um die Endlosscroll-Ansicht zu genießen",
     "reshuffleLabel": "Videos neu mischen",
     "homeLabel": "Zur Startseite",
-    "seekLabel": "Video-Position suchen"
+    "seekLabel": "Video-Position suchen",
+    "downloadLabel": "Video herunterladen",
+    "originalLabel": "Original ansehen"
   },
   "VideoGrid": {
     "title": "Downloads",

@@ -110,6 +110,15 @@ export function InfinitePage() {
     setCurrentTime(time);
   }
 
+  function handleDownload() {
+    const video = videos[activeIndex];
+    if (!video?.downloadURL) return;
+    const a = document.createElement('a');
+    a.href = resolveMediaUrl(video.downloadURL);
+    a.download = video.name ?? 'video';
+    a.click();
+  }
+
   function handleSwiper(swiper: SwiperType) {
     swiperRef.current = swiper;
     setActiveIndex(swiper.activeIndex);
@@ -121,6 +130,8 @@ export function InfinitePage() {
     setActiveIndex(swiper.activeIndex);
     setCurrentTime(0);
     setDuration(0);
+    const el = videoRefs.current.get(swiper.activeIndex);
+    if (el) el.currentTime = 0;
     playAt(swiper.activeIndex);
   }
 
@@ -169,27 +180,45 @@ export function InfinitePage() {
               className="infinite-video"
             />
             <Box className="infinite-overlay">
-              <Box className="infinite-info">
-                {video.name && (
-                  <Typography variant="body" className="infinite-title">
-                    {video.name}
+              <Box
+                display="flex"
+                alignItems="flex-start"
+                justifyContent="space-between"
+                width="100%"
+              >
+                <Box className="infinite-info">
+                  {video.name && (
+                    <Typography variant="body" className="infinite-title">
+                      {video.name}
+                    </Typography>
+                  )}
+                  <Typography variant="body-sm" className="infinite-count">
+                    {index + 1}/{videos.length}
                   </Typography>
-                )}
-                {video.uploader && (
-                  <Typography variant="body-sm" className="infinite-uploader">
-                    {video.uploader}
-                  </Typography>
-                )}
+                  {video.uploader && (
+                    <Typography variant="body-sm" className="infinite-uploader">
+                      {video.uploader}
+                    </Typography>
+                  )}
+                </Box>
+                <a
+                  href={video.originalURL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t('originalLabel')}
+                  className="infinite-platform-link"
+                >
+                  <Image
+                    src={
+                      PLATFORM_ICONS[video.platform] ?? PLATFORM_ICONS.unknown ?? ''
+                    }
+                    alt={video.platform}
+                    width={32}
+                    height={32}
+                    className="infinite-platform-icon"
+                  />
+                </a>
               </Box>
-              <Image
-                src={
-                  PLATFORM_ICONS[video.platform] ?? PLATFORM_ICONS.unknown ?? ''
-                }
-                alt={video.platform}
-                width={32}
-                height={32}
-                className="infinite-platform-icon"
-              />
             </Box>
           </SwiperSlide>
         ))}
@@ -223,6 +252,14 @@ export function InfinitePage() {
           className="infinite-action-btn"
         >
           <Image src="/icons/home.svg" alt="" width={24} height={24} />
+        </Button>
+        <Button
+          unstyled
+          onClick={handleDownload}
+          aria-label={t('downloadLabel')}
+          className="infinite-action-btn"
+        >
+          <Image src="/icons/download.svg" alt="" width={24} height={24} />
         </Button>
         <Button
           unstyled

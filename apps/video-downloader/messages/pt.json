@@ -55,7 +55,9 @@
     "emptyStateHint": "Baixe alguns vídeos primeiro para aproveitar a visualização de rolagem infinita",
     "reshuffleLabel": "Embaralhar vídeos",
     "homeLabel": "Ir para o início",
-    "seekLabel": "Navegar no vídeo"
+    "seekLabel": "Navegar no vídeo",
+    "downloadLabel": "Baixar vídeo",
+    "originalLabel": "Ver original"
   },
   "VideoGrid": {
     "title": "Downloads",
