@@ -51,6 +51,8 @@
     "infinite": "Endlos"
   },
   "InfinitePage": {
+    "loading": "Laden...",
+    "playLabel": "Video abspielen",
     "emptyState": "Keine Videos zum Anzeigen",
     "emptyStateHint": "Lade zuerst Videos herunter, um die Endlosscroll-Ansicht zu genießen",
     "reshuffleLabel": "Videos neu mischen",

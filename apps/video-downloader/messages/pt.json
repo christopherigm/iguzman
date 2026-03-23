@@ -51,6 +51,8 @@
     "infinite": "Infinito"
   },
   "InfinitePage": {
+    "loading": "Carregando...",
+    "playLabel": "Reproduzir vídeo",
     "emptyState": "Nenhum vídeo para exibir",
     "emptyStateHint": "Baixe alguns vídeos primeiro para aproveitar a visualização de rolagem infinita",
     "reshuffleLabel": "Embaralhar vídeos",

@@ -21,8 +21,9 @@
 }
 
 .infinite-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -79,6 +80,23 @@
 
 .infinite-platform-icon {
   filter: brightness(0) invert(1);
+}
+
+.infinite-play-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  cursor: pointer;
+}
+
+.infinite-play-prompt img {
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
+  drop-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .infinite-actions {

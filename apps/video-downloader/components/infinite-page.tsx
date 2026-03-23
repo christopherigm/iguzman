@@ -19,12 +19,14 @@ export function InfinitePage() {
   const t = useTranslations('InfinitePage');
   const { completed, removeCompleted } = useVideoStore();
   const [videos, setVideos] = useState<StoredVideo[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
   const swiperRef = useRef<SwiperType | null>(null);
   const reshuffled = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [showPlayPrompt, setShowPlayPrompt] = useState(false);
 
   function shuffle(list: StoredVideo[]) {
     const shuffled = [...list];
@@ -38,6 +40,7 @@ export function InfinitePage() {
   useEffect(() => {
     const eligible = completed.filter((v) => v.downloadURL && !v.justAudio);
     setVideos(shuffle(eligible));
+    setLoaded(true);
   }, []); // fixed random order on mount
 
   function handleReshuffle() {
@@ -63,7 +66,9 @@ export function InfinitePage() {
     videoRefs.current
       .get(index)
       ?.play()
-      .catch(() => {});
+      .catch(() => {
+        if (index === 0) setShowPlayPrompt(true);
+      });
   }
 
   function pauseAt(index: number) {
@@ -87,10 +92,16 @@ export function InfinitePage() {
     const onTimeUpdate = () => setCurrentTime(el.currentTime);
     const onMetadata = () =>
       setDuration(isFinite(el.duration) ? el.duration : 0);
+    const onEnded = () => {
+      if (swiperRef.current && activeIndex < videos.length - 1) {
+        swiperRef.current.slideNext();
+      }
+    };
 
     el.addEventListener('timeupdate', onTimeUpdate);
     el.addEventListener('loadedmetadata', onMetadata);
     el.addEventListener('durationchange', onMetadata);
+    el.addEventListener('ended', onEnded);
 
     if (isFinite(el.duration)) setDuration(el.duration);
     setCurrentTime(el.currentTime);
@@ -99,6 +110,7 @@ export function InfinitePage() {
       el.removeEventListener('timeupdate', onTimeUpdate);
       el.removeEventListener('loadedmetadata', onMetadata);
       el.removeEventListener('durationchange', onMetadata);
+      el.removeEventListener('ended', onEnded);
     };
   }, [activeIndex, videos]);
 
@@ -140,8 +152,14 @@ export function InfinitePage() {
     playAt(swiper.activeIndex);
   }
 
+  function handleManualPlay() {
+    setShowPlayPrompt(false);
+    playAt(activeIndex);
+  }
+
   function handleSlideChange(swiper: SwiperType) {
     pauseAt(swiper.previousIndex);
+    setShowPlayPrompt(false);
     setActiveIndex(swiper.activeIndex);
     setCurrentTime(0);
     setDuration(0);
@@ -150,7 +168,7 @@ export function InfinitePage() {
     playAt(swiper.activeIndex);
   }
 
-  if (videos.length === 0) {
+  if (!loaded || videos.length === 0) {
     return (
       <Box
         display="flex"
@@ -160,10 +178,16 @@ export function InfinitePage() {
         gap="8px"
         styles={{ height: '100dvh' }}
       >
-        <Typography variant="h3">{t('emptyState')}</Typography>
-        <Typography variant="body" color="var(--foreground-muted)">
-          {t('emptyStateHint')}
-        </Typography>
+        {!loaded ? (
+          <Typography variant="h3">{t('loading')}</Typography>
+        ) : (
+          <>
+            <Typography variant="h3">{t('emptyState')}</Typography>
+            <Typography variant="body" color="var(--foreground-muted)">
+              {t('emptyStateHint')}
+            </Typography>
+          </>
+        )}
       </Box>
     );
   }
@@ -181,7 +205,11 @@ export function InfinitePage() {
         onSlideChange={handleSlideChange}
       >
         {videos.map((video, index) => (
-          <SwiperSlide key={video.uuid} virtualIndex={index} className="infinite-slide">
+          <SwiperSlide
+            key={video.uuid}
+            virtualIndex={index}
+            className="infinite-slide"
+          >
             <video
               onClick={() => togglePlayAt(index)}
               aria-label={video.name ?? video.originalURL}
@@ -191,53 +219,66 @@ export function InfinitePage() {
               }}
               src={resolveMediaUrl(video.downloadURL!)}
               playsInline
-              loop
               className="infinite-video"
             />
-            <Box className="infinite-overlay">
-              <Box
-                display="flex"
-                alignItems="flex-start"
-                justifyContent="space-between"
-                width="100%"
-              >
-                <Box className="infinite-info">
-                  {video.name && (
-                    <Typography variant="body" className="infinite-title">
-                      {video.name}
-                    </Typography>
-                  )}
-                  <Typography variant="body-sm" className="infinite-count">
-                    {index + 1}/{videos.length}
-                  </Typography>
-                  {video.uploader && (
-                    <Typography variant="body-sm" className="infinite-uploader">
-                      {video.uploader}
-                    </Typography>
-                  )}
-                </Box>
-                <a
-                  href={video.originalURL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={t('originalLabel')}
-                  className="infinite-platform-link"
-                >
-                  <Image
-                    src={
-                      PLATFORM_ICONS[video.platform] ?? PLATFORM_ICONS.unknown ?? ''
-                    }
-                    alt={video.platform}
-                    width={32}
-                    height={32}
-                    className="infinite-platform-icon"
-                  />
-                </a>
-              </Box>
-            </Box>
           </SwiperSlide>
         ))}
       </Swiper>
+      {videos[activeIndex] && (
+        <Box className="infinite-overlay">
+          <Box
+            display="flex"
+            alignItems="flex-start"
+            justifyContent="space-between"
+            width="100%"
+          >
+            <Box className="infinite-info">
+              {videos[activeIndex].name && (
+                <Typography variant="body" className="infinite-title">
+                  {videos[activeIndex].name}
+                </Typography>
+              )}
+              <Typography variant="body-sm" className="infinite-count">
+                {activeIndex + 1}/{videos.length}
+              </Typography>
+              {videos[activeIndex].uploader && (
+                <Typography variant="body-sm" className="infinite-uploader">
+                  {videos[activeIndex].uploader}
+                </Typography>
+              )}
+            </Box>
+            <a
+              href={videos[activeIndex].originalURL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t('originalLabel')}
+              className="infinite-platform-link"
+            >
+              <Image
+                src={
+                  PLATFORM_ICONS[videos[activeIndex].platform] ??
+                  PLATFORM_ICONS.unknown ??
+                  ''
+                }
+                alt={videos[activeIndex].platform}
+                width={32}
+                height={32}
+                className="infinite-platform-icon"
+              />
+            </a>
+          </Box>
+        </Box>
+      )}
+      {showPlayPrompt && (
+        <Button
+          unstyled
+          onClick={handleManualPlay}
+          aria-label={t('playLabel')}
+          className="infinite-play-prompt"
+        >
+          <Image src="/icons/play.svg" alt="" width={64} height={64} />
+        </Button>
+      )}
       {duration > 0 && (
         <Box
           className="infinite-progress-container"
@@ -270,6 +311,14 @@ export function InfinitePage() {
         </Button>
         <Button
           unstyled
+          onClick={handleDelete}
+          aria-label={t('deleteLabel')}
+          className="infinite-action-btn"
+        >
+          <Image src="/icons/delete-video.svg" alt="" width={24} height={24} />
+        </Button>
+        <Button
+          unstyled
           onClick={handleDownload}
           aria-label={t('downloadLabel')}
           className="infinite-action-btn"
@@ -283,14 +332,6 @@ export function InfinitePage() {
           className="infinite-action-btn"
         >
           <Image src="/icons/random.svg" alt="" width={24} height={24} />
-        </Button>
-        <Button
-          unstyled
-          onClick={handleDelete}
-          aria-label={t('deleteLabel')}
-          className="infinite-action-btn"
-        >
-          <Image src="/icons/delete.svg" alt="" width={24} height={24} />
         </Button>
       </Box>
     </>

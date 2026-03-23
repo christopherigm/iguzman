@@ -51,6 +51,8 @@
     "infinite": "Infinito"
   },
   "InfinitePage": {
+    "loading": "Cargando...",
+    "playLabel": "Reproducir video",
     "emptyState": "Sin videos para mostrar",
     "emptyStateHint": "Descarga algunos videos primero para disfrutar la vista de scroll infinito",
     "reshuffleLabel": "Mezclar videos",
