@@ -46,6 +46,16 @@
     "noTasksFound": "No se encontraron tareas.",
     "taskCount": "{count, plural, one {# tarea} other {# tareas}}"
   },
+  "Navbar": {
+    "home": "Inicio",
+    "infinite": "Infinito"
+  },
+  "InfinitePage": {
+    "emptyState": "Sin videos para mostrar",
+    "emptyStateHint": "Descarga algunos videos primero para disfrutar la vista de scroll infinito",
+    "reshuffleLabel": "Mezclar videos",
+    "homeLabel": "Ir al inicio"
+  },
   "VideoGrid": {
     "title": "Descargas",
     "emptyState": "Aún no hay descargas",

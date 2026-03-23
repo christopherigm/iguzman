@@ -1,6 +1,6 @@
 {
   "name": "video-downloader",
-  "version": "0.2.35",
+  "version": "0.2.36",
   "type": "module",
   "private": true,
   "scripts": {
@@ -19,6 +19,7 @@
     "@repo/ui": "workspace:*",
     "next-intl": "^4",
     "pino": "^9",
+    "swiper": "^12.1.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },

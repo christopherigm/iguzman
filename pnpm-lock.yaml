@@ -107,6 +107,9 @@ importers:
       react-dom:
         specifier: ^19.2.4
         version: 19.2.4(react@19.2.4)
+      swiper:
+        specifier: ^12.1.2
+        version: 12.1.2
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
