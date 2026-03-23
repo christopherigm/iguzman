@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Mousewheel } from 'swiper/modules';
+import { Mousewheel, Virtual } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
 import { useTranslations } from 'next-intl';
@@ -17,7 +17,7 @@ import './infinite-page.css';
 
 export function InfinitePage() {
   const t = useTranslations('InfinitePage');
-  const { completed } = useVideoStore();
+  const { completed, removeCompleted } = useVideoStore();
   const [videos, setVideos] = useState<StoredVideo[]>([]);
   const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
   const swiperRef = useRef<SwiperType | null>(null);
@@ -110,6 +110,21 @@ export function InfinitePage() {
     setCurrentTime(time);
   }
 
+  function handleDelete() {
+    const video = videos[activeIndex];
+    if (!video) return;
+    removeCompleted(video.uuid);
+    setVideos((prev) => {
+      const next = prev.filter((v) => v.uuid !== video.uuid);
+      const newIndex = Math.min(activeIndex, next.length - 1);
+      if (swiperRef.current && newIndex !== activeIndex) {
+        swiperRef.current.slideTo(newIndex, 0);
+      }
+      setActiveIndex(newIndex);
+      return next;
+    });
+  }
+
   function handleDownload() {
     const video = videos[activeIndex];
     if (!video?.downloadURL) return;
@@ -157,15 +172,16 @@ export function InfinitePage() {
     <>
       <Swiper
         direction="vertical"
-        modules={[Mousewheel]}
+        modules={[Mousewheel, Virtual]}
         mousewheel
+        virtual
         slidesPerView={1}
         className="infinite-swiper"
         onSwiper={handleSwiper}
         onSlideChange={handleSlideChange}
       >
         {videos.map((video, index) => (
-          <SwiperSlide key={video.uuid} className="infinite-slide">
+          <SwiperSlide key={video.uuid} virtualIndex={index} className="infinite-slide">
             <video
               onClick={() => togglePlayAt(index)}
               aria-label={video.name ?? video.originalURL}
@@ -174,7 +190,6 @@ export function InfinitePage() {
                 else videoRefs.current.delete(index);
               }}
               src={resolveMediaUrl(video.downloadURL!)}
-              muted
               playsInline
               loop
               className="infinite-video"
@@ -268,6 +283,14 @@ export function InfinitePage() {
           className="infinite-action-btn"
         >
           <Image src="/icons/random.svg" alt="" width={24} height={24} />
+        </Button>
+        <Button
+          unstyled
+          onClick={handleDelete}
+          aria-label={t('deleteLabel')}
+          className="infinite-action-btn"
+        >
+          <Image src="/icons/delete.svg" alt="" width={24} height={24} />
         </Button>
       </Box>
     </>

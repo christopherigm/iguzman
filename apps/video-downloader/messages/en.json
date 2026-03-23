@@ -54,6 +54,7 @@
     "emptyState": "No videos to show",
     "emptyStateHint": "Download some videos first to enjoy the infinite scroll view",
     "reshuffleLabel": "Reshuffle videos",
+    "deleteLabel": "Delete video",
     "homeLabel": "Go to home",
     "seekLabel": "Seek video",
     "downloadLabel": "Download video",

@@ -54,6 +54,7 @@
     "emptyState": "Aucune vidéo à afficher",
     "emptyStateHint": "Téléchargez d'abord des vidéos pour profiter du défilement infini",
     "reshuffleLabel": "Mélanger les vidéos",
+    "deleteLabel": "Supprimer la vidéo",
     "homeLabel": "Aller à l'accueil",
     "seekLabel": "Naviguer dans la vidéo",
     "downloadLabel": "Télécharger la vidéo",

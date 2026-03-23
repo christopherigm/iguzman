@@ -54,6 +54,7 @@
     "emptyState": "Nenhum vídeo para exibir",
     "emptyStateHint": "Baixe alguns vídeos primeiro para aproveitar a visualização de rolagem infinita",
     "reshuffleLabel": "Embaralhar vídeos",
+    "deleteLabel": "Excluir vídeo",
     "homeLabel": "Ir para o início",
     "seekLabel": "Navegar no vídeo",
     "downloadLabel": "Baixar vídeo",
