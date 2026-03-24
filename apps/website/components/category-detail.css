@@ -1,0 +1,25 @@
+.category-detail {
+  padding: 24px 0 56px;
+}
+
+.category-detail__title {
+  margin-bottom: 12px;
+}
+
+.category-detail__items-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.category-detail__count {
+  font-size: 14px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+
+.category-detail__empty {
+  padding: 48px 0;
+}

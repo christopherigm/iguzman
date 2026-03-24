@@ -106,6 +106,26 @@
     "productLabel": "Produkt",
     "serviceLabel": "Dienst"
   },
+  "CategoryDetail": {
+    "home": "Startseite",
+    "products": "Produkte",
+    "services": "Dienste",
+    "noItems": "Keine Artikel in dieser Kategorie gefunden."
+  },
+  "ServicesPage": {
+    "heading": "Dienste",
+    "categoriesHeading": "Dienstkategorien",
+    "itemsHeading": "Alle Dienste",
+    "productLabel": "Produkt",
+    "serviceLabel": "Dienst"
+  },
+  "ProductsPage": {
+    "heading": "Produkte",
+    "categoriesHeading": "Produktkategorien",
+    "itemsHeading": "Alle Produkte",
+    "productLabel": "Produkt",
+    "serviceLabel": "Dienst"
+  },
   "SuccessStories": {
     "heading": "Erfolgsgeschichten",
     "readMore": "Mehr lesen"

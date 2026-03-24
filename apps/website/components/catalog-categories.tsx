@@ -23,7 +23,7 @@ interface CategoryCardProps {
   href: string;
 }
 
-function CategoryCard({
+export function CategoryCard({
   name,
   description,
   image,

@@ -106,6 +106,26 @@
     "modalityInPerson": "In Person",
     "modalityHybrid": "Hybrid"
   },
+  "CategoryDetail": {
+    "home": "Home",
+    "products": "Products",
+    "services": "Services",
+    "noItems": "No items found in this category."
+  },
+  "ServicesPage": {
+    "heading": "Services",
+    "categoriesHeading": "Service Categories",
+    "itemsHeading": "All Services",
+    "productLabel": "Product",
+    "serviceLabel": "Service"
+  },
+  "ProductsPage": {
+    "heading": "Products",
+    "categoriesHeading": "Product Categories",
+    "itemsHeading": "All Products",
+    "productLabel": "Product",
+    "serviceLabel": "Service"
+  },
   "SuccessStories": {
     "heading": "Success Stories",
     "readMore": "Read More"

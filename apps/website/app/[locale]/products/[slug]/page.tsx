@@ -53,9 +53,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const { variant: variantIdStr } = await searchParams;
   setRequestLocale(locale);
 
-  const [product, t] = await Promise.all([
+  const [product, t, tNav] = await Promise.all([
     getProduct(slug),
     getTranslations('ItemDetail'),
+    getTranslations('CategoryDetail'),
   ]);
 
   if (!product) notFound();
@@ -77,6 +78,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t('home'), href: '/' },
+    { label: tNav('products'), href: '/categories/products' },
     ...(product.category_name && product.category_slug
       ? [
           {

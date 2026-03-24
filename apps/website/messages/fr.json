@@ -106,6 +106,26 @@
     "productLabel": "Produit",
     "serviceLabel": "Service"
   },
+  "CategoryDetail": {
+    "home": "Accueil",
+    "products": "Produits",
+    "services": "Services",
+    "noItems": "Aucun article trouvé dans cette catégorie."
+  },
+  "ServicesPage": {
+    "heading": "Services",
+    "categoriesHeading": "Catégories de Services",
+    "itemsHeading": "Tous les Services",
+    "productLabel": "Produit",
+    "serviceLabel": "Service"
+  },
+  "ProductsPage": {
+    "heading": "Produits",
+    "categoriesHeading": "Catégories de Produits",
+    "itemsHeading": "Tous les Produits",
+    "productLabel": "Produit",
+    "serviceLabel": "Service"
+  },
   "SuccessStories": {
     "heading": "Histoires de Succès",
     "readMore": "En savoir plus"

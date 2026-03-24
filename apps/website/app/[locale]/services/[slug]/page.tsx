@@ -45,9 +45,10 @@ export default async function ServicePage({ params, searchParams }: Props) {
   const { variant: variantIdStr } = await searchParams;
   setRequestLocale(locale);
 
-  const [service, t] = await Promise.all([
+  const [service, t, tNav] = await Promise.all([
     getService(slug),
     getTranslations('ItemDetail'),
+    getTranslations('CategoryDetail'),
   ]);
 
   if (!service) notFound();
@@ -69,6 +70,7 @@ export default async function ServicePage({ params, searchParams }: Props) {
 
   const breadcrumbs: BreadcrumbItem[] = [
     { label: t('home'), href: '/' },
+    { label: tNav('services'), href: '/categories/services' },
     ...(service.category_name && service.category_slug
       ? [
           {
