@@ -130,6 +130,14 @@
     "heading": "Histórias de Sucesso",
     "readMore": "Leia mais"
   },
+  "SuccessStoryDetail": {
+    "home": "Início",
+    "successStories": "Histórias de Sucesso"
+  },
+  "HighlightDetail": {
+    "home": "Início",
+    "highlights": "Destaques"
+  },
   "VerifyEmailPage": {
     "loading": "Verificando sua conta, aguarde…",
     "successTitle": "E-mail verificado!",

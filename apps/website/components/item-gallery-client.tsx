@@ -43,6 +43,19 @@ export function ItemGalleryClient({
   }, []);
 
   useEffect(() => {
+    if (fullscreenIndex === null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeFullscreen();
+      if (e.key === 'ArrowLeft')
+        setFullscreenIndex((i) => (i === null ? null : (i - 1 + images.length) % images.length));
+      if (e.key === 'ArrowRight')
+        setFullscreenIndex((i) => (i === null ? null : (i + 1) % images.length));
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [fullscreenIndex, closeFullscreen]);
+
+  useEffect(() => {
     if (images.length === 0) return;
     Promise.all(
       images.map((img) => getImageDimensionsFromUrl(img.url).catch(() => null)),

@@ -58,6 +58,8 @@ class BasePicture(Common):
     en_name = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     en_description = models.TextField(null=True, blank=True)
+    short_description = models.TextField(null=True, blank=True)
+    en_short_description = models.TextField(null=True, blank=True)
     href = models.URLField(max_length=255, null=True, blank=True)
     fit = models.CharField(
         max_length=16,
@@ -192,6 +194,7 @@ class SuccessStory(StandardPicture):
         on_delete=models.SET_NULL,
         related_name="success_stories",
     )
+    slug = models.SlugField(max_length=255, unique=True, null=True, blank=True)
     gallery = models.ManyToManyField(
         SuccessStoryImage,
         blank=True,
@@ -234,6 +237,7 @@ class CompanyHighlight(StandardPicture):
     en_category = models.CharField(max_length=128, null=True, blank=True)
     icon = models.CharField(max_length=512, null=True, blank=True)
     size = models.CharField(max_length=4, choices=SIZE_CHOICES, default="md")
+    slug = models.SlugField(max_length=255, unique=True, null=True, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:

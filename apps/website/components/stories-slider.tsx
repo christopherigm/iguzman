@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import { Box } from '@repo/ui/core-elements/box';
@@ -80,7 +81,7 @@ function StoryCard({
           </Typography>
         )}
 
-        {story.href && (
+        {(story.slug || story.href) && (
           <Box className="story-card__cta">
             <Typography as="span" variant="none" className="story-card__cta-btn">{readMore} →</Typography>
           </Box>
@@ -88,6 +89,14 @@ function StoryCard({
       </Box>
     </Box>
   );
+
+  if (story.slug) {
+    return (
+      <Link href={`/blog/${story.slug}`} prefetch className="story-card zoom-on-hover">
+        {boxContent}
+      </Link>
+    );
+  }
 
   if (story.href) {
     return (

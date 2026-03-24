@@ -21,23 +21,23 @@ class CompanyHighlightItemInline(admin.TabularInline):
 
 @admin.register(CompanyHighlight)
 class CompanyHighlightAdmin(admin.ModelAdmin):
-    list_display = ("name", "system", "category", "sort_order", "enabled", "modified")
+    list_display = ("name", "slug", "system", "category", "sort_order", "enabled", "modified")
     list_filter = ("enabled", "system")
     search_fields = ("name", "en_name", "category")
     readonly_fields = ("created", "modified", "version")
     inlines = [CompanyHighlightItemInline]
     fieldsets = (
         ("Identity", {
-            "fields": ("system", "enabled", "size", "sort_order", "version", "created", "modified"),
+            "fields": ("system", "enabled", "size", "slug", "sort_order", "version", "created", "modified"),
         }),
         ("Category", {
             "fields": ("category", "en_category"),
         }),
         ("Content (ES)", {
-            "fields": ("name", "description"),
+            "fields": ("name", "short_description", "description"),
         }),
         ("Content (EN)", {
-            "fields": ("en_name", "en_description"),
+            "fields": ("en_name", "en_short_description", "en_description"),
         }),
         ("Media", {
             "fields": ("image", "icon", "fit", "background_color", "href"),
@@ -77,20 +77,20 @@ class SuccessStoryImageAdmin(admin.ModelAdmin):
 
 @admin.register(SuccessStory)
 class SuccessStoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "system", "enabled", "modified")
+    list_display = ("name", "slug", "system", "enabled", "modified")
     list_filter = ("enabled", "system")
     search_fields = ("name", "en_name", "description")
     readonly_fields = ("created", "modified", "version")
     filter_horizontal = ("gallery",)
     fieldsets = (
         ("Identity", {
-            "fields": ("system", "enabled", "version", "created", "modified"),
+            "fields": ("system", "enabled", "slug", "version", "created", "modified"),
         }),
         ("Content (ES)", {
-            "fields": ("name", "description"),
+            "fields": ("name", "short_description", "description"),
         }),
         ("Content (EN)", {
-            "fields": ("en_name", "en_description"),
+            "fields": ("en_name", "en_short_description", "en_description"),
         }),
         ("Media", {
             "fields": ("image", "fit", "background_color", "href"),
@@ -104,11 +104,13 @@ class SuccessStoryAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         cache.delete(f"core:success_story:{obj.pk}")
         cache.delete(f"core:success_story_gallery:{obj.pk}")
+        _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
 
     def delete_model(self, request, obj):
         cache.delete(f"core:success_story:{obj.pk}")
         cache.delete(f"core:success_story_gallery:{obj.pk}")
+        _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
         super().delete_model(request, obj)
 

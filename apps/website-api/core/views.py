@@ -175,6 +175,7 @@ class SuccessStoryDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save(instance)
         cache.delete(f"core:success_story:{pk}")
+        _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
         return Response(SuccessStorySerializer(instance, context={"request": request}).data)
 
@@ -185,6 +186,7 @@ class SuccessStoryDetailView(APIView):
         instance.delete()
         cache.delete(f"core:success_story:{pk}")
         cache.delete(f"core:success_story_gallery:{pk}")
+        _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -233,6 +235,7 @@ class SuccessStoryGalleryView(APIView):
         story.gallery.add(img)
         cache.delete(f"core:success_story_gallery:{pk}")
         cache.delete(f"core:success_story:{pk}")
+        _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
         return Response(
             SuccessStoryImageSerializer(img, context={"request": request}).data,
@@ -250,8 +253,42 @@ class SuccessStoryGalleryView(APIView):
         story.gallery.remove(img)
         cache.delete(f"core:success_story_gallery:{pk}")
         cache.delete(f"core:success_story:{pk}")
+        _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SuccessStoryBySlugView(APIView):
+    """GET /api/success-stories/slug/<slug>/ — retrieve a story by slug for the current system (public)."""
+
+    permission_classes = [AllowAny]
+
+    def _resolve_system(self, request):
+        host = (
+            request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()
+        ).split(":")[0]
+        return System.objects.filter(host=host, enabled=True).first()
+
+    def get(self, request, slug):
+        system = self._resolve_system(request)
+        if system is None:
+            return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+
+        cache_key = f"core:success_story:slug:{system.host}:{slug}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        try:
+            instance = SuccessStory.objects.prefetch_related("gallery").get(
+                system=system, slug=slug, enabled=True
+            )
+        except SuccessStory.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = SuccessStorySerializer(instance, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
 
 class CompanyHighlightListView(APIView):
@@ -347,6 +384,39 @@ class CompanyHighlightDetailView(APIView):
         cache.delete(f"core:highlight_items:{pk}")
         _invalidate_pattern("core:highlights:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CompanyHighlightBySlugView(APIView):
+    """GET /api/highlights/slug/<slug>/ — retrieve a highlight by slug for the current system (public)."""
+
+    permission_classes = [AllowAny]
+
+    def _resolve_system(self, request):
+        host = (
+            request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()
+        ).split(":")[0]
+        return System.objects.filter(host=host, enabled=True).first()
+
+    def get(self, request, slug):
+        system = self._resolve_system(request)
+        if system is None:
+            return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+
+        cache_key = f"core:highlight:slug:{system.host}:{slug}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        try:
+            instance = CompanyHighlight.objects.prefetch_related("items").get(
+                system=system, slug=slug, enabled=True
+            )
+        except CompanyHighlight.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = CompanyHighlightSerializer(instance, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
 
 class CompanyHighlightItemsView(APIView):

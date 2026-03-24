@@ -150,9 +150,13 @@ function HighlightCard({
     </>
   );
 
-  if (highlight.href) {
+  const linkHref = highlight.slug
+    ? `/highlights/${highlight.slug}`
+    : highlight.href ?? null;
+
+  if (linkHref) {
     return (
-      <Link href={highlight.href} prefetch className={cardClass}>
+      <Link href={linkHref} prefetch className={cardClass}>
         {cardBody}
       </Link>
     );

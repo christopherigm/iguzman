@@ -118,8 +118,11 @@ class SuccessStorySerializer(serializers.ModelSerializer):
         fields = [
             "id", "enabled", "created", "modified", "version",
             "system",
-            "name", "en_name", "description", "en_description",
+            "name", "en_name",
+            "short_description", "en_short_description",
+            "description", "en_description",
             "image", "fit", "background_color", "href",
+            "slug",
             "gallery",
         ]
 
@@ -141,11 +144,14 @@ class SuccessStoryWriteSerializer(serializers.Serializer):
     system      = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
     name        = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     en_name     = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     href        = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     fit         = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
     background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
+    slug        = serializers.SlugField(max_length=255, required=False, allow_null=True, allow_blank=True)
     enabled     = serializers.BooleanField(required=False)
     image       = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
 
@@ -158,8 +164,10 @@ class SuccessStoryWriteSerializer(serializers.Serializer):
 
     def save(self, instance):
         scalar_fields = [
-            "system", "name", "en_name", "description", "en_description",
-            "href", "fit", "background_color", "enabled",
+            "system", "name", "en_name",
+            "short_description", "en_short_description",
+            "description", "en_description",
+            "href", "fit", "background_color", "slug", "enabled",
         ]
         update_fields = []
         for field_name in scalar_fields:
@@ -263,9 +271,11 @@ class CompanyHighlightSerializer(serializers.ModelSerializer):
             "id", "enabled", "created", "modified", "version",
             "system",
             "category", "en_category",
-            "name", "en_name", "description", "en_description",
+            "name", "en_name",
+            "short_description", "en_short_description",
+            "description", "en_description",
             "image", "fit", "background_color", "href",
-            "icon", "size", "sort_order",
+            "icon", "size", "slug", "sort_order",
             "items",
         ]
 
@@ -286,6 +296,8 @@ class CompanyHighlightWriteSerializer(serializers.Serializer):
     en_category  = serializers.CharField(max_length=128, required=False, allow_null=True, allow_blank=True)
     name         = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     en_name      = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_short_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     description  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     href         = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -293,6 +305,7 @@ class CompanyHighlightWriteSerializer(serializers.Serializer):
     background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
     icon         = serializers.CharField(max_length=512, required=False, allow_null=True, allow_blank=True)
     size         = serializers.ChoiceField(choices=["sm", "md", "lg", "xl"], required=False)
+    slug         = serializers.SlugField(max_length=255, required=False, allow_null=True, allow_blank=True)
     sort_order   = serializers.IntegerField(min_value=0, required=False)
     enabled      = serializers.BooleanField(required=False)
     image        = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
@@ -307,8 +320,10 @@ class CompanyHighlightWriteSerializer(serializers.Serializer):
     def save(self, instance):
         scalar_fields = [
             "system", "category", "en_category",
-            "name", "en_name", "description", "en_description",
-            "href", "fit", "background_color", "icon", "size", "sort_order", "enabled",
+            "name", "en_name",
+            "short_description", "en_short_description",
+            "description", "en_description",
+            "href", "fit", "background_color", "icon", "size", "slug", "sort_order", "enabled",
         ]
         update_fields = []
         for field_name in scalar_fields:
