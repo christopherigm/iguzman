@@ -62,7 +62,8 @@
     "downloadLabel": "Video herunterladen",
     "originalLabel": "Original ansehen",
     "videoDeletedFromServer": "Video vom Server gelöscht",
-    "nextVideoIn": "Nächstes Video in {seconds}s"
+    "nextVideoIn": "Nächstes Video in {seconds}s",
+    "objectFitLabel": "Objektanpassung umschalten"
   },
   "VideoGrid": {
     "title": "Downloads",

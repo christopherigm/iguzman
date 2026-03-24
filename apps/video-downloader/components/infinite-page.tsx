@@ -29,6 +29,7 @@ export function InfinitePage() {
   const [duration, setDuration] = useState(0);
   const [showPlayPrompt, setShowPlayPrompt] = useState(false);
   const [activeVideoLoading, setActiveVideoLoading] = useState(true);
+  const [objectFit, setObjectFit] = useState<'cover' | 'contain'>('cover');
   const [deletedCountdown, setDeletedCountdown] = useState<number | null>(null);
 
   function shuffle(list: StoredVideo[]) {
@@ -256,6 +257,7 @@ export function InfinitePage() {
               playsInline
               preload={Math.abs(index - activeIndex) <= 1 ? 'auto' : 'none'}
               className="infinite-video"
+              style={{ objectFit }}
               onCanPlay={() => handleVideoCanPlay(index)}
               onError={() => handleVideoError(index)}
             />
@@ -263,21 +265,9 @@ export function InfinitePage() {
         ))}
       </Swiper>
       {activeVideoLoading && videos[activeIndex] && (
-        <>
-          {videos[activeIndex].thumbnail && (
-            <Box className="infinite-thumbnail-wrap">
-              <Image
-                src={resolveMediaUrl(`/api/media/${videos[activeIndex].thumbnail}`)}
-                alt=""
-                fill
-                className="infinite-thumbnail"
-              />
-            </Box>
-          )}
-          <Box className="infinite-loading-bar">
-            <ProgressBar label={t('loading')} />
-          </Box>
-        </>
+        <Box className="infinite-loading-bar">
+          <ProgressBar label={t('loading')} />
+        </Box>
       )}
       {deletedCountdown !== null && (
         <Box className="infinite-deleted-overlay">
@@ -397,6 +387,25 @@ export function InfinitePage() {
           className="infinite-action-btn"
         >
           <Image src="/icons/random.svg" alt="" width={24} height={24} />
+        </Button>
+        <Button
+          unstyled
+          onClick={() =>
+            setObjectFit((prev) => (prev === 'cover' ? 'contain' : 'cover'))
+          }
+          aria-label={t('objectFitLabel')}
+          className="infinite-action-btn"
+        >
+          <Image
+            src={
+              objectFit === 'contain'
+                ? '/icons/maximize.svg'
+                : '/icons/minimize.svg'
+            }
+            alt=""
+            width={24}
+            height={24}
+          />
         </Button>
       </Box>
     </>
