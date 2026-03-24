@@ -382,14 +382,6 @@ export function InfinitePage() {
         </Button>
         <Button
           unstyled
-          onClick={handleReshuffle}
-          aria-label={t('reshuffleLabel')}
-          className="infinite-action-btn"
-        >
-          <Image src="/icons/random.svg" alt="" width={24} height={24} />
-        </Button>
-        <Button
-          unstyled
           onClick={() =>
             setObjectFit((prev) => (prev === 'cover' ? 'contain' : 'cover'))
           }
@@ -406,6 +398,14 @@ export function InfinitePage() {
             width={24}
             height={24}
           />
+        </Button>
+        <Button
+          unstyled
+          onClick={handleReshuffle}
+          aria-label={t('reshuffleLabel')}
+          className="infinite-action-btn"
+        >
+          <Image src="/icons/random.svg" alt="" width={24} height={24} />
         </Button>
       </Box>
     </>
