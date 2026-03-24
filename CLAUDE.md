@@ -92,7 +92,7 @@ Most components extend `UIComponentProps`, which maps common CSS properties dire
 | Use case | Component | Key props |
 |---|---|---|
 | Headings, body text, labels | `Typography` | `variant?: 'none'\|'h1'…'h6'\|'body'\|'body-sm'\|'caption'\|'label'`, `as?` (HTML element override), `textAlign?`, `fontWeight?`, `role?`, `aria-current?`, `aria-hidden?`, `aria-label?` + UIComponentProps. Heading variants h1–h5 use fluid `clamp()` sizing (h1 56px→32px hero, h2 32px→22px section titles, h3 22px→17px feature card names, h4 18px→15px secondary, h5 15px→13px compact card names). Use `variant="none"` only when a CSS class must fully control typography (e.g. `.section-subtitle` with its special opacity color). |
-| Generic `<div>` wrapper | `Box` | `role?`, `aria-label?`, `aria-hidden?`, `aria-labelledby?`, `aria-describedby?` + all `UIComponentProps` |
+| Generic `<div>` wrapper | `Box` | `role?`, `aria-label?`, `aria-hidden?`, `aria-labelledby?`, `aria-describedby?`, `aria-modal?`, `onClick?` + all `UIComponentProps` |
 | Centered max-width section | `Container` | `size?: 'xs'\|'sm'\|'md'\|'lg'\|'xl'`, `paddingX?` |
 | 12-col responsive layout | `Grid` | `container?`, `item?`, `size?: {xs,sm,md,lg,xl}` (1–12), `spacing?`, `spacingX?`, `spacingY?` |
 | Clickable button | `Button` | `text?` (or `children`), `href?`, `onClick?`, `type?`, `onHover?`, `unstyled?` (strips default styles/wave — use for icon or toggle buttons with custom CSS), `title?`, `aria-label?`, `aria-pressed?`, `aria-expanded?`, `aria-controls?` + UIComponentProps |

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Thumbs, Navigation, FreeMode } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
 import { Box } from '@repo/ui/core-elements/box';
+import { Button } from '@repo/ui/core-elements/button';
 import getImageDimensionsFromUrl from '@repo/helpers/get-image-dimensions-from-url';
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -29,12 +30,24 @@ export function ItemGalleryClient({
 }: ItemGalleryClientProps) {
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
   const [slideAspectRatio, setSlideAspectRatio] = useState<number | null>(null);
+  const [imageAspectRatios, setImageAspectRatios] = useState<(number | null)[]>([]);
+  const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const closeFullscreen = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setFullscreenIndex(null);
+      setIsClosing(false);
+    }, 250);
+  }, []);
 
   useEffect(() => {
     if (images.length === 0) return;
     Promise.all(
       images.map((img) => getImageDimensionsFromUrl(img.url).catch(() => null)),
     ).then((results) => {
+      setImageAspectRatios(results.map((r) => r?.aspectRatio ?? null));
       const ratios = results
         .filter((r) => r !== null)
         .map((r) => r!.aspectRatio);
@@ -86,6 +99,19 @@ export function ItemGalleryClient({
                 sizes="(min-width: 1200px) 40vw, (min-width: 600px) 50vw, 100vw"
                 priority={i === 0}
               />
+              <Button
+                unstyled
+                className="item-gallery__fullscreen-btn"
+                aria-label="Expand image"
+                onClick={() => setFullscreenIndex(i)}
+              >
+                <Image
+                  src="/icons/fullscreen.svg"
+                  alt=""
+                  width={20}
+                  height={20}
+                />
+              </Button>
             </Box>
           </SwiperSlide>
         ))}
@@ -115,6 +141,42 @@ export function ItemGalleryClient({
             </SwiperSlide>
           ))}
         </Swiper>
+      )}
+
+      {fullscreenIndex !== null && (
+        <Box
+          className={`item-gallery__overlay${isClosing ? ' item-gallery__overlay--closing' : ''}`}
+          role="dialog"
+          aria-modal
+          aria-label="Image fullscreen"
+          onClick={closeFullscreen}
+        >
+          <Box
+            className="item-gallery__overlay-image-wrap"
+            styles={
+              imageAspectRatios[fullscreenIndex] != null
+                ? ({ '--img-ar': String(imageAspectRatios[fullscreenIndex]) } as React.CSSProperties)
+                : undefined
+            }
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <Image
+              fill
+              src={images[fullscreenIndex]?.url ?? ''}
+              alt={images[fullscreenIndex]?.alt ?? ''}
+              className="item-gallery__overlay-image"
+              sizes="90vw"
+            />
+          </Box>
+          <Button
+            unstyled
+            className="item-gallery__overlay-close"
+            aria-label="Close fullscreen"
+            onClick={closeFullscreen}
+          >
+            <Image src="/icons/close.svg" alt="" width={24} height={24} />
+          </Button>
+        </Box>
       )}
     </Box>
   );

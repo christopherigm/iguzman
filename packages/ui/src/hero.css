@@ -1,0 +1,10 @@
+.hero--image {
+  height: clamp(500px, 65vw, 800px);
+}
+
+@media (max-width: 899px) {
+  /* md */
+  .hero--image {
+    min-height: 300px;
+  }
+}

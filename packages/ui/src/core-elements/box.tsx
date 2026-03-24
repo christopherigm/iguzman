@@ -12,6 +12,10 @@ export interface BoxProps extends UIComponentProps {
   'aria-labelledby'?: string;
   /** ID of another element that describes this one. */
   'aria-describedby'?: string;
+  /** Whether this element is a modal dialog. */
+  'aria-modal'?: boolean;
+  /** Click handler. */
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
 /**
@@ -31,7 +35,7 @@ export interface BoxProps extends UIComponentProps {
  * </Box>
  */
 export const Box: React.FC<BoxProps> = (props) => {
-  const { styles, children, className, id, role } = props;
+  const { styles, children, className, id, role, onClick } = props;
 
   const style: CSSProperties = { ...buildStyleProps(props), ...styles };
 
@@ -45,6 +49,8 @@ export const Box: React.FC<BoxProps> = (props) => {
       aria-hidden={props['aria-hidden']}
       aria-labelledby={props['aria-labelledby']}
       aria-describedby={props['aria-describedby']}
+      aria-modal={props['aria-modal']}
+      onClick={onClick}
     >
       {children}
     </div>

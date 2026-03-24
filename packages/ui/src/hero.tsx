@@ -1,5 +1,6 @@
 import React, { CSSProperties } from 'react';
 import { HeroVideo } from './hero-video';
+import './hero.css';
 
 export type HeroProps = {
   /** YouTube, Vimeo, or direct video file URL. Takes priority over backgroundImage. */
@@ -53,15 +54,11 @@ export function Hero({
 
   return (
     <div
-      className={className}
+      className={[!hasVideo ? 'hero--image' : '', className].filter(Boolean).join(' ')}
       style={{
         position: 'relative',
         width: '100%',
-        /*
-         * clamp(350px, 45vw, 600px):
-         *   350 px on mobile, scales up to 600 px at ~1333 px viewport width.
-         */
-        height: 'clamp(350px, 45vw, 600px)',
+        height: hasVideo ? 'clamp(350px, 45vw, 600px)' : 'clamp(500px, 65vw, 800px)',
         overflow: 'hidden',
         backgroundColor: '#000',
         ...style,
