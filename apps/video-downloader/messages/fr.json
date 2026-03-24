@@ -60,7 +60,9 @@
     "homeLabel": "Aller à l'accueil",
     "seekLabel": "Naviguer dans la vidéo",
     "downloadLabel": "Télécharger la vidéo",
-    "originalLabel": "Voir l'original"
+    "originalLabel": "Voir l'original",
+    "videoDeletedFromServer": "Vidéo supprimée du serveur",
+    "nextVideoIn": "Prochaine vidéo dans {seconds}s"
   },
   "VideoGrid": {
     "title": "Téléchargements",

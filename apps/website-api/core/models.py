@@ -107,9 +107,10 @@ def picture_mixin(max_width: int, quality: int = 85):
 
 
 # Standard size tiers — use these directly or call picture_mixin() for custom sizes.
-SmallPicture = picture_mixin(256)          # thumbnails, avatars
-MediumPicture = picture_mixin(512)         # cards, previews
-RegularPicture = picture_mixin(1200)       # content images, banners
+SmallPicture = picture_mixin(256)               # thumbnails, avatars
+MediumPicture = picture_mixin(512, quality=90)  # cards, previews
+StandardPicture = picture_mixin(900)            # stories, highlights, buyables
+RegularPicture = picture_mixin(1200)            # content images, banners
 LargePicture = picture_mixin(3840, quality=90)  # hero images, full-bleed
 
 
@@ -127,14 +128,14 @@ class Brand(Common):
         return self.name
 
 
-class Buyable(RegularPicture):
+class Buyable(StandardPicture):
     """
     Abstract base for all buyable items (products, services, meals, houses, cars).
 
     Inherits from RegularPicture which provides:
       - Common: enabled, created, modified, version
       - BasePicture: name, en_name, description, en_description, href, fit, background_color
-      - RegularPicture: image (max 1200px)
+      - StandardPicture: image (max 900px)
     """
 
     system = models.ForeignKey(
@@ -162,7 +163,7 @@ class Buyable(RegularPicture):
         abstract = True
 
 
-class SuccessStoryImage(MediumPicture):
+class SuccessStoryImage(StandardPicture):
     """A single gallery image that can be attached to one or more SuccessStory entries."""
 
     class Meta:
@@ -174,7 +175,7 @@ class SuccessStoryImage(MediumPicture):
         return self.name or f"Image #{self.pk}"
 
 
-class SuccessStory(MediumPicture):
+class SuccessStory(StandardPicture):
     """
     A company success story linked to a System.
 
@@ -206,7 +207,7 @@ class SuccessStory(MediumPicture):
         return self.name or f"Story #{self.pk}"
 
 
-class CompanyHighlight(MediumPicture):
+class CompanyHighlight(StandardPicture):
     """
     A company highlight / spec entry linked to a System.
 

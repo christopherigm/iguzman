@@ -14,9 +14,9 @@ import type { GridSize } from '@repo/ui/core-elements/grid';
 import './company-highlights.css';
 
 const HIGHLIGHT_GRID_SIZE: Record<string, GridSize> = {
-  sm: { xs: 12, sm: 6, md: 3 },
-  md: { xs: 12, sm: 6, md: 4 },
-  lg: { xs: 12, sm: 12, md: 8 },
+  sm: { xs: 6, md: 3 },
+  md: { xs: 6, md: 4 },
+  lg: { xs: 6, md: 8 },
   xl: { xs: 12 },
 };
 
@@ -38,7 +38,9 @@ function HighlightItemCard({ item }: { item: CompanyHighlightItem }) {
           alt={item.name ?? ''}
         />
       ) : (
-        <Typography as="span" variant="none" styles={{ fontSize: 24 }}>{item.icon ?? ''}</Typography>
+        <Typography as="span" variant="none" styles={{ fontSize: 24 }}>
+          {item.icon ?? ''}
+        </Typography>
       )}
     </Box>
   );
@@ -86,7 +88,13 @@ function HighlightCard({
       <Box className="highlight-card__content card-content">
         <Box className="highlight-card__left">
           {category && (
-            <Typography as="span" variant="none" className="highlight-card__category">{category}</Typography>
+            <Typography
+              as="span"
+              variant="none"
+              className="highlight-card__category"
+            >
+              {category}
+            </Typography>
           )}
 
           {highlight.icon && (
@@ -100,7 +108,9 @@ function HighlightCard({
                   aria-hidden={true}
                 />
               ) : (
-                <Typography as="span" variant="none">{highlight.icon}</Typography>
+                <Typography as="span" variant="none">
+                  {highlight.icon}
+                </Typography>
               )}
             </Box>
           )}
@@ -112,7 +122,10 @@ function HighlightCard({
           )}
 
           {description && (
-            <Typography variant="body-sm" className="highlight-card__description">
+            <Typography
+              variant="body-sm"
+              className="highlight-card__description"
+            >
               {description}
             </Typography>
           )}

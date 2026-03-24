@@ -86,7 +86,7 @@ class ProductImageWriteSerializer(serializers.Serializer):
     def validate_image(self, value):
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(512, 512),
+            max_size=(900, 900),
             quality=85,
         )
         if not sub.is_valid():
@@ -104,7 +104,7 @@ class ProductImageWriteSerializer(serializers.Serializer):
 
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
-            max_size=(512, 512),
+            max_size=(900, 900),
             quality=85,
         )
         proc.is_valid()
@@ -252,7 +252,7 @@ class ProductVariantWriteSerializer(serializers.Serializer):
             return value
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(1200, 1200),
+            max_size=(900, 900),
             quality=85,
         )
         if not sub.is_valid():
@@ -294,7 +294,7 @@ class ProductVariantWriteSerializer(serializers.Serializer):
     def _save_image(self, variant, image_data):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
-            max_size=(1200, 1200),
+            max_size=(900, 900),
             quality=85,
         )
         proc.is_valid()
@@ -310,7 +310,7 @@ class ProductVariantImageWriteSerializer(serializers.Serializer):
     def validate_image(self, value):
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(512, 512),
+            max_size=(900, 900),
             quality=85,
         )
         if not sub.is_valid():
@@ -326,7 +326,7 @@ class ProductVariantImageWriteSerializer(serializers.Serializer):
         instance.save()
         proc = ImageProcessingSerializer(
             data={'base64_image': self.validated_data['image']},
-            max_size=(512, 512),
+            max_size=(900, 900),
             quality=85,
         )
         proc.is_valid()
@@ -395,7 +395,7 @@ class ServiceVariantWriteSerializer(serializers.Serializer):
             return value
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(1200, 1200),
+            max_size=(900, 900),
             quality=85,
         )
         if not sub.is_valid():
@@ -437,7 +437,7 @@ class ServiceVariantWriteSerializer(serializers.Serializer):
     def _save_image(self, variant, image_data):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
-            max_size=(1200, 1200),
+            max_size=(900, 900),
             quality=85,
         )
         proc.is_valid()
@@ -540,7 +540,7 @@ class ProductWriteSerializer(serializers.Serializer):
             return value
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(1200, 1200),
+            max_size=(900, 900),
             quality=85,
         )
         if not sub.is_valid():
@@ -594,7 +594,7 @@ class ProductWriteSerializer(serializers.Serializer):
     def _save_image(self, product, image_data):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
-            max_size=(1200, 1200),
+            max_size=(900, 900),
             quality=85,
         )
         proc.is_valid()
@@ -630,7 +630,7 @@ class ServiceImageWriteSerializer(serializers.Serializer):
     def validate_image(self, value):
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(512, 512),
+            max_size=(900, 900),
             quality=85,
         )
         if not sub.is_valid():
@@ -648,7 +648,7 @@ class ServiceImageWriteSerializer(serializers.Serializer):
 
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
-            max_size=(512, 512),
+            max_size=(900, 900),
             quality=85,
         )
         proc.is_valid()
@@ -786,7 +786,7 @@ class ServiceWriteSerializer(serializers.Serializer):
             return value
         sub = ImageProcessingSerializer(
             data={'base64_image': value},
-            max_size=(1200, 1200),
+            max_size=(900, 900),
             quality=85,
         )
         if not sub.is_valid():
@@ -839,7 +839,7 @@ class ServiceWriteSerializer(serializers.Serializer):
     def _save_image(self, service, image_data):
         proc = ImageProcessingSerializer(
             data={'base64_image': image_data},
-            max_size=(1200, 1200),
+            max_size=(900, 900),
             quality=85,
         )
         proc.is_valid()

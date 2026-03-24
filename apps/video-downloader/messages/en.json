@@ -60,7 +60,9 @@
     "homeLabel": "Go to home",
     "seekLabel": "Seek video",
     "downloadLabel": "Download video",
-    "originalLabel": "Watch original"
+    "originalLabel": "Watch original",
+    "videoDeletedFromServer": "Video deleted from server",
+    "nextVideoIn": "Next video in {seconds}s"
   },
   "VideoGrid": {
     "title": "Downloads",

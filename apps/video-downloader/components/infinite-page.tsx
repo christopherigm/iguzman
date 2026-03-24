@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Button } from '@repo/ui/core-elements/button';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { useVideoStore } from './use-video-store';
 import type { StoredVideo } from './use-video-store';
 import { resolveMediaUrl, PLATFORM_ICONS } from './video-item-shared';
@@ -27,6 +28,8 @@ export function InfinitePage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showPlayPrompt, setShowPlayPrompt] = useState(false);
+  const [activeVideoLoading, setActiveVideoLoading] = useState(true);
+  const [deletedCountdown, setDeletedCountdown] = useState<number | null>(null);
 
   function shuffle(list: StoredVideo[]) {
     const shuffled = [...list];
@@ -114,6 +117,30 @@ export function InfinitePage() {
     };
   }, [activeIndex, videos]);
 
+  useEffect(() => {
+    if (deletedCountdown === null) return;
+    if (deletedCountdown === 0) {
+      setDeletedCountdown(null);
+      if (swiperRef.current && activeIndex < videos.length - 1) {
+        swiperRef.current.slideNext();
+      }
+      return;
+    }
+    const timer = setTimeout(
+      () => setDeletedCountdown((prev) => (prev !== null ? prev - 1 : null)),
+      1000,
+    );
+    return () => clearTimeout(timer);
+  }, [deletedCountdown, activeIndex, videos.length]);
+
+  function handleVideoError(index: number) {
+    if (index === activeIndex) setDeletedCountdown(3);
+  }
+
+  function handleVideoCanPlay(index: number) {
+    if (index === activeIndex) setActiveVideoLoading(false);
+  }
+
   function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
     const el = videoRefs.current.get(activeIndex);
     if (!el) return;
@@ -149,6 +176,8 @@ export function InfinitePage() {
   function handleSwiper(swiper: SwiperType) {
     swiperRef.current = swiper;
     setActiveIndex(swiper.activeIndex);
+    const el = videoRefs.current.get(swiper.activeIndex);
+    setActiveVideoLoading(!el || el.readyState < 3);
     playAt(swiper.activeIndex);
   }
 
@@ -160,11 +189,17 @@ export function InfinitePage() {
   function handleSlideChange(swiper: SwiperType) {
     pauseAt(swiper.previousIndex);
     setShowPlayPrompt(false);
+    setDeletedCountdown(null);
     setActiveIndex(swiper.activeIndex);
     setCurrentTime(0);
     setDuration(0);
     const el = videoRefs.current.get(swiper.activeIndex);
-    if (el) el.currentTime = 0;
+    if (el) {
+      el.currentTime = 0;
+      setActiveVideoLoading(el.readyState < 3);
+    } else {
+      setActiveVideoLoading(true);
+    }
     playAt(swiper.activeIndex);
   }
 
@@ -219,11 +254,41 @@ export function InfinitePage() {
               }}
               src={resolveMediaUrl(video.downloadURL!)}
               playsInline
+              preload={Math.abs(index - activeIndex) <= 1 ? 'auto' : 'none'}
               className="infinite-video"
+              onCanPlay={() => handleVideoCanPlay(index)}
+              onError={() => handleVideoError(index)}
             />
           </SwiperSlide>
         ))}
       </Swiper>
+      {activeVideoLoading && videos[activeIndex] && (
+        <>
+          {videos[activeIndex].thumbnail && (
+            <Box className="infinite-thumbnail-wrap">
+              <Image
+                src={resolveMediaUrl(`/api/media/${videos[activeIndex].thumbnail}`)}
+                alt=""
+                fill
+                className="infinite-thumbnail"
+              />
+            </Box>
+          )}
+          <Box className="infinite-loading-bar">
+            <ProgressBar label={t('loading')} />
+          </Box>
+        </>
+      )}
+      {deletedCountdown !== null && (
+        <Box className="infinite-deleted-overlay">
+          <Typography variant="h3" className="infinite-deleted-text">
+            {t('videoDeletedFromServer')}
+          </Typography>
+          <Typography variant="body" className="infinite-deleted-countdown">
+            {t('nextVideoIn', { seconds: deletedCountdown })}
+          </Typography>
+        </Box>
+      )}
       {videos[activeIndex] && (
         <Box className="infinite-overlay">
           <Box

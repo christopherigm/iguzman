@@ -49,9 +49,23 @@ data:
             autoindex off;
 
             # Optimise large-file delivery
-            sendfile    on;
-            tcp_nopush  on;
-            tcp_nodelay on;
+            sendfile           on;
+            sendfile_max_chunk 512k;  # yield worker between chunks
+            tcp_nopush         on;
+            tcp_nodelay        on;
+            aio                on;    # async I/O for large video files
+
+            # Cache open file descriptors — avoids a syscall per request
+            open_file_cache          max=200 inactive=60s;
+            open_file_cache_valid    30s;
+            open_file_cache_min_uses 2;
+            open_file_cache_errors   on;
+
+            # Explicit byte-range support (required for video seeking)
+            add_header Accept-Ranges bytes always;
+
+            # Buffer tuning for large sequential reads
+            output_buffers 2 512k;
         }
 
         # Health check endpoint for k8s probes

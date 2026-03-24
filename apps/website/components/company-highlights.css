@@ -155,3 +155,19 @@
   filter: brightness(0) invert(1);
   opacity: 0.6;
 }
+
+/* Mobile + tablet (xs, sm, md): sm/md/lg cards shrink card height */
+@media (max-width: 1199px) {
+  /* below lg */
+  .highlight-card--sm,
+  .highlight-card--md,
+  .highlight-card--lg {
+    min-height: 200px;
+  }
+
+  .highlight-card--sm.highlight-card--has-image,
+  .highlight-card--md.highlight-card--has-image,
+  .highlight-card--lg.highlight-card--has-image {
+    min-height: 250px;
+  }
+}

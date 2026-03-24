@@ -4,7 +4,7 @@ from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from core.models import Buyable, Common, MediumPicture, RegularPicture, picture
+from core.models import Buyable, Common, RegularPicture, StandardPicture, picture
 
 
 DIMENSION_UNIT_CHOICES = [
@@ -55,7 +55,7 @@ class Product(Buyable):
     Inherits from Buyable which provides:
       - Common: enabled, created, modified, version
       - BasePicture: name, en_name, description, en_description, href, fit, background_color
-      - RegularPicture: image (max 1200px)
+      - StandardPicture: image (max 900px)
       - Buyable: system (FK), brand (FK), price, compare_price, cost_price, currency
     """
 
@@ -138,7 +138,7 @@ class Service(Buyable):
     Inherits from Buyable which provides:
       - Common: enabled, created, modified, version
       - BasePicture: name, en_name, description, en_description, href, fit, background_color
-      - RegularPicture: image (max 1200px)
+      - StandardPicture: image (max 900px)
       - Buyable: system (FK), brand (FK), price, compare_price, cost_price, currency
     """
 
@@ -170,7 +170,7 @@ class Service(Buyable):
         return self.name or self.slug
 
 
-class ProductImage(MediumPicture):
+class ProductImage(StandardPicture):
     """Additional gallery images for a product."""
 
     product = models.ForeignKey(
@@ -189,7 +189,7 @@ class ProductImage(MediumPicture):
         return f"Image for {self.product} (#{self.sort_order})"
 
 
-class ServiceImage(MediumPicture):
+class ServiceImage(StandardPicture):
     """Additional gallery images for a service."""
 
     service = models.ForeignKey(
@@ -406,7 +406,7 @@ class ProductVariant(BaseVariant):
         return self.product
 
 
-class ProductVariantImage(MediumPicture):
+class ProductVariantImage(StandardPicture):
     """Additional gallery images specific to a product variant."""
 
     variant = models.ForeignKey(
