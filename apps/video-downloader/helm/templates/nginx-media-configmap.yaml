@@ -1,15 +1,23 @@
-{{- if .Values.nginx.enabled }}
+{{- if .Values.nginxMedia.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "video-downloader.fullname" . }}-nginx
+  name: {{ include "video-downloader.fullname" . }}-media-nginx
   labels:
     {{- include "video-downloader.labels" . | nindent 4 }}
 data:
   default.conf: |
     server {
-        listen {{ .Values.nginx.port }};
-        server_name _;
+        listen {{ .Values.nginxMedia.port }} quic reuseport;
+        listen {{ .Values.nginxMedia.port }} ssl;
+
+        http2 on;
+        http3 on;
+
+        ssl_certificate     /etc/nginx/tls/tls.crt;
+        ssl_certificate_key /etc/nginx/tls/tls.key;
+        ssl_protocols       TLSv1.3;
+        ssl_prefer_server_ciphers off;
 
         # Block access to sensitive files inside /api/media/
         location = /api/media/netscape-cookies.txt {
@@ -18,14 +26,14 @@ data:
 
         # ── Serve media files at the same path the Next.js API used ──
         location /api/media/ {
-            # Write operations (PUT) → forward to the Next.js app server
-            # so client-side processed videos are stored on disk.
-            if ($request_method !~ ^(GET|HEAD)$) {
-                proxy_pass http://127.0.0.1:{{ $.Values.service.targetPort }};
-            }
-
             # Allow large video uploads (client-side FFmpeg output)
             client_max_body_size 500m;
+
+            # Write operations (PUT) → forward to the Next.js app server
+            # so client-side processed videos are stored on disk.
+            limit_except GET HEAD {
+                proxy_pass http://{{ include "video-downloader.fullname" . }}:{{ .Values.service.targetPort }};
+            }
 
             alias {{ .Values.hostPathVolume.mountPath }}/;
 
@@ -42,8 +50,22 @@ data:
             }
             default_type application/octet-stream;
 
-            # Match the caching header the old API route returned
-            add_header Cache-Control "public, max-age=3600";
+            # NOTE: all add_header directives must live in this location block.
+            # nginx does not inherit server-level add_header into a location that
+            # defines its own add_header directives.
+            add_header Cache-Control "public, max-age=3600" always;
+            add_header Accept-Ranges bytes always;
+
+            # Required: Next.js sets COEP: require-corp — cross-origin resources must opt in
+            add_header Cross-Origin-Resource-Policy "cross-origin" always;
+
+            # Required: allow the Next.js app to fetch media blobs cross-origin
+            # (the `download` attribute is ignored for cross-origin URLs, so we
+            # fetch as blob and create an object URL instead).
+            add_header Access-Control-Allow-Origin "*" always;
+
+            # Advertise HTTP/3 so browsers upgrade to QUIC on the next request
+            add_header Alt-Svc 'h3=":{{ .Values.nginxMedia.port }}"; ma=86400' always;
 
             # Block directory listings
             autoindex off;
@@ -60,9 +82,6 @@ data:
             open_file_cache_valid    30s;
             open_file_cache_min_uses 2;
             open_file_cache_errors   on;
-
-            # Explicit byte-range support (required for video seeking)
-            add_header Accept-Ranges bytes always;
 
             # Buffer tuning for large sequential reads
             output_buffers 2 512k;

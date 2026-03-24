@@ -18,7 +18,10 @@ Then open http://localhost:{{ .Values.service.port }} in your browser.
 
 Replicas: {{ .Values.replicaCount }}
 
-{{- if .Values.nginx.enabled }}
+{{- if .Values.nginxMedia.enabled }}
 
-Nginx sidecar: ENABLED (serving /api/media/* on port {{ .Values.nginx.port }})
+nginx-media (HTTP/3): ENABLED
+  Media URL: https://{{ .Values.nginxMedia.subdomain }}
+  Port:      {{ .Values.nginxMedia.port }} (TCP + UDP)
+  MetalLB IP: {{ .Values.nginxMedia.service.loadBalancerIP }}
 {{- end }}

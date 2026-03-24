@@ -35,6 +35,11 @@ COPY --from=pruner /app/out/full/ ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# NEXT_PUBLIC_* vars are inlined into the JS bundle at build time.
+# Pass the media host as a build arg so it is baked into the client bundle.
+ARG NEXT_PUBLIC_MEDIA_HOST=""
+ENV NEXT_PUBLIC_MEDIA_HOST=$NEXT_PUBLIC_MEDIA_HOST
+
 RUN corepack enable pnpm && pnpm exec turbo run build --filter=video-downloader --no-daemon
 
 # ---------------------------------------------------------------------------

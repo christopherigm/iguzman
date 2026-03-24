@@ -12,9 +12,21 @@ const withPWA = withPWAInit({
   },
 });
 
+// Allow next/image to load thumbnails from the nginx-media host when configured.
+const mediaHostValue = process.env.NEXT_PUBLIC_MEDIA_HOST ?? '';
+const mediaRemotePatterns = (() => {
+  if (!mediaHostValue) return [];
+  const [hostname, port] = mediaHostValue.split(':');
+  return [{ protocol: 'https', hostname, ...(port ? { port } : {}) }];
+})();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+
+  images: {
+    remotePatterns: mediaRemotePatterns,
+  },
 
   /**
    * Required for FFmpeg WASM multi-threaded mode (SharedArrayBuffer).

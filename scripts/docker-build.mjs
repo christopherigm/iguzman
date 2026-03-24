@@ -30,9 +30,18 @@ if (!existsSync(dockerfile)) {
 
 console.log(`\n  Building Docker image for "${appName}"...\n`);
 
+// Forward all NEXT_PUBLIC_* vars from the app's .env as --build-arg so they
+// get baked into the Next.js client bundle at build time.
+const envPath = join(appDir, '.env');
+const env = readEnvFile(envPath);
+const buildArgs = Object.entries(env)
+  .filter(([key]) => key.startsWith('NEXT_PUBLIC_'))
+  .map(([key, value]) => `--build-arg ${key}=${value}`)
+  .join(' ');
+
 try {
   execSync(
-    `docker build -f apps/${appName}/Dockerfile -t ${appName}:latest .`,
+    `docker build -f apps/${appName}/Dockerfile ${buildArgs} -t ${appName}:latest .`,
     { cwd: ROOT, stdio: 'inherit' },
   );
   console.log(`\n  Done! Image tagged as ${appName}:latest\n`);

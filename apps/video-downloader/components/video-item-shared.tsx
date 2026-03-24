@@ -41,8 +41,21 @@ export const FPS_OPTIONS = [
 /* ── Helpers ────────────────────────────────────────── */
 
 export function resolveMediaUrl(url: string): string {
-  if (process.env.NODE_ENV !== 'development') return url;
+  if (process.env.NODE_ENV !== 'development') {
+    const mediaHost = process.env.NEXT_PUBLIC_MEDIA_HOST;
+    if (mediaHost) return `https://${mediaHost}${url}`;
+    return url;
+  }
   return url.replace('/api/media/', '/media/');
+}
+
+export function resolveVideoUrl(path: string): string {
+  if (process.env.NODE_ENV !== 'development') {
+    const mediaHost = process.env.NEXT_PUBLIC_MEDIA_HOST;
+    if (mediaHost) return `https://${mediaHost}${path}`;
+    return path;
+  }
+  return path.replace('/api/media/', '/media/');
 }
 
 function isIOS(): boolean {
@@ -82,12 +95,17 @@ export async function triggerBrowserDownload(
   urlOrBlob: string | Blob,
   filename: string,
 ): Promise<void> {
+  // Resolve relative /api/media/ paths to the correct host in production
+  // (handles NEXT_PUBLIC_MEDIA_HOST for the standalone nginx-media service).
+  const resolvedUrl =
+    urlOrBlob instanceof Blob ? null : resolveVideoUrl(urlOrBlob);
+
   if (isIOS() && navigator.canShare) {
     try {
       const blob =
         urlOrBlob instanceof Blob
           ? urlOrBlob
-          : await fetch(urlOrBlob).then((r) => r.blob());
+          : await fetch(resolvedUrl!).then((r) => r.blob());
       const type = blob.type || getMimeType(filename);
       const file = new File([blob], filename, { type });
       if (navigator.canShare({ files: [file] })) {
@@ -99,15 +117,38 @@ export async function triggerBrowserDownload(
     }
   }
 
-  const url =
-    urlOrBlob instanceof Blob ? URL.createObjectURL(urlOrBlob) : urlOrBlob;
+  if (urlOrBlob instanceof Blob) {
+    const url = URL.createObjectURL(urlOrBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    return;
+  }
+
+  // The `download` attribute is silently ignored for cross-origin URLs.
+  // Fetch the file as a blob and use an object URL so the browser save-dialog
+  // always fires with the correct filename.
+  const isCrossOrigin =
+    resolvedUrl!.startsWith('http') &&
+    !resolvedUrl!.startsWith(window.location.origin);
+
+  if (isCrossOrigin) {
+    const blob = await fetch(resolvedUrl!).then((r) => r.blob());
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    return;
+  }
+
   const link = document.createElement('a');
-  link.href = url;
+  link.href = resolvedUrl!;
   link.download = filename;
   link.click();
-  if (urlOrBlob instanceof Blob) {
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
 }
 
 export function downloadThumbnail(url: string, name: string | null) {
@@ -286,7 +327,7 @@ export function VideoMediaPreview({
 }) {
   if (!downloadURL) return null;
 
-  const src = resolveMediaUrl(downloadURL);
+  const src = resolveVideoUrl(downloadURL);
   const thumbnailSrc = thumbnail
     ? resolveMediaUrl(`/api/media/${thumbnail}`)
     : null;

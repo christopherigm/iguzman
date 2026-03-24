@@ -1,0 +1,30 @@
+{{- if and .Values.nginxMedia.enabled .Values.nginxMedia.subdomain }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "video-downloader.fullname" . }}-media-tls
+  labels:
+    {{- include "video-downloader.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "video-downloader.fullname" . }}-media-tls
+  issuerRef:
+    name: {{ .Values.nginxMedia.certIssuer }}
+    kind: ClusterIssuer
+  dnsNames:
+    - {{ .Values.nginxMedia.subdomain }}
+  # HTTP-01 challenge is served through the main nginx ingress controller.
+  # DNS for nginxMedia.subdomain must point to the ingress controller IP
+  # (same IP as the main app) so Let's Encrypt can reach /.well-known/acme-challenge/
+  solvers:
+    - http01:
+        ingress:
+          ingressClassName: {{ .Values.ingress.className }}
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  usages:
+    - digital signature
+    - key encipherment
+  duration: 2160h   # 90 days
+  renewBefore: 360h # 15 days
+{{- end }}

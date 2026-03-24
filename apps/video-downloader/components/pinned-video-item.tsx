@@ -12,6 +12,7 @@ import type { StoredVideo, VideoStatus } from './use-video-store';
 import {
   STATUS_COLORS,
   resolveMediaUrl,
+  resolveVideoUrl,
   triggerBrowserDownload,
   downloadThumbnail,
   uploadProcessedVideo,
@@ -124,7 +125,8 @@ export function PinnedVideoItem({
 
       try {
         onUpdate(video.uuid, { status: opts.activeStatus, error: null });
-        const sourceUrl = `${window.location.origin}${resolveMediaUrl(`/api/media/${file}`)}`;
+        const resolved = resolveVideoUrl(`/api/media/${file}`);
+        const sourceUrl = resolved.startsWith('http') ? resolved : `${window.location.origin}${resolved}`;
         setLocalProgress({ status: 'loading', progress: 0 });
         const { objectUrl, blob } = await opts.process(sourceUrl, (p) => {
           setLocalProgress({ status: 'processing', progress: p });

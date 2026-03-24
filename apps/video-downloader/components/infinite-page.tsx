@@ -13,7 +13,11 @@ import { Button } from '@repo/ui/core-elements/button';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { useVideoStore } from './use-video-store';
 import type { StoredVideo } from './use-video-store';
-import { resolveMediaUrl, PLATFORM_ICONS } from './video-item-shared';
+import {
+  resolveMediaUrl,
+  resolveVideoUrl,
+  PLATFORM_ICONS,
+} from './video-item-shared';
 import './infinite-page.css';
 
 export function InfinitePage() {
@@ -253,7 +257,7 @@ export function InfinitePage() {
                 if (el) videoRefs.current.set(index, el);
                 else videoRefs.current.delete(index);
               }}
-              src={resolveMediaUrl(video.downloadURL!)}
+              src={resolveVideoUrl(video.downloadURL!)}
               playsInline
               preload={Math.abs(index - activeIndex) <= 1 ? 'auto' : 'none'}
               className="infinite-video"
@@ -382,14 +386,6 @@ export function InfinitePage() {
         </Button>
         <Button
           unstyled
-          onClick={handleReshuffle}
-          aria-label={t('reshuffleLabel')}
-          className="infinite-action-btn"
-        >
-          <Image src="/icons/random.svg" alt="" width={24} height={24} />
-        </Button>
-        <Button
-          unstyled
           onClick={() =>
             setObjectFit((prev) => (prev === 'cover' ? 'contain' : 'cover'))
           }
@@ -406,6 +402,14 @@ export function InfinitePage() {
             width={24}
             height={24}
           />
+        </Button>
+        <Button
+          unstyled
+          onClick={handleReshuffle}
+          aria-label={t('reshuffleLabel')}
+          className="infinite-action-btn"
+        >
+          <Image src="/icons/random.svg" alt="" width={24} height={24} />
         </Button>
       </Box>
     </>

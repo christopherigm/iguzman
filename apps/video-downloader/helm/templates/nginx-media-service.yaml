@@ -1,0 +1,33 @@
+{{- if .Values.nginxMedia.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "video-downloader.fullname" . }}-media
+  labels:
+    {{- include "video-downloader.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx-media
+spec:
+  type: {{ .Values.nginxMedia.service.type }}
+  {{- if and (eq .Values.nginxMedia.service.type "LoadBalancer") .Values.nginxMedia.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.nginxMedia.service.loadBalancerIP }}
+  {{- end }}
+  selector:
+    app.kubernetes.io/name: {{ include "video-downloader.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: nginx-media
+  ports:
+    - name: http3-tcp
+      port: {{ .Values.nginxMedia.port }}
+      targetPort: {{ .Values.nginxMedia.port }}
+      protocol: TCP
+      {{- if and (eq .Values.nginxMedia.service.type "NodePort") .Values.nginxMedia.service.nodePorts.tcp }}
+      nodePort: {{ .Values.nginxMedia.service.nodePorts.tcp }}
+      {{- end }}
+    - name: http3-udp
+      port: {{ .Values.nginxMedia.port }}
+      targetPort: {{ .Values.nginxMedia.port }}
+      protocol: UDP
+      {{- if and (eq .Values.nginxMedia.service.type "NodePort") .Values.nginxMedia.service.nodePorts.udp }}
+      nodePort: {{ .Values.nginxMedia.service.nodePorts.udp }}
+      {{- end }}
+{{- end }}

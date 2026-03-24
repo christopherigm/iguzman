@@ -50,6 +50,7 @@ env:
   NEXT_TELEMETRY_DISABLED: '1'
   # Add your own env vars here, for example:
   # API_URL: "https://api.example.com"
+  NEXT_PUBLIC_MEDIA_HOST: 'media.vd2.iguzman.com.mx:8443'  # set when nginxMedia.enabled=true
 
 # Sensitive values – reference existing Kubernetes Secrets.
 # envFromSecret:
@@ -91,24 +92,33 @@ nodeAffinity:
   # - node-2
   # - node-3
 
-# ─── Nginx sidecar (serves media files) ─────────────────────
-# Replaces the Next.js GET /api/media/* endpoint with a high-
-# performance static-file server that shares the same volume.
-nginx:
+# ─── nginx-media: standalone HTTP/3 video-serving pod ────────
+# Serves GET /api/media/* with HTTP/3 (QUIC) + HTTP/2 from its own pod.
+# Exposed via MetalLB LoadBalancer on nginxMedia.port (default 8443).
+# DNS for nginxMedia.subdomain must point to the MetalLB IP.
+nginxMedia:
   enabled: true
+  replicaCount: 4           # HTTP/2 load-balances fine; QUIC sessions may pin to one pod
   image:
     repository: nginx
-    tag: 'alpine'
+    tag: '1.27-alpine'
     pullPolicy: IfNotPresent
-  port: 8080 # port the nginx container listens on
-  servicePort: 8080 # port exposed by the Service for nginx
+  port: 8443
+  subdomain: 'media.vd2.iguzman.com.mx'  # e.g. media.vd2.iguzman.com.mx
+  certIssuer: letsencrypt-prod
+  service:
+    type: LoadBalancer      # LoadBalancer (MetalLB) or NodePort
+    loadBalancerIP: '192.168.0.105'  # optional: pin a MetalLB address pool IP
+    nodePorts:
+      tcp: ''               # optional: fixed NodePort for TCP (e.g. "30443")
+      udp: ''               # optional: fixed NodePort for UDP (e.g. "30443")
   resources:
     requests:
       cpu: 50m
       memory: 64Mi
     limits:
-      cpu: 200m
-      memory: 128Mi
+      cpu: 500m
+      memory: 256Mi
 
 # ─── Resources ──────────────────────────────────────────────
 resources:

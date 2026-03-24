@@ -15,6 +15,104 @@ const IS_PRODUCTION = NODE_ENV === 'production';
 const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
 
 /**
+ * GET /api/media/:filename
+ *
+ * In production: redirects to the dedicated nginx-media host if
+ * NEXT_PUBLIC_MEDIA_HOST is set, so video/thumbnail requests are served
+ * by nginx directly without an extra Next.js hop.
+ *
+ * Fallback (no NEXT_PUBLIC_MEDIA_HOST): streams the file from disk so the
+ * app still works without the standalone nginx-media service.
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ filename: string }> },
+) {
+  const filename = (await params).filename;
+
+  if (!filename || filename.includes('..') || filename.includes('/')) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  // Block sensitive files
+  if (filename === 'netscape-cookies.txt') {
+    return new NextResponse(null, { status: 403 });
+  }
+
+  const mediaHost = process.env.NEXT_PUBLIC_MEDIA_HOST;
+  if (mediaHost) {
+    // Permanent-ish redirect — browsers & CDNs cache 307 for the session.
+    return NextResponse.redirect(`https://${mediaHost}/api/media/${filename}`, {
+      status: 307,
+    });
+  }
+
+  // ── Fallback: serve from disk ──────────────────────────────────────────
+  const filePath = join(MEDIA_DIR, filename);
+  try {
+    const info = await fsStat(filePath);
+    if (!info.isFile()) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+    const MIME: Record<string, string> = {
+      mp4: 'video/mp4',
+      webm: 'video/webm',
+      mp3: 'audio/mpeg',
+      m4a: 'audio/x-m4a',
+      ogg: 'audio/ogg',
+      wav: 'audio/wav',
+      flac: 'audio/flac',
+      mkv: 'video/x-matroska',
+      srt: 'text/plain',
+      webp: 'image/webp',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+    };
+    const contentType = MIME[ext] ?? 'application/octet-stream';
+    const fileSize = info.size;
+
+    const { createReadStream } = await import('node:fs');
+    const { Readable } = await import('node:stream');
+
+    const rangeHeader = request.headers.get('range');
+    if (rangeHeader) {
+      const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
+      const start = parseInt(startStr ?? '0', 10);
+      const end = endStr ? parseInt(endStr, 10) : fileSize - 1;
+      const stream = createReadStream(filePath, { start, end });
+      return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
+        status: 206,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': String(end - start + 1),
+          'Cache-Control': 'public, max-age=3600',
+          'Cross-Origin-Resource-Policy': 'cross-origin',
+        },
+      });
+    }
+
+    const stream = createReadStream(filePath);
+    return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Content-Length': String(fileSize),
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'public, max-age=3600',
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+}
+
+/**
  * PUT /api/media/:filename
  *
  * Saves the uploaded body as a *new* file (new unique name, same

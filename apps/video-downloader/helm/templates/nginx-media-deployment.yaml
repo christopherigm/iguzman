@@ -1,19 +1,22 @@
+{{- if .Values.nginxMedia.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "video-downloader.fullname" . }}
+  name: {{ include "video-downloader.fullname" . }}-media
   labels:
     {{- include "video-downloader.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx-media
 spec:
-  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.nginxMedia.replicaCount }}
   selector:
     matchLabels:
       {{- include "video-downloader.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: nginx-media
   template:
     metadata:
       labels:
         {{- include "video-downloader.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: nginx-media
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -33,32 +36,18 @@ spec:
       {{- end }}
 
       containers:
-        - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+        - name: nginx-media
+          image: "{{ .Values.nginxMedia.image.repository }}:{{ .Values.nginxMedia.image.tag }}"
+          imagePullPolicy: {{ .Values.nginxMedia.image.pullPolicy }}
 
           ports:
-            - name: http
-              containerPort: {{ .Values.service.targetPort }}
+            - name: https-tcp
+              containerPort: {{ .Values.nginxMedia.port }}
               protocol: TCP
+            - name: https-udp
+              containerPort: {{ .Values.nginxMedia.port }}
+              protocol: UDP
 
-          {{- /* ── Plain environment variables ── */}}
-          {{- if or .Values.env .Values.envFromSecret }}
-          env:
-            {{- range $key, $value := .Values.env }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-            {{- range .Values.envFromSecret }}
-            - name: {{ .name }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .secretName }}
-                  key: {{ .secretKey }}
-            {{- end }}
-          {{- end }}
-
-          {{- /* ── Probes ── */}}
           startupProbe:
             exec:
               command:
@@ -75,23 +64,42 @@ spec:
             periodSeconds: {{ .Values.probes.livenessProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.livenessProbe.failureThreshold }}
 
-          {{- /* ── Resources ── */}}
-          {{- with .Values.resources }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.nginxMedia.port }}
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            failureThreshold: 3
+
+          {{- with .Values.nginxMedia.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
 
-          {{- /* ── Volume mounts ── */}}
-          {{- if .Values.hostPathVolume.enabled }}
           volumeMounts:
+            {{- if .Values.hostPathVolume.enabled }}
             - name: media-data
               mountPath: {{ .Values.hostPathVolume.mountPath }}
-          {{- end }}
+              readOnly: true
+            {{- end }}
+            - name: nginx-media-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+            - name: tls-certs
+              mountPath: /etc/nginx/tls
+              readOnly: true
 
-      {{- if .Values.hostPathVolume.enabled }}
       volumes:
+        {{- if .Values.hostPathVolume.enabled }}
         - name: media-data
           hostPath:
-            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/media
+            path: {{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/media
             type: DirectoryOrCreate
-      {{- end }}
+        {{- end }}
+        - name: nginx-media-config
+          configMap:
+            name: {{ include "video-downloader.fullname" . }}-media-nginx
+        - name: tls-certs
+          secret:
+            secretName: {{ include "video-downloader.fullname" . }}-media-tls
+{{- end }}
