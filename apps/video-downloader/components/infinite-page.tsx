@@ -224,9 +224,18 @@ export function InfinitePage() {
     setActiveIndex(swiper.activeIndex);
     setCurrentTime(0);
     setDuration(0);
-    // New active video is not mounted yet (renders after state update).
-    // The ref callback on the <video> element will trigger play once mounted.
-    setActiveVideoLoading(true);
+    const el = videoRefs.current.get(swiper.activeIndex);
+    if (el) {
+      // Element already in the DOM (virtual module pre-rendered it) — play directly.
+      // Update the ref so the ref callback skips the duplicate play call.
+      activeVideoElRef.current = el;
+      setActiveVideoLoading(el.readyState < 3);
+      el.currentTime = 0;
+      el.play().catch(() => setShowPlayPrompt(true));
+    } else {
+      // Not yet rendered — ref callback will trigger play once it mounts.
+      setActiveVideoLoading(true);
+    }
   }
 
   if (!loaded || videos.length === 0) {
@@ -263,7 +272,7 @@ export function InfinitePage() {
         slidesPerView={1}
         className="infinite-swiper"
         onSwiper={handleSwiper}
-        onSlideChangeTransitionEnd={handleSlideChange}
+        onSlideChangeTransitionStart={handleSlideChange}
       >
         {videos.map((video, index) => {
           const isActive = index === activeIndex;
