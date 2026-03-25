@@ -63,7 +63,8 @@
     "originalLabel": "Original ansehen",
     "videoDeletedFromServer": "Video vom Server gelöscht",
     "nextVideoIn": "Nächstes Video in {seconds}s",
-    "objectFitLabel": "Objektanpassung umschalten"
+    "objectFitLabel": "Objektanpassung umschalten",
+    "autoSwipeLabel": "Automatisches Weiterblättern umschalten"
   },
   "VideoGrid": {
     "title": "Downloads",

@@ -63,7 +63,8 @@
     "originalLabel": "Watch original",
     "videoDeletedFromServer": "Video deleted from server",
     "nextVideoIn": "Next video in {seconds}s",
-    "objectFitLabel": "Toggle object fit"
+    "objectFitLabel": "Toggle object fit",
+    "autoSwipeLabel": "Toggle auto-advance"
   },
   "VideoGrid": {
     "title": "Downloads",

@@ -19,6 +19,10 @@ import { APPS_DIR, readEnvFile, createPrompt } from './utils.mjs';
 // ── Paths ───────────────────────────────────────────────────────────────────
 
 const VALUES_YAML = join(APPS_DIR, 'website', 'helm', 'values.yaml');
+const API_VALUES_YAML = join(APPS_DIR, 'website-api', 'helm', 'values.yaml');
+
+// Fixed API host — always included in ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS
+const API_HOST = 'api.website.iguzman.com.mx';
 
 // ── YAML helpers ────────────────────────────────────────────────────────────
 
@@ -150,14 +154,41 @@ if (hosts.length === 0) {
 console.log(`  Found ${hosts.length} host(s):`);
 hosts.forEach((h) => console.log(`    • ${h}`));
 
-// ── Update values.yaml ───────────────────────────────────────────────────────
+// ── Update website values.yaml (ingress) ────────────────────────────────────
 
 const original = readFileSync(VALUES_YAML, 'utf-8');
 const updated = updateValuesYaml(original, hosts);
 
 if (original === updated) {
-  console.log('\n  values.yaml ingress is already up to date.\n');
+  console.log('\n  apps/website/helm/values.yaml ingress is already up to date.\n');
 } else {
   writeFileSync(VALUES_YAML, updated, 'utf-8');
   console.log(`\n  Updated ingress hosts in apps/website/helm/values.yaml\n`);
+}
+
+// ── Update website-api values.yaml (CORS / CSRF / ALLOWED_HOSTS) ─────────────
+
+const corsOrigins = hosts.map((h) => `https://${h}`).join(',');
+const csrfOrigins = [`https://${API_HOST}`, ...hosts.map((h) => `https://${h}`)].join(',');
+const allowedHosts = [API_HOST, ...hosts, 'localhost', '127.0.0.1'].join(',');
+
+function updateEnvValue(content, key, value) {
+  // Matches lines like:  KEY: 'old-value'  or  KEY: "old-value"
+  return content.replace(
+    new RegExp(`^(\\s*${key}:\\s*)(['"]?).*\\2`, 'm'),
+    `$1'${value}'`,
+  );
+}
+
+const apiOriginal = readFileSync(API_VALUES_YAML, 'utf-8');
+let apiUpdated = apiOriginal;
+apiUpdated = updateEnvValue(apiUpdated, 'CORS_ALLOWED_ORIGINS', corsOrigins);
+apiUpdated = updateEnvValue(apiUpdated, 'CSRF_TRUSTED_ORIGINS', csrfOrigins);
+apiUpdated = updateEnvValue(apiUpdated, 'ALLOWED_HOSTS', allowedHosts);
+
+if (apiOriginal === apiUpdated) {
+  console.log('  apps/website-api/helm/values.yaml CORS settings are already up to date.\n');
+} else {
+  writeFileSync(API_VALUES_YAML, apiUpdated, 'utf-8');
+  console.log('  Updated CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS, ALLOWED_HOSTS in apps/website-api/helm/values.yaml\n');
 }

@@ -165,7 +165,7 @@ class Buyable(StandardPicture):
         abstract = True
 
 
-class SuccessStoryImage(StandardPicture):
+class SuccessStoryImage(RegularPicture):
     """A single gallery image that can be attached to one or more SuccessStory entries."""
 
     class Meta:
@@ -177,7 +177,7 @@ class SuccessStoryImage(StandardPicture):
         return self.name or f"Image #{self.pk}"
 
 
-class SuccessStory(StandardPicture):
+class SuccessStory(RegularPicture):
     """
     A company success story linked to a System.
 
@@ -210,7 +210,7 @@ class SuccessStory(StandardPicture):
         return self.name or f"Story #{self.pk}"
 
 
-class CompanyHighlight(StandardPicture):
+class CompanyHighlight(RegularPicture):
     """
     A company highlight / spec entry linked to a System.
 

@@ -22,6 +22,7 @@ export function InfinitePage() {
   const [videos, setVideos] = useState<StoredVideo[]>([]);
   const [loaded, setLoaded] = useState(false);
   const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
+  const activeVideoElRef = useRef<HTMLVideoElement | null>(null);
   const swiperRef = useRef<SwiperType | null>(null);
   const reshuffled = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -30,7 +31,11 @@ export function InfinitePage() {
   const [showPlayPrompt, setShowPlayPrompt] = useState(false);
   const [activeVideoLoading, setActiveVideoLoading] = useState(true);
   const [objectFit, setObjectFit] = useState<'cover' | 'contain'>('cover');
+  const [autoSwipe, setAutoSwipe] = useState(true);
   const [deletedCountdown, setDeletedCountdown] = useState<number | null>(null);
+  const [capturedFrames, setCapturedFrames] = useState<Map<string, string>>(
+    new Map(),
+  );
 
   function shuffle(list: StoredVideo[]) {
     const shuffled = [...list];
@@ -89,6 +94,28 @@ export function InfinitePage() {
     }
   }
 
+  function captureFirstFrame(index: number) {
+    const el = videoRefs.current.get(index);
+    const video = videos[index];
+    if (!el || !video || el.videoWidth === 0) return;
+    if (capturedFrames.has(video.uuid)) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = el.videoWidth;
+    canvas.height = el.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(el, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        setCapturedFrames((prev) => new Map(prev).set(video.uuid, url));
+      },
+      'image/jpeg',
+      0.7,
+    );
+  }
+
   useEffect(() => {
     const el = videoRefs.current.get(activeIndex);
     if (!el) return;
@@ -97,7 +124,7 @@ export function InfinitePage() {
     const onMetadata = () =>
       setDuration(isFinite(el.duration) ? el.duration : 0);
     const onEnded = () => {
-      if (swiperRef.current && activeIndex < videos.length - 1) {
+      if (autoSwipe && swiperRef.current && activeIndex < videos.length - 1) {
         swiperRef.current.slideNext();
       }
     };
@@ -116,7 +143,7 @@ export function InfinitePage() {
       el.removeEventListener('durationchange', onMetadata);
       el.removeEventListener('ended', onEnded);
     };
-  }, [activeIndex, videos]);
+  }, [activeIndex, videos, autoSwipe]);
 
   useEffect(() => {
     if (deletedCountdown === null) return;
@@ -139,7 +166,10 @@ export function InfinitePage() {
   }
 
   function handleVideoCanPlay(index: number) {
-    if (index === activeIndex) setActiveVideoLoading(false);
+    if (index === activeIndex) {
+      setActiveVideoLoading(false);
+      captureFirstFrame(index);
+    }
   }
 
   function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
@@ -194,14 +224,9 @@ export function InfinitePage() {
     setActiveIndex(swiper.activeIndex);
     setCurrentTime(0);
     setDuration(0);
-    const el = videoRefs.current.get(swiper.activeIndex);
-    if (el) {
-      el.currentTime = 0;
-      setActiveVideoLoading(el.readyState < 3);
-    } else {
-      setActiveVideoLoading(true);
-    }
-    playAt(swiper.activeIndex);
+    // New active video is not mounted yet (renders after state update).
+    // The ref callback on the <video> element will trigger play once mounted.
+    setActiveVideoLoading(true);
   }
 
   if (!loaded || videos.length === 0) {
@@ -238,31 +263,73 @@ export function InfinitePage() {
         slidesPerView={1}
         className="infinite-swiper"
         onSwiper={handleSwiper}
-        onSlideChange={handleSlideChange}
+        onSlideChangeTransitionEnd={handleSlideChange}
       >
-        {videos.map((video, index) => (
-          <SwiperSlide
-            key={video.uuid}
-            virtualIndex={index}
-            className="infinite-slide"
-          >
-            <video
-              onClick={() => togglePlayAt(index)}
-              aria-label={video.name ?? video.originalURL}
-              ref={(el) => {
-                if (el) videoRefs.current.set(index, el);
-                else videoRefs.current.delete(index);
-              }}
-              src={resolveMediaUrl(video.downloadURL!)}
-              playsInline
-              preload={Math.abs(index - activeIndex) <= 1 ? 'auto' : 'none'}
-              className="infinite-video"
-              style={{ objectFit }}
-              onCanPlay={() => handleVideoCanPlay(index)}
-              onError={() => handleVideoError(index)}
-            />
-          </SwiperSlide>
-        ))}
+        {videos.map((video, index) => {
+          const isActive = index === activeIndex;
+          const thumbSrc =
+            capturedFrames.get(video.uuid) ??
+            (video.thumbnail
+              ? resolveMediaUrl(`/api/media/${video.thumbnail}`)
+              : null);
+          return (
+            <SwiperSlide
+              key={video.uuid}
+              virtualIndex={index}
+              className="infinite-slide"
+            >
+              {isActive ? (
+                <>
+                  {thumbSrc && (
+                    <Image
+                      src={thumbSrc}
+                      alt=""
+                      fill
+                      unoptimized
+                      className="infinite-thumbnail"
+                      style={{ objectFit }}
+                    />
+                  )}
+                  <video
+                    onClick={() => togglePlayAt(index)}
+                    aria-label={video.name ?? video.originalURL}
+                    ref={(el) => {
+                      if (el) {
+                        videoRefs.current.set(index, el);
+                        if (el !== activeVideoElRef.current) {
+                          activeVideoElRef.current = el;
+                          el.currentTime = 0;
+                          el.play().catch(() => setShowPlayPrompt(true));
+                        }
+                      } else {
+                        videoRefs.current.delete(index);
+                      }
+                    }}
+                    src={resolveMediaUrl(video.downloadURL!)}
+                    playsInline
+                    loop={!autoSwipe}
+                    preload="auto"
+                    className="infinite-video"
+                    style={{ objectFit }}
+                    onCanPlay={() => handleVideoCanPlay(index)}
+                    onError={() => handleVideoError(index)}
+                  />
+                </>
+              ) : thumbSrc ? (
+                <Image
+                  src={thumbSrc}
+                  alt={video.name ?? ''}
+                  fill
+                  unoptimized
+                  className="infinite-thumbnail"
+                  style={{ objectFit }}
+                />
+              ) : (
+                <Box className="infinite-thumbnail" />
+              )}
+            </SwiperSlide>
+          );
+        })}
       </Swiper>
       {activeVideoLoading && videos[activeIndex] && (
         <Box className="infinite-loading-bar">
@@ -398,6 +465,15 @@ export function InfinitePage() {
             width={24}
             height={24}
           />
+        </Button>
+        <Button
+          unstyled
+          onClick={() => setAutoSwipe((prev) => !prev)}
+          aria-label={t('autoSwipeLabel')}
+          aria-pressed={autoSwipe}
+          className={`infinite-action-btn${autoSwipe ? '' : ' infinite-action-btn--off'}`}
+        >
+          <Image src="/icons/up-arrow.svg" alt="" width={24} height={24} />
         </Button>
         <Button
           unstyled

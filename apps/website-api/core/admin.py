@@ -24,6 +24,7 @@ class CompanyHighlightAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "system", "category", "sort_order", "enabled", "modified")
     list_filter = ("enabled", "system")
     search_fields = ("name", "en_name", "category")
+    prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ("created", "modified", "version")
     inlines = [CompanyHighlightItemInline]
     fieldsets = (
@@ -80,6 +81,7 @@ class SuccessStoryAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "system", "enabled", "modified")
     list_filter = ("enabled", "system")
     search_fields = ("name", "en_name", "description")
+    prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ("created", "modified", "version")
     filter_horizontal = ("gallery",)
     fieldsets = (

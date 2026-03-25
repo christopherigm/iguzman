@@ -63,7 +63,8 @@
     "originalLabel": "Ver original",
     "videoDeletedFromServer": "Video eliminado del servidor",
     "nextVideoIn": "Siguiente video en {seconds}s",
-    "objectFitLabel": "Alternar ajuste de objeto"
+    "objectFitLabel": "Alternar ajuste de objeto",
+    "autoSwipeLabel": "Activar/desactivar avance automático"
   },
   "VideoGrid": {
     "title": "Descargas",
