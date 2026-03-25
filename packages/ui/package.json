@@ -5,7 +5,8 @@
   "exports": {
     "./*": "./src/*.tsx",
     "./palettes": "./src/palettes.ts",
-    "./use-ffmpeg": "./src/use-ffmpeg.ts"
+    "./use-ffmpeg": "./src/use-ffmpeg.ts",
+    "./use-speech-to-text": "./src/use-speech-to-text.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -24,6 +25,7 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "@huggingface/transformers": "^3.0.0",
     "@repo/helpers": "workspace:*",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

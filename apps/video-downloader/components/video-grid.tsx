@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
+import { Button } from '@repo/ui/core-elements/button';
 import { Grid } from '@repo/ui/core-elements/grid';
 import { Typography } from '@repo/ui/core-elements/typography';
 import type { Platform } from '@repo/helpers/checkers';
@@ -10,7 +11,7 @@ import { PinnedVideoItem } from './pinned-video-item';
 import { ReadOnlyVideoItem, type ReprocessAction } from './readonly-video-item';
 import { VideoToolbar } from './video-toolbar';
 import type { StoredVideo, VideoStatus } from './use-video-store';
-import { useSearchQuery } from './use-search-store';
+import { useSearchQuery, setSearchQuery } from './use-search-store';
 import './video-grid.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -198,6 +199,26 @@ export function VideoGrid({
         filteredCount={filtered.length}
         onPageChange={setPage}
       />
+
+      {searchQuery && (
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          className="vg-search-active"
+        >
+          <Typography variant="body-sm" className="vg-search-active-text">
+            {t('searchActive', { query: searchQuery })}
+          </Typography>
+          <Button
+            unstyled
+            onClick={() => setSearchQuery('')}
+            className="vg-search-active-clear"
+            aria-label={t('clearSearch')}
+            text={t('clearSearch')}
+          />
+        </Box>
+      )}
 
       {pageVideos.length === 0 ? (
         <Box className="vg-empty vg-empty--filtered">

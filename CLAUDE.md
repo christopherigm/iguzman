@@ -101,11 +101,12 @@ Most components extend `UIComponentProps`, which maps common CSS properties dire
 | Toggle / checkbox | `Switch` | `checked?`, `defaultChecked?`, `onChange(checked: boolean)?` |
 | Status tag / label | `Badge` | `children`, `variant?: 'filled'\|'outlined'\|'subtle'`, `size?: 'sm'\|'md'\|'lg'`, `color?`, `textColor?` |
 | SVG icon | `Icon` | `icon` (SVG path, required), `color?`, `size?`, `backgroundColor?`, `backgroundShape?: 'circle'\|'square'\|'triangle'`, `shadow?` |
-| Top navigation bar | `Navbar` | `logo` (required), `items?`, `fixedItems?`, `searchBox?`, `onSearch?`, `translucent?`, `themeSwitch?` |
+| Top navigation bar | `Navbar` | `logo` (required), `items?`, `fixedItems?`, `searchBox?`, `onSearch?`, `translucent?`, `themeSwitch?`, `searchValue?` (controlled search text), `rightSlot?` (ReactNode rendered beside search) |
 | Mobile slide-in menu | `Drawer` | `open`, `onClose`, `items`, `logo`, `themeSwitch?` |
 | Loading / progress | `ProgressBar` | `value?` (0–100, omit for indeterminate), `size?` (px height), `label?` |
 | Confirm dialog | `ConfirmationModal` | `title`, `text`, `okCallback`, `cancelCallback?` |
 | Page breadcrumb trail | `Breadcrumbs` | `items: BreadcrumbItem[]` — each item has `label: string` and optional `href?: string`; items without `href` render as the current page (aria-current). Also exports `BreadcrumbItem` type. |
+| Voice input mic button | `SpeechButton` | `mode?: 'batch'\|'realtime'` (default `'batch'`), `language?` (BCP-47, default `'en'`), `model?` (HF model ID, default `'Xenova/whisper-tiny'`), `realtimeInterval?` (ms), `micIcon?`, `stopIcon?`, `onTranscript(text)?`, `onInterimTranscript(text)?`, `aria-label?` + UIComponentProps. Requires COOP+COEP headers (SharedArrayBuffer). Hook also available separately: `import { useSpeechToText } from '@repo/ui/use-speech-to-text'`. |
 
 #### Other UI exports (`packages/ui/src/`)
 

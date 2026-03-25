@@ -42,6 +42,8 @@ export interface DrawerProps extends UIComponentProps {
   onSearchChange?: (search: string) => void;
   /** SVG path for the search icon. */
   searchIcon?: string;
+  /** Controlled search value (e.g. a voice transcript). Fills the search box when set. */
+  searchValue?: string;
   /** Enable theme switch in drawer. Defaults to `false`. */
   themeSwitch?: boolean;
 }
@@ -119,8 +121,20 @@ const DrawerSearch: React.FC<{
   onSearch?: (value: string) => void;
   onSearchChange?: (value: string) => void;
   searchIcon?: string;
-}> = ({ onSearch, onSearchChange, searchIcon }) => {
+  externalValue?: string;
+}> = ({ onSearch, onSearchChange, searchIcon, externalValue }) => {
   const [value, setValue] = useState('');
+  const prevExternalRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (externalValue) {
+      setValue(externalValue);
+      onSearchChange?.(externalValue);
+    } else if (externalValue === '' && prevExternalRef.current) {
+      setValue('');
+    }
+    prevExternalRef.current = externalValue;
+  }, [externalValue, onSearchChange]);
 
   const handleChange = (v: string) => {
     setValue(v);
@@ -176,6 +190,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   onSearch,
   onSearchChange,
   searchIcon,
+  searchValue,
   className,
   id,
   themeSwitch = true,
@@ -265,6 +280,7 @@ export const Drawer: React.FC<DrawerProps> = ({
             onSearch={onSearch}
             onSearchChange={onSearchChange}
             searchIcon={searchIcon}
+            externalValue={searchValue}
           />
         )}
 

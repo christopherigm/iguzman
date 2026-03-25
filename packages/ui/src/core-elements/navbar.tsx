@@ -55,6 +55,16 @@ export interface NavbarProps extends UIComponentProps {
   themeSwitch?: boolean;
   /** Make the navbar background semi-transparent with a backdrop blur. Defaults to `false`. */
   translucent?: boolean;
+  /**
+   * Controlled search value. When set, expands the search box and fills it
+   * with this text (e.g. a voice-search transcript).  Requires `searchBox`.
+   */
+  searchValue?: string;
+  /**
+   * Optional node rendered to the right of the search box and to the left
+   * of the hamburger icon (e.g. a `SpeechButton`).
+   */
+  rightSlot?: React.ReactNode;
 }
 
 // ── useScrollDirection ───────────────────────────────────────────────
@@ -168,16 +178,32 @@ const SearchBox: React.FC<{
   onSearchChange?: (value: string) => void;
   searchIcon?: string;
   closeIcon?: string;
-}> = ({ onSearch, onSearchChange, searchIcon, closeIcon }) => {
+  externalValue?: string;
+}> = ({ onSearch, onSearchChange, searchIcon, closeIcon, externalValue }) => {
   const [expanded, setExpanded] = useState(false);
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const prevExternalRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (expanded) {
       inputRef.current?.focus();
     }
   }, [expanded]);
+
+  // Sync an externally-controlled value (e.g. voice transcript) into the box.
+  // Also clears the box when the value transitions from non-empty back to ''.
+  useEffect(() => {
+    if (externalValue) {
+      setExpanded(true);
+      setValue(externalValue);
+      onSearchChange?.(externalValue);
+    } else if (externalValue === '' && prevExternalRef.current) {
+      setValue('');
+      setExpanded(false);
+    }
+    prevExternalRef.current = externalValue;
+  }, [externalValue, onSearchChange]);
 
   const handleChange = (v: string) => {
     setValue(v);
@@ -279,6 +305,8 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     id,
     themeSwitch = true,
     translucent = false,
+    searchValue,
+    rightSlot,
     ...uiProps
   } = props;
 
@@ -407,8 +435,12 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
           onSearchChange={onSearchChange}
           searchIcon={searchIcon}
           closeIcon={closeIcon}
+          externalValue={searchValue}
         />
       )}
+
+      {/* Right slot (e.g. SpeechButton) */}
+      {rightSlot}
 
       {/* Hamburger (visible xs/sm) */}
       <button
@@ -442,6 +474,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         onSearch={onSearch}
         onSearchChange={onSearchChange}
         searchIcon={searchIcon}
+        searchValue={searchValue}
         themeSwitch={themeSwitch}
       />
     </>

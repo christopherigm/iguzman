@@ -124,6 +124,8 @@
     "toggleExtraActions": "Mais ações",
     "processingTitle": "Em Processamento",
     "detailProcessingTime": "Tempo de processamento",
-    "detailCores": "Threads de CPU"
+    "detailCores": "Threads de CPU",
+    "searchActive": "Buscando: \"{query}\"",
+    "clearSearch": "Limpar pesquisa"
   }
 }

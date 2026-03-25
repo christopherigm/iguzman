@@ -124,6 +124,8 @@
     "toggleExtraActions": "More actions",
     "processingTitle": "In Progress",
     "detailProcessingTime": "Processing time",
-    "detailCores": "CPU threads"
+    "detailCores": "CPU threads",
+    "searchActive": "Searching for: \"{query}\"",
+    "clearSearch": "Clear search"
   }
 }
