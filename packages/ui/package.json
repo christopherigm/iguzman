@@ -6,7 +6,9 @@
     "./*": "./src/*.tsx",
     "./palettes": "./src/palettes.ts",
     "./use-ffmpeg": "./src/use-ffmpeg.ts",
-    "./use-speech-to-text": "./src/use-speech-to-text.ts"
+    "./use-speech-to-text": "./src/use-speech-to-text.ts",
+    "./use-text-to-speech": "./src/use-text-to-speech.ts",
+    "./use-llm": "./src/use-llm.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
