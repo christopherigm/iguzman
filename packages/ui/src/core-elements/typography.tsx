@@ -51,6 +51,8 @@ export interface TypographyProps extends UIComponentProps {
   'aria-hidden'?: React.AriaAttributes['aria-hidden'];
   /** Accessible label when visible text is absent or insufficient. */
   'aria-label'?: string;
+  /** Tooltip text shown on hover (native HTML title attribute). */
+  title?: string;
 }
 
 const VARIANT_ELEMENT: Record<TypographyVariant, TypographyElement> = {
@@ -98,6 +100,7 @@ export const Typography: React.FC<TypographyProps> = ({
   'aria-current': ariaCurrent,
   'aria-hidden': ariaHidden,
   'aria-label': ariaLabel,
+  title,
   ...rest
 }) => {
   const Tag = (as ??
@@ -129,6 +132,7 @@ export const Typography: React.FC<TypographyProps> = ({
       aria-current={ariaCurrent}
       aria-hidden={ariaHidden}
       aria-label={ariaLabel}
+      title={title}
     >
       {children}
     </Tag>

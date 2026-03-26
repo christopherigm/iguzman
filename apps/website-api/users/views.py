@@ -9,8 +9,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from core.permissions import IsSystemAdmin
 from .models import EmailVerificationToken, PasswordResetToken
 from .serializers import (
+    AdminUserSerializer,
+    AdminUserUpdateSerializer,
     CustomTokenObtainPairSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -222,3 +225,42 @@ class ProfilePictureView(APIView):
         if profile.profile_picture:
             picture_url = request.build_absolute_uri(profile.profile_picture.url)
         return Response({"profile_picture": picture_url}, status=status.HTTP_200_OK)
+
+
+class AdminUserListView(APIView):
+    """GET /api/auth/admin/users/ — list users belonging to the admin's system."""
+
+    permission_classes = (IsSystemAdmin,)
+
+    def get(self, request):
+        try:
+            system_id = request.user.profile.system_id
+        except Exception:
+            system_id = None
+        if system_id is None:
+            return Response([], status=status.HTTP_200_OK)
+        qs = User.objects.filter(profile__system_id=system_id).select_related("profile").order_by("email")
+        serializer = AdminUserSerializer(qs, many=True, context={"request": request})
+        return Response(serializer.data)
+
+
+class AdminUserDetailView(APIView):
+    """PATCH /api/auth/admin/users/<pk>/ — toggle is_admin / is_active for a user in the admin's system."""
+
+    permission_classes = (IsSystemAdmin,)
+
+    def patch(self, request, pk):
+        try:
+            admin_system_id = request.user.profile.system_id
+        except Exception:
+            admin_system_id = None
+        try:
+            user = User.objects.select_related("profile").get(pk=pk)
+        except User.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if admin_system_id and user.profile.system_id != admin_system_id:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminUserUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user)
+        return Response(AdminUserSerializer(user, context={"request": request}).data)

@@ -120,6 +120,13 @@ class Brand(Common):
     name = models.CharField(max_length=255, null=False, blank=False)
     slug = models.SlugField(max_length=255, unique=True)
     logo = models.ImageField(null=True, blank=True, upload_to=picture)
+    system = models.ForeignKey(
+        "core.System",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="brands",
+    )
 
     class Meta:
         verbose_name = "Brand"
@@ -165,26 +172,14 @@ class Buyable(StandardPicture):
         abstract = True
 
 
-class SuccessStoryImage(RegularPicture):
-    """A single gallery image that can be attached to one or more SuccessStory entries."""
-
-    class Meta:
-        verbose_name = "Success Story Image"
-        verbose_name_plural = "Success Story Images"
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name or f"Image #{self.pk}"
-
-
 class SuccessStory(RegularPicture):
     """
     A company success story linked to a System.
 
-    Inherits from MediumPicture (512 px) which provides:
+    Inherits from RegularPicture (1200 px) which provides:
       - Common: enabled, created, modified, version
       - BasePicture: name, en_name, description, en_description, href, fit, background_color
-      - MediumPicture: image (max 512 px)
+      - RegularPicture: image (max 1200 px)
     """
 
     system = models.ForeignKey(
@@ -195,11 +190,6 @@ class SuccessStory(RegularPicture):
         related_name="success_stories",
     )
     slug = models.SlugField(max_length=255, unique=True, null=True, blank=True)
-    gallery = models.ManyToManyField(
-        SuccessStoryImage,
-        blank=True,
-        related_name="stories",
-    )
 
     class Meta:
         verbose_name = "Success Story"
@@ -208,6 +198,27 @@ class SuccessStory(RegularPicture):
 
     def __str__(self):
         return self.name or f"Story #{self.pk}"
+
+
+class SuccessStoryImage(StandardPicture):
+    """Additional gallery images for a success story."""
+
+    story = models.ForeignKey(
+        SuccessStory,
+        on_delete=models.CASCADE,
+        related_name="images",
+        null=True,
+        blank=True,
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Success Story Image"
+        verbose_name_plural = "Success Story Images"
+        ordering = ["sort_order"]
+
+    def __str__(self):
+        return f"Image for {self.story} (#{self.sort_order})"
 
 
 class CompanyHighlight(RegularPicture):

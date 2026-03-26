@@ -1,0 +1,117 @@
+.admin-sidebar__toggle {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  background: var(--background);
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  cursor: pointer;
+  color: var(--foreground);
+  font-size: 14px;
+  width: 100%;
+  text-align: left;
+}
+
+.admin-sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: color-mix(in srgb, var(--background) 97%, var(--foreground) 3%);
+  border-right: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+  position: sticky;
+  top: 60px;
+  height: calc(100dvh - 60px);
+}
+
+.admin-sidebar__header {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.admin-sidebar__title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--foreground) 50%, transparent);
+}
+
+.admin-sidebar__list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+}
+
+.admin-sidebar__item {
+  margin: 0;
+}
+
+.admin-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  text-decoration: none;
+  color: color-mix(in srgb, var(--foreground) 80%, transparent);
+  font-size: 14px;
+  border-radius: 0;
+  transition: background 0.15s, color 0.15s;
+  border-left: 3px solid transparent;
+}
+
+.admin-sidebar__link:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  color: var(--foreground);
+}
+
+.admin-sidebar__link--active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.admin-sidebar__icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.admin-sidebar__overlay {
+  display: none;
+}
+
+@media (max-width: 899px) { /* md */
+  .admin-sidebar__toggle {
+    display: flex;
+  }
+
+  .admin-sidebar {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100dvh;
+    z-index: 200;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+    overflow-y: auto;
+  }
+
+  .admin-sidebar--open {
+    display: flex;
+  }
+
+  .admin-sidebar__overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 199;
+  }
+}

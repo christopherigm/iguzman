@@ -72,6 +72,7 @@ export const TextInput = ({
   className,
   id,
   ref,
+  disabled,
   ...rest
 }: TextInputProps) => {
   // ── Controlled / uncontrolled ──────────────────────────────────
@@ -138,6 +139,7 @@ export const TextInput = ({
     onChange: handleChange,
     onFocus: handleFocus,
     onBlur: handleBlur,
+    disabled,
     // If a placeholder is explicitly provided, use it. Otherwise the label
     // visually replaces the placeholder via CSS, so we keep it empty.
     placeholder: placeholder ?? (isFocused && label ? label : undefined),

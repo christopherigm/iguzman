@@ -6,6 +6,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import type { BreadcrumbItem } from '@repo/ui/core-elements/breadcrumbs';
 import { Hero } from '@repo/ui/hero';
+import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
 import { getHighlight } from '@/lib/highlights';
 import { ItemGalleryClient } from '@/components/item-gallery-client';
 import type { GalleryImage } from '@/components/item-gallery-client';
@@ -80,7 +81,8 @@ export default async function HighlightDetailPage({ params }: Props) {
           style={{ height: 'clamp(220px, 30vw, 500px)' }}
         />
       )}
-      <Container size="md" paddingX={10} marginTop={hasImage ? 32 : 70}>
+      {!hasImage && <NavbarSpacer />}
+      <Container size="md" paddingX={10} marginTop={32}>
         <Breadcrumbs items={breadcrumbs} />
         <Typography as="h1" variant="h1" marginTop={24}>
           {name}

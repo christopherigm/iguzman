@@ -34,7 +34,7 @@ export interface SuccessStory {
   background_color: string | null;
   href: string | null;
   slug: string | null;
-  gallery: SuccessStoryImage[];
+  images: SuccessStoryImage[];
 }
 
 export const getSuccessStory = cache(async (slug: string): Promise<SuccessStory | null> => {

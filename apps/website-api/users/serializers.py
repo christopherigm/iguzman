@@ -148,6 +148,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token["username"] = user.username
         token["email"] = user.email
+        try:
+            token["is_admin"] = user.profile.is_admin
+        except Exception:
+            token["is_admin"] = False
+        try:
+            token["system_id"] = user.profile.system_id
+        except Exception:
+            token["system_id"] = None
         return token
 
     def validate(self, attrs):
@@ -202,6 +210,61 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         if "email" in validated_data:
             instance.username = self._new_username
         return super().update(instance, validated_data)
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    """Read-only serializer for admin user management."""
+
+    profile_picture = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
+    system_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("id", "email", "first_name", "last_name", "is_active", "date_joined", "profile_picture", "is_admin", "system_id")
+
+    def get_profile_picture(self, obj):
+        request = self.context.get("request")
+        try:
+            picture = obj.profile.profile_picture
+            if picture and request:
+                return request.build_absolute_uri(picture.url)
+            if picture:
+                return picture.url
+        except Exception:
+            pass
+        return None
+
+    def get_is_admin(self, obj):
+        try:
+            return obj.profile.is_admin
+        except Exception:
+            return False
+
+    def get_system_id(self, obj):
+        try:
+            return obj.profile.system_id
+        except Exception:
+            return None
+
+
+class AdminUserUpdateSerializer(serializers.Serializer):
+    """Writable serializer for toggling is_admin and is_active."""
+
+    is_admin = serializers.BooleanField(required=False)
+    is_active = serializers.BooleanField(required=False)
+
+    def save(self, user):
+        if "is_active" in self.validated_data:
+            user.is_active = self.validated_data["is_active"]
+            user.save(update_fields=["is_active"])
+        if "is_admin" in self.validated_data:
+            try:
+                user.profile.is_admin = self.validated_data["is_admin"]
+                user.profile.save(update_fields=["is_admin"])
+            except Exception:
+                pass
+        return user
 
 
 class UserProfileSerializer(serializers.ModelSerializer):

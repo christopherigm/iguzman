@@ -11,20 +11,24 @@ export class ApiError extends Error {
 }
 
 export function storeTokens(access: string, refresh: string): void {
+  if (typeof window === 'undefined') return;
   localStorage.setItem(ACCESS_TOKEN_KEY, access);
   localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
   window.dispatchEvent(new CustomEvent('auth-changed'));
 }
 
 export function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
 export function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function clearTokens(): void {
+  if (typeof window === 'undefined') return;
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
@@ -33,9 +37,12 @@ export interface TokenUser {
   firstName?: string;
   lastName?: string;
   email?: string;
+  isAdmin?: boolean;
+  systemId?: number;
 }
 
 export function getUserFromToken(): TokenUser | null {
+  if (typeof window === 'undefined') return null;
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   if (!token) return null;
 
@@ -47,6 +54,8 @@ export function getUserFromToken(): TokenUser | null {
       firstName: typeof decoded.first_name === 'string' ? decoded.first_name : undefined,
       lastName: typeof decoded.last_name === 'string' ? decoded.last_name : undefined,
       email: typeof decoded.email === 'string' ? decoded.email : undefined,
+      isAdmin: typeof decoded.is_admin === 'boolean' ? decoded.is_admin : false,
+      systemId: typeof decoded.system_id === 'number' ? decoded.system_id : undefined,
     };
   } catch {
     return null;

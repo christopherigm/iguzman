@@ -6,8 +6,11 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
+from core.permissions import IsSystemAdmin
+from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
 from .serializers import (
+    BrandSerializer,
+    BrandWriteSerializer,
     CompanyHighlightItemSerializer,
     CompanyHighlightItemWriteSerializer,
     CompanyHighlightSerializer,
@@ -56,9 +59,22 @@ class SystemView(APIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
-    def get(self, request):
+    def get(self, request, pk=None):
+        if pk is not None:
+            cache_key = f"system:pk:{pk}"
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return Response(cached)
+            try:
+                instance = System.objects.get(pk=pk)
+            except System.DoesNotExist:
+                return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            data = SystemSerializer(instance, context={"request": request}).data
+            cache.set(cache_key, data, SYSTEM_CACHE_TTL)
+            return Response(data)
+
         # X-Website-Host is forwarded by the Next.js SSR layer so that
         # server-side fetches (which originate from the Next.js process)
         # carry the original browser host for correct System record lookup.
@@ -90,6 +106,7 @@ class SystemView(APIView):
         instance = serializer.save(instance)
 
         cache.delete(f"system:host:{instance.host}")
+        cache.delete(f"system:pk:{pk}")
 
         return Response(SystemSerializer(instance, context={"request": request}).data)
 
@@ -103,7 +120,7 @@ class SuccessStoryListView(APIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _resolve_system(self, request):
         host = (
@@ -112,6 +129,17 @@ class SuccessStoryListView(APIView):
         return System.objects.filter(host=host, enabled=True).first()
 
     def get(self, request):
+        system_id = request.query_params.get('system')
+        if system_id:
+            cache_key = f"core:success_stories:system:{system_id}"
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return Response(cached)
+            qs = SuccessStory.objects.filter(system_id=system_id, enabled=True).prefetch_related("images")
+            data = SuccessStorySerializer(qs, many=True, context={"request": request}).data
+            cache.set(cache_key, data, CACHE_TTL)
+            return Response(data)
+        # Existing host-based resolution
         system = self._resolve_system(request)
         if system is None:
             return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
@@ -119,7 +147,7 @@ class SuccessStoryListView(APIView):
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
-        qs = SuccessStory.objects.filter(system=system, enabled=True).prefetch_related("gallery")
+        qs = SuccessStory.objects.filter(system=system, enabled=True).prefetch_related("images")
         data = SuccessStorySerializer(qs, many=True, context={"request": request}).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)
@@ -147,11 +175,11 @@ class SuccessStoryDetailView(APIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk):
         try:
-            return SuccessStory.objects.prefetch_related("gallery").get(pk=pk)
+            return SuccessStory.objects.prefetch_related("images").get(pk=pk)
         except SuccessStory.DoesNotExist:
             return None
 
@@ -185,23 +213,22 @@ class SuccessStoryDetailView(APIView):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         instance.delete()
         cache.delete(f"core:success_story:{pk}")
-        cache.delete(f"core:success_story_gallery:{pk}")
+        cache.delete(f"core:success_story_images:{pk}")
         _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class SuccessStoryGalleryView(APIView):
+class SuccessStoryImagesView(APIView):
     """
-    GET    /api/success-stories/<pk>/gallery/          — list gallery images (public).
-    POST   /api/success-stories/<pk>/gallery/          — create & attach a new image (admin only).
-    DELETE /api/success-stories/<pk>/gallery/<img_pk>/ — detach an image from gallery (admin only).
+    GET  /api/success-stories/<pk>/images/ — list gallery images (public).
+    POST /api/success-stories/<pk>/images/ — add an image (admin only, base64).
     """
 
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_story(self, pk):
         try:
@@ -210,7 +237,7 @@ class SuccessStoryGalleryView(APIView):
             return None
 
     def get(self, request, pk):
-        cache_key = f"core:success_story_gallery:{pk}"
+        cache_key = f"core:success_story_images:{pk}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -218,7 +245,7 @@ class SuccessStoryGalleryView(APIView):
         if story is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         data = SuccessStoryImageSerializer(
-            story.gallery.all(), many=True, context={"request": request}
+            story.images.all(), many=True, context={"request": request}
         ).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)
@@ -229,11 +256,8 @@ class SuccessStoryGalleryView(APIView):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = SuccessStoryImageWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        img = SuccessStoryImage()
-        img.save()
-        img = serializer.save(img)
-        story.gallery.add(img)
-        cache.delete(f"core:success_story_gallery:{pk}")
+        img = serializer.save(story)
+        cache.delete(f"core:success_story_images:{pk}")
         cache.delete(f"core:success_story:{pk}")
         _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
@@ -242,16 +266,44 @@ class SuccessStoryGalleryView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
-    def delete(self, request, pk, img_pk):
-        story = self._get_story(pk)
-        if story is None:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class SuccessStoryImageDetailView(APIView):
+    """
+    PATCH  /api/success-stories/<pk>/images/<img_pk>/ — update sort_order / name (admin only).
+    DELETE /api/success-stories/<pk>/images/<img_pk>/ — delete an image (admin only).
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    def _get_image(self, pk, img_pk):
         try:
-            img = story.gallery.get(pk=img_pk)
+            return SuccessStoryImage.objects.get(pk=img_pk, story_id=pk)
         except SuccessStoryImage.DoesNotExist:
-            return Response({"detail": "Image not found in gallery."}, status=status.HTTP_404_NOT_FOUND)
-        story.gallery.remove(img)
-        cache.delete(f"core:success_story_gallery:{pk}")
+            return None
+
+    def patch(self, request, pk, img_pk):
+        img = self._get_image(pk, img_pk)
+        if img is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        name = request.data.get("name")
+        sort_order = request.data.get("sort_order")
+        if name is not None:
+            img.name = name
+        if sort_order is not None:
+            img.sort_order = sort_order
+        img.save(update_fields=[f for f in ["name", "sort_order"] if f in request.data])
+        cache.delete(f"core:success_story_images:{pk}")
+        cache.delete(f"core:success_story:{pk}")
+        _invalidate_pattern("core:success_story:slug:*")
+        _invalidate_pattern("core:success_stories:*")
+        return Response(SuccessStoryImageSerializer(img, context={"request": request}).data)
+
+    def delete(self, request, pk, img_pk):
+        img = self._get_image(pk, img_pk)
+        if img is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        img.delete()
+        cache.delete(f"core:success_story_images:{pk}")
         cache.delete(f"core:success_story:{pk}")
         _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
@@ -280,7 +332,7 @@ class SuccessStoryBySlugView(APIView):
             return Response(cached)
 
         try:
-            instance = SuccessStory.objects.prefetch_related("gallery").get(
+            instance = SuccessStory.objects.prefetch_related("images").get(
                 system=system, slug=slug, enabled=True
             )
         except SuccessStory.DoesNotExist:
@@ -300,7 +352,7 @@ class CompanyHighlightListView(APIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _resolve_system(self, request):
         host = (
@@ -309,6 +361,17 @@ class CompanyHighlightListView(APIView):
         return System.objects.filter(host=host, enabled=True).first()
 
     def get(self, request):
+        system_id = request.query_params.get('system')
+        if system_id:
+            cache_key = f"core:highlights:system:{system_id}"
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return Response(cached)
+            qs = CompanyHighlight.objects.filter(system_id=system_id, enabled=True).prefetch_related("items")
+            data = CompanyHighlightSerializer(qs, many=True, context={"request": request}).data
+            cache.set(cache_key, data, CACHE_TTL)
+            return Response(data)
+        # Existing host-based resolution
         system = self._resolve_system(request)
         if system is None:
             return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
@@ -344,7 +407,7 @@ class CompanyHighlightDetailView(APIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk):
         try:
@@ -428,7 +491,7 @@ class CompanyHighlightItemsView(APIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_highlight(self, pk):
         try:
@@ -478,7 +541,7 @@ class CompanyHighlightItemDetailView(APIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_item(self, pk, item_pk):
         try:
@@ -521,3 +584,171 @@ class CompanyHighlightItemDetailView(APIView):
         cache.delete(f"core:highlight:{pk}")
         _invalidate_pattern("core:highlights:*")
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _get_admin_system_id(request):
+    """Return the system_id of the authenticated admin, or None."""
+    try:
+        return request.user.profile.system_id
+    except Exception:
+        return None
+
+
+class BrandListCreateView(APIView):
+    """
+    GET  /api/brands/   — list brands for the current system (by ?system= or host).
+    POST /api/brands/   — create a brand (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def get(self, request):
+        system_id = request.query_params.get("system")
+        if system_id:
+            cache_key = f"core:brands:system:{system_id}"
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return Response(cached)
+            qs = Brand.objects.filter(system_id=system_id, enabled=True)
+            data = BrandSerializer(qs, many=True, context={"request": request}).data
+            cache.set(cache_key, data, CACHE_TTL)
+            return Response(data)
+        host = (request.META.get("HTTP_X_WEBSITE_HOST") or request.get_host()).split(":")[0]
+        system = System.objects.filter(host=host, enabled=True).first()
+        if system is None:
+            return Response({"detail": "No system configuration found."}, status=status.HTTP_404_NOT_FOUND)
+        cache_key = f"core:brands:{system.host}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        qs = Brand.objects.filter(system=system, enabled=True)
+        data = BrandSerializer(qs, many=True, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def post(self, request):
+        system_id = _get_admin_system_id(request)
+        serializer = BrandWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = Brand()
+        if system_id and "system" not in serializer.validated_data:
+            instance.system_id = system_id
+        instance.save()
+        instance = serializer.save(instance)
+        _invalidate_pattern("core:brands:*")
+        return Response(
+            BrandSerializer(instance, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class BrandDetailView(APIView):
+    """
+    GET    /api/brands/<pk>/   — retrieve a brand (public).
+    PATCH  /api/brands/<pk>/   — partial update (admin only).
+    DELETE /api/brands/<pk>/   — delete (admin only).
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsSystemAdmin()]
+
+    def _get_object(self, pk):
+        try:
+            return Brand.objects.get(pk=pk)
+        except Brand.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        cache_key = f"core:brand:{pk}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        data = BrandSerializer(instance, context={"request": request}).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
+
+    def patch(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        admin_system_id = _get_admin_system_id(request)
+        if admin_system_id and instance.system_id and instance.system_id != admin_system_id:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = BrandWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save(instance)
+        cache.delete(f"core:brand:{pk}")
+        _invalidate_pattern("core:brands:*")
+        return Response(BrandSerializer(instance, context={"request": request}).data)
+
+    def delete(self, request, pk):
+        instance = self._get_object(pk)
+        if instance is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        admin_system_id = _get_admin_system_id(request)
+        if admin_system_id and instance.system_id and instance.system_id != admin_system_id:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        instance.delete()
+        cache.delete(f"core:brand:{pk}")
+        _invalidate_pattern("core:brands:*")
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SlugCheckView(APIView):
+    """
+    GET /api/check-slug/?model=<model>&slug=<slug>[&exclude_id=<id>]
+
+    Returns {"available": true|false}.  Admin-only.
+
+    Supported model values:
+      brand, highlight, success-story,
+      product, product-category, service, service-category, variant-option
+    """
+
+    permission_classes = [IsSystemAdmin]
+
+    _MODEL_MAP = {
+        "brand": ("core", "Brand"),
+        "highlight": ("core", "CompanyHighlight"),
+        "success-story": ("core", "SuccessStory"),
+        "product": ("catalog", "Product"),
+        "product-category": ("catalog", "ProductCategory"),
+        "service": ("catalog", "Service"),
+        "service-category": ("catalog", "ServiceCategory"),
+        "variant-option": ("catalog", "VariantOption"),
+    }
+
+    def get(self, request):
+        model_key = request.query_params.get("model", "")
+        slug = request.query_params.get("slug", "").strip()
+        exclude_id = request.query_params.get("exclude_id")
+
+        if model_key not in self._MODEL_MAP:
+            return Response(
+                {"available": False, "error": "Unknown model"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not slug:
+            return Response({"available": False})
+
+        from django.apps import apps as django_apps
+        app_label, model_name = self._MODEL_MAP[model_key]
+        Model = django_apps.get_model(app_label, model_name)
+
+        qs = Model.objects.filter(slug=slug)
+        if exclude_id:
+            try:
+                qs = qs.exclude(pk=int(exclude_id))
+            except (ValueError, TypeError):
+                pass
+
+        return Response({"available": not qs.exists()})

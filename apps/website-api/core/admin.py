@@ -60,20 +60,11 @@ class CompanyHighlightAdmin(admin.ModelAdmin):
         super().delete_model(request, obj)
 
 
-@admin.register(SuccessStoryImage)
-class SuccessStoryImageAdmin(admin.ModelAdmin):
-    list_display = ("name", "enabled", "modified")
-    list_filter = ("enabled",)
-    search_fields = ("name",)
-    readonly_fields = ("created", "modified", "version")
-
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        _invalidate_pattern("core:success_story*")
-
-    def delete_model(self, request, obj):
-        _invalidate_pattern("core:success_story*")
-        super().delete_model(request, obj)
+class SuccessStoryImageInline(admin.TabularInline):
+    model = SuccessStoryImage
+    extra = 0
+    fields = ("image", "name", "sort_order", "enabled")
+    readonly_fields = ("created", "modified")
 
 
 @admin.register(SuccessStory)
@@ -83,7 +74,7 @@ class SuccessStoryAdmin(admin.ModelAdmin):
     search_fields = ("name", "en_name", "description")
     prepopulated_fields = {"slug": ("name",)}
     readonly_fields = ("created", "modified", "version")
-    filter_horizontal = ("gallery",)
+    inlines = [SuccessStoryImageInline]
     fieldsets = (
         ("Identity", {
             "fields": ("system", "enabled", "slug", "version", "created", "modified"),
@@ -97,21 +88,18 @@ class SuccessStoryAdmin(admin.ModelAdmin):
         ("Media", {
             "fields": ("image", "fit", "background_color", "href"),
         }),
-        ("Gallery", {
-            "fields": ("gallery",),
-        }),
     )
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         cache.delete(f"core:success_story:{obj.pk}")
-        cache.delete(f"core:success_story_gallery:{obj.pk}")
+        cache.delete(f"core:success_story_images:{obj.pk}")
         _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
 
     def delete_model(self, request, obj):
         cache.delete(f"core:success_story:{obj.pk}")
-        cache.delete(f"core:success_story_gallery:{obj.pk}")
+        cache.delete(f"core:success_story_images:{obj.pk}")
         _invalidate_pattern("core:success_story:slug:*")
         _invalidate_pattern("core:success_stories:*")
         super().delete_model(request, obj)
@@ -119,11 +107,21 @@ class SuccessStoryAdmin(admin.ModelAdmin):
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
-    list_display = ("name", "enabled", "modified")
-    list_filter = ("enabled",)
+    list_display = ("name", "system", "enabled", "modified")
+    list_filter = ("enabled", "system")
     search_fields = ("name",)
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ("created", "modified", "version")
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete(f"core:brand:{obj.pk}")
+        _invalidate_pattern("core:brands:*")
+
+    def delete_model(self, request, obj):
+        cache.delete(f"core:brand:{obj.pk}")
+        _invalidate_pattern("core:brands:*")
+        super().delete_model(request, obj)
 
 
 @admin.register(System)

@@ -1,0 +1,82 @@
+.uf {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 560px;
+}
+
+.uf__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.uf__btn-cancel {
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.uf__btn-cancel:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.uf__banner {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.uf__banner--error {
+  background: color-mix(in srgb, #e53935 10%, transparent);
+  color: #c62828;
+}
+
+.uf__banner--success {
+  background: color-mix(in srgb, #43a047 10%, transparent);
+  color: #2e7d32;
+}
+
+.uf__card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.uf__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uf__toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.uf__toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.uf__toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.uf__actions {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+}

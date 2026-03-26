@@ -9,7 +9,7 @@ class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = "Profile"
-    fields = ("system", "profile_picture")
+    fields = ("system", "is_admin", "profile_picture")
 
 
 class UserAdmin(BaseUserAdmin):
@@ -22,8 +22,8 @@ admin.site.register(User, UserAdmin)
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "system", "profile_picture")
-    list_filter = ("system",)
+    list_display = ("user", "system", "is_admin", "profile_picture")
+    list_filter = ("system", "is_admin")
     search_fields = ("user__username", "user__email")
     raw_id_fields = ("user",)
 

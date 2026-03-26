@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 from PIL import Image, ImageOps
 from rest_framework import serializers
 
-from .models import CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
+from .models import Brand, CompanyHighlight, CompanyHighlightItem, SuccessStory, SuccessStoryImage, System
 
 # ---------------------------------------------------------------------------
 # Image processing
@@ -98,6 +98,7 @@ class SuccessStoryImageSerializer(serializers.ModelSerializer):
             "id", "enabled", "created", "modified",
             "name", "en_name", "description", "en_description",
             "image", "fit", "background_color", "href",
+            "sort_order",
         ]
 
     def get_image(self, obj):
@@ -111,7 +112,7 @@ class SuccessStoryImageSerializer(serializers.ModelSerializer):
 
 class SuccessStorySerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
-    gallery = SuccessStoryImageSerializer(many=True, read_only=True)
+    images = SuccessStoryImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = SuccessStory
@@ -123,7 +124,7 @@ class SuccessStorySerializer(serializers.ModelSerializer):
             "description", "en_description",
             "image", "fit", "background_color", "href",
             "slug",
-            "gallery",
+            "images",
         ]
 
     def get_image(self, obj):
@@ -135,7 +136,7 @@ class SuccessStorySerializer(serializers.ModelSerializer):
         return obj.image.url
 
 
-_STORY_IMAGE_CFG = {"max_size": (512, 512), "quality": 85, "force_format": "JPEG"}
+_STORY_IMAGE_CFG = {"max_size": (900, 900), "quality": 85, "force_format": "JPEG"}
 
 
 class SuccessStoryWriteSerializer(serializers.Serializer):
@@ -189,46 +190,30 @@ class SuccessStoryWriteSerializer(serializers.Serializer):
 
 
 class SuccessStoryImageWriteSerializer(serializers.Serializer):
-    """Create/update a gallery image — accepts base64 image."""
+    """Create a gallery image linked to a story — accepts base64 image."""
 
-    name        = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
-    en_name     = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
-    description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    en_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    href        = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
-    fit         = serializers.CharField(max_length=16, required=False, allow_null=True, allow_blank=True)
-    background_color = serializers.CharField(max_length=32, required=False, allow_null=True, allow_blank=True)
-    enabled     = serializers.BooleanField(required=False)
-    image       = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
+    image      = serializers.CharField()
+    name       = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
 
     def validate_image(self, value):
-        if value:
-            sub = ImageProcessingSerializer(data={"base64_image": value}, **_STORY_IMAGE_CFG)
-            if not sub.is_valid():
-                raise serializers.ValidationError(sub.errors["base64_image"])
+        sub = ImageProcessingSerializer(data={"base64_image": value}, **_STORY_IMAGE_CFG)
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors["base64_image"])
         return value
 
-    def save(self, instance):
-        scalar_fields = [
-            "name", "en_name", "description", "en_description",
-            "href", "fit", "background_color", "enabled",
-        ]
-        update_fields = []
-        for field_name in scalar_fields:
-            if field_name in self.validated_data:
-                setattr(instance, field_name, self.validated_data[field_name])
-                update_fields.append(field_name)
-
-        image_value = self.validated_data.get("image")
-        if image_value:
-            proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_STORY_IMAGE_CFG)
-            proc.is_valid()
-            proc.save_to_field(instance.image, f"storyimage_{instance.pk}.jpg")
-            update_fields.append("image")
-
-        if update_fields:
-            instance.save(update_fields=update_fields)
-
+    def save(self, story):
+        image_data = self.validated_data["image"]
+        instance = SuccessStoryImage(
+            story=story,
+            name=self.validated_data.get("name"),
+            sort_order=self.validated_data.get("sort_order", 0),
+        )
+        instance.save()
+        proc = ImageProcessingSerializer(data={"base64_image": image_data}, **_STORY_IMAGE_CFG)
+        proc.is_valid()
+        proc.save_to_field(instance.image, f"storyimage_{instance.pk}.jpg")
+        instance.save(update_fields=["image"])
         return instance
 
 
@@ -552,6 +537,66 @@ class SystemWriteSerializer(serializers.Serializer):
             filename = f"{field_name}_{instance.pk}.{ext}"
             proc.save_to_field(getattr(instance, field_name), filename)
             update_fields.append(field_name)
+
+        if update_fields:
+            instance.save(update_fields=update_fields)
+
+        return instance
+
+
+# ---------------------------------------------------------------------------
+# Brand serializers
+# ---------------------------------------------------------------------------
+
+class BrandSerializer(serializers.ModelSerializer):
+    logo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Brand
+        fields = ["id", "enabled", "created", "modified", "name", "slug", "logo", "system"]
+
+    def get_logo(self, obj):
+        request = self.context.get("request")
+        if not obj.logo:
+            return None
+        if request:
+            return request.build_absolute_uri(obj.logo.url)
+        return obj.logo.url
+
+
+_BRAND_LOGO_CFG = {"max_size": (512, 512), "quality": 90, "force_format": "PNG"}
+
+
+class BrandWriteSerializer(serializers.Serializer):
+    """Write serializer for Brand — all fields optional (PATCH semantics)."""
+
+    name    = serializers.CharField(max_length=255, required=False)
+    slug    = serializers.SlugField(max_length=255, required=False)
+    enabled = serializers.BooleanField(required=False)
+    system  = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
+    logo    = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # base64
+
+    def validate_logo(self, value):
+        if value:
+            sub = ImageProcessingSerializer(data={"base64_image": value}, **_BRAND_LOGO_CFG)
+            if not sub.is_valid():
+                raise serializers.ValidationError(sub.errors["base64_image"])
+        return value
+
+    def save(self, instance):
+        scalar_fields = ["name", "slug", "enabled", "system"]
+        update_fields = []
+        for field_name in scalar_fields:
+            if field_name in self.validated_data:
+                setattr(instance, field_name, self.validated_data[field_name])
+                update_fields.append(field_name)
+
+        logo_value = self.validated_data.get("logo")
+        if logo_value:
+            proc = ImageProcessingSerializer(data={"base64_image": logo_value}, **_BRAND_LOGO_CFG)
+            proc.is_valid()
+            proc.save_to_field(instance.logo, f"brand_logo_{instance.pk}.png")
+            update_fields.append("logo")
 
         if update_fields:
             instance.save(update_fields=update_fields)

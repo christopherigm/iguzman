@@ -1,3 +1,14 @@
+/* ── Navbar height token ──────────────────────────── */
+:root {
+  --ui-navbar-height: 57px; /* .ui-navbar-inner min-height (56px) + border-bottom (1px) */
+}
+
+/* ── Navbar spacer ────────────────────────────────── */
+.ui-navbar-spacer {
+  height: var(--ui-navbar-height);
+  flex-shrink: 0;
+}
+
 /* ── Navbar base ──────────────────────────────────── */
 .ui-navbar {
   position: fixed;

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from '@repo/i18n/navigation';
 import { Navbar } from '@repo/ui/core-elements/navbar';
-import { getAccessToken, getRefreshToken, clearTokens } from '@/lib/auth';
+import { getAccessToken, getRefreshToken, clearTokens, getUserFromToken } from '@/lib/auth';
 
 interface NavbarClientProps {
   logo: string;
@@ -15,11 +15,13 @@ export function NavbarClient({ logo, version }: NavbarClientProps) {
   const t = useTranslations('Navbar');
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const syncAuth = () => {
     const access = getAccessToken();
     const refresh = getRefreshToken();
     setIsLoggedIn(Boolean(access && refresh));
+    setIsAdmin(getUserFromToken()?.isAdmin === true);
   };
 
   useEffect(() => {
@@ -44,10 +46,15 @@ export function NavbarClient({ logo, version }: NavbarClientProps) {
       }
     : { label: '', href: '/auth', icon: '/icons/user.svg' };
 
+  const navItems = [
+    ...(pathname === '/' ? [] : [{ label: t('home'), href: '/' }]),
+    ...(isAdmin && !pathname.startsWith('/admin') ? [{ label: t('admin'), href: '/admin' }] : []),
+  ];
+
   return (
     <Navbar
       logo={logo}
-      items={pathname === '/' ? [] : [{ label: 'Home', href: '/' }]}
+      items={navItems}
       fixedItems={[authItem]}
       version={version}
       translucent

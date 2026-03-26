@@ -38,6 +38,8 @@ export interface ButtonProps extends UIComponentProps {
    * color swatches, or any toggle button that requires custom visual treatment.
    */
   unstyled?: boolean;
+  /** Disables the button and suppresses interaction. */
+  disabled?: boolean;
   /** HTML `title` attribute (tooltip shown on hover). */
   title?: string;
   /** Accessible label when visible text is absent or insufficient (e.g. icon-only buttons). */
@@ -59,7 +61,7 @@ export interface ButtonProps extends UIComponentProps {
  * <Button text="Go to docs" href="/docs" />
  */
 export const Button: React.FC<ButtonProps> = (props) => {
-  const { text, type = 'button', href, onClick, className, id, unstyled, title } = props;
+  const { text, type = 'button', href, onClick, className, id, unstyled, title, disabled } = props;
   const [isHovered, setIsHovered] = React.useState(false);
 
   const ariaLabel = props['aria-label'];
@@ -121,6 +123,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
         <button
           id={id}
           title={title}
+          disabled={disabled}
           className={[unstyled ? undefined : 'ui-button-wave', className].filter(Boolean).join(' ')}
           style={finalStyle}
           aria-label={ariaLabel}
@@ -146,6 +149,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
       type={type}
       id={id}
       title={title}
+      disabled={disabled}
       className={[unstyled ? undefined : 'ui-button-wave', className].filter(Boolean).join(' ')}
       style={finalStyle}
       onClick={typeof onClick === 'function' ? handleClick : undefined}

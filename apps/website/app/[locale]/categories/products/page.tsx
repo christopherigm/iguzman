@@ -5,6 +5,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Grid } from '@repo/ui/core-elements/grid';
 import { Hero } from '@repo/ui/hero';
+import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
 import { getProductCategories, getAllProducts } from '@/lib/catalog';
 import { CategoryCard } from '@/components/catalog-categories';
 import { BuyableCard } from '@/components/buyable-card';
@@ -40,7 +41,8 @@ export default async function ProductsPage({ params }: Props) {
           style={{ height: 'clamp(220px, 30vw, 400px)' }}
         />
       )}
-      <Container paddingX={10} marginTop={heroImage ? 32 : 70}>
+      {!heroImage && <NavbarSpacer />}
+      <Container paddingX={10} marginTop={32}>
         {!heroImage && (
           <Typography as="h1" variant="h1" className="section-title" marginBottom={24}>
             {t('heading')}

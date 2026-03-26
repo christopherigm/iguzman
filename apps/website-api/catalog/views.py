@@ -1,7 +1,8 @@
 from django.core.cache import cache
 
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny
+from core.permissions import IsSystemAdmin
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -78,7 +79,7 @@ class ProductCategoryListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def get(self, request):
         system_id = request.query_params.get('system')
@@ -126,7 +127,7 @@ class ProductCategoryDetailView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk):
         try:
@@ -184,7 +185,7 @@ class ProductListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def get(self, request):
         system_id = request.query_params.get('system')
@@ -248,7 +249,7 @@ class ProductDetailView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk):
         try:
@@ -299,7 +300,7 @@ class ProductImageListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_product(self, pk):
         try:
@@ -332,7 +333,7 @@ class ProductImageDetailView(APIView):
     PATCH  /api/catalog/products/<pk>/images/<img_pk>/  — update sort_order / name (admin only).
     """
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsSystemAdmin]
 
     def _get_image(self, pk, img_pk):
         try:
@@ -374,7 +375,7 @@ class ServiceCategoryListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def get(self, request):
         system_id = request.query_params.get('system')
@@ -422,7 +423,7 @@ class ServiceCategoryDetailView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk):
         try:
@@ -480,7 +481,7 @@ class ServiceListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def get(self, request):
         system_id = request.query_params.get('system')
@@ -545,7 +546,7 @@ class ServiceDetailView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk):
         try:
@@ -603,7 +604,7 @@ class VariantOptionListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def get(self, request):
         system_id = request.query_params.get('system')
@@ -643,7 +644,7 @@ class VariantOptionDetailView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk):
         try:
@@ -694,7 +695,7 @@ class VariantOptionValueListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_option(self, pk):
         try:
@@ -739,7 +740,7 @@ class VariantOptionValueDetailView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk, val_pk):
         try:
@@ -789,7 +790,7 @@ class ProductVariantListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_product(self, pk):
         try:
@@ -833,7 +834,7 @@ class ProductVariantDetailView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk, var_pk):
         try:
@@ -879,7 +880,7 @@ class ProductVariantImageListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_variant(self, pk, var_pk):
         try:
@@ -912,7 +913,7 @@ class ProductVariantImageDetailView(APIView):
     DELETE /api/catalog/products/<pk>/variants/<var_pk>/images/<img_pk>/  — delete (admin only).
     """
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsSystemAdmin]
 
     def _get_image(self, pk, var_pk, img_pk):
         try:
@@ -958,7 +959,7 @@ class ServiceVariantListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_service(self, pk):
         try:
@@ -1001,7 +1002,7 @@ class ServiceVariantDetailView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_object(self, pk, var_pk):
         try:
@@ -1047,7 +1048,7 @@ class ServiceImageListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSystemAdmin()]
 
     def _get_service(self, pk):
         try:
@@ -1080,7 +1081,7 @@ class ServiceImageDetailView(APIView):
     PATCH  /api/catalog/services/<pk>/images/<img_pk>/  — update sort_order / name (admin only).
     """
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsSystemAdmin]
 
     def _get_image(self, pk, img_pk):
         try:

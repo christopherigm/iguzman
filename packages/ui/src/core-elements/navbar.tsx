@@ -481,4 +481,11 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
   );
 };
 
+/**
+ * NavbarSpacer — a `div` with `height: var(--ui-navbar-height)` that pushes
+ * page content below the fixed navbar.  Use it on any page that does not
+ * start with a full-width `<Hero>` section.
+ */
+export const NavbarSpacer: React.FC = () => <div className="ui-navbar-spacer" />;
+
 export default Navbar;

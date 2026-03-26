@@ -134,7 +134,7 @@ export function ItemGalleryClient({
         <Swiper
           modules={[Thumbs, FreeMode]}
           onSwiper={setThumbsSwiper}
-          slidesPerView={4}
+          slidesPerView={5}
           spaceBetween={8}
           freeMode
           watchSlidesProgress

@@ -8,6 +8,7 @@ import type { GalleryImage } from '@/components/item-gallery-client';
 import { ItemGalleryClient } from '@/components/item-gallery-client';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import type { BreadcrumbItem } from '@repo/ui/core-elements/breadcrumbs';
+import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
 import { ServiceDetailPanel } from '@/components/service-detail';
 
 type Props = {
@@ -83,23 +84,26 @@ export default async function ServicePage({ params, searchParams }: Props) {
   ];
 
   return (
-    <Container paddingX={10} marginTop={70}>
-      <Breadcrumbs items={breadcrumbs} />
-      <Grid container spacing={4} marginBottom="48px">
-        <Grid size={{ xs: 12, sm: 6, lg: 5 }}>
-          <ItemGalleryClient
-            images={galleryImages}
-            placeholderColor={service.background_color ?? undefined}
-          />
+    <>
+      <NavbarSpacer />
+      <Container paddingX={10}>
+        <Breadcrumbs items={breadcrumbs} />
+        <Grid container spacing={4} marginBottom="48px">
+          <Grid size={{ xs: 12, sm: 6, lg: 5 }}>
+            <ItemGalleryClient
+              images={galleryImages}
+              placeholderColor={service.background_color ?? undefined}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, lg: 7 }}>
+            <ServiceDetailPanel
+              service={service}
+              selectedVariant={selectedVariant}
+              locale={locale}
+            />
+          </Grid>
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, lg: 7 }}>
-          <ServiceDetailPanel
-            service={service}
-            selectedVariant={selectedVariant}
-            locale={locale}
-          />
-        </Grid>
-      </Grid>
-    </Container>
+      </Container>
+    </>
   );
 }

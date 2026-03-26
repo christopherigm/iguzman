@@ -1,0 +1,53 @@
+.admin-home {
+  padding: 16px 0;
+}
+
+.admin-home__header {
+  margin-bottom: 32px;
+}
+
+.admin-home__title {
+  margin-bottom: 8px;
+}
+
+.admin-home__subtitle {
+  opacity: 0.7;
+}
+
+.admin-home__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  background: var(--surface, var(--background));
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+  height: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.admin-home__card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.admin-home__icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  display: block;
+}
+
+.admin-home__name {
+  font-weight: 600;
+  display: block;
+}
+
+.admin-home__desc {
+  opacity: 0.65;
+  margin: 0;
+}

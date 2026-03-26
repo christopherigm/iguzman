@@ -1,0 +1,12 @@
+.admin-shell {
+  display: flex;
+  min-height: calc(100dvh - 60px); /* subtract navbar height */
+  background: var(--background);
+}
+
+@media (max-width: 899px) {
+  /* md */
+  .admin-shell {
+    flex-direction: column;
+  }
+}

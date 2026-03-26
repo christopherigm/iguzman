@@ -42,11 +42,13 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
 
 class ProductCategoryWriteSerializer(serializers.ModelSerializer):
+    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
     class Meta:
         model = ProductCategory
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
-            'description', 'en_description', 'enabled',
+            'description', 'en_description', 'enabled', 'image',
         ]
 
     def validate_slug(self, value):
@@ -56,6 +58,34 @@ class ProductCategoryWriteSerializer(serializers.ModelSerializer):
         if qs.exists():
             raise serializers.ValidationError('A product category with this slug already exists.')
         return value
+
+    def validate_image(self, value):
+        if not value:
+            return value
+        sub = ImageProcessingSerializer(data={'base64_image': value}, max_size=(1200, 1200), quality=85)
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def create(self, validated_data):
+        image_data = validated_data.pop('image', None)
+        instance = super().create(validated_data)
+        if image_data:
+            self._save_image(instance, image_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        image_data = validated_data.pop('image', None)
+        instance = super().update(instance, validated_data)
+        if image_data:
+            self._save_image(instance, image_data)
+        return instance
+
+    def _save_image(self, instance, image_data):
+        proc = ImageProcessingSerializer(data={'base64_image': image_data}, max_size=(1200, 1200), quality=85)
+        proc.is_valid()
+        proc.save_to_field(instance.image, f'product_category_{instance.pk}.jpg')
+        instance.save(update_fields=['image'])
 
 
 # ---------------------------------------------------------------------------
@@ -687,11 +717,13 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
 
 
 class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
+    image = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+
     class Meta:
         model = ServiceCategory
         fields = [
             'system', 'parent', 'name', 'en_name', 'slug',
-            'description', 'en_description', 'enabled',
+            'description', 'en_description', 'enabled', 'image',
         ]
 
     def validate_slug(self, value):
@@ -701,6 +733,34 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
         if qs.exists():
             raise serializers.ValidationError('A service category with this slug already exists.')
         return value
+
+    def validate_image(self, value):
+        if not value:
+            return value
+        sub = ImageProcessingSerializer(data={'base64_image': value}, max_size=(1200, 1200), quality=85)
+        if not sub.is_valid():
+            raise serializers.ValidationError(sub.errors['base64_image'])
+        return value
+
+    def create(self, validated_data):
+        image_data = validated_data.pop('image', None)
+        instance = super().create(validated_data)
+        if image_data:
+            self._save_image(instance, image_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        image_data = validated_data.pop('image', None)
+        instance = super().update(instance, validated_data)
+        if image_data:
+            self._save_image(instance, image_data)
+        return instance
+
+    def _save_image(self, instance, image_data):
+        proc = ImageProcessingSerializer(data={'base64_image': image_data}, max_size=(1200, 1200), quality=85)
+        proc.is_valid()
+        proc.save_to_field(instance.image, f'service_category_{instance.pk}.jpg')
+        instance.save(update_fields=['image'])
 
 
 # ---------------------------------------------------------------------------

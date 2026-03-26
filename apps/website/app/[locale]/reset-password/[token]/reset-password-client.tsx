@@ -83,7 +83,7 @@ export function ResetPasswordClient({ token, apiUrl }: Props) {
         minHeight: '100vh',
         flexDirection: 'column',
         justifyContent: 'flex-start',
-        paddingTop: 80,
+        paddingTop: 'var(--ui-navbar-height)',
       }}
       paddingX={10}
     >
