@@ -38,8 +38,16 @@ export function AdminEntityList({
 
   return (
     <Box flexDirection="column" gap={20}>
-      <Box display="flex" alignItems="center" justifyContent="space-between" gap={16} flexWrap="wrap">
-        <Typography as="h1" variant="h3" className="ael__title">{title}</Typography>
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        gap={16}
+        flexWrap="wrap"
+      >
+        <Typography as="h1" variant="h3" className="ael__title">
+          {title}
+        </Typography>
         <Link href={`${basePath}/new`} prefetch>
           <Button text={`+ ${t('newItem')}`} />
         </Link>
@@ -68,16 +76,18 @@ export function AdminEntityList({
           <table className="ael__table">
             <thead>
               <tr>
-                {columns.map(col => (
-                  <th key={col.key} className="ael__th">{col.label}</th>
+                {columns.map((col) => (
+                  <th key={col.key} className="ael__th">
+                    {col.label}
+                  </th>
                 ))}
                 <th className="ael__th ael__th--actions">{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {items.map(item => (
+              {items.map((item) => (
                 <tr key={String(item.id)} className="ael__row">
-                  {columns.map(col => (
+                  {columns.map((col) => (
                     <td key={col.key} className="ael__td">
                       {col.render
                         ? col.render(item[col.key], item)
@@ -86,7 +96,11 @@ export function AdminEntityList({
                   ))}
                   <td className="ael__td ael__td--actions">
                     <Link href={`${basePath}/${item.id}`} prefetch>
-                      <Button text={t('edit')} unstyled className="ael__btn-edit" />
+                      <Button
+                        text={t('edit')}
+                        unstyled
+                        className="ael__btn-edit"
+                      />
                     </Link>
                     {onDelete && (
                       <Button
@@ -112,7 +126,12 @@ export function AdminEntityList({
 }
 
 function renderCell(value: unknown): React.ReactNode {
-  if (value === null || value === undefined) return <Typography as="span" variant="body-sm" className="ael__null">—</Typography>;
+  if (value === null || value === undefined)
+    return (
+      <Typography as="span" variant="body-sm" className="ael__null">
+        —
+      </Typography>
+    );
   if (typeof value === 'boolean') {
     return (
       <Badge variant="subtle" color={value ? 'green' : 'gray'}>
@@ -120,18 +139,37 @@ function renderCell(value: unknown): React.ReactNode {
       </Badge>
     );
   }
-  if (typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'))) {
+  if (
+    typeof value === 'string' &&
+    (value.startsWith('http://') || value.startsWith('https://'))
+  ) {
     // Detect image URLs
     if (/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i.test(value)) {
       return (
         <Box className="ael__thumb-wrap">
-          <Image src={value} alt="" width={40} height={40} className="ael__thumb" unoptimized />
+          <Image
+            src={value}
+            alt=""
+            width={40}
+            height={40}
+            className="ael__thumb"
+            unoptimized
+          />
         </Box>
       );
     }
   }
   if (typeof value === 'string' && value.length > 60) {
-    return <Typography as="span" variant="body-sm" className="ael__truncated" title={value}>{value.slice(0, 60)}…</Typography>;
+    return (
+      <Typography
+        as="span"
+        variant="body-sm"
+        className="ael__truncated"
+        title={value}
+      >
+        {value.slice(0, 60)}…
+      </Typography>
+    );
   }
   return String(value);
 }

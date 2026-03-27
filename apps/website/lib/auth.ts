@@ -159,6 +159,27 @@ export async function verifyEmail(token: string, apiUrl = ''): Promise<void> {
   }
 }
 
+export async function refreshTokens(apiUrl = ''): Promise<string | null> {
+  const refresh = getRefreshToken();
+  if (!refresh) return null;
+
+  const res = await fetch(`${apiUrl}/api/auth/token/refresh/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh }),
+  });
+
+  if (!res.ok) {
+    clearTokens();
+    return null;
+  }
+
+  const data = (await res.json()) as { access: string; refresh?: string };
+  const newRefresh = data.refresh ?? refresh;
+  storeTokens(data.access, newRefresh);
+  return data.access;
+}
+
 export async function login(payload: LoginPayload, apiUrl = ''): Promise<LoginResponse> {
   const res = await fetch(`${apiUrl}/api/auth/login/`, {
     method: 'POST',

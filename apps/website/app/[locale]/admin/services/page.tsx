@@ -15,32 +15,62 @@ export default function AdminServicesPage() {
   const systemId = getUserFromToken()?.systemId ?? 0;
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { setItems(await listServices(systemId)); }
-    catch { setError(t('errorLoad')); }
-    finally { setLoading(false); }
+    setLoading(true);
+    setError(null);
+    try {
+      setItems(await listServices(systemId));
+    } catch {
+      setError(t('errorLoad'));
+    } finally {
+      setLoading(false);
+    }
   }, [systemId, t]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleDelete = async (id: number) => {
-    try { await deleteService(id); setItems(prev => prev.filter(i => i.id !== id)); }
-    catch { setError(t('errorDelete')); }
+    try {
+      await deleteService(id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch {
+      setError(t('errorDelete'));
+    }
   };
 
   const columns = [
     { key: 'image', label: 'Image' },
     { key: 'name', label: t('name') },
     { key: 'sku', label: 'SKU' },
-    { key: 'price', label: t('price') ?? 'Price', render: (v: unknown, r: Record<string, unknown>) => v != null ? `${v} ${r.currency ?? ''}` : '—' },
+    {
+      key: 'price',
+      label: t('price') ?? 'Price',
+      render: (v: unknown, r: Record<string, unknown>) =>
+        v != null ? `${v} ${r.currency ?? ''}` : '—',
+    },
     { key: 'modality', label: t('modality') ?? 'Modality' },
     { key: 'enabled', label: t('enabled') },
   ];
 
   return (
     <>
-      <Breadcrumbs items={[{ label: t('home'), href: '/' }, { label: t('breadcrumbAdmin'), href: '/admin' }, { label: t('services') }]} />
-      <AdminEntityList title={t('services')} items={items} columns={columns} basePath="/admin/services" onDelete={handleDelete} loading={loading} error={error} />
+      <Breadcrumbs
+        items={[
+          { label: t('home'), href: '/' },
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('services') },
+        ]}
+      />
+      <AdminEntityList
+        title={t('services')}
+        items={items}
+        columns={columns}
+        basePath="/admin/services"
+        onDelete={handleDelete}
+        loading={loading}
+        error={error}
+      />
     </>
   );
 }

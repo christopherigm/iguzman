@@ -1,0 +1,100 @@
+/* ─── Keyframes ─────────────────────────────────────────────────────────────── */
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--_tx, 0)) translateY(var(--_ty));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(var(--_tx, 0)) translateY(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(var(--_tx, 0)) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(var(--_tx, 0)) translateY(var(--_ty));
+  }
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────────── */
+
+.ui-toast {
+  position: fixed;
+  z-index: 1000;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  max-width: 420px;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--foreground, #000) 12%, transparent);
+  cursor: pointer;
+}
+
+/* ─── Variants ───────────────────────────────────────────────────────────────── */
+
+.ui-toast--error {
+  background: color-mix(in srgb, #e53935 10%, transparent);
+  color: #c62828;
+  border: 1px solid color-mix(in srgb, #e53935 30%, transparent);
+}
+
+.ui-toast--success {
+  background: color-mix(in srgb, #43a047 10%, transparent);
+  color: #2e7d32;
+  border: 1px solid color-mix(in srgb, #43a047 30%, transparent);
+}
+
+/* ─── Positions + translation direction ─────────────────────────────────────── */
+
+.ui-toast--bottom-left {
+  bottom: 24px;
+  left: 24px;
+  --_ty: 16px;
+}
+
+.ui-toast--bottom-center {
+  bottom: 24px;
+  left: 50%;
+  --_tx: -50%;
+  --_ty: 16px;
+}
+
+.ui-toast--bottom-right {
+  bottom: 24px;
+  right: 24px;
+  --_ty: 16px;
+}
+
+.ui-toast--top-left {
+  top: 24px;
+  left: 24px;
+  --_ty: -16px;
+}
+
+.ui-toast--top-center {
+  top: 24px;
+  left: 50%;
+  --_tx: -50%;
+  --_ty: -16px;
+}
+
+.ui-toast--top-right {
+  top: 24px;
+  right: 24px;
+  --_ty: -16px;
+}
+
+/* ─── Animation phases ───────────────────────────────────────────────────────── */
+
+.ui-toast--in {
+  animation: toast-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.ui-toast--out {
+  animation: toast-out 0.22s ease-in forwards;
+}

@@ -254,6 +254,18 @@
     "usersDesc": "View and manage registered users.",
     "breadcrumbAdmin": "Admin"
   },
+  "GradientBuilder": {
+    "linear": "Linear",
+    "radial": "Radial",
+    "solid": "Solid",
+    "angle": "Angle",
+    "color": "Color",
+    "stops": "Color Stops",
+    "addStop": "Add stop",
+    "removeStop": "Remove stop",
+    "pickColor": "Pick color",
+    "rawCss": "CSS value"
+  },
   "AdminImageUploader": {
     "dropzoneLabel": "Upload images",
     "dropzoneText": "Drop images here or click to upload",

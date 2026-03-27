@@ -9,12 +9,14 @@ import {
 } from '@/components/admin-image-uploader/admin-image-uploader';
 import { getSystem, updateSystem } from '@/lib/admin-api';
 import { getUserFromToken } from '@/lib/auth';
+import { GradientBuilder } from '@repo/ui/core-elements/gradient-builder';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 
 export default function AdminSystemPage() {
   const t = useTranslations('Admin');
+  const tGb = useTranslations('GradientBuilder');
 
   const [values, setValues] = useState<Record<string, unknown>>({
     site_name: '',
@@ -174,10 +176,6 @@ export default function AdminSystemPage() {
       type: 'color',
     },
     {
-      key: 'highlights_bg',
-      label: t('highlightsBg') ?? 'Highlights Section Background (CSS)',
-    },
-    {
       key: 'highlights_title',
       label: t('highlightsTitle') ?? 'Highlights Title (ES)',
     },
@@ -191,10 +189,6 @@ export default function AdminSystemPage() {
       key: 'highlights_en_subtitle',
       label: 'Highlights Subtitle (EN)',
       type: 'textarea',
-    },
-    {
-      key: 'catalog_items_bg',
-      label: t('catalogBg') ?? 'Catalog Section Background (CSS)',
     },
     { key: 'about', label: t('about') ?? 'About (ES)', type: 'textarea' },
     { key: 'en_about', label: 'About (EN)', type: 'textarea' },
@@ -264,6 +258,40 @@ export default function AdminSystemPage() {
       error={error}
       success={success}
     >
+      <GradientBuilder
+        label={t('highlightsBg')}
+        value={String(values.highlights_bg ?? '')}
+        onChange={(v) => setValues((prev) => ({ ...prev, highlights_bg: v }))}
+        labels={{
+          linear: tGb('linear'),
+          radial: tGb('radial'),
+          solid: tGb('solid'),
+          angle: tGb('angle'),
+          color: tGb('color'),
+          stops: tGb('stops'),
+          addStop: tGb('addStop'),
+          removeStop: tGb('removeStop'),
+          pickColor: tGb('pickColor'),
+          rawCss: tGb('rawCss'),
+        }}
+      />
+      <GradientBuilder
+        label={t('catalogBg')}
+        value={String(values.catalog_items_bg ?? '')}
+        onChange={(v) => setValues((prev) => ({ ...prev, catalog_items_bg: v }))}
+        labels={{
+          linear: tGb('linear'),
+          radial: tGb('radial'),
+          solid: tGb('solid'),
+          angle: tGb('angle'),
+          color: tGb('color'),
+          stops: tGb('stops'),
+          addStop: tGb('addStop'),
+          removeStop: tGb('removeStop'),
+          pickColor: tGb('pickColor'),
+          rawCss: tGb('rawCss'),
+        }}
+      />
       {Object.entries(images).map(([field, state]) => (
         <Box key={field} display="flex" flexDirection="column" gap="8px">
           <Typography variant="label">

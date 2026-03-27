@@ -9,19 +9,7 @@ import { Button } from '@repo/ui/core-elements/button';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import './admin-sidebar.css';
-
-const NAV_ITEMS = [
-  { key: 'system', href: '/admin/system', icon: '⚙️' },
-  { key: 'products', href: '/admin/products', icon: '📦' },
-  { key: 'productCategories', href: '/admin/product-categories', icon: '🏷️' },
-  { key: 'services', href: '/admin/services', icon: '🛠️' },
-  { key: 'serviceCategories', href: '/admin/service-categories', icon: '🏷️' },
-  { key: 'brands', href: '/admin/brands', icon: '🎯' },
-  { key: 'variantOptions', href: '/admin/variant-options', icon: '🔀' },
-  { key: 'successStories', href: '/admin/success-stories', icon: '⭐' },
-  { key: 'highlights', href: '/admin/highlights', icon: '✨' },
-  { key: 'users', href: '/admin/users', icon: '👥' },
-] as const;
+import { ADMIN_NAV_ITEMS } from './admin-nav-items';
 
 export function AdminSidebar() {
   const t = useTranslations('Admin');
@@ -47,6 +35,8 @@ export function AdminSidebar() {
 
   return (
     <>
+      <div className="admin-sidebar__spacer" aria-hidden="true" />
+
       <Button
         unstyled
         className="admin-sidebar__toggle"
@@ -63,7 +53,7 @@ export function AdminSidebar() {
           <Typography as="span" variant="label" className="admin-sidebar__title">{t('title')}</Typography>
         </Box>
         <ul className="admin-sidebar__list">
-          {NAV_ITEMS.map(item => {
+          {ADMIN_NAV_ITEMS.map(item => {
             const active = pathname.startsWith(item.href);
             return (
               <li key={item.key} className="admin-sidebar__item">

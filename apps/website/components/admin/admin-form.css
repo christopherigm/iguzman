@@ -14,24 +14,6 @@
   background: color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
-.af__banner {
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.af__banner--error {
-  background: color-mix(in srgb, #e53935 10%, transparent);
-  color: #c62828;
-  border: 1px solid color-mix(in srgb, #e53935 30%, transparent);
-}
-
-.af__banner--success {
-  background: color-mix(in srgb, #43a047 10%, transparent);
-  color: #2e7d32;
-  border: 1px solid color-mix(in srgb, #43a047 30%, transparent);
-}
-
 .af__form {
   display: flex;
   flex-direction: column;
@@ -116,8 +98,14 @@
 }
 
 .af__actions {
-  padding-top: 8px;
-  border-top: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--background);
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--foreground) 12%, transparent);
+  z-index: 100;
 }
 
 @media (max-width: 599px) {

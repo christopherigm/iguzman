@@ -28,12 +28,14 @@ export default function AdminProductsPage() {
     }
   }, [t]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleDelete = async (id: number) => {
     try {
       await deleteProduct(id);
-      setItems(prev => prev.filter(i => i.id !== id));
+      setItems((prev) => prev.filter((i) => i.id !== id));
     } catch {
       setError(t('errorDelete'));
     }
@@ -43,14 +45,25 @@ export default function AdminProductsPage() {
     { key: 'image', label: t('image') ?? 'Image' },
     { key: 'name', label: t('name') },
     { key: 'sku', label: 'SKU' },
-    { key: 'price', label: t('price') ?? 'Price', render: (v: unknown, row: Record<string, unknown>) => v != null ? `${v} ${row.currency ?? ''}` : '—' },
+    {
+      key: 'price',
+      label: t('price') ?? 'Price',
+      render: (v: unknown, row: Record<string, unknown>) =>
+        v != null ? `${v} ${row.currency ?? ''}` : '—',
+    },
     { key: 'in_stock', label: t('inStock') ?? 'In Stock' },
     { key: 'enabled', label: t('enabled') },
   ];
 
   return (
     <>
-      <Breadcrumbs items={[{ label: t('home'), href: '/' }, { label: t('breadcrumbAdmin'), href: '/admin' }, { label: t('products') }]} />
+      <Breadcrumbs
+        items={[
+          { label: t('home'), href: '/' },
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('products') },
+        ]}
+      />
       <AdminEntityList
         title={t('products')}
         items={items}

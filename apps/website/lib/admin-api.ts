@@ -1,17 +1,38 @@
-import { getAccessToken } from './auth';
+import { clearTokens, getAccessToken, refreshTokens } from './auth';
 import { API_URL } from './config';
 
-// Helper: authenticated fetch
+function buildHeaders(token: string | null, extra: HeadersInit = {}): HeadersInit {
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
+
+// Helper: authenticated fetch with automatic token refresh on 401
 async function adminFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = getAccessToken();
-  return fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers: buildHeaders(token, options.headers),
   });
+
+  if (res.status === 401) {
+    const newToken = await refreshTokens();
+    if (!newToken) {
+      clearTokens();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth';
+      }
+      return res;
+    }
+    return fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: buildHeaders(newToken, options.headers),
+    });
+  }
+
+  return res;
 }
 
 export class AdminApiError extends Error {

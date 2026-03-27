@@ -111,9 +111,12 @@ export default function AdminProductFormPage({ params }: Props) {
   // Auto-populate slug from name for new records
   useEffect(() => {
     if (isNew) {
-      setValues(prev => ({ ...prev, slug: buildSlug(String(prev.name ?? ''), systemId) }));
+      setValues((prev) => ({
+        ...prev,
+        slug: buildSlug(String(prev.name ?? ''), systemId),
+      }));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.name, isNew, systemId]);
 
   const handleNameBlur = useCallback(async () => {
@@ -121,9 +124,15 @@ export default function AdminProductFormPage({ params }: Props) {
     if (!currentSlug) return;
     setSlugError(null);
     try {
-      const result = await checkSlug('product', currentSlug, !isNew ? Number(id) : undefined);
+      const result = await checkSlug(
+        'product',
+        currentSlug,
+        !isNew ? Number(id) : undefined,
+      );
       if (!result.available) setSlugError(t('slugTaken'));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [values.slug, isNew, id, t]);
 
   const loadMeta = useCallback(async () => {
@@ -274,7 +283,13 @@ export default function AdminProductFormPage({ params }: Props) {
   const fields: FieldDef[] = [
     { key: 'name', label: t('name'), required: true, onBlur: handleNameBlur },
     { key: 'en_name', label: 'Name (EN)' },
-    { key: 'slug', label: 'Slug', type: 'slug', disabled: true, fieldError: slugError },
+    {
+      key: 'slug',
+      label: 'Slug',
+      type: 'slug',
+      disabled: true,
+      fieldError: slugError,
+    },
     { key: 'sku', label: 'SKU' },
     { key: 'barcode', label: t('barcode') ?? 'Barcode' },
     {
@@ -361,30 +376,37 @@ export default function AdminProductFormPage({ params }: Props) {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: t('home'), href: '/' }, { label: t('breadcrumbAdmin'), href: '/admin' }, { label: t('products'), href: '/admin/products' }, { label: isNew ? t('newItem') : t('edit') }]} />
+      <Breadcrumbs
+        items={[
+          { label: t('home'), href: '/' },
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('products'), href: '/admin/products' },
+          { label: isNew ? t('newItem') : t('edit') },
+        ]}
+      />
       <AdminForm
-      title={
-        isNew
-          ? `${t('newItem')} — ${t('products')}`
-          : `${t('edit')} — ${t('products')}`
-      }
-      fields={fields}
-      values={values}
-      onChange={handleChange}
-      onSubmit={handleSubmit}
-      saving={saving}
-      error={error}
-      success={success}
-    >
-      <Box display="flex" flexDirection="column" gap="8px">
-        <Typography variant="label">{t('images') ?? 'Images'}</Typography>
-        <AdminImageUploader
-          existingImages={existingImages}
-          onChange={handleImagesChange}
-          maxImages={10}
-        />
-      </Box>
-    </AdminForm>
+        title={
+          isNew
+            ? `${t('newItem')} — ${t('products')}`
+            : `${t('edit')} — ${t('products')}`
+        }
+        fields={fields}
+        values={values}
+        onChange={handleChange}
+        onSubmit={handleSubmit}
+        saving={saving}
+        error={error}
+        success={success}
+      >
+        <Box display="flex" flexDirection="column" gap="8px">
+          <Typography variant="label">{t('images') ?? 'Images'}</Typography>
+          <AdminImageUploader
+            existingImages={existingImages}
+            onChange={handleImagesChange}
+            maxImages={10}
+          />
+        </Box>
+      </AdminForm>
     </>
   );
 }

@@ -1,0 +1,185 @@
+.gb {
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--foreground) 2%, var(--background));
+}
+
+.gb__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--foreground) 75%, transparent);
+}
+
+/* Preview strip */
+.gb__preview {
+  height: 64px;
+  margin: 4px 0;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+/* Type tabs */
+.gb__type-btn {
+  padding: 5px 14px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 20px;
+  background: transparent;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.gb__type-btn:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  color: var(--foreground);
+}
+
+.gb__type-btn--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.gb__type-btn--active:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Sub-labels */
+.gb__sublabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Angle range */
+.gb__range {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.gb__angle-num {
+  width: 58px;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 13px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.gb__angle-num::-webkit-inner-spin-button,
+.gb__angle-num::-webkit-outer-spin-button {
+  opacity: 0.5;
+}
+
+.gb__angle-num:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Color swatch */
+.gb__swatch {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  padding: 2px;
+  cursor: pointer;
+  background: none;
+}
+
+/* Stop color text input */
+.gb__stop-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Position number input */
+.gb__pos-num {
+  width: 52px;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 13px;
+  text-align: center;
+  flex-shrink: 0;
+  -moz-appearance: textfield;
+}
+
+.gb__pos-num::-webkit-inner-spin-button,
+.gb__pos-num::-webkit-outer-spin-button {
+  opacity: 0.5;
+}
+
+.gb__pos-num:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Add / remove buttons */
+.gb__add-btn {
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 20px;
+  background: transparent;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  white-space: nowrap;
+}
+
+.gb__add-btn:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  color: var(--foreground);
+}
+
+.gb__remove-btn {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.gb__remove-btn:hover {
+  background: #e53935;
+  color: #fff;
+}
+
+/* Raw CSS input */
+.gb__raw {
+  width: 100%;
+}

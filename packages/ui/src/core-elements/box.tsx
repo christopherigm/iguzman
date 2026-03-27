@@ -16,6 +16,8 @@ export interface BoxProps extends UIComponentProps {
   'aria-modal'?: boolean;
   /** Click handler. */
   onClick?: React.MouseEventHandler<HTMLDivElement>;
+  /** Animation end handler. */
+  onAnimationEnd?: React.AnimationEventHandler<HTMLDivElement>;
 }
 
 /**
@@ -35,7 +37,7 @@ export interface BoxProps extends UIComponentProps {
  * </Box>
  */
 export const Box: React.FC<BoxProps> = (props) => {
-  const { styles, children, className, id, role, onClick } = props;
+  const { styles, children, className, id, role, onClick, onAnimationEnd } = props;
 
   const style: CSSProperties = { ...buildStyleProps(props), ...styles };
 
@@ -51,6 +53,7 @@ export const Box: React.FC<BoxProps> = (props) => {
       aria-describedby={props['aria-describedby']}
       aria-modal={props['aria-modal']}
       onClick={onClick}
+      onAnimationEnd={onAnimationEnd}
     >
       {children}
     </div>

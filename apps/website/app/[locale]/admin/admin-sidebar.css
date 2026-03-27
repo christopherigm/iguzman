@@ -13,6 +13,12 @@
   text-align: left;
 }
 
+.admin-sidebar__spacer {
+  width: 240px;
+  min-width: 240px;
+  flex-shrink: 0;
+}
+
 .admin-sidebar {
   width: 240px;
   min-width: 240px;
@@ -22,9 +28,11 @@
   flex-direction: column;
   flex-shrink: 0;
   overflow-y: auto;
-  position: sticky;
+  position: fixed;
   top: 60px;
+  left: 0;
   height: calc(100dvh - 60px);
+  z-index: 100;
 }
 
 .admin-sidebar__header {
@@ -87,6 +95,10 @@
 }
 
 @media (max-width: 899px) { /* md */
+  .admin-sidebar__spacer {
+    display: none;
+  }
+
   .admin-sidebar__toggle {
     display: flex;
   }
@@ -98,6 +110,7 @@
     left: 0;
     width: 280px;
     height: 100dvh;
+    padding-top: var(--ui-navbar-height, 60px);
     z-index: 200;
     box-shadow: 4px 0 24px rgba(0,0,0,0.15);
     overflow-y: auto;
