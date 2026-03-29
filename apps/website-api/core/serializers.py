@@ -176,11 +176,14 @@ class SuccessStoryWriteSerializer(serializers.Serializer):
                 setattr(instance, field_name, self.validated_data[field_name])
                 update_fields.append(field_name)
 
-        image_value = self.validated_data.get("image")
-        if image_value:
-            proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_STORY_IMAGE_CFG)
-            proc.is_valid()
-            proc.save_to_field(instance.image, f"story_{instance.pk}.jpg")
+        if "image" in self.validated_data:
+            image_value = self.validated_data["image"]
+            if image_value:
+                proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_STORY_IMAGE_CFG)
+                proc.is_valid()
+                proc.save_to_field(instance.image, f"story_{instance.pk}.jpg")
+            else:
+                instance.image = None
             update_fields.append("image")
 
         if update_fields:
@@ -316,11 +319,14 @@ class CompanyHighlightWriteSerializer(serializers.Serializer):
                 setattr(instance, field_name, self.validated_data[field_name])
                 update_fields.append(field_name)
 
-        image_value = self.validated_data.get("image")
-        if image_value:
-            proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_HIGHLIGHT_IMAGE_CFG)
-            proc.is_valid()
-            proc.save_to_field(instance.image, f"highlight_{instance.pk}.jpg")
+        if "image" in self.validated_data:
+            image_value = self.validated_data["image"]
+            if image_value:
+                proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_HIGHLIGHT_IMAGE_CFG)
+                proc.is_valid()
+                proc.save_to_field(instance.image, f"highlight_{instance.pk}.jpg")
+            else:
+                instance.image = None
             update_fields.append("image")
 
         if update_fields:
@@ -362,11 +368,14 @@ class CompanyHighlightItemWriteSerializer(serializers.Serializer):
                 setattr(instance, field_name, self.validated_data[field_name])
                 update_fields.append(field_name)
 
-        image_value = self.validated_data.get("image")
-        if image_value:
-            proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_HIGHLIGHT_ITEM_IMAGE_CFG)
-            proc.is_valid()
-            proc.save_to_field(instance.image, f"highlightitem_{instance.pk}.jpg")
+        if "image" in self.validated_data:
+            image_value = self.validated_data["image"]
+            if image_value:
+                proc = ImageProcessingSerializer(data={"base64_image": image_value}, **_HIGHLIGHT_ITEM_IMAGE_CFG)
+                proc.is_valid()
+                proc.save_to_field(instance.image, f"highlightitem_{instance.pk}.jpg")
+            else:
+                instance.image = None
             update_fields.append("image")
 
         if update_fields:
@@ -528,8 +537,12 @@ class SystemWriteSerializer(serializers.Serializer):
 
         # Image fields
         for field_name, cfg in _IMAGE_FIELDS.items():
-            value = self.validated_data.get(field_name)
+            if field_name not in self.validated_data:
+                continue
+            value = self.validated_data[field_name]
             if not value:
+                setattr(instance, field_name, None)
+                update_fields.append(field_name)
                 continue
             proc = ImageProcessingSerializer(data={"base64_image": value}, **cfg)
             proc.is_valid()  # already validated above
@@ -591,11 +604,14 @@ class BrandWriteSerializer(serializers.Serializer):
                 setattr(instance, field_name, self.validated_data[field_name])
                 update_fields.append(field_name)
 
-        logo_value = self.validated_data.get("logo")
-        if logo_value:
-            proc = ImageProcessingSerializer(data={"base64_image": logo_value}, **_BRAND_LOGO_CFG)
-            proc.is_valid()
-            proc.save_to_field(instance.logo, f"brand_logo_{instance.pk}.png")
+        if "logo" in self.validated_data:
+            logo_value = self.validated_data["logo"]
+            if logo_value:
+                proc = ImageProcessingSerializer(data={"base64_image": logo_value}, **_BRAND_LOGO_CFG)
+                proc.is_valid()
+                proc.save_to_field(instance.logo, f"brand_logo_{instance.pk}.png")
+            else:
+                instance.logo = None
             update_fields.append("logo")
 
         if update_fields:

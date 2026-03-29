@@ -13,7 +13,9 @@ import { ADMIN_NAV_ITEMS } from './admin-nav-items';
 const MAX_NAME_LENGTH = 20;
 
 function trimName(name: string): string {
-  return name.length > MAX_NAME_LENGTH ? name.slice(0, MAX_NAME_LENGTH) + '…' : name;
+  return name.length > MAX_NAME_LENGTH
+    ? name.slice(0, MAX_NAME_LENGTH) + '…'
+    : name;
 }
 
 export default function AdminPage() {
@@ -37,12 +39,18 @@ export default function AdminPage() {
         </Typography>
       </Box>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={1}>
         {ADMIN_NAV_ITEMS.map((item) => (
           <Grid key={item.key} size={{ xs: 6, sm: 4, md: 3 }}>
             <Link href={item.href} prefetch className="admin-home__card">
-              <span className="admin-home__icon" aria-hidden="true">{item.icon}</span>
-              <Typography as="span" variant="label" className="admin-home__name">
+              <span className="admin-home__icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <Typography
+                as="span"
+                variant="label"
+                className="admin-home__name"
+              >
                 {t(item.key)}
               </Typography>
               <Typography as="p" variant="body-sm" className="admin-home__desc">

@@ -252,7 +252,14 @@
     "successStoriesDesc": "Exibir casos de sucesso de clientes.",
     "highlightsDesc": "Destacar elementos importantes na página inicial.",
     "usersDesc": "Visualizar e gerenciar usuários cadastrados.",
-    "breadcrumbAdmin": "Admin"
+    "breadcrumbAdmin": "Admin",
+    "enhanceLabel": "Melhorar com IA",
+    "enhanceModelTitle": "Melhoria de texto com IA",
+    "enhanceModelText": "Na primeira vez que usar a função Melhorar, o modelo de IA (~350 MB) será baixado uma vez no seu navegador. Isso pode levar um momento. Continuar?",
+    "downloadingModel": "Baixando modelo de IA",
+    "enhanceAccept": "Aceitar",
+    "enhanceDiscard": "Descartar",
+    "enhanceStop": "Parar"
   },
   "GradientBuilder": {
     "linear": "Linear",

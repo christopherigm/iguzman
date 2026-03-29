@@ -116,7 +116,11 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
       const payload: Record<string, unknown> = { ...values, system: systemId };
       if (!payload.href) delete payload.href;
       if (!payload.slug) delete payload.slug;
-      if (pendingImage.length > 0) payload.image = pendingImage?.[0]?.base64;
+      if (pendingImage.length > 0) {
+        payload.image = pendingImage[0]?.base64;
+      } else if (existingImage.length === 0) {
+        payload.image = null;
+      }
 
       let storyId: number;
       if (isNew) {
@@ -208,7 +212,10 @@ export default function AdminSuccessStoryFormPage({ params }: Props) {
         </Typography>
         <AdminImageUploader
           existingImages={existingImage}
-          onChange={(n) => setPendingImage(n)}
+          onChange={(n, _d, o) => {
+            setPendingImage(n);
+            setExistingImage(prev => prev.filter(img => o.includes(img.id)));
+          }}
           maxImages={1}
         />
       </Box>

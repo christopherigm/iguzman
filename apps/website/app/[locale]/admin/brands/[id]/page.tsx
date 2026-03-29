@@ -82,7 +82,11 @@ export default function AdminBrandFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      if (pendingLogo.length > 0) payload.logo = pendingLogo?.[0]?.base64;
+      if (pendingLogo.length > 0) {
+        payload.logo = pendingLogo[0]?.base64;
+      } else if (existingLogo.length === 0) {
+        payload.logo = null;
+      }
       if (isNew) {
         const created = await createBrand(payload);
         setSuccess(t('saved'));
@@ -132,7 +136,10 @@ export default function AdminBrandFormPage({ params }: Props) {
         <Typography variant="label">{t('logo') ?? 'Logo'}</Typography>
         <AdminImageUploader
           existingImages={existingLogo}
-          onChange={(n, _d, _o) => setPendingLogo(n)}
+          onChange={(n, _d, o) => {
+            setPendingLogo(n);
+            setExistingLogo(prev => prev.filter(img => o.includes(img.id)));
+          }}
           maxImages={1}
         />
       </Box>

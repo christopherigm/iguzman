@@ -76,7 +76,11 @@ export default function AdminServiceCategoryFormPage({ params }: Props) {
     setSaving(true); setError(null); setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      if (pendingImage.length > 0) payload.image = pendingImage[0]?.base64;
+      if (pendingImage.length > 0) {
+        payload.image = pendingImage[0]?.base64;
+      } else if (existingImage.length === 0) {
+        payload.image = null;
+      }
       if (!payload.parent) delete payload.parent;
       if (isNew) { const c = await createServiceCategory(payload); setSuccess(t('saved')); router.replace(`/admin/service-categories/${c.id}`); }
       else { await updateServiceCategory(Number(id), payload); setSuccess(t('saved')); }
@@ -108,7 +112,10 @@ export default function AdminServiceCategoryFormPage({ params }: Props) {
         <Typography variant="label">{t('image') ?? 'Image'}</Typography>
         <AdminImageUploader
           existingImages={existingImage}
-          onChange={(n, _d, _o) => setPendingImage(n)}
+          onChange={(n, _d, o) => {
+            setPendingImage(n);
+            setExistingImage(prev => prev.filter(img => o.includes(img.id)));
+          }}
           maxImages={1}
         />
       </Box>

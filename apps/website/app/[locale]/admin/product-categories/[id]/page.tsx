@@ -87,7 +87,11 @@ export default function AdminProductCategoryFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      if (pendingImage.length > 0) payload.image = pendingImage[0]?.base64;
+      if (pendingImage.length > 0) {
+        payload.image = pendingImage[0]?.base64;
+      } else if (existingImage.length === 0) {
+        payload.image = null;
+      }
       if (payload.parent === '' || payload.parent === null) delete payload.parent;
       if (isNew) {
         const created = await createProductCategory(payload);
@@ -133,7 +137,10 @@ export default function AdminProductCategoryFormPage({ params }: Props) {
         <Typography variant="label">{t('image') ?? 'Image'}</Typography>
         <AdminImageUploader
           existingImages={existingImage}
-          onChange={(n, _d, _o) => setPendingImage(n)}
+          onChange={(n, _d, o) => {
+            setPendingImage(n);
+            setExistingImage(prev => prev.filter(img => o.includes(img.id)));
+          }}
           maxImages={1}
         />
       </Box>

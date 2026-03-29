@@ -15,6 +15,17 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  async headers() {
+    return [
+      {
+        source: '/admin/(.*)',
+        headers: [
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
+        ],
+      },
+    ];
+  },
   allowedDevOrigins: ['127.0.0.1', '*'],
   images: {
     qualities: [75, 80, 85, 90],
@@ -27,6 +38,10 @@ const nextConfig = {
       {
         protocol: 'http',
         hostname: '127.0.0.1',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
       },
     ],
   },

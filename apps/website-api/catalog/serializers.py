@@ -75,10 +75,14 @@ class ProductCategoryWriteSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
+        clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
         instance = super().update(instance, validated_data)
         if image_data:
             self._save_image(instance, image_data)
+        elif clear_image:
+            instance.image = None
+            instance.save(update_fields=['image'])
         return instance
 
     def _save_image(self, instance, image_data):
@@ -613,9 +617,12 @@ class ProductWriteSerializer(serializers.Serializer):
         return product
 
     def update(self, instance, validated_data):
+        clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
         for field_name, value in validated_data.items():
             setattr(instance, field_name, value)
+        if clear_image:
+            instance.image = None
         instance.save()
         if image_data:
             self._save_image(instance, image_data)
@@ -750,10 +757,14 @@ class ServiceCategoryWriteSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
+        clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
         instance = super().update(instance, validated_data)
         if image_data:
             self._save_image(instance, image_data)
+        elif clear_image:
+            instance.image = None
+            instance.save(update_fields=['image'])
         return instance
 
     def _save_image(self, instance, image_data):
@@ -888,9 +899,12 @@ class ServiceWriteSerializer(serializers.Serializer):
         return service
 
     def update(self, instance, validated_data):
+        clear_image = 'image' in validated_data and not validated_data.get('image')
         image_data = validated_data.pop('image', None)
         for field_name, value in validated_data.items():
             setattr(instance, field_name, value)
+        if clear_image:
+            instance.image = None
         instance.save()
         if image_data:
             self._save_image(instance, image_data)

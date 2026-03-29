@@ -252,7 +252,14 @@
     "successStoriesDesc": "Showcase customer success stories.",
     "highlightsDesc": "Feature important highlights on the homepage.",
     "usersDesc": "View and manage registered users.",
-    "breadcrumbAdmin": "Admin"
+    "breadcrumbAdmin": "Admin",
+    "enhanceLabel": "Enhance with AI",
+    "enhanceModelTitle": "AI Text Enhancement",
+    "enhanceModelText": "The first time you use the Enhance feature, the AI model (~350 MB) is downloaded once to your browser. This may take a minute. Continue?",
+    "downloadingModel": "Downloading AI model",
+    "enhanceAccept": "Accept",
+    "enhanceDiscard": "Discard",
+    "enhanceStop": "Stop"
   },
   "GradientBuilder": {
     "linear": "Linear",

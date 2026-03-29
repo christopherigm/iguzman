@@ -252,7 +252,14 @@
     "successStoriesDesc": "Erfolgsgeschichten von Kunden präsentieren.",
     "highlightsDesc": "Wichtige Highlights auf der Startseite hervorheben.",
     "usersDesc": "Registrierte Benutzer anzeigen und verwalten.",
-    "breadcrumbAdmin": "Admin"
+    "breadcrumbAdmin": "Admin",
+    "enhanceLabel": "Mit KI verbessern",
+    "enhanceModelTitle": "KI-Textverbesserung",
+    "enhanceModelText": "Beim ersten Verwenden der Verbessern-Funktion wird das KI-Modell (~350 MB) einmalig in Ihrem Browser heruntergeladen. Dies kann einen Moment dauern. Fortfahren?",
+    "downloadingModel": "KI-Modell wird heruntergeladen",
+    "enhanceAccept": "Übernehmen",
+    "enhanceDiscard": "Verwerfen",
+    "enhanceStop": "Stoppen"
   },
   "GradientBuilder": {
     "linear": "Linear",

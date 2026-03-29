@@ -144,8 +144,11 @@ export default function AdminSystemPage() {
       );
       // Attach pending images as base64
       Object.entries(images).forEach(([field, state]) => {
-        if (state.pending.length > 0)
-          payload[field] = state.pending?.[0]?.base64;
+        if (state.pending.length > 0) {
+          payload[field] = state.pending[0]?.base64;
+        } else if (state.existing.length === 0) {
+          payload[field] = null;
+        }
       });
       await updateSystem(systemId, payload);
       setSuccess(t('saved'));
@@ -299,10 +302,15 @@ export default function AdminSystemPage() {
           </Typography>
           <AdminImageUploader
             existingImages={state.existing}
-            onChange={(n) =>
+            onChange={(newImages, _deletedIds, orderedExistingIds) =>
               setImages((prev) => ({
                 ...prev,
-                [field]: { existing: prev[field]?.existing ?? [], pending: n },
+                [field]: {
+                  existing: (prev[field]?.existing ?? []).filter((img) =>
+                    orderedExistingIds.includes(img.id),
+                  ),
+                  pending: newImages,
+                },
               }))
             }
             maxImages={1}

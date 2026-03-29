@@ -252,7 +252,14 @@
     "successStoriesDesc": "Mettre en avant les réussites clients.",
     "highlightsDesc": "Mettre en valeur les points forts sur la page d'accueil.",
     "usersDesc": "Voir et gérer les utilisateurs enregistrés.",
-    "breadcrumbAdmin": "Admin"
+    "breadcrumbAdmin": "Admin",
+    "enhanceLabel": "Améliorer avec l'IA",
+    "enhanceModelTitle": "Amélioration de texte par IA",
+    "enhanceModelText": "La première fois que vous utilisez la fonction Améliorer, le modèle IA (~350 Mo) est téléchargé une fois dans votre navigateur. Cela peut prendre un moment. Continuer ?",
+    "downloadingModel": "Téléchargement du modèle IA",
+    "enhanceAccept": "Accepter",
+    "enhanceDiscard": "Rejeter",
+    "enhanceStop": "Arrêter"
   },
   "GradientBuilder": {
     "linear": "Linéaire",

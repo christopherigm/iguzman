@@ -119,7 +119,11 @@ export default function AdminHighlightFormPage({ params }: Props) {
       if (!payload.href) delete payload.href;
       if (!payload.slug) delete payload.slug;
       if (!payload.icon) delete payload.icon;
-      if (pendingImage.length > 0) payload.image = pendingImage?.[0]?.base64;
+      if (pendingImage.length > 0) {
+        payload.image = pendingImage[0]?.base64;
+      } else if (existingImage.length === 0) {
+        payload.image = null;
+      }
       if (isNew) {
         const c = await createHighlight(payload);
         setSuccess(t('saved'));
@@ -197,7 +201,10 @@ export default function AdminHighlightFormPage({ params }: Props) {
         <Typography variant="label">{t('image') ?? 'Image'}</Typography>
         <AdminImageUploader
           existingImages={existingImage}
-          onChange={(n) => setPendingImage(n)}
+          onChange={(n, _d, o) => {
+            setPendingImage(n);
+            setExistingImage(prev => prev.filter(img => o.includes(img.id)));
+          }}
           maxImages={1}
         />
       </Box>
