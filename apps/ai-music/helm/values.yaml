@@ -1,16 +1,16 @@
 # ─────────────────────────────────────────────────────────────
-# Website Application – Helm Values
+# Ai Music Application – Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
 revisionHistoryLimit: 2 # how many old ReplicaSets to keep for rollbacks
 
 # -- Number of pod replicas
-replicaCount: 1
+replicaCount: 2
 
 # ─── Container image ────────────────────────────────────────
 image:
-  repository: christopherguzman/website # registry/image (no tag)
+  repository: christopherigm/ai-music # registry/image (no tag)
   tag: 'latest' # overrides Chart.appVersion
   pullPolicy: IfNotPresent
 
@@ -34,33 +34,27 @@ ingress:
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
   hosts:
-    - host: bdrone.com.mx
-      paths:
-        - path: /
-          pathType: Prefix
-    - host: website.iguzman.com.mx
+    - host: ai-music.iguzman.com.mx
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: website-tls
+    - secretName: ai-music-tls
       hosts:
-        - bdrone.com.mx
-        - website.iguzman.com.mx
+        - ai-music.iguzman.com.mx
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.
 env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
-  NEXT_PUBLIC_API_URL: 'https://api.website.iguzman.com.mx'
   # Add your own env vars here, for example:
   # API_URL: "https://api.example.com"
 
 # Sensitive values – reference existing Kubernetes Secrets.
 # envFromSecret:
 #   - name: DATABASE_URL
-#     secretName: website-secrets
+#     secretName: ai-music-secrets
 #     secretKey: database-url
 
 # ─── Shared storage (ReadWriteMany) ─────────────────────────

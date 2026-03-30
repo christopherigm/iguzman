@@ -185,6 +185,7 @@ self.onmessage = async (
         max_new_tokens: maxNewTokens,
         do_sample: doSample,
         return_full_text: false,
+        enable_thinking: false,
         ...(doSample ? { temperature, top_p: topP } : {}),
       };
 

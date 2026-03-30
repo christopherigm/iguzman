@@ -1,6 +1,6 @@
 {
-  "name": "website",
-  "version": "0.1.49",
+  "name": "ai-music",
+  "version": "0.1.0",
   "type": "module",
   "private": true,
   "scripts": {
@@ -11,15 +11,14 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@ducanh2912/next-pwa": "^10.2.9",
     "@repo/helpers": "workspace:*",
-    "@repo/i18n": "workspace:^",
     "@repo/ui": "workspace:*",
-    "next-intl": "^4",
-    "pino": "^9",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "swiper": "^12.1.2"
+    "pino": "^9",
+    "@repo/i18n": "workspace:^",
+    "next-intl": "^4",
+    "@ducanh2912/next-pwa": "^10.2.9"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

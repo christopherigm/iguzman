@@ -30,7 +30,9 @@ export function ItemGalleryClient({
 }: ItemGalleryClientProps) {
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperType | null>(null);
   const [slideAspectRatio, setSlideAspectRatio] = useState<number | null>(null);
-  const [imageAspectRatios, setImageAspectRatios] = useState<(number | null)[]>([]);
+  const [imageAspectRatios, setImageAspectRatios] = useState<(number | null)[]>(
+    [],
+  );
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -47,9 +49,13 @@ export function ItemGalleryClient({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeFullscreen();
       if (e.key === 'ArrowLeft')
-        setFullscreenIndex((i) => (i === null ? null : (i - 1 + images.length) % images.length));
+        setFullscreenIndex((i) =>
+          i === null ? null : (i - 1 + images.length) % images.length,
+        );
       if (e.key === 'ArrowRight')
-        setFullscreenIndex((i) => (i === null ? null : (i + 1) % images.length));
+        setFullscreenIndex((i) =>
+          i === null ? null : (i + 1) % images.length,
+        );
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -168,7 +174,9 @@ export function ItemGalleryClient({
             className="item-gallery__overlay-image-wrap"
             styles={
               imageAspectRatios[fullscreenIndex] != null
-                ? ({ '--img-ar': String(imageAspectRatios[fullscreenIndex]) } as React.CSSProperties)
+                ? ({
+                    '--img-ar': String(imageAspectRatios[fullscreenIndex]),
+                  } as React.CSSProperties)
                 : undefined
             }
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
