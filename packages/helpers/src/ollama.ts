@@ -3,6 +3,133 @@ import { ollamaServerURL } from '@repo/helpers/constants';
 import getRandomNumber from '@repo/helpers/random-number';
 
 /* ------------------------------------------------------------------ */
+/*  Model listing                                                     */
+/* ------------------------------------------------------------------ */
+
+/** A single entry from the `/api/tags` response. */
+export interface OllamaTag {
+  name: string;
+  model: string;
+  modified_at: string;
+  size: number;
+}
+
+interface OllamaTagsResponse {
+  models: OllamaTag[];
+}
+
+/**
+ * Returns the list of models available on the Ollama server.
+ * Uses the `/api/tags` endpoint.
+ */
+export const ollamaListModels = async (
+  host: string = ollamaServerURL,
+): Promise<OllamaTag[]> => {
+  const response = await fetch(`${host}/api/tags`);
+  if (!response.ok) {
+    throw new Error(`Ollama: failed to list models (${response.status})`);
+  }
+  const data: OllamaTagsResponse = await response.json();
+  return data.models ?? [];
+};
+
+/* ------------------------------------------------------------------ */
+/*  Streaming chat                                                     */
+/* ------------------------------------------------------------------ */
+
+/** A single message passed to the Ollama chat endpoint. */
+export interface OllamaChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+/** Options for {@link ollamaChatStream}. */
+export interface OllamaChatStreamOptions {
+  host?: string;
+  model: string;
+  messages: OllamaChatMessage[];
+  temperature?: number;
+  /** Called once per streamed token as it arrives. */
+  onToken: (token: string) => void;
+  /** Optional AbortSignal to cancel the stream mid-flight. */
+  signal?: AbortSignal;
+}
+
+/**
+ * Sends a streaming chat request to `/api/chat` and calls `onToken` for
+ * every token received. Returns the full accumulated response text.
+ *
+ * Uses native `fetch` directly (instead of `http-client`) because the
+ * response body must be consumed as a `ReadableStream`.
+ */
+export const ollamaChatStream = async (
+  options: OllamaChatStreamOptions,
+): Promise<string> => {
+  const {
+    host = ollamaServerURL,
+    model,
+    messages,
+    temperature,
+    onToken,
+    signal,
+  } = options;
+
+  const response = await fetch(`${host}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages,
+      stream: true,
+      ...(temperature !== undefined ? { options: { temperature } } : {}),
+    }),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Ollama: ${response.status} ${response.statusText}`);
+  }
+  if (!response.body) {
+    throw new Error('Ollama: response body is empty');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    // Keep the last (potentially incomplete) line in the buffer.
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const json = JSON.parse(trimmed) as {
+          message?: { content?: string };
+          done?: boolean;
+        };
+        const token = json.message?.content ?? '';
+        if (token) {
+          fullText += token;
+          onToken(token);
+        }
+      } catch {
+        // Skip lines that are not valid JSON.
+      }
+    }
+  }
+
+  return fullText;
+};
+
+/* ------------------------------------------------------------------ */
 /*  Types                                                             */
 /* ------------------------------------------------------------------ */
 

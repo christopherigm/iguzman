@@ -31,8 +31,11 @@
   border-radius: 8px;
   font-size: 14px;
   max-width: 420px;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--foreground, #000) 12%, transparent);
+  box-shadow: 0 4px 16px
+    color-mix(in srgb, var(--foreground, #000) 12%, transparent);
   cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 /* ─── Variants ───────────────────────────────────────────────────────────────── */

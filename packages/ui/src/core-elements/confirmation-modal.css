@@ -64,6 +64,11 @@
   font-family: inherit;
 }
 
+/* ── Children slot ────────────────────────────────── */
+.ui-confirmation-modal-children {
+  margin-top: 16px;
+}
+
 /* ── Actions ──────────────────────────────────────── */
 .ui-confirmation-modal-actions {
   display: flex;

@@ -105,12 +105,13 @@ Most components extend `UIComponentProps`, which maps common CSS properties dire
 | Navbar height spacer | `NavbarSpacer` | No props. Renders a `div` with `height: var(--ui-navbar-height)` (57 px). Place at the top of any page that does not start with a `<Hero>` to push content below the fixed navbar. For full-viewport containers using `styles={{ paddingTop }}`, use `paddingTop: 'var(--ui-navbar-height)'` instead. Both import from `@repo/ui/core-elements/navbar`. |
 | Mobile slide-in menu | `Drawer` | `open`, `onClose`, `items`, `logo`, `themeSwitch?` |
 | Loading / progress | `ProgressBar` | `value?` (0–100, omit for indeterminate), `size?` (px height), `label?` |
-| Confirm dialog | `ConfirmationModal` | `title`, `text`, `okCallback`, `cancelCallback?` |
+| Confirm dialog | `ConfirmationModal` | `title`, `text`, `okCallback`, `cancelCallback?`, `children?` (rendered between text and actions), `panelMaxWidth?` (CSS string, default `420px`) |
+| Discrete range select | `Slider` | `steps: SliderStep[]` (array of `{value, label}`), `value` (current step value), `onChange(value)`, `label?` (shown above track), `disabled?` + UIComponentProps. Tick labels are clickable; the active step is highlighted in accent color. Also exports `SliderStep` type. |
 | Page breadcrumb trail | `Breadcrumbs` | `items: BreadcrumbItem[]` — each item has `label: string` and optional `href?: string`; items without `href` render as the current page (aria-current). Also exports `BreadcrumbItem` type. |
 | CSS gradient picker | `GradientBuilder` | `value` (CSS string), `onChange(css: string)`, `label?` (field label above preview), `labels?: GradientBuilderLabels` (i18n overrides — keys: `linear`, `radial`, `solid`, `angle`, `color`, `stops`, `addStop`, `removeStop`, `pickColor`, `rawCss`; all fall back to English defaults). Renders a live preview strip, Linear/Radial/Solid type tabs, angle slider (linear), color-stop editor with swatch + hex + position %, and a raw CSS text field. Parses and writes standard CSS gradient strings. Also exports `GradientType`, `ColorStop`, `GradientBuilderLabels` types. |
+| Markdown / rich-text body | `RichText` | `children` (markdown string, required), `className?`. Renders markdown via `react-markdown` + `remark-gfm` (GFM tables, strikethrough, etc.). Does **not** extend `UIComponentProps` — wrap in `<Box>` for layout props. |
 | Fixed-position notification | `Toast` | `message` (required), `variant: 'error'\|'success'`, `position?: 'bottom-left'\|'bottom-center'\|'bottom-right'\|'top-left'\|'top-center'\|'top-right'` (default `'bottom-left'`), `duration?` (seconds before auto-dismiss, default `5`, pass `0` to never dismiss). Renders fixed on screen with `z-index: 1000`; slides in/out from the nearest edge. Click to dismiss early. Also exports `ToastVariant` and `ToastPosition` types. |
 | Voice input mic button | `SpeechButton` | `mode?: 'batch'\|'realtime'` (default `'batch'`), `language?` (BCP-47, default `'en'`), `model?` (HF model ID, default `'Xenova/whisper-tiny'`), `realtimeInterval?` (ms), `micIcon?`, `stopIcon?`, `onTranscript(text)?`, `onInterimTranscript(text)?`, `aria-label?` + UIComponentProps. Requires COOP+COEP headers (SharedArrayBuffer). Hook also available separately: `import { useSpeechToText } from '@repo/ui/use-speech-to-text'`. |
-| In-browser LLM chat | *(hook only)* | `import { useLlm } from '@repo/ui/use-llm'`. `mode?: 'streaming'\|'batch'` (default `'streaming'`), `model?` (HF ONNX model ID, default auto: `onnx-community/Qwen3-0.6B-ONNX` on WebGPU, `Xenova/TinyLlama-1.1B-Chat-v1.0` on WASM), `maxNewTokens?` (default 512), `temperature?` (default 1), `topP?` (default 0.9). Returns `{ text, streamingText, isModelLoading, modelLoadProgress, isGenerating, error, generate(messages), abort(), reset() }`. `generate()` takes `LlmMessage[]` and returns `Promise<string>`. Requires COOP+COEP headers for WebGPU. Types: `import type { LlmMessage, LlmOptions, LlmMode } from '@repo/helpers/llm'`. |
 | Text-to-speech button | `SpeakButton` | `text` (required — string to speak), `engine?: 'browser'\|'neural'` (default `'browser'`), `language?` (BCP-47, default `'en'`), `model?` (HF model ID, neural only, default `'Xenova/speecht5_tts'`), `speakerEmbeddings?` (URL, neural only), `rate?`, `pitch?`, `volume?` (browser only), `speakIcon?`, `stopIcon?`, `onSpeakStart?`, `onSpeakEnd?`, `aria-label?` + UIComponentProps. Neural engine requires COOP+COEP headers. Hook also available separately: `import { useTextToSpeech } from '@repo/ui/use-text-to-speech'`. |
 
 #### Other UI exports (`packages/ui/src/`)
@@ -274,6 +275,10 @@ import Link from 'next/link';
 // External link — use <a>
 <a href="https://example.com" target="_blank" rel="noopener noreferrer">External</a>
 ```
+
+### TypeScript — Always Check After Writing
+
+After writing or modifying any `.ts` or `.tsx` file, always run `pnpm check-types` and fix every error before considering the task done. Never leave type errors behind.
 
 ### Key Conventions
 

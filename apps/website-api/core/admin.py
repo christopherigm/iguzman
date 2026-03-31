@@ -148,8 +148,8 @@ class SystemAdmin(admin.ModelAdmin):
         ("Company Highlights Section", {
             "fields": (
                 "highlights_bg",
-                "highlights_title", "highlights_en_title",
-                "highlights_subtitle", "highlights_en_subtitle",
+                "highlights_title", "en_highlights_title",
+                "highlights_subtitle", "en_highlights_subtitle",
             ),
         }),
         ("Catalog Items Section", {

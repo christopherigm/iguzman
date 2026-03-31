@@ -17,6 +17,10 @@ export interface ConfirmationModalProps {
   okCallback: () => void;
   /** Called when the user cancels. If provided a "Cancel" button is rendered. */
   cancelCallback?: () => void;
+  /** Optional content rendered between the text and the action buttons. */
+  children?: React.ReactNode;
+  /** Override the panel's max-width (default: 420px). */
+  panelMaxWidth?: string;
 }
 
 /**
@@ -35,6 +39,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   text,
   okCallback,
   cancelCallback,
+  children,
+  panelMaxWidth,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -69,10 +75,17 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   return (
     <div className="ui-confirmation-modal-overlay" onClick={handleOverlayClick}>
-      <div ref={panelRef} className="ui-confirmation-modal-panel">
+      <div
+        ref={panelRef}
+        className="ui-confirmation-modal-panel"
+        style={panelMaxWidth ? { maxWidth: panelMaxWidth } : undefined}
+      >
         <div className="ui-confirmation-modal-body">
           <h2 className="ui-confirmation-modal-title">{title}</h2>
           <p className="ui-confirmation-modal-text">{text}</p>
+          {children && (
+            <div className="ui-confirmation-modal-children">{children}</div>
+          )}
         </div>
 
         <Box className="ui-confirmation-modal-actions">

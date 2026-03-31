@@ -25,9 +25,9 @@ export interface System {
   secondary_color: string;
   highlights_bg: string | null;
   highlights_title: string | null;
-  highlights_en_title: string | null;
+  en_highlights_title: string | null;
   highlights_subtitle: string | null;
-  highlights_en_subtitle: string | null;
+  en_highlights_subtitle: string | null;
   catalog_items_bg: string | null;
   about: string;
   en_about: string;

@@ -34,6 +34,31 @@
   min-height: 24px;
 }
 
+/* ── Bilingual pair group header ─────────────────────────────────────── */
+
+.af__pair-header {
+  padding: 6px 0 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  margin-bottom: 2px;
+}
+
+.af__pair-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+
+/* ── Enhance options modal ───────────────────────────────────────────── */
+
+.af__enhance-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0;
+}
+
 /* ── Enhance button ──────────────────────────────────────────────────── */
 
 .af__enhance-btn {
@@ -60,6 +85,15 @@
 .af__enhance-btn--busy {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ── Translate preview panel ─────────────────────────────────────────── */
+
+.af__translate-preview {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
 }
 
 /* ── Model download progress bar ─────────────────────────────────────── */

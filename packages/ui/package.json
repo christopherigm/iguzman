@@ -7,8 +7,7 @@
     "./palettes": "./src/palettes.ts",
     "./use-ffmpeg": "./src/use-ffmpeg.ts",
     "./use-speech-to-text": "./src/use-speech-to-text.ts",
-    "./use-text-to-speech": "./src/use-text-to-speech.ts",
-    "./use-llm": "./src/use-llm.ts"
+    "./use-text-to-speech": "./src/use-text-to-speech.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -31,6 +30,8 @@
     "@repo/helpers": "workspace:*",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-player": "^2.16.0"
+    "react-markdown": "^9",
+    "react-player": "^2.16.0",
+    "remark-gfm": "^4"
   }
 }

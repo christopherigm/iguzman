@@ -317,9 +317,9 @@ class System(Common):
         ),
     )
     highlights_title = models.CharField(max_length=255, null=True, blank=True)
-    highlights_en_title = models.CharField(max_length=255, null=True, blank=True)
+    en_highlights_title = models.CharField(max_length=255, null=True, blank=True)
     highlights_subtitle = models.TextField(null=True, blank=True)
-    highlights_en_subtitle = models.TextField(null=True, blank=True)
+    en_highlights_subtitle = models.TextField(null=True, blank=True)
 
     catalog_items_bg = models.CharField(
         max_length=512,

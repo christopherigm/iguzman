@@ -176,18 +176,18 @@ export async function CompanyHighlights() {
 
   const title =
     (locale === 'en'
-      ? system?.highlights_en_title
+      ? system?.en_highlights_title
       : system?.highlights_title) ??
     system?.highlights_title ??
-    system?.highlights_en_title ??
+    system?.en_highlights_title ??
     null;
 
   const subtitle =
     (locale === 'en'
-      ? system?.highlights_en_subtitle
+      ? system?.en_highlights_subtitle
       : system?.highlights_subtitle) ??
     system?.highlights_subtitle ??
-    system?.highlights_en_subtitle ??
+    system?.en_highlights_subtitle ??
     null;
 
   return (

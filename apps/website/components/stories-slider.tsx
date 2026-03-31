@@ -26,9 +26,9 @@ function StoryCard({
     story.en_name ??
     '';
   const description =
-    (locale === 'en' ? story.en_description : story.description) ??
-    story.description ??
-    story.en_description ??
+    (locale === 'en' ? story.en_short_description : story.short_description) ??
+    story.short_description ??
+    story.en_short_description ??
     '';
   const date = new Date(story.created).toLocaleDateString(locale, {
     year: 'numeric',

@@ -7,6 +7,7 @@ import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import type { BreadcrumbItem } from '@repo/ui/core-elements/breadcrumbs';
 import { Hero } from '@repo/ui/hero';
 import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
+import { RichText } from '@repo/ui/core-elements/rich-text';
 import { getSuccessStory } from '@/lib/success-stories';
 import { ItemGalleryClient } from '@/components/item-gallery-client';
 import type { GalleryImage } from '@/components/item-gallery-client';
@@ -104,9 +105,9 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
           </Box>
         )}
         {description && (
-          <Typography variant="body" marginTop={32}>
-            {description}
-          </Typography>
+          <Box marginTop={32}>
+            <RichText>{description}</RichText>
+          </Box>
         )}
       </Container>
     </>
