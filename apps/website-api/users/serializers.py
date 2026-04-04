@@ -296,6 +296,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
             return None
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+    new_password2 = serializers.CharField(write_only=True, label="Confirm new password")
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password2"]:
+            raise serializers.ValidationError({"new_password": "Passwords do not match."})
+        return attrs
+
+
 # ── Passkey (WebAuthn) serializers ────────────────────────────────────────────
 
 

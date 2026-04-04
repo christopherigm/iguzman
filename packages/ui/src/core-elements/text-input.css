@@ -45,6 +45,33 @@
   resize: vertical;
 }
 
+/* ── Disabled state ───────────────────────────────────────────── */
+
+.ui-text-input:disabled,
+.ui-text-input-multirow:disabled {
+  color: var(--muted, #757575);
+  border-bottom-color: var(--border, #b0b0b0);
+  border-bottom-style: dashed;
+  background-color: transparent;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ui-text-input:disabled:hover,
+.ui-text-input-multirow:disabled:hover {
+  background-color: transparent;
+}
+
+.ui-text-input-wrapper:has(:disabled) .ui-text-input-label {
+  color: var(--muted, #757575);
+  opacity: 0.6;
+}
+
+.ui-text-input:disabled ~ .ui-text-input-bar,
+.ui-text-input-multirow:disabled ~ .ui-text-input-bar {
+  display: none;
+}
+
 /* ── Floating label ───────────────────────────────────────────── */
 
 .ui-text-input-label {

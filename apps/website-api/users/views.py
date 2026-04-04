@@ -33,6 +33,7 @@ from .models import EmailVerificationToken, PasskeyCredential, PasswordResetToke
 from .serializers import (
     AdminUserSerializer,
     AdminUserUpdateSerializer,
+    ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
     PasskeyAuthenticationOptionsSerializer,
     PasskeyAuthenticationVerifySerializer,
@@ -256,6 +257,27 @@ class ProfilePictureView(APIView):
         if profile.profile_picture:
             picture_url = request.build_absolute_uri(profile.profile_picture.url)
         return Response({"profile_picture": picture_url}, status=status.HTTP_200_OK)
+
+
+class ChangePasswordView(APIView):
+    """Change the authenticated user's password after verifying their current one."""
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        if not user.check_password(serializer.validated_data["current_password"]):
+            return Response(
+                {"current_password": "Current password is incorrect."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(serializer.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
 
 
 class AdminUserListView(APIView):

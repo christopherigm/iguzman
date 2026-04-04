@@ -195,6 +195,91 @@ export async function login(payload: LoginPayload, apiUrl = ''): Promise<LoginRe
   return res.json() as Promise<LoginResponse>;
 }
 
+export interface UserProfile {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile_picture: string | null;
+  system_id: number;
+}
+
+export async function getProfile(accessToken: string, apiUrl = ''): Promise<UserProfile> {
+  const res = await fetch(`${apiUrl}/api/auth/profile/`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<UserProfile>;
+}
+
+export async function updateProfile(
+  payload: { first_name?: string; last_name?: string },
+  accessToken: string,
+  apiUrl = '',
+): Promise<UserProfile> {
+  const res = await fetch(`${apiUrl}/api/auth/profile/`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<UserProfile>;
+}
+
+export async function uploadProfilePicture(
+  base64Image: string,
+  accessToken: string,
+  apiUrl = '',
+): Promise<{ profile_picture: string | null }> {
+  const res = await fetch(`${apiUrl}/api/auth/profile/picture/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ base64_image: base64Image }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<{ profile_picture: string | null }>;
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+  newPassword2: string,
+  accessToken: string,
+  apiUrl = '',
+): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/auth/change-password/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password2: newPassword2,
+    }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}
+
 // ── Passkey (WebAuthn) ───────────────────────────────────────────────────────
 
 export async function registerPasskey(

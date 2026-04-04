@@ -13,7 +13,6 @@ import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Switch } from '@repo/ui/core-elements/switch';
 import './auth-form.css';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import {
   login,
   storeTokens,
@@ -24,7 +23,6 @@ import {
   loginWithPasskey,
   registerPasskey,
   getPasskeyCredentials,
-  deletePasskeyCredential,
 } from '@/lib/auth';
 
 const REMEMBERED_EMAIL_KEY = 'auth_remembered_email';
@@ -67,7 +65,6 @@ function SignInTab({
   const [passkeyPrompt, setPasskeyPrompt] = useState(false);
   const [passkeyToken, setPasskeyToken] = useState<string | null>(null);
   const [passkeySuccess, setPasskeySuccess] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [rememberEmail, setRememberEmail] = useState(false);
 
   useEffect(() => {
@@ -170,33 +167,6 @@ function SignInTab({
     }
   }
 
-  async function handleDeletePasskeyConfirmed() {
-    setShowDeleteConfirm(false);
-    setError(null);
-    setLoading(true);
-    try {
-      const { access, refresh } = await login(
-        { email, password, system_id: systemId },
-        apiUrl,
-      );
-      storeTokens(access, refresh);
-      const { credentials } = await getPasskeyCredentials(apiUrl, access);
-      for (const cred of credentials) {
-        await deletePasskeyCredential(apiUrl, access, cred.id);
-      }
-      setPasskeyToken(access);
-      setPasskeyPrompt(true);
-    } catch (err) {
-      if (err instanceof LoginError && err.status === 401) {
-        setError(t('signIn.errorInvalidCredentials'));
-      } else {
-        setError(t('passkey.deletingError'));
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
   if (passkeyPrompt) {
     return (
       <Box display="flex" flexDirection="column" gap={16} alignItems="center">
@@ -233,14 +203,6 @@ function SignInTab({
 
   return (
     <>
-      {showDeleteConfirm && (
-        <ConfirmationModal
-          title={t('passkey.manageTitle')}
-          text={t('passkey.manageDescription')}
-          okCallback={handleDeletePasskeyConfirmed}
-          cancelCallback={() => setShowDeleteConfirm(false)}
-        />
-      )}
       <form onSubmit={handleSubmit} className="auth-form__form">
         <TextInput
           label={t('signIn.emailLabel')}
@@ -286,32 +248,6 @@ function SignInTab({
           {t('signIn.orDivider')}
         </Typography>
         <Box display="flex" justifyContent="center" gap={12}>
-          {/* <div className="auth-form__passkey-delete-wrapper">
-            <Button
-              unstyled
-              type="button"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={!email}
-              className="auth-form__passkey-icon-btn"
-              aria-label={t('passkey.removeButton')}
-              title={t('passkey.removeButton')}
-            >
-              <Image
-                src="/icons/fingerprint.svg"
-                width={28}
-                height={28}
-                alt=""
-              />
-            </Button>
-            <div className="auth-form__passkey-delete-badge">
-              <Image
-                src="/icons/delete-trash-icon.svg"
-                width={12}
-                height={12}
-                alt=""
-              />
-            </div>
-          </div> */}
           <Button
             unstyled
             type="button"

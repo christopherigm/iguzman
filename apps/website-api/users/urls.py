@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from .views import (
     AdminUserDetailView,
     AdminUserListView,
+    ChangePasswordView,
     LoginView,
     PasskeyAuthenticationOptionsView,
     PasskeyAuthenticationVerifyView,
@@ -27,6 +28,7 @@ urlpatterns = [
     path("token/verify/", TokenVerifyView.as_view(), name="auth-token-verify"),
     path("profile/", ProfileView.as_view(), name="auth-profile"),
     path("profile/picture/", ProfilePictureView.as_view(), name="auth-profile-picture"),
+    path("change-password/", ChangePasswordView.as_view(), name="auth-change-password"),
     path("verify-email/<uuid:token>/", VerifyEmailView.as_view(), name="auth-verify-email"),
     path("resend-verification/", ResendVerificationView.as_view(), name="auth-resend-verification"),
     path("password-reset/", PasswordResetRequestView.as_view(), name="auth-password-reset"),
