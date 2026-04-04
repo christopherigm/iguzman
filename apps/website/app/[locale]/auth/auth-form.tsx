@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@repo/i18n/navigation';
 import { Container } from '@repo/ui/core-elements/container';
@@ -10,7 +11,9 @@ import { Button } from '@repo/ui/core-elements/button';
 import { LinkButton } from '@repo/ui/core-elements/link-button';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { Typography } from '@repo/ui/core-elements/typography';
+import { Switch } from '@repo/ui/core-elements/switch';
 import './auth-form.css';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import {
   login,
   storeTokens,
@@ -18,7 +21,14 @@ import {
   signUp,
   requestPasswordReset,
   ApiError,
+  loginWithPasskey,
+  registerPasskey,
+  getPasskeyCredentials,
+  deletePasskeyCredential,
 } from '@/lib/auth';
+
+const REMEMBERED_EMAIL_KEY = 'auth_remembered_email';
+const REMEMBER_EMAIL_PREF_KEY = 'auth_remember_email';
 
 type Tab = 'sign-in' | 'sign-up' | 'reset-password';
 
@@ -54,6 +64,35 @@ function SignInTab({
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [passkeyPrompt, setPasskeyPrompt] = useState(false);
+  const [passkeyToken, setPasskeyToken] = useState<string | null>(null);
+  const [passkeySuccess, setPasskeySuccess] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(false);
+
+  useEffect(() => {
+    const pref = localStorage.getItem(REMEMBER_EMAIL_PREF_KEY) === 'true';
+    setRememberEmail(pref);
+    if (pref) {
+      const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? '';
+      if (saved) setEmail(saved);
+    }
+  }, []);
+
+  function handleEmailChange(value: string) {
+    setEmail(value);
+    if (rememberEmail) localStorage.setItem(REMEMBERED_EMAIL_KEY, value);
+  }
+
+  function handleRememberEmailChange(checked: boolean) {
+    setRememberEmail(checked);
+    localStorage.setItem(REMEMBER_EMAIL_PREF_KEY, String(checked));
+    if (checked) {
+      if (email) localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+    } else {
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +108,15 @@ function SignInTab({
         apiUrl,
       );
       storeTokens(access, refresh);
+
+      const { count } = await getPasskeyCredentials(apiUrl, access);
+      if (count === 0) {
+        setPasskeyToken(access);
+        setPasskeyPrompt(true);
+        setLoading(false);
+        return;
+      }
+
       router.push('/');
     } catch (err) {
       if (err instanceof LoginError && err.status === 401) {
@@ -81,14 +129,124 @@ function SignInTab({
     }
   }
 
+  async function handlePasskeySignIn() {
+    if (!email) {
+      setError(t('signIn.errorEmailRequired'));
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const { access, refresh } = await loginWithPasskey(
+        email,
+        systemId,
+        apiUrl,
+      );
+      storeTokens(access, refresh);
+      router.push('/');
+    } catch (err) {
+      if (err instanceof LoginError) {
+        setError(t('signIn.errorPasskeyFailed'));
+      } else {
+        setError(t('signIn.errorGeneric'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegisterPasskey() {
+    if (!passkeyToken) return;
+    setError(null);
+    setLoading(true);
+    try {
+      await registerPasskey(apiUrl, passkeyToken);
+      setPasskeySuccess(true);
+      setTimeout(() => router.push('/'), 1500);
+    } catch {
+      setError(t('passkey.errorGeneric'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDeletePasskeyConfirmed() {
+    setShowDeleteConfirm(false);
+    setError(null);
+    setLoading(true);
+    try {
+      const { access, refresh } = await login(
+        { email, password, system_id: systemId },
+        apiUrl,
+      );
+      storeTokens(access, refresh);
+      const { credentials } = await getPasskeyCredentials(apiUrl, access);
+      for (const cred of credentials) {
+        await deletePasskeyCredential(apiUrl, access, cred.id);
+      }
+      setPasskeyToken(access);
+      setPasskeyPrompt(true);
+    } catch (err) {
+      if (err instanceof LoginError && err.status === 401) {
+        setError(t('signIn.errorInvalidCredentials'));
+      } else {
+        setError(t('passkey.deletingError'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (passkeyPrompt) {
+    return (
+      <Box display="flex" flexDirection="column" gap={16} alignItems="center">
+        <Typography variant="body-sm" fontWeight={600}>
+          {t('passkey.promptTitle')}
+        </Typography>
+        <Typography variant="caption" styles={{ textAlign: 'center' }}>
+          {t('passkey.promptDescription')}
+        </Typography>
+        {passkeySuccess && (
+          <Typography variant="caption" className="auth-form__success">
+            {t('passkey.successMessage')}
+          </Typography>
+        )}
+        {error && <ErrorMessage message={error} />}
+        {loading && <ProgressBar />}
+        {!passkeySuccess && (
+          <>
+            <Button
+              text={t('passkey.registerButton')}
+              type="button"
+              onClick={handleRegisterPasskey}
+              styles={{ width: '100%', padding: '10px', fontSize: 14 }}
+            />
+            <LinkButton
+              onClick={() => router.push('/')}
+              label={t('passkey.skipButton')}
+            />
+          </>
+        )}
+      </Box>
+    );
+  }
+
   return (
     <>
+      {showDeleteConfirm && (
+        <ConfirmationModal
+          title={t('passkey.manageTitle')}
+          text={t('passkey.manageDescription')}
+          okCallback={handleDeletePasskeyConfirmed}
+          cancelCallback={() => setShowDeleteConfirm(false)}
+        />
+      )}
       <form onSubmit={handleSubmit} className="auth-form__form">
         <TextInput
           label={t('signIn.emailLabel')}
           type="email"
           value={email}
-          onChange={setEmail}
+          onChange={handleEmailChange}
           required
           autoComplete="email"
         />
@@ -100,6 +258,18 @@ function SignInTab({
           required
           autoComplete="current-password"
         />
+        <Box display="flex" alignItems="center" gap={8}>
+          <Switch
+            checked={rememberEmail}
+            onChange={handleRememberEmailChange}
+          />
+          <Typography
+            variant="caption"
+            color="var(--muted-foreground, #6b7280)"
+          >
+            {t('signIn.rememberEmail')}
+          </Typography>
+        </Box>
         {error && <ErrorMessage message={error} />}
         {loading && <ProgressBar label={t('signIn.submitting')} />}
         <Button
@@ -112,6 +282,48 @@ function SignInTab({
             marginTop: 4,
           }}
         />
+        <Typography variant="none" className="auth-form__divider">
+          {t('signIn.orDivider')}
+        </Typography>
+        <Box display="flex" justifyContent="center" gap={12}>
+          {/* <div className="auth-form__passkey-delete-wrapper">
+            <Button
+              unstyled
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={!email}
+              className="auth-form__passkey-icon-btn"
+              aria-label={t('passkey.removeButton')}
+              title={t('passkey.removeButton')}
+            >
+              <Image
+                src="/icons/fingerprint.svg"
+                width={28}
+                height={28}
+                alt=""
+              />
+            </Button>
+            <div className="auth-form__passkey-delete-badge">
+              <Image
+                src="/icons/delete-trash-icon.svg"
+                width={12}
+                height={12}
+                alt=""
+              />
+            </div>
+          </div> */}
+          <Button
+            unstyled
+            type="button"
+            onClick={handlePasskeySignIn}
+            disabled={!email}
+            className="auth-form__passkey-icon-btn"
+            aria-label={t('signIn.passkeyButton')}
+            title={t('signIn.passkeyButton')}
+          >
+            <Image src="/icons/fingerprint.svg" width={28} height={28} alt="" />
+          </Button>
+        </Box>
         <Box display="flex" flexDirection="column" gap={8} alignItems="center">
           <LinkButton
             onClick={() => switchTab('reset-password')}

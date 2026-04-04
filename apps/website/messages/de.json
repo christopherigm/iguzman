@@ -27,7 +27,12 @@
       "errorInvalidCredentials": "Ungültige E-Mail oder falsches Passwort.",
       "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "forgotPassword": "Passwort vergessen?",
-      "noAccount": "Noch kein Konto? Registrieren"
+      "noAccount": "Noch kein Konto? Registrieren",
+      "orDivider": "oder",
+      "passkeyButton": "Mit Passkey anmelden",
+      "errorPasskeyFailed": "Passkey-Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "errorEmailRequired": "Bitte geben Sie zuerst Ihre E-Mail ein.",
+      "rememberEmail": "E-Mail merken"
     },
     "signUp": {
       "title": "Konto erstellen",
@@ -55,6 +60,20 @@
       "successDetail": "Falls ein Konto mit dieser E-Mail existiert, wurde ein Reset-Link gesendet.",
       "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
       "backToSignIn": "Zurück zur Anmeldung"
+    },
+    "passkey": {
+      "promptTitle": "Passkey einrichten?",
+      "promptDescription": "Melden Sie sich schneller und sicherer mit einem Passkey an. Nutzen Sie Fingerabdruck, Gesichtserkennung oder Geräte-PIN.",
+      "registerButton": "Passkey einrichten",
+      "skipButton": "Jetzt überspringen",
+      "successMessage": "Passkey erfolgreich registriert!",
+      "errorGeneric": "Passkey konnte nicht registriert werden. Versuchen Sie es später erneut.",
+      "manageTitle": "Passkey bereits registriert",
+      "manageDescription": "Sie haben einen Passkey für diese Website registriert. Falls er auf diesem Gerät nicht funktioniert, können Sie ihn entfernen und einen neuen einrichten.",
+      "reregisterButton": "Passkey neu registrieren",
+      "manageContinueButton": "Zur Website fortfahren",
+      "deletingError": "Vorhandener Passkey konnte nicht entfernt werden. Bitte versuchen Sie es erneut.",
+      "removeButton": "Passkey entfernen"
     }
   },
   "ResetPasswordPage": {

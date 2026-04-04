@@ -294,3 +294,24 @@ class UserProfileSerializer(serializers.ModelSerializer):
             return obj.profile.system_id
         except Exception:
             return None
+
+
+# ── Passkey (WebAuthn) serializers ────────────────────────────────────────────
+
+
+class PasskeyRegistrationVerifySerializer(serializers.Serializer):
+    credential = serializers.JSONField()
+    challenge_id = serializers.CharField()
+    name = serializers.CharField(max_length=64, required=False, default="My passkey")
+
+
+class PasskeyAuthenticationOptionsSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    system_id = serializers.IntegerField()
+
+
+class PasskeyAuthenticationVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    system_id = serializers.IntegerField()
+    credential = serializers.JSONField()
+    challenge_id = serializers.CharField()

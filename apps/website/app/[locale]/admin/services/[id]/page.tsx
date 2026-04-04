@@ -70,6 +70,10 @@ export default function AdminServiceFormPage({ params }: Props) {
     enabled: true,
     href: '',
   });
+  const [existingImage, setExistingImage] = useState<
+    { id: number; url: string }[]
+  >([]);
+  const [pendingImage, setPendingImage] = useState<NewImage[]>([]);
   const [existingImages, setExistingImages] = useState<
     { id: number; url: string; sort_order?: number }[]
   >([]);
@@ -167,6 +171,9 @@ export default function AdminServiceFormPage({ params }: Props) {
             enabled: data.enabled ?? true,
             href: data.href ?? '',
           });
+          if (data.image) {
+            setExistingImage([{ id: Number(id), url: String(data.image) }]);
+          }
           const imgs = (images as Record<string, unknown>[]).map((i) => ({
             id: i.id as number,
             url: String(i.image ?? ''),
@@ -192,6 +199,11 @@ export default function AdminServiceFormPage({ params }: Props) {
       );
       if (payload.category === '') delete payload.category;
       if (payload.brand === '') delete payload.brand;
+      if (pendingImage.length > 0) {
+        payload.image = pendingImage[0]?.base64;
+      } else if (existingImage.length === 0) {
+        payload.image = null;
+      }
 
       let serviceId: number;
       if (isNew) {
@@ -333,6 +345,17 @@ export default function AdminServiceFormPage({ params }: Props) {
         error={error}
         success={success}
       >
+        <Box display="flex" flexDirection="column" gap="8px">
+          <Typography variant="label">{t('image') ?? 'Main Image'}</Typography>
+          <AdminImageUploader
+            existingImages={existingImage}
+            onChange={(n, _d, o) => {
+              setPendingImage(n);
+              setExistingImage((prev) => prev.filter((img) => o.includes(img.id)));
+            }}
+            maxImages={1}
+          />
+        </Box>
         <Box display="flex" flexDirection="column" gap="8px">
           <Typography variant="label">{t('images') ?? 'Images'}</Typography>
           <AdminImageUploader

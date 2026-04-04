@@ -27,7 +27,12 @@
       "errorInvalidCredentials": "Correo electrónico o contraseña incorrectos.",
       "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
       "forgotPassword": "¿Olvidaste tu contraseña?",
-      "noAccount": "¿No tienes cuenta? Regístrate"
+      "noAccount": "¿No tienes cuenta? Regístrate",
+      "orDivider": "o",
+      "passkeyButton": "Iniciar sesión con passkey",
+      "errorPasskeyFailed": "La autenticación con passkey falló. Inténtalo de nuevo.",
+      "errorEmailRequired": "Ingresa tu correo electrónico primero.",
+      "rememberEmail": "Recordar correo electrónico"
     },
     "signUp": {
       "title": "Crear cuenta",
@@ -55,6 +60,20 @@
       "successDetail": "Si existe una cuenta con ese correo, se ha enviado un enlace de restablecimiento.",
       "errorGeneric": "Algo salió mal. Por favor, inténtalo de nuevo.",
       "backToSignIn": "Volver a iniciar sesión"
+    },
+    "passkey": {
+      "promptTitle": "¿Configurar una passkey?",
+      "promptDescription": "Inicia sesión de forma más rápida y segura con una passkey. Usa tu huella digital, rostro o PIN del dispositivo.",
+      "registerButton": "Configurar passkey",
+      "skipButton": "Omitir por ahora",
+      "successMessage": "¡Passkey registrada exitosamente!",
+      "errorGeneric": "No se pudo registrar la passkey. Puedes intentarlo más tarde.",
+      "manageTitle": "Passkey ya registrada",
+      "manageDescription": "Tienes una passkey registrada para este sitio. Si no funciona en este dispositivo, puedes eliminarla y configurar una nueva.",
+      "reregisterButton": "Volver a registrar passkey",
+      "manageContinueButton": "Continuar al sitio",
+      "deletingError": "No se pudo eliminar la passkey existente. Por favor, inténtalo de nuevo.",
+      "removeButton": "Eliminar passkey"
     }
   },
   "ResetPasswordPage": {

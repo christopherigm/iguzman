@@ -48,3 +48,24 @@ class PasswordResetToken(models.Model):
     def is_expired(self):
         hours = getattr(settings, 'PASSWORD_RESET_TOKEN_EXPIRY_HOURS', 1)
         return timezone.now() > self.created_at + timezone.timedelta(hours=hours)
+
+
+class PasskeyCredential(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="passkey_credentials")
+    system = models.ForeignKey(
+        'core.System',
+        on_delete=models.CASCADE,
+        related_name='passkey_credentials',
+    )
+    credential_id = models.CharField(max_length=512)
+    public_key = models.BinaryField()
+    sign_count = models.PositiveIntegerField(default=0)
+    transports = models.JSONField(default=list, blank=True)
+    name = models.CharField(max_length=64, default="My passkey")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("system", "credential_id")
+
+    def __str__(self):
+        return f"Passkey '{self.name}' for {self.user.email}"

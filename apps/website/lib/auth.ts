@@ -194,3 +194,112 @@ export async function login(payload: LoginPayload, apiUrl = ''): Promise<LoginRe
 
   return res.json() as Promise<LoginResponse>;
 }
+
+// ── Passkey (WebAuthn) ───────────────────────────────────────────────────────
+
+export async function registerPasskey(
+  apiUrl: string,
+  accessToken: string,
+  name = 'My passkey',
+): Promise<{ id: number; name: string }> {
+  const { startRegistration } = await import('@simplewebauthn/browser');
+
+  const optionsRes = await fetch(`${apiUrl}/api/auth/passkey/register/options/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (!optionsRes.ok) {
+    const data: Record<string, unknown> = await optionsRes.json().catch(() => ({}));
+    throw new ApiError(optionsRes.status, data);
+  }
+
+  const { options, challenge_id } = (await optionsRes.json()) as {
+    options: Parameters<typeof startRegistration>[0]['optionsJSON'];
+    challenge_id: string;
+  };
+
+  const credential = await startRegistration({ optionsJSON: options });
+
+  const verifyRes = await fetch(`${apiUrl}/api/auth/passkey/register/verify/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ credential, challenge_id, name }),
+  });
+  if (!verifyRes.ok) {
+    const data: Record<string, unknown> = await verifyRes.json().catch(() => ({}));
+    throw new ApiError(verifyRes.status, data);
+  }
+
+  return verifyRes.json() as Promise<{ id: number; name: string }>;
+}
+
+export async function loginWithPasskey(
+  email: string,
+  systemId: number,
+  apiUrl = '',
+): Promise<LoginResponse> {
+  const { startAuthentication } = await import('@simplewebauthn/browser');
+
+  const optionsRes = await fetch(`${apiUrl}/api/auth/passkey/authenticate/options/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, system_id: systemId }),
+  });
+  if (!optionsRes.ok) {
+    const data: Record<string, unknown> = await optionsRes.json().catch(() => ({}));
+    throw new LoginError(optionsRes.status, data);
+  }
+
+  const { options, challenge_id } = (await optionsRes.json()) as {
+    options: Parameters<typeof startAuthentication>[0]['optionsJSON'];
+    challenge_id: string;
+  };
+
+  const credential = await startAuthentication({ optionsJSON: options });
+
+  const verifyRes = await fetch(`${apiUrl}/api/auth/passkey/authenticate/verify/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, system_id: systemId, credential, challenge_id }),
+  });
+  if (!verifyRes.ok) {
+    const data: Record<string, unknown> = await verifyRes.json().catch(() => ({}));
+    throw new LoginError(verifyRes.status, data);
+  }
+
+  return verifyRes.json() as Promise<LoginResponse>;
+}
+
+export async function getPasskeyCredentials(
+  apiUrl: string,
+  accessToken: string,
+): Promise<{ count: number; credentials: { id: number; name: string; created_at: string }[] }> {
+  const res = await fetch(`${apiUrl}/api/auth/passkey/credentials/`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    return { count: 0, credentials: [] };
+  }
+  return res.json() as Promise<{ count: number; credentials: { id: number; name: string; created_at: string }[] }>;
+}
+
+export async function deletePasskeyCredential(
+  apiUrl: string,
+  accessToken: string,
+  credentialId: number,
+): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/auth/passkey/credentials/${credentialId}/`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}

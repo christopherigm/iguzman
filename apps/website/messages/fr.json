@@ -27,7 +27,12 @@
       "errorInvalidCredentials": "E-mail ou mot de passe invalide.",
       "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
       "forgotPassword": "Mot de passe oublié ?",
-      "noAccount": "Pas encore de compte ? S'inscrire"
+      "noAccount": "Pas encore de compte ? S'inscrire",
+      "orDivider": "ou",
+      "passkeyButton": "Se connecter avec une passkey",
+      "errorPasskeyFailed": "L'authentification par passkey a échoué. Veuillez réessayer.",
+      "errorEmailRequired": "Veuillez d'abord saisir votre e-mail.",
+      "rememberEmail": "Se souvenir de l'e-mail"
     },
     "signUp": {
       "title": "Créer un compte",
@@ -55,6 +60,20 @@
       "successDetail": "Si un compte avec cet e-mail existe, un lien de réinitialisation a été envoyé.",
       "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
       "backToSignIn": "Retour à la connexion"
+    },
+    "passkey": {
+      "promptTitle": "Configurer une passkey ?",
+      "promptDescription": "Connectez-vous plus rapidement et en toute sécurité avec une passkey. Utilisez votre empreinte digitale, votre visage ou le code PIN de votre appareil.",
+      "registerButton": "Configurer une passkey",
+      "skipButton": "Passer pour le moment",
+      "successMessage": "Passkey enregistrée avec succès !",
+      "errorGeneric": "Impossible d'enregistrer la passkey. Réessayez plus tard.",
+      "manageTitle": "Passkey déjà enregistrée",
+      "manageDescription": "Vous avez une passkey enregistrée pour ce site. Si elle ne fonctionne pas sur cet appareil, vous pouvez la supprimer et en créer une nouvelle.",
+      "reregisterButton": "Ré-enregistrer la passkey",
+      "manageContinueButton": "Continuer vers le site",
+      "deletingError": "Impossible de supprimer la passkey existante. Veuillez réessayer.",
+      "removeButton": "Supprimer la passkey"
     }
   },
   "ResetPasswordPage": {
