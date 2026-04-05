@@ -103,6 +103,7 @@ Most components extend `UIComponentProps`, which maps common CSS properties dire
 | SVG icon | `Icon` | `icon` (SVG path, required), `color?`, `size?`, `backgroundColor?`, `backgroundShape?: 'circle'\|'square'\|'triangle'`, `shadow?` |
 | Top navigation bar | `Navbar` | `logo` (required), `items?`, `fixedItems?`, `searchBox?`, `onSearch?`, `translucent?`, `themeSwitch?`, `searchValue?` (controlled search text), `rightSlot?` (ReactNode rendered beside search) |
 | Navbar height spacer | `NavbarSpacer` | No props. Renders a `div` with `height: var(--ui-navbar-height)` (57 px). Place at the top of any page that does not start with a `<Hero>` to push content below the fixed navbar. For full-viewport containers using `styles={{ paddingTop }}`, use `paddingTop: 'var(--ui-navbar-height)'` instead. Both import from `@repo/ui/core-elements/navbar`. |
+| Page bottom spacer | `PageBottomSpacer` | No props. Renders a `div` with `height: var(--ui-page-bottom-spacing)` (default 64 px). Place as the last element on any detail or content page to add breathing room below the main content. Override the height via the CSS variable. Imports from `@repo/ui/core-elements/navbar`. |
 | Mobile slide-in menu | `Drawer` | `open`, `onClose`, `items`, `logo`, `themeSwitch?` |
 | Loading / progress | `ProgressBar` | `value?` (0–100, omit for indeterminate), `size?` (px height), `label?` |
 | Confirm dialog | `ConfirmationModal` | `title`, `text`, `okCallback`, `cancelCallback?`, `children?` (rendered between text and actions), `panelMaxWidth?` (CSS string, default `420px`) |

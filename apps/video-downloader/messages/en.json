@@ -85,7 +85,7 @@
     "detailStatus": "Status",
     "detailError": "Error",
     "detailJustAudio": "Audio only",
-    "detailEnhance": "Enhanced",
+    "detailResolution": "Resolution",
     "detailDuration": "Duration",
     "yes": "Yes",
     "no": "No",

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { Container } from '@repo/ui/core-elements/container';
@@ -8,13 +9,41 @@ import type { GalleryImage } from '@/components/item-gallery-client';
 import { ItemGalleryClient } from '@/components/item-gallery-client';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import type { BreadcrumbItem } from '@repo/ui/core-elements/breadcrumbs';
-import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
+import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
 import { ProductDetailPanel } from '@/components/product-detail';
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
   searchParams: Promise<{ variant?: string }>;
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const product = await getProduct(slug);
+  if (!product) return {};
+
+  const name =
+    (locale === 'en' ? product.en_name : product.name) ??
+    product.name ??
+    product.en_name ??
+    slug;
+
+  const description =
+    (locale === 'en' ? product.en_description : product.description) ??
+    product.description ??
+    product.en_description ??
+    undefined;
+
+  return {
+    title: name,
+    description: description ?? undefined,
+    openGraph: {
+      title: name,
+      description: description ?? undefined,
+      images: product.image ? [{ url: product.image }] : undefined,
+    },
+  };
+}
 
 function buildGalleryImages(
   product: ProductDetail,
@@ -112,6 +141,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
           </Grid>
         </Grid>
       </Container>
+      <PageBottomSpacer />
     </>
   );
 }

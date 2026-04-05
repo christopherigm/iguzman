@@ -102,6 +102,7 @@ export function ReadOnlyVideoItem({
       <VideoCardHeader
         video={video}
         displayName={displayName}
+        detailsOpen={detailsOpen}
         onToggleDetails={() => setDetailsOpen((p) => !p)}
         t={t}
       />

@@ -43,6 +43,13 @@
   letter-spacing: -0.01em;
 }
 
+.vi-name--expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
+}
+
 /* ── Icon buttons ────────────────────────────────────── */
 
 .vi-icon-btn {

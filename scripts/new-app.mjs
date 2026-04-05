@@ -62,6 +62,7 @@ function packageJson(name, port, includeI18n, includePwa) {
     },
     dependencies: {
       '@repo/helpers': 'workspace:*',
+      '@swc/helpers': '^0.5.21',
       '@repo/ui': 'workspace:*',
       react: '^19.2.4',
       'react-dom': '^19.2.4',
@@ -69,7 +70,7 @@ function packageJson(name, port, includeI18n, includePwa) {
     devDependencies: {
       '@repo/eslint-config': 'workspace:*',
       '@repo/typescript-config': 'workspace:*',
-      '@types/node': '^25.2.3',
+      '@types/node': '^25.5.2',
       '@types/react': '19.2.14',
       '@types/react-dom': '19.2.3',
       eslint: '^9.39.2',
@@ -95,6 +96,10 @@ function nextConfig(includeI18n, includePwa) {
   if (includeI18n && includePwa) {
     return `import createNextIntlPlugin from 'next-intl/plugin';
 import withPWAInit from '@ducanh2912/next-pwa';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const withPWA = withPWAInit({
   dest: 'public',
@@ -110,6 +115,7 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: process.env.NODE_ENV === 'production' ? path.join(__dirname, '../../') : undefined,
   allowedDevOrigins: ['127.0.0.1', '*'],
   images: {
     dangerouslyAllowLocalIP: true,
@@ -131,10 +137,15 @@ export default withPWA(withNextIntl(nextConfig));
 
   if (includeI18n) {
     return `import createNextIntlPlugin from 'next-intl/plugin';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: process.env.NODE_ENV === 'production' ? path.join(__dirname, '../../') : undefined,
   allowedDevOrigins: ['127.0.0.1', '*'],
   images: {
     dangerouslyAllowLocalIP: true,
@@ -156,6 +167,10 @@ export default withNextIntl(nextConfig);
 
   if (includePwa) {
     return `import withPWAInit from '@ducanh2912/next-pwa';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const withPWA = withPWAInit({
   dest: 'public',
@@ -171,6 +186,7 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: process.env.NODE_ENV === 'production' ? path.join(__dirname, '../../') : undefined,
   allowedDevOrigins: ['127.0.0.1', '*'],
   images: {
     dangerouslyAllowLocalIP: true,
@@ -188,9 +204,15 @@ export default withPWA(nextConfig);
 `;
   }
 
-  return `/** @type {import('next').NextConfig} */
+  return `import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: process.env.NODE_ENV === 'production' ? path.join(__dirname, '../../') : undefined,
   allowedDevOrigins: ['127.0.0.1', '*'],
   images: {
     dangerouslyAllowLocalIP: true,
@@ -839,6 +861,21 @@ COPY --from=pruner /app/out/full/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN corepack enable pnpm && pnpm exec turbo run build --filter=${name} --no-daemon
+
+# @swc/helpers is resolved via Node.js conditional package exports at runtime,
+# so Next.js static file tracing misses it in pnpm monorepos.
+# pnpm stores @swc/helpers as a symlink inside next@*/node_modules/, so:
+#   - use \`find -L\` to follow symlinks during traversal (matches -type d on symlinked dirs)
+#   - increase maxdepth to 5 to account for symlink resolution adding one level
+#   - use \`cp -rL\` to dereference symlinks when copying so the real files land in the image
+RUN find -L /app/node_modules/.pnpm -maxdepth 5 \\
+      -path "*/next@*/node_modules/@swc/helpers" -type d \\
+    | while read src; do \\
+        rel="\${src#/app/}"; \\
+        dest="/app/apps/${name}/.next/standalone/\${rel}"; \\
+        mkdir -p "\$dest"; \\
+        cp -rL "\$src/." "\$dest/"; \\
+      done
 
 # ---------------------------------------------------------------------------
 # Stage 4 – Minimal production image.

@@ -69,6 +69,8 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     blackBarsRemoved: v.blackBarsRemoved ?? false,
     taskId: v.taskId ?? null,
     sourceFps: v.sourceFps ?? null,
+    width: v.width ?? null,
+    height: v.height ?? null,
     thumbnail:
       v.thumbnail ??
       ((v as unknown as Record<string, unknown>).thumbnailFile as string) ??
@@ -172,34 +174,37 @@ function initializeStore(): { pinned: StoredVideo[]; completed: StoredVideo[] } 
 /* ── Hook ───────────────────────────────────────────── */
 
 export function useVideoStore() {
-  const initialData = useRef(initializeStore());
-  const [pinned, setPinned] = useState<StoredVideo[]>(
-    () => initialData.current.pinned,
-  );
-  const [completed, setCompleted] = useState<StoredVideo[]>(
-    () => initialData.current.completed,
-  );
+  /* Start with empty arrays so the server-rendered HTML and the initial
+     client render match (no hydration mismatch). localStorage is read
+     inside a useEffect after hydration. */
+  const [pinned, setPinned] = useState<StoredVideo[]>([]);
+  const [completed, setCompleted] = useState<StoredVideo[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
-  const initialized = useRef(typeof window !== 'undefined');
+  const initialized = useRef(false);
 
-  /* Persist each array independently. */
+  /* Load from localStorage after mount (client-only). */
   useEffect(() => {
-    if (initialized.current) {
-      try {
-        writeStorage(PINNED_KEY, pinned);
-        setStorageError(null);
-      } catch {
-        setStorageError(
-          'Storage is full — your video list may not be saved across page reloads.',
-        );
-      }
-    } else {
-      initialized.current = true;
+    const { pinned: p, completed: c } = initializeStore();
+    initialized.current = true;
+    setPinned(p);
+    setCompleted(c);
+  }, []);
+
+  /* Persist each array independently — skip until initialized. */
+  useEffect(() => {
+    if (!initialized.current) return;
+    try {
+      writeStorage(PINNED_KEY, pinned);
+      setStorageError(null);
+    } catch {
+      setStorageError(
+        'Storage is full — your video list may not be saved across page reloads.',
+      );
     }
   }, [pinned]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!initialized.current) return;
     try {
       writeStorage(COMPLETED_KEY, completed);
     } catch {
@@ -249,6 +254,8 @@ export function useVideoStore() {
         blackBarsRemoved: false,
         taskId: null,
         sourceFps: null,
+        width: null,
+        height: null,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional

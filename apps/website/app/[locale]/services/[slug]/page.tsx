@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { Container } from '@repo/ui/core-elements/container';
@@ -8,13 +9,41 @@ import type { GalleryImage } from '@/components/item-gallery-client';
 import { ItemGalleryClient } from '@/components/item-gallery-client';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import type { BreadcrumbItem } from '@repo/ui/core-elements/breadcrumbs';
-import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
+import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
 import { ServiceDetailPanel } from '@/components/service-detail';
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
   searchParams: Promise<{ variant?: string }>;
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const service = await getService(slug);
+  if (!service) return {};
+
+  const name =
+    (locale === 'en' ? service.en_name : service.name) ??
+    service.name ??
+    service.en_name ??
+    slug;
+
+  const description =
+    (locale === 'en' ? service.en_description : service.description) ??
+    service.description ??
+    service.en_description ??
+    undefined;
+
+  return {
+    title: name,
+    description: description ?? undefined,
+    openGraph: {
+      title: name,
+      description: description ?? undefined,
+      images: service.image ? [{ url: service.image }] : undefined,
+    },
+  };
+}
 
 function buildGalleryImages(
   service: ServiceDetail,
@@ -104,6 +133,7 @@ export default async function ServicePage({ params, searchParams }: Props) {
           </Grid>
         </Grid>
       </Container>
+      <PageBottomSpacer />
     </>
   );
 }

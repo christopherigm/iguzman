@@ -6,7 +6,7 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import type { BreadcrumbItem } from '@repo/ui/core-elements/breadcrumbs';
 import { Hero } from '@repo/ui/hero';
-import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
+import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
 import { getProductCategory, getProductsByCategory } from '@/lib/catalog';
 import { CategoryDetail } from '@/components/category-detail';
 
@@ -100,6 +100,7 @@ export default async function ProductCategoryPage({ params }: Props) {
           showTitle={!hasImage}
         />
       </Container>
+      <PageBottomSpacer />
     </>
   );
 }

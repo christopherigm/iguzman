@@ -222,8 +222,14 @@ export function VideoDetailsPanel({
         ) : null}
         <dt>{t('detailJustAudio')}</dt>
         <dd>{video.justAudio ? t('yes') : t('no')}</dd>
-        <dt>{t('detailEnhance')}</dt>
-        <dd>{video.enhance ? t('yes') : t('no')}</dd>
+        {!video.justAudio && video.width && video.height ? (
+          <>
+            <dt>{t('detailResolution')}</dt>
+            <dd>
+              {video.width}×{video.height}
+            </dd>
+          </>
+        ) : null}
         {video.duration ? (
           <>
             <dt>{t('detailDuration')}</dt>
@@ -571,22 +577,41 @@ export function VideoExtraActions({
   );
 }
 
+/* ── Resolution label helper ─────────────────────────── */
+
+export function resolveResolutionLabel(height: number | null): string | null {
+  if (height == null) return null;
+  if (height >= 2160) return '4K';
+  if (height >= 1440) return '2K';
+  if (height >= 1080) return 'FHD';
+  if (height >= 720) return 'HD';
+  if (height >= 480) return 'SD';
+  if (height >= 360) return '360p';
+  return null;
+}
+
 /* ── Card header ─────────────────────────────────────── */
 
 export function VideoCardHeader({
   video,
   displayName,
+  detailsOpen,
   onToggleDetails,
   t,
 }: {
   video: StoredVideo;
   displayName: string;
+  detailsOpen: boolean;
   onToggleDetails: () => void;
   t: TranslationFn;
 }) {
   return (
     <Box className="vi-header">
-      <Typography as="span" variant="body" className="vi-name">
+      <Typography
+        as="span"
+        variant="body"
+        className={`vi-name${detailsOpen ? ' vi-name--expanded' : ''}`}
+      >
         {displayName}
       </Typography>
       {video.isH265 ? (
@@ -594,13 +619,22 @@ export function VideoCardHeader({
           H265
         </Badge>
       ) : null}
-      {video.sourceFps != null ? (
+      {video.fpsApplied ? (
+        <Badge variant="subtle" size="sm" color="#f59e0b">
+          {video.fps} FPS
+        </Badge>
+      ) : video.sourceFps != null ? (
         <Badge variant="subtle" size="sm" color="#f59e0b">
           {video.sourceFps} FPS
         </Badge>
       ) : video.fps !== 'original' ? (
         <Badge variant="subtle" size="sm" color="#f59e0b">
           {video.fps} FPS
+        </Badge>
+      ) : null}
+      {!video.justAudio && resolveResolutionLabel(video.height) ? (
+        <Badge variant="subtle" size="sm" color="#38bdf8">
+          {resolveResolutionLabel(video.height)}
         </Badge>
       ) : null}
       <button

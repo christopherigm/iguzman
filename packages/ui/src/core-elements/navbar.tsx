@@ -490,4 +490,11 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
  */
 export const NavbarSpacer: React.FC = () => <div className="ui-navbar-spacer" />;
 
+/**
+ * PageBottomSpacer — a `div` with `height: var(--ui-page-bottom-spacing)`
+ * (default 64 px) that adds breathing room at the bottom of page content.
+ * Place it as the last element inside the page's root fragment.
+ */
+export const PageBottomSpacer: React.FC = () => <div className="ui-page-bottom-spacer" />;
+
 export default Navbar;

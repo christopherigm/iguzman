@@ -17,7 +17,7 @@
 **/.vscode
 **/.idea
 **/.DS_Store
-apps/*/public/media/*.*
+apps/*/public/media
 
 # Python
 **/venv

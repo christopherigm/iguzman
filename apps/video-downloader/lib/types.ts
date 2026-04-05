@@ -23,6 +23,10 @@ export interface VideoResultFields {
   uploader: string | null;
   /** Source video FPS as detected by ffprobe. `null` when unavailable. */
   sourceFps: number | null;
+  /** Video width in pixels. `null` for audio-only or when unavailable. */
+  width: number | null;
+  /** Video height in pixels. `null` for audio-only or when unavailable. */
+  height: number | null;
 }
 
 /* ── Status ────────────────────────────────────────── */

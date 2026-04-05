@@ -241,6 +241,8 @@ export function PinnedVideoItem({
         uploader: task.uploader ?? null,
         isH265: task.isH265 ?? false,
         sourceFps: task.sourceFps ?? null,
+        width: task.width ?? null,
+        height: task.height ?? null,
       });
 
       /* FPS interpolation requested — chain into processing before completing. */
@@ -523,6 +525,7 @@ export function PinnedVideoItem({
       <VideoCardHeader
         video={video}
         displayName={displayName}
+        detailsOpen={detailsOpen}
         onToggleDetails={() => setDetailsOpen((p) => !p)}
         t={t}
       />

@@ -124,6 +124,14 @@ export async function POST(request: Request) {
           duration: result.metadata?.duration ?? null,
           uploader: result.metadata?.uploader ?? null,
           sourceFps: result.fps ?? null,
+          width:
+            result.formatSelection?.bestVideo?.width ??
+            result.formatSelection?.bestCombined?.width ??
+            null,
+          height:
+            result.formatSelection?.bestVideo?.height ??
+            result.formatSelection?.bestCombined?.height ??
+            null,
         });
       }
     } catch (err) {

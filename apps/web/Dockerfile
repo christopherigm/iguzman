@@ -37,6 +37,21 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN corepack enable pnpm && pnpm exec turbo run build --filter=web --no-daemon
 
+# @swc/helpers is resolved via Node.js conditional package exports at runtime,
+# so Next.js static file tracing misses it in pnpm monorepos.
+# pnpm stores @swc/helpers as a symlink inside next@*/node_modules/, so:
+#   - use `find -L` to follow symlinks during traversal (matches -type d on symlinked dirs)
+#   - increase maxdepth to 5 to account for symlink resolution adding one level
+#   - use `cp -rL` to dereference symlinks when copying so the real files land in the image
+RUN find -L /app/node_modules/.pnpm -maxdepth 5 \
+      -path "*/next@*/node_modules/@swc/helpers" -type d \
+    | while read src; do \
+        rel="${src#/app/}"; \
+        dest="/app/apps/web/.next/standalone/${rel}"; \
+        mkdir -p "$dest"; \
+        cp -rL "$src/." "$dest/"; \
+      done
+
 # ---------------------------------------------------------------------------
 # Stage 4 – Minimal production image.
 # Uses the standalone output so node_modules are NOT copied.

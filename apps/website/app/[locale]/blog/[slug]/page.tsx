@@ -7,7 +7,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
 import type { BreadcrumbItem } from '@repo/ui/core-elements/breadcrumbs';
 import { Hero } from '@repo/ui/hero';
-import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
+import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
 import { RichText } from '@repo/ui/core-elements/rich-text';
 import { getSuccessStory } from '@/lib/success-stories';
 import { ItemGalleryClient } from '@/components/item-gallery-client';
@@ -139,6 +139,7 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
           </Box>
         )}
       </Container>
+      <PageBottomSpacer />
     </>
   );
 }

@@ -9,6 +9,16 @@
   flex-shrink: 0;
 }
 
+/* ── Page bottom spacer ───────────────────────────── */
+:root {
+  --ui-page-bottom-spacing: 64px;
+}
+
+.ui-page-bottom-spacer {
+  height: var(--ui-page-bottom-spacing);
+  flex-shrink: 0;
+}
+
 /* ── Navbar base ──────────────────────────────────── */
 .ui-navbar {
   position: fixed;
