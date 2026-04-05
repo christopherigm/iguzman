@@ -68,7 +68,6 @@ export function Hero({
       {hasVideo && videoUrl && <HeroVideo url={videoUrl} />}
 
       {!hasVideo && backgroundImage && (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={backgroundImage}
           alt={backgroundAlt}
@@ -109,7 +108,6 @@ export function Hero({
         >
           {logoImage && (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={logoImage}
                 alt={logoAlt}

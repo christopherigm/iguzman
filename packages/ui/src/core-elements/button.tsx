@@ -141,7 +141,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
   }
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (typeof onClick === 'function') onClick(e as any);
+    if (typeof onClick === 'function') onClick(e);
   };
 
   return (

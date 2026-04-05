@@ -1,6 +1,6 @@
 {
   "name": "website-api",
-  "version": "0.1.69",
+  "version": "0.1.70",
   "scripts": {
     "venv": "source venv/bin/activate",
     "requirements": "pip install -r requirements.txt",

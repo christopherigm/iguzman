@@ -83,6 +83,7 @@ function ThemeProvider({
     };
 
     const current = getSystemTheme();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResolved(current);
     applyThemeToDOM(current);
 

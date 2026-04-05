@@ -1,6 +1,7 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  "globalEnv": ["NODE_ENV", "URL_BASE", "K8S_URL_BASE", "HOST", "BASE_URL", "MONGO_URI"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

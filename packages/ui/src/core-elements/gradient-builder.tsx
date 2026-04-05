@@ -161,6 +161,7 @@ export function GradientBuilder({ value, onChange, label, labels }: GradientBuil
     if (internalRef.current) return;
     const parsed = parseCss(value);
     if (parsed) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setType(parsed.type);
       setAngle(parsed.angle);
       setStops(parsed.stops);

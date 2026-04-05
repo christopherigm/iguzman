@@ -122,12 +122,13 @@ const DrawerSearch: React.FC<{
   onSearchChange?: (value: string) => void;
   searchIcon?: string;
   externalValue?: string;
-}> = ({ onSearch, onSearchChange, searchIcon, externalValue }) => {
+}> = ({ onSearch, onSearchChange, externalValue }) => {
   const [value, setValue] = useState('');
   const prevExternalRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (externalValue) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setValue(externalValue);
       onSearchChange?.(externalValue);
     } else if (externalValue === '' && prevExternalRef.current) {

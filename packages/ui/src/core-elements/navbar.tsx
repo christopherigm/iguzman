@@ -75,6 +75,7 @@ function useScrollDirection(threshold = 5): 'up' | 'down' | null {
   const pathname = usePathname();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDirection(null);
     lastScrollY.current = 0;
   }, [pathname]);
@@ -195,6 +196,7 @@ const SearchBox: React.FC<{
   // Also clears the box when the value transitions from non-empty back to ''.
   useEffect(() => {
     if (externalValue) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExpanded(true);
       setValue(externalValue);
       onSearchChange?.(externalValue);

@@ -13,9 +13,7 @@ type PendingOp = {
   reject: (err: Error) => void;
 };
 
-export interface UseTextToSpeechOptions extends TtsOptions {
-  // Inherits: engine, language, model, speakerEmbeddings, rate, pitch, volume
-}
+export type UseTextToSpeechOptions = TtsOptions;
 
 export interface UseTextToSpeechReturn {
   /** `true` while audio is being played. */

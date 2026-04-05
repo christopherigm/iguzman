@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react';
+import React, { CSSProperties } from 'react';
 
 /**
  * Props for the `UI Components` component (extracted for reuse).
@@ -38,7 +38,7 @@ export interface UIComponentProps {
   elevation?: number;
   /** Inline style object that overrides other computed styles */
   styles?: CSSProperties;
-  children?: any;
+  children?: React.ReactNode;
   className?: string;
   id?: string;
 }

@@ -77,7 +77,7 @@ const PREFERRED_AUDIO_EXTENSIONS = [
  * FFmpegExtractAudio post-processor. Ordered by quality preference —
  * FLAC is lossless, the rest are high-bitrate lossy.
  */
-const LOSSLESS_AUDIO_FORMATS = ['flac', 'wav', 'alac', 'aiff'] as const;
+export const LOSSLESS_AUDIO_FORMATS = ['flac', 'wav', 'alac', 'aiff'] as const;
 
 /**
  * Language prefixes used to select a preferred SRT file when multiple
@@ -987,7 +987,7 @@ const yearFromDate = (d: string | null): number | null => {
  */
 const TITLE_NOISE_RE =
   // prettier-ignore
-  /\s*[(\[]\s*(?:official\s+music\s+video|official\s+lyric\s+video|official\s+visualizer|official\s+audio|official\s+video|offizielles?\s+musikvideo|music\s+video|lyric\s+video|(?:audio|video|videoclip|clip|música|musica)\s+(?:oficial|official|officiel(?:le)?|ufficiale)|(?:oficial|official|officiel(?:le)?|ufficiale)\s+(?:audio|video|videoclip|clip|música|musica)|just\s+audio|audio\s+only|visualizer|lyrics?|remastered(?:\s+\d{4})?|oficial|official|audio|video|hd|hq|4k)\s*[)\]]/gi;
+  /\s*[([]\s*(?:official\s+music\s+video|official\s+lyric\s+video|official\s+visualizer|official\s+audio|official\s+video|offizielles?\s+musikvideo|music\s+video|lyric\s+video|(?:audio|video|videoclip|clip|música|musica)\s+(?:oficial|official|officiel(?:le)?|ufficiale)|(?:oficial|official|officiel(?:le)?|ufficiale)\s+(?:audio|video|videoclip|clip|música|musica)|just\s+audio|audio\s+only|visualizer|lyrics?|remastered(?:\s+\d{4})?|oficial|official|audio|video|hd|hq|4k)\s*[)\]]/gi;
 
 /**
  * Remove a leading "Artist - " prefix and parenthetical noise from a

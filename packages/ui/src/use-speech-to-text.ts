@@ -16,9 +16,7 @@ type PendingOp = {
   reject: (err: Error) => void;
 };
 
-export interface UseSpeechToTextOptions extends SttOptions {
-  // Inherits: mode, language, model, realtimeInterval from SttOptions
-}
+export type UseSpeechToTextOptions = SttOptions;
 
 export interface UseSpeechToTextReturn {
   /**
@@ -174,7 +172,7 @@ export function useSpeechToText(
       });
 
     return loadPromiseRef.current;
-  }, [getWorker, model]);
+  }, [getWorker, language, model]);
 
   // ── Audio processing ───────────────────────────────────────────
 
