@@ -283,7 +283,11 @@
     "enhanceLengthLabel": "Longueur du paragraphe",
     "enhanceAccept": "Accepter",
     "enhanceDiscard": "Rejeter",
-    "enhanceStop": "Arrêter"
+    "enhanceStop": "Arrêter",
+    "logoAssetsModalTitle": "Générer les assets depuis le logo ?",
+    "logoAssetsModalText": "Voulez-vous générer automatiquement le favicon et les icônes du manifeste (1080×, 512×, 256×, 128×) à partir du logo téléversé ?",
+    "generatingAssets": "Génération des assets…",
+    "errorGenerateAssets": "Échec de la génération des assets depuis le logo."
   },
   "GradientBuilder": {
     "linear": "Linéaire",

@@ -83,10 +83,16 @@ function ProfileSection({
     setLoading(true);
     try {
       const tasks: Promise<unknown>[] = [
-        updateProfile({ first_name: firstName, last_name: lastName }, accessToken, apiUrl),
+        updateProfile(
+          { first_name: firstName, last_name: lastName },
+          accessToken,
+          apiUrl,
+        ),
       ];
       if (pendingPicture) {
-        tasks.push(uploadProfilePicture(pendingPicture.base64, accessToken, apiUrl));
+        tasks.push(
+          uploadProfilePicture(pendingPicture.base64, accessToken, apiUrl),
+        );
       }
       await Promise.all(tasks);
       setPendingPicture(null);
@@ -109,7 +115,12 @@ function ProfileSection({
       elevation={5}
       backgroundColor="var(--surface-1)"
     >
-      <Typography as="h2" variant="h3" fontWeight={600} className="my-account__section-title">
+      <Typography
+        as="h2"
+        variant="h3"
+        fontWeight={600}
+        className="my-account__section-title"
+      >
         {t('profileSection')}
       </Typography>
       <form onSubmit={handleSubmit} className="my-account__form">
@@ -147,7 +158,12 @@ function ProfileSection({
         <Button
           text={loading ? t('savingProfile') : t('saveProfile')}
           type="submit"
-          styles={{ width: '100%', padding: '10px', fontSize: 14, marginTop: 4 }}
+          styles={{
+            width: '100%',
+            padding: '10px',
+            fontSize: 14,
+            marginTop: 4,
+          }}
         />
       </form>
     </Box>
@@ -183,7 +199,13 @@ function ChangePasswordSection({
 
     setLoading(true);
     try {
-      await changePassword(currentPassword, newPassword, confirmPassword, accessToken, apiUrl);
+      await changePassword(
+        currentPassword,
+        newPassword,
+        confirmPassword,
+        accessToken,
+        apiUrl,
+      );
       setSuccess(t('passwordSaved'));
       setCurrentPassword('');
       setNewPassword('');
@@ -215,7 +237,12 @@ function ChangePasswordSection({
       elevation={5}
       backgroundColor="var(--surface-1)"
     >
-      <Typography as="h2" variant="h3" fontWeight={600} className="my-account__section-title">
+      <Typography
+        as="h2"
+        variant="h3"
+        fontWeight={600}
+        className="my-account__section-title"
+      >
         {t('securitySection')}
       </Typography>
       <form onSubmit={handleSubmit} className="my-account__form">
@@ -249,7 +276,12 @@ function ChangePasswordSection({
         <Button
           text={loading ? t('savingPassword') : t('savePassword')}
           type="submit"
-          styles={{ width: '100%', padding: '10px', fontSize: 14, marginTop: 4 }}
+          styles={{
+            width: '100%',
+            padding: '10px',
+            fontSize: 14,
+            marginTop: 4,
+          }}
         />
       </form>
     </Box>
@@ -273,7 +305,10 @@ function PasskeySection({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [addingPasskey, setAddingPasskey] = useState(false);
-  const [toast, setToast] = useState<{ message: string; isError: boolean } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    isError: boolean;
+  } | null>(null);
 
   useEffect(() => {
     getPasskeyCredentials(apiUrl, accessToken)
@@ -303,7 +338,10 @@ function PasskeySection({
     setToast(null);
     try {
       await registerPasskey(apiUrl, accessToken);
-      const { credentials: creds } = await getPasskeyCredentials(apiUrl, accessToken);
+      const { credentials: creds } = await getPasskeyCredentials(
+        apiUrl,
+        accessToken,
+      );
       setCredentials(creds);
       setToast({ message: t('passkeyAdded'), isError: false });
     } catch {
@@ -333,20 +371,33 @@ function PasskeySection({
         elevation={5}
         backgroundColor="var(--surface-1)"
       >
-        <Typography as="h2" variant="h3" fontWeight={600} className="my-account__section-title">
+        <Typography
+          as="h2"
+          variant="h3"
+          fontWeight={600}
+          className="my-account__section-title"
+        >
           {t('passkeySection')}
         </Typography>
         <Box display="flex" flexDirection="column" gap={8}>
           {loadingCreds && <ProgressBar />}
           {!loadingCreds && credentials.length === 0 && (
-            <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+            <Typography
+              variant="caption"
+              color="var(--muted-foreground, #6b7280)"
+            >
               {t('noPasskeys')}
             </Typography>
           )}
           {credentials.map((cred) => (
             <Box key={cred.id} className="my-account__passkey-row">
               <Box display="flex" alignItems="center" gap={10}>
-                <Image src="/icons/fingerprint.svg" width={24} height={24} alt="" />
+                <Image
+                  src="/icons/fingerprint.svg"
+                  width={24}
+                  height={24}
+                  alt=""
+                />
                 <Box className="my-account__passkey-meta">
                   <Typography variant="caption" fontWeight={600}>
                     {cred.name}
@@ -363,7 +414,12 @@ function PasskeySection({
                 onClick={() => setConfirmDeleteId(cred.id)}
                 aria-label={t('deletePasskey')}
               >
-                <Image src="/icons/delete-trash-icon.svg" width={18} height={18} alt="" />
+                <Image
+                  src="/icons/delete-trash-icon.svg"
+                  width={18}
+                  height={18}
+                  alt=""
+                />
               </Button>
             </Box>
           ))}
@@ -380,7 +436,12 @@ function PasskeySection({
           type="button"
           onClick={handleAddPasskey}
           disabled={addingPasskey}
-          styles={{ width: '100%', padding: '10px', fontSize: 14, marginTop: 4 }}
+          styles={{
+            width: '100%',
+            padding: '10px',
+            fontSize: 14,
+            marginTop: 4,
+          }}
         />
       </Box>
     </>
@@ -453,7 +514,11 @@ export function MyAccountForm({ apiUrl }: Props) {
         maxWidth={520}
         marginBottom={40}
       >
-        <ProfileSection profile={profile} apiUrl={apiUrl} accessToken={accessToken} />
+        <ProfileSection
+          profile={profile}
+          apiUrl={apiUrl}
+          accessToken={accessToken}
+        />
         <ChangePasswordSection apiUrl={apiUrl} accessToken={accessToken} />
         <PasskeySection apiUrl={apiUrl} accessToken={accessToken} />
       </Box>

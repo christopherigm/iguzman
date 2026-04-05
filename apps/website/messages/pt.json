@@ -283,7 +283,11 @@
     "enhanceLengthLabel": "Comprimento do parágrafo",
     "enhanceAccept": "Aceitar",
     "enhanceDiscard": "Descartar",
-    "enhanceStop": "Parar"
+    "enhanceStop": "Parar",
+    "logoAssetsModalTitle": "Gerar recursos a partir do logo?",
+    "logoAssetsModalText": "Deseja gerar automaticamente o favicon e os ícones do manifesto (1080×, 512×, 256×, 128×) a partir do logo enviado?",
+    "generatingAssets": "Gerando recursos…",
+    "errorGenerateAssets": "Falha ao gerar recursos a partir do logo."
   },
   "GradientBuilder": {
     "linear": "Linear",

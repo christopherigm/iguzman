@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
 import {
@@ -13,6 +13,26 @@ import { GradientBuilder } from '@repo/ui/core-elements/gradient-builder';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import logoToAssets from '@repo/helpers/logo-to-assets';
+
+/** Fields that are auto-generated from the logo when the user confirms. */
+const LOGO_DERIVED_FIELDS = [
+  'img_favicon',
+  'img_manifest_1080',
+  'img_manifest_512',
+  'img_manifest_256',
+  'img_manifest_128',
+] as const;
+
+type LogoDerivedField = (typeof LOGO_DERIVED_FIELDS)[number];
+
+/** Converts a data URI to a synthetic File object (required by NewImage type). */
+async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], filename, { type: blob.type });
+}
 
 export default function AdminSystemPage() {
   const t = useTranslations('Admin');
@@ -68,6 +88,16 @@ export default function AdminSystemPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Logo-to-assets modal state
+  const [showLogoAssetsModal, setShowLogoAssetsModal] = useState(false);
+  const [generatingAssets, setGeneratingAssets] = useState(false);
+  // Incrementing this key forces the derived-field uploaders to re-mount and
+  // pick up the newly generated existing images.
+  const [derivedImageKey, setDerivedImageKey] = useState(0);
+
+  // Track previous logo pending count to detect new uploads (not removals).
+  const prevLogoPendingCountRef = useRef(0);
 
   const systemId = getUserFromToken()?.systemId ?? 0;
 
@@ -130,6 +160,57 @@ export default function AdminSystemPage() {
       .catch(() => setError(t('errorLoad')))
       .finally(() => setLoading(false));
   }, [systemId, t]);
+
+  // Detect when a new logo is uploaded and offer to auto-generate derived assets.
+  useEffect(() => {
+    const count = images.img_logo?.pending.length ?? 0;
+    if (count > prevLogoPendingCountRef.current) {
+      setShowLogoAssetsModal(true);
+    }
+    prevLogoPendingCountRef.current = count;
+  }, [images.img_logo?.pending.length]);
+
+  /** Generate favicon + manifest icons from the current pending logo. */
+  const handleGenerateAssets = async () => {
+    const logoBase64 = images.img_logo?.pending[0]?.base64;
+    if (!logoBase64) return;
+
+    setGeneratingAssets(true);
+    try {
+      const assets = await logoToAssets(logoBase64);
+
+      // Build synthetic NewImage entries for each derived field.
+      const entries = await Promise.all(
+        LOGO_DERIVED_FIELDS.map(async (field) => {
+          const dataUrl = assets[field];
+          const ext = field === 'img_favicon' ? 'ico' : 'png';
+          const file = await dataUrlToFile(dataUrl, `${field}.${ext}`);
+          const newImage: NewImage = { base64: dataUrl, preview: dataUrl, file };
+          return { field, dataUrl, newImage };
+        }),
+      );
+
+      setImages((prev) => {
+        const next = { ...prev };
+        entries.forEach(({ field, dataUrl, newImage }) => {
+          next[field] = {
+            // Fake existing entry so the uploader shows a preview after re-mount.
+            existing: [{ id: -1, url: dataUrl }],
+            pending: [newImage],
+          };
+        });
+        return next;
+      });
+
+      // Force uploaders for derived fields to re-mount with the new existing images.
+      setDerivedImageKey((k) => k + 1);
+    } catch {
+      setError(t('errorGenerateAssets'));
+    } finally {
+      setGeneratingAssets(false);
+      setShowLogoAssetsModal(false);
+    }
+  };
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -240,6 +321,10 @@ export default function AdminSystemPage() {
     img_manifest_128: 'Manifest 128×',
   };
 
+  /** Fields whose uploader key includes `derivedImageKey` so they re-mount after generation. */
+  const isDerivedField = (field: string): field is LogoDerivedField =>
+    (LOGO_DERIVED_FIELDS as readonly string[]).includes(field);
+
   if (loading)
     return (
       <Box padding="24px">
@@ -251,73 +336,87 @@ export default function AdminSystemPage() {
     <>
       <Breadcrumbs items={[{ label: t('home'), href: '/' }, { label: t('breadcrumbAdmin'), href: '/admin' }, { label: t('system') }]} />
       <AdminForm
-      title={t('system')}
-      hideCancel
-      fields={fields}
-      values={values}
-      onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
-      onSubmit={handleSubmit}
-      saving={saving}
-      error={error}
-      success={success}
-    >
-      <GradientBuilder
-        label={t('highlightsBg')}
-        value={String(values.highlights_bg ?? '')}
-        onChange={(v) => setValues((prev) => ({ ...prev, highlights_bg: v }))}
-        labels={{
-          linear: tGb('linear'),
-          radial: tGb('radial'),
-          solid: tGb('solid'),
-          angle: tGb('angle'),
-          color: tGb('color'),
-          stops: tGb('stops'),
-          addStop: tGb('addStop'),
-          removeStop: tGb('removeStop'),
-          pickColor: tGb('pickColor'),
-          rawCss: tGb('rawCss'),
-        }}
-      />
-      <GradientBuilder
-        label={t('catalogBg')}
-        value={String(values.catalog_items_bg ?? '')}
-        onChange={(v) => setValues((prev) => ({ ...prev, catalog_items_bg: v }))}
-        labels={{
-          linear: tGb('linear'),
-          radial: tGb('radial'),
-          solid: tGb('solid'),
-          angle: tGb('angle'),
-          color: tGb('color'),
-          stops: tGb('stops'),
-          addStop: tGb('addStop'),
-          removeStop: tGb('removeStop'),
-          pickColor: tGb('pickColor'),
-          rawCss: tGb('rawCss'),
-        }}
-      />
-      {Object.entries(images).map(([field, state]) => (
-        <Box key={field} display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">
-            {IMAGE_LABELS[field] ?? field}
-          </Typography>
-          <AdminImageUploader
-            existingImages={state.existing}
-            onChange={(newImages, _deletedIds, orderedExistingIds) =>
-              setImages((prev) => ({
-                ...prev,
-                [field]: {
-                  existing: (prev[field]?.existing ?? []).filter((img) =>
-                    orderedExistingIds.includes(img.id),
-                  ),
-                  pending: newImages,
-                },
-              }))
-            }
-            maxImages={1}
-          />
-        </Box>
-      ))}
-    </AdminForm>
+        title={t('system')}
+        hideCancel
+        fields={fields}
+        values={values}
+        onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+        onSubmit={handleSubmit}
+        saving={saving}
+        error={error}
+        success={success}
+      >
+        <GradientBuilder
+          label={t('highlightsBg')}
+          value={String(values.highlights_bg ?? '')}
+          onChange={(v) => setValues((prev) => ({ ...prev, highlights_bg: v }))}
+          labels={{
+            linear: tGb('linear'),
+            radial: tGb('radial'),
+            solid: tGb('solid'),
+            angle: tGb('angle'),
+            color: tGb('color'),
+            stops: tGb('stops'),
+            addStop: tGb('addStop'),
+            removeStop: tGb('removeStop'),
+            pickColor: tGb('pickColor'),
+            rawCss: tGb('rawCss'),
+          }}
+        />
+        <GradientBuilder
+          label={t('catalogBg')}
+          value={String(values.catalog_items_bg ?? '')}
+          onChange={(v) => setValues((prev) => ({ ...prev, catalog_items_bg: v }))}
+          labels={{
+            linear: tGb('linear'),
+            radial: tGb('radial'),
+            solid: tGb('solid'),
+            angle: tGb('angle'),
+            color: tGb('color'),
+            stops: tGb('stops'),
+            addStop: tGb('addStop'),
+            removeStop: tGb('removeStop'),
+            pickColor: tGb('pickColor'),
+            rawCss: tGb('rawCss'),
+          }}
+        />
+        {Object.entries(images).map(([field, state]) => (
+          <Box key={field} display="flex" flexDirection="column" gap="8px">
+            <Typography variant="label">
+              {IMAGE_LABELS[field] ?? field}
+            </Typography>
+            <AdminImageUploader
+              key={isDerivedField(field) ? `${field}-${derivedImageKey}` : field}
+              existingImages={state.existing}
+              onChange={(newImages, _deletedIds, orderedExistingIds) =>
+                setImages((prev) => ({
+                  ...prev,
+                  [field]: {
+                    existing: (prev[field]?.existing ?? []).filter((img) =>
+                      orderedExistingIds.includes(img.id),
+                    ),
+                    pending: newImages,
+                  },
+                }))
+              }
+              maxImages={1}
+            />
+          </Box>
+        ))}
+      </AdminForm>
+
+      {showLogoAssetsModal && (
+        <ConfirmationModal
+          title={t('logoAssetsModalTitle')}
+          text={t('logoAssetsModalText')}
+          okCallback={handleGenerateAssets}
+          cancelCallback={() => setShowLogoAssetsModal(false)}
+        >
+          {generatingAssets && (
+            <Typography variant="body-sm">{t('generatingAssets')}</Typography>
+          )}
+        </ConfirmationModal>
+      )}
     </>
   );
 }
