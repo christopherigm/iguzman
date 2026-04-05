@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { Container } from '@repo/ui/core-elements/container';
@@ -15,6 +16,34 @@ import type { GalleryImage } from '@/components/item-gallery-client';
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const story = await getSuccessStory(slug);
+  if (!story) return {};
+
+  const name =
+    (locale === 'en' ? story.en_name : story.name) ??
+    story.name ??
+    story.en_name ??
+    slug;
+
+  const description =
+    (locale === 'en' ? story.en_short_description : story.short_description) ??
+    story.short_description ??
+    story.en_short_description ??
+    undefined;
+
+  return {
+    title: name,
+    description: description ?? undefined,
+    openGraph: {
+      title: name,
+      description: description ?? undefined,
+      images: story.image ? [{ url: story.image }] : undefined,
+    },
+  };
+}
 
 export default async function SuccessStoryDetailPage({ params }: Props) {
   const { locale, slug } = await params;

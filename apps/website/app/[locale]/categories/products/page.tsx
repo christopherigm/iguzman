@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { getLocale } from 'next-intl/server';
 import { Container } from '@repo/ui/core-elements/container';
@@ -14,6 +15,12 @@ import type { BuyableItem } from '@/components/buyable-card';
 type Props = {
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = (await getTranslations({ locale, namespace: 'ProductsPage' })) as (key: string) => string;
+  return { title: t('heading') };
+}
 
 export default async function ProductsPage({ params }: Props) {
   const { locale } = await params;

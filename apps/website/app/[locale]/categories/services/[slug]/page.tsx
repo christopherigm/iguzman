@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { Container } from '@repo/ui/core-elements/container';
@@ -12,6 +13,34 @@ import { CategoryDetail } from '@/components/category-detail';
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const category = await getServiceCategory(slug);
+  if (!category) return {};
+
+  const name =
+    (locale === 'en' ? category.en_name : category.name) ??
+    category.name ??
+    category.en_name ??
+    slug;
+
+  const description =
+    (locale === 'en' ? category.en_description : category.description) ??
+    category.description ??
+    category.en_description ??
+    undefined;
+
+  return {
+    title: name,
+    description: description ?? undefined,
+    openGraph: {
+      title: name,
+      description: description ?? undefined,
+      images: category.image ? [{ url: category.image }] : undefined,
+    },
+  };
+}
 
 export default async function ServiceCategoryPage({ params }: Props) {
   const { locale, slug } = await params;
