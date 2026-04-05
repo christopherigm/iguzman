@@ -135,6 +135,9 @@ class SystemAdmin(admin.ModelAdmin):
         ("Identity", {
             "fields": ("site_name", "host", "enabled", "version", "created", "modified"),
         }),
+        ("Site Description", {
+            "fields": ("site_description", "en_site_description"),
+        }),
         ("Branding", {
             "fields": (
                 "primary_color", "secondary_color",

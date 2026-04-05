@@ -209,6 +209,8 @@
     "isAdmin": "Administrador",
     "notAdmin": "Usuario",
     "siteName": "Nombre del sitio",
+    "siteDescription": "Descripción del sitio (ES)",
+    "enSiteDescription": "Descripción del sitio (EN)",
     "host": "Host",
     "slogan": "Eslogan",
     "videoLink": "Enlace de video del héroe",

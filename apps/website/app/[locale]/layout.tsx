@@ -42,8 +42,8 @@ export async function generateMetadata({
   const system = await getSystem();
 
   return {
-    title: t('title'),
-    description: t('description'),
+    title: system?.site_name ?? t('title'),
+    description: system?.site_description ?? t('description'),
     manifest: '/manifest.webmanifest',
     icons: {
       icon: system?.img_favicon ?? '/favicon.ico',
@@ -52,7 +52,7 @@ export async function generateMetadata({
     appleWebApp: {
       capable: true,
       statusBarStyle: 'default',
-      title: t('title'),
+      title: system?.site_name ?? t('title'),
     },
     formatDetection: {
       telephone: false,

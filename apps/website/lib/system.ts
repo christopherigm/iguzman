@@ -10,6 +10,8 @@ export interface System {
   modified: string;
   version: number;
   site_name: string;
+  site_description: string | null;
+  en_site_description: string | null;
   host: string;
   img_logo: string | null;
   img_logo_hero: string | null;

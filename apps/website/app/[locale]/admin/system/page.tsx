@@ -40,6 +40,8 @@ export default function AdminSystemPage() {
 
   const [values, setValues] = useState<Record<string, unknown>>({
     site_name: '',
+    site_description: '',
+    en_site_description: '',
     host: '',
     slogan: '',
     video_link: '',
@@ -108,6 +110,8 @@ export default function AdminSystemPage() {
       .then((data) => {
         setValues({
           site_name: data.site_name ?? '',
+          site_description: data.site_description ?? '',
+          en_site_description: data.en_site_description ?? '',
           host: data.host ?? '',
           slogan: data.slogan ?? '',
           video_link: data.video_link ?? '',
@@ -242,6 +246,8 @@ export default function AdminSystemPage() {
 
   const fields: FieldDef[] = [
     { key: 'site_name', label: t('siteName') ?? 'Site Name', required: true },
+    { key: 'site_description', label: t('siteDescription') ?? 'Site Description (ES)', type: 'textarea' },
+    { key: 'en_site_description', label: t('enSiteDescription') ?? 'Site Description (EN)', type: 'textarea' },
     { key: 'host', label: t('host') ?? 'Host', required: true },
     { key: 'slogan', label: t('slogan') ?? 'Slogan' },
     {

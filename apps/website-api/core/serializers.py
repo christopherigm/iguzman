@@ -424,7 +424,7 @@ class SystemSerializer(serializers.ModelSerializer):
         model = System
         fields = [
             "id", "enabled", "created", "modified", "version",
-            "site_name", "host",
+            "site_name", "site_description", "en_site_description", "host",
             "img_logo", "img_logo_hero", "img_favicon",
             "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_128",
             "img_hero", "video_link", "slogan", "primary_color", "secondary_color",
@@ -462,7 +462,7 @@ class SystemSerializer(serializers.ModelSerializer):
 
 
 _TEXT_FIELDS = [
-    "site_name", "host", "video_link", "slogan", "primary_color", "secondary_color",
+    "site_name", "site_description", "en_site_description", "host", "video_link", "slogan", "primary_color", "secondary_color",
     "highlights_bg",
     "highlights_title", "en_highlights_title",
     "highlights_subtitle", "en_highlights_subtitle",
@@ -479,8 +479,10 @@ class SystemWriteSerializer(serializers.Serializer):
     """Write serializer — accepts base64-encoded images alongside regular fields."""
 
     # Regular fields (all optional for PATCH semantics)
-    site_name       = serializers.CharField(max_length=32, required=False)
-    host            = serializers.CharField(max_length=64, required=False)
+    site_name           = serializers.CharField(max_length=32, required=False)
+    site_description    = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    en_site_description = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    host                = serializers.CharField(max_length=64, required=False)
     video_link      = serializers.URLField(max_length=255, required=False, allow_null=True, allow_blank=True)
     slogan          = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     primary_color   = serializers.CharField(max_length=16, required=False)
