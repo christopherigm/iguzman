@@ -18,7 +18,7 @@ import './infinite-page.css';
 
 export function InfinitePage() {
   const t = useTranslations('InfinitePage');
-  const { completed, removeCompleted } = useVideoStore();
+  const { completed, removeCompleted, storeLoaded } = useVideoStore();
   const [videos, setVideos] = useState<StoredVideo[]>([]);
   const [loaded, setLoaded] = useState(false);
   const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
@@ -47,10 +47,12 @@ export function InfinitePage() {
   }
 
   useEffect(() => {
+    if (!storeLoaded) return;
     const eligible = completed.filter((v) => v.downloadURL && !v.justAudio);
     setVideos(shuffle(eligible));
     setLoaded(true);
-  }, []); // fixed random order on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeLoaded]); // run once when store hydrates; completed is captured at that moment for a fixed random order
 
   function handleReshuffle() {
     if (swiperRef.current) {

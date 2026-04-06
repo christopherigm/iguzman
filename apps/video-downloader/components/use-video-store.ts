@@ -180,6 +180,7 @@ export function useVideoStore() {
   const [pinned, setPinned] = useState<StoredVideo[]>([]);
   const [completed, setCompleted] = useState<StoredVideo[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
+  const [storeLoaded, setStoreLoaded] = useState(false);
   const initialized = useRef(false);
 
   /* Load from localStorage after mount (client-only). */
@@ -188,6 +189,7 @@ export function useVideoStore() {
     initialized.current = true;
     setPinned(p);
     setCompleted(c);
+    setStoreLoaded(true);
   }, []);
 
   /* Persist each array independently — skip until initialized. */
@@ -337,6 +339,7 @@ export function useVideoStore() {
   return {
     pinned,
     completed,
+    storeLoaded,
     addToPinned,
     updatePinned,
     completeVideo,

@@ -579,14 +579,18 @@ export function VideoExtraActions({
 
 /* ── Resolution label helper ─────────────────────────── */
 
-export function resolveResolutionLabel(height: number | null): string | null {
+export function resolveResolutionLabel(
+  height: number | null,
+  width?: number | null,
+): string | null {
   if (height == null) return null;
-  if (height >= 2160) return '4K';
-  if (height >= 1440) return '2K';
-  if (height >= 1080) return 'FHD';
-  if (height >= 720) return 'HD';
-  if (height >= 480) return 'SD';
-  if (height >= 360) return '360p';
+  const px = width != null ? Math.min(height, width) : height;
+  if (px >= 2160) return '4K';
+  if (px >= 1440) return '2K';
+  if (px >= 1080) return 'FHD';
+  if (px >= 720) return 'HD';
+  if (px >= 480) return 'SD';
+  if (px >= 360) return '360p';
   return null;
 }
 
@@ -632,9 +636,9 @@ export function VideoCardHeader({
           {video.fps} FPS
         </Badge>
       ) : null}
-      {!video.justAudio && resolveResolutionLabel(video.height) ? (
+      {!video.justAudio && resolveResolutionLabel(video.height, video.width) ? (
         <Badge variant="subtle" size="sm" color="#38bdf8">
-          {resolveResolutionLabel(video.height)}
+          {resolveResolutionLabel(video.height, video.width)}
         </Badge>
       ) : null}
       <button
