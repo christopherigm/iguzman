@@ -24,6 +24,9 @@ export function generateStaticParams() {
 
 export const viewport: Viewport = {
   themeColor: '#68c3f7',
+  userScalable: false,
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export async function generateMetadata({

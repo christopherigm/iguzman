@@ -10,6 +10,7 @@ import { Icon } from '@repo/ui/core-elements/icon';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { detectPlatform, type Platform } from '@repo/helpers/checkers';
 import { stripQueryParams } from '@repo/helpers/clean-url';
+import { isIOS } from './video-item-shared';
 import './download-form.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -120,7 +121,8 @@ export interface DownloadFormProps {
 export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   const t = useTranslations('DownloadForm');
   const [url, setUrl] = useState('');
-  const [autoDownload, setAutoDownload] = useState(true);
+  const ios = isIOS();
+  const [autoDownload, setAutoDownload] = useState(!ios);
   const [justAudio, setJustAudio] = useState(false);
   const [enhance] = useState(false);
   const [fps, setFps] = useState<FPSValue>('original');
@@ -305,12 +307,14 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
 
       {/* ── Options ──────────────────────────────────── */}
       <Box className="df-options">
-        <OptionRow label={t('autoDownload')} disabled={switchesDisabled}>
-          <Switch
-            checked={autoDownload}
-            onChange={switchesDisabled ? undefined : setAutoDownload}
-          />
-        </OptionRow>
+        {!ios && (
+          <OptionRow label={t('autoDownload')} disabled={switchesDisabled}>
+            <Switch
+              checked={autoDownload}
+              onChange={switchesDisabled ? undefined : setAutoDownload}
+            />
+          </OptionRow>
+        )}
 
         <OptionRow label={t('justAudio')} disabled={switchesDisabled}>
           <Switch

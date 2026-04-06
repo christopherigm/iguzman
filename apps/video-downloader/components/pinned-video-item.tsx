@@ -21,6 +21,7 @@ import {
   VideoActions,
   VideoCardHeader,
   VideoFooterLink,
+  isIOS,
 } from './video-item-shared';
 import './video-item.css';
 
@@ -328,6 +329,7 @@ export function PinnedVideoItem({
           url: video.originalURL,
           justAudio: video.justAudio,
           checkCodec: video.platform === 'tiktok',
+          iosDevice: isIOS(),
         }),
       });
 

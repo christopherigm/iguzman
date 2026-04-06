@@ -220,6 +220,16 @@ export interface DownloadVideoOptions {
    * @defaultValue false
    */
   checkCodec?: boolean;
+  /**
+   * When `true`, the downloaded video is probed for iOS Safari codec
+   * compatibility. If the video stream uses a codec not supported by
+   * iOS Safari (VP9, AV1, VP8, Theora, etc.) it is transcoded to
+   * H.264 in-place — the original file is replaced so the client
+   * receives a playable file without any URL change.
+   * Has no effect when `justAudio` is `true`.
+   * @defaultValue false
+   */
+  iosDevice?: boolean;
 }
 
 /** A single format entry from yt-dlp's `--dump-json` output. */
@@ -1370,6 +1380,86 @@ const isH265Codec = async (
 };
 
 /**
+ * iOS Safari-compatible video codecs (H.264 and H.265/HEVC).
+ * Any codec not in this set will be transcoded to H.264 when `iosDevice` is true.
+ */
+const IOS_SAFE_CODECS = new Set(['h264', 'hevc', 'h265']);
+
+/**
+ * Returns `true` when the first video stream of `filePath` uses a codec
+ * that iOS Safari cannot play (e.g. VP9, AV1, VP8, Theora).
+ *
+ * Returns `false` for H.264 / H.265 and on any probe error so that
+ * transcoding is only triggered when we are certain it is needed.
+ */
+const isIosUnsupportedCodec = async (
+  filePath: string,
+  ffmpegBinary: string,
+): Promise<boolean> => {
+  try {
+    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
+    const output = await execFileAsync(ffprobeBinary, [
+      '-v',
+      'error',
+      '-select_streams',
+      'v:0',
+      '-show_entries',
+      'stream=codec_name',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      filePath,
+    ]);
+    const codec = output.trim().toLowerCase();
+    return codec.length > 0 && !IOS_SAFE_CODECS.has(codec);
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Transcodes the video stream of `filePath` to H.264 using ffmpeg,
+ * replacing the original file in-place. Audio is copied without
+ * re-encoding. `+faststart` is applied for web-optimised playback.
+ *
+ * A temporary file is written next to the original and atomically
+ * renamed over it so a partial transcode never corrupts the source.
+ *
+ * @throws When ffmpeg exits with a non-zero code.
+ */
+const transcodeToH264InPlace = async (
+  filePath: string,
+  ffmpegBinary: string,
+): Promise<void> => {
+  const tmpPath = `${filePath}.ios_tmp_${randomUUID()}.mp4`;
+  try {
+    await execFileAsync(ffmpegBinary, [
+      '-y',
+      '-i',
+      filePath,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
+      '-crf',
+      '23',
+      '-c:a',
+      'copy',
+      '-movflags',
+      '+faststart',
+      tmpPath,
+    ]);
+    renameSync(tmpPath, filePath);
+  } catch (err) {
+    try {
+      rmSync(tmpPath, { force: true });
+    } catch {
+      /* ignore cleanup error */
+    }
+    throw err;
+  }
+};
+
+/**
  * Probes a media file with ffprobe to read the frame rate of its first
  * video stream.
  *
@@ -2337,10 +2427,11 @@ const downloadVideo = async ({
   audioFormat,
   jsRuntimes = DEFAULT_JS_RUNTIMES,
   checkCodec = false,
+  iosDevice = false,
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
-  const audioFmt: AudioOutputFormat = audioFormat ?? 'flac';
+  const audioFmt: AudioOutputFormat = audioFormat ?? (iosDevice ? 'm4a' : 'flac');
 
   /* ---- 1. Check yt-dlp availability ---- */
 
@@ -2733,6 +2824,27 @@ const downloadVideo = async ({
     const fps = await getVideoFps(`${outputFolder}/${fileName}`, ffmpegBinary);
     if (fps !== undefined) {
       result.fps = fps;
+    }
+  }
+
+  /* ---- 8d. iOS H.264 transcode ---- */
+  //
+  // When the request comes from an iOS device, probe the video codec.
+  // If it is not playable in iOS Safari (VP9, AV1, VP8, Theora, …),
+  // transcode to H.264 in-place so nginx serves a compatible file.
+  // The filename is unchanged — the client never sees the difference.
+
+  if (iosDevice && !justAudio && fileName) {
+    try {
+      const filePath = `${outputFolder}/${fileName}`;
+      const needsTranscode = await isIosUnsupportedCodec(filePath, ffmpegBinary);
+      if (needsTranscode) {
+        await transcodeToH264InPlace(filePath, ffmpegBinary);
+        // After transcode the codec is H.264; clear any stale isH265 flag.
+        result.isH265 = false;
+      }
+    } catch {
+      // Transcode is best-effort; a failure must not abort the whole result.
     }
   }
 

@@ -678,6 +678,12 @@ export default getRequestConfig(async ({ requestLocale }) => {
 `;
 }
 
+function cssDts() {
+  return `declare module 'swiper/css';
+declare module 'swiper/css/*';
+`;
+}
+
 function globalDts() {
   return `import type sharedMessages from '@repo/i18n/messages/en';
 import type localMessages from './messages/en.json';
@@ -1384,6 +1390,7 @@ async function main() {
   writeFile(appPath('eslint.config.js'), eslintConfig());
   writeFile(appPath('.gitignore'), gitignore(includePwa));
   writeFile(appPath('app/globals.css'), globalsCss());
+  writeFile(appPath('css.d.ts'), cssDts());
 
   // Create empty public directory
   mkdirSync(appPath('public'), { recursive: true });

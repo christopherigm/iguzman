@@ -277,6 +277,21 @@ import Link from 'next/link';
 <a href="https://example.com" target="_blank" rel="noopener noreferrer">External</a>
 ```
 
+### TypeScript — CSS Module Declarations
+
+Each Next.js app in `apps/` includes a `css.d.ts` file at its root with ambient module declarations for CSS subpath imports that TypeScript cannot resolve on its own:
+
+```ts
+declare module 'swiper/css';
+declare module 'swiper/css/*';
+```
+
+**Why it exists:** Swiper (and similar packages) export CSS via subpaths like `swiper/css` and `swiper/css/navigation`. These entries in the package's `exports` field are bare strings with no `types` field, so TypeScript raises `TS2882: Cannot find module or type declarations for side-effect import`. A wildcard like `declare module '*.css'` does **not** fix this because `swiper/css` is a package subpath, not a file extension.
+
+**Rule:** If you add a new CSS side-effect import from a third-party package and TypeScript raises TS2882, add a `declare module` entry to the app's `css.d.ts`. Never create a separate per-package `.d.ts` file for this — `css.d.ts` is the single place for these declarations.
+
+The `new-app.mjs` scaffold generates this file automatically for every new app.
+
 ### TypeScript — Always Check After Writing
 
 After writing or modifying any `.ts` or `.tsx` file, always run `pnpm check-types` and fix every error before considering the task done. Never leave type errors behind.

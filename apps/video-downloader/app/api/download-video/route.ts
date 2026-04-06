@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { url, justAudio = false, checkCodec = false } = body;
+  const { url, justAudio = false, checkCodec = false, iosDevice = false } = body;
 
   if (!url || typeof url !== 'string') {
     return NextResponse.json(
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   }
 
   /* 2. Create the task document immediately */
-  const task = await createTask({ url, justAudio, checkCodec });
+  const task = await createTask({ url, justAudio, checkCodec, iosDevice });
   const taskId = task._id.toHexString();
 
   /* 3. Fire-and-forget: the download runs independently of the status update
@@ -83,6 +83,7 @@ export async function POST(request: Request) {
         url,
         justAudio,
         checkCodec,
+        iosDevice,
         outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
         cookies: IS_PRODUCTION
           ? '/app/media/netscape-cookies.txt'

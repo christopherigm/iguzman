@@ -8,7 +8,7 @@ import type {
 /** Fields sent to the server to start a download — picked from DownloadVideoOptions. */
 export type VideoDownloadInput = Pick<
   DownloadVideoOptions,
-  'url' | 'justAudio' | 'checkCodec'
+  'url' | 'justAudio' | 'checkCodec' | 'iosDevice'
 >;
 
 /* ── Result metadata ───────────────────────────────── */
