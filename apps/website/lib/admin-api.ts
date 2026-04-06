@@ -9,6 +9,9 @@ function buildHeaders(token: string | null, extra: HeadersInit = {}): HeadersIni
   };
 }
 
+// Deduplicate concurrent refresh attempts — all 401s share one refresh call
+let _adminRefreshPromise: Promise<string | null> | null = null;
+
 // Helper: authenticated fetch with automatic token refresh on 401
 async function adminFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const token = getAccessToken();
@@ -18,7 +21,12 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<Resp
   });
 
   if (res.status === 401) {
-    const newToken = await refreshTokens();
+    if (!_adminRefreshPromise) {
+      _adminRefreshPromise = refreshTokens().finally(() => {
+        _adminRefreshPromise = null;
+      });
+    }
+    const newToken = await _adminRefreshPromise;
     if (!newToken) {
       clearTokens();
       if (typeof window !== 'undefined') {

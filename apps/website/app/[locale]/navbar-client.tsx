@@ -14,7 +14,7 @@ interface NavbarClientProps {
 export function NavbarClient({ logo, version }: NavbarClientProps) {
   const t = useTranslations('Navbar');
   const pathname = usePathname();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   const syncAuth = () => {

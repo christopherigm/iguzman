@@ -10,11 +10,10 @@ export class ApiError extends Error {
   }
 }
 
-export function storeTokens(access: string, refresh: string, apiUrl = ''): void {
+export function storeTokens(access: string, refresh: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(ACCESS_TOKEN_KEY, access);
   localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
-  scheduleTokenRefresh(apiUrl);
   window.dispatchEvent(new CustomEvent('auth-changed'));
 }
 
@@ -30,61 +29,8 @@ export function getRefreshToken(): string | null {
 
 export function clearTokens(): void {
   if (typeof window === 'undefined') return;
-  clearRefreshTimer();
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
-}
-
-// ── Auto-refresh scheduler ───────────────────────────────────────────────────
-
-const REFRESH_BUFFER_MS = 60_000; // refresh 60s before expiry
-let _refreshTimer: ReturnType<typeof setTimeout> | null = null;
-
-function getTokenExpiry(token: string): number | null {
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return null;
-    const decoded = JSON.parse(
-      atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
-    ) as Record<string, unknown>;
-    return typeof decoded.exp === 'number' ? decoded.exp * 1000 : null;
-  } catch {
-    return null;
-  }
-}
-
-function clearRefreshTimer(): void {
-  if (_refreshTimer !== null) {
-    clearTimeout(_refreshTimer);
-    _refreshTimer = null;
-  }
-}
-
-export function scheduleTokenRefresh(apiUrl = ''): void {
-  if (typeof window === 'undefined') return;
-  clearRefreshTimer();
-
-  const token = getAccessToken();
-  if (!token) return;
-
-  const expiresAt = getTokenExpiry(token);
-  if (!expiresAt) return;
-
-  const delay = expiresAt - Date.now() - REFRESH_BUFFER_MS;
-
-  if (delay <= 0) {
-    // Already within the buffer window or expired — refresh immediately
-    void refreshTokens(apiUrl).then((newToken) => {
-      if (newToken) scheduleTokenRefresh(apiUrl);
-    });
-    return;
-  }
-
-  _refreshTimer = setTimeout(() => {
-    void refreshTokens(apiUrl).then((newToken) => {
-      if (newToken) scheduleTokenRefresh(apiUrl);
-    });
-  }, delay);
 }
 
 export interface TokenUser {
@@ -213,11 +159,11 @@ export async function verifyEmail(token: string, apiUrl = ''): Promise<void> {
   }
 }
 
-export async function refreshTokens(apiUrl = ''): Promise<string | null> {
+export async function refreshTokens(): Promise<string | null> {
   const refresh = getRefreshToken();
   if (!refresh) return null;
 
-  const res = await fetch(`${apiUrl}/api/auth/token/refresh/`, {
+  const res = await fetch(`/api/auth/token/refresh/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh }),
@@ -230,7 +176,7 @@ export async function refreshTokens(apiUrl = ''): Promise<string | null> {
 
   const data = (await res.json()) as { access: string; refresh?: string };
   const newRefresh = data.refresh ?? refresh;
-  storeTokens(data.access, newRefresh, apiUrl);
+  storeTokens(data.access, newRefresh);
   return data.access;
 }
 
@@ -443,36 +389,3 @@ export async function deletePasskeyCredential(
   }
 }
 
-// ── Authenticated fetch ──────────────────────────────────────────────────────
-
-let _refreshPromise: Promise<string | null> | null = null;
-
-export async function fetchWithAuth(
-  url: string,
-  init: RequestInit = {},
-  apiUrl = '',
-): Promise<Response> {
-  const token = getAccessToken();
-
-  const res = await fetch(url, {
-    ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${token}` },
-  });
-
-  if (res.status !== 401) return res;
-
-  // Deduplicate concurrent refresh attempts — all 401s share one refresh call
-  if (!_refreshPromise) {
-    _refreshPromise = refreshTokens(apiUrl).finally(() => {
-      _refreshPromise = null;
-    });
-  }
-  const newToken = await _refreshPromise;
-
-  if (!newToken) throw new ApiError(401, { detail: 'Session expired' });
-
-  return fetch(url, {
-    ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${newToken}` },
-  });
-}
