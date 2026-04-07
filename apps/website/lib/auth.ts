@@ -159,11 +159,11 @@ export async function verifyEmail(token: string, apiUrl = ''): Promise<void> {
   }
 }
 
-export async function refreshTokens(): Promise<string | null> {
+export async function refreshTokens(apiUrl = ''): Promise<string | null> {
   const refresh = getRefreshToken();
   if (!refresh) return null;
 
-  const res = await fetch(`/api/auth/token/refresh/`, {
+  const res = await fetch(`${apiUrl}/api/auth/token/refresh/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh }),

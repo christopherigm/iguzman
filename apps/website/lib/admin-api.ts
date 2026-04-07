@@ -22,7 +22,7 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<Resp
 
   if (res.status === 401) {
     if (!_adminRefreshPromise) {
-      _adminRefreshPromise = refreshTokens().finally(() => {
+      _adminRefreshPromise = refreshTokens(API_URL).finally(() => {
         _adminRefreshPromise = null;
       });
     }
