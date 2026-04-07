@@ -11,7 +11,9 @@
     "myAccount": "Minha conta",
     "signOut": "Sair",
     "home": "Início",
-    "admin": "Administração"
+    "admin": "Administração",
+    "products": "Produtos",
+    "services": "Serviços"
   },
   "AuthPage": {
     "tabSignIn": "Entrar",

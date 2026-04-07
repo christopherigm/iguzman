@@ -24,9 +24,23 @@ export default function AdminUsersPage() {
 
   const columns: Column[] = [
     { key: 'profile_picture', label: 'Avatar' },
-    { key: 'email', label: 'Email' },
+    {
+      key: 'email',
+      label: 'Email',
+      render: (v) => {
+        if (!v) return '—';
+        const str = String(v);
+        const [local, domain] = str.split('@');
+        const short = local.length > 10 ? `${local.slice(0, 10)}…` : local;
+        return <span title={str}>{short}@{domain}</span>;
+      },
+    },
     { key: 'first_name', label: t('firstName') ?? 'First Name' },
-    { key: 'last_name', label: t('lastName') ?? 'Last Name' },
+    {
+      key: 'last_name',
+      label: t('lastName') ?? 'Last Name',
+      render: (v) => v ? `${String(v).charAt(0).toUpperCase()}.` : '—',
+    },
     {
       key: 'is_active',
       label: t('status') ?? 'Status',

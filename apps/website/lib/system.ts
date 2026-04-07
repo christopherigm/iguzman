@@ -44,6 +44,8 @@ export interface System {
   en_terms_and_conditions: string;
   user_data: string;
   en_user_data: string;
+  product_count: number;
+  service_count: number;
 }
 
 /**

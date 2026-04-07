@@ -419,6 +419,8 @@ class SystemSerializer(serializers.ModelSerializer):
     img_manifest_128 = serializers.SerializerMethodField()
     img_about = serializers.SerializerMethodField()
     img_hero = serializers.SerializerMethodField()
+    product_count = serializers.SerializerMethodField()
+    service_count = serializers.SerializerMethodField()
 
     class Meta:
         model = System
@@ -439,6 +441,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "privacy_policy", "en_privacy_policy",
             "terms_and_conditions", "en_terms_and_conditions",
             "user_data", "en_user_data",
+            "product_count", "service_count",
         ]
 
     def _image_url(self, obj, field_name):
@@ -459,6 +462,14 @@ class SystemSerializer(serializers.ModelSerializer):
     def get_img_manifest_128(self, obj): return self._image_url(obj, "img_manifest_128")
     def get_img_about(self, obj):        return self._image_url(obj, "img_about")
     def get_img_hero(self, obj):         return self._image_url(obj, "img_hero")
+
+    def get_product_count(self, obj):
+        from catalog.models import Product
+        return Product.objects.filter(system=obj, enabled=True).count()
+
+    def get_service_count(self, obj):
+        from catalog.models import Service
+        return Service.objects.filter(system=obj, enabled=True).count()
 
 
 _TEXT_FIELDS = [

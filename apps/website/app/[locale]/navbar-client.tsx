@@ -9,9 +9,11 @@ import { getAccessToken, getRefreshToken, clearTokens, getUserFromToken } from '
 interface NavbarClientProps {
   logo: string;
   version: string;
+  productCount: number;
+  serviceCount: number;
 }
 
-export function NavbarClient({ logo, version }: NavbarClientProps) {
+export function NavbarClient({ logo, version, productCount, serviceCount }: NavbarClientProps) {
   const t = useTranslations('Navbar');
   const pathname = usePathname();
 const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -48,6 +50,8 @@ const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const navItems = [
     ...(pathname === '/' ? [] : [{ label: t('home'), href: '/' }]),
+    ...(productCount > 0 && !pathname.startsWith('/categories/products') ? [{ label: t('products'), href: '/categories/products' }] : []),
+    ...(serviceCount > 0 && !pathname.startsWith('/categories/services') ? [{ label: t('services'), href: '/categories/services' }] : []),
     ...(isAdmin && !pathname.startsWith('/admin') ? [{ label: t('admin'), href: '/admin' }] : []),
   ];
 
