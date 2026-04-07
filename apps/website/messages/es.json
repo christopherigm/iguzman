@@ -289,7 +289,7 @@
     "enhanceDiscard": "Descartar",
     "enhanceStop": "Detener",
     "logoAssetsModalTitle": "¿Generar recursos desde el logo?",
-    "logoAssetsModalText": "¿Deseas generar automáticamente el favicon y los íconos del manifest (1080×, 512×, 256×, 128×) a partir del logo subido?",
+    "logoAssetsModalText": "¿Deseas generar automáticamente el favicon y los íconos del manifest (1080×, 512×, 256×, 192×, 128×) a partir del logo subido?",
     "generatingAssets": "Generando recursos…",
     "errorGenerateAssets": "No se pudieron generar los recursos desde el logo."
   },

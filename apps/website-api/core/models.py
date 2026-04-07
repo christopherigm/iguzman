@@ -292,6 +292,7 @@ class System(Common):
     img_manifest_1080 = models.ImageField(null=True, blank=True, upload_to=picture)
     img_manifest_512 = models.ImageField(null=True, blank=True, upload_to=picture)
     img_manifest_256 = models.ImageField(null=True, blank=True, upload_to=picture)
+    img_manifest_192 = models.ImageField(null=True, blank=True, upload_to=picture)
     img_manifest_128 = models.ImageField(null=True, blank=True, upload_to=picture)
 
     img_hero = models.ImageField(null=True, blank=True, upload_to=picture)

@@ -158,8 +158,8 @@
 .ui-navbar-dropdown {
   position: absolute;
   top: 100%;
-  left: 0;
-  max-width: 200px;
+  right: 0;
+  width: max-content;
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 8px;
   overflow: hidden;

@@ -395,6 +395,7 @@ _IMAGE_FIELDS = {
     "img_manifest_1080":{"max_size": (1080, 1080), "quality": 85, "force_format": "PNG"},
     "img_manifest_512": {"max_size": (512, 512),   "quality": 85, "force_format": "PNG"},
     "img_manifest_256": {"max_size": (256, 256),   "quality": 85, "force_format": "PNG"},
+    "img_manifest_192": {"max_size": (192, 192),   "quality": 85, "force_format": "PNG"},
     "img_manifest_128": {"max_size": (128, 128),   "quality": 85, "force_format": "PNG"},
     "img_about":        {"max_size": (1200, 1200), "quality": 95, "force_format": "PNG"},
     "img_hero":         {"max_size": (1920, 1080), "quality": 90, "force_format": "JPEG"},
@@ -416,6 +417,7 @@ class SystemSerializer(serializers.ModelSerializer):
     img_manifest_1080 = serializers.SerializerMethodField()
     img_manifest_512 = serializers.SerializerMethodField()
     img_manifest_256 = serializers.SerializerMethodField()
+    img_manifest_192 = serializers.SerializerMethodField()
     img_manifest_128 = serializers.SerializerMethodField()
     img_about = serializers.SerializerMethodField()
     img_hero = serializers.SerializerMethodField()
@@ -428,7 +430,7 @@ class SystemSerializer(serializers.ModelSerializer):
             "id", "enabled", "created", "modified", "version",
             "site_name", "site_description", "en_site_description", "host",
             "img_logo", "img_logo_hero", "img_favicon",
-            "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_128",
+            "img_manifest_1080", "img_manifest_512", "img_manifest_256", "img_manifest_192", "img_manifest_128",
             "img_hero", "video_link", "slogan", "primary_color", "secondary_color",
             "highlights_bg",
             "highlights_title", "en_highlights_title",
@@ -459,6 +461,7 @@ class SystemSerializer(serializers.ModelSerializer):
     def get_img_manifest_1080(self, obj):return self._image_url(obj, "img_manifest_1080")
     def get_img_manifest_512(self, obj): return self._image_url(obj, "img_manifest_512")
     def get_img_manifest_256(self, obj): return self._image_url(obj, "img_manifest_256")
+    def get_img_manifest_192(self, obj): return self._image_url(obj, "img_manifest_192")
     def get_img_manifest_128(self, obj): return self._image_url(obj, "img_manifest_128")
     def get_img_about(self, obj):        return self._image_url(obj, "img_about")
     def get_img_hero(self, obj):         return self._image_url(obj, "img_hero")
@@ -526,6 +529,7 @@ class SystemWriteSerializer(serializers.Serializer):
     img_manifest_1080 = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_manifest_512  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_manifest_256  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    img_manifest_192  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_manifest_128  = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_about         = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     img_hero          = serializers.CharField(required=False, allow_null=True, allow_blank=True)

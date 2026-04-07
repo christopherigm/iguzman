@@ -111,10 +111,11 @@ nginx:
       memory: 128Mi
 
 # ─── Resources ──────────────────────────────────────────────
-resources:
-  requests:
-    cpu: 100m
-    memory: 128Mi
-  limits:
-    cpu: 900m
-    memory: 1Gi
+# Comment out to allow pods to use all available node resources.
+# resources:
+#   requests:
+#     cpu: 100m
+#     memory: 128Mi
+#   limits:
+#     cpu: 900m
+#     memory: 1Gi

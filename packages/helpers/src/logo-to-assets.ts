@@ -14,6 +14,8 @@ export interface LogoAssets {
   img_manifest_512: string;
   /** 256×256 PNG for use as `img_manifest_256`. */
   img_manifest_256: string;
+  /** 192×192 PNG for use as `img_manifest_192`. */
+  img_manifest_192: string;
   /** 128×128 PNG for use as `img_manifest_128`. */
   img_manifest_128: string;
 }
@@ -112,6 +114,7 @@ const pngDataUrlToIco = (pngDataUrl: string): string => {
  * // assets.img_manifest_1080  → data:image/png;base64,...
  * // assets.img_manifest_512   → data:image/png;base64,...
  * // assets.img_manifest_256   → data:image/png;base64,...
+ * // assets.img_manifest_192   → data:image/png;base64,...
  * // assets.img_manifest_128   → data:image/png;base64,...
  * ```
  */
@@ -124,6 +127,7 @@ const logoToAssets = async (logoBase64: string): Promise<LogoAssets> => {
     img_manifest_1080: logoToSquarePng(img, 1080),
     img_manifest_512: logoToSquarePng(img, 512),
     img_manifest_256: logoToSquarePng(img, 256),
+    img_manifest_192: logoToSquarePng(img, 192),
     img_manifest_128: logoToSquarePng(img, 128),
   };
 };

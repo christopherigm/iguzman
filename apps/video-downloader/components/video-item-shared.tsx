@@ -54,49 +54,31 @@ export function isIOS(): boolean {
   );
 }
 
-function getMimeType(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
-  const map: Record<string, string> = {
-    mp4: 'video/mp4',
-    webm: 'video/webm',
-    ogv: 'video/ogg',
-    mp3: 'audio/mpeg',
-    m4a: 'audio/x-m4a',
-    ogg: 'audio/ogg',
-    wav: 'audio/wav',
-    flac: 'audio/flac',
-  };
-  return map[ext] ?? 'application/octet-stream';
-}
 
 /**
  * Triggers a browser download for the given URL or Blob.
  *
- * On iOS Safari the `download` attribute is ignored, so we fall back to the
- * Web Share API which opens the native share sheet and lets users save to the
- * Files app.  The share path requires a transient user activation (i.e. a
- * click); auto-downloads triggered after task completion will silently fall
- * through to the anchor method.
+ * On iOS Safari the `download` attribute is ignored and the Web Share API
+ * share-sheet does not give direct access to the Photos app.  Instead we open
+ * the media URL in a new Safari tab: the native player surfaces a
+ * "Save to Camera Roll" option via long-press or the system share button.
+ * This path requires a transient user activation (i.e. a click); popup-blocked
+ * auto-downloads silently fall through to the anchor method.
  */
 export async function triggerBrowserDownload(
   urlOrBlob: string | Blob,
   filename: string,
 ): Promise<void> {
-  if (isIOS() && navigator.canShare) {
-    try {
-      const blob =
-        urlOrBlob instanceof Blob
-          ? urlOrBlob
-          : await fetch(urlOrBlob).then((r) => r.blob());
-      const type = blob.type || getMimeType(filename);
-      const file = new File([blob], filename, { type });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: filename });
-        return;
-      }
-    } catch {
-      // No transient activation (auto-download) or share cancelled — fall through.
+  if (isIOS()) {
+    if (urlOrBlob instanceof Blob) {
+      const objectUrl = URL.createObjectURL(urlOrBlob);
+      window.open(objectUrl, '_blank');
+      // Keep the object URL alive long enough for Safari to open the new tab.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } else {
+      window.open(resolveMediaUrl(urlOrBlob), '_blank');
     }
+    return;
   }
 
   const url =
@@ -332,6 +314,7 @@ export function VideoMediaPreview({
         loop
         playsInline
         preload="metadata"
+        poster={isIOS() && thumbnailSrc ? thumbnailSrc : undefined}
         controls
       />
     </Box>
@@ -465,7 +448,7 @@ export function VideoActions({
           title={t('redownload')}
         >
           <Icon
-            icon="/icons/download.svg"
+            icon={isIOS() ? '/icons/safari.svg' : '/icons/download.svg'}
             size={15}
             color="var(--foreground, #171717)"
           />

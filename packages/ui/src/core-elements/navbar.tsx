@@ -4,7 +4,12 @@ import React, { useState, useEffect, useRef, CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { UIComponentProps, buildStyleProps, MenuItem } from './utils';
+import {
+  UIComponentProps,
+  buildStyleProps,
+  MenuItem,
+  BREAKPOINTS,
+} from './utils';
 import { Container } from './container';
 import { Icon } from './icon';
 import { TextInput } from './text-input';
@@ -82,6 +87,11 @@ function useScrollDirection(threshold = 5): 'up' | 'down' | null {
 
   useEffect(() => {
     const handleScroll = () => {
+      // Disable hide-on-scroll at sm breakpoint (600px) and above
+      if (window.innerWidth >= BREAKPOINTS.sm) {
+        setDirection(null);
+        return;
+      }
       const currentY = window.scrollY;
       if (
         Math.abs(currentY - lastScrollY.current) < threshold ||
@@ -122,7 +132,9 @@ const NavbarItem: React.FC<{
 
   return (
     <Tag className="ui-navbar-item" onClick={handleClick} {...linkProps}>
-      {item.icon && <Icon icon={item.icon} size="18px" className="ui-navbar-item-icon" />}
+      {item.icon && (
+        <Icon icon={item.icon} size="18px" className="ui-navbar-item-icon" />
+      )}
       {item.label}
       {hasChildren && (
         <Icon
@@ -317,6 +329,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
   const [computedLogoWidth, setComputedLogoWidth] = useState(logoWidth);
   const scrollDirection = useScrollDirection();
   const navRef = useRef<HTMLElement>(null);
+  const activeDropdownWrapperRef = useRef<HTMLDivElement | null>(null);
 
   // Calculate logo width from aspect ratio to preserve proportions
   useEffect(() => {
@@ -336,11 +349,14 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     };
   }, [logo, logoHeight, logoWidth]);
 
-  // Close dropdown on outside click
+  // Close dropdown when clicking outside the active dropdown wrapper
   useEffect(() => {
     if (!activeDropdown) return;
     const handler = (e: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+      if (
+        activeDropdownWrapperRef.current &&
+        !activeDropdownWrapperRef.current.contains(e.target as Node)
+      ) {
         setActiveDropdown(null);
       }
     };
@@ -386,15 +402,20 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
       <div className="ui-navbar-menu">
         {items.map((item) => {
           const hasChildren = item.children && item.children.length > 0;
+          const isOpen = activeDropdown === item.label;
           return (
-            <div key={item.label} className="ui-navbar-menu-item-wrapper">
+            <div
+              key={item.label}
+              className="ui-navbar-menu-item-wrapper"
+              ref={isOpen ? activeDropdownWrapperRef : undefined}
+            >
               <NavbarItem
                 item={item}
                 onToggleDropdown={hasChildren ? setActiveDropdown : undefined}
-                isDropdownOpen={activeDropdown === item.label}
+                isDropdownOpen={isOpen}
                 chevronIcon={chevronIcon}
               />
-              {hasChildren && activeDropdown === item.label && (
+              {hasChildren && isOpen && (
                 <DropdownPanel
                   items={item.children!}
                   onClose={() => setActiveDropdown(null)}
@@ -410,15 +431,20 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         <div className="ui-navbar-fixed">
           {fixedItems.map((item) => {
             const hasChildren = item.children && item.children.length > 0;
+            const isOpen = activeDropdown === item.label;
             return (
-              <div key={item.label} className="ui-navbar-menu-item-wrapper">
+              <div
+                key={item.label}
+                className="ui-navbar-menu-item-wrapper"
+                ref={isOpen ? activeDropdownWrapperRef : undefined}
+              >
                 <NavbarItem
                   item={item}
                   onToggleDropdown={hasChildren ? setActiveDropdown : undefined}
-                  isDropdownOpen={activeDropdown === item.label}
+                  isDropdownOpen={isOpen}
                   chevronIcon={chevronIcon}
                 />
-                {hasChildren && activeDropdown === item.label && (
+                {hasChildren && isOpen && (
                   <DropdownPanel
                     items={item.children!}
                     onClose={() => setActiveDropdown(null)}
@@ -488,13 +514,17 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
  * page content below the fixed navbar.  Use it on any page that does not
  * start with a full-width `<Hero>` section.
  */
-export const NavbarSpacer: React.FC = () => <div className="ui-navbar-spacer" />;
+export const NavbarSpacer: React.FC = () => (
+  <div className="ui-navbar-spacer" />
+);
 
 /**
  * PageBottomSpacer — a `div` with `height: var(--ui-page-bottom-spacing)`
  * (default 64 px) that adds breathing room at the bottom of page content.
  * Place it as the last element inside the page's root fragment.
  */
-export const PageBottomSpacer: React.FC = () => <div className="ui-page-bottom-spacer" />;
+export const PageBottomSpacer: React.FC = () => (
+  <div className="ui-page-bottom-spacer" />
+);
 
 export default Navbar;

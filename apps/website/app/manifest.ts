@@ -14,12 +14,20 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
       purpose: 'any',
     });
   }
+  if (system?.img_manifest_192) {
+    icons.push({
+      src: system.img_manifest_192,
+      sizes: '192x192',
+      type: 'image/png',
+      purpose: 'maskable',
+    });
+  }
   if (system?.img_manifest_256) {
     icons.push({
       src: system.img_manifest_256,
       sizes: '256x256',
       type: 'image/png',
-      purpose: 'any',
+      purpose: 'maskable',
     });
   }
   if (system?.img_manifest_512) {
@@ -72,7 +80,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   return {
     name: system?.site_name ?? 'Website',
     short_name: system?.site_name ?? 'Website',
-    description: 'Website application',
+    description: system?.site_description ?? 'Website application',
     start_url: '/',
     display: 'standalone',
     background_color: '#000000',

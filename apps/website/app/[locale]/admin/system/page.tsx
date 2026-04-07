@@ -22,6 +22,7 @@ const LOGO_DERIVED_FIELDS = [
   'img_manifest_1080',
   'img_manifest_512',
   'img_manifest_256',
+  'img_manifest_192',
   'img_manifest_128',
 ] as const;
 
@@ -83,6 +84,7 @@ export default function AdminSystemPage() {
     img_manifest_1080: { existing: [], pending: [] },
     img_manifest_512: { existing: [], pending: [] },
     img_manifest_256: { existing: [], pending: [] },
+    img_manifest_192: { existing: [], pending: [] },
     img_manifest_128: { existing: [], pending: [] },
   });
 
@@ -147,6 +149,7 @@ export default function AdminSystemPage() {
           'img_manifest_1080',
           'img_manifest_512',
           'img_manifest_256',
+          'img_manifest_192',
           'img_manifest_128',
         ] as const;
         setImages((prev) => {
@@ -189,7 +192,11 @@ export default function AdminSystemPage() {
           const dataUrl = assets[field];
           const ext = field === 'img_favicon' ? 'ico' : 'png';
           const file = await dataUrlToFile(dataUrl, `${field}.${ext}`);
-          const newImage: NewImage = { base64: dataUrl, preview: dataUrl, file };
+          const newImage: NewImage = {
+            base64: dataUrl,
+            preview: dataUrl,
+            file,
+          };
           return { field, dataUrl, newImage };
         }),
       );
@@ -246,8 +253,16 @@ export default function AdminSystemPage() {
 
   const fields: FieldDef[] = [
     { key: 'site_name', label: t('siteName') ?? 'Site Name', required: true },
-    { key: 'site_description', label: t('siteDescription') ?? 'Site Description (ES)', type: 'textarea' },
-    { key: 'en_site_description', label: t('enSiteDescription') ?? 'Site Description (EN)', type: 'textarea' },
+    {
+      key: 'site_description',
+      label: t('siteDescription') ?? 'Site Description (ES)',
+      type: 'textarea',
+    },
+    {
+      key: 'en_site_description',
+      label: t('enSiteDescription') ?? 'Site Description (EN)',
+      type: 'textarea',
+    },
     { key: 'host', label: t('host') ?? 'Host', required: true },
     { key: 'slogan', label: t('slogan') ?? 'Slogan' },
     {
@@ -324,6 +339,7 @@ export default function AdminSystemPage() {
     img_manifest_1080: 'Manifest 1080×',
     img_manifest_512: 'Manifest 512×',
     img_manifest_256: 'Manifest 256×',
+    img_manifest_192: 'Manifest 192×',
     img_manifest_128: 'Manifest 128×',
   };
 
@@ -340,7 +356,13 @@ export default function AdminSystemPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: t('home'), href: '/' }, { label: t('breadcrumbAdmin'), href: '/admin' }, { label: t('system') }]} />
+      <Breadcrumbs
+        items={[
+          { label: t('home'), href: '/' },
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('system') },
+        ]}
+      />
       <AdminForm
         title={t('system')}
         hideCancel
@@ -372,7 +394,9 @@ export default function AdminSystemPage() {
         <GradientBuilder
           label={t('catalogBg')}
           value={String(values.catalog_items_bg ?? '')}
-          onChange={(v) => setValues((prev) => ({ ...prev, catalog_items_bg: v }))}
+          onChange={(v) =>
+            setValues((prev) => ({ ...prev, catalog_items_bg: v }))
+          }
           labels={{
             linear: tGb('linear'),
             radial: tGb('radial'),
@@ -392,7 +416,9 @@ export default function AdminSystemPage() {
               {IMAGE_LABELS[field] ?? field}
             </Typography>
             <AdminImageUploader
-              key={isDerivedField(field) ? `${field}-${derivedImageKey}` : field}
+              key={
+                isDerivedField(field) ? `${field}-${derivedImageKey}` : field
+              }
               existingImages={state.existing}
               onChange={(newImages, _deletedIds, orderedExistingIds) =>
                 setImages((prev) => ({
