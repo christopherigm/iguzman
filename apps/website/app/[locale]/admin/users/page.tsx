@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { AdminEntityList, type Column } from '@/components/admin/admin-entity-list';
+import {
+  AdminEntityList,
+  type Column,
+} from '@/components/admin/admin-entity-list';
 import { listAdminUsers } from '@/lib/admin-api';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
@@ -14,13 +17,20 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { setItems(await listAdminUsers()); }
-    catch { setError(t('errorLoad')); }
-    finally { setLoading(false); }
+    setLoading(true);
+    setError(null);
+    try {
+      setItems(await listAdminUsers());
+    } catch {
+      setError(t('errorLoad'));
+    } finally {
+      setLoading(false);
+    }
   }, [t]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const columns: Column[] = [
     { key: 'profile_picture', label: 'Avatar' },
@@ -31,15 +41,19 @@ export default function AdminUsersPage() {
         if (!v) return '—';
         const str = String(v);
         const [local, domain] = str.split('@');
-        const short = local.length > 10 ? `${local.slice(0, 10)}…` : local;
-        return <span title={str}>{short}@{domain}</span>;
+        const short = local && local.length > 10 ? `${local.slice(0, 10)}…` : (local ?? '');
+        return (
+          <span title={str}>
+            {short}@{domain}
+          </span>
+        );
       },
     },
     { key: 'first_name', label: t('firstName') ?? 'First Name' },
     {
       key: 'last_name',
       label: t('lastName') ?? 'Last Name',
-      render: (v) => v ? `${String(v).charAt(0).toUpperCase()}.` : '—',
+      render: (v) => (v ? `${String(v).charAt(0).toUpperCase()}.` : '—'),
     },
     {
       key: 'is_active',
@@ -59,12 +73,22 @@ export default function AdminUsersPage() {
         </Badge>
       ),
     },
-    { key: 'date_joined', label: t('createdAt'), render: (v) => v ? new Date(String(v)).toLocaleDateString() : '—' },
+    {
+      key: 'date_joined',
+      label: t('createdAt'),
+      render: (v) => (v ? new Date(String(v)).toLocaleDateString() : '—'),
+    },
   ];
 
   return (
     <>
-      <Breadcrumbs items={[{ label: t('home'), href: '/' }, { label: t('breadcrumbAdmin'), href: '/admin' }, { label: t('users') }]} />
+      <Breadcrumbs
+        items={[
+          { label: t('home'), href: '/' },
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('users') },
+        ]}
+      />
       <AdminEntityList
         title={t('users')}
         items={items}

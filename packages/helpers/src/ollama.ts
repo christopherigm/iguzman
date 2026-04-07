@@ -204,6 +204,10 @@ const DEFAULT_TIMEOUT_MS = 600_000;
 
 /** Available model presets. */
 export const models: OllamaModelRegistry = {
+  gemma4: {
+    host: ollamaServerURL,
+    name: 'gemma4:latest',
+  },
   gemma3: {
     host: ollamaServerURL,
     name: 'gemma3:latest',
@@ -243,8 +247,8 @@ const ollamaGenerate = async (
   options: OllamaGenerateOptions,
 ): Promise<OllamaGenerateResponse> => {
   const {
-    host = models.gemma3?.host ?? '',
-    model = models.gemma3?.name ?? '',
+    host = models.gemma4?.host ?? '',
+    model = models.gemma4?.name ?? '',
     prompt,
     system = '',
     format,

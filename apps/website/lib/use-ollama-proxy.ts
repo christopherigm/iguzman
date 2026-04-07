@@ -9,6 +9,7 @@ export type { LlmMessage };
 const PROXY_BASE = '/api/ollama';
 
 const PREFERRED_MODELS = [
+  'gemma4:latest',
   'gemma3:latest',
   'llama3.2:latest',
   'llama3.1:latest',
@@ -71,7 +72,8 @@ export function useOllamaProxy(
 
   const generate = useCallback(
     async (messages: LlmMessage[]): Promise<string> => {
-      if (isGenerating) throw new Error('Already generating — call abort() first');
+      if (isGenerating)
+        throw new Error('Already generating — call abort() first');
 
       setError(null);
       setStreamingText('');
@@ -98,7 +100,8 @@ export function useOllamaProxy(
           signal: controller.signal,
         });
 
-        if (!res.ok) throw new Error(`Ollama proxy: ${res.status} ${res.statusText}`);
+        if (!res.ok)
+          throw new Error(`Ollama proxy: ${res.status} ${res.statusText}`);
         if (!res.body) throw new Error('Ollama proxy: empty response body');
 
         const reader = res.body.getReader();
@@ -162,5 +165,13 @@ export function useOllamaProxy(
     setStreamingText('');
   }, []);
 
-  return { streamingText, isGenerating, error, selectedModel, generate, abort, reset };
+  return {
+    streamingText,
+    isGenerating,
+    error,
+    selectedModel,
+    generate,
+    abort,
+    reset,
+  };
 }
