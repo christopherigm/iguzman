@@ -46,7 +46,7 @@ export async function Footer({ system }: Props) {
 
   return (
     <footer className="footer">
-      <Container paddingX={24}>
+      <Container paddingX={10}>
         <Grid container spacing={4}>
           {/* Column 1 – Brand */}
           <Grid size={{ xs: 12, sm: 4 }}>
@@ -79,7 +79,12 @@ export async function Footer({ system }: Props) {
                   {description}
                 </Typography>
               )}
-              <Box display="flex" alignItems="center" gap="12px" flexWrap="wrap">
+              <Box
+                display="flex"
+                alignItems="center"
+                gap="12px"
+                flexWrap="wrap"
+              >
                 <ThemeSwitch />
                 <LocaleSwitcher
                   locales={routing.locales}

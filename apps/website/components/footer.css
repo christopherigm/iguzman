@@ -13,11 +13,17 @@
 .footer__slogan {
   font-style: italic;
   color: color-mix(in srgb, var(--foreground) 80%, transparent);
+  overflow-wrap: break-word;
 }
 
 .footer__description {
   color: color-mix(in srgb, var(--foreground) 60%, transparent);
   line-height: 1.6;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .footer__col-heading {

@@ -1,9 +1,11 @@
 /* ===== Container ===== */
 .ui-grid-container {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--ui-grid-spacing-y, 0px) var(--ui-grid-spacing-x, 0px);
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* ===== Item ===== */

@@ -21,6 +21,10 @@ const PREFERRED_MODELS = [
 
 export interface UseOllamaProxyOptions {
   temperature?: number;
+  /** Random seed for generation. Defaults to a random integer each call. */
+  seed?: number;
+  /** When true, the proxy fetches live Tavily web-search results and injects them before calling the model. */
+  webSearch?: boolean;
 }
 
 export interface UseOllamaProxyReturn {
@@ -36,7 +40,7 @@ export interface UseOllamaProxyReturn {
 export function useOllamaProxy(
   options: UseOllamaProxyOptions = {},
 ): UseOllamaProxyReturn {
-  const { temperature } = options;
+  const { temperature, seed: seedOption, webSearch = false } = options;
 
   const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -84,6 +88,7 @@ export function useOllamaProxy(
 
       try {
         const model = await resolveModel();
+        const seed = seedOption ?? Math.floor(Math.random() * 9999) + 1;
 
         const res = await fetch(`${PROXY_BASE}/api/chat`, {
           method: 'POST',
@@ -95,7 +100,12 @@ export function useOllamaProxy(
             model,
             messages,
             stream: true,
-            ...(temperature !== undefined ? { options: { temperature } } : {}),
+            keep_alive: -1,
+            ...(webSearch ? { webSearch: true } : {}),
+            options: {
+              seed,
+              ...(temperature !== undefined ? { temperature } : {}),
+            },
           }),
           signal: controller.signal,
         });
@@ -151,7 +161,14 @@ export function useOllamaProxy(
         abortControllerRef.current = null;
       }
     },
-    [isGenerating, resolveModel, authHeaders, temperature],
+    [
+      isGenerating,
+      resolveModel,
+      authHeaders,
+      temperature,
+      seedOption,
+      webSearch,
+    ],
   );
 
   const abort = useCallback((): void => {
