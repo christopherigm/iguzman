@@ -1,0 +1,49 @@
+.footer {
+  width: 100%;
+  background: var(--background);
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  padding-top: 56px;
+}
+
+.footer__logo {
+  object-fit: contain;
+  object-position: left center;
+}
+
+.footer__slogan {
+  font-style: italic;
+  color: color-mix(in srgb, var(--foreground) 80%, transparent);
+}
+
+.footer__description {
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  line-height: 1.6;
+}
+
+.footer__col-heading {
+  margin-bottom: 20px;
+}
+
+.footer__link {
+  font-size: 14px;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  width: fit-content;
+}
+
+.footer__link:hover {
+  color: var(--accent);
+}
+
+.footer__bottom {
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  padding: 20px 0;
+  margin-top: 40px;
+}
+
+@media (max-width: 599px) { /* below sm */
+  .footer {
+    padding-top: 40px;
+  }
+}

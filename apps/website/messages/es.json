@@ -340,6 +340,21 @@
     "loading": "Cargando…",
     "notLoggedIn": "Debes iniciar sesión para ver esta página."
   },
+  "Footer": {
+    "navigationHeading": "Navegación",
+    "companyHeading": "Empresa",
+    "home": "Inicio",
+    "products": "Productos",
+    "services": "Servicios",
+    "blog": "Blog",
+    "successStories": "Casos de éxito",
+    "about": "Acerca de",
+    "careers": "Empleo",
+    "privacyPolicy": "Política de privacidad",
+    "terms": "Términos y condiciones",
+    "userData": "Política de datos",
+    "copyright": "© {year} {name}. Todos los derechos reservados."
+  },
   "AdminImageUploader": {
     "dropzoneLabel": "Subir imágenes",
     "dropzoneText": "Arrastra imágenes aquí o haz clic para subir",

@@ -340,6 +340,21 @@
     "loading": "Loading…",
     "notLoggedIn": "You must be signed in to view this page."
   },
+  "Footer": {
+    "navigationHeading": "Navigation",
+    "companyHeading": "Company",
+    "home": "Home",
+    "products": "Products",
+    "services": "Services",
+    "blog": "Blog",
+    "successStories": "Success Stories",
+    "about": "About Us",
+    "careers": "Careers",
+    "privacyPolicy": "Privacy Policy",
+    "terms": "Terms & Conditions",
+    "userData": "User Data Policy",
+    "copyright": "© {year} {name}. All rights reserved."
+  },
   "AdminImageUploader": {
     "dropzoneLabel": "Upload images",
     "dropzoneText": "Drop images here or click to upload",

@@ -12,6 +12,8 @@ import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
 import { NavbarClient } from './navbar-client';
+import { Footer } from '@/components/footer';
+import { FooterVisibility } from '@/components/footer-visibility';
 import packageJson from '@/package.json';
 import { getSystem } from '@/lib/system';
 import '../globals.css';
@@ -102,6 +104,9 @@ export default async function LocaleLayout({ children, params }: Props) {
               serviceCount={system?.service_count ?? 0}
             />
             {children}
+            <FooterVisibility>
+              <Footer system={system} />
+            </FooterVisibility>
           </PaletteProvider>
         </ThemeProvider>
       </NextIntlClientProvider>
