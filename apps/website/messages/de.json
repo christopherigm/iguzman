@@ -291,7 +291,10 @@
     "logoAssetsModalTitle": "Assets aus Logo generieren?",
     "logoAssetsModalText": "Möchten Sie Favicon und Manifest-Icons (1080×, 512×, 256×, 192×, 128×) automatisch aus dem hochgeladenen Logo erstellen?",
     "generatingAssets": "Assets werden generiert…",
-    "errorGenerateAssets": "Assets konnten nicht aus dem Logo generiert werden."
+    "errorGenerateAssets": "Assets konnten nicht aus dem Logo generiert werden.",
+    "aiProvider": "KI-Anbieter",
+    "groqProvider": "Groq",
+    "ollamaProvider": "Ollama"
   },
   "GradientBuilder": {
     "linear": "Linear",

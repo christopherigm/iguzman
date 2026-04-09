@@ -11,12 +11,16 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import './admin-sidebar.css';
 import { ADMIN_NAV_ITEMS } from './admin-nav-items';
 
+export const ADMIN_AI_PROVIDER_KEY = 'admin-ai-provider';
+export type AdminAiProvider = 'groq' | 'ollama';
+
 export function AdminSidebar() {
   const t = useTranslations('Admin');
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [aiProvider, setAiProvider] = useState<AdminAiProvider>('groq');
 
   useEffect(() => {
     const token = getAccessToken();
@@ -29,6 +33,21 @@ export function AdminSidebar() {
     }
   }, [router]);
 
+  useEffect(() => {
+    const stored = localStorage.getItem(
+      ADMIN_AI_PROVIDER_KEY,
+    ) as AdminAiProvider | null;
+    if (stored === 'ollama' || stored === 'groq') setAiProvider(stored);
+  }, []);
+
+  const handleProviderChange = (provider: AdminAiProvider) => {
+    setAiProvider(provider);
+    localStorage.setItem(ADMIN_AI_PROVIDER_KEY, provider);
+    window.dispatchEvent(
+      new CustomEvent('admin-ai-provider-change', { detail: provider }),
+    );
+  };
+
   if (authorized === null) return null; // loading
   if (!authorized) return null;
   if (pathname === '/admin') return null;
@@ -40,20 +59,35 @@ export function AdminSidebar() {
       <Button
         unstyled
         className="admin-sidebar__toggle"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
         aria-label={t('toggleSidebar')}
         aria-expanded={open}
       >
         <span className="admin-sidebar__toggle-icon">{open ? '✕' : '☰'}</span>
-        <Typography as="span" variant="body-sm" className="admin-sidebar__toggle-label">{t('menu')}</Typography>
+        <Typography
+          as="span"
+          variant="body-sm"
+          className="admin-sidebar__toggle-label"
+        >
+          {t('menu')}
+        </Typography>
       </Button>
 
-      <nav className={`admin-sidebar ${open ? 'admin-sidebar--open' : ''}`} aria-label={t('navigation')}>
+      <nav
+        className={`admin-sidebar ${open ? 'admin-sidebar--open' : ''}`}
+        aria-label={t('navigation')}
+      >
         <Box className="admin-sidebar__header">
-          <Typography as="span" variant="label" className="admin-sidebar__title">{t('title')}</Typography>
+          <Typography
+            as="span"
+            variant="label"
+            className="admin-sidebar__title"
+          >
+            {t('title')}
+          </Typography>
         </Box>
         <ul className="admin-sidebar__list">
-          {ADMIN_NAV_ITEMS.map(item => {
+          {ADMIN_NAV_ITEMS.map((item) => {
             const active = pathname.startsWith(item.href);
             return (
               <li key={item.key} className="admin-sidebar__item">
@@ -63,16 +97,54 @@ export function AdminSidebar() {
                   className={`admin-sidebar__link${active ? ' admin-sidebar__link--active' : ''}`}
                   onClick={() => setOpen(false)}
                 >
-                  <span className="admin-sidebar__icon" aria-hidden="true">{item.icon}</span>
-                  <Typography as="span" variant="body-sm" className="admin-sidebar__label">{t(item.key)}</Typography>
+                  <span className="admin-sidebar__icon" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <Typography
+                    as="span"
+                    variant="body-sm"
+                    className="admin-sidebar__label"
+                  >
+                    {t(item.key)}
+                  </Typography>
                 </Link>
               </li>
             );
           })}
         </ul>
+
+        <div className="admin-sidebar__provider">
+          <div className="admin-sidebar__provider-label">{t('aiProvider')}</div>
+          <div className="admin-sidebar__provider-buttons">
+            {(['groq', 'ollama'] as AdminAiProvider[]).map((provider) => {
+              const active = aiProvider === provider;
+              return (
+                <Button
+                  key={provider}
+                  flex="1"
+                  backgroundColor={active ? 'var(--accent)' : 'transparent'}
+                  color={
+                    active
+                      ? 'var(--accent-foreground, #fff)'
+                      : 'var(--foreground, #171717)'
+                  }
+                  onClick={() => handleProviderChange(provider)}
+                  aria-pressed={active}
+                >
+                  {t(`${provider}Provider`)}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
       </nav>
 
-      {open && <Box className="admin-sidebar__overlay" onClick={() => setOpen(false)} />}
+      {open && (
+        <Box
+          className="admin-sidebar__overlay"
+          onClick={() => setOpen(false)}
+        />
+      )}
     </>
   );
 }

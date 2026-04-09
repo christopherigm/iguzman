@@ -12,8 +12,10 @@ import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Toast } from '@repo/ui/core-elements/toast';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
-import { useOllamaProxy } from '@/lib/use-ollama-proxy';
-import type { LlmMessage } from '@/lib/use-ollama-proxy';
+import { getAccessToken } from '@/lib/auth';
+import { useOllamaProxy, type LlmMessage } from '@repo/ui/use-ollama';
+import { useGroqProxy } from '@repo/ui/use-groq';
+import { ADMIN_AI_PROVIDER_KEY, type AdminAiProvider } from '@/app/[locale]/admin/admin-sidebar';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Slider } from '@repo/ui/core-elements/slider';
 
@@ -221,14 +223,37 @@ export function AdminForm({
   const t = useTranslations('Admin');
   const router = useRouter();
 
-  // ── LLM (Ollama) ─────────────────────────────────────────────────────────
+  // ── AI provider (read from sidebar localStorage selection) ───────────────
+  const [aiProvider, setAiProvider] = useState<AdminAiProvider>('groq');
+
+  useEffect(() => {
+    const stored = localStorage.getItem(ADMIN_AI_PROVIDER_KEY) as AdminAiProvider | null;
+    if (stored === 'ollama' || stored === 'groq') setAiProvider(stored);
+
+    const handler = (e: Event) => {
+      const provider = (e as CustomEvent<AdminAiProvider>).detail;
+      if (provider === 'ollama' || provider === 'groq') setAiProvider(provider);
+    };
+    window.addEventListener('admin-ai-provider-change', handler);
+    return () => window.removeEventListener('admin-ai-provider-change', handler);
+  }, []);
+
+  // ── LLM hooks (both must be called unconditionally) ───────────────────────
+  const getAuthHeaders = useCallback((): Record<string, string> => {
+    const token = getAccessToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, []);
+
+  const ollamaHook = useOllamaProxy({ temperature: 0.7, getAuthHeaders });
+  const groqHook = useGroqProxy({ temperature: 0.7, getAuthHeaders });
+
   const {
     streamingText,
     isGenerating,
     generate,
     abort,
     reset: resetLlm,
-  } = useOllamaProxy({ temperature: 0.7 });
+  } = aiProvider === 'ollama' ? ollamaHook : groqHook;
 
   // Tracks which operation ('enhance' | 'translate') is currently streaming.
   const activeOperationRef = useRef<'enhance' | 'translate' | null>(null);

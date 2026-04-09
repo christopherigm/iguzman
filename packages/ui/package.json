@@ -7,7 +7,9 @@
     "./palettes": "./src/palettes.ts",
     "./use-ffmpeg": "./src/use-ffmpeg.ts",
     "./use-speech-to-text": "./src/use-speech-to-text.ts",
-    "./use-text-to-speech": "./src/use-text-to-speech.ts"
+    "./use-text-to-speech": "./src/use-text-to-speech.ts",
+    "./use-groq": "./src/use-groq.ts",
+    "./use-ollama": "./src/use-ollama.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

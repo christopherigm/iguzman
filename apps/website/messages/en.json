@@ -291,7 +291,10 @@
     "logoAssetsModalTitle": "Generate assets from logo?",
     "logoAssetsModalText": "Would you like to automatically generate the favicon and manifest icons (1080×, 512×, 256×, 192×, 128×) from the uploaded logo?",
     "generatingAssets": "Generating assets…",
-    "errorGenerateAssets": "Failed to generate assets from logo."
+    "errorGenerateAssets": "Failed to generate assets from logo.",
+    "aiProvider": "AI Provider",
+    "groqProvider": "Groq",
+    "ollamaProvider": "Ollama"
   },
   "GradientBuilder": {
     "linear": "Linear",
