@@ -1,0 +1,28 @@
+──────────────────────────────────────────────────────────────
+  {{ include "scraper.fullname" . }} has been deployed!
+──────────────────────────────────────────────────────────────
+
+{{- if .Values.ingress.enabled }}
+The scraper API is accessible at:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else }}
+
+To access the API locally, run:
+
+  kubectl port-forward svc/{{ include "scraper.fullname" . }} 4000:{{ .Values.service.port }}
+
+Then use http://localhost:4000 as the base URL.
+{{- end }}
+
+Replicas : {{ .Values.replicaCount }}
+Image    : {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+
+Available endpoints:
+  POST /search   – run a web search (DuckDuckGo or Bing)
+  POST /extract  – extract readable text from a URL
+  GET  /health   – health check (no auth required)
+
+All requests (except /health) require the header:
+  X-API-Key: <your-api-key>

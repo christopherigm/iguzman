@@ -1,0 +1,27 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Local env files
+.env
+.env.local
+
+# Turbo
+.turbo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Editor
+.DS_Store
+.vscode
+.idea
+
+# Playwright state
+playwright-report/
+test-results/

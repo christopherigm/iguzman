@@ -1,0 +1,96 @@
+# ─────────────────────────────────────────────────────────────
+# Scraper Microservice – Helm Values
+# ─────────────────────────────────────────────────────────────
+
+# -- Number of old ReplicaSets to keep for rollbacks (default: 2)
+revisionHistoryLimit: 2
+
+# -- Number of pod replicas (keep at 1 – shared Playwright browser instance)
+replicaCount: 1
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: christopherguzman/scraper # registry/image (no tag)
+  tag: 'latest' # overrides Chart.appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+# - name: my-registry-secret
+
+# ─── Name overrides ─────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80       # port exposed by the Service
+  targetPort: 4000 # port the container listens on
+
+# ─── Ingress ────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: scraper.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: scraper-tls
+      hosts:
+        - scraper.iguzman.com.mx
+
+# ─── Environment variables ──────────────────────────────────
+# Plain (non-sensitive) environment variables.
+env:
+  NODE_ENV: 'production'
+  PORT: '4000'
+  LOG_LEVEL: 'info'
+
+# Sensitive values – reference existing Kubernetes Secrets.
+# Create the secret first (see README), then uncomment below.
+envFromSecret:
+  - name: SCRAPER_API_KEY
+    secretName: scraper-secrets
+    secretKey: api-key
+
+# ─── Health probes (HTTP against /health endpoint) ──────────
+probes:
+  startupProbe:
+    httpGet:
+      path: /health
+      port: 4000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 12 # allow up to ~60 s for Chromium first launch
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 4000
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    failureThreshold: 3
+
+# ─── Node affinity (schedule on specific nodes) ─────────────
+# nodeAffinity:
+#   enabled: false
+#   nodeNames: []
+  # - node-1
+nodeAffinity:
+  enabled: true
+  nodeNames:
+    - node6
+
+# ─── Resources ──────────────────────────────────────────────
+# Playwright + Chromium is memory-hungry; 1 Gi is a safe floor.
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 2Gi
