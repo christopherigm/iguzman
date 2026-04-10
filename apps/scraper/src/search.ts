@@ -8,6 +8,7 @@ export interface SearchResult {
   url: string;
   snippet: string;
   thumbnail?: string;
+  og_image?: string | null;
 }
 
 export interface SearchOptions {
@@ -68,10 +69,13 @@ async function searchDuckDuckGo(
           // leave url as-is
         }
 
+        const imgEl = item.querySelector<HTMLImageElement>('img.result__image, .result__image img');
+
         return {
           title: anchor?.textContent?.trim() ?? '',
           url,
           snippet: snippetEl?.textContent?.trim() ?? '',
+          og_image: imgEl?.src || imgEl?.getAttribute('data-src') || null,
         };
       })
       .filter((r) => r.title && r.url);
@@ -131,11 +135,14 @@ async function searchBing(
           '.b_thumb img, .b_imageCap img',
         );
 
+        const thumbnail = thumbEl?.src || thumbEl?.getAttribute('data-src') || undefined;
+
         return {
           title: anchor?.textContent?.trim() ?? '',
           url: anchor?.getAttribute('href') ?? '',
           snippet: snippetEl?.textContent?.trim() ?? '',
-          thumbnail: thumbEl?.src || thumbEl?.getAttribute('data-src') || undefined,
+          thumbnail,
+          og_image: thumbnail ?? null,
         };
       })
       .filter((r) => r.title && r.url);
