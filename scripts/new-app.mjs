@@ -1392,8 +1392,8 @@ async function main() {
   writeFile(appPath('app/globals.css'), globalsCss());
   writeFile(appPath('css.d.ts'), cssDts());
 
-  // Create empty public directory
-  mkdirSync(appPath('public'), { recursive: true });
+  // Create public directory structure
+  writeFile(appPath('public/icons/.gitkeep'), '');
 
   if (includeI18n) {
     // i18n variant: files go under app/[locale]/
