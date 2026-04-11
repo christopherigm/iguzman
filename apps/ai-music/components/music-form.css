@@ -1,0 +1,51 @@
+/* Only things Box props cannot express: pseudo-classes, transitions, transforms */
+
+/* ── Option cards ──────────────────────────────────────────────────── */
+.music-form__option-card {
+  transition: border-color 0.15s, background-color 0.15s;
+  cursor: pointer;
+}
+
+.music-form__option-card:hover {
+  border-color: var(--accent) !important;
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent) !important;
+}
+
+/* ── Lyric mode buttons ────────────────────────────────────────────── */
+.music-form__lyric-btn {
+  transition: border-color 0.15s, background-color 0.15s;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.music-form__lyric-btn:hover {
+  border-color: var(--accent) !important;
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent) !important;
+}
+
+/* ── Dots ──────────────────────────────────────────────────────────── */
+.music-form__dot {
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.music-form__dot--active {
+  transform: scale(1.4);
+}
+
+/* ── Arrow buttons ─────────────────────────────────────────────────── */
+.music-form__arrow-btn {
+  transition: background-color 0.15s;
+  cursor: pointer;
+}
+
+.music-form__arrow-btn:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.music-form__arrow-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}

@@ -5,5 +5,30 @@
   },
   "HomePage": {
     "title": "Ai Music"
+  },
+  "AppPage": {
+    "type": {
+      "title": "Create your music",
+      "subtitle": "Choose the type of track you want to generate.",
+      "vocalLabel": "Song with Lyrics",
+      "instrumentalLabel": "Instrumental"
+    },
+    "lyrics": {
+      "title": "Your lyrics",
+      "subtitle": "Tell us about the lyrics for your song.",
+      "ownLyrics": "I have my lyrics",
+      "generateLyrics": "Help me write lyrics",
+      "lyricsLabel": "Enter your lyrics",
+      "promptLabel": "Describe your song idea"
+    },
+    "settings": {
+      "title": "Almost there",
+      "subtitle": "Fine-tune your track.",
+      "placeholder": "More options coming soon."
+    },
+    "nav": {
+      "back": "Previous step",
+      "next": "Next step"
+    }
   }
 }

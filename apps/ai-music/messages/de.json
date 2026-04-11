@@ -5,5 +5,30 @@
   },
   "HomePage": {
     "title": "Ai Music"
+  },
+  "AppPage": {
+    "type": {
+      "title": "Erstelle deine Musik",
+      "subtitle": "Wähle den Typ des Tracks, den du generieren möchtest.",
+      "vocalLabel": "Song mit Text",
+      "instrumentalLabel": "Instrumental"
+    },
+    "lyrics": {
+      "title": "Dein Songtext",
+      "subtitle": "Erzähl uns von den Lyrics deines Songs.",
+      "ownLyrics": "Ich habe meinen Songtext",
+      "generateLyrics": "Hilf mir, den Text zu schreiben",
+      "lyricsLabel": "Gib deinen Songtext ein",
+      "promptLabel": "Beschreibe deine Song-Idee"
+    },
+    "settings": {
+      "title": "Fast fertig",
+      "subtitle": "Verfeinere deinen Track.",
+      "placeholder": "Weitere Optionen folgen bald."
+    },
+    "nav": {
+      "back": "Vorheriger Schritt",
+      "next": "Nächster Schritt"
+    }
   }
 }

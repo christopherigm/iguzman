@@ -182,6 +182,22 @@ This keeps responsive behaviour consistent across every component and ensures a 
 - Name the CSS file after the component: `my-component.css` alongside `my-component.tsx`, then `import './my-component.css'` at the top of the component file.
 - `UIComponentProps` layout props (`padding`, `gap`, `width`, etc.) and the `styles` escape-hatch prop are the only acceptable inline styles — they are part of the `@repo/ui` design system contract.
 
+#### Component-props-first rule
+
+**Before writing any CSS, exhaust all props available on the `@repo/ui` component you are using.** Every component in `packages/ui/src/core-elements/` extends `UIComponentProps`, which covers the vast majority of layout, spacing, sizing, color, border, and shadow needs directly as props. Writing CSS for something a component prop already handles creates duplication and drift.
+
+| Reach for component props first | Fall back to CSS only when props cannot express it |
+|---|---|
+| Layout: `display`, `flexDirection`, `gap`, `alignItems`, `justifyContent`, `flex`, `flexWrap` | `:hover`, `:focus`, `:disabled`, `:active` pseudo-class overrides |
+| Sizing: `width`, `height`, `minWidth`, `maxWidth`, `minHeight`, `maxHeight` | `transition` and `animation` (smooth state changes) |
+| Spacing: `padding`, `margin`, `marginTop`, `marginBottom`, etc. | `transform` (e.g. `scale()` for active-state indicators) |
+| Borders: `border`, `borderRadius` | `@media` queries for breakpoint-specific overrides |
+| Color: `color`, `backgroundColor` | Pseudo-elements (`::before`, `::after`) and structural selectors |
+| Shadow / elevation: `elevation`, `shadow` | |
+| Typography: `fontWeight`, `textAlign`, `color` (on `Typography`) | |
+
+**Rule:** if a style value is static and does not depend on a CSS pseudo-class or media query, it belongs on the component prop — not in a CSS file. Dynamic values driven by React state (e.g. selected vs. unselected border color) should also go on the prop using a ternary, keeping CSS lean and free of duplicated property declarations.
+
 #### `globals.css` — shared utility classes
 
 Each Next.js app in `apps/` has its own `app/globals.css`, which is the single source of truth for styles that recur across more than one component within that app (headings, subtitles, shared card patterns, etc.).

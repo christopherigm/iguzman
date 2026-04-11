@@ -5,5 +5,30 @@
   },
   "HomePage": {
     "title": "Ai Music"
+  },
+  "AppPage": {
+    "type": {
+      "title": "Créez votre musique",
+      "subtitle": "Choisissez le type de piste que vous souhaitez générer.",
+      "vocalLabel": "Chanson avec paroles",
+      "instrumentalLabel": "Instrumental"
+    },
+    "lyrics": {
+      "title": "Vos paroles",
+      "subtitle": "Parlez-nous des paroles de votre chanson.",
+      "ownLyrics": "J'ai mes paroles",
+      "generateLyrics": "Aidez-moi à écrire les paroles",
+      "lyricsLabel": "Saisissez vos paroles",
+      "promptLabel": "Décrivez votre idée de chanson"
+    },
+    "settings": {
+      "title": "Presque terminé",
+      "subtitle": "Peaufinez votre piste.",
+      "placeholder": "Plus d'options bientôt disponibles."
+    },
+    "nav": {
+      "back": "Étape précédente",
+      "next": "Étape suivante"
+    }
   }
 }

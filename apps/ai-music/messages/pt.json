@@ -5,5 +5,30 @@
   },
   "HomePage": {
     "title": "Ai Music"
+  },
+  "AppPage": {
+    "type": {
+      "title": "Crie sua música",
+      "subtitle": "Escolha o tipo de faixa que deseja gerar.",
+      "vocalLabel": "Música com letra",
+      "instrumentalLabel": "Instrumental"
+    },
+    "lyrics": {
+      "title": "Sua letra",
+      "subtitle": "Conte-nos sobre a letra da sua música.",
+      "ownLyrics": "Tenho minha letra",
+      "generateLyrics": "Me ajude a escrever a letra",
+      "lyricsLabel": "Digite sua letra",
+      "promptLabel": "Descreva a ideia da sua música"
+    },
+    "settings": {
+      "title": "Quase lá",
+      "subtitle": "Ajuste sua faixa.",
+      "placeholder": "Mais opções em breve."
+    },
+    "nav": {
+      "back": "Etapa anterior",
+      "next": "Próxima etapa"
+    }
   }
 }
