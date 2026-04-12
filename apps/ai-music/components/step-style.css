@@ -1,0 +1,100 @@
+/* Only pseudo-classes, transitions, and transforms — layout is handled via Box props */
+
+/* ── Pill toggle buttons ──────────────────────────────────────────────────── */
+.step-style__pill {
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border, #e5e7eb);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--foreground);
+  background-color: transparent;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+
+.step-style__pill--selected {
+  border-color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.step-style__pill:hover:not(.step-style__pill--selected) {
+  border-color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* ── Remove button inside a voice pill ────────────────────────────────────── */
+.step-style__voice-remove {
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+  color: var(--foreground);
+  padding: 0;
+  transition: opacity 0.15s;
+}
+
+.step-style__voice-remove:hover {
+  opacity: 1;
+}
+
+/* ── "Add voice" dashed button ────────────────────────────────────────────── */
+.step-style__add-voice-btn {
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--border, #e5e7eb);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--muted-foreground, #6b7280);
+  background-color: transparent;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.step-style__add-voice-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Action buttons inside the voice-add inline form ─────────────────────── */
+.step-style__action-btn {
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    opacity 0.15s;
+}
+
+.step-style__action-btn--cancel {
+  border: 1.5px solid var(--border, #e5e7eb);
+  color: var(--muted-foreground, #6b7280);
+  background-color: transparent;
+}
+
+.step-style__action-btn--cancel:hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.step-style__action-btn--confirm {
+  border: 1.5px solid var(--accent);
+  color: var(--foreground);
+  background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.step-style__action-btn--confirm:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.step-style__action-btn--confirm:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

@@ -2,18 +2,26 @@
 
 /* ── Option cards ──────────────────────────────────────────────────── */
 .music-form__option-card {
-  transition: border-color 0.15s, background-color 0.15s;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
   cursor: pointer;
 }
 
 .music-form__option-card:hover {
   border-color: var(--accent) !important;
-  background-color: color-mix(in srgb, var(--accent) 8%, transparent) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--accent) 8%,
+    transparent
+  ) !important;
 }
 
 /* ── Lyric mode buttons ────────────────────────────────────────────── */
 .music-form__lyric-btn {
-  transition: border-color 0.15s, background-color 0.15s;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
   cursor: pointer;
   text-align: center;
   line-height: 1.35;
@@ -23,16 +31,56 @@
 
 .music-form__lyric-btn:hover {
   border-color: var(--accent) !important;
-  background-color: color-mix(in srgb, var(--accent) 8%, transparent) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--accent) 8%,
+    transparent
+  ) !important;
 }
 
 /* ── Dots ──────────────────────────────────────────────────────────── */
 .music-form__dot {
-  transition: background-color 0.2s, transform 0.2s;
+  transition:
+    background-color 0.2s,
+    transform 0.2s;
 }
 
 .music-form__dot--active {
   transform: scale(1.4);
+}
+
+/* ── Field label (prompt label row) ───────────────────────────────── */
+.music-form__field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* ── AI lyrics preview panel ───────────────────────────────────────── */
+.music-form__ai-preview {
+  padding: 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--accent, #06b6d4);
+  background-color: color-mix(in srgb, var(--accent) 6%, var(--surface-1));
+}
+
+.music-form__ai-preview-text {
+  white-space: pre-wrap;
+  line-height: 1.65;
+}
+
+/* ── Cancel / discard / stop button ───────────────────────────────── */
+.music-form__cancel-btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-foreground, #6b7280);
+  cursor: pointer;
+  padding: 6px 4px;
+  transition: color 0.15s;
+}
+
+.music-form__cancel-btn:hover {
+  color: var(--foreground);
 }
 
 /* ── Arrow buttons ─────────────────────────────────────────────────── */
