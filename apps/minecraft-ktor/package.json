@@ -1,0 +1,9 @@
+{
+  "name": "minecraft-ktor",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "./gradlew run",
+    "build": "./gradlew installDist",
+    "test": "./gradlew test"
+  }
+}

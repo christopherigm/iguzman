@@ -1,0 +1,6 @@
+apiVersion: v2
+name: minecraft-ktor
+description: Architectury mod compile service — accepts Kotlin sources, returns compiled .jar files
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

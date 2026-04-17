@@ -1,0 +1,130 @@
+# ─────────────────────────────────────────────────────────────
+# Minecraft Api Application – Helm Values
+# ─────────────────────────────────────────────────────────────
+
+revisionHistoryLimit: 2
+replicaCount: 1
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: christopherguzman/minecraft-api
+  tag: 'latest'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# ─── Name overrides ─────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# ─── Ingress ────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: api.minecraft.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: minecraft-api-tls
+      hosts:
+        - api.minecraft.iguzman.com.mx
+
+# ─── Environment variables ──────────────────────────────────
+env:
+  DJANGO_SETTINGS_MODULE: 'minecraft_api.settings'
+  MEDIA_ROOT: '/app/media'
+  DB_HOST: 'postgres.minecraft.svc.cluster.local'
+  DB_PORT: '5432'
+  DB_NAME: 'postgres'
+  DB_USER: 'postgres'
+  REDIS_URL: 'redis://redis.minecraft.svc.cluster.local:6379/0'
+  EMAIL_HOST: 'smtp.ionos.com'
+  EMAIL_PORT: '587'
+  EMAIL_USE_TLS: 'True'
+  EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
+  FRONTEND_URL: 'https://minecraft.iguzman.com.mx'
+  DEBUG: 'True'
+  ALLOWED_HOSTS: 'api.minecraft.iguzman.com.mx,localhost,127.0.0.1'
+  CSRF_TRUSTED_ORIGINS: 'https://api.minecraft.iguzman.com.mx'
+  KTOR_SERVICE_URL: 'http://minecraft-ktor.minecraft.svc.cluster.local'
+
+# Sensitive values – reference existing Kubernetes Secrets.
+envFromSecret:
+  - name: DB_PASSWORD
+    secretName: minecraft-api-secrets
+    secretKey: db-password
+  - name: SECRET_KEY
+    secretName: minecraft-api-secrets
+    secretKey: secret-key
+  - name: REDIS_PASSWORD
+    secretName: minecraft-api-secrets
+    secretKey: redis-password
+  - name: GROQ_API_KEY
+    secretName: minecraft-api-secrets
+    secretKey: groq-api-key
+  - name: EMAIL_HOST_USER
+    secretName: minecraft-api-secrets
+    secretKey: email-host-user
+  - name: EMAIL_HOST_PASSWORD
+    secretName: minecraft-api-secrets
+    secretKey: email-host-password
+
+# ─── Shared storage (media files via hostPath) ───────────────
+sharedStorage:
+  enabled: true
+  hostPath: '/shared-master'
+  mountPath: /app/media
+
+# ─── Nginx sidecar (serves /media/ files) ───────────────────
+nginx:
+  enabled: true
+  image: nginx:alpine
+  port: 8080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# ─── Health probes ──────────────────────────────────────────
+probes:
+  startupProbe:
+    httpGet:
+      path: /healthz/
+      port: 8000
+    initialDelaySeconds: 15
+    periodSeconds: 5
+    failureThreshold: 30
+
+  livenessProbe:
+    httpGet:
+      path: /healthz/
+      port: 8000
+    periodSeconds: 10
+    failureThreshold: 3
+
+# ─── Node affinity ──────────────────────────────────────────
+nodeAffinity:
+  enabled: false
+  nodeNames: []
+
+# ─── Resources ──────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

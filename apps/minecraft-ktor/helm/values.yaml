@@ -1,0 +1,80 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Minecraft Ktor Compile Service – Helm Values
+# ─────────────────────────────────────────────────────────────────────────────
+
+revisionHistoryLimit: 2
+replicaCount: 1
+
+# ─── Container image ─────────────────────────────────────────────────────────
+image:
+  repository: christopherguzman/minecraft-ktor
+  tag: 'latest'
+  pullPolicy: Always
+
+imagePullSecrets: []
+
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ─────────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# ─── Ingress (disabled by default — internal service only) ───────────────────
+ingress:
+  enabled: false
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: ktor.minecraft.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: minecraft-ktor-tls
+      hosts:
+        - ktor.minecraft.iguzman.com.mx
+
+# ─── Environment variables ───────────────────────────────────────────────────
+env:
+  PORT: '8080'
+  TEMPLATE_DIR: '/opt/mc-template'
+  GRADLE_USER_HOME: '/opt/gradle-home'
+  BUILD_WORKSPACE_DIR: '/tmp/mc-builds'
+
+envFromSecret: []
+
+# ─── Health probes ───────────────────────────────────────────────────────────
+probes:
+  startupProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    failureThreshold: 20
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    periodSeconds: 15
+    failureThreshold: 3
+
+# ─── Node affinity ───────────────────────────────────────────────────────────
+nodeAffinity:
+  enabled: true
+  nodeNames:
+    - node6
+
+# ─── Resources (compilation is CPU/RAM intensive) ────────────────────────────
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    cpu: 2000m
+    memory: 4Gi

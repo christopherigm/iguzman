@@ -1,0 +1,9 @@
+minecraft-ktor compile service deployed.
+
+Internal endpoint (within cluster):
+  http://{{ include "minecraft-ktor.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local/compile
+
+Health check:
+  http://{{ include "minecraft-ktor.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local/health
+
+Add this URL to minecraft-api as KTOR_SERVICE_URL.
