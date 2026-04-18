@@ -1,0 +1,111 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Diarization Microservice – Helm Values
+# ─────────────────────────────────────────────────────────────────────────────
+
+# -- Number of old ReplicaSets to keep for rollbacks
+revisionHistoryLimit: 2
+
+# -- Keep at 1: model objects are held in-process memory
+replicaCount: 1
+
+# ─── Container image ──────────────────────────────────────────────────────────
+image:
+  repository: christopherguzman/diarization
+  tag: 'latest'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# ─── Name overrides ───────────────────────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ──────────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# ─── Ingress ──────────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    # Allow audio file uploads up to 100 MB
+    nginx.ingress.kubernetes.io/proxy-body-size: '100m'
+    # Diarization + transcription of long audio can take several minutes on CPU
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '600'
+  hosts:
+    - host: diarization.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: diarization-tls
+      hosts:
+        - diarization.iguzman.com.mx
+
+# ─── Environment variables ────────────────────────────────────────────────────
+env:
+  PORT: '8000'
+  LOG_LEVEL: 'info'
+  WHISPER_MODEL_SIZE: 'base'
+
+# Sensitive values – reference existing Kubernetes Secrets.
+# Create the secret first (see README), then these are injected at runtime.
+envFromSecret:
+  - name: API_KEY
+    secretName: diarization-secrets
+    secretKey: api-key
+  - name: HF_TOKEN
+    secretName: diarization-secrets
+    secretKey: hf-token
+
+# ─── Health probes ────────────────────────────────────────────────────────────
+# On first boot, pyannote and whisper models must be downloaded from HuggingFace.
+# This can take 5–10 minutes depending on network speed.
+# The startupProbe allows up to 15 min (90 × 10 s) before giving up.
+probes:
+  startupProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 90   # 15 min window for cold-start model download
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 0
+    periodSeconds: 15
+    failureThreshold: 3
+
+# ─── Node affinity ────────────────────────────────────────────────────────────
+nodeAffinity:
+  enabled: true
+  nodeNames:
+    - node6
+
+# ─── Resources ────────────────────────────────────────────────────────────────
+# pyannote + faster-whisper on CPU is memory- and CPU-intensive.
+# The i9 on node6 can handle concurrent diarization; adjust limits as needed.
+resources:
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+  limits:
+    cpu: 4000m
+    memory: 8Gi
+
+# ─── Model cache (PersistentVolume) ──────────────────────────────────────────
+# When enabled, HuggingFace model files are stored on a PVC so they survive
+# pod restarts and avoid re-downloading on every deployment.
+# Recommended for production; requires a StorageClass that supports ReadWriteOnce.
+modelCache:
+  enabled: false
+  size: 5Gi
+  storageClass: ''   # leave empty to use the cluster default StorageClass

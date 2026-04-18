@@ -1,0 +1,25 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Diarization service – Python dependencies
+#
+# NOTE: torch and torchaudio are intentionally NOT listed here.
+# They are installed separately in the Dockerfile (and locally via the
+# instructions in README.md) using the CPU-only wheel index to avoid pulling
+# the much larger CUDA-enabled builds.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+
+# Diarization
+pyannote.audio==3.3.2
+
+# Transcription
+faster-whisper==1.1.1
+
+# Audio I/O (pyannote / soundfile dependency)
+soundfile==0.12.1
+
+# Numerical (keep below 2 for pyannote compatibility)
+numpy>=1.24,<2

@@ -1,0 +1,17 @@
+{{- if .Values.modelCache.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "diarization.fullname" . }}-model-cache
+  labels:
+    {{- include "diarization.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.modelCache.size }}
+  {{- if .Values.modelCache.storageClass }}
+  storageClassName: {{ .Values.modelCache.storageClass }}
+  {{- end }}
+{{- end }}
