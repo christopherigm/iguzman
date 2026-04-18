@@ -330,6 +330,7 @@ export function PinnedVideoItem({
           justAudio: video.justAudio,
           checkCodec: video.platform === 'tiktok',
           iosDevice: isIOS(),
+          ...(video.maxHeight != null && { maxHeight: video.maxHeight }),
         }),
       });
 

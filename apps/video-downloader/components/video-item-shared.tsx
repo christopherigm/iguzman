@@ -577,6 +577,12 @@ export function resolveResolutionLabel(
   return null;
 }
 
+/** Formats a height value as a human-readable resolution option label, e.g. "FHD 1080". */
+export function buildResolutionLabel(height: number): string {
+  const name = resolveResolutionLabel(height);
+  return name ? `${name} ${height}` : `${height}p`;
+}
+
 /* ── Card header ─────────────────────────────────────── */
 
 export function VideoCardHeader({

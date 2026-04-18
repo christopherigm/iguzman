@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
@@ -8,9 +8,9 @@ import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { detectPlatform, type Platform } from '@repo/helpers/checkers';
+import { detectPlatform, isYoutube, type Platform } from '@repo/helpers/checkers';
 import { stripQueryParams } from '@repo/helpers/clean-url';
-import { isIOS } from './video-item-shared';
+import { isIOS, buildResolutionLabel } from './video-item-shared';
 import './download-form.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -104,6 +104,47 @@ function FPSSelect({
   );
 }
 
+function ResolutionSelect({
+  value,
+  onChange,
+  disabled,
+  options,
+}: {
+  value: number | null;
+  onChange: (v: number) => void;
+  disabled: boolean;
+  options: { value: number; label: string }[];
+}) {
+  return (
+    <Box className="df-select-wrapper">
+      <select
+        className="df-select"
+        value={value ?? ''}
+        onChange={(e) => onChange(Number(e.target.value))}
+        disabled={disabled}
+        aria-label="Resolution"
+      >
+        {options.map((opt) => (
+          <option
+            key={opt.value}
+            value={opt.value}
+            style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+          >
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      <span className="df-select-chevron">
+        <Icon
+          icon="/icons/chevron-down.svg"
+          size={14}
+          color="var(--foreground, #171717)"
+        />
+      </span>
+    </Box>
+  );
+}
+
 /* ── Main Component ─────────────────────────────────── */
 
 export interface DownloadFormProps {
@@ -115,6 +156,7 @@ export interface DownloadFormProps {
     justAudio: boolean;
     enhance: boolean;
     autoDownload: boolean;
+    maxHeight?: number;
   }) => void;
 }
 
@@ -127,6 +169,10 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   const [enhance] = useState(false);
   const [fps, setFps] = useState<FPSValue>('original');
   const [showFpsWarning, setShowFpsWarning] = useState(false);
+
+  const [resolutions, setResolutions] = useState<number[]>([]);
+  const [selectedResolution, setSelectedResolution] = useState<number | null>(null);
+  const [metadataLoading, setMetadataLoading] = useState(false);
 
   const fpsOptions = useMemo(
     () => [
@@ -149,6 +195,40 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     } catch {
       // Clipboard permission denied — silently ignore
     }
+  }, [url]);
+
+  /* Fetch available resolutions for YouTube URLs (debounced) */
+  useEffect(() => {
+    if (!isValidUrl(url) || !isYoutube(url)) {
+      setResolutions([]);
+      setSelectedResolution(null);
+      setMetadataLoading(false);
+      return;
+    }
+
+    setMetadataLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/video-metadata?url=${encodeURIComponent(url)}`,
+        );
+        if (res.ok) {
+          const data = (await res.json()) as { heights?: number[] };
+          const heights = data.heights ?? [];
+          setResolutions(heights);
+          setSelectedResolution(heights[0] ?? null);
+        }
+      } catch {
+        /* best-effort */
+      } finally {
+        setMetadataLoading(false);
+      }
+    }, 800);
+
+    return () => {
+      clearTimeout(timer);
+      setMetadataLoading(false);
+    };
   }, [url]);
 
   /* Derived state */
@@ -183,6 +263,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
       justAudio,
       enhance: effectiveEnhance,
       autoDownload,
+      ...(selectedResolution != null && { maxHeight: selectedResolution }),
     });
 
     /* Reset the URL field after submission */
@@ -194,6 +275,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     effectiveFps,
     effectiveEnhance,
     platform,
+    selectedResolution,
     onVideoAdded,
   ]);
 
@@ -338,6 +420,29 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
             options={fpsOptions}
           />
         </OptionRow>
+
+        {(resolutions.length > 0 || metadataLoading) && (
+          <OptionRow
+            label={t('resolution')}
+            disabled={switchesDisabled || metadataLoading}
+          >
+            {metadataLoading ? (
+              <Typography variant="caption" color="var(--foreground-muted, #999)">
+                …
+              </Typography>
+            ) : (
+              <ResolutionSelect
+                value={selectedResolution}
+                onChange={setSelectedResolution}
+                disabled={switchesDisabled}
+                options={resolutions.map((h) => ({
+                  value: h,
+                  label: buildResolutionLabel(h),
+                }))}
+              />
+            )}
+          </OptionRow>
+        )}
       </Box>
     </Box>
   );

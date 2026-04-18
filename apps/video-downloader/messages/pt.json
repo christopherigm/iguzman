@@ -27,7 +27,8 @@
     "ffmpegProcessing": "Interpolando quadros… {progress}%",
     "errorFfmpegFailed": "A interpolação de FPS falhou. Baixando o original.",
     "fpsBoostTitle": "Aviso de aumento de FPS",
-    "fpsBoostText": "Aumentar os FPS para {fps} usa o navegador do seu dispositivo para processar o vídeo, o que pode levar mais tempo. Se você fechar ou atualizar a página, o processamento será retomado automaticamente na sua próxima visita."
+    "fpsBoostText": "Aumentar os FPS para {fps} usa o navegador do seu dispositivo para processar o vídeo, o que pode levar mais tempo. Se você fechar ou atualizar a página, o processamento será retomado automaticamente na sua próxima visita.",
+    "resolution": "Resolução"
   },
   "Admin": {
     "title": "Painel de administração",

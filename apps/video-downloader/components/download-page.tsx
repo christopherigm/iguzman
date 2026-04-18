@@ -17,6 +17,7 @@ interface VideoAddedEntry {
   justAudio: boolean;
   enhance: boolean;
   autoDownload: boolean;
+  maxHeight?: number;
 }
 
 /* ── Component ──────────────────────────────────────── */
@@ -44,6 +45,7 @@ export function DownloadPage() {
         justAudio: entry.justAudio,
         enhance: entry.enhance,
         autoDownload: entry.autoDownload,
+        maxHeight: entry.maxHeight ?? null,
       });
     },
     [addToPinned],

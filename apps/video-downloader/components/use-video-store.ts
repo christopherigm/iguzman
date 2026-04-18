@@ -41,6 +41,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   blackBarsRemoved: boolean;
   /** MongoDB task ID (for polling and deletion). */
   taskId: string | null;
+  /** Maximum resolution height cap sent to the download API. */
+  maxHeight?: number | null;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -227,7 +229,7 @@ export function useVideoStore() {
         | 'justAudio'
         | 'enhance'
         | 'autoDownload'
-      >,
+      > & { maxHeight?: number | null },
     ): string => {
       const existing = pinned.find((v) => v.originalURL === partial.originalURL);
       if (existing) return existing.uuid;
@@ -258,6 +260,7 @@ export function useVideoStore() {
         sourceFps: null,
         width: null,
         height: null,
+        maxHeight: partial.maxHeight ?? null,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional

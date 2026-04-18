@@ -69,8 +69,11 @@ RUN apk add --no-cache \
     jq \
     wget \
     python3 \
-    py3-pip && \
-    pip install --break-system-packages "yt-dlp[default,curl-cffi]" gallery-dl
+    py3-pip
+
+RUN pip install --break-system-packages --no-cache-dir --upgrade \
+    "yt-dlp[default,curl-cffi]" \
+    gallery-dl
 
 # Non-root user for security
 # RUN addgroup --system --gid 1001 nodejs && \

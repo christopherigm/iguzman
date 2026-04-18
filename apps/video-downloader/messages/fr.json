@@ -27,7 +27,8 @@
     "ffmpegProcessing": "Interpolation des images… {progress}%",
     "errorFfmpegFailed": "L'interpolation FPS a échoué. Téléchargement de l'original.",
     "fpsBoostTitle": "Avertissement d'augmentation des IPS",
-    "fpsBoostText": "L'augmentation des IPS à {fps} utilise le navigateur de votre appareil pour traiter la vidéo, ce qui peut prendre plus de temps. Si vous fermez ou actualisez la page, le traitement reprendra automatiquement lors de votre prochaine visite."
+    "fpsBoostText": "L'augmentation des IPS à {fps} utilise le navigateur de votre appareil pour traiter la vidéo, ce qui peut prendre plus de temps. Si vous fermez ou actualisez la page, le traitement reprendra automatiquement lors de votre prochaine visite.",
+    "resolution": "Résolution"
   },
   "Admin": {
     "title": "Tableau de bord admin",

@@ -230,6 +230,13 @@ export interface DownloadVideoOptions {
    * @defaultValue false
    */
   iosDevice?: boolean;
+  /**
+   * Maximum video height in pixels. When provided, only formats with
+   * `height <= maxHeight` are considered during format selection,
+   * capping the download resolution to the nearest available quality.
+   * @example 1080 — download at most 1080p
+   */
+  maxHeight?: number;
 }
 
 /** A single format entry from yt-dlp's `--dump-json` output. */
@@ -581,7 +588,7 @@ const isPreferredAudioExt = (ext: string): boolean =>
  * 4. A "combined" format has both video and audio codecs — useful for
  *    platforms that serve muxed streams (e.g. Instagram).
  */
-const selectBestFormats = (formats: FormatInfo[]): FormatSelection => {
+const selectBestFormats = (formats: FormatInfo[], maxHeight?: number): FormatSelection => {
   const videoOnly: FormatInfo[] = [];
   const audioOnly: FormatInfo[] = [];
   const combined: FormatInfo[] = [];
@@ -601,7 +608,12 @@ const selectBestFormats = (formats: FormatInfo[]): FormatSelection => {
 
   // --- Best video-only (max resolution → max bitrate → preferred ext) ---
   const filteredVideo = videoOnly.filter((f) => isPreferredVideoExt(f.ext));
-  const videoPool = filteredVideo.length > 0 ? filteredVideo : videoOnly;
+  let videoPool = filteredVideo.length > 0 ? filteredVideo : videoOnly;
+
+  if (maxHeight) {
+    const capped = videoPool.filter((f) => (f.height ?? 0) <= maxHeight);
+    if (capped.length > 0) videoPool = capped;
+  }
 
   const bestVideo =
     videoPool.length > 0
@@ -692,8 +704,12 @@ const selectBestFormats = (formats: FormatInfo[]): FormatSelection => {
 
   // --- Best combined (max resolution → max bitrate → preferred ext) ---
   const filteredCombined = combined.filter((f) => isPreferredVideoExt(f.ext));
-  const combinedPool =
-    filteredCombined.length > 0 ? filteredCombined : combined;
+  let combinedPool = filteredCombined.length > 0 ? filteredCombined : combined;
+
+  if (maxHeight) {
+    const capped = combinedPool.filter((f) => (f.height ?? 0) <= maxHeight);
+    if (capped.length > 0) combinedPool = capped;
+  }
 
   const bestCombined =
     combinedPool.length > 0
@@ -2428,6 +2444,7 @@ const downloadVideo = async ({
   jsRuntimes = DEFAULT_JS_RUNTIMES,
   checkCodec = false,
   iosDevice = false,
+  maxHeight,
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
@@ -2537,7 +2554,7 @@ const downloadVideo = async ({
       formatSelection =
         isTiktok(url) && !justAudio
           ? selectBestTikTokFormat(formats)
-          : selectBestFormats(formats);
+          : selectBestFormats(formats, maxHeight);
     }
   } catch {
     // Format detection is best-effort. When it fails we fall back to
@@ -2890,5 +2907,25 @@ const downloadVideo = async ({
 
   return result;
 };
+
+/**
+ * Fetches video metadata for a URL without downloading the video.
+ *
+ * @returns Parsed {@link VideoMetadata} from yt-dlp's `--dump-json` output.
+ */
+export const fetchVideoMetadata = (
+  url: string,
+  options: {
+    cookies?: string;
+    binary?: string;
+    jsRuntimes?: string;
+  } = {},
+): Promise<VideoMetadata> =>
+  fetchMetadata(
+    url,
+    options.binary ?? DEFAULT_BINARY,
+    options.cookies ?? DEFAULT_COOKIES,
+    options.jsRuntimes ?? DEFAULT_JS_RUNTIMES,
+  );
 
 export default downloadVideo;
