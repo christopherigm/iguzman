@@ -68,6 +68,8 @@ export async function createTask(
     url: params.url,
     justAudio: params.justAudio,
     checkCodec: params.checkCodec,
+    captionsEnabled: params.captionsEnabled,
+    captionUrl: params.captionUrl,
     status: 'pending',
     result: null,
     error: null,
@@ -80,6 +82,7 @@ export async function createTask(
     sourceFps: null,
     width: null,
     height: null,
+    captionsFile: null,
     createdAt: now,
     updatedAt: now,
   };

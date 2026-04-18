@@ -1,0 +1,113 @@
+.bcm-config {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 2px;
+}
+
+.bcm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bcm-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--foreground-muted, #888);
+}
+
+/* 3×3 alignment grid */
+.bcm-alignment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.bcm-align-btn {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--surface-1, rgba(0, 0, 0, 0.06));
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.bcm-align-btn:hover {
+  border-color: var(--accent, #06b6d4);
+  background: var(--surface-2, rgba(0, 0, 0, 0.1));
+}
+
+.bcm-align-btn--active {
+  border-color: var(--accent, #06b6d4);
+  background: rgba(6, 182, 212, 0.12);
+}
+
+/* Subtitle position indicator strip */
+.bcm-align-btn::after {
+  content: '';
+  position: absolute;
+  height: 3px;
+  width: 55%;
+  background: var(--foreground-muted, #aaa);
+  border-radius: 2px;
+}
+
+.bcm-align-btn--active::after {
+  background: var(--accent, #06b6d4);
+}
+
+/* Bottom row (1, 2, 3) */
+.bcm-align-btn[data-pos='1']::after { bottom: 5px; left: 5px; }
+.bcm-align-btn[data-pos='2']::after { bottom: 5px; left: 50%; transform: translateX(-50%); }
+.bcm-align-btn[data-pos='3']::after { bottom: 5px; right: 5px; }
+
+/* Middle row (4, 5, 6) */
+.bcm-align-btn[data-pos='4']::after { top: 50%; left: 5px; transform: translateY(-50%); }
+.bcm-align-btn[data-pos='5']::after { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.bcm-align-btn[data-pos='6']::after { top: 50%; right: 5px; transform: translateY(-50%); }
+
+/* Top row (7, 8, 9) */
+.bcm-align-btn[data-pos='7']::after { top: 5px; left: 5px; }
+.bcm-align-btn[data-pos='8']::after { top: 5px; left: 50%; transform: translateX(-50%); }
+.bcm-align-btn[data-pos='9']::after { top: 5px; right: 5px; }
+
+/* Row with label + control side by side */
+.bcm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bcm-row--space-between {
+  justify-content: space-between;
+}
+
+.bcm-range {
+  flex: 1;
+  accent-color: var(--accent, #06b6d4);
+  cursor: pointer;
+}
+
+.bcm-range-value {
+  font-size: 12px;
+  min-width: 48px;
+  text-align: right;
+  color: var(--foreground-muted, #888);
+  font-variant-numeric: tabular-nums;
+}
+
+.bcm-color-input {
+  width: 36px;
+  height: 28px;
+  border: 2px solid var(--border, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  padding: 1px;
+  cursor: pointer;
+  background: none;
+}

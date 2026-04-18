@@ -28,7 +28,10 @@
     "errorFfmpegFailed": "A interpolação de FPS falhou. Baixando o original.",
     "fpsBoostTitle": "Aviso de aumento de FPS",
     "fpsBoostText": "Aumentar os FPS para {fps} usa o navegador do seu dispositivo para processar o vídeo, o que pode levar mais tempo. Se você fechar ou atualizar a página, o processamento será retomado automaticamente na sua próxima visita.",
-    "resolution": "Resolução"
+    "resolution": "Resolução",
+    "checkForCaptions": "Verificar legendas",
+    "subtitles": "Legendas",
+    "captionsLoading": "Carregando legendas…"
   },
   "Admin": {
     "title": "Painel de administração",
@@ -127,6 +130,19 @@
     "detailProcessingTime": "Tempo de processamento",
     "detailCores": "Threads de CPU",
     "searchActive": "Buscando: \"{query}\"",
-    "clearSearch": "Limpar pesquisa"
+    "clearSearch": "Limpar pesquisa",
+    "downloadCaptions": "Baixar legendas",
+    "burnCaptions": "Gravar legendas",
+    "burningCaptions": "Gravando legendas… {progress}%",
+    "errorBurnCaptionsFailed": "Falha ao gravar as legendas no vídeo.",
+    "burnCaptionsTitle": "Gravar legendas no vídeo",
+    "burnCaptionsText": "As legendas serão incorporadas permanentemente no vídeo. Escolha uma posição e estilo abaixo.",
+    "burnCaptionsPosition": "Posição",
+    "burnCaptionsFontSize": "Tamanho da fonte",
+    "burnCaptionsTextColor": "Cor do texto",
+    "burnCaptionsBackground": "Mostrar fundo",
+    "burnCaptionsBgColor": "Cor do fundo",
+    "burnCaptionsBgOpacity": "Opacidade do fundo",
+    "burnCaptionsMarginV": "Margem"
   }
 }

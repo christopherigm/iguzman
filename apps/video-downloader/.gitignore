@@ -49,6 +49,7 @@ public/media/*.avif
 public/media/*.mp3
 public/media/*.wav
 public/media/*.ogg
+public/media/*.txt
 
 # PWA generated files
 public/sw.js

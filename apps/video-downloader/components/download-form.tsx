@@ -8,9 +8,15 @@ import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { detectPlatform, isYoutube, type Platform } from '@repo/helpers/checkers';
+import { Spinner } from '@repo/ui/core-elements/spinner';
+import {
+  detectPlatform,
+  isYoutube,
+  type Platform,
+} from '@repo/helpers/checkers';
 import { stripQueryParams } from '@repo/helpers/clean-url';
 import { isIOS, buildResolutionLabel } from './video-item-shared';
+import type { CaptionOption } from '@/app/api/video-metadata/route';
 import './download-form.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -55,7 +61,9 @@ function OptionRow({
     <Box
       className={`df-option-row${disabled ? ' df-option-row--disabled' : ''}`}
     >
-      <Typography variant="label" className="df-option-label">{label}</Typography>
+      <Typography variant="label" className="df-option-label">
+        {label}
+      </Typography>
       <Box className="df-option-control">{children}</Box>
     </Box>
   );
@@ -145,6 +153,47 @@ function ResolutionSelect({
   );
 }
 
+function CaptionSelect({
+  value,
+  onChange,
+  disabled,
+  options,
+}: {
+  value: string | null;
+  onChange: (v: string) => void;
+  disabled: boolean;
+  options: CaptionOption[];
+}) {
+  return (
+    <Box className="df-select-wrapper df-select-wrapper--caption">
+      <select
+        className="df-select"
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        aria-label="Subtitles"
+      >
+        {options.map((opt) => (
+          <option
+            key={`${opt.type}-${opt.lang}`}
+            value={opt.url}
+            style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+          >
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      <span className="df-select-chevron">
+        <Icon
+          icon="/icons/chevron-down.svg"
+          size={14}
+          color="var(--foreground, #171717)"
+        />
+      </span>
+    </Box>
+  );
+}
+
 /* ── Main Component ─────────────────────────────────── */
 
 export interface DownloadFormProps {
@@ -157,6 +206,8 @@ export interface DownloadFormProps {
     enhance: boolean;
     autoDownload: boolean;
     maxHeight?: number;
+    captionsEnabled?: boolean;
+    captionUrl?: string;
   }) => void;
 }
 
@@ -171,8 +222,20 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   const [showFpsWarning, setShowFpsWarning] = useState(false);
 
   const [resolutions, setResolutions] = useState<number[]>([]);
-  const [selectedResolution, setSelectedResolution] = useState<number | null>(null);
+  const [selectedResolution, setSelectedResolution] = useState<number | null>(
+    null,
+  );
   const [metadataLoading, setMetadataLoading] = useState(false);
+
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [captionsLoading, setCaptionsLoading] = useState(false);
+  const [availableCaptions, setAvailableCaptions] = useState<CaptionOption[]>(
+    [],
+  );
+  const [selectedCaptionUrl, setSelectedCaptionUrl] = useState<string | null>(
+    null,
+  );
+  const [captionsUnavailable, setCaptionsUnavailable] = useState(false);
 
   const fpsOptions = useMemo(
     () => [
@@ -199,6 +262,8 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
 
   /* Fetch available resolutions for YouTube URLs (debounced) */
   useEffect(() => {
+    setCaptionsUnavailable(false);
+
     if (!isValidUrl(url) || !isYoutube(url)) {
       setResolutions([]);
       setSelectedResolution(null);
@@ -231,6 +296,49 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     };
   }, [url]);
 
+  /* Fetch available captions when the switch is enabled and URL is valid */
+  useEffect(() => {
+    if (!captionsEnabled || !isValidUrl(url)) {
+      setAvailableCaptions([]);
+      setSelectedCaptionUrl(null);
+      setCaptionsLoading(false);
+      return;
+    }
+
+    setCaptionsLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/video-metadata?url=${encodeURIComponent(url)}&exhaustive=true`,
+        );
+        if (res.ok) {
+          const data = (await res.json()) as { captions?: CaptionOption[] };
+          const captions = data.captions ?? [];
+          if (captions.length === 0) {
+            setCaptionsEnabled(false);
+            setCaptionsUnavailable(true);
+          } else {
+            setAvailableCaptions(captions);
+            const preferred = captions.find(
+              (c) =>
+                /orig/i.test(c.lang) || /orig/i.test(c.label),
+            );
+            setSelectedCaptionUrl((preferred ?? captions[0])?.url ?? null);
+          }
+        }
+      } catch {
+        /* best-effort */
+      } finally {
+        setCaptionsLoading(false);
+      }
+    }, 800);
+
+    return () => {
+      clearTimeout(timer);
+      setCaptionsLoading(false);
+    };
+  }, [captionsEnabled, url]);
+
   /* Derived state */
   const hasText = url.length > 0;
   const validUrl = useMemo(() => isValidUrl(url), [url]);
@@ -245,6 +353,7 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   const switchesDisabled = !validPlatformUrl;
   // const _enhanceDisabled = switchesDisabled || justAudio;
   const fpsDisabled = switchesDisabled || justAudio;
+  const captionsDisabled = switchesDisabled || justAudio || captionsUnavailable;
 
   /* Effective values (justAudio overrides enhance & fps) */
   const effectiveEnhance = justAudio ? false : enhance;
@@ -264,6 +373,10 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
       enhance: effectiveEnhance,
       autoDownload,
       ...(selectedResolution != null && { maxHeight: selectedResolution }),
+      captionsEnabled: captionsEnabled && !justAudio,
+      ...(captionsEnabled &&
+        !justAudio &&
+        selectedCaptionUrl && { captionUrl: selectedCaptionUrl }),
     });
 
     /* Reset the URL field after submission */
@@ -276,6 +389,8 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     effectiveEnhance,
     platform,
     selectedResolution,
+    captionsEnabled,
+    selectedCaptionUrl,
     onVideoAdded,
   ]);
 
@@ -382,7 +497,12 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
       </Box>
 
       {/* ── Hint ─────────────────────────────────────── */}
-      <Typography variant="caption" className={`df-hint df-hint--${hint.variant}`}>{hint.text}</Typography>
+      <Typography
+        variant="caption"
+        className={`df-hint df-hint--${hint.variant}`}
+      >
+        {hint.text}
+      </Typography>
 
       {/* ── Divider ──────────────────────────────────── */}
       <hr className="df-divider" />
@@ -398,19 +518,60 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
           </OptionRow>
         )}
 
+        {(resolutions.length > 0 || metadataLoading) && (
+          <OptionRow
+            label={t('resolution')}
+            disabled={switchesDisabled || metadataLoading || justAudio}
+          >
+            {metadataLoading ? (
+              <Spinner size={18} thickness={2} label={t('resolution')} />
+            ) : (
+              <ResolutionSelect
+                value={selectedResolution}
+                onChange={setSelectedResolution}
+                disabled={switchesDisabled || justAudio}
+                options={resolutions.map((h) => ({
+                  value: h,
+                  label: buildResolutionLabel(h),
+                }))}
+              />
+            )}
+          </OptionRow>
+        )}
+
+        <OptionRow
+          label={t('checkForCaptions')}
+          disabled={captionsDisabled || captionsLoading}
+        >
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            gap={20}
+          >
+            <Switch
+              checked={captionsEnabled}
+              onChange={captionsDisabled ? undefined : setCaptionsEnabled}
+            />
+            {captionsEnabled && captionsLoading ? (
+              <Spinner size={18} thickness={2} label={t('captionsLoading')} />
+            ) : captionsEnabled && availableCaptions.length > 0 ? (
+              <CaptionSelect
+                value={selectedCaptionUrl}
+                onChange={setSelectedCaptionUrl}
+                disabled={captionsDisabled}
+                options={availableCaptions}
+              />
+            ) : null}
+          </Box>
+        </OptionRow>
+
         <OptionRow label={t('justAudio')} disabled={switchesDisabled}>
           <Switch
             checked={justAudio}
             onChange={switchesDisabled ? undefined : setJustAudio}
           />
         </OptionRow>
-
-        {/* <OptionRow label={t('enhance')} disabled={enhanceDisabled}>
-          <Switch
-            checked={effectiveEnhance}
-            onChange={enhanceDisabled ? undefined : setEnhance}
-          />
-        </OptionRow> */}
 
         <OptionRow label={t('fps')} disabled={fpsDisabled}>
           <FPSSelect
@@ -420,29 +581,6 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
             options={fpsOptions}
           />
         </OptionRow>
-
-        {(resolutions.length > 0 || metadataLoading) && (
-          <OptionRow
-            label={t('resolution')}
-            disabled={switchesDisabled || metadataLoading}
-          >
-            {metadataLoading ? (
-              <Typography variant="caption" color="var(--foreground-muted, #999)">
-                …
-              </Typography>
-            ) : (
-              <ResolutionSelect
-                value={selectedResolution}
-                onChange={setSelectedResolution}
-                disabled={switchesDisabled}
-                options={resolutions.map((h) => ({
-                  value: h,
-                  label: buildResolutionLabel(h),
-                }))}
-              />
-            )}
-          </OptionRow>
-        )}
       </Box>
     </Box>
   );

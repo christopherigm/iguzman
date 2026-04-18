@@ -71,6 +71,15 @@ export async function DELETE(
       }
     }
 
+    if (task.captionsFile) {
+      const captionsPath = join(MEDIA_DIR, task.captionsFile);
+      try {
+        await unlink(captionsPath);
+      } catch {
+        /* Captions file may already be gone — acceptable */
+      }
+    }
+
     await deleteTask(id);
 
     log.info({ taskId: id, file: task.file }, 'Task deleted');

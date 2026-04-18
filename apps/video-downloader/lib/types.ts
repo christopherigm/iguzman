@@ -9,7 +9,12 @@ import type {
 export type VideoDownloadInput = Pick<
   DownloadVideoOptions,
   'url' | 'justAudio' | 'checkCodec' | 'iosDevice' | 'maxHeight'
->;
+> & {
+  /** When true, captions/subtitles are downloaded along with the video. */
+  captionsEnabled?: boolean;
+  /** Direct URL to an SRT caption file selected by the user. */
+  captionUrl?: string;
+};
 
 /* ── Result metadata ───────────────────────────────── */
 
@@ -27,6 +32,8 @@ export interface VideoResultFields {
   width: number | null;
   /** Video height in pixels. `null` for audio-only or when unavailable. */
   height: number | null;
+  /** Filename of the saved captions file (e.g. `uuid.txt`). `null` when no captions were downloaded. */
+  captionsFile: string | null;
 }
 
 /* ── Status ────────────────────────────────────────── */
@@ -35,7 +42,19 @@ export interface VideoResultFields {
 export type TaskStatus = 'pending' | 'downloading' | 'done' | 'error';
 
 /** Client-side statuses extend task statuses with local processing states. */
-export type VideoStatus = TaskStatus | 'queued' | 'processing' | 'converting';
+export type VideoStatus = TaskStatus | 'queued' | 'processing' | 'converting' | 'burning';
+
+/* ── Burn captions config ──────────────────────────── */
+
+export interface BurnCaptionsConfig {
+  alignment: number;
+  marginV: number;
+  fontSize: number;
+  primaryColor: string;
+  showBackground: boolean;
+  bgColor: string;
+  bgOpacity: number;
+}
 
 /* ── Re-exports for convenience ────────────────────── */
 

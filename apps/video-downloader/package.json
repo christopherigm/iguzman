@@ -1,6 +1,6 @@
 {
   "name": "video-downloader",
-  "version": "0.2.90",
+  "version": "0.2.94",
   "type": "module",
   "private": true,
   "scripts": {

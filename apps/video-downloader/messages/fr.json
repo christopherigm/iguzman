@@ -28,7 +28,10 @@
     "errorFfmpegFailed": "L'interpolation FPS a échoué. Téléchargement de l'original.",
     "fpsBoostTitle": "Avertissement d'augmentation des IPS",
     "fpsBoostText": "L'augmentation des IPS à {fps} utilise le navigateur de votre appareil pour traiter la vidéo, ce qui peut prendre plus de temps. Si vous fermez ou actualisez la page, le traitement reprendra automatiquement lors de votre prochaine visite.",
-    "resolution": "Résolution"
+    "resolution": "Résolution",
+    "checkForCaptions": "Chercher les sous-titres",
+    "subtitles": "Sous-titres",
+    "captionsLoading": "Chargement des sous-titres…"
   },
   "Admin": {
     "title": "Tableau de bord admin",
@@ -127,6 +130,19 @@
     "detailProcessingTime": "Temps de traitement",
     "detailCores": "Threads CPU",
     "searchActive": "Recherche: \"{query}\"",
-    "clearSearch": "Effacer la recherche"
+    "clearSearch": "Effacer la recherche",
+    "downloadCaptions": "Télécharger les sous-titres",
+    "burnCaptions": "Incruster les sous-titres",
+    "burningCaptions": "Incrustation des sous-titres… {progress}%",
+    "errorBurnCaptionsFailed": "Échec de l'incrustation des sous-titres.",
+    "burnCaptionsTitle": "Incruster les sous-titres dans la vidéo",
+    "burnCaptionsText": "Les sous-titres seront définitivement intégrés dans la vidéo. Choisissez une position et un style ci-dessous.",
+    "burnCaptionsPosition": "Position",
+    "burnCaptionsFontSize": "Taille de police",
+    "burnCaptionsTextColor": "Couleur du texte",
+    "burnCaptionsBackground": "Afficher le fond",
+    "burnCaptionsBgColor": "Couleur de fond",
+    "burnCaptionsBgOpacity": "Opacité du fond",
+    "burnCaptionsMarginV": "Marge"
   }
 }

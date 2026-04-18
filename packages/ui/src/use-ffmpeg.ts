@@ -303,25 +303,30 @@ export function useFFmpeg() {
   /**
    * Burn SRT subtitles into a video using the FFmpeg `subtitles` filter.
    *
-   * @param videoUrl    URL (or object-URL) of the source video.
-   * @param srtContent  Raw SRT subtitle string.
-   * @param alignment   SSA alignment value (numpad layout 1–9). @default 2
-   * @param marginV     Vertical margin in pixels from the subtitle position. @default 40
-   * @returns           `{ objectUrl, blob }` – object-URL for immediate use
-   *                    and the raw Blob for uploading back to the server.
+   * @param videoUrl  URL (or object-URL) of the source video.
+   * @param opts      Subtitle style options.
+   * @returns         `{ objectUrl, blob }` – object-URL for immediate use
+   *                  and the raw Blob for uploading back to the server.
    */
   const burnSubtitles = useCallback(
     async (
       videoUrl: string,
-      srtContent: string,
-      alignment = 2,
-      marginV = 40,
+      opts: {
+        srtContent: string;
+        alignment?: number;
+        marginV?: number;
+        fontSize?: number;
+        primaryColour?: string;
+        backColour?: string;
+        borderStyle?: number;
+        outline?: number;
+      },
       onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {
       const data = await sendVideoOp(
         'burnSubtitles',
         videoUrl,
-        { srtContent, alignment, marginV },
+        { ...opts },
         onProgress,
       );
       const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });

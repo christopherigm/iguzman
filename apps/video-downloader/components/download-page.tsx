@@ -18,6 +18,8 @@ interface VideoAddedEntry {
   enhance: boolean;
   autoDownload: boolean;
   maxHeight?: number;
+  captionsEnabled?: boolean;
+  captionUrl?: string;
 }
 
 /* ── Component ──────────────────────────────────────── */
@@ -46,6 +48,8 @@ export function DownloadPage() {
         enhance: entry.enhance,
         autoDownload: entry.autoDownload,
         maxHeight: entry.maxHeight ?? null,
+        captionsEnabled: entry.captionsEnabled ?? false,
+        captionUrl: entry.captionUrl ?? null,
       });
     },
     [addToPinned],

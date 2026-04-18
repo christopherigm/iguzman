@@ -28,6 +28,7 @@ export const STATUS_COLORS: Record<VideoStatus, string> = {
   queued: '#6366f1',
   processing: '#f59e0b',
   converting: '#8b5cf6',
+  burning: '#ec4899',
   done: '#22c55e',
   error: '#ef4444',
 };
@@ -53,7 +54,6 @@ export function isIOS(): boolean {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   );
 }
-
 
 /**
  * Triggers a browser download for the given URL or Blob.
@@ -346,7 +346,9 @@ export function VideoStatusHints({
     const message =
       videoStatus === 'converting'
         ? t('convertingH264', { progress: ffmpegProgress })
-        : t('ffmpegProcessing', { progress: ffmpegProgress });
+        : videoStatus === 'burning'
+          ? t('burningCaptions', { progress: ffmpegProgress })
+          : t('ffmpegProcessing', { progress: ffmpegProgress });
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
         {message}
@@ -487,6 +489,8 @@ export function VideoExtraActions({
   onRemoveBlackBars,
   onInterpolateFps,
   onConvert,
+  onDownloadCaptions,
+  onBurnCaptions,
   t,
 }: {
   video: StoredVideo;
@@ -497,6 +501,8 @@ export function VideoExtraActions({
   onRemoveBlackBars: () => void;
   onInterpolateFps: (fps: number) => void;
   onConvert: () => void;
+  onDownloadCaptions?: () => void;
+  onBurnCaptions?: () => void;
   t: TranslationFn;
 }) {
   const canProcess = !isBusy && !!video.downloadURL && !video.justAudio;
@@ -536,6 +542,41 @@ export function VideoExtraActions({
             color="var(--accent, #8b5cf6)"
           />
           {t('removeBlackBars')}
+        </button>
+      ) : null}
+
+      {video.captionsFile && onDownloadCaptions ? (
+        <button
+          type="button"
+          className="vi-fps-btn"
+          onClick={onDownloadCaptions}
+          aria-label={t('downloadCaptions')}
+          title={t('downloadCaptions')}
+        >
+          <Icon
+            icon="/icons/captions.svg"
+            size={14}
+            color="var(--accent, #8b5cf6)"
+          />
+          {t('downloadCaptions')}
+        </button>
+      ) : null}
+
+      {video.captionsFile && !video.justAudio && onBurnCaptions ? (
+        <button
+          type="button"
+          className="vi-fps-btn"
+          onClick={onBurnCaptions}
+          disabled={isBusy}
+          aria-label={t('burnCaptions')}
+          title={t('burnCaptions')}
+        >
+          <Icon
+            icon="/icons/write.svg"
+            size={14}
+            color="var(--accent, #8b5cf6)"
+          />
+          {t('burnCaptions')}
         </button>
       ) : null}
 

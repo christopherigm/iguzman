@@ -28,7 +28,10 @@
     "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead.",
     "fpsBoostTitle": "FPS Boost Warning",
     "fpsBoostText": "FPS boosting to {fps} uses your device's browser to process the video, which can take longer to complete. If you close or refresh the page, processing will automatically resume on your next visit.",
-    "resolution": "Resolution"
+    "resolution": "Resolution",
+    "checkForCaptions": "Check for captions",
+    "subtitles": "Subtitles",
+    "captionsLoading": "Loading captions…"
   },
   "Admin": {
     "title": "Admin Dashboard",
@@ -127,6 +130,19 @@
     "detailProcessingTime": "Processing time",
     "detailCores": "CPU threads",
     "searchActive": "Searching for: \"{query}\"",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "downloadCaptions": "Download Captions",
+    "burnCaptions": "Burn Captions",
+    "burningCaptions": "Burning captions… {progress}%",
+    "errorBurnCaptionsFailed": "Failed to burn captions into video.",
+    "burnCaptionsTitle": "Burn Captions into Video",
+    "burnCaptionsText": "Subtitles will be permanently embedded into the video. Choose a position and style below.",
+    "burnCaptionsPosition": "Position",
+    "burnCaptionsFontSize": "Font Size",
+    "burnCaptionsTextColor": "Text Color",
+    "burnCaptionsBackground": "Show Background",
+    "burnCaptionsBgColor": "Background Color",
+    "burnCaptionsBgOpacity": "Background Opacity",
+    "burnCaptionsMarginV": "Margin"
   }
 }

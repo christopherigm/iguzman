@@ -32,7 +32,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const { url, justAudio = false, checkCodec = false, iosDevice = false, maxHeight } = body;
+  const {
+    url,
+    justAudio = false,
+    checkCodec = false,
+    iosDevice = false,
+    maxHeight,
+    captionsEnabled = false,
+    captionUrl,
+  } = body;
 
   if (!url || typeof url !== 'string') {
     return NextResponse.json(
@@ -64,7 +72,15 @@ export async function POST(request: Request) {
   }
 
   /* 2. Create the task document immediately */
-  const task = await createTask({ url, justAudio, checkCodec, iosDevice, maxHeight });
+  const task = await createTask({
+    url,
+    justAudio,
+    checkCodec,
+    iosDevice,
+    maxHeight,
+    captionsEnabled,
+    captionUrl,
+  });
   const taskId = task._id.toHexString();
 
   /* 3. Fire-and-forget: the download runs independently of the status update
@@ -85,6 +101,8 @@ export async function POST(request: Request) {
         checkCodec,
         iosDevice,
         maxHeight,
+        captions: captionsEnabled,
+        captionUrl,
         outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
         cookies: IS_PRODUCTION
           ? '/app/media/netscape-cookies.txt'
@@ -134,6 +152,7 @@ export async function POST(request: Request) {
             result.formatSelection?.bestVideo?.height ??
             result.formatSelection?.bestCombined?.height ??
             null,
+          captionsFile: result.captionsFile ?? null,
         });
       }
     } catch (err) {

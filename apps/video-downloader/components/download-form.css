@@ -166,6 +166,12 @@
   opacity: 0.5;
 }
 
+.df-select-wrapper--caption .df-select {
+  max-width: 100px;
+  min-width: unset;
+  width: 100px;
+}
+
 .df-select-chevron {
   position: absolute;
   right: 8px;

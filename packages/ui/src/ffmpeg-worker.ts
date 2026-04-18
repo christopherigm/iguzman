@@ -28,6 +28,23 @@ import { toBlobURL } from '@ffmpeg/util';
 let ffmpeg: FFmpeg | null = null;
 let loadPromise: Promise<void> | null = null;
 
+/* ── Subtitle font (cached across calls) ─────────── */
+let subtitleFontCache: Uint8Array | null = null;
+const SUBTITLE_FONT_URL =
+  'https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Regular.ttf';
+
+async function getSubtitleFont(): Promise<Uint8Array | null> {
+  if (subtitleFontCache) return subtitleFontCache;
+  try {
+    const res = await fetch(SUBTITLE_FONT_URL);
+    if (!res.ok) return null;
+    subtitleFontCache = new Uint8Array(await res.arrayBuffer());
+    return subtitleFontCache;
+  } catch {
+    return null;
+  }
+}
+
 /* ── Helpers ─────────────────────────────────────── */
 
 async function ensureLoaded(
@@ -404,11 +421,21 @@ self.onmessage = async (
             srtContent,
             alignment = 2,
             marginV = 40,
+            fontSize = 24,
+            primaryColour = '&H00FFFFFF',
+            backColour = '&H70000000',
+            borderStyle = 3,
+            outline = 0,
           } = payload as {
             videoData: Uint8Array;
             srtContent: string;
             alignment?: number;
             marginV?: number;
+            fontSize?: number;
+            primaryColour?: string;
+            backColour?: string;
+            borderStyle?: number;
+            outline?: number;
           };
 
           const input = 'input_subs.mp4';
@@ -417,6 +444,15 @@ self.onmessage = async (
 
           await ff.writeFile(input, videoData);
           await ff.writeFile(srtFile, new TextEncoder().encode(srtContent));
+
+          /* Provide a font for libass — WASM has no system fonts. */
+          const fontData = await getSubtitleFont();
+          if (fontData) {
+            try {
+              await ff.createDir('/fonts');
+            } catch { /* dir already exists */ }
+            await ff.writeFile('/fonts/subtitle-font.ttf', fontData);
+          }
 
           /* Probe duration for progress reporting. */
           let probeLog = '';
@@ -456,12 +492,21 @@ self.onmessage = async (
           };
           ff.on('log', burnLogHandler);
 
-          const forceStyle = `Alignment=${alignment},MarginV=${marginV}`;
+          const forceStyle = [
+            `Alignment=${alignment}`,
+            `MarginV=${marginV}`,
+            `FontSize=${fontSize}`,
+            `PrimaryColour=${primaryColour}`,
+            `BackColour=${backColour}`,
+            `BorderStyle=${borderStyle}`,
+            `Outline=${outline}`,
+          ].join(',');
+          const fontsOption = fontData ? ':fontsdir=/fonts' : '';
           const code = await ff.exec([
             '-i',
             input,
             '-vf',
-            `subtitles=${srtFile}:force_style='${forceStyle}'`,
+            `subtitles=${srtFile}${fontsOption}:force_style='${forceStyle}'`,
             '-c:a',
             'copy',
             output,

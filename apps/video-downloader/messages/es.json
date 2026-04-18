@@ -28,7 +28,10 @@
     "errorFfmpegFailed": "La interpolación de FPS falló. Descargando el original.",
     "fpsBoostTitle": "Aviso de aumento de FPS",
     "fpsBoostText": "Aumentar los FPS a {fps} usa el navegador de tu dispositivo para procesar el video, lo cual puede tardar más en completarse. Si cierras o actualizas la página, el procesamiento se reanudará automáticamente en tu próxima visita.",
-    "resolution": "Resolución"
+    "resolution": "Resolución",
+    "checkForCaptions": "Buscar subtítulos",
+    "subtitles": "Subtítulos",
+    "captionsLoading": "Cargando subtítulos…"
   },
   "Admin": {
     "title": "Panel de administración",
@@ -127,6 +130,19 @@
     "detailProcessingTime": "Tiempo de procesamiento",
     "detailCores": "Hilos de CPU",
     "searchActive": "Buscando: \"{query}\"",
-    "clearSearch": "Limpiar búsqueda"
+    "clearSearch": "Limpiar búsqueda",
+    "downloadCaptions": "Descargar subtítulos",
+    "burnCaptions": "Grabar subtítulos",
+    "burningCaptions": "Grabando subtítulos… {progress}%",
+    "errorBurnCaptionsFailed": "Error al grabar los subtítulos en el video.",
+    "burnCaptionsTitle": "Grabar subtítulos en el video",
+    "burnCaptionsText": "Los subtítulos se incrustarán permanentemente en el video. Elige la posición y el estilo a continuación.",
+    "burnCaptionsPosition": "Posición",
+    "burnCaptionsFontSize": "Tamaño de fuente",
+    "burnCaptionsTextColor": "Color del texto",
+    "burnCaptionsBackground": "Mostrar fondo",
+    "burnCaptionsBgColor": "Color de fondo",
+    "burnCaptionsBgOpacity": "Opacidad del fondo",
+    "burnCaptionsMarginV": "Margen"
   }
 }

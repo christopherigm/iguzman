@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import type { BurnCaptionsConfig } from '@/lib/types';
 import type { StoredVideo } from './use-video-store';
 import {
   STATUS_COLORS,
@@ -17,11 +18,12 @@ import {
   VideoCardHeader,
   VideoFooterLink,
 } from './video-item-shared';
+import { BurnCaptionsModal } from './burn-captions-modal';
 import './video-item.css';
 
 /* ── Props ──────────────────────────────────────────── */
 
-export type ReprocessAction = 'fps' | 'h264' | 'bars' | 'retry';
+export type ReprocessAction = 'fps' | 'h264' | 'bars' | 'retry' | 'burnCaptions';
 
 export interface ReadOnlyVideoItemProps {
   video: StoredVideo;
@@ -29,6 +31,7 @@ export interface ReadOnlyVideoItemProps {
     uuid: string,
     action: ReprocessAction,
     extra?: number,
+    config?: BurnCaptionsConfig,
   ) => void;
   onRemove: (uuid: string) => void;
   onUpdate: (uuid: string, patch: Partial<StoredVideo>) => void;
@@ -40,6 +43,7 @@ export function ReadOnlyVideoItem({
   video,
   onReprocess,
   onRemove,
+  onUpdate,
 }: ReadOnlyVideoItemProps) {
   const t = useTranslations('VideoGrid');
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -47,6 +51,7 @@ export function ReadOnlyVideoItem({
   const [copying, setCopying] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmConvert, setConfirmConvert] = useState(false);
+  const [showBurnModal, setShowBurnModal] = useState(false);
 
   const displayName =
     video.name ??
@@ -83,6 +88,23 @@ export function ReadOnlyVideoItem({
   const handleRetry = useCallback(() => {
     onReprocess(video.uuid, 'retry');
   }, [onReprocess, video.uuid]);
+
+  /* ── Download captions file ──────────────────────── */
+  const handleDownloadCaptions = useCallback(() => {
+    if (!video.captionsFile) return;
+    const url = resolveMediaUrl(video.captionsFile);
+    const name = video.name ?? 'video';
+    triggerBrowserDownload(url, `${name}-captions.txt`);
+  }, [video.captionsFile, video.name]);
+
+  /* ── Burn captions: collect config then hand off to PinnedVideoItem ── */
+  const handleBurnCaptions = useCallback(
+    (config: BurnCaptionsConfig) => {
+      setShowBurnModal(false);
+      onReprocess(video.uuid, 'burnCaptions', undefined, config);
+    },
+    [onReprocess, video.uuid],
+  );
 
   return (
     <Box
@@ -157,11 +179,20 @@ export function ReadOnlyVideoItem({
           onRemoveBlackBars={() => onReprocess(video.uuid, 'bars')}
           onInterpolateFps={(fps) => onReprocess(video.uuid, 'fps', fps)}
           onConvert={() => setConfirmConvert(true)}
+          onDownloadCaptions={handleDownloadCaptions}
+          onBurnCaptions={() => setShowBurnModal(true)}
           t={t}
         />
       ) : null}
 
       {/* ── Confirmation modals ───────────────────── */}
+      {showBurnModal ? (
+        <BurnCaptionsModal
+          onConfirm={handleBurnCaptions}
+          onCancel={() => setShowBurnModal(false)}
+        />
+      ) : null}
+
       {confirmConvert ? (
         <ConfirmationModal
           title={t('confirmConvertTitle')}

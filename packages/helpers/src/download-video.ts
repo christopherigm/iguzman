@@ -7,6 +7,7 @@ import {
   readdirSync,
   renameSync,
   rmSync,
+  writeFileSync,
 } from 'fs';
 import { get as httpsGet } from 'https';
 import { get as httpGet } from 'http';
@@ -237,6 +238,12 @@ export interface DownloadVideoOptions {
    * @example 1080 — download at most 1080p
    */
   maxHeight?: number;
+  /**
+   * Direct URL to an SRT caption/subtitle file to download.
+   * When provided and `captions` is `true`, this URL is used directly
+   * instead of auto-detecting captions from metadata.
+   */
+  captionUrl?: string;
 }
 
 /** A single format entry from yt-dlp's `--dump-json` output. */
@@ -385,11 +392,11 @@ export interface DownloadVideoResult {
    */
   srt?: string;
   /**
-   * Closed-caption text extracted from the video's automatic captions.
+   * Filename of the locally-saved captions file (e.g. `uuid.txt`).
    * Present only when the `captions` option is `true` and captions
-   * were available.
+   * were successfully downloaded to the output folder.
    */
-  captions?: string;
+  captionsFile?: string;
   /**
    * Format selection details. Present only when format detection
    * succeeds. Useful for debugging or inspecting chosen formats.
@@ -442,6 +449,18 @@ const execFileAsync = (bin: string, args: string[]): Promise<string> =>
         return reject(error);
       }
       resolve(stdout);
+    });
+  });
+
+/**
+ * Runs a command and resolves with the combined stdout + stderr output.
+ * Always resolves (never rejects) so callers can inspect output even when
+ * the process exits with a non-zero code (e.g. `yt-dlp --list-subs`).
+ */
+const execFileCaptureBoth = (bin: string, args: string[]): Promise<string> =>
+  new Promise((resolve) => {
+    execFile(bin, args, { maxBuffer: EXEC_MAX_BUFFER }, (_error, stdout, stderr) => {
+      resolve((stdout ?? '') + '\n' + (stderr ?? ''));
     });
   });
 
@@ -1329,31 +1348,17 @@ const fetchCaptions = (metadata: VideoMetadata): string | null => {
  */
 const downloadCaptionContent = async (
   captionUrl: string,
-  binary: string,
-  cookies: string,
   outputFolder: string,
+  fileId: string,
 ): Promise<string | null> => {
-  const tmpFile = `${outputFolder}/_caption_${randomUUID()}.srt`;
+  const destFile = `${outputFolder}/${fileId}.txt`;
 
   try {
-    const args = [captionUrl, '-o', tmpFile, '--quiet'];
-
-    if (cookies) {
-      args.push('--cookies', cookies);
-    }
-
-    await execFileAsync(binary, args);
-
-    if (existsSync(tmpFile)) {
-      const content = readFileSync(tmpFile, 'utf8');
-      rmSync(tmpFile, { force: true });
-      return content;
-    }
-
-    return null;
+    const ok = await downloadUrlToFile(captionUrl, destFile);
+    return ok && existsSync(destFile) ? `${fileId}.txt` : null;
   } catch {
     try {
-      rmSync(tmpFile, { force: true });
+      rmSync(destFile, { force: true });
     } catch {
       /* ignore */
     }
@@ -2445,6 +2450,7 @@ const downloadVideo = async ({
   checkCodec = false,
   iosDevice = false,
   maxHeight,
+  captionUrl: providedCaptionUrl,
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
@@ -2886,18 +2892,32 @@ const downloadVideo = async ({
 
   /* ---- 10. Fetch captions ---- */
 
-  if (requestCaptions && videoMetadata) {
+  if (requestCaptions) {
     try {
-      const captionUrl = fetchCaptions(videoMetadata);
-      if (captionUrl) {
-        const captionContent = await downloadCaptionContent(
-          captionUrl,
-          binary,
-          cookies,
-          outputFolder,
-        );
-        if (captionContent) {
-          result.captions = captionContent;
+      const captionUrlToUse =
+        providedCaptionUrl ?? (videoMetadata ? fetchCaptions(videoMetadata) : null);
+      if (captionUrlToUse) {
+        let captionsFile: string | null = null;
+        if (captionUrlToUse.startsWith('YTDLP_SUBS://')) {
+          const lang = captionUrlToUse.slice('YTDLP_SUBS://'.length);
+          captionsFile = await downloadSubtitleViaYtDlp(
+            url,
+            lang,
+            binary,
+            cookies,
+            jsRuntimes,
+            outputFolder,
+            fileId,
+          );
+        } else {
+          captionsFile = await downloadCaptionContent(
+            captionUrlToUse,
+            outputFolder,
+            fileId,
+          );
+        }
+        if (captionsFile) {
+          result.captionsFile = captionsFile;
         }
       }
     } catch {
@@ -2906,6 +2926,127 @@ const downloadVideo = async ({
   }
 
   return result;
+};
+
+/* ------------------------------------------------------------------ */
+/*  Subtitle list via yt-dlp --list-subs                              */
+/* ------------------------------------------------------------------ */
+
+/** One entry returned by {@link listSubtitlesViaYtDlp}. */
+export interface SubtitleInfo {
+  lang: string;
+  label: string;
+  type: 'manual' | 'auto';
+  /**
+   * Sentinel URL in the form `YTDLP_SUBS://<lang>`.
+   * Pass this as `captionUrl` to {@link downloadVideo} and it will be
+   * resolved via `yt-dlp --write-subs` at download time.
+   */
+  url: string;
+}
+
+/**
+ * Parses the combined stdout+stderr from `yt-dlp --list-subs`.
+ *
+ * Example output:
+ * ```
+ * [info] Available subtitles for <id>:
+ * Language Formats
+ * eng-US   vtt
+ *
+ * [info] Available automatic captions for <id>:
+ * Language Formats
+ * en   json3, vtt, srv1
+ * ```
+ */
+const parseListSubsOutput = (output: string): Array<{ lang: string; type: 'manual' | 'auto' }> => {
+  const results: Array<{ lang: string; type: 'manual' | 'auto' }> = [];
+  const seen = new Set<string>();
+  let currentType: 'manual' | 'auto' | null = null;
+
+  for (const line of output.split('\n')) {
+    const trimmed = line.trim();
+
+    if (trimmed.includes('Available subtitles') && !trimmed.includes('automatic')) {
+      currentType = 'manual';
+      continue;
+    }
+    if (trimmed.includes('Available automatic captions')) {
+      currentType = 'auto';
+      continue;
+    }
+    if (currentType === null) continue;
+    if (trimmed.startsWith('Language') || trimmed.startsWith('[') || trimmed === '') continue;
+
+    const match = trimmed.match(/^(\S+)\s+/);
+    if (!match) continue;
+
+    const lang = match[1]!;
+    if (!seen.has(lang)) {
+      seen.add(lang);
+      results.push({ lang, type: currentType });
+    }
+  }
+
+  return results;
+};
+
+/**
+ * Downloads a subtitle file via yt-dlp for the given language code and
+ * saves the converted SRT content to `${outputFolder}/${fileId}.txt`.
+ *
+ * Used when a caption URL is the `YTDLP_SUBS://<lang>` sentinel.
+ *
+ * @returns The saved filename (`${fileId}.txt`), or `null` on failure.
+ */
+const downloadSubtitleViaYtDlp = async (
+  videoUrl: string,
+  lang: string,
+  binary: string,
+  cookies: string,
+  jsRuntimes: string,
+  outputFolder: string,
+  fileId: string,
+): Promise<string | null> => {
+  const tmpFolder = `${outputFolder}/_srt_ydlp_${randomUUID()}`;
+  ensureFolder(tmpFolder);
+
+  try {
+    const args = [
+      videoUrl,
+      '--skip-download',
+      '--write-subs',
+      '--write-auto-subs',
+      '--convert-subs',
+      'srt',
+      '--sub-langs',
+      lang,
+      '--no-playlist',
+      '--js-runtimes',
+      `node:${jsRuntimes}`,
+    ];
+    if (cookies) args.push('--cookies', cookies);
+    args.push('-o', `${tmpFolder}/%(id)s.%(ext)s`);
+
+    await execFileAsync(binary, args);
+
+    const files = readdirSync(tmpFolder);
+    const srtFile = files.find((f) => f.endsWith('.srt'));
+
+    if (srtFile) {
+      const content = readFileSync(`${tmpFolder}/${srtFile}`, 'utf8');
+      const destFile = `${outputFolder}/${fileId}.txt`;
+      writeFileSync(destFile, content, 'utf8');
+      removeFolder(tmpFolder);
+      return existsSync(destFile) ? `${fileId}.txt` : null;
+    }
+
+    removeFolder(tmpFolder);
+    return null;
+  } catch {
+    removeFolder(tmpFolder);
+    return null;
+  }
 };
 
 /**
@@ -2927,5 +3068,51 @@ export const fetchVideoMetadata = (
     options.cookies ?? DEFAULT_COOKIES,
     options.jsRuntimes ?? DEFAULT_JS_RUNTIMES,
   );
+
+/**
+ * Lists subtitles available for a URL using `yt-dlp --list-subs`.
+ *
+ * This is a slower, exhaustive fallback for when `fetchVideoMetadata`
+ * returns no captions. Each result carries a `YTDLP_SUBS://<lang>`
+ * sentinel URL — pass it as `captionUrl` to {@link downloadVideo} and
+ * the subtitle will be fetched via `yt-dlp --write-subs` at download time.
+ *
+ * @returns Array of available subtitles, or an empty array on failure.
+ */
+export const listSubtitlesViaYtDlp = async (
+  url: string,
+  options: {
+    cookies?: string;
+    binary?: string;
+    jsRuntimes?: string;
+  } = {},
+): Promise<SubtitleInfo[]> => {
+  const binary = options.binary ?? DEFAULT_BINARY;
+  const cookies = options.cookies ?? DEFAULT_COOKIES;
+  const jsRuntimes = options.jsRuntimes ?? DEFAULT_JS_RUNTIMES;
+
+  try {
+    const args = [
+      '--list-subs',
+      '--no-playlist',
+      '--js-runtimes',
+      `node:${jsRuntimes}`,
+    ];
+    if (cookies) args.push('--cookies', cookies);
+    args.push(url);
+
+    const output = await execFileCaptureBoth(binary, args);
+    const entries = parseListSubsOutput(output);
+
+    return entries.map((e) => ({
+      lang: e.lang,
+      label: e.type === 'auto' ? `${e.lang} (auto)` : e.lang,
+      type: e.type,
+      url: `YTDLP_SUBS://${e.lang}`,
+    }));
+  } catch {
+    return [];
+  }
+};
 
 export default downloadVideo;

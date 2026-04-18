@@ -1,0 +1,17 @@
+/* ── Spinner ───────────────────────────────────────────── */
+
+.spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border-style: solid;
+  border-color: var(--surface-2, #e5e7eb);
+  border-top-color: var(--accent, #06b6d4);
+  animation: spinner-rotate 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}

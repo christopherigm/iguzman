@@ -28,7 +28,10 @@
     "errorFfmpegFailed": "FPS-Interpolation fehlgeschlagen. Original wird heruntergeladen.",
     "fpsBoostTitle": "FPS-Erhöhung Warnung",
     "fpsBoostText": "Die FPS-Erhöhung auf {fps} nutzt den Browser Ihres Geräts zur Videoverarbeitung, was länger dauern kann. Wenn Sie die Seite schließen oder aktualisieren, wird die Verarbeitung bei Ihrem nächsten Besuch automatisch fortgesetzt.",
-    "resolution": "Auflösung"
+    "resolution": "Auflösung",
+    "checkForCaptions": "Untertitel suchen",
+    "subtitles": "Untertitel",
+    "captionsLoading": "Untertitel werden geladen…"
   },
   "Admin": {
     "title": "Admin-Dashboard",
@@ -127,6 +130,19 @@
     "detailProcessingTime": "Verarbeitungszeit",
     "detailCores": "CPU-Threads",
     "searchActive": "Suche nach: \"{query}\"",
-    "clearSearch": "Suche löschen"
+    "clearSearch": "Suche löschen",
+    "downloadCaptions": "Untertitel herunterladen",
+    "burnCaptions": "Untertitel einbrennen",
+    "burningCaptions": "Untertitel werden eingebrannt… {progress}%",
+    "errorBurnCaptionsFailed": "Fehler beim Einbrennen der Untertitel.",
+    "burnCaptionsTitle": "Untertitel ins Video einbrennen",
+    "burnCaptionsText": "Die Untertitel werden dauerhaft in das Video eingebettet. Wähle unten eine Position und einen Stil.",
+    "burnCaptionsPosition": "Position",
+    "burnCaptionsFontSize": "Schriftgröße",
+    "burnCaptionsTextColor": "Textfarbe",
+    "burnCaptionsBackground": "Hintergrund anzeigen",
+    "burnCaptionsBgColor": "Hintergrundfarbe",
+    "burnCaptionsBgOpacity": "Hintergrunddeckkraft",
+    "burnCaptionsMarginV": "Abstand"
   }
 }

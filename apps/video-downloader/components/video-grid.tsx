@@ -7,6 +7,7 @@ import { Button } from '@repo/ui/core-elements/button';
 import { Grid } from '@repo/ui/core-elements/grid';
 import { Typography } from '@repo/ui/core-elements/typography';
 import type { Platform } from '@repo/helpers/checkers';
+import type { BurnCaptionsConfig } from '@/lib/types';
 import { PinnedVideoItem } from './pinned-video-item';
 import { ReadOnlyVideoItem, type ReprocessAction } from './readonly-video-item';
 import { VideoToolbar } from './video-toolbar';
@@ -112,7 +113,7 @@ export function VideoGrid({
 
   /* ── Reprocess handler: move completed → pinned ──── */
   const handleReprocess = useCallback(
-    (uuid: string, action: ReprocessAction, extra?: number) => {
+    (uuid: string, action: ReprocessAction, extra?: number, config?: BurnCaptionsConfig) => {
       switch (action) {
         case 'fps':
           onReprocessCompleted(uuid, {
@@ -139,6 +140,13 @@ export function VideoGrid({
             taskId: null,
             file: null,
             downloadURL: null,
+          });
+          break;
+        case 'burnCaptions':
+          onReprocessCompleted(uuid, {
+            status: 'burning' as VideoStatus,
+            burnCaptionsConfig: config ?? null,
+            captionsBurned: false,
           });
           break;
       }

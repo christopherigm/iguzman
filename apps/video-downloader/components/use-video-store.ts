@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Platform } from '@repo/helpers/checkers';
-import type { VideoResultFields, VideoStatus } from '@/lib/types';
+import type { BurnCaptionsConfig, VideoResultFields, VideoStatus } from '@/lib/types';
 
 /* ── Types ──────────────────────────────────────────── */
 
@@ -43,6 +43,14 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   taskId: string | null;
   /** Maximum resolution height cap sent to the download API. */
   maxHeight?: number | null;
+  /** Whether captions were requested for this download. */
+  captionsEnabled: boolean;
+  /** URL of the selected caption/subtitle track. */
+  captionUrl: string | null;
+  /** Config stored when user triggers burn-captions; null when not pending or after completion. */
+  burnCaptionsConfig: BurnCaptionsConfig | null;
+  /** Whether captions have been successfully burned into the video. */
+  captionsBurned: boolean;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -58,6 +66,7 @@ const BUSY_STATUSES = new Set<VideoStatus>([
   'queued',
   'processing',
   'converting',
+  'burning',
 ]);
 
 /* ── Helpers ────────────────────────────────────────── */
@@ -73,6 +82,11 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     sourceFps: v.sourceFps ?? null,
     width: v.width ?? null,
     height: v.height ?? null,
+    captionsEnabled: v.captionsEnabled ?? false,
+    captionUrl: v.captionUrl ?? null,
+    captionsFile: v.captionsFile ?? null,
+    burnCaptionsConfig: v.burnCaptionsConfig ?? null,
+    captionsBurned: v.captionsBurned ?? false,
     thumbnail:
       v.thumbnail ??
       ((v as unknown as Record<string, unknown>).thumbnailFile as string) ??
@@ -98,6 +112,10 @@ function recoverPinnedState(v: StoredVideo): StoredVideo {
   }
   if (video.status === 'converting' && !video.file) {
     return { ...video, status: 'done' as VideoStatus, error: null };
+  }
+  if (video.status === 'burning') {
+    if (video.burnCaptionsConfig && video.file) return video;
+    return { ...video, status: 'done' as VideoStatus };
   }
   return video;
 }
@@ -229,7 +247,7 @@ export function useVideoStore() {
         | 'justAudio'
         | 'enhance'
         | 'autoDownload'
-      > & { maxHeight?: number | null },
+      > & { maxHeight?: number | null; captionsEnabled?: boolean; captionUrl?: string | null },
     ): string => {
       const existing = pinned.find((v) => v.originalURL === partial.originalURL);
       if (existing) return existing.uuid;
@@ -261,6 +279,11 @@ export function useVideoStore() {
         width: null,
         height: null,
         maxHeight: partial.maxHeight ?? null,
+        captionsEnabled: partial.captionsEnabled ?? false,
+        captionUrl: partial.captionUrl ?? null,
+        captionsFile: null,
+        burnCaptionsConfig: null,
+        captionsBurned: false,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional

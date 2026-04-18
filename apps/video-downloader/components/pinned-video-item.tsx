@@ -7,8 +7,9 @@ import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { useFFmpeg } from '@repo/ui/use-ffmpeg';
 import type { DownloadVideoError } from '@repo/helpers/download-video';
+import type { VideoStatus } from '@/lib/types';
 import { usePollTask, type TaskData } from './use-poll-task';
-import type { StoredVideo, VideoStatus } from './use-video-store';
+import type { StoredVideo } from './use-video-store';
 import {
   STATUS_COLORS,
   resolveMediaUrl,
@@ -24,6 +25,18 @@ import {
   isIOS,
 } from './video-item-shared';
 import './video-item.css';
+
+/* ── Helpers ────────────────────────────────────────── */
+
+function hexToSSA(hex: string, opacity: number): string {
+  const r = hex.slice(1, 3);
+  const g = hex.slice(3, 5);
+  const b = hex.slice(5, 7);
+  const alpha = Math.round((1 - opacity / 100) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `&H${alpha}${b}${g}${r}`.toUpperCase();
+}
 
 /* ── API types ──────────────────────────────────────── */
 
@@ -62,6 +75,7 @@ export function PinnedVideoItem({
   const resumeChecked = useRef(false);
   const convertResumeChecked = useRef(false);
   const blackBarsResumeChecked = useRef(false);
+  const burnResumeChecked = useRef(false);
   const pollResumeChecked = useRef(false);
 
   /* Own FFmpeg WASM instance (dedicated Web Worker for this item) */
@@ -74,6 +88,7 @@ export function PinnedVideoItem({
     interpolateFps,
     convertToH264,
     removeBlackBars,
+    burnSubtitles,
   } = useFFmpeg();
 
   const { startPolling, stopPolling } = usePollTask();
@@ -85,7 +100,8 @@ export function PinnedVideoItem({
   const isProcessing =
     video.status === 'downloading' ||
     video.status === 'processing' ||
-    video.status === 'converting';
+    video.status === 'converting' ||
+    video.status === 'burning';
   const isBusy = isProcessing || video.status === 'queued';
   const displayName =
     video.name ??
@@ -225,6 +241,54 @@ export function PinnedVideoItem({
     [runProcessing, removeBlackBars],
   );
 
+  /* ── Burn captions handler ──────────────────────────── */
+  const handleBurnCaptions = useCallback(() => {
+    const config = video.burnCaptionsConfig;
+    if (!config || !video.captionsFile || video.justAudio) return;
+
+    const captionsFile = video.captionsFile;
+    runProcessing({
+      activeStatus: 'burning' as VideoStatus,
+      process: async (sourceUrl, onProgress) => {
+        const srtRes = await fetch(resolveMediaUrl(captionsFile));
+        if (!srtRes.ok) throw new Error('Failed to fetch captions file');
+        const srtContent = await srtRes.text();
+
+        const primaryColour = hexToSSA(config.primaryColor, 100);
+        const backColour = config.showBackground
+          ? hexToSSA(config.bgColor, config.bgOpacity)
+          : '&HFF000000';
+        const borderStyle = config.showBackground ? 3 : 1;
+        const outline = config.showBackground ? 0 : 2;
+
+        return burnSubtitles(
+          sourceUrl,
+          {
+            srtContent,
+            alignment: config.alignment,
+            marginV: config.marginV,
+            fontSize: config.fontSize,
+            primaryColour,
+            backColour,
+            borderStyle,
+            outline,
+          },
+          onProgress,
+        );
+      },
+      donePatch: { captionsBurned: true, burnCaptionsConfig: null },
+      taskUpdate: { captionsBurned: true },
+      errorKey: 'errorBurnCaptionsFailed',
+      completeAfter: true,
+    });
+  }, [
+    video.burnCaptionsConfig,
+    video.captionsFile,
+    video.justAudio,
+    runProcessing,
+    burnSubtitles,
+  ]);
+
   /* ── Handle completed task from polling ────────────── */
   const handleTaskDone = useCallback(
     (task: TaskData) => {
@@ -244,6 +308,10 @@ export function PinnedVideoItem({
         sourceFps: task.sourceFps ?? null,
         width: task.width ?? null,
         height: task.height ?? null,
+        captionsFile: task.captionsFile
+          ? `/api/media/${task.captionsFile}`
+          : null,
+        captionUrl: null,
       });
 
       /* FPS interpolation requested — chain into processing before completing. */
@@ -331,6 +399,8 @@ export function PinnedVideoItem({
           checkCodec: video.platform === 'tiktok',
           iosDevice: isIOS(),
           ...(video.maxHeight != null && { maxHeight: video.maxHeight }),
+          ...(video.captionsEnabled && { captionsEnabled: true }),
+          ...(video.captionUrl && { captionUrl: video.captionUrl }),
         }),
       });
 
@@ -481,6 +551,30 @@ export function PinnedVideoItem({
     video.fps,
     video.fpsApplied,
     handleRemoveBlackBars,
+  ]);
+
+  /* ── Resume interrupted burn-captions on mount ── */
+  useEffect(() => {
+    if (burnResumeChecked.current) return;
+    burnResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.justAudio &&
+      !video.captionsBurned &&
+      video.burnCaptionsConfig !== null &&
+      video.status === 'burning';
+
+    if (needsResume) {
+      queueMicrotask(() => handleBurnCaptions());
+    }
+  }, [
+    video.file,
+    video.justAudio,
+    video.captionsBurned,
+    video.burnCaptionsConfig,
+    video.status,
+    handleBurnCaptions,
   ]);
 
   /* ── Stop polling when this card unmounts ── */
