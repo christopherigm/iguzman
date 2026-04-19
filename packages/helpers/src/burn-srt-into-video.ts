@@ -104,32 +104,99 @@ const burnSRTIntoVideo = ({
       );
     }
 
-    // Build the ASS/SSA force_style string for subtitle rendering.
-    const forceStyle = [
-      `FontName=${font}`,
-      `FontSize=${fontSize}`,
-      `BorderStyle=${borderStyle}`,
-      `BackColour=&${backColour}`,
-      `Alignment=${alignment}`,
-      `MarginV=${marginV}`,
-    ].join(',');
+    /* Probe the source video for rotation metadata so we can orient
+       the frame *before* burning subtitles.  Without this, portrait
+       videos (stored as landscape + rotation flag) get subtitles
+       positioned in the wrong place. */
+    execFile(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-select_streams',
+        'v:0',
+        '-show_entries',
+        'stream_tags=rotate:side_data=rotation',
+        '-of',
+        'default=nw=1',
+        srcFile,
+      ],
+      { maxBuffer: 1024 * 512 },
+      (probeErr, probeOut) => {
+        let rotation = 0;
+        if (!probeErr && probeOut) {
+          const m = probeOut.match(/(?:rotate|rotation)=(-?\d+(?:\.\d+)?)/i);
+          if (m) rotation = ((Math.round(Number(m[1])) % 360) + 360) % 360;
+        }
 
-    const subtitleFilter = `subtitles=${srtFilePath}:force_style='${forceStyle}'`;
+        /* The caller uses ASS v4+ numpad alignment (1-9), but ffmpeg's
+           subtitles filter interprets the Alignment field as SSA v4
+           bit-flag format: bottom 1-3, top +4 (5-7), mid +8 (9-11).
+           Convert before building the style string. */
+        const SSA_ALIGNMENT: Record<number, number> = {
+          1: 1,
+          2: 2,
+          3: 3, // bottom: same
+          4: 9,
+          5: 10,
+          6: 11, // middle: +8 offset
+          7: 5,
+          8: 6,
+          9: 7, // top: +4 offset
+        };
+        const ssaAlignment = SSA_ALIGNMENT[alignment] ?? alignment;
 
-    // Use execFile with explicit args to avoid shell-injection risks.
-    // @see https://stackoverflow.com/questions/8672809/use-ffmpeg-to-add-text-subtitles
-    const args = ['-y', '-i', srcFile, '-vf', subtitleFilter, destFile];
+        const forceStyle = [
+          `FontName=${font}`,
+          `FontSize=${fontSize}`,
+          `BorderStyle=${borderStyle}`,
+          `BackColour=&${backColour}`,
+          `Alignment=${ssaAlignment}`,
+          `MarginV=${marginV}`,
+        ].join(',');
 
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error) => {
-      if (error) {
-        console.error('Error burning SRT into video:', error);
-        cleanupSrtFile();
-        return reject(error);
-      }
+        const subtitleFilter = `subtitles=${srtFilePath}:force_style='${forceStyle}'`;
 
-      cleanupSrtFile();
-      resolve(`media/${destClean}`);
-    });
+        /* Prepend a transpose filter when rotation metadata is present so
+           the subtitle alignment values match the displayed orientation. */
+        let vf: string;
+        if (rotation === 90) {
+          vf = `transpose=1,${subtitleFilter}`;
+        } else if (rotation === 270) {
+          vf = `transpose=2,${subtitleFilter}`;
+        } else if (rotation === 180) {
+          vf = `transpose=1,transpose=1,${subtitleFilter}`;
+        } else {
+          vf = subtitleFilter;
+        }
+
+        const needsRotation = rotation !== 0;
+
+        // Use execFile with explicit args to avoid shell-injection risks.
+        // @see https://stackoverflow.com/questions/8672809/use-ffmpeg-to-add-text-subtitles
+        const args = [
+          '-y',
+          ...(needsRotation ? ['-noautorotate'] : []),
+          '-i',
+          srcFile,
+          '-vf',
+          vf,
+          ...(needsRotation ? ['-metadata:s:v:0', 'rotate=0'] : []),
+          destFile,
+        ];
+
+        execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error) => {
+          if (error) {
+            console.error('Error burning SRT into video:', error);
+            cleanupSrtFile();
+            return reject(error);
+          }
+
+          cleanupSrtFile();
+          resolve(`media/${destClean}`);
+        });
+      },
+    );
   });
 };
 

@@ -483,6 +483,16 @@ self.onmessage = async (
             : 0;
           const fpsMatch = probeLog.match(/(\d+(?:\.\d+)?)\s*(?:fps|tbr)/);
           const srcFps = fpsMatch ? Number(fpsMatch[1]) : 30;
+
+          /* Detect rotation metadata so we can orient the frame before
+             burning subtitles.  Without this, portrait videos (stored as
+             landscape + rotation flag) get subtitles in the wrong position. */
+          const rotMatch = probeLog.match(
+            /rotation\s+(?:of\s+)?(-?\d+(?:\.\d+)?)/i,
+          );
+          const rotation = rotMatch
+            ? ((Math.round(Number(rotMatch[1])) % 360) + 360) % 360
+            : 0;
           const estimatedFrames = durationSec > 0 ? durationSec * srcFps : 0;
           let lastFrame = 0;
 
@@ -504,8 +514,25 @@ self.onmessage = async (
           };
           ff.on('log', burnLogHandler);
 
+          /* The UI uses ASS v4+ numpad alignment (1-9), but ffmpeg's
+             subtitles filter interprets the Alignment field as SSA v4
+             bit-flag format: bottom 1-3, top +4 (5-7), mid +8 (9-11).
+             Convert before building the style string. */
+          const SSA_ALIGNMENT: Record<number, number> = {
+            1: 1,
+            2: 2,
+            3: 3, // bottom: same
+            4: 9,
+            5: 10,
+            6: 11, // middle: +8 offset
+            7: 5,
+            8: 6,
+            9: 7, // top: +4 offset
+          };
+          const ssaAlignment = SSA_ALIGNMENT[alignment] ?? alignment;
+
           const forceStyle = [
-            `Alignment=${alignment}`,
+            `Alignment=${ssaAlignment}`,
             `MarginV=${marginV}`,
             `FontSize=${fontSize}`,
             `PrimaryColour=${primaryColour}`,
@@ -520,13 +547,33 @@ self.onmessage = async (
             ...(fontData ? ['FontName=Roboto'] : []),
           ].join(',');
           const fontsOption = fontData ? ':fontsdir=/fonts' : '';
+          const subsFilter = `subtitles=${srtFile}${fontsOption}:force_style='${forceStyle}'`;
+
+          /* Build the video filter chain.  When the source has rotation
+             metadata we must orient the pixels *before* the subtitles
+             filter so that ASS alignment values match the displayed frame.
+             We pass -noautorotate to prevent ffmpeg from double-rotating. */
+          let vf: string;
+          const needsRotation = rotation !== 0;
+          if (rotation === 90) {
+            vf = `transpose=1,${subsFilter}`;
+          } else if (rotation === 270) {
+            vf = `transpose=2,${subsFilter}`;
+          } else if (rotation === 180) {
+            vf = `transpose=1,transpose=1,${subsFilter}`;
+          } else {
+            vf = subsFilter;
+          }
+
           const code = await ff.exec([
+            ...(needsRotation ? ['-noautorotate'] : []),
             '-i',
             input,
             '-vf',
-            `subtitles=${srtFile}${fontsOption}:force_style='${forceStyle}'`,
+            vf,
             '-c:a',
             'copy',
+            ...(needsRotation ? ['-metadata:s:v:0', 'rotate=0'] : []),
             output,
           ]);
           ff.off('log', burnLogHandler);
