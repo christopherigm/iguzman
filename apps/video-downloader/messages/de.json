@@ -156,6 +156,24 @@
     "status_burning": "Untertitel einbrennen",
     "status_translating": "Untertitel übersetzen",
     "translatingCaptions": "Untertitel werden übersetzt…",
-    "errorTranslateFailed": "Untertitel konnten nicht übersetzt werden."
+    "errorTranslateFailed": "Untertitel konnten nicht übersetzt werden.",
+    "burnCaptionsAnimation": "Animation",
+    "burnCaptionsAnimationNone": "Keine",
+    "burnCaptionsAnimationFade": "Einblenden",
+    "burnCaptionsAnimationSlideUp": "Nach oben gleiten",
+    "burnCaptionsAnimationSlideDown": "Nach unten gleiten",
+    "burnCaptionsAnimationBlur": "Unschärfe",
+    "burnCaptionsAnimationZoom": "Zoom",
+    "burnCaptionsAnimationKaraoke": "Karaoke",
+    "burnCaptionsAnimationFadeIn": "Einblenden",
+    "burnCaptionsAnimationFadeOut": "Ausblenden",
+    "burnCaptionsAnimationOffset": "Versatz",
+    "burnCaptionsAnimationDuration": "Dauer",
+    "burnCaptionsAnimationStrength": "Stärke",
+    "burnCaptionsAnimationKaraokeMode": "Karaoke-Modus",
+    "burnCaptionsAnimationKaraokeHighlight": "Hervorhebungsfarbe",
+    "burnCaptionsAnimationKaraokeSweep": "Gleiten",
+    "burnCaptionsAnimationKaraokeInstant": "Sofort",
+    "burnCaptionsAnimationKaraokeFilled": "Gefüllt"
   }
 }

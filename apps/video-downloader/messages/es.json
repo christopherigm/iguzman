@@ -156,6 +156,24 @@
     "status_burning": "Grabando subtítulos",
     "status_translating": "Traduciendo subtítulos",
     "translatingCaptions": "Traduciendo subtítulos…",
-    "errorTranslateFailed": "No se pudieron traducir los subtítulos."
+    "errorTranslateFailed": "No se pudieron traducir los subtítulos.",
+    "burnCaptionsAnimation": "Animación",
+    "burnCaptionsAnimationNone": "Ninguna",
+    "burnCaptionsAnimationFade": "Fundido",
+    "burnCaptionsAnimationSlideUp": "Deslizar arriba",
+    "burnCaptionsAnimationSlideDown": "Deslizar abajo",
+    "burnCaptionsAnimationBlur": "Desenfoque",
+    "burnCaptionsAnimationZoom": "Zoom",
+    "burnCaptionsAnimationKaraoke": "Karaoke",
+    "burnCaptionsAnimationFadeIn": "Entrada",
+    "burnCaptionsAnimationFadeOut": "Salida",
+    "burnCaptionsAnimationOffset": "Desplazamiento",
+    "burnCaptionsAnimationDuration": "Duración",
+    "burnCaptionsAnimationStrength": "Intensidad",
+    "burnCaptionsAnimationKaraokeMode": "Modo karaoke",
+    "burnCaptionsAnimationKaraokeHighlight": "Color resaltado",
+    "burnCaptionsAnimationKaraokeSweep": "Barrido",
+    "burnCaptionsAnimationKaraokeInstant": "Instantáneo",
+    "burnCaptionsAnimationKaraokeFilled": "Relleno"
   }
 }

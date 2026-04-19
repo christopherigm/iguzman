@@ -46,6 +46,37 @@ export type VideoStatus = TaskStatus | 'queued' | 'processing' | 'converting' | 
 
 /* ── Burn captions config ──────────────────────────── */
 
+export type BurnCaptionsAnimationType =
+  | 'none'
+  | 'fade'
+  | 'slideUp'
+  | 'slideDown'
+  | 'blur'
+  | 'zoom'
+  | 'karaoke';
+
+export interface BurnCaptionsAnimationConfig {
+  type: BurnCaptionsAnimationType;
+  /** Fade: fade-in duration in ms. Default 300. */
+  fadeInMs?: number;
+  /** Fade: fade-out duration in ms. Default 200. */
+  fadeOutMs?: number;
+  /** SlideUp / SlideDown: pixel offset from final anchor. Default 20. */
+  slideOffset?: number;
+  /** SlideUp / SlideDown: travel duration in ms. Default 300. */
+  slideDurationMs?: number;
+  /** Blur: initial blur strength. Default 15. */
+  blurStrength?: number;
+  /** Blur: duration in ms to clear blur to 0. Default 300. */
+  blurDurationMs?: number;
+  /** Zoom: duration in ms to scale text from 0→100%. Default 300. */
+  zoomDurationMs?: number;
+  /** Karaoke: ASS tag variant. Default 'kf' (sweep). */
+  karaokeMode?: 'k' | 'kf' | 'ko';
+  /** Karaoke: highlight colour in ASS &HAABBGGRR format. Default yellow. */
+  karaokeHighlightColour?: string;
+}
+
 export interface BurnCaptionsConfig {
   alignment: number;
   marginV: number;
@@ -59,6 +90,8 @@ export interface BurnCaptionsConfig {
   translate?: boolean;
   /** BCP-47 language code to translate subtitles into (e.g. 'en', 'es'). */
   translateTo?: string;
+  /** Animation applied to subtitle entries. */
+  animation?: BurnCaptionsAnimationConfig;
 }
 
 /* ── Re-exports for convenience ────────────────────── */

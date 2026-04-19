@@ -307,6 +307,25 @@ export function PinnedVideoItem({
           : '&HFF000000';
         const outline = borderStyle === 3 ? 4 : 2;
 
+        const animCfg = config.animation;
+        const animation =
+          animCfg && animCfg.type !== 'none'
+            ? {
+                types: [animCfg.type] as string[],
+                fadeInMs: animCfg.fadeInMs,
+                fadeOutMs: animCfg.fadeOutMs,
+                slideOffset: animCfg.slideOffset,
+                slideDurationMs: animCfg.slideDurationMs,
+                blurStrength: animCfg.blurStrength,
+                blurDurationMs: animCfg.blurDurationMs,
+                zoomDurationMs: animCfg.zoomDurationMs,
+                karaokeMode: animCfg.karaokeMode,
+                karaokeHighlightColour: animCfg.karaokeHighlightColour
+                  ? hexToSSA(animCfg.karaokeHighlightColour, 100)
+                  : undefined,
+              }
+            : {};
+
         return burnSubtitles(
           sourceUrl,
           {
@@ -318,6 +337,7 @@ export function PinnedVideoItem({
             backColour,
             borderStyle,
             outline,
+            animation,
           },
           onProgress,
         );

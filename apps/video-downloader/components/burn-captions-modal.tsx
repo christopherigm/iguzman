@@ -7,7 +7,11 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
-import type { BurnCaptionsConfig } from '@/lib/types';
+import type {
+  BurnCaptionsConfig,
+  BurnCaptionsAnimationConfig,
+  BurnCaptionsAnimationType,
+} from '@/lib/types';
 import './burn-captions-modal.css';
 
 export type { BurnCaptionsConfig };
@@ -39,7 +43,7 @@ const buildSubtitlePreviewStyle = (cfg: BurnCaptionsConfig): CSSProperties => {
   const isRight = [3, 6, 9].includes(alignment);
 
   const scaledMargin = Math.max(3, Math.round(marginV * 0.2));
-  const scaledFont = Math.max(12, Math.round(fontSize));
+  const scaledFont = Math.max(8, Math.round(fontSize * 0.35));
   const transforms: string[] = [];
 
   const s: CSSProperties = {
@@ -107,16 +111,40 @@ export interface BurnCaptionsModalProps {
   onCancel: () => void;
 }
 
+const ANIMATION_TYPES: BurnCaptionsAnimationType[] = [
+  'none',
+  'fade',
+  'slideUp',
+  'slideDown',
+  'blur',
+  'zoom',
+  'karaoke',
+];
+
+const DEFAULT_ANIMATION: BurnCaptionsAnimationConfig = {
+  type: 'none',
+  fadeInMs: 300,
+  fadeOutMs: 200,
+  slideOffset: 20,
+  slideDurationMs: 300,
+  blurStrength: 15,
+  blurDurationMs: 300,
+  zoomDurationMs: 300,
+  karaokeMode: 'kf',
+  karaokeHighlightColour: '#ffff00',
+};
+
 const DEFAULT_CONFIG: BurnCaptionsConfig = {
   alignment: 2,
   marginV: 15,
-  fontSize: 16,
-  primaryColor: '#ffffff',
-  borderStyle: 3,
+  fontSize: 24,
+  primaryColor: '#ffff00',
+  borderStyle: 1,
   bgColor: '#000000',
   bgOpacity: 50,
   translate: false,
   translateTo: 'en',
+  animation: { ...DEFAULT_ANIMATION },
 };
 
 export function BurnCaptionsModal({
@@ -130,6 +158,18 @@ export function BurnCaptionsModal({
     key: K,
     value: BurnCaptionsConfig[K],
   ) => setConfig((prev) => ({ ...prev, [key]: value }));
+
+  const setAnim = <K extends keyof BurnCaptionsAnimationConfig>(
+    key: K,
+    value: BurnCaptionsAnimationConfig[K],
+  ) =>
+    setConfig((prev) => ({
+      ...prev,
+      animation: { ...(prev.animation ?? DEFAULT_ANIMATION), [key]: value },
+    }));
+
+  const anim = config.animation ?? DEFAULT_ANIMATION;
+  const animType = anim.type;
 
   return (
     <ConfirmationModal
@@ -345,6 +385,274 @@ export function BurnCaptionsModal({
                   onChange={(e) => set('bgOpacity', Number(e.target.value))}
                 />
                 <span className="bcm-range-value">{config.bgOpacity}%</span>
+              </Box>
+            </Box>
+          </>
+        ) : null}
+
+        {/* Animation */}
+        <Box className="bcm-section">
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsAnimation')}
+          </Typography>
+          <Box className="bcm-select-wrapper">
+            <select
+              className="bcm-select"
+              value={animType}
+              onChange={(e) =>
+                setAnim('type', e.target.value as BurnCaptionsAnimationType)
+              }
+              aria-label={t('burnCaptionsAnimation')}
+            >
+              {ANIMATION_TYPES.map((aType) => (
+                <option
+                  key={aType}
+                  value={aType}
+                  style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+                >
+                  {t(
+                    `burnCaptionsAnimation${aType.charAt(0).toUpperCase()}${aType.slice(1)}` as Parameters<
+                      typeof t
+                    >[0],
+                  )}
+                </option>
+              ))}
+            </select>
+            <span className="bcm-select-chevron">
+              <Icon
+                icon="/icons/chevron-down.svg"
+                size={14}
+                color="var(--foreground, #171717)"
+              />
+            </span>
+          </Box>
+        </Box>
+
+        {/* Fade sub-options */}
+        {animType === 'fade' ? (
+          <>
+            <Box className="bcm-section">
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsAnimationFadeIn')}
+              </Typography>
+              <Box className="bcm-row">
+                <input
+                  type="range"
+                  className="bcm-range"
+                  min={0}
+                  max={1000}
+                  step={50}
+                  value={anim.fadeInMs ?? 300}
+                  onChange={(e) => setAnim('fadeInMs', Number(e.target.value))}
+                />
+                <span className="bcm-range-value">
+                  {anim.fadeInMs ?? 300}ms
+                </span>
+              </Box>
+            </Box>
+            <Box className="bcm-section">
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsAnimationFadeOut')}
+              </Typography>
+              <Box className="bcm-row">
+                <input
+                  type="range"
+                  className="bcm-range"
+                  min={0}
+                  max={1000}
+                  step={50}
+                  value={anim.fadeOutMs ?? 200}
+                  onChange={(e) => setAnim('fadeOutMs', Number(e.target.value))}
+                />
+                <span className="bcm-range-value">
+                  {anim.fadeOutMs ?? 200}ms
+                </span>
+              </Box>
+            </Box>
+          </>
+        ) : null}
+
+        {/* SlideUp / SlideDown sub-options */}
+        {animType === 'slideUp' || animType === 'slideDown' ? (
+          <>
+            <Box className="bcm-section">
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsAnimationOffset')}
+              </Typography>
+              <Box className="bcm-row">
+                <input
+                  type="range"
+                  className="bcm-range"
+                  min={4}
+                  max={80}
+                  step={4}
+                  value={anim.slideOffset ?? 20}
+                  onChange={(e) =>
+                    setAnim('slideOffset', Number(e.target.value))
+                  }
+                />
+                <span className="bcm-range-value">
+                  {anim.slideOffset ?? 20}px
+                </span>
+              </Box>
+            </Box>
+            <Box className="bcm-section">
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsAnimationDuration')}
+              </Typography>
+              <Box className="bcm-row">
+                <input
+                  type="range"
+                  className="bcm-range"
+                  min={50}
+                  max={1000}
+                  step={50}
+                  value={anim.slideDurationMs ?? 300}
+                  onChange={(e) =>
+                    setAnim('slideDurationMs', Number(e.target.value))
+                  }
+                />
+                <span className="bcm-range-value">
+                  {anim.slideDurationMs ?? 300}ms
+                </span>
+              </Box>
+            </Box>
+          </>
+        ) : null}
+
+        {/* Blur sub-options */}
+        {animType === 'blur' ? (
+          <>
+            <Box className="bcm-section">
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsAnimationStrength')}
+              </Typography>
+              <Box className="bcm-row">
+                <input
+                  type="range"
+                  className="bcm-range"
+                  min={1}
+                  max={40}
+                  step={1}
+                  value={anim.blurStrength ?? 15}
+                  onChange={(e) =>
+                    setAnim('blurStrength', Number(e.target.value))
+                  }
+                />
+                <span className="bcm-range-value">
+                  {anim.blurStrength ?? 15}
+                </span>
+              </Box>
+            </Box>
+            <Box className="bcm-section">
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsAnimationDuration')}
+              </Typography>
+              <Box className="bcm-row">
+                <input
+                  type="range"
+                  className="bcm-range"
+                  min={50}
+                  max={1000}
+                  step={50}
+                  value={anim.blurDurationMs ?? 300}
+                  onChange={(e) =>
+                    setAnim('blurDurationMs', Number(e.target.value))
+                  }
+                />
+                <span className="bcm-range-value">
+                  {anim.blurDurationMs ?? 300}ms
+                </span>
+              </Box>
+            </Box>
+          </>
+        ) : null}
+
+        {/* Zoom sub-options */}
+        {animType === 'zoom' ? (
+          <Box className="bcm-section">
+            <Typography variant="caption" className="bcm-label">
+              {t('burnCaptionsAnimationDuration')}
+            </Typography>
+            <Box className="bcm-row">
+              <input
+                type="range"
+                className="bcm-range"
+                min={50}
+                max={1000}
+                step={50}
+                value={anim.zoomDurationMs ?? 300}
+                onChange={(e) =>
+                  setAnim('zoomDurationMs', Number(e.target.value))
+                }
+              />
+              <span className="bcm-range-value">
+                {anim.zoomDurationMs ?? 300}ms
+              </span>
+            </Box>
+          </Box>
+        ) : null}
+
+        {/* Karaoke sub-options */}
+        {animType === 'karaoke' ? (
+          <>
+            <Box className="bcm-section">
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsAnimationKaraokeMode')}
+              </Typography>
+              <Box className="bcm-select-wrapper">
+                <select
+                  className="bcm-select"
+                  value={anim.karaokeMode ?? 'kf'}
+                  onChange={(e) =>
+                    setAnim('karaokeMode', e.target.value as 'k' | 'kf' | 'ko')
+                  }
+                  aria-label={t('burnCaptionsAnimationKaraokeMode')}
+                >
+                  <option
+                    value="kf"
+                    style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+                  >
+                    {t('burnCaptionsAnimationKaraokeSweep')}
+                  </option>
+                  <option
+                    value="k"
+                    style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+                  >
+                    {t('burnCaptionsAnimationKaraokeInstant')}
+                  </option>
+                  <option
+                    value="ko"
+                    style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+                  >
+                    {t('burnCaptionsAnimationKaraokeFilled')}
+                  </option>
+                </select>
+                <span className="bcm-select-chevron">
+                  <Icon
+                    icon="/icons/chevron-down.svg"
+                    size={14}
+                    color="var(--foreground, #171717)"
+                  />
+                </span>
+              </Box>
+            </Box>
+            <Box className="bcm-section">
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsAnimationKaraokeHighlight')}
+              </Typography>
+              <Box className="bcm-row">
+                <input
+                  type="color"
+                  className="bcm-color-input"
+                  value={anim.karaokeHighlightColour ?? '#ffff00'}
+                  onChange={(e) =>
+                    setAnim('karaokeHighlightColour', e.target.value)
+                  }
+                />
+                <span className="bcm-range-value">
+                  {anim.karaokeHighlightColour ?? '#ffff00'}
+                </span>
               </Box>
             </Box>
           </>

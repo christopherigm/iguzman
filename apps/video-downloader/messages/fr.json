@@ -156,6 +156,24 @@
     "status_burning": "Gravure des sous-titres",
     "status_translating": "Traduction des sous-titres",
     "translatingCaptions": "Traduction en cours…",
-    "errorTranslateFailed": "Échec de la traduction des sous-titres."
+    "errorTranslateFailed": "Échec de la traduction des sous-titres.",
+    "burnCaptionsAnimation": "Animation",
+    "burnCaptionsAnimationNone": "Aucune",
+    "burnCaptionsAnimationFade": "Fondu",
+    "burnCaptionsAnimationSlideUp": "Glissement haut",
+    "burnCaptionsAnimationSlideDown": "Glissement bas",
+    "burnCaptionsAnimationBlur": "Flou",
+    "burnCaptionsAnimationZoom": "Zoom",
+    "burnCaptionsAnimationKaraoke": "Karaoké",
+    "burnCaptionsAnimationFadeIn": "Entrée",
+    "burnCaptionsAnimationFadeOut": "Sortie",
+    "burnCaptionsAnimationOffset": "Décalage",
+    "burnCaptionsAnimationDuration": "Durée",
+    "burnCaptionsAnimationStrength": "Intensité",
+    "burnCaptionsAnimationKaraokeMode": "Mode karaoké",
+    "burnCaptionsAnimationKaraokeHighlight": "Couleur de surbrillance",
+    "burnCaptionsAnimationKaraokeSweep": "Balayage",
+    "burnCaptionsAnimationKaraokeInstant": "Instantané",
+    "burnCaptionsAnimationKaraokeFilled": "Rempli"
   }
 }

@@ -326,6 +326,7 @@ export function useFFmpeg() {
         backColour?: string;
         borderStyle?: number;
         outline?: number;
+        animation?: Record<string, unknown>;
       },
       onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {

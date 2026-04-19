@@ -156,6 +156,24 @@
     "status_burning": "Burning Captions",
     "status_translating": "Translating Captions",
     "translatingCaptions": "Translating captions…",
-    "errorTranslateFailed": "Failed to translate captions."
+    "errorTranslateFailed": "Failed to translate captions.",
+    "burnCaptionsAnimation": "Animation",
+    "burnCaptionsAnimationNone": "None",
+    "burnCaptionsAnimationFade": "Fade",
+    "burnCaptionsAnimationSlideUp": "Slide Up",
+    "burnCaptionsAnimationSlideDown": "Slide Down",
+    "burnCaptionsAnimationBlur": "Blur",
+    "burnCaptionsAnimationZoom": "Zoom",
+    "burnCaptionsAnimationKaraoke": "Karaoke",
+    "burnCaptionsAnimationFadeIn": "Fade In",
+    "burnCaptionsAnimationFadeOut": "Fade Out",
+    "burnCaptionsAnimationOffset": "Offset",
+    "burnCaptionsAnimationDuration": "Duration",
+    "burnCaptionsAnimationStrength": "Strength",
+    "burnCaptionsAnimationKaraokeMode": "Karaoke Mode",
+    "burnCaptionsAnimationKaraokeHighlight": "Highlight Color",
+    "burnCaptionsAnimationKaraokeSweep": "Sweep",
+    "burnCaptionsAnimationKaraokeInstant": "Instant",
+    "burnCaptionsAnimationKaraokeFilled": "Filled"
   }
 }

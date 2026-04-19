@@ -156,6 +156,24 @@
     "status_burning": "Gravando legendas",
     "status_translating": "Traduzindo legendas",
     "translatingCaptions": "Traduzindo legendas…",
-    "errorTranslateFailed": "Falha ao traduzir as legendas."
+    "errorTranslateFailed": "Falha ao traduzir as legendas.",
+    "burnCaptionsAnimation": "Animação",
+    "burnCaptionsAnimationNone": "Nenhuma",
+    "burnCaptionsAnimationFade": "Fade",
+    "burnCaptionsAnimationSlideUp": "Deslizar para cima",
+    "burnCaptionsAnimationSlideDown": "Deslizar para baixo",
+    "burnCaptionsAnimationBlur": "Desfoque",
+    "burnCaptionsAnimationZoom": "Zoom",
+    "burnCaptionsAnimationKaraoke": "Karaokê",
+    "burnCaptionsAnimationFadeIn": "Entrada",
+    "burnCaptionsAnimationFadeOut": "Saída",
+    "burnCaptionsAnimationOffset": "Deslocamento",
+    "burnCaptionsAnimationDuration": "Duração",
+    "burnCaptionsAnimationStrength": "Intensidade",
+    "burnCaptionsAnimationKaraokeMode": "Modo karaokê",
+    "burnCaptionsAnimationKaraokeHighlight": "Cor de destaque",
+    "burnCaptionsAnimationKaraokeSweep": "Varredura",
+    "burnCaptionsAnimationKaraokeInstant": "Instantâneo",
+    "burnCaptionsAnimationKaraokeFilled": "Preenchido"
   }
 }
