@@ -42,8 +42,8 @@ const buildSubtitlePreviewStyle = (cfg: BurnCaptionsConfig): CSSProperties => {
   const isLeft = [1, 4, 7].includes(alignment);
   const isRight = [3, 6, 9].includes(alignment);
 
-  const scaledMargin = Math.max(3, Math.round(marginV * 0.2));
-  const scaledFont = Math.max(8, Math.round(fontSize * 0.35));
+  const scaledMargin = Math.max(3, Math.round(marginV * 0.3));
+  const scaledFont = Math.max(8, Math.round(fontSize * 0.525));
   const transforms: string[] = [];
 
   const s: CSSProperties = {
@@ -138,7 +138,7 @@ const DEFAULT_CONFIG: BurnCaptionsConfig = {
   alignment: 2,
   marginV: 15,
   fontSize: 24,
-  primaryColor: '#ffff00',
+  primaryColor: '#ffffff',
   borderStyle: 1,
   bgColor: '#000000',
   bgOpacity: 50,
@@ -255,7 +255,7 @@ export function BurnCaptionsModal({
               type="range"
               className="bcm-range"
               min={0}
-              max={80}
+              max={100}
               step={4}
               value={config.marginV}
               onChange={(e) => set('marginV', Number(e.target.value))}
@@ -286,7 +286,7 @@ export function BurnCaptionsModal({
               type="range"
               className="bcm-range"
               min={12}
-              max={60}
+              max={80}
               step={2}
               value={config.fontSize}
               onChange={(e) => set('fontSize', Number(e.target.value))}

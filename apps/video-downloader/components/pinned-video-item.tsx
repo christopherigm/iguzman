@@ -296,6 +296,8 @@ export function PinnedVideoItem({
       return;
     }
 
+    srtContent = srtContent.toUpperCase();
+
     /* 2. Burn the (possibly translated) SRT into the video */
     runProcessing({
       activeStatus: 'burning' as VideoStatus,
