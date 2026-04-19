@@ -136,6 +136,7 @@ export function ReadOnlyVideoItem({
           ffmpegStatus="idle"
           ffmpegProgress={null}
           ffmpegLastError={null}
+          ffmpegLastWarning={null}
           ffmpegProcessingTime={null}
           ffmpegCores={null}
           uploading={false}

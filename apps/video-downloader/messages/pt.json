@@ -121,6 +121,7 @@
     "detailCodec": "Codec",
     "detailProgress": "Progresso",
     "detailFfmpegError": "Erro FFmpeg",
+    "detailFfmpegWarning": "Aviso FFmpeg",
     "converted": "convertido",
     "removeBlackBars": "Remover barras pretas",
     "removingBlackBars": "Removendo barras pretas… {progress}%",
@@ -143,6 +144,18 @@
     "burnCaptionsBackground": "Mostrar fundo",
     "burnCaptionsBgColor": "Cor do fundo",
     "burnCaptionsBgOpacity": "Opacidade do fundo",
-    "burnCaptionsMarginV": "Margem"
+    "burnCaptionsMarginV": "Margem",
+    "burnCaptionsTranslate": "Traduzir legendas",
+    "burnCaptionsTranslateLang": "Idioma alvo",
+    "burnCaptionsPreview": "Visualização",
+    "burnCaptionsBorderStyle": "Estilo de borda",
+    "burnCaptionsBorderStyleBox": "Caixa opaca",
+    "burnCaptionsBorderStyleOutline": "Contorno",
+    "burnCaptionsBorderStyleBoxHint": "Um retângulo preenchido é desenhado atrás do texto. Máxima legibilidade em qualquer fundo.",
+    "burnCaptionsBorderStyleOutlineHint": "Cada caractere é rodeado por uma borda colorida. O texto fica limpo sem bloquear a imagem.",
+    "status_burning": "Gravando legendas",
+    "status_translating": "Traduzindo legendas",
+    "translatingCaptions": "Traduzindo legendas…",
+    "errorTranslateFailed": "Falha ao traduzir as legendas."
   }
 }

@@ -121,6 +121,7 @@
     "detailCodec": "Códec",
     "detailProgress": "Progreso",
     "detailFfmpegError": "Error de FFmpeg",
+    "detailFfmpegWarning": "Advertencia FFmpeg",
     "converted": "convertido",
     "removeBlackBars": "Eliminar barras negras",
     "removingBlackBars": "Eliminando barras negras… {progress}%",
@@ -143,6 +144,18 @@
     "burnCaptionsBackground": "Mostrar fondo",
     "burnCaptionsBgColor": "Color de fondo",
     "burnCaptionsBgOpacity": "Opacidad del fondo",
-    "burnCaptionsMarginV": "Margen"
+    "burnCaptionsMarginV": "Margen",
+    "burnCaptionsTranslate": "Traducir subtítulos",
+    "burnCaptionsTranslateLang": "Idioma destino",
+    "burnCaptionsPreview": "Vista previa",
+    "burnCaptionsBorderStyle": "Estilo de borde",
+    "burnCaptionsBorderStyleBox": "Caja opaca",
+    "burnCaptionsBorderStyleOutline": "Contorno",
+    "burnCaptionsBorderStyleBoxHint": "Se dibuja un rectángulo relleno detrás del texto. Máxima legibilidad en cualquier fondo.",
+    "burnCaptionsBorderStyleOutlineHint": "Cada carácter está rodeado por un borde de color. El texto se ve limpio sin tapar la imagen.",
+    "status_burning": "Grabando subtítulos",
+    "status_translating": "Traduciendo subtítulos",
+    "translatingCaptions": "Traduciendo subtítulos…",
+    "errorTranslateFailed": "No se pudieron traducir los subtítulos."
   }
 }

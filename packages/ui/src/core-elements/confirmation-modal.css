@@ -24,6 +24,9 @@
   position: relative;
   width: 90%;
   max-width: 420px;
+  max-height: calc(90vh - 50px);
+  display: flex;
+  flex-direction: column;
   background: var(--background, #ffffff);
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
@@ -46,6 +49,9 @@
 /* ── Body ─────────────────────────────────────────── */
 .ui-confirmation-modal-body {
   padding: 24px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .ui-confirmation-modal-title {
@@ -75,4 +81,6 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 24px 20px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08));
 }

@@ -140,6 +140,12 @@
   word-break: break-word;
 }
 
+.vi-warning-text {
+  color: #f59e0b !important;
+  white-space: normal;
+  word-break: break-word;
+}
+
 /* ── Media (video / audio) ───────────────────────────── */
 
 .vi-media-wrapper {

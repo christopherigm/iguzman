@@ -29,6 +29,7 @@ export const STATUS_COLORS: Record<VideoStatus, string> = {
   processing: '#f59e0b',
   converting: '#8b5cf6',
   burning: '#ec4899',
+  translating: '#a855f7',
   done: '#22c55e',
   error: '#ef4444',
 };
@@ -153,6 +154,7 @@ export function VideoDetailsPanel({
   ffmpegStatus,
   ffmpegProgress,
   ffmpegLastError,
+  ffmpegLastWarning,
   ffmpegProcessingTime,
   ffmpegCores,
   uploading,
@@ -162,6 +164,7 @@ export function VideoDetailsPanel({
   ffmpegStatus: string;
   ffmpegProgress: number | null;
   ffmpegLastError: string | null;
+  ffmpegLastWarning: string | null;
   ffmpegProcessingTime: number | null;
   ffmpegCores: number | null;
   uploading: boolean;
@@ -242,6 +245,12 @@ export function VideoDetailsPanel({
           <>
             <dt>{t('detailFfmpegError')}</dt>
             <dd className="vi-error-text">{ffmpegLastError}</dd>
+          </>
+        ) : null}
+        {ffmpegLastWarning ? (
+          <>
+            <dt>{t('detailFfmpegWarning')}</dt>
+            <dd className="vi-warning-text">{ffmpegLastWarning}</dd>
           </>
         ) : null}
         {ffmpegProcessingTime !== null ? (
@@ -352,6 +361,14 @@ export function VideoStatusHints({
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
         {message}
+      </Typography>
+    );
+  }
+
+  if (videoStatus === 'translating') {
+    return (
+      <Typography variant="caption" className="vi-ffmpeg-hint">
+        {t('translatingCaptions')}
       </Typography>
     );
   }

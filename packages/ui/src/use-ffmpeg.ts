@@ -36,6 +36,7 @@ export function useFFmpeg() {
   const [status, setStatus] = useState<FFmpegStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [lastWarning, setLastWarning] = useState<string | null>(null);
   const [lastProcessingTime, setLastProcessingTime] = useState<number | null>(
     null,
   );
@@ -74,6 +75,10 @@ export function useFFmpeg() {
         pendingRef.current.delete(id);
         setLastError(msg);
         pending.reject(new Error(msg));
+      } else if (type === 'warn') {
+        const msg = (payload as { message: string }).message;
+        setLastWarning(msg);
+        console.warn('[ffmpeg-worker]', msg);
       }
     };
 
@@ -142,6 +147,7 @@ export function useFFmpeg() {
       await ensureLoaded();
       setStatus('processing');
       setProgress(0);
+      setLastWarning(null);
       processingStartRef.current = Date.now();
 
       const videoData = await fetchFile(videoUrl);
@@ -339,6 +345,7 @@ export function useFFmpeg() {
     status,
     progress,
     lastError,
+    lastWarning,
     lastProcessingTime,
     cores,
     interpolateFps,

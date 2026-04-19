@@ -6,8 +6,11 @@ import { Box } from '@repo/ui/core-elements/box';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { useFFmpeg } from '@repo/ui/use-ffmpeg';
+import { useGroq } from '@repo/ui/use-groq';
+import type { LlmMessage } from '@repo/ui/use-groq';
 import type { DownloadVideoError } from '@repo/helpers/download-video';
 import type { VideoStatus } from '@/lib/types';
+import { TRANSLATE_LANGUAGES } from './burn-captions-modal';
 import { usePollTask, type TaskData } from './use-poll-task';
 import type { StoredVideo } from './use-video-store';
 import {
@@ -27,6 +30,22 @@ import {
 import './video-item.css';
 
 /* ── Helpers ────────────────────────────────────────── */
+
+const LANG_LABEL: Record<string, string> = Object.fromEntries(
+  TRANSLATE_LANGUAGES.map((l) => [l.value, l.label]),
+);
+
+function buildTranslationPrompt(targetLangName: string): string {
+  return `You are a professional subtitle translator. Translate the SRT subtitle content into ${targetLangName}.
+
+STRICT RULES:
+- Preserve the EXACT SRT format: block numbers, timestamp lines (e.g. "00:00:02,041 --> 00:00:03,401"), and text lines must remain in their correct positions
+- Do NOT alter, add, or remove any timestamps
+- Do NOT reorder, merge, or split subtitle blocks
+- Translate ONLY the text lines; leave block numbers and timestamps completely untouched
+- Maintain natural speech patterns, tone, and the speaker's intent
+- Return ONLY the translated SRT content — no explanations, no markdown fences, no extra commentary`;
+}
 
 function hexToSSA(hex: string, opacity: number): string {
   const r = hex.slice(1, 3);
@@ -78,11 +97,15 @@ export function PinnedVideoItem({
   const burnResumeChecked = useRef(false);
   const pollResumeChecked = useRef(false);
 
+  /* Groq client for subtitle translation */
+  const { generate } = useGroq({ proxyBase: '/api/groq', model: 'llama-3.3-70b-versatile' });
+
   /* Own FFmpeg WASM instance (dedicated Web Worker for this item) */
   const {
     status: ffmpegStatus,
     progress: ffmpegProgress,
     lastError: ffmpegLastError,
+    lastWarning: ffmpegLastWarning,
     lastProcessingTime: ffmpegProcessingTime,
     cores: ffmpegCores,
     interpolateFps,
@@ -101,7 +124,8 @@ export function PinnedVideoItem({
     video.status === 'downloading' ||
     video.status === 'processing' ||
     video.status === 'converting' ||
-    video.status === 'burning';
+    video.status === 'burning' ||
+    video.status === 'translating';
   const isBusy = isProcessing || video.status === 'queued';
   const displayName =
     video.name ??
@@ -242,24 +266,46 @@ export function PinnedVideoItem({
   );
 
   /* ── Burn captions handler ──────────────────────────── */
-  const handleBurnCaptions = useCallback(() => {
+  const handleBurnCaptions = useCallback(async () => {
     const config = video.burnCaptionsConfig;
     if (!config || !video.captionsFile || video.justAudio) return;
 
-    const captionsFile = video.captionsFile;
+    /* 1. Fetch the SRT and optionally translate it via Groq */
+    let srtContent: string;
+    try {
+      const srtRes = await fetch(resolveMediaUrl(video.captionsFile));
+      if (!srtRes.ok) throw new Error('Failed to fetch captions file');
+      const originalSrt = await srtRes.text();
+
+      if (config.translate && config.translateTo) {
+        onUpdate(video.uuid, { status: 'translating' as VideoStatus, error: null });
+        const langName = LANG_LABEL[config.translateTo] ?? config.translateTo;
+        const messages: LlmMessage[] = [
+          { role: 'system', content: buildTranslationPrompt(langName) },
+          { role: 'user', content: originalSrt },
+        ];
+        const translated = await generate(messages);
+        if (!translated) throw new Error('Translation returned empty result');
+        srtContent = translated;
+      } else {
+        srtContent = originalSrt;
+      }
+    } catch (err) {
+      console.error('Caption translation failed:', err);
+      onUpdate(video.uuid, { status: 'error', error: t('errorTranslateFailed') });
+      return;
+    }
+
+    /* 2. Burn the (possibly translated) SRT into the video */
     runProcessing({
       activeStatus: 'burning' as VideoStatus,
       process: async (sourceUrl, onProgress) => {
-        const srtRes = await fetch(resolveMediaUrl(captionsFile));
-        if (!srtRes.ok) throw new Error('Failed to fetch captions file');
-        const srtContent = await srtRes.text();
-
         const primaryColour = hexToSSA(config.primaryColor, 100);
-        const backColour = config.showBackground
+        const borderStyle = config.borderStyle ?? 3;
+        const backColour = borderStyle === 3
           ? hexToSSA(config.bgColor, config.bgOpacity)
           : '&HFF000000';
-        const borderStyle = config.showBackground ? 3 : 1;
-        const outline = config.showBackground ? 0 : 2;
+        const outline = borderStyle === 3 ? 4 : 2;
 
         return burnSubtitles(
           sourceUrl,
@@ -285,8 +331,12 @@ export function PinnedVideoItem({
     video.burnCaptionsConfig,
     video.captionsFile,
     video.justAudio,
+    video.uuid,
+    onUpdate,
+    generate,
     runProcessing,
     burnSubtitles,
+    t,
   ]);
 
   /* ── Handle completed task from polling ────────────── */
@@ -634,6 +684,7 @@ export function PinnedVideoItem({
           ffmpegStatus={displayFFmpegStatus}
           ffmpegProgress={displayFFmpegProgress}
           ffmpegLastError={ffmpegLastError}
+          ffmpegLastWarning={ffmpegLastWarning}
           ffmpegProcessingTime={ffmpegProcessingTime}
           ffmpegCores={ffmpegCores}
           uploading={uploading}

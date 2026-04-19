@@ -1,15 +1,85 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useTranslations } from 'next-intl';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Switch } from '@repo/ui/core-elements/switch';
+import { Icon } from '@repo/ui/core-elements/icon';
 import type { BurnCaptionsConfig } from '@/lib/types';
 import './burn-captions-modal.css';
 
 export type { BurnCaptionsConfig };
+
+/* ── Preview helpers ─────────────────────────────────── */
+
+const PREVIEW_SAMPLE = 'The quick brown fox jumps';
+
+const hexToRgba = (hex: string, opacity: number): string => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+const buildSubtitlePreviewStyle = (cfg: BurnCaptionsConfig): CSSProperties => {
+  const {
+    alignment,
+    marginV,
+    fontSize,
+    primaryColor,
+    borderStyle,
+    bgColor,
+    bgOpacity,
+  } = cfg;
+  const isTop = alignment >= 7;
+  const isBottom = alignment <= 3;
+  const isLeft = [1, 4, 7].includes(alignment);
+  const isRight = [3, 6, 9].includes(alignment);
+
+  const scaledMargin = Math.max(3, Math.round(marginV * 0.2));
+  const scaledFont = Math.max(12, Math.round(fontSize));
+  const transforms: string[] = [];
+
+  const s: CSSProperties = {
+    position: 'absolute',
+    fontSize: scaledFont,
+    color: primaryColor,
+    lineHeight: 1.3,
+    display: 'inline-block',
+    maxWidth: '88%',
+    whiteSpace: 'nowrap',
+  };
+
+  if (isTop) s.top = scaledMargin;
+  else if (isBottom) s.bottom = scaledMargin;
+  else {
+    s.top = '50%';
+    transforms.push('translateY(-50%)');
+  }
+
+  if (isLeft) s.left = '6%';
+  else if (isRight) s.right = '6%';
+  else {
+    s.left = '50%';
+    s.textAlign = 'center';
+    transforms.push('translateX(-50%)');
+  }
+
+  if (transforms.length) s.transform = transforms.join(' ');
+
+  if (borderStyle === 3) {
+    s.backgroundColor = hexToRgba(bgColor, bgOpacity / 100);
+    s.padding = '2px 6px';
+    s.borderRadius = '2px';
+  } else {
+    s.textShadow =
+      '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
+  }
+
+  return s;
+};
 
 /* ── Alignment grid ──────────────────────────────────── */
 
@@ -18,6 +88,16 @@ const ALIGNMENT_ROWS = [
   [7, 8, 9],
   [4, 5, 6],
   [1, 2, 3],
+] as const;
+
+/* ── Translate languages ─────────────────────────────── */
+
+export const TRANSLATE_LANGUAGES = [
+  { value: 'en', label: 'English', flag: '🇺🇸' },
+  { value: 'es', label: 'Español', flag: '🇲🇽' },
+  { value: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { value: 'fr', label: 'Français', flag: '🇫🇷' },
+  { value: 'pt', label: 'Português', flag: '🇧🇷' },
 ] as const;
 
 /* ── Component ──────────────────────────────────────── */
@@ -29,20 +109,27 @@ export interface BurnCaptionsModalProps {
 
 const DEFAULT_CONFIG: BurnCaptionsConfig = {
   alignment: 2,
-  marginV: 20,
-  fontSize: 24,
+  marginV: 15,
+  fontSize: 16,
   primaryColor: '#ffffff',
-  showBackground: true,
+  borderStyle: 3,
   bgColor: '#000000',
   bgOpacity: 50,
+  translate: false,
+  translateTo: 'en',
 };
 
-export function BurnCaptionsModal({ onConfirm, onCancel }: BurnCaptionsModalProps) {
+export function BurnCaptionsModal({
+  onConfirm,
+  onCancel,
+}: BurnCaptionsModalProps) {
   const t = useTranslations('VideoGrid');
   const [config, setConfig] = useState<BurnCaptionsConfig>(DEFAULT_CONFIG);
 
-  const set = <K extends keyof BurnCaptionsConfig>(key: K, value: BurnCaptionsConfig[K]) =>
-    setConfig((prev) => ({ ...prev, [key]: value }));
+  const set = <K extends keyof BurnCaptionsConfig>(
+    key: K,
+    value: BurnCaptionsConfig[K],
+  ) => setConfig((prev) => ({ ...prev, [key]: value }));
 
   return (
     <ConfirmationModal
@@ -53,10 +140,54 @@ export function BurnCaptionsModal({ onConfirm, onCancel }: BurnCaptionsModalProp
       panelMaxWidth="480px"
     >
       <Box className="bcm-config">
+        {/* Translate subtitles */}
+        <Box className="bcm-section">
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsTranslate')}
+          </Typography>
+          <Box className="bcm-row">
+            <Switch
+              checked={config.translate ?? false}
+              onChange={(v) => set('translate', v)}
+            />
+            <Box className="bcm-select-wrapper">
+              <select
+                className="bcm-select"
+                value={config.translateTo ?? 'en'}
+                onChange={(e) => set('translateTo', e.target.value)}
+                disabled={!config.translate}
+                aria-label={t('burnCaptionsTranslateLang')}
+              >
+                {TRANSLATE_LANGUAGES.map((lang) => (
+                  <option
+                    key={lang.value}
+                    value={lang.value}
+                    style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+                  >
+                    {lang.flag} {lang.label}
+                  </option>
+                ))}
+              </select>
+              <span className="bcm-select-chevron">
+                <Icon
+                  icon="/icons/chevron-down.svg"
+                  size={14}
+                  color={
+                    config.translate
+                      ? 'var(--foreground, #171717)'
+                      : 'var(--foreground-muted, #aaa)'
+                  }
+                />
+              </span>
+            </Box>
+          </Box>
+        </Box>
 
         {/* Position grid */}
         <Box className="bcm-section">
-          <Typography variant="caption" className="bcm-label">{t('burnCaptionsPosition')}</Typography>
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsPosition')}
+          </Typography>
           <Box className="bcm-alignment-grid">
             {ALIGNMENT_ROWS.map((row) =>
               row.map((pos) => (
@@ -74,9 +205,42 @@ export function BurnCaptionsModal({ onConfirm, onCancel }: BurnCaptionsModalProp
           </Box>
         </Box>
 
+        {/* Margin */}
+        <Box className="bcm-section">
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsMarginV')}
+          </Typography>
+          <Box className="bcm-row">
+            <input
+              type="range"
+              className="bcm-range"
+              min={0}
+              max={80}
+              step={4}
+              value={config.marginV}
+              onChange={(e) => set('marginV', Number(e.target.value))}
+            />
+            <span className="bcm-range-value">{config.marginV}px</span>
+          </Box>
+        </Box>
+
+        {/* Subtitle preview */}
+        <Box className="bcm-section">
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsPreview')}
+          </Typography>
+          <Box className="bcm-preview">
+            <span style={buildSubtitlePreviewStyle(config)}>
+              {PREVIEW_SAMPLE}
+            </span>
+          </Box>
+        </Box>
+
         {/* Font size */}
         <Box className="bcm-section">
-          <Typography variant="caption" className="bcm-label">{t('burnCaptionsFontSize')}</Typography>
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsFontSize')}
+          </Typography>
           <Box className="bcm-row">
             <input
               type="range"
@@ -93,7 +257,9 @@ export function BurnCaptionsModal({ onConfirm, onCancel }: BurnCaptionsModalProp
 
         {/* Text color */}
         <Box className="bcm-section">
-          <Typography variant="caption" className="bcm-label">{t('burnCaptionsTextColor')}</Typography>
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsTextColor')}
+          </Typography>
           <Box className="bcm-row">
             <input
               type="color"
@@ -105,22 +271,55 @@ export function BurnCaptionsModal({ onConfirm, onCancel }: BurnCaptionsModalProp
           </Box>
         </Box>
 
-        {/* Background toggle */}
+        {/* Border style */}
         <Box className="bcm-section">
-          <Box className="bcm-row bcm-row--space-between">
-            <Typography variant="caption" className="bcm-label">{t('burnCaptionsBackground')}</Typography>
-            <Switch
-              checked={config.showBackground}
-              onChange={(v) => set('showBackground', v)}
-            />
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsBorderStyle')}
+          </Typography>
+          <Box className="bcm-select-wrapper">
+            <select
+              className="bcm-select"
+              value={config.borderStyle}
+              onChange={(e) =>
+                set('borderStyle', Number(e.target.value) as 1 | 3)
+              }
+              aria-label={t('burnCaptionsBorderStyle')}
+            >
+              <option
+                value={3}
+                style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+              >
+                {t('burnCaptionsBorderStyleBox')}
+              </option>
+              <option
+                value={1}
+                style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+              >
+                {t('burnCaptionsBorderStyleOutline')}
+              </option>
+            </select>
+            <span className="bcm-select-chevron">
+              <Icon
+                icon="/icons/chevron-down.svg"
+                size={14}
+                color="var(--foreground, #171717)"
+              />
+            </span>
           </Box>
+          <Typography variant="caption" className="bcm-border-style-hint">
+            {config.borderStyle === 3
+              ? t('burnCaptionsBorderStyleBoxHint')
+              : t('burnCaptionsBorderStyleOutlineHint')}
+          </Typography>
         </Box>
 
-        {/* Background color + opacity (only when background is enabled) */}
-        {config.showBackground ? (
+        {/* Background color + opacity (only for opaque box style) */}
+        {config.borderStyle === 3 ? (
           <>
             <Box className="bcm-section">
-              <Typography variant="caption" className="bcm-label">{t('burnCaptionsBgColor')}</Typography>
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsBgColor')}
+              </Typography>
               <Box className="bcm-row">
                 <input
                   type="color"
@@ -132,7 +331,9 @@ export function BurnCaptionsModal({ onConfirm, onCancel }: BurnCaptionsModalProp
               </Box>
             </Box>
             <Box className="bcm-section">
-              <Typography variant="caption" className="bcm-label">{t('burnCaptionsBgOpacity')}</Typography>
+              <Typography variant="caption" className="bcm-label">
+                {t('burnCaptionsBgOpacity')}
+              </Typography>
               <Box className="bcm-row">
                 <input
                   type="range"
@@ -148,24 +349,6 @@ export function BurnCaptionsModal({ onConfirm, onCancel }: BurnCaptionsModalProp
             </Box>
           </>
         ) : null}
-
-        {/* Margin */}
-        <Box className="bcm-section">
-          <Typography variant="caption" className="bcm-label">{t('burnCaptionsMarginV')}</Typography>
-          <Box className="bcm-row">
-            <input
-              type="range"
-              className="bcm-range"
-              min={0}
-              max={80}
-              step={4}
-              value={config.marginV}
-              onChange={(e) => set('marginV', Number(e.target.value))}
-            />
-            <span className="bcm-range-value">{config.marginV}px</span>
-          </Box>
-        </Box>
-
       </Box>
     </ConfirmationModal>
   );

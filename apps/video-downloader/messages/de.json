@@ -121,6 +121,7 @@
     "detailCodec": "Codec",
     "detailProgress": "Fortschritt",
     "detailFfmpegError": "FFmpeg-Fehler",
+    "detailFfmpegWarning": "FFmpeg-Warnung",
     "converted": "konvertiert",
     "removeBlackBars": "Schwarze Balken entfernen",
     "removingBlackBars": "Schwarze Balken werden entfernt… {progress}%",
@@ -143,6 +144,18 @@
     "burnCaptionsBackground": "Hintergrund anzeigen",
     "burnCaptionsBgColor": "Hintergrundfarbe",
     "burnCaptionsBgOpacity": "Hintergrunddeckkraft",
-    "burnCaptionsMarginV": "Abstand"
+    "burnCaptionsMarginV": "Abstand",
+    "burnCaptionsTranslate": "Untertitel übersetzen",
+    "burnCaptionsTranslateLang": "Zielsprache",
+    "burnCaptionsPreview": "Vorschau",
+    "burnCaptionsBorderStyle": "Rahmenstil",
+    "burnCaptionsBorderStyleBox": "Opaque Box",
+    "burnCaptionsBorderStyleOutline": "Umriss",
+    "burnCaptionsBorderStyleBoxHint": "Ein gefülltes Rechteck wird hinter den Text gezeichnet. Maximale Lesbarkeit auf jedem Hintergrund.",
+    "burnCaptionsBorderStyleOutlineHint": "Jedes Zeichen wird von einem farbigen Rand umgeben. Der Text bleibt sauber, ohne das Bild zu verdecken.",
+    "status_burning": "Untertitel einbrennen",
+    "status_translating": "Untertitel übersetzen",
+    "translatingCaptions": "Untertitel werden übersetzt…",
+    "errorTranslateFailed": "Untertitel konnten nicht übersetzt werden."
   }
 }

@@ -31,7 +31,7 @@ let loadPromise: Promise<void> | null = null;
 /* ── Subtitle font (cached across calls) ─────────── */
 let subtitleFontCache: Uint8Array | null = null;
 const SUBTITLE_FONT_URL =
-  'https://cdn.jsdelivr.net/npm/roboto-fontface@0.10.0/fonts/roboto/Roboto-Regular.ttf';
+  'https://cdn.jsdelivr.net/npm/roboto-font@0.1.0/fonts/Roboto/roboto-regular-webfont.ttf';
 
 async function getSubtitleFont(): Promise<Uint8Array | null> {
   if (subtitleFontCache) return subtitleFontCache;
@@ -87,6 +87,10 @@ self.onmessage = async (
 
   const sendError = (message: string) => {
     self.postMessage({ id, type: 'error', payload: { message } });
+  };
+
+  const sendWarn = (message: string) => {
+    self.postMessage({ id, type: 'warn', payload: { message } });
   };
 
   try {
@@ -421,7 +425,7 @@ self.onmessage = async (
             srtContent,
             alignment = 2,
             marginV = 40,
-            fontSize = 24,
+            fontSize = 16,
             primaryColour = '&H00FFFFFF',
             backColour = '&H70000000',
             borderStyle = 3,
@@ -450,8 +454,14 @@ self.onmessage = async (
           if (fontData) {
             try {
               await ff.createDir('/fonts');
-            } catch { /* dir already exists */ }
+            } catch {
+              /* dir already exists */
+            }
             await ff.writeFile('/fonts/subtitle-font.ttf', fontData);
+          } else {
+            sendWarn(
+              'Failed to load subtitle font from CDN — subtitles may not render.',
+            );
           }
 
           /* Probe duration for progress reporting. */
@@ -476,7 +486,9 @@ self.onmessage = async (
           const estimatedFrames = durationSec > 0 ? durationSec * srcFps : 0;
           let lastFrame = 0;
 
+          let burnLog = '';
           const burnLogHandler = ({ message }: { message: string }) => {
+            burnLog += message + '\n';
             if (estimatedFrames > 0) {
               const m = message.match(/frame=\s*(\d+)/);
               if (m) {
@@ -498,8 +510,14 @@ self.onmessage = async (
             `FontSize=${fontSize}`,
             `PrimaryColour=${primaryColour}`,
             `BackColour=${backColour}`,
+            /*  ASS spec: with BorderStyle=3 the opaque box is filled with
+                OutlineColour, NOT BackColour.  Map the caller's intended
+                background colour to the correct property.  For BorderStyle=1
+                (outline mode) use a solid black outline for legibility. */
+            `OutlineColour=${borderStyle === 3 ? backColour : '&H00000000'}`,
             `BorderStyle=${borderStyle}`,
             `Outline=${outline}`,
+            ...(fontData ? ['FontName=Roboto'] : []),
           ].join(',');
           const fontsOption = fontData ? ':fontsdir=/fonts' : '';
           const code = await ff.exec([
@@ -513,7 +531,22 @@ self.onmessage = async (
           ]);
           ff.off('log', burnLogHandler);
 
-          if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
+          if (code !== 0) {
+            throw new Error(
+              `FFmpeg exited with code ${code}\n${burnLog.slice(-500)}`,
+            );
+          }
+
+          /* Warn if libass reported font/glyph issues (subtitles won't be visible). */
+          if (
+            /font.*not found|glyph.*not found|no fonts|failed to load/i.test(
+              burnLog,
+            )
+          ) {
+            sendWarn(
+              'FFmpeg/libass could not find a suitable font — subtitles may not be visible.',
+            );
+          }
 
           const result = (await ff.readFile(output)) as Uint8Array;
           await ff.deleteFile(input);

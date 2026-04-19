@@ -67,6 +67,7 @@ const BUSY_STATUSES = new Set<VideoStatus>([
   'processing',
   'converting',
   'burning',
+  'translating',
 ]);
 
 /* ── Helpers ────────────────────────────────────────── */
@@ -115,6 +116,14 @@ function recoverPinnedState(v: StoredVideo): StoredVideo {
   }
   if (video.status === 'burning') {
     if (video.burnCaptionsConfig && video.file) return video;
+    return { ...video, status: 'done' as VideoStatus };
+  }
+  if (video.status === 'translating') {
+    /* Resume translation by re-entering the burning flow; handleBurnCaptions
+       will re-translate if config.translate is still set. */
+    if (video.burnCaptionsConfig && video.file) {
+      return { ...video, status: 'burning' as VideoStatus };
+    }
     return { ...video, status: 'done' as VideoStatus };
   }
   return video;

@@ -121,6 +121,7 @@
     "detailCodec": "Codec",
     "detailProgress": "Progress",
     "detailFfmpegError": "FFmpeg error",
+    "detailFfmpegWarning": "FFmpeg warning",
     "converted": "converted",
     "removeBlackBars": "Remove Black Bars",
     "removingBlackBars": "Removing black bars… {progress}%",
@@ -143,6 +144,18 @@
     "burnCaptionsBackground": "Show Background",
     "burnCaptionsBgColor": "Background Color",
     "burnCaptionsBgOpacity": "Background Opacity",
-    "burnCaptionsMarginV": "Margin"
+    "burnCaptionsMarginV": "Margin",
+    "burnCaptionsTranslate": "Translate Subtitles",
+    "burnCaptionsTranslateLang": "Target Language",
+    "burnCaptionsPreview": "Preview",
+    "burnCaptionsBorderStyle": "Border Style",
+    "burnCaptionsBorderStyleBox": "Opaque Box",
+    "burnCaptionsBorderStyleOutline": "Outline",
+    "burnCaptionsBorderStyleBoxHint": "A solid filled rectangle is drawn behind the text. Maximum readability on any background.",
+    "burnCaptionsBorderStyleOutlineHint": "Each character is surrounded by a colored border. Keeps the text clean without blocking the picture.",
+    "status_burning": "Burning Captions",
+    "status_translating": "Translating Captions",
+    "translatingCaptions": "Translating captions…",
+    "errorTranslateFailed": "Failed to translate captions."
   }
 }

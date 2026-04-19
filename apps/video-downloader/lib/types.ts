@@ -42,7 +42,7 @@ export interface VideoResultFields {
 export type TaskStatus = 'pending' | 'downloading' | 'done' | 'error';
 
 /** Client-side statuses extend task statuses with local processing states. */
-export type VideoStatus = TaskStatus | 'queued' | 'processing' | 'converting' | 'burning';
+export type VideoStatus = TaskStatus | 'queued' | 'processing' | 'converting' | 'burning' | 'translating';
 
 /* ── Burn captions config ──────────────────────────── */
 
@@ -51,9 +51,14 @@ export interface BurnCaptionsConfig {
   marginV: number;
   fontSize: number;
   primaryColor: string;
-  showBackground: boolean;
+  /** ASS BorderStyle: 1 = outline, 3 = opaque box. */
+  borderStyle: 1 | 3;
   bgColor: string;
   bgOpacity: number;
+  /** When true, the SRT content is translated via Groq before burning. */
+  translate?: boolean;
+  /** BCP-47 language code to translate subtitles into (e.g. 'en', 'es'). */
+  translateTo?: string;
 }
 
 /* ── Re-exports for convenience ────────────────────── */
