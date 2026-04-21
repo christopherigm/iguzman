@@ -1,0 +1,23 @@
+[Unit]
+Description=Server Video Editor
+Documentation=https://github.com/iguzman
+After=network.target
+
+[Service]
+Type=simple
+User=server-video-editor
+Group=server-video-editor
+WorkingDirectory=/opt/server-video-editor/app
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+Environment=PORT=3001
+Environment=HOSTNAME=0.0.0.0
+ExecStart=/opt/server-video-editor/node/bin/node /opt/server-video-editor/app/apps/server-video-editor/server.js
+StandardOutput=append:/var/log/server-video-editor/app.log
+StandardError=append:/var/log/server-video-editor/error.log
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

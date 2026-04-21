@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://nfpm.goreleaser.com/schema.json
+
+name: server-video-editor
+arch: amd64
+platform: linux
+version: "${VERSION}"
+maintainer: "Christopher Guzman <christopher.guzman.monsalvo@gmail.com>"
+description: |
+  Server Video Editor — Next.js server-side video editing application.
+  Bundles Node.js 22 runtime. No system Node.js required.
+license: "private"
+section: "web"
+priority: "optional"
+
+depends:
+  - ffmpeg
+
+contents:
+  - src: ./dist/app/
+    dst: /opt/server-video-editor/app
+    type: tree
+    file_info:
+      owner: server-video-editor
+      group: server-video-editor
+
+  - src: ./dist/node/
+    dst: /opt/server-video-editor/node
+    type: tree
+
+  - src: ./package/server-video-editor.service
+    dst: /lib/systemd/system/server-video-editor.service
+
+  - dst: /var/log/server-video-editor
+    type: dir
+    file_info:
+      mode: 0755
+      owner: server-video-editor
+      group: server-video-editor
+
+scripts:
+  postinstall: ./package/postinstall.sh
+  preremove: ./package/preremove.sh

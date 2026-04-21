@@ -334,7 +334,7 @@ function generateAssContent(params: {
     styleSecondary,
     outlineColour,
     backColour,
-    0,
+    -1,
     0,
     0,
     0, // Bold, Italic, Underline, StrikeOut
