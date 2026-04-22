@@ -170,6 +170,11 @@
     "burnCaptionsText": "Les sous-titres seront définitivement intégrés dans la vidéo. Choisissez une position et un style ci-dessous.",
     "burnCaptionsPosition": "Position",
     "burnCaptionsFontSize": "Taille de police",
+    "burnCaptionsFontStyle": "Style de police",
+    "burnCaptionsFontStyleNormal": "Normal",
+    "burnCaptionsFontStyleBold": "Gras",
+    "burnCaptionsFontStyleItalic": "Italique",
+    "burnCaptionsFontStyleBoldItalic": "Gras italique",
     "burnCaptionsTextColor": "Couleur du texte",
     "burnCaptionsBackground": "Afficher le fond",
     "burnCaptionsBgColor": "Couleur de fond",
@@ -204,6 +209,7 @@
     "burnCaptionsAnimationKaraokeHighlight": "Couleur de surbrillance",
     "burnCaptionsAnimationKaraokeSweep": "Balayage",
     "burnCaptionsAnimationKaraokeInstant": "Instantané",
-    "burnCaptionsAnimationKaraokeFilled": "Rempli"
+    "burnCaptionsAnimationKaraokeFilled": "Rempli",
+    "burnCaptionsOutlineThickness": "Épaisseur du contour"
   }
 }

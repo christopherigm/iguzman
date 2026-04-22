@@ -170,6 +170,11 @@
     "burnCaptionsText": "As legendas serão incorporadas permanentemente no vídeo. Escolha uma posição e estilo abaixo.",
     "burnCaptionsPosition": "Posição",
     "burnCaptionsFontSize": "Tamanho da fonte",
+    "burnCaptionsFontStyle": "Estilo da fonte",
+    "burnCaptionsFontStyleNormal": "Normal",
+    "burnCaptionsFontStyleBold": "Negrito",
+    "burnCaptionsFontStyleItalic": "Itálico",
+    "burnCaptionsFontStyleBoldItalic": "Negrito itálico",
     "burnCaptionsTextColor": "Cor do texto",
     "burnCaptionsBackground": "Mostrar fundo",
     "burnCaptionsBgColor": "Cor do fundo",
@@ -204,6 +209,7 @@
     "burnCaptionsAnimationKaraokeHighlight": "Cor de destaque",
     "burnCaptionsAnimationKaraokeSweep": "Varredura",
     "burnCaptionsAnimationKaraokeInstant": "Instantâneo",
-    "burnCaptionsAnimationKaraokeFilled": "Preenchido"
+    "burnCaptionsAnimationKaraokeFilled": "Preenchido",
+    "burnCaptionsOutlineThickness": "Espessura do contorno"
   }
 }

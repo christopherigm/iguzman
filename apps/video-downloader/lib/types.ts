@@ -77,10 +77,14 @@ export interface BurnCaptionsAnimationConfig {
   karaokeHighlightColour?: string;
 }
 
+export type BurnCaptionsFontStyle = 'normal' | 'bold' | 'italic' | 'bold-italic';
+
 export interface BurnCaptionsConfig {
   alignment: number;
   marginV: number;
   fontSize: number;
+  /** Font weight/style combination applied to subtitles. Default 'normal'. */
+  fontStyle?: BurnCaptionsFontStyle;
   primaryColor: string;
   /** ASS BorderStyle: 1 = outline, 3 = opaque box. */
   borderStyle: 1 | 3;
@@ -90,6 +94,8 @@ export interface BurnCaptionsConfig {
   translate?: boolean;
   /** BCP-47 language code to translate subtitles into (e.g. 'en', 'es'). */
   translateTo?: string;
+  /** Outline stroke thickness in ASS pixels (borderStyle 1 only). Default 2. */
+  outlineThickness?: number;
   /** Animation applied to subtitle entries. */
   animation?: BurnCaptionsAnimationConfig;
 }

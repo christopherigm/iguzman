@@ -11,6 +11,7 @@ import type {
   BurnCaptionsConfig,
   BurnCaptionsAnimationConfig,
   BurnCaptionsAnimationType,
+  BurnCaptionsFontStyle,
 } from '@/lib/types';
 import './burn-captions-modal.css';
 
@@ -32,10 +33,12 @@ const buildSubtitlePreviewStyle = (cfg: BurnCaptionsConfig): CSSProperties => {
     alignment,
     marginV,
     fontSize,
+    fontStyle = 'normal',
     primaryColor,
     borderStyle,
     bgColor,
     bgOpacity,
+    outlineThickness = 2,
   } = cfg;
   const isTop = alignment >= 7;
   const isBottom = alignment <= 3;
@@ -54,6 +57,12 @@ const buildSubtitlePreviewStyle = (cfg: BurnCaptionsConfig): CSSProperties => {
     display: 'inline-block',
     maxWidth: '88%',
     whiteSpace: 'nowrap',
+    fontWeight:
+      fontStyle === 'bold' || fontStyle === 'bold-italic' ? 'bold' : 'normal',
+    fontStyle:
+      fontStyle === 'italic' || fontStyle === 'bold-italic'
+        ? 'italic'
+        : 'normal',
   };
 
   if (isTop) s.top = scaledMargin;
@@ -78,8 +87,9 @@ const buildSubtitlePreviewStyle = (cfg: BurnCaptionsConfig): CSSProperties => {
     s.padding = '2px 6px';
     s.borderRadius = '2px';
   } else {
-    s.textShadow =
-      '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
+    const strokePx = Math.max(0.5, outlineThickness * 0.35);
+    (s as Record<string, unknown>).WebkitTextStroke = `${strokePx}px #000000`;
+    s.paintOrder = 'stroke fill' as CSSProperties['paintOrder'];
   }
 
   return s;
@@ -111,6 +121,13 @@ export interface BurnCaptionsModalProps {
   onCancel: () => void;
 }
 
+const FONT_STYLES: BurnCaptionsFontStyle[] = [
+  'normal',
+  'bold',
+  'italic',
+  'bold-italic',
+];
+
 const ANIMATION_TYPES: BurnCaptionsAnimationType[] = [
   'none',
   'fade',
@@ -138,8 +155,10 @@ const DEFAULT_CONFIG: BurnCaptionsConfig = {
   alignment: 2,
   marginV: 15,
   fontSize: 24,
+  fontStyle: 'normal',
   primaryColor: '#ffffff',
   borderStyle: 1,
+  outlineThickness: 2,
   bgColor: '#000000',
   bgOpacity: 50,
   translate: false,
@@ -295,6 +314,45 @@ export function BurnCaptionsModal({
           </Box>
         </Box>
 
+        {/* Font style */}
+        <Box className="bcm-section">
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsFontStyle')}
+          </Typography>
+          <Box className="bcm-select-wrapper">
+            <select
+              className="bcm-select"
+              value={config.fontStyle ?? 'normal'}
+              onChange={(e) =>
+                set('fontStyle', e.target.value as BurnCaptionsFontStyle)
+              }
+              aria-label={t('burnCaptionsFontStyle')}
+            >
+              {FONT_STYLES.map((fs) => (
+                <option
+                  key={fs}
+                  value={fs}
+                  style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+                >
+                  {t(
+                    `burnCaptionsFontStyle${fs
+                      .split('-')
+                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                      .join('')}` as Parameters<typeof t>[0],
+                  )}
+                </option>
+              ))}
+            </select>
+            <span className="bcm-select-chevron">
+              <Icon
+                icon="/icons/chevron-down.svg"
+                size={14}
+                color="var(--foreground, #171717)"
+              />
+            </span>
+          </Box>
+        </Box>
+
         {/* Text color */}
         <Box className="bcm-section">
           <Typography variant="caption" className="bcm-label">
@@ -326,16 +384,16 @@ export function BurnCaptionsModal({
               aria-label={t('burnCaptionsBorderStyle')}
             >
               <option
-                value={3}
-                style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
-              >
-                {t('burnCaptionsBorderStyleBox')}
-              </option>
-              <option
                 value={1}
                 style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
               >
                 {t('burnCaptionsBorderStyleOutline')}
+              </option>
+              <option
+                value={3}
+                style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+              >
+                {t('burnCaptionsBorderStyleBox')}
               </option>
             </select>
             <span className="bcm-select-chevron">
@@ -352,6 +410,31 @@ export function BurnCaptionsModal({
               : t('burnCaptionsBorderStyleOutlineHint')}
           </Typography>
         </Box>
+
+        {/* Outline thickness (only for outline style) */}
+        {config.borderStyle === 1 ? (
+          <Box className="bcm-section">
+            <Typography variant="caption" className="bcm-label">
+              {t('burnCaptionsOutlineThickness')}
+            </Typography>
+            <Box className="bcm-row">
+              <input
+                type="range"
+                className="bcm-range"
+                min={5}
+                max={40}
+                step={1}
+                value={config.outlineThickness ?? 2}
+                onChange={(e) =>
+                  set('outlineThickness', Number(e.target.value))
+                }
+              />
+              <span className="bcm-range-value">
+                {config.outlineThickness ?? 2}px
+              </span>
+            </Box>
+          </Box>
+        ) : null}
 
         {/* Background color + opacity (only for opaque box style) */}
         {config.borderStyle === 3 ? (

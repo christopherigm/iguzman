@@ -170,6 +170,11 @@
     "burnCaptionsText": "Los subtítulos se incrustarán permanentemente en el video. Elige la posición y el estilo a continuación.",
     "burnCaptionsPosition": "Posición",
     "burnCaptionsFontSize": "Tamaño de fuente",
+    "burnCaptionsFontStyle": "Estilo de fuente",
+    "burnCaptionsFontStyleNormal": "Normal",
+    "burnCaptionsFontStyleBold": "Negrita",
+    "burnCaptionsFontStyleItalic": "Cursiva",
+    "burnCaptionsFontStyleBoldItalic": "Negrita cursiva",
     "burnCaptionsTextColor": "Color del texto",
     "burnCaptionsBackground": "Mostrar fondo",
     "burnCaptionsBgColor": "Color de fondo",
@@ -204,6 +209,7 @@
     "burnCaptionsAnimationKaraokeHighlight": "Color resaltado",
     "burnCaptionsAnimationKaraokeSweep": "Barrido",
     "burnCaptionsAnimationKaraokeInstant": "Instantáneo",
-    "burnCaptionsAnimationKaraokeFilled": "Relleno"
+    "burnCaptionsAnimationKaraokeFilled": "Relleno",
+    "burnCaptionsOutlineThickness": "Grosor del contorno"
   }
 }

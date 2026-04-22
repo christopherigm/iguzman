@@ -170,6 +170,11 @@
     "burnCaptionsText": "Subtitles will be permanently embedded into the video. Choose a position and style below.",
     "burnCaptionsPosition": "Position",
     "burnCaptionsFontSize": "Font Size",
+    "burnCaptionsFontStyle": "Font Style",
+    "burnCaptionsFontStyleNormal": "Normal",
+    "burnCaptionsFontStyleBold": "Bold",
+    "burnCaptionsFontStyleItalic": "Italic",
+    "burnCaptionsFontStyleBoldItalic": "Bold Italic",
     "burnCaptionsTextColor": "Text Color",
     "burnCaptionsBackground": "Show Background",
     "burnCaptionsBgColor": "Background Color",
@@ -204,6 +209,7 @@
     "burnCaptionsAnimationKaraokeHighlight": "Highlight Color",
     "burnCaptionsAnimationKaraokeSweep": "Sweep",
     "burnCaptionsAnimationKaraokeInstant": "Instant",
-    "burnCaptionsAnimationKaraokeFilled": "Filled"
+    "burnCaptionsAnimationKaraokeFilled": "Filled",
+    "burnCaptionsOutlineThickness": "Outline Thickness"
   }
 }

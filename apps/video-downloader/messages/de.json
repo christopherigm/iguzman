@@ -170,6 +170,11 @@
     "burnCaptionsText": "Die Untertitel werden dauerhaft in das Video eingebettet. Wähle unten eine Position und einen Stil.",
     "burnCaptionsPosition": "Position",
     "burnCaptionsFontSize": "Schriftgröße",
+    "burnCaptionsFontStyle": "Schriftstil",
+    "burnCaptionsFontStyleNormal": "Normal",
+    "burnCaptionsFontStyleBold": "Fett",
+    "burnCaptionsFontStyleItalic": "Kursiv",
+    "burnCaptionsFontStyleBoldItalic": "Fett kursiv",
     "burnCaptionsTextColor": "Textfarbe",
     "burnCaptionsBackground": "Hintergrund anzeigen",
     "burnCaptionsBgColor": "Hintergrundfarbe",
@@ -204,6 +209,7 @@
     "burnCaptionsAnimationKaraokeHighlight": "Hervorhebungsfarbe",
     "burnCaptionsAnimationKaraokeSweep": "Gleiten",
     "burnCaptionsAnimationKaraokeInstant": "Sofort",
-    "burnCaptionsAnimationKaraokeFilled": "Gefüllt"
+    "burnCaptionsAnimationKaraokeFilled": "Gefüllt",
+    "burnCaptionsOutlineThickness": "Umrissdicke"
   }
 }

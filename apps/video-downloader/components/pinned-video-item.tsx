@@ -307,7 +307,7 @@ export function PinnedVideoItem({
         const backColour = borderStyle === 3
           ? hexToSSA(config.bgColor, config.bgOpacity)
           : '&HFF000000';
-        const outline = borderStyle === 3 ? 4 : 2;
+        const outline = borderStyle === 3 ? 8 : (config.outlineThickness ?? 2);
 
         const animCfg = config.animation;
         const animation =
@@ -328,6 +328,7 @@ export function PinnedVideoItem({
               }
             : {};
 
+        const fontStyle = config.fontStyle ?? 'normal';
         return burnSubtitles(
           sourceUrl,
           {
@@ -335,6 +336,8 @@ export function PinnedVideoItem({
             alignment: config.alignment,
             marginV: config.marginV,
             fontSize: config.fontSize,
+            bold: fontStyle === 'bold' || fontStyle === 'bold-italic',
+            italic: fontStyle === 'italic' || fontStyle === 'bold-italic',
             primaryColour,
             backColour,
             borderStyle,

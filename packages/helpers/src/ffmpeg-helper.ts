@@ -204,6 +204,10 @@ function computeDefaultPosition(
 
 /**
  * Build the ASS override tag block `{…}` for non-karaoke animation types.
+ *
+ * posX / posY: when provided (multi-line split), the explicit anchor is used
+ * instead of the computed default.  A \pos tag is emitted unless a \move is
+ * already present (slide animations embed the position in \move).
  */
 function buildOverrideTags(
   types: AnimationType[],
@@ -212,8 +216,12 @@ function buildOverrideTags(
   playResY: number,
   alignment: number,
   marginV: number,
+  posX?: number,
+  posY?: number,
 ): string {
   const tags: string[] = [];
+  const hasExplicitPos = posX !== undefined && posY !== undefined;
+  let hasMove = false;
 
   for (const type of types) {
     switch (type) {
@@ -227,11 +235,14 @@ function buildOverrideTags(
       case 'slideDown': {
         const offset = opts.slideOffset ?? 20;
         const dur = opts.slideDurationMs ?? 300;
-        const pos = computeDefaultPosition(alignment, playResX, playResY, marginV);
+        const pos = hasExplicitPos
+          ? { x: posX!, y: posY! }
+          : computeDefaultPosition(alignment, playResX, playResY, marginV);
         const startY = type === 'slideUp' ? pos.y + offset : pos.y - offset;
         tags.push(
           `\\move(${Math.round(pos.x)},${Math.round(startY)},${Math.round(pos.x)},${Math.round(pos.y)},0,${dur})`,
         );
+        hasMove = true;
         break;
       }
       case 'blur': {
@@ -248,6 +259,10 @@ function buildOverrideTags(
       default:
         break;
     }
+  }
+
+  if (hasExplicitPos && !hasMove) {
+    tags.push(`\\pos(${Math.round(posX!)},${Math.round(posY!)})`);
   }
 
   return tags.length > 0 ? `{${tags.join('')}}` : '';
@@ -283,6 +298,8 @@ function generateAssContent(params: {
   alignment: number;
   marginV: number;
   fontSize: number;
+  bold: boolean;
+  italic: boolean;
   primaryColour: string;
   backColour: string;
   borderStyle: number;
@@ -297,6 +314,8 @@ function generateAssContent(params: {
     alignment,
     marginV,
     fontSize,
+    bold,
+    italic,
     primaryColour,
     backColour,
     borderStyle,
@@ -314,31 +333,89 @@ function generateAssContent(params: {
   const karaokeMode = animation.karaokeMode ?? 'kf';
   const karaokeHighlight = animation.karaokeHighlightColour ?? '&H0000FFFF';
 
+  /* ASS spec: with BorderStyle=3 the box uses OutlineColour, not BackColour. */
   const outlineColour = borderStyle === 3 ? backColour : '&H00000000';
+
+  /* Karaoke remaps colours:
+       PrimaryColour   = highlight (sung) colour
+       SecondaryColour = normal (unsung) text colour  */
   const stylePrimary = hasKaraoke ? karaokeHighlight : primaryColour;
   const styleSecondary = hasKaraoke ? primaryColour : '&H000000FF';
 
   const events = parseSrt(srtContent);
-  const dialogues = events
-    .map(({ startCs, endCs, text }) => {
-      let finalText = text;
 
-      if (hasKaraoke) {
-        finalText = applyKaraokeToText(finalText, endCs - startCs, karaokeMode);
+  /* For BorderStyle=3 (opaque box), multi-line subtitles are split into one
+     Dialogue per line so each line gets its own independent background box.
+     Line spacing accounts for font height + both sides of the box padding so
+     boxes never touch.  A \be3 tag softens box corners for a rounded look. */
+  const dialogues = events
+    .flatMap(({ startCs, endCs, text }) => {
+      const rawLines = text.split('\\N');
+      const splitPerLine = borderStyle === 3 && rawLines.length > 1;
+
+      if (!splitPerLine) {
+        let finalText = text;
+        if (hasKaraoke) {
+          finalText = applyKaraokeToText(finalText, endCs - startCs, karaokeMode);
+        }
+        const overrideTags = buildOverrideTags(
+          nonKaraokeTypes, animation, playResX, playResY, alignment, marginV,
+        );
+        let tagBlock: string;
+        if (borderStyle === 3) {
+          tagBlock = overrideTags
+            ? `{${overrideTags.slice(1, -1)}\\be3}`
+            : '{\\be3}';
+        } else {
+          tagBlock = overrideTags;
+        }
+        if (tagBlock) finalText = `${tagBlock}${finalText}`;
+        return [`Dialogue: 0,${formatAssTimestamp(startCs)},${formatAssTimestamp(endCs)},Default,,0,0,0,,${finalText}`];
       }
 
-      const overrideTags = buildOverrideTags(
-        nonKaraokeTypes,
-        animation,
-        playResX,
-        playResY,
-        alignment,
-        marginV,
+      /* lineHeight must exceed (fontSize + 2*outline) so boxes don't overlap.
+         Adding 30 % of fontSize provides a small visible gap between boxes. */
+      const lineHeight = Math.round(fontSize * 1.3 + 2 * outline);
+      const defaultPos = computeDefaultPosition(alignment, playResX, playResY, marginV);
+      const row = Math.floor((alignment - 1) / 3); // 0=bottom 1=middle 2=top
+      const totalWords = rawLines.reduce(
+        (s, l) => s + l.split(/\s+/).filter(Boolean).length, 0,
       );
 
-      if (overrideTags) finalText = `${overrideTags}${finalText}`;
+      return rawLines.map((line, i) => {
+        let lineY: number;
+        if (row === 0) {
+          // bottom-aligned: last line at base position, earlier lines go up
+          lineY = Math.round(defaultPos.y - (rawLines.length - 1 - i) * lineHeight);
+        } else if (row === 2) {
+          // top-aligned: first line at base, later lines go down
+          lineY = Math.round(defaultPos.y + i * lineHeight);
+        } else {
+          // middle-aligned: centre the block around defaultPos.y
+          const totalOffset = (rawLines.length - 1) * lineHeight;
+          lineY = Math.round(defaultPos.y - totalOffset / 2 + i * lineHeight);
+        }
+        const lineX = Math.round(defaultPos.x);
 
-      return `Dialogue: 0,${formatAssTimestamp(startCs)},${formatAssTimestamp(endCs)},Default,,0,0,0,,${finalText}`;
+        let finalLine = line;
+        if (hasKaraoke) {
+          const lineWords = line.split(/\s+/).filter(Boolean).length;
+          const lineDuration = totalWords > 0
+            ? Math.round(((endCs - startCs) * lineWords) / totalWords)
+            : endCs - startCs;
+          finalLine = applyKaraokeToText(finalLine, lineDuration, karaokeMode);
+        }
+
+        const overrideTags = buildOverrideTags(
+          nonKaraokeTypes, animation, playResX, playResY, alignment, marginV, lineX, lineY,
+        );
+        // overrideTags always contains \pos (or \move for slide) when posX/posY given
+        const tagBlock = overrideTags
+          ? `{${overrideTags.slice(1, -1)}\\be3}`
+          : `{\\pos(${lineX},${lineY})\\be3}`;
+
+        return `Dialogue: 0,${formatAssTimestamp(startCs)},${formatAssTimestamp(endCs)},Default,,0,0,0,,${tagBlock}${finalLine}`;
+      });
     })
     .join('\n');
 
@@ -350,8 +427,8 @@ function generateAssContent(params: {
     styleSecondary,
     outlineColour,
     backColour,
-    -1,
-    0,
+    bold ? -1 : 0,
+    italic ? -1 : 0,
     0,
     0, // Bold, Italic, Underline, StrikeOut
     100,
@@ -381,7 +458,7 @@ function generateAssContent(params: {
     `Style: ${styleLine}`,
     '',
     '[Events]',
-    'Format: Layer, Start, End, Style, Name, MarginL, MarginR, Effect, Text',
+    'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
     dialogues,
     '',
   ].join('\n');
@@ -466,6 +543,10 @@ export interface BurnSubtitlesOptions {
   marginV?: number;
   /** Font size in points. Default 16. */
   fontSize?: number;
+  /** Bold text. Default false. */
+  bold?: boolean;
+  /** Italic text. Default false. */
+  italic?: boolean;
   /** Primary (text fill) colour in ASS &HAABBGGRR format. Default `'&H00FFFFFF'` (white). */
   primaryColour?: string;
   /** Background / outline box colour in ASS &HAABBGGRR format. Default `'&H70000000'` (semi-transparent black). */
@@ -756,6 +837,8 @@ export async function burnSubtitles(options: BurnSubtitlesOptions): Promise<stri
     alignment = 2,
     marginV = 40,
     fontSize = 16,
+    bold = false,
+    italic = false,
     primaryColour = '&H00FFFFFF',
     backColour = '&H70000000',
     borderStyle = 3,
@@ -781,6 +864,8 @@ export async function burnSubtitles(options: BurnSubtitlesOptions): Promise<stri
     alignment,
     marginV,
     fontSize,
+    bold,
+    italic,
     primaryColour,
     backColour,
     borderStyle,

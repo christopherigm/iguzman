@@ -322,6 +322,8 @@ export function useFFmpeg() {
         alignment?: number;
         marginV?: number;
         fontSize?: number;
+        bold?: boolean;
+        italic?: boolean;
         primaryColour?: string;
         backColour?: string;
         borderStyle?: number;
