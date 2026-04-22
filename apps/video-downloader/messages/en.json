@@ -52,7 +52,8 @@
   },
   "Navbar": {
     "home": "Home",
-    "infinite": "Infinite"
+    "infinite": "Infinite",
+    "terms": "Terms"
   },
   "InfinitePage": {
     "loading": "Loading...",
@@ -69,6 +70,35 @@
     "nextVideoIn": "Next video in {seconds}s",
     "objectFitLabel": "Toggle object fit",
     "autoSwipeLabel": "Toggle auto-advance"
+  },
+  "TermsPage": {
+    "title": "Terms and Conditions",
+    "lastUpdated": "Last updated: April 2026",
+    "intro": "Please read these Terms and Conditions carefully before using Video Downloader. By using this application, you agree to be bound by these terms. If you do not agree, please discontinue use.",
+    "s1Title": "1. Purpose and Intended Use",
+    "s1Body": "Video Downloader is a personal-use tool that enables you to download publicly available videos from supported platforms for your own private consumption. It is not intended for commercial redistribution, mass scraping, or any use that violates applicable laws or third-party rights.",
+    "s2Title": "2. Your Responsibility",
+    "s2Body": "You are solely responsible for ensuring that your use of this application complies with all applicable laws, regulations, and the terms of service of the platforms from which you download content. We do not monitor, control, or take responsibility for the content you download.",
+    "s3Title": "3. Copyright and Intellectual Property",
+    "s3Body": "Downloading a video does not transfer any copyright or ownership rights to you. You must respect the intellectual property rights of content creators and rights holders. Redistribution, public performance, or commercial use of downloaded content without proper authorization may constitute copyright infringement under applicable law.",
+    "s4Title": "4. Platform Terms of Service",
+    "s4Body": "Most platforms — including YouTube, Facebook, Instagram, TikTok, and X (Twitter) — prohibit scraping or automated downloading in their Terms of Service. Violating a platform's ToS is a civil matter between you and that platform, not a criminal act in most jurisdictions. However, you use this application at your own risk and assume full responsibility for any ToS violations.",
+    "s5Title": "5. Legal Status of yt-dlp",
+    "s5Body": "This application uses yt-dlp, an open-source tool published under the Unlicense. yt-dlp is legal software. Courts in multiple jurisdictions have held that Terms of Service violations alone do not constitute illegal activity. Whether a specific download is lawful in your jurisdiction depends on local copyright law and the nature of the content.",
+    "s6Title": "6. No DRM Circumvention",
+    "s6Body": "This application only downloads content from publicly accessible streams. It does not circumvent Digital Rights Management (DRM) or technical protection measures. Circumventing DRM may violate laws such as the DMCA § 1201 (United States), the EU Copyright Directive, or equivalent legislation in your country, and is not supported by this application.",
+    "s7Title": "7. Privacy and Data",
+    "s7Body": "Downloaded media files are stored temporarily on the server and are associated only with your browser session. We do not collect, store, or share personally identifiable information. URLs you submit are used solely to perform the download you requested and are not retained after the session ends. Files are automatically purged after a period of inactivity.",
+    "s8Title": "8. Third-Party Tools",
+    "s8Body": "This application relies on third-party open-source tools including yt-dlp (Unlicense) and FFmpeg (LGPL/GPL). These tools are provided under their respective open-source licenses. We are not affiliated with, endorsed by, or responsible for these projects or their developers. Their availability and behavior may change at any time.",
+    "s9Title": "9. Service Availability",
+    "s9Body": "This application is provided on a best-effort basis. Platform changes, network issues, or yt-dlp extractor updates may cause downloads to fail at any time without notice. We make no guarantees of availability, uptime, or compatibility with any specific URL or platform.",
+    "s10Title": "10. Disclaimer of Warranties",
+    "s10Body": "This application is provided \"as is\" without warranty of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. Your use of this application is entirely at your own risk.",
+    "s11Title": "11. Limitation of Liability",
+    "s11Body": "To the fullest extent permitted by applicable law, we shall not be liable for any direct, indirect, incidental, special, or consequential damages arising from your use of this application, including but not limited to copyright claims, platform account suspensions, data loss, or any other harm resulting from downloaded content.",
+    "s12Title": "12. Changes to These Terms",
+    "s12Body": "We reserve the right to update these Terms and Conditions at any time without prior notice. Continued use of the application after changes are posted constitutes your acceptance of the revised terms. The date at the top of this page reflects the most recent revision."
   },
   "VideoGrid": {
     "title": "Downloads",

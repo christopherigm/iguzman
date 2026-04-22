@@ -22,7 +22,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY --from=pruner /app/out/json/ ./
-RUN corepack enable pnpm && pnpm i --frozen-lockfile
+RUN corepack enable pnpm && pnpm i --no-frozen-lockfile
 
 # ---------------------------------------------------------------------------
 # Stage 3 – Build the Next.js application.

@@ -39,6 +39,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const allItems = [
     { label: t('home'), href: '/' },
     { label: t('infinite'), href: '/infinite' },
+    { label: t('terms'), href: '/terms' },
   ];
   const items = allItems.filter((item) => item.href !== pathname);
 

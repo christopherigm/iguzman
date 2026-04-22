@@ -7,12 +7,13 @@ After=network.target
 Type=simple
 User=server-video-editor
 Group=server-video-editor
-WorkingDirectory=/opt/server-video-editor/app
+WorkingDirectory=/opt/server-video-editor
 Environment=NODE_ENV=production
 Environment=NEXT_TELEMETRY_DISABLED=1
 Environment=PORT=3001
 Environment=HOSTNAME=0.0.0.0
-ExecStart=/opt/server-video-editor/node/bin/node /opt/server-video-editor/app/apps/server-video-editor/server.js
+Environment=VIDEO_DOWNLOADER_URL=https://vd2.iguzman.com.mx
+ExecStart=/opt/server-video-editor/start.sh
 StandardOutput=append:/var/log/server-video-editor/app.log
 StandardError=append:/var/log/server-video-editor/error.log
 Restart=on-failure

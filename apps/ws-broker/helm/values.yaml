@@ -1,0 +1,82 @@
+# ─────────────────────────────────────────────────────────────
+# ws-broker – Helm Values
+# ─────────────────────────────────────────────────────────────
+
+# MUST stay at 1 — WS connections are held in-memory on this pod.
+replicaCount: 1
+revisionHistoryLimit: 2
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: christopherguzman/ws-broker
+  tag: 'latest'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+# ─── Ingress ────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    # Required for WebSocket upgrade through nginx ingress
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '3600'
+    nginx.ingress.kubernetes.io/proxy-http-version: '1.1'
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+  hosts:
+    - host: ws.vd2.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: ws-vd2-tls
+      hosts:
+        - ws.vd2.iguzman.com.mx
+
+# ─── Environment variables ──────────────────────────────────
+env:
+  NODE_ENV: 'production'
+  # Internal K8s URL so ws-broker can call back to video-downloader
+  VIDEO_DOWNLOADER_URL: 'http://video-downloader.video-downloader-2.svc.cluster.local'
+  # Shared MongoDB instance deployed in the video-downloader-2 namespace
+  MONGO_URI: 'mongodb://mongodb.video-downloader-2.svc.cluster.local:27017'
+
+envFromSecret: []
+
+# ─── Health probes ──────────────────────────────────────────
+probes:
+  startupProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 12
+  livenessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 15
+    failureThreshold: 3
+
+# ─── Node affinity ──────────────────────────────────────────
+nodeAffinity:
+  enabled: false
+  nodeNames: []
+
+# ─── Resources ──────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

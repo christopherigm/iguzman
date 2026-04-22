@@ -1,0 +1,21 @@
+ws-broker deployed successfully.
+
+WebSocket endpoint (for server-video-editor):
+  wss://{{ (index .Values.ingress.hosts 0).host }}/ws
+
+Internal REST API (for video-downloader pods):
+  http://{{ include "ws-broker.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local/api/clients
+  http://{{ include "ws-broker.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local/api/jobs
+
+Health check:
+  https://{{ (index .Values.ingress.hosts 0).host }}/healthz
+
+Required Kubernetes Secret (create before deploying):
+  kubectl create secret generic ws-broker-secrets \
+    --namespace {{ .Release.Namespace }} \
+    --from-literal=mongo-uri='<MONGO_URI>' \
+    --from-literal=broker-shared-secret='<BROKER_SHARED_SECRET>'
+
+video-downloader must have these env vars set:
+  WS_BROKER_URL=http://{{ include "ws-broker.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  BROKER_SHARED_SECRET=<same value as above>

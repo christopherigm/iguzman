@@ -48,8 +48,7 @@ ingress:
 env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
-  # Add your own env vars here, for example:
-  # API_URL: "https://api.example.com"
+  WS_BROKER_URL: 'http://ws-broker.video-downloader-2.svc.cluster.local'
 
 # Sensitive values – reference existing Kubernetes Secrets.
 # envFromSecret:

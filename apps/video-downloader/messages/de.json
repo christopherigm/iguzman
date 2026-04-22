@@ -52,7 +52,8 @@
   },
   "Navbar": {
     "home": "Startseite",
-    "infinite": "Endlos"
+    "infinite": "Endlos",
+    "terms": "Nutzungsbedingungen"
   },
   "InfinitePage": {
     "loading": "Laden...",
@@ -69,6 +70,35 @@
     "nextVideoIn": "Nächstes Video in {seconds}s",
     "objectFitLabel": "Objektanpassung umschalten",
     "autoSwipeLabel": "Automatisches Weiterblättern umschalten"
+  },
+  "TermsPage": {
+    "title": "Nutzungsbedingungen",
+    "lastUpdated": "Zuletzt aktualisiert: April 2026",
+    "intro": "Bitte lies diese Nutzungsbedingungen sorgfältig durch, bevor du den Video-Downloader verwendest. Durch die Nutzung dieser Anwendung erklärst du dich mit diesen Bedingungen einverstanden. Wenn du nicht einverstanden bist, stelle bitte die Nutzung ein.",
+    "s1Title": "1. Zweck und bestimmungsgemäßer Gebrauch",
+    "s1Body": "Der Video-Downloader ist ein Werkzeug für den persönlichen Gebrauch, mit dem du öffentlich verfügbare Videos von unterstützten Plattformen für deinen privaten Konsum herunterladen kannst. Er ist nicht für die kommerzielle Weiterverbreitung, das massenhafte Herunterladen oder eine Verwendung bestimmt, die gegen geltendes Recht oder Rechte Dritter verstößt.",
+    "s2Title": "2. Deine Verantwortung",
+    "s2Body": "Du bist allein dafür verantwortlich, sicherzustellen, dass deine Nutzung dieser Anwendung allen geltenden Gesetzen, Vorschriften und Nutzungsbedingungen der Plattformen entspricht, von denen du Inhalte herunterlädst. Wir überwachen, kontrollieren oder übernehmen keine Verantwortung für die von dir heruntergeladenen Inhalte.",
+    "s3Title": "3. Urheberrecht und geistiges Eigentum",
+    "s3Body": "Das Herunterladen eines Videos überträgt dir keinerlei Urheberrechte oder Eigentumsrechte daran. Du musst die Rechte am geistigen Eigentum von Inhaltserstellern und Rechteinhabern respektieren. Die Weiterverbreitung, öffentliche Aufführung oder kommerzielle Nutzung heruntergeladener Inhalte ohne ordnungsgemäße Genehmigung kann nach geltendem Recht eine Urheberrechtsverletzung darstellen.",
+    "s4Title": "4. Nutzungsbedingungen der Plattformen",
+    "s4Body": "Die meisten Plattformen – darunter YouTube, Facebook, Instagram, TikTok und X (Twitter) – verbieten in ihren Nutzungsbedingungen das Scraping oder automatisierte Herunterladen. Ein Verstoß gegen die Nutzungsbedingungen einer Plattform ist eine zivilrechtliche Angelegenheit zwischen dir und dieser Plattform, in den meisten Jurisdiktionen kein Straftatbestand. Du nutzt diese Anwendung jedoch auf eigenes Risiko und trägst die volle Verantwortung für etwaige Verstöße gegen Nutzungsbedingungen.",
+    "s5Title": "5. Rechtsstatus von yt-dlp",
+    "s5Body": "Diese Anwendung verwendet yt-dlp, ein Open-Source-Tool, das unter der Unlicense veröffentlicht wurde. yt-dlp ist legale Software. Gerichte in verschiedenen Jurisdiktionen haben entschieden, dass Verstöße gegen Nutzungsbedingungen allein keine illegale Aktivität darstellen. Ob ein bestimmter Download in deiner Jurisdiktion rechtmäßig ist, hängt vom lokalen Urheberrecht und der Art der Inhalte ab.",
+    "s6Title": "6. Keine DRM-Umgehung",
+    "s6Body": "Diese Anwendung lädt ausschließlich Inhalte von öffentlich zugänglichen Streams herunter. Sie umgeht kein Digital Rights Management (DRM) oder technische Schutzmaßnahmen. Die Umgehung von DRM kann gegen Gesetze wie § 1201 DMCA (USA), die EU-Urheberrechtsrichtlinie oder entsprechende Gesetze in deinem Land verstoßen und wird von dieser Anwendung nicht unterstützt.",
+    "s7Title": "7. Datenschutz und Daten",
+    "s7Body": "Heruntergeladene Mediendateien werden vorübergehend auf dem Server gespeichert und sind ausschließlich deiner Browser-Sitzung zugeordnet. Wir erfassen, speichern oder geben keine personenbezogenen Daten weiter. Die von dir eingegebenen URLs werden ausschließlich zur Durchführung des angeforderten Downloads verwendet und nach Sitzungsende nicht gespeichert. Dateien werden nach einer Inaktivitätsperiode automatisch gelöscht.",
+    "s8Title": "8. Drittanbieter-Tools",
+    "s8Body": "Diese Anwendung ist auf Open-Source-Tools von Drittanbietern angewiesen, darunter yt-dlp (Unlicense) und FFmpeg (LGPL/GPL). Diese Tools werden unter ihren jeweiligen Open-Source-Lizenzen bereitgestellt. Wir sind nicht mit diesen Projekten oder deren Entwicklern verbunden und übernehmen keine Verantwortung für sie. Ihre Verfügbarkeit und ihr Verhalten können sich jederzeit ändern.",
+    "s9Title": "9. Dienstverfügbarkeit",
+    "s9Body": "Diese Anwendung wird nach bestem Bemühen bereitgestellt. Plattformänderungen, Netzwerkprobleme oder yt-dlp-Extractor-Updates können dazu führen, dass Downloads jederzeit ohne Vorankündigung fehlschlagen. Wir übernehmen keine Garantie für Verfügbarkeit, Betriebszeit oder Kompatibilität mit einer bestimmten URL oder Plattform.",
+    "s10Title": "10. Gewährleistungsausschluss",
+    "s10Body": "Diese Anwendung wird \"wie besehen\" ohne jegliche ausdrückliche oder stillschweigende Gewährleistung bereitgestellt, einschließlich, aber nicht beschränkt auf Gewährleistungen der Marktgängigkeit, Eignung für einen bestimmten Zweck oder Nichtverletzung von Rechten. Die Nutzung dieser Anwendung erfolgt vollständig auf eigenes Risiko.",
+    "s11Title": "11. Haftungsbeschränkung",
+    "s11Body": "Im größtmöglichen gesetzlich zulässigen Umfang haften wir nicht für direkte, indirekte, zufällige, besondere oder Folgeschäden, die aus der Nutzung dieser Anwendung entstehen, einschließlich, aber nicht beschränkt auf Urheberrechtsansprüche, Kontosperrungen auf Plattformen, Datenverlust oder sonstige Schäden durch heruntergeladene Inhalte.",
+    "s12Title": "12. Änderungen dieser Bedingungen",
+    "s12Body": "Wir behalten uns das Recht vor, diese Nutzungsbedingungen jederzeit ohne vorherige Ankündigung zu aktualisieren. Die fortgesetzte Nutzung der Anwendung nach der Veröffentlichung von Änderungen gilt als Zustimmung zu den überarbeiteten Bedingungen. Das Datum oben auf dieser Seite gibt die letzte Überarbeitung an."
   },
   "VideoGrid": {
     "title": "Downloads",

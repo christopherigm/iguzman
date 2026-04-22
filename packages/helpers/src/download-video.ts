@@ -546,6 +546,10 @@ const fetchMetadata = async (
 
   args.push('--js-runtimes', `node:${jsRuntimes}`);
 
+  if (isFacebook(url)) {
+    args.push('--impersonate', 'chrome');
+  }
+
   if (cookies) {
     args.push('--cookies', cookies);
   }
@@ -1227,6 +1231,9 @@ const buildDownloadArgs = (
 
   if (!isTiktok(url)) {
     args.push('--add-header', 'user-agent:Mozilla/5.0');
+  }
+  if (isFacebook(url)) {
+    args.push('--impersonate', 'chrome');
   }
   args.push('--js-runtimes', `node:${jsRuntimes}`);
 
@@ -2327,6 +2334,7 @@ const downloadSeparateStreams = async (
       '--js-runtimes',
       `node:${jsRuntimes}`,
     ];
+    if (isFacebook(url)) args.push('--impersonate', 'chrome');
     if (cookies) args.push('--cookies', cookies);
     args.push('-o', outputTemplate, '--quiet');
     return args;

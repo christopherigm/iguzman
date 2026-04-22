@@ -52,7 +52,8 @@
   },
   "Navbar": {
     "home": "Accueil",
-    "infinite": "Infini"
+    "infinite": "Infini",
+    "terms": "Conditions"
   },
   "InfinitePage": {
     "loading": "Chargement...",
@@ -69,6 +70,35 @@
     "nextVideoIn": "Prochaine vidéo dans {seconds}s",
     "objectFitLabel": "Basculer l'ajustement",
     "autoSwipeLabel": "Activer/désactiver le défilement automatique"
+  },
+  "TermsPage": {
+    "title": "Conditions Générales d'Utilisation",
+    "lastUpdated": "Dernière mise à jour : avril 2026",
+    "intro": "Veuillez lire attentivement ces Conditions Générales d'Utilisation avant d'utiliser le Téléchargeur de Vidéos. En utilisant cette application, vous acceptez d'être lié par ces conditions. Si vous n'acceptez pas, veuillez cesser d'utiliser l'application.",
+    "s1Title": "1. Objet et utilisation prévue",
+    "s1Body": "Le Téléchargeur de Vidéos est un outil à usage personnel qui vous permet de télécharger des vidéos publiquement disponibles depuis des plateformes prises en charge pour votre consommation privée. Il n'est pas destiné à la redistribution commerciale, à l'extraction massive de données, ni à toute utilisation enfreignant les lois applicables ou les droits de tiers.",
+    "s2Title": "2. Votre responsabilité",
+    "s2Body": "Vous êtes seul responsable de vous assurer que votre utilisation de cette application est conforme à toutes les lois, réglementations et conditions d'utilisation applicables des plateformes depuis lesquelles vous téléchargez du contenu. Nous ne surveillons pas, ne contrôlons pas et n'assumons aucune responsabilité pour le contenu que vous téléchargez.",
+    "s3Title": "3. Droits d'auteur et propriété intellectuelle",
+    "s3Body": "Le téléchargement d'une vidéo ne vous transfère aucun droit d'auteur ni droit de propriété sur celle-ci. Vous devez respecter les droits de propriété intellectuelle des créateurs de contenu et des titulaires de droits. La redistribution, la représentation publique ou l'utilisation commerciale du contenu téléchargé sans autorisation appropriée peut constituer une violation du droit d'auteur en vertu de la loi applicable.",
+    "s4Title": "4. Conditions d'utilisation des plateformes",
+    "s4Body": "La plupart des plateformes — dont YouTube, Facebook, Instagram, TikTok et X (Twitter) — interdisent le scraping ou le téléchargement automatisé dans leurs Conditions d'Utilisation. Enfreindre les conditions d'une plateforme est une affaire civile entre vous et cette plateforme, et non un acte criminel dans la plupart des juridictions. Vous utilisez néanmoins cette application à vos propres risques et assumez l'entière responsabilité de toute violation des conditions.",
+    "s5Title": "5. Statut juridique de yt-dlp",
+    "s5Body": "Cette application utilise yt-dlp, un outil open source publié sous la licence Unlicense. yt-dlp est un logiciel légal. Des tribunaux de plusieurs juridictions ont jugé que les violations des Conditions d'Utilisation ne constituent pas à elles seules une activité illégale. La légalité d'un téléchargement spécifique dans votre juridiction dépend du droit d'auteur local et de la nature du contenu.",
+    "s6Title": "6. Absence de contournement du DRM",
+    "s6Body": "Cette application télécharge uniquement du contenu depuis des flux publiquement accessibles. Elle ne contourne pas les systèmes de Gestion des Droits Numériques (DRM) ni les mesures de protection technique. Le contournement du DRM peut violer des lois telles que le DMCA § 1201 (États-Unis), la Directive européenne sur le droit d'auteur ou une législation équivalente dans votre pays, et n'est pas pris en charge par cette application.",
+    "s7Title": "7. Confidentialité et données",
+    "s7Body": "Les fichiers multimédias téléchargés sont stockés temporairement sur le serveur et associés uniquement à votre session de navigateur. Nous ne collectons, ne stockons ni ne partageons aucune information personnelle identifiable. Les URL que vous soumettez sont utilisées uniquement pour effectuer le téléchargement demandé et ne sont pas conservées après la fin de la session. Les fichiers sont automatiquement supprimés après une période d'inactivité.",
+    "s8Title": "8. Outils tiers",
+    "s8Body": "Cette application s'appuie sur des outils open source tiers, dont yt-dlp (Unlicense) et FFmpeg (LGPL/GPL). Ces outils sont fournis sous leurs licences open source respectives. Nous ne sommes pas affiliés à ces projets ou à leurs développeurs et n'en sommes pas responsables. Leur disponibilité et leur comportement peuvent évoluer à tout moment.",
+    "s9Title": "9. Disponibilité du service",
+    "s9Body": "Cette application est fournie selon le principe du meilleur effort. Les modifications des plateformes, les problèmes de réseau ou les mises à jour des extracteurs yt-dlp peuvent entraîner des échecs de téléchargement à tout moment sans préavis. Nous ne garantissons pas la disponibilité, le temps de fonctionnement ni la compatibilité avec une URL ou une plateforme spécifique.",
+    "s10Title": "10. Exclusion de garanties",
+    "s10Body": "Cette application est fournie \"telle quelle\", sans garantie d'aucune sorte, expresse ou implicite, y compris, mais sans s'y limiter, les garanties de qualité marchande, d'adéquation à un usage particulier ou d'absence de contrefaçon. Votre utilisation de cette application est entièrement à vos propres risques.",
+    "s11Title": "11. Limitation de responsabilité",
+    "s11Body": "Dans toute la mesure permise par la loi applicable, nous ne serons pas responsables des dommages directs, indirects, accessoires, spéciaux ou consécutifs découlant de votre utilisation de cette application, y compris, mais sans s'y limiter, les réclamations pour droits d'auteur, les suspensions de comptes sur les plateformes, la perte de données ou tout autre préjudice résultant du contenu téléchargé.",
+    "s12Title": "12. Modifications des présentes conditions",
+    "s12Body": "Nous nous réservons le droit de mettre à jour ces Conditions Générales d'Utilisation à tout moment sans préavis. La poursuite de l'utilisation de l'application après la publication de modifications vaut acceptation des conditions révisées. La date en haut de cette page reflète la dernière révision."
   },
   "VideoGrid": {
     "title": "Téléchargements",

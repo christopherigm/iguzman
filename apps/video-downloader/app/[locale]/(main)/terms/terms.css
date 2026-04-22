@@ -1,0 +1,21 @@
+.terms-meta {
+  opacity: 0.6;
+  display: block;
+  margin-top: 6px;
+}
+
+.terms-intro {
+  opacity: 0.85;
+  line-height: 1.7;
+}
+
+.terms-section {
+  padding-top: 24px;
+  padding-bottom: 24px;
+  border-top: 1px solid var(--border, rgba(128, 128, 128, 0.2));
+}
+
+.terms-section p {
+  line-height: 1.7;
+  opacity: 0.85;
+}

@@ -62,7 +62,16 @@ if [ -d "$PUBLIC_DIR" ]; then
     cp -r "$PUBLIC_DIR/." "$DIST_DIR/app/apps/server-video-editor/public/"
 fi
 
-# ── 4. Download & extract Node.js ───────────────────────────────────────────
+# ── 4. Compile WS agent ─────────────────────────────────────────────────────
+echo "▶ Compiling WS agent…"
+cd "$SCRIPT_DIR"
+# tsc with tsconfig.agent.json compiles src/{ws-agent,config,ffmpeg-ops}.ts
+# to CommonJS in dist/ — no external npm deps, runs on the bundled Node.js 22
+pnpm exec tsc --project tsconfig.agent.json
+# ws-agent.js lands in dist/; nfpm picks it up from there
+echo "  → dist/ws-agent.js"
+
+# ── 6. Download & extract Node.js ───────────────────────────────────────────
 if [ ! -f "$NODE_CACHE" ]; then
     echo "▶ Downloading Node.js ${NODE_VERSION}…"
     curl -fsSL "$NODE_URL" -o "$NODE_CACHE"
@@ -73,7 +82,7 @@ fi
 echo "▶ Extracting Node.js…"
 tar -xJf "$NODE_CACHE" -C "$DIST_DIR/node" --strip-components=1
 
-# ── 5. Package with nfpm ────────────────────────────────────────────────────
+# ── 7. Package with nfpm ────────────────────────────────────────────────────
 echo "▶ Running nfpm…"
 cd "$SCRIPT_DIR"
 

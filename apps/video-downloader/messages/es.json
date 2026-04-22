@@ -52,7 +52,8 @@
   },
   "Navbar": {
     "home": "Inicio",
-    "infinite": "Infinito"
+    "infinite": "Infinito",
+    "terms": "Términos"
   },
   "InfinitePage": {
     "loading": "Cargando...",
@@ -69,6 +70,35 @@
     "nextVideoIn": "Siguiente video en {seconds}s",
     "objectFitLabel": "Alternar ajuste de objeto",
     "autoSwipeLabel": "Activar/desactivar avance automático"
+  },
+  "TermsPage": {
+    "title": "Términos y Condiciones",
+    "lastUpdated": "Última actualización: abril de 2026",
+    "intro": "Lee detenidamente estos Términos y Condiciones antes de usar el Descargador de Videos. Al usar esta aplicación, aceptas quedar vinculado por estos términos. Si no estás de acuerdo, deja de utilizar la aplicación.",
+    "s1Title": "1. Propósito y uso previsto",
+    "s1Body": "El Descargador de Videos es una herramienta de uso personal que te permite descargar videos públicamente disponibles de plataformas compatibles para tu consumo privado. No está destinada a la redistribución comercial, la extracción masiva de datos ni cualquier uso que infrinja las leyes aplicables o los derechos de terceros.",
+    "s2Title": "2. Tu responsabilidad",
+    "s2Body": "Eres el único responsable de asegurarte de que tu uso de esta aplicación cumpla con todas las leyes, regulaciones y términos de servicio aplicables de las plataformas desde las que descargas contenido. No supervisamos, controlamos ni asumimos responsabilidad por el contenido que descargues.",
+    "s3Title": "3. Derechos de autor y propiedad intelectual",
+    "s3Body": "Descargar un video no te transfiere ningún derecho de autor ni de propiedad sobre él. Debes respetar los derechos de propiedad intelectual de los creadores de contenido y los titulares de derechos. La redistribución, ejecución pública o uso comercial del contenido descargado sin la autorización adecuada puede constituir una infracción de los derechos de autor según la legislación aplicable.",
+    "s4Title": "4. Términos de servicio de plataformas",
+    "s4Body": "La mayoría de las plataformas —incluidas YouTube, Facebook, Instagram, TikTok y X (Twitter)— prohíben la extracción o descarga automatizada en sus Términos de Servicio. Infringir los términos de una plataforma es un asunto civil entre tú y dicha plataforma, no un acto delictivo en la mayoría de jurisdicciones. Sin embargo, usas esta aplicación bajo tu propio riesgo y asumes toda la responsabilidad por cualquier infracción de los términos.",
+    "s5Title": "5. Estado legal de yt-dlp",
+    "s5Body": "Esta aplicación utiliza yt-dlp, una herramienta de código abierto publicada bajo la licencia Unlicense. yt-dlp es un software legal. Tribunales de múltiples jurisdicciones han determinado que las infracciones de los Términos de Servicio por sí solas no constituyen una actividad ilegal. Si una descarga concreta es legal en tu jurisdicción depende de la legislación local sobre derechos de autor y la naturaleza del contenido.",
+    "s6Title": "6. Sin elusión de DRM",
+    "s6Body": "Esta aplicación solo descarga contenido de transmisiones públicamente accesibles. No elude la Gestión de Derechos Digitales (DRM) ni las medidas de protección técnica. Eludir el DRM puede infringir leyes como el DMCA § 1201 (Estados Unidos), la Directiva de Derechos de Autor de la UE o legislaciones equivalentes en tu país, y no está soportado por esta aplicación.",
+    "s7Title": "7. Privacidad y datos",
+    "s7Body": "Los archivos multimedia descargados se almacenan temporalmente en el servidor y están asociados únicamente a tu sesión de navegador. No recopilamos, almacenamos ni compartimos información de identificación personal. Las URL que envías se utilizan únicamente para realizar la descarga que solicitaste y no se conservan una vez finalizada la sesión. Los archivos se eliminan automáticamente tras un período de inactividad.",
+    "s8Title": "8. Herramientas de terceros",
+    "s8Body": "Esta aplicación depende de herramientas de código abierto de terceros como yt-dlp (Unlicense) y FFmpeg (LGPL/GPL). Estas herramientas se proporcionan bajo sus respectivas licencias de código abierto. No estamos afiliados ni somos responsables de estos proyectos o sus desarrolladores. Su disponibilidad y comportamiento pueden cambiar en cualquier momento.",
+    "s9Title": "9. Disponibilidad del servicio",
+    "s9Body": "Esta aplicación se proporciona bajo el principio de mejor esfuerzo. Los cambios en las plataformas, problemas de red o actualizaciones del extractor de yt-dlp pueden provocar fallos en las descargas en cualquier momento sin previo aviso. No garantizamos la disponibilidad, el tiempo de actividad ni la compatibilidad con ninguna URL o plataforma específica.",
+    "s10Title": "10. Exclusión de garantías",
+    "s10Body": "Esta aplicación se proporciona \"tal cual\" sin garantía de ningún tipo, expresa o implícita, incluidas, entre otras, las garantías de comerciabilidad, idoneidad para un fin particular o no infracción. Tu uso de esta aplicación es bajo tu propio riesgo.",
+    "s11Title": "11. Limitación de responsabilidad",
+    "s11Body": "En la máxima medida permitida por la legislación aplicable, no seremos responsables de ningún daño directo, indirecto, incidental, especial o consecuente derivado del uso de esta aplicación, incluidos, entre otros, reclamaciones por derechos de autor, suspensión de cuentas en plataformas, pérdida de datos u otros daños resultantes del contenido descargado.",
+    "s12Title": "12. Cambios en estos términos",
+    "s12Body": "Nos reservamos el derecho de actualizar estos Términos y Condiciones en cualquier momento sin previo aviso. El uso continuado de la aplicación tras la publicación de cambios constituye tu aceptación de los términos revisados. La fecha en la parte superior de esta página refleja la revisión más reciente."
   },
   "VideoGrid": {
     "title": "Descargas",
