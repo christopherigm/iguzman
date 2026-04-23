@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
-import { tmpdir } from 'os';
+import { tmpdir, cpus } from 'os';
 import { randomUUID } from 'crypto';
 import { join } from 'path';
 
@@ -14,7 +14,15 @@ const DEFAULT_FFMPEG = 'ffmpeg';
  * Runs an FFmpeg command via spawn, parsing stderr for frame-based progress.
  * Resolves when the process exits 0, rejects on non-zero exit.
  */
-const THREAD_FLAGS = ['-threads', '0', '-filter_threads', '0'];
+const CPU_COUNT = String(cpus().length);
+const THREAD_FLAGS = [
+  '-threads',
+  CPU_COUNT,
+  '-filter_threads',
+  CPU_COUNT,
+  '-filter_complex_threads',
+  CPU_COUNT,
+];
 
 const runFFmpeg = (
   args: string[],
@@ -37,7 +45,9 @@ const runFFmpeg = (
           const frame = Number(m[1]);
           if (frame > lastFrame) {
             lastFrame = frame;
-            onProgress(Math.min(99, Math.round((frame / estimatedFrames) * 100)));
+            onProgress(
+              Math.min(99, Math.round((frame / estimatedFrames) * 100)),
+            );
           }
         }
       }
@@ -45,7 +55,9 @@ const runFFmpeg = (
 
     proc.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(`FFmpeg exited with code ${code}\n${stderr.slice(-500)}`));
+        reject(
+          new Error(`FFmpeg exited with code ${code}\n${stderr.slice(-500)}`),
+        );
       } else {
         onProgress?.(100);
         resolve();
@@ -197,10 +209,8 @@ function computeDefaultPosition(
 ): { x: number; y: number } {
   const col = (alignment - 1) % 3; // 0=left 1=center 2=right
   const row = Math.floor((alignment - 1) / 3); // 0=bottom 1=middle 2=top
-  const x =
-    col === 0 ? marginL : col === 1 ? playResX / 2 : playResX - marginR;
-  const y =
-    row === 0 ? playResY - marginV : row === 1 ? playResY / 2 : marginV;
+  const x = col === 0 ? marginL : col === 1 ? playResX / 2 : playResX - marginR;
+  const y = row === 0 ? playResY - marginV : row === 1 ? playResY / 2 : marginV;
   return { x, y };
 }
 
@@ -358,10 +368,19 @@ function generateAssContent(params: {
       if (!splitPerLine) {
         let finalText = text;
         if (hasKaraoke) {
-          finalText = applyKaraokeToText(finalText, endCs - startCs, karaokeMode);
+          finalText = applyKaraokeToText(
+            finalText,
+            endCs - startCs,
+            karaokeMode,
+          );
         }
         const overrideTags = buildOverrideTags(
-          nonKaraokeTypes, animation, playResX, playResY, alignment, marginV,
+          nonKaraokeTypes,
+          animation,
+          playResX,
+          playResY,
+          alignment,
+          marginV,
         );
         let tagBlock: string;
         if (borderStyle === 3) {
@@ -372,23 +391,33 @@ function generateAssContent(params: {
           tagBlock = overrideTags;
         }
         if (tagBlock) finalText = `${tagBlock}${finalText}`;
-        return [`Dialogue: 0,${formatAssTimestamp(startCs)},${formatAssTimestamp(endCs)},Default,,0,0,0,,${finalText}`];
+        return [
+          `Dialogue: 0,${formatAssTimestamp(startCs)},${formatAssTimestamp(endCs)},Default,,0,0,0,,${finalText}`,
+        ];
       }
 
       /* lineHeight must exceed (fontSize + 2*outline) so boxes don't overlap.
          Adding 30 % of fontSize provides a small visible gap between boxes. */
       const lineHeight = Math.round(fontSize * 1.3 + 2 * outline);
-      const defaultPos = computeDefaultPosition(alignment, playResX, playResY, marginV);
+      const defaultPos = computeDefaultPosition(
+        alignment,
+        playResX,
+        playResY,
+        marginV,
+      );
       const row = Math.floor((alignment - 1) / 3); // 0=bottom 1=middle 2=top
       const totalWords = rawLines.reduce(
-        (s, l) => s + l.split(/\s+/).filter(Boolean).length, 0,
+        (s, l) => s + l.split(/\s+/).filter(Boolean).length,
+        0,
       );
 
       return rawLines.map((line, i) => {
         let lineY: number;
         if (row === 0) {
           // bottom-aligned: last line at base position, earlier lines go up
-          lineY = Math.round(defaultPos.y - (rawLines.length - 1 - i) * lineHeight);
+          lineY = Math.round(
+            defaultPos.y - (rawLines.length - 1 - i) * lineHeight,
+          );
         } else if (row === 2) {
           // top-aligned: first line at base, later lines go down
           lineY = Math.round(defaultPos.y + i * lineHeight);
@@ -402,14 +431,22 @@ function generateAssContent(params: {
         let finalLine = line;
         if (hasKaraoke) {
           const lineWords = line.split(/\s+/).filter(Boolean).length;
-          const lineDuration = totalWords > 0
-            ? Math.round(((endCs - startCs) * lineWords) / totalWords)
-            : endCs - startCs;
+          const lineDuration =
+            totalWords > 0
+              ? Math.round(((endCs - startCs) * lineWords) / totalWords)
+              : endCs - startCs;
           finalLine = applyKaraokeToText(finalLine, lineDuration, karaokeMode);
         }
 
         const overrideTags = buildOverrideTags(
-          nonKaraokeTypes, animation, playResX, playResY, alignment, marginV, lineX, lineY,
+          nonKaraokeTypes,
+          animation,
+          playResX,
+          playResY,
+          alignment,
+          marginV,
+          lineX,
+          lineY,
         );
         // overrideTags always contains \pos (or \move for slide) when posX/posY given
         const tagBlock = overrideTags
@@ -475,6 +512,13 @@ export interface InterpolateFpsOptions {
   outputPath: string;
   /** Target frames per second (e.g. 60). */
   targetFps: number;
+  /**
+   * Motion-search radius for `minterpolate` (pixels). Default 16.
+   * Lower = faster ME, more CPU headroom for the encoder; higher = more
+   * accurate motion vectors at the cost of sequential search time.
+   * Valid range: 4–64.
+   */
+  searchParam?: number;
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
   /** Called with a value 0–100 as encoding progresses. */
@@ -578,11 +622,14 @@ export interface BurnSubtitlesOptions {
  * @returns The resolved `outputPath`.
  * @throws When ffmpeg exits with a non-zero code.
  */
-export async function interpolateFps(options: InterpolateFpsOptions): Promise<string> {
+export async function interpolateFps(
+  options: InterpolateFpsOptions,
+): Promise<string> {
   const {
     inputPath,
     outputPath,
     targetFps,
+    searchParam = 16,
     ffmpegBinary = DEFAULT_FFMPEG,
     onProgress,
   } = options;
@@ -590,10 +637,24 @@ export async function interpolateFps(options: InterpolateFpsOptions): Promise<st
   const { durationSec } = await probeVideo(inputPath, ffmpegBinary);
 
   const estimatedFrames = durationSec > 0 ? durationSec * targetFps : 0;
-  const videoFilter = `minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1`;
+  const videoFilter = `minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1:search_param=${searchParam}`;
 
   await runFFmpeg(
-    ['-i', inputPath, '-filter:v', videoFilter, '-c:a', 'copy', outputPath],
+    [
+      '-i',
+      inputPath,
+      '-filter:v',
+      videoFilter,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'faster',
+      '-crf',
+      '23',
+      '-c:a',
+      'copy',
+      outputPath,
+    ],
     ffmpegBinary,
     onProgress,
     estimatedFrames,
@@ -608,7 +669,9 @@ export async function interpolateFps(options: InterpolateFpsOptions): Promise<st
  * @returns The resolved `outputPath`.
  * @throws When ffmpeg exits with a non-zero code.
  */
-export async function convertToH264(options: ConvertToH264Options): Promise<string> {
+export async function convertToH264(
+  options: ConvertToH264Options,
+): Promise<string> {
   const {
     inputPath,
     outputPath,
@@ -621,11 +684,16 @@ export async function convertToH264(options: ConvertToH264Options): Promise<stri
 
   await runFFmpeg(
     [
-      '-i', inputPath,
-      '-c:v', 'libx264',
-      '-preset', 'faster',
-      '-crf', '23',
-      '-c:a', 'copy',
+      '-i',
+      inputPath,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'faster',
+      '-crf',
+      '23',
+      '-c:a',
+      'copy',
       outputPath,
     ],
     ffmpegBinary,
@@ -645,7 +713,9 @@ export async function convertToH264(options: ConvertToH264Options): Promise<stri
  * @returns The resolved `outputPath`.
  * @throws When no black bars are detected or ffmpeg fails.
  */
-export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<string> {
+export async function removeBlackBars(
+  options: RemoveBlackBarsOptions,
+): Promise<string> {
   const {
     inputPath,
     outputPath,
@@ -656,10 +726,12 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
     onProgress,
   } = options;
 
-  const { width: origW, height: origH, durationSec, fps } = await probeVideo(
-    inputPath,
-    ffmpegBinary,
-  );
+  const {
+    width: origW,
+    height: origH,
+    durationSec,
+    fps,
+  } = await probeVideo(inputPath, ffmpegBinary);
   const estimatedFrames = durationSec > 0 ? durationSec * fps : 0;
 
   let crop = cropString;
@@ -670,9 +742,13 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
     await new Promise<void>((resolve, reject) => {
       const proc = spawn(ffmpegBinary, [
         ...THREAD_FLAGS,
-        '-i', inputPath,
-        '-vf', `cropdetect=limit=${limit}:round=${round}:reset=0`,
-        '-f', 'null', '-',
+        '-i',
+        inputPath,
+        '-vf',
+        `cropdetect=limit=${limit}:round=${round}:reset=0`,
+        '-f',
+        'null',
+        '-',
       ]);
 
       let log = '';
@@ -688,7 +764,9 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
             const frame = Number(m[1]);
             if (frame > lastFrame) {
               lastFrame = frame;
-              onProgress(Math.min(49, Math.round((frame / estimatedFrames) * 50)));
+              onProgress(
+                Math.min(49, Math.round((frame / estimatedFrames) * 50)),
+              );
             }
           }
         }
@@ -698,7 +776,12 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
           const last = matches[matches.length - 1]!;
           const [, w, h, x, y] = last;
 
-          if (origW > 0 && origH > 0 && Number(w) >= origW && Number(h) >= origH) {
+          if (
+            origW > 0 &&
+            origH > 0 &&
+            Number(w) >= origW &&
+            Number(h) >= origH
+          ) {
             // Detected crop equals source — no bars
             return;
           }
@@ -715,7 +798,12 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
           }
           const last = matches[matches.length - 1]!;
           const [, w, h, x, y] = last;
-          if (origW > 0 && origH > 0 && Number(w) >= origW && Number(h) >= origH) {
+          if (
+            origW > 0 &&
+            origH > 0 &&
+            Number(w) >= origW &&
+            Number(h) >= origH
+          ) {
             return reject(new Error('No black bars detected'));
           }
           crop = `${w}:${h}:${x}:${y}`;
@@ -737,9 +825,12 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
   await new Promise<void>((resolve, reject) => {
     const proc = spawn(ffmpegBinary, [
       ...THREAD_FLAGS,
-      '-i', inputPath,
-      '-vf', `crop=${crop}`,
-      '-c:a', 'copy',
+      '-i',
+      inputPath,
+      '-vf',
+      `crop=${crop}`,
+      '-c:a',
+      'copy',
       outputPath,
     ]);
 
@@ -756,7 +847,9 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
           const frame = Number(m[1]);
           if (frame > lastFrame) {
             lastFrame = frame;
-            onProgress(Math.min(99, 50 + Math.round((frame / cropEstFrames) * 50)));
+            onProgress(
+              Math.min(99, 50 + Math.round((frame / cropEstFrames) * 50)),
+            );
           }
         }
       }
@@ -764,7 +857,11 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
 
     proc.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(`FFmpeg crop exited with code ${code}\n${stderr.slice(-500)}`));
+        reject(
+          new Error(
+            `FFmpeg crop exited with code ${code}\n${stderr.slice(-500)}`,
+          ),
+        );
       } else {
         onProgress?.(100);
         resolve();
@@ -787,7 +884,9 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
  * @returns The resolved `outputPath`.
  * @throws When ffmpeg exits with a non-zero code.
  */
-export async function extractAudio(options: ExtractAudioOptions): Promise<string> {
+export async function extractAudio(
+  options: ExtractAudioOptions,
+): Promise<string> {
   const {
     inputPath,
     outputPath,
@@ -802,7 +901,18 @@ export async function extractAudio(options: ExtractAudioOptions): Promise<string
 
   const args =
     format === 'wav'
-      ? ['-i', inputPath, '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', outputPath]
+      ? [
+          '-i',
+          inputPath,
+          '-vn',
+          '-acodec',
+          'pcm_s16le',
+          '-ar',
+          '16000',
+          '-ac',
+          '1',
+          outputPath,
+        ]
       : ['-i', inputPath, '-vn', '-c:a', 'copy', outputPath];
 
   await runFFmpeg(args, ffmpegBinary, onProgress, estimatedFrames);
@@ -823,7 +933,9 @@ export async function extractAudio(options: ExtractAudioOptions): Promise<string
  * @returns The resolved `outputPath`.
  * @throws When ffmpeg exits with a non-zero code.
  */
-export async function burnSubtitles(options: BurnSubtitlesOptions): Promise<string> {
+export async function burnSubtitles(
+  options: BurnSubtitlesOptions,
+): Promise<string> {
   const {
     inputPath,
     outputPath,
@@ -843,8 +955,13 @@ export async function burnSubtitles(options: BurnSubtitlesOptions): Promise<stri
     onProgress,
   } = options;
 
-  const { width: origW, height: origH, durationSec, fps, rotation } =
-    await probeVideo(inputPath, ffmpegBinary);
+  const {
+    width: origW,
+    height: origH,
+    durationSec,
+    fps,
+    rotation,
+  } = await probeVideo(inputPath, ffmpegBinary);
 
   /* ASS PlayRes must match the frame the subtitles filter sees.
      When there is rotation metadata and we transpose, width ↔ height swap. */
@@ -907,9 +1024,12 @@ export async function burnSubtitles(options: BurnSubtitlesOptions): Promise<stri
     await runFFmpeg(
       [
         ...(needsRotation ? ['-noautorotate'] : []),
-        '-i', inputPath,
-        '-vf', vf,
-        '-c:a', 'copy',
+        '-i',
+        inputPath,
+        '-vf',
+        vf,
+        '-c:a',
+        'copy',
         ...(needsRotation ? ['-metadata:s:v:0', 'rotate=0'] : []),
         outputPath,
       ],
@@ -918,9 +1038,17 @@ export async function burnSubtitles(options: BurnSubtitlesOptions): Promise<stri
       estimatedFrames,
     );
   } finally {
-    try { rmSync(assFile, { force: true }); } catch { /* ignore */ }
+    try {
+      rmSync(assFile, { force: true });
+    } catch {
+      /* ignore */
+    }
     if (fontsDir) {
-      try { rmSync(fontsDir, { recursive: true, force: true }); } catch { /* ignore */ }
+      try {
+        rmSync(fontsDir, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
     }
   }
 

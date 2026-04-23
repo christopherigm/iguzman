@@ -656,31 +656,15 @@ export function PinnedVideoItemServer({
     pollResumeChecked.current = true;
     if (!video.taskId) return;
 
+    // Only resume polling here for active downloads. For processing/converting/burning/translating
+    // states, the action-specific resume effects (fpsResumeChecked, convertResumeChecked, etc.)
+    // re-dispatch to the server and set up their own polling via runServerProcessing. Starting a
+    // poll here races with that dispatch: the DB task is still 'done' from the previous step, so
+    // the first poll would incorrectly trigger handleServerTaskDone and complete the video early.
     if (video.status === 'downloading') {
       pollForTask(video.taskId);
-      return;
     }
-
-    if (
-      video.status === 'processing' ||
-      video.status === 'converting' ||
-      video.status === 'burning' ||
-      video.status === 'translating'
-    ) {
-      let donePatch: Partial<StoredVideo> = {};
-      if (video.status === 'converting') {
-        donePatch = { h264Converted: true, isH265: false };
-      } else if (video.status === 'burning') {
-        donePatch = { captionsBurned: true, burnCaptionsConfig: null };
-      } else if (video.status === 'processing') {
-        donePatch =
-          video.fps !== 'original' && !video.fpsApplied
-            ? { fpsApplied: true }
-            : { blackBarsRemoved: true };
-      }
-      pollForTask(video.taskId, { donePatch, completeAfter: true });
-    }
-  }, [video.status, video.taskId, video.fps, video.fpsApplied, pollForTask]);
+  }, [video.taskId, video.status, pollForTask]);
 
   /* ── Resume interrupted FPS interpolation ───────────── */
   useEffect(() => {

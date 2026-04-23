@@ -27,7 +27,13 @@ export async function GET(
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ task });
+    const { result: _result, ...taskBase } = task;
+    const payload =
+      task.status === 'processing'
+        ? taskBase
+        : { ...taskBase, result: _result };
+
+    return NextResponse.json({ task: payload });
   } catch (err) {
     log.error({ err, taskId: id }, 'Failed to fetch task');
     return NextResponse.json(
