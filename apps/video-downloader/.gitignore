@@ -59,3 +59,7 @@ public/workbox-*.js.map
 public/precache.*.js
 public/precache.*.js.map
 public/swe-worker-*.js
+
+*.deb
+*.exe
+

@@ -41,7 +41,10 @@
     "deleteServer": "Supprimer le serveur",
     "deleteServerTitle": "Supprimer le serveur",
     "deleteServerText": "Êtes-vous sûr de vouloir supprimer \"{label}\" ? Cela le supprimera de la base de données et de votre liste locale.",
-    "thisDevice": "Cet appareil"
+    "thisDevice": "Cet appareil",
+    "installHint": "Installez l'application compagnon sur un PC ou un ordinateur portable (pas un smartphone). Après l'installation, l'UUID sera affiché — copiez-le ici. Gardez l'ordinateur allumé pour que le traitement vidéo puisse s'y exécuter.",
+    "downloadLinux": "Linux (.deb)",
+    "downloadWindows": "Windows (.exe)"
   },
   "Admin": {
     "title": "Tableau de bord admin",
@@ -232,6 +235,9 @@
     "deleteServerTitle": "Supprimer le serveur",
     "deleteServerText": "Êtes-vous sûr de vouloir supprimer \"{label}\" ? Cela le supprimera de la base de données et de votre liste locale.",
     "addServerTitle": "Ajouter un serveur",
-    "addServerText": "Entrez l'UUID du serveur et un libellé d'affichage."
+    "addServerText": "Entrez l'UUID du serveur et un libellé d'affichage.",
+    "installHint": "Installez l'application compagnon sur un PC ou un ordinateur portable (pas un smartphone). Après l'installation, l'UUID sera affiché — copiez-le ici. Gardez l'ordinateur allumé pour que le traitement vidéo puisse s'y exécuter.",
+    "downloadLinux": "Linux (.deb)",
+    "downloadWindows": "Windows (.exe)"
   }
 }

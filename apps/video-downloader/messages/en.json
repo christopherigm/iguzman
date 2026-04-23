@@ -41,7 +41,10 @@
     "deleteServer": "Delete server",
     "deleteServerTitle": "Delete Server",
     "deleteServerText": "Are you sure you want to delete \"{label}\"? This will remove it from the database and your local list.",
-    "thisDevice": "This device"
+    "thisDevice": "This device",
+    "installHint": "Install the companion app on a PC or laptop (not a smartphone). After installation the UUID will be displayed — copy it here. Keep the computer on so video processing can run on it.",
+    "downloadLinux": "Linux (.deb)",
+    "downloadWindows": "Windows (.exe)"
   },
   "Admin": {
     "title": "Admin Dashboard",
@@ -232,6 +235,9 @@
     "deleteServerTitle": "Delete Server",
     "deleteServerText": "Are you sure you want to delete \"{label}\"? This will remove it from the database and your local list.",
     "addServerTitle": "Add Server",
-    "addServerText": "Enter the server UUID and a display label."
+    "addServerText": "Enter the server UUID and a display label.",
+    "installHint": "Install the companion app on a PC or laptop (not a smartphone). After installation the UUID will be displayed — copy it here. Keep the computer on so video processing can run on it.",
+    "downloadLinux": "Linux (.deb)",
+    "downloadWindows": "Windows (.exe)"
   }
 }

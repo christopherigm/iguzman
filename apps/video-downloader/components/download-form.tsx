@@ -454,6 +454,9 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     wsClientNameLabel: t('wsClientNameLabel'),
     deleteServerTitle: t('deleteServerTitle'),
     deleteServerText: (label) => t('deleteServerText', { label }),
+    installHint: t('installHint'),
+    downloadLinux: t('downloadLinux'),
+    downloadWindows: t('downloadWindows'),
   };
 
   const formContent = (
@@ -599,14 +602,14 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
           />
         </OptionRow>
 
-        <OptionRow label={t('fps')} disabled={fpsDisabled}>
+        {/* <OptionRow label={t('fps')} disabled={fpsDisabled}>
           <FPSSelect
             value={effectiveFps}
             onChange={setFps}
             disabled={fpsDisabled}
             options={fpsOptions}
           />
-        </OptionRow>
+        </OptionRow> */}
 
         {effectiveFps !== 'original' && (
           <OptionRow label={t('server')} disabled={false}>

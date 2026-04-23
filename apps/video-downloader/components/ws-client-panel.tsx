@@ -34,6 +34,12 @@ export interface WsClientPanelLabels {
   deleteServerTitle?: string;
   /** Receives the client label, returns the formatted confirmation text. */
   deleteServerText?: (label: string) => string;
+  /** Hint shown below the inputs in the add-server modal, explaining that the server app must be installed. */
+  installHint?: string;
+  /** Label for the Linux download button. */
+  downloadLinux?: string;
+  /** Label for the Windows download button. */
+  downloadWindows?: string;
 }
 
 interface WsClientPanelProps {
@@ -163,10 +169,9 @@ export function WsClientPanel({
     setShowDeleteModal(false);
     setDeletingServer(true);
     try {
-      await fetch(
-        `/api/ws-clients?uuid=${encodeURIComponent(selectedUuid)}`,
-        { method: 'DELETE' },
-      );
+      await fetch(`/api/ws-clients?uuid=${encodeURIComponent(selectedUuid)}`, {
+        method: 'DELETE',
+      });
       let remaining: StoredWsClient[] = [];
       setClients((prev) => {
         remaining = prev.filter((c) => c.uuid !== selectedUuid);
@@ -315,7 +320,7 @@ export function WsClientPanel({
 
         {selectEl}
 
-        {(addingServer || deletingServer) ? (
+        {addingServer || deletingServer ? (
           <Spinner
             size={18}
             thickness={2}
@@ -333,15 +338,56 @@ export function WsClientPanel({
         >
           <Box flexDirection="column" gap={12} marginTop={8}>
             <TextInput
-              label={labels.wsClientUuidLabel ?? 'UUID'}
-              value={newUuid}
-              onChange={setNewUuid}
-            />
-            <TextInput
               label={labels.wsClientNameLabel ?? 'Label'}
               value={newLabel}
               onChange={setNewLabel}
             />
+            <TextInput
+              label={labels.wsClientUuidLabel ?? 'UUID'}
+              value={newUuid}
+              onChange={setNewUuid}
+            />
+            {labels.installHint ||
+            labels.downloadLinux ||
+            labels.downloadWindows ? (
+              <Box className="wcp-install-section" marginTop={8}>
+                {labels.installHint ? (
+                  <Typography variant="caption" className="wcp-install-hint">
+                    {labels.installHint}
+                  </Typography>
+                ) : null}
+                <Box className="wcp-download-btns">
+                  {labels.downloadLinux ? (
+                    <a
+                      href="/binaries/server-video-editor_0.1.10_amd64.deb"
+                      download
+                      className="wcp-dl-btn"
+                    >
+                      <Icon
+                        icon="/icons/linux.svg"
+                        size={18}
+                        color="var(--foreground, #171717)"
+                      />
+                      {labels.downloadLinux}
+                    </a>
+                  ) : null}
+                  {labels.downloadWindows ? (
+                    <a
+                      href="/binaries/server-video-editor_0.1.12.exe"
+                      download
+                      className="wcp-dl-btn"
+                    >
+                      <Icon
+                        icon="/icons/windows.svg"
+                        size={18}
+                        color="var(--foreground, #171717)"
+                      />
+                      {labels.downloadWindows}
+                    </a>
+                  ) : null}
+                </Box>
+              </Box>
+            ) : null}
           </Box>
         </ConfirmationModal>
       ) : null}

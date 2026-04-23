@@ -41,7 +41,10 @@
     "deleteServer": "Server löschen",
     "deleteServerTitle": "Server löschen",
     "deleteServerText": "Möchtest du \"{label}\" wirklich löschen? Dadurch wird er aus der Datenbank und deiner lokalen Liste entfernt.",
-    "thisDevice": "Dieses Gerät"
+    "thisDevice": "Dieses Gerät",
+    "installHint": "Installiere die Begleit-App auf einem PC oder Laptop (kein Smartphone). Nach der Installation wird die UUID angezeigt — kopiere sie hier. Halte den Computer eingeschaltet, damit die Videoverarbeitung dort ausgeführt werden kann.",
+    "downloadLinux": "Linux (.deb)",
+    "downloadWindows": "Windows (.exe)"
   },
   "Admin": {
     "title": "Admin-Dashboard",
@@ -232,6 +235,9 @@
     "deleteServerTitle": "Server löschen",
     "deleteServerText": "Möchtest du \"{label}\" wirklich löschen? Dadurch wird er aus der Datenbank und deiner lokalen Liste entfernt.",
     "addServerTitle": "Server hinzufügen",
-    "addServerText": "UUID und Anzeigebezeichnung des Servers eingeben."
+    "addServerText": "UUID und Anzeigebezeichnung des Servers eingeben.",
+    "installHint": "Installiere die Begleit-App auf einem PC oder Laptop (kein Smartphone). Nach der Installation wird die UUID angezeigt — kopiere sie hier. Halte den Computer eingeschaltet, damit die Videoverarbeitung dort ausgeführt werden kann.",
+    "downloadLinux": "Linux (.deb)",
+    "downloadWindows": "Windows (.exe)"
   }
 }

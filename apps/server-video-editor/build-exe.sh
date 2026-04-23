@@ -48,6 +48,35 @@ echo "▶ Building Next.js (standalone)…"
 cd "$REPO_ROOT"
 pnpm build --filter=server-video-editor
 
+# ── 1.5. Fix broken pnpm symlinks in standalone output ──────────────────────
+# Next.js traces deps at build time; if pnpm later resolves a different patch
+# version the symlink inside the standalone dir becomes dangling.  Repoint each
+# broken link to the highest-version matching package that is actually present.
+echo "▶ Fixing broken pnpm symlinks in standalone output…"
+PNPM_HOISTED="$STANDALONE_DIR/node_modules/.pnpm/node_modules"
+if [ -d "$PNPM_HOISTED" ]; then
+    while IFS= read -r -d '' link; do
+        [ -e "$link" ] && continue          # skip valid symlinks
+        target=$(readlink "$link")
+        # Only handle the common pattern  ../PKG@VER/node_modules/PKG
+        versioned=$(printf '%s' "$target" | sed 's|^\.\./\([^/]*\)/.*|\1|')
+        [ "$versioned" = "$target" ] && continue   # different pattern — skip
+        pkg_name="${versioned%@*}"
+        pnpm_dir="$STANDALONE_DIR/node_modules/.pnpm"
+        # Pick the newest installed version of that package
+        actual=$(find "$pnpm_dir" -maxdepth 1 -type d -name "${pkg_name}@*" 2>/dev/null \
+                   | sort -V | tail -1)
+        if [ -n "$actual" ]; then
+            actual_name=$(basename "$actual")
+            new_target="${target/$versioned/$actual_name}"
+            ln -sf "$new_target" "$link"
+            echo "  Fixed: $(basename "$link") $versioned → $actual_name"
+        else
+            echo "  Warning: no replacement found for broken symlink: $(basename "$link") -> $target"
+        fi
+    done < <(find "$PNPM_HOISTED" -maxdepth 2 -type l -print0 2>/dev/null)
+fi
+
 # ── 2. Assemble dist/windows/app ────────────────────────────────────────────
 # Use -L to dereference pnpm symlinks — Windows has no concept of Unix symlinks.
 echo "▶ Assembling app bundle…"
@@ -344,8 +373,8 @@ if ! command -v makensis >/dev/null 2>&1; then
     exit 1
 fi
 
-VERSION=$(node -p "require('./package.json').version") \
-  makensis -DVERSION="$VERSION" installer.nsi
+VERSION=$(node -p "require('./package.json').version")
+makensis -DVERSION="$VERSION" installer.nsi
 
 rm -f "$NSI_FILE"
 

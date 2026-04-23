@@ -553,6 +553,9 @@ export function VideoExtraActions({
             wsClientNameLabel: t('wsClientNameLabel'),
             deleteServerTitle: t('deleteServerTitle'),
             deleteServerText: (label) => t('deleteServerText', { label }),
+            installHint: t('installHint'),
+            downloadLinux: t('downloadLinux'),
+            downloadWindows: t('downloadWindows'),
           }}
         />
       ) : null}

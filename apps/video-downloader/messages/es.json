@@ -41,7 +41,10 @@
     "deleteServer": "Eliminar servidor",
     "deleteServerTitle": "Eliminar servidor",
     "deleteServerText": "¿Estás seguro de que quieres eliminar \"{label}\"? Esto lo eliminará de la base de datos y de tu lista local.",
-    "thisDevice": "Este dispositivo"
+    "thisDevice": "Este dispositivo",
+    "installHint": "Instala la app complementaria en una PC o laptop (no en un smartphone). Tras la instalación se mostrará el UUID — cópialo aquí. Mantén la computadora encendida para que el procesamiento de video se ejecute en ella.",
+    "downloadLinux": "Linux (.deb)",
+    "downloadWindows": "Windows (.exe)"
   },
   "Admin": {
     "title": "Panel de administración",
@@ -232,6 +235,9 @@
     "deleteServerTitle": "Eliminar servidor",
     "deleteServerText": "¿Estás seguro de que quieres eliminar \"{label}\"? Esto lo eliminará de la base de datos y de tu lista local.",
     "addServerTitle": "Añadir servidor",
-    "addServerText": "Ingresa el UUID del servidor y una etiqueta de visualización."
+    "addServerText": "Ingresa el UUID del servidor y una etiqueta de visualización.",
+    "installHint": "Instala la app complementaria en una PC o laptop (no en un smartphone). Tras la instalación se mostrará el UUID — cópialo aquí. Mantén la computadora encendida para que el procesamiento de video se ejecute en ella.",
+    "downloadLinux": "Linux (.deb)",
+    "downloadWindows": "Windows (.exe)"
   }
 }
