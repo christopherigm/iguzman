@@ -555,9 +555,6 @@ export function PinnedVideoItemServer({
             });
           }
         },
-        onError: (errorMsg) => {
-          onUpdate(video.uuid, { status: 'error', error: errorMsg });
-        },
       });
     },
     [

@@ -98,7 +98,10 @@ export function PinnedVideoItem({
   const pollResumeChecked = useRef(false);
 
   /* Groq client for subtitle translation */
-  const { generate } = useGroq({ proxyBase: '/api/groq', model: 'llama-3.3-70b-versatile' });
+  const { generate } = useGroq({
+    proxyBase: '/api/groq',
+    model: 'llama-3.3-70b-versatile',
+  });
 
   /* Own FFmpeg WASM instance (dedicated Web Worker for this item) */
   const {
@@ -278,7 +281,10 @@ export function PinnedVideoItem({
       const originalSrt = await srtRes.text();
 
       if (config.translate && config.translateTo) {
-        onUpdate(video.uuid, { status: 'translating' as VideoStatus, error: null });
+        onUpdate(video.uuid, {
+          status: 'translating' as VideoStatus,
+          error: null,
+        });
         const langName = LANG_LABEL[config.translateTo] ?? config.translateTo;
         const messages: LlmMessage[] = [
           { role: 'system', content: buildTranslationPrompt(langName) },
@@ -292,7 +298,10 @@ export function PinnedVideoItem({
       }
     } catch (err) {
       console.error('Caption translation failed:', err);
-      onUpdate(video.uuid, { status: 'error', error: t('errorTranslateFailed') });
+      onUpdate(video.uuid, {
+        status: 'error',
+        error: t('errorTranslateFailed'),
+      });
       return;
     }
 
@@ -304,9 +313,10 @@ export function PinnedVideoItem({
       process: async (sourceUrl, onProgress) => {
         const primaryColour = hexToSSA(config.primaryColor, 100);
         const borderStyle = config.borderStyle ?? 3;
-        const backColour = borderStyle === 3
-          ? hexToSSA(config.bgColor, config.bgOpacity)
-          : '&HFF000000';
+        const backColour =
+          borderStyle === 3
+            ? hexToSSA(config.bgColor, config.bgOpacity)
+            : '&HFF000000';
         const outline = borderStyle === 3 ? 8 : (config.outlineThickness ?? 2);
 
         const animCfg = config.animation;
@@ -452,9 +462,6 @@ export function PinnedVideoItem({
             });
           }
         },
-        onError: (errorMsg) => {
-          onUpdate(video.uuid, { status: 'error', error: errorMsg });
-        },
       });
     },
     [startPolling, handleTaskDone, onUpdate, video.uuid],
@@ -504,6 +511,9 @@ export function PinnedVideoItem({
     video.originalURL,
     video.justAudio,
     video.platform,
+    video.maxHeight,
+    video.captionsEnabled,
+    video.captionUrl,
     pollForTask,
     t,
   ]);

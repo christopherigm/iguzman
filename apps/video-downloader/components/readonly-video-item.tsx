@@ -24,7 +24,12 @@ import './video-item.css';
 
 /* ── Props ──────────────────────────────────────────── */
 
-export type ReprocessAction = 'fps' | 'h264' | 'bars' | 'retry' | 'burnCaptions';
+export type ReprocessAction =
+  | 'fps'
+  | 'h264'
+  | 'bars'
+  | 'retry'
+  | 'burnCaptions';
 
 export interface ReadOnlyVideoItemProps {
   video: StoredVideo;
@@ -53,6 +58,9 @@ export function ReadOnlyVideoItem({
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [confirmConvert, setConfirmConvert] = useState(false);
   const [showBurnModal, setShowBurnModal] = useState(false);
+  const [selectedWsClientUuid, setSelectedWsClientUuid] = useState<string>(
+    video.wsClientUuid ?? THIS_DEVICE_UUID,
+  );
 
   const displayName =
     video.name ??
@@ -62,6 +70,7 @@ export function ReadOnlyVideoItem({
   /* ── Change ws-client selection ──────────────────── */
   const handleWsClientChange = useCallback(
     (uuid: string) => {
+      setSelectedWsClientUuid(uuid);
       onUpdate(video.uuid, {
         wsClientUuid: uuid === THIS_DEVICE_UUID ? null : uuid,
       });
@@ -88,7 +97,9 @@ export function ReadOnlyVideoItem({
       `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
     );
     if (video.justAudio) {
-      const thumbSrc = video.thumbnail ? resolveMediaUrl(`/api/media/${video.thumbnail}`) : null;
+      const thumbSrc = video.thumbnail
+        ? resolveMediaUrl(`/api/media/${video.thumbnail}`)
+        : null;
       if (thumbSrc) {
         downloadThumbnail(thumbSrc, video.name);
       }
@@ -190,7 +201,13 @@ export function ReadOnlyVideoItem({
           blackBarsError={false}
           onRemoveBlackBars={() => onReprocess(video.uuid, 'bars')}
           onInterpolateFps={(fps) => onReprocess(video.uuid, 'fps', fps)}
-          onConvert={() => setConfirmConvert(true)}
+          onConvert={() => {
+            if (selectedWsClientUuid !== THIS_DEVICE_UUID) {
+              setConfirmConvert(true);
+            } else {
+              onReprocess(video.uuid, 'h264');
+            }
+          }}
           onDownloadCaptions={handleDownloadCaptions}
           onBurnCaptions={() => setShowBurnModal(true)}
           initialWsClientUuid={video.wsClientUuid ?? null}
