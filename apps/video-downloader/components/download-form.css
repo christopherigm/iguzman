@@ -205,3 +205,79 @@
   color: var(--foreground-muted, #999);
   opacity: 0.6;
 }
+
+/* ── WS Client (Server) Controls ──────────────────── */
+
+.df-ws-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.df-ws-select-wrapper {
+  position: relative;
+}
+
+.df-ws-select-wrapper .df-select {
+  padding-left: 22px;
+  min-width: 90px;
+}
+
+.df-ws-dot {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.df-ws-dot--online {
+  background: #22c55e;
+}
+
+.df-ws-dot--offline {
+  background: var(--foreground-muted, #aaa);
+  opacity: 0.5;
+}
+
+.df-add-server-btn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 1.5px solid var(--surface-2, #e5e7eb);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--foreground, #171717);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease;
+}
+
+.df-add-server-btn:hover:not(:disabled) {
+  background: var(--surface-2, #f4f4f5);
+  border-color: var(--accent, #06b6d4);
+}
+
+.df-add-server-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.df-icon-btn--delete-server:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+}
+
+.df-icon-btn--delete-server:hover:not(:disabled) img,
+.df-icon-btn--delete-server:hover:not(:disabled) svg {
+  filter: brightness(0) saturate(100%) invert(27%) sepia(80%) saturate(1700%) hue-rotate(338deg) brightness(95%) contrast(95%);
+}

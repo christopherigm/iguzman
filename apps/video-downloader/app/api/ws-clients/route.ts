@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  registerClient,
-  listRegisteredClients,
-} from '@/lib/ws-client-db';
+import { registerClient, listRegisteredClients, deregisterClient } from '@/lib/ws-client-db';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/ws-clients' });
@@ -16,11 +13,16 @@ async function fetchBrokerStatus(): Promise<Map<string, boolean>> {
       signal: AbortSignal.timeout(3000),
     });
     if (res.ok) {
-      const data = (await res.json()) as Array<{ uuid: string; connected: boolean }>;
+      const data = (await res.json()) as Array<{
+        uuid: string;
+        connected: boolean;
+      }>;
+      console.log('data' + JSON.stringify(data));
       for (const c of data) connected.set(c.uuid, c.connected);
     }
   } catch {
     // broker unreachable — all clients show as disconnected
+    console.warn('WS broker unreachable, showing all clients as disconnected');
   }
   return connected;
 }
@@ -64,6 +66,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(client, { status: 201 });
   } catch (err) {
     log.error({ err, uuid }, 'Failed to register WS client');
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const uuid = request.nextUrl.searchParams.get('uuid');
+  if (!uuid || !/^[0-9a-f-]{36}$/i.test(uuid)) {
+    return NextResponse.json({ error: 'Invalid uuid' }, { status: 400 });
+  }
+
+  try {
+    const deleted = await deregisterClient(uuid.toLowerCase());
+    if (!deleted) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    log.info({ uuid }, 'WS client deregistered');
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    log.error({ err, uuid }, 'Failed to deregister WS client');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

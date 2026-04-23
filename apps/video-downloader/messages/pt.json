@@ -31,7 +31,17 @@
     "resolution": "Resolução",
     "checkForCaptions": "Verificar legendas",
     "subtitles": "Legendas",
-    "captionsLoading": "Carregando legendas…"
+    "captionsLoading": "Carregando legendas…",
+    "server": "Servidor",
+    "addServer": "Adicionar servidor",
+    "addServerTitle": "Adicionar servidor",
+    "addServerText": "Insira o UUID do servidor e um rótulo de exibição.",
+    "wsClientUuidLabel": "UUID",
+    "wsClientNameLabel": "Rótulo",
+    "deleteServer": "Excluir servidor",
+    "deleteServerTitle": "Excluir servidor",
+    "deleteServerText": "Tem certeza de que deseja excluir \"{label}\"? Isso o removerá do banco de dados e da sua lista local.",
+    "thisDevice": "Este dispositivo"
   },
   "Admin": {
     "title": "Painel de administração",

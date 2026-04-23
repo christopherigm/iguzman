@@ -31,7 +31,17 @@
     "resolution": "Auflösung",
     "checkForCaptions": "Untertitel suchen",
     "subtitles": "Untertitel",
-    "captionsLoading": "Untertitel werden geladen…"
+    "captionsLoading": "Untertitel werden geladen…",
+    "server": "Server",
+    "addServer": "Server hinzufügen",
+    "addServerTitle": "Server hinzufügen",
+    "addServerText": "UUID und Anzeigebezeichnung des Servers eingeben.",
+    "wsClientUuidLabel": "UUID",
+    "wsClientNameLabel": "Bezeichnung",
+    "deleteServer": "Server löschen",
+    "deleteServerTitle": "Server löschen",
+    "deleteServerText": "Möchtest du \"{label}\" wirklich löschen? Dadurch wird er aus der Datenbank und deiner lokalen Liste entfernt.",
+    "thisDevice": "Dieses Gerät"
   },
   "Admin": {
     "title": "Admin-Dashboard",

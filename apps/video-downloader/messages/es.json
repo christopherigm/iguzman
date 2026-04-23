@@ -31,7 +31,17 @@
     "resolution": "Resolución",
     "checkForCaptions": "Buscar subtítulos",
     "subtitles": "Subtítulos",
-    "captionsLoading": "Cargando subtítulos…"
+    "captionsLoading": "Cargando subtítulos…",
+    "server": "Servidor",
+    "addServer": "Añadir servidor",
+    "addServerTitle": "Añadir servidor",
+    "addServerText": "Ingresa el UUID del servidor y una etiqueta de visualización.",
+    "wsClientUuidLabel": "UUID",
+    "wsClientNameLabel": "Etiqueta",
+    "deleteServer": "Eliminar servidor",
+    "deleteServerTitle": "Eliminar servidor",
+    "deleteServerText": "¿Estás seguro de que quieres eliminar \"{label}\"? Esto lo eliminará de la base de datos y de tu lista local.",
+    "thisDevice": "Este dispositivo"
   },
   "Admin": {
     "title": "Panel de administración",

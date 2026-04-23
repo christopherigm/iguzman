@@ -31,7 +31,17 @@
     "resolution": "Resolution",
     "checkForCaptions": "Check for captions",
     "subtitles": "Subtitles",
-    "captionsLoading": "Loading captions…"
+    "captionsLoading": "Loading captions…",
+    "server": "Server",
+    "addServer": "Add server",
+    "addServerTitle": "Add Server",
+    "addServerText": "Enter the server UUID and a display label.",
+    "wsClientUuidLabel": "UUID",
+    "wsClientNameLabel": "Label",
+    "deleteServer": "Delete server",
+    "deleteServerTitle": "Delete Server",
+    "deleteServerText": "Are you sure you want to delete \"{label}\"? This will remove it from the database and your local list.",
+    "thisDevice": "This device"
   },
   "Admin": {
     "title": "Admin Dashboard",
