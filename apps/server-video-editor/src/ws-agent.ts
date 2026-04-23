@@ -5,16 +5,25 @@
  * Uses only Node.js 22 built-ins: WebSocket, fetch, fs, path, os, crypto.
  */
 import { readConfig } from './config.js';
-import * as ffmpeg from './ffmpeg-ops.js';
+import {
+  interpolateFps,
+  removeBlackBars,
+  convertToH264,
+  burnSubtitles,
+} from './ffmpeg-ops.js';
 import { tmpdir } from 'node:os';
 import { join, extname } from 'node:path';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { unlink, stat } from 'node:fs/promises';
+import { readFile, unlink, stat } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import { randomUUID } from 'node:crypto';
 
-type WsOp = 'interpolateFps' | 'removeBlackBars' | 'convertToH264' | 'burnSubtitles';
+type WsOp =
+  | 'interpolateFps'
+  | 'removeBlackBars'
+  | 'convertToH264'
+  | 'burnSubtitles';
 
 interface JobMessage {
   type: 'job';
@@ -40,20 +49,25 @@ const config = readConfig();
 
 function log(level: 'info' | 'warn' | 'error', msg: string, extra?: object) {
   process[level === 'error' ? 'stderr' : 'stdout'].write(
-    JSON.stringify({ time: new Date().toISOString(), level, msg, ...extra }) + '\n',
+    JSON.stringify({ time: new Date().toISOString(), level, msg, ...extra }) +
+      '\n',
   );
 }
 
 async function downloadFile(url: string, destPath: string): Promise<void> {
   const res = await fetch(url);
-  if (!res.ok || !res.body) throw new Error(`Download failed: ${res.status} ${url}`);
+  if (!res.ok || !res.body)
+    throw new Error(`Download failed: ${res.status} ${url}`);
   await pipeline(
     Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]),
     createWriteStream(destPath),
   );
 }
 
-async function uploadFile(filePath: string, uploadUrl: string): Promise<string> {
+async function uploadFile(
+  filePath: string,
+  uploadUrl: string,
+): Promise<string> {
   const { size } = await stat(filePath);
   const res = await fetch(uploadUrl, {
     method: 'PUT',
@@ -79,21 +93,42 @@ async function handleJob(ws: WebSocket, msg: JobMessage): Promise<void> {
   try {
     log('info', 'Job started', { jobId, op });
 
-    await downloadFile(`${VIDEO_DOWNLOADER_URL}/api/media/${params.inputFile}`, inputPath);
+    await downloadFile(
+      `${VIDEO_DOWNLOADER_URL}/api/media/${params.inputFile}`,
+      inputPath,
+    );
     sendProgress(5);
 
     if (op === 'interpolateFps') {
-      await ffmpeg.interpolateFps(inputPath, outputPath, params.fps ?? 60, sendProgress);
+      await interpolateFps({
+        inputPath,
+        outputPath,
+        targetFps: params.fps ?? 60,
+        onProgress: sendProgress,
+      });
     } else if (op === 'removeBlackBars') {
-      await ffmpeg.removeBlackBars(inputPath, outputPath, sendProgress);
+      await removeBlackBars({
+        inputPath,
+        outputPath,
+        onProgress: sendProgress,
+      });
     } else if (op === 'convertToH264') {
-      await ffmpeg.convertToH264(inputPath, outputPath, sendProgress);
+      await convertToH264({ inputPath, outputPath, onProgress: sendProgress });
     } else if (op === 'burnSubtitles') {
       if (!params.subtitlesFile) throw new Error('subtitlesFile param missing');
-      const subPath = join(tmpdir(), `sve-sub-${randomUUID()}.ass`);
-      await downloadFile(`${VIDEO_DOWNLOADER_URL}/api/media/${params.subtitlesFile}`, subPath);
-      await ffmpeg.burnSubtitles(inputPath, subPath, outputPath, sendProgress);
+      const subPath = join(tmpdir(), `sve-sub-${randomUUID()}.srt`);
+      await downloadFile(
+        `${VIDEO_DOWNLOADER_URL}/api/media/${params.subtitlesFile}`,
+        subPath,
+      );
+      const srtContent = await readFile(subPath, 'utf8');
       await unlink(subPath).catch(() => {});
+      await burnSubtitles({
+        inputPath,
+        outputPath,
+        srtContent,
+        onProgress: sendProgress,
+      });
     } else {
       throw new Error(`Unknown op: ${op as string}`);
     }
@@ -123,25 +158,35 @@ function connect(): void {
     log('info', 'Connected to ws-broker');
     ws.send(JSON.stringify({ type: 'auth', uuid: config.uuid }));
     pingTimer = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+      if (ws.readyState === WebSocket.OPEN)
+        ws.send(JSON.stringify({ type: 'ping' }));
     }, PING_INTERVAL_MS);
   });
 
   ws.addEventListener('message', (event) => {
     let msg: ServerMessage;
-    try { msg = JSON.parse(event.data as string) as ServerMessage; } catch { return; }
+    try {
+      msg = JSON.parse(event.data as string) as ServerMessage;
+    } catch {
+      return;
+    }
 
     if (msg.type === 'ack') {
       log('info', 'Authenticated', { uuid: config.uuid, label: config.label });
     } else if (msg.type === 'job') {
       handleJob(ws, msg).catch((err: unknown) => {
-        log('error', 'Unhandled job error', { error: err instanceof Error ? err.message : String(err) });
+        log('error', 'Unhandled job error', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
     }
   });
 
   ws.addEventListener('close', (event) => {
-    if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+    if (pingTimer) {
+      clearInterval(pingTimer);
+      pingTimer = null;
+    }
     log('warn', 'Disconnected, reconnecting…', { code: event.code });
     setTimeout(connect, RECONNECT_DELAY_MS);
   });
@@ -151,5 +196,8 @@ function connect(): void {
   });
 }
 
-log('info', 'ws-agent starting', { uuid: config.uuid, broker: config.wsBrokerUrl });
+log('info', 'ws-agent starting', {
+  uuid: config.uuid,
+  broker: config.wsBrokerUrl,
+});
 connect();

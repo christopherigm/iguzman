@@ -23,9 +23,19 @@ contents:
       owner: server-video-editor
       group: server-video-editor
 
-  # Compiled WS agent (standalone, no npm deps needed)
+  # Compiled WS agent and its dependencies (standalone, no npm deps needed)
   - src: ./dist/ws-agent.js
     dst: /opt/server-video-editor/app/ws-agent.js
+    file_info:
+      owner: server-video-editor
+      group: server-video-editor
+  - src: ./dist/config.js
+    dst: /opt/server-video-editor/app/config.js
+    file_info:
+      owner: server-video-editor
+      group: server-video-editor
+  - src: ./dist/ffmpeg-ops.js
+    dst: /opt/server-video-editor/app/ffmpeg-ops.js
     file_info:
       owner: server-video-editor
       group: server-video-editor

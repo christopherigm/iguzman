@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-const CONFIG_PATH = process.env.CONFIG_PATH ?? '/opt/server-video-editor/config.json';
+const CONFIG_PATH =
+  process.env.CONFIG_PATH ?? '/opt/server-video-editor/config.json';
 
 export interface AgentConfig {
   uuid: string;
@@ -11,7 +12,9 @@ export interface AgentConfig {
 
 export function readConfig(): AgentConfig {
   if (!existsSync(CONFIG_PATH)) {
-    throw new Error(`Config not found at ${CONFIG_PATH}. Re-run the installer.`);
+    throw new Error(
+      `Config not found at ${CONFIG_PATH}. Re-run the installer.`,
+    );
   }
   return JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) as AgentConfig;
 }

@@ -16,7 +16,7 @@ Environment=VIDEO_DOWNLOADER_URL=https://vd2.iguzman.com.mx
 ExecStart=/opt/server-video-editor/start.sh
 StandardOutput=append:/var/log/server-video-editor/app.log
 StandardError=append:/var/log/server-video-editor/error.log
-Restart=on-failure
+Restart=always
 RestartSec=10
 TimeoutStopSec=30
 
