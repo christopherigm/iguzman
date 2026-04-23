@@ -9,7 +9,6 @@ import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Spinner } from '@repo/ui/core-elements/spinner';
-import { Button } from '@repo/ui/core-elements/button';
 import {
   detectPlatform,
   isYoutube,
@@ -17,6 +16,11 @@ import {
 } from '@repo/helpers/checkers';
 import { stripQueryParams } from '@repo/helpers/clean-url';
 import { isIOS, buildResolutionLabel } from './video-item-shared';
+import {
+  WsClientPanel,
+  THIS_DEVICE_UUID,
+  type WsClientPanelLabels,
+} from './ws-client-panel';
 import type { CaptionOption } from '@/app/api/video-metadata/route';
 import './download-form.css';
 
@@ -35,15 +39,6 @@ const PLATFORM_ICONS: Record<Platform, string> = {
 };
 
 type FPSValue = 'original' | '60' | '90' | '120';
-
-interface StoredWsClient {
-  uuid: string;
-  label: string;
-  connected: boolean;
-}
-
-const WS_CLIENTS_KEY = 'vd-ws-clients';
-const THIS_DEVICE_UUID = '__local__';
 
 /* ── Helpers ────────────────────────────────────────── */
 
@@ -204,61 +199,6 @@ function CaptionSelect({
   );
 }
 
-function WsClientSelect({
-  clients,
-  value,
-  onChange,
-  disabled,
-  thisDeviceLabel,
-}: {
-  clients: StoredWsClient[];
-  value: string | null;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-  thisDeviceLabel: string;
-}) {
-  const isThisDevice = value === THIS_DEVICE_UUID;
-  const selected = clients.find((c) => c.uuid === value);
-  const isOnline = isThisDevice || (selected?.connected ?? false);
-  return (
-    <Box className="df-select-wrapper df-ws-select-wrapper">
-      <span
-        className={`df-ws-dot${isOnline ? ' df-ws-dot--online' : ' df-ws-dot--offline'}`}
-      />
-      <select
-        className="df-select"
-        value={value ?? THIS_DEVICE_UUID}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        aria-label="Server"
-      >
-        <option
-          value={THIS_DEVICE_UUID}
-          style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
-        >
-          {thisDeviceLabel}
-        </option>
-        {clients.map((c) => (
-          <option
-            key={c.uuid}
-            value={c.uuid}
-            style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
-          >
-            {c.label}
-          </option>
-        ))}
-      </select>
-      <span className="df-select-chevron">
-        <Icon
-          icon="/icons/chevron-down.svg"
-          size={14}
-          color="var(--foreground, #171717)"
-        />
-      </span>
-    </Box>
-  );
-}
-
 /* ── Main Component ─────────────────────────────────── */
 
 export interface DownloadFormProps {
@@ -273,6 +213,8 @@ export interface DownloadFormProps {
     maxHeight?: number;
     captionsEnabled?: boolean;
     captionUrl?: string;
+    /** UUID of the selected ws-client for server FFmpeg, or null for local WASM. */
+    wsClientUuid: string | null;
   }) => void;
 }
 
@@ -302,16 +244,9 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   );
   const [captionsUnavailable, setCaptionsUnavailable] = useState(false);
 
-  const [wsClients, setWsClients] = useState<StoredWsClient[]>([]);
   const [selectedWsClientUuid, setSelectedWsClientUuid] = useState<
     string | null
   >(null);
-  const [showAddServer, setShowAddServer] = useState(false);
-  const [newClientUuid, setNewClientUuid] = useState('');
-  const [newClientLabel, setNewClientLabel] = useState('');
-  const [addingServer, setAddingServer] = useState(false);
-  const [showDeleteServer, setShowDeleteServer] = useState(false);
-  const [deletingServer, setDeletingServer] = useState(false);
 
   const fpsOptions = useMemo(
     () => [
@@ -414,39 +349,6 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     };
   }, [captionsEnabled, url]);
 
-  /* Load ws-clients from localStorage and hydrate connected status from API */
-  useEffect(() => {
-    let stored: StoredWsClient[] = [];
-    try {
-      stored = JSON.parse(
-        localStorage.getItem(WS_CLIENTS_KEY) ?? '[]',
-      ) as StoredWsClient[];
-      if (!Array.isArray(stored)) stored = [];
-    } catch {
-      stored = [];
-    }
-    if (stored.length === 0) {
-      setSelectedWsClientUuid(THIS_DEVICE_UUID);
-      return;
-    }
-    setWsClients(stored);
-    setSelectedWsClientUuid(stored[0]?.uuid ?? THIS_DEVICE_UUID);
-
-    fetch('/api/ws-clients')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: Array<{ uuid: string; connected: boolean }> | null) => {
-        if (!data) return;
-        const statusMap = new Map(data.map((c) => [c.uuid, c.connected]));
-        setWsClients((prev) =>
-          prev.map((c) => ({
-            ...c,
-            connected: statusMap.get(c.uuid) ?? false,
-          })),
-        );
-      })
-      .catch(() => {});
-  }, []);
-
   /* Derived state */
   const hasText = url.length > 0;
   const validUrl = useMemo(() => isValidUrl(url), [url]);
@@ -485,6 +387,10 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
       ...(captionsEnabled &&
         !justAudio &&
         selectedCaptionUrl && { captionUrl: selectedCaptionUrl }),
+      wsClientUuid:
+        !selectedWsClientUuid || selectedWsClientUuid === THIS_DEVICE_UUID
+          ? null
+          : selectedWsClientUuid,
     });
 
     /* Reset the URL field after submission */
@@ -523,78 +429,6 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     submitDownload();
   }, [submitDownload]);
 
-  const handleAddServer = useCallback(async () => {
-    const uuid = newClientUuid.trim();
-    const label = newClientLabel.trim();
-    if (!uuid || !label) return;
-
-    setShowAddServer(false);
-    setAddingServer(true);
-    try {
-      const res = await fetch('/api/ws-clients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uuid, label }),
-      });
-      if (res.ok) {
-        const newClient: StoredWsClient = { uuid, label, connected: false };
-        setWsClients((prev) => {
-          const updated = [...prev, newClient];
-          localStorage.setItem(WS_CLIENTS_KEY, JSON.stringify(updated));
-          return updated;
-        });
-        setSelectedWsClientUuid(uuid);
-        setNewClientUuid('');
-        setNewClientLabel('');
-
-        fetch('/api/ws-clients')
-          .then((r) => (r.ok ? r.json() : null))
-          .then((data: Array<{ uuid: string; connected: boolean }> | null) => {
-            if (!data) return;
-            const statusMap = new Map(data.map((c) => [c.uuid, c.connected]));
-            setWsClients((prev) =>
-              prev.map((c) => ({
-                ...c,
-                connected: statusMap.get(c.uuid) ?? false,
-              })),
-            );
-          })
-          .catch(() => {});
-      }
-    } catch {
-      /* best-effort */
-    } finally {
-      setAddingServer(false);
-    }
-  }, [newClientUuid, newClientLabel]);
-
-  const handleDeleteServer = useCallback(async () => {
-    if (!selectedWsClientUuid) return;
-    setShowDeleteServer(false);
-    setDeletingServer(true);
-    try {
-      await fetch(
-        `/api/ws-clients?uuid=${encodeURIComponent(selectedWsClientUuid)}`,
-        {
-          method: 'DELETE',
-        },
-      );
-      setWsClients((prev) => {
-        const updated = prev.filter((c) => c.uuid !== selectedWsClientUuid);
-        localStorage.setItem(WS_CLIENTS_KEY, JSON.stringify(updated));
-        return updated;
-      });
-      setSelectedWsClientUuid((prev) => {
-        const remaining = wsClients.filter((c) => c.uuid !== prev);
-        return remaining[0]?.uuid ?? THIS_DEVICE_UUID;
-      });
-    } catch {
-      /* best-effort */
-    } finally {
-      setDeletingServer(false);
-    }
-  }, [selectedWsClientUuid, wsClients]);
-
   /* Hint text below input */
   const hint = useMemo(() => {
     if (!hasText) return { text: t('hintEmpty'), variant: 'muted' };
@@ -609,6 +443,18 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   }, [hasText, validUrl, knownPlatform, platform, t]);
 
   const platformIcon = PLATFORM_ICONS[platform];
+
+  const wsClientLabels: WsClientPanelLabels = {
+    thisDevice: t('thisDevice'),
+    addServer: t('addServer'),
+    deleteServer: t('deleteServer'),
+    addServerTitle: t('addServerTitle'),
+    addServerText: t('addServerText'),
+    wsClientUuidLabel: t('wsClientUuidLabel'),
+    wsClientNameLabel: t('wsClientNameLabel'),
+    deleteServerTitle: t('deleteServerTitle'),
+    deleteServerText: (label) => t('deleteServerText', { label }),
+  };
 
   const formContent = (
     <Box
@@ -698,48 +544,6 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
           </OptionRow>
         )}
 
-        <OptionRow label={t('server')} disabled={false}>
-          <Box className="df-ws-controls">
-            <button
-              type="button"
-              className="df-add-server-btn"
-              disabled={addingServer || deletingServer}
-              onClick={() => {
-                setNewClientUuid('');
-                setNewClientLabel('');
-                setShowAddServer(true);
-              }}
-            >
-              {t('addServer')}
-            </button>
-            {wsClients.length > 0 && selectedWsClientUuid && (
-              <button
-                type="button"
-                className="df-icon-btn df-icon-btn--delete-server"
-                disabled={deletingServer || addingServer || selectedWsClientUuid === THIS_DEVICE_UUID}
-                onClick={() => setShowDeleteServer(true)}
-                aria-label={t('deleteServer')}
-              >
-                <Icon
-                  icon="/icons/delete-video.svg"
-                  size={18}
-                  color="var(--foreground, #171717)"
-                />
-              </button>
-            )}
-            <WsClientSelect
-              clients={wsClients}
-              value={selectedWsClientUuid}
-              onChange={deletingServer ? () => {} : setSelectedWsClientUuid}
-              disabled={deletingServer}
-              thisDeviceLabel={t('thisDevice')}
-            />
-            {(addingServer || deletingServer) && (
-              <Spinner size={18} thickness={2} label={t('addServer')} />
-            )}
-          </Box>
-        </OptionRow>
-
         {(resolutions.length > 0 || metadataLoading) && (
           <OptionRow
             label={t('resolution')}
@@ -803,6 +607,16 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
             options={fpsOptions}
           />
         </OptionRow>
+
+        {effectiveFps !== 'original' && (
+          <OptionRow label={t('server')} disabled={false}>
+            <WsClientPanel
+              showManagement
+              onChange={setSelectedWsClientUuid}
+              labels={wsClientLabels}
+            />
+          </OptionRow>
+        )}
       </Box>
     </Box>
   );
@@ -820,43 +634,6 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
           {formContent}
         </form>
       </Box>
-
-      {/* ── Add Server Modal ──────────────────────── */}
-      {showAddServer ? (
-        <ConfirmationModal
-          title={t('addServerTitle')}
-          text={t('addServerText')}
-          okCallback={handleAddServer}
-          cancelCallback={() => setShowAddServer(false)}
-        >
-          <Box flexDirection="column" gap={12} marginTop={8}>
-            <TextInput
-              label={t('wsClientUuidLabel')}
-              value={newClientUuid}
-              onChange={setNewClientUuid}
-            />
-            <TextInput
-              label={t('wsClientNameLabel')}
-              value={newClientLabel}
-              onChange={setNewClientLabel}
-            />
-          </Box>
-        </ConfirmationModal>
-      ) : null}
-
-      {/* ── Delete Server Confirmation Modal ─────── */}
-      {showDeleteServer ? (
-        <ConfirmationModal
-          title={t('deleteServerTitle')}
-          text={t('deleteServerText', {
-            label:
-              wsClients.find((c) => c.uuid === selectedWsClientUuid)?.label ??
-              '',
-          })}
-          okCallback={handleDeleteServer}
-          cancelCallback={() => setShowDeleteServer(false)}
-        />
-      ) : null}
 
       {/* ── FPS Boost Confirmation Modal ──────────── */}
       {showFpsWarning ? (

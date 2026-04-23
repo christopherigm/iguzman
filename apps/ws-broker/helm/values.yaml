@@ -10,7 +10,7 @@ revisionHistoryLimit: 2
 image:
   repository: christopherguzman/ws-broker
   tag: 'latest'
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 imagePullSecrets: []
 

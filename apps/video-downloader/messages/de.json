@@ -220,6 +220,18 @@
     "burnCaptionsAnimationKaraokeSweep": "Gleiten",
     "burnCaptionsAnimationKaraokeInstant": "Sofort",
     "burnCaptionsAnimationKaraokeFilled": "Gefüllt",
-    "burnCaptionsOutlineThickness": "Umrissdicke"
+    "burnCaptionsOutlineThickness": "Umrissdicke",
+    "serverDispatching": "An Server senden…",
+    "serverProcessing": "Server verarbeitet… {progress}%",
+    "server": "Server",
+    "thisDevice": "Dieses Gerät",
+    "addServer": "Server hinzufügen",
+    "deleteServer": "Server löschen",
+    "wsClientUuidLabel": "UUID",
+    "wsClientNameLabel": "Bezeichnung",
+    "deleteServerTitle": "Server löschen",
+    "deleteServerText": "Möchtest du \"{label}\" wirklich löschen? Dadurch wird er aus der Datenbank und deiner lokalen Liste entfernt.",
+    "addServerTitle": "Server hinzufügen",
+    "addServerText": "UUID und Anzeigebezeichnung des Servers eingeben."
   }
 }

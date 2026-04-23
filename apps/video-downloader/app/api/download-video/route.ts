@@ -88,8 +88,9 @@ export async function POST(request: Request) {
         download from starting. */
   void (async () => {
     /* Best-effort status update — does NOT gate the download. */
-    updateTask(taskId, { status: 'downloading' }).catch((err: unknown) =>
-      log.error({ err, taskId }, 'Failed to set task status to downloading'),
+    updateTask(taskId, { status: 'downloading', progress: 0 }).catch(
+      (err: unknown) =>
+        log.error({ err, taskId }, 'Failed to set task status to downloading'),
     );
 
     log.info({ taskId, url, justAudio, checkCodec }, 'Download started');
@@ -121,6 +122,7 @@ export async function POST(request: Request) {
         );
         await updateTask(taskId, {
           status: 'error',
+          progress: 0,
           error: result.error,
           result,
         });
@@ -136,6 +138,7 @@ export async function POST(request: Request) {
         );
         await updateTask(taskId, {
           status: 'done',
+          progress: 100,
           result,
           file: result.file ?? null,
           name: result.name ?? null,
@@ -159,6 +162,7 @@ export async function POST(request: Request) {
       log.error({ err, taskId, url }, 'Unexpected error during download');
       await updateTask(taskId, {
         status: 'error',
+        progress: 0,
         error: {
           code: 'DOWNLOAD_FAILED',
           message: err instanceof Error ? err.message : String(err),

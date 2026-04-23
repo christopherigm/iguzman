@@ -220,6 +220,18 @@
     "burnCaptionsAnimationKaraokeSweep": "Varredura",
     "burnCaptionsAnimationKaraokeInstant": "Instantâneo",
     "burnCaptionsAnimationKaraokeFilled": "Preenchido",
-    "burnCaptionsOutlineThickness": "Espessura do contorno"
+    "burnCaptionsOutlineThickness": "Espessura do contorno",
+    "serverDispatching": "Enviando ao servidor…",
+    "serverProcessing": "Processando no servidor… {progress}%",
+    "server": "Servidor",
+    "thisDevice": "Este dispositivo",
+    "addServer": "Adicionar servidor",
+    "deleteServer": "Excluir servidor",
+    "wsClientUuidLabel": "UUID",
+    "wsClientNameLabel": "Rótulo",
+    "deleteServerTitle": "Excluir servidor",
+    "deleteServerText": "Tem certeza de que deseja excluir \"{label}\"? Isso o removerá do banco de dados e da sua lista local.",
+    "addServerTitle": "Adicionar servidor",
+    "addServerText": "Insira o UUID do servidor e um rótulo de exibição."
   }
 }

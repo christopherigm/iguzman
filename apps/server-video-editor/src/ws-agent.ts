@@ -34,6 +34,17 @@ interface JobMessage {
     inputFile: string;
     fps?: number;
     subtitlesFile?: string;
+    srtContent?: string;
+    alignment?: number;
+    marginV?: number;
+    fontSize?: number;
+    bold?: boolean;
+    italic?: boolean;
+    primaryColour?: string;
+    backColour?: string;
+    borderStyle?: number;
+    outline?: number;
+    animation?: Record<string, unknown>;
   };
 }
 
@@ -115,18 +126,34 @@ async function handleJob(ws: WebSocket, msg: JobMessage): Promise<void> {
     } else if (op === 'convertToH264') {
       await convertToH264({ inputPath, outputPath, onProgress: sendProgress });
     } else if (op === 'burnSubtitles') {
-      if (!params.subtitlesFile) throw new Error('subtitlesFile param missing');
-      const subPath = join(tmpdir(), `sve-sub-${randomUUID()}.srt`);
-      await downloadFile(
-        `${VIDEO_DOWNLOADER_URL}/api/media/${params.subtitlesFile}`,
-        subPath,
-      );
-      const srtContent = await readFile(subPath, 'utf8');
-      await unlink(subPath).catch(() => {});
+      let srtContent: string;
+      if (params.srtContent) {
+        srtContent = params.srtContent;
+      } else if (params.subtitlesFile) {
+        const subPath = join(tmpdir(), `sve-sub-${randomUUID()}.srt`);
+        await downloadFile(
+          `${VIDEO_DOWNLOADER_URL}/api/media/${params.subtitlesFile}`,
+          subPath,
+        );
+        srtContent = await readFile(subPath, 'utf8');
+        await unlink(subPath).catch(() => {});
+      } else {
+        throw new Error('burnSubtitles requires srtContent or subtitlesFile');
+      }
       await burnSubtitles({
         inputPath,
         outputPath,
         srtContent,
+        alignment: params.alignment,
+        marginV: params.marginV,
+        fontSize: params.fontSize,
+        bold: params.bold,
+        italic: params.italic,
+        primaryColour: params.primaryColour,
+        backColour: params.backColour,
+        borderStyle: params.borderStyle,
+        outline: params.outline,
+        animation: params.animation as Parameters<typeof burnSubtitles>[0]['animation'],
         onProgress: sendProgress,
       });
     } else {

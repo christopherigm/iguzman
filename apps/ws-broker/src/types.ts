@@ -9,8 +9,21 @@ export type WsOp =
 export interface WsJobParams {
   taskId: string;
   inputFile: string;
+  // interpolateFps
   fps?: number;
+  // burnSubtitles — SRT content and style params
   subtitlesFile?: string;
+  srtContent?: string;
+  alignment?: number;
+  marginV?: number;
+  fontSize?: number;
+  bold?: boolean;
+  italic?: boolean;
+  primaryColour?: string;
+  backColour?: string;
+  borderStyle?: number;
+  outline?: number;
+  animation?: Record<string, unknown>;
 }
 
 // Server → client
@@ -36,7 +49,12 @@ export interface WsClientDoc {
   lastSeenAt: Date | null;
 }
 
-export type JobStatus = 'pending' | 'dispatched' | 'processing' | 'done' | 'error';
+export type JobStatus =
+  | 'pending'
+  | 'dispatched'
+  | 'processing'
+  | 'done'
+  | 'error';
 
 export interface ProcessingJobDoc {
   _id?: ObjectId;

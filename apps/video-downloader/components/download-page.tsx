@@ -20,6 +20,7 @@ interface VideoAddedEntry {
   maxHeight?: number;
   captionsEnabled?: boolean;
   captionUrl?: string;
+  wsClientUuid: string | null;
 }
 
 /* ── Component ──────────────────────────────────────── */
@@ -50,6 +51,7 @@ export function DownloadPage() {
         maxHeight: entry.maxHeight ?? null,
         captionsEnabled: entry.captionsEnabled ?? false,
         captionUrl: entry.captionUrl ?? null,
+        wsClientUuid: entry.wsClientUuid,
       });
     },
     [addToPinned],

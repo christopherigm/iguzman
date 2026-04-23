@@ -8,6 +8,7 @@ import type { BurnCaptionsConfig } from '@/lib/types';
 import type { StoredVideo } from './use-video-store';
 import {
   STATUS_COLORS,
+  THIS_DEVICE_UUID,
   resolveMediaUrl,
   triggerBrowserDownload,
   downloadThumbnail,
@@ -57,6 +58,16 @@ export function ReadOnlyVideoItem({
     video.name ??
     video.uploader ??
     (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
+
+  /* ── Change ws-client selection ──────────────────── */
+  const handleWsClientChange = useCallback(
+    (uuid: string) => {
+      onUpdate(video.uuid, {
+        wsClientUuid: uuid === THIS_DEVICE_UUID ? null : uuid,
+      });
+    },
+    [onUpdate, video.uuid],
+  );
 
   /* ── Copy link ──────────────────────────────────── */
   const handleCopy = useCallback(async () => {
@@ -182,6 +193,8 @@ export function ReadOnlyVideoItem({
           onConvert={() => setConfirmConvert(true)}
           onDownloadCaptions={handleDownloadCaptions}
           onBurnCaptions={() => setShowBurnModal(true)}
+          initialWsClientUuid={video.wsClientUuid ?? null}
+          onWsClientChange={handleWsClientChange}
           t={t}
         />
       ) : null}

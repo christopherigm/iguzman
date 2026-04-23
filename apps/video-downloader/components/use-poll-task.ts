@@ -12,6 +12,7 @@ import type {
 export interface TaskData extends VideoResultFields {
   _id: string;
   status: TaskStatus;
+  progress: number;
   error: DownloadVideoError | null;
 }
 

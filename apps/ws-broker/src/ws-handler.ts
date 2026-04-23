@@ -2,7 +2,7 @@ import { WebSocketServer } from 'ws';
 import type { Server } from 'node:http';
 import { findClientByUuid, touchClient, updateJob } from './db.js';
 import * as registry from './client-registry.js';
-import { notifyJobComplete } from './notifier.js';
+import { notifyJobComplete, notifyJobProgress } from './notifier.js';
 import type { ClientMessage, ServerMessage } from './types.js';
 import logger from './logger.js';
 
@@ -59,6 +59,7 @@ export function attachWsServer(httpServer: Server): WebSocketServer {
 
       if (msg.type === 'progress') {
         await updateJob(msg.jobId, { progress: msg.percent, status: 'processing' });
+        void notifyJobProgress(msg.jobId, msg.percent);
         return;
       }
 

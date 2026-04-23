@@ -1,0 +1,206 @@
+/* ── WsClientPanel — full management mode ─────────── */
+
+.wcp-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wcp-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.wcp-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--surface-2, #f4f4f5);
+  color: var(--foreground, #171717);
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  padding: 5px 30px 5px 22px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease;
+  min-width: 90px;
+}
+
+.wcp-select:focus {
+  border-color: var(--accent, #06b6d4);
+  background: color-mix(in srgb, var(--accent, #06b6d4) 6%, transparent);
+}
+
+.wcp-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.wcp-select-chevron {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.wcp-dot {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.wcp-dot--online {
+  background: #22c55e;
+}
+
+.wcp-dot--offline {
+  background: var(--foreground-muted, #aaa);
+  opacity: 0.5;
+}
+
+.wcp-add-btn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 1.5px solid var(--surface-2, #e5e7eb);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--foreground, #171717);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease;
+}
+
+.wcp-add-btn:hover:not(:disabled) {
+  background: var(--surface-2, #f4f4f5);
+  border-color: var(--accent, #06b6d4);
+}
+
+.wcp-add-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.wcp-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  transition:
+    background 180ms ease,
+    opacity 180ms ease;
+}
+
+.wcp-delete-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.wcp-delete-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+}
+
+.wcp-delete-btn:hover:not(:disabled) img,
+.wcp-delete-btn:hover:not(:disabled) svg {
+  filter: brightness(0) saturate(100%) invert(27%) sepia(80%) saturate(1700%)
+    hue-rotate(338deg) brightness(95%) contrast(95%);
+}
+
+/* ── WsClientPanel — compact mode ─────────────────── */
+
+.wcp-sm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 4px;
+}
+
+.wcp-sm-label {
+  font-size: 12px;
+  color: var(--foreground-muted, #999);
+  white-space: nowrap;
+}
+
+.wcp-sm-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.wcp-sm-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--surface-2, #f4f4f5);
+  color: var(--foreground, #171717);
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  padding: 4px 26px 4px 20px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease;
+  min-width: 90px;
+}
+
+.wcp-sm-select:focus {
+  border-color: var(--accent, #06b6d4);
+  background: color-mix(in srgb, var(--accent, #06b6d4) 6%, transparent);
+}
+
+.wcp-sm-select-chevron {
+  position: absolute;
+  right: 7px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.wcp-sm-dot {
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wcp-sm-dot--online {
+  background: #22c55e;
+}
+
+.wcp-sm-dot--offline {
+  background: var(--foreground-muted, #aaa);
+  opacity: 0.5;
+}

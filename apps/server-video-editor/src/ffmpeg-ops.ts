@@ -14,6 +14,8 @@ const DEFAULT_FFMPEG = 'ffmpeg';
  * Runs an FFmpeg command via spawn, parsing stderr for frame-based progress.
  * Resolves when the process exits 0, rejects on non-zero exit.
  */
+const THREAD_FLAGS = ['-threads', '0', '-filter_threads', '0'];
+
 const runFFmpeg = (
   args: string[],
   binary: string,
@@ -21,7 +23,7 @@ const runFFmpeg = (
   estimatedFrames?: number,
 ): Promise<void> =>
   new Promise((resolve, reject) => {
-    const proc = spawn(binary, args);
+    const proc = spawn(binary, [...THREAD_FLAGS, ...args]);
     let stderr = '';
     let lastFrame = 0;
 
@@ -574,7 +576,7 @@ export interface BurnSubtitlesOptions {
  * Interpolates a video to a higher frame rate using `minterpolate`.
  *
  * @returns The resolved `outputPath`.
- * @throws When the input resolution exceeds QHD+ (2560×1440) or ffmpeg fails.
+ * @throws When ffmpeg exits with a non-zero code.
  */
 export async function interpolateFps(options: InterpolateFpsOptions): Promise<string> {
   const {
@@ -585,20 +587,10 @@ export async function interpolateFps(options: InterpolateFpsOptions): Promise<st
     onProgress,
   } = options;
 
-  const { width, height, durationSec, fps } = await probeVideo(inputPath, ffmpegBinary);
-
-  if (width > 2560 || height > 1440) {
-    throw new Error(
-      `Video resolution ${width}x${height} exceeds QHD+ (2560×1440). FPS interpolation is not supported for resolutions above QHD+.`,
-    );
-  }
+  const { durationSec } = await probeVideo(inputPath, ffmpegBinary);
 
   const estimatedFrames = durationSec > 0 ? durationSec * targetFps : 0;
   const videoFilter = `minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1`;
-
-  // minterpolate does not fire ffmpeg progress events reliably; frame-log
-  // parsing is the only reliable progress source — handled inside runFFmpeg.
-  void fps; // probed but not used directly; estimatedFrames already computed
 
   await runFFmpeg(
     ['-i', inputPath, '-filter:v', videoFilter, '-c:a', 'copy', outputPath],
@@ -631,7 +623,7 @@ export async function convertToH264(options: ConvertToH264Options): Promise<stri
     [
       '-i', inputPath,
       '-c:v', 'libx264',
-      '-preset', 'fast',
+      '-preset', 'faster',
       '-crf', '23',
       '-c:a', 'copy',
       outputPath,
@@ -677,6 +669,7 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
        frames; we parse frame numbers from the null-muxer log. */
     await new Promise<void>((resolve, reject) => {
       const proc = spawn(ffmpegBinary, [
+        ...THREAD_FLAGS,
         '-i', inputPath,
         '-vf', `cropdetect=limit=${limit}:round=${round}:reset=0`,
         '-f', 'null', '-',
@@ -743,6 +736,7 @@ export async function removeBlackBars(options: RemoveBlackBarsOptions): Promise<
   const cropEstFrames = estimatedFrames;
   await new Promise<void>((resolve, reject) => {
     const proc = spawn(ffmpegBinary, [
+      ...THREAD_FLAGS,
       '-i', inputPath,
       '-vf', `crop=${crop}`,
       '-c:a', 'copy',

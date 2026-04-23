@@ -39,10 +39,24 @@ export interface VideoResultFields {
 /* ── Status ────────────────────────────────────────── */
 
 /** Server-side task statuses (DB + polling). */
-export type TaskStatus = 'pending' | 'downloading' | 'done' | 'error';
+export type TaskStatus =
+  | 'pending'
+  | 'downloading'
+  | 'processing'
+  | 'converting'
+  | 'burning'
+  | 'translating'
+  | 'done'
+  | 'error';
 
 /** Client-side statuses extend task statuses with local processing states. */
-export type VideoStatus = TaskStatus | 'queued' | 'processing' | 'converting' | 'burning' | 'translating';
+export type VideoStatus =
+  | TaskStatus
+  | 'queued'
+  | 'processing'
+  | 'converting'
+  | 'burning'
+  | 'translating';
 
 /* ── Burn captions config ──────────────────────────── */
 
@@ -77,7 +91,11 @@ export interface BurnCaptionsAnimationConfig {
   karaokeHighlightColour?: string;
 }
 
-export type BurnCaptionsFontStyle = 'normal' | 'bold' | 'italic' | 'bold-italic';
+export type BurnCaptionsFontStyle =
+  | 'normal'
+  | 'bold'
+  | 'italic'
+  | 'bold-italic';
 
 export interface BurnCaptionsConfig {
   alignment: number;

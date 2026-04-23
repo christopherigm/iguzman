@@ -22,6 +22,7 @@ export type { TaskStatus };
 export interface VideoTaskDocument
   extends VideoDownloadInput, VideoResultFields {
   status: TaskStatus;
+  progress: number;
   result: DownloadVideoResult | null;
   error: DownloadVideoError | null;
   createdAt: Date;
@@ -71,6 +72,7 @@ export async function createTask(
     captionsEnabled: params.captionsEnabled,
     captionUrl: params.captionUrl,
     status: 'pending',
+    progress: 0,
     result: null,
     error: null,
     file: null,

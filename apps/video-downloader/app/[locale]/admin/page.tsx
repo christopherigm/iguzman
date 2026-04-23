@@ -13,6 +13,10 @@ export const dynamic = 'force-dynamic';
 const STATUS_COLORS: Record<TaskStatus, string> = {
   pending: '#999',
   downloading: '#06b6d4',
+  processing: '#3b82f6',
+  converting: '#f59e0b',
+  burning: '#a855f7',
+  translating: '#ec4899',
   done: '#22c55e',
   error: '#ef4444',
 };
@@ -25,6 +29,10 @@ export default async function AdminPage() {
   const counts: Record<TaskStatus, number> = {
     pending: 0,
     downloading: 0,
+    processing: 0,
+    converting: 0,
+    burning: 0,
+    translating: 0,
     done: 0,
     error: 0,
   };
@@ -33,11 +41,17 @@ export default async function AdminPage() {
   }
 
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const recentCount = tasks.filter((task) => task.updatedAt >= oneDayAgo).length;
+  const recentCount = tasks.filter(
+    (task) => task.updatedAt >= oneDayAgo,
+  ).length;
 
   const statCards: { label: string; value: number; color: string }[] = [
     { label: t('statTotal'), value: total, color: 'var(--accent, #68c3f7)' },
-    { label: t('statPending'), value: counts.pending, color: STATUS_COLORS.pending },
+    {
+      label: t('statPending'),
+      value: counts.pending,
+      color: STATUS_COLORS.pending,
+    },
     {
       label: t('statDownloading'),
       value: counts.downloading,
@@ -45,13 +59,19 @@ export default async function AdminPage() {
     },
     { label: t('statDone'), value: counts.done, color: STATUS_COLORS.done },
     { label: t('statErrors'), value: counts.error, color: STATUS_COLORS.error },
-    { label: t('statLast24h'), value: recentCount, color: 'var(--accent, #68c3f7)' },
+    {
+      label: t('statLast24h'),
+      value: recentCount,
+      color: 'var(--accent, #68c3f7)',
+    },
   ];
 
   return (
     <Container size="xl" paddingX={16}>
       <Box className="admin-header">
-        <Typography as="h1" variant="h1" className="admin-title">{t('title')}</Typography>
+        <Typography as="h1" variant="h1" className="admin-title">
+          {t('title')}
+        </Typography>
         <ThemeSwitch />
       </Box>
 
@@ -59,10 +79,16 @@ export default async function AdminPage() {
         {statCards.map((card) => (
           <Grid key={card.label} size={{ xs: 6, sm: 4, md: 2 }}>
             <Box className="admin-stat-card">
-              <Typography variant="body" className="admin-stat-value" color={card.color}>
+              <Typography
+                variant="body"
+                className="admin-stat-value"
+                color={card.color}
+              >
                 {card.value}
               </Typography>
-              <Typography variant="label" className="admin-stat-label">{card.label}</Typography>
+              <Typography variant="label" className="admin-stat-label">
+                {card.label}
+              </Typography>
             </Box>
           </Grid>
         ))}

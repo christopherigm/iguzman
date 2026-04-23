@@ -11,6 +11,10 @@ import type { TaskStatus } from '@/lib/types';
 const STATUS_COLORS: Record<TaskStatus, string> = {
   pending: '#999',
   downloading: '#06b6d4',
+  processing: '#3b82f6',
+  converting: '#f59e0b',
+  burning: '#a855f7',
+  translating: '#ec4899',
   done: '#22c55e',
   error: '#ef4444',
 };
@@ -141,6 +145,10 @@ export function AdminTaskTable({ tasks }: AdminTaskTableProps) {
           <option value="all">{t('filterAllStatuses')}</option>
           <option value="pending">{t('filterPending')}</option>
           <option value="downloading">{t('filterDownloading')}</option>
+          <option value="processing">processing</option>
+          <option value="converting">converting</option>
+          <option value="burning">burning</option>
+          <option value="translating">translating</option>
           <option value="done">{t('filterDone')}</option>
           <option value="error">{t('filterError')}</option>
         </select>

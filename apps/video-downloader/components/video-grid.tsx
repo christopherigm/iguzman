@@ -9,6 +9,7 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import type { Platform } from '@repo/helpers/checkers';
 import type { BurnCaptionsConfig } from '@/lib/types';
 import { PinnedVideoItem } from './pinned-video-item';
+import { PinnedVideoItemServer } from './pinned-video-item-server';
 import { ReadOnlyVideoItem, type ReprocessAction } from './readonly-video-item';
 import { VideoToolbar } from './video-toolbar';
 import type { StoredVideo, VideoStatus } from './use-video-store';
@@ -180,12 +181,21 @@ export function VideoGrid({
           <Grid container spacing={2}>
             {pinned.map((video) => (
               <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-                <PinnedVideoItem
-                  video={video}
-                  onUpdate={onUpdatePinned}
-                  onComplete={onCompletePinned}
-                  onRemove={onRemovePinned}
-                />
+                {video.wsClientUuid && video.wsClientUuid !== '__local__' ? (
+                  <PinnedVideoItemServer
+                    video={video}
+                    onUpdate={onUpdatePinned}
+                    onComplete={onCompletePinned}
+                    onRemove={onRemovePinned}
+                  />
+                ) : (
+                  <PinnedVideoItem
+                    video={video}
+                    onUpdate={onUpdatePinned}
+                    onComplete={onCompletePinned}
+                    onRemove={onRemovePinned}
+                  />
+                )}
               </Grid>
             ))}
           </Grid>

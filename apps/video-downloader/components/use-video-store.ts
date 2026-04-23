@@ -2,7 +2,11 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Platform } from '@repo/helpers/checkers';
-import type { BurnCaptionsConfig, VideoResultFields, VideoStatus } from '@/lib/types';
+import type {
+  BurnCaptionsConfig,
+  VideoResultFields,
+  VideoStatus,
+} from '@/lib/types';
 
 /* ── Types ──────────────────────────────────────────── */
 
@@ -51,6 +55,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   burnCaptionsConfig: BurnCaptionsConfig | null;
   /** Whether captions have been successfully burned into the video. */
   captionsBurned: boolean;
+  /** UUID of the ws-client selected for server-side FFmpeg. Null or '__local__' = local WASM. */
+  wsClientUuid: string | null;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -92,6 +98,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
       v.thumbnail ??
       ((v as unknown as Record<string, unknown>).thumbnailFile as string) ??
       null,
+    wsClientUuid: v.wsClientUuid ?? null,
   };
 }
 
@@ -176,7 +183,10 @@ function migrateFromLegacy(): {
   }
 }
 
-function initializeStore(): { pinned: StoredVideo[]; completed: StoredVideo[] } {
+function initializeStore(): {
+  pinned: StoredVideo[];
+  completed: StoredVideo[];
+} {
   if (typeof window === 'undefined') return { pinned: [], completed: [] };
 
   /* Try migration from legacy single-array store. */
@@ -256,9 +266,16 @@ export function useVideoStore() {
         | 'justAudio'
         | 'enhance'
         | 'autoDownload'
-      > & { maxHeight?: number | null; captionsEnabled?: boolean; captionUrl?: string | null },
+      > & {
+        maxHeight?: number | null;
+        captionsEnabled?: boolean;
+        captionUrl?: string | null;
+        wsClientUuid?: string | null;
+      },
     ): string => {
-      const existing = pinned.find((v) => v.originalURL === partial.originalURL);
+      const existing = pinned.find(
+        (v) => v.originalURL === partial.originalURL,
+      );
       if (existing) return existing.uuid;
 
       const uuid = crypto.randomUUID();
@@ -293,11 +310,13 @@ export function useVideoStore() {
         captionsFile: null,
         burnCaptionsConfig: null,
         captionsBurned: false,
+        wsClientUuid: partial.wsClientUuid ?? null,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional
            updaters: if the URL is already in pinned, skip the add. */
-        if (prev.some((v) => v.originalURL === partial.originalURL)) return prev;
+        if (prev.some((v) => v.originalURL === partial.originalURL))
+          return prev;
         return [entry, ...prev];
       });
       return uuid;

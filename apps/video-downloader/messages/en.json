@@ -220,6 +220,18 @@
     "burnCaptionsAnimationKaraokeSweep": "Sweep",
     "burnCaptionsAnimationKaraokeInstant": "Instant",
     "burnCaptionsAnimationKaraokeFilled": "Filled",
-    "burnCaptionsOutlineThickness": "Outline Thickness"
+    "burnCaptionsOutlineThickness": "Outline Thickness",
+    "serverDispatching": "Sending to server…",
+    "serverProcessing": "Server processing… {progress}%",
+    "server": "Server",
+    "thisDevice": "This device",
+    "addServer": "Add server",
+    "deleteServer": "Delete server",
+    "wsClientUuidLabel": "UUID",
+    "wsClientNameLabel": "Label",
+    "deleteServerTitle": "Delete Server",
+    "deleteServerText": "Are you sure you want to delete \"{label}\"? This will remove it from the database and your local list.",
+    "addServerTitle": "Add Server",
+    "addServerText": "Enter the server UUID and a display label."
   }
 }

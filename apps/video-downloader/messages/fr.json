@@ -220,6 +220,18 @@
     "burnCaptionsAnimationKaraokeSweep": "Balayage",
     "burnCaptionsAnimationKaraokeInstant": "Instantané",
     "burnCaptionsAnimationKaraokeFilled": "Rempli",
-    "burnCaptionsOutlineThickness": "Épaisseur du contour"
+    "burnCaptionsOutlineThickness": "Épaisseur du contour",
+    "serverDispatching": "Envoi au serveur…",
+    "serverProcessing": "Traitement sur le serveur… {progress}%",
+    "server": "Serveur",
+    "thisDevice": "Cet appareil",
+    "addServer": "Ajouter un serveur",
+    "deleteServer": "Supprimer le serveur",
+    "wsClientUuidLabel": "UUID",
+    "wsClientNameLabel": "Libellé",
+    "deleteServerTitle": "Supprimer le serveur",
+    "deleteServerText": "Êtes-vous sûr de vouloir supprimer \"{label}\" ? Cela le supprimera de la base de données et de votre liste locale.",
+    "addServerTitle": "Ajouter un serveur",
+    "addServerText": "Entrez l'UUID du serveur et un libellé d'affichage."
   }
 }

@@ -7,6 +7,13 @@ import { Icon } from '@repo/ui/core-elements/icon';
 import { Badge } from '@repo/ui/core-elements/badge';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import Image from 'next/image';
+import {
+  WsClientPanel,
+  THIS_DEVICE_UUID,
+  type StoredWsClient,
+} from './ws-client-panel';
+
+export { THIS_DEVICE_UUID, type StoredWsClient };
 
 /* ── Constants ──────────────────────────────────────── */
 
@@ -508,6 +515,8 @@ export function VideoExtraActions({
   onConvert,
   onDownloadCaptions,
   onBurnCaptions,
+  initialWsClientUuid,
+  onWsClientChange,
   t,
 }: {
   video: StoredVideo;
@@ -520,12 +529,34 @@ export function VideoExtraActions({
   onConvert: () => void;
   onDownloadCaptions?: () => void;
   onBurnCaptions?: () => void;
+  initialWsClientUuid?: string | null;
+  onWsClientChange?: (uuid: string) => void;
   t: TranslationFn;
 }) {
   const canProcess = !isBusy && !!video.downloadURL && !video.justAudio;
 
   return (
     <Box className="vi-extra-actions">
+      {onWsClientChange ? (
+        <WsClientPanel
+          showManagement
+          initialValue={initialWsClientUuid}
+          onChange={onWsClientChange}
+          labels={{
+            thisDevice: t('thisDevice'),
+            server: t('server'),
+            addServer: t('addServer'),
+            deleteServer: t('deleteServer'),
+            addServerTitle: t('addServerTitle'),
+            addServerText: t('addServerText'),
+            wsClientUuidLabel: t('wsClientUuidLabel'),
+            wsClientNameLabel: t('wsClientNameLabel'),
+            deleteServerTitle: t('deleteServerTitle'),
+            deleteServerText: (label) => t('deleteServerText', { label }),
+          }}
+        />
+      ) : null}
+
       {video.isH265 && !video.h264Converted ? (
         <button
           type="button"
