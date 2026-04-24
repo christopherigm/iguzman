@@ -139,7 +139,7 @@ const ANIMATION_TYPES: BurnCaptionsAnimationType[] = [
 ];
 
 const DEFAULT_ANIMATION: BurnCaptionsAnimationConfig = {
-  type: 'none',
+  type: 'karaoke',
   fadeInMs: 300,
   fadeOutMs: 200,
   slideOffset: 20,
@@ -148,17 +148,17 @@ const DEFAULT_ANIMATION: BurnCaptionsAnimationConfig = {
   blurDurationMs: 300,
   zoomDurationMs: 300,
   karaokeMode: 'kf',
-  karaokeHighlightColour: '#ffff00',
+  karaokeHighlightColour: '#00ffff',
 };
 
 const DEFAULT_CONFIG: BurnCaptionsConfig = {
   alignment: 2,
-  marginV: 15,
-  fontSize: 24,
-  fontStyle: 'normal',
+  marginV: 72,
+  fontSize: 65,
+  fontStyle: 'bold',
   primaryColor: '#ffffff',
   borderStyle: 1,
-  outlineThickness: 2,
+  outlineThickness: 8,
   bgColor: '#000000',
   bgOpacity: 50,
   translate: false,

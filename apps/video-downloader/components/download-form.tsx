@@ -271,7 +271,9 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
     }
   }, [url]);
 
-  /* Fetch available resolutions for YouTube URLs (debounced) */
+  /* Fetch available resolutions for YouTube URLs.
+   * Retries up to 20 times with exponential backoff (1 s, 2 s, 4 s … capped at 30 s)
+   * on network errors or non-2xx responses. */
   useEffect(() => {
     setCaptionsUnavailable(false);
 
@@ -282,32 +284,50 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
       return;
     }
 
-    setMetadataLoading(true);
-    const timer = setTimeout(async () => {
+    const MAX_ATTEMPTS = 20;
+    let attempt = 0;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const tryFetch = async () => {
+      if (cancelled) return;
+      setMetadataLoading(true);
       try {
         const res = await fetch(
           `/api/video-metadata?url=${encodeURIComponent(url)}`,
         );
-        if (res.ok) {
-          const data = (await res.json()) as { heights?: number[] };
-          const heights = data.heights ?? [];
-          setResolutions(heights);
-          setSelectedResolution(heights[0] ?? null);
-        }
-      } catch {
-        /* best-effort */
-      } finally {
+        if (cancelled) return;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { heights?: number[] };
+        const heights = data.heights ?? [];
+        setResolutions(heights);
+        setSelectedResolution(heights[0] ?? null);
         setMetadataLoading(false);
+      } catch {
+        if (cancelled) return;
+        attempt += 1;
+        if (attempt < MAX_ATTEMPTS) {
+          const delay = Math.min(1000 * 2 ** (attempt - 1), 30_000);
+          timer = setTimeout(tryFetch, delay);
+        } else {
+          setMetadataLoading(false);
+        }
       }
-    }, 800);
+    };
+
+    /* Initial debounce before the first attempt */
+    timer = setTimeout(tryFetch, 800);
 
     return () => {
+      cancelled = true;
       clearTimeout(timer);
       setMetadataLoading(false);
     };
   }, [url]);
 
-  /* Fetch available captions when the switch is enabled and URL is valid */
+  /* Fetch available captions when the switch is enabled and URL is valid.
+   * Retries up to 20 times with exponential backoff (1 s, 2 s, 4 s … capped at 30 s)
+   * on network errors or non-2xx responses. */
   useEffect(() => {
     if (!captionsEnabled || !isValidUrl(url)) {
       setAvailableCaptions([]);
@@ -316,34 +336,50 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
       return;
     }
 
-    setCaptionsLoading(true);
-    const timer = setTimeout(async () => {
+    const MAX_ATTEMPTS = 20;
+    let attempt = 0;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const tryFetch = async () => {
+      if (cancelled) return;
+      setCaptionsLoading(true);
       try {
         const res = await fetch(
           `/api/video-metadata?url=${encodeURIComponent(url)}&exhaustive=true`,
         );
-        if (res.ok) {
-          const data = (await res.json()) as { captions?: CaptionOption[] };
-          const captions = data.captions ?? [];
-          if (captions.length === 0) {
-            setCaptionsEnabled(false);
-            setCaptionsUnavailable(true);
-          } else {
-            setAvailableCaptions(captions);
-            const preferred = captions.find(
-              (c) => /orig/i.test(c.lang) || /orig/i.test(c.label),
-            );
-            setSelectedCaptionUrl((preferred ?? captions[0])?.url ?? null);
-          }
+        if (cancelled) return;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { captions?: CaptionOption[] };
+        const captions = data.captions ?? [];
+        if (captions.length === 0) {
+          setCaptionsEnabled(false);
+          setCaptionsUnavailable(true);
+        } else {
+          setAvailableCaptions(captions);
+          const preferred = captions.find(
+            (c) => /orig/i.test(c.lang) || /orig/i.test(c.label),
+          );
+          setSelectedCaptionUrl((preferred ?? captions[0])?.url ?? null);
         }
-      } catch {
-        /* best-effort */
-      } finally {
         setCaptionsLoading(false);
+      } catch {
+        if (cancelled) return;
+        attempt += 1;
+        if (attempt < MAX_ATTEMPTS) {
+          const delay = Math.min(1000 * 2 ** (attempt - 1), 30_000);
+          timer = setTimeout(tryFetch, delay);
+        } else {
+          setCaptionsLoading(false);
+        }
       }
-    }, 800);
+    };
+
+    /* Initial debounce before the first attempt */
+    timer = setTimeout(tryFetch, 800);
 
     return () => {
+      cancelled = true;
       clearTimeout(timer);
       setCaptionsLoading(false);
     };

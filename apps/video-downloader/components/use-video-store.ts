@@ -57,6 +57,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   captionsBurned: boolean;
   /** UUID of the ws-client selected for server-side FFmpeg. Null or '__local__' = local WASM. */
   wsClientUuid: string | null;
+  /** Task ID of the last server-side FFmpeg job dispatched for this video. Null when idle. */
+  serverTaskId: string | null;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -99,6 +101,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
       ((v as unknown as Record<string, unknown>).thumbnailFile as string) ??
       null,
     wsClientUuid: v.wsClientUuid ?? null,
+    serverTaskId: v.serverTaskId ?? null,
   };
 }
 
@@ -311,6 +314,7 @@ export function useVideoStore() {
         burnCaptionsConfig: null,
         captionsBurned: false,
         wsClientUuid: partial.wsClientUuid ?? null,
+        serverTaskId: null,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional

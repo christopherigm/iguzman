@@ -119,7 +119,11 @@ export function PinnedVideoItemServer({
   const pollForTaskRef = useRef<
     (
       taskId: string,
-      opts?: { donePatch?: Partial<StoredVideo>; completeAfter?: boolean },
+      opts?: {
+        donePatch?: Partial<StoredVideo>;
+        completeAfter?: boolean;
+        activeStatus?: VideoStatus;
+      },
     ) => void
   >(() => {});
 
@@ -158,6 +162,40 @@ export function PinnedVideoItemServer({
     }) => {
       const file = opts.sourceFile ?? video.file;
       if (!file || video.justAudio) return;
+
+      // If a server task was previously dispatched for this job, check whether it
+      // is still running before creating a duplicate. This handles the case where
+      // the browser was closed mid-job and has just reopened.
+      if (video.serverTaskId) {
+        try {
+          const checkRes = await fetch(
+            `/api/download-video/${video.serverTaskId}`,
+          );
+          if (checkRes.ok) {
+            const checkData = (await checkRes.json()) as { task: TaskData };
+            const existing = checkData.task;
+            if (
+              existing.status === 'processing' ||
+              existing.status === 'converting' ||
+              existing.status === 'burning' ||
+              existing.status === 'translating' ||
+              existing.status === 'done'
+            ) {
+              onUpdate(video.uuid, { status: opts.activeStatus, error: null });
+              setJobPhase('polling');
+              setJobProgress(existing.progress ?? 0);
+              pollForTaskRef.current(video.serverTaskId, {
+                donePatch: opts.donePatch,
+                completeAfter: opts.completeAfter,
+                activeStatus: opts.activeStatus,
+              });
+              return;
+            }
+          }
+        } catch {
+          // Preflight fetch failed — fall through to re-dispatch
+        }
+      }
 
       onUpdate(video.uuid, { status: opts.activeStatus, error: null });
       setJobPhase('dispatching');
@@ -234,19 +272,28 @@ export function PinnedVideoItemServer({
         // No servers available — fall back to PinnedVideoItem (local WASM)
         if (!dispatchedTaskId) {
           setJobPhase('idle');
-          onUpdate(video.uuid, { wsClientUuid: THIS_DEVICE_UUID });
+          onUpdate(video.uuid, {
+            wsClientUuid: THIS_DEVICE_UUID,
+            serverTaskId: null,
+          });
           return;
         }
 
-        // Task dispatched — start polling task status updates.
+        // Task dispatched — persist the task ID then start polling.
+        onUpdate(video.uuid, { serverTaskId: dispatchedTaskId });
         pollForTaskRef.current(dispatchedTaskId, {
           donePatch: opts.donePatch,
           completeAfter: opts.completeAfter,
+          activeStatus: opts.activeStatus,
         });
       } catch (err) {
         console.error(`${opts.errorKey} failed:`, err);
         setJobPhase('idle');
-        onUpdate(video.uuid, { status: 'error', error: t(opts.errorKey) });
+        onUpdate(video.uuid, {
+          status: 'error',
+          error: t(opts.errorKey),
+          serverTaskId: null,
+        });
       }
     },
     [
@@ -255,6 +302,7 @@ export function PinnedVideoItemServer({
       video.justAudio,
       video.taskId,
       video.wsClientUuid,
+      video.serverTaskId,
       onUpdate,
       t,
     ],
@@ -500,6 +548,7 @@ export function PinnedVideoItemServer({
           ? `/api/media/${task.captionsFile}`
           : null,
         captionUrl: null,
+        serverTaskId: null,
         ...donePatch,
       });
 
@@ -522,6 +571,7 @@ export function PinnedVideoItemServer({
       opts?: {
         donePatch?: Partial<StoredVideo>;
         completeAfter?: boolean;
+        activeStatus?: VideoStatus;
       },
     ) => {
       startPolling({
@@ -536,7 +586,13 @@ export function PinnedVideoItemServer({
             setJobPhase('polling');
             setJobProgress(task.progress ?? 0);
             onUpdate(video.uuid, {
-              status: task.status,
+              // Use the caller-supplied activeStatus when the server reports the
+              // generic 'processing' state so that e.g. 'burning' / 'converting'
+              // are not overwritten by the server's generic running status.
+              status:
+                task.status === 'processing' && opts?.activeStatus
+                  ? opts.activeStatus
+                  : task.status,
               error: null,
               file: task.file ?? video.file,
             });
@@ -552,6 +608,7 @@ export function PinnedVideoItemServer({
             onUpdate(video.uuid, {
               status: 'error',
               error: task.error?.message ?? 'Download failed',
+              serverTaskId: null,
             });
           }
         },
