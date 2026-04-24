@@ -44,6 +44,7 @@ STRICT RULES:
 - Do NOT reorder, merge, or split subtitle blocks
 - Translate ONLY the text lines; leave block numbers and timestamps completely untouched
 - Maintain natural speech patterns, tone, and the speaker's intent
+- When translating to Spanish, use Mexican Spanish vocabulary and expressions, not Spain Spanish
 - Return ONLY the translated SRT content — no explanations, no markdown fences, no extra commentary`;
 }
 

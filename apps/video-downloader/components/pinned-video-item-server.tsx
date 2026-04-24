@@ -41,9 +41,12 @@ function buildTranslationPrompt(targetLangName: string): string {
   return `You are a professional subtitle translator. Translate the SRT subtitle content into ${targetLangName}.
 
 STRICT RULES:
-- Preserve the EXACT SRT format: block numbers, timestamp lines, and text lines must remain in their correct positions
+- Preserve the EXACT SRT format: block numbers, timestamp lines (e.g. "00:00:02,041 --> 00:00:03,401"), and text lines must remain in their correct positions
 - Do NOT alter, add, or remove any timestamps
+- Do NOT reorder, merge, or split subtitle blocks
 - Translate ONLY the text lines; leave block numbers and timestamps completely untouched
+- Maintain natural speech patterns, tone, and the speaker's intent
+- When translating to Spanish, use Mexican Spanish vocabulary and expressions, not Spain Spanish
 - Return ONLY the translated SRT content — no explanations, no markdown fences, no extra commentary`;
 }
 
