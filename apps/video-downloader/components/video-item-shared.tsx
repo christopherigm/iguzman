@@ -63,21 +63,81 @@ export function isIOS(): boolean {
   );
 }
 
+function mimeTypeFromFilename(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  const map: Record<string, string> = {
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    webm: 'video/webm',
+    mkv: 'video/x-matroska',
+    avi: 'video/x-msvideo',
+    mp3: 'audio/mpeg',
+    m4a: 'audio/mp4',
+    aac: 'audio/aac',
+    wav: 'audio/wav',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+  };
+  return map[ext] ?? '';
+}
+
 /**
  * Triggers a browser download for the given URL or Blob.
  *
  * On iOS Safari the `download` attribute is ignored and the Web Share API
- * share-sheet does not give direct access to the Photos app.  Instead we open
- * the media URL in a new Safari tab: the native player surfaces a
- * "Save to Camera Roll" option via long-press or the system share button.
- * This path requires a transient user activation (i.e. a click); popup-blocked
- * auto-downloads silently fall through to the anchor method.
+ * share-sheet does not give direct access to the Photos app.
+ *
+ * - Safari 26 / iOS 26+: uses `showSaveFilePicker` for a native Save dialog.
+ * - Older iOS: opens the media URL in a new tab where the native player
+ *   surfaces a "Save to Camera Roll" option via long-press / share button.
+ *
+ * Both iOS paths require a transient user activation (i.e. a click).
  */
 export async function triggerBrowserDownload(
   urlOrBlob: string | Blob,
   filename: string,
 ): Promise<void> {
   if (isIOS()) {
+    // Safari 26 / iOS 26+: File System Access API
+    if ('showSaveFilePicker' in window) {
+      try {
+        const blob =
+          urlOrBlob instanceof Blob
+            ? urlOrBlob
+            : await fetch(resolveMediaUrl(urlOrBlob)).then((r) => r.blob());
+
+        const mimeType = blob.type || mimeTypeFromFilename(filename);
+        const ext = filename.split('.').pop() ?? '';
+
+        const handle = await (
+          window as Window & {
+            showSaveFilePicker: (opts?: {
+              suggestedName?: string;
+              types?: { description?: string; accept: Record<string, string[]> }[];
+            }) => Promise<FileSystemFileHandle>;
+          }
+        ).showSaveFilePicker({
+          suggestedName: filename,
+          types: mimeType
+            ? [{ description: 'Media file', accept: { [mimeType]: ext ? [`.${ext}`] : [] } }]
+            : undefined,
+        });
+
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch (err) {
+        // AbortError = user cancelled the picker — no fallback needed.
+        if ((err as DOMException)?.name === 'AbortError') return;
+        // Any other failure: fall through to the window.open path.
+        console.error('showSaveFilePicker failed, falling back:', err);
+      }
+    }
+
+    // Fallback for older iOS: open in a new Safari tab.
     if (urlOrBlob instanceof Blob) {
       const objectUrl = URL.createObjectURL(urlOrBlob);
       window.open(objectUrl, '_blank');
