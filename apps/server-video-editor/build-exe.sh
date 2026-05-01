@@ -90,16 +90,32 @@ if [ -d "$PUBLIC_DIR" ]; then
     cp -r "$PUBLIC_DIR/." "$WIN_DIST/app/apps/server-video-editor/public/"
 fi
 
-# ── 3. Fix @swc/helpers (pnpm symlink not traced by Next.js) ────────────────
-echo "▶ Copying @swc/helpers…"
-find -L "$REPO_ROOT/node_modules/.pnpm" -maxdepth 5 \
-    -path "*/next@*/node_modules/@swc/helpers" -type d \
-  | while read -r src; do
-      rel="${src#"$REPO_ROOT/"}"
-      dest="$WIN_DIST/app/${rel}"
-      mkdir -p "$dest"
-      cp -rL "$src/." "$dest/"
-    done
+# ── 3. Fix pnpm-deduplicated Next.js peer packages ──────────────────────────
+# Next.js's file-tracing doesn't follow pnpm's virtual store symlinks, so
+# @next/* and @swc/* packages land in the pnpm store but not in standalone/.
+# Copy each scoped package from the store directly into app/node_modules/.
+echo "▶ Copying missing @next/* and @swc/* packages…"
+for scope_pattern in "@next+*" "@swc+*"; do
+    while IFS= read -r store_dir; do
+        # store_dir = .../node_modules/.pnpm/@next+env@1.2.3
+        # Extract the scoped package path inside node_modules/
+        pkg_dir=$(find -L "$store_dir/node_modules" -mindepth 2 -maxdepth 2 \
+            -type d -name "$(echo "$store_dir" | sed 's|.*/@||; s|+|/|; s|@[^/]*$||')" \
+            2>/dev/null | head -1)
+        # Fallback: derive scope/name from store entry name
+        entry=$(basename "$store_dir")              # e.g. @next+env@1.2.3
+        scope=$(echo "$entry" | sed 's/+.*//')      # next
+        pkg=$(echo "$entry" | sed 's/[^+]*+//; s/@[0-9].*//')  # env
+        src="$store_dir/node_modules/@${scope}/${pkg}"
+        [ -d "$src" ] || continue
+        dest="$WIN_DIST/app/node_modules/@${scope}/${pkg}"
+        [ -d "$dest" ] && continue   # already present (traced by Next.js)
+        mkdir -p "$WIN_DIST/app/node_modules/@${scope}"
+        cp -rL "$src/." "$dest/"
+        echo "  → @${scope}/${pkg}"
+    done < <(find "$REPO_ROOT/node_modules/.pnpm" -maxdepth 1 -type d \
+        -name "$scope_pattern" 2>/dev/null)
+done
 
 # ── 4. Compile WS agent ─────────────────────────────────────────────────────
 echo "▶ Compiling WS agent…"
@@ -240,7 +256,7 @@ Section "Install" SEC_INSTALL
   FileWrite $0 "  <name>Server Video Editor (Next.js)</name>$\r$\n"
   FileWrite $0 "  <description>Server Video Editor - Next.js HTTP server.</description>$\r$\n"
   FileWrite $0 "  <executable>$INSTDIR\node\node.exe</executable>$\r$\n"
-  FileWrite $0 "  <arguments>$INSTDIR\app\apps\server-video-editor\server.js</arguments>$\r$\n"
+  FileWrite $0 "  <arguments>$\"$INSTDIR\app\apps\server-video-editor\server.js$\"</arguments>$\r$\n"
   FileWrite $0 "  <env name=$\"NODE_ENV$\" value=$\"production$\"/>$\r$\n"
   FileWrite $0 "  <env name=$\"NEXT_TELEMETRY_DISABLED$\" value=$\"1$\"/>$\r$\n"
   FileWrite $0 "  <env name=$\"PORT$\" value=$\"3001$\"/>$\r$\n"
@@ -262,7 +278,7 @@ Section "Install" SEC_INSTALL
   FileWrite $0 "  <name>Server Video Editor (WS Agent)</name>$\r$\n"
   FileWrite $0 "  <description>Server Video Editor - WebSocket agent.</description>$\r$\n"
   FileWrite $0 "  <executable>$INSTDIR\node\node.exe</executable>$\r$\n"
-  FileWrite $0 "  <arguments>$INSTDIR\app\ws-agent.js</arguments>$\r$\n"
+  FileWrite $0 "  <arguments>$\"$INSTDIR\app\ws-agent.js$\"</arguments>$\r$\n"
   FileWrite $0 "  <env name=$\"NODE_ENV$\" value=$\"production$\"/>$\r$\n"
   FileWrite $0 "  <env name=$\"VIDEO_DOWNLOADER_URL$\" value=$\"https://vd2.iguzman.com.mx$\"/>$\r$\n"
   FileWrite $0 "  <env name=$\"CONFIG_PATH$\" value=$\"$INSTDIR\config.json$\"/>$\r$\n"

@@ -115,13 +115,21 @@ export async function triggerBrowserDownload(
           window as Window & {
             showSaveFilePicker: (opts?: {
               suggestedName?: string;
-              types?: { description?: string; accept: Record<string, string[]> }[];
+              types?: {
+                description?: string;
+                accept: Record<string, string[]>;
+              }[];
             }) => Promise<FileSystemFileHandle>;
           }
         ).showSaveFilePicker({
           suggestedName: filename,
           types: mimeType
-            ? [{ description: 'Media file', accept: { [mimeType]: ext ? [`.${ext}`] : [] } }]
+            ? [
+                {
+                  description: 'Media file',
+                  accept: { [mimeType]: ext ? [`.${ext}`] : [] },
+                },
+              ]
             : undefined,
         });
 

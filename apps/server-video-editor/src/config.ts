@@ -16,7 +16,8 @@ export function readConfig(): AgentConfig {
       `Config not found at ${CONFIG_PATH}. Re-run the installer.`,
     );
   }
-  return JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) as AgentConfig;
+  const raw = readFileSync(CONFIG_PATH, 'utf8').replace(/^﻿/, '');
+  return JSON.parse(raw) as AgentConfig;
 }
 
 export function writeConfig(config: AgentConfig): void {

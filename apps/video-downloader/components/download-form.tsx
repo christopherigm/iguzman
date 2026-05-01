@@ -7,6 +7,7 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
+import { Button } from '@repo/ui/core-elements/button';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Spinner } from '@repo/ui/core-elements/spinner';
 import {
@@ -40,6 +41,12 @@ const PLATFORM_ICONS: Record<Platform, string> = {
 
 type FPSValue = 'original' | '60' | '90' | '120';
 
+interface DuplicateEntry {
+  uuid: string;
+  downloadURL: string;
+  name: string | null;
+}
+
 /* ── Helpers ────────────────────────────────────────── */
 
 function isValidUrl(input: string): boolean {
@@ -49,6 +56,11 @@ function isValidUrl(input: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isServerPath(url: string | null): url is string {
+  if (!url) return false;
+  return !url.startsWith('blob:') && (url.startsWith('/') || url.startsWith('http'));
 }
 
 /* ── Sub-components ─────────────────────────────────── */
@@ -216,13 +228,28 @@ export interface DownloadFormProps {
     /** UUID of the selected ws-client for server FFmpeg, or null for local WASM. */
     wsClientUuid: string | null;
   }) => void;
+  /** Completed videos to check against for duplicate detection. */
+  completedVideos?: Array<{
+    uuid: string;
+    originalURL: string;
+    downloadURL: string | null;
+    name: string | null;
+  }>;
+  /** Called when the user wants to move an existing completed video to the top of the list. */
+  onMoveToFirst?: (uuid: string) => void;
 }
 
-export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
+export function DownloadForm({ onVideoAdded, completedVideos, onMoveToFirst }: DownloadFormProps = {}) {
   const t = useTranslations('DownloadForm');
   const [url, setUrl] = useState('');
-  const ios = isIOS();
-  const [autoDownload, setAutoDownload] = useState(!ios);
+  const [ios, setIos] = useState(false);
+  const [autoDownload, setAutoDownload] = useState(true);
+
+  useEffect(() => {
+    const isIOSDevice = isIOS();
+    setIos(isIOSDevice);
+    if (isIOSDevice) setAutoDownload(false);
+  }, []);
   const [justAudio, setJustAudio] = useState(false);
   const [enhance] = useState(false);
   const [fps, setFps] = useState<FPSValue>('original');
@@ -247,6 +274,8 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   const [selectedWsClientUuid, setSelectedWsClientUuid] = useState<
     string | null
   >(null);
+
+  const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(null);
 
   const fpsOptions = useMemo(
     () => [
@@ -429,8 +458,9 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
           : selectedWsClientUuid,
     });
 
-    /* Reset the URL field after submission */
+    /* Reset the URL field and captions toggle after submission */
     setUrl('');
+    setCaptionsEnabled(false);
   }, [
     url,
     justAudio,
@@ -447,13 +477,42 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
   const handleSubmit = useCallback(() => {
     if (!validPlatformUrl) return;
 
+    const dupe = completedVideos?.find(
+      (v) => v.originalURL === url && isServerPath(v.downloadURL),
+    );
+    if (dupe) {
+      setDuplicateEntry({ uuid: dupe.uuid, downloadURL: dupe.downloadURL as string, name: dupe.name });
+      return;
+    }
+
     if (effectiveFps !== 'original') {
       setShowFpsWarning(true);
       return;
     }
 
     submitDownload();
-  }, [validPlatformUrl, effectiveFps, submitDownload]);
+  }, [validPlatformUrl, url, completedVideos, effectiveFps, submitDownload]);
+
+  const handleDuplicateClose = useCallback(() => {
+    setDuplicateEntry(null);
+  }, []);
+
+  const handleDuplicateDownload = useCallback(() => {
+    if (!duplicateEntry) return;
+    const a = document.createElement('a');
+    a.href = duplicateEntry.downloadURL;
+    if (duplicateEntry.name) a.download = duplicateEntry.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setDuplicateEntry(null);
+  }, [duplicateEntry]);
+
+  const handleDuplicateMoveToFirst = useCallback(() => {
+    if (!duplicateEntry) return;
+    onMoveToFirst?.(duplicateEntry.uuid);
+    setDuplicateEntry(null);
+  }, [duplicateEntry, onMoveToFirst]);
 
   const handleFpsWarningCancel = useCallback(() => {
     setShowFpsWarning(false);
@@ -682,6 +741,36 @@ export function DownloadForm({ onVideoAdded }: DownloadFormProps = {}) {
           okCallback={handleFpsWarningOk}
           cancelCallback={handleFpsWarningCancel}
         />
+      ) : null}
+
+      {/* ── Duplicate Video Modal ─────────────────── */}
+      {duplicateEntry ? (
+        <ConfirmationModal
+          title={t('duplicateTitle')}
+          text={t('duplicateText')}
+          okCallback={handleDuplicateClose}
+          cancelCallback={handleDuplicateClose}
+          panelMaxWidth="440px"
+        >
+          <Box display="flex" flexDirection="column" gap={8}>
+            <Button
+              text={t('duplicateDownloadVideo')}
+              onClick={handleDuplicateDownload}
+              width="100%"
+              padding="8px 16px"
+              borderRadius={8}
+            />
+            <Button
+              text={t('duplicateMoveToFirst')}
+              onClick={handleDuplicateMoveToFirst}
+              width="100%"
+              padding="8px 16px"
+              borderRadius={8}
+              backgroundColor="var(--surface-1, rgba(0,0,0,0.06))"
+              color="var(--foreground, #1a1a1a)"
+            />
+          </Box>
+        </ConfirmationModal>
       ) : null}
     </>
   );

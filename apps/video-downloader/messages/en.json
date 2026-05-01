@@ -44,7 +44,11 @@
     "thisDevice": "This device",
     "installHint": "Install the companion app on a PC or laptop (not a smartphone). After installation the UUID will be displayed — copy it here. Keep the computer on so video processing can run on it.",
     "downloadLinux": "Linux (.deb)",
-    "downloadWindows": "Windows (.exe)"
+    "downloadWindows": "Windows (.exe)",
+    "duplicateTitle": "Already downloaded",
+    "duplicateText": "This video has already been downloaded. What would you like to do?",
+    "duplicateDownloadVideo": "Download Video",
+    "duplicateMoveToFirst": "Move to first place"
   },
   "Admin": {
     "title": "Admin Dashboard",

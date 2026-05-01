@@ -44,7 +44,11 @@
     "thisDevice": "Dieses Gerät",
     "installHint": "Installiere die Begleit-App auf einem PC oder Laptop (kein Smartphone). Nach der Installation wird die UUID angezeigt — kopiere sie hier. Halte den Computer eingeschaltet, damit die Videoverarbeitung dort ausgeführt werden kann.",
     "downloadLinux": "Linux (.deb)",
-    "downloadWindows": "Windows (.exe)"
+    "downloadWindows": "Windows (.exe)",
+    "duplicateTitle": "Bereits heruntergeladen",
+    "duplicateText": "Dieses Video wurde bereits heruntergeladen. Was möchtest du tun?",
+    "duplicateDownloadVideo": "Video herunterladen",
+    "duplicateMoveToFirst": "An erste Stelle verschieben"
   },
   "Admin": {
     "title": "Admin-Dashboard",

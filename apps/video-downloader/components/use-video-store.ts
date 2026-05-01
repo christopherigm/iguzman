@@ -80,6 +80,18 @@ const BUSY_STATUSES = new Set<VideoStatus>([
 
 /* ── Helpers ────────────────────────────────────────── */
 
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for non-secure contexts (iOS over HTTP in dev)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 function applyDefaults(v: StoredVideo): StoredVideo {
   return {
     ...v,
@@ -281,7 +293,7 @@ export function useVideoStore() {
       );
       if (existing) return existing.uuid;
 
-      const uuid = crypto.randomUUID();
+      const uuid = generateUUID();
       const entry: StoredVideo = {
         uuid,
         status: 'pending',
@@ -394,6 +406,16 @@ export function useVideoStore() {
     setCompleted((prev) => prev.filter((v) => v.uuid !== uuid));
   }, []);
 
+  /** Move a completed video to the top of the completed list. */
+  const moveCompletedToFirst = useCallback((uuid: string) => {
+    setCompleted((prev) => {
+      const idx = prev.findIndex((v) => v.uuid === uuid);
+      if (idx <= 0) return prev;
+      const video = prev[idx]!;
+      return [video, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+    });
+  }, []);
+
   return {
     pinned,
     completed,
@@ -405,6 +427,7 @@ export function useVideoStore() {
     updateCompleted,
     removePinned,
     removeCompleted,
+    moveCompletedToFirst,
     storageError,
   } as const;
 }

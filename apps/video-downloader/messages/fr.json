@@ -44,7 +44,11 @@
     "thisDevice": "Cet appareil",
     "installHint": "Installez l'application compagnon sur un PC ou un ordinateur portable (pas un smartphone). Après l'installation, l'UUID sera affiché — copiez-le ici. Gardez l'ordinateur allumé pour que le traitement vidéo puisse s'y exécuter.",
     "downloadLinux": "Linux (.deb)",
-    "downloadWindows": "Windows (.exe)"
+    "downloadWindows": "Windows (.exe)",
+    "duplicateTitle": "Déjà téléchargé",
+    "duplicateText": "Cette vidéo a déjà été téléchargée. Que souhaitez-vous faire ?",
+    "duplicateDownloadVideo": "Télécharger la vidéo",
+    "duplicateMoveToFirst": "Déplacer en première position"
   },
   "Admin": {
     "title": "Tableau de bord admin",

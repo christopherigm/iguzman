@@ -359,7 +359,7 @@ export function WsClientPanel({
                 <Box className="wcp-download-btns">
                   {labels.downloadLinux ? (
                     <a
-                      href="/binaries/server-video-editor_0.1.10_amd64.deb"
+                      href="/api/media/binaries/server-video-editor_0.1.10_amd64.deb"
                       download
                       className="wcp-dl-btn"
                     >
@@ -373,7 +373,7 @@ export function WsClientPanel({
                   ) : null}
                   {labels.downloadWindows ? (
                     <a
-                      href="/binaries/server-video-editor_0.1.12.exe"
+                      href="/api/media/binaries/server-video-editor_0.1.13.exe"
                       download
                       className="wcp-dl-btn"
                     >

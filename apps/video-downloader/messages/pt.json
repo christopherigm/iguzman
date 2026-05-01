@@ -44,7 +44,11 @@
     "thisDevice": "Este dispositivo",
     "installHint": "Instale o aplicativo complementar em um PC ou laptop (não em um smartphone). Após a instalação, o UUID será exibido — copie-o aqui. Mantenha o computador ligado para que o processamento de vídeo possa ser executado nele.",
     "downloadLinux": "Linux (.deb)",
-    "downloadWindows": "Windows (.exe)"
+    "downloadWindows": "Windows (.exe)",
+    "duplicateTitle": "Já baixado",
+    "duplicateText": "Este vídeo já foi baixado. O que você gostaria de fazer?",
+    "duplicateDownloadVideo": "Baixar vídeo",
+    "duplicateMoveToFirst": "Mover para o primeiro lugar"
   },
   "Admin": {
     "title": "Painel de administração",

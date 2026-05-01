@@ -36,6 +36,7 @@ export function DownloadPage() {
     updateCompleted,
     removePinned,
     removeCompleted,
+    moveCompletedToFirst,
     storageError,
   } = useVideoStore();
 
@@ -59,7 +60,11 @@ export function DownloadPage() {
 
   return (
     <>
-      <DownloadForm onVideoAdded={handleVideoAdded} />
+      <DownloadForm
+        onVideoAdded={handleVideoAdded}
+        completedVideos={completed}
+        onMoveToFirst={moveCompletedToFirst}
+      />
       {storageError ? (
         <Typography as="p" variant="body-sm" role="alert" className="dp-storage-error">
           {storageError}
