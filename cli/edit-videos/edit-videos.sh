@@ -32,6 +32,17 @@ clr_bold_red()     { printf "${BOLD}${RED}%s${RESET}" "$*"; }
 clr_magenta()      { printf "${MAGENTA}%s${RESET}" "$*"; }
 clr_bold_magenta() { printf "${BOLD}${MAGENTA}%s${RESET}" "$*"; }
 
+_fmt_time() {
+  local sec="$1"
+  if [[ $sec -ge 3600 ]]; then
+    printf "%dh%02dm%02ds" $(( sec/3600 )) $(( (sec%3600)/60 )) $(( sec%60 ))
+  elif [[ $sec -ge 60 ]]; then
+    printf "%dm%02ds" $(( sec/60 )) $(( sec%60 ))
+  else
+    printf "%ds" "${sec}"
+  fi
+}
+
 # ── i18n ──────────────────────────────────────────────────────────────────────
 
 setup_strings() {
@@ -97,6 +108,7 @@ setup_strings() {
     HDR_FOUND_DV="Fuente Dolby Vision detectada — usando mapeo de tono HDR10 como respaldo"
     HDR_FOUND_10BIT="Fuente SDR de 10 bits detectada — convirtiendo a 8 bits BT.709"
     ZSCALE_NOT_FOUND="Filtro zscale no disponible — se omite la conversión HDR (instala libzimg para mejores resultados)"
+    STEP_PREPROCESS="Pre-convirtiendo a intermedio H.264 SDR"
   else
     WELCOME="FFmpeg Video Editor"
     SUBTITLE="Batch-process videos with FFmpeg filters."
@@ -157,6 +169,7 @@ setup_strings() {
     HDR_FOUND_DV="Dolby Vision source detected — applying HDR10 tone-mapping fallback"
     HDR_FOUND_10BIT="10-bit SDR source detected — converting to 8-bit BT.709"
     ZSCALE_NOT_FOUND="zscale filter not available — skipping HDR color conversion (install libzimg for best results)"
+    STEP_PREPROCESS="Pre-converting to H.264 SDR intermediate"
   fi
 }
 
@@ -190,7 +203,7 @@ _cb_render() {
     local checkbox pointer label_str
 
     if [[ "${is_sel}" -eq 1 ]]; then
-      checkbox="${BOLD}${CYAN}[✓]${RESET}"
+      checkbox="$(clr_bold_cyan '[✓]')"
     else
       checkbox="$(clr_dim '[ ]')"
     fi
@@ -551,6 +564,7 @@ run_ffmpeg_step() {
 
   local stderr_tmp bar_width=25
   stderr_tmp="$(mktemp)"
+  local step_start=$SECONDS
 
   "${FFMPEG_BIN}" "${THREAD_FLAGS[@]}" "$@" -y 2>"${stderr_tmp}" &
   local ffmpeg_pid=$!
@@ -560,6 +574,8 @@ run_ffmpeg_step() {
   local spinners=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
   while kill -0 "${ffmpeg_pid}" 2>/dev/null; do
+    local elapsed=$(( SECONDS - step_start ))
+    local elapsed_str; elapsed_str="$(_fmt_time "${elapsed}")"
     local pct=-1
     if [[ "${dur}" -gt 0 ]]; then
       local time_str
@@ -579,9 +595,14 @@ run_ffmpeg_step() {
       local bar="" i
       for ((i=0; i<filled; i++)); do bar+="█"; done
       for ((i=0; i<empty; i++)); do bar+="░"; done
-      printf "\r    [%s] %3d%%\033[K" "$(clr_cyan "${bar}")" "${pct}"
+      local eta_str=""
+      if [[ "${pct}" -ge 1 && "${elapsed}" -gt 0 ]]; then
+        local remaining=$(( elapsed * (100 - pct) / pct ))
+        eta_str="  ETA ~$(_fmt_time "${remaining}")"
+      fi
+      printf "\r    [%s] %3d%%  %s%s\033[K" "$(clr_cyan "${bar}")" "${pct}" "$(clr_dim "${elapsed_str}")" "$(clr_dim "${eta_str}")"
     else
-      printf "\r    %s\033[K" "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")"
+      printf "\r    %s  %s\033[K" "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" "$(clr_dim "${elapsed_str}")"
       spin_idx=$(( spin_idx + 1 ))
     fi
     sleep 0.15
@@ -590,21 +611,23 @@ run_ffmpeg_step() {
   wait "${ffmpeg_pid}"
   local ec=$?
   printf '\033[?25h'
+  local total_elapsed=$(( SECONDS - step_start ))
+  local total_str; total_str="$(_fmt_time "${total_elapsed}")"
 
   if [[ "${ec}" -eq 0 ]]; then
     if [[ "${dur}" -gt 0 ]]; then
       local bar="" i
       for ((i=0; i<bar_width; i++)); do bar+="█"; done
-      printf "\r    [%s] 100%%\033[K\n" "$(clr_bold_green "${bar}")"
+      printf "\r    [%s] 100%%  %s\033[K\n" "$(clr_bold_green "${bar}")" "$(clr_dim "${total_str}")"
     else
       printf "\r\033[K"
     fi
-    printf "    %s\n" "$(clr_bold_green "✓ ${STEP_DONE}")"
+    printf "    %s\n" "$(clr_bold_green "✓ ${STEP_DONE}  (${total_str})")"
     rm -f "${stderr_tmp}"
     return 0
   else
     printf "\r\033[K"
-    printf "    %s\n" "$(clr_bold_red "✗ ${STEP_FAIL}")"
+    printf "    %s\n" "$(clr_bold_red "✗ ${STEP_FAIL}  (${total_str})")"
     local tail_out
     tail_out="$(tail -3 "${stderr_tmp}" 2>/dev/null | grep -v '^$' | head -3 || true)"
     [[ -n "${tail_out}" ]] && printf "    %s\n" "$(clr_dim "${tail_out}")"
@@ -631,6 +654,8 @@ process_video() {
   local stab_mode="${13:-vidstab}"
 
   local trf_file=""
+  local intermediate=""
+  local src="${input}"
   local vf_chain=()
 
   # Probe duration so run_ffmpeg_step can show a percentage bar.
@@ -678,6 +703,26 @@ process_video() {
     fi
   fi
 
+  # ── Pre-transcode to H.264 SDR when stabilizing HDR/HEVC source ─────────
+  # Decoding H.265 Main10 + applying HDR filters twice (detect + encode pass)
+  # is the main bottleneck on 4K HDR sources. Pre-converting to a fast H.264
+  # SDR intermediate lets vidstabdetect decode 3-5× faster and skips the
+  # expensive HDR tone-mapping on the second pass.
+  if [[ "${do_stab}" -eq 1 && "${stab_mode}" == "vidstab" && "${hdr_type}" != "sdr_8bit" ]]; then
+    intermediate="$(mktemp /tmp/edit_videos_pre_XXXXXX.mp4)"
+    local pre_vf=""
+    [[ "${#vf_chain[@]}" -gt 0 ]] && pre_vf="$(IFS=','; echo "${vf_chain[*]}")"
+    local pre_args=(-i "${src}")
+    [[ -n "${pre_vf}" ]] && pre_args+=(-vf "${pre_vf}")
+    pre_args+=(-c:v libx264 -preset ultrafast -crf 18 -c:a copy "${intermediate}")
+    if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" "${pre_args[@]}"; then
+      rm -f "${intermediate}"; intermediate=""
+      return 1
+    fi
+    src="${intermediate}"
+    vf_chain=()
+  fi
+
   # ── Pass B: stabilization ────────────────────────────────────────────────
   if [[ "${do_stab}" -eq 1 ]]; then
     if [[ "${stab_mode}" == "vidstab" ]]; then
@@ -692,8 +737,8 @@ process_video() {
         detect_vf="vidstabdetect=shakiness=${stab_shakiness}:accuracy=${stab_accuracy}:result=${trf_file}"
       fi
 
-      if ! run_ffmpeg_step "${STEP_VIDSTABDETECT}" "${dur_sec}" -i "${input}" -vf "${detect_vf}" -f null -; then
-        rm -f "${trf_file}"
+      if ! run_ffmpeg_step "${STEP_VIDSTABDETECT}" "${dur_sec}" -i "${src}" -vf "${detect_vf}" -f null -; then
+        rm -f "${trf_file}"; [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
         return 1
       fi
 
@@ -738,24 +783,25 @@ process_video() {
     local final_vf=""
     [[ "${#vf_chain[@]}" -gt 0 ]] && final_vf="$(IFS=','; echo "${vf_chain[*]}")"
 
-    local ffmpeg_args=("${pre_input_args[@]}" -i "${input}")
+    local ffmpeg_args=("${pre_input_args[@]}" -i "${src}")
     [[ -n "${final_vf}" ]] && ffmpeg_args+=(-vf "${final_vf}")
     ffmpeg_args+=("${encode_args[@]}" "${output}")
 
     if ! run_ffmpeg_step "${STEP_ENCODE}" "${dur_sec}" "${ffmpeg_args[@]}"; then
-      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"; [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
       return 1
     fi
 
   else
     # No modifications — just copy to output folder.
-    if ! run_ffmpeg_step "${STEP_COPY}" "${dur_sec}" -i "${input}" -c copy "${output}"; then
-      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+    if ! run_ffmpeg_step "${STEP_COPY}" "${dur_sec}" -i "${src}" -c copy "${output}"; then
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"; [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
       return 1
     fi
   fi
 
   [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+  [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
   return 0
 }
 
@@ -768,6 +814,7 @@ main() {
   local lang="en"
   [[ "${raw_lang,,}" == es* ]] && lang="es"
   setup_strings "${lang}"
+  local main_start=$SECONDS
 
   clear
   print_header
@@ -1055,6 +1102,8 @@ main() {
     done
   fi
   printf "  %s: %s\n" "$(clr_bold "${OUTPUT_FOLDER}")" "$(clr_dim "${out_dir}")"
+  local total_elapsed=$(( SECONDS - main_start ))
+  printf "  %s: %s\n" "$(clr_dim "Total time")" "$(clr_dim "$(_fmt_time "${total_elapsed}")")"
   echo "  ${divider}"
   printf "\n  %s %s\n\n" "$(clr_bold_green '✓')" "${ALL_DONE}"
 }

@@ -405,7 +405,7 @@ interactive_select() {
         pointer=" "
         label_str="$(clr_dim "${lbl}")"
       elif [[ "${is_selected}" -eq 1 ]]; then
-        checkbox="${BOLD}${CYAN}[✓]${RESET}"
+        checkbox="$(clr_bold_cyan '[✓]')"
         if [[ "${is_active}" -eq 1 ]]; then
           pointer="$(clr_cyan '▶')"
           label_str="$(clr_bold_cyan "${lbl}")"
