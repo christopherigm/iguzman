@@ -137,6 +137,32 @@ setup_strings() {
     COLOR_BRIGHTNESS_LABEL="Brillo [-1.0 a 1.0, 0.0=neutro]"
     COLOR_SATURATION_LABEL="Saturación [0.0-2.0, 1.0=neutro]"
     COLOR_GAMMA_LABEL="Gamma [0.1-10.0, 1.0=neutro]"
+    ACTION_RIFE="Interpolar FPS — IA (rife-ncnn-vulkan)"
+    RIFE_MULTIPLIER_PROMPT="Multiplicador de FPS [2/4/8]"
+    RIFE_DISK_WARN="Aviso: RIFE extrae todos los fotogramas a /tmp (~1-2 GB por minuto de 1080p). Asegúrate de tener espacio suficiente."
+    RIFE_CHECK="Verificando rife-ncnn-vulkan..."
+    RIFE_FOUND="rife-ncnn-vulkan encontrado"
+    RIFE_NOT_FOUND="rife-ncnn-vulkan no encontrado"
+    RIFE_DOWNLOADING="Descargando rife-ncnn-vulkan desde GitHub..."
+    RIFE_DOWNLOAD_FAIL="No se pudo obtener la URL de descarga de RIFE. Instálalo manualmente."
+    RIFE_UNZIP_MISSING="unzip no disponible — no se puede extraer el archivo RIFE (instala con: sudo apt install unzip)"
+    RIFE_STEP_EXTRACT="Extrayendo fotogramas"
+    RIFE_STEP_INTERP="Interpolando fotogramas (RIFE)"
+    RIFE_STEP_ENCODE="Recodificando video interpolado"
+    RIFE_MPG_PRECONVERT="Pre-convirtiendo MPG/MPEG a MP4 para interpolación con RIFE"
+    ACTION_VIDEO2X="Aumentar resolución — IA (Real-ESRGAN)"
+    VIDEO2X_SCALE_PROMPT="Factor de escala [2/4]"
+    VIDEO2X_MODEL_PROMPT="Modelo [realesr-animevideov3 / realesrgan-x4plus / realesr-general-x4v3]"
+    VIDEO2X_DISK_WARN="Aviso: Real-ESRGAN extrae todos los fotogramas a /tmp (~1-2 GB por minuto de 1080p). Requiere GPU Vulkan."
+    VIDEO2X_CHECK="Verificando realesrgan-ncnn-vulkan..."
+    VIDEO2X_FOUND="realesrgan-ncnn-vulkan encontrado"
+    VIDEO2X_NOT_FOUND="realesrgan-ncnn-vulkan no encontrado"
+    VIDEO2X_DOWNLOADING="Descargando realesrgan-ncnn-vulkan desde GitHub..."
+    VIDEO2X_DOWNLOAD_FAIL="No se pudo obtener la URL de descarga. Instala realesrgan-ncnn-vulkan manualmente."
+    VIDEO2X_STEP_EXTRACT="Extrayendo fotogramas"
+    VIDEO2X_STEP_UPSCALE="Escalando con IA (Real-ESRGAN)"
+    VIDEO2X_STEP_ENCODE="Recodificando video escalado"
+    VIDEO2X_MPG_PRECONVERT="Pre-convirtiendo MPG/MPEG a MP4 para escalado con IA"
   else
     WELCOME="FFmpeg Video Editor"
     SUBTITLE="Batch-process videos with FFmpeg filters."
@@ -221,6 +247,32 @@ setup_strings() {
     COLOR_BRIGHTNESS_LABEL="Brightness [-1.0 to 1.0, 0.0=neutral]"
     COLOR_SATURATION_LABEL="Saturation [0.0-2.0, 1.0=neutral]"
     COLOR_GAMMA_LABEL="Gamma [0.1-10.0, 1.0=neutral]"
+    ACTION_RIFE="Interpolate FPS — AI (rife-ncnn-vulkan)"
+    RIFE_MULTIPLIER_PROMPT="FPS multiplier [2/4/8]"
+    RIFE_DISK_WARN="Note: RIFE extracts all frames to /tmp (~1-2 GB per minute of 1080p). Make sure /tmp has enough space."
+    RIFE_CHECK="Checking rife-ncnn-vulkan..."
+    RIFE_FOUND="rife-ncnn-vulkan found"
+    RIFE_NOT_FOUND="rife-ncnn-vulkan not found"
+    RIFE_DOWNLOADING="Downloading rife-ncnn-vulkan from GitHub..."
+    RIFE_DOWNLOAD_FAIL="Could not determine RIFE download URL. Please install manually."
+    RIFE_UNZIP_MISSING="unzip not available — cannot extract RIFE archive (install with: sudo apt install unzip)"
+    RIFE_STEP_EXTRACT="Extracting frames"
+    RIFE_STEP_INTERP="Interpolating frames (RIFE)"
+    RIFE_STEP_ENCODE="Re-encoding interpolated video"
+    RIFE_MPG_PRECONVERT="Pre-converting MPG/MPEG to MP4 for RIFE interpolation"
+    ACTION_VIDEO2X="Upscale — AI (Real-ESRGAN)"
+    VIDEO2X_SCALE_PROMPT="Scale factor [2/4]"
+    VIDEO2X_MODEL_PROMPT="Model [realesr-animevideov3 / realesrgan-x4plus / realesr-general-x4v3]"
+    VIDEO2X_DISK_WARN="Note: Real-ESRGAN extracts all frames to /tmp (~1-2 GB per minute of 1080p). Requires a Vulkan GPU."
+    VIDEO2X_CHECK="Checking realesrgan-ncnn-vulkan..."
+    VIDEO2X_FOUND="realesrgan-ncnn-vulkan found"
+    VIDEO2X_NOT_FOUND="realesrgan-ncnn-vulkan not found"
+    VIDEO2X_DOWNLOADING="Downloading realesrgan-ncnn-vulkan from GitHub..."
+    VIDEO2X_DOWNLOAD_FAIL="Could not determine download URL. Please install realesrgan-ncnn-vulkan manually."
+    VIDEO2X_STEP_EXTRACT="Extracting frames"
+    VIDEO2X_STEP_UPSCALE="AI upscaling (Real-ESRGAN)"
+    VIDEO2X_STEP_ENCODE="Re-encoding upscaled video"
+    VIDEO2X_MPG_PRECONVERT="Pre-converting MPG/MPEG to MP4 for AI upscaling"
   fi
 }
 
@@ -346,6 +398,22 @@ UPSCALE_TARGET_W=1920; UPSCALE_TARGET_H=1080
 DO_COLOR=0
 COLOR_CONTRAST=1.1; COLOR_BRIGHTNESS=0.0; COLOR_SATURATION=1.1; COLOR_GAMMA=1.0
 
+# ── RIFE globals ──────────────────────────────────────────────────────────────
+
+DO_RIFE=0
+RIFE_MULTIPLIER=2
+RIFE_BIN="rife-ncnn-vulkan"
+RIFE_LOCAL_DIR="${HOME}/.local/share/edit-videos/rife"
+RIFE_MODEL="rife-v4.6"
+
+# ── Video2X globals ───────────────────────────────────────────────────────────
+
+DO_VIDEO2X=0
+VIDEO2X_SCALE=2
+VIDEO2X_MODEL="realesr-animevideov3"
+VIDEO2X_BIN="realesrgan-ncnn-vulkan"
+VIDEO2X_LOCAL_DIR="${HOME}/.local/share/edit-videos/realesrgan"
+
 # ── GPU Detection ─────────────────────────────────────────────────────────────
 
 GPU_ENCODER=""
@@ -452,6 +520,295 @@ bootstrap_ffmpeg() {
   FFMPEG_BIN="${FFMPEG_LOCAL_DIR}/ffmpeg"
   FFPROBE_BIN="${FFMPEG_LOCAL_DIR}/ffprobe"
   printf "  %s FFmpeg installed to %s\n\n" "$(clr_bold_green '✓')" "$(clr_dim "${FFMPEG_LOCAL_DIR}")"
+}
+
+# ── RIFE (rife-ncnn-vulkan) helpers ──────────────────────────────────────────
+
+check_rife() {
+  if [[ -x "${RIFE_LOCAL_DIR}/rife-ncnn-vulkan" ]]; then
+    RIFE_BIN="${RIFE_LOCAL_DIR}/rife-ncnn-vulkan"
+    return 0
+  fi
+  if command -v rife-ncnn-vulkan &>/dev/null; then
+    RIFE_BIN="rife-ncnn-vulkan"
+    return 0
+  fi
+  return 1
+}
+
+find_rife_model() {
+  local preferred=("rife-v4.6" "rife-v4.4" "rife-v4.3" "rife-v4" "rife-v3.9" "rife-v2.4" "rife-v2.3" "rife-v2")
+  for m in "${preferred[@]}"; do
+    if [[ -d "${RIFE_LOCAL_DIR}/${m}" ]]; then
+      RIFE_MODEL="${m}"
+      return 0
+    fi
+  done
+  local found; found="$(find "${RIFE_LOCAL_DIR}" -maxdepth 1 -type d -name 'rife-v*' 2>/dev/null | sort -V | tail -1)"
+  if [[ -n "${found}" ]]; then
+    RIFE_MODEL="$(basename "${found}")"
+    return 0
+  fi
+  return 1
+}
+
+bootstrap_rife() {
+  if ! command -v unzip &>/dev/null; then
+    printf "  %s %s\n" "$(clr_bold_red '✗')" "${RIFE_UNZIP_MISSING}"
+    return 1
+  fi
+
+  printf "  %s\n" "$(clr_dim "${RIFE_DOWNLOADING}")"
+
+  local api_url="https://api.github.com/repos/nihui/rife-ncnn-vulkan/releases/latest"
+  local dl_url=""
+  if command -v curl &>/dev/null; then
+    dl_url="$(curl -sL "${api_url}" | grep -o '"browser_download_url":"[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
+    [[ -z "${dl_url}" ]] && dl_url="$(curl -sL "${api_url}" | grep -o '"browser_download_url": "[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
+  elif command -v wget &>/dev/null; then
+    dl_url="$(wget -qO- "${api_url}" | grep -o '"browser_download_url":"[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
+    [[ -z "${dl_url}" ]] && dl_url="$(wget -qO- "${api_url}" | grep -o '"browser_download_url": "[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
+  fi
+
+  if [[ -z "${dl_url}" ]]; then
+    printf "  %s %s\n" "$(clr_bold_red '✗')" "${RIFE_DOWNLOAD_FAIL}"
+    return 1
+  fi
+
+  local tmp_dir; tmp_dir="$(mktemp -d)"
+  local archive="${tmp_dir}/rife.zip"
+
+  if command -v wget &>/dev/null; then
+    wget -q --show-progress -O "${archive}" "${dl_url}" || { printf "  %s Download failed.\n" "$(clr_bold_red '✗')"; rm -rf "${tmp_dir}"; return 1; }
+  else
+    curl -L --progress-bar -o "${archive}" "${dl_url}" || { printf "  %s Download failed.\n" "$(clr_bold_red '✗')"; rm -rf "${tmp_dir}"; return 1; }
+  fi
+
+  mkdir -p "${RIFE_LOCAL_DIR}"
+  unzip -q "${archive}" -d "${tmp_dir}/extracted" || { printf "  %s Extraction failed.\n" "$(clr_bold_red '✗')"; rm -rf "${tmp_dir}"; return 1; }
+
+  local extracted_dir; extracted_dir="$(find "${tmp_dir}/extracted" -maxdepth 1 -mindepth 1 -type d | head -1)"
+  [[ -z "${extracted_dir}" ]] && extracted_dir="${tmp_dir}/extracted"
+
+  cp -r "${extracted_dir}/"* "${RIFE_LOCAL_DIR}/" 2>/dev/null || true
+  chmod +x "${RIFE_LOCAL_DIR}/rife-ncnn-vulkan" 2>/dev/null || true
+  rm -rf "${tmp_dir}"
+
+  RIFE_BIN="${RIFE_LOCAL_DIR}/rife-ncnn-vulkan"
+  find_rife_model
+  printf "  %s RIFE installed to %s (model: %s)\n\n" \
+    "$(clr_bold_green '✓')" "$(clr_dim "${RIFE_LOCAL_DIR}")" "$(clr_cyan "${RIFE_MODEL}")"
+}
+
+run_rife_step() {
+  # Args: label in_dir out_dir multiplier
+  local label="$1" in_dir="$2" out_dir="$3" multiplier="$4"
+  printf "    %s\n" "${label}..."
+
+  local in_count; in_count="$(find "${in_dir}" -maxdepth 1 -name '*.png' 2>/dev/null | wc -l)"
+  local expected_out=$(( in_count * multiplier ))
+
+  local rife_model_path
+  if [[ "${RIFE_BIN}" == "${RIFE_LOCAL_DIR}/rife-ncnn-vulkan" ]]; then
+    rife_model_path="${RIFE_LOCAL_DIR}/${RIFE_MODEL}"
+  else
+    rife_model_path="${RIFE_MODEL}"
+  fi
+
+  "${RIFE_BIN}" -i "${in_dir}" -o "${out_dir}" -n "${expected_out}" -m "${rife_model_path}" >> "${LOG_FILE}" 2>&1 &
+  local rife_pid=$!
+  local step_start=$SECONDS
+
+  printf '\033[?25l'
+  local spin_idx=0 bar_width=25
+  local spinners=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+
+  while kill -0 "${rife_pid}" 2>/dev/null; do
+    local elapsed=$(( SECONDS - step_start ))
+    local elapsed_str; elapsed_str="$(_fmt_time "${elapsed}")"
+    local out_count; out_count="$(find "${out_dir}" -maxdepth 1 -name '*.png' 2>/dev/null | wc -l || echo 0)"
+
+    if [[ "${expected_out}" -gt 0 && "${out_count}" -gt 0 ]]; then
+      local pct=$(( out_count * 100 / expected_out ))
+      [[ "${pct}" -gt 99 ]] && pct=99
+      local filled=$(( pct * bar_width / 100 ))
+      local empty=$(( bar_width - filled ))
+      local bar="" i
+      for ((i=0; i<filled; i++)); do bar+="█"; done
+      for ((i=0; i<empty;  i++)); do bar+="░"; done
+      local eta_str=""
+      if [[ "${pct}" -ge 1 && "${elapsed}" -gt 0 ]]; then
+        local remaining=$(( elapsed * (100 - pct) / pct ))
+        eta_str="  ETA ~$(_fmt_time "${remaining}")"
+      fi
+      printf "\r    [%s] %3d%%  %s%s\033[K" \
+        "$(clr_cyan "${bar}")" "${pct}" "$(clr_dim "${elapsed_str}")" "$(clr_dim "${eta_str}")"
+    else
+      printf "\r    %s  %s\033[K" \
+        "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" "$(clr_dim "${elapsed_str}")"
+      spin_idx=$(( spin_idx + 1 ))
+    fi
+    sleep 0.3
+  done
+
+  wait "${rife_pid}"
+  local ec=$?
+  printf '\033[?25h'
+  local total_elapsed=$(( SECONDS - step_start ))
+  local total_str; total_str="$(_fmt_time "${total_elapsed}")"
+
+  if [[ "${ec}" -eq 0 ]]; then
+    local bar="" i
+    for ((i=0; i<bar_width; i++)); do bar+="█"; done
+    printf "\r    [%s] 100%%  %s\033[K\n" "$(clr_bold_green "${bar}")" "$(clr_dim "${total_str}")"
+    printf "    %s\n" "$(clr_bold_green "✓ ${STEP_DONE}  (${total_str})")"
+    return 0
+  else
+    printf "\r\033[K"
+    printf "    %s\n" "$(clr_bold_red "✗ ${STEP_FAIL}  (${total_str})")"
+    return "${ec}"
+  fi
+}
+
+# ── Video2X (video2x AppImage) helpers ───────────────────────────────────────
+
+check_video2x() {
+  if [[ -x "${VIDEO2X_LOCAL_DIR}/realesrgan-ncnn-vulkan" ]]; then
+    # Treat a local install without a models directory as incomplete so the
+    # bootstrap prompt re-runs and downloads the full bundle (binary + models).
+    if [[ ! -d "${VIDEO2X_LOCAL_DIR}/models" ]]; then
+      return 1
+    fi
+    VIDEO2X_BIN="${VIDEO2X_LOCAL_DIR}/realesrgan-ncnn-vulkan"
+    return 0
+  fi
+  if command -v realesrgan-ncnn-vulkan &>/dev/null; then
+    VIDEO2X_BIN="realesrgan-ncnn-vulkan"
+    return 0
+  fi
+  return 1
+}
+
+bootstrap_video2x() {
+  if ! command -v unzip &>/dev/null; then
+    printf "  %s unzip not available — cannot extract archive (install with: sudo apt install unzip)\n" "$(clr_bold_red '✗')"
+    return 1
+  fi
+
+  printf "  %s\n" "$(clr_dim "${VIDEO2X_DOWNLOADING}")"
+
+  # xinntao/Real-ESRGAN releases bundle both the binary and model files;
+  # xinntao/Real-ESRGAN-ncnn-vulkan releases ship the binary only (no models).
+  local api_url="https://api.github.com/repos/xinntao/Real-ESRGAN/releases"
+  local dl_url=""
+  local _fetch=""
+  if command -v curl &>/dev/null; then
+    _fetch="$(curl -sL "${api_url}")"
+  elif command -v wget &>/dev/null; then
+    _fetch="$(wget -qO- "${api_url}")"
+  fi
+
+  if [[ -n "${_fetch}" ]]; then
+    dl_url="$(printf '%s' "${_fetch}" | grep -o '"browser_download_url":"[^"]*ncnn-vulkan[^"]*ubuntu[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
+    [[ -z "${dl_url}" ]] && dl_url="$(printf '%s' "${_fetch}" | grep -o '"browser_download_url": "[^"]*ncnn-vulkan[^"]*ubuntu[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
+  fi
+
+  if [[ -z "${dl_url}" ]]; then
+    printf "  %s %s\n" "$(clr_bold_red '✗')" "${VIDEO2X_DOWNLOAD_FAIL}"
+    return 1
+  fi
+
+  local tmp_dir; tmp_dir="$(mktemp -d)"
+  local archive="${tmp_dir}/realesrgan.zip"
+
+  if command -v wget &>/dev/null; then
+    wget -q --show-progress -O "${archive}" "${dl_url}" || { printf "  %s Download failed.\n" "$(clr_bold_red '✗')"; rm -rf "${tmp_dir}"; return 1; }
+  else
+    curl -L --progress-bar -o "${archive}" "${dl_url}" || { printf "  %s Download failed.\n" "$(clr_bold_red '✗')"; rm -rf "${tmp_dir}"; return 1; }
+  fi
+
+  mkdir -p "${VIDEO2X_LOCAL_DIR}"
+  unzip -q "${archive}" -d "${tmp_dir}/extracted" || { printf "  %s Extraction failed.\n" "$(clr_bold_red '✗')"; rm -rf "${tmp_dir}"; return 1; }
+
+  # The zip may extract flat (binary + models/ at root) or into a single subdirectory.
+  # Detect by checking whether the binary exists at the top level.
+  local src_dir="${tmp_dir}/extracted"
+  if [[ ! -f "${src_dir}/realesrgan-ncnn-vulkan" ]]; then
+    local sub; sub="$(find "${src_dir}" -maxdepth 1 -mindepth 1 -type d | head -1)"
+    [[ -n "${sub}" ]] && src_dir="${sub}"
+  fi
+
+  cp -r "${src_dir}/"* "${VIDEO2X_LOCAL_DIR}/" 2>/dev/null || true
+  chmod +x "${VIDEO2X_LOCAL_DIR}/realesrgan-ncnn-vulkan" 2>/dev/null || true
+  rm -rf "${tmp_dir}"
+
+  VIDEO2X_BIN="${VIDEO2X_LOCAL_DIR}/realesrgan-ncnn-vulkan"
+  printf "  %s Real-ESRGAN installed to %s\n\n" "$(clr_bold_green '✓')" "$(clr_dim "${VIDEO2X_LOCAL_DIR}")"
+}
+
+run_video2x_step() {
+  # Args: label in_dir out_dir scale model expected_count
+  local label="$1" in_dir="$2" out_dir="$3" scale="$4" model="$5" expected_out="$6"
+  printf "    %s\n" "${label}..."
+
+  local model_args=(-n "${model}" -s "${scale}")
+  if [[ "${VIDEO2X_BIN}" == "${VIDEO2X_LOCAL_DIR}/realesrgan-ncnn-vulkan" && -d "${VIDEO2X_LOCAL_DIR}/models" ]]; then
+    model_args+=(-m "${VIDEO2X_LOCAL_DIR}/models")
+  fi
+
+  "${VIDEO2X_BIN}" -i "${in_dir}" -o "${out_dir}" "${model_args[@]}" >> "${LOG_FILE}" 2>&1 &
+  local esrgan_pid=$!
+  local step_start=$SECONDS
+
+  printf '\033[?25l'
+  local spin_idx=0 bar_width=25
+  local spinners=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+
+  while kill -0 "${esrgan_pid}" 2>/dev/null; do
+    local elapsed=$(( SECONDS - step_start ))
+    local elapsed_str; elapsed_str="$(_fmt_time "${elapsed}")"
+    local out_count; out_count="$(find "${out_dir}" -maxdepth 1 -name '*.png' 2>/dev/null | wc -l || echo 0)"
+
+    if [[ "${expected_out}" -gt 0 && "${out_count}" -gt 0 ]]; then
+      local pct=$(( out_count * 100 / expected_out ))
+      [[ "${pct}" -gt 99 ]] && pct=99
+      local filled=$(( pct * bar_width / 100 ))
+      local empty=$(( bar_width - filled ))
+      local bar="" i
+      for ((i=0; i<filled; i++)); do bar+="█"; done
+      for ((i=0; i<empty;  i++)); do bar+="░"; done
+      local eta_str=""
+      if [[ "${pct}" -ge 1 && "${elapsed}" -gt 0 ]]; then
+        local remaining=$(( elapsed * (100 - pct) / pct ))
+        eta_str="  ETA ~$(_fmt_time "${remaining}")"
+      fi
+      printf "\r    [%s] %3d%%  %s%s\033[K" \
+        "$(clr_cyan "${bar}")" "${pct}" "$(clr_dim "${elapsed_str}")" "$(clr_dim "${eta_str}")"
+    else
+      printf "\r    %s  %s\033[K" \
+        "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" "$(clr_dim "${elapsed_str}")"
+      spin_idx=$(( spin_idx + 1 ))
+    fi
+    sleep 0.3
+  done
+
+  wait "${esrgan_pid}"
+  local ec=$?
+  printf '\033[?25h'
+  local total_elapsed=$(( SECONDS - step_start ))
+  local total_str; total_str="$(_fmt_time "${total_elapsed}")"
+
+  if [[ "${ec}" -eq 0 ]]; then
+    local bar="" i
+    for ((i=0; i<bar_width; i++)); do bar+="█"; done
+    printf "\r    [%s] 100%%  %s\033[K\n" "$(clr_bold_green "${bar}")" "$(clr_dim "${total_str}")"
+    printf "    %s\n" "$(clr_bold_green "✓ ${STEP_DONE}  (${total_str})")"
+    return 0
+  else
+    printf "\r\033[K"
+    printf "    %s\n" "$(clr_bold_red "✗ ${STEP_FAIL}  (${total_str})")"
+    return "${ec}"
+  fi
 }
 
 # ── FFmpeg helpers ────────────────────────────────────────────────────────────
@@ -749,6 +1106,8 @@ process_video() {
   local use_gpu="${11}"
   local gpu_encoder="${12}"
   local stab_mode="${13:-vidstab}"
+  local do_rife="${14:-0}"
+  local rife_multiplier="${15:-2}"
 
   local trf_file=""
   local intermediate=""
@@ -761,7 +1120,7 @@ process_video() {
   dur_sec="${probe_out%% *}"
 
   # ── Auto-detect HDR / 10-bit; prepend color conversion when re-encoding ──
-  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_COLOR ))
+  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_COLOR | do_rife | DO_VIDEO2X ))
   if [[ "${do_any}" -eq 1 ]]; then
     printf "    %s\n" "$(clr_dim "${HDR_DETECT}")"
     local hdr_type
@@ -813,7 +1172,8 @@ process_video() {
     vf_chain+=("unsharp=${SHARPEN_MATRIX}:${SHARPEN_MATRIX}:${SHARPEN_LUMA_AMOUNT}:${SHARPEN_MATRIX}:${SHARPEN_MATRIX}:${SHARPEN_CHROMA_AMOUNT}")
   fi
 
-  if [[ "${DO_UPSCALE}" -eq 1 ]]; then
+  # Skip lanczos upscale when Video2X AI upscale is handling it.
+  if [[ "${DO_UPSCALE}" -eq 1 && "${DO_VIDEO2X}" -eq 0 ]]; then
     local dim_out vid_w vid_h
     dim_out="$(probe_dimensions "${input}")"
     vid_w="${dim_out%% *}"
@@ -878,8 +1238,207 @@ process_video() {
   fi
 
   # ── FPS interpolation filter (added to chain, encoded in final pass) ─────
-  if [[ "${do_fps}" -eq 1 ]]; then
+  # Skip minterpolate when RIFE is handling interpolation.
+  if [[ "${do_fps}" -eq 1 && "${do_rife}" -eq 0 ]]; then
     vf_chain+=("minterpolate=fps=${target_fps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1:search_param=16")
+  fi
+
+  # ── RIFE AI FPS interpolation ─────────────────────────────────────────────
+  if [[ "${do_rife}" -eq 1 ]]; then
+    local rife_in_dir rife_out_dir
+    rife_in_dir="$(mktemp -d /tmp/rife_in_XXXXXX)"
+    rife_out_dir="$(mktemp -d /tmp/rife_out_XXXXXX)"
+
+    # MPG/MPEG containers report r_frame_rate as the field rate for interlaced
+    # content (e.g. 50/1 for 25fps PAL), so frames extracted at the real rate
+    # but reassembled at the doubled field rate play back at 2× speed.
+    # Pre-convert to an MP4 intermediate to normalise the container first.
+    local rife_mpg_intermediate=""
+    local _rife_src_ext="${src##*.}"; _rife_src_ext="${_rife_src_ext,,}"
+    if [[ "${_rife_src_ext}" == "mpg" || "${_rife_src_ext}" == "mpeg" || "${_rife_src_ext}" == "m2v" || "${_rife_src_ext}" == "vob" ]]; then
+      rife_mpg_intermediate="$(mktemp /tmp/edit_videos_rife_mpg_XXXXXX.mp4)"
+      if ! run_ffmpeg_step "${RIFE_MPG_PRECONVERT}" "${dur_sec}" \
+          -i "${src}" -c:v libx264 -preset ultrafast -crf 18 -c:a copy "${rife_mpg_intermediate}"; then
+        rm -f "${rife_mpg_intermediate}"
+        rm -rf "${rife_in_dir}" "${rife_out_dir}"
+        [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+        [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+        return 1
+      fi
+      src="${rife_mpg_intermediate}"
+    fi
+
+    # Compute source FPS using ffprobe rational (avoids decimal parse bugs).
+    local _fp="${FFPROBE_BIN}"; [[ ! -x "${_fp}" ]] && _fp="ffprobe"
+    local fps_frac; fps_frac="$("${_fp}" -v quiet -select_streams v:0 \
+        -show_entries stream=r_frame_rate -of default=noprint_wrappers=1:nokey=1 "${src}" 2>/dev/null)"
+    local fps_num fps_den
+    fps_num="${fps_frac%/*}"; fps_den="${fps_frac#*/}"
+    [[ -z "${fps_num}" || "${fps_num}" -le 0 ]] && fps_num=30 && fps_den=1
+    [[ -z "${fps_den}" || "${fps_den}" -le 0 ]] && fps_den=1
+    local out_fps_num=$(( fps_num * rife_multiplier ))
+    local out_fps="${out_fps_num}/${fps_den}"  # rational e.g. 60000/1001
+
+    # Step 1 — extract frames, applying any pending vf_chain filters inline.
+    local extract_vf=""
+    [[ "${#vf_chain[@]}" -gt 0 ]] && extract_vf="$(IFS=','; echo "${vf_chain[*]}")"
+    local extract_args=(-i "${src}")
+    [[ -n "${extract_vf}" ]] && extract_args+=(-vf "${extract_vf}")
+    extract_args+=("${rife_in_dir}/%08d.png")
+
+    if ! run_ffmpeg_step "${RIFE_STEP_EXTRACT}" "${dur_sec}" "${extract_args[@]}"; then
+      rm -rf "${rife_in_dir}" "${rife_out_dir}"
+      [[ -n "${rife_mpg_intermediate}" ]] && rm -f "${rife_mpg_intermediate}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 1
+    fi
+
+    # Step 2 — RIFE interpolation.
+    if ! run_rife_step "${RIFE_STEP_INTERP}" "${rife_in_dir}" "${rife_out_dir}" "${rife_multiplier}"; then
+      rm -rf "${rife_in_dir}" "${rife_out_dir}"
+      [[ -n "${rife_mpg_intermediate}" ]] && rm -f "${rife_mpg_intermediate}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 1
+    fi
+    rm -rf "${rife_in_dir}"
+
+    # Step 3 — re-encode interpolated frames + audio from original input.
+    # When Real-ESRGAN is also selected, write to a temp file so VIDEO2X
+    # can upscale the interpolated result afterwards.
+    local rife_encode_args=()
+    if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
+      rife_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+    else
+      rife_encode_args=(-c:v libx264 -preset faster -crf 23 -c:a copy)
+    fi
+
+    local rife_chained_temp=""
+    local rife_encode_target="${output}"
+    if [[ "${DO_VIDEO2X}" -eq 1 ]]; then
+      rife_chained_temp="$(mktemp /tmp/rife_chain_XXXXXX.mp4)"
+      rife_encode_target="${rife_chained_temp}"
+    fi
+
+    local rife_out_dur="${dur_sec}"
+    if ! run_ffmpeg_step "${RIFE_STEP_ENCODE}" "${rife_out_dur}" \
+        -framerate "${out_fps}" -i "${rife_out_dir}/%08d.png" \
+        -i "${input}" \
+        -map 0:v -map 1:a? \
+        "${rife_encode_args[@]}" \
+        "${rife_encode_target}"; then
+      rm -rf "${rife_out_dir}"
+      [[ -n "${rife_chained_temp}" ]] && rm -f "${rife_chained_temp}"
+      [[ -n "${rife_mpg_intermediate}" ]] && rm -f "${rife_mpg_intermediate}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 1
+    fi
+
+    rm -rf "${rife_out_dir}"
+    [[ -n "${rife_mpg_intermediate}" ]] && rm -f "${rife_mpg_intermediate}"
+    [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+    [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+
+    if [[ "${DO_VIDEO2X}" -eq 0 ]]; then
+      return 0
+    fi
+
+    # Chain into Real-ESRGAN: use the RIFE output as the new source.
+    src="${rife_chained_temp}"
+    intermediate="${rife_chained_temp}"  # cleaned up by the VIDEO2X block below
+    vf_chain=()  # filters were already baked in during RIFE frame extraction
+  fi
+
+  # ── Real-ESRGAN AI upscaling ──────────────────────────────────────────────
+  if [[ "${DO_VIDEO2X}" -eq 1 ]]; then
+    local esrgan_in_dir esrgan_out_dir
+    esrgan_in_dir="$(mktemp -d /tmp/esrgan_in_XXXXXX)"
+    esrgan_out_dir="$(mktemp -d /tmp/esrgan_out_XXXXXX)"
+
+    # MPG/MPEG containers report r_frame_rate as the field rate for interlaced
+    # content (e.g. 50/1 for 25fps PAL), so frames extracted at the real rate
+    # but reassembled at the doubled field rate play back at 2× speed.
+    # Pre-convert to an MP4 intermediate to normalise the container first.
+    local mpg_intermediate=""
+    local _src_ext="${src##*.}"; _src_ext="${_src_ext,,}"
+    if [[ "${_src_ext}" == "mpg" || "${_src_ext}" == "mpeg" || "${_src_ext}" == "m2v" || "${_src_ext}" == "vob" ]]; then
+      mpg_intermediate="$(mktemp /tmp/edit_videos_mpg_XXXXXX.mp4)"
+      if ! run_ffmpeg_step "${VIDEO2X_MPG_PRECONVERT}" "${dur_sec}" \
+          -i "${src}" -c:v libx264 -preset ultrafast -crf 18 -c:a copy "${mpg_intermediate}"; then
+        rm -f "${mpg_intermediate}"
+        rm -rf "${esrgan_in_dir}" "${esrgan_out_dir}"
+        [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+        [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+        return 1
+      fi
+      src="${mpg_intermediate}"
+    fi
+
+    # Get rational framerate for final reassemble
+    local _fp="${FFPROBE_BIN}"; [[ ! -x "${_fp}" ]] && _fp="ffprobe"
+    local fps_frac; fps_frac="$("${_fp}" -v quiet -select_streams v:0 \
+        -show_entries stream=r_frame_rate -of default=noprint_wrappers=1:nokey=1 "${src}" 2>/dev/null)"
+    local fps_num fps_den
+    fps_num="${fps_frac%/*}"; fps_den="${fps_frac#*/}"
+    [[ -z "${fps_num}" || "${fps_num}" -le 0 ]] && fps_num=30 && fps_den=1
+    [[ -z "${fps_den}" || "${fps_den}" -le 0 ]] && fps_den=1
+    local src_fps="${fps_num}/${fps_den}"
+
+    # Step 1 — extract frames, applying any pending vf_chain filters inline
+    local extract_vf=""
+    [[ "${#vf_chain[@]}" -gt 0 ]] && extract_vf="$(IFS=','; echo "${vf_chain[*]}")"
+    local extract_args=(-i "${src}")
+    [[ -n "${extract_vf}" ]] && extract_args+=(-vf "${extract_vf}")
+    extract_args+=(-qscale:v 1 -qmin 1 -qmax 1 -vsync 0 "${esrgan_in_dir}/%08d.png")
+
+    if ! run_ffmpeg_step "${VIDEO2X_STEP_EXTRACT}" "${dur_sec}" "${extract_args[@]}"; then
+      rm -rf "${esrgan_in_dir}" "${esrgan_out_dir}"
+      [[ -n "${mpg_intermediate}" ]] && rm -f "${mpg_intermediate}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 1
+    fi
+
+    local in_count; in_count="$(find "${esrgan_in_dir}" -maxdepth 1 -name '*.png' 2>/dev/null | wc -l)"
+
+    # Step 2 — Real-ESRGAN upscale with frame-count progress bar
+    if ! run_video2x_step "${VIDEO2X_STEP_UPSCALE}" "${esrgan_in_dir}" "${esrgan_out_dir}" "${VIDEO2X_SCALE}" "${VIDEO2X_MODEL}" "${in_count}"; then
+      rm -rf "${esrgan_in_dir}" "${esrgan_out_dir}"
+      [[ -n "${mpg_intermediate}" ]] && rm -f "${mpg_intermediate}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 1
+    fi
+    rm -rf "${esrgan_in_dir}"
+
+    # Step 3 — reassemble upscaled frames with original audio
+    local esrgan_encode_args=()
+    if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
+      esrgan_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+    else
+      esrgan_encode_args=(-c:v libx264 -preset faster -crf 23 -c:a copy)
+    fi
+
+    if ! run_ffmpeg_step "${VIDEO2X_STEP_ENCODE}" "${dur_sec}" \
+        -framerate "${src_fps}" -i "${esrgan_out_dir}/%08d.png" \
+        -i "${input}" \
+        -map 0:v -map 1:a? \
+        "${esrgan_encode_args[@]}" \
+        "${output}"; then
+      rm -rf "${esrgan_out_dir}"
+      [[ -n "${mpg_intermediate}" ]] && rm -f "${mpg_intermediate}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 1
+    fi
+
+    rm -rf "${esrgan_out_dir}"
+    [[ -n "${mpg_intermediate}" ]] && rm -f "${mpg_intermediate}"
+    [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+    [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+    return 0
   fi
 
   # ── Final pass: encode with full filter chain ────────────────────────────
@@ -967,7 +1526,8 @@ _run_processing() {
     if process_video "${vf}" "${out}" \
         "${do_black_bars}" "${do_fps}" "${do_h264}" "${do_stab}" \
         "${target_fps}" "${stab_shakiness}" "${stab_accuracy}" "${stab_smoothing}" \
-        "${use_gpu}" "${GPU_ENCODER}" "${stab_mode}"; then
+        "${use_gpu}" "${GPU_ENCODER}" "${stab_mode}" \
+        "${DO_RIFE}" "${RIFE_MULTIPLIER}"; then
       count_ok=$(( count_ok + 1 ))
       _log "[${count_idx}/${#video_files[@]}] Done: ${base}"
     else
@@ -1169,12 +1729,14 @@ main() {
     "${ACTION_SHARPEN}"
     "${ACTION_UPSCALE}"
     "${ACTION_COLOR}"
+    "${ACTION_RIFE}"
+    "${ACTION_VIDEO2X}"
   )
-  _CB_SEL=(0 0 0 0 0 0 0 0)
+  _CB_SEL=(0 0 0 0 0 0 0 0 0 0)
   interactive_checkbox
 
   local do_black_bars=0 do_fps=0 do_h264=0 do_stab=0
-  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_COLOR=0
+  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_COLOR=0; DO_RIFE=0; DO_VIDEO2X=0
   for idx in "${SELECTED_INDICES[@]}"; do
     case "${idx}" in
       0) do_black_bars=1 ;;
@@ -1185,15 +1747,67 @@ main() {
       5) DO_SHARPEN=1 ;;
       6) DO_UPSCALE=1 ;;
       7) DO_COLOR=1 ;;
+      8) DO_RIFE=1 ;;
+      9) DO_VIDEO2X=1 ;;
     esac
   done
 
   if [[ "${do_black_bars}" -eq 0 && "${do_fps}" -eq 0 && "${do_h264}" -eq 0 && "${do_stab}" -eq 0 && \
-        "${DO_DENOISE}" -eq 0 && "${DO_SHARPEN}" -eq 0 && "${DO_UPSCALE}" -eq 0 && "${DO_COLOR}" -eq 0 ]]; then
+        "${DO_DENOISE}" -eq 0 && "${DO_SHARPEN}" -eq 0 && "${DO_UPSCALE}" -eq 0 && "${DO_COLOR}" -eq 0 && \
+        "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 ]]; then
     printf "\n  %s\n\n" "$(clr_yellow "${NO_ACTIONS_SELECTED}")"
     exit 0
   fi
   echo ""
+
+  # ── RIFE check / bootstrap ────────────────────────────────────────────────
+  if [[ "${DO_RIFE}" -eq 1 ]]; then
+    printf "  %s\n" "$(clr_dim "${RIFE_CHECK}")"
+    if check_rife; then
+      find_rife_model
+      printf "  %s %s: %s (model: %s)\n\n" \
+        "$(clr_bold_green '✓')" "${RIFE_FOUND}" "$(clr_dim "${RIFE_BIN}")" "$(clr_cyan "${RIFE_MODEL}")"
+    else
+      printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "${RIFE_NOT_FOUND}"
+      echo ""
+      printf "  %s [y/n] (y): " "$(clr_bold "Download rife-ncnn-vulkan automatically?")"
+      local rife_dl_ans; read -r rife_dl_ans; rife_dl_ans="${rife_dl_ans:-y}"
+      echo ""
+      if [[ "${rife_dl_ans,,}" == y* ]]; then
+        if ! bootstrap_rife; then
+          printf "  %s RIFE disabled — skipping interpolation.\n\n" "$(clr_yellow '⚠')"
+          DO_RIFE=0
+        fi
+      else
+        printf "  %s RIFE disabled — continuing without AI interpolation.\n\n" "$(clr_yellow '⚠')"
+        DO_RIFE=0
+      fi
+    fi
+  fi
+
+  # ── Video2X check / bootstrap ─────────────────────────────────────────────
+  if [[ "${DO_VIDEO2X}" -eq 1 ]]; then
+    printf "  %s\n" "$(clr_dim "${VIDEO2X_CHECK}")"
+    if check_video2x; then
+      printf "  %s %s: %s\n\n" \
+        "$(clr_bold_green '✓')" "${VIDEO2X_FOUND}" "$(clr_dim "${VIDEO2X_BIN}")"
+    else
+      printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "${VIDEO2X_NOT_FOUND}"
+      echo ""
+      printf "  %s [y/n] (y): " "$(clr_bold "Download video2x AppImage automatically?")"
+      local v2x_dl_ans; read -r v2x_dl_ans; v2x_dl_ans="${v2x_dl_ans:-y}"
+      echo ""
+      if [[ "${v2x_dl_ans,,}" == y* ]]; then
+        if ! bootstrap_video2x; then
+          printf "  %s video2x disabled — skipping AI upscale.\n\n" "$(clr_yellow '⚠')"
+          DO_VIDEO2X=0
+        fi
+      else
+        printf "  %s video2x disabled — continuing without AI upscale.\n\n" "$(clr_yellow '⚠')"
+        DO_VIDEO2X=0
+      fi
+    fi
+  fi
 
   # ── Action parameters ─────────────────────────────────────────────────────
   local target_fps=60
@@ -1276,6 +1890,34 @@ main() {
     printf "  %s (1.0): " "$(clr_dim "${COLOR_GAMMA_LABEL}")"
     read -r COLOR_GAMMA; COLOR_GAMMA="${COLOR_GAMMA:-1.0}"
   fi
+
+  if [[ "${DO_RIFE}" -eq 1 ]]; then
+    printf "  %s\n" "$(clr_yellow "⚠  ${RIFE_DISK_WARN}")"
+    printf "  %s (2): " "$(clr_bold "${RIFE_MULTIPLIER_PROMPT}")"
+    local rife_mult_input; read -r rife_mult_input
+    case "${rife_mult_input:-2}" in
+      4) RIFE_MULTIPLIER=4 ;;
+      8) RIFE_MULTIPLIER=8 ;;
+      *) RIFE_MULTIPLIER=2 ;;
+    esac
+  fi
+
+  if [[ "${DO_VIDEO2X}" -eq 1 ]]; then
+    printf "  %s\n" "$(clr_yellow "⚠  ${VIDEO2X_DISK_WARN}")"
+    printf "  %s (2): " "$(clr_bold "${VIDEO2X_SCALE_PROMPT}")"
+    local v2x_scale_input; read -r v2x_scale_input
+    case "${v2x_scale_input:-2}" in
+      4) VIDEO2X_SCALE=4 ;;
+      *) VIDEO2X_SCALE=2 ;;
+    esac
+    printf "  %s (realesr-animevideov3): " "$(clr_bold "${VIDEO2X_MODEL_PROMPT}")"
+    local v2x_model_input; read -r v2x_model_input
+    case "${v2x_model_input:-realesr-animevideov3}" in
+      realesrgan-x4plus|x4plus)     VIDEO2X_MODEL="realesrgan-x4plus" ;;
+      realesr-general-x4v3|general) VIDEO2X_MODEL="realesr-general-x4v3" ;;
+      *)                            VIDEO2X_MODEL="realesr-animevideov3" ;;
+    esac
+  fi
   echo ""
 
   # ── Collect files to process ──────────────────────────────────────────────
@@ -1314,6 +1956,8 @@ main() {
   if [[ "${DO_SHARPEN}" -eq 1 ]];    then action_list+=("sharpen (m=${SHARPEN_MATRIX} la=${SHARPEN_LUMA_AMOUNT} ca=${SHARPEN_CHROMA_AMOUNT})"); fi
   if [[ "${DO_UPSCALE}" -eq 1 ]];    then action_list+=("upscale→${UPSCALE_TARGET_W}x${UPSCALE_TARGET_H}"); fi
   if [[ "${DO_COLOR}" -eq 1 ]];      then action_list+=("color (c=${COLOR_CONTRAST} b=${COLOR_BRIGHTNESS} s=${COLOR_SATURATION} g=${COLOR_GAMMA})"); fi
+  if [[ "${DO_RIFE}" -eq 1 ]];       then action_list+=("RIFE ${RIFE_MULTIPLIER}× (${RIFE_MODEL})"); fi
+  if [[ "${DO_VIDEO2X}" -eq 1 ]];   then action_list+=("video2x ${VIDEO2X_SCALE}× (${VIDEO2X_MODEL})"); fi
   local IFS_SAVE="${IFS}"; IFS=', '; printf "%s\n" "$(clr_cyan "${action_list[*]}")"; IFS="${IFS_SAVE}"
 
   if [[ "${use_gpu}" -eq 1 ]]; then
