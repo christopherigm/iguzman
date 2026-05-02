@@ -120,6 +120,23 @@ setup_strings() {
     BG_PID_LABEL="PID"
     BG_LOG_LABEL="Registro"
     BG_MONITOR_TIP="Monitorear el progreso con: tail -f"
+    ACTION_DENOISE="Eliminar ruido del video (hqdn3d)"
+    ACTION_SHARPEN="Nitidez (unsharp mask)"
+    ACTION_UPSCALE="Aumentar resolución (scale+lanczos)"
+    ACTION_COLOR="Mejorar color y contraste (eq)"
+    DENOISE_LUMA_S_LABEL="Fuerza espacial de luma [0-10]"
+    DENOISE_CHROMA_S_LABEL="Fuerza espacial de croma [0-10]"
+    DENOISE_LUMA_T_LABEL="Fuerza temporal de luma [0-10]"
+    DENOISE_CHROMA_T_LABEL="Fuerza temporal de croma [0-10]"
+    SHARPEN_MATRIX_LABEL="Tamaño de la matriz (impar, 3-23)"
+    SHARPEN_LUMA_AMOUNT_LABEL="Intensidad de luma [-2.0 a 5.0]"
+    SHARPEN_CHROMA_AMOUNT_LABEL="Intensidad de croma [-2.0 a 5.0]"
+    UPSCALE_TARGET_LABEL="Resolución objetivo [720, 1080, 1440, 2160 o AnchoxAlto]"
+    UPSCALE_SKIP_MSG="Resolución ya es igual o superior al objetivo, se omite el escalado"
+    COLOR_CONTRAST_LABEL="Contraste [0.0-2.0, 1.0=neutro]"
+    COLOR_BRIGHTNESS_LABEL="Brillo [-1.0 a 1.0, 0.0=neutro]"
+    COLOR_SATURATION_LABEL="Saturación [0.0-2.0, 1.0=neutro]"
+    COLOR_GAMMA_LABEL="Gamma [0.1-10.0, 1.0=neutro]"
   else
     WELCOME="FFmpeg Video Editor"
     SUBTITLE="Batch-process videos with FFmpeg filters."
@@ -187,6 +204,23 @@ setup_strings() {
     BG_PID_LABEL="PID"
     BG_LOG_LABEL="Log"
     BG_MONITOR_TIP="Monitor progress with: tail -f"
+    ACTION_DENOISE="Denoise video (hqdn3d)"
+    ACTION_SHARPEN="Sharpen (unsharp mask)"
+    ACTION_UPSCALE="Upscale resolution (scale+lanczos)"
+    ACTION_COLOR="Color & contrast boost (eq)"
+    DENOISE_LUMA_S_LABEL="Luma spatial strength [0-10]"
+    DENOISE_CHROMA_S_LABEL="Chroma spatial strength [0-10]"
+    DENOISE_LUMA_T_LABEL="Luma temporal strength [0-10]"
+    DENOISE_CHROMA_T_LABEL="Chroma temporal strength [0-10]"
+    SHARPEN_MATRIX_LABEL="Matrix size (odd, 3-23)"
+    SHARPEN_LUMA_AMOUNT_LABEL="Luma amount [-2.0 to 5.0]"
+    SHARPEN_CHROMA_AMOUNT_LABEL="Chroma amount [-2.0 to 5.0]"
+    UPSCALE_TARGET_LABEL="Target resolution [720, 1080, 1440, 2160 or WxH]"
+    UPSCALE_SKIP_MSG="Already at or above target resolution, skipping upscale"
+    COLOR_CONTRAST_LABEL="Contrast [0.0-2.0, 1.0=neutral]"
+    COLOR_BRIGHTNESS_LABEL="Brightness [-1.0 to 1.0, 0.0=neutral]"
+    COLOR_SATURATION_LABEL="Saturation [0.0-2.0, 1.0=neutral]"
+    COLOR_GAMMA_LABEL="Gamma [0.1-10.0, 1.0=neutral]"
   fi
 }
 
@@ -292,7 +326,7 @@ interactive_checkbox() {
 
   SELECTED_INDICES=()
   for ((i=0; i<num; i++)); do
-    [[ "${_CB_SEL[$i]}" -eq 1 ]] && SELECTED_INDICES+=("$i")
+    if [[ "${_CB_SEL[$i]}" -eq 1 ]]; then SELECTED_INDICES+=("$i"); fi
   done
 }
 
@@ -300,6 +334,17 @@ interactive_checkbox() {
 
 BG_MODE=0
 LOG_FILE=""
+
+# ── Quality enhancement globals ───────────────────────────────────────────────
+
+DO_DENOISE=0
+DENOISE_LUMA_S=4; DENOISE_CHROMA_S=4; DENOISE_LUMA_T=3; DENOISE_CHROMA_T=3
+DO_SHARPEN=0
+SHARPEN_MATRIX=5; SHARPEN_LUMA_AMOUNT=1.0; SHARPEN_CHROMA_AMOUNT=0.0
+DO_UPSCALE=0
+UPSCALE_TARGET_W=1920; UPSCALE_TARGET_H=1080
+DO_COLOR=0
+COLOR_CONTRAST=1.1; COLOR_BRIGHTNESS=0.0; COLOR_SATURATION=1.1; COLOR_GAMMA=1.0
 
 # ── GPU Detection ─────────────────────────────────────────────────────────────
 
@@ -433,6 +478,32 @@ probe_video() {
   fi
 
   echo "${dur_sec} ${fps}"
+}
+
+probe_dimensions() {
+  # Outputs: "<width> <height>" of the first video stream.
+  local input="$1"
+  local w=0 h=0 info
+
+  if [[ -x "${FFPROBE_BIN}" ]] || command -v ffprobe &>/dev/null; then
+    local _ffprobe="${FFPROBE_BIN}"
+    [[ ! -x "${_ffprobe}" ]] && _ffprobe="ffprobe"
+    info="$("${_ffprobe}" -v quiet -select_streams v:0 \
+      -show_entries stream=width,height \
+      -of default=noprint_wrappers=1 "${input}" 2>/dev/null)"
+    w="$(grep 'width='  <<< "${info}" | cut -d= -f2 | tr -d '[:space:]')"
+    h="$(grep 'height=' <<< "${info}" | cut -d= -f2 | tr -d '[:space:]')"
+  fi
+
+  if [[ -z "${w}" || "${w}" -eq 0 ]]; then
+    info="$("${FFMPEG_BIN}" -i "${input}" 2>&1 || true)"
+    if [[ "${info}" =~ [[:space:]]([0-9]+)x([0-9]+)[[:space:],] ]]; then
+      w="${BASH_REMATCH[1]}"
+      h="${BASH_REMATCH[2]}"
+    fi
+  fi
+
+  echo "${w:-0} ${h:-0}"
 }
 
 detect_black_bars() {
@@ -690,7 +761,7 @@ process_video() {
   dur_sec="${probe_out%% *}"
 
   # ── Auto-detect HDR / 10-bit; prepend color conversion when re-encoding ──
-  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab ))
+  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_COLOR ))
   if [[ "${do_any}" -eq 1 ]]; then
     printf "    %s\n" "$(clr_dim "${HDR_DETECT}")"
     local hdr_type
@@ -726,6 +797,34 @@ process_video() {
       vf_chain+=("crop=${crop_str}")
     else
       printf "    %s %s\n" "$(clr_dim '○')" "$(clr_dim "${NO_BLACK_BARS}")"
+    fi
+  fi
+
+  # ── Quality filters ────────────────────────────────────────────────────────
+  if [[ "${DO_DENOISE}" -eq 1 ]]; then
+    vf_chain+=("hqdn3d=${DENOISE_LUMA_S}:${DENOISE_CHROMA_S}:${DENOISE_LUMA_T}:${DENOISE_CHROMA_T}")
+  fi
+
+  if [[ "${DO_COLOR}" -eq 1 ]]; then
+    vf_chain+=("eq=contrast=${COLOR_CONTRAST}:brightness=${COLOR_BRIGHTNESS}:saturation=${COLOR_SATURATION}:gamma=${COLOR_GAMMA}")
+  fi
+
+  if [[ "${DO_SHARPEN}" -eq 1 ]]; then
+    vf_chain+=("unsharp=${SHARPEN_MATRIX}:${SHARPEN_MATRIX}:${SHARPEN_LUMA_AMOUNT}:${SHARPEN_MATRIX}:${SHARPEN_MATRIX}:${SHARPEN_CHROMA_AMOUNT}")
+  fi
+
+  if [[ "${DO_UPSCALE}" -eq 1 ]]; then
+    local dim_out vid_w vid_h
+    dim_out="$(probe_dimensions "${input}")"
+    vid_w="${dim_out%% *}"
+    vid_h="${dim_out##* }"
+    if [[ "${vid_w}" -ge "${UPSCALE_TARGET_W}" || "${vid_h}" -ge "${UPSCALE_TARGET_H}" ]]; then
+      printf "    %s %s (%sx%s ≥ %sx%s)\n" \
+        "$(clr_dim '○')" "${UPSCALE_SKIP_MSG}" \
+        "${vid_w}" "${vid_h}" "${UPSCALE_TARGET_W}" "${UPSCALE_TARGET_H}"
+    else
+      # Two-step scale: fit within target box (AR preserved), then ensure even dimensions for H.264.
+      vf_chain+=("scale=${UPSCALE_TARGET_W}:${UPSCALE_TARGET_H}:force_original_aspect_ratio=decrease:flags=lanczos,scale=trunc(iw/2)*2:trunc(ih/2)*2")
     fi
   fi
 
@@ -1066,21 +1165,31 @@ main() {
     "${ACTION_FPS}"
     "${ACTION_H264}"
     "${ACTION_STAB}"
+    "${ACTION_DENOISE}"
+    "${ACTION_SHARPEN}"
+    "${ACTION_UPSCALE}"
+    "${ACTION_COLOR}"
   )
-  _CB_SEL=(0 0 0 0)
+  _CB_SEL=(0 0 0 0 0 0 0 0)
   interactive_checkbox
 
   local do_black_bars=0 do_fps=0 do_h264=0 do_stab=0
+  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_COLOR=0
   for idx in "${SELECTED_INDICES[@]}"; do
     case "${idx}" in
       0) do_black_bars=1 ;;
       1) do_fps=1 ;;
       2) do_h264=1 ;;
       3) do_stab=1 ;;
+      4) DO_DENOISE=1 ;;
+      5) DO_SHARPEN=1 ;;
+      6) DO_UPSCALE=1 ;;
+      7) DO_COLOR=1 ;;
     esac
   done
 
-  if [[ "${do_black_bars}" -eq 0 && "${do_fps}" -eq 0 && "${do_h264}" -eq 0 && "${do_stab}" -eq 0 ]]; then
+  if [[ "${do_black_bars}" -eq 0 && "${do_fps}" -eq 0 && "${do_h264}" -eq 0 && "${do_stab}" -eq 0 && \
+        "${DO_DENOISE}" -eq 0 && "${DO_SHARPEN}" -eq 0 && "${DO_UPSCALE}" -eq 0 && "${DO_COLOR}" -eq 0 ]]; then
     printf "\n  %s\n\n" "$(clr_yellow "${NO_ACTIONS_SELECTED}")"
     exit 0
   fi
@@ -1119,6 +1228,54 @@ main() {
       do_stab=0
     fi
   fi
+
+  if [[ "${DO_DENOISE}" -eq 1 ]]; then
+    printf "  %s (4): " "$(clr_dim "${DENOISE_LUMA_S_LABEL}")"
+    read -r DENOISE_LUMA_S; DENOISE_LUMA_S="${DENOISE_LUMA_S:-4}"
+    printf "  %s (4): " "$(clr_dim "${DENOISE_CHROMA_S_LABEL}")"
+    read -r DENOISE_CHROMA_S; DENOISE_CHROMA_S="${DENOISE_CHROMA_S:-4}"
+    printf "  %s (3): " "$(clr_dim "${DENOISE_LUMA_T_LABEL}")"
+    read -r DENOISE_LUMA_T; DENOISE_LUMA_T="${DENOISE_LUMA_T:-3}"
+    printf "  %s (3): " "$(clr_dim "${DENOISE_CHROMA_T_LABEL}")"
+    read -r DENOISE_CHROMA_T; DENOISE_CHROMA_T="${DENOISE_CHROMA_T:-3}"
+  fi
+
+  if [[ "${DO_SHARPEN}" -eq 1 ]]; then
+    printf "  %s (5): " "$(clr_dim "${SHARPEN_MATRIX_LABEL}")"
+    read -r SHARPEN_MATRIX; SHARPEN_MATRIX="${SHARPEN_MATRIX:-5}"
+    printf "  %s (1.0): " "$(clr_dim "${SHARPEN_LUMA_AMOUNT_LABEL}")"
+    read -r SHARPEN_LUMA_AMOUNT; SHARPEN_LUMA_AMOUNT="${SHARPEN_LUMA_AMOUNT:-1.0}"
+    printf "  %s (0.0): " "$(clr_dim "${SHARPEN_CHROMA_AMOUNT_LABEL}")"
+    read -r SHARPEN_CHROMA_AMOUNT; SHARPEN_CHROMA_AMOUNT="${SHARPEN_CHROMA_AMOUNT:-0.0}"
+  fi
+
+  if [[ "${DO_UPSCALE}" -eq 1 ]]; then
+    printf "  %s (1080): " "$(clr_bold "${UPSCALE_TARGET_LABEL}")"
+    local upscale_input; read -r upscale_input
+    if [[ "${upscale_input}" =~ ^([0-9]+)[xX]([0-9]+)$ ]]; then
+      UPSCALE_TARGET_W="${BASH_REMATCH[1]}"
+      UPSCALE_TARGET_H="${BASH_REMATCH[2]}"
+    else
+      case "${upscale_input:-1080}" in
+        720)              UPSCALE_TARGET_W=1280;  UPSCALE_TARGET_H=720  ;;
+        1080)             UPSCALE_TARGET_W=1920;  UPSCALE_TARGET_H=1080 ;;
+        1440)             UPSCALE_TARGET_W=2560;  UPSCALE_TARGET_H=1440 ;;
+        2160|4k|4K|4K*)  UPSCALE_TARGET_W=3840;  UPSCALE_TARGET_H=2160 ;;
+        *)                UPSCALE_TARGET_W=1920;  UPSCALE_TARGET_H=1080 ;;
+      esac
+    fi
+  fi
+
+  if [[ "${DO_COLOR}" -eq 1 ]]; then
+    printf "  %s (1.1): " "$(clr_dim "${COLOR_CONTRAST_LABEL}")"
+    read -r COLOR_CONTRAST; COLOR_CONTRAST="${COLOR_CONTRAST:-1.1}"
+    printf "  %s (0.0): " "$(clr_dim "${COLOR_BRIGHTNESS_LABEL}")"
+    read -r COLOR_BRIGHTNESS; COLOR_BRIGHTNESS="${COLOR_BRIGHTNESS:-0.0}"
+    printf "  %s (1.1): " "$(clr_dim "${COLOR_SATURATION_LABEL}")"
+    read -r COLOR_SATURATION; COLOR_SATURATION="${COLOR_SATURATION:-1.1}"
+    printf "  %s (1.0): " "$(clr_dim "${COLOR_GAMMA_LABEL}")"
+    read -r COLOR_GAMMA; COLOR_GAMMA="${COLOR_GAMMA:-1.0}"
+  fi
   echo ""
 
   # ── Collect files to process ──────────────────────────────────────────────
@@ -1149,10 +1306,14 @@ main() {
 
   printf "  %s: " "$(clr_bold "${ACTIONS_LABEL}")"
   local action_list=()
-  [[ "${do_black_bars}" -eq 1 ]] && action_list+=("black bars")
-  [[ "${do_fps}" -eq 1 ]]        && action_list+=("FPS→${target_fps}")
-  [[ "${do_h264}" -eq 1 ]]       && action_list+=("H.264")
-  [[ "${do_stab}" -eq 1 ]]       && action_list+=("stabilize (sh=${stab_shakiness} ac=${stab_accuracy} sm=${stab_smoothing})")
+  if [[ "${do_black_bars}" -eq 1 ]]; then action_list+=("black bars"); fi
+  if [[ "${do_fps}" -eq 1 ]];        then action_list+=("FPS→${target_fps}"); fi
+  if [[ "${do_h264}" -eq 1 ]];       then action_list+=("H.264"); fi
+  if [[ "${do_stab}" -eq 1 ]];       then action_list+=("stabilize (sh=${stab_shakiness} ac=${stab_accuracy} sm=${stab_smoothing})"); fi
+  if [[ "${DO_DENOISE}" -eq 1 ]];    then action_list+=("denoise (ls=${DENOISE_LUMA_S} cs=${DENOISE_CHROMA_S} lt=${DENOISE_LUMA_T} ct=${DENOISE_CHROMA_T})"); fi
+  if [[ "${DO_SHARPEN}" -eq 1 ]];    then action_list+=("sharpen (m=${SHARPEN_MATRIX} la=${SHARPEN_LUMA_AMOUNT} ca=${SHARPEN_CHROMA_AMOUNT})"); fi
+  if [[ "${DO_UPSCALE}" -eq 1 ]];    then action_list+=("upscale→${UPSCALE_TARGET_W}x${UPSCALE_TARGET_H}"); fi
+  if [[ "${DO_COLOR}" -eq 1 ]];      then action_list+=("color (c=${COLOR_CONTRAST} b=${COLOR_BRIGHTNESS} s=${COLOR_SATURATION} g=${COLOR_GAMMA})"); fi
   local IFS_SAVE="${IFS}"; IFS=', '; printf "%s\n" "$(clr_cyan "${action_list[*]}")"; IFS="${IFS_SAVE}"
 
   if [[ "${use_gpu}" -eq 1 ]]; then
