@@ -43,6 +43,11 @@ _fmt_time() {
   fi
 }
 
+_log() {
+  [[ -z "${LOG_FILE}" ]] && return 0
+  printf "[%s] %s\n" "$(date '+%H:%M:%S')" "$*" >> "${LOG_FILE}"
+}
+
 # ── i18n ──────────────────────────────────────────────────────────────────────
 
 setup_strings() {
@@ -101,6 +106,7 @@ setup_strings() {
     ACTIONS_LABEL="Acciones"
     FILES_LABEL="archivos"
     THREADS_LABEL="hilos CPU"
+    OUTPUT_FOLDER_PROMPT="Carpeta de salida"
     CANCELLED="Cancelado."
     HDR_DETECT="Detectando perfil HDR/color..."
     HDR_FOUND_HDR10="Fuente HDR10 detectada — aplicando mapeo de tono a SDR BT.709"
@@ -109,6 +115,11 @@ setup_strings() {
     HDR_FOUND_10BIT="Fuente SDR de 10 bits detectada — convirtiendo a 8 bits BT.709"
     ZSCALE_NOT_FOUND="Filtro zscale no disponible — se omite la conversión HDR (instala libzimg para mejores resultados)"
     STEP_PREPROCESS="Pre-convirtiendo a intermedio H.264 SDR"
+    BG_PROMPT="¿Ejecutar en segundo plano (el proceso sobrevive al cierre del terminal)? [s/n]"
+    BG_STARTED="Procesamiento en segundo plano iniciado"
+    BG_PID_LABEL="PID"
+    BG_LOG_LABEL="Registro"
+    BG_MONITOR_TIP="Monitorear el progreso con: tail -f"
   else
     WELCOME="FFmpeg Video Editor"
     SUBTITLE="Batch-process videos with FFmpeg filters."
@@ -162,6 +173,7 @@ setup_strings() {
     ACTIONS_LABEL="Actions"
     FILES_LABEL="files"
     THREADS_LABEL="CPU threads"
+    OUTPUT_FOLDER_PROMPT="Output folder"
     CANCELLED="Cancelled."
     HDR_DETECT="Detecting HDR/color profile..."
     HDR_FOUND_HDR10="HDR10 source detected — applying tone-mapping to SDR BT.709"
@@ -170,6 +182,11 @@ setup_strings() {
     HDR_FOUND_10BIT="10-bit SDR source detected — converting to 8-bit BT.709"
     ZSCALE_NOT_FOUND="zscale filter not available — skipping HDR color conversion (install libzimg for best results)"
     STEP_PREPROCESS="Pre-converting to H.264 SDR intermediate"
+    BG_PROMPT="Run in background (process survives terminal close)? [y/n]"
+    BG_STARTED="Background processing started"
+    BG_PID_LABEL="PID"
+    BG_LOG_LABEL="Log"
+    BG_MONITOR_TIP="Monitor progress with: tail -f"
   fi
 }
 
@@ -278,6 +295,11 @@ interactive_checkbox() {
     [[ "${_CB_SEL[$i]}" -eq 1 ]] && SELECTED_INDICES+=("$i")
   done
 }
+
+# ── Background mode / logging ─────────────────────────────────────────────────
+
+BG_MODE=0
+LOG_FILE=""
 
 # ── GPU Detection ─────────────────────────────────────────────────────────────
 
@@ -424,17 +446,21 @@ detect_black_bars() {
     -f null - 2>"${log_tmp}" &
   local ffmpeg_pid=$!
 
-  printf '\033[?25l' >/dev/tty
-  local spin_idx=0
-  local spinners=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
-  while kill -0 "${ffmpeg_pid}" 2>/dev/null; do
-    printf "\r    %s\033[K" "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" >/dev/tty
-    spin_idx=$(( spin_idx + 1 ))
-    sleep 0.15
-  done
-  wait "${ffmpeg_pid}" || true
-  printf '\033[?25h' >/dev/tty
-  printf "\r\033[K" >/dev/tty
+  if [[ "${BG_MODE}" -eq 0 ]]; then
+    printf '\033[?25l' >/dev/tty
+    local spin_idx=0
+    local spinners=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+    while kill -0 "${ffmpeg_pid}" 2>/dev/null; do
+      printf "\r    %s\033[K" "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" >/dev/tty
+      spin_idx=$(( spin_idx + 1 ))
+      sleep 0.15
+    done
+    wait "${ffmpeg_pid}" || true
+    printf '\033[?25h' >/dev/tty
+    printf "\r\033[K" >/dev/tty
+  else
+    wait "${ffmpeg_pid}" || true
+  fi
 
   local log; log="$(<"${log_tmp}")"
   rm -f "${log_tmp}"
@@ -805,6 +831,84 @@ process_video() {
   return 0
 }
 
+# ── Processing queue (shared by foreground and background modes) ──────────────
+
+_run_processing() {
+  local _start_epoch; _start_epoch="$(date +%s)"
+  local count_ok=0 count_fail=0 count_idx=0
+  local failed_files=()
+  local divider
+  divider="$(printf '─%.0s' {1..60})"
+
+  # ── Log header ──────────────────────────────────────────────────────────────
+  if [[ -n "${LOG_FILE}" ]]; then
+    {
+      printf "=== FFmpeg Video Editor ===\n"
+      printf "Started:  %s\n" "$(date '+%Y-%m-%d %H:%M:%S')"
+      printf "Input:    %s\n" "${folder}"
+      printf "Output:   %s\n" "${out_dir}"
+      printf "Files:    %d\n" "${#video_files[@]}"
+      printf "Actions:  %s\n" "$(IFS=', '; echo "${action_list[*]}")"
+      printf "===========================\n"
+    } >> "${LOG_FILE}"
+  fi
+
+  printf "  %s\n" "$(clr_bold "${PROCESSING_TITLE}...")"
+  echo "  ${divider}"
+
+  local vf
+  for vf in "${video_files[@]}"; do
+    count_idx=$(( count_idx + 1 ))
+    local base; base="$(basename "${vf}")"
+    local out="${out_dir}/${base}"
+
+    printf "\n  [%d/%d] %s\n" "${count_idx}" "${#video_files[@]}" "$(clr_bold "${base}")"
+    _log "[${count_idx}/${#video_files[@]}] Starting: ${base}"
+
+    if process_video "${vf}" "${out}" \
+        "${do_black_bars}" "${do_fps}" "${do_h264}" "${do_stab}" \
+        "${target_fps}" "${stab_shakiness}" "${stab_accuracy}" "${stab_smoothing}" \
+        "${use_gpu}" "${GPU_ENCODER}" "${stab_mode}"; then
+      count_ok=$(( count_ok + 1 ))
+      _log "[${count_idx}/${#video_files[@]}] Done: ${base}"
+    else
+      printf "  %s %s: %s\n" "$(clr_red '✗')" "${STEP_FAIL}" "${base}"
+      count_fail=$(( count_fail + 1 ))
+      failed_files+=("${base}")
+      _log "[${count_idx}/${#video_files[@]}] FAILED: ${base}"
+    fi
+  done
+
+  # ── Summary ─────────────────────────────────────────────────────────────────
+  local _end_epoch; _end_epoch="$(date +%s)"
+  local _elapsed=$(( _end_epoch - _start_epoch ))
+
+  echo ""
+  echo "  ${divider}"
+  printf "  %s %s: %s\n" "$(clr_bold_green '✓')" "${SUMMARY_OK}" "$(clr_bold "${count_ok}")"
+  if [[ "${count_fail}" -gt 0 ]]; then
+    printf "  %s %s: %s\n" "$(clr_red '✗')" "${SUMMARY_FAIL}" "$(clr_bold "${count_fail}")"
+    local f
+    for f in "${failed_files[@]}"; do
+      printf "    %s %s\n" "$(clr_dim '·')" "$(clr_dim "${f}")"
+    done
+  fi
+  printf "  %s: %s\n" "$(clr_bold "${OUTPUT_FOLDER}")" "$(clr_dim "${out_dir}")"
+  printf "  %s: %s\n" "$(clr_dim "Total time")" "$(clr_dim "$(_fmt_time "${_elapsed}")")"
+  echo "  ${divider}"
+  printf "\n  %s %s\n\n" "$(clr_bold_green '✓')" "${ALL_DONE}"
+
+  # ── Log footer ──────────────────────────────────────────────────────────────
+  if [[ -n "${LOG_FILE}" ]]; then
+    {
+      printf "===========================\n"
+      printf "Done: %d  Failed: %d\n" "${count_ok}" "${count_fail}"
+      printf "Finished: %s\n" "$(date '+%Y-%m-%d %H:%M:%S')"
+      printf "Total time: %s\n" "$(_fmt_time "${_elapsed}")"
+    } >> "${LOG_FILE}"
+  fi
+}
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 main() {
@@ -1030,7 +1134,11 @@ main() {
   # ── Output folder ─────────────────────────────────────────────────────────
   local date_str
   date_str="$(date '+%Y-%m-%d')"
-  local out_dir="${folder}/output-${date_str}"
+  local out_dir_default="${folder}/output-${date_str}"
+  printf "  %s (%s): " "$(clr_bold "${OUTPUT_FOLDER_PROMPT}")" "$(clr_dim "${out_dir_default}")"
+  local out_dir_input; read -r out_dir_input
+  local out_dir="${out_dir_input:-${out_dir_default}}"
+  echo ""
 
   # ── Pre-flight summary ────────────────────────────────────────────────────
   local divider
@@ -1062,50 +1170,36 @@ main() {
     printf "  %s\n\n" "${CANCELLED}"; exit 0
   fi
   mkdir -p "${out_dir}"
+
+  # ── Background mode prompt ─────────────────────────────────────────────────
+  echo ""
+  printf "  %s (n): " "$(clr_bold "${BG_PROMPT}")"
+  local bg_ans; read -r bg_ans; bg_ans="${bg_ans:-n}"
+  local bg_fchar="${bg_ans:0:1}"
   echo ""
 
-  # ── Processing queue ──────────────────────────────────────────────────────
-  printf "  %s\n" "$(clr_bold "${PROCESSING_TITLE}...")"
-  echo "  ${divider}"
-
-  local count_ok=0 count_fail=0 count_idx=0
-  local failed_files=()
-  local vf
-
-  for vf in "${video_files[@]}"; do
-    count_idx=$(( count_idx + 1 ))
-    local base; base="$(basename "${vf}")"
-    local out="${out_dir}/${base}"
-
-    printf "\n  [%d/%d] %s\n" "${count_idx}" "${total}" "$(clr_bold "${base}")"
-
-    if process_video "${vf}" "${out}" \
-        "${do_black_bars}" "${do_fps}" "${do_h264}" "${do_stab}" \
-        "${target_fps}" "${stab_shakiness}" "${stab_accuracy}" "${stab_smoothing}" \
-        "${use_gpu}" "${GPU_ENCODER}" "${stab_mode}"; then
-      count_ok=$(( count_ok + 1 ))
-    else
-      printf "  %s %s: %s\n" "$(clr_red '✗')" "${STEP_FAIL}" "${base}"
-      count_fail=$(( count_fail + 1 ))
-      failed_files+=("${base}")
-    fi
-  done
-
-  # ── Summary ───────────────────────────────────────────────────────────────
-  echo ""
-  echo "  ${divider}"
-  printf "  %s %s: %s\n" "$(clr_bold_green '✓')" "${SUMMARY_OK}" "$(clr_bold "${count_ok}")"
-  if [[ "${count_fail}" -gt 0 ]]; then
-    printf "  %s %s: %s\n" "$(clr_red '✗')" "${SUMMARY_FAIL}" "$(clr_bold "${count_fail}")"
-    for f in "${failed_files[@]}"; do
-      printf "    %s %s\n" "$(clr_dim '·')" "$(clr_dim "${f}")"
-    done
+  if [[ "${CONFIRM_YES_CHARS}" == *"${bg_fchar,,}"* ]]; then
+    # ── Background launch ──────────────────────────────────────────────────
+    LOG_FILE="${out_dir}/process-$(date '+%Y%m%d-%H%M%S').log"
+    BG_MODE=1
+    (
+      trap '' HUP
+      exec < /dev/null
+      _run_processing > /dev/null 2>&1
+    ) &
+    local bg_pid=$!
+    disown "${bg_pid}"
+    printf "  %s %s\n" "$(clr_bold_green '✓')" "${BG_STARTED}"
+    printf "  %s: %s\n" "$(clr_dim "${BG_PID_LABEL}")" "$(clr_dim "${bg_pid}")"
+    printf "  %s: %s\n" "$(clr_dim "${BG_LOG_LABEL}")" "$(clr_cyan "${LOG_FILE}")"
+    printf "\n  %s\n" "$(clr_dim "${BG_MONITOR_TIP}")"
+    printf "  %s\n\n" "$(clr_cyan "tail -f ${LOG_FILE}")"
+  else
+    # ── Foreground run ─────────────────────────────────────────────────────
+    LOG_FILE="${out_dir}/process-$(date '+%Y%m%d-%H%M%S').log"
+    echo ""
+    _run_processing
   fi
-  printf "  %s: %s\n" "$(clr_bold "${OUTPUT_FOLDER}")" "$(clr_dim "${out_dir}")"
-  local total_elapsed=$(( SECONDS - main_start ))
-  printf "  %s: %s\n" "$(clr_dim "Total time")" "$(clr_dim "$(_fmt_time "${total_elapsed}")")"
-  echo "  ${divider}"
-  printf "\n  %s %s\n\n" "$(clr_bold_green '✓')" "${ALL_DONE}"
 }
 
 main "$@"
