@@ -148,8 +148,9 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   // ── Stream response back ──────────────────────────────────────────────────
   const responseHeaders = new Headers();
+  const STRIP_HEADERS = new Set(['transfer-encoding', 'content-encoding', 'content-length']);
   groqRes.headers.forEach((value, key) => {
-    if (key.toLowerCase() !== 'transfer-encoding') {
+    if (!STRIP_HEADERS.has(key.toLowerCase())) {
       responseHeaders.set(key, value);
     }
   });

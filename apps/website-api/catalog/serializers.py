@@ -503,6 +503,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'href', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
             'in_stock', 'stock_count', 'is_featured',
+            'is_ai_generated', 'is_verified',
             'length', 'width', 'height', 'weight',
             'dimension_unit', 'weight_unit',
         ]
@@ -554,6 +555,8 @@ class ProductWriteSerializer(serializers.Serializer):
     in_stock = serializers.BooleanField(required=False)
     stock_count = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     is_featured = serializers.BooleanField(required=False)
+    is_ai_generated = serializers.BooleanField(required=False)
+    is_verified = serializers.BooleanField(required=False)
 
     length = serializers.DecimalField(max_digits=10, decimal_places=3, required=False, allow_null=True)
     width = serializers.DecimalField(max_digits=10, decimal_places=3, required=False, allow_null=True)
@@ -605,6 +608,7 @@ class ProductWriteSerializer(serializers.Serializer):
         'slug', 'sku', 'barcode',
         'price', 'compare_price', 'cost_price', 'currency',
         'enabled', 'in_stock', 'stock_count', 'is_featured',
+        'is_ai_generated', 'is_verified',
         'length', 'width', 'height', 'weight', 'dimension_unit', 'weight_unit',
     ]
 
@@ -797,7 +801,8 @@ class ServiceSerializer(serializers.ModelSerializer):
             'image', 'images', 'variants',
             'href', 'fit', 'background_color',
             'price', 'compare_price', 'cost_price', 'currency',
-            'is_featured', 'duration', 'modality',
+            'is_featured', 'is_ai_generated', 'is_verified',
+            'duration', 'modality',
         ]
 
     def get_image(self, obj):
@@ -844,6 +849,8 @@ class ServiceWriteSerializer(serializers.Serializer):
 
     enabled = serializers.BooleanField(required=False)
     is_featured = serializers.BooleanField(required=False)
+    is_ai_generated = serializers.BooleanField(required=False)
+    is_verified = serializers.BooleanField(required=False)
     duration = serializers.IntegerField(min_value=0, required=False, allow_null=True)
     modality = serializers.ChoiceField(
         choices=[c[0] for c in MODALITY_CHOICES], required=False, allow_null=True,
@@ -887,7 +894,8 @@ class ServiceWriteSerializer(serializers.Serializer):
         'background_color', 'system', 'brand', 'category',
         'slug', 'sku',
         'price', 'compare_price', 'cost_price', 'currency',
-        'enabled', 'is_featured', 'duration', 'modality',
+        'enabled', 'is_featured', 'is_ai_generated', 'is_verified',
+        'duration', 'modality',
     ]
 
     def create(self, validated_data):

@@ -18,6 +18,7 @@ import { useGroqProxy } from '@repo/ui/use-groq';
 import { ADMIN_AI_PROVIDER_KEY, type AdminAiProvider } from '@/app/[locale]/admin/admin-sidebar';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Slider } from '@repo/ui/core-elements/slider';
+import { AiInterviewer, type AiEntityType } from './ai-interviewer/ai-interviewer';
 
 // ── SpeechFieldButton ──────────────────────────────────────────────────────
 //
@@ -203,6 +204,8 @@ interface AdminFormProps {
   error?: string | null;
   success?: string | null;
   children?: React.ReactNode;
+  /** When provided, shows an "AI Interview" button that populates the form via conversational AI. */
+  aiInterviewEntityType?: AiEntityType;
 }
 
 // ── AdminForm ──────────────────────────────────────────────────────────────
@@ -219,6 +222,7 @@ export function AdminForm({
   error,
   success,
   children,
+  aiInterviewEntityType,
 }: AdminFormProps) {
   const t = useTranslations('Admin');
   const router = useRouter();
@@ -425,14 +429,25 @@ export function AdminForm({
           <Typography as="h1" variant="h3" className="af__title">
             {title}
           </Typography>
-          {!hideCancel && (
-            <Button
-              text={t('cancel')}
-              unstyled
-              className="af__btn-cancel"
-              onClick={onCancel ?? (() => router.back())}
-            />
-          )}
+          <Box display="flex" alignItems="center" gap={8}>
+            {aiInterviewEntityType && (
+              <AiInterviewer
+                entityType={aiInterviewEntityType}
+                entityLabel={title}
+                fields={fields}
+                values={values}
+                onChange={onChange}
+              />
+            )}
+            {!hideCancel && (
+              <Button
+                text={t('cancel')}
+                unstyled
+                className="af__btn-cancel"
+                onClick={onCancel ?? (() => router.back())}
+              />
+            )}
+          </Box>
         </Box>
 
         {error && <Toast message={error} variant="error" />}

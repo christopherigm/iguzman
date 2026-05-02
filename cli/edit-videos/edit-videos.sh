@@ -82,6 +82,10 @@ setup_strings() {
     SHAKINESS_LABEL="Intensidad de vibración a detectar [1-10]"
     ACCURACY_LABEL="Precisión del análisis [1-15]"
     SMOOTHING_LABEL="Suavizado de la estabilización [0-100]"
+    STAB_MODE_LABEL="Modo de estabilización"
+    STAB_MODE_STANDARD="Estándar (mano alzada)"
+    STAB_MODE_CONCERT="Concierto / flashes (límite de rotación estricto)"
+    STAB_CONCERT_INFO="Modo concierto: shakiness=5 suavizado=50 maxángulo=3° maxdesplaz=30px"
     CONFIRM_PROMPT="¿Confirmar y comenzar el procesamiento? [s/n]"
     PROCESSING_TITLE="Procesando videos"
     STEP_CROPDETECT="Detectando franjas negras"
@@ -192,6 +196,10 @@ setup_strings() {
     SHAKINESS_LABEL="Shakiness level to detect [1-10]"
     ACCURACY_LABEL="Analysis accuracy [1-15]"
     SMOOTHING_LABEL="Stabilization smoothing [0-100]"
+    STAB_MODE_LABEL="Stabilization mode"
+    STAB_MODE_STANDARD="Standard (handheld)"
+    STAB_MODE_CONCERT="Concert / flash-safe (strict rotation cap)"
+    STAB_CONCERT_INFO="Concert mode: shakiness=5 smoothing=50 maxangle=3° maxshift=30px"
     CONFIRM_PROMPT="Confirm and start processing? [y/n]"
     PROCESSING_TITLE="Processing videos"
     STEP_CROPDETECT="Detecting black bars"
@@ -1106,8 +1114,10 @@ process_video() {
   local use_gpu="${11}"
   local gpu_encoder="${12}"
   local stab_mode="${13:-vidstab}"
-  local do_rife="${14:-0}"
-  local rife_multiplier="${15:-2}"
+  local stab_maxangle="${14:-0.15}"
+  local stab_maxshift="${15:-60}"
+  local do_rife="${16:-0}"
+  local rife_multiplier="${17:-2}"
 
   local trf_file=""
   local intermediate=""
@@ -1227,7 +1237,7 @@ process_video() {
         return 1
       fi
 
-      vf_chain+=("vidstabtransform=input=${trf_file}:smoothing=${stab_smoothing}:interpol=bicubic")
+      vf_chain+=("vidstabtransform=input=${trf_file}:smoothing=${stab_smoothing}:maxangle=${stab_maxangle}:maxshift=${stab_maxshift}:interpol=bicubic")
 
     else
       # deshake fallback: single-pass, no temp file needed.
@@ -1527,6 +1537,7 @@ _run_processing() {
         "${do_black_bars}" "${do_fps}" "${do_h264}" "${do_stab}" \
         "${target_fps}" "${stab_shakiness}" "${stab_accuracy}" "${stab_smoothing}" \
         "${use_gpu}" "${GPU_ENCODER}" "${stab_mode}" \
+        "${stab_maxangle}" "${stab_maxshift}" \
         "${DO_RIFE}" "${RIFE_MULTIPLIER}"; then
       count_ok=$(( count_ok + 1 ))
       _log "[${count_idx}/${#video_files[@]}] Done: ${base}"
@@ -1813,6 +1824,7 @@ main() {
   local target_fps=60
   local stab_shakiness=7 stab_accuracy=15 stab_smoothing=30
   local stab_mode="vidstab"
+  local stab_maxangle=0.15 stab_maxshift=60
 
   if [[ "${do_fps}" -eq 1 ]]; then
     printf "  %s (60): " "$(clr_bold "${TARGET_FPS_PROMPT}")"
@@ -1826,12 +1838,34 @@ main() {
   if [[ "${do_stab}" -eq 1 ]]; then
     if check_vidstab; then
       stab_mode="vidstab"
-      printf "  %s (7): " "$(clr_dim "${SHAKINESS_LABEL}")"
-      read -r stab_shakiness; stab_shakiness="${stab_shakiness:-7}"
-      printf "  %s (15): " "$(clr_dim "${ACCURACY_LABEL}")"
-      read -r stab_accuracy; stab_accuracy="${stab_accuracy:-15}"
-      printf "  %s (30): " "$(clr_dim "${SMOOTHING_LABEL}")"
-      read -r stab_smoothing; stab_smoothing="${stab_smoothing:-30}"
+
+      printf "  %s\n" "$(clr_bold "${STAB_MODE_LABEL}:")"
+      printf "    1) %s\n" "${STAB_MODE_STANDARD}"
+      printf "    2) %s\n" "${STAB_MODE_CONCERT}"
+      printf "  %s (1): " "$(clr_dim "Choice")"
+      local stab_preset_choice; read -r stab_preset_choice; stab_preset_choice="${stab_preset_choice:-1}"
+
+      if [[ "${stab_preset_choice}" == "2" ]]; then
+        # Concert / flash-safe preset — tight caps prevent flash-induced rotation artifacts
+        stab_shakiness=5
+        stab_accuracy=15
+        stab_smoothing=50
+        stab_maxangle=0.05   # ≈ 3° — suppresses flash-induced spin
+        stab_maxshift=30
+        printf "  %s %s\n" "$(clr_cyan '→')" "$(clr_dim "${STAB_CONCERT_INFO}")"
+      else
+        # Standard handheld — prompt params, apply a generous-but-sane cap
+        printf "  %s (7): " "$(clr_dim "${SHAKINESS_LABEL}")"
+        read -r stab_shakiness; stab_shakiness="${stab_shakiness:-7}"
+        printf "  %s (15): " "$(clr_dim "${ACCURACY_LABEL}")"
+        read -r stab_accuracy; stab_accuracy="${stab_accuracy:-15}"
+        printf "  %s (30): " "$(clr_dim "${SMOOTHING_LABEL}")"
+        read -r stab_smoothing; stab_smoothing="${stab_smoothing:-30}"
+        # maxangle=0.15 rad (≈8.6°) and maxshift=60px cap extreme outliers silently
+        stab_maxangle=0.15
+        stab_maxshift=60
+      fi
+
     elif check_deshake; then
       stab_mode="deshake"
       printf "  %s %s\n" "$(clr_yellow '⚠')" "${VIDSTAB_FALLBACK_DESHAKE}"
@@ -1951,7 +1985,13 @@ main() {
   if [[ "${do_black_bars}" -eq 1 ]]; then action_list+=("black bars"); fi
   if [[ "${do_fps}" -eq 1 ]];        then action_list+=("FPS→${target_fps}"); fi
   if [[ "${do_h264}" -eq 1 ]];       then action_list+=("H.264"); fi
-  if [[ "${do_stab}" -eq 1 ]];       then action_list+=("stabilize (sh=${stab_shakiness} ac=${stab_accuracy} sm=${stab_smoothing})"); fi
+  if [[ "${do_stab}" -eq 1 ]]; then
+    if [[ "${stab_maxangle}" == "0.05" ]]; then
+      action_list+=("stabilize/concert (sh=${stab_shakiness} sm=${stab_smoothing} maxangle=${stab_maxangle} maxshift=${stab_maxshift})")
+    else
+      action_list+=("stabilize (sh=${stab_shakiness} ac=${stab_accuracy} sm=${stab_smoothing} maxangle=${stab_maxangle} maxshift=${stab_maxshift})")
+    fi
+  fi
   if [[ "${DO_DENOISE}" -eq 1 ]];    then action_list+=("denoise (ls=${DENOISE_LUMA_S} cs=${DENOISE_CHROMA_S} lt=${DENOISE_LUMA_T} ct=${DENOISE_CHROMA_T})"); fi
   if [[ "${DO_SHARPEN}" -eq 1 ]];    then action_list+=("sharpen (m=${SHARPEN_MATRIX} la=${SHARPEN_LUMA_AMOUNT} ca=${SHARPEN_CHROMA_AMOUNT})"); fi
   if [[ "${DO_UPSCALE}" -eq 1 ]];    then action_list+=("upscale→${UPSCALE_TARGET_W}x${UPSCALE_TARGET_H}"); fi

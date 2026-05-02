@@ -76,6 +76,8 @@ class Product(Buyable):
     in_stock = models.BooleanField(default=True)
     stock_count = models.PositiveIntegerField(null=True, blank=True)
     is_featured = models.BooleanField(default=False)
+    is_ai_generated = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
 
     # Physical dimensions (all optional)
     length = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
@@ -156,6 +158,8 @@ class Service(Buyable):
 
     # Service details
     is_featured = models.BooleanField(default=False)
+    is_ai_generated = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
     duration = models.PositiveIntegerField(null=True, blank=True, help_text='Duration in minutes')
     modality = models.CharField(
         max_length=16, choices=MODALITY_CHOICES, default='in_person', null=True, blank=True

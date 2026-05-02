@@ -163,8 +163,8 @@ class ServiceCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'category', 'brand', 'price', 'currency', 'in_stock', 'is_featured', 'enabled', 'modified')
-    list_filter = ('enabled', 'in_stock', 'is_featured', 'currency', 'system', 'category', 'brand')
+    list_display = ('name', 'slug', 'category', 'brand', 'price', 'currency', 'in_stock', 'is_featured', 'is_ai_generated', 'is_verified', 'enabled', 'modified')
+    list_filter = ('enabled', 'in_stock', 'is_featured', 'is_ai_generated', 'is_verified', 'currency', 'system', 'category', 'brand')
     search_fields = ('name', 'en_name', 'slug', 'sku', 'barcode')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
@@ -172,7 +172,7 @@ class ProductAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Identity', {
-            'fields': ('system', 'category', 'brand', 'enabled', 'is_featured', 'version', 'created', 'modified'),
+            'fields': ('system', 'category', 'brand', 'enabled', 'is_featured', 'is_ai_generated', 'is_verified', 'version', 'created', 'modified'),
         }),
         ('Content (ES)', {
             'fields': ('name', 'slug', 'description', 'image', 'fit', 'background_color', 'href'),
@@ -207,8 +207,8 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'category', 'brand', 'price', 'currency', 'modality', 'is_featured', 'enabled', 'modified')
-    list_filter = ('enabled', 'is_featured', 'currency', 'modality', 'system', 'category', 'brand')
+    list_display = ('name', 'slug', 'category', 'brand', 'price', 'currency', 'modality', 'is_featured', 'is_ai_generated', 'is_verified', 'enabled', 'modified')
+    list_filter = ('enabled', 'is_featured', 'is_ai_generated', 'is_verified', 'currency', 'modality', 'system', 'category', 'brand')
     search_fields = ('name', 'en_name', 'slug', 'sku')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created', 'modified', 'version')
@@ -216,7 +216,7 @@ class ServiceAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Identity', {
-            'fields': ('system', 'category', 'brand', 'enabled', 'is_featured', 'version', 'created', 'modified'),
+            'fields': ('system', 'category', 'brand', 'enabled', 'is_featured', 'is_ai_generated', 'is_verified', 'version', 'created', 'modified'),
         }),
         ('Content (ES)', {
             'fields': ('name', 'slug', 'description', 'image', 'fit', 'background_color', 'href'),
