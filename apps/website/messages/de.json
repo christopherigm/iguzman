@@ -325,7 +325,12 @@
     "aiInterviewResearchResults": "Marktforschungsergebnisse",
     "aiInterviewResearchNoResults": "Keine Marktforschungsergebnisse gefunden.",
     "aiInterviewNegotiatePrompt": "Gerne, teilen Sie mir mit, was geändert werden soll.",
-    "aiInterviewApplied": "Inhalt wurde auf das Formular angewendet. Überprüfen und speichern Sie, wenn bereit."
+    "aiInterviewApplied": "Inhalt wurde auf das Formular angewendet. Überprüfen und speichern Sie, wenn bereit.",
+    "aiInterviewLengthOptionsTitle": "Inhaltslänge",
+    "aiInterviewLengthOptionsText": "Legen Sie die Länge jedes Textfeldes im Vorschlag fest.",
+    "aiInterviewLengthParagraphsLabel": "Absätze",
+    "aiInterviewLengthWordsLabel": "Wörter pro Absatz",
+    "aiInterviewLengthWordsPerPara": "Wörter/Absatz"
   },
   "GradientBuilder": {
     "linear": "Linear",

@@ -325,7 +325,12 @@
     "aiInterviewResearchResults": "Market Research Results",
     "aiInterviewResearchNoResults": "No market research results found.",
     "aiInterviewNegotiatePrompt": "Sure, let me know what you’d like to change.",
-    "aiInterviewApplied": "Content applied to the form. Review and save when ready."
+    "aiInterviewApplied": "Content applied to the form. Review and save when ready.",
+    "aiInterviewLengthOptionsTitle": "Content Length",
+    "aiInterviewLengthOptionsText": "Set the length for each text field in the proposal.",
+    "aiInterviewLengthParagraphsLabel": "Paragraphs",
+    "aiInterviewLengthWordsLabel": "Words per paragraph",
+    "aiInterviewLengthWordsPerPara": "words/para"
   },
   "GradientBuilder": {
     "linear": "Linear",

@@ -1,4 +1,17 @@
-import type { InterviewerEntityConfig } from '../entity-config';
+import type { InterviewerEntityConfig, ResearchQueryParams } from '../entity-config';
+
+const BOOTSTRAP_PREFIX = 'Start the interview.';
+
+function buildSystemResearchQuery({ brandPersona, chatHistory }: ResearchQueryParams): string {
+  const firstAnswer = chatHistory
+    .filter((m) => m.role === 'user' && !m.content.startsWith(BOOTSTRAP_PREFIX))
+    .slice(0, 2)
+    .map((m) => m.content)
+    .join(' ');
+
+  const subject = firstAnswer || brandPersona?.site_name || '';
+  return `${subject} brand identity mission vision about company`.trim();
+}
 
 export const systemConfig: InterviewerEntityConfig = {
   entityType: 'system',
@@ -16,6 +29,13 @@ export const systemConfig: InterviewerEntityConfig = {
     vision: 'Vision (ES)',
     en_vision: 'Vision (EN)',
     slogan: 'Slogan',
+  },
+  buildResearchQuery: buildSystemResearchQuery,
+  fieldLengths: {
+    about:   { paragraphs: 3, length: 'md' },
+    mission: { paragraphs: 1, length: 'sm' },
+    vision:  { paragraphs: 1, length: 'sm' },
+    slogan:  null,
   },
   proposalSchema: `{
   "about": "<Spanish about section — translate from interview if needed>",

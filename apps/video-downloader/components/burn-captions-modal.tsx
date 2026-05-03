@@ -278,6 +278,7 @@ export function BurnCaptionsModal({
               step={4}
               value={config.marginV}
               onChange={(e) => set('marginV', Number(e.target.value))}
+              aria-label={t('burnCaptionsMarginV')}
             />
             <span className="bcm-range-value">{config.marginV}px</span>
           </Box>
@@ -309,6 +310,7 @@ export function BurnCaptionsModal({
               step={2}
               value={config.fontSize}
               onChange={(e) => set('fontSize', Number(e.target.value))}
+              aria-label={t('burnCaptionsFontSize')}
             />
             <span className="bcm-range-value">{config.fontSize}pt</span>
           </Box>
@@ -364,6 +366,7 @@ export function BurnCaptionsModal({
               className="bcm-color-input"
               value={config.primaryColor}
               onChange={(e) => set('primaryColor', e.target.value)}
+              aria-label={t('burnCaptionsTextColor')}
             />
             <span className="bcm-range-value">{config.primaryColor}</span>
           </Box>
@@ -428,6 +431,7 @@ export function BurnCaptionsModal({
                 onChange={(e) =>
                   set('outlineThickness', Number(e.target.value))
                 }
+                aria-label={t('burnCaptionsOutlineThickness')}
               />
               <span className="bcm-range-value">
                 {config.outlineThickness ?? 2}px
@@ -449,6 +453,7 @@ export function BurnCaptionsModal({
                   className="bcm-color-input"
                   value={config.bgColor}
                   onChange={(e) => set('bgColor', e.target.value)}
+                  aria-label={t('burnCaptionsBgColor')}
                 />
                 <span className="bcm-range-value">{config.bgColor}</span>
               </Box>
@@ -466,6 +471,7 @@ export function BurnCaptionsModal({
                   step={5}
                   value={config.bgOpacity}
                   onChange={(e) => set('bgOpacity', Number(e.target.value))}
+                  aria-label={t('burnCaptionsBgOpacity')}
                 />
                 <span className="bcm-range-value">{config.bgOpacity}%</span>
               </Box>
@@ -527,6 +533,7 @@ export function BurnCaptionsModal({
                   step={50}
                   value={anim.fadeInMs ?? 300}
                   onChange={(e) => setAnim('fadeInMs', Number(e.target.value))}
+                  aria-label={t('burnCaptionsAnimationFadeIn')}
                 />
                 <span className="bcm-range-value">
                   {anim.fadeInMs ?? 300}ms
@@ -546,6 +553,7 @@ export function BurnCaptionsModal({
                   step={50}
                   value={anim.fadeOutMs ?? 200}
                   onChange={(e) => setAnim('fadeOutMs', Number(e.target.value))}
+                  aria-label={t('burnCaptionsAnimationFadeOut')}
                 />
                 <span className="bcm-range-value">
                   {anim.fadeOutMs ?? 200}ms
@@ -573,6 +581,7 @@ export function BurnCaptionsModal({
                   onChange={(e) =>
                     setAnim('slideOffset', Number(e.target.value))
                   }
+                  aria-label={t('burnCaptionsAnimationOffset')}
                 />
                 <span className="bcm-range-value">
                   {anim.slideOffset ?? 20}px
@@ -594,6 +603,7 @@ export function BurnCaptionsModal({
                   onChange={(e) =>
                     setAnim('slideDurationMs', Number(e.target.value))
                   }
+                  aria-label={t('burnCaptionsAnimationDuration')}
                 />
                 <span className="bcm-range-value">
                   {anim.slideDurationMs ?? 300}ms
@@ -621,6 +631,7 @@ export function BurnCaptionsModal({
                   onChange={(e) =>
                     setAnim('blurStrength', Number(e.target.value))
                   }
+                  aria-label={t('burnCaptionsAnimationStrength')}
                 />
                 <span className="bcm-range-value">
                   {anim.blurStrength ?? 15}
@@ -642,6 +653,7 @@ export function BurnCaptionsModal({
                   onChange={(e) =>
                     setAnim('blurDurationMs', Number(e.target.value))
                   }
+                  aria-label={t('burnCaptionsAnimationDuration')}
                 />
                 <span className="bcm-range-value">
                   {anim.blurDurationMs ?? 300}ms
@@ -668,6 +680,7 @@ export function BurnCaptionsModal({
                 onChange={(e) =>
                   setAnim('zoomDurationMs', Number(e.target.value))
                 }
+                aria-label={t('burnCaptionsAnimationDuration')}
               />
               <span className="bcm-range-value">
                 {anim.zoomDurationMs ?? 300}ms
@@ -732,6 +745,7 @@ export function BurnCaptionsModal({
                   onChange={(e) =>
                     setAnim('karaokeHighlightColour', e.target.value)
                   }
+                  aria-label={t('burnCaptionsAnimationKaraokeHighlight')}
                 />
                 <span className="bcm-range-value">
                   {anim.karaokeHighlightColour ?? '#ffff00'}

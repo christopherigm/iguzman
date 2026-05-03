@@ -325,7 +325,12 @@
     "aiInterviewResearchResults": "Resultados da pesquisa de mercado",
     "aiInterviewResearchNoResults": "Nenhum resultado de pesquisa encontrado.",
     "aiInterviewNegotiatePrompt": "Claro, diga-me o que você gostaria de mudar.",
-    "aiInterviewApplied": "Conteúdo aplicado ao formulário. Revise e salve quando estiver pronto."
+    "aiInterviewApplied": "Conteúdo aplicado ao formulário. Revise e salve quando estiver pronto.",
+    "aiInterviewLengthOptionsTitle": "Comprimento do conteúdo",
+    "aiInterviewLengthOptionsText": "Defina o comprimento de cada campo de texto na proposta.",
+    "aiInterviewLengthParagraphsLabel": "Parágrafos",
+    "aiInterviewLengthWordsLabel": "Palavras por parágrafo",
+    "aiInterviewLengthWordsPerPara": "palavras/parágrafo"
   },
   "GradientBuilder": {
     "linear": "Linear",

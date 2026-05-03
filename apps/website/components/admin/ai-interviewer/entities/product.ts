@@ -19,13 +19,23 @@ export const productConfig: InterviewerEntityConfig = {
     compare_price: 'Compare Price',
     sku: 'SKU',
   },
+  buildResearchQuery({ values, brandPersona, entityLabel }) {
+    const name = String(values['name'] ?? values['en_name'] ?? entityLabel);
+    const brandName = brandPersona?.site_name ?? '';
+    return `${name} product pricing description ${brandName}`.trim();
+  },
+  fieldLengths: {
+    name:              null,
+    description:       { paragraphs: 2, length: 'md' },
+    short_description: { paragraphs: 1, length: 'xs' },
+  },
   proposalSchema: `{
   "name": "<Spanish name — translate from interview if needed>",
   "en_name": "<English name — translate from interview if needed>",
-  "description": "<Spanish description, 2-3 sentences — translate from interview if needed>",
-  "en_description": "<English description, 2-3 sentences — translate from interview if needed>",
-  "short_description": "<Spanish one-sentence summary — translate from interview if needed>",
-  "en_short_description": "<English one-sentence summary — translate from interview if needed>",
+  "description": "<Spanish description — translate from interview if needed>",
+  "en_description": "<English description — translate from interview if needed>",
+  "short_description": "<Spanish short summary — translate from interview if needed>",
+  "en_short_description": "<English short summary — translate from interview if needed>",
   "price": <number>,
   "sku": "<string or null>",
   "compare_price": <number or null>,

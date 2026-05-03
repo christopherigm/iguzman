@@ -233,6 +233,39 @@ Each Next.js app in `apps/` has its own `app/globals.css`, which is the single s
 
 When adding a new shared utility class to `globals.css`, update this table so the catalogue stays current.
 
+### Accessibility — Form Element Labels
+
+Every `<input>`, `<select>`, and `<textarea>` element must have an accessible label so that screen readers and voice-control tools can identify it. The ESLint `jsx-a11y` rules enforce this as an error (`--max-warnings 0`).
+
+**Required:** one of the following must be present on every form element:
+
+| Method | When to use |
+|---|---|
+| `aria-label="..."` | Element is visually labelled by adjacent text but has no programmatic association |
+| `aria-labelledby="id"` | A separate element already in the DOM provides the label text |
+| `id` paired with `<label htmlFor="id">` | Standard HTML label association |
+| `aria-hidden="true"` | Element is purely decorative / programmatically triggered (e.g. a hidden file input triggered by a button) |
+
+**Common cases:**
+
+```tsx
+// Range slider — adjacent Typography is the visible label; aria-label connects it for AT
+<input type="range" aria-label={t('mySliderLabel')} ... />
+
+// Color picker — same pattern
+<input type="color" aria-label={t('myColorLabel')} ... />
+
+// Hidden file input — triggered by a <Button> that already has aria-label; suppress AT
+<input type="file" aria-hidden="true" ... />
+// OR give it its own label that matches the trigger button
+<input type="file" aria-label={t('uploadLabel')} ... />
+
+// Select with no visible <label> element
+<select aria-label={t('mySelectLabel')} ... />
+```
+
+**Rule:** if a `<Typography>` or plain text immediately precedes or follows the control, reuse its translation key as the `aria-label` value — never hardcode strings.
+
 ### i18n — Static Text
 
 All static text in any Next.js app in `apps/` **must** use `next-intl` translations. Never hardcode user-visible strings directly in JSX.
@@ -313,6 +346,23 @@ The `new-app.mjs` scaffold generates this file automatically for every new app.
 ### TypeScript — Always Check After Writing
 
 After writing or modifying any `.ts` or `.tsx` file, always run `pnpm check-types` and fix every error before considering the task done. Never leave type errors behind.
+
+### Shared Constants — Don't Duplicate Across Sibling Files
+
+Before defining a constant, type, or pure utility function in a component file, check whether it already exists in a shared file in the same directory. If the same value appears (or is about to appear) in two or more sibling files, extract it into a dedicated shared module in their common parent directory.
+
+**Rule:** a constant or pure utility that is used in more than one file in the same directory belongs in a shared file in that directory — not copy-pasted into each consumer.
+
+**Current shared files to check first:**
+
+| File | Contents |
+|---|---|
+| `apps/website/components/admin/paragraph-options.ts` | `PARAGRAPH_WORD_COUNTS`, `PARAGRAPH_LENGTH_STEPS`, `PARAGRAPH_COUNT_STEPS` — used by `admin-form.tsx` and `ai-interviewer/ai-interviewer.tsx` |
+
+**How to apply:**
+1. Before writing a new constant (step counts, label maps, word-count ranges, etc.) in any file under `apps/website/components/admin/`, grep for it across sibling files first.
+2. If it already exists in a shared file, import it. If it exists in a sibling but not yet extracted, move it to the appropriate shared file and update both importers.
+3. When creating a new shared file, name it after what it contains (`paragraph-options.ts`, `field-utils.ts`, etc.) — not after a consumer (`admin-form-helpers.ts`).
 
 ### Key Conventions
 

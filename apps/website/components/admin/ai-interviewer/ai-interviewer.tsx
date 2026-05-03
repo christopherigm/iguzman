@@ -11,11 +11,14 @@ import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Spinner } from '@repo/ui/core-elements/spinner';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import { Slider } from '@repo/ui/core-elements/slider';
 import { getAccessToken } from '@/lib/auth';
 import { useGroqProxy, type LlmMessage } from '@repo/ui/use-groq';
 import type { FieldDef } from '../admin-form';
-import type { AiEntityType } from './entity-config';
+import type { AiEntityType, FieldLengthConfig } from './entity-config';
 import { ENTITY_CONFIGS } from './entities';
+import { PARAGRAPH_WORD_COUNTS, PARAGRAPH_LENGTH_STEPS, PARAGRAPH_COUNT_STEPS } from '../paragraph-options';
 
 export type { AiEntityType } from './entity-config';
 
@@ -78,6 +81,34 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const MIN_SCOPING_ROUNDS = 3;
 const VISIBLE_STAGES: InterviewStage[] = ['scoping', 'researching', 'proposal', 'confirmed'];
 
+function fieldGroupDisplayName(key: string): string {
+  return key
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+function buildFieldLengthRulesText(
+  configLengths: Record<string, FieldLengthConfig | null>,
+  activeLengths: Record<string, FieldLengthConfig>,
+  proposalFieldLabels: Record<string, string>,
+): string {
+  const lines: string[] = [];
+  for (const [key, configCfg] of Object.entries(configLengths)) {
+    const hasEnPair = Object.prototype.hasOwnProperty.call(proposalFieldLabels, `en_${key}`);
+    const fieldRef = hasEnPair ? `"${key}" and "en_${key}"` : `"${key}"`;
+    if (configCfg === null) {
+      lines.push(`- ${fieldRef}: one concise sentence`);
+    } else {
+      const cfg = activeLengths[key] ?? configCfg;
+      const { min, max } = PARAGRAPH_WORD_COUNTS[cfg.length] ?? { min: 80, max: 120 };
+      const paraLabel = cfg.paragraphs === 1 ? 'paragraph' : 'paragraphs';
+      lines.push(`- ${fieldRef}: exactly ${cfg.paragraphs} ${paraLabel}, ${min}–${max} words each`);
+    }
+  }
+  return lines.join('\n');
+}
+
 const LOCALE_LANGUAGE_MAP: Record<string, string> = {
   en: 'English',
   es: 'Spanish',
@@ -134,6 +165,7 @@ function buildProposalMessages(
   imageAnalysis: string,
   researchData: string,
   language: string,
+  fieldLengthRulesText: string,
 ): LlmMessage[] {
   const brandBlock = persona
     ? `Brand: ${persona.site_name ?? ''}. Mission: ${persona.mission || persona.en_mission || ''}. Vision: ${persona.vision || persona.en_vision || ''}.`
@@ -151,7 +183,7 @@ The interview was conducted in ${language}. Based on the interview conversation$
 ${contextBlock}
 
 TRANSLATION RULE: All bilingual fields have a Spanish version (base field, e.g. "name") and an English version ("en_" prefix, e.g. "en_name"). Use the interview content for the ${language} version and TRANSLATE it for the other language. Never ask for translations — produce both versions yourself.
-
+${fieldLengthRulesText ? `\nFIELD LENGTH RULES (follow exactly — do not shorten or pad):\n${fieldLengthRulesText}\n` : ''}
 Respond ONLY with a valid JSON object. No markdown, no explanation outside the JSON. Use this exact structure:
 ${proposalSchema}`;
 
@@ -223,6 +255,12 @@ export function AiInterviewer({
   const [proposedRecord, setProposedRecord] = useState<ProposedRecord | null>(null);
   const [generatingProposal, setGeneratingProposal] = useState(false);
   const [proposalError, setProposalError] = useState(false);
+
+  // ── Length options modal ──────────────────────────────────────────────────────
+  const [showLengthModal, setShowLengthModal] = useState(false);
+  const [lengthSettings, setLengthSettings] = useState<Record<string, FieldLengthConfig>>({});
+  const lengthSettingsRef = useRef<Record<string, FieldLengthConfig>>({});
+  useEffect(() => { lengthSettingsRef.current = lengthSettings; }, [lengthSettings]);
 
   // ── Groq hook ────────────────────────────────────────────────────────────────
   const getAuthHeaders = useCallback((): Record<string, string> => {
@@ -307,6 +345,7 @@ export function AiInterviewer({
     setResearchError(false);
     setProposedRecord(null);
     setProposalError(false);
+    setLengthSettings({});
     resetGroq();
 
     setLoadingPersona(true);
@@ -431,11 +470,12 @@ export function AiInterviewer({
     setResearching(true);
     setResearchError(false);
 
-    const entityNameGuess = String(
-      values['name'] ?? values['en_name'] ?? entityLabel,
-    );
-    const brandName = brandPersonaRef.current?.site_name ?? '';
-    const query = `${entityNameGuess} ${config.entityType} pricing description ${brandName}`.trim();
+    const query = config.buildResearchQuery({
+      values,
+      brandPersona: brandPersonaRef.current,
+      entityLabel,
+      chatHistory: llmHistoryRef.current,
+    });
 
     try {
       const token = getAccessToken();
@@ -495,6 +535,12 @@ export function AiInterviewer({
         .map((m) => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`)
         .join('\n');
 
+      const fieldLengthRulesText = buildFieldLengthRulesText(
+        config.fieldLengths,
+        lengthSettingsRef.current,
+        config.proposalFieldLabels,
+      );
+
       const proposalMsgs = buildProposalMessages(
         brandPersonaRef.current,
         config.entityType,
@@ -503,6 +549,7 @@ export function AiInterviewer({
         imageAnalysisRef.current,
         researchDataRef.current,
         language,
+        fieldLengthRulesText,
       );
 
       const token = getAccessToken();
@@ -592,6 +639,26 @@ export function AiInterviewer({
     systemPromptRef.current = systemPromptRef.current + negotiationAddendum;
     addAssistantMessage(t('aiInterviewNegotiatePrompt'));
   }, [t]);
+
+  // ── Length options modal ───────────────────────────────────────────────────────
+
+  const textFieldGroups = Object.entries(config.fieldLengths).filter(
+    ([, cfg]) => cfg !== null,
+  ) as [string, FieldLengthConfig][];
+
+  const handleOpenLengthModal = useCallback(() => {
+    const initial: Record<string, FieldLengthConfig> = {};
+    for (const [key, cfg] of Object.entries(config.fieldLengths)) {
+      if (cfg !== null) initial[key] = { ...cfg };
+    }
+    setLengthSettings(initial);
+    setShowLengthModal(true);
+  }, [config.fieldLengths]);
+
+  const handleConfirmLengthOptions = useCallback(async () => {
+    setShowLengthModal(false);
+    await handleGenerateProposal();
+  }, [handleGenerateProposal]);
 
   // ── Derived ───────────────────────────────────────────────────────────────────
 
@@ -779,7 +846,7 @@ export function AiInterviewer({
                             text={t('aiInterviewContinue')}
                             unstyled
                             className="af__btn-cancel"
-                            onClick={handleGenerateProposal}
+                            onClick={handleOpenLengthModal}
                           />
                         )}
                       </Box>
@@ -823,6 +890,7 @@ export function AiInterviewer({
                 type="file"
                 accept="image/*"
                 className="aii__file-input"
+                aria-label={t('aiInterviewUpload')}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleFileSelect(file);
@@ -855,7 +923,7 @@ export function AiInterviewer({
               {canGenerateProposal && (
                 <Button
                   text={t('aiInterviewContinue')}
-                  onClick={handleGenerateProposal}
+                  onClick={handleOpenLengthModal}
                   className="aii__proposal-cta"
                 />
               )}
@@ -883,6 +951,8 @@ export function AiInterviewer({
                       researching ||
                       stage === 'proposal'
                     }
+                    multirow
+                    rows={3}
                     className="aii__input"
                   />
                 </div>
@@ -916,6 +986,53 @@ export function AiInterviewer({
             )}
           </div>
         </div>
+      )}
+
+      {/* ── Length options modal ── */}
+      {showLengthModal && (
+        <ConfirmationModal
+          title={t('aiInterviewLengthOptionsTitle')}
+          text={t('aiInterviewLengthOptionsText')}
+          okCallback={handleConfirmLengthOptions}
+          cancelCallback={() => setShowLengthModal(false)}
+          panelMaxWidth="520px"
+        >
+          <div className="aii__length-options">
+            {textFieldGroups.map(([key, defaultCfg]) => {
+              const current = lengthSettings[key] ?? defaultCfg;
+              const wordRange = PARAGRAPH_WORD_COUNTS[current.length] ?? { min: 80, max: 120 };
+              return (
+                <div key={key} className="aii__length-field-group">
+                  <Typography variant="label" className="aii__length-field-name">
+                    {fieldGroupDisplayName(key)}
+                  </Typography>
+                  <Slider
+                    steps={PARAGRAPH_COUNT_STEPS}
+                    value={current.paragraphs}
+                    onChange={(v) =>
+                      setLengthSettings((prev) => ({
+                        ...prev,
+                        [key]: { ...current, paragraphs: Number(v) },
+                      }))
+                    }
+                    label={t('aiInterviewLengthParagraphsLabel')}
+                  />
+                  <Slider
+                    steps={PARAGRAPH_LENGTH_STEPS}
+                    value={current.length}
+                    onChange={(v) =>
+                      setLengthSettings((prev) => ({
+                        ...prev,
+                        [key]: { ...current, length: String(v) },
+                      }))
+                    }
+                    label={`${t('aiInterviewLengthWordsLabel')} (${wordRange.min}–${wordRange.max} ${t('aiInterviewLengthWordsPerPara')})`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </ConfirmationModal>
       )}
     </>
   );

@@ -19,6 +19,7 @@ import { ADMIN_AI_PROVIDER_KEY, type AdminAiProvider } from '@/app/[locale]/admi
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Slider } from '@repo/ui/core-elements/slider';
 import { AiInterviewer, type AiEntityType } from './ai-interviewer/ai-interviewer';
+import { PARAGRAPH_WORD_COUNTS, PARAGRAPH_LENGTH_STEPS, PARAGRAPH_COUNT_STEPS } from './paragraph-options';
 
 // ── SpeechFieldButton ──────────────────────────────────────────────────────
 //
@@ -57,28 +58,6 @@ function SpeechFieldButton({
     />
   );
 }
-
-// ── Enhance options constants ──────────────────────────────────────────────
-
-const PARAGRAPH_WORD_COUNTS: Record<string, { min: number; max: number }> = {
-  xs: { min: 25, max: 40 },
-  sm: { min: 50, max: 75 },
-  md: { min: 80, max: 120 },
-  'md-lg': { min: 130, max: 180 },
-  lg: { min: 200, max: 270 },
-  xl: { min: 300, max: 400 },
-};
-
-const PARAGRAPH_LENGTH_STEPS = [
-  { value: 'xs', label: 'XS' },
-  { value: 'sm', label: 'S' },
-  { value: 'md', label: 'M' },
-  { value: 'md-lg', label: 'M-L' },
-  { value: 'lg', label: 'L' },
-  { value: 'xl', label: 'XL' },
-];
-
-const PARAGRAPH_COUNT_STEPS = [1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) }));
 
 // ── LLM enhance helpers ────────────────────────────────────────────────────
 
