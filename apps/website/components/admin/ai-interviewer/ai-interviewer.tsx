@@ -14,10 +14,10 @@ import { SpeechButton } from '@repo/ui/core-elements/speech-button';
 import { getAccessToken } from '@/lib/auth';
 import { useGroqProxy, type LlmMessage } from '@repo/ui/use-groq';
 import type { FieldDef } from '../admin-form';
+import type { AiEntityType } from './entity-config';
+import { ENTITY_CONFIGS } from './entities';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-export type AiEntityType = 'product' | 'service' | 'system';
+export type { AiEntityType } from './entity-config';
 
 type InterviewStage = 'idle' | 'scoping' | 'researching' | 'proposal' | 'negotiating' | 'confirmed';
 
@@ -73,48 +73,6 @@ export interface AiInterviewerProps {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const AI_TARGET_FIELDS: Record<AiEntityType, string[]> = {
-  product: [
-    'name', 'en_name',
-    'description', 'en_description',
-    'short_description', 'en_short_description',
-    'price', 'compare_price', 'sku',
-  ],
-  service: [
-    'name', 'en_name',
-    'description', 'en_description',
-    'short_description', 'en_short_description',
-    'price', 'duration', 'modality', 'sku',
-  ],
-  system: [
-    'about', 'en_about',
-    'mission', 'en_mission',
-    'vision', 'en_vision',
-    'slogan',
-  ],
-};
-
-const PROPOSAL_FIELD_LABELS: Record<string, string> = {
-  name: 'Name (ES)',
-  en_name: 'Name (EN)',
-  description: 'Description (ES)',
-  en_description: 'Description (EN)',
-  short_description: 'Short Description (ES)',
-  en_short_description: 'Short Description (EN)',
-  price: 'Price',
-  compare_price: 'Compare Price',
-  sku: 'SKU',
-  duration: 'Duration (min)',
-  modality: 'Modality',
-  about: 'About (ES)',
-  en_about: 'About (EN)',
-  mission: 'Mission (ES)',
-  en_mission: 'Mission (EN)',
-  vision: 'Vision (ES)',
-  en_vision: 'Vision (EN)',
-  slogan: 'Slogan',
-};
-
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const MIN_SCOPING_ROUNDS = 3;
@@ -132,7 +90,8 @@ const LOCALE_LANGUAGE_MAP: Record<string, string> = {
 
 function buildScopingSystemPrompt(
   persona: BrandPersona | null,
-  entityType: AiEntityType,
+  entityType: string,
+  targetFields: string[],
   imageAnalysis: string,
   researchData: string,
   language: string,
@@ -154,7 +113,7 @@ function buildScopingSystemPrompt(
 ${brandBlock}${extras.length ? `\n\n${extras.join('\n\n')}` : ''}
 
 Your task: Gather information to create a ${entityType} record.
-Fields to populate: ${AI_TARGET_FIELDS[entityType].join(', ')}
+Fields to populate: ${targetFields.join(', ')}
 
 LANGUAGE: Conduct the entire interview in ${language}. All your questions and responses must be in ${language}.
 
@@ -169,7 +128,8 @@ RULES:
 
 function buildProposalMessages(
   persona: BrandPersona | null,
-  entityType: AiEntityType,
+  entityType: string,
+  proposalSchema: string,
   conversationText: string,
   imageAnalysis: string,
   researchData: string,
@@ -178,21 +138,6 @@ function buildProposalMessages(
   const brandBlock = persona
     ? `Brand: ${persona.site_name ?? ''}. Mission: ${persona.mission || persona.en_mission || ''}. Vision: ${persona.vision || persona.en_vision || ''}.`
     : '';
-
-  const serviceSchema =
-    entityType === 'service'
-      ? `  "duration": <number in minutes or null>,\n  "modality": "online" | "in_person" | "hybrid",\n  `
-      : '';
-
-  const productSchema =
-    entityType === 'product'
-      ? `  "sku": "<string or null>",\n  "compare_price": <number or null>,\n  `
-      : '';
-
-  const systemSchema =
-    entityType === 'system'
-      ? `  "about": "<Spanish about section — translate from interview if needed>",\n  "en_about": "<English about section — translate from interview if needed>",\n  "mission": "<Spanish mission — translate from interview if needed>",\n  "en_mission": "<English mission — translate from interview if needed>",\n  "vision": "<Spanish vision — translate from interview if needed>",\n  "en_vision": "<English vision — translate from interview if needed>",\n  "slogan": "<slogan>",\n  `
-      : '';
 
   const contextLines: string[] = [];
   if (imageAnalysis) contextLines.push(`Visual context: ${imageAnalysis}`);
@@ -208,17 +153,7 @@ ${contextBlock}
 TRANSLATION RULE: All bilingual fields have a Spanish version (base field, e.g. "name") and an English version ("en_" prefix, e.g. "en_name"). Use the interview content for the ${language} version and TRANSLATE it for the other language. Never ask for translations — produce both versions yourself.
 
 Respond ONLY with a valid JSON object. No markdown, no explanation outside the JSON. Use this exact structure:
-{
-  "name": "<Spanish name — translate from interview if needed>",
-  "en_name": "<English name — translate from interview if needed>",
-  "description": "<Spanish description, 2-3 sentences — translate from interview if needed>",
-  "en_description": "<English description, 2-3 sentences — translate from interview if needed>",
-  "short_description": "<Spanish one-sentence summary — translate from interview if needed>",
-  "en_short_description": "<English one-sentence summary — translate from interview if needed>",
-  "price": <number>,
-  ${productSchema}${serviceSchema}${systemSchema}"justification": "<1-2 sentences explaining pricing and positioning>",
-  "brand_alignment_notes": "<brand alignment concerns if any, or null>"
-}`;
+${proposalSchema}`;
 
   return [
     { role: 'system', content: systemContent },
@@ -239,6 +174,7 @@ export function AiInterviewer({
   const t = useTranslations('Admin');
   const locale = useLocale();
   const language = LOCALE_LANGUAGE_MAP[locale] ?? 'English';
+  const config = ENTITY_CONFIGS[entityType];
 
   // ── Modal / stage state ──────────────────────────────────────────────────────
   const [isOpen, setIsOpen] = useState(false);
@@ -342,11 +278,18 @@ export function AiInterviewer({
 
   const rebuildSystemPrompt = useCallback(
     (persona: BrandPersona | null, imgAnalysis: string, research: string) => {
-      const prompt = buildScopingSystemPrompt(persona, entityType, imgAnalysis, research, language);
+      const prompt = buildScopingSystemPrompt(
+        persona,
+        config.entityType,
+        config.targetFields,
+        imgAnalysis,
+        research,
+        language,
+      );
       systemPromptRef.current = prompt;
       return prompt;
     },
-    [entityType, language],
+    [config, language],
   );
 
   // ── Open ─────────────────────────────────────────────────────────────────────
@@ -391,13 +334,13 @@ export function AiInterviewer({
     const welcome = t('aiInterviewWelcome', { entityLabel });
     setChatMessages([{ id: 'welcome', role: 'assistant', content: welcome }]);
 
-    const firstUserMsg = `Start the interview. Ask your first question about the ${entityType}.`;
+    const firstUserMsg = `Start the interview. Ask your first question about the ${config.entityType}.`;
     llmHistoryRef.current = [{ role: 'user', content: firstUserMsg }];
     await generate([
       { role: 'system', content: sysPrompt },
       { role: 'user', content: firstUserMsg },
     ]);
-  }, [entityType, entityLabel, t, rebuildSystemPrompt, generate, resetGroq]);
+  }, [config, entityLabel, t, rebuildSystemPrompt, generate, resetGroq]);
 
   // ── Close ────────────────────────────────────────────────────────────────────
 
@@ -458,7 +401,7 @@ export function AiInterviewer({
           },
           body: JSON.stringify({
             model: 'gemma3:4b',
-            prompt: `Analyze this ${entityType} image for a business catalog. Extract: name, key features, visible text, specifications, materials, and suggested catalog metadata. Be specific and concise.`,
+            prompt: `Analyze this ${config.entityType} image for a business catalog. Extract: name, key features, visible text, specifications, materials, and suggested catalog metadata. Be specific and concise.`,
             images: [base64],
             stream: false,
           }),
@@ -479,7 +422,7 @@ export function AiInterviewer({
 
       setAnalyzingImage(false);
     },
-    [entityType, t, rebuildSystemPrompt],
+    [config, t, rebuildSystemPrompt],
   );
 
   // ── Market research ───────────────────────────────────────────────────────────
@@ -492,7 +435,7 @@ export function AiInterviewer({
       values['name'] ?? values['en_name'] ?? entityLabel,
     );
     const brandName = brandPersonaRef.current?.site_name ?? '';
-    const query = `${entityNameGuess} ${entityType} pricing description ${brandName}`.trim();
+    const query = `${entityNameGuess} ${config.entityType} pricing description ${brandName}`.trim();
 
     try {
       const token = getAccessToken();
@@ -530,7 +473,7 @@ export function AiInterviewer({
     }
 
     setResearching(false);
-  }, [entityType, entityLabel, values, t, rebuildSystemPrompt]);
+  }, [config, entityLabel, values, t, rebuildSystemPrompt]);
 
   // ── Generate proposal ─────────────────────────────────────────────────────────
 
@@ -554,7 +497,8 @@ export function AiInterviewer({
 
       const proposalMsgs = buildProposalMessages(
         brandPersonaRef.current,
-        entityType,
+        config.entityType,
+        config.proposalSchema,
         conversationText,
         imageAnalysisRef.current,
         researchDataRef.current,
@@ -613,7 +557,7 @@ export function AiInterviewer({
     isGenerating,
     generatingProposal,
     marketResearchEnabled,
-    entityType,
+    config,
     language,
     t,
     handleResearch,
@@ -806,7 +750,7 @@ export function AiInterviewer({
                         .map(([key, value]) => (
                           <div key={key} className="aii__proposal-field">
                             <span className="aii__proposal-field-label">
-                              {PROPOSAL_FIELD_LABELS[key] ?? key}
+                              {config.proposalFieldLabels[key] ?? key}
                             </span>
                             <span className="aii__proposal-field-value">
                               {String(value)}

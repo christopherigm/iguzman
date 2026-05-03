@@ -2,7 +2,7 @@
 # edit-videos.sh
 #
 # Interactive FFmpeg batch video editor.
-# Actions: Remove black bars, Interpolate FPS, Convert to H.264, Video stabilization.
+# Actions: Remove black bars, Interpolate FPS, Convert to H.264, Video stabilization, Downsize resolution.
 #
 # Run: bash cli/edit-videos/edit-videos.sh
 
@@ -154,6 +154,9 @@ setup_strings() {
     RIFE_STEP_INTERP="Interpolando fotogramas (RIFE)"
     RIFE_STEP_ENCODE="Recodificando video interpolado"
     RIFE_MPG_PRECONVERT="Pre-convirtiendo MPG/MPEG a MP4 para interpolación con RIFE"
+    ACTION_DOWNSIZE="Reducir resolución (scale+lanczos)"
+    DOWNSIZE_TARGET_LABEL="Resolución máxima [480, 720, 1080, 1440, 2160 o AnchoxAlto]"
+    DOWNSIZE_SKIP_MSG="Resolución ya es igual o inferior al objetivo, se omite la reducción"
     ACTION_VIDEO2X="Aumentar resolución — IA (Real-ESRGAN)"
     VIDEO2X_SCALE_PROMPT="Factor de escala [2/4]"
     VIDEO2X_MODEL_PROMPT="Modelo [realesr-animevideov3 / realesrgan-x4plus / realesr-general-x4v3]"
@@ -268,6 +271,9 @@ setup_strings() {
     RIFE_STEP_INTERP="Interpolating frames (RIFE)"
     RIFE_STEP_ENCODE="Re-encoding interpolated video"
     RIFE_MPG_PRECONVERT="Pre-converting MPG/MPEG to MP4 for RIFE interpolation"
+    ACTION_DOWNSIZE="Downsize resolution (scale+lanczos)"
+    DOWNSIZE_TARGET_LABEL="Maximum resolution [480, 720, 1080, 1440, 2160 or WxH]"
+    DOWNSIZE_SKIP_MSG="Already at or below target resolution, skipping downsize"
     ACTION_VIDEO2X="Upscale — AI (Real-ESRGAN)"
     VIDEO2X_SCALE_PROMPT="Scale factor [2/4]"
     VIDEO2X_MODEL_PROMPT="Model [realesr-animevideov3 / realesrgan-x4plus / realesr-general-x4v3]"
@@ -403,6 +409,8 @@ DO_SHARPEN=0
 SHARPEN_MATRIX=5; SHARPEN_LUMA_AMOUNT=1.0; SHARPEN_CHROMA_AMOUNT=0.0
 DO_UPSCALE=0
 UPSCALE_TARGET_W=1920; UPSCALE_TARGET_H=1080
+DO_DOWNSIZE=0
+DOWNSIZE_TARGET_W=1920; DOWNSIZE_TARGET_H=1080
 DO_COLOR=0
 COLOR_CONTRAST=1.1; COLOR_BRIGHTNESS=0.0; COLOR_SATURATION=1.1; COLOR_GAMMA=1.0
 
@@ -1130,7 +1138,7 @@ process_video() {
   dur_sec="${probe_out%% *}"
 
   # ── Auto-detect HDR / 10-bit; prepend color conversion when re-encoding ──
-  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_COLOR | do_rife | DO_VIDEO2X ))
+  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | do_rife | DO_VIDEO2X ))
   if [[ "${do_any}" -eq 1 ]]; then
     printf "    %s\n" "$(clr_dim "${HDR_DETECT}")"
     local hdr_type
@@ -1166,6 +1174,22 @@ process_video() {
       vf_chain+=("crop=${crop_str}")
     else
       printf "    %s %s\n" "$(clr_dim '○')" "$(clr_dim "${NO_BLACK_BARS}")"
+    fi
+  fi
+
+  # ── Downsize (before quality filters so they operate on the target resolution)
+  if [[ "${DO_DOWNSIZE}" -eq 1 ]]; then
+    local ds_dim_out ds_vid_w ds_vid_h
+    ds_dim_out="$(probe_dimensions "${input}")"
+    ds_vid_w="${ds_dim_out%% *}"
+    ds_vid_h="${ds_dim_out##* }"
+    if [[ "${ds_vid_w}" -le "${DOWNSIZE_TARGET_W}" && "${ds_vid_h}" -le "${DOWNSIZE_TARGET_H}" ]]; then
+      printf "    %s %s (%sx%s ≤ %sx%s)\n" \
+        "$(clr_dim '○')" "${DOWNSIZE_SKIP_MSG}" \
+        "${ds_vid_w}" "${ds_vid_h}" "${DOWNSIZE_TARGET_W}" "${DOWNSIZE_TARGET_H}"
+    else
+      # Fit within target box (AR preserved), then round to even dimensions for H.264.
+      vf_chain+=("scale=${DOWNSIZE_TARGET_W}:${DOWNSIZE_TARGET_H}:force_original_aspect_ratio=decrease:flags=lanczos,scale=trunc(iw/2)*2:trunc(ih/2)*2")
     fi
   fi
 
@@ -1739,15 +1763,16 @@ main() {
     "${ACTION_DENOISE}"
     "${ACTION_SHARPEN}"
     "${ACTION_UPSCALE}"
+    "${ACTION_DOWNSIZE}"
     "${ACTION_COLOR}"
     "${ACTION_RIFE}"
     "${ACTION_VIDEO2X}"
   )
-  _CB_SEL=(0 0 0 0 0 0 0 0 0 0)
+  _CB_SEL=(0 0 0 0 0 0 0 0 0 0 0)
   interactive_checkbox
 
   local do_black_bars=0 do_fps=0 do_h264=0 do_stab=0
-  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_COLOR=0; DO_RIFE=0; DO_VIDEO2X=0
+  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_DOWNSIZE=0; DO_COLOR=0; DO_RIFE=0; DO_VIDEO2X=0
   for idx in "${SELECTED_INDICES[@]}"; do
     case "${idx}" in
       0) do_black_bars=1 ;;
@@ -1757,15 +1782,16 @@ main() {
       4) DO_DENOISE=1 ;;
       5) DO_SHARPEN=1 ;;
       6) DO_UPSCALE=1 ;;
-      7) DO_COLOR=1 ;;
-      8) DO_RIFE=1 ;;
-      9) DO_VIDEO2X=1 ;;
+      7) DO_DOWNSIZE=1 ;;
+      8) DO_COLOR=1 ;;
+      9) DO_RIFE=1 ;;
+      10) DO_VIDEO2X=1 ;;
     esac
   done
 
   if [[ "${do_black_bars}" -eq 0 && "${do_fps}" -eq 0 && "${do_h264}" -eq 0 && "${do_stab}" -eq 0 && \
-        "${DO_DENOISE}" -eq 0 && "${DO_SHARPEN}" -eq 0 && "${DO_UPSCALE}" -eq 0 && "${DO_COLOR}" -eq 0 && \
-        "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 ]]; then
+        "${DO_DENOISE}" -eq 0 && "${DO_SHARPEN}" -eq 0 && "${DO_UPSCALE}" -eq 0 && "${DO_DOWNSIZE}" -eq 0 && \
+        "${DO_COLOR}" -eq 0 && "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 ]]; then
     printf "\n  %s\n\n" "$(clr_yellow "${NO_ACTIONS_SELECTED}")"
     exit 0
   fi
@@ -1914,6 +1940,24 @@ main() {
     fi
   fi
 
+  if [[ "${DO_DOWNSIZE}" -eq 1 ]]; then
+    printf "  %s (1080): " "$(clr_bold "${DOWNSIZE_TARGET_LABEL}")"
+    local downsize_input; read -r downsize_input
+    if [[ "${downsize_input}" =~ ^([0-9]+)[xX]([0-9]+)$ ]]; then
+      DOWNSIZE_TARGET_W="${BASH_REMATCH[1]}"
+      DOWNSIZE_TARGET_H="${BASH_REMATCH[2]}"
+    else
+      case "${downsize_input:-1080}" in
+        480)              DOWNSIZE_TARGET_W=854;   DOWNSIZE_TARGET_H=480  ;;
+        720)              DOWNSIZE_TARGET_W=1280;  DOWNSIZE_TARGET_H=720  ;;
+        1080)             DOWNSIZE_TARGET_W=1920;  DOWNSIZE_TARGET_H=1080 ;;
+        1440)             DOWNSIZE_TARGET_W=2560;  DOWNSIZE_TARGET_H=1440 ;;
+        2160|4k|4K|4K*)  DOWNSIZE_TARGET_W=3840;  DOWNSIZE_TARGET_H=2160 ;;
+        *)                DOWNSIZE_TARGET_W=1920;  DOWNSIZE_TARGET_H=1080 ;;
+      esac
+    fi
+  fi
+
   if [[ "${DO_COLOR}" -eq 1 ]]; then
     printf "  %s (1.1): " "$(clr_dim "${COLOR_CONTRAST_LABEL}")"
     read -r COLOR_CONTRAST; COLOR_CONTRAST="${COLOR_CONTRAST:-1.1}"
@@ -1995,6 +2039,7 @@ main() {
   if [[ "${DO_DENOISE}" -eq 1 ]];    then action_list+=("denoise (ls=${DENOISE_LUMA_S} cs=${DENOISE_CHROMA_S} lt=${DENOISE_LUMA_T} ct=${DENOISE_CHROMA_T})"); fi
   if [[ "${DO_SHARPEN}" -eq 1 ]];    then action_list+=("sharpen (m=${SHARPEN_MATRIX} la=${SHARPEN_LUMA_AMOUNT} ca=${SHARPEN_CHROMA_AMOUNT})"); fi
   if [[ "${DO_UPSCALE}" -eq 1 ]];    then action_list+=("upscale→${UPSCALE_TARGET_W}x${UPSCALE_TARGET_H}"); fi
+  if [[ "${DO_DOWNSIZE}" -eq 1 ]];   then action_list+=("downsize→${DOWNSIZE_TARGET_W}x${DOWNSIZE_TARGET_H}"); fi
   if [[ "${DO_COLOR}" -eq 1 ]];      then action_list+=("color (c=${COLOR_CONTRAST} b=${COLOR_BRIGHTNESS} s=${COLOR_SATURATION} g=${COLOR_GAMMA})"); fi
   if [[ "${DO_RIFE}" -eq 1 ]];       then action_list+=("RIFE ${RIFE_MULTIPLIER}× (${RIFE_MODEL})"); fi
   if [[ "${DO_VIDEO2X}" -eq 1 ]];   then action_list+=("video2x ${VIDEO2X_SCALE}× (${VIDEO2X_MODEL})"); fi
