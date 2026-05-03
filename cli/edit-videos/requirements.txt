@@ -1,0 +1,18 @@
+# Deep3D Stabilizer dependencies
+# Install with:
+#   pip install -r requirements.txt
+#
+# The --extra-index-url line below adds PyTorch's wheel registry for CPU-only
+# torch/torchvision builds while keeping PyPI as the primary source for everything else.
+# GPU build (CUDA 12.1): change whl/cpu to whl/cu121
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch>=1.9.0
+torchvision>=0.10.0
+opencv-python>=4.5.0
+scipy>=1.7.0
+tqdm>=4.60.0
+imageio>=2.9.0
+scikit-image>=0.18.0
+path>=16.0.0

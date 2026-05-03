@@ -170,6 +170,25 @@ setup_strings() {
     VIDEO2X_STEP_UPSCALE="Escalando con IA (Real-ESRGAN)"
     VIDEO2X_STEP_ENCODE="Recodificando video escalado"
     VIDEO2X_MPG_PRECONVERT="Pre-convirtiendo MPG/MPEG a MP4 para escalado con IA"
+    ACTION_DEEP3D="Estabilizar — IA (Deep3D)"
+    DEEP3D_STABILITY_LABEL="Nivel de estabilidad [1-50]"
+    DEEP3D_DISK_WARN="Aviso: Deep3D analiza cada fotograma con una red neuronal. Puede tardar varios minutos por video."
+    DEEP3D_CHECK="Verificando Deep3D..."
+    DEEP3D_FOUND="Deep3D encontrado"
+    DEEP3D_NOT_FOUND="Deep3D no encontrado"
+    DEEP3D_INSTALLING="Clonando Deep3D e instalando dependencias en el entorno virtual..."
+    DEEP3D_INSTALL_FAIL="No se pudo instalar Deep3D. Verifique la conexión y git."
+    DEEP3D_STEP_ANALYZE="Analizando geometría del video (pase 1/3)"
+    DEEP3D_STEP_RECTIFY="Rectificando video (pase 2/3)"
+    DEEP3D_STEP_ENCODE="Recodificando video estabilizado (pase 3/3)"
+    AI_GPU_HINT="GPU con aceleración de hardware detectada para IA"
+    AI_GPU_NONE="Sin GPU Vulkan — las herramientas de IA usarán CPU (más lento)"
+    AI_GPU_USING="Usando GPU"
+    VULKAN_TOOLS_WARN="vulkan-tools no encontrado — se recomienda instalarlo para identificar el GPU Vulkan con precisión"
+    VULKAN_TOOLS_HINT="Instalar con: sudo apt install vulkan-tools"
+    GPU_REQUIRED_LABEL="requiere GPU"
+    AI_VULKAN_REQUIRED="Requiere GPU Vulkan (no disponible en este sistema)"
+    AI_CUDA_REQUIRED="Requiere GPU CUDA (no disponible en este sistema)"
   else
     WELCOME="FFmpeg Video Editor"
     SUBTITLE="Batch-process videos with FFmpeg filters."
@@ -287,6 +306,25 @@ setup_strings() {
     VIDEO2X_STEP_UPSCALE="AI upscaling (Real-ESRGAN)"
     VIDEO2X_STEP_ENCODE="Re-encoding upscaled video"
     VIDEO2X_MPG_PRECONVERT="Pre-converting MPG/MPEG to MP4 for AI upscaling"
+    ACTION_DEEP3D="Stabilize — AI (Deep3D)"
+    DEEP3D_STABILITY_LABEL="Stability level [1-50]"
+    DEEP3D_DISK_WARN="Note: Deep3D runs a neural network per frame. May take several minutes per video."
+    DEEP3D_CHECK="Checking Deep3D..."
+    DEEP3D_FOUND="Deep3D found"
+    DEEP3D_NOT_FOUND="Deep3D not found"
+    DEEP3D_INSTALLING="Cloning Deep3D and installing dependencies into venv..."
+    DEEP3D_INSTALL_FAIL="Could not install Deep3D. Check internet connection and git."
+    DEEP3D_STEP_ANALYZE="Analyzing video geometry (pass 1/3)"
+    DEEP3D_STEP_RECTIFY="Rectifying video (pass 2/3)"
+    DEEP3D_STEP_ENCODE="Re-encoding stabilized video (pass 3/3)"
+    AI_GPU_HINT="Hardware-accelerated GPU detected for AI processing"
+    AI_GPU_NONE="No Vulkan GPU detected — AI tools will run on CPU (slower)"
+    AI_GPU_USING="Using GPU"
+    VULKAN_TOOLS_WARN="vulkan-tools not found — install it for accurate Vulkan GPU identification"
+    VULKAN_TOOLS_HINT="Install with: sudo apt install vulkan-tools"
+    GPU_REQUIRED_LABEL="requires GPU"
+    AI_VULKAN_REQUIRED="Requires Vulkan GPU (not available on this system)"
+    AI_CUDA_REQUIRED="Requires CUDA GPU (not available on this system)"
   fi
 }
 
@@ -309,6 +347,7 @@ print_header() {
 
 _CB_LABELS=()
 _CB_SEL=()
+_CB_DISABLED=()
 _CB_CURSOR=0
 SELECTED_INDICES=()
 
@@ -317,20 +356,36 @@ _cb_render() {
   for ((j=0; j<num; j++)); do
     local lbl="${_CB_LABELS[$j]}"
     local is_sel="${_CB_SEL[$j]}"
+    local is_dis="${_CB_DISABLED[$j]:-0}"
     local checkbox pointer label_str
 
-    if [[ "${is_sel}" -eq 1 ]]; then
+    if [[ "${is_dis}" -eq 1 ]]; then
+      checkbox="$(clr_dim '[—]')"
+      if [[ $j -eq $_CB_CURSOR ]]; then
+        pointer="$(clr_dim '▶')"
+        label_str="$(clr_dim "${lbl} [${GPU_REQUIRED_LABEL}]")"
+      else
+        pointer=" "
+        label_str="$(clr_dim "${lbl} [${GPU_REQUIRED_LABEL}]")"
+      fi
+    elif [[ "${is_sel}" -eq 1 ]]; then
       checkbox="$(clr_bold_cyan '[✓]')"
+      if [[ $j -eq $_CB_CURSOR ]]; then
+        pointer="$(clr_cyan '▶')"
+        label_str="$(clr_bold_cyan "${lbl}")"
+      else
+        pointer=" "
+        label_str="${lbl}"
+      fi
     else
       checkbox="$(clr_dim '[ ]')"
-    fi
-
-    if [[ $j -eq $_CB_CURSOR ]]; then
-      pointer="$(clr_cyan '▶')"
-      label_str="$(clr_bold_cyan "${lbl}")"
-    else
-      pointer=" "
-      label_str="${lbl}"
+      if [[ $j -eq $_CB_CURSOR ]]; then
+        pointer="$(clr_cyan '▶')"
+        label_str="$(clr_bold_cyan "${lbl}")"
+      else
+        pointer=" "
+        label_str="${lbl}"
+      fi
     fi
 
     printf "  %s %s %s\n" "${pointer}" "${checkbox}" "${label_str}"
@@ -375,15 +430,18 @@ interactive_checkbox() {
     if [[ "${key}" == $'\x03' || "${key}" == $'\x04' ]]; then printf '\033[?25h'; echo ""; exit 0; fi
 
     if [[ "${key}" == ' ' ]]; then
-      _CB_SEL[$_CB_CURSOR]=$(( 1 - _CB_SEL[$_CB_CURSOR] ))
-      printf "\033[%dA" "${num}"; _cb_render; continue
+      if [[ "${_CB_DISABLED[$_CB_CURSOR]:-0}" -eq 0 ]]; then
+        _CB_SEL[$_CB_CURSOR]=$(( 1 - _CB_SEL[$_CB_CURSOR] ))
+        printf "\033[%dA" "${num}"; _cb_render
+      fi
+      continue
     fi
     if [[ "${key}" == 'a' || "${key}" == 'A' ]]; then
-      for ((i=0; i<num; i++)); do _CB_SEL[$i]=1; done
+      for ((i=0; i<num; i++)); do [[ "${_CB_DISABLED[$i]:-0}" -eq 0 ]] && _CB_SEL[$i]=1; done
       printf "\033[%dA" "${num}"; _cb_render; continue
     fi
     if [[ "${key}" == 'n' || "${key}" == 'N' ]]; then
-      for ((i=0; i<num; i++)); do _CB_SEL[$i]=0; done
+      for ((i=0; i<num; i++)); do [[ "${_CB_DISABLED[$i]:-0}" -eq 0 ]] && _CB_SEL[$i]=0; done
       printf "\033[%dA" "${num}"; _cb_render; continue
     fi
   done
@@ -430,10 +488,22 @@ VIDEO2X_MODEL="realesr-animevideov3"
 VIDEO2X_BIN="realesrgan-ncnn-vulkan"
 VIDEO2X_LOCAL_DIR="${HOME}/.local/share/edit-videos/realesrgan"
 
+# ── Deep3D globals ────────────────────────────────────────────────────────────
+
+DO_DEEP3D=0
+DEEP3D_STABILITY=12
+DEEP3D_DEVICE="cpu"
+DEEP3D_GPU_NAME=""
+DEEP3D_DIR="${HOME}/.local/share/edit-videos/deep3d"
+DEEP3D_PYTHON="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/venv/bin/python"
+
 # ── GPU Detection ─────────────────────────────────────────────────────────────
 
 GPU_ENCODER=""
 GPU_LABEL=""
+VULKAN_GPU_LABEL=""
+HAS_VULKAN_GPU=0
+HAS_CUDA_GPU=0
 
 detect_gpu() {
   printf "  %s\n" "$(clr_dim "${GPU_DETECT}")"
@@ -461,6 +531,60 @@ detect_gpu() {
   fi
 
   printf "  %s  %s\n" "$(clr_dim '○')" "$(clr_dim "${GPU_NONE}")"
+  return 1
+}
+
+_VULKAN_TOOLS_WARNED=0
+
+detect_vulkan_gpus() {
+  # Populates VULKAN_GPU_LABEL with the primary Vulkan-capable GPU name.
+  # Idempotent — skips detection if already set.
+  [[ -n "${VULKAN_GPU_LABEL}" ]] && return 0
+
+  # Warn once if vulkan-tools is missing (vulkaninfo is the most reliable probe)
+  if ! command -v vulkaninfo &>/dev/null && [[ "${_VULKAN_TOOLS_WARNED}" -eq 0 ]]; then
+    _VULKAN_TOOLS_WARNED=1
+    printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "$(clr_yellow "${VULKAN_TOOLS_WARN}")"
+    printf "  %s\n\n" "$(clr_dim "${VULKAN_TOOLS_HINT}")"
+  fi
+
+  # Try vulkaninfo first (most accurate — enumerates all Vulkan devices)
+  if command -v vulkaninfo &>/dev/null; then
+    local vk_name
+    vk_name="$(vulkaninfo --summary 2>/dev/null \
+      | grep -i 'deviceName' | head -1 \
+      | sed 's/.*= *//' | xargs 2>/dev/null)"
+    if [[ -n "${vk_name}" ]]; then
+      VULKAN_GPU_LABEL="${vk_name} (Vulkan)"
+      return 0
+    fi
+  fi
+
+  # NVIDIA fallback via nvidia-smi
+  if command -v nvidia-smi &>/dev/null && nvidia-smi &>/dev/null 2>&1; then
+    local gpu_name
+    gpu_name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null \
+      | head -1 | xargs 2>/dev/null)"
+    if [[ -n "${gpu_name}" ]]; then
+      VULKAN_GPU_LABEL="${gpu_name} (NVIDIA Vulkan)"
+      return 0
+    fi
+  fi
+
+  # AMD / Intel — sysfs DRM node
+  if [[ -e /dev/dri/renderD128 ]]; then
+    local drm_name
+    drm_name="$(cat /sys/class/drm/card0/device/product_name 2>/dev/null | xargs 2>/dev/null)"
+    [[ -z "${drm_name}" ]] && \
+      drm_name="$(cat /sys/class/drm/card0/device/label 2>/dev/null | xargs 2>/dev/null)"
+    if [[ -n "${drm_name}" ]]; then
+      VULKAN_GPU_LABEL="${drm_name} (Vulkan)"
+    else
+      VULKAN_GPU_LABEL="GPU /dev/dri/renderD128 (Vulkan)"
+    fi
+    return 0
+  fi
+
   return 1
 }
 
@@ -827,6 +951,158 @@ run_video2x_step() {
   fi
 }
 
+# ── Deep3D helpers ────────────────────────────────────────────────────────────
+
+check_deep3d() {
+  [[ ! -f "${DEEP3D_DIR}/geometry_optimizer.py" ]] && return 1
+  [[ ! -f "${DEEP3D_DIR}/rectify.py" ]]            && return 1
+  [[ ! -x "${DEEP3D_PYTHON}" ]]                    && return 1
+  "${DEEP3D_PYTHON}" -c "import torch, cv2, tqdm, path, imageio, scipy, skimage" &>/dev/null && return 0
+  return 1
+}
+
+bootstrap_deep3d() {
+  if ! command -v git &>/dev/null; then
+    printf "  %s git not found — cannot clone Deep3D repository.\n" "$(clr_bold_red '✗')"
+    return 1
+  fi
+
+  if [[ ! -x "${DEEP3D_PYTHON}" ]]; then
+    printf "  %s Python venv not found at: %s\n" "$(clr_bold_red '✗')" "$(clr_dim "${DEEP3D_PYTHON}")"
+    local _venv_dir; _venv_dir="$(dirname "$(dirname "${DEEP3D_PYTHON}")")"
+    printf "  %s Create it first: python3 -m venv %s\n" "$(clr_dim 'Hint:')" "$(clr_cyan "${_venv_dir}")"
+    return 1
+  fi
+
+  printf "  %s\n" "$(clr_dim "${DEEP3D_INSTALLING}")"
+
+  # 1. Clone repo
+  if [[ ! -f "${DEEP3D_DIR}/geometry_optimizer.py" ]]; then
+    mkdir -p "$(dirname "${DEEP3D_DIR}")"
+    git clone --depth=1 https://github.com/yaochih/Deep3D-Stabilizer-release "${DEEP3D_DIR}" 2>&1 | \
+      while IFS= read -r _line; do printf "  %s\n" "$(clr_dim "${_line}")"; done
+    if [[ ! -f "${DEEP3D_DIR}/geometry_optimizer.py" ]]; then
+      printf "  %s Failed to clone Deep3D repository.\n" "$(clr_bold_red '✗')"
+      return 1
+    fi
+  fi
+
+  # 2. Copy OpenCV flow helper into repo (replaces PWC-Net python2 step)
+  local _script_dir; _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  if [[ -f "${_script_dir}/deep3d_flow_cv.py" ]]; then
+    cp "${_script_dir}/deep3d_flow_cv.py" "${DEEP3D_DIR}/deep3d_flow_cv.py"
+  else
+    printf "  %s deep3d_flow_cv.py not found next to edit-videos.sh\n" "$(clr_bold_red '✗')"
+    return 1
+  fi
+
+  # 3. Patch generate_flows() in sequence_io.py to use OpenCV instead of python2+PWC-Net
+  local _patch_script; _patch_script="$(mktemp /tmp/deep3d_patch_XXXXXX.py)"
+  cat > "${_patch_script}" << 'PYEOF'
+import re, sys
+
+path = sys.argv[1]
+with open(path) as f:
+    content = f.read()
+
+old_method = r'    def generate_flows\(self\):.*?(?=\n    def )'
+new_method = """    def generate_flows(self):
+        # OpenCV Farneback optical flow — replaces PWC-Net (no python2/CUDA 8 required)
+        import sys as _sys
+        _script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'deep3d_flow_cv.py')
+        print('=> preparing optical flow using OpenCV Farneback...')
+        for i in self.opt.intervals:
+            ret = os.system('{} \"{}\" --output_dir \"{}\" --interval {}'.format(
+                _sys.executable, _script, str(self.root), i))
+        assert ret == 0, 'Failed to compute optical flow. Check OpenCV installation.'
+"""
+content = re.sub(old_method, new_method, content, flags=re.DOTALL)
+with open(path, 'w') as f:
+    f.write(content)
+print('sequence_io.py patched successfully')
+PYEOF
+
+  if ! python3 "${_patch_script}" "${DEEP3D_DIR}/sequence_io.py"; then
+    printf "  %s Failed to patch sequence_io.py\n" "$(clr_bold_red '✗')"
+    rm -f "${_patch_script}"; return 1
+  fi
+  rm -f "${_patch_script}"
+
+  # 4. Install Python dependencies into venv
+  # Auto-detect CUDA version (e.g. 12.8 → cu128) and use the matching torch wheel.
+  local _torch_index="https://download.pytorch.org/whl/cpu"
+  local _torch_label="CPU"
+  local _cuda_ver=""
+  if command -v nvcc &>/dev/null; then
+    _cuda_ver="$(nvcc --version 2>/dev/null | grep -oP 'release \K[0-9]+\.[0-9]+')"
+  elif command -v nvidia-smi &>/dev/null; then
+    _cuda_ver="$(nvidia-smi 2>/dev/null | grep -oP 'CUDA Version: \K[0-9]+\.[0-9]+')"
+  fi
+  if [[ -n "${_cuda_ver}" ]]; then
+    # Convert "12.8" → "cu128"
+    local _cu_tag; _cu_tag="cu$(echo "${_cuda_ver}" | tr -d '.')"
+    _torch_index="https://download.pytorch.org/whl/${_cu_tag}"
+    _torch_label="CUDA ${_cuda_ver} (${_cu_tag})"
+  fi
+  printf "  %s\n" "$(clr_dim "Installing PyTorch (${_torch_label}) — this may take a few minutes...")"
+  "${DEEP3D_PYTHON}" -m pip install --quiet torch torchvision \
+    --extra-index-url "${_torch_index}" || {
+    printf "  %s Failed to install PyTorch.\n" "$(clr_bold_red '✗')"; return 1
+  }
+  printf "  %s\n" "$(clr_dim "Installing opencv-python, scipy, tqdm, imageio, scikit-image, path...")"
+  "${DEEP3D_PYTHON}" -m pip install --quiet \
+    "opencv-python>=4.5" scipy tqdm imageio "scikit-image" path || {
+    printf "  %s Failed to install dependencies.\n" "$(clr_bold_red '✗')"; return 1
+  }
+
+  printf "  %s Deep3D installed to %s\n\n" "$(clr_bold_green '✓')" "$(clr_dim "${DEEP3D_DIR}")"
+}
+
+run_deep3d_step() {
+  # Args: label dur_sec abs_input_path name python_script_basename [extra_args...]
+  local label="$1" dur="${2:-0}" input_path="$3" name="$4" script="$5"
+  shift 5
+  local extra_args=("$@")
+
+  printf "    %s\n" "${label}..."
+  local step_start=$SECONDS
+
+  (
+    cd "${DEEP3D_DIR}"
+    "${DEEP3D_PYTHON}" "${script}" "${input_path}" \
+      --name "${name}" --output_dir "outputs" --cuda "${DEEP3D_DEVICE}" "${extra_args[@]}"
+  ) >> "${LOG_FILE}" 2>&1 &
+  local _d3d_pid=$!
+
+  printf '\033[?25l'
+  local spin_idx=0
+  local spinners=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+
+  while kill -0 "${_d3d_pid}" 2>/dev/null; do
+    local elapsed=$(( SECONDS - step_start ))
+    local elapsed_str; elapsed_str="$(_fmt_time "${elapsed}")"
+    printf "\r    %s  %s\033[K" \
+      "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" "$(clr_dim "${elapsed_str}")"
+    spin_idx=$(( spin_idx + 1 ))
+    sleep 0.3
+  done
+
+  wait "${_d3d_pid}"
+  local ec=$?
+  printf '\033[?25h'
+  local total_elapsed=$(( SECONDS - step_start ))
+  local total_str; total_str="$(_fmt_time "${total_elapsed}")"
+  printf "\r\033[K"
+
+  if [[ "${ec}" -eq 0 ]]; then
+    printf "    %s\n" "$(clr_bold_green "✓ ${STEP_DONE}  (${total_str})")"
+    return 0
+  else
+    printf "    %s\n" "$(clr_bold_red "✗ ${STEP_FAIL}  (${total_str})")"
+    return "${ec}"
+  fi
+}
+
 # ── FFmpeg helpers ────────────────────────────────────────────────────────────
 
 THREAD_COUNT="$(nproc 2>/dev/null || echo 4)"
@@ -1138,7 +1414,7 @@ process_video() {
   dur_sec="${probe_out%% *}"
 
   # ── Auto-detect HDR / 10-bit; prepend color conversion when re-encoding ──
-  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | do_rife | DO_VIDEO2X ))
+  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | do_rife | DO_VIDEO2X | DO_DEEP3D ))
   if [[ "${do_any}" -eq 1 ]]; then
     printf "    %s\n" "$(clr_dim "${HDR_DETECT}")"
     local hdr_type
@@ -1231,9 +1507,19 @@ process_video() {
     intermediate="$(mktemp /tmp/edit_videos_pre_XXXXXX.mp4)"
     local pre_vf=""
     [[ "${#vf_chain[@]}" -gt 0 ]] && pre_vf="$(IFS=','; echo "${vf_chain[*]}")"
-    local pre_args=(-i "${src}")
+    local pre_input_args=() pre_codec_args=()
+    if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
+      pre_codec_args=(-c:v h264_nvenc -preset p1 -cq 18 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
+      pre_input_args=(-vaapi_device /dev/dri/renderD128)
+      [[ -n "${pre_vf}" ]] && pre_vf="${pre_vf},format=nv12,hwupload" || pre_vf="format=nv12,hwupload"
+      pre_codec_args=(-c:v h264_vaapi -qp 18 -c:a copy)
+    else
+      pre_codec_args=(-c:v libx264 -preset ultrafast -crf 18 -c:a copy)
+    fi
+    local pre_args=("${pre_input_args[@]}" -i "${src}")
     [[ -n "${pre_vf}" ]] && pre_args+=(-vf "${pre_vf}")
-    pre_args+=(-c:v libx264 -preset ultrafast -crf 18 -c:a copy "${intermediate}")
+    pre_args+=("${pre_codec_args[@]}" "${intermediate}")
     if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" "${pre_args[@]}"; then
       rm -f "${intermediate}"; intermediate=""
       return 1
@@ -1277,6 +1563,109 @@ process_video() {
     vf_chain+=("minterpolate=fps=${target_fps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1:search_param=16")
   fi
 
+  # ── Deep3D AI stabilization ─────────────────────────────────────────
+  if [[ "${DO_DEEP3D}" -eq 1 ]]; then
+    # If pending vf_chain filters exist, bake them into an intermediate first
+    # so Deep3D receives a fully-filtered video file.
+    local d3d_pre_intermediate=""
+    if [[ "${#vf_chain[@]}" -gt 0 ]]; then
+      d3d_pre_intermediate="$(mktemp /tmp/deep3d_pre_XXXXXX.mp4)"
+      local d3d_pre_vf; d3d_pre_vf="$(IFS=','; echo "${vf_chain[*]}")"
+      local d3d_pre_input_args=() d3d_pre_codec_args=()
+      if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
+        d3d_pre_codec_args=(-c:v h264_nvenc -preset p1 -cq 18 -c:a copy)
+      elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
+        d3d_pre_input_args=(-vaapi_device /dev/dri/renderD128)
+        d3d_pre_vf="${d3d_pre_vf},format=nv12,hwupload"
+        d3d_pre_codec_args=(-c:v h264_vaapi -qp 18 -c:a copy)
+      else
+        d3d_pre_codec_args=(-c:v libx264 -preset ultrafast -crf 18 -c:a copy)
+      fi
+      if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" \
+          "${d3d_pre_input_args[@]}" -i "${src}" -vf "${d3d_pre_vf}" "${d3d_pre_codec_args[@]}" "${d3d_pre_intermediate}"; then
+        rm -f "${d3d_pre_intermediate}"
+        [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+        [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+        return 1
+      fi
+      src="${d3d_pre_intermediate}"
+      vf_chain=()
+    fi
+
+    # Resolve an absolute path for Deep3D scripts (they cd into DEEP3D_DIR).
+    local d3d_abs_src
+    d3d_abs_src="$(realpath "${src}" 2>/dev/null || readlink -f "${src}" 2>/dev/null || echo "${src}")"
+
+    # Decide where to write the final H.264 output from Deep3D.
+    local d3d_out_temp=""
+    local d3d_encode_target="${output}"
+    if [[ "${do_rife}" -eq 1 || "${DO_VIDEO2X}" -eq 1 ]]; then
+      d3d_out_temp="$(mktemp /tmp/deep3d_out_XXXXXX.mp4)"
+      d3d_encode_target="${d3d_out_temp}"
+    fi
+
+    local d3d_name="stab_$$_${RANDOM}"
+    local d3d_out_avi="${DEEP3D_DIR}/outputs/${d3d_name}/output.avi"
+
+    # Pass 1 — geometry optimisation (depth + pose estimation per frame).
+    printf "    %s %s: %s\n" "$(clr_bold_magenta '⚡')" "${AI_GPU_USING}" "$(clr_magenta "${DEEP3D_GPU_NAME} (CUDA)")"
+    if ! run_deep3d_step "${DEEP3D_STEP_ANALYZE}" "${dur_sec}" \
+        "${d3d_abs_src}" "${d3d_name}" "geometry_optimizer.py"; then
+      rm -rf "${DEEP3D_DIR}/outputs/${d3d_name}"
+      [[ -n "${d3d_pre_intermediate}" ]] && rm -f "${d3d_pre_intermediate}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 1
+    fi
+
+    # Pass 2 — trajectory smoothing + warp rectification.
+    if ! run_deep3d_step "${DEEP3D_STEP_RECTIFY}" "${dur_sec}" \
+        "${d3d_abs_src}" "${d3d_name}" "rectify.py" "--stability" "${DEEP3D_STABILITY}"; then
+      rm -rf "${DEEP3D_DIR}/outputs/${d3d_name}"
+      [[ -n "${d3d_pre_intermediate}" ]] && rm -f "${d3d_pre_intermediate}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 1
+    fi
+
+    # Pass 3 — re-encode Deep3D's MJPG AVI to H.264 + restore original audio.
+    local d3d_encode_args=()
+    if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
+      d3d_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+    else
+      d3d_encode_args=(-c:v libx264 -preset faster -crf 23 -c:a copy)
+    fi
+
+    if ! run_ffmpeg_step "${DEEP3D_STEP_ENCODE}" "${dur_sec}" \
+        -i "${d3d_out_avi}" -i "${input}" \
+        -map 0:v -map 1:a? \
+        "${d3d_encode_args[@]}" \
+        "${d3d_encode_target}"; then
+      rm -rf "${DEEP3D_DIR}/outputs/${d3d_name}"
+      [[ -n "${d3d_pre_intermediate}" ]] && rm -f "${d3d_pre_intermediate}"
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 1
+    fi
+
+    rm -rf "${DEEP3D_DIR}/outputs/${d3d_name}"
+    [[ -n "${d3d_pre_intermediate}" ]] && rm -f "${d3d_pre_intermediate}"
+
+    # If no further AI steps, we're done.
+    if [[ "${do_rife}" -eq 0 && "${DO_VIDEO2X}" -eq 0 ]]; then
+      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+      [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+      return 0
+    fi
+
+    # Chain: Deep3D output becomes the new source for RIFE / Video2X.
+    [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+    [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+    intermediate="${d3d_out_temp}"
+    src="${d3d_out_temp}"
+    vf_chain=()
+  fi
+
   # ── RIFE AI FPS interpolation ─────────────────────────────────────────────
   if [[ "${do_rife}" -eq 1 ]]; then
     local rife_in_dir rife_out_dir
@@ -1291,8 +1680,18 @@ process_video() {
     local _rife_src_ext="${src##*.}"; _rife_src_ext="${_rife_src_ext,,}"
     if [[ "${_rife_src_ext}" == "mpg" || "${_rife_src_ext}" == "mpeg" || "${_rife_src_ext}" == "m2v" || "${_rife_src_ext}" == "vob" ]]; then
       rife_mpg_intermediate="$(mktemp /tmp/edit_videos_rife_mpg_XXXXXX.mp4)"
+      local _rife_pre_input=() _rife_pre_vf_args=() _rife_pre_codec=()
+      if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
+        _rife_pre_codec=(-c:v h264_nvenc -preset p1 -cq 18 -c:a copy)
+      elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
+        _rife_pre_input=(-vaapi_device /dev/dri/renderD128)
+        _rife_pre_vf_args=(-vf "format=nv12,hwupload")
+        _rife_pre_codec=(-c:v h264_vaapi -qp 18 -c:a copy)
+      else
+        _rife_pre_codec=(-c:v libx264 -preset ultrafast -crf 18 -c:a copy)
+      fi
       if ! run_ffmpeg_step "${RIFE_MPG_PRECONVERT}" "${dur_sec}" \
-          -i "${src}" -c:v libx264 -preset ultrafast -crf 18 -c:a copy "${rife_mpg_intermediate}"; then
+          "${_rife_pre_input[@]}" -i "${src}" "${_rife_pre_vf_args[@]}" "${_rife_pre_codec[@]}" "${rife_mpg_intermediate}"; then
         rm -f "${rife_mpg_intermediate}"
         rm -rf "${rife_in_dir}" "${rife_out_dir}"
         [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
@@ -1329,6 +1728,8 @@ process_video() {
     fi
 
     # Step 2 — RIFE interpolation.
+    [[ -n "${VULKAN_GPU_LABEL}" ]] && \
+      printf "    %s %s: %s\n" "$(clr_bold_magenta '⚡')" "${AI_GPU_USING}" "$(clr_magenta "${VULKAN_GPU_LABEL}")"
     if ! run_rife_step "${RIFE_STEP_INTERP}" "${rife_in_dir}" "${rife_out_dir}" "${rife_multiplier}"; then
       rm -rf "${rife_in_dir}" "${rife_out_dir}"
       [[ -n "${rife_mpg_intermediate}" ]] && rm -f "${rife_mpg_intermediate}"
@@ -1399,8 +1800,18 @@ process_video() {
     local _src_ext="${src##*.}"; _src_ext="${_src_ext,,}"
     if [[ "${_src_ext}" == "mpg" || "${_src_ext}" == "mpeg" || "${_src_ext}" == "m2v" || "${_src_ext}" == "vob" ]]; then
       mpg_intermediate="$(mktemp /tmp/edit_videos_mpg_XXXXXX.mp4)"
+      local _v2x_pre_input=() _v2x_pre_vf_args=() _v2x_pre_codec=()
+      if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
+        _v2x_pre_codec=(-c:v h264_nvenc -preset p1 -cq 18 -c:a copy)
+      elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
+        _v2x_pre_input=(-vaapi_device /dev/dri/renderD128)
+        _v2x_pre_vf_args=(-vf "format=nv12,hwupload")
+        _v2x_pre_codec=(-c:v h264_vaapi -qp 18 -c:a copy)
+      else
+        _v2x_pre_codec=(-c:v libx264 -preset ultrafast -crf 18 -c:a copy)
+      fi
       if ! run_ffmpeg_step "${VIDEO2X_MPG_PRECONVERT}" "${dur_sec}" \
-          -i "${src}" -c:v libx264 -preset ultrafast -crf 18 -c:a copy "${mpg_intermediate}"; then
+          "${_v2x_pre_input[@]}" -i "${src}" "${_v2x_pre_vf_args[@]}" "${_v2x_pre_codec[@]}" "${mpg_intermediate}"; then
         rm -f "${mpg_intermediate}"
         rm -rf "${esrgan_in_dir}" "${esrgan_out_dir}"
         [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
@@ -1438,6 +1849,8 @@ process_video() {
     local in_count; in_count="$(find "${esrgan_in_dir}" -maxdepth 1 -name '*.png' 2>/dev/null | wc -l)"
 
     # Step 2 — Real-ESRGAN upscale with frame-count progress bar
+    [[ -n "${VULKAN_GPU_LABEL}" ]] && \
+      printf "    %s %s: %s\n" "$(clr_bold_magenta '⚡')" "${AI_GPU_USING}" "$(clr_magenta "${VULKAN_GPU_LABEL}")"
     if ! run_video2x_step "${VIDEO2X_STEP_UPSCALE}" "${esrgan_in_dir}" "${esrgan_out_dir}" "${VIDEO2X_SCALE}" "${VIDEO2X_MODEL}" "${in_count}"; then
       rm -rf "${esrgan_in_dir}" "${esrgan_out_dir}"
       [[ -n "${mpg_intermediate}" ]] && rm -f "${mpg_intermediate}"
@@ -1679,6 +2092,14 @@ main() {
   fi
   echo ""
 
+  # ── AI GPU detection (Vulkan + CUDA) — must run before action selector ───
+  detect_vulkan_gpus && HAS_VULKAN_GPU=1 || HAS_VULKAN_GPU=0
+  HAS_CUDA_GPU=0
+  if command -v nvidia-smi &>/dev/null && nvidia-smi &>/dev/null 2>&1; then
+    HAS_CUDA_GPU=1
+  fi
+  echo ""
+
   # ── Folder selection ─────────────────────────────────────────────────────
   local folder=""
   while true; do
@@ -1767,12 +2188,18 @@ main() {
     "${ACTION_COLOR}"
     "${ACTION_RIFE}"
     "${ACTION_VIDEO2X}"
+    "${ACTION_DEEP3D}"
   )
-  _CB_SEL=(0 0 0 0 0 0 0 0 0 0 0)
+  _CB_SEL=(0 0 0 0 0 0 0 0 0 0 0 0)
+  # Indices 9 (RIFE) and 10 (Video2X) require Vulkan; index 11 (Deep3D) requires CUDA.
+  local _dis_vulkan=0 _dis_cuda=0
+  [[ "${HAS_VULKAN_GPU}" -eq 0 ]] && _dis_vulkan=1
+  [[ "${HAS_CUDA_GPU}" -eq 0 ]]   && _dis_cuda=1
+  _CB_DISABLED=(0 0 0 0 0 0 0 0 0 "${_dis_vulkan}" "${_dis_vulkan}" "${_dis_cuda}")
   interactive_checkbox
 
   local do_black_bars=0 do_fps=0 do_h264=0 do_stab=0
-  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_DOWNSIZE=0; DO_COLOR=0; DO_RIFE=0; DO_VIDEO2X=0
+  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_DOWNSIZE=0; DO_COLOR=0; DO_RIFE=0; DO_VIDEO2X=0; DO_DEEP3D=0
   for idx in "${SELECTED_INDICES[@]}"; do
     case "${idx}" in
       0) do_black_bars=1 ;;
@@ -1786,12 +2213,13 @@ main() {
       8) DO_COLOR=1 ;;
       9) DO_RIFE=1 ;;
       10) DO_VIDEO2X=1 ;;
+      11) DO_DEEP3D=1 ;;
     esac
   done
 
   if [[ "${do_black_bars}" -eq 0 && "${do_fps}" -eq 0 && "${do_h264}" -eq 0 && "${do_stab}" -eq 0 && \
         "${DO_DENOISE}" -eq 0 && "${DO_SHARPEN}" -eq 0 && "${DO_UPSCALE}" -eq 0 && "${DO_DOWNSIZE}" -eq 0 && \
-        "${DO_COLOR}" -eq 0 && "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 ]]; then
+        "${DO_COLOR}" -eq 0 && "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 && "${DO_DEEP3D}" -eq 0 ]]; then
     printf "\n  %s\n\n" "$(clr_yellow "${NO_ACTIONS_SELECTED}")"
     exit 0
   fi
@@ -1802,7 +2230,7 @@ main() {
     printf "  %s\n" "$(clr_dim "${RIFE_CHECK}")"
     if check_rife; then
       find_rife_model
-      printf "  %s %s: %s (model: %s)\n\n" \
+      printf "  %s %s: %s (model: %s)\n" \
         "$(clr_bold_green '✓')" "${RIFE_FOUND}" "$(clr_dim "${RIFE_BIN}")" "$(clr_cyan "${RIFE_MODEL}")"
     else
       printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "${RIFE_NOT_FOUND}"
@@ -1820,13 +2248,21 @@ main() {
         DO_RIFE=0
       fi
     fi
+    if [[ "${DO_RIFE}" -eq 1 ]]; then
+      detect_vulkan_gpus
+      if [[ -n "${VULKAN_GPU_LABEL}" ]]; then
+        printf "  %s %s: %s\n\n" "$(clr_bold_magenta '⚡')" "${AI_GPU_HINT}" "$(clr_magenta "${VULKAN_GPU_LABEL}")"
+      else
+        printf "  %s %s\n\n" "$(clr_dim '○')" "$(clr_dim "${AI_GPU_NONE}")"
+      fi
+    fi
   fi
 
   # ── Video2X check / bootstrap ─────────────────────────────────────────────
   if [[ "${DO_VIDEO2X}" -eq 1 ]]; then
     printf "  %s\n" "$(clr_dim "${VIDEO2X_CHECK}")"
     if check_video2x; then
-      printf "  %s %s: %s\n\n" \
+      printf "  %s %s: %s\n" \
         "$(clr_bold_green '✓')" "${VIDEO2X_FOUND}" "$(clr_dim "${VIDEO2X_BIN}")"
     else
       printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "${VIDEO2X_NOT_FOUND}"
@@ -1842,6 +2278,38 @@ main() {
       else
         printf "  %s video2x disabled — continuing without AI upscale.\n\n" "$(clr_yellow '⚠')"
         DO_VIDEO2X=0
+      fi
+    fi
+    if [[ "${DO_VIDEO2X}" -eq 1 ]]; then
+      detect_vulkan_gpus
+      if [[ -n "${VULKAN_GPU_LABEL}" ]]; then
+        printf "  %s %s: %s\n\n" "$(clr_bold_magenta '⚡')" "${AI_GPU_HINT}" "$(clr_magenta "${VULKAN_GPU_LABEL}")"
+      else
+        printf "  %s %s\n\n" "$(clr_dim '○')" "$(clr_dim "${AI_GPU_NONE}")"
+      fi
+    fi
+  fi
+
+  # ── Deep3D check / bootstrap ─────────────────────────────────────────────
+  if [[ "${DO_DEEP3D}" -eq 1 ]]; then
+    printf "  %s\n" "$(clr_dim "${DEEP3D_CHECK}")"
+    if check_deep3d; then
+      printf "  %s %s: %s\n\n" \
+        "$(clr_bold_green '✓')" "${DEEP3D_FOUND}" "$(clr_dim "${DEEP3D_DIR}")"
+    else
+      printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "${DEEP3D_NOT_FOUND}"
+      echo ""
+      printf "  %s [y/n] (y): " "$(clr_bold "Install Deep3D automatically?")"
+      local d3d_dl_ans; read -r d3d_dl_ans; d3d_dl_ans="${d3d_dl_ans:-y}"
+      echo ""
+      if [[ "${d3d_dl_ans,,}" == y* ]]; then
+        if ! bootstrap_deep3d; then
+          printf "  %s Deep3D disabled — skipping AI stabilization.\n\n" "$(clr_yellow '⚠')"
+          DO_DEEP3D=0
+        fi
+      else
+        printf "  %s Deep3D disabled — continuing without AI stabilization.\n\n" "$(clr_yellow '⚠')"
+        DO_DEEP3D=0
       fi
     fi
   fi
@@ -1996,6 +2464,30 @@ main() {
       *)                            VIDEO2X_MODEL="realesr-animevideov3" ;;
     esac
   fi
+
+  if [[ "${DO_DEEP3D}" -eq 1 ]]; then
+    printf "  %s\n" "$(clr_yellow "⚠  ${DEEP3D_DISK_WARN}")"
+    # Always use CUDA — Deep3D is only selectable when HAS_CUDA_GPU=1.
+    # Confirm the GPU name from the venv's PyTorch for the display label.
+    local _d3d_cuda_name=""
+    if "${DEEP3D_PYTHON}" -c "import torch; exit(0 if torch.cuda.is_available() else 1)" 2>/dev/null; then
+      _d3d_cuda_name="$("${DEEP3D_PYTHON}" -c \
+        "import torch; print(torch.cuda.get_device_name(0))" 2>/dev/null || echo "CUDA GPU")"
+    else
+      # PyTorch not yet built with CUDA in venv — fall back to nvidia-smi name
+      _d3d_cuda_name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null \
+        | head -1 | xargs 2>/dev/null || echo "CUDA GPU")"
+    fi
+    DEEP3D_DEVICE="0"
+    DEEP3D_GPU_NAME="${_d3d_cuda_name}"
+    printf "  %s %s: %s\n\n" "$(clr_bold_magenta '⚡')" "${AI_GPU_HINT}" "$(clr_magenta "${_d3d_cuda_name}")"
+    printf "  %s (12): " "$(clr_bold "${DEEP3D_STABILITY_LABEL}")"
+    local d3d_stab_input; read -r d3d_stab_input
+    DEEP3D_STABILITY="${d3d_stab_input:-12}"
+    if ! [[ "${DEEP3D_STABILITY}" =~ ^[0-9]+$ ]] || [[ "${DEEP3D_STABILITY}" -lt 1 ]]; then
+      DEEP3D_STABILITY=12
+    fi
+  fi
   echo ""
 
   # ── Collect files to process ──────────────────────────────────────────────
@@ -2043,10 +2535,17 @@ main() {
   if [[ "${DO_COLOR}" -eq 1 ]];      then action_list+=("color (c=${COLOR_CONTRAST} b=${COLOR_BRIGHTNESS} s=${COLOR_SATURATION} g=${COLOR_GAMMA})"); fi
   if [[ "${DO_RIFE}" -eq 1 ]];       then action_list+=("RIFE ${RIFE_MULTIPLIER}× (${RIFE_MODEL})"); fi
   if [[ "${DO_VIDEO2X}" -eq 1 ]];   then action_list+=("video2x ${VIDEO2X_SCALE}× (${VIDEO2X_MODEL})"); fi
+  if [[ "${DO_DEEP3D}" -eq 1 ]];    then action_list+=("deep3d (stability=${DEEP3D_STABILITY})"); fi
   local IFS_SAVE="${IFS}"; IFS=', '; printf "%s\n" "$(clr_cyan "${action_list[*]}")"; IFS="${IFS_SAVE}"
 
   if [[ "${use_gpu}" -eq 1 ]]; then
     printf "  %s: %s\n" "$(clr_bold_magenta 'GPU')" "$(clr_magenta "${GPU_LABEL}")"
+  fi
+  if [[ ("${DO_RIFE}" -eq 1 || "${DO_VIDEO2X}" -eq 1) && -n "${VULKAN_GPU_LABEL}" ]]; then
+    printf "  %s: %s\n" "$(clr_bold_magenta 'AI GPU')" "$(clr_magenta "${VULKAN_GPU_LABEL}")"
+  fi
+  if [[ "${DO_DEEP3D}" -eq 1 && -n "${DEEP3D_GPU_NAME}" ]]; then
+    printf "  %s: %s\n" "$(clr_bold_magenta 'AI GPU')" "$(clr_magenta "${DEEP3D_GPU_NAME} (CUDA)")"
   fi
   printf "  %s: %s\n" "$(clr_dim "${THREADS_LABEL}")" "$(clr_dim "${THREAD_COUNT}")"
   echo "  ${divider}"
