@@ -156,6 +156,11 @@ setup_strings() {
     RIFE_STEP_INTERP="Interpolando fotogramas (RIFE)"
     RIFE_STEP_ENCODE="Recodificando video interpolado"
     RIFE_MPG_PRECONVERT="Pre-convirtiendo MPG/MPEG a MP4 para interpolación con RIFE"
+    BTBN_REQUIRED_MSG="FFmpeg del sistema no es compatible. Este script requiere FFmpeg BtbN (compilación estática con soporte GPU)."
+    BTBN_REQUIRED_TITLE="Por qué se requiere FFmpeg BtbN:"
+    BTBN_REQUIRED_REASON="Los binarios BtbN incluyen NVENC/VAAPI y todos los filtros de CPU (vidstab, zscale, etc.) en un solo ejecutable estático portátil."
+    BTBN_DOWNLOAD_PROMPT="¿Descargar FFmpeg BtbN automáticamente?"
+    BTBN_DECLINED_MSG="Se requiere FFmpeg BtbN para ejecutar este script. Descárgalo en: https://github.com/BtbN/FFmpeg-Builds/releases"
     ACTION_DOWNSIZE="Reducir resolución (scale+lanczos)"
     DOWNSIZE_TARGET_LABEL="Resolución máxima [480, 720, 1080, 1440, 2160 o AnchoxAlto]"
     DOWNSIZE_SKIP_MSG="Resolución ya es igual o inferior al objetivo, se omite la reducción"
@@ -191,6 +196,12 @@ setup_strings() {
     GPU_REQUIRED_LABEL="requiere GPU"
     AI_VULKAN_REQUIRED="Requiere GPU Vulkan (no disponible en este sistema)"
     AI_CUDA_REQUIRED="Requiere GPU CUDA (no disponible en este sistema)"
+    CODEC_SELECT_LABEL="Códec de salida"
+    CODEC_H264_OPTION="H.264 (AVC) — compatible con todos los reproductores"
+    CODEC_H265_OPTION="H.265 (HEVC) — archivos ~40% más pequeños, requiere reproductores modernos"
+    CODEC_H265_NO_GPU="Codificador GPU H.265 no disponible — se usará CPU (libx265)"
+    CODEC_H265_NO_ENC="H.265 (libx265) no disponible en este FFmpeg — se usará H.264"
+    ACTION_H265="Convertir a H.265 (HEVC)"
   else
     WELCOME="FFmpeg Video Editor"
     SUBTITLE="Batch-process videos with FFmpeg filters."
@@ -294,6 +305,11 @@ setup_strings() {
     RIFE_STEP_INTERP="Interpolating frames (RIFE)"
     RIFE_STEP_ENCODE="Re-encoding interpolated video"
     RIFE_MPG_PRECONVERT="Pre-converting MPG/MPEG to MP4 for RIFE interpolation"
+    BTBN_REQUIRED_MSG="System FFmpeg is no longer supported. This script requires BtbN FFmpeg (GPU-capable static build)."
+    BTBN_REQUIRED_TITLE="Why BtbN FFmpeg is required:"
+    BTBN_REQUIRED_REASON="BtbN builds include NVENC/VAAPI and all CPU filters (vidstab, zscale, etc.) in a single portable static binary."
+    BTBN_DOWNLOAD_PROMPT="Download BtbN FFmpeg automatically?"
+    BTBN_DECLINED_MSG="BtbN FFmpeg is required to run this script. Download it at: https://github.com/BtbN/FFmpeg-Builds/releases"
     ACTION_DOWNSIZE="Downsize resolution (scale+lanczos)"
     DOWNSIZE_TARGET_LABEL="Maximum resolution [480, 720, 1080, 1440, 2160 or WxH]"
     DOWNSIZE_SKIP_MSG="Already at or below target resolution, skipping downsize"
@@ -329,6 +345,12 @@ setup_strings() {
     GPU_REQUIRED_LABEL="requires GPU"
     AI_VULKAN_REQUIRED="Requires Vulkan GPU (not available on this system)"
     AI_CUDA_REQUIRED="Requires CUDA GPU (not available on this system)"
+    CODEC_SELECT_LABEL="Output codec"
+    CODEC_H264_OPTION="H.264 (AVC) — compatible with all players"
+    CODEC_H265_OPTION="H.265 (HEVC) — ~40% smaller files, requires modern players"
+    CODEC_H265_NO_GPU="H.265 GPU encoder not available — using CPU (libx265)"
+    CODEC_H265_NO_ENC="H.265 (libx265) not available in this FFmpeg build — falling back to H.264"
+    ACTION_H265="Convert to H.265 (HEVC)"
   fi
 }
 
@@ -458,6 +480,85 @@ interactive_checkbox() {
   done
 }
 
+# ── Interactive radio button ──────────────────────────────────────────────────
+# Like interactive_checkbox but single-select. Uses same _CB_LABELS / _CB_SEL globals.
+# Set exactly one entry in _CB_SEL to 1 before calling to set the default.
+# Result: SELECTED_INDICES[0] holds the chosen index.
+
+_rb_render() {
+  local j num="${#_CB_LABELS[@]}"
+  for ((j=0; j<num; j++)); do
+    local lbl="${_CB_LABELS[$j]}"
+    local is_sel="${_CB_SEL[$j]}"
+    local radio pointer label_str
+    if [[ "${is_sel}" -eq 1 ]]; then
+      radio="$(clr_bold_cyan '(●)')"
+      if [[ $j -eq $_CB_CURSOR ]]; then
+        pointer="$(clr_cyan '▶')"; label_str="$(clr_bold_cyan "${lbl}")"
+      else
+        pointer=" "; label_str="${lbl}"
+      fi
+    else
+      radio="$(clr_dim '(○)')"
+      if [[ $j -eq $_CB_CURSOR ]]; then
+        pointer="$(clr_cyan '▶')"; label_str="$(clr_bold_cyan "${lbl}")"
+      else
+        pointer=" "; label_str="$(clr_dim "${lbl}")"
+      fi
+    fi
+    printf "  %s %s %s\n" "${pointer}" "${radio}" "${label_str}"
+  done
+}
+
+interactive_radio() {
+  local num="${#_CB_LABELS[@]}"
+  _CB_CURSOR=0
+  local i
+  for ((i=0; i<num; i++)); do
+    if [[ "${_CB_SEL[$i]}" -eq 1 ]]; then _CB_CURSOR=$i; break; fi
+  done
+
+  _rb_render
+  printf '\033[?25l'
+
+  while true; do
+    local key esc
+    IFS= read -r -s -n1 key 2>/dev/null || key=""
+
+    if [[ "${key}" == $'\x1b' ]]; then
+      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
+      if [[ "${esc}" == '[' ]]; then
+        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
+        if [[ "${key}" == 'A' ]]; then
+          _CB_CURSOR=$(( (_CB_CURSOR - 1 + num) % num ))
+          printf "\033[%dA" "${num}"; _rb_render
+        elif [[ "${key}" == 'B' ]]; then
+          _CB_CURSOR=$(( (_CB_CURSOR + 1) % num ))
+          printf "\033[%dA" "${num}"; _rb_render
+        fi
+      fi
+      continue
+    fi
+
+    if [[ "${key}" == $'\r' || "${key}" == $'\n' || "${key}" == '' ]]; then break; fi
+    if [[ "${key}" == $'\x03' || "${key}" == $'\x04' ]]; then printf '\033[?25h'; echo ""; exit 0; fi
+
+    if [[ "${key}" == ' ' ]]; then
+      for ((i=0; i<num; i++)); do _CB_SEL[$i]=0; done
+      _CB_SEL[$_CB_CURSOR]=1
+      printf "\033[%dA" "${num}"; _rb_render
+      continue
+    fi
+  done
+
+  printf '\033[?25h'; echo ""
+
+  SELECTED_INDICES=()
+  for ((i=0; i<num; i++)); do
+    if [[ "${_CB_SEL[$i]}" -eq 1 ]]; then SELECTED_INDICES+=("$i"); break; fi
+  done
+}
+
 # ── Background mode / logging ─────────────────────────────────────────────────
 
 BG_MODE=0
@@ -503,6 +604,7 @@ DEEP3D_PYTHON="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/venv/bi
 
 # ── GPU Detection ─────────────────────────────────────────────────────────────
 
+USE_H265=0
 GPU_ENCODER=""
 GPU_LABEL=""
 VULKAN_GPU_LABEL=""
@@ -520,23 +622,23 @@ _has_encoder() {
 
 _switch_to_system_ffmpeg_or_redownload() {
   # The cached binary lacks NVENC/VAAPI.  Offer to re-download a GPU-capable
-  # build (BtbN) if one is available for this arch; otherwise use system ffmpeg.
+  # BtbN build.  System ffmpeg is no longer a supported fallback.
   local btbn_asset; btbn_asset="$(_btbn_asset)"
   if [[ -n "${btbn_asset}" ]]; then
     printf "  %s  %s\n" "$(clr_bold_yellow '⚠')" \
-      "$(clr_yellow "Cached FFmpeg build lacks GPU encoders.")" 
-    printf "  %s [y/n] (y): " "$(clr_bold "Re-download a GPU-capable FFmpeg build (BtbN)?")"
+      "$(clr_yellow "Cached FFmpeg build lacks GPU encoders.")"
+    printf "  %s [y/n] (y): " "$(clr_bold "Re-download a GPU-capable BtbN FFmpeg build?")"
     local _ans; read -r _ans; _ans="${_ans:-y}"
     if [[ "${_ans,,}" == y* ]]; then
       bootstrap_ffmpeg
       return 0
     fi
   fi
-  # Fall back to system ffmpeg for GPU encoding.
-  printf "  %s  %s\n" "$(clr_dim '→')" \
-    "$(clr_dim "Using system ffmpeg for GPU encoding.")"
-  FFMPEG_BIN="ffmpeg"
-  FFPROBE_BIN="ffprobe"
+  # User declined re-download: disable GPU encoding rather than fall back to system ffmpeg.
+  printf "  %s  %s\n" "$(clr_bold_yellow '⚠')" \
+    "$(clr_yellow "GPU encoding disabled — BtbN FFmpeg required for hardware acceleration.")"
+  GPU_ENCODER=""
+  return 1
 }
 
 detect_gpu() {
@@ -1781,17 +1883,31 @@ process_video() {
       return 1
     fi
 
-    # Pass 3 — re-encode Deep3D's MJPG AVI to H.264 + restore original audio.
-    local d3d_encode_args=()
+    # Pass 3 — re-encode Deep3D's MJPG AVI + restore original audio.
+    local d3d_encode_args=() d3d_enc_pre_input_args=() d3d_enc_vf_args=()
     if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
       d3d_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_nvenc" ]]; then
+      d3d_encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
+      d3d_enc_pre_input_args=(-vaapi_device /dev/dri/renderD128)
+      d3d_enc_vf_args=(-vf "format=nv12,hwupload")
+      d3d_encode_args=(-c:v h264_vaapi -qp 23 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_vaapi" ]]; then
+      d3d_enc_pre_input_args=(-vaapi_device /dev/dri/renderD128)
+      d3d_enc_vf_args=(-vf "format=nv12,hwupload")
+      d3d_encode_args=(-c:v hevc_vaapi -qp 28 -c:a copy)
+    elif [[ "${USE_H265}" -eq 1 ]]; then
+      d3d_encode_args=(-c:v libx265 -preset faster -crf 28 -c:a copy)
     else
       d3d_encode_args=(-c:v libx264 -preset faster -crf 23 -c:a copy)
     fi
 
     if ! run_ffmpeg_step "${DEEP3D_STEP_ENCODE}" "${dur_sec}" \
+        "${d3d_enc_pre_input_args[@]}" \
         -i "${d3d_out_avi}" -i "${input}" \
         -map 0:v -map 1:a? \
+        "${d3d_enc_vf_args[@]}" \
         "${d3d_encode_args[@]}" \
         "${d3d_encode_target}"; then
       rm -rf "${DEEP3D_DIR}/outputs/${d3d_name}"
@@ -1895,9 +2011,21 @@ process_video() {
     # Step 3 — re-encode interpolated frames + audio from original input.
     # When Real-ESRGAN is also selected, write to a temp file so VIDEO2X
     # can upscale the interpolated result afterwards.
-    local rife_encode_args=()
+    local rife_encode_args=() rife_enc_pre_input_args=() rife_enc_vf_args=()
     if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
       rife_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_nvenc" ]]; then
+      rife_encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
+      rife_enc_pre_input_args=(-vaapi_device /dev/dri/renderD128)
+      rife_enc_vf_args=(-vf "format=nv12,hwupload")
+      rife_encode_args=(-c:v h264_vaapi -qp 23 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_vaapi" ]]; then
+      rife_enc_pre_input_args=(-vaapi_device /dev/dri/renderD128)
+      rife_enc_vf_args=(-vf "format=nv12,hwupload")
+      rife_encode_args=(-c:v hevc_vaapi -qp 28 -c:a copy)
+    elif [[ "${USE_H265}" -eq 1 ]]; then
+      rife_encode_args=(-c:v libx265 -preset faster -crf 28 -c:a copy)
     else
       rife_encode_args=(-c:v libx264 -preset faster -crf 23 -c:a copy)
     fi
@@ -1911,9 +2039,11 @@ process_video() {
 
     local rife_out_dur="${dur_sec}"
     if ! run_ffmpeg_step "${RIFE_STEP_ENCODE}" "${rife_out_dur}" \
+        "${rife_enc_pre_input_args[@]}" \
         -framerate "${out_fps}" -i "${rife_out_dir}/%08d.png" \
         -i "${input}" \
         -map 0:v -map 1:a? \
+        "${rife_enc_vf_args[@]}" \
         "${rife_encode_args[@]}" \
         "${rife_encode_target}"; then
       rm -rf "${rife_out_dir}"
@@ -2014,17 +2144,31 @@ process_video() {
     rm -rf "${esrgan_in_dir}"
 
     # Step 3 — reassemble upscaled frames with original audio
-    local esrgan_encode_args=()
+    local esrgan_encode_args=() esrgan_enc_pre_input_args=() esrgan_enc_vf_args=()
     if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
       esrgan_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_nvenc" ]]; then
+      esrgan_encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
+      esrgan_enc_pre_input_args=(-vaapi_device /dev/dri/renderD128)
+      esrgan_enc_vf_args=(-vf "format=nv12,hwupload")
+      esrgan_encode_args=(-c:v h264_vaapi -qp 23 -c:a copy)
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_vaapi" ]]; then
+      esrgan_enc_pre_input_args=(-vaapi_device /dev/dri/renderD128)
+      esrgan_enc_vf_args=(-vf "format=nv12,hwupload")
+      esrgan_encode_args=(-c:v hevc_vaapi -qp 28 -c:a copy)
+    elif [[ "${USE_H265}" -eq 1 ]]; then
+      esrgan_encode_args=(-c:v libx265 -preset faster -crf 28 -c:a copy)
     else
       esrgan_encode_args=(-c:v libx264 -preset faster -crf 23 -c:a copy)
     fi
 
     if ! run_ffmpeg_step "${VIDEO2X_STEP_ENCODE}" "${dur_sec}" \
+        "${esrgan_enc_pre_input_args[@]}" \
         -framerate "${src_fps}" -i "${esrgan_out_dir}/%08d.png" \
         -i "${input}" \
         -map 0:v -map 1:a? \
+        "${esrgan_enc_vf_args[@]}" \
         "${esrgan_encode_args[@]}" \
         "${output}"; then
       rm -rf "${esrgan_out_dir}"
@@ -2053,11 +2197,22 @@ process_video() {
       # NVENC: CPU filters → NVENC encode. No special filter needed.
       encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
 
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_nvenc" ]]; then
+      encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -c:a copy)
+
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
       # VA-API: all CPU filters run first, then upload frames to GPU via hwupload.
       pre_input_args=(-vaapi_device /dev/dri/renderD128)
       vf_chain+=("format=nv12" "hwupload")
       encode_args=(-c:v h264_vaapi -qp 23 -c:a copy)
+
+    elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_vaapi" ]]; then
+      pre_input_args=(-vaapi_device /dev/dri/renderD128)
+      vf_chain+=("format=nv12" "hwupload")
+      encode_args=(-c:v hevc_vaapi -qp 28 -c:a copy)
+
+    elif [[ "${USE_H265}" -eq 1 ]]; then
+      encode_args=(-c:v libx265 -preset faster -crf 28 -c:a copy)
 
     else
       # CPU: libx264
@@ -2183,56 +2338,33 @@ main() {
   clear
   print_header
 
-  # ── FFmpeg check ────────────────────────────────────────────────────────
-
-  # If a previously-downloaded static binary exists, prefer it.
-  if [[ -x "${FFMPEG_LOCAL_DIR}/ffmpeg" ]]; then
-    FFMPEG_BIN="${FFMPEG_LOCAL_DIR}/ffmpeg"
-    FFPROBE_BIN="${FFMPEG_LOCAL_DIR}/ffprobe"
-  fi
+  # ── FFmpeg check (BtbN required — system ffmpeg is not supported) ────────
 
   printf "  %s\n" "$(clr_dim "${FFMPEG_CHECK}")"
 
-  local ffmpeg_ver major_ver
-  if command -v "${FFMPEG_BIN}" &>/dev/null || [[ -x "${FFMPEG_BIN}" ]]; then
+  local ffmpeg_ver
+  if [[ -x "${FFMPEG_LOCAL_DIR}/ffmpeg" ]]; then
+    # Previously-downloaded BtbN binary found — use it.
+    FFMPEG_BIN="${FFMPEG_LOCAL_DIR}/ffmpeg"
+    FFPROBE_BIN="${FFMPEG_LOCAL_DIR}/ffprobe"
     ffmpeg_ver="$("${FFMPEG_BIN}" -version 2>/dev/null | head -1 | sed 's/ffmpeg version //')"
+    printf "  %s %s: %s\n\n" "$(clr_bold_green '✓')" "${FFMPEG_FOUND}" "$(clr_dim "${ffmpeg_ver}")"
   else
-    ffmpeg_ver=""
-  fi
-
-  # Git builds (start with N-) are cutting-edge; treat as current.
-  if [[ "${ffmpeg_ver}" =~ ^N- ]]; then
-    major_ver=99
-  elif [[ "${ffmpeg_ver}" =~ ^([0-9]+) ]]; then
-    major_ver="${BASH_REMATCH[1]}"
-  else
-    major_ver=0
-  fi
-
-  if [[ -z "${ffmpeg_ver}" || "${major_ver}" -lt 7 ]]; then
-    if [[ -z "${ffmpeg_ver}" ]]; then
-      printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "${FFMPEG_NOT_FOUND}"
-    else
-      printf "  %s %s: %s\n" "$(clr_bold_yellow '⚠')" "${FFMPEG_OLD_VERSION}" "$(clr_dim "${ffmpeg_ver}")"
-      printf "  %s\n" "$(clr_yellow "${FFMPEG_MIN_VERSION}")"
-    fi
+    # No BtbN binary cached — it is mandatory.
+    printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "$(clr_yellow "${BTBN_REQUIRED_MSG}")"
+    printf "  %s %s\n" "$(clr_dim '→')" "$(clr_dim "${BTBN_REQUIRED_REASON}")"
     echo ""
-    printf "  %s [y/n] (y): " "$(clr_bold "Download a static FFmpeg binary automatically?")"
+    printf "  %s [y/n] (y): " "$(clr_bold "${BTBN_DOWNLOAD_PROMPT}")"
     local dl_ans; read -r dl_ans; dl_ans="${dl_ans:-y}"
     if [[ "${dl_ans,,}" == y* ]]; then
       bootstrap_ffmpeg
       ffmpeg_ver="$("${FFMPEG_BIN}" -version 2>/dev/null | head -1 | sed 's/ffmpeg version //')"
+      printf "  %s %s: %s\n\n" "$(clr_bold_green '✓')" "${FFMPEG_FOUND}" "$(clr_dim "${ffmpeg_ver}")"
     else
-      if [[ -z "${ffmpeg_ver}" ]]; then
-        printf "  %s %s\n\n" "$(clr_bold_red '✗')" "${FFMPEG_NOT_FOUND}"
-        exit 1
-      fi
-      # Outdated but user declined — continue with a warning.
-      printf "  %s\n\n" "$(clr_yellow "Continuing with outdated FFmpeg. Results may vary.")"
+      printf "  %s %s\n\n" "$(clr_bold_red '✗')" "${BTBN_DECLINED_MSG}"
+      exit 1
     fi
   fi
-
-  printf "  %s %s: %s\n\n" "$(clr_bold_green '✓')" "${FFMPEG_FOUND}" "$(clr_dim "${ffmpeg_ver}")"
 
   # ── GPU detection ────────────────────────────────────────────────────────
   local use_gpu=0
@@ -2372,6 +2504,42 @@ main() {
         "${DO_COLOR}" -eq 0 && "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 && "${DO_DEEP3D}" -eq 0 ]]; then
     printf "\n  %s\n\n" "$(clr_yellow "${NO_ACTIONS_SELECTED}")"
     exit 0
+  fi
+  echo ""
+
+  # ── Codec selection ───────────────────────────────────────────────────────
+  printf "  %s\n" "$(clr_bold "${CODEC_SELECT_LABEL}:")"
+  printf "  %s\n\n" "$(clr_dim "↑↓ ${CB_PROMPT##*↑↓ }")"
+  _CB_LABELS=("${CODEC_H264_OPTION}" "${CODEC_H265_OPTION}")
+  _CB_SEL=(1 0)
+  _CB_DISABLED=(0 0)
+  interactive_radio
+
+  if [[ "${SELECTED_INDICES[0]:-0}" -eq 1 ]]; then
+    USE_H265=1
+    # Upgrade GPU_ENCODER to the H.265 equivalent when available.
+    if [[ "${GPU_ENCODER}" == "h264_nvenc" ]]; then
+      if _has_encoder "${FFMPEG_BIN}" 'hevc_nvenc'; then
+        GPU_ENCODER="hevc_nvenc"
+        GPU_LABEL="${GPU_LABEL/h264_nvenc/hevc_nvenc}"
+      else
+        printf "  %s  %s\n\n" "$(clr_bold_yellow '⚠')" "$(clr_yellow "${CODEC_H265_NO_GPU}")"
+        use_gpu=0; GPU_ENCODER=""; GPU_LABEL=""
+      fi
+    elif [[ "${GPU_ENCODER}" == "h264_vaapi" ]]; then
+      if _has_encoder "${FFMPEG_BIN}" 'hevc_vaapi'; then
+        GPU_ENCODER="hevc_vaapi"
+        GPU_LABEL="${GPU_LABEL/h264_vaapi/hevc_vaapi}"
+      else
+        printf "  %s  %s\n\n" "$(clr_bold_yellow '⚠')" "$(clr_yellow "${CODEC_H265_NO_GPU}")"
+        use_gpu=0; GPU_ENCODER=""; GPU_LABEL=""
+      fi
+    fi
+    # Verify CPU encoder is available (covers no-GPU path and GPU fallback above).
+    if [[ "${use_gpu}" -eq 0 ]] && ! _has_encoder "${FFMPEG_BIN}" 'libx265'; then
+      printf "  %s  %s\n\n" "$(clr_bold_yellow '⚠')" "$(clr_yellow "${CODEC_H265_NO_ENC}")"
+      USE_H265=0
+    fi
   fi
   echo ""
 
