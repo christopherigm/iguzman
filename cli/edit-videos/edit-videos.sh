@@ -2,7 +2,7 @@
 # edit-videos.sh
 #
 # Interactive FFmpeg batch video editor.
-# Actions: Remove black bars, Interpolate FPS, Convert to H.264, Video stabilization, Downsize resolution.
+# Actions: Remove black bars, Interpolate FPS, Convert to H.264, Video stabilization, Downsize resolution, Convert MPG to MP4.
 #
 # Run: bash cli/edit-videos/edit-videos.sh
 
@@ -238,6 +238,9 @@ setup_strings() {
     CODEC_H265_OPTION="H.265 (HEVC) — archivos ~40% más pequeños, requiere reproductores modernos"
     CODEC_H265_NO_GPU="Codificador GPU H.265 no disponible — se usará CPU (libx265)"
     CODEC_H265_NO_ENC="H.265 (libx265) no disponible en este FFmpeg — se usará H.264"
+    ACTION_MPG_TO_MP4="Convertir MPG/MPEG a MP4 (H.264/H.265)"
+    MPG_TO_MP4_PRECONVERT="Convirtiendo MPG/MPEG a MP4"
+    MPG_TO_MP4_SKIP_MSG="No es MPG/MPEG, se omite la conversión"
   else
     WELCOME="FFmpeg Video Editor"
     SUBTITLE="Batch-process videos with FFmpeg filters."
@@ -386,6 +389,9 @@ setup_strings() {
     CODEC_H265_OPTION="H.265 (HEVC) — ~40% smaller files, requires modern players"
     CODEC_H265_NO_GPU="H.265 GPU encoder not available — using CPU (libx265)"
     CODEC_H265_NO_ENC="H.265 (libx265) not available in this FFmpeg build — falling back to H.264"
+    ACTION_MPG_TO_MP4="Convert MPG/MPEG to MP4 (H.264/H.265)"
+    MPG_TO_MP4_PRECONVERT="Converting MPG/MPEG to MP4"
+    MPG_TO_MP4_SKIP_MSG="Not MPG/MPEG, skipping conversion"
   fi
 }
 
@@ -636,6 +642,10 @@ DEEP3D_DEVICE="cpu"
 DEEP3D_GPU_NAME=""
 DEEP3D_DIR="${HOME}/.local/share/edit-videos/deep3d"
 DEEP3D_PYTHON="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/venv/bin/python"
+
+# ── MPG to MP4 globals ────────────────────────────────────────────────────────
+
+DO_MPG_TO_MP4=0
 
 # ── GPU Detection ─────────────────────────────────────────────────────────────
 
@@ -1699,7 +1709,7 @@ process_video() {
   dur_sec="${probe_out%% *}"
 
   # ── Auto-detect HDR / 10-bit; prepend color conversion when re-encoding ──
-  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | do_rife | DO_VIDEO2X | DO_DEEP3D ))
+  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | do_rife | DO_VIDEO2X | DO_DEEP3D | DO_MPG_TO_MP4 ))
   local hdr_type="sdr_8bit"
   if [[ "${do_any}" -eq 1 ]]; then
     printf "    %s\n" "$(clr_dim "${HDR_DETECT}")"
@@ -1972,9 +1982,9 @@ process_video() {
     # Pass 3 — re-encode Deep3D's MJPG AVI + restore original audio.
     local d3d_encode_args=() d3d_enc_pre_input_args=() d3d_enc_vf_args=()
     if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
-      d3d_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+      d3d_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_nvenc" ]]; then
-      d3d_encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -c:a copy)
+      d3d_encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
       d3d_enc_pre_input_args=(-vaapi_device /dev/dri/renderD128)
       d3d_enc_vf_args=(-vf "format=nv12,hwupload")
@@ -2099,9 +2109,9 @@ process_video() {
     # can upscale the interpolated result afterwards.
     local rife_encode_args=() rife_enc_pre_input_args=() rife_enc_vf_args=()
     if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
-      rife_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+      rife_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_nvenc" ]]; then
-      rife_encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -c:a copy)
+      rife_encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
       rife_enc_pre_input_args=(-vaapi_device /dev/dri/renderD128)
       rife_enc_vf_args=(-vf "format=nv12,hwupload")
@@ -2232,9 +2242,9 @@ process_video() {
     # Step 3 — reassemble upscaled frames with original audio
     local esrgan_encode_args=() esrgan_enc_pre_input_args=() esrgan_enc_vf_args=()
     if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
-      esrgan_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+      esrgan_encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_nvenc" ]]; then
-      esrgan_encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -c:a copy)
+      esrgan_encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
       esrgan_enc_pre_input_args=(-vaapi_device /dev/dri/renderD128)
       esrgan_enc_vf_args=(-vf "format=nv12,hwupload")
@@ -2275,16 +2285,45 @@ process_video() {
   local needs_encode=0
   [[ "${#vf_chain[@]}" -gt 0 ]] && needs_encode=1
   [[ "${do_h264}" -eq 1 ]]      && needs_encode=1
+  if [[ "${DO_MPG_TO_MP4}" -eq 1 ]]; then
+    local _mpg_ext="${src##*.}"; _mpg_ext="${_mpg_ext,,}"
+    if [[ "${_mpg_ext}" == "mpg" || "${_mpg_ext}" == "mpeg" || \
+          "${_mpg_ext}" == "m2v" || "${_mpg_ext}" == "vob" ]]; then
+      needs_encode=1
+    else
+      printf "    %s %s\n" "$(clr_dim '○')" "$(clr_dim "${MPG_TO_MP4_SKIP_MSG}")"
+    fi
+  fi
 
   if [[ "${needs_encode}" -eq 1 ]]; then
     local pre_input_args=() encode_args=()
 
+    # Full CUDA pipeline: GPU decode → scale_cuda → NVENC, keeping frames off the CPU.
+    # Requires: NVENC encoder, no CPU-only filters (vidstab/denoise/color/sharpen/fps/HDR).
+    local _use_cuda_scale=0
+    if [[ "${use_gpu}" -eq 1 && \
+          ( "${gpu_encoder}" == "h264_nvenc" || "${gpu_encoder}" == "hevc_nvenc" ) && \
+          "${do_black_bars}" -eq 0 && "${do_stab}" -eq 0 && \
+          "${DO_DENOISE}" -eq 0 && "${DO_COLOR}" -eq 0 && "${DO_SHARPEN}" -eq 0 && \
+          "${do_fps}" -eq 0 && "${hdr_type}" == "sdr_8bit" && \
+          "${do_rife}" -eq 0 && "${DO_VIDEO2X}" -eq 0 && "${DO_DEEP3D}" -eq 0 && \
+          ( "${DO_DOWNSIZE}" -eq 1 || "${DO_UPSCALE}" -eq 1 ) ]]; then
+      _use_cuda_scale=1
+      pre_input_args=(-hwaccel cuda -hwaccel_output_format cuda)
+    fi
+
     if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
-      # NVENC: CPU filters → NVENC encode. No special filter needed.
-      encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -c:a copy)
+      # -surfaces 64 / -rc-lookahead 32 keep the NVENC pipeline full so the encoder
+      # does not stall waiting for CPU to deliver frames.
+      # -multipass fullres enables two-pass sub-pixel ME within the NVENC hardware.
+      encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
+      # vidstabtransform can output yuvj420p or other variants; normalise to
+      # yuv420p so NVENC doesn't segfault on unexpected pixel formats.
+      [[ "${do_stab}" -eq 1 && "${stab_mode}" == "vidstab" ]] && vf_chain+=("format=yuv420p")
 
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_nvenc" ]]; then
-      encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -c:a copy)
+      encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
+      [[ "${do_stab}" -eq 1 && "${stab_mode}" == "vidstab" ]] && vf_chain+=("format=yuv420p")
 
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
       # VA-API: all CPU filters run first, then upload frames to GPU via hwupload.
@@ -2306,15 +2345,43 @@ process_video() {
     fi
 
     local final_vf=""
-    [[ "${#vf_chain[@]}" -gt 0 ]] && final_vf="$(IFS=','; echo "${vf_chain[*]}")"
+    if [[ "${#vf_chain[@]}" -gt 0 ]]; then
+      final_vf="$(IFS=','; echo "${vf_chain[*]}")"
+      # On the full CUDA path, replace the CPU scale filter with scale_cuda so frames
+      # stay in GPU memory for the entire decode → scale → encode pipeline.
+      if [[ "${_use_cuda_scale}" -eq 1 ]]; then
+        final_vf="${final_vf//scale=/scale_cuda=}"
+        final_vf="${final_vf//flags=lanczos/interp_algo=lanczos}"
+      fi
+    fi
 
     local ffmpeg_args=("${pre_input_args[@]}" -i "${src}")
     [[ -n "${final_vf}" ]] && ffmpeg_args+=(-vf "${final_vf}")
     ffmpeg_args+=("${encode_args[@]}" "${output}")
 
     if ! run_ffmpeg_step "${STEP_ENCODE}" "${dur_sec}" "${ffmpeg_args[@]}"; then
-      [[ -n "${trf_file}" ]] && rm -f "${trf_file}"; [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
-      return 1
+      # vidstabtransform + NVENC segfaults on some FFmpeg builds — retry with CPU encoder.
+      if [[ "${do_stab}" -eq 1 && "${stab_mode}" == "vidstab" && \
+            "${use_gpu}" -eq 1 && \
+            ("${gpu_encoder}" == "hevc_nvenc" || "${gpu_encoder}" == "h264_nvenc") ]]; then
+        printf "    %s NVENC encode failed — retrying with CPU encoder...\n" "$(clr_yellow '⚠')"
+        local cpu_encode_args=()
+        if [[ "${USE_H265}" -eq 1 ]]; then
+          cpu_encode_args=(-c:v libx265 -preset faster -crf 28 -c:a copy)
+        else
+          cpu_encode_args=(-c:v libx264 -preset faster -crf 23 -c:a copy)
+        fi
+        local cpu_ffmpeg_args=(-i "${src}")
+        [[ -n "${final_vf}" ]] && cpu_ffmpeg_args+=(-vf "${final_vf}")
+        cpu_ffmpeg_args+=("${cpu_encode_args[@]}" "${output}")
+        if ! run_ffmpeg_step "${STEP_ENCODE}" "${dur_sec}" "${cpu_ffmpeg_args[@]}"; then
+          [[ -n "${trf_file}" ]] && rm -f "${trf_file}"; [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+          return 1
+        fi
+      else
+        [[ -n "${trf_file}" ]] && rm -f "${trf_file}"; [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+        return 1
+      fi
     fi
 
   else
@@ -2360,6 +2427,13 @@ _run_processing() {
     count_idx=$(( count_idx + 1 ))
     local base; base="$(basename "${vf}")"
     local out="${out_dir}/${base}"
+    if [[ "${DO_MPG_TO_MP4}" -eq 1 ]]; then
+      local _out_ext="${base##*.}"; _out_ext="${_out_ext,,}"
+      if [[ "${_out_ext}" == "mpg" || "${_out_ext}" == "mpeg" || \
+            "${_out_ext}" == "m2v" || "${_out_ext}" == "vob" ]]; then
+        out="${out_dir}/${base%.*}.mp4"
+      fi
+    fi
 
     printf "\n  [%d/%d] %s\n" "${count_idx}" "${#video_files[@]}" "$(clr_bold "${base}")"
     _log "[${count_idx}/${#video_files[@]}] Starting: ${base}"
@@ -2559,17 +2633,18 @@ main() {
     "${ACTION_RIFE}"
     "${ACTION_VIDEO2X}"
     "${ACTION_DEEP3D}"
+    "${ACTION_MPG_TO_MP4}"
   )
-  _CB_SEL=(0 0 0 0 0 0 0 0 0 0 0 0)
+  _CB_SEL=(0 0 0 0 0 0 0 0 0 0 0 0 0)
   # Indices 9 (RIFE) and 10 (Video2X) require Vulkan; index 11 (Deep3D) requires CUDA.
   local _dis_vulkan=0 _dis_cuda=0
   [[ "${HAS_VULKAN_GPU}" -eq 0 ]] && _dis_vulkan=1
   [[ "${HAS_CUDA_GPU}" -eq 0 ]]   && _dis_cuda=1
-  _CB_DISABLED=(0 0 0 0 0 0 0 0 0 "${_dis_vulkan}" "${_dis_vulkan}" "${_dis_cuda}")
+  _CB_DISABLED=(0 0 0 0 0 0 0 0 0 "${_dis_vulkan}" "${_dis_vulkan}" "${_dis_cuda}" 0)
   interactive_checkbox
 
   local do_black_bars=0 do_fps=0 do_h264=0 do_stab=0
-  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_DOWNSIZE=0; DO_COLOR=0; DO_RIFE=0; DO_VIDEO2X=0; DO_DEEP3D=0
+  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_DOWNSIZE=0; DO_COLOR=0; DO_RIFE=0; DO_VIDEO2X=0; DO_DEEP3D=0; DO_MPG_TO_MP4=0
   for idx in "${SELECTED_INDICES[@]}"; do
     case "${idx}" in
       0) do_black_bars=1 ;;
@@ -2584,12 +2659,14 @@ main() {
       9) DO_RIFE=1 ;;
       10) DO_VIDEO2X=1 ;;
       11) DO_DEEP3D=1 ;;
+      12) DO_MPG_TO_MP4=1 ;;
     esac
   done
 
   if [[ "${do_black_bars}" -eq 0 && "${do_fps}" -eq 0 && "${do_h264}" -eq 0 && "${do_stab}" -eq 0 && \
         "${DO_DENOISE}" -eq 0 && "${DO_SHARPEN}" -eq 0 && "${DO_UPSCALE}" -eq 0 && "${DO_DOWNSIZE}" -eq 0 && \
-        "${DO_COLOR}" -eq 0 && "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 && "${DO_DEEP3D}" -eq 0 ]]; then
+        "${DO_COLOR}" -eq 0 && "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 && "${DO_DEEP3D}" -eq 0 && \
+        "${DO_MPG_TO_MP4}" -eq 0 ]]; then
     printf "\n  %s\n\n" "$(clr_yellow "${NO_ACTIONS_SELECTED}")"
     exit 0
   fi
@@ -2941,6 +3018,11 @@ main() {
   if [[ "${DO_RIFE}" -eq 1 ]];       then action_list+=("RIFE ${RIFE_MULTIPLIER}× (${RIFE_MODEL})"); fi
   if [[ "${DO_VIDEO2X}" -eq 1 ]];   then action_list+=("video2x ${VIDEO2X_SCALE}× (${VIDEO2X_MODEL})"); fi
   if [[ "${DO_DEEP3D}" -eq 1 ]];    then action_list+=("deep3d (stability=${DEEP3D_STABILITY})"); fi
+  if [[ "${DO_MPG_TO_MP4}" -eq 1 ]]; then
+    local _m2m_codec="H.264"
+    [[ "${USE_H265}" -eq 1 ]] && _m2m_codec="H.265"
+    action_list+=("mpg→mp4 (${_m2m_codec})")
+  fi
   local IFS_SAVE="${IFS}"; IFS=', '; printf "%s\n" "$(clr_cyan "${action_list[*]}")"; IFS="${IFS_SAVE}"
 
   if [[ "${use_gpu}" -eq 1 ]]; then
