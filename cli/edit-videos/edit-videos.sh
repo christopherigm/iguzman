@@ -825,7 +825,7 @@ bootstrap_ffmpeg() {
   fi
 
   local tmp_dir; tmp_dir="$(mktemp -d)"
-  trap 'rm -rf "${tmp_dir}"' RETURN
+  trap 'rm -rf "${tmp_dir}"; trap - RETURN' RETURN
   local archive="${tmp_dir}/ffmpeg.tar.xz"
   local source_label url btbn_bin_subdir=""
 
@@ -1815,10 +1815,11 @@ process_video() {
     intermediate="$(mktemp /tmp/edit_videos_pre_XXXXXX.mp4)"
     local pre_vf=""
     [[ "${#vf_chain[@]}" -gt 0 ]] && pre_vf="$(IFS=','; echo "${vf_chain[*]}")"
-    local pre_input_args=() pre_codec_args=()
+    local pre_input_args=() pre_codec_args=() _is_vaapi_pre=0
     if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
       pre_codec_args=(-c:v h264_nvenc -preset p1 -cq 18 -c:a copy)
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
+      _is_vaapi_pre=1
       pre_input_args=(-vaapi_device /dev/dri/renderD128)
       [[ -n "${pre_vf}" ]] && pre_vf="${pre_vf},format=nv12,hwupload" || pre_vf="format=nv12,hwupload"
       pre_codec_args=(-c:v h264_vaapi -qp 18 -c:a copy)
@@ -1829,8 +1830,19 @@ process_video() {
     [[ -n "${pre_vf}" ]] && pre_args+=(-vf "${pre_vf}")
     pre_args+=("${pre_codec_args[@]}" "${intermediate}")
     if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" "${pre_args[@]}"; then
-      rm -f "${intermediate}"; intermediate=""
-      return 1
+      if [[ "${_is_vaapi_pre}" -eq 1 ]]; then
+        printf "    %s VA-API pre-conversion failed — retrying with CPU (libx264)...\n" "$(clr_yellow '⚠')"
+        local cpu_pre_vf=""
+        [[ "${#vf_chain[@]}" -gt 0 ]] && cpu_pre_vf="$(IFS=','; echo "${vf_chain[*]}")"
+        local cpu_pre_args=(-i "${src}")
+        [[ -n "${cpu_pre_vf}" ]] && cpu_pre_args+=(-vf "${cpu_pre_vf}")
+        cpu_pre_args+=(-c:v libx264 -preset ultrafast -crf 18 -c:a copy "${intermediate}")
+        if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" "${cpu_pre_args[@]}"; then
+          rm -f "${intermediate}"; intermediate=""; return 1
+        fi
+      else
+        rm -f "${intermediate}"; intermediate=""; return 1
+      fi
     fi
     src="${intermediate}"
     vf_chain=()
@@ -1879,10 +1891,12 @@ process_video() {
     if [[ "${#vf_chain[@]}" -gt 0 ]]; then
       d3d_pre_intermediate="$(mktemp /tmp/deep3d_pre_XXXXXX.mp4)"
       local d3d_pre_vf; d3d_pre_vf="$(IFS=','; echo "${vf_chain[*]}")"
-      local d3d_pre_input_args=() d3d_pre_codec_args=()
+      local d3d_pre_input_args=() d3d_pre_codec_args=() _d3d_is_vaapi_pre=0
+      local d3d_pre_vf_cpu="${d3d_pre_vf}"
       if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
         d3d_pre_codec_args=(-c:v h264_nvenc -preset p1 -cq 18 -c:a copy)
       elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
+        _d3d_is_vaapi_pre=1
         d3d_pre_input_args=(-vaapi_device /dev/dri/renderD128)
         d3d_pre_vf="${d3d_pre_vf},format=nv12,hwupload"
         d3d_pre_codec_args=(-c:v h264_vaapi -qp 18 -c:a copy)
@@ -1891,10 +1905,21 @@ process_video() {
       fi
       if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" \
           "${d3d_pre_input_args[@]}" -i "${src}" -vf "${d3d_pre_vf}" "${d3d_pre_codec_args[@]}" "${d3d_pre_intermediate}"; then
-        rm -f "${d3d_pre_intermediate}"
-        [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
-        [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
-        return 1
+        if [[ "${_d3d_is_vaapi_pre}" -eq 1 ]]; then
+          printf "    %s VA-API pre-conversion failed — retrying with CPU (libx264)...\n" "$(clr_yellow '⚠')"
+          if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" \
+              -i "${src}" -vf "${d3d_pre_vf_cpu}" -c:v libx264 -preset ultrafast -crf 18 -c:a copy "${d3d_pre_intermediate}"; then
+            rm -f "${d3d_pre_intermediate}"
+            [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+            [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+            return 1
+          fi
+        else
+          rm -f "${d3d_pre_intermediate}"
+          [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
+          [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
+          return 1
+        fi
       fi
       src="${d3d_pre_intermediate}"
       vf_chain=()
