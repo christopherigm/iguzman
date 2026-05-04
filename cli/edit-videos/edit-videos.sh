@@ -115,7 +115,7 @@ setup_strings() {
     ACTION_FPS="Interpolar FPS (minterpolate)"
     ACTION_H264="Convertir a H.264"
     ACTION_STAB="Estabilizar video (vid.stab, dos pases)"
-    TARGET_FPS_PROMPT="FPS objetivo [60/90/120 o valor personalizado]"
+    TARGET_FPS_PROMPT="Multiplicador de FPS para minterpolate [2/4/8]"
     SHAKINESS_LABEL="Intensidad de vibración a detectar [1-10]"
     ACCURACY_LABEL="Precisión del análisis [1-15]"
     SMOOTHING_LABEL="Suavizado de la estabilización [0-100]"
@@ -263,7 +263,7 @@ setup_strings() {
     ACTION_FPS="Interpolate FPS (minterpolate)"
     ACTION_H264="Convert to H.264"
     ACTION_STAB="Video stabilization (vid.stab, two-pass)"
-    TARGET_FPS_PROMPT="Target FPS [60/90/120 or custom value]"
+    TARGET_FPS_PROMPT="FPS multiplier for minterpolate [2/4/8]"
     SHAKINESS_LABEL="Shakiness level to detect [1-10]"
     ACCURACY_LABEL="Analysis accuracy [1-15]"
     SMOOTHING_LABEL="Stabilization smoothing [0-100]"
@@ -1676,7 +1676,7 @@ process_video() {
   local do_fps="$4"
   local do_h264="$5"
   local do_stab="$6"
-  local target_fps="$7"
+  local fps_multiplier="$7"
   local stab_shakiness="$8"
   local stab_accuracy="$9"
   local stab_smoothing="${10}"
@@ -1868,7 +1868,15 @@ process_video() {
   # ── FPS interpolation filter (added to chain, encoded in final pass) ─────
   # Skip minterpolate when RIFE is handling interpolation.
   if [[ "${do_fps}" -eq 1 && "${do_rife}" -eq 0 ]]; then
-    vf_chain+=("minterpolate=fps=${target_fps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1:search_param=16")
+    local _fp="${FFPROBE_BIN}"; [[ ! -x "${_fp}" ]] && _fp="ffprobe"
+    local _fps_frac; _fps_frac="$("${_fp}" -v quiet -select_streams v:0 \
+      -show_entries stream=r_frame_rate -of default=nw=1:nk=1 "${input}" 2>/dev/null || echo "30/1")"
+    local _fps_num="${_fps_frac%/*}" _fps_den="${_fps_frac#*/}"
+    [[ -z "${_fps_num}" || "${_fps_num}" -le 0 ]] && _fps_num=30 && _fps_den=1
+    [[ -z "${_fps_den}" || "${_fps_den}" -le 0 ]] && _fps_den=1
+    local _target_fps_num=$(( _fps_num * fps_multiplier ))
+    local _target_fps="${_target_fps_num}/${_fps_den}"
+    vf_chain+=("minterpolate=fps=${_target_fps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1:search_param=16")
   fi
 
   # ── Deep3D AI stabilization ─────────────────────────────────────────
@@ -2333,7 +2341,7 @@ _run_processing() {
 
     if process_video "${vf}" "${out}" \
         "${do_black_bars}" "${do_fps}" "${do_h264}" "${do_stab}" \
-        "${target_fps}" "${stab_shakiness}" "${stab_accuracy}" "${stab_smoothing}" \
+        "${fps_multiplier}" "${stab_shakiness}" "${stab_accuracy}" "${stab_smoothing}" \
         "${use_gpu}" "${GPU_ENCODER}" "${stab_mode}" \
         "${stab_maxangle}" "${stab_maxshift}" \
         "${DO_RIFE}" "${RIFE_MULTIPLIER}"; then
@@ -2696,13 +2704,20 @@ main() {
   fi
 
   # ── Action parameters ─────────────────────────────────────────────────────
-  local target_fps=60
+  local fps_multiplier=2
   local stab_shakiness=7 stab_accuracy=15 stab_smoothing=30
   local stab_mode="vidstab"
   local stab_maxangle=0.15 stab_maxshift=60
 
   if [[ "${do_fps}" -eq 1 ]]; then
-    _read_int target_fps "$(clr_bold "${TARGET_FPS_PROMPT}")" 60 1 999
+    printf "  %s (2): " "$(clr_bold "${TARGET_FPS_PROMPT}")"
+    local _fps_mult_raw; read -r _fps_mult_raw; _fps_mult_raw="${_fps_mult_raw:-2}"
+    case "${_fps_mult_raw}" in
+      4) fps_multiplier=4 ;;
+      8) fps_multiplier=8 ;;
+      *) fps_multiplier=2 ;;
+    esac
+    echo ""
   fi
 
   if [[ "${do_stab}" -eq 1 ]]; then
@@ -2884,7 +2899,7 @@ main() {
   printf "  %s: " "$(clr_bold "${ACTIONS_LABEL}")"
   local action_list=()
   if [[ "${do_black_bars}" -eq 1 ]]; then action_list+=("black bars"); fi
-  if [[ "${do_fps}" -eq 1 ]];        then action_list+=("FPS→${target_fps}"); fi
+  if [[ "${do_fps}" -eq 1 ]];        then action_list+=("minterpolate ${fps_multiplier}×"); fi
   if [[ "${do_h264}" -eq 1 ]];       then action_list+=("H.264"); fi
   if [[ "${do_stab}" -eq 1 ]]; then
     if [[ "${stab_maxangle}" == "0.05" ]]; then
