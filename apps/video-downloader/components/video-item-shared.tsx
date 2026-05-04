@@ -41,11 +41,15 @@ export const STATUS_COLORS: Record<VideoStatus, string> = {
   error: '#ef4444',
 };
 
-export const FPS_OPTIONS = [
-  { value: 60, label: '60 FPS' },
-  { value: 90, label: '90 FPS' },
-  { value: 120, label: '120 FPS' },
-] as const;
+const FPS_MULTIPLIERS = [2, 4, 8] as const;
+
+function buildFpsOptions(sourceFps: number | null): { value: number; label: string }[] {
+  const base = sourceFps && sourceFps > 0 ? sourceFps : 30;
+  return FPS_MULTIPLIERS.map((m) => {
+    const value = Math.round(base * m);
+    return { value, label: `${value} FPS (${m}x)` };
+  });
+}
 
 /* ── Helpers ────────────────────────────────────────── */
 
@@ -700,7 +704,7 @@ export function VideoExtraActions({
       ) : null}
 
       <Box>
-        {FPS_OPTIONS.map(({ value, label }) => {
+        {buildFpsOptions(video.sourceFps).map(({ value, label }) => {
           const alreadyApplied = video.fpsApplied && value <= Number(video.fps);
           return (
             <button
