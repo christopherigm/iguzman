@@ -48,6 +48,43 @@ _log() {
   printf "[%s] %s\n" "$(date '+%H:%M:%S')" "$*" >> "${LOG_FILE}"
 }
 
+# ── Input helpers ─────────────────────────────────────────────────────────────
+# _read_int varname "prompt" default min max
+# Loops until the user enters a valid integer in [min, max].
+_read_int() {
+  local _varname="$1" _prompt="$2" _default="$3" _min="$4" _max="$5"
+  local _val
+  while true; do
+    printf "  %s (%s): " "${_prompt}" "${_default}"
+    read -r _val
+    _val="${_val:-${_default}}"
+    if [[ "${_val}" =~ ^-?[0-9]+$ ]] && \
+       [[ "${_val}" -ge "${_min}" ]] && [[ "${_val}" -le "${_max}" ]]; then
+      printf -v "${_varname}" '%s' "${_val}"
+      return 0
+    fi
+    printf "  %s  Enter an integer between %d and %d.\n" "$(clr_bold_red '✗')" "${_min}" "${_max}"
+  done
+}
+
+# _read_float varname "prompt" default min max
+# Loops until the user enters a valid decimal number in [min, max].
+_read_float() {
+  local _varname="$1" _prompt="$2" _default="$3" _min="$4" _max="$5"
+  local _val
+  while true; do
+    printf "  %s (%s): " "${_prompt}" "${_default}"
+    read -r _val
+    _val="${_val:-${_default}}"
+    if [[ "${_val}" =~ ^-?[0-9]+(\.[0-9]+)?$ ]] && \
+       awk -v v="${_val}" -v lo="${_min}" -v hi="${_max}" 'BEGIN{exit !(v>=lo && v<=hi)}'; then
+      printf -v "${_varname}" '%s' "${_val}"
+      return 0
+    fi
+    printf "  %s  Enter a number between %s and %s.\n" "$(clr_bold_red '✗')" "${_min}" "${_max}"
+  done
+}
+
 # ── i18n ──────────────────────────────────────────────────────────────────────
 
 setup_strings() {
@@ -201,7 +238,6 @@ setup_strings() {
     CODEC_H265_OPTION="H.265 (HEVC) — archivos ~40% más pequeños, requiere reproductores modernos"
     CODEC_H265_NO_GPU="Codificador GPU H.265 no disponible — se usará CPU (libx265)"
     CODEC_H265_NO_ENC="H.265 (libx265) no disponible en este FFmpeg — se usará H.264"
-    ACTION_H265="Convertir a H.265 (HEVC)"
   else
     WELCOME="FFmpeg Video Editor"
     SUBTITLE="Batch-process videos with FFmpeg filters."
@@ -350,7 +386,6 @@ setup_strings() {
     CODEC_H265_OPTION="H.265 (HEVC) — ~40% smaller files, requires modern players"
     CODEC_H265_NO_GPU="H.265 GPU encoder not available — using CPU (libx265)"
     CODEC_H265_NO_ENC="H.265 (libx265) not available in this FFmpeg build — falling back to H.264"
-    ACTION_H265="Convert to H.265 (HEVC)"
   fi
 }
 
@@ -790,6 +825,7 @@ bootstrap_ffmpeg() {
   fi
 
   local tmp_dir; tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "${tmp_dir}"' RETURN
   local archive="${tmp_dir}/ffmpeg.tar.xz"
   local source_label url btbn_bin_subdir=""
 
@@ -826,6 +862,7 @@ bootstrap_ffmpeg() {
 
   FFMPEG_BIN="${FFMPEG_LOCAL_DIR}/ffmpeg"
   FFPROBE_BIN="${FFMPEG_LOCAL_DIR}/ffprobe"
+  _FILTER_CACHE=""
   printf "  %s FFmpeg installed to %s (%s)\n\n" "$(clr_bold_green '✓')" "$(clr_dim "${FFMPEG_LOCAL_DIR}")" "$(clr_dim "${source_label}")"
 }
 
@@ -868,13 +905,15 @@ bootstrap_rife() {
   printf "  %s\n" "$(clr_dim "${RIFE_DOWNLOADING}")"
 
   local api_url="https://api.github.com/repos/nihui/rife-ncnn-vulkan/releases/latest"
-  local dl_url=""
+  local dl_url="" _rife_fetch=""
   if command -v curl &>/dev/null; then
-    dl_url="$(curl -sL "${api_url}" | grep -o '"browser_download_url":"[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
-    [[ -z "${dl_url}" ]] && dl_url="$(curl -sL "${api_url}" | grep -o '"browser_download_url": "[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
+    _rife_fetch="$(curl -sL "${api_url}")"
   elif command -v wget &>/dev/null; then
-    dl_url="$(wget -qO- "${api_url}" | grep -o '"browser_download_url":"[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
-    [[ -z "${dl_url}" ]] && dl_url="$(wget -qO- "${api_url}" | grep -o '"browser_download_url": "[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
+    _rife_fetch="$(wget -qO- "${api_url}")"
+  fi
+  if [[ -n "${_rife_fetch}" ]]; then
+    dl_url="$(printf '%s' "${_rife_fetch}" | grep -o '"browser_download_url":"[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
+    [[ -z "${dl_url}" ]] && dl_url="$(printf '%s' "${_rife_fetch}" | grep -o '"browser_download_url": "[^"]*\(linux\|ubuntu\)[^"]*\.zip"' | head -1 | cut -d'"' -f4)"
   fi
 
   if [[ -z "${dl_url}" ]]; then
@@ -1424,16 +1463,26 @@ detect_black_bars() {
   echo "${crop}"
 }
 
+_FILTER_CACHE=""
+
+_populate_filter_cache() {
+  [[ -n "${_FILTER_CACHE}" ]] && return 0
+  _FILTER_CACHE="$("${FFMPEG_BIN}" -hide_banner -filters 2>/dev/null || true)"
+}
+
 check_vidstab() {
-  "${FFMPEG_BIN}" -hide_banner -filters 2>/dev/null | grep -q 'vidstabdetect'
+  _populate_filter_cache
+  grep -q 'vidstabdetect' <<< "${_FILTER_CACHE}"
 }
 
 check_deshake() {
-  "${FFMPEG_BIN}" -hide_banner -filters 2>/dev/null | grep -q 'deshake'
+  _populate_filter_cache
+  grep -q 'deshake' <<< "${_FILTER_CACHE}"
 }
 
 check_zscale() {
-  "${FFMPEG_BIN}" -hide_banner -filters 2>/dev/null | grep -q 'zscale'
+  _populate_filter_cache
+  grep -q 'zscale' <<< "${_FILTER_CACHE}"
 }
 
 probe_hdr_type() {
@@ -1651,9 +1700,9 @@ process_video() {
 
   # ── Auto-detect HDR / 10-bit; prepend color conversion when re-encoding ──
   local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | do_rife | DO_VIDEO2X | DO_DEEP3D ))
+  local hdr_type="sdr_8bit"
   if [[ "${do_any}" -eq 1 ]]; then
     printf "    %s\n" "$(clr_dim "${HDR_DETECT}")"
-    local hdr_type
     hdr_type="$(probe_hdr_type "${input}")"
 
     if [[ "${hdr_type}" != "sdr_8bit" ]]; then
@@ -1714,7 +1763,9 @@ process_video() {
     ds_dim_out="$(probe_dimensions "${input}")"
     ds_vid_w="${ds_dim_out%% *}"
     ds_vid_h="${ds_dim_out##* }"
-    if [[ "${ds_vid_w}" -le "${DOWNSIZE_TARGET_W}" && "${ds_vid_h}" -le "${DOWNSIZE_TARGET_H}" ]]; then
+    if [[ "${ds_vid_w}" -eq 0 || "${ds_vid_h}" -eq 0 ]]; then
+      printf "    %s Could not read video dimensions — skipping downsize.\n" "$(clr_yellow '⚠')"
+    elif [[ "${ds_vid_w}" -le "${DOWNSIZE_TARGET_W}" && "${ds_vid_h}" -le "${DOWNSIZE_TARGET_H}" ]]; then
       printf "    %s %s (%sx%s ≤ %sx%s)\n" \
         "$(clr_dim '○')" "${DOWNSIZE_SKIP_MSG}" \
         "${ds_vid_w}" "${ds_vid_h}" "${DOWNSIZE_TARGET_W}" "${DOWNSIZE_TARGET_H}"
@@ -1743,7 +1794,9 @@ process_video() {
     dim_out="$(probe_dimensions "${input}")"
     vid_w="${dim_out%% *}"
     vid_h="${dim_out##* }"
-    if [[ "${vid_w}" -ge "${UPSCALE_TARGET_W}" || "${vid_h}" -ge "${UPSCALE_TARGET_H}" ]]; then
+    if [[ "${vid_w}" -eq 0 || "${vid_h}" -eq 0 ]]; then
+      printf "    %s Could not read video dimensions — skipping upscale.\n" "$(clr_yellow '⚠')"
+    elif [[ "${vid_w}" -ge "${UPSCALE_TARGET_W}" || "${vid_h}" -ge "${UPSCALE_TARGET_H}" ]]; then
       printf "    %s %s (%sx%s ≥ %sx%s)\n" \
         "$(clr_dim '○')" "${UPSCALE_SKIP_MSG}" \
         "${vid_w}" "${vid_h}" "${UPSCALE_TARGET_W}" "${UPSCALE_TARGET_H}"
@@ -2333,6 +2386,7 @@ main() {
   local lang="en"
   [[ "${raw_lang,,}" == es* ]] && lang="es"
   setup_strings "${lang}"
+  trap 'printf "\033[?25h"' EXIT
   local main_start=$SECONDS
 
   clear
@@ -2435,6 +2489,7 @@ main() {
 
   _CB_LABELS=()
   _CB_SEL=()
+  _CB_DISABLED=()
   for ext in "${found_formats[@]}"; do
     _CB_LABELS+=(".${ext}  (${FORMAT_COUNT[$ext]} ${FILES_LABEL})")
     _CB_SEL+=(1)
@@ -2560,6 +2615,9 @@ main() {
         if ! bootstrap_rife; then
           printf "  %s RIFE disabled — skipping interpolation.\n\n" "$(clr_yellow '⚠')"
           DO_RIFE=0
+        elif ! find_rife_model; then
+          printf "  %s No RIFE model found after install — skipping interpolation.\n\n" "$(clr_yellow '⚠')"
+          DO_RIFE=0
         fi
       else
         printf "  %s RIFE disabled — continuing without AI interpolation.\n\n" "$(clr_yellow '⚠')"
@@ -2644,12 +2702,7 @@ main() {
   local stab_maxangle=0.15 stab_maxshift=60
 
   if [[ "${do_fps}" -eq 1 ]]; then
-    printf "  %s (60): " "$(clr_bold "${TARGET_FPS_PROMPT}")"
-    read -r target_fps
-    target_fps="${target_fps:-60}"
-    if ! [[ "${target_fps}" =~ ^[0-9]+$ ]] || [[ "${target_fps}" -lt 1 ]]; then
-      target_fps=60
-    fi
+    _read_int target_fps "$(clr_bold "${TARGET_FPS_PROMPT}")" 60 1 999
   fi
 
   if [[ "${do_stab}" -eq 1 ]]; then
@@ -2672,12 +2725,9 @@ main() {
         printf "  %s %s\n" "$(clr_cyan '→')" "$(clr_dim "${STAB_CONCERT_INFO}")"
       else
         # Standard handheld — prompt params, apply a generous-but-sane cap
-        printf "  %s (7): " "$(clr_dim "${SHAKINESS_LABEL}")"
-        read -r stab_shakiness; stab_shakiness="${stab_shakiness:-7}"
-        printf "  %s (15): " "$(clr_dim "${ACCURACY_LABEL}")"
-        read -r stab_accuracy; stab_accuracy="${stab_accuracy:-15}"
-        printf "  %s (30): " "$(clr_dim "${SMOOTHING_LABEL}")"
-        read -r stab_smoothing; stab_smoothing="${stab_smoothing:-30}"
+        _read_int stab_shakiness "$(clr_dim "${SHAKINESS_LABEL}")" 7 1 10
+        _read_int stab_accuracy "$(clr_dim "${ACCURACY_LABEL}")" 15 1 15
+        _read_int stab_smoothing "$(clr_dim "${SMOOTHING_LABEL}")" 30 0 100
         # maxangle=0.15 rad (≈8.6°) and maxshift=60px cap extreme outliers silently
         stab_maxangle=0.15
         stab_maxshift=60
@@ -2686,8 +2736,7 @@ main() {
     elif check_deshake; then
       stab_mode="deshake"
       printf "  %s %s\n" "$(clr_yellow '⚠')" "${VIDSTAB_FALLBACK_DESHAKE}"
-      printf "  %s (30): " "$(clr_dim "${SMOOTHING_LABEL}")"
-      read -r stab_smoothing; stab_smoothing="${stab_smoothing:-30}"
+      _read_int stab_smoothing "$(clr_dim "${SMOOTHING_LABEL}")" 30 0 100
     else
       printf "  %s %s\n\n" "$(clr_yellow '⚠')" "${DESHAKE_NOT_FOUND}"
       do_stab=0
@@ -2695,23 +2744,25 @@ main() {
   fi
 
   if [[ "${DO_DENOISE}" -eq 1 ]]; then
-    printf "  %s (4): " "$(clr_dim "${DENOISE_LUMA_S_LABEL}")"
-    read -r DENOISE_LUMA_S; DENOISE_LUMA_S="${DENOISE_LUMA_S:-4}"
-    printf "  %s (4): " "$(clr_dim "${DENOISE_CHROMA_S_LABEL}")"
-    read -r DENOISE_CHROMA_S; DENOISE_CHROMA_S="${DENOISE_CHROMA_S:-4}"
-    printf "  %s (3): " "$(clr_dim "${DENOISE_LUMA_T_LABEL}")"
-    read -r DENOISE_LUMA_T; DENOISE_LUMA_T="${DENOISE_LUMA_T:-3}"
-    printf "  %s (3): " "$(clr_dim "${DENOISE_CHROMA_T_LABEL}")"
-    read -r DENOISE_CHROMA_T; DENOISE_CHROMA_T="${DENOISE_CHROMA_T:-3}"
+    _read_int DENOISE_LUMA_S   "$(clr_dim "${DENOISE_LUMA_S_LABEL}")"   4 0 10
+    _read_int DENOISE_CHROMA_S "$(clr_dim "${DENOISE_CHROMA_S_LABEL}")" 4 0 10
+    _read_int DENOISE_LUMA_T   "$(clr_dim "${DENOISE_LUMA_T_LABEL}")"   3 0 10
+    _read_int DENOISE_CHROMA_T "$(clr_dim "${DENOISE_CHROMA_T_LABEL}")" 3 0 10
   fi
 
   if [[ "${DO_SHARPEN}" -eq 1 ]]; then
-    printf "  %s (5): " "$(clr_dim "${SHARPEN_MATRIX_LABEL}")"
-    read -r SHARPEN_MATRIX; SHARPEN_MATRIX="${SHARPEN_MATRIX:-5}"
-    printf "  %s (1.0): " "$(clr_dim "${SHARPEN_LUMA_AMOUNT_LABEL}")"
-    read -r SHARPEN_LUMA_AMOUNT; SHARPEN_LUMA_AMOUNT="${SHARPEN_LUMA_AMOUNT:-1.0}"
-    printf "  %s (0.0): " "$(clr_dim "${SHARPEN_CHROMA_AMOUNT_LABEL}")"
-    read -r SHARPEN_CHROMA_AMOUNT; SHARPEN_CHROMA_AMOUNT="${SHARPEN_CHROMA_AMOUNT:-0.0}"
+    while true; do
+      printf "  %s (5): " "$(clr_dim "${SHARPEN_MATRIX_LABEL}")"
+      read -r SHARPEN_MATRIX; SHARPEN_MATRIX="${SHARPEN_MATRIX:-5}"
+      if [[ "${SHARPEN_MATRIX}" =~ ^[0-9]+$ ]] && \
+         [[ "${SHARPEN_MATRIX}" -ge 3 ]] && [[ "${SHARPEN_MATRIX}" -le 23 ]] && \
+         [[ $(( SHARPEN_MATRIX % 2 )) -eq 1 ]]; then
+        break
+      fi
+      printf "  %s  Enter an odd integer between 3 and 23.\n" "$(clr_bold_red '✗')"
+    done
+    _read_float SHARPEN_LUMA_AMOUNT   "$(clr_dim "${SHARPEN_LUMA_AMOUNT_LABEL}")"   1.0 -2.0 5.0
+    _read_float SHARPEN_CHROMA_AMOUNT "$(clr_dim "${SHARPEN_CHROMA_AMOUNT_LABEL}")" 0.0 -2.0 5.0
   fi
 
   if [[ "${DO_UPSCALE}" -eq 1 ]]; then
@@ -2750,14 +2801,10 @@ main() {
   fi
 
   if [[ "${DO_COLOR}" -eq 1 ]]; then
-    printf "  %s (1.1): " "$(clr_dim "${COLOR_CONTRAST_LABEL}")"
-    read -r COLOR_CONTRAST; COLOR_CONTRAST="${COLOR_CONTRAST:-1.1}"
-    printf "  %s (0.0): " "$(clr_dim "${COLOR_BRIGHTNESS_LABEL}")"
-    read -r COLOR_BRIGHTNESS; COLOR_BRIGHTNESS="${COLOR_BRIGHTNESS:-0.0}"
-    printf "  %s (1.1): " "$(clr_dim "${COLOR_SATURATION_LABEL}")"
-    read -r COLOR_SATURATION; COLOR_SATURATION="${COLOR_SATURATION:-1.1}"
-    printf "  %s (1.0): " "$(clr_dim "${COLOR_GAMMA_LABEL}")"
-    read -r COLOR_GAMMA; COLOR_GAMMA="${COLOR_GAMMA:-1.0}"
+    _read_float COLOR_CONTRAST   "$(clr_dim "${COLOR_CONTRAST_LABEL}")"   1.1 0.0 2.0
+    _read_float COLOR_BRIGHTNESS "$(clr_dim "${COLOR_BRIGHTNESS_LABEL}")" 0.0 -1.0 1.0
+    _read_float COLOR_SATURATION "$(clr_dim "${COLOR_SATURATION_LABEL}")" 1.1 0.0 2.0
+    _read_float COLOR_GAMMA      "$(clr_dim "${COLOR_GAMMA_LABEL}")"      1.0 0.1 10.0
   fi
 
   if [[ "${DO_RIFE}" -eq 1 ]]; then
@@ -2804,12 +2851,7 @@ main() {
     DEEP3D_DEVICE="cuda:0"
     DEEP3D_GPU_NAME="${_d3d_cuda_name}"
     printf "  %s %s: %s\n\n" "$(clr_bold_magenta '⚡')" "${AI_GPU_HINT}" "$(clr_magenta "${_d3d_cuda_name}")"
-    printf "  %s (12): " "$(clr_bold "${DEEP3D_STABILITY_LABEL}")"
-    local d3d_stab_input; read -r d3d_stab_input
-    DEEP3D_STABILITY="${d3d_stab_input:-12}"
-    if ! [[ "${DEEP3D_STABILITY}" =~ ^[0-9]+$ ]] || [[ "${DEEP3D_STABILITY}" -lt 1 ]]; then
-      DEEP3D_STABILITY=12
-    fi
+    _read_int DEEP3D_STABILITY "$(clr_bold "${DEEP3D_STABILITY_LABEL}")" 12 1 50
   fi
   echo ""
 
@@ -2877,7 +2919,7 @@ main() {
   printf "  %s (y): " "${CONFIRM_PROMPT}"
   local confirm; read -r confirm
   confirm="${confirm:-y}"
-  fchar="${confirm:0:1}"
+  local fchar="${confirm:0:1}"
   if [[ "${CONFIRM_YES_CHARS}" != *"${fchar,,}"* ]]; then
     printf "  %s\n\n" "${CANCELLED}"; exit 0
   fi
