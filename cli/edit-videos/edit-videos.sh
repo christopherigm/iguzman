@@ -65,7 +65,7 @@ setup_strings() {
     GPU_DETECT="Detectando aceleración GPU..."
     GPU_FOUND_MSG="GPU con aceleración detectada"
     GPU_NONE="Sin GPU con aceleración detectada — se usará la CPU."
-    GPU_USE_PROMPT="¿Usar GPU para codificación H.264? [s/n]"
+    GPU_USE_PROMPT="¿Usar GPU para codificación H.264? [S/n]"
     FOLDER_PROMPT="Ruta de la carpeta de videos"
     FOLDER_NOT_FOUND="Carpeta no encontrada"
     FOLDER_HINT="Ingresa la ruta absoluta, ej: /home/usuario/Videos"
@@ -76,7 +76,7 @@ setup_strings() {
     SELECT_ACTIONS_TITLE="Selecciona las acciones a aplicar"
     ACTION_BLACK_BARS="Eliminar franjas negras (cropdetect)"
     ACTION_FPS="Interpolar FPS (minterpolate)"
-    ACTION_H264="Convertir a H.264 (libx264)"
+    ACTION_H264="Convertir a H.264"
     ACTION_STAB="Estabilizar video (vid.stab, dos pases)"
     TARGET_FPS_PROMPT="FPS objetivo [60/90/120 o valor personalizado]"
     SHAKINESS_LABEL="Intensidad de vibración a detectar [1-10]"
@@ -94,6 +94,7 @@ setup_strings() {
     STEP_COPY="Copiando al destino"
     STEP_DONE="listo"
     STEP_FAIL="FALLÓ"
+    STEP_FINALIZING="Finalizando..."
     NO_BLACK_BARS="Sin franjas negras, se omite el recorte"
     VIDSTAB_NOT_FOUND="vid.stab no disponible en este FFmpeg. Se omite la estabilización."
     VIDSTAB_FALLBACK_DESHAKE="vid.stab no disponible — usando filtro deshake para estabilización básica."
@@ -118,6 +119,7 @@ setup_strings() {
     HDR_FOUND_DV="Fuente Dolby Vision detectada — usando mapeo de tono HDR10 como respaldo"
     HDR_FOUND_10BIT="Fuente SDR de 10 bits detectada — convirtiendo a 8 bits BT.709"
     ZSCALE_NOT_FOUND="Filtro zscale no disponible — se omite la conversión HDR (instala libzimg para mejores resultados)"
+    ZSCALE_FALLBACK_COLORSPACE="zscale no disponible — usando filtro colorspace para conversión básica HDR→SDR (instala libzimg para mapeo de tono completo)"
     STEP_PREPROCESS="Pre-convirtiendo a intermedio H.264 SDR"
     BG_PROMPT="¿Ejecutar en segundo plano (el proceso sobrevive al cierre del terminal)? [s/n]"
     BG_STARTED="Procesamiento en segundo plano iniciado"
@@ -201,7 +203,7 @@ setup_strings() {
     GPU_DETECT="Detecting GPU acceleration..."
     GPU_FOUND_MSG="Hardware-accelerated GPU detected"
     GPU_NONE="No hardware-accelerated GPU detected — CPU will be used."
-    GPU_USE_PROMPT="Use GPU acceleration for H.264 encoding? [y/n]"
+    GPU_USE_PROMPT="Use GPU acceleration for H.264 encoding? [Y/n]"
     FOLDER_PROMPT="Videos folder path"
     FOLDER_NOT_FOUND="Folder not found"
     FOLDER_HINT="Enter an absolute path, e.g. /home/user/Videos"
@@ -212,7 +214,7 @@ setup_strings() {
     SELECT_ACTIONS_TITLE="Select actions to apply"
     ACTION_BLACK_BARS="Remove black bars (cropdetect)"
     ACTION_FPS="Interpolate FPS (minterpolate)"
-    ACTION_H264="Convert to H.264 (libx264)"
+    ACTION_H264="Convert to H.264"
     ACTION_STAB="Video stabilization (vid.stab, two-pass)"
     TARGET_FPS_PROMPT="Target FPS [60/90/120 or custom value]"
     SHAKINESS_LABEL="Shakiness level to detect [1-10]"
@@ -230,6 +232,7 @@ setup_strings() {
     STEP_COPY="Copying to output"
     STEP_DONE="done"
     STEP_FAIL="FAILED"
+    STEP_FINALIZING="Finalizing..."
     NO_BLACK_BARS="No black bars detected, skipping crop"
     VIDSTAB_NOT_FOUND="vid.stab not available in this FFmpeg build. Skipping stabilization."
     VIDSTAB_FALLBACK_DESHAKE="vid.stab not available — falling back to deshake filter for basic stabilization."
@@ -254,6 +257,7 @@ setup_strings() {
     HDR_FOUND_DV="Dolby Vision source detected — applying HDR10 tone-mapping fallback"
     HDR_FOUND_10BIT="10-bit SDR source detected — converting to 8-bit BT.709"
     ZSCALE_NOT_FOUND="zscale filter not available — skipping HDR color conversion (install libzimg for best results)"
+    ZSCALE_FALLBACK_COLORSPACE="zscale not available — using colorspace filter for basic HDR→SDR conversion (install libzimg for full tone-mapping)"
     STEP_PREPROCESS="Pre-converting to H.264 SDR intermediate"
     BG_PROMPT="Run in background (process survives terminal close)? [y/n]"
     BG_STARTED="Background processing started"
@@ -505,14 +509,53 @@ VULKAN_GPU_LABEL=""
 HAS_VULKAN_GPU=0
 HAS_CUDA_GPU=0
 
+_has_encoder() {
+  # Tests whether a given ffmpeg binary supports an encoder.
+  # Uses a captured variable to avoid pipefail false-negatives
+  # (ffmpeg -encoders exits non-zero; with pipefail that would mask grep's result).
+  local bin="$1" encoder="$2" encoder_list
+  encoder_list="$("${bin}" -hide_banner -encoders 2>/dev/null || true)"
+  grep -q "${encoder}" <<< "${encoder_list}" || return 1
+}
+
+_switch_to_system_ffmpeg_or_redownload() {
+  # The cached binary lacks NVENC/VAAPI.  Offer to re-download a GPU-capable
+  # build (BtbN) if one is available for this arch; otherwise use system ffmpeg.
+  local btbn_asset; btbn_asset="$(_btbn_asset)"
+  if [[ -n "${btbn_asset}" ]]; then
+    printf "  %s  %s\n" "$(clr_bold_yellow '⚠')" \
+      "$(clr_yellow "Cached FFmpeg build lacks GPU encoders.")" 
+    printf "  %s [y/n] (y): " "$(clr_bold "Re-download a GPU-capable FFmpeg build (BtbN)?")"
+    local _ans; read -r _ans; _ans="${_ans:-y}"
+    if [[ "${_ans,,}" == y* ]]; then
+      bootstrap_ffmpeg
+      return 0
+    fi
+  fi
+  # Fall back to system ffmpeg for GPU encoding.
+  printf "  %s  %s\n" "$(clr_dim '→')" \
+    "$(clr_dim "Using system ffmpeg for GPU encoding.")"
+  FFMPEG_BIN="ffmpeg"
+  FFPROBE_BIN="ffprobe"
+}
+
 detect_gpu() {
   printf "  %s\n" "$(clr_dim "${GPU_DETECT}")"
 
-  # NVIDIA NVENC — check nvidia-smi then verify ffmpeg has h264_nvenc
+  # NVIDIA NVENC — check nvidia-smi then find an ffmpeg with h264_nvenc
   if command -v nvidia-smi &>/dev/null && nvidia-smi &>/dev/null 2>&1; then
     local gpu_name
     gpu_name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 | xargs 2>/dev/null || true)"
-    if "${FFMPEG_BIN}" -hide_banner -encoders 2>/dev/null | grep -q 'h264_nvenc'; then
+    # Check current FFMPEG_BIN first; fall back to system ffmpeg if needed.
+    local _nvenc_ok=0
+    if _has_encoder "${FFMPEG_BIN}" 'h264_nvenc'; then
+      _nvenc_ok=1
+    elif command -v ffmpeg &>/dev/null && _has_encoder ffmpeg 'h264_nvenc'; then
+      _switch_to_system_ffmpeg_or_redownload
+      # After re-download FFMPEG_BIN may have changed; either way GPU is available.
+      _nvenc_ok=1
+    fi
+    if [[ "${_nvenc_ok}" -eq 1 ]]; then
       GPU_ENCODER="h264_nvenc"
       GPU_LABEL="NVIDIA ${gpu_name} (h264_nvenc)"
       printf "  %s %s: %s\n" "$(clr_bold_green '✓')" "${GPU_FOUND_MSG}" "$(clr_cyan "${GPU_LABEL}")"
@@ -522,7 +565,14 @@ detect_gpu() {
 
   # VA-API — AMD / Intel on Linux
   if [[ -e /dev/dri/renderD128 ]]; then
-    if "${FFMPEG_BIN}" -hide_banner -encoders 2>/dev/null | grep -q 'h264_vaapi'; then
+    local _vaapi_ok=0
+    if _has_encoder "${FFMPEG_BIN}" 'h264_vaapi'; then
+      _vaapi_ok=1
+    elif command -v ffmpeg &>/dev/null && _has_encoder ffmpeg 'h264_vaapi'; then
+      _switch_to_system_ffmpeg_or_redownload
+      _vaapi_ok=1
+    fi
+    if [[ "${_vaapi_ok}" -eq 1 ]]; then
       GPU_ENCODER="h264_vaapi"
       GPU_LABEL="VA-API /dev/dri/renderD128 (h264_vaapi)"
       printf "  %s %s: %s\n" "$(clr_bold_green '✓')" "${GPU_FOUND_MSG}" "$(clr_cyan "${GPU_LABEL}")"
@@ -589,8 +639,10 @@ detect_vulkan_gpus() {
 }
 
 # ── FFmpeg binary bootstrap ───────────────────────────────────────────────────
-# Downloads a static FFmpeg build from johnvansickle.com when the system
-# ffmpeg is missing or older than v7.
+# Downloads a GPU-capable static FFmpeg build from BtbN/FFmpeg-Builds (GitHub)
+# for x86_64 and arm64.
+# BtbN builds include NVENC/VAAPI + all CPU filters (vidstab, zscale, etc.).
+# NVENC uses dlopen() at runtime — no CUDA headers needed at build time.
 
 FFMPEG_BIN="ffmpeg"
 FFPROBE_BIN="ffprobe"
@@ -607,6 +659,27 @@ _arch_tag() {
   esac
 }
 
+# Returns the BtbN asset name for the current arch, or empty if unsupported.
+_btbn_asset() {
+  case "$(_arch_tag)" in
+    amd64) echo "ffmpeg-master-latest-linux64-gpl.tar.xz" ;;
+    arm64) echo "ffmpeg-master-latest-linuxarm64-gpl.tar.xz" ;;
+    *)     echo "" ;;
+  esac
+}
+
+_download_file() {
+  local url="$1" dest="$2"
+  if command -v wget &>/dev/null; then
+    wget -q --show-progress -O "${dest}" "${url}"
+  elif command -v curl &>/dev/null; then
+    curl -L --progress-bar -o "${dest}" "${url}"
+  else
+    printf "  %s Neither wget nor curl found — cannot download.\n" "$(clr_bold_red '✗')"
+    return 1
+  fi
+}
+
 bootstrap_ffmpeg() {
   local arch; arch="$(_arch_tag)"
   if [[ -z "${arch}" ]]; then
@@ -614,52 +687,44 @@ bootstrap_ffmpeg() {
     exit 1
   fi
 
-  local url="https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-${arch}-static.tar.xz"
-  local md5_url="${url}.md5"
   local tmp_dir; tmp_dir="$(mktemp -d)"
   local archive="${tmp_dir}/ffmpeg.tar.xz"
+  local source_label url btbn_bin_subdir=""
 
-  printf "  %s\n" "$(clr_dim "Downloading static FFmpeg (johnvansickle.com) for ${arch}...")"
-
-  if command -v wget &>/dev/null; then
-    wget -q --show-progress -O "${archive}" "${url}" || { printf "  %s Download failed.\n" "$(clr_bold_red '✗')"; rm -rf "${tmp_dir}"; exit 1; }
-  elif command -v curl &>/dev/null; then
-    curl -L --progress-bar -o "${archive}" "${url}" || { printf "  %s Download failed.\n" "$(clr_bold_red '✗')"; rm -rf "${tmp_dir}"; exit 1; }
-  else
-    printf "  %s Neither wget nor curl found — cannot download FFmpeg.\n" "$(clr_bold_red '✗')"
-    exit 1
+  # ── BtbN: GPU-capable (NVENC/VAAPI) + all CPU filters ───────────────────
+  local btbn_asset; btbn_asset="$(_btbn_asset)"
+  if [[ -z "${btbn_asset}" ]]; then
+    printf "  %s No prebuilt FFmpeg available for arch %s.\n" "$(clr_bold_red '✗')" "${arch}"
+    rm -rf "${tmp_dir}"; exit 1
   fi
+  url="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/${btbn_asset}"
+  source_label="BtbN/FFmpeg-Builds (GPU-capable)"
+  btbn_bin_subdir="bin"   # BtbN puts binaries under <extracted>/bin/
 
-  # Optional MD5 check
-  if command -v md5sum &>/dev/null; then
-    local md5_file="${tmp_dir}/ffmpeg.tar.xz.md5"
-    if command -v wget &>/dev/null; then
-      wget -q -O "${md5_file}" "${md5_url}" 2>/dev/null || true
-    else
-      curl -sL -o "${md5_file}" "${md5_url}" 2>/dev/null || true
-    fi
-    if [[ -s "${md5_file}" ]]; then
-      local expected; expected="$(awk '{print $1}' "${md5_file}")"
-      local actual;   actual="$(md5sum "${archive}" | awk '{print $1}')"
-      if [[ "${expected}" != "${actual}" ]]; then
-        printf "  %s MD5 mismatch — archive may be corrupted.\n" "$(clr_bold_red '✗')"
-        rm -rf "${tmp_dir}"; exit 1
-      fi
-      printf "  %s MD5 verified.\n" "$(clr_bold_green '✓')"
-    fi
+  printf "  %s\n" "$(clr_dim "Downloading static FFmpeg (${source_label}) for ${arch}...")"
+
+  if ! _download_file "${url}" "${archive}"; then
+    printf "  %s Download failed.\n" "$(clr_bold_red '✗')"; rm -rf "${tmp_dir}"; exit 1
   fi
 
   mkdir -p "${FFMPEG_LOCAL_DIR}"
   tar -xf "${archive}" -C "${tmp_dir}"
-  local extracted_dir; extracted_dir="$(find "${tmp_dir}" -maxdepth 1 -type d -name 'ffmpeg-*' | head -1)"
-  cp "${extracted_dir}/ffmpeg"  "${FFMPEG_LOCAL_DIR}/ffmpeg"
-  cp "${extracted_dir}/ffprobe" "${FFMPEG_LOCAL_DIR}/ffprobe" 2>/dev/null || true
+  local extracted_dir; extracted_dir="$(find "${tmp_dir}" -maxdepth 1 -mindepth 1 -type d | head -1)"
+
+  # BtbN: binaries in <dir>/bin/
+  local src_bin_dir="${extracted_dir}"
+  if [[ -n "${btbn_bin_subdir}" && -f "${extracted_dir}/${btbn_bin_subdir}/ffmpeg" ]]; then
+    src_bin_dir="${extracted_dir}/${btbn_bin_subdir}"
+  fi
+
+  cp "${src_bin_dir}/ffmpeg"  "${FFMPEG_LOCAL_DIR}/ffmpeg"
+  cp "${src_bin_dir}/ffprobe" "${FFMPEG_LOCAL_DIR}/ffprobe" 2>/dev/null || true
   chmod +x "${FFMPEG_LOCAL_DIR}/ffmpeg" "${FFMPEG_LOCAL_DIR}/ffprobe" 2>/dev/null || true
   rm -rf "${tmp_dir}"
 
   FFMPEG_BIN="${FFMPEG_LOCAL_DIR}/ffmpeg"
   FFPROBE_BIN="${FFMPEG_LOCAL_DIR}/ffprobe"
-  printf "  %s FFmpeg installed to %s\n\n" "$(clr_bold_green '✓')" "$(clr_dim "${FFMPEG_LOCAL_DIR}")"
+  printf "  %s FFmpeg installed to %s (%s)\n\n" "$(clr_bold_green '✓')" "$(clr_dim "${FFMPEG_LOCAL_DIR}")" "$(clr_dim "${source_label}")"
 }
 
 # ── RIFE (rife-ncnn-vulkan) helpers ──────────────────────────────────────────
@@ -957,8 +1022,12 @@ check_deep3d() {
   [[ ! -f "${DEEP3D_DIR}/geometry_optimizer.py" ]] && return 1
   [[ ! -f "${DEEP3D_DIR}/rectify.py" ]]            && return 1
   [[ ! -x "${DEEP3D_PYTHON}" ]]                    && return 1
-  "${DEEP3D_PYTHON}" -c "import torch, cv2, tqdm, path, imageio, scipy, skimage" &>/dev/null && return 0
-  return 1
+  "${DEEP3D_PYTHON}" -c "import torch, cv2, tqdm, path, imageio, scipy, skimage" &>/dev/null || return 1
+  # When a CUDA GPU is present, torch must have been compiled with CUDA support.
+  if [[ "${HAS_CUDA_GPU:-0}" -eq 1 ]]; then
+    "${DEEP3D_PYTHON}" -c "import torch; assert torch.cuda.is_available()" &>/dev/null || return 1
+  fi
+  return 0
 }
 
 bootstrap_deep3d() {
@@ -1045,7 +1114,16 @@ PYEOF
     _torch_label="CUDA ${_cuda_ver} (${_cu_tag})"
   fi
   printf "  %s\n" "$(clr_dim "Installing PyTorch (${_torch_label}) — this may take a few minutes...")"
-  "${DEEP3D_PYTHON}" -m pip install --quiet torch torchvision \
+  # If CUDA is needed but the existing torch is CPU-only, force a reinstall so the
+  # CUDA-enabled wheels replace the CPU build already present in the venv.
+  local _torch_pip_flags=(--quiet)
+  if [[ -n "${_cuda_ver}" ]]; then
+    if ! "${DEEP3D_PYTHON}" -c "import torch; assert torch.cuda.is_available()" &>/dev/null; then
+      _torch_pip_flags+=(--force-reinstall)
+      printf "  %s\n" "$(clr_dim "CPU-only torch detected in venv — reinstalling with CUDA support...")"
+    fi
+  fi
+  "${DEEP3D_PYTHON}" -m pip install "${_torch_pip_flags[@]}" torch torchvision \
     --extra-index-url "${_torch_index}" || {
     printf "  %s Failed to install PyTorch.\n" "$(clr_bold_red '✗')"; return 1
   }
@@ -1067,23 +1145,65 @@ run_deep3d_step() {
   printf "    %s\n" "${label}..."
   local step_start=$SECONDS
 
+  local progress_tmp bar_width=25
+  progress_tmp="$(mktemp)"
+
   (
     cd "${DEEP3D_DIR}"
     "${DEEP3D_PYTHON}" "${script}" "${input_path}" \
       --name "${name}" --output_dir "outputs" --cuda "${DEEP3D_DEVICE}" "${extra_args[@]}"
-  ) >> "${LOG_FILE}" 2>&1 &
+  ) > "${progress_tmp}" 2>&1 &
   local _d3d_pid=$!
 
   printf '\033[?25l'
   local spin_idx=0
   local spinners=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+  local _d3d_finalizing=0
 
   while kill -0 "${_d3d_pid}" 2>/dev/null; do
     local elapsed=$(( SECONDS - step_start ))
     local elapsed_str; elapsed_str="$(_fmt_time "${elapsed}")"
-    printf "\r    %s  %s\033[K" \
-      "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" "$(clr_dim "${elapsed_str}")"
-    spin_idx=$(( spin_idx + 1 ))
+    local pct=-1
+
+    # Parse "optical flow N/TOTAL" lines emitted by the Python scripts
+    local flow_line
+    flow_line="$(grep -o 'optical flow [0-9]*/[0-9]*' "${progress_tmp}" 2>/dev/null | tail -1 || true)"
+    if [[ -n "${flow_line}" ]]; then
+      local cur_flow total_flow
+      cur_flow="${flow_line##*optical flow }"
+      total_flow="${cur_flow##*/}"
+      cur_flow="${cur_flow%%/*}"
+      if [[ "${total_flow}" -gt 0 ]]; then
+        if [[ "${cur_flow}" -ge "${total_flow}" ]]; then
+          _d3d_finalizing=1
+        else
+          pct=$(( cur_flow * 100 / total_flow ))
+        fi
+      fi
+    fi
+
+    if [[ "${_d3d_finalizing}" -eq 1 ]]; then
+      printf "\r    %s  %s  %s\033[K" \
+        "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" "$(clr_dim "${elapsed_str}")" "$(clr_dim "${STEP_FINALIZING}")"
+      spin_idx=$(( spin_idx + 1 ))
+    elif [[ "${pct}" -ge 0 ]]; then
+      local filled=$(( pct * bar_width / 100 ))
+      local empty=$(( bar_width - filled ))
+      local bar="" i
+      for ((i=0; i<filled; i++)); do bar+="█"; done
+      for ((i=0; i<empty; i++)); do bar+="░"; done
+      local eta_str=""
+      if [[ "${pct}" -ge 1 && "${elapsed}" -gt 0 ]]; then
+        local remaining=$(( elapsed * (100 - pct) / pct ))
+        eta_str="  ETA ~$(_fmt_time "${remaining}")"
+      fi
+      printf "\r    [%s] %3d%%  %s%s\033[K" \
+        "$(clr_cyan "${bar}")" "${pct}" "$(clr_dim "${elapsed_str}")" "$(clr_dim "${eta_str}")"
+    else
+      printf "\r    %s  %s\033[K" \
+        "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" "$(clr_dim "${elapsed_str}")"
+      spin_idx=$(( spin_idx + 1 ))
+    fi
     sleep 0.3
   done
 
@@ -1094,7 +1214,14 @@ run_deep3d_step() {
   local total_str; total_str="$(_fmt_time "${total_elapsed}")"
   printf "\r\033[K"
 
+  # Flush captured Python output to the log file
+  cat "${progress_tmp}" >> "${LOG_FILE}" 2>/dev/null || true
+  rm -f "${progress_tmp}"
+
   if [[ "${ec}" -eq 0 ]]; then
+    local bar="" i
+    for ((i=0; i<bar_width; i++)); do bar+="█"; done
+    printf "\r    [%s] 100%%  %s\033[K\n" "$(clr_bold_green "${bar}")" "$(clr_dim "${total_str}")"
     printf "    %s\n" "$(clr_bold_green "✓ ${STEP_DONE}  (${total_str})")"
     return 0
   else
@@ -1318,6 +1445,7 @@ run_ffmpeg_step() {
   printf '\033[?25l'
   local spin_idx=0
   local spinners=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+  local _ffmpeg_finalizing=0
 
   while kill -0 "${ffmpeg_pid}" 2>/dev/null; do
     local elapsed=$(( SECONDS - step_start ))
@@ -1331,11 +1459,17 @@ run_ffmpeg_step() {
         IFS=: read -r h m s <<< "${time_str}"
         local cur_sec=$(( 10#${h:-0}*3600 + 10#${m:-0}*60 + 10#${s:-0} ))
         pct=$(( cur_sec * 100 / dur ))
-        [[ "${pct}" -gt 99 ]] && pct=99
+        if [[ "${pct}" -ge 100 ]]; then
+          _ffmpeg_finalizing=1
+          pct=-1
+        fi
       fi
     fi
 
-    if [[ "${pct}" -ge 0 ]]; then
+    if [[ "${_ffmpeg_finalizing}" -eq 1 ]]; then
+      printf "\r    %s  %s  %s\033[K" "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" "$(clr_dim "${elapsed_str}")" "$(clr_dim "${STEP_FINALIZING}")"
+      spin_idx=$(( spin_idx + 1 ))
+    elif [[ "${pct}" -ge 0 ]]; then
       local filled=$(( pct * bar_width / 100 ))
       local empty=$(( bar_width - filled ))
       local bar="" i
@@ -1435,7 +1569,26 @@ process_video() {
         get_hdr_conversion_filters "${hdr_type}" hdr_filters
         [[ "${#hdr_filters[@]}" -gt 0 ]] && vf_chain=("${hdr_filters[@]}" "${vf_chain[@]}")
       else
-        printf "    %s %s\n" "$(clr_yellow '⚠')" "$(clr_dim "${ZSCALE_NOT_FOUND}")"
+        printf "    %s %s\n" "$(clr_yellow '⚠')" "$(clr_dim "${ZSCALE_FALLBACK_COLORSPACE}")"
+        # Without zscale/libzimg, use FFmpeg's built-in colorspace filter to
+        # apply the BT.2020→BT.709 matrix and primaries conversion, plus a
+        # BT.2020-10 gamma approximation (the closest SDR-compatible TRC that
+        # the colorspace filter supports).
+        # Note: the colorspace filter does NOT support PQ (smpte2084) or HLG
+        # (arib-std-b67) as TRC values — those require zscale for proper
+        # linearisation. iall=bt2020 sets itrc=bt2020-10 internally, which at
+        # least makes the matrix math correct; the gamma will be approximate for
+        # HDR10/HLG but is far better than the raw format=yuv420p path.
+        local _fallback_cf=""
+        case "${hdr_type}" in
+          hdr10|dolby_vision|hlg)
+            _fallback_cf="colorspace=iall=bt2020:all=bt709:format=yuv420p"
+            ;;
+          sdr_10bit)
+            _fallback_cf="format=yuv420p"
+            ;;
+        esac
+        [[ -n "${_fallback_cf}" ]] && vf_chain=("${_fallback_cf}" "${vf_chain[@]}")
       fi
     fi
   fi
@@ -2084,11 +2237,8 @@ main() {
   # ── GPU detection ────────────────────────────────────────────────────────
   local use_gpu=0
   if detect_gpu; then
-    printf "  %s: " "${GPU_USE_PROMPT}"
-    local gpu_ans; read -r gpu_ans
-    gpu_ans="${gpu_ans:-n}"
-    local fchar="${gpu_ans:0:1}"
-    [[ "${CONFIRM_YES_CHARS}" == *"${fchar,,}"* ]] && use_gpu=1
+    printf "  %s: Y\n" "${GPU_USE_PROMPT}"
+    use_gpu=1
   fi
   echo ""
 
@@ -2296,6 +2446,11 @@ main() {
     if check_deep3d; then
       printf "  %s %s: %s\n\n" \
         "$(clr_bold_green '✓')" "${DEEP3D_FOUND}" "$(clr_dim "${DEEP3D_DIR}")"
+      # Always sync the flow helper so the latest version (with CUDA support) is used.
+      local _ev_script_dir; _ev_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+      if [[ -f "${_ev_script_dir}/deep3d_flow_cv.py" ]]; then
+        cp "${_ev_script_dir}/deep3d_flow_cv.py" "${DEEP3D_DIR}/deep3d_flow_cv.py"
+      fi
     else
       printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "${DEEP3D_NOT_FOUND}"
       echo ""
@@ -2478,7 +2633,7 @@ main() {
       _d3d_cuda_name="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null \
         | head -1 | xargs 2>/dev/null || echo "CUDA GPU")"
     fi
-    DEEP3D_DEVICE="0"
+    DEEP3D_DEVICE="cuda:0"
     DEEP3D_GPU_NAME="${_d3d_cuda_name}"
     printf "  %s %s: %s\n\n" "$(clr_bold_magenta '⚡')" "${AI_GPU_HINT}" "$(clr_magenta "${_d3d_cuda_name}")"
     printf "  %s (12): " "$(clr_bold "${DEEP3D_STABILITY_LABEL}")"
