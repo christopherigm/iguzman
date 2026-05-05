@@ -43,7 +43,7 @@ run_ffmpeg_step() {
       fi
     fi
 
-    _render_progress_line "${pct}" "${elapsed_str}" "${_finalizing}" "${bar_width}" "${spin_idx}"
+    _render_progress_line "${pct}" "${elapsed_str}" "${_finalizing}" "${bar_width}" "${spin_idx}" "${elapsed}"
     spin_idx=$(( spin_idx + 1 ))
     sleep 0.15
   done
@@ -100,7 +100,7 @@ wait_frame_progress() {
       [[ "${pct}" -gt 99 ]] && pct=99
     fi
 
-    _render_progress_line "${pct}" "${elapsed_str}" 0 "${bar_width}" "${spin_idx}"
+    _render_progress_line "${pct}" "${elapsed_str}" 0 "${bar_width}" "${spin_idx}" "${elapsed}"
     spin_idx=$(( spin_idx + 1 ))
     sleep 0.3
   done
@@ -153,7 +153,7 @@ wait_deep3d_progress() {
       fi
     fi
 
-    _render_progress_line "${pct}" "${elapsed_str}" "${_finalizing}" "${bar_width}" "${spin_idx}"
+    _render_progress_line "${pct}" "${elapsed_str}" "${_finalizing}" "${bar_width}" "${spin_idx}" "${elapsed}"
     spin_idx=$(( spin_idx + 1 ))
     sleep 0.3
   done
@@ -184,7 +184,7 @@ _filled_bar() {
 }
 
 _render_progress_line() {
-  local pct="$1" elapsed_str="$2" finalizing="$3" bar_width="$4" spin_idx="$5"
+  local pct="$1" elapsed_str="$2" finalizing="$3" bar_width="$4" spin_idx="$5" elapsed_s="${6:-0}"
   local spinners=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
   if [[ "${finalizing}" -eq 1 ]]; then
@@ -199,12 +199,14 @@ _render_progress_line() {
     for ((i=0; i<filled; i++)); do bar+="█"; done
     for ((i=0; i<empty;  i++)); do bar+="░"; done
     local eta_str=""
-    if [[ "${pct}" -ge 1 && "${SECONDS}" -gt 0 ]]; then
-      local elapsed_s; elapsed_s="$(( SECONDS ))"
-      : # eta computed at call site — pass pre-computed elapsed via elapsed_str
+    if [[ "${pct}" -ge 1 && "${elapsed_s}" -gt 0 ]]; then
+      local total_est=$(( elapsed_s * 100 / pct ))
+      local eta=$(( total_est - elapsed_s ))
+      [[ "${eta}" -lt 0 ]] && eta=0
+      eta_str="  ETA $(_fmt_time "${eta}")"
     fi
-    printf "\r    [%s] %3d%%  %s\033[K" \
-      "$(clr_cyan "${bar}")" "${pct}" "$(clr_dim "${elapsed_str}")"
+    printf "\r    [%s] %3d%%  %s%s\033[K" \
+      "$(clr_cyan "${bar}")" "${pct}" "$(clr_dim "${elapsed_str}")" "$(clr_dim "${eta_str}")"
   else
     printf "\r    %s  %s\033[K" \
       "$(clr_cyan "${spinners[$(( spin_idx % 10 ))]}")" \
