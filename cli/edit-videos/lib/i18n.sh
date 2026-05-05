@@ -157,6 +157,9 @@ setup_strings() {
     ACTION_MPG_TO_MP4="Convertir MPG/MPEG a MP4 (H.264/H.265)"
     MPG_TO_MP4_PRECONVERT="Convirtiendo MPG/MPEG a MP4"
     MPG_TO_MP4_SKIP_MSG="No es MPG/MPEG, se omite la conversión"
+    SKIP_EXISTING_FOUND="archivos ya encontrados en la carpeta de salida"
+    SKIP_EXISTING_PROMPT="¿Omitir archivos ya procesados?"
+    SKIP_EXISTING_SKIPPED="omitidos (ya en carpeta de salida)"
   else
     WELCOME="FFmpeg Video Editor"
     SUBTITLE="Batch-process videos with FFmpeg filters."
@@ -308,5 +311,8 @@ setup_strings() {
     ACTION_MPG_TO_MP4="Convert MPG/MPEG to MP4 (H.264/H.265)"
     MPG_TO_MP4_PRECONVERT="Converting MPG/MPEG to MP4"
     MPG_TO_MP4_SKIP_MSG="Not MPG/MPEG, skipping conversion"
+    SKIP_EXISTING_FOUND="files already found in output folder"
+    SKIP_EXISTING_PROMPT="Skip already processed files?"
+    SKIP_EXISTING_SKIPPED="skipped (already in output folder)"
   fi
 }

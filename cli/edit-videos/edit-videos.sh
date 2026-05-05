@@ -190,6 +190,39 @@ main() {
   fi
   echo ""
 
+  # ── Output folder ─────────────────────────────────────────────────────────
+  local date_str; date_str="$(date '+%Y-%m-%d')"
+  local out_dir_default="${folder}/output-${date_str}"
+  printf "  %s (%s): " "$(clr_bold "${OUTPUT_FOLDER_PROMPT}")" "$(clr_dim "${out_dir_default}")"
+  local out_dir_input; read -r out_dir_input
+  local out_dir="${out_dir_input:-${out_dir_default}}"
+  echo ""
+
+  # ── Skip already processed files ─────────────────────────────────────────
+  local SKIP_EXISTING=0
+  local _skipped_count=0
+  declare -A _SKIP_STEM_MAP
+  if [[ -d "${out_dir}" ]]; then
+    local _all_video_exts=(mp4 mkv avi mov wmv flv webm mpeg mpg m4v ts mts m2ts 3gp ogv)
+    local _existing_count=0
+    local _ef _ef_base _ef_stem _ev
+    for _ev in "${_all_video_exts[@]}"; do
+      while IFS= read -r -d '' _ef; do
+        _ef_base="$(basename "${_ef}")"
+        _ef_stem="${_ef_base%.*}"
+        _SKIP_STEM_MAP["${_ef_stem,,}"]=1
+        (( _existing_count++ )) || true
+      done < <(find "${out_dir}" -maxdepth 1 -type f -iname "*.${_ev}" -print0 2>/dev/null)
+    done
+    if [[ "${_existing_count}" -gt 0 ]]; then
+      printf "  %s %d %s\n" "$(clr_yellow '⚠')" "${_existing_count}" "${SKIP_EXISTING_FOUND}"
+      printf "  %s [y/n] (y): " "$(clr_bold "${SKIP_EXISTING_PROMPT}")"
+      local _skip_ans; read -r _skip_ans; _skip_ans="${_skip_ans:-y}"
+      [[ "${CONFIRM_YES_CHARS}" == *"${_skip_ans:0:1}"* ]] && SKIP_EXISTING=1
+      echo ""
+    fi
+  fi
+
   # ── Action selection ──────────────────────────────────────────────────────
   printf "  %s\n" "$(clr_bold "${SELECT_ACTIONS_TITLE}:")"
   printf "  %s\n" "$(clr_dim "${CB_PROMPT}")"
@@ -530,26 +563,29 @@ main() {
 
   # ── Collect files ─────────────────────────────────────────────────────────
   local video_files=()
+  local _f_base _f_stem
   for ext in "${selected_exts[@]}"; do
     while IFS= read -r -d '' f; do
+      if [[ "${SKIP_EXISTING}" -eq 1 ]]; then
+        _f_base="$(basename "${f}")"
+        _f_stem="${_f_base%.*}"
+        if [[ -n "${_SKIP_STEM_MAP["${_f_stem,,}"]:-}" ]]; then
+          (( _skipped_count++ )) || true
+          continue
+        fi
+      fi
       video_files+=("$f")
     done < <(find "${folder}" -maxdepth 1 -type f -iname "*.${ext}" -print0 2>/dev/null | sort -z)
   done
 
   local total="${#video_files[@]}"
 
-  # ── Output folder ─────────────────────────────────────────────────────────
-  local date_str; date_str="$(date '+%Y-%m-%d')"
-  local out_dir_default="${folder}/output-${date_str}"
-  printf "  %s (%s): " "$(clr_bold "${OUTPUT_FOLDER_PROMPT}")" "$(clr_dim "${out_dir_default}")"
-  local out_dir_input; read -r out_dir_input
-  local out_dir="${out_dir_input:-${out_dir_default}}"
-  echo ""
-
   # ── Pre-flight summary ────────────────────────────────────────────────────
   local divider; divider="$(printf '─%.0s' {1..60})"
   echo "  ${divider}"
   printf "  %s  %d %s\n" "$(clr_bold_cyan '▶')" "${total}" "$(clr_bold "${FILES_LABEL} selected")"
+  [[ "${_skipped_count}" -gt 0 ]] && \
+    printf "  %s  %d %s\n" "$(clr_dim '○')" "${_skipped_count}" "$(clr_dim "${SKIP_EXISTING_SKIPPED}")"
   printf "  %s: %s\n" "$(clr_bold "${OUTPUT_FOLDER}")" "$(clr_dim "${out_dir}")"
 
   printf "  %s: " "$(clr_bold "${ACTIONS_LABEL}")"
