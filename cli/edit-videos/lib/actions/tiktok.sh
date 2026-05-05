@@ -13,7 +13,8 @@
 DO_TIKTOK=0
 TIKTOK_OLLAMA_URL="http://localhost:11434"
 TIKTOK_OLLAMA_MODEL="gemma4:latest"
-TIKTOK_MIN_SCORE=7
+TIKTOK_MIN_SCORE=5
+TIKTOK_TOP_K_PERCENT=50   # keep top N% of scored clips; 0 = disabled (threshold-only)
 TIKTOK_CLIP_MIN=3
 TIKTOK_CLIP_MAX=7
 TIKTOK_FRAME_INTERVAL=5
@@ -21,6 +22,8 @@ TIKTOK_MUSIC_FILE=""
 TIKTOK_MUSIC_VOLUME=0.3
 TIKTOK_ORIG_AUDIO_VOLUME=0.7
 TIKTOK_DEDUP_THRESHOLD=0.95   # SSIM similarity threshold; 1.0 = identical, lower = more aggressive dedup
+TIKTOK_SUBJECT_TYPE=""         # e.g. "person", "face", "cat"; empty = generic hero detection
+TIKTOK_ROI_FRAMES=3            # frames to average for subject-coord SMA (1 = no smoothing, ≥2 = average window)
 
 # ── Ollama helpers ────────────────────────────────────────────────────────────
 
@@ -69,7 +72,7 @@ _score_frame() {
   # Write payload to a temp file to safely handle large base64 strings
   local tmp_payload
   tmp_payload="$(mktemp /tmp/ollama_score_XXXXXX.json)"
-  printf '{"model":"%s","prompt":"Rate the aesthetic quality of this image from 1-10. Consider: sharp focus, interesting subject, good lighting, composition. Reply with ONLY a single integer from 1 to 10, nothing else.","images":["%s"],"stream":false}' \
+  printf '{"model":"%s","prompt":"Rate this frame for a short-form vertical video reel.\nRubric:\n1-3: Poor \u2014 blurry, bad exposure, cluttered, or no clear subject.\n4-6: Mediocre \u2014 technically clear but visually uninteresting. Most frames fall here.\n7-8: Good \u2014 sharp, intentional composition, good lighting, clear subject.\n9-10: Exceptional \u2014 cinematic quality, strong emotional impact, high-contrast visual hook.\nDeduct 3 points if the subject is cut off or the frame is severely cluttered.\nAssume 90%% of frames score 6 or lower. Be a harsh critic.\nRespond with: [one-sentence reason] | [integer 1-10]","images":["%s"],"stream":false}' \
     "${model}" "${b64}" > "${tmp_payload}"
 
   local response curl_exit
@@ -88,11 +91,15 @@ _score_frame() {
     | sed 's/"response":"//;s/"$//' \
     | tr -d '[:space:]')"
 
-  # First integer in response text
+  # Prefer score after pipe separator (chain-of-thought format: "reason | score")
   local score
-  score="$(printf '%s' "${raw_text}" | grep -o '[0-9]\+' | head -1)"
+  score="$(printf '%s' "${raw_text}" | grep -oE '\|[0-9]+' | grep -o '[0-9]\+' | tail -1)"
+  # Fallback: last integer in response (score is at the end in CoT format)
   if [[ -z "${score}" ]]; then
-    # Fallback: check top-level numeric field (some model versions)
+    score="$(printf '%s' "${raw_text}" | grep -o '[0-9]\+' | tail -1)"
+  fi
+  if [[ -z "${score}" ]]; then
+    # Last resort: check top-level numeric field (some model versions)
     score="$(printf '%s' "${response}" | grep -o '"response":[[:space:]]*[0-9]\+' | grep -o '[0-9]\+$')"
   fi
 
@@ -116,11 +123,23 @@ _get_subject_coords() {
   local b64
   b64="$(base64 -w 0 "${image_path}" 2>/dev/null)" || { echo "0.5 0.5"; return; }
 
+  # Build subject-type priming hint; strip chars unsafe in JSON/shell
+  local _subject_safe=""
+  [[ -n "${TIKTOK_SUBJECT_TYPE}" ]] && \
+    _subject_safe="$(printf '%s' "${TIKTOK_SUBJECT_TYPE}" | tr -cd 'A-Za-z0-9 ' | head -c 50)"
+  local _subject_hint=""
+  [[ -n "${_subject_safe}" ]] && \
+    _subject_hint=" Focus specifically on the ${_subject_safe}; if there are multiple, choose the one closest to the foreground."
+
+  # Assemble prompt (100×100 integer grid eliminates float ambiguity; CoT yields accurate scores)
+  local _prompt
+  _prompt="Act as a professional cinematographer. Imagine a 100x100 grid over this image where [0,0] is top-left and [100,100] is bottom-right.${_subject_hint} Identify the Hero of the shot (primary person, face, or moving object) and determine the exact center point of that subject. Do not output 50,50 unless the subject is truly centered. Respond in this format: [one-sentence reasoning] | X,Y"
+
   # Write payload to a temp file to safely handle large base64 strings
   local tmp_payload
   tmp_payload="$(mktemp /tmp/ollama_roi_XXXXXX.json)"
-  printf '{"model":"%s","prompt":"Where is the main subject in this image? Reply with ONLY two decimal numbers between 0.0 and 1.0: the horizontal center x and vertical center y of the main subject. Example: 0.5 0.5 (for a centered subject). Reply with the two numbers separated by a space and nothing else.","images":["%s"],"stream":false}' \
-    "${model}" "${b64}" > "${tmp_payload}"
+  printf '{"model":"%s","prompt":"%s","images":["%s"],"stream":false}' \
+    "${model}" "${_prompt}" "${b64}" > "${tmp_payload}"
 
   local response curl_exit
   response="$(curl -sf --max-time 120 -X POST \
@@ -137,17 +156,24 @@ _get_subject_coords() {
     | sed 's/"response":"//;s/"$//' \
     | tr -d '[:space:]')"
 
-  # Extract first two numbers (integer or decimal)
-  local x y
-  x="$(printf '%s' "${raw_text}" | grep -oE '[0-9]+(\.[0-9]+)?' | sed -n '1p')"
-  y="$(printf '%s' "${raw_text}" | grep -oE '[0-9]+(\.[0-9]+)?' | sed -n '2p')"
+  # Extract X,Y from after pipe separator (chain-of-thought: "reason | X,Y")
+  local x y coord_str
+  coord_str="$(printf '%s' "${raw_text}" | grep -oE '\|[0-9]+,[0-9]+' | tail -1 | tr -d '|')"
+  if [[ -n "${coord_str}" ]]; then
+    x="${coord_str%%,*}"
+    y="${coord_str##*,}"
+  else
+    # Fallback: last two integers in response (score usually appears at end in CoT format)
+    x="$(printf '%s' "${raw_text}" | grep -oE '[0-9]+' | tail -2 | head -1)"
+    y="$(printf '%s' "${raw_text}" | grep -oE '[0-9]+' | tail -1)"
+  fi
 
-  [[ -z "${x}" ]] && x="0.5"
-  [[ -z "${y}" ]] && y="0.5"
+  [[ -z "${x}" ]] && x="50"
+  [[ -z "${y}" ]] && y="50"
 
-  # Clamp to [0,1] using awk
-  x="$(echo "${x}" | awk '{v=$1+0; if(v<0)v=0; if(v>1)v=1; printf "%.4f",v}')"
-  y="$(echo "${y}" | awk '{v=$1+0; if(v<0)v=0; if(v>1)v=1; printf "%.4f",v}')"
+  # Normalize from 0-100 grid to 0.0-1.0 fraction, clamped
+  x="$(awk -v v="${x}" 'BEGIN { v=v/100.0; if(v<0)v=0; if(v>1)v=1; printf "%.4f",v}')"
+  y="$(awk -v v="${y}" 'BEGIN { v=v/100.0; if(v<0)v=0; if(v>1)v=1; printf "%.4f",v}')"
 
   echo "${x} ${y}"
 }
@@ -165,10 +191,59 @@ _is_image_file() {
   esac
 }
 
+# _image_dhash <image_path>
+# Computes a 64-bit difference hash (dHash) of an image.
+# Outputs a 64-char binary string ("0110...") or "" on failure.
+# Algorithm: scale to 9×8 grayscale, compare each pixel to its right neighbour.
+_image_dhash() {
+  local img="$1"
+  [[ ! -f "${img}" ]] && { echo ""; return; }
+
+  "${FFMPEG_BIN}" -hide_banner -loglevel error \
+    -i "${img}" \
+    -vf "scale=9:8:flags=area,format=gray" \
+    -frames:v 1 -f rawvideo pipe:1 2>/dev/null \
+  | od -A n -t u1 -v \
+  | awk '
+    BEGIN { n = 0 }
+    { for (i = 1; i <= NF; i++) vals[++n] = $i + 0 }
+    END {
+      if (n < 72) { print ""; exit }
+      h = ""
+      for (r = 0; r < 8; r++)
+        for (c = 0; c < 8; c++) {
+          idx = r * 9 + c + 1
+          h = h (vals[idx] < vals[idx+1] ? "1" : "0")
+        }
+      print h
+    }'
+}
+
+# _sharpness_score <image_path>
+# Returns a focus/sharpness value (0–100, higher = sharper).
+# Method: compare original vs heavily-blurred copy with SSIM.
+# Sharp images lose more detail when blurred → lower SSIM → higher score.
+_sharpness_score() {
+  local img="$1"
+  [[ ! -f "${img}" ]] && { echo "0"; return; }
+
+  local ssim_out ssim_val
+  ssim_out="$("${FFMPEG_BIN}" -hide_banner -loglevel error \
+    -i "${img}" \
+    -lavfi "[0:v]scale=256:256:flags=bilinear,split[orig][dup];[dup]gblur=sigma=4[blurred];[orig][blurred]ssim" \
+    -f null - 2>&1)"
+
+  ssim_val="$(printf '%s' "${ssim_out}" | grep -oE 'All:[0-9]+\.[0-9]+' | head -1 | cut -d: -f2)"
+  [[ -z "${ssim_val}" ]] && { echo "0"; return; }
+
+  # Invert: lower SSIM vs blurred = more detail lost = sharper image
+  awk -v v="${ssim_val}" 'BEGIN { printf "%.4f\n", (1.0 - v) * 100 }'
+}
+
 # _images_are_similar <img1> <img2> <threshold>
-# Returns 0 if the SSIM between the two images is >= threshold.
-# Both inputs are scaled to 256x256 before comparison so resolution differences
-# don't matter (burst shots from the same phone vary only in tiny details).
+# Returns 0 (similar) if dHash Hamming distance ≤ 12 (catches burst shots /
+# same-scene variants faster than SSIM), or if SSIM ≥ threshold for borderline
+# dHash distances (13–20).  Distances > 20 skip SSIM entirely.
 _images_are_similar() {
   local img1="$1"
   local img2="$2"
@@ -176,17 +251,33 @@ _images_are_similar() {
 
   [[ ! -f "${img1}" || ! -f "${img2}" ]] && return 1
 
-  local ssim_out
+  # ── Fast path: dHash ────────────────────────────────────────────────────
+  local h1 h2
+  h1="$(_image_dhash "${img1}")"
+  h2="$(_image_dhash "${img2}")"
+  if [[ -n "${h1}" && -n "${h2}" && "${#h1}" -eq 64 && "${#h2}" -eq 64 ]]; then
+    local dist
+    dist="$(awk -v a="${h1}" -v b="${h2}" 'BEGIN {
+      n = split(a, x, ""); split(b, y, "")
+      d = 0; for (i = 1; i <= n; i++) if (x[i] != y[i]) d++
+      print d
+    }')"
+    # Hamming ≤ 12 → near-duplicate (covers burst shots / same scene)
+    [[ "${dist}" -le 12 ]] 2>/dev/null && return 0
+    # Hamming > 20 → clearly different scene; skip expensive SSIM
+    [[ "${dist}" -gt 20 ]] 2>/dev/null && return 1
+  fi
+
+  # ── Confirm borderline dHash with SSIM ─────────────────────────────────
+  local ssim_out ssim_val
   ssim_out="$("${FFMPEG_BIN}" -hide_banner -loglevel error \
     -i "${img1}" -i "${img2}" \
     -lavfi "[0:v]scale=256:256:flags=bilinear[a];[1:v]scale=256:256:flags=bilinear[b];[a][b]ssim" \
     -f null - 2>&1)"
 
-  local ssim_val
   ssim_val="$(printf '%s' "${ssim_out}" | grep -oE 'All:[0-9]+\.[0-9]+' | head -1 | cut -d: -f2)"
   [[ -z "${ssim_val}" ]] && return 1
 
-  # Return 0 (similar) if val >= threshold
   awk -v val="${ssim_val}" -v thr="${threshold}" \
     'BEGIN { exit (val + 0 >= thr + 0) ? 0 : 1 }'
 }
@@ -290,8 +381,8 @@ run_tiktok_reel() {
   # ── Phase 1: Frame extraction + LLM scoring ──────────────────────────────
   printf "  %s\n\n" "$(clr_bold "${TIKTOK_PHASE1}:")"
 
-  # scored_files entries: "<score>:<best_frame>:<src_file>:<dur_sec>"
-  local -a scored_files=()
+  # all_scored_files entries: "<score>:<best_frame>:<src_file>:<dur_sec>"
+  local -a all_scored_files=()
   local file_idx=0
   local total_files="${#video_files[@]}"
 
@@ -363,13 +454,38 @@ run_tiktok_reel() {
       "$(clr_bold_cyan '→')" "${TIKTOK_BEST_SCORE}" "$(clr_bold "${best_score}")"
 
     if [[ "${best_score}" -ge "${TIKTOK_MIN_SCORE}" ]] 2>/dev/null; then
-      scored_files+=("${best_score}:${best_frame}:${vf_src}:${dur_sec}")
+      all_scored_files+=("${best_score}:${best_frame}:${vf_src}:${dur_sec}")
       printf "    %s %s\n\n" "$(clr_bold_green '✓')" "${TIKTOK_SELECTED}"
     else
-      printf "    %s %s (%d < %d)\n\n" \
-        "$(clr_dim '○')" "${TIKTOK_SKIPPED}" "${best_score}" "${TIKTOK_MIN_SCORE}"
+      printf "    %s %s\n\n" "$(clr_dim '○')" "${TIKTOK_SKIPPED}"
     fi
   done
+
+  if [[ "${#all_scored_files[@]}" -eq 0 ]]; then
+    printf "  %s %s\n\n" "$(clr_bold_yellow '⚠')" "${TIKTOK_NO_CLIPS_SELECTED}"
+    return 1
+  fi
+
+  # ── Top-K percent selection ──────────────────────────────────────────────
+  # Sort candidates by score descending; keep the top TIKTOK_TOP_K_PERCENT %
+  # (0 = keep all), then apply TIKTOK_MIN_SCORE as an absolute floor.
+  local -a scored_files=()
+  local _total_cands="${#all_scored_files[@]}"
+  local _keep_count
+  _keep_count="$(awk -v n="${_total_cands}" -v pct="${TIKTOK_TOP_K_PERCENT}" \
+    'BEGIN { k = (pct > 0) ? int(n * pct / 100 + 0.5) : n; if (k < 1) k = 1; print k }')"
+  if [[ "${TIKTOK_TOP_K_PERCENT}" -gt 0 ]]; then
+    printf "  %s Top %d%% → keeping %d of %d candidates\n\n" \
+      "$(clr_dim '○')" "${TIKTOK_TOP_K_PERCENT}" "${_keep_count}" "${_total_cands}"
+  fi
+  local _rank=0 _tk_entry
+  while IFS= read -r _tk_entry; do
+    [[ -z "${_tk_entry}" ]] && continue
+    local _tk_score="${_tk_entry%%:*}"
+    [[ "${_tk_score}" -lt "${TIKTOK_MIN_SCORE}" ]] 2>/dev/null && break
+    (( _rank++ )) || true
+    [[ "${_rank}" -le "${_keep_count}" ]] && scored_files+=("${_tk_entry}")
+  done < <(printf '%s\n' "${all_scored_files[@]}" | sort -t: -k1 -rn)
 
   if [[ "${#scored_files[@]}" -eq 0 ]]; then
     printf "  %s %s\n\n" "$(clr_bold_yellow '⚠')" "${TIKTOK_NO_CLIPS_SELECTED}"
@@ -377,9 +493,10 @@ run_tiktok_reel() {
   fi
 
   # ── Near-duplicate filter ─────────────────────────────────────────────────
-  # Sort by score descending so the best shot of a burst always wins,
-  # then drop any entry whose representative frame is visually too similar
-  # (SSIM >= TIKTOK_DEDUP_THRESHOLD) to an already-accepted frame.
+  # Sort by score descending so the best-scored shot enters each group first.
+  # For each entry, run dHash+SSIM against accepted frames to detect burst
+  # duplicates.  When a near-duplicate is found, compare sharpness scores and
+  # keep the sharper image even if its LLM score was lower.
   local -a deduped_files=()
   local -a _accepted_frames=()
   local _raw_entry
@@ -388,19 +505,33 @@ run_tiktok_reel() {
     local _dup_frame="${_raw_entry#*:}"
     _dup_frame="${_dup_frame%%:*}"
     local _is_dup=0
-    local _af
-    for _af in "${_accepted_frames[@]+"${_accepted_frames[@]}"}" ; do
-      if _images_are_similar "${_dup_frame}" "${_af}" "${TIKTOK_DEDUP_THRESHOLD}"; then
+    local _matched_idx=-1
+    local _af_idx
+    for (( _af_idx=0; _af_idx<${#_accepted_frames[@]}; _af_idx++ )); do
+      if _images_are_similar "${_dup_frame}" "${_accepted_frames[${_af_idx}]}" "${TIKTOK_DEDUP_THRESHOLD}"; then
         _is_dup=1
+        _matched_idx="${_af_idx}"
         break
       fi
     done
-    if [[ "${_is_dup}" -eq 1 ]]; then
-      # src_file is field 3: strip score: then best_frame: then keep up to last :dur
-      local _dup_rest="${_raw_entry#*:}"   # best_frame:src_file:dur
-      _dup_rest="${_dup_rest#*:}"          # src_file:dur
-      local _dup_src="${_dup_rest%:*}"     # src_file
-      printf "  %s %s\n" "$(clr_dim '≈')" "$(clr_dim "${TIKTOK_DEDUP_SKIP}: $(basename "${_dup_src}")")"
+    if [[ "${_is_dup}" -eq 1 && "${_matched_idx}" -ge 0 ]]; then
+      # Near-duplicate found — compare sharpness and keep the crisper image
+      local _prev_frame="${_accepted_frames[${_matched_idx}]}"
+      local _cand_sharp _prev_sharp
+      _cand_sharp="$(_sharpness_score "${_dup_frame}")"
+      _prev_sharp="$(_sharpness_score "${_prev_frame}")"
+      local _dup_rest="${_raw_entry#*:}"; _dup_rest="${_dup_rest#*:}"
+      local _dup_src="${_dup_rest%:*}"
+      if [[ "${_cand_sharp}" != "0" && "${_prev_sharp}" != "0" ]] && \
+           awk -v c="${_cand_sharp}" -v p="${_prev_sharp}" \
+             'BEGIN { exit (c > p * 1.1) ? 0 : 1 }'; then
+        # Candidate is ≥10% sharper → replace the accepted entry
+        deduped_files[${_matched_idx}]="${_raw_entry}"
+        _accepted_frames[${_matched_idx}]="${_dup_frame}"
+        printf "  %s %s\n" "$(clr_dim '↑')" "$(clr_dim "${TIKTOK_DEDUP_REPLACED}: $(basename "${_dup_src}")")"
+      else
+        printf "  %s %s\n" "$(clr_dim '≈')" "$(clr_dim "${TIKTOK_DEDUP_SKIP}: $(basename "${_dup_src}")")"
+      fi
     else
       deduped_files+=("${_raw_entry}")
       _accepted_frames+=("${_dup_frame}")
@@ -437,15 +568,61 @@ run_tiktok_reel() {
     local base; base="$(basename "${src_file}")"
     printf "  [%d/%d] %s\n" "${clip_idx}" "${#scored_files[@]}" "$(clr_bold "${base}")"
 
-    # Get region-of-interest from the best-scoring frame
+    # Get region-of-interest via SMA across TIKTOK_ROI_FRAMES neighboring frames
     local subj_x="0.5" subj_y="0.5"
     if [[ -n "${best_frame}" && -f "${best_frame}" ]]; then
       printf "    %s\n" "$(clr_dim "${TIKTOK_STEP_ROI}...")"
-      local coords
-      coords="$(_get_subject_coords "${best_frame}" "${TIKTOK_OLLAMA_MODEL}")"
-      subj_x="${coords%% *}"
-      subj_y="${coords##* }"
-      printf "    %s ROI: x=%.2f y=%.2f\n" "$(clr_dim '○')" "${subj_x}" "${subj_y}"
+      if _is_image_file "${src_file}" || [[ "${TIKTOK_ROI_FRAMES}" -le 1 ]]; then
+        # Still image or smoothing disabled — single query
+        local coords
+        coords="$(_get_subject_coords "${best_frame}" "${TIKTOK_OLLAMA_MODEL}")"
+        subj_x="${coords%% *}"
+        subj_y="${coords##* }"
+      else
+        # Video — build a window of TIKTOK_ROI_FRAMES frames centered on best_frame for SMA
+        local _roi_dir; _roi_dir="$(dirname "${best_frame}")"
+        local _best_base; _best_base="$(basename "${best_frame}")"
+        local -a _all_roi=()
+        while IFS= read -r _rf; do _all_roi+=("${_rf}"); done \
+          < <(find "${_roi_dir}" -maxdepth 1 -name "*.jpg" 2>/dev/null | sort)
+
+        # Locate best_frame index in sorted list
+        local _best_idx=0 _rfi
+        for (( _rfi=0; _rfi<${#_all_roi[@]}; _rfi++ )); do
+          [[ "$(basename "${_all_roi[${_rfi}]}")" == "${_best_base}" ]] && \
+            { _best_idx="${_rfi}"; break; }
+        done
+
+        # Compute window bounds centered on best_frame
+        local _half=$(( TIKTOK_ROI_FRAMES / 2 ))
+        local _ws=$(( _best_idx - _half ))
+        [[ "${_ws}" -lt 0 ]] && _ws=0
+        local _we=$(( _ws + TIKTOK_ROI_FRAMES - 1 ))
+        local _total_roi="${#_all_roi[@]}"
+        [[ "${_we}" -ge "${_total_roi}" ]] && _we=$(( _total_roi - 1 ))
+
+        local _acc_x="0.0" _acc_y="0.0" _roi_n=0
+        local _roi_f _rc
+        for (( _rfi=_ws; _rfi<=_we; _rfi++ )); do
+          _roi_f="${_all_roi[${_rfi}]}"
+          [[ ! -f "${_roi_f}" ]] && continue
+          _rc="$(_get_subject_coords "${_roi_f}" "${TIKTOK_OLLAMA_MODEL}")"
+          printf "    %s frame %d: x=%s y=%s\n" \
+            "$(clr_dim '·')" "$(( _rfi + 1 ))" "${_rc%% *}" "${_rc##* }"
+          _acc_x="$(awk -v a="${_acc_x}" -v b="${_rc%% *}" 'BEGIN{printf "%.4f",a+b}')"
+          _acc_y="$(awk -v a="${_acc_y}" -v b="${_rc##* }" 'BEGIN{printf "%.4f",a+b}')"
+          (( _roi_n++ )) || true
+        done
+
+        if [[ "${_roi_n}" -gt 0 ]]; then
+          subj_x="$(awk -v s="${_acc_x}" -v n="${_roi_n}" \
+            'BEGIN{v=s/n; if(v<0)v=0; if(v>1)v=1; printf "%.4f",v}')"
+          subj_y="$(awk -v s="${_acc_y}" -v n="${_roi_n}" \
+            'BEGIN{v=s/n; if(v<0)v=0; if(v>1)v=1; printf "%.4f",v}')"
+        fi
+      fi
+      printf "    %s ROI (SMA n=%d): x=%.2f y=%.2f\n" \
+        "$(clr_dim '○')" "${TIKTOK_ROI_FRAMES}" "${subj_x}" "${subj_y}"
     fi
 
     # Probe source dimensions
@@ -488,14 +665,18 @@ run_tiktok_reel() {
 
     local ffmpeg_ok=0
     if _is_image_file "${src_file}"; then
-      # Photo → loop as still image with silent audio
+      # Photo → loop as still image with slow zoom-in animation + silent audio
+      local _frames=$(( clip_dur * 30 ))
+      local _zinc
+      _zinc="$(awk -v f="${_frames}" 'BEGIN { printf "%.6f", 0.03 / f }')"
+      local _vf_zoom="${vf_tiktok},zoompan=z='min(zoom+${_zinc},1.03)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${_frames}:s=1080x1920:fps=30"
       if "${FFMPEG_BIN}" -hide_banner -loglevel error \
           "${THREAD_FLAGS[@]}" \
           -loop 1 \
           -i "${src_file}" \
           -f lavfi -i "anullsrc=r=44100:cl=stereo" \
           -t "${clip_dur}" \
-          -vf "${vf_tiktok}" \
+          -vf "${_vf_zoom}" \
           -r 30 \
           -c:v libx264 -preset fast -crf 20 \
           -c:a aac -ac 2 -ar 44100 \
