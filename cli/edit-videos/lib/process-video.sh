@@ -450,6 +450,12 @@ process_video() {
 #               DO_RIFE, RIFE_MULTIPLIER, DO_MPG_TO_MP4, LOG_FILE
 
 _run_processing() {
+  # TikTok/Reel mode: many-to-one pipeline; bypasses the per-file loop entirely.
+  if [[ "${DO_TIKTOK:-0}" -eq 1 ]]; then
+    run_tiktok_reel
+    return $?
+  fi
+
   local _start_epoch; _start_epoch="$(date +%s)"
   local count_ok=0 count_fail=0 count_idx=0
   local failed_files=()

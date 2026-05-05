@@ -42,6 +42,8 @@ source "${_SCRIPT_DIR}/lib/actions/video2x.sh"
 source "${_SCRIPT_DIR}/lib/actions/deep3d.sh"
 # shellcheck source=lib/actions/mpg-to-mp4.sh
 source "${_SCRIPT_DIR}/lib/actions/mpg-to-mp4.sh"
+# shellcheck source=lib/actions/tiktok.sh
+source "${_SCRIPT_DIR}/lib/actions/tiktok.sh"
 
 # Orchestration
 # shellcheck source=lib/process-video.sh
@@ -53,6 +55,7 @@ DO_SHARPEN=0
 DO_UPSCALE=0
 DO_DOWNSIZE=0
 DO_COLOR=0
+DO_TIKTOK=0
 
 DENOISE_LUMA_S=4; DENOISE_CHROMA_S=4; DENOISE_LUMA_T=3; DENOISE_CHROMA_T=3
 COLOR_CONTRAST=1.1; COLOR_BRIGHTNESS=0.0; COLOR_SATURATION=1.1; COLOR_GAMMA=1.0
@@ -136,7 +139,7 @@ main() {
   # ── Scan for video formats ────────────────────────────────────────────────
   printf "  %s\n" "$(clr_dim "${SCANNING}")"
 
-  local all_exts=(mp4 mkv avi mov wmv flv webm mpeg mpg m4v ts mts m2ts 3gp ogv)
+  local all_exts=(mp4 mkv avi mov wmv flv webm mpeg mpg m4v ts mts m2ts 3gp ogv jpg jpeg png webp heic heif)
   local found_formats=()
   declare -A FORMAT_COUNT
 
@@ -242,17 +245,18 @@ main() {
     "${ACTION_VIDEO2X}"
     "${ACTION_DEEP3D}"
     "${ACTION_MPG_TO_MP4}"
+    "${ACTION_TIKTOK}"
   )
-  _CB_SEL=(0 0 0 0 0 0 0 0 0 0 0 0 0)
+  _CB_SEL=(0 0 0 0 0 0 0 0 0 0 0 0 0 0)
   local _dis_vulkan=0 _dis_cuda=0
   [[ "${HAS_VULKAN_GPU}" -eq 0 ]] && _dis_vulkan=1
   [[ "${HAS_CUDA_GPU}" -eq 0 ]]   && _dis_cuda=1
-  _CB_DISABLED=(0 0 0 0 0 0 0 0 0 "${_dis_vulkan}" "${_dis_vulkan}" "${_dis_cuda}" 0)
+  _CB_DISABLED=(0 0 0 0 0 0 0 0 0 "${_dis_vulkan}" "${_dis_vulkan}" "${_dis_cuda}" 0 0)
   interactive_checkbox
 
   local do_black_bars=0 do_fps=0 do_h264=0 do_stab=0
   DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_DOWNSIZE=0; DO_COLOR=0
-  DO_RIFE=0; DO_VIDEO2X=0; DO_DEEP3D=0; DO_MPG_TO_MP4=0
+  DO_RIFE=0; DO_VIDEO2X=0; DO_DEEP3D=0; DO_MPG_TO_MP4=0; DO_TIKTOK=0
 
   for idx in "${SELECTED_INDICES[@]}"; do
     case "${idx}" in
@@ -269,6 +273,7 @@ main() {
       10) DO_VIDEO2X=1 ;;
       11) DO_DEEP3D=1 ;;
       12) DO_MPG_TO_MP4=1 ;;
+      13) DO_TIKTOK=1 ;;
     esac
   done
 
@@ -276,7 +281,7 @@ main() {
         "${do_stab}" -eq 0 && "${DO_DENOISE}" -eq 0 && "${DO_SHARPEN}" -eq 0 && \
         "${DO_UPSCALE}" -eq 0 && "${DO_DOWNSIZE}" -eq 0 && "${DO_COLOR}" -eq 0 && \
         "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 && "${DO_DEEP3D}" -eq 0 && \
-        "${DO_MPG_TO_MP4}" -eq 0 ]]; then
+        "${DO_MPG_TO_MP4}" -eq 0 && "${DO_TIKTOK}" -eq 0 ]]; then
     printf "\n  %s\n\n" "$(clr_yellow "${NO_ACTIONS_SELECTED}")"
     exit 0
   fi
@@ -559,6 +564,73 @@ main() {
     printf "  %s %s: %s\n\n" "$(clr_bold_magenta '⚡')" "${AI_GPU_HINT}" "$(clr_magenta "${_d3d_cuda_name}")"
     _read_int DEEP3D_STABILITY "$(clr_bold "${DEEP3D_STABILITY_LABEL}")" 12 1 50
   fi
+
+  # ── Ollama / TikTok check ─────────────────────────────────────────────────
+  if [[ "${DO_TIKTOK}" -eq 1 ]]; then
+    printf "  %s\n" "$(clr_yellow "⚠  ${TIKTOK_DISK_WARN}")"
+    printf "  %s\n\n" "$(clr_dim "${TIKTOK_NOTE}")"
+
+    printf "  %s\n" "$(clr_dim "${TIKTOK_OLLAMA_CHECK}")"
+    if check_ollama; then
+      printf "  %s %s\n" "$(clr_bold_green '✓')" "${TIKTOK_OLLAMA_FOUND}"
+    else
+      printf "  %s %s\n" "$(clr_bold_yellow '⚠')" "${TIKTOK_OLLAMA_NOT_FOUND}"
+      printf "  %s\n\n" "$(clr_dim "Make sure Ollama is running: ollama serve")"
+      printf "  %s [y/n] (n): " "$(clr_bold "Continue anyway?")"
+      local ollama_cont; read -r ollama_cont; ollama_cont="${ollama_cont:-n}"
+      if [[ "${CONFIRM_YES_CHARS}" != *"${ollama_cont:0:1}"* ]]; then
+        printf "  %s\n\n" "${CANCELLED}"; exit 0
+      fi
+    fi
+
+    # Prompt for model name (default gemma3:4b)
+    printf "  %s (%s): " "$(clr_bold "${TIKTOK_MODEL_PROMPT}")" "$(clr_dim "${TIKTOK_OLLAMA_MODEL}")"
+    local tiktok_model_input; read -r tiktok_model_input
+    [[ -n "${tiktok_model_input}" ]] && TIKTOK_OLLAMA_MODEL="${tiktok_model_input}"
+
+    # Check if the chosen model is available; offer to pull it
+    if ! check_ollama_model "${TIKTOK_OLLAMA_MODEL}"; then
+      printf "  %s %s: %s\n" "$(clr_bold_yellow '⚠')" \
+        "${TIKTOK_OLLAMA_MODEL_NOT_FOUND}" "$(clr_dim "${TIKTOK_OLLAMA_MODEL}")"
+      printf "  %s [y/n] (y): " "$(clr_bold "${TIKTOK_OLLAMA_PULL_PROMPT}")"
+      local pull_ans; read -r pull_ans; pull_ans="${pull_ans:-y}"
+      if [[ "${CONFIRM_YES_CHARS}" == *"${pull_ans:0:1}"* ]]; then
+        if ! pull_ollama_model "${TIKTOK_OLLAMA_MODEL}"; then
+          printf "  %s %s: ollama pull %s\n\n" \
+            "$(clr_bold_yellow '⚠')" "${TIKTOK_OLLAMA_PULL_FAIL}" "${TIKTOK_OLLAMA_MODEL}"
+          printf "  Continue without model pull? [y/n] (n): "
+          local skip_pull_ans; read -r skip_pull_ans; skip_pull_ans="${skip_pull_ans:-n}"
+          if [[ "${CONFIRM_YES_CHARS}" != *"${skip_pull_ans:0:1}"* ]]; then
+            printf "  %s\n\n" "${CANCELLED}"; exit 0
+          fi
+        else
+          printf "  %s %s\n" "$(clr_bold_green '✓')" "$(clr_dim "Model pulled successfully")"
+        fi
+      fi
+    else
+      printf "  %s %s: %s\n" "$(clr_bold_green '✓')" "${TIKTOK_OLLAMA_FOUND}" \
+        "$(clr_dim "${TIKTOK_OLLAMA_MODEL}")"
+    fi
+    echo ""
+
+    # TikTok parameters
+    _read_int TIKTOK_MIN_SCORE      "$(clr_dim "${TIKTOK_MIN_SCORE_PROMPT}")"      7 1 10
+    _read_int TIKTOK_CLIP_MIN        "$(clr_dim "${TIKTOK_CLIP_MIN_PROMPT}")"        3 1 10
+    _read_int TIKTOK_CLIP_MAX        "$(clr_dim "${TIKTOK_CLIP_MAX_PROMPT}")"        7 1 30
+    _read_int TIKTOK_FRAME_INTERVAL  "$(clr_dim "${TIKTOK_FRAME_INTERVAL_PROMPT}")"  5 1 30
+
+    printf "  %s\n  %s: " \
+      "$(clr_dim 'Audio mixing — press Enter to skip music overlay')" \
+      "$(clr_bold "${TIKTOK_MUSIC_PROMPT}")"
+    local music_input; read -r music_input
+    if [[ -n "${music_input}" && -f "${music_input}" ]]; then
+      TIKTOK_MUSIC_FILE="${music_input}"
+      _read_float TIKTOK_ORIG_AUDIO_VOLUME  "$(clr_dim "${TIKTOK_ORIG_VOL_PROMPT}")"  0.7 0.0 1.0
+      _read_float TIKTOK_MUSIC_VOLUME       "$(clr_dim "${TIKTOK_MUSIC_VOL_PROMPT}")" 0.3 0.0 1.0
+    elif [[ -n "${music_input}" ]]; then
+      printf "  %s Music file not found — audio overlay disabled.\n\n" "$(clr_yellow '⚠')"
+    fi
+  fi
   echo ""
 
   # ── Collect files ─────────────────────────────────────────────────────────
@@ -603,6 +675,7 @@ main() {
   [[ "${DO_VIDEO2X}" -eq 1 ]]    && action_list+=("video2x ${VIDEO2X_SCALE}× (${VIDEO2X_MODEL})")
   [[ "${DO_DEEP3D}" -eq 1 ]]     && action_list+=("deep3d (stability=${DEEP3D_STABILITY})")
   [[ "${DO_MPG_TO_MP4}" -eq 1 ]] && action_list+=("mpg→mp4")
+  [[ "${DO_TIKTOK}"    -eq 1 ]] && action_list+=("tiktok reel (model=${TIKTOK_OLLAMA_MODEL} score≥${TIKTOK_MIN_SCORE} ${TIKTOK_CLIP_MIN}-${TIKTOK_CLIP_MAX}s clips)")
   local IFS_SAVE="${IFS}"; IFS=', '; printf "%s\n" "$(clr_cyan "${action_list[*]}")"; IFS="${IFS_SAVE}"
 
   [[ "${use_gpu}" -eq 1 ]] && \
