@@ -11,6 +11,15 @@ import './button.css';
  */
 export type ButtonType = 'button' | 'submit' | 'reset';
 
+/** Standardized button size tokens. */
+export type ButtonSize = 'sm' | 'md' | 'lg';
+
+const SIZE_STYLES: Record<ButtonSize, Pick<CSSProperties, 'padding' | 'fontSize' | 'borderRadius'>> = {
+  sm: { padding: '6px',        fontSize: 13, borderRadius: 6 },
+  md: { padding: '10px 18px',  fontSize: 14, borderRadius: 6 },
+  lg: { padding: '12px 24px',  fontSize: 15, borderRadius: 8 },
+};
+
 /**
  * Props for `Button` component.
  */
@@ -42,6 +51,8 @@ export interface ButtonProps extends UIComponentProps {
   disabled?: boolean;
   /** HTML `title` attribute (tooltip shown on hover). */
   title?: string;
+  /** Controls padding, font-size, and border-radius. Defaults to `'sm'`. */
+  size?: ButtonSize;
   /** Accessible label when visible text is absent or insufficient (e.g. icon-only buttons). */
   'aria-label'?: string;
   /** Indicates whether a toggle button is currently pressed. */
@@ -61,7 +72,7 @@ export interface ButtonProps extends UIComponentProps {
  * <Button text="Go to docs" href="/docs" />
  */
 export const Button: React.FC<ButtonProps> = (props) => {
-  const { text, type = 'button', href, onClick, className, id, unstyled, title, disabled } = props;
+  const { text, type = 'button', href, onClick, className, id, unstyled, title, disabled, size = 'sm' } = props;
   const [isHovered, setIsHovered] = React.useState(false);
 
   const ariaLabel = props['aria-label'];
@@ -78,11 +89,9 @@ export const Button: React.FC<ButtonProps> = (props) => {
   }
 
   const defaultStyle: CSSProperties = {
-    padding: '6px',
-    borderRadius: 6,
+    ...SIZE_STYLES[size],
     border: 'none',
     cursor: 'pointer',
-    fontSize: 13,
     fontWeight: 600,
     backgroundColor: 'var(--accent, #06b6d4)',
     color: 'var(--accent-foreground, #171717)',

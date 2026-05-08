@@ -158,12 +158,9 @@ function ProfileSection({
         <Button
           text={loading ? t('savingProfile') : t('saveProfile')}
           type="submit"
-          styles={{
-            width: '100%',
-            padding: '10px',
-            fontSize: 14,
-            marginTop: 4,
-          }}
+          size="md"
+          width="100%"
+          marginTop={4}
         />
       </form>
     </Box>
@@ -276,12 +273,9 @@ function ChangePasswordSection({
         <Button
           text={loading ? t('savingPassword') : t('savePassword')}
           type="submit"
-          styles={{
-            width: '100%',
-            padding: '10px',
-            fontSize: 14,
-            marginTop: 4,
-          }}
+          size="md"
+          width="100%"
+          marginTop={4}
         />
       </form>
     </Box>
@@ -436,12 +430,9 @@ function PasskeySection({
           type="button"
           onClick={handleAddPasskey}
           disabled={addingPasskey}
-          styles={{
-            width: '100%',
-            padding: '10px',
-            fontSize: 14,
-            marginTop: 4,
-          }}
+          size="md"
+          width="100%"
+          marginTop={4}
         />
       </Box>
     </>

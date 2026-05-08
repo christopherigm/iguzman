@@ -15,31 +15,8 @@ export function ActionButtonsClient({
 }: ActionButtonsClientProps) {
   return (
     <Box className="action-buttons">
-      <Button
-        text={addToCartLabel}
-        width="100%"
-        styles={{
-          padding: '13px 24px',
-          borderRadius: '8px',
-          fontSize: '15px',
-          fontWeight: 600,
-          backgroundColor: 'var(--accent)',
-          color: '#fff',
-        }}
-      />
-      <Button
-        text={buyNowLabel}
-        width="100%"
-        border="1.5px solid var(--accent)"
-        styles={{
-          padding: '13px 24px',
-          borderRadius: '8px',
-          fontSize: '15px',
-          fontWeight: 600,
-          backgroundColor: 'transparent',
-          color: 'var(--accent)',
-        }}
-      />
+      <Button text={addToCartLabel} size="lg" width="100%" />
+      <Button text={buyNowLabel} size="lg" width="100%" />
     </Box>
   );
 }

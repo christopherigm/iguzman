@@ -691,14 +691,17 @@ export function AiInterviewer({
     <>
       {/* ── Trigger button ── */}
       <Button
-        unstyled
-        className="aii__trigger"
+        display="inline-flex"
+        alignItems="center"
+        gap={5}
+        borderRadius={8}
+        padding="5px 10px"
         onClick={handleOpen}
         aria-label={t('aiInterviewLabel')}
         title={t('aiInterviewLabel')}
       >
-        <Icon icon="/icons/enhance.svg" size="15px" color="var(--accent, #06b6d4)" />
-        <Typography as="span" variant="none" className="aii__trigger-label">
+        <Icon icon="/icons/enhance.svg" size="15px" color="var(--accent-foreground, #171717)" />
+        <Typography as="span" variant="none" fontWeight={500}>
           {t('aiInterviewLabel')}
         </Typography>
       </Button>
@@ -924,7 +927,7 @@ export function AiInterviewer({
                 <Button
                   text={t('aiInterviewContinue')}
                   onClick={handleOpenLengthModal}
-                  className="aii__proposal-cta"
+                  marginLeft="auto"
                 />
               )}
             </Box>

@@ -189,7 +189,8 @@ function SignInTab({
               text={t('passkey.registerButton')}
               type="button"
               onClick={handleRegisterPasskey}
-              styles={{ width: '100%', padding: '10px', fontSize: 14 }}
+              size="md"
+              width="100%"
             />
             <LinkButton
               onClick={() => router.push('/')}
@@ -237,12 +238,9 @@ function SignInTab({
         <Button
           text={loading ? t('signIn.submitting') : t('signIn.submitButton')}
           type="submit"
-          styles={{
-            width: '100%',
-            padding: '10px',
-            fontSize: 14,
-            marginTop: 4,
-          }}
+          size="md"
+          width="100%"
+          marginTop={4}
         />
         <Typography variant="none" className="auth-form__divider">
           {t('signIn.orDivider')}
@@ -406,12 +404,9 @@ function SignUpTab({
         <Button
           text={loading ? t('signUp.submitting') : t('signUp.submitButton')}
           type="submit"
-          styles={{
-            width: '100%',
-            padding: '10px',
-            fontSize: 14,
-            marginTop: 4,
-          }}
+          size="md"
+          width="100%"
+          marginTop={4}
         />
         <Box display="flex" flexDirection="column" gap={8} alignItems="center">
           <LinkButton
@@ -489,12 +484,9 @@ function ResetPasswordTab({
                 : t('resetPassword.submitButton')
             }
             type="submit"
-            styles={{
-              width: '100%',
-              padding: '10px',
-              fontSize: 14,
-              marginTop: 4,
-            }}
+            size="md"
+            width="100%"
+            marginTop={4}
           />
           <Box display="flex" justifyContent="center">
             <LinkButton
