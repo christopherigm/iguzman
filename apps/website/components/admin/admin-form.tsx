@@ -14,7 +14,6 @@ import './admin-form.css';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Button } from '@repo/ui/core-elements/button';
-import { Icon } from '@repo/ui/core-elements/icon';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Toast } from '@repo/ui/core-elements/toast';
@@ -636,6 +635,13 @@ export function AdminForm({
                             {field.type === 'textarea' && (
                               <Button
                                 unstyled
+                                icon="/icons/enhance.svg"
+                                iconSize="16px"
+                                iconColor={
+                                  activeEnhanceField === field.key
+                                    ? 'var(--accent, #06b6d4)'
+                                    : 'var(--foreground, #171717)'
+                                }
                                 disabled={
                                   llmBusy ||
                                   !String(values[field.key] ?? '').trim()
@@ -655,21 +661,18 @@ export function AdminForm({
                                 ]
                                   .filter(Boolean)
                                   .join(' ')}
-                              >
-                                <Icon
-                                  icon="/icons/enhance.svg"
-                                  size="16px"
-                                  color={
-                                    activeEnhanceField === field.key
-                                      ? 'var(--accent, #06b6d4)'
-                                      : 'var(--foreground, #171717)'
-                                  }
-                                />
-                              </Button>
+                              />
                             )}
                             {isTranslatable(field) && (
                               <Button
                                 unstyled
+                                icon="/icons/translate.svg"
+                                iconSize="16px"
+                                iconColor={
+                                  activeTranslateField === field.key
+                                    ? 'var(--accent, #06b6d4)'
+                                    : 'var(--foreground, #171717)'
+                                }
                                 disabled={
                                   llmBusy ||
                                   !String(values[field.key] ?? '').trim()
@@ -689,17 +692,7 @@ export function AdminForm({
                                 ]
                                   .filter(Boolean)
                                   .join(' ')}
-                              >
-                                <Icon
-                                  icon="/icons/translate.svg"
-                                  size="16px"
-                                  color={
-                                    activeTranslateField === field.key
-                                      ? 'var(--accent, #06b6d4)'
-                                      : 'var(--foreground, #171717)'
-                                  }
-                                />
-                              </Button>
+                              />
                             )}
                           </Box>
                         )}

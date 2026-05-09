@@ -71,33 +71,6 @@
   opacity: 0.5;
 }
 
-.wcp-add-btn {
-  display: inline-flex;
-  align-items: center;
-  background: transparent;
-  border: 1.5px solid var(--surface-2, #e5e7eb);
-  border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  color: var(--foreground, #171717);
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    background 180ms ease,
-    border-color 180ms ease;
-}
-
-.wcp-add-btn:hover:not(:disabled) {
-  background: var(--surface-2, #f4f4f5);
-  border-color: var(--accent, #06b6d4);
-}
-
-.wcp-add-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
 
 .wcp-delete-btn {
   display: inline-flex;

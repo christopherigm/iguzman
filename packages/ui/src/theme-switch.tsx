@@ -43,15 +43,8 @@ export function ThemeSwitch({ hideOnMobile = false }: ThemeSwitchProps) {
                 ? 'var(--accent-foreground, #fff)'
                 : 'var(--foreground, #171717)'
             }
-            styles={{
-              padding: '6px 14px',
-              borderRadius: 6,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 13,
-              fontWeight: active ? 600 : 400,
-              background: active ? 'var(--accent, #06b6d4)' : 'transparent',
-            }}
+            backgroundColor={active ? undefined : 'transparent'}
+            styles={{ fontWeight: active ? 600 : 400 }}
           />
         );
       })}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { Box } from '@repo/ui/core-elements/box';
+import { Button } from '@repo/ui/core-elements/button';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Spinner } from '@repo/ui/core-elements/spinner';
 import { TextInput } from '@repo/ui/core-elements/text-input';
@@ -289,18 +290,15 @@ export function WsClientPanel({
   return (
     <>
       <Box className="wcp-controls">
-        <button
-          type="button"
-          className="wcp-add-btn"
+        <Button
+          text={labels.addServer ?? 'Add server'}
           disabled={addingServer || deletingServer}
           onClick={() => {
             setNewUuid('');
             setNewLabel('');
             setShowAddModal(true);
           }}
-        >
-          {labels.addServer ?? 'Add server'}
-        </button>
+        />
 
         {clients.length > 0 && selectedUuid !== THIS_DEVICE_UUID ? (
           <button

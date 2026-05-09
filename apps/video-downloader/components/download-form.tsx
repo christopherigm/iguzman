@@ -757,15 +757,13 @@ export function DownloadForm({ onVideoAdded, completedVideos, onMoveToFirst }: D
               text={t('duplicateDownloadVideo')}
               onClick={handleDuplicateDownload}
               width="100%"
-              padding="8px 16px"
-              borderRadius={8}
+              size="md"
             />
             <Button
               text={t('duplicateMoveToFirst')}
               onClick={handleDuplicateMoveToFirst}
               width="100%"
-              padding="8px 16px"
-              borderRadius={8}
+              size="md"
               backgroundColor="var(--surface-1, rgba(0,0,0,0.06))"
               color="var(--foreground, #1a1a1a)"
             />

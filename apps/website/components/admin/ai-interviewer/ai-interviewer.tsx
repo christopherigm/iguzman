@@ -752,20 +752,11 @@ export function AiInterviewer({
     <>
       {/* ── Trigger button ── */}
       <Button
-        display="inline-flex"
-        alignItems="center"
-        gap={5}
-        borderRadius={8}
-        padding="5px 10px"
+        icon="/icons/enhance.svg"
         onClick={handleOpen}
         aria-label={t('aiInterviewLabel')}
         title={t('aiInterviewLabel')}
       >
-        <Icon
-          icon="/icons/enhance.svg"
-          size="15px"
-          color="var(--accent-foreground, #171717)"
-        />
         {t('aiInterviewLabel')}
       </Button>
 
@@ -802,16 +793,13 @@ export function AiInterviewer({
               </Box>
               <Button
                 unstyled
+                icon="/icons/x.svg"
+                iconSize="16px"
+                iconColor="var(--foreground)"
                 className="aii__close-btn"
                 onClick={handleClose}
                 aria-label={t('aiInterviewClose')}
-              >
-                <Icon
-                  icon="/icons/x.svg"
-                  size="16px"
-                  color="var(--foreground)"
-                />
-              </Button>
+              />
             </Box>
 
             {/* Stage indicator */}
@@ -1005,17 +993,15 @@ export function AiInterviewer({
               />
               <Button
                 unstyled
+                icon="/icons/link.svg"
+                iconSize="14px"
+                iconColor="var(--foreground)"
                 className="aii__upload-btn"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={analyzingImage}
                 title={t('aiInterviewUpload')}
                 aria-label={t('aiInterviewUpload')}
               >
-                <Icon
-                  icon="/icons/link.svg"
-                  size="14px"
-                  color="var(--foreground)"
-                />
                 <Typography
                   as="span"
                   variant="none"

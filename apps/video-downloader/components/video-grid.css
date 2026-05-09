@@ -1,8 +1,6 @@
 /* ── VideoGrid ───────────────────────────────────────── */
 
 .vg-wrapper {
-  width: 100%;
-  margin-top: 16px;
   animation: vg-fade-in 350ms ease-out;
 }
 
@@ -17,108 +15,10 @@
   }
 }
 
-.vg-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 0 2px;
-}
-
-.vg-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--foreground, #171717);
-  letter-spacing: -0.02em;
-}
-
-.vg-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--accent-foreground, white);
-  background: var(--accent, #06b6d4);
-  letter-spacing: 0.02em;
-}
-
 /* ── Pinned / in-progress section ────────────────────── */
 
 .vg-pinned {
-  margin-bottom: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--border, rgba(0 0 0 / 0.08));
 }
 
-.vg-pinned-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 0 2px;
-}
-
-.vg-pinned-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--foreground-muted, #999);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* ── Empty state ─────────────────────────────────────── */
-
-.vg-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 16px;
-  margin-top: 16px;
-}
-
-.vg-empty-text {
-  font-size: 13px;
-  color: var(--foreground-muted, #999);
-  opacity: 0.6;
-  font-weight: 500;
-}
-
-/* ── Filtered empty (smaller, inline) ────────────────── */
-
-.vg-empty--filtered {
-  padding: 24px 16px;
-  margin-top: 0;
-}
-
-/* ── Active search banner ────────────────────────────── */
-
-.vg-search-active {
-  padding: 7px 12px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--accent, #06b6d4) 10%, transparent);
-  margin-bottom: 12px;
-}
-
-.vg-search-active-text {
-  font-size: 12px;
-  color: var(--accent, #06b6d4);
-  font-weight: 500;
-}
-
-.vg-search-active-clear {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent, #06b6d4);
-  padding: 2px 8px;
-  border-radius: 4px;
-  transition: background 150ms ease;
-}
-
-.vg-search-active-clear:hover {
-  background: color-mix(in srgb, var(--accent, #06b6d4) 15%, transparent);
-}

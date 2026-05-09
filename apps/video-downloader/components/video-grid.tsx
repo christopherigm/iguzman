@@ -114,7 +114,12 @@ export function VideoGrid({
 
   /* ── Reprocess handler: move completed → pinned ──── */
   const handleReprocess = useCallback(
-    (uuid: string, action: ReprocessAction, extra?: number, config?: BurnCaptionsConfig) => {
+    (
+      uuid: string,
+      action: ReprocessAction,
+      extra?: number,
+      config?: BurnCaptionsConfig,
+    ) => {
       switch (action) {
         case 'fps':
           onReprocessCompleted(uuid, {
@@ -158,25 +163,101 @@ export function VideoGrid({
   /* ── Empty state ────────────────────────────────── */
   if (totalCount === 0) {
     return (
-      <Box className="vg-empty">
-        <Typography variant="body" className="vg-empty-text">{t('emptyState')}</Typography>
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        padding="32px 16px"
+        marginTop={16}
+      >
+        <Typography
+          variant="body"
+          color="var(--foreground-muted, #999)"
+          styles={{ fontSize: 13, fontWeight: 500, opacity: 0.6 }}
+        >
+          {t('emptyState')}
+        </Typography>
       </Box>
     );
   }
 
   return (
-    <Box className="vg-wrapper">
-      <Box className="vg-header">
-        <Typography as="h2" variant="h2" className="vg-title">{t('title')}</Typography>
-        <Typography variant="body-sm" className="vg-count">{totalCount}</Typography>
+    <Box className="vg-wrapper" width="100%" marginTop={16}>
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={8}
+        marginBottom={12}
+        padding="0 2px"
+      >
+        <Typography
+          as="h2"
+          variant="h2"
+          color="var(--foreground, #171717)"
+          fontWeight={700}
+          styles={{ fontSize: 15, letterSpacing: '-0.02em' }}
+        >
+          {t('title')}
+        </Typography>
+        <Typography
+          variant="body-sm"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+          minWidth="22px"
+          height="22px"
+          padding="0 6px"
+          borderRadius="999px"
+          color="var(--accent-foreground, white)"
+          backgroundColor="var(--accent, #06b6d4)"
+          styles={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.02em' }}
+        >
+          {totalCount}
+        </Typography>
       </Box>
 
       {/* ── Pinned: active-processing items with own FFmpeg instances ── */}
       {pinned.length > 0 ? (
-        <Box className="vg-pinned">
-          <Box className="vg-pinned-header">
-            <Typography as="h3" variant="h3" className="vg-pinned-label">{t('processingTitle')}</Typography>
-            <Typography variant="body-sm" className="vg-count">{pinned.length}</Typography>
+        <Box className="vg-pinned" marginBottom={20}>
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={8}
+            marginBottom={12}
+            padding="0 2px"
+          >
+            <Typography
+              as="h3"
+              variant="h3"
+              color="var(--foreground-muted, #999)"
+              fontWeight={700}
+              styles={{
+                fontSize: 11,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {t('processingTitle')}
+            </Typography>
+            <Typography
+              variant="body-sm"
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
+              minWidth="22px"
+              height="22px"
+              padding="0 6px"
+              borderRadius="999px"
+              color="var(--accent-foreground, white)"
+              backgroundColor="var(--accent, #06b6d4)"
+              styles={{
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+              }}
+            >
+              {pinned.length}
+            </Typography>
           </Box>
           <Grid container spacing={2}>
             {pinned.map((video) => (
@@ -223,15 +304,21 @@ export function VideoGrid({
           display="flex"
           alignItems="center"
           justifyContent="space-between"
-          className="vg-search-active"
+          padding="7px 12px"
+          borderRadius={8}
+          backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 10%, transparent)"
+          marginBottom={12}
         >
-          <Typography variant="body-sm" className="vg-search-active-text">
+          <Typography
+            variant="body-sm"
+            color="var(--accent, #06b6d4)"
+            fontWeight={500}
+            styles={{ fontSize: 12 }}
+          >
             {t('searchActive', { query: searchQuery })}
           </Typography>
           <Button
-            unstyled
             onClick={() => setSearchQuery('')}
-            className="vg-search-active-clear"
             aria-label={t('clearSearch')}
             text={t('clearSearch')}
           />
@@ -239,8 +326,19 @@ export function VideoGrid({
       )}
 
       {pageVideos.length === 0 ? (
-        <Box className="vg-empty vg-empty--filtered">
-          <Typography variant="body" className="vg-empty-text">{t('noResults')}</Typography>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          padding="24px 16px"
+        >
+          <Typography
+            variant="body"
+            color="var(--foreground-muted, #999)"
+            styles={{ fontSize: 13, fontWeight: 500, opacity: 0.6 }}
+          >
+            {t('noResults')}
+          </Typography>
         </Box>
       ) : (
         <Grid container spacing={2}>
