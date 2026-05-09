@@ -1,0 +1,15 @@
+apiVersion: v2
+name: pihole
+description: |
+  Pi-hole DNS sinkhole wrapper chart.
+  This wrapper pulls the community MoJo2600/pihole chart and configures it for
+  MicroK8s with MetalLB LoadBalancer services.
+type: application
+version: 0.1.0
+appVersion: "2025.11.1"
+
+dependencies:
+  - name: pihole
+    version: ">=2.35.0"
+    repository: "https://mojo2600.github.io/pihole-kubernetes/"
+    alias: pihole
