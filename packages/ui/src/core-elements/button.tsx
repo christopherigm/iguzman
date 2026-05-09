@@ -15,10 +15,38 @@ export type ButtonType = 'button' | 'submit' | 'reset';
 /** Standardized button size tokens. */
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-const SIZE_STYLES: Record<ButtonSize, Pick<CSSProperties, 'padding' | 'fontSize' | 'borderRadius'>> = {
-  sm: { padding: '6px',        fontSize: 13, borderRadius: 6 },
-  md: { padding: '10px 18px',  fontSize: 14, borderRadius: 6 },
-  lg: { padding: '12px 24px',  fontSize: 15, borderRadius: 8 },
+/** Semantic color intent for a button. */
+export type ButtonKind = 'success' | 'error' | 'warning';
+
+const SIZE_STYLES: Record<
+  ButtonSize,
+  Pick<CSSProperties, 'padding' | 'fontSize' | 'borderRadius'>
+> = {
+  sm: { padding: '6px', fontSize: 13, borderRadius: 6 },
+  md: { padding: '8px 14px', fontSize: 13, borderRadius: 6 },
+  lg: { padding: '10px 20px', fontSize: 14, borderRadius: 8 },
+};
+
+const KIND_STYLES: Record<
+  'default' | ButtonKind,
+  Pick<CSSProperties, 'backgroundColor' | 'color'>
+> = {
+  default: {
+    backgroundColor: 'var(--surface-2)',
+    color: 'var(--foreground)',
+  },
+  success: {
+    backgroundColor: 'var(--accent, #06b6d4)',
+    color: 'var(--accent-foreground, #ffffff)',
+  },
+  error: {
+    backgroundColor: 'var(--error, #8d0e0e)',
+    color: 'var(--error-foreground, #ffffff)',
+  },
+  warning: {
+    backgroundColor: 'var(--warning, #d97706)',
+    color: 'var(--warning-foreground, #1c1000)',
+  },
 };
 
 const ICON_SIZES: Record<ButtonSize, string> = {
@@ -66,6 +94,8 @@ export interface ButtonProps extends UIComponentProps {
   title?: string;
   /** Controls padding, font-size, and border-radius. Defaults to `'sm'`. */
   size?: ButtonSize;
+  /** Semantic color intent. Omit for a neutral surface-2 button. */
+  kind?: ButtonKind;
   /** SVG path passed to the internal Icon component. */
   icon?: string;
   /** Position of the icon relative to the label. Defaults to `'start'`. */
@@ -93,7 +123,23 @@ export interface ButtonProps extends UIComponentProps {
  * <Button text="Go to docs" href="/docs" />
  */
 export const Button: React.FC<ButtonProps> = (props) => {
-  const { text, type = 'button', href, onClick, className, id, unstyled, title, disabled, size = 'sm', icon, iconPosition = 'start', iconSize, iconColor } = props;
+  const {
+    text,
+    type = 'button',
+    href,
+    onClick,
+    className,
+    id,
+    unstyled,
+    title,
+    disabled,
+    size = 'sm',
+    kind,
+    icon,
+    iconPosition = 'start',
+    iconSize,
+    iconColor,
+  } = props;
   const [isHovered, setIsHovered] = React.useState(false);
 
   const ariaLabel = props['aria-label'];
@@ -116,9 +162,13 @@ export const Button: React.FC<ButtonProps> = (props) => {
     return null;
   }
 
-  const hasGap = iconEl && (content !== undefined && content !== null);
+  const hasGap = iconEl && content !== undefined && content !== null;
   const iconFlexDefaults: CSSProperties = iconEl
-    ? { display: 'inline-flex', alignItems: 'center', ...(hasGap ? { gap: ICON_GAPS[size] } : {}) }
+    ? {
+        display: 'inline-flex',
+        alignItems: 'center',
+        ...(hasGap ? { gap: ICON_GAPS[size] } : {}),
+      }
     : {};
 
   const contentWithIcon = iconEl ? (
@@ -127,16 +177,17 @@ export const Button: React.FC<ButtonProps> = (props) => {
       {content}
       {iconPosition === 'end' && iconEl}
     </>
-  ) : content;
+  ) : (
+    content
+  );
 
   const defaultStyle: CSSProperties = {
     ...SIZE_STYLES[size],
     ...iconFlexDefaults,
+    ...KIND_STYLES[kind ?? 'default'],
     border: 'none',
     cursor: 'pointer',
     fontWeight: 600,
-    backgroundColor: 'var(--accent, #06b6d4)',
-    color: 'var(--accent-foreground, #171717)',
     transition:
       'background 150ms ease, color 150ms ease, box-shadow 450ms ease',
   };
@@ -176,11 +227,13 @@ export const Button: React.FC<ButtonProps> = (props) => {
           id={id}
           title={title}
           disabled={disabled}
-          className={[unstyled ? undefined : 'ui-button-wave', className].filter(Boolean).join(' ')}
+          className={[unstyled ? undefined : 'ui-button-wave', className]
+            .filter(Boolean)
+            .join(' ')}
           style={finalStyle}
           aria-label={ariaLabel}
-          aria-pressed={ariaPressed}
-          aria-expanded={ariaExpanded}
+          aria-pressed={ariaPressed !== undefined ? ariaPressed : undefined}
+          aria-expanded={ariaExpanded !== undefined ? ariaExpanded : undefined}
           aria-controls={ariaControls}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -202,14 +255,16 @@ export const Button: React.FC<ButtonProps> = (props) => {
       id={id}
       title={title}
       disabled={disabled}
-      className={[unstyled ? undefined : 'ui-button-wave', className].filter(Boolean).join(' ')}
+      className={[unstyled ? undefined : 'ui-button-wave', className]
+        .filter(Boolean)
+        .join(' ')}
       style={finalStyle}
       onClick={typeof onClick === 'function' ? handleClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       aria-label={ariaLabel}
-      aria-pressed={ariaPressed}
-      aria-expanded={ariaExpanded}
+      aria-pressed={ariaPressed !== undefined ? ariaPressed : undefined}
+      aria-expanded={ariaExpanded !== undefined ? ariaExpanded : undefined}
       aria-controls={ariaControls}
     >
       {contentWithIcon}

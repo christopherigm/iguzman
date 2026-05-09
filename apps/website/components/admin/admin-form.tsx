@@ -467,7 +467,7 @@ export function AdminForm({
 
   return (
     <>
-      <Box flexDirection="column" gap={20} maxWidth="900px">
+      <Box flexDirection="column" gap={20} maxWidth="900px" marginBottom={40}>
         <Box
           display="flex"
           alignItems="center"
@@ -490,16 +490,17 @@ export function AdminForm({
             {!hideCancel && (
               <Button
                 text={t('cancel')}
-                unstyled
-                className="af__btn-cancel"
                 onClick={onCancel ?? (() => router.back())}
+                size="md"
               />
             )}
           </Box>
         </Box>
 
         {error && <Toast message={error} variant="error" />}
-        {success && <Toast message={success} variant="success" />}
+        {success && (
+          <Toast message={success} variant="success" position="bottom-center" />
+        )}
 
         <form className="af__form" onSubmit={handleSubmit} noValidate>
           <Box className="af__grid">
@@ -622,7 +623,7 @@ export function AdminForm({
                         {/* ── Action buttons (mic, enhance, translate) ── */}
                         {(field.type === 'textarea' ||
                           isTranslatable(field)) && (
-                          <Box display="flex" alignItems="center" gap={2}>
+                          <Box display="flex" alignItems="center" gap={12}>
                             {field.type === 'textarea' && (
                               <SpeechFieldButton
                                 fieldKey={field.key}
@@ -727,31 +728,33 @@ export function AdminForm({
                             flexDirection="column"
                             gap={10}
                           >
-                            <Typography
-                              variant="body-sm"
-                              className="af__enhance-preview-text"
-                            >
+                            <Typography variant="body-sm">
                               {enhancePreview || '…'}
                             </Typography>
-                            <Box display="flex" gap={8} alignItems="center">
+                            <Box
+                              display="flex"
+                              gap={8}
+                              alignItems="center"
+                              marginTop={12}
+                            >
                               {isGenerating ? (
                                 <Button
                                   text={t('enhanceStop')}
-                                  unstyled
-                                  className="af__btn-cancel"
                                   onClick={handleDiscardEnhance}
+                                  size="md"
                                 />
                               ) : (
                                 <>
                                   <Button
-                                    text={t('enhanceAccept')}
-                                    onClick={handleAcceptEnhance}
+                                    text={t('enhanceDiscard')}
+                                    onClick={handleDiscardEnhance}
+                                    size="md"
                                   />
                                   <Button
-                                    text={t('enhanceDiscard')}
-                                    unstyled
-                                    className="af__btn-cancel"
-                                    onClick={handleDiscardEnhance}
+                                    text={t('enhanceAccept')}
+                                    onClick={handleAcceptEnhance}
+                                    size="md"
+                                    kind="success"
                                   />
                                 </>
                               )}
@@ -767,31 +770,33 @@ export function AdminForm({
                             flexDirection="column"
                             gap={10}
                           >
-                            <Typography
-                              variant="body-sm"
-                              className="af__enhance-preview-text"
-                            >
+                            <Typography variant="body-sm">
                               {translatePreview || '…'}
                             </Typography>
-                            <Box display="flex" gap={8} alignItems="center">
+                            <Box
+                              display="flex"
+                              gap={8}
+                              alignItems="center"
+                              marginTop={12}
+                            >
                               {isGenerating ? (
                                 <Button
                                   text={t('enhanceStop')}
-                                  unstyled
-                                  className="af__btn-cancel"
                                   onClick={handleDiscardTranslate}
+                                  size="md"
                                 />
                               ) : (
                                 <>
                                   <Button
-                                    text={t('enhanceAccept')}
-                                    onClick={handleAcceptTranslate}
+                                    text={t('enhanceDiscard')}
+                                    onClick={handleDiscardTranslate}
+                                    size="md"
                                   />
                                   <Button
-                                    text={t('enhanceDiscard')}
-                                    unstyled
-                                    className="af__btn-cancel"
-                                    onClick={handleDiscardTranslate}
+                                    text={t('enhanceAccept')}
+                                    onClick={handleAcceptTranslate}
+                                    size="md"
+                                    kind="success"
                                   />
                                 </>
                               )}
@@ -823,6 +828,8 @@ export function AdminForm({
               type="submit"
               text={saving ? t('saving') : t('save')}
               disabled={saving}
+              kind="success"
+              size="lg"
             />
           </Box>
         </form>

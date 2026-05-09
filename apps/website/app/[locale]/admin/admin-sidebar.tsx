@@ -122,12 +122,8 @@ export function AdminSidebar() {
                 <Button
                   key={provider}
                   flex="1"
-                  backgroundColor={active ? 'var(--accent)' : 'transparent'}
-                  color={
-                    active
-                      ? 'var(--accent-foreground, #fff)'
-                      : 'var(--foreground, #171717)'
-                  }
+                  size="md"
+                  kind={active ? 'success' : undefined}
                   onClick={() => handleProviderChange(provider)}
                   aria-pressed={active}
                 >

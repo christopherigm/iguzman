@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Button } from './button';
 import { Box } from './box';
+import { Typography } from './typography';
 import './confirmation-modal.css';
 
 /**
@@ -42,8 +43,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   children,
   panelMaxWidth,
 }) => {
-  const panelRef = useRef<HTMLDivElement>(null);
-
   // Prevent body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -62,52 +61,93 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cancelCallback]);
 
-  // Close when clicking the overlay (outside the panel)
+  // Close when clicking the overlay directly (not the panel)
   const handleOverlayClick = (e: React.MouseEvent) => {
-    if (
-      cancelCallback &&
-      panelRef.current &&
-      !panelRef.current.contains(e.target as Node)
-    ) {
-      cancelCallback();
-    }
+    if (cancelCallback && e.target === e.currentTarget) cancelCallback();
   };
 
   return (
-    <div className="ui-confirmation-modal-overlay" onClick={handleOverlayClick}>
-      <div
-        ref={panelRef}
+    <Box
+      className="ui-confirmation-modal-overlay"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      backgroundColor="rgba(0, 0, 0, 0.55)"
+      styles={{
+        position: 'fixed',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        zIndex: 1100,
+        backdropFilter: 'blur(2px)',
+      }}
+      onClick={handleOverlayClick}
+    >
+      <Box
         className="ui-confirmation-modal-panel"
-        style={panelMaxWidth ? { maxWidth: panelMaxWidth } : undefined}
+        role="dialog"
+        aria-modal={true}
+        aria-labelledby="ui-confirmation-modal-title"
+        display="flex"
+        flexDirection="column"
+        width="90%"
+        maxWidth={panelMaxWidth ?? '420px'}
+        maxHeight="calc(90vh - 50px)"
+        backgroundColor="var(--background, #ffffff)"
+        borderRadius="12px"
+        styles={{
+          position: 'relative',
+          zIndex: 1101,
+          overflow: 'hidden',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.18)',
+        }}
       >
-        <div className="ui-confirmation-modal-body">
-          <h2 className="ui-confirmation-modal-title">{title}</h2>
-          <p className="ui-confirmation-modal-text">{text}</p>
-          {children && (
-            <div className="ui-confirmation-modal-children">{children}</div>
-          )}
-        </div>
-
-        <Box className="ui-confirmation-modal-actions">
-          {cancelCallback && (
-            <Button
-              text="Cancel"
-              onClick={cancelCallback}
-              backgroundColor="var(--surface-1, rgba(0, 0, 0, 0.06))"
-              color="var(--foreground, #1a1a1a)"
-              padding="8px 16px"
-              borderRadius={8}
-            />
-          )}
-          <Button
-            text="OK"
-            onClick={okCallback}
-            padding="8px 16px"
-            borderRadius={8}
-          />
+        <Box
+          padding={24}
+          flex="1 1 auto"
+          minHeight={0}
+          styles={{ overflowY: 'auto' }}
+        >
+          <Typography
+            id="ui-confirmation-modal-title"
+            as="h2"
+            variant="h4"
+            color="var(--foreground, #1a1a1a)"
+            margin={0}
+            marginBottom={8}
+            // styles={{ fontSize: '18px' }}
+          >
+            {title}
+          </Typography>
+          <Typography
+            as="p"
+            variant="body-sm"
+            margin={0}
+            styles={{ lineHeight: 1.5 }}
+          >
+            {text}
+          </Typography>
+          {children && <Box marginTop={16}>{children}</Box>}
         </Box>
-      </div>
-    </div>
+
+        <Box
+          display="flex"
+          justifyContent="flex-end"
+          gap={8}
+          padding="12px 24px 20px"
+          styles={{
+            flexShrink: 0,
+            borderTop: '1px solid var(--border, rgba(0, 0, 0, 0.08))',
+          }}
+        >
+          {cancelCallback && (
+            <Button text="Cancel" onClick={cancelCallback} size="md" />
+          )}
+          <Button text="OK" onClick={okCallback} kind="success" size="md" />
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

@@ -298,6 +298,7 @@ export function WsClientPanel({
             setNewLabel('');
             setShowAddModal(true);
           }}
+          kind="success"
         />
 
         {clients.length > 0 && selectedUuid !== THIS_DEVICE_UUID ? (

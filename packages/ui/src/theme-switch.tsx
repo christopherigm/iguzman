@@ -38,13 +38,8 @@ export function ThemeSwitch({ hideOnMobile = false }: ThemeSwitchProps) {
             type="button"
             text={label}
             onClick={() => actions.setMode(value)}
-            color={
-              active
-                ? 'var(--accent-foreground, #fff)'
-                : 'var(--foreground, #171717)'
-            }
-            backgroundColor={active ? undefined : 'transparent'}
-            styles={{ fontWeight: active ? 600 : 400 }}
+            kind={active ? 'success' : undefined}
+            size="md"
           />
         );
       })}

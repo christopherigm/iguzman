@@ -150,6 +150,7 @@ export const TextInput = ({
   const wrapperCls = [
     'ui-text-input-wrapper',
     isActive ? 'ui-text-input-wrapper--active' : '',
+    !label ? 'ui-text-input-wrapper--no-label' : '',
     className,
   ]
     .filter(Boolean)

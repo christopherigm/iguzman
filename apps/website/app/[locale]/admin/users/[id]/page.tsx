@@ -78,72 +78,74 @@ export default function AdminUserFormPage({ params }: Props) {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: t('home'), href: '/' }, { label: t('breadcrumbAdmin'), href: '/admin' }, { label: t('users'), href: '/admin/users' }, { label: t('edit') }]} />
+      <Breadcrumbs
+        items={[
+          { label: t('home'), href: '/' },
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('users'), href: '/admin/users' },
+          { label: t('edit') },
+        ]}
+      />
       <Box className="uf">
-      <Box className="uf__header">
-        <Typography as="h1" variant="h3">
-          {t('edit')} — {t('users')}
-        </Typography>
-        <Button
-          text={t('cancel')}
-          unstyled
-          className="uf__btn-cancel"
-          onClick={() => router.back()}
-        />
-      </Box>
-
-      {error && (
-        <Box className="uf__banner uf__banner--error">
-          <Typography variant="body-sm">{error}</Typography>
-        </Box>
-      )}
-      {success && (
-        <Box className="uf__banner uf__banner--success">
-          <Typography variant="body-sm">{success}</Typography>
-        </Box>
-      )}
-
-      <Box className="uf__card">
-        <Box className="uf__meta">
-          <Typography as="p" variant="body">
-            <strong>Email:</strong> {String(user.email ?? '')}
+        <Box className="uf__header">
+          <Typography as="h1" variant="h3">
+            {t('edit')} — {t('users')}
           </Typography>
-          <Typography as="p" variant="body">
-            <strong>{t('firstName') ?? 'First Name'}:</strong>{' '}
-            {String(user.first_name ?? '')}
-          </Typography>
-          <Typography as="p" variant="body">
-            <strong>{t('lastName') ?? 'Last Name'}:</strong>{' '}
-            {String(user.last_name ?? '')}
-          </Typography>
-          <Typography as="p" variant="body">
-            <strong>{t('role') ?? 'Role'}:</strong>{' '}
-            <Badge variant="subtle" color={user.is_admin ? 'blue' : 'gray'}>
-              {user.is_admin ? t('isAdmin') : t('notAdmin')}
-            </Badge>
-          </Typography>
+          <Button text={t('cancel')} size="md" onClick={() => router.back()} />
         </Box>
 
-        <Box className="uf__toggles">
-          <Box className="uf__toggle-row">
-            <Switch checked={isAdmin} onChange={setIsAdmin} />
-            <span className="uf__toggle-label">{t('isAdmin')}</span>
+        {error && (
+          <Box className="uf__banner uf__banner--error">
+            <Typography variant="body-sm">{error}</Typography>
           </Box>
-          <Box className="uf__toggle-row">
-            <Switch checked={isActive} onChange={setIsActive} />
-            <span className="uf__toggle-label">{t('active')}</span>
+        )}
+        {success && (
+          <Box className="uf__banner uf__banner--success">
+            <Typography variant="body-sm">{success}</Typography>
           </Box>
-        </Box>
+        )}
 
-        <Box className="uf__actions">
-          <Button
-            text={saving ? t('saving') : t('save')}
-            onClick={handleSave}
-            disabled={saving}
-          />
+        <Box className="uf__card">
+          <Box className="uf__meta">
+            <Typography as="p" variant="body">
+              <strong>Email:</strong> {String(user.email ?? '')}
+            </Typography>
+            <Typography as="p" variant="body">
+              <strong>{t('firstName') ?? 'First Name'}:</strong>{' '}
+              {String(user.first_name ?? '')}
+            </Typography>
+            <Typography as="p" variant="body">
+              <strong>{t('lastName') ?? 'Last Name'}:</strong>{' '}
+              {String(user.last_name ?? '')}
+            </Typography>
+            <Typography as="p" variant="body">
+              <strong>{t('role') ?? 'Role'}:</strong>{' '}
+              <Badge variant="subtle" color={user.is_admin ? 'blue' : 'gray'}>
+                {user.is_admin ? t('isAdmin') : t('notAdmin')}
+              </Badge>
+            </Typography>
+          </Box>
+
+          <Box className="uf__toggles">
+            <Box className="uf__toggle-row">
+              <Switch checked={isAdmin} onChange={setIsAdmin} />
+              <span className="uf__toggle-label">{t('isAdmin')}</span>
+            </Box>
+            <Box className="uf__toggle-row">
+              <Switch checked={isActive} onChange={setIsActive} />
+              <span className="uf__toggle-label">{t('active')}</span>
+            </Box>
+          </Box>
+
+          <Box className="uf__actions">
+            <Button
+              text={saving ? t('saving') : t('save')}
+              onClick={handleSave}
+              disabled={saving}
+            />
+          </Box>
         </Box>
       </Box>
-    </Box>
     </>
   );
 }

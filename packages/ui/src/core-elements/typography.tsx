@@ -53,6 +53,8 @@ export interface TypographyProps extends UIComponentProps {
   'aria-label'?: string;
   /** Tooltip text shown on hover (native HTML title attribute). */
   title?: string;
+  /** For `as="label"`: associates the label with a form control by its id. */
+  htmlFor?: string;
 }
 
 const VARIANT_ELEMENT: Record<TypographyVariant, TypographyElement> = {
@@ -101,10 +103,12 @@ export const Typography: React.FC<TypographyProps> = ({
   'aria-hidden': ariaHidden,
   'aria-label': ariaLabel,
   title,
+  htmlFor,
   ...rest
 }) => {
+  type TagProps = React.HTMLAttributes<HTMLElement> & { htmlFor?: string };
   const Tag = (as ??
-    VARIANT_ELEMENT[variant]) as React.ElementType<React.HTMLAttributes<HTMLElement>>;
+    VARIANT_ELEMENT[variant]) as React.ElementType<TagProps>;
 
   const uiStyle = buildStyleProps(rest as UIComponentProps);
 
@@ -133,6 +137,7 @@ export const Typography: React.FC<TypographyProps> = ({
       aria-hidden={ariaHidden}
       aria-label={ariaLabel}
       title={title}
+      htmlFor={htmlFor}
     >
       {children}
     </Tag>

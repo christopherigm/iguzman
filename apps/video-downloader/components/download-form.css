@@ -245,24 +245,6 @@
   opacity: 0.5;
 }
 
-.df-add-server-btn {
-  display: inline-flex;
-  align-items: center;
-  background: transparent;
-  border: 1.5px solid var(--surface-2, #e5e7eb);
-  border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  color: var(--foreground, #171717);
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    background 180ms ease,
-    border-color 180ms ease;
-}
-
 .df-add-server-btn:hover:not(:disabled) {
   background: var(--surface-2, #f4f4f5);
   border-color: var(--accent, #06b6d4);
@@ -279,5 +261,6 @@
 
 .df-icon-btn--delete-server:hover:not(:disabled) img,
 .df-icon-btn--delete-server:hover:not(:disabled) svg {
-  filter: brightness(0) saturate(100%) invert(27%) sepia(80%) saturate(1700%) hue-rotate(338deg) brightness(95%) contrast(95%);
+  filter: brightness(0) saturate(100%) invert(27%) sepia(80%) saturate(1700%)
+    hue-rotate(338deg) brightness(95%) contrast(95%);
 }

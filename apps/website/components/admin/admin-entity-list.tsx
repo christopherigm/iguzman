@@ -44,12 +44,13 @@ export function AdminEntityList({
         justifyContent="space-between"
         gap={16}
         flexWrap="wrap"
+        marginBottom={12}
       >
         <Typography as="h1" variant="h3" className="ael__title">
           {title}
         </Typography>
         <Link href={`${basePath}/new`} prefetch>
-          <Button text={`+ ${t('newItem')}`} />
+          <Button text={`+ ${t('newItem')}`} kind="success" size="md" />
         </Link>
       </Box>
 
@@ -95,25 +96,23 @@ export function AdminEntityList({
                     </td>
                   ))}
                   <td className="ael__td ael__td--actions">
-                    <Link href={`${basePath}/${item.id}`} prefetch>
-                      <Button
-                        text={t('edit')}
-                        unstyled
-                        className="ael__btn-edit"
-                      />
-                    </Link>
-                    {onDelete && (
-                      <Button
-                        text={t('delete')}
-                        unstyled
-                        className="ael__btn-delete"
-                        onClick={() => {
-                          if (window.confirm(t('confirmDelete'))) {
-                            onDelete(item.id as number);
-                          }
-                        }}
-                      />
-                    )}
+                    <Box display="flex" gap={8} justifyContent="center">
+                      <Link href={`${basePath}/${item.id}`} prefetch>
+                        <Button text={t('edit')} size="sm" />
+                      </Link>
+                      {onDelete && (
+                        <Button
+                          text={t('delete')}
+                          size="sm"
+                          kind="error"
+                          onClick={() => {
+                            if (window.confirm(t('confirmDelete'))) {
+                              onDelete(item.id as number);
+                            }
+                          }}
+                        />
+                      )}
+                    </Box>
                   </td>
                 </tr>
               ))}

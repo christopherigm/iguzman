@@ -49,7 +49,6 @@ export default function AdminServicesPage() {
       render: (v: unknown, r: Record<string, unknown>) =>
         v != null ? `${v} ${r.currency ?? ''}` : '—',
     },
-    { key: 'modality', label: t('modality') ?? 'Modality' },
     { key: 'enabled', label: t('enabled') },
   ];
 

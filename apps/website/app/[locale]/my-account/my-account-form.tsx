@@ -161,6 +161,7 @@ function ProfileSection({
           size="md"
           width="100%"
           marginTop={4}
+          kind="success"
         />
       </form>
     </Box>
@@ -276,6 +277,7 @@ function ChangePasswordSection({
           size="md"
           width="100%"
           marginTop={4}
+          kind="success"
         />
       </form>
     </Box>
@@ -402,11 +404,11 @@ function PasskeySection({
                 </Box>
               </Box>
               <Button
-                unstyled
                 type="button"
                 disabled={deletingId === cred.id}
                 onClick={() => setConfirmDeleteId(cred.id)}
                 aria-label={t('deletePasskey')}
+                kind="error"
               >
                 <Image
                   src="/icons/delete-trash-icon.svg"
@@ -433,6 +435,7 @@ function PasskeySection({
           size="md"
           width="100%"
           marginTop={4}
+          kind="success"
         />
       </Box>
     </>

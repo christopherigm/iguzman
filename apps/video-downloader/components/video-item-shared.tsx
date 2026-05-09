@@ -5,6 +5,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { Badge } from '@repo/ui/core-elements/badge';
+import { Button } from '@repo/ui/core-elements/button';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import Image from 'next/image';
 import {
@@ -43,7 +44,9 @@ export const STATUS_COLORS: Record<VideoStatus, string> = {
 
 const FPS_MULTIPLIERS = [2, 4, 8] as const;
 
-function buildFpsOptions(sourceFps: number | null): { value: number; label: string }[] {
+function buildFpsOptions(
+  sourceFps: number | null,
+): { value: number; label: string }[] {
   const base = sourceFps && sourceFps > 0 ? sourceFps : 30;
   return FPS_MULTIPLIERS.map((m) => {
     const value = Math.round(base * m);
@@ -496,65 +499,57 @@ export function VideoActions({
 }) {
   return (
     <Box className="vi-actions" display="flex" justifyContent="space-evenly">
-      <button
-        type="button"
+      <Button
+        unstyled
         className="vi-icon-btn vi-icon-btn--danger"
         onClick={onDelete}
         aria-label={t('delete')}
         title={t('delete')}
-      >
-        <Icon icon="/icons/delete-video.svg" size={15} color="#ef4444" />
-      </button>
+        icon="/icons/delete-video.svg"
+        iconSize="15px"
+        iconColor="#ef4444"
+      />
 
-      <button
-        type="button"
+      <Button
+        unstyled
         className="vi-icon-btn"
         onClick={onRetry}
         disabled={isBusy}
         aria-label={t('retry')}
         title={t('retry')}
-      >
-        <Icon
-          icon="/icons/retry.svg"
-          size={15}
-          color="var(--foreground, #171717)"
-        />
-      </button>
+        icon="/icons/retry.svg"
+        iconSize="15px"
+        iconColor="var(--foreground, #171717)"
+      />
 
-      <button
-        type="button"
+      <Button
+        unstyled
         className="vi-icon-btn"
         onClick={onCopy}
         aria-label={t('copyLink')}
         title={copying ? t('copied') : t('copyLink')}
-      >
-        <Icon
-          icon="/icons/copy.svg"
-          size={15}
-          color={
-            copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
-          }
-        />
-      </button>
+        icon="/icons/copy.svg"
+        iconSize="15px"
+        iconColor={
+          copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+        }
+      />
 
       {video.downloadURL ? (
-        <button
-          type="button"
+        <Button
+          unstyled
           className="vi-icon-btn"
           onClick={onRedownload}
           aria-label={t('redownload')}
           title={t('redownload')}
-        >
-          <Icon
-            icon={isIOS() ? '/icons/safari.svg' : '/icons/download.svg'}
-            size={15}
-            color="var(--foreground, #171717)"
-          />
-        </button>
+          icon={isIOS() ? '/icons/safari.svg' : '/icons/download.svg'}
+          iconSize="15px"
+          iconColor="var(--foreground, #171717)"
+        />
       ) : null}
 
-      <button
-        type="button"
+      <Button
+        unstyled
         className="vi-icon-btn"
         onClick={onToggleExtra}
         aria-label={t('toggleExtraActions')}
@@ -569,7 +564,7 @@ export function VideoActions({
             extraActionsOpen ? 'vi-chevron--open' : 'vi-chevron--closed'
           }
         />
-      </button>
+      </Button>
     </Box>
   );
 }
@@ -633,90 +628,82 @@ export function VideoExtraActions({
       ) : null}
 
       {video.isH265 && !video.h264Converted ? (
-        <button
-          type="button"
+        <Button
+          unstyled
           className="vi-fps-btn"
           onClick={onConvert}
           disabled={isBusy || h264Error}
           aria-label={t('convertH264')}
           title={t('convertH264')}
+          icon="/icons/convert.svg"
+          iconSize="14px"
+          iconColor="var(--accent, #8b5cf6)"
         >
-          <Icon
-            icon="/icons/convert.svg"
-            size={14}
-            color="var(--accent, #8b5cf6)"
-          />
           {t('convertH264')}
-        </button>
+        </Button>
       ) : null}
 
       {!video.justAudio && !video.blackBarsRemoved ? (
-        <button
-          type="button"
+        <Button
+          unstyled
           className="vi-fps-btn"
           onClick={onRemoveBlackBars}
           disabled={!canProcess || blackBarsError}
           aria-label={t('removeBlackBars')}
           title={t('removeBlackBars')}
+          icon="/icons/remove-black-bars.svg"
+          iconSize="14px"
+          iconColor="var(--accent, #8b5cf6)"
         >
-          <Icon
-            icon="/icons/remove-black-bars.svg"
-            size={14}
-            color="var(--accent, #8b5cf6)"
-          />
           {t('removeBlackBars')}
-        </button>
+        </Button>
       ) : null}
 
       {video.captionsFile && onDownloadCaptions ? (
-        <button
-          type="button"
+        <Button
+          unstyled
           className="vi-fps-btn"
           onClick={onDownloadCaptions}
           aria-label={t('downloadCaptions')}
           title={t('downloadCaptions')}
+          icon="/icons/captions.svg"
+          iconSize="14px"
+          iconColor="var(--accent, #8b5cf6)"
         >
-          <Icon
-            icon="/icons/captions.svg"
-            size={14}
-            color="var(--accent, #8b5cf6)"
-          />
           {t('downloadCaptions')}
-        </button>
+        </Button>
       ) : null}
 
       {video.captionsFile && !video.justAudio && onBurnCaptions ? (
-        <button
-          type="button"
+        <Button
+          unstyled
           className="vi-fps-btn"
           onClick={onBurnCaptions}
           disabled={isBusy}
           aria-label={t('burnCaptions')}
           title={t('burnCaptions')}
+          icon="/icons/write.svg"
+          iconSize="14px"
+          iconColor="var(--accent, #8b5cf6)"
         >
-          <Icon
-            icon="/icons/write.svg"
-            size={14}
-            color="var(--accent, #8b5cf6)"
-          />
           {t('burnCaptions')}
-        </button>
+        </Button>
       ) : null}
 
       <Box>
         {buildFpsOptions(video.sourceFps).map(({ value, label }) => {
           const alreadyApplied = video.fpsApplied && value <= Number(video.fps);
           return (
-            <button
+            <Button
               key={value}
-              type="button"
+              unstyled
               className="vi-fps-btn"
               onClick={() => onInterpolateFps(value)}
               disabled={!canProcess || alreadyApplied || fpsError}
               title={label}
             >
               {label}
-            </button>
+            </Button>
           );
         })}
       </Box>
@@ -794,18 +781,15 @@ export function VideoCardHeader({
           {resolveResolutionLabel(video.height, video.width)}
         </Badge>
       ) : null}
-      <button
-        type="button"
+      <Button
+        unstyled
         className="vi-icon-btn"
         onClick={onToggleDetails}
         aria-label={t('toggleDetails')}
-      >
-        <Icon
-          icon="/icons/hamburger.svg"
-          size={16}
-          color="var(--foreground, #171717)"
-        />
-      </button>
+        icon="/icons/hamburger.svg"
+        iconSize="16px"
+        iconColor="var(--foreground, #171717)"
+      />
     </Box>
   );
 }

@@ -1,7 +1,9 @@
 'use client';
 
 import { useId } from 'react';
-import { buildStyleProps } from './utils';
+import type { CSSProperties } from 'react';
+import { Box } from './box';
+import { Typography } from './typography';
 import type { UIComponentProps } from './utils';
 import './slider.css';
 
@@ -34,26 +36,43 @@ export interface SliderProps extends UIComponentProps {
  *   label="Number of paragraphs"
  * />
  */
-export function Slider({ steps, value, onChange, label, disabled, ...rest }: SliderProps) {
+export function Slider({
+  steps,
+  value,
+  onChange,
+  label,
+  disabled,
+  ...rest
+}: SliderProps) {
   const id = useId();
   const currentIndex = steps.findIndex((s) => s.value === value);
   const safeIndex = currentIndex === -1 ? 0 : currentIndex;
   const max = Math.max(steps.length - 1, 1);
   const pct = (safeIndex / max) * 100;
 
-  const style = buildStyleProps(rest);
+  const { className: userClassName, ...boxRest } = rest;
 
   return (
-    <div
-      className={['ui-slider', rest.className].filter(Boolean).join(' ')}
-      style={{ ...style, ...(rest.styles ?? {}) }}
+    <Box
+      display="flex"
+      flexDirection="column"
+      gap={6}
+      width="100%"
+      {...boxRest}
+      className={['ui-slider', userClassName].filter(Boolean).join(' ')}
     >
       {label && (
-        <label className="ui-slider__label" htmlFor={id}>
+        <Typography
+          as="label"
+          htmlFor={id}
+          fontWeight={600}
+          color="var(--foreground, #1a1a1a)"
+          styles={{ fontSize: 13, userSelect: 'none' }}
+        >
           {label}
-        </label>
+        </Typography>
       )}
-      <div className="ui-slider__track-wrapper">
+      <Box width="100%" padding="6px 0" styles={{ position: 'relative' }}>
         <input
           id={id}
           type="range"
@@ -67,11 +86,16 @@ export function Slider({ steps, value, onChange, label, disabled, ...rest }: Sli
             const idx = Number(e.target.value);
             if (steps[idx]) onChange(steps[idx].value);
           }}
-          style={{ '--ui-slider-pct': `${pct}%` } as React.CSSProperties}
+          style={{ '--ui-slider-pct': `${pct}%` } as CSSProperties}
           aria-valuetext={steps[safeIndex]?.label ?? String(safeIndex)}
         />
-      </div>
-      <div className="ui-slider__labels" aria-hidden="true">
+      </Box>
+      <Box
+        width="100%"
+        marginTop={2}
+        aria-hidden="true"
+        styles={{ position: 'relative', height: '20px' }}
+      >
         {steps.map((step, i) => (
           <span
             key={String(step.value)}
@@ -81,6 +105,11 @@ export function Slider({ steps, value, onChange, label, disabled, ...rest }: Sli
             ]
               .filter(Boolean)
               .join(' ')}
+            style={
+              {
+                '--ui-slider-label-pct': max > 0 ? i / max : 0,
+              } as CSSProperties
+            }
             onClick={() => {
               if (!disabled) onChange(step.value);
             }}
@@ -88,7 +117,7 @@ export function Slider({ steps, value, onChange, label, disabled, ...rest }: Sli
             {step.label}
           </span>
         ))}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

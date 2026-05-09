@@ -2,18 +2,6 @@
   margin: 0;
 }
 
-.af__btn-cancel {
-  color: color-mix(in srgb, var(--foreground) 60%, transparent);
-  font-size: 14px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  transition: background 0.15s;
-}
-
-.af__btn-cancel:hover {
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
-}
-
 .af__form {
   display: flex;
   flex-direction: column;
@@ -32,13 +20,15 @@
 
 .af__label-row {
   min-height: 24px;
+  margin-bottom: 4px;
 }
 
 /* ── Bilingual pair group header ─────────────────────────────────────── */
 
 .af__pair-header {
   padding: 6px 0 2px;
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--foreground) 12%, transparent);
   margin-bottom: 2px;
 }
 
@@ -71,7 +61,9 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  transition: background 150ms ease, opacity 150ms ease;
+  transition:
+    background 150ms ease,
+    opacity 150ms ease;
 }
 
 .af__enhance-btn:hover:not(:disabled) {
@@ -119,16 +111,8 @@
   background: color-mix(in srgb, var(--accent, #06b6d4) 5%, transparent);
 }
 
-.af__enhance-preview-text {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--foreground);
-  white-space: pre-wrap;
-  min-height: 32px;
-}
-
 .af__label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: color-mix(in srgb, var(--foreground) 75%, transparent);
 }

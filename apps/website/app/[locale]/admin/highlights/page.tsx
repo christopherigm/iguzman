@@ -15,17 +15,28 @@ export default function AdminHighlightsPage() {
   const systemId = getUserFromToken()?.systemId ?? 0;
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { setItems(await listHighlights(systemId)); }
-    catch { setError(t('errorLoad')); }
-    finally { setLoading(false); }
+    setLoading(true);
+    setError(null);
+    try {
+      setItems(await listHighlights(systemId));
+    } catch {
+      setError(t('errorLoad'));
+    } finally {
+      setLoading(false);
+    }
   }, [systemId, t]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleDelete = async (id: number) => {
-    try { await deleteHighlight(id); setItems(prev => prev.filter(i => i.id !== id)); }
-    catch { setError(t('errorDelete')); }
+    try {
+      await deleteHighlight(id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch {
+      setError(t('errorDelete'));
+    }
   };
 
   const columns = [
@@ -39,8 +50,22 @@ export default function AdminHighlightsPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: t('home'), href: '/' }, { label: t('breadcrumbAdmin'), href: '/admin' }, { label: t('highlights') }]} />
-      <AdminEntityList title={t('highlights')} items={items} columns={columns} basePath="/admin/highlights" onDelete={handleDelete} loading={loading} error={error} />
+      <Breadcrumbs
+        items={[
+          { label: t('home'), href: '/' },
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('highlights') },
+        ]}
+      />
+      <AdminEntityList
+        title={t('highlights')}
+        items={items}
+        columns={columns}
+        basePath="/admin/highlights"
+        onDelete={handleDelete}
+        loading={loading}
+        error={error}
+      />
     </>
   );
 }

@@ -756,6 +756,8 @@ export function AiInterviewer({
         onClick={handleOpen}
         aria-label={t('aiInterviewLabel')}
         title={t('aiInterviewLabel')}
+        size="md"
+        kind="success"
       >
         {t('aiInterviewLabel')}
       </Button>
@@ -924,16 +926,13 @@ export function AiInterviewer({
                         {stage === 'proposal' && (
                           <Button
                             text={t('aiInterviewNegotiate')}
-                            unstyled
-                            className="af__btn-cancel"
                             onClick={handleNegotiate}
                           />
                         )}
                         {stage === 'negotiating' && (
                           <Button
                             text={t('aiInterviewContinue')}
-                            unstyled
-                            className="af__btn-cancel"
+                            kind="success"
                             onClick={handleOpenLengthModal}
                           />
                         )}
@@ -992,7 +991,6 @@ export function AiInterviewer({
                 }}
               />
               <Button
-                unstyled
                 icon="/icons/link.svg"
                 iconSize="14px"
                 iconColor="var(--foreground)"
@@ -1002,13 +1000,7 @@ export function AiInterviewer({
                 title={t('aiInterviewUpload')}
                 aria-label={t('aiInterviewUpload')}
               >
-                <Typography
-                  as="span"
-                  variant="none"
-                  className="aii__upload-label"
-                >
-                  {uploadedFile ? uploadedFile.name : t('aiInterviewUpload')}
-                </Typography>
+                {uploadedFile ? uploadedFile.name : t('aiInterviewUpload')}
               </Button>
 
               {/* Market research toggle */}

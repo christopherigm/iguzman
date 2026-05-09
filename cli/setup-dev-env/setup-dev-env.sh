@@ -71,6 +71,7 @@ setup_strings() {
     TOOL_PYTHON="Lenguaje de programación (última versión)"
     TOOL_DJANGO="Framework web de Python"
     TOOL_CLAUDE="Asistente de código con IA"
+    TOOL_OPENCODE="Agente de código con IA para terminal"
     NOTE_BASH_GIT_PROMPT="Snippet de activación agregado automáticamente a ~/.bash_profile (macOS) o ~/.bashrc (Linux).\n  Reinicia tu shell o ejecuta: source ~/.bashrc"
     CONFIRM_YES_CHARS="sy"
   else
@@ -110,6 +111,7 @@ setup_strings() {
     TOOL_PYTHON="Programming language (latest)"
     TOOL_DJANGO="Python web framework"
     TOOL_CLAUDE="AI coding assistant CLI"
+    TOOL_OPENCODE="Terminal-based AI coding agent"
     NOTE_BASH_GIT_PROMPT="Source snippet automatically added to ~/.bash_profile (macOS) or ~/.bashrc (Linux).\n  Restart your shell or run: source ~/.bashrc"
     CONFIRM_YES_CHARS="y"
   fi
@@ -249,12 +251,21 @@ install_claude() {
   return 1
 }
 
+install_opencode() {
+  if command -v curl &>/dev/null; then
+    curl -fsSL https://opencode.ai/install | bash
+    return $?
+  fi
+  echo "  $(clr_yellow 'curl not found. Install curl first, then run: curl -fsSL https://opencode.ai/install | bash')"
+  return 1
+}
+
 # ── Tool definitions ──────────────────────────────────────────────────────────
 # Each entry: ID|LABEL|DESCRIPTION|CHECK_CMD|VERSION_CMD|INSTALL_FN
 
 build_tools() {
-  TOOL_IDS=(git nodejs pnpm docker kubectl helm bash-git-prompt python django claude)
-  TOOL_LABELS=(Git Node.js pnpm Docker kubectl Helm bash-git-prompt Python Django "Claude Code")
+  TOOL_IDS=(git nodejs pnpm docker kubectl helm bash-git-prompt python django claude opencode)
+  TOOL_LABELS=(Git Node.js pnpm Docker kubectl Helm bash-git-prompt Python Django "Claude Code" OpenCode)
   TOOL_DESCS=(
     "${TOOL_GIT}"
     "${TOOL_NODEJS}"
@@ -266,6 +277,7 @@ build_tools() {
     "${TOOL_PYTHON}"
     "${TOOL_DJANGO}"
     "${TOOL_CLAUDE}"
+    "${TOOL_OPENCODE}"
   )
   TOOL_INSTALLED=()
   TOOL_VERSIONS=()
@@ -308,6 +320,10 @@ build_tools() {
 
   # claude
   if command -v claude &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(claude --version 2>/dev/null)");
+  else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
+
+  # opencode
+  if command -v opencode &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(opencode --version 2>/dev/null)");
   else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
 }
 

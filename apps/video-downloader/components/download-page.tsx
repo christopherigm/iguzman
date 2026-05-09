@@ -66,7 +66,12 @@ export function DownloadPage() {
         onMoveToFirst={moveCompletedToFirst}
       />
       {storageError ? (
-        <Typography as="p" variant="body-sm" role="alert" className="dp-storage-error">
+        <Typography
+          as="p"
+          variant="body-sm"
+          role="alert"
+          className="dp-storage-error"
+        >
           {storageError}
         </Typography>
       ) : null}

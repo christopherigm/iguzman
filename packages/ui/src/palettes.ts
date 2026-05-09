@@ -7,7 +7,11 @@ type CSSVariableKey =
   | '--surface-2'
   | '--border'
   | '--accent'
-  | '--accent-foreground';
+  | '--accent-foreground'
+  | '--error'
+  | '--error-foreground'
+  | '--warning'
+  | '--warning-foreground';
 
 type PaletteVariables = Record<CSSVariableKey, string>;
 
@@ -32,6 +36,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#e5e7eb',
       '--accent': '#06b6d4',
       '--accent-foreground': '#ffffff',
+      '--error': '#8d0e0e',
+      '--error-foreground': '#ffffff',
+      '--warning': '#e98410',
+      '--warning-foreground': '#ffffff',
     },
     dark: {
       '--background': '#202020',
@@ -41,6 +49,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#333333',
       '--accent': '#22d3ee',
       '--accent-foreground': '#0a0a0a',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 
@@ -55,6 +67,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#93c5fd',
       '--accent': '#2563eb',
       '--accent-foreground': '#ffffff',
+      '--error': '#dc2626',
+      '--error-foreground': '#ffffff',
+      '--warning': '#d97706',
+      '--warning-foreground': '#1c1000',
     },
     dark: {
       '--background': '#020617',
@@ -64,6 +80,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#1e3a5f',
       '--accent': '#60a5fa',
       '--accent-foreground': '#020617',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 
@@ -78,6 +98,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#fda4af',
       '--accent': '#e11d48',
       '--accent-foreground': '#ffffff',
+      '--error': '#dc2626',
+      '--error-foreground': '#ffffff',
+      '--warning': '#d97706',
+      '--warning-foreground': '#1c1000',
     },
     dark: {
       '--background': '#0c0608',
@@ -87,6 +111,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#4c1d2e',
       '--accent': '#fb7185',
       '--accent-foreground': '#0c0608',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 
@@ -101,6 +129,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#6ee7b7',
       '--accent': '#059669',
       '--accent-foreground': '#ffffff',
+      '--error': '#dc2626',
+      '--error-foreground': '#ffffff',
+      '--warning': '#d97706',
+      '--warning-foreground': '#1c1000',
     },
     dark: {
       '--background': '#030c06',
@@ -110,6 +142,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#1a4a38',
       '--accent': '#34d399',
       '--accent-foreground': '#030c06',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 
@@ -124,6 +160,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#fcd34d',
       '--accent': '#d97706',
       '--accent-foreground': '#ffffff',
+      '--error': '#dc2626',
+      '--error-foreground': '#ffffff',
+      '--warning': '#d97706',
+      '--warning-foreground': '#1c1000',
     },
     dark: {
       '--background': '#0c0a02',
@@ -133,6 +173,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#4a3b14',
       '--accent': '#fbbf24',
       '--accent-foreground': '#0c0a02',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 
@@ -147,6 +191,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#c4b5fd',
       '--accent': '#7c3aed',
       '--accent-foreground': '#ffffff',
+      '--error': '#dc2626',
+      '--error-foreground': '#ffffff',
+      '--warning': '#d97706',
+      '--warning-foreground': '#1c1000',
     },
     dark: {
       '--background': '#07020e',
@@ -156,6 +204,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#3b1f6e',
       '--accent': '#a78bfa',
       '--accent-foreground': '#07020e',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 
@@ -170,6 +222,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#cbd5e1',
       '--accent': '#475569',
       '--accent-foreground': '#ffffff',
+      '--error': '#dc2626',
+      '--error-foreground': '#ffffff',
+      '--warning': '#d97706',
+      '--warning-foreground': '#1c1000',
     },
     dark: {
       '--background': '#020409',
@@ -179,6 +235,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#334155',
       '--accent': '#94a3b8',
       '--accent-foreground': '#020409',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 
@@ -193,6 +253,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#fdba74',
       '--accent': '#ea580c',
       '--accent-foreground': '#ffffff',
+      '--error': '#dc2626',
+      '--error-foreground': '#ffffff',
+      '--warning': '#d97706',
+      '--warning-foreground': '#1c1000',
     },
     dark: {
       '--background': '#0c0602',
@@ -202,6 +266,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#4a3018',
       '--accent': '#fb923c',
       '--accent-foreground': '#0c0602',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 
@@ -216,6 +284,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#5eead4',
       '--accent': '#0d9488',
       '--accent-foreground': '#ffffff',
+      '--error': '#dc2626',
+      '--error-foreground': '#ffffff',
+      '--warning': '#d97706',
+      '--warning-foreground': '#1c1000',
     },
     dark: {
       '--background': '#030c0b',
@@ -225,6 +297,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#1a4a44',
       '--accent': '#2dd4bf',
       '--accent-foreground': '#030c0b',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 
@@ -239,6 +315,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#e879f9',
       '--accent': '#c026d3',
       '--accent-foreground': '#ffffff',
+      '--error': '#dc2626',
+      '--error-foreground': '#ffffff',
+      '--warning': '#d97706',
+      '--warning-foreground': '#1c1000',
     },
     dark: {
       '--background': '#0a020a',
@@ -248,6 +328,10 @@ const palettes: Record<string, PaletteDefinition> = {
       '--border': '#4a1d4a',
       '--accent': '#e879f9',
       '--accent-foreground': '#0a020a',
+      '--error': '#f87171',
+      '--error-foreground': '#1c0002',
+      '--warning': '#fbbf24',
+      '--warning-foreground': '#0c0800',
     },
   },
 };

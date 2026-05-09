@@ -31,7 +31,8 @@
 
 .aii__header {
   padding: 14px 18px;
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--foreground) 10%, transparent);
   flex-shrink: 0;
 }
 
@@ -70,7 +71,9 @@
   font-weight: 600;
   letter-spacing: 0.03em;
   color: color-mix(in srgb, var(--foreground) 40%, transparent);
-  transition: color 200ms, background 200ms;
+  transition:
+    color 200ms,
+    background 200ms;
 }
 
 .aii__stage--active {
@@ -252,15 +255,6 @@
   background: color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 
-.aii__upload-label {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--foreground) 70%, transparent);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 110px;
-}
-
 /* ── Input row ────────────────────────────────────────────────────────────── */
 
 .aii__input-row {
@@ -336,7 +330,8 @@
 
 /* ── Mobile ───────────────────────────────────────────────────────────────── */
 
-@media (max-width: 600px) { /* sm */
+@media (max-width: 600px) {
+  /* sm */
   .aii__proposal-grid {
     grid-template-columns: 1fr;
   }

@@ -313,7 +313,6 @@ export function VideoGrid({
             variant="body-sm"
             color="var(--accent, #06b6d4)"
             fontWeight={500}
-            styles={{ fontSize: 12 }}
           >
             {t('searchActive', { query: searchQuery })}
           </Typography>
@@ -321,6 +320,7 @@ export function VideoGrid({
             onClick={() => setSearchQuery('')}
             aria-label={t('clearSearch')}
             text={t('clearSearch')}
+            kind="warning"
           />
         </Box>
       )}

@@ -60,7 +60,9 @@ function isValidUrl(input: string): boolean {
 
 function isServerPath(url: string | null): url is string {
   if (!url) return false;
-  return !url.startsWith('blob:') && (url.startsWith('/') || url.startsWith('http'));
+  return (
+    !url.startsWith('blob:') && (url.startsWith('/') || url.startsWith('http'))
+  );
 }
 
 /* ── Sub-components ─────────────────────────────────── */
@@ -239,7 +241,11 @@ export interface DownloadFormProps {
   onMoveToFirst?: (uuid: string) => void;
 }
 
-export function DownloadForm({ onVideoAdded, completedVideos, onMoveToFirst }: DownloadFormProps = {}) {
+export function DownloadForm({
+  onVideoAdded,
+  completedVideos,
+  onMoveToFirst,
+}: DownloadFormProps = {}) {
   const t = useTranslations('DownloadForm');
   const [url, setUrl] = useState('');
   const [ios, setIos] = useState(false);
@@ -275,7 +281,9 @@ export function DownloadForm({ onVideoAdded, completedVideos, onMoveToFirst }: D
     string | null
   >(null);
 
-  const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(null);
+  const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
+    null,
+  );
 
   const fpsOptions = useMemo(
     () => [
@@ -481,7 +489,11 @@ export function DownloadForm({ onVideoAdded, completedVideos, onMoveToFirst }: D
       (v) => v.originalURL === url && isServerPath(v.downloadURL),
     );
     if (dupe) {
-      setDuplicateEntry({ uuid: dupe.uuid, downloadURL: dupe.downloadURL as string, name: dupe.name });
+      setDuplicateEntry({
+        uuid: dupe.uuid,
+        downloadURL: dupe.downloadURL as string,
+        name: dupe.name,
+      });
       return;
     }
 

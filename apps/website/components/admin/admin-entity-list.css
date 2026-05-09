@@ -36,7 +36,8 @@
   letter-spacing: 0.05em;
   color: color-mix(in srgb, var(--foreground) 55%, transparent);
   background: color-mix(in srgb, var(--foreground) 4%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--foreground) 10%, transparent);
   white-space: nowrap;
 }
 
@@ -85,31 +86,4 @@
   width: 40px;
   height: 40px;
   object-fit: cover;
-}
-
-.ael__btn-edit {
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 0.15s;
-}
-
-.ael__btn-edit:hover {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-
-.ael__btn-delete {
-  color: #e53935;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 6px;
-  margin-left: 4px;
-  transition: background 0.15s;
-}
-
-.ael__btn-delete:hover {
-  background: color-mix(in srgb, #e53935 10%, transparent);
 }
