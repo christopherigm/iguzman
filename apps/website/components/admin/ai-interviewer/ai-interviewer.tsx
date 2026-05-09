@@ -18,11 +18,21 @@ import { useGroqProxy, type LlmMessage } from '@repo/ui/use-groq';
 import type { FieldDef } from '../admin-form';
 import type { AiEntityType, FieldLengthConfig } from './entity-config';
 import { ENTITY_CONFIGS } from './entities';
-import { PARAGRAPH_WORD_COUNTS, PARAGRAPH_LENGTH_STEPS, PARAGRAPH_COUNT_STEPS } from '../paragraph-options';
+import {
+  PARAGRAPH_WORD_COUNTS,
+  PARAGRAPH_LENGTH_STEPS,
+  PARAGRAPH_COUNT_STEPS,
+} from '../paragraph-options';
 
 export type { AiEntityType } from './entity-config';
 
-type InterviewStage = 'idle' | 'scoping' | 'researching' | 'proposal' | 'negotiating' | 'confirmed';
+type InterviewStage =
+  | 'idle'
+  | 'scoping'
+  | 'researching'
+  | 'proposal'
+  | 'negotiating'
+  | 'confirmed';
 
 interface ChatMessage {
   id: string;
@@ -79,7 +89,12 @@ export interface AiInterviewerProps {
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const MIN_SCOPING_ROUNDS = 3;
-const VISIBLE_STAGES: InterviewStage[] = ['scoping', 'researching', 'proposal', 'confirmed'];
+const VISIBLE_STAGES: InterviewStage[] = [
+  'scoping',
+  'researching',
+  'proposal',
+  'confirmed',
+];
 
 function fieldGroupDisplayName(key: string): string {
   return key
@@ -95,15 +110,23 @@ function buildFieldLengthRulesText(
 ): string {
   const lines: string[] = [];
   for (const [key, configCfg] of Object.entries(configLengths)) {
-    const hasEnPair = Object.prototype.hasOwnProperty.call(proposalFieldLabels, `en_${key}`);
+    const hasEnPair = Object.prototype.hasOwnProperty.call(
+      proposalFieldLabels,
+      `en_${key}`,
+    );
     const fieldRef = hasEnPair ? `"${key}" and "en_${key}"` : `"${key}"`;
     if (configCfg === null) {
       lines.push(`- ${fieldRef}: one concise sentence`);
     } else {
       const cfg = activeLengths[key] ?? configCfg;
-      const { min, max } = PARAGRAPH_WORD_COUNTS[cfg.length] ?? { min: 80, max: 120 };
+      const { min, max } = PARAGRAPH_WORD_COUNTS[cfg.length] ?? {
+        min: 80,
+        max: 120,
+      };
       const paraLabel = cfg.paragraphs === 1 ? 'paragraph' : 'paragraphs';
-      lines.push(`- ${fieldRef}: exactly ${cfg.paragraphs} ${paraLabel}, ${min}–${max} words each`);
+      lines.push(
+        `- ${fieldRef}: exactly ${cfg.paragraphs} ${paraLabel}, ${min}–${max} words each`,
+      );
     }
   }
   return lines.join('\n');
@@ -136,7 +159,8 @@ function buildScopingSystemPrompt(
     : 'Brand context: not available.';
 
   const extras: string[] = [];
-  if (imageAnalysis) extras.push(`Visual context from uploaded image:\n${imageAnalysis}`);
+  if (imageAnalysis)
+    extras.push(`Visual context from uploaded image:\n${imageAnalysis}`);
   if (researchData) extras.push(`Market research data:\n${researchData}`);
 
   return `You are an AI Marketing Strategist conducting a business interview.
@@ -212,14 +236,18 @@ export function AiInterviewer({
   const [isOpen, setIsOpen] = useState(false);
   const [stage, setStage] = useState<InterviewStage>('idle');
   const stageRef = useRef<InterviewStage>('idle');
-  useEffect(() => { stageRef.current = stage; }, [stage]);
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
 
   // ── Brand persona ────────────────────────────────────────────────────────────
   const [brandPersona, setBrandPersona] = useState<BrandPersona | null>(null);
   const [loadingPersona, setLoadingPersona] = useState(false);
   const [personaError, setPersonaError] = useState(false);
   const brandPersonaRef = useRef<BrandPersona | null>(null);
-  useEffect(() => { brandPersonaRef.current = brandPersona; }, [brandPersona]);
+  useEffect(() => {
+    brandPersonaRef.current = brandPersona;
+  }, [brandPersona]);
 
   // ── Chat display ─────────────────────────────────────────────────────────────
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -238,7 +266,9 @@ export function AiInterviewer({
   const [analyzingImage, setAnalyzingImage] = useState(false);
   const imageAnalysisRef = useRef('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { imageAnalysisRef.current = imageAnalysis; }, [imageAnalysis]);
+  useEffect(() => {
+    imageAnalysisRef.current = imageAnalysis;
+  }, [imageAnalysis]);
 
   // ── Market research ──────────────────────────────────────────────────────────
   const [marketResearchEnabled, setMarketResearchEnabled] = useState(false);
@@ -246,21 +276,29 @@ export function AiInterviewer({
   const [researching, setResearching] = useState(false);
   const [researchError, setResearchError] = useState(false);
   const researchDataRef = useRef('');
-  useEffect(() => { researchDataRef.current = researchData; }, [researchData]);
+  useEffect(() => {
+    researchDataRef.current = researchData;
+  }, [researchData]);
 
   // ── Scoping progress ─────────────────────────────────────────────────────────
   const [scopingRound, setScopingRound] = useState(0);
 
   // ── Proposal ─────────────────────────────────────────────────────────────────
-  const [proposedRecord, setProposedRecord] = useState<ProposedRecord | null>(null);
+  const [proposedRecord, setProposedRecord] = useState<ProposedRecord | null>(
+    null,
+  );
   const [generatingProposal, setGeneratingProposal] = useState(false);
   const [proposalError, setProposalError] = useState(false);
 
   // ── Length options modal ──────────────────────────────────────────────────────
   const [showLengthModal, setShowLengthModal] = useState(false);
-  const [lengthSettings, setLengthSettings] = useState<Record<string, FieldLengthConfig>>({});
+  const [lengthSettings, setLengthSettings] = useState<
+    Record<string, FieldLengthConfig>
+  >({});
   const lengthSettingsRef = useRef<Record<string, FieldLengthConfig>>({});
-  useEffect(() => { lengthSettingsRef.current = lengthSettings; }, [lengthSettings]);
+  useEffect(() => {
+    lengthSettingsRef.current = lengthSettings;
+  }, [lengthSettings]);
 
   // ── Groq hook ────────────────────────────────────────────────────────────────
   const getAuthHeaders = useCallback((): Record<string, string> => {
@@ -279,7 +317,9 @@ export function AiInterviewer({
   // Track generation completion to commit streaming text into chat history
   const prevIsGeneratingRef = useRef(false);
   const streamingTextRef = useRef('');
-  useEffect(() => { streamingTextRef.current = streamingText; }, [streamingText]);
+  useEffect(() => {
+    streamingTextRef.current = streamingText;
+  }, [streamingText]);
 
   useEffect(() => {
     if (prevIsGeneratingRef.current && !isGenerating) {
@@ -307,7 +347,10 @@ export function AiInterviewer({
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
-  const addAssistantMessage = (content: string, variant?: ChatMessage['variant']) => {
+  const addAssistantMessage = (
+    content: string,
+    variant?: ChatMessage['variant'],
+  ) => {
     setChatMessages((prev) => [
       ...prev,
       { id: crypto.randomUUID(), role: 'assistant', content, variant },
@@ -400,7 +443,10 @@ export function AiInterviewer({
       ...prev,
       { id: crypto.randomUUID(), role: 'user', content: text },
     ]);
-    llmHistoryRef.current = [...llmHistoryRef.current, { role: 'user', content: text }];
+    llmHistoryRef.current = [
+      ...llmHistoryRef.current,
+      { role: 'user', content: text },
+    ];
 
     if (stageRef.current === 'scoping' || stageRef.current === 'negotiating') {
       await generate([
@@ -428,7 +474,8 @@ export function AiInterviewer({
         const buffer = await file.arrayBuffer();
         const bytes = new Uint8Array(buffer);
         let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i] as number);
+        for (let i = 0; i < bytes.byteLength; i++)
+          binary += String.fromCharCode(bytes[i] as number);
         const base64 = btoa(binary);
 
         const token = getAccessToken();
@@ -450,8 +497,15 @@ export function AiInterviewer({
           const data = (await res.json()) as { response?: string };
           const analysis = data.response ?? '';
           setImageAnalysis(analysis);
-          rebuildSystemPrompt(brandPersonaRef.current, analysis, researchDataRef.current);
-          addAssistantMessage(`${t('aiInterviewImageAnalysis')}\n\n${analysis}`, 'research');
+          rebuildSystemPrompt(
+            brandPersonaRef.current,
+            analysis,
+            researchDataRef.current,
+          );
+          addAssistantMessage(
+            `${t('aiInterviewImageAnalysis')}\n\n${analysis}`,
+            'research',
+          );
         } else {
           addAssistantMessage(t('aiInterviewImageAnalysisError'));
         }
@@ -498,8 +552,15 @@ export function AiInterviewer({
             .map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}`)
             .join('\n\n');
           setResearchData(summary);
-          rebuildSystemPrompt(brandPersonaRef.current, imageAnalysisRef.current, summary);
-          addAssistantMessage(`${t('aiInterviewResearchResults')}\n\n${summary}`, 'research');
+          rebuildSystemPrompt(
+            brandPersonaRef.current,
+            imageAnalysisRef.current,
+            summary,
+          );
+          addAssistantMessage(
+            `${t('aiInterviewResearchResults')}\n\n${summary}`,
+            'research',
+          );
         } else {
           addAssistantMessage(t('aiInterviewResearchNoResults'), 'research');
         }
@@ -700,10 +761,12 @@ export function AiInterviewer({
         aria-label={t('aiInterviewLabel')}
         title={t('aiInterviewLabel')}
       >
-        <Icon icon="/icons/enhance.svg" size="15px" color="var(--accent-foreground, #171717)" />
-        <Typography as="span" variant="none" fontWeight={500}>
-          {t('aiInterviewLabel')}
-        </Typography>
+        <Icon
+          icon="/icons/enhance.svg"
+          size="15px"
+          color="var(--accent-foreground, #171717)"
+        />
+        {t('aiInterviewLabel')}
       </Button>
 
       {/* ── Modal ── */}
@@ -722,8 +785,17 @@ export function AiInterviewer({
               alignItems="center"
               justifyContent="space-between"
             >
-              <Box display="flex" alignItems="center" gap={10}>
-                <Icon icon="/icons/enhance.svg" size="18px" color="var(--accent, #06b6d4)" />
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={10}
+                color="var(--accent-foreground, #fff)"
+              >
+                <Icon
+                  icon="/icons/enhance.svg"
+                  size="18px"
+                  color="var(--accent, #06b6d4)"
+                />
                 <Typography as="h2" variant="h5" className="aii__title">
                   {t('aiInterviewTitle', { entityLabel })}
                 </Typography>
@@ -734,7 +806,11 @@ export function AiInterviewer({
                 onClick={handleClose}
                 aria-label={t('aiInterviewClose')}
               >
-                <Icon icon="/icons/x.svg" size="16px" color="var(--foreground)" />
+                <Icon
+                  icon="/icons/x.svg"
+                  size="16px"
+                  color="var(--foreground)"
+                />
               </Button>
             </Box>
 
@@ -745,7 +821,9 @@ export function AiInterviewer({
                   <div
                     className={[
                       'aii__stage',
-                      currentIndex === stageIndex(s) ? 'aii__stage--active' : '',
+                      currentIndex === stageIndex(s)
+                        ? 'aii__stage--active'
+                        : '',
                       currentIndex > stageIndex(s) ? 'aii__stage--done' : '',
                     ]
                       .filter(Boolean)
@@ -763,9 +841,16 @@ export function AiInterviewer({
             {/* Chat area */}
             <div className="aii__chat">
               {loadingPersona && (
-                <Box display="flex" alignItems="center" gap={8} className="aii__status-row">
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={8}
+                  className="aii__status-row"
+                >
                   <Spinner size={14} />
-                  <Typography variant="body-sm">{t('aiInterviewLoadingBrand')}</Typography>
+                  <Typography variant="body-sm">
+                    {t('aiInterviewLoadingBrand')}
+                  </Typography>
                 </Box>
               )}
               {personaError && (
@@ -803,16 +888,25 @@ export function AiInterviewer({
 
               {/* Proposal card (shown in proposal / negotiating / confirmed stages) */}
               {proposedRecord &&
-                (stage === 'proposal' || stage === 'negotiating' || stage === 'confirmed') && (
+                (stage === 'proposal' ||
+                  stage === 'negotiating' ||
+                  stage === 'confirmed') && (
                   <div className="aii__proposal-card">
-                    <Typography as="p" variant="none" className="aii__proposal-heading">
+                    <Typography
+                      as="p"
+                      variant="none"
+                      className="aii__proposal-heading"
+                    >
                       {t('aiInterviewProposalTitle')}
                     </Typography>
                     <div className="aii__proposal-grid">
                       {Object.entries(proposedRecord)
                         .filter(
                           ([k, v]) =>
-                            !['justification', 'brand_alignment_notes'].includes(k) &&
+                            ![
+                              'justification',
+                              'brand_alignment_notes',
+                            ].includes(k) &&
                             v !== null &&
                             v !== undefined &&
                             v !== '',
@@ -835,7 +929,10 @@ export function AiInterviewer({
                     )}
                     {(stage === 'proposal' || stage === 'negotiating') && (
                       <Box display="flex" gap={8} marginTop={8}>
-                        <Button text={t('aiInterviewAccept')} onClick={handleApply} />
+                        <Button
+                          text={t('aiInterviewAccept')}
+                          onClick={handleApply}
+                        />
                         {stage === 'proposal' && (
                           <Button
                             text={t('aiInterviewNegotiate')}
@@ -886,7 +983,13 @@ export function AiInterviewer({
             </div>
 
             {/* Toolbar */}
-            <Box className="aii__toolbar" display="flex" alignItems="center" flexWrap="wrap" gap={10}>
+            <Box
+              className="aii__toolbar"
+              display="flex"
+              alignItems="center"
+              flexWrap="wrap"
+              gap={10}
+            >
               {/* Image upload */}
               <input
                 ref={fileInputRef}
@@ -908,15 +1011,26 @@ export function AiInterviewer({
                 title={t('aiInterviewUpload')}
                 aria-label={t('aiInterviewUpload')}
               >
-                <Icon icon="/icons/link.svg" size="14px" color="var(--foreground)" />
-                <Typography as="span" variant="none" className="aii__upload-label">
+                <Icon
+                  icon="/icons/link.svg"
+                  size="14px"
+                  color="var(--foreground)"
+                />
+                <Typography
+                  as="span"
+                  variant="none"
+                  className="aii__upload-label"
+                >
                   {uploadedFile ? uploadedFile.name : t('aiInterviewUpload')}
                 </Typography>
               </Button>
 
               {/* Market research toggle */}
               <Box display="flex" alignItems="center" gap={6}>
-                <Switch checked={marketResearchEnabled} onChange={setMarketResearchEnabled} />
+                <Switch
+                  checked={marketResearchEnabled}
+                  onChange={setMarketResearchEnabled}
+                />
                 <Typography as="span" variant="body-sm">
                   {t('aiInterviewMarketResearch')}
                 </Typography>
@@ -934,7 +1048,12 @@ export function AiInterviewer({
 
             {/* Input row */}
             {stage !== 'confirmed' && (
-              <Box className="aii__input-row" display="flex" alignItems="center" gap={8}>
+              <Box
+                className="aii__input-row"
+                display="flex"
+                alignItems="center"
+                gap={8}
+              >
                 <SpeechButton
                   language={locale}
                   onTranscript={(text) =>
@@ -1003,10 +1122,16 @@ export function AiInterviewer({
           <div className="aii__length-options">
             {textFieldGroups.map(([key, defaultCfg]) => {
               const current = lengthSettings[key] ?? defaultCfg;
-              const wordRange = PARAGRAPH_WORD_COUNTS[current.length] ?? { min: 80, max: 120 };
+              const wordRange = PARAGRAPH_WORD_COUNTS[current.length] ?? {
+                min: 80,
+                max: 120,
+              };
               return (
                 <div key={key} className="aii__length-field-group">
-                  <Typography variant="label" className="aii__length-field-name">
+                  <Typography
+                    variant="label"
+                    className="aii__length-field-name"
+                  >
                     {fieldGroupDisplayName(key)}
                   </Typography>
                   <Slider
