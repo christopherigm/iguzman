@@ -668,6 +668,7 @@ main() {
             python)          install_python          && ok=1 || true ;;
             django)          install_django          && ok=1 || true ;;
             claude)          install_claude          && ok=1 || true ;;
+            opencode)        install_opencode        && ok=1 || true ;;
           esac
 
           if [[ "${ok}" -eq 1 ]]; then
