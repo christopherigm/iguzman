@@ -21,10 +21,13 @@ import {
   VideoDetailsPanel,
   VideoMediaPreview,
   VideoActions,
+  VideoExtraActions,
   VideoCardHeader,
   VideoFooterLink,
   isIOS,
 } from './video-item-shared';
+import { useOPFSUrls } from './opfs-url-context';
+import { readFromOPFS, writeToOPFS, deleteFromOPFS } from '@/lib/opfs';
 import './video-item.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -105,13 +108,17 @@ export function PinnedVideoItemServer({
   onRemove,
 }: PinnedVideoItemServerProps) {
   const t = useTranslations('VideoGrid');
+  const { registerUrls, getUrls } = useOPFSUrls();
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [extraActionsOpen, setExtraActionsOpen] = useState(false);
   const [copying, setCopying] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [jobProgress, setJobProgress] = useState(0);
   const [jobPhase, setJobPhase] = useState<'idle' | 'dispatching' | 'polling'>(
     'idle',
   );
+  const [opfsUploading, setOpfsUploading] = useState(false);
+  const [opfsMigrating, setOpfsMigrating] = useState(false);
 
   const downloadTriggered = useRef(false);
   const pollResumeChecked = useRef(false);
@@ -119,6 +126,10 @@ export function PinnedVideoItemServer({
   const convertResumeChecked = useRef(false);
   const blackBarsResumeChecked = useRef(false);
   const burnResumeChecked = useRef(false);
+  // Tracks the server input file for an OPFS job (either uploaded from OPFS
+  // this session, or an existing server copy) so handleServerTaskDone can
+  // delete it after the result is saved back to OPFS.
+  const opfsUploadedFileRef = useRef<string | null>(null);
   const pollForTaskRef = useRef<
     (
       taskId: string,
@@ -163,8 +174,7 @@ export function PinnedVideoItemServer({
       errorKey: string;
       completeAfter?: boolean;
     }) => {
-      const file = opts.sourceFile ?? video.file;
-      if (!file || video.justAudio) return;
+      if (video.justAudio) return;
 
       // If a server task was previously dispatched for this job, check whether it
       // is still running before creating a duplicate. This handles the case where
@@ -198,6 +208,47 @@ export function PinnedVideoItemServer({
         } catch {
           // Preflight fetch failed — fall through to re-dispatch
         }
+      }
+
+      // Resolve source file. For OPFS-stored videos whose server copy has been
+      // deleted, upload the local blob to the server first so the server FFmpeg
+      // agent has something to work with.
+      let file = opts.sourceFile ?? video.file;
+      if (video.opfsEnabled && video.opfsStored && video.opfsKey && video.serverFileDeleted) {
+        setOpfsUploading(true);
+        try {
+          const blob = await readFromOPFS(video.opfsKey);
+          const ext = video.opfsKey.split('.').pop() ?? 'mp4';
+          const uploadRes = await fetch(
+            `/api/media?ext=${encodeURIComponent(ext)}`,
+            { method: 'POST', body: blob },
+          );
+          if (!uploadRes.ok) throw new Error('Upload failed');
+          const { file: uploadedFile } = (await uploadRes.json()) as {
+            file: string;
+          };
+          file = uploadedFile;
+          opfsUploadedFileRef.current = uploadedFile;
+          onUpdate(video.uuid, { file: uploadedFile, serverFileDeleted: false });
+        } catch {
+          setOpfsUploading(false);
+          onUpdate(video.uuid, {
+            status: 'error',
+            error: t('errorOpfsUploadFailed'),
+          });
+          return;
+        }
+        setOpfsUploading(false);
+      }
+
+      if (!file) return;
+
+      // For OPFS videos whose server copy is still present, register the
+      // server file as the input so handleServerTaskDone deletes it after
+      // the result is saved back to OPFS (same cleanup path as the
+      // uploaded-from-OPFS case where opfsUploadedFileRef is set above).
+      if (video.opfsEnabled && video.opfsStored && !video.serverFileDeleted && file) {
+        opfsUploadedFileRef.current = file;
       }
 
       onUpdate(video.uuid, { status: opts.activeStatus, error: null });
@@ -306,6 +357,10 @@ export function PinnedVideoItemServer({
       video.taskId,
       video.wsClientUuid,
       video.serverTaskId,
+      video.opfsEnabled,
+      video.opfsStored,
+      video.opfsKey,
+      video.serverFileDeleted,
       onUpdate,
       t,
     ],
@@ -323,6 +378,20 @@ export function PinnedVideoItemServer({
         completeAfter,
       }),
     [runServerProcessing, video.fps],
+  );
+
+  /* ── FPS interpolation (manual button — fps value from the button) ── */
+  const handleInterpolateFpsFromButton = useCallback(
+    (fps: number) =>
+      runServerProcessing({
+        activeStatus: 'processing',
+        op: 'interpolateFps',
+        extraParams: { fps },
+        donePatch: { fpsApplied: true },
+        errorKey: 'errorFfmpegFailed',
+        completeAfter: true,
+      }),
+    [runServerProcessing],
   );
 
   /* ── H.265 → H.264 conversion ───────────────────────── */
@@ -523,7 +592,7 @@ export function PinnedVideoItemServer({
   );
 
   const handleServerTaskDone = useCallback(
-    (
+    async (
       task: TaskData,
       donePatch: Partial<StoredVideo>,
       completeAfter?: boolean,
@@ -562,9 +631,68 @@ export function PinnedVideoItemServer({
         );
       }
 
+      // For OPFS-stored videos, fetch the result and write it back to OPFS
+      // before marking the card as complete. Only then delete the server copies.
+      if (video.opfsEnabled && file) {
+        setOpfsMigrating(true);
+        try {
+          const blob = await fetch(resolveMediaUrl(downloadURL!)).then((r) =>
+            r.blob(),
+          );
+          const ext = file.split('.').pop() ?? 'mp4';
+          const newKey = `${crypto.randomUUID()}.${ext}`;
+          await writeToOPFS(newKey, blob);
+
+          const newVideoUrl = URL.createObjectURL(blob);
+          const existingUrls = getUrls(video.uuid);
+          registerUrls(video.uuid, {
+            videoUrl: newVideoUrl,
+            thumbnailUrl: existingUrls.thumbnailUrl,
+          });
+
+          if (video.opfsKey && video.opfsKey !== newKey) {
+            void deleteFromOPFS(video.opfsKey);
+          }
+
+          // Delete the server output file
+          fetch(`/api/media/${file}`, { method: 'DELETE' }).catch(() => {});
+
+          // Delete the server input file uploaded from OPFS (if different)
+          const uploadedInput = opfsUploadedFileRef.current;
+          if (uploadedInput && uploadedInput !== file) {
+            fetch(`/api/media/${uploadedInput}`, { method: 'DELETE' }).catch(
+              () => {},
+            );
+            opfsUploadedFileRef.current = null;
+          }
+
+          onUpdate(video.uuid, {
+            opfsKey: newKey,
+            file: newKey,
+            downloadURL: `opfs://${newKey}`,
+            opfsStored: true,
+            serverFileDeleted: true,
+          });
+        } catch (err) {
+          console.error('OPFS save-back failed:', err);
+        } finally {
+          setOpfsMigrating(false);
+        }
+      }
+
       if (completeAfter) onComplete(video.uuid);
     },
-    [video.uuid, video.autoDownload, video.justAudio, onUpdate, onComplete],
+    [
+      video.uuid,
+      video.autoDownload,
+      video.justAudio,
+      video.opfsEnabled,
+      video.opfsKey,
+      onUpdate,
+      onComplete,
+      getUrls,
+      registerUrls,
+    ],
   );
 
   /* ── Poll download task ─────────────────────────────── */
@@ -603,7 +731,7 @@ export function PinnedVideoItemServer({
           }
 
           if (task.status === 'done' && opts?.donePatch) {
-            handleServerTaskDone(task, opts.donePatch, opts.completeAfter);
+            void handleServerTaskDone(task, opts.donePatch, opts.completeAfter);
           } else if (task.status === 'done') {
             handleTaskDone(task);
           } else if (task.status === 'error') {
@@ -837,6 +965,8 @@ export function PinnedVideoItemServer({
 
   /* ── Status hint text ────────────────────────────────── */
   const statusHint = (() => {
+    if (opfsUploading) return t('uploadingFromDevice');
+    if (opfsMigrating) return t('savingToDevice');
     if (jobPhase === 'dispatching') return t('serverDispatching');
     if (jobPhase === 'polling' && jobProgress > 0)
       return t('serverProcessing', { progress: jobProgress });
@@ -846,7 +976,11 @@ export function PinnedVideoItemServer({
   })();
 
   const showProgressBar =
-    isProcessing || jobPhase === 'dispatching' || jobPhase === 'polling';
+    isProcessing ||
+    jobPhase === 'dispatching' ||
+    jobPhase === 'polling' ||
+    opfsUploading ||
+    opfsMigrating;
   const progressValue =
     jobPhase === 'polling' && jobProgress > 0 ? jobProgress : undefined;
 
@@ -900,6 +1034,10 @@ export function PinnedVideoItemServer({
         justAudio={video.justAudio}
         thumbnail={video.thumbnail}
         compact={isBusy}
+        opfsVideoUrl={video.opfsEnabled ? getUrls(video.uuid).videoUrl : null}
+        opfsThumbnailUrl={
+          video.opfsEnabled ? getUrls(video.uuid).thumbnailUrl : null
+        }
       />
 
       {/* ── Progress bar ────────────────────────────── */}
@@ -926,10 +1064,34 @@ export function PinnedVideoItemServer({
           onRedownload={handleRedownload}
           onDelete={() => setConfirmRemove(true)}
           t={t}
-          extraActionsOpen={false}
-          onToggleExtra={() => null}
+          extraActionsOpen={extraActionsOpen}
+          onToggleExtra={() => setExtraActionsOpen((p) => !p)}
         />
       </Box>
+
+      {/* ── Extra actions (server selector + FPS / convert / etc.) ── */}
+      {extraActionsOpen ? (
+        <VideoExtraActions
+          video={video}
+          isBusy={isBusy}
+          fpsError={false}
+          h264Error={false}
+          blackBarsError={false}
+          onRemoveBlackBars={handleRemoveBlackBars}
+          onInterpolateFps={handleInterpolateFpsFromButton}
+          onConvert={handleConvertH264}
+          onBurnCaptions={
+            video.captionsFile && !video.justAudio
+              ? handleBurnCaptions
+              : undefined
+          }
+          initialWsClientUuid={video.wsClientUuid}
+          onWsClientChange={(uuid) =>
+            onUpdate(video.uuid, { wsClientUuid: uuid })
+          }
+          t={t}
+        />
+      ) : null}
 
       {/* ── Delete confirmation ──────────────────────── */}
       {confirmRemove ? (

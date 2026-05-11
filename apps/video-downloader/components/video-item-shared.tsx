@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
@@ -227,6 +227,25 @@ export async function uploadProcessedVideo(
   } finally {
     setUploading(false);
   }
+}
+
+/* ── Online status hook ─────────────────────────────── */
+
+export function useOnlineStatus(): boolean {
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  );
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  return isOnline;
 }
 
 /* ── Sub-components ─────────────────────────────────── */
@@ -518,6 +537,8 @@ export function VideoActions({
   onDelete: () => void;
   t: TranslationFn;
 }) {
+  const isOnline = useOnlineStatus();
+
   return (
     <Box className="vi-actions" display="flex" justifyContent="space-evenly">
       <Button
@@ -529,13 +550,14 @@ export function VideoActions({
         icon="/icons/delete-video.svg"
         iconSize="15px"
         iconColor="#ef4444"
+        disabled={!isOnline}
       />
 
       <Button
         unstyled
         className="vi-icon-btn"
         onClick={onRetry}
-        disabled={isBusy}
+        disabled={isBusy || !isOnline}
         aria-label={t('retry')}
         title={t('retry')}
         icon="/icons/retry.svg"
@@ -575,7 +597,7 @@ export function VideoActions({
         onClick={onToggleExtra}
         aria-label={t('toggleExtraActions')}
         title={t('toggleExtraActions')}
-        disabled={isBusy}
+        disabled={isBusy || !isOnline}
       >
         <Icon
           icon="/icons/chevron-down.svg"
@@ -655,113 +677,114 @@ export function VideoExtraActions({
         />
       ) : null}
       <Box className="vi-extra-actions">
-      {onWsClientChange ? (
-        <WsClientPanel
-          showManagement
-          initialValue={initialWsClientUuid}
-          onChange={(uuid) => {
-            setCurrentWsUuid(uuid);
-            onWsClientChange(uuid);
-          }}
-          labels={{
-            thisDevice: t('thisDevice'),
-            server: t('server'),
-            addServer: t('addServer'),
-            deleteServer: t('deleteServer'),
-            addServerTitle: t('addServerTitle'),
-            addServerText: t('addServerText'),
-            wsClientUuidLabel: t('wsClientUuidLabel'),
-            wsClientNameLabel: t('wsClientNameLabel'),
-            deleteServerTitle: t('deleteServerTitle'),
-            deleteServerText: (label) => t('deleteServerText', { label }),
-            installHint: t('installHint'),
-            downloadLinux: t('downloadLinux'),
-            downloadWindows: t('downloadWindows'),
-          }}
-        />
-      ) : null}
+        {onWsClientChange ? (
+          <WsClientPanel
+            showManagement
+            initialValue={initialWsClientUuid}
+            onChange={(uuid) => {
+              setCurrentWsUuid(uuid);
+              onWsClientChange(uuid);
+            }}
+            labels={{
+              thisDevice: t('thisDevice'),
+              server: t('server'),
+              addServer: t('addServer'),
+              deleteServer: t('deleteServer'),
+              addServerTitle: t('addServerTitle'),
+              addServerText: t('addServerText'),
+              wsClientUuidLabel: t('wsClientUuidLabel'),
+              wsClientNameLabel: t('wsClientNameLabel'),
+              deleteServerTitle: t('deleteServerTitle'),
+              deleteServerText: (label) => t('deleteServerText', { label }),
+              installHint: t('installHint'),
+              downloadLinux: t('downloadLinux'),
+              downloadWindows: t('downloadWindows'),
+            }}
+          />
+        ) : null}
 
-      {video.isH265 && !video.h264Converted ? (
-        <Button
-          unstyled
-          className="vi-fps-btn"
-          onClick={onConvert}
-          disabled={isBusy || h264Error}
-          aria-label={t('convertH264')}
-          title={t('convertH264')}
-          icon="/icons/convert.svg"
-          iconSize="14px"
-          iconColor="var(--accent, #8b5cf6)"
-        >
-          {t('convertH264')}
-        </Button>
-      ) : null}
+        {video.isH265 && !video.h264Converted ? (
+          <Button
+            unstyled
+            className="vi-fps-btn"
+            onClick={onConvert}
+            disabled={isBusy || h264Error}
+            aria-label={t('convertH264')}
+            title={t('convertH264')}
+            icon="/icons/convert.svg"
+            iconSize="14px"
+            iconColor="var(--accent, #8b5cf6)"
+          >
+            {t('convertH264')}
+          </Button>
+        ) : null}
 
-      {!video.justAudio && !video.blackBarsRemoved ? (
-        <Button
-          unstyled
-          className="vi-fps-btn"
-          onClick={onRemoveBlackBars}
-          disabled={!canProcess || blackBarsError}
-          aria-label={t('removeBlackBars')}
-          title={t('removeBlackBars')}
-          icon="/icons/remove-black-bars.svg"
-          iconSize="14px"
-          iconColor="var(--accent, #8b5cf6)"
-        >
-          {t('removeBlackBars')}
-        </Button>
-      ) : null}
+        {!video.justAudio && !video.blackBarsRemoved ? (
+          <Button
+            unstyled
+            className="vi-fps-btn"
+            onClick={onRemoveBlackBars}
+            disabled={!canProcess || blackBarsError}
+            aria-label={t('removeBlackBars')}
+            title={t('removeBlackBars')}
+            icon="/icons/remove-black-bars.svg"
+            iconSize="14px"
+            iconColor="var(--accent, #8b5cf6)"
+          >
+            {t('removeBlackBars')}
+          </Button>
+        ) : null}
 
-      {video.captionsFile && onDownloadCaptions ? (
-        <Button
-          unstyled
-          className="vi-fps-btn"
-          onClick={onDownloadCaptions}
-          aria-label={t('downloadCaptions')}
-          title={t('downloadCaptions')}
-          icon="/icons/captions.svg"
-          iconSize="14px"
-          iconColor="var(--accent, #8b5cf6)"
-        >
-          {t('downloadCaptions')}
-        </Button>
-      ) : null}
+        {video.captionsFile && onDownloadCaptions ? (
+          <Button
+            unstyled
+            className="vi-fps-btn"
+            onClick={onDownloadCaptions}
+            aria-label={t('downloadCaptions')}
+            title={t('downloadCaptions')}
+            icon="/icons/captions.svg"
+            iconSize="14px"
+            iconColor="var(--accent, #8b5cf6)"
+          >
+            {t('downloadCaptions')}
+          </Button>
+        ) : null}
 
-      {video.captionsFile && !video.justAudio && onBurnCaptions ? (
-        <Button
-          unstyled
-          className="vi-fps-btn"
-          onClick={onBurnCaptions}
-          disabled={isBusy}
-          aria-label={t('burnCaptions')}
-          title={t('burnCaptions')}
-          icon="/icons/write.svg"
-          iconSize="14px"
-          iconColor="var(--accent, #8b5cf6)"
-        >
-          {t('burnCaptions')}
-        </Button>
-      ) : null}
+        {video.captionsFile && !video.justAudio && onBurnCaptions ? (
+          <Button
+            unstyled
+            className="vi-fps-btn"
+            onClick={onBurnCaptions}
+            disabled={isBusy}
+            aria-label={t('burnCaptions')}
+            title={t('burnCaptions')}
+            icon="/icons/write.svg"
+            iconSize="14px"
+            iconColor="var(--accent, #8b5cf6)"
+          >
+            {t('burnCaptions')}
+          </Button>
+        ) : null}
 
-      <Box>
-        {buildFpsOptions(video.sourceFps).map(({ value, label }) => {
-          const alreadyApplied = video.fpsApplied && value <= Number(video.fps);
-          return (
-            <Button
-              key={value}
-              unstyled
-              className="vi-fps-btn"
-              onClick={() => handleFpsClick(value)}
-              disabled={!canProcess || alreadyApplied || fpsError}
-              title={label}
-            >
-              {label}
-            </Button>
-          );
-        })}
+        <Box>
+          {buildFpsOptions(video.sourceFps).map(({ value, label }) => {
+            const alreadyApplied =
+              video.fpsApplied && value <= Number(video.fps);
+            return (
+              <Button
+                key={value}
+                unstyled
+                className="vi-fps-btn"
+                onClick={() => handleFpsClick(value)}
+                disabled={!canProcess || alreadyApplied || fpsError}
+                title={label}
+              >
+                {label}
+              </Button>
+            );
+          })}
+        </Box>
       </Box>
-    </Box>
     </>
   );
 }
@@ -813,7 +836,7 @@ export function VideoCardHeader({
       >
         {displayName}
       </Typography>
-      {video.isH265 ? (
+      {video.isH265 && !video.h264Converted ? (
         <Badge variant="subtle" size="sm" color="#16dd00">
           H265
         </Badge>

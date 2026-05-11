@@ -53,7 +53,7 @@
     "opfsConfirmTitle": "Enregistrer dans le stockage de l'appareil",
     "opfsConfirmText": "Les vidéos seront enregistrées dans le stockage privé du navigateur plutôt que sur le serveur Video Downloader. Elles ne sont accessibles que depuis ce navigateur et ce site — la suppression des données du navigateur les effacera définitivement.",
     "opfsStorageLabel": "Stockage de l'appareil",
-    "opfsStorageUsage": "{used} / {total}",
+    "opfsStorageUsage": "{used} / {total} ({pct}%)",
     "clearStorageLabel": "Vider le stockage de l'appareil",
     "clearStorageTitle": "Vider le stockage de l'appareil",
     "clearStorageText": "Cela supprimera définitivement toutes les vidéos enregistrées dans le stockage du navigateur de votre appareil. Les vidéos stockées sur le serveur ne seront pas affectées. Cette action est irréversible."
@@ -255,7 +255,13 @@
     "downloadLinux": "Linux (.deb)",
     "downloadWindows": "Windows (.exe)",
     "savingToDevice": "Enregistrement sur l'appareil…",
+    "uploadingFromDevice": "Téléversement depuis l'appareil…",
+    "errorOpfsUploadFailed": "Échec du téléversement de la vidéo vers le serveur.",
     "fpsDeviceOnlyTitle": "Interpolation FPS non disponible",
     "fpsDeviceOnlyText": "L'interpolation FPS sur l'appareil n'est pas disponible pour les résolutions FHD et supérieures. Ajoutez un serveur pour traiter cette vidéo."
+  },
+  "Offline": {
+    "title": "Vous êtes hors ligne",
+    "body": "Vos vidéos enregistrées sont toujours disponibles. Connectez-vous à internet pour télécharger de nouvelles vidéos."
   }
 }

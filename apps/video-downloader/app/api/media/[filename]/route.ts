@@ -3,6 +3,7 @@ import { stat } from 'node:fs';
 import { promisify } from 'node:util';
 import { join } from 'node:path';
 import logger from '@/lib/logger';
+import { unlink } from 'node:fs/promises';
 
 const log = logger.child({ module: 'api/media/[filename]' });
 
@@ -112,4 +113,31 @@ export async function PUT(
       { status: 500 },
     );
   }
+}
+
+/**
+ * DELETE /api/media/:filename
+ *
+ * Removes a single media file from disk. Used to clean up server-side
+ * copies after they have been saved back to OPFS on the client.
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ filename: string }> },
+) {
+  const { filename } = await params;
+
+  if (!filename || filename.includes('..') || filename.includes('/')) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const filePath = join(MEDIA_DIR, filename);
+  try {
+    await unlink(filePath);
+  } catch {
+    // File may already be gone — not an error
+  }
+
+  log.info({ filename }, 'DELETE /api/media/[filename] – file removed');
+  return NextResponse.json({ ok: true });
 }

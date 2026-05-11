@@ -71,11 +71,33 @@ function isServerPath(url: string | null): url is string {
   );
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
-  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
-  if (bytes >= 1e3) return `${(bytes / 1e3).toFixed(0)} KB`;
-  return `${bytes} B`;
+function formatStorageUsage(
+  usedBytes: number,
+  totalBytes: number,
+): { used: string; total: string; pct: string } {
+  let divisor: number;
+  let unit: string;
+
+  if (totalBytes >= 1e9) { divisor = 1e9; unit = 'GB'; }
+  else if (totalBytes >= 1e6) { divisor = 1e6; unit = 'MB'; }
+  else if (totalBytes >= 1e3) { divisor = 1e3; unit = 'KB'; }
+  else { divisor = 1; unit = 'B'; }
+
+  const usedValue = usedBytes / divisor;
+  const totalValue = totalBytes / divisor;
+
+  const usedStr =
+    usedValue === 0
+      ? '0'
+      : usedValue >= 1
+        ? usedValue.toFixed(1)
+        : parseFloat(usedValue.toPrecision(2)).toString();
+
+  return {
+    used: usedStr,
+    total: `${totalValue.toFixed(1)} ${unit}`,
+    pct: ((usedBytes / totalBytes) * 100).toFixed(2),
+  };
 }
 
 /* ── Sub-components ─────────────────────────────────── */
@@ -852,10 +874,13 @@ export function DownloadForm({
                     color="var(--foreground-muted, #999)"
                     marginRight={8}
                   >
-                    {t('opfsStorageUsage', {
-                      used: formatBytes(storageInfo.usedBytes),
-                      total: formatBytes(storageInfo.totalBytes),
-                    })}
+                    {(() => {
+                      const { used, total, pct } = formatStorageUsage(
+                        storageInfo.usedBytes,
+                        storageInfo.totalBytes,
+                      );
+                      return t('opfsStorageUsage', { used, total, pct });
+                    })()}
                   </Typography>
                   <button
                     type="button"

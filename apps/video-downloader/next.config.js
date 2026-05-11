@@ -11,6 +11,7 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   cacheOnFrontendNav: true,
+  aggressiveFrontEndNavCaching: true,
   fallbacks: {
     document: '/~offline',
   },
@@ -23,6 +24,22 @@ const nextConfig = {
     process.env.NODE_ENV === 'production'
       ? path.join(__dirname, '../../')
       : undefined,
+
+  // stt-worker.ts → @huggingface/transformers resolves to its Node.js build on
+  // the server, pulling in onnxruntime-node native .node binaries that webpack
+  // cannot parse. These packages are browser-only (Web Worker) and never run
+  // server-side, so marking them external stops webpack from bundling them.
+  serverExternalPackages: ['@huggingface/transformers', 'onnxruntime-node'],
+
+  webpack(config) {
+    // Client-side safety net: resolve onnxruntime-node to an empty module so
+    // webpack skips the native binary if it reaches it via the worker chunk.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'onnxruntime-node': false,
+    };
+    return config;
+  },
 
   /**
    * Required for FFmpeg WASM multi-threaded mode (SharedArrayBuffer).

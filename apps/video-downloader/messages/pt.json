@@ -53,7 +53,7 @@
     "opfsConfirmTitle": "Salvar no armazenamento do dispositivo",
     "opfsConfirmText": "Os vídeos serão salvos no armazenamento privado do navegador em vez do servidor Video Downloader. Eles só são acessíveis neste navegador e site — limpar os dados do navegador os excluirá permanentemente.",
     "opfsStorageLabel": "Armazenamento do dispositivo",
-    "opfsStorageUsage": "{used} / {total}",
+    "opfsStorageUsage": "{used} / {total} ({pct}%)",
     "clearStorageLabel": "Limpar armazenamento do dispositivo",
     "clearStorageTitle": "Limpar armazenamento do dispositivo",
     "clearStorageText": "Isso excluirá permanentemente todos os vídeos armazenados no armazenamento do navegador do seu dispositivo. Os vídeos armazenados no servidor permanecerão intocados. Esta ação não pode ser desfeita."
@@ -255,7 +255,13 @@
     "downloadLinux": "Linux (.deb)",
     "downloadWindows": "Windows (.exe)",
     "savingToDevice": "Salvando no dispositivo…",
+    "uploadingFromDevice": "Enviando do dispositivo…",
+    "errorOpfsUploadFailed": "Falha ao enviar o vídeo para o servidor.",
     "fpsDeviceOnlyTitle": "Interpolação de FPS indisponível",
     "fpsDeviceOnlyText": "A interpolação de FPS no dispositivo não está disponível para resoluções FHD e superiores. Adicione um servidor para processar este vídeo."
+  },
+  "Offline": {
+    "title": "Você está offline",
+    "body": "Seus vídeos salvos ainda estão disponíveis. Conecte-se à internet para baixar novos vídeos."
   }
 }

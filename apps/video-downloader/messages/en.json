@@ -53,7 +53,7 @@
     "opfsConfirmTitle": "Save to Device Storage",
     "opfsConfirmText": "Videos will be saved to your browser's private storage instead of the Video Downloader server. They are only accessible from this browser and site — clearing your browser data will permanently delete them.",
     "opfsStorageLabel": "Device storage",
-    "opfsStorageUsage": "{used} / {total}",
+    "opfsStorageUsage": "{used} / {total} ({pct}%)",
     "clearStorageLabel": "Clear device storage",
     "clearStorageTitle": "Clear Device Storage",
     "clearStorageText": "This will permanently delete all videos stored in your browser's device storage. Videos stored on the server will remain untouched. This action cannot be undone."
@@ -255,7 +255,13 @@
     "downloadLinux": "Linux (.deb)",
     "downloadWindows": "Windows (.exe)",
     "savingToDevice": "Saving to device…",
+    "uploadingFromDevice": "Uploading from device…",
+    "errorOpfsUploadFailed": "Failed to upload video to server.",
     "fpsDeviceOnlyTitle": "FPS Interpolation Unavailable",
     "fpsDeviceOnlyText": "On-device FPS interpolation is not available for FHD and higher resolutions. Add a server to process this video."
+  },
+  "Offline": {
+    "title": "You are offline",
+    "body": "Your saved videos are still available. Connect to the internet to download new videos."
   }
 }

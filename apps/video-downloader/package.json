@@ -1,11 +1,11 @@
 {
   "name": "video-downloader",
-  "version": "0.2.141",
+  "version": "0.2.152",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "check-types": "next typegen && tsc --noEmit"

@@ -53,7 +53,7 @@
     "opfsConfirmTitle": "Im Gerätespeicher speichern",
     "opfsConfirmText": "Videos werden im privaten Browserspeicher statt auf dem Video Downloader-Server gespeichert. Sie sind nur über diesen Browser und diese Website zugänglich — das Löschen der Browserdaten entfernt sie dauerhaft.",
     "opfsStorageLabel": "Gerätespeicher",
-    "opfsStorageUsage": "{used} / {total}",
+    "opfsStorageUsage": "{used} / {total} ({pct}%)",
     "clearStorageLabel": "Gerätespeicher leeren",
     "clearStorageTitle": "Gerätespeicher leeren",
     "clearStorageText": "Dadurch werden alle im Browser-Speicher deines Geräts gespeicherten Videos dauerhaft gelöscht. Videos auf dem Server bleiben unberührt. Diese Aktion kann nicht rückgängig gemacht werden."
@@ -255,7 +255,13 @@
     "downloadLinux": "Linux (.deb)",
     "downloadWindows": "Windows (.exe)",
     "savingToDevice": "Auf Gerät speichern…",
+    "uploadingFromDevice": "Vom Gerät hochladen…",
+    "errorOpfsUploadFailed": "Video konnte nicht auf den Server hochgeladen werden.",
     "fpsDeviceOnlyTitle": "FPS-Interpolation nicht verfügbar",
     "fpsDeviceOnlyText": "Die geräteseitige FPS-Interpolation ist für FHD und höhere Auflösungen nicht verfügbar. Füge einen Server hinzu, um dieses Video zu verarbeiten."
+  },
+  "Offline": {
+    "title": "Du bist offline",
+    "body": "Deine gespeicherten Videos sind weiterhin verfügbar. Verbinde dich mit dem Internet, um neue Videos herunterzuladen."
   }
 }

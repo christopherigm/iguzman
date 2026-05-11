@@ -28,6 +28,16 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
+          {{- /* ── Next.js: POST /api/media (OPFS upload) – exact match must
+                   come before the /api/media/ prefix rule so ingress-nginx
+                   does not issue a trailing-slash 301 that turns POST→GET ── */}}
+          - path: /api/media
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "video-downloader.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.port }}
           {{- /* ── Nginx: serve media files directly ── */}}
           {{- if $.Values.nginx.enabled }}
           - path: /api/media/
