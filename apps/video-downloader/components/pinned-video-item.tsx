@@ -481,7 +481,7 @@ export function PinnedVideoItem({
         setOpfsMigrating(true);
         void (async () => {
           try {
-            const videoRes = await fetch(`/media/${file}`);
+            const videoRes = await fetch(resolveMediaUrl(`/api/media/${file}`));
             if (!videoRes.ok) throw new Error('video fetch failed');
             const videoBlob = await videoRes.blob();
             await writeToOPFS(file, videoBlob);
@@ -489,7 +489,7 @@ export function PinnedVideoItem({
             let thumbKey: string | null = null;
             if (task.thumbnail) {
               try {
-                const thumbRes = await fetch(`/media/${task.thumbnail}`);
+                const thumbRes = await fetch(resolveMediaUrl(`/api/media/${task.thumbnail}`));
                 if (thumbRes.ok) {
                   const thumbBlob = await thumbRes.blob();
                   thumbKey = `thumb_${task.thumbnail}`;
