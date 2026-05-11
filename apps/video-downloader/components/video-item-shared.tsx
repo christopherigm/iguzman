@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { Badge } from '@repo/ui/core-elements/badge';
@@ -267,6 +269,8 @@ export function VideoDetailsPanel({
         >
           {t(`status_${video.status}`)}
         </dd>
+        <dt>{t('detailStorage')}</dt>
+        <dd>{video.opfsStored ? t('storageOpfs') : t('storageServer')}</dd>
         {video.h264Converted ? (
           <>
             <dt>{t('detailCodec')}</dt>
@@ -617,15 +621,48 @@ export function VideoExtraActions({
   onWsClientChange?: (uuid: string) => void;
   t: TranslationFn;
 }) {
+  const [currentWsUuid, setCurrentWsUuid] = useState<string>(
+    initialWsClientUuid ?? THIS_DEVICE_UUID,
+  );
+  const [fpsDeviceModalFps, setFpsDeviceModalFps] = useState<number | null>(
+    null,
+  );
+
   const canProcess = !isBusy && !!video.downloadURL && !video.justAudio;
 
+  const isFhdOrHigher =
+    video.height != null
+      ? (video.width != null
+          ? Math.min(video.height, video.width)
+          : video.height) >= 1080
+      : false;
+
+  const handleFpsClick = (fps: number) => {
+    if (isFhdOrHigher && currentWsUuid === THIS_DEVICE_UUID) {
+      setFpsDeviceModalFps(fps);
+      return;
+    }
+    onInterpolateFps(fps);
+  };
+
   return (
-    <Box className="vi-extra-actions">
+    <>
+      {fpsDeviceModalFps !== null ? (
+        <ConfirmationModal
+          title={t('fpsDeviceOnlyTitle')}
+          text={t('fpsDeviceOnlyText')}
+          okCallback={() => setFpsDeviceModalFps(null)}
+        />
+      ) : null}
+      <Box className="vi-extra-actions">
       {onWsClientChange ? (
         <WsClientPanel
           showManagement
           initialValue={initialWsClientUuid}
-          onChange={onWsClientChange}
+          onChange={(uuid) => {
+            setCurrentWsUuid(uuid);
+            onWsClientChange(uuid);
+          }}
           labels={{
             thisDevice: t('thisDevice'),
             server: t('server'),
@@ -715,7 +752,7 @@ export function VideoExtraActions({
               key={value}
               unstyled
               className="vi-fps-btn"
-              onClick={() => onInterpolateFps(value)}
+              onClick={() => handleFpsClick(value)}
               disabled={!canProcess || alreadyApplied || fpsError}
               title={label}
             >
@@ -725,6 +762,7 @@ export function VideoExtraActions({
         })}
       </Box>
     </Box>
+    </>
   );
 }
 

@@ -61,7 +61,6 @@ export function ReadOnlyVideoItem({
   const [extraActionsOpen, setExtraActionsOpen] = useState(false);
   const [copying, setCopying] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [confirmConvert, setConfirmConvert] = useState(false);
   const [showBurnModal, setShowBurnModal] = useState(false);
   const [selectedWsClientUuid, setSelectedWsClientUuid] = useState<string>(
     video.wsClientUuid ?? THIS_DEVICE_UUID,
@@ -217,13 +216,7 @@ export function ReadOnlyVideoItem({
           blackBarsError={false}
           onRemoveBlackBars={() => onReprocess(video.uuid, 'bars')}
           onInterpolateFps={(fps) => onReprocess(video.uuid, 'fps', fps)}
-          onConvert={() => {
-            if (selectedWsClientUuid !== THIS_DEVICE_UUID) {
-              setConfirmConvert(true);
-            } else {
-              onReprocess(video.uuid, 'h264');
-            }
-          }}
+          onConvert={() => onReprocess(video.uuid, 'h264')}
           onDownloadCaptions={handleDownloadCaptions}
           onBurnCaptions={() => setShowBurnModal(true)}
           initialWsClientUuid={video.wsClientUuid ?? null}
@@ -237,18 +230,6 @@ export function ReadOnlyVideoItem({
         <BurnCaptionsModal
           onConfirm={handleBurnCaptions}
           onCancel={() => setShowBurnModal(false)}
-        />
-      ) : null}
-
-      {confirmConvert ? (
-        <ConfirmationModal
-          title={t('confirmConvertTitle')}
-          text={t('confirmConvertText')}
-          okCallback={() => {
-            setConfirmConvert(false);
-            onReprocess(video.uuid, 'h264');
-          }}
-          cancelCallback={() => setConfirmConvert(false)}
         />
       ) : null}
 

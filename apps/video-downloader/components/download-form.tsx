@@ -609,7 +609,16 @@ export function DownloadForm({
 
   const handleClearStorage = useCallback(async () => {
     await clearOPFSStorage();
-    localStorage.removeItem('vd_completed_v2');
+    try {
+      const raw = localStorage.getItem('vd_completed_v2');
+      if (raw) {
+        const all = JSON.parse(raw) as Array<{ opfsEnabled?: boolean }>;
+        const kept = all.filter((v) => !v.opfsEnabled);
+        localStorage.setItem('vd_completed_v2', JSON.stringify(kept));
+      }
+    } catch {
+      // Malformed storage — leave it untouched
+    }
     setStorageInfo(null);
     setShowClearStorageConfirm(false);
     onClearStorage?.();

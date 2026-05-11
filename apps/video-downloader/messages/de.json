@@ -56,7 +56,7 @@
     "opfsStorageUsage": "{used} / {total}",
     "clearStorageLabel": "Gerätespeicher leeren",
     "clearStorageTitle": "Gerätespeicher leeren",
-    "clearStorageText": "Dadurch werden alle im Gerätespeicher gespeicherten Videos dauerhaft gelöscht und dein Download-Verlauf entfernt. Diese Aktion kann nicht rückgängig gemacht werden."
+    "clearStorageText": "Dadurch werden alle im Browser-Speicher deines Geräts gespeicherten Videos dauerhaft gelöscht. Videos auf dem Server bleiben unberührt. Diese Aktion kann nicht rückgängig gemacht werden."
   },
   "Admin": {
     "title": "Admin-Dashboard",
@@ -142,6 +142,9 @@
     "confirmConvertText": "Das Video wird in deinem Browser von H.265 nach H.264 umgewandelt. Der Vorgang kann je nach Videolänge und Geräteleistung einige Zeit dauern.",
     "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
     "detailStatus": "Status",
+    "detailStorage": "Speicher",
+    "storageOpfs": "Gerät (OPFS)",
+    "storageServer": "Server",
     "detailError": "Fehler",
     "detailJustAudio": "Nur Audio",
     "detailEnhance": "Verbessert",
@@ -251,6 +254,8 @@
     "installHint": "Installiere die Begleit-App auf einem PC oder Laptop (kein Smartphone). Nach der Installation wird die UUID angezeigt — kopiere sie hier. Halte den Computer eingeschaltet, damit die Videoverarbeitung dort ausgeführt werden kann.",
     "downloadLinux": "Linux (.deb)",
     "downloadWindows": "Windows (.exe)",
-    "savingToDevice": "Auf Gerät speichern…"
+    "savingToDevice": "Auf Gerät speichern…",
+    "fpsDeviceOnlyTitle": "FPS-Interpolation nicht verfügbar",
+    "fpsDeviceOnlyText": "Die geräteseitige FPS-Interpolation ist für FHD und höhere Auflösungen nicht verfügbar. Füge einen Server hinzu, um dieses Video zu verarbeiten."
   }
 }

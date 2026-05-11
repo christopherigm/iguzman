@@ -56,7 +56,7 @@
     "opfsStorageUsage": "{used} / {total}",
     "clearStorageLabel": "Clear device storage",
     "clearStorageTitle": "Clear Device Storage",
-    "clearStorageText": "This will permanently delete all videos saved to your device storage and remove your download history. This action cannot be undone."
+    "clearStorageText": "This will permanently delete all videos stored in your browser's device storage. Videos stored on the server will remain untouched. This action cannot be undone."
   },
   "Admin": {
     "title": "Admin Dashboard",
@@ -142,6 +142,9 @@
     "confirmConvertText": "This will re-encode the video from H.265 to H.264 in your browser. The process may take a while depending on the video length and your device performance.",
     "errorGeneric": "Something went wrong. Please try again.",
     "detailStatus": "Status",
+    "detailStorage": "Storage",
+    "storageOpfs": "Device (OPFS)",
+    "storageServer": "Server",
     "detailError": "Error",
     "detailJustAudio": "Audio only",
     "detailResolution": "Resolution",
@@ -251,6 +254,8 @@
     "installHint": "Install the companion app on a PC or laptop (not a smartphone). After installation the UUID will be displayed — copy it here. Keep the computer on so video processing can run on it.",
     "downloadLinux": "Linux (.deb)",
     "downloadWindows": "Windows (.exe)",
-    "savingToDevice": "Saving to device…"
+    "savingToDevice": "Saving to device…",
+    "fpsDeviceOnlyTitle": "FPS Interpolation Unavailable",
+    "fpsDeviceOnlyText": "On-device FPS interpolation is not available for FHD and higher resolutions. Add a server to process this video."
   }
 }

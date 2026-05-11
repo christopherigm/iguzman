@@ -567,10 +567,17 @@ self.onmessage = async (
           ff.on('log', frameLogHandler);
 
           const code = await ff.exec([
+            '-y',
             '-i',
             input,
             '-filter:v',
             videoFilter,
+            '-c:v',
+            'libx264',
+            '-preset',
+            'ultrafast',
+            '-crf',
+            '18',
             '-c:a',
             'copy',
             output,

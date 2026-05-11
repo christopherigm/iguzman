@@ -56,7 +56,7 @@
     "opfsStorageUsage": "{used} / {total}",
     "clearStorageLabel": "Limpar armazenamento do dispositivo",
     "clearStorageTitle": "Limpar armazenamento do dispositivo",
-    "clearStorageText": "Isso excluirá permanentemente todos os vídeos salvos no armazenamento do seu dispositivo e removerá seu histórico de downloads. Esta ação não pode ser desfeita."
+    "clearStorageText": "Isso excluirá permanentemente todos os vídeos armazenados no armazenamento do navegador do seu dispositivo. Os vídeos armazenados no servidor permanecerão intocados. Esta ação não pode ser desfeita."
   },
   "Admin": {
     "title": "Painel de administração",
@@ -142,6 +142,9 @@
     "confirmConvertText": "Isso irá recodificar o vídeo de H.265 para H.264 no seu navegador. O processo pode demorar dependendo da duração do vídeo e do desempenho do seu dispositivo.",
     "errorGeneric": "Algo deu errado. Por favor, tente novamente.",
     "detailStatus": "Status",
+    "detailStorage": "Armazenamento",
+    "storageOpfs": "Dispositivo (OPFS)",
+    "storageServer": "Servidor",
     "detailError": "Erro",
     "detailJustAudio": "Apenas áudio",
     "detailEnhance": "Aprimorado",
@@ -251,6 +254,8 @@
     "installHint": "Instale o aplicativo complementar em um PC ou laptop (não em um smartphone). Após a instalação, o UUID será exibido — copie-o aqui. Mantenha o computador ligado para que o processamento de vídeo possa ser executado nele.",
     "downloadLinux": "Linux (.deb)",
     "downloadWindows": "Windows (.exe)",
-    "savingToDevice": "Salvando no dispositivo…"
+    "savingToDevice": "Salvando no dispositivo…",
+    "fpsDeviceOnlyTitle": "Interpolação de FPS indisponível",
+    "fpsDeviceOnlyText": "A interpolação de FPS no dispositivo não está disponível para resoluções FHD e superiores. Adicione um servidor para processar este vídeo."
   }
 }

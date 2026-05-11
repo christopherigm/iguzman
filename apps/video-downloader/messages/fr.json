@@ -56,7 +56,7 @@
     "opfsStorageUsage": "{used} / {total}",
     "clearStorageLabel": "Vider le stockage de l'appareil",
     "clearStorageTitle": "Vider le stockage de l'appareil",
-    "clearStorageText": "Cela supprimera définitivement toutes les vidéos enregistrées dans le stockage de votre appareil et effacera votre historique de téléchargements. Cette action est irréversible."
+    "clearStorageText": "Cela supprimera définitivement toutes les vidéos enregistrées dans le stockage du navigateur de votre appareil. Les vidéos stockées sur le serveur ne seront pas affectées. Cette action est irréversible."
   },
   "Admin": {
     "title": "Tableau de bord admin",
@@ -142,6 +142,9 @@
     "confirmConvertText": "Cela réencodera la vidéo de H.265 en H.264 dans votre navigateur. Le processus peut prendre du temps selon la durée de la vidéo et les performances de votre appareil.",
     "errorGeneric": "Une erreur s'est produite. Veuillez réessayer.",
     "detailStatus": "Statut",
+    "detailStorage": "Stockage",
+    "storageOpfs": "Appareil (OPFS)",
+    "storageServer": "Serveur",
     "detailError": "Erreur",
     "detailJustAudio": "Audio uniquement",
     "detailEnhance": "Amélioré",
@@ -251,6 +254,8 @@
     "installHint": "Installez l'application compagnon sur un PC ou un ordinateur portable (pas un smartphone). Après l'installation, l'UUID sera affiché — copiez-le ici. Gardez l'ordinateur allumé pour que le traitement vidéo puisse s'y exécuter.",
     "downloadLinux": "Linux (.deb)",
     "downloadWindows": "Windows (.exe)",
-    "savingToDevice": "Enregistrement sur l'appareil…"
+    "savingToDevice": "Enregistrement sur l'appareil…",
+    "fpsDeviceOnlyTitle": "Interpolation FPS non disponible",
+    "fpsDeviceOnlyText": "L'interpolation FPS sur l'appareil n'est pas disponible pour les résolutions FHD et supérieures. Ajoutez un serveur pour traiter cette vidéo."
   }
 }
