@@ -15,6 +15,7 @@
     "hintUnsupported": "Plateforme non supportée",
     "hintDetected": "Lien {platform} détecté",
     "autoDownload": "Téléchargement automatique",
+    "saveToDevice": "Stockage de l'appareil",
     "justAudio": "Audio uniquement",
     "enhance": "Améliorer",
     "fps": "IPS",
@@ -48,7 +49,14 @@
     "duplicateTitle": "Déjà téléchargé",
     "duplicateText": "Cette vidéo a déjà été téléchargée. Que souhaitez-vous faire ?",
     "duplicateDownloadVideo": "Télécharger la vidéo",
-    "duplicateMoveToFirst": "Déplacer en première position"
+    "duplicateMoveToFirst": "Déplacer en première position",
+    "opfsConfirmTitle": "Enregistrer dans le stockage de l'appareil",
+    "opfsConfirmText": "Les vidéos seront enregistrées dans le stockage privé du navigateur plutôt que sur le serveur Video Downloader. Elles ne sont accessibles que depuis ce navigateur et ce site — la suppression des données du navigateur les effacera définitivement.",
+    "opfsStorageLabel": "Stockage de l'appareil",
+    "opfsStorageUsage": "{used} / {total}",
+    "clearStorageLabel": "Vider le stockage de l'appareil",
+    "clearStorageTitle": "Vider le stockage de l'appareil",
+    "clearStorageText": "Cela supprimera définitivement toutes les vidéos enregistrées dans le stockage de votre appareil et effacera votre historique de téléchargements. Cette action est irréversible."
   },
   "Admin": {
     "title": "Tableau de bord admin",
@@ -242,6 +250,7 @@
     "addServerText": "Entrez l'UUID du serveur et un libellé d'affichage.",
     "installHint": "Installez l'application compagnon sur un PC ou un ordinateur portable (pas un smartphone). Après l'installation, l'UUID sera affiché — copiez-le ici. Gardez l'ordinateur allumé pour que le traitement vidéo puisse s'y exécuter.",
     "downloadLinux": "Linux (.deb)",
-    "downloadWindows": "Windows (.exe)"
+    "downloadWindows": "Windows (.exe)",
+    "savingToDevice": "Enregistrement sur l'appareil…"
   }
 }

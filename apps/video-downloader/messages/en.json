@@ -15,6 +15,7 @@
     "hintUnsupported": "Unsupported platform",
     "hintDetected": "{platform} link detected",
     "autoDownload": "Auto download",
+    "saveToDevice": "Device Storage",
     "justAudio": "Just audio",
     "enhance": "Enhance",
     "fps": "FPS",
@@ -48,7 +49,14 @@
     "duplicateTitle": "Already downloaded",
     "duplicateText": "This video has already been downloaded. What would you like to do?",
     "duplicateDownloadVideo": "Download Video",
-    "duplicateMoveToFirst": "Move to first place"
+    "duplicateMoveToFirst": "Move to first place",
+    "opfsConfirmTitle": "Save to Device Storage",
+    "opfsConfirmText": "Videos will be saved to your browser's private storage instead of the Video Downloader server. They are only accessible from this browser and site — clearing your browser data will permanently delete them.",
+    "opfsStorageLabel": "Device storage",
+    "opfsStorageUsage": "{used} / {total}",
+    "clearStorageLabel": "Clear device storage",
+    "clearStorageTitle": "Clear Device Storage",
+    "clearStorageText": "This will permanently delete all videos saved to your device storage and remove your download history. This action cannot be undone."
   },
   "Admin": {
     "title": "Admin Dashboard",
@@ -242,6 +250,7 @@
     "addServerText": "Enter the server UUID and a display label.",
     "installHint": "Install the companion app on a PC or laptop (not a smartphone). After installation the UUID will be displayed — copy it here. Keep the computer on so video processing can run on it.",
     "downloadLinux": "Linux (.deb)",
-    "downloadWindows": "Windows (.exe)"
+    "downloadWindows": "Windows (.exe)",
+    "savingToDevice": "Saving to device…"
   }
 }

@@ -15,6 +15,7 @@
     "hintUnsupported": "Plataforma não suportada",
     "hintDetected": "Link do {platform} detectado",
     "autoDownload": "Download automático",
+    "saveToDevice": "Armazenamento do dispositivo",
     "justAudio": "Apenas áudio",
     "enhance": "Melhorar",
     "fps": "FPS",
@@ -48,7 +49,14 @@
     "duplicateTitle": "Já baixado",
     "duplicateText": "Este vídeo já foi baixado. O que você gostaria de fazer?",
     "duplicateDownloadVideo": "Baixar vídeo",
-    "duplicateMoveToFirst": "Mover para o primeiro lugar"
+    "duplicateMoveToFirst": "Mover para o primeiro lugar",
+    "opfsConfirmTitle": "Salvar no armazenamento do dispositivo",
+    "opfsConfirmText": "Os vídeos serão salvos no armazenamento privado do navegador em vez do servidor Video Downloader. Eles só são acessíveis neste navegador e site — limpar os dados do navegador os excluirá permanentemente.",
+    "opfsStorageLabel": "Armazenamento do dispositivo",
+    "opfsStorageUsage": "{used} / {total}",
+    "clearStorageLabel": "Limpar armazenamento do dispositivo",
+    "clearStorageTitle": "Limpar armazenamento do dispositivo",
+    "clearStorageText": "Isso excluirá permanentemente todos os vídeos salvos no armazenamento do seu dispositivo e removerá seu histórico de downloads. Esta ação não pode ser desfeita."
   },
   "Admin": {
     "title": "Painel de administração",
@@ -242,6 +250,7 @@
     "addServerText": "Insira o UUID do servidor e um rótulo de exibição.",
     "installHint": "Instale o aplicativo complementar em um PC ou laptop (não em um smartphone). Após a instalação, o UUID será exibido — copie-o aqui. Mantenha o computador ligado para que o processamento de vídeo possa ser executado nele.",
     "downloadLinux": "Linux (.deb)",
-    "downloadWindows": "Windows (.exe)"
+    "downloadWindows": "Windows (.exe)",
+    "savingToDevice": "Salvando no dispositivo…"
   }
 }

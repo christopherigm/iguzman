@@ -15,6 +15,7 @@ import { usePollTask, type TaskData } from './use-poll-task';
 import type { StoredVideo } from './use-video-store';
 import {
   STATUS_COLORS,
+  THIS_DEVICE_UUID,
   resolveMediaUrl,
   triggerBrowserDownload,
   downloadThumbnail,
@@ -27,6 +28,12 @@ import {
   VideoFooterLink,
   isIOS,
 } from './video-item-shared';
+import { useOPFSUrls } from './opfs-url-context';
+import {
+  writeToOPFS,
+  readFromOPFS,
+  deleteFromOPFS,
+} from '@/lib/opfs';
 import './video-item.css';
 
 /* ── Helpers ────────────────────────────────────────── */
@@ -87,6 +94,9 @@ export function PinnedVideoItem({
   const [copying, setCopying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [opfsMigrating, setOpfsMigrating] = useState(false);
+
+  const { registerUrls, getUrls } = useOPFSUrls();
   const [localProgress, setLocalProgress] = useState<{
     status: 'loading' | 'processing';
     progress: number;
@@ -167,42 +177,102 @@ export function PinnedVideoItem({
       const file = opts.sourceFile ?? video.file;
       if (!file || video.justAudio) return;
 
+      const isLocalDevice =
+        !video.wsClientUuid || video.wsClientUuid === THIS_DEVICE_UUID;
+      let tempBlobUrl: string | null = null;
+
       try {
         onUpdate(video.uuid, { status: opts.activeStatus, error: null });
-        const sourceUrl = `${window.location.origin}${resolveMediaUrl(`/api/media/${file}`)}`;
+
+        // Resolve source: read from OPFS if the video is device-stored.
+        let sourceUrl: string;
+        if (video.opfsEnabled && video.opfsStored && video.opfsKey) {
+          const cached = getUrls(video.uuid);
+          if (cached.videoUrl) {
+            sourceUrl = cached.videoUrl;
+          } else {
+            const opfsFile = await readFromOPFS(video.opfsKey);
+            tempBlobUrl = URL.createObjectURL(opfsFile);
+            sourceUrl = tempBlobUrl;
+          }
+        } else {
+          sourceUrl = `${window.location.origin}${resolveMediaUrl(`/api/media/${file}`)}`;
+        }
+
         setLocalProgress({ status: 'loading', progress: 0 });
         const { objectUrl, blob } = await opts.process(sourceUrl, (p) => {
           setLocalProgress({ status: 'processing', progress: p });
         });
+
+        if (tempBlobUrl) {
+          URL.revokeObjectURL(tempBlobUrl);
+          tempBlobUrl = null;
+        }
         setLocalProgress(null);
 
         onUpdate(video.uuid, { status: 'done', ...opts.donePatch });
 
-        const uploadPromise = uploadProcessedVideo(
-          file,
-          blob,
-          opts.taskUpdate,
-          setUploading,
-        );
+        if (video.opfsEnabled && isLocalDevice) {
+          // Write result directly to OPFS — skip server upload.
+          const oldOpfsKey = video.opfsKey;
+          const ext = file.split('.').pop() ?? 'mp4';
+          const newKey = `${crypto.randomUUID()}.${ext}`;
+          await writeToOPFS(newKey, blob);
 
-        if (video.autoDownload) {
-          const prefix = opts.downloadPrefix ?? 'video';
-          const downloadName = `${video.name ?? prefix}-${Date.now()}-${file}`;
-          triggerBrowserDownload(objectUrl, downloadName);
-        }
-
-        const newFile = await uploadPromise;
-        if (newFile) {
-          onUpdate(video.uuid, {
-            file: newFile,
-            downloadURL: `/api/media/${newFile}`,
+          const newFile = await readFromOPFS(newKey);
+          const newVideoUrl = URL.createObjectURL(newFile);
+          const existingUrls = getUrls(video.uuid);
+          registerUrls(video.uuid, {
+            videoUrl: newVideoUrl,
+            thumbnailUrl: existingUrls.thumbnailUrl,
           });
+
+          if (oldOpfsKey && oldOpfsKey !== newKey) {
+            void deleteFromOPFS(oldOpfsKey);
+          }
+
+          if (video.autoDownload) {
+            const prefix = opts.downloadPrefix ?? 'video';
+            triggerBrowserDownload(
+              objectUrl,
+              `${video.name ?? prefix}-${Date.now()}-${newKey}`,
+            );
+          }
+
+          onUpdate(video.uuid, {
+            opfsKey: newKey,
+            file: newKey,
+            downloadURL: `opfs://${newKey}`,
+          });
+        } else {
+          // Upload result to server (existing flow).
+          const uploadPromise = uploadProcessedVideo(
+            file,
+            blob,
+            opts.taskUpdate,
+            setUploading,
+          );
+
+          if (video.autoDownload) {
+            const prefix = opts.downloadPrefix ?? 'video';
+            const downloadName = `${video.name ?? prefix}-${Date.now()}-${file}`;
+            triggerBrowserDownload(objectUrl, downloadName);
+          }
+
+          const newFile = await uploadPromise;
+          if (newFile) {
+            onUpdate(video.uuid, {
+              file: newFile,
+              downloadURL: `/api/media/${newFile}`,
+            });
+          }
         }
 
         if (opts.completeAfter) {
           tryComplete(video.uuid);
         }
       } catch (err) {
+        if (tempBlobUrl) URL.revokeObjectURL(tempBlobUrl);
         console.error(`${opts.errorKey} failed:`, err);
         setLocalProgress(null);
         onUpdate(video.uuid, {
@@ -218,9 +288,15 @@ export function PinnedVideoItem({
       video.justAudio,
       video.autoDownload,
       video.name,
+      video.opfsEnabled,
+      video.opfsStored,
+      video.opfsKey,
+      video.wsClientUuid,
       onUpdate,
       t,
       tryComplete,
+      getUrls,
+      registerUrls,
     ],
   );
 
@@ -400,22 +476,67 @@ export function PinnedVideoItem({
         captionUrl: null,
       });
 
-      /* FPS interpolation requested — chain into processing before completing. */
-      const willInterpolateFps =
-        video.fps !== 'original' && !video.justAudio && file;
-      if (willInterpolateFps) {
-        /* Chain FPS interpolation before completing. */
-        void runProcessing({
-          sourceFile: file,
-          activeStatus: 'processing',
-          process: (url, onProgress) =>
-            interpolateFps(url, Number(video.fps), onProgress),
-          donePatch: { fpsApplied: true },
-          taskUpdate: { fpsApplied: true },
-          errorKey: 'errorFfmpegFailed',
-          downloadPrefix: 'video',
-          completeAfter: true,
-        });
+      if (video.opfsEnabled && file) {
+        // Migrate to OPFS before moving the card to completed.
+        setOpfsMigrating(true);
+        void (async () => {
+          try {
+            const videoRes = await fetch(`/media/${file}`);
+            if (!videoRes.ok) throw new Error('video fetch failed');
+            const videoBlob = await videoRes.blob();
+            await writeToOPFS(file, videoBlob);
+
+            let thumbKey: string | null = null;
+            if (task.thumbnail) {
+              try {
+                const thumbRes = await fetch(`/media/${task.thumbnail}`);
+                if (thumbRes.ok) {
+                  const thumbBlob = await thumbRes.blob();
+                  thumbKey = `thumb_${task.thumbnail}`;
+                  await writeToOPFS(thumbKey, thumbBlob);
+                }
+              } catch {}
+            }
+
+            if (task._id) {
+              await fetch(`/api/download-video/${task._id}`, {
+                method: 'DELETE',
+              }).catch(() => {});
+            }
+
+            const videoFile = await readFromOPFS(file);
+            const videoUrl = URL.createObjectURL(videoFile);
+            let thumbnailUrl: string | null = null;
+            if (thumbKey) {
+              try {
+                const thumbFile = await readFromOPFS(thumbKey);
+                thumbnailUrl = URL.createObjectURL(thumbFile);
+              } catch {}
+            }
+            registerUrls(video.uuid, { videoUrl, thumbnailUrl });
+
+            onUpdate(video.uuid, {
+              opfsKey: file,
+              opfsThumbnailKey: thumbKey,
+              opfsStored: true,
+              serverFileDeleted: true,
+              downloadURL: `opfs://${file}`,
+            });
+
+            if (video.autoDownload) {
+              triggerBrowserDownload(
+                videoUrl,
+                `${name ?? 'video'}-${Date.now()}-${file}`,
+              );
+            }
+          } catch (err) {
+            console.error('OPFS migration failed:', err);
+            // Server URLs remain as fallback.
+          } finally {
+            setOpfsMigrating(false);
+            tryComplete(video.uuid);
+          }
+        })();
         return;
       }
 
@@ -440,11 +561,10 @@ export function PinnedVideoItem({
       onUpdate,
       video.uuid,
       video.autoDownload,
-      video.fps,
       video.justAudio,
-      runProcessing,
-      interpolateFps,
+      video.opfsEnabled,
       tryComplete,
+      registerUrls,
     ],
   );
 
@@ -533,19 +653,31 @@ export function PinnedVideoItem({
   /* ── Re-download (trigger browser save) ─────────── */
   const handleRedownload = useCallback(() => {
     if (!video.downloadURL) return;
+    const opfsUrls = video.opfsEnabled ? getUrls(video.uuid) : null;
+    const url = opfsUrls?.videoUrl ?? video.downloadURL;
     triggerBrowserDownload(
-      video.downloadURL,
+      url,
       `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
     );
     if (video.justAudio) {
-      const thumbSrc = video.thumbnail
-        ? resolveMediaUrl(`/api/media/${video.thumbnail}`)
-        : null;
+      const thumbSrc =
+        opfsUrls?.thumbnailUrl ??
+        (video.thumbnail
+          ? resolveMediaUrl(`/api/media/${video.thumbnail}`)
+          : null);
       if (thumbSrc) {
         downloadThumbnail(thumbSrc, video.name);
       }
     }
-  }, [video.downloadURL, video.name, video.justAudio, video.thumbnail]);
+  }, [
+    video.downloadURL,
+    video.name,
+    video.justAudio,
+    video.thumbnail,
+    video.opfsEnabled,
+    video.uuid,
+    getUrls,
+  ]);
 
   /* ── Auto-trigger download for newly added (pending) items ── */
   useEffect(() => {
@@ -734,10 +866,14 @@ export function PinnedVideoItem({
         justAudio={video.justAudio}
         thumbnail={video.thumbnail}
         compact={isBusy}
+        opfsVideoUrl={video.opfsEnabled ? getUrls(video.uuid).videoUrl : null}
+        opfsThumbnailUrl={
+          video.opfsEnabled ? getUrls(video.uuid).thumbnailUrl : null
+        }
       />
 
       {/* ── Loading indicator ─────────────────────── */}
-      {isProcessing || displayFFmpegStatus !== 'idle' ? (
+      {isProcessing || displayFFmpegStatus !== 'idle' || opfsMigrating ? (
         <ProgressBar
           value={displayFFmpegProgress ? displayFFmpegProgress : undefined}
           margin="0"
@@ -750,6 +886,7 @@ export function PinnedVideoItem({
         ffmpegProgress={displayFFmpegProgress}
         videoStatus={video.status}
         uploading={uploading}
+        opfsMigrating={opfsMigrating}
         t={t}
       />
       {/* ── Footer actions ────────────────────────── */}

@@ -357,18 +357,25 @@ export function VideoMediaPreview({
   justAudio,
   thumbnail,
   compact,
+  opfsVideoUrl,
+  opfsThumbnailUrl,
 }: {
   downloadURL: string | null;
   justAudio: boolean;
   thumbnail: string | null;
   compact?: boolean;
+  opfsVideoUrl?: string | null;
+  opfsThumbnailUrl?: string | null;
 }) {
-  if (!downloadURL) return null;
+  const isOpfs = downloadURL?.startsWith('opfs://') ?? false;
 
-  const src = resolveMediaUrl(downloadURL);
-  const thumbnailSrc = thumbnail
-    ? resolveMediaUrl(`/api/media/${thumbnail}`)
-    : null;
+  if (!downloadURL) return null;
+  if (isOpfs && !opfsVideoUrl) return null;
+
+  const src = opfsVideoUrl ?? resolveMediaUrl(downloadURL);
+  const thumbnailSrc =
+    opfsThumbnailUrl ??
+    (thumbnail ? resolveMediaUrl(`/api/media/${thumbnail}`) : null);
 
   if (justAudio) {
     return (
@@ -417,14 +424,24 @@ export function VideoStatusHints({
   ffmpegProgress,
   videoStatus,
   uploading,
+  opfsMigrating,
   t,
 }: {
   ffmpegStatus: string;
   ffmpegProgress: number | null;
   videoStatus: VideoStatus;
   uploading: boolean;
+  opfsMigrating?: boolean;
   t: TranslationFn;
 }) {
+  if (opfsMigrating) {
+    return (
+      <Typography variant="caption" className="vi-ffmpeg-hint">
+        {t('savingToDevice')}
+      </Typography>
+    );
+  }
+
   if (ffmpegStatus === 'loading') {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">

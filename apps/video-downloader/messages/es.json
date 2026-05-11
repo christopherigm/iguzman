@@ -15,6 +15,7 @@
     "hintUnsupported": "Plataforma no soportada",
     "hintDetected": "Enlace de {platform} detectado",
     "autoDownload": "Descarga automática",
+    "saveToDevice": "Almacenamiento del dispositivo",
     "justAudio": "Solo audio",
     "enhance": "Mejorar",
     "fps": "FPS",
@@ -48,7 +49,14 @@
     "duplicateTitle": "Ya descargado",
     "duplicateText": "Este video ya fue descargado. ¿Qué te gustaría hacer?",
     "duplicateDownloadVideo": "Descargar video",
-    "duplicateMoveToFirst": "Mover al primer lugar"
+    "duplicateMoveToFirst": "Mover al primer lugar",
+    "opfsConfirmTitle": "Guardar en almacenamiento del dispositivo",
+    "opfsConfirmText": "Los vídeos se guardarán en el almacenamiento privado del navegador en lugar del servidor de Video Downloader. Solo son accesibles desde este navegador y sitio — borrar los datos del navegador los eliminará permanentemente.",
+    "opfsStorageLabel": "Almacenamiento del dispositivo",
+    "opfsStorageUsage": "{used} / {total}",
+    "clearStorageLabel": "Borrar almacenamiento del dispositivo",
+    "clearStorageTitle": "Borrar almacenamiento del dispositivo",
+    "clearStorageText": "Esto eliminará permanentemente todos los videos guardados en el almacenamiento de tu dispositivo y borrará tu historial de descargas. Esta acción no se puede deshacer."
   },
   "Admin": {
     "title": "Panel de administración",
@@ -242,6 +250,7 @@
     "addServerText": "Ingresa el UUID del servidor y una etiqueta de visualización.",
     "installHint": "Instala la app complementaria en una PC o laptop (no en un smartphone). Tras la instalación se mostrará el UUID — cópialo aquí. Mantén la computadora encendida para que el procesamiento de video se ejecute en ella.",
     "downloadLinux": "Linux (.deb)",
-    "downloadWindows": "Windows (.exe)"
+    "downloadWindows": "Windows (.exe)",
+    "savingToDevice": "Guardando en dispositivo…"
   }
 }

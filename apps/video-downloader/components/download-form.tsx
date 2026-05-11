@@ -10,6 +10,7 @@ import { Icon } from '@repo/ui/core-elements/icon';
 import { Button } from '@repo/ui/core-elements/button';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Spinner } from '@repo/ui/core-elements/spinner';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import {
   detectPlatform,
   isYoutube,
@@ -17,6 +18,11 @@ import {
 } from '@repo/helpers/checkers';
 import { stripQueryParams } from '@repo/helpers/clean-url';
 import { isIOS, buildResolutionLabel } from './video-item-shared';
+import {
+  isOPFSSupported,
+  getOPFSStorageInfo,
+  clearOPFSStorage,
+} from '@/lib/opfs';
 import {
   WsClientPanel,
   THIS_DEVICE_UUID,
@@ -63,6 +69,13 @@ function isServerPath(url: string | null): url is string {
   return (
     !url.startsWith('blob:') && (url.startsWith('/') || url.startsWith('http'))
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
+  if (bytes >= 1e3) return `${(bytes / 1e3).toFixed(0)} KB`;
+  return `${bytes} B`;
 }
 
 /* ── Sub-components ─────────────────────────────────── */
@@ -229,6 +242,8 @@ export interface DownloadFormProps {
     captionUrl?: string;
     /** UUID of the selected ws-client for server FFmpeg, or null for local WASM. */
     wsClientUuid: string | null;
+    /** Whether to store the downloaded video in the browser's Origin Private File System. */
+    opfsEnabled: boolean;
   }) => void;
   /** Completed videos to check against for duplicate detection. */
   completedVideos?: Array<{
@@ -239,23 +254,55 @@ export interface DownloadFormProps {
   }>;
   /** Called when the user wants to move an existing completed video to the top of the list. */
   onMoveToFirst?: (uuid: string) => void;
+  /** Called after OPFS and completed-video storage have been cleared. */
+  onClearStorage?: () => void;
 }
 
 export function DownloadForm({
   onVideoAdded,
   completedVideos,
   onMoveToFirst,
+  onClearStorage,
 }: DownloadFormProps = {}) {
   const t = useTranslations('DownloadForm');
   const [url, setUrl] = useState('');
   const [ios, setIos] = useState(false);
   const [autoDownload, setAutoDownload] = useState(true);
+  const [opfsSupported, setOpfsSupported] = useState(false);
+  const [opfsEnabled, setOpfsEnabled] = useState(false);
+  const [storageInfo, setStorageInfo] = useState<{
+    usedBytes: number;
+    totalBytes: number;
+  } | null>(null);
 
   useEffect(() => {
     const isIOSDevice = isIOS();
     setIos(isIOSDevice);
     if (isIOSDevice) setAutoDownload(false);
+    const supported = isOPFSSupported();
+    setOpfsSupported(supported);
+    if (supported) {
+      const saved = localStorage.getItem('vd-opfs-enabled');
+      if (saved !== null) setOpfsEnabled(saved === 'true');
+    }
   }, []);
+
+  useEffect(() => {
+    if (!opfsSupported) return;
+    let cancelled = false;
+    const refresh = async () => {
+      const info = await getOPFSStorageInfo();
+      if (!cancelled) setStorageInfo(info);
+    };
+    void refresh();
+    const id = setInterval(() => {
+      void refresh();
+    }, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [opfsSupported]);
   const [justAudio, setJustAudio] = useState(false);
   const [enhance] = useState(false);
   const [fps, setFps] = useState<FPSValue>('original');
@@ -276,6 +323,9 @@ export function DownloadForm({
     null,
   );
   const [captionsUnavailable, setCaptionsUnavailable] = useState(false);
+
+  const [showOpfsConfirm, setShowOpfsConfirm] = useState(false);
+  const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
 
   const [selectedWsClientUuid, setSelectedWsClientUuid] = useState<
     string | null
@@ -442,6 +492,11 @@ export function DownloadForm({
   const effectiveEnhance = justAudio ? false : enhance;
   const effectiveFps: FPSValue = justAudio ? 'original' : fps;
 
+  const persistOpfsEnabled = useCallback((value: boolean) => {
+    setOpfsEnabled(value);
+    localStorage.setItem('vd-opfs-enabled', String(value));
+  }, []);
+
   /* Handlers */
   const handleClear = useCallback(() => {
     setUrl('');
@@ -464,6 +519,7 @@ export function DownloadForm({
         !selectedWsClientUuid || selectedWsClientUuid === THIS_DEVICE_UUID
           ? null
           : selectedWsClientUuid,
+      opfsEnabled,
     });
 
     /* Reset the URL field and captions toggle after submission */
@@ -480,6 +536,8 @@ export function DownloadForm({
     captionsEnabled,
     selectedCaptionUrl,
     onVideoAdded,
+    opfsEnabled,
+    selectedWsClientUuid,
   ]);
 
   const handleSubmit = useCallback(() => {
@@ -548,6 +606,14 @@ export function DownloadForm({
       variant: 'success',
     };
   }, [hasText, validUrl, knownPlatform, platform, t]);
+
+  const handleClearStorage = useCallback(async () => {
+    await clearOPFSStorage();
+    localStorage.removeItem('vd_completed_v2');
+    setStorageInfo(null);
+    setShowClearStorageConfirm(false);
+    onClearStorage?.();
+  }, [onClearStorage]);
 
   const platformIcon = PLATFORM_ICONS[platform];
 
@@ -644,16 +710,39 @@ export function DownloadForm({
       <hr className="df-divider" />
 
       {/* ── Options ──────────────────────────────────── */}
-      <Box className="df-options">
-        {!ios && (
-          <OptionRow label={t('autoDownload')} disabled={switchesDisabled}>
-            <Switch
-              checked={autoDownload}
-              onChange={switchesDisabled ? undefined : setAutoDownload}
-            />
-          </OptionRow>
-        )}
-
+      <Box className="df-options" marginTop={8}>
+        <Box display="flex" justifyContent="space-between" gap={12}>
+          {opfsSupported && (
+            <Box width="50%">
+              <OptionRow label={t('saveToDevice')} disabled={switchesDisabled}>
+                <Switch
+                  checked={opfsEnabled}
+                  onChange={
+                    switchesDisabled
+                      ? undefined
+                      : (checked) => {
+                          if (checked) {
+                            setShowOpfsConfirm(true);
+                          } else {
+                            persistOpfsEnabled(false);
+                          }
+                        }
+                  }
+                />
+              </OptionRow>
+            </Box>
+          )}
+          {!ios && (
+            <Box width="50%">
+              <OptionRow label={t('autoDownload')} disabled={switchesDisabled}>
+                <Switch
+                  checked={autoDownload}
+                  onChange={switchesDisabled ? undefined : setAutoDownload}
+                />
+              </OptionRow>
+            </Box>
+          )}
+        </Box>
         {(resolutions.length > 0 || metadataLoading) && (
           <OptionRow
             label={t('resolution')}
@@ -728,6 +817,61 @@ export function DownloadForm({
           </OptionRow>
         )}
       </Box>
+
+      {opfsSupported &&
+        storageInfo !== null &&
+        storageInfo.usedBytes > 0 &&
+        storageInfo.totalBytes > 0 && (
+          <>
+            <hr className="df-divider" />
+            <Box marginTop={8}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                marginBottom={6}
+              >
+                <Typography
+                  variant="caption"
+                  color="var(--foreground-muted, #999)"
+                >
+                  {t('opfsStorageLabel')}
+                </Typography>
+                <Box display="flex" alignItems="center" gap={6}>
+                  <Typography
+                    variant="caption"
+                    color="var(--foreground-muted, #999)"
+                    marginRight={8}
+                  >
+                    {t('opfsStorageUsage', {
+                      used: formatBytes(storageInfo.usedBytes),
+                      total: formatBytes(storageInfo.totalBytes),
+                    })}
+                  </Typography>
+                  <button
+                    type="button"
+                    className="df-icon-btn df-icon-btn--download"
+                    onClick={() => setShowClearStorageConfirm(true)}
+                    aria-label={t('clearStorageLabel')}
+                  >
+                    <Icon
+                      icon="/icons/clear.svg"
+                      size={18}
+                      color="var(--accent-foreground, white)"
+                    />
+                  </button>
+                </Box>
+              </Box>
+              <ProgressBar
+                value={Math.round(
+                  (storageInfo.usedBytes / storageInfo.totalBytes) * 100,
+                )}
+                size={4}
+                label={t('opfsStorageLabel')}
+              />
+            </Box>
+          </>
+        )}
     </Box>
   );
 
@@ -752,6 +896,31 @@ export function DownloadForm({
           text={t('fpsBoostText', { fps: effectiveFps })}
           okCallback={handleFpsWarningOk}
           cancelCallback={handleFpsWarningCancel}
+        />
+      ) : null}
+
+      {/* ── OPFS Confirmation Modal ──────────────── */}
+      {showOpfsConfirm ? (
+        <ConfirmationModal
+          title={t('opfsConfirmTitle')}
+          text={t('opfsConfirmText')}
+          okCallback={() => {
+            persistOpfsEnabled(true);
+            setShowOpfsConfirm(false);
+          }}
+          cancelCallback={() => setShowOpfsConfirm(false)}
+        />
+      ) : null}
+
+      {/* ── Clear Storage Confirmation Modal ─────── */}
+      {showClearStorageConfirm ? (
+        <ConfirmationModal
+          title={t('clearStorageTitle')}
+          text={t('clearStorageText')}
+          okCallback={() => {
+            void handleClearStorage();
+          }}
+          cancelCallback={() => setShowClearStorageConfirm(false)}
         />
       ) : null}
 

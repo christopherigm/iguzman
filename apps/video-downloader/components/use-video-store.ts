@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Platform } from '@repo/helpers/checkers';
 import type {
   BurnCaptionsConfig,
@@ -59,6 +59,16 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   wsClientUuid: string | null;
   /** Task ID of the last server-side FFmpeg job dispatched for this video. Null when idle. */
   serverTaskId: string | null;
+  /** Whether Origin Private File System device-local storage was requested for this video. */
+  opfsEnabled: boolean;
+  /** OPFS filename key for the main video/audio file. Null if not yet stored. */
+  opfsKey: string | null;
+  /** OPFS filename key for the thumbnail. Null if not stored. */
+  opfsThumbnailKey: string | null;
+  /** Whether the video file has been successfully written to OPFS. */
+  opfsStored: boolean;
+  /** Whether the server temp file has been confirmed deleted after OPFS migration. */
+  serverFileDeleted: boolean;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -114,6 +124,11 @@ function applyDefaults(v: StoredVideo): StoredVideo {
       null,
     wsClientUuid: v.wsClientUuid ?? null,
     serverTaskId: v.serverTaskId ?? null,
+    opfsEnabled: v.opfsEnabled ?? false,
+    opfsKey: v.opfsKey ?? null,
+    opfsThumbnailKey: v.opfsThumbnailKey ?? null,
+    opfsStored: v.opfsStored ?? false,
+    serverFileDeleted: v.serverFileDeleted ?? false,
   };
 }
 
@@ -235,20 +250,22 @@ export function useVideoStore() {
   const [completed, setCompleted] = useState<StoredVideo[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [storeLoaded, setStoreLoaded] = useState(false);
-  const initialized = useRef(false);
 
   /* Load from localStorage after mount (client-only). */
   useEffect(() => {
     const { pinned: p, completed: c } = initializeStore();
-    initialized.current = true;
     setPinned(p);
     setCompleted(c);
     setStoreLoaded(true);
   }, []);
 
-  /* Persist each array independently — skip until initialized. */
+  /* Persist each array independently — skip until the store has been hydrated.
+     Using storeLoaded (not a ref) ensures the guard value is always in sync
+     with the render that triggered the effect, avoiding the race where effects
+     from the first render (completed=[]) would overwrite localStorage before
+     the hydrated values were applied. */
   useEffect(() => {
-    if (!initialized.current) return;
+    if (!storeLoaded) return;
     try {
       writeStorage(PINNED_KEY, pinned);
       setStorageError(null);
@@ -257,10 +274,10 @@ export function useVideoStore() {
         'Storage is full — your video list may not be saved across page reloads.',
       );
     }
-  }, [pinned]);
+  }, [pinned, storeLoaded]);
 
   useEffect(() => {
-    if (!initialized.current) return;
+    if (!storeLoaded) return;
     try {
       writeStorage(COMPLETED_KEY, completed);
     } catch {
@@ -268,7 +285,7 @@ export function useVideoStore() {
         'Storage is full — your video list may not be saved across page reloads.',
       );
     }
-  }, [completed]);
+  }, [completed, storeLoaded]);
 
   /** Add a brand-new video entry directly to pinned and return its uuid. */
   const addToPinned = useCallback(
@@ -286,6 +303,7 @@ export function useVideoStore() {
         captionsEnabled?: boolean;
         captionUrl?: string | null;
         wsClientUuid?: string | null;
+        opfsEnabled?: boolean;
       },
     ): string => {
       const existing = pinned.find(
@@ -327,6 +345,11 @@ export function useVideoStore() {
         captionsBurned: false,
         wsClientUuid: partial.wsClientUuid ?? null,
         serverTaskId: null,
+        opfsEnabled: partial.opfsEnabled ?? false,
+        opfsKey: null,
+        opfsThumbnailKey: null,
+        opfsStored: false,
+        serverFileDeleted: false,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional
@@ -406,6 +429,11 @@ export function useVideoStore() {
     setCompleted((prev) => prev.filter((v) => v.uuid !== uuid));
   }, []);
 
+  /** Remove all completed video entries. */
+  const clearCompleted = useCallback(() => {
+    setCompleted([]);
+  }, []);
+
   /** Move a completed video to the top of the completed list. */
   const moveCompletedToFirst = useCallback((uuid: string) => {
     setCompleted((prev) => {
@@ -427,6 +455,7 @@ export function useVideoStore() {
     updateCompleted,
     removePinned,
     removeCompleted,
+    clearCompleted,
     moveCompletedToFirst,
     storageError,
   } as const;

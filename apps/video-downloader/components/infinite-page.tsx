@@ -14,11 +14,94 @@ import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { useVideoStore } from './use-video-store';
 import type { StoredVideo } from './use-video-store';
 import { resolveMediaUrl, PLATFORM_ICONS } from './video-item-shared';
+import { OPFSUrlProvider, useOPFSUrls } from './opfs-url-context';
+import {
+  isOPFSSupported,
+  writeToOPFS,
+  readFromOPFS,
+  deleteFromOPFS,
+} from '@/lib/opfs';
 import './infinite-page.css';
 
-export function InfinitePage() {
+function InfinitePageInner() {
   const t = useTranslations('InfinitePage');
-  const { completed, removeCompleted, storeLoaded } = useVideoStore();
+  const { completed, removeCompleted, updateCompleted, storeLoaded } =
+    useVideoStore();
+  const { getUrls, registerUrls, revokeUrls } = useOPFSUrls();
+
+  /* ── OPFS recovery: re-establish blob URLs on mount ── */
+  useEffect(() => {
+    if (!storeLoaded || !isOPFSSupported()) return;
+    const opfsVideos = completed.filter((v) => v.opfsEnabled);
+    void (async () => {
+      for (const video of opfsVideos) {
+        if (video.opfsStored && video.opfsKey) {
+          try {
+            const videoFile = await readFromOPFS(video.opfsKey);
+            const videoUrl = URL.createObjectURL(videoFile);
+            let thumbnailUrl: string | null = null;
+            if (video.opfsThumbnailKey) {
+              try {
+                const thumbFile = await readFromOPFS(video.opfsThumbnailKey);
+                thumbnailUrl = URL.createObjectURL(thumbFile);
+              } catch {}
+            }
+            registerUrls(video.uuid, { videoUrl, thumbnailUrl });
+            if (!video.serverFileDeleted && video.taskId) {
+              await fetch(`/api/download-video/${video.taskId}`, {
+                method: 'DELETE',
+              }).catch(() => {});
+              updateCompleted(video.uuid, { serverFileDeleted: true });
+            }
+          } catch {}
+        } else if (
+          !video.opfsStored &&
+          !video.serverFileDeleted &&
+          video.file &&
+          video.taskId
+        ) {
+          try {
+            const videoRes = await fetch(`/api/media/${video.file}`);
+            if (!videoRes.ok) throw new Error('not found');
+            const videoBlob = await videoRes.blob();
+            await writeToOPFS(video.file, videoBlob);
+            let thumbKey: string | null = null;
+            if (video.thumbnail) {
+              try {
+                const thumbRes = await fetch(`/api/media/${video.thumbnail}`);
+                if (thumbRes.ok) {
+                  const thumbBlob = await thumbRes.blob();
+                  thumbKey = `thumb_${video.thumbnail}`;
+                  await writeToOPFS(thumbKey, thumbBlob);
+                }
+              } catch {}
+            }
+            await fetch(`/api/download-video/${video.taskId}`, {
+              method: 'DELETE',
+            }).catch(() => {});
+            const videoFile = await readFromOPFS(video.file);
+            const videoUrl = URL.createObjectURL(videoFile);
+            let thumbnailUrl: string | null = null;
+            if (thumbKey) {
+              try {
+                const thumbFile = await readFromOPFS(thumbKey);
+                thumbnailUrl = URL.createObjectURL(thumbFile);
+              } catch {}
+            }
+            registerUrls(video.uuid, { videoUrl, thumbnailUrl });
+            updateCompleted(video.uuid, {
+              opfsKey: video.file,
+              opfsThumbnailKey: thumbKey,
+              opfsStored: true,
+              serverFileDeleted: true,
+              downloadURL: null,
+            });
+          } catch {}
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeLoaded]);
   const [videos, setVideos] = useState<StoredVideo[]>([]);
   const [loaded, setLoaded] = useState(false);
   const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
@@ -48,7 +131,9 @@ export function InfinitePage() {
 
   useEffect(() => {
     if (!storeLoaded) return;
-    const eligible = completed.filter((v) => v.downloadURL && !v.justAudio);
+    const eligible = completed.filter(
+      (v) => (v.downloadURL || v.opfsStored) && !v.justAudio,
+    );
     setVideos(shuffle(eligible));
     setLoaded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,6 +270,12 @@ export function InfinitePage() {
   function handleDelete() {
     const video = videos[activeIndex];
     if (!video) return;
+    if (video.opfsEnabled) {
+      if (video.opfsKey) void deleteFromOPFS(video.opfsKey).catch(() => {});
+      if (video.opfsThumbnailKey)
+        void deleteFromOPFS(video.opfsThumbnailKey).catch(() => {});
+      revokeUrls(video.uuid);
+    }
     removeCompleted(video.uuid);
     setVideos((prev) => {
       const next = prev.filter((v) => v.uuid !== video.uuid);
@@ -199,9 +290,14 @@ export function InfinitePage() {
 
   function handleDownload() {
     const video = videos[activeIndex];
-    if (!video?.downloadURL) return;
+    if (!video) return;
+    const opfsUrls = video.opfsEnabled ? getUrls(video.uuid) : null;
+    const href =
+      opfsUrls?.videoUrl ??
+      (video.opfsStored ? null : video.downloadURL ? resolveMediaUrl(video.downloadURL) : null);
+    if (!href) return;
     const a = document.createElement('a');
-    a.href = resolveMediaUrl(video.downloadURL);
+    a.href = href;
     a.download = video.name ?? 'video';
     a.click();
   }
@@ -278,11 +374,16 @@ export function InfinitePage() {
       >
         {videos.map((video, index) => {
           const isActive = index === activeIndex;
+          const opfsUrls = video.opfsEnabled ? getUrls(video.uuid) : null;
           const thumbSrc =
             capturedFrames.get(video.uuid) ??
-            (video.thumbnail
+            opfsUrls?.thumbnailUrl ??
+            (video.thumbnail && !(video.opfsEnabled && video.serverFileDeleted)
               ? resolveMediaUrl(`/api/media/${video.thumbnail}`)
               : null);
+          const videoSrc =
+            opfsUrls?.videoUrl ??
+            (video.opfsStored ? null : video.downloadURL ? resolveMediaUrl(video.downloadURL) : null);
           return (
             <SwiperSlide
               key={video.uuid}
@@ -301,30 +402,32 @@ export function InfinitePage() {
                       style={{ objectFit }}
                     />
                   )}
-                  <video
-                    onClick={() => togglePlayAt(index)}
-                    aria-label={video.name ?? video.originalURL}
-                    ref={(el) => {
-                      if (el) {
-                        videoRefs.current.set(index, el);
-                        if (el !== activeVideoElRef.current) {
-                          activeVideoElRef.current = el;
-                          el.currentTime = 0;
-                          el.play().catch(() => setShowPlayPrompt(true));
+                  {videoSrc ? (
+                    <video
+                      onClick={() => togglePlayAt(index)}
+                      aria-label={video.name ?? video.originalURL}
+                      ref={(el) => {
+                        if (el) {
+                          videoRefs.current.set(index, el);
+                          if (el !== activeVideoElRef.current) {
+                            activeVideoElRef.current = el;
+                            el.currentTime = 0;
+                            el.play().catch(() => setShowPlayPrompt(true));
+                          }
+                        } else {
+                          videoRefs.current.delete(index);
                         }
-                      } else {
-                        videoRefs.current.delete(index);
-                      }
-                    }}
-                    src={resolveMediaUrl(video.downloadURL!)}
-                    playsInline
-                    loop={!autoSwipe}
-                    preload="auto"
-                    className="infinite-video"
-                    style={{ objectFit }}
-                    onCanPlay={() => handleVideoCanPlay(index)}
-                    onError={() => handleVideoError(index)}
-                  />
+                      }}
+                      src={videoSrc}
+                      playsInline
+                      loop={!autoSwipe}
+                      preload="auto"
+                      className="infinite-video"
+                      style={{ objectFit }}
+                      onCanPlay={() => handleVideoCanPlay(index)}
+                      onError={() => handleVideoError(index)}
+                    />
+                  ) : null}
                 </>
               ) : thumbSrc ? (
                 <Image
@@ -496,5 +599,13 @@ export function InfinitePage() {
         </Button>
       </Box>
     </>
+  );
+}
+
+export function InfinitePage() {
+  return (
+    <OPFSUrlProvider>
+      <InfinitePageInner />
+    </OPFSUrlProvider>
   );
 }

@@ -1,11 +1,19 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { DownloadForm } from './download-form';
 import { VideoGrid } from './video-grid';
 import { useVideoStore } from './use-video-store';
+import type { StoredVideo } from './use-video-store';
 import type { Platform } from '@repo/helpers/checkers';
+import { OPFSUrlProvider, useOPFSUrls } from './opfs-url-context';
+import {
+  isOPFSSupported,
+  writeToOPFS,
+  readFromOPFS,
+  deleteFromOPFS,
+} from '@/lib/opfs';
 import './download-page.css';
 
 /* ── Entry shape from DownloadForm ──────────────────── */
@@ -21,14 +29,117 @@ interface VideoAddedEntry {
   captionsEnabled?: boolean;
   captionUrl?: string;
   wsClientUuid: string | null;
+  opfsEnabled: boolean;
+}
+
+/* ── Recovery: re-establish OPFS blob URLs and finish interrupted migrations ── */
+
+function useOPFSRecovery({
+  completed,
+  updateCompleted,
+  storeLoaded,
+}: {
+  completed: StoredVideo[];
+  updateCompleted: (uuid: string, patch: Partial<StoredVideo>) => void;
+  storeLoaded: boolean;
+}) {
+  const { registerUrls } = useOPFSUrls();
+
+  useEffect(() => {
+    if (!storeLoaded || !isOPFSSupported()) return;
+
+    const opfsVideos = completed.filter((v) => v.opfsEnabled);
+
+    void (async () => {
+      for (const video of opfsVideos) {
+        if (video.opfsStored && video.opfsKey) {
+          // Normal case: OPFS has the file — re-establish blob URLs for this session.
+          try {
+            const videoFile = await readFromOPFS(video.opfsKey);
+            const videoUrl = URL.createObjectURL(videoFile);
+            let thumbnailUrl: string | null = null;
+            if (video.opfsThumbnailKey) {
+              try {
+                const thumbFile = await readFromOPFS(video.opfsThumbnailKey);
+                thumbnailUrl = URL.createObjectURL(thumbFile);
+              } catch {}
+            }
+            registerUrls(video.uuid, { videoUrl, thumbnailUrl });
+
+            // Server not yet told to delete — do it now.
+            if (!video.serverFileDeleted && video.taskId) {
+              await fetch(`/api/download-video/${video.taskId}`, {
+                method: 'DELETE',
+              }).catch(() => {});
+              updateCompleted(video.uuid, { serverFileDeleted: true });
+            }
+          } catch {
+            // OPFS file evicted by browser — nothing to recover.
+          }
+        } else if (
+          !video.opfsStored &&
+          !video.serverFileDeleted &&
+          video.file &&
+          video.taskId
+        ) {
+          // Browser closed before OPFS write completed — try to recover from server.
+          try {
+            const videoRes = await fetch(`/api/media/${video.file}`);
+            if (!videoRes.ok) throw new Error('not found');
+            const videoBlob = await videoRes.blob();
+            await writeToOPFS(video.file, videoBlob);
+
+            let thumbKey: string | null = null;
+            if (video.thumbnail) {
+              try {
+                const thumbRes = await fetch(`/api/media/${video.thumbnail}`);
+                if (thumbRes.ok) {
+                  const thumbBlob = await thumbRes.blob();
+                  thumbKey = `thumb_${video.thumbnail}`;
+                  await writeToOPFS(thumbKey, thumbBlob);
+                }
+              } catch {}
+            }
+
+            await fetch(`/api/download-video/${video.taskId}`, {
+              method: 'DELETE',
+            }).catch(() => {});
+
+            const videoFile = await readFromOPFS(video.file);
+            const videoUrl = URL.createObjectURL(videoFile);
+            let thumbnailUrl: string | null = null;
+            if (thumbKey) {
+              try {
+                const thumbFile = await readFromOPFS(thumbKey);
+                thumbnailUrl = URL.createObjectURL(thumbFile);
+              } catch {}
+            }
+            registerUrls(video.uuid, { videoUrl, thumbnailUrl });
+
+            updateCompleted(video.uuid, {
+              opfsKey: video.file,
+              opfsThumbnailKey: thumbKey,
+              opfsStored: true,
+              serverFileDeleted: true,
+              downloadURL: `opfs://${video.file}`,
+            });
+          } catch {
+            // Server file already gone — leave as-is.
+          }
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeLoaded]); // run once after store hydrates
 }
 
 /* ── Component ──────────────────────────────────────── */
 
-export function DownloadPage() {
+function DownloadPageInner() {
   const {
     pinned,
     completed,
+    storeLoaded,
     addToPinned,
     updatePinned,
     completeVideo,
@@ -36,9 +147,14 @@ export function DownloadPage() {
     updateCompleted,
     removePinned,
     removeCompleted,
+    clearCompleted,
     moveCompletedToFirst,
     storageError,
   } = useVideoStore();
+
+  const { revokeUrls } = useOPFSUrls();
+
+  useOPFSRecovery({ completed, updateCompleted, storeLoaded });
 
   const handleVideoAdded = useCallback(
     (entry: VideoAddedEntry) => {
@@ -53,9 +169,24 @@ export function DownloadPage() {
         captionsEnabled: entry.captionsEnabled ?? false,
         captionUrl: entry.captionUrl ?? null,
         wsClientUuid: entry.wsClientUuid,
+        opfsEnabled: entry.opfsEnabled,
       });
     },
     [addToPinned],
+  );
+
+  const handleRemoveCompleted = useCallback(
+    async (uuid: string) => {
+      const video = completed.find((v) => v.uuid === uuid);
+      if (video?.opfsEnabled) {
+        if (video.opfsKey) await deleteFromOPFS(video.opfsKey).catch(() => {});
+        if (video.opfsThumbnailKey)
+          await deleteFromOPFS(video.opfsThumbnailKey).catch(() => {});
+        revokeUrls(uuid);
+      }
+      removeCompleted(uuid);
+    },
+    [completed, removeCompleted, revokeUrls],
   );
 
   return (
@@ -64,6 +195,7 @@ export function DownloadPage() {
         onVideoAdded={handleVideoAdded}
         completedVideos={completed}
         onMoveToFirst={moveCompletedToFirst}
+        onClearStorage={clearCompleted}
       />
       {storageError ? (
         <Typography
@@ -84,9 +216,17 @@ export function DownloadPage() {
         onRemovePinned={removePinned}
         onUpdateCompleted={updateCompleted}
         onReprocessCompleted={reprocessVideo}
-        onRemoveCompleted={removeCompleted}
+        onRemoveCompleted={handleRemoveCompleted}
       />
     </>
+  );
+}
+
+export function DownloadPage() {
+  return (
+    <OPFSUrlProvider>
+      <DownloadPageInner />
+    </OPFSUrlProvider>
   );
 }
 

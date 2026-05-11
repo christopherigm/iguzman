@@ -15,6 +15,7 @@
     "hintUnsupported": "Nicht unterstützte Plattform",
     "hintDetected": "{platform}-Link erkannt",
     "autoDownload": "Automatischer Download",
+    "saveToDevice": "Gerätespeicher",
     "justAudio": "Nur Audio",
     "enhance": "Verbessern",
     "fps": "FPS",
@@ -48,7 +49,14 @@
     "duplicateTitle": "Bereits heruntergeladen",
     "duplicateText": "Dieses Video wurde bereits heruntergeladen. Was möchtest du tun?",
     "duplicateDownloadVideo": "Video herunterladen",
-    "duplicateMoveToFirst": "An erste Stelle verschieben"
+    "duplicateMoveToFirst": "An erste Stelle verschieben",
+    "opfsConfirmTitle": "Im Gerätespeicher speichern",
+    "opfsConfirmText": "Videos werden im privaten Browserspeicher statt auf dem Video Downloader-Server gespeichert. Sie sind nur über diesen Browser und diese Website zugänglich — das Löschen der Browserdaten entfernt sie dauerhaft.",
+    "opfsStorageLabel": "Gerätespeicher",
+    "opfsStorageUsage": "{used} / {total}",
+    "clearStorageLabel": "Gerätespeicher leeren",
+    "clearStorageTitle": "Gerätespeicher leeren",
+    "clearStorageText": "Dadurch werden alle im Gerätespeicher gespeicherten Videos dauerhaft gelöscht und dein Download-Verlauf entfernt. Diese Aktion kann nicht rückgängig gemacht werden."
   },
   "Admin": {
     "title": "Admin-Dashboard",
@@ -242,6 +250,7 @@
     "addServerText": "UUID und Anzeigebezeichnung des Servers eingeben.",
     "installHint": "Installiere die Begleit-App auf einem PC oder Laptop (kein Smartphone). Nach der Installation wird die UUID angezeigt — kopiere sie hier. Halte den Computer eingeschaltet, damit die Videoverarbeitung dort ausgeführt werden kann.",
     "downloadLinux": "Linux (.deb)",
-    "downloadWindows": "Windows (.exe)"
+    "downloadWindows": "Windows (.exe)",
+    "savingToDevice": "Auf Gerät speichern…"
   }
 }

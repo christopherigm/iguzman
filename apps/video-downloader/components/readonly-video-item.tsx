@@ -19,6 +19,8 @@ import {
   VideoCardHeader,
   VideoFooterLink,
 } from './video-item-shared';
+import { useOPFSUrls } from './opfs-url-context';
+import { deleteFromOPFS } from '@/lib/opfs';
 import { BurnCaptionsModal } from './burn-captions-modal';
 import './video-item.css';
 
@@ -52,6 +54,9 @@ export function ReadOnlyVideoItem({
   onUpdate,
 }: ReadOnlyVideoItemProps) {
   const t = useTranslations('VideoGrid');
+  const { getUrls } = useOPFSUrls();
+  const opfsUrls = video.opfsEnabled ? getUrls(video.uuid) : null;
+
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [extraActionsOpen, setExtraActionsOpen] = useState(false);
   const [copying, setCopying] = useState(false);
@@ -92,19 +97,28 @@ export function ReadOnlyVideoItem({
   /* ── Re-download (trigger browser save) ─────────── */
   const handleRedownload = useCallback(() => {
     if (!video.downloadURL) return;
+    const url = opfsUrls?.videoUrl ?? video.downloadURL;
     triggerBrowserDownload(
-      video.downloadURL,
+      url,
       `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
     );
     if (video.justAudio) {
-      const thumbSrc = video.thumbnail
-        ? resolveMediaUrl(`/api/media/${video.thumbnail}`)
-        : null;
+      const thumbSrc =
+        opfsUrls?.thumbnailUrl ??
+        (video.thumbnail
+          ? resolveMediaUrl(`/api/media/${video.thumbnail}`)
+          : null);
       if (thumbSrc) {
         downloadThumbnail(thumbSrc, video.name);
       }
     }
-  }, [video.downloadURL, video.name, video.justAudio, video.thumbnail]);
+  }, [
+    video.downloadURL,
+    video.name,
+    video.justAudio,
+    video.thumbnail,
+    opfsUrls,
+  ]);
 
   /* ── Retry → move to pinned for reprocessing ─────── */
   const handleRetry = useCallback(() => {
@@ -171,6 +185,8 @@ export function ReadOnlyVideoItem({
         downloadURL={video.downloadURL}
         justAudio={video.justAudio}
         thumbnail={video.thumbnail}
+        opfsVideoUrl={opfsUrls?.videoUrl}
+        opfsThumbnailUrl={opfsUrls?.thumbnailUrl}
       />
 
       {/* ── Footer actions ────────────────────────── */}
@@ -242,11 +258,14 @@ export function ReadOnlyVideoItem({
           text={t('confirmDeleteText')}
           okCallback={() => {
             setConfirmRemove(false);
-            if (video.taskId) {
+            if (video.taskId && !video.serverFileDeleted) {
               fetch(`/api/download-video/${video.taskId}`, {
                 method: 'DELETE',
               }).catch(console.error);
             }
+            if (video.opfsKey) void deleteFromOPFS(video.opfsKey);
+            if (video.opfsThumbnailKey)
+              void deleteFromOPFS(video.opfsThumbnailKey);
             onRemove(video.uuid);
           }}
           cancelCallback={() => setConfirmRemove(false)}
