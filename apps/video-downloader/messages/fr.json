@@ -257,6 +257,7 @@
     "savingToDevice": "Enregistrement sur l'appareil…",
     "uploadingFromDevice": "Téléversement depuis l'appareil…",
     "errorOpfsUploadFailed": "Échec du téléversement de la vidéo vers le serveur.",
+    "errorNoServerAvailable": "Aucun serveur de traitement disponible. Ajoutez un serveur ou réessayez plus tard.",
     "fpsDeviceOnlyTitle": "Interpolation FPS non disponible",
     "fpsDeviceOnlyText": "L'interpolation FPS sur l'appareil n'est pas disponible pour les résolutions FHD et supérieures. Ajoutez un serveur pour traiter cette vidéo."
   },

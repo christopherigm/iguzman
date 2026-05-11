@@ -10,6 +10,7 @@ export async function DELETE(
 ) {
   const { uuid } = await params;
   if (!uuid || !/^[0-9a-f-]{36}$/i.test(uuid)) {
+    log.warn({ uuid }, 'Invalid UUID format in DELETE');
     return NextResponse.json({ error: 'Invalid uuid' }, { status: 400 });
   }
 

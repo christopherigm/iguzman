@@ -198,6 +198,38 @@ export function WsClientPanel({
 
   const dotClass = isOnline ? 'wcp-dot--online' : 'wcp-dot--offline';
 
+  const onlineClients = clients.filter((c) => c.connected);
+  const offlineClients = clients.filter((c) => !c.connected);
+
+  const renderOptions = () => (
+    <>
+      {onlineClients.map((c) => (
+        <option
+          key={c.uuid}
+          value={c.uuid}
+          style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+        >
+          {c.label}
+        </option>
+      ))}
+      <option
+        value={THIS_DEVICE_UUID}
+        style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+      >
+        {labels.thisDevice}
+      </option>
+      {offlineClients.map((c) => (
+        <option
+          key={c.uuid}
+          value={c.uuid}
+          style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+        >
+          {c.label}
+        </option>
+      ))}
+    </>
+  );
+
   const selectEl = compact ? (
     <Box className="wcp-sm-select-wrapper">
       <span className={`wcp-sm-dot ${dotClass}`} />
@@ -207,21 +239,7 @@ export function WsClientPanel({
         onChange={(e) => handleChange(e.target.value)}
         aria-label={labels.server ?? 'Server'}
       >
-        <option
-          value={THIS_DEVICE_UUID}
-          style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
-        >
-          {labels.thisDevice}
-        </option>
-        {clients.map((c) => (
-          <option
-            key={c.uuid}
-            value={c.uuid}
-            style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
-          >
-            {c.label}
-          </option>
-        ))}
+        {renderOptions()}
       </select>
       <span className="wcp-sm-select-chevron">
         <Icon
@@ -241,21 +259,7 @@ export function WsClientPanel({
         disabled={deletingServer}
         aria-label={labels.server ?? 'Server'}
       >
-        <option
-          value={THIS_DEVICE_UUID}
-          style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
-        >
-          {labels.thisDevice}
-        </option>
-        {clients.map((c) => (
-          <option
-            key={c.uuid}
-            value={c.uuid}
-            style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
-          >
-            {c.label}
-          </option>
-        ))}
+        {renderOptions()}
       </select>
       <span className="wcp-select-chevron">
         <Icon

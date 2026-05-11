@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stat } from 'node:fs';
-import { promisify } from 'node:util';
-import { join } from 'node:path';
-import logger from '@/lib/logger';
+import { createWriteStream, stat } from 'node:fs';
 import { unlink } from 'node:fs/promises';
+import { promisify } from 'node:util';
+import { join, extname } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { pipeline } from 'node:stream/promises';
+import { Readable } from 'node:stream';
+import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/media/[filename]' });
 
@@ -29,16 +32,15 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ filename: string }> },
 ) {
-  const { unlink } = await import('node:fs/promises');
-  const { randomUUID } = await import('node:crypto');
-  const { extname } = await import('node:path');
   const oldFileName = (await params).filename;
 
   if (!oldFileName) {
+    log.warn('PUT /api/media/[filename] – missing filename param');
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
   if (oldFileName.includes('..') || oldFileName.includes('/')) {
+    log.warn({ oldFileName }, 'PUT /api/media/[filename] – path traversal attempt');
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
@@ -48,9 +50,11 @@ export async function PUT(
   try {
     const info = await fsStat(oldFilePath);
     if (!info.isFile()) {
+      log.warn({ oldFileName }, 'PUT /api/media/[filename] – path exists but is not a file');
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
   } catch {
+    log.warn({ oldFileName }, 'PUT /api/media/[filename] – original file not found');
     return NextResponse.json(
       { error: 'Original file not found — nothing to replace' },
       { status: 404 },
@@ -64,15 +68,12 @@ export async function PUT(
     const newFilePath = join(MEDIA_DIR, newFileName);
 
     if (!request.body) {
+      log.warn({ oldFileName }, 'PUT /api/media/[filename] – empty request body');
       return NextResponse.json({ error: 'Empty body' }, { status: 400 });
     }
 
     /* Stream the request body directly to disk — avoids buffering the entire
        file in Node.js heap, which would OOM on large videos. */
-    const { createWriteStream } = await import('node:fs');
-    const { pipeline } = await import('node:stream/promises');
-    const { Readable } = await import('node:stream');
-
     const writeStream = createWriteStream(newFilePath);
     try {
       await pipeline(
@@ -97,11 +98,12 @@ export async function PUT(
         const { updateTaskByFile } = await import('@/lib/video-task-db');
         const patch = JSON.parse(taskUpdateHeader);
         await updateTaskByFile(oldFileName, { ...patch, file: newFileName });
-      } catch {
-        /* MongoDB update is best-effort */
+      } catch (dbErr) {
+        log.warn({ err: dbErr, oldFileName, newFileName }, 'PUT /api/media/[filename] – MongoDB sync failed (best-effort)');
       }
     }
 
+    log.info({ oldFileName, newFileName }, 'PUT /api/media/[filename] – file replaced');
     return NextResponse.json(
       { ok: true, file: newFileName, oldFile: oldFileName },
       { status: 200 },
@@ -128,6 +130,7 @@ export async function DELETE(
   const { filename } = await params;
 
   if (!filename || filename.includes('..') || filename.includes('/')) {
+    log.warn({ filename }, 'DELETE /api/media/[filename] – invalid or traversal filename');
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 

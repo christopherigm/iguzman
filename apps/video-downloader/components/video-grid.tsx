@@ -8,7 +8,8 @@ import { Grid } from '@repo/ui/core-elements/grid';
 import { Typography } from '@repo/ui/core-elements/typography';
 import type { Platform } from '@repo/helpers/checkers';
 import type { BurnCaptionsConfig } from '@/lib/types';
-import { PinnedVideoItem } from './pinned-video-item';
+import { PinnedVideoItemDownloading } from './pinned-video-item-downloading';
+import { PinnedVideoItemClient } from './pinned-video-item-client';
 import { PinnedVideoItemServer } from './pinned-video-item-server';
 import { ReadOnlyVideoItem, type ReprocessAction } from './readonly-video-item';
 import { VideoToolbar } from './video-toolbar';
@@ -139,15 +140,6 @@ export function VideoGrid({
             blackBarsRemoved: false,
           });
           break;
-        case 'retry':
-          onReprocessCompleted(uuid, {
-            status: 'pending' as VideoStatus,
-            error: null,
-            taskId: null,
-            file: null,
-            downloadURL: null,
-          });
-          break;
         case 'burnCaptions':
           onReprocessCompleted(uuid, {
             status: 'burning' as VideoStatus,
@@ -260,25 +252,41 @@ export function VideoGrid({
             </Typography>
           </Box>
           <Grid container spacing={2}>
-            {pinned.map((video) => (
-              <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-                {video.wsClientUuid && video.wsClientUuid !== '__local__' ? (
-                  <PinnedVideoItemServer
-                    video={video}
-                    onUpdate={onUpdatePinned}
-                    onComplete={onCompletePinned}
-                    onRemove={onRemovePinned}
-                  />
-                ) : (
-                  <PinnedVideoItem
-                    video={video}
-                    onUpdate={onUpdatePinned}
-                    onComplete={onCompletePinned}
-                    onRemove={onRemovePinned}
-                  />
-                )}
-              </Grid>
-            ))}
+            {pinned.map((video) => {
+              const isDownloading =
+                video.status === 'pending' ||
+                video.status === 'downloading' ||
+                video.status === 'queued';
+              const isServerMode =
+                !!video.wsClientUuid && video.wsClientUuid !== '__local__';
+
+              return (
+                <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                  {isDownloading ? (
+                    <PinnedVideoItemDownloading
+                      video={video}
+                      onUpdate={onUpdatePinned}
+                      onComplete={onCompletePinned}
+                      onRemove={onRemovePinned}
+                    />
+                  ) : isServerMode ? (
+                    <PinnedVideoItemServer
+                      video={video}
+                      onUpdate={onUpdatePinned}
+                      onComplete={onCompletePinned}
+                      onRemove={onRemovePinned}
+                    />
+                  ) : (
+                    <PinnedVideoItemClient
+                      video={video}
+                      onUpdate={onUpdatePinned}
+                      onComplete={onCompletePinned}
+                      onRemove={onRemovePinned}
+                    />
+                  )}
+                </Grid>
+              );
+            })}
           </Grid>
         </Box>
       ) : null}

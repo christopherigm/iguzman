@@ -565,13 +565,11 @@ export function DownloadForm({
   const handleSubmit = useCallback(() => {
     if (!validPlatformUrl) return;
 
-    const dupe = completedVideos?.find(
-      (v) => v.originalURL === url && isServerPath(v.downloadURL),
-    );
+    const dupe = completedVideos?.find((v) => v.originalURL === url);
     if (dupe) {
       setDuplicateEntry({
         uuid: dupe.uuid,
-        downloadURL: dupe.downloadURL as string,
+        downloadURL: dupe.downloadURL ?? '',
         name: dupe.name,
       });
       return;
@@ -968,12 +966,14 @@ export function DownloadForm({
           panelMaxWidth="440px"
         >
           <Box display="flex" flexDirection="column" gap={8}>
-            <Button
-              text={t('duplicateDownloadVideo')}
-              onClick={handleDuplicateDownload}
-              width="100%"
-              size="md"
-            />
+            {isServerPath(duplicateEntry.downloadURL) && (
+              <Button
+                text={t('duplicateDownloadVideo')}
+                onClick={handleDuplicateDownload}
+                width="100%"
+                size="md"
+              />
+            )}
             <Button
               text={t('duplicateMoveToFirst')}
               onClick={handleDuplicateMoveToFirst}

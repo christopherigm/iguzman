@@ -5,35 +5,27 @@ import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import { Button } from '@repo/ui/core-elements/button';
 import { useFFmpeg } from '@repo/ui/use-ffmpeg';
 import { useGroq } from '@repo/ui/use-groq';
 import type { LlmMessage } from '@repo/ui/use-groq';
-import type { DownloadVideoError } from '@repo/helpers/download-video';
 import type { VideoStatus } from '@/lib/types';
 import { TRANSLATE_LANGUAGES } from './burn-captions-modal';
-import { usePollTask, type TaskData } from './use-poll-task';
 import type { StoredVideo } from './use-video-store';
 import {
   STATUS_COLORS,
-  THIS_DEVICE_UUID,
   resolveMediaUrl,
   triggerBrowserDownload,
-  downloadThumbnail,
   uploadProcessedVideo,
+  VideoCardHeader,
   VideoDetailsPanel,
   VideoMediaPreview,
   VideoStatusHints,
-  VideoActions,
-  VideoCardHeader,
   VideoFooterLink,
-  isIOS,
 } from './video-item-shared';
 import { useOPFSUrls } from './opfs-url-context';
-import {
-  writeToOPFS,
-  readFromOPFS,
-  deleteFromOPFS,
-} from '@/lib/opfs';
+import { readFromOPFS } from '@/lib/opfs';
+import { saveProcessedToOPFS } from '@/lib/opfs-processing';
 import './video-item.css';
 
 /* ── Helpers ────────────────────────────────────────── */
@@ -65,16 +57,9 @@ function hexToSSA(hex: string, opacity: number): string {
   return `&H${alpha}${b}${g}${r}`.toUpperCase();
 }
 
-/* ── API types ──────────────────────────────────────── */
-
-interface TaskCreateResponse {
-  task: { _id: string; status: string };
-  error?: DownloadVideoError;
-}
-
 /* ── Props ──────────────────────────────────────────── */
 
-export interface PinnedVideoItemProps {
+export interface PinnedVideoItemClientProps {
   video: StoredVideo;
   onUpdate: (uuid: string, patch: Partial<StoredVideo>) => void;
   onComplete: (uuid: string) => void;
@@ -83,38 +68,33 @@ export interface PinnedVideoItemProps {
 
 /* ── Component ──────────────────────────────────────── */
 
-export function PinnedVideoItem({
+export function PinnedVideoItemClient({
   video,
   onUpdate,
   onComplete,
   onRemove,
-}: PinnedVideoItemProps) {
+}: PinnedVideoItemClientProps) {
   const t = useTranslations('VideoGrid');
+  const { getUrls, registerUrls } = useOPFSUrls();
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [copying, setCopying] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [confirmRemove, setConfirmRemove] = useState(false);
-  const [opfsMigrating, setOpfsMigrating] = useState(false);
-
-  const { registerUrls, getUrls } = useOPFSUrls();
   const [localProgress, setLocalProgress] = useState<{
     status: 'loading' | 'processing';
     progress: number;
   } | null>(null);
-  const downloadTriggered = useRef(false);
-  const resumeChecked = useRef(false);
+
+  const fpsResumeChecked = useRef(false);
   const convertResumeChecked = useRef(false);
   const blackBarsResumeChecked = useRef(false);
   const burnResumeChecked = useRef(false);
-  const pollResumeChecked = useRef(false);
 
-  /* Groq client for subtitle translation */
   const { generate } = useGroq({
     proxyBase: '/api/groq',
     model: 'llama-3.3-70b-versatile',
   });
 
-  /* Own FFmpeg WASM instance (dedicated Web Worker for this item) */
   const {
     status: ffmpegStatus,
     progress: ffmpegProgress,
@@ -128,39 +108,34 @@ export function PinnedVideoItem({
     burnSubtitles,
   } = useFFmpeg();
 
-  const { startPolling, stopPolling } = usePollTask();
-
-  /* Use local progress when actively processing, otherwise use hook status */
   const displayFFmpegStatus = localProgress?.status ?? ffmpegStatus;
   const displayFFmpegProgress = localProgress?.progress ?? ffmpegProgress;
 
   const isProcessing =
-    video.status === 'downloading' ||
     video.status === 'processing' ||
     video.status === 'converting' ||
     video.status === 'burning' ||
     video.status === 'translating';
-  const isBusy = isProcessing || video.status === 'queued';
+
   const displayName =
     video.name ??
     video.uploader ??
     (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
 
-  /* ── Try to complete: move to completed array if all processing is done ── */
-  const tryComplete = useCallback(
-    (uuid: string) => {
-      /* Read the latest pinned state to decide if we can complete.
-         We check the flags that matter — if any post-processing is pending,
-         don't complete yet, the resume effects will handle it. */
-      onComplete(uuid);
-    },
-    [onComplete],
-  );
+  /* ── Copy link ──────────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    try {
+      setCopying(true);
+      await navigator.clipboard.writeText(video.originalURL);
+      setTimeout(() => setCopying(false), 1200);
+    } catch {
+      setCopying(false);
+    }
+  }, [video.originalURL]);
 
-  /* ── Run FFmpeg processing (own instance, no shared queue) ── */
+  /* ── Run FFmpeg locally (WASM) ──────────────────────── */
   const runProcessing = useCallback(
     async (opts: {
-      sourceFile?: string;
       activeStatus: VideoStatus;
       process: (
         sourceUrl: string,
@@ -170,21 +145,17 @@ export function PinnedVideoItem({
       taskUpdate: Record<string, unknown>;
       errorKey: string;
       downloadPrefix?: string;
-      onError?: () => void;
-      /** If true, call tryComplete after finishing. */
       completeAfter?: boolean;
     }) => {
-      const file = opts.sourceFile ?? video.file;
+      const file = video.file;
       if (!file || video.justAudio) return;
 
-      const isLocalDevice =
-        !video.wsClientUuid || video.wsClientUuid === THIS_DEVICE_UUID;
       let tempBlobUrl: string | null = null;
 
       try {
         onUpdate(video.uuid, { status: opts.activeStatus, error: null });
 
-        // Resolve source: read from OPFS if the video is device-stored.
+        // Resolve source: read from OPFS if device-stored, else use server URL
         let sourceUrl: string;
         if (video.opfsEnabled && video.opfsStored && video.opfsKey) {
           const cached = getUrls(video.uuid);
@@ -212,24 +183,25 @@ export function PinnedVideoItem({
 
         onUpdate(video.uuid, { status: 'done', ...opts.donePatch });
 
-        if (video.opfsEnabled && isLocalDevice) {
-          // Write result directly to OPFS — skip server upload.
-          const oldOpfsKey = video.opfsKey;
+        if (video.opfsEnabled) {
+          // Save result directly to OPFS — skip server upload
           const ext = file.split('.').pop() ?? 'mp4';
-          const newKey = `${crypto.randomUUID()}.${ext}`;
-          await writeToOPFS(newKey, blob);
-
-          const newFile = await readFromOPFS(newKey);
-          const newVideoUrl = URL.createObjectURL(newFile);
-          const existingUrls = getUrls(video.uuid);
-          registerUrls(video.uuid, {
-            videoUrl: newVideoUrl,
-            thumbnailUrl: existingUrls.thumbnailUrl,
+          const newKey = await saveProcessedToOPFS({
+            blob,
+            fileExt: ext,
+            oldOpfsKey: video.opfsKey,
+            uuid: video.uuid,
+            getUrls,
+            registerUrls,
           });
 
-          if (oldOpfsKey && oldOpfsKey !== newKey) {
-            void deleteFromOPFS(oldOpfsKey);
-          }
+          onUpdate(video.uuid, {
+            opfsKey: newKey,
+            file: newKey,
+            downloadURL: `opfs://${newKey}`,
+            opfsStored: true,
+            serverFileDeleted: true,
+          });
 
           if (video.autoDownload) {
             const prefix = opts.downloadPrefix ?? 'video';
@@ -238,14 +210,8 @@ export function PinnedVideoItem({
               `${video.name ?? prefix}-${Date.now()}-${newKey}`,
             );
           }
-
-          onUpdate(video.uuid, {
-            opfsKey: newKey,
-            file: newKey,
-            downloadURL: `opfs://${newKey}`,
-          });
         } else {
-          // Upload result to server (existing flow).
+          // Upload result back to server
           const uploadPromise = uploadProcessedVideo(
             file,
             blob,
@@ -255,8 +221,10 @@ export function PinnedVideoItem({
 
           if (video.autoDownload) {
             const prefix = opts.downloadPrefix ?? 'video';
-            const downloadName = `${video.name ?? prefix}-${Date.now()}-${file}`;
-            triggerBrowserDownload(objectUrl, downloadName);
+            triggerBrowserDownload(
+              objectUrl,
+              `${video.name ?? prefix}-${Date.now()}-${file}`,
+            );
           }
 
           const newFile = await uploadPromise;
@@ -268,18 +236,12 @@ export function PinnedVideoItem({
           }
         }
 
-        if (opts.completeAfter) {
-          tryComplete(video.uuid);
-        }
+        if (opts.completeAfter) onComplete(video.uuid);
       } catch (err) {
         if (tempBlobUrl) URL.revokeObjectURL(tempBlobUrl);
         console.error(`${opts.errorKey} failed:`, err);
         setLocalProgress(null);
-        onUpdate(video.uuid, {
-          status: 'error',
-          error: t(opts.errorKey),
-        });
-        opts.onError?.();
+        onUpdate(video.uuid, { status: 'error', error: t(opts.errorKey) });
       }
     },
     [
@@ -291,16 +253,15 @@ export function PinnedVideoItem({
       video.opfsEnabled,
       video.opfsStored,
       video.opfsKey,
-      video.wsClientUuid,
       onUpdate,
+      onComplete,
       t,
-      tryComplete,
       getUrls,
       registerUrls,
     ],
   );
 
-  /* ── FPS interpolation handler ──────────────────────── */
+  /* ── FPS interpolation ──────────────────────────────── */
   const handleInterpolateFps = useCallback(
     (completeAfter = true) =>
       runProcessing({
@@ -315,7 +276,7 @@ export function PinnedVideoItem({
     [runProcessing, interpolateFps, video.fps],
   );
 
-  /* ── H.265 → H.264 conversion handler ──────────────── */
+  /* ── H.265 → H.264 conversion ───────────────────────── */
   const handleConvertH264 = useCallback(
     () =>
       runProcessing({
@@ -330,7 +291,7 @@ export function PinnedVideoItem({
     [runProcessing, convertToH264],
   );
 
-  /* ── Remove black bars handler ───────────────────── */
+  /* ── Remove black bars ──────────────────────────────── */
   const handleRemoveBlackBars = useCallback(
     () =>
       runProcessing({
@@ -345,12 +306,11 @@ export function PinnedVideoItem({
     [runProcessing, removeBlackBars],
   );
 
-  /* ── Burn captions handler ──────────────────────────── */
+  /* ── Burn captions ──────────────────────────────────── */
   const handleBurnCaptions = useCallback(async () => {
     const config = video.burnCaptionsConfig;
     if (!config || !video.captionsFile || video.justAudio) return;
 
-    /* 1. Fetch the SRT and optionally translate it via Groq */
     let srtContent: string;
     try {
       const srtRes = await fetch(resolveMediaUrl(video.captionsFile));
@@ -384,7 +344,6 @@ export function PinnedVideoItem({
 
     srtContent = srtContent.toUpperCase();
 
-    /* 2. Burn the (possibly translated) SRT into the video */
     runProcessing({
       activeStatus: 'burning' as VideoStatus,
       process: async (sourceUrl, onProgress) => {
@@ -451,256 +410,10 @@ export function PinnedVideoItem({
     t,
   ]);
 
-  /* ── Handle completed task from polling ────────────── */
-  const handleTaskDone = useCallback(
-    (task: TaskData) => {
-      const file = task.file;
-      const name = task.name;
-      const downloadURL = file ? `/api/media/${file}` : null;
-
-      onUpdate(video.uuid, {
-        status: 'done',
-        file: file ?? null,
-        name: name ?? null,
-        downloadURL,
-        thumbnail: task.thumbnail ?? null,
-        duration: task.duration ?? null,
-        uploader: task.uploader ?? null,
-        isH265: task.isH265 ?? false,
-        sourceFps: task.sourceFps ?? null,
-        width: task.width ?? null,
-        height: task.height ?? null,
-        captionsFile: task.captionsFile
-          ? `/api/media/${task.captionsFile}`
-          : null,
-        captionUrl: null,
-      });
-
-      if (video.opfsEnabled && file) {
-        // Migrate to OPFS before moving the card to completed.
-        setOpfsMigrating(true);
-        void (async () => {
-          try {
-            const videoRes = await fetch(resolveMediaUrl(`/api/media/${file}`));
-            if (!videoRes.ok) throw new Error('video fetch failed');
-            const videoBlob = await videoRes.blob();
-            await writeToOPFS(file, videoBlob);
-
-            let thumbKey: string | null = null;
-            if (task.thumbnail) {
-              try {
-                const thumbRes = await fetch(resolveMediaUrl(`/api/media/${task.thumbnail}`));
-                if (thumbRes.ok) {
-                  const thumbBlob = await thumbRes.blob();
-                  thumbKey = `thumb_${task.thumbnail}`;
-                  await writeToOPFS(thumbKey, thumbBlob);
-                }
-              } catch {}
-            }
-
-            if (task._id) {
-              await fetch(`/api/download-video/${task._id}`, {
-                method: 'DELETE',
-              }).catch(() => {});
-            }
-
-            const videoFile = await readFromOPFS(file);
-            const videoUrl = URL.createObjectURL(videoFile);
-            let thumbnailUrl: string | null = null;
-            if (thumbKey) {
-              try {
-                const thumbFile = await readFromOPFS(thumbKey);
-                thumbnailUrl = URL.createObjectURL(thumbFile);
-              } catch {}
-            }
-            registerUrls(video.uuid, { videoUrl, thumbnailUrl });
-
-            onUpdate(video.uuid, {
-              opfsKey: file,
-              opfsThumbnailKey: thumbKey,
-              opfsStored: true,
-              serverFileDeleted: true,
-              downloadURL: `opfs://${file}`,
-            });
-
-            if (video.autoDownload) {
-              triggerBrowserDownload(
-                videoUrl,
-                `${name ?? 'video'}-${Date.now()}-${file}`,
-              );
-            }
-          } catch (err) {
-            console.error('OPFS migration failed:', err);
-            // Server URLs remain as fallback.
-          } finally {
-            setOpfsMigrating(false);
-            tryComplete(video.uuid);
-          }
-        })();
-        return;
-      }
-
-      /* Complete — auto-download if configured. */
-      if (video.autoDownload && downloadURL && file) {
-        triggerBrowserDownload(
-          downloadURL,
-          `${name ?? 'audio'}-${Date.now()}-${file}`,
-        );
-        if (video.justAudio) {
-          const thumbSrc = task.thumbnail
-            ? resolveMediaUrl(`/api/media/${task.thumbnail}`)
-            : null;
-          if (thumbSrc) {
-            downloadThumbnail(thumbSrc, name);
-          }
-        }
-      }
-      tryComplete(video.uuid);
-    },
-    [
-      onUpdate,
-      video.uuid,
-      video.autoDownload,
-      video.justAudio,
-      video.opfsEnabled,
-      tryComplete,
-      registerUrls,
-    ],
-  );
-
-  /* ── Start polling for a given task ID ───────────── */
-  const pollForTask = useCallback(
-    (taskId: string) => {
-      startPolling({
-        taskId,
-        onUpdate: (task) => {
-          if (task.status === 'done') {
-            handleTaskDone(task);
-          } else if (task.status === 'error') {
-            onUpdate(video.uuid, {
-              status: 'error',
-              error: task.error?.message ?? 'Download failed',
-            });
-          }
-        },
-      });
-    },
-    [startPolling, handleTaskDone, onUpdate, video.uuid],
-  );
-
-  /* ── Download handler ───────────────────────────── */
-  const handleDownload = useCallback(async () => {
-    onUpdate(video.uuid, { error: null });
-
-    try {
-      const res = await fetch('/api/download-video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: video.originalURL,
-          justAudio: video.justAudio,
-          checkCodec: video.platform === 'tiktok',
-          iosDevice: isIOS(),
-          ...(video.maxHeight != null && { maxHeight: video.maxHeight }),
-          ...(video.captionsEnabled && { captionsEnabled: true }),
-          ...(video.captionUrl && { captionUrl: video.captionUrl }),
-        }),
-      });
-
-      const data: TaskCreateResponse = await res.json();
-
-      if (!res.ok || data.error) {
-        onUpdate(video.uuid, {
-          status: 'error',
-          error: data.error?.message ?? 'Failed to start download',
-        });
-        return;
-      }
-
-      const taskId = data.task._id;
-      onUpdate(video.uuid, { status: 'downloading', taskId, error: null });
-      pollForTask(taskId);
-    } catch {
-      onUpdate(video.uuid, {
-        status: 'error',
-        error: t('errorGeneric'),
-      });
-    }
-  }, [
-    onUpdate,
-    video.uuid,
-    video.originalURL,
-    video.justAudio,
-    video.platform,
-    video.maxHeight,
-    video.captionsEnabled,
-    video.captionUrl,
-    pollForTask,
-    t,
-  ]);
-
-  /* ── Copy link ──────────────────────────────────── */
-  const handleCopy = useCallback(async () => {
-    try {
-      setCopying(true);
-      await navigator.clipboard.writeText(video.originalURL);
-      setTimeout(() => setCopying(false), 1200);
-    } catch {
-      setCopying(false);
-    }
-  }, [video.originalURL]);
-
-  /* ── Re-download (trigger browser save) ─────────── */
-  const handleRedownload = useCallback(() => {
-    if (!video.downloadURL) return;
-    const opfsUrls = video.opfsEnabled ? getUrls(video.uuid) : null;
-    const url = opfsUrls?.videoUrl ?? video.downloadURL;
-    triggerBrowserDownload(
-      url,
-      `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
-    );
-    if (video.justAudio) {
-      const thumbSrc =
-        opfsUrls?.thumbnailUrl ??
-        (video.thumbnail
-          ? resolveMediaUrl(`/api/media/${video.thumbnail}`)
-          : null);
-      if (thumbSrc) {
-        downloadThumbnail(thumbSrc, video.name);
-      }
-    }
-  }, [
-    video.downloadURL,
-    video.name,
-    video.justAudio,
-    video.thumbnail,
-    video.opfsEnabled,
-    video.uuid,
-    getUrls,
-  ]);
-
-  /* ── Auto-trigger download for newly added (pending) items ── */
+  /* ── Resume interrupted FPS interpolation ───────────── */
   useEffect(() => {
-    if (video.status === 'pending' && !downloadTriggered.current) {
-      downloadTriggered.current = true;
-      queueMicrotask(() => handleDownload());
-    }
-  }, [video.status, handleDownload]);
-
-  /* ── Resume polling after page refresh ─────────────── */
-  useEffect(() => {
-    if (pollResumeChecked.current) return;
-    pollResumeChecked.current = true;
-
-    if (video.status === 'downloading' && video.taskId) {
-      pollForTask(video.taskId);
-    }
-  }, [video.status, video.taskId, pollForTask]);
-
-  /* ── Resume interrupted FPS interpolation on mount ── */
-  useEffect(() => {
-    if (resumeChecked.current) return;
-    resumeChecked.current = true;
+    if (fpsResumeChecked.current) return;
+    fpsResumeChecked.current = true;
 
     const needsResume =
       video.file &&
@@ -709,9 +422,7 @@ export function PinnedVideoItem({
       !video.fpsApplied &&
       (video.status === 'done' || video.status === 'processing');
 
-    if (needsResume) {
-      queueMicrotask(() => handleInterpolateFps(true));
-    }
+    if (needsResume) queueMicrotask(() => handleInterpolateFps(true));
   }, [
     video.file,
     video.fps,
@@ -721,7 +432,7 @@ export function PinnedVideoItem({
     handleInterpolateFps,
   ]);
 
-  /* ── Resume interrupted H.264 conversion on mount ── */
+  /* ── Resume interrupted H.264 conversion ─────────────── */
   useEffect(() => {
     if (convertResumeChecked.current) return;
     convertResumeChecked.current = true;
@@ -733,9 +444,7 @@ export function PinnedVideoItem({
       !video.h264Converted &&
       video.status === 'converting';
 
-    if (needsResume) {
-      queueMicrotask(() => handleConvertH264());
-    }
+    if (needsResume) queueMicrotask(() => handleConvertH264());
   }, [
     video.file,
     video.isH265,
@@ -745,7 +454,7 @@ export function PinnedVideoItem({
     handleConvertH264,
   ]);
 
-  /* ── Resume interrupted black-bar removal on mount ── */
+  /* ── Resume interrupted black-bar removal ─────────────── */
   useEffect(() => {
     if (blackBarsResumeChecked.current) return;
     blackBarsResumeChecked.current = true;
@@ -755,12 +464,9 @@ export function PinnedVideoItem({
       !video.justAudio &&
       !video.blackBarsRemoved &&
       video.status === 'processing' &&
-      // Not waiting for FPS interpolation, which also uses 'processing'
       (video.fps === 'original' || !!video.fpsApplied);
 
-    if (needsResume) {
-      queueMicrotask(() => handleRemoveBlackBars());
-    }
+    if (needsResume) queueMicrotask(() => handleRemoveBlackBars());
   }, [
     video.file,
     video.justAudio,
@@ -771,7 +477,7 @@ export function PinnedVideoItem({
     handleRemoveBlackBars,
   ]);
 
-  /* ── Resume interrupted burn-captions on mount ── */
+  /* ── Resume interrupted burn-captions ────────────────── */
   useEffect(() => {
     if (burnResumeChecked.current) return;
     burnResumeChecked.current = true;
@@ -783,9 +489,7 @@ export function PinnedVideoItem({
       video.burnCaptionsConfig !== null &&
       video.status === 'burning';
 
-    if (needsResume) {
-      queueMicrotask(() => handleBurnCaptions());
-    }
+    if (needsResume) queueMicrotask(() => handleBurnCaptions());
   }, [
     video.file,
     video.justAudio,
@@ -795,31 +499,19 @@ export function PinnedVideoItem({
     handleBurnCaptions,
   ]);
 
-  /* ── Stop polling when this card unmounts ── */
-  useEffect(() => {
-    const taskId = video.taskId;
-    return () => {
-      if (taskId) stopPolling(taskId);
-    };
-  }, [video.taskId, stopPolling]);
-
-  /* ── Warn before closing during active processing ── */
+  /* ── Warn before closing during active processing ────── */
   useEffect(() => {
     if (!isProcessing) return;
-
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
-
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [isProcessing]);
 
-  /* ── Auto-move errored items to completed array ──── */
+  /* ── Auto-move errored items to completed ─────────────── */
   useEffect(() => {
-    if (video.status === 'error') {
-      onComplete(video.uuid);
-    }
+    if (video.status === 'error') onComplete(video.uuid);
   }, [video.status, video.uuid, onComplete]);
 
   return (
@@ -830,13 +522,13 @@ export function PinnedVideoItem({
       flexDirection="column"
       styles={{ overflow: 'hidden' }}
     >
-      {/* ── Status bar ────────────────────────────── */}
+      {/* ── Status bar ──────────────────────────────── */}
       <Box
         className="vi-status-bar"
         backgroundColor={STATUS_COLORS[video.status]}
       />
 
-      {/* ── Header row ────────────────────────────── */}
+      {/* ── Header row ──────────────────────────────── */}
       <VideoCardHeader
         video={video}
         displayName={displayName}
@@ -845,7 +537,7 @@ export function PinnedVideoItem({
         t={t}
       />
 
-      {/* ── Details panel (collapsible) ───────────── */}
+      {/* ── Details panel (collapsible) ───────────────── */}
       {detailsOpen ? (
         <VideoDetailsPanel
           video={video}
@@ -860,66 +552,71 @@ export function PinnedVideoItem({
         />
       ) : null}
 
-      {/* ── Media preview ─────────────────────────── */}
+      {/* ── Media preview ───────────────────────────── */}
       <VideoMediaPreview
         downloadURL={video.downloadURL}
         justAudio={video.justAudio}
         thumbnail={video.thumbnail}
-        compact={isBusy}
+        compact
         opfsVideoUrl={video.opfsEnabled ? getUrls(video.uuid).videoUrl : null}
         opfsThumbnailUrl={
           video.opfsEnabled ? getUrls(video.uuid).thumbnailUrl : null
         }
       />
 
-      {/* ── Loading indicator ─────────────────────── */}
-      {isProcessing || displayFFmpegStatus !== 'idle' || opfsMigrating ? (
+      {/* ── Progress bar ────────────────────────────── */}
+      {isProcessing || displayFFmpegStatus !== 'idle' ? (
         <ProgressBar
           value={displayFFmpegProgress ? displayFFmpegProgress : undefined}
           margin="0"
         />
       ) : null}
 
-      {/* ── Status hints ──────────────────────────── */}
+      {/* ── Status hints ────────────────────────────── */}
       <VideoStatusHints
         ffmpegStatus={displayFFmpegStatus}
         ffmpegProgress={displayFFmpegProgress}
         videoStatus={video.status}
         uploading={uploading}
-        opfsMigrating={opfsMigrating}
         t={t}
       />
-      {/* ── Footer actions ────────────────────────── */}
+
+      {/* ── Footer ──────────────────────────────────── */}
       <Box className="vi-footer">
         <VideoFooterLink video={video} />
-
-        <VideoActions
-          video={video}
-          isBusy={isBusy}
-          copying={copying}
-          onCopy={handleCopy}
-          onRetry={handleDownload}
-          onRedownload={handleRedownload}
-          onDelete={() => setConfirmRemove(true)}
-          t={t}
-          extraActionsOpen={false}
-          onToggleExtra={() => null}
-        />
+        <Box className="vi-actions" display="flex" justifyContent="space-evenly">
+          <Button
+            unstyled
+            className="vi-icon-btn vi-icon-btn--danger"
+            onClick={() => setConfirmRemove(true)}
+            aria-label={t('delete')}
+            title={t('delete')}
+            icon="/icons/delete-video.svg"
+            iconSize="15px"
+            iconColor="#ef4444"
+          />
+          <Button
+            unstyled
+            className="vi-icon-btn"
+            onClick={handleCopy}
+            aria-label={t('copyLink')}
+            title={copying ? t('copied') : t('copyLink')}
+            icon="/icons/copy.svg"
+            iconSize="15px"
+            iconColor={
+              copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+            }
+          />
+        </Box>
       </Box>
 
-      {/* ── Confirmation modals ───────────────────── */}
+      {/* ── Delete confirmation ──────────────────────── */}
       {confirmRemove ? (
         <ConfirmationModal
           title={t('confirmDeleteTitle')}
           text={t('confirmDeleteText')}
           okCallback={() => {
             setConfirmRemove(false);
-            if (video.taskId) {
-              stopPolling(video.taskId);
-              fetch(`/api/download-video/${video.taskId}`, {
-                method: 'DELETE',
-              }).catch(console.error);
-            }
             onRemove(video.uuid);
           }}
           cancelCallback={() => setConfirmRemove(false)}
@@ -929,4 +626,4 @@ export function PinnedVideoItem({
   );
 }
 
-export default PinnedVideoItem;
+export default PinnedVideoItemClient;

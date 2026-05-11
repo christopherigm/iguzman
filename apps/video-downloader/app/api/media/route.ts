@@ -26,10 +26,12 @@ export async function POST(request: NextRequest) {
   const ext = request.nextUrl.searchParams.get('ext') ?? 'mp4';
 
   if (!/^[a-z0-9]{1,10}$/i.test(ext)) {
+    log.warn({ ext }, 'POST /api/media – invalid file extension');
     return NextResponse.json({ error: 'Invalid extension' }, { status: 400 });
   }
 
   if (!request.body) {
+    log.warn({ ext }, 'POST /api/media – empty request body');
     return NextResponse.json({ error: 'Empty body' }, { status: 400 });
   }
 

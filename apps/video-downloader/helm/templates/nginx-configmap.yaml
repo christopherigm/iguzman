@@ -18,8 +18,11 @@ data:
 
         # ── Serve media files at the same path the Next.js API used ──
         location /api/media/ {
-            # Write operations (PUT) → forward to the Next.js app server
+            # Write operations (PUT/DELETE) → forward to the Next.js app server
             # so client-side processed videos are stored on disk.
+            # proxy_request_buffering off is set at location level (not allowed in if blocks);
+            # it only takes effect when proxy_pass is active, so static file serving is unaffected.
+            proxy_request_buffering off;
             if ($request_method !~ ^(GET|HEAD)$) {
                 proxy_pass http://127.0.0.1:{{ $.Values.service.targetPort }};
             }

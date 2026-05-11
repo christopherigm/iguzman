@@ -257,6 +257,7 @@
     "savingToDevice": "Auf Gerät speichern…",
     "uploadingFromDevice": "Vom Gerät hochladen…",
     "errorOpfsUploadFailed": "Video konnte nicht auf den Server hochgeladen werden.",
+    "errorNoServerAvailable": "Kein Verarbeitungsserver verfügbar. Bitte Server hinzufügen oder später erneut versuchen.",
     "fpsDeviceOnlyTitle": "FPS-Interpolation nicht verfügbar",
     "fpsDeviceOnlyText": "Die geräteseitige FPS-Interpolation ist für FHD und höhere Auflösungen nicht verfügbar. Füge einen Server hinzu, um dieses Video zu verarbeiten."
   },

@@ -1,8 +1,12 @@
 import { NextRequest } from 'next/server';
+import logger from '@/lib/logger';
+
+const log = logger.child({ module: 'api/groq/chat' });
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
+    log.error('GROQ_API_KEY env var is not configured');
     return new Response(JSON.stringify({ error: 'GROQ_API_KEY not configured' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -22,12 +26,14 @@ export async function POST(req: NextRequest) {
 
   if (!upstream.ok) {
     const text = await upstream.text();
+    log.warn({ status: upstream.status, detail: text }, 'Groq upstream returned error');
     return new Response(text, {
       status: upstream.status,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
+  log.info({ status: upstream.status }, 'Groq request proxied successfully');
   return new Response(upstream.body, {
     status: upstream.status,
     headers: {

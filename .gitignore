@@ -60,3 +60,8 @@ skills/**
 
 # Helm
 packages/charts/*/charts/*.tgz
+
+# PWA generated files
+apps/*/public/fallback-*.js
+apps/*/public/sw.js
+apps/*/public/workbox-*.js

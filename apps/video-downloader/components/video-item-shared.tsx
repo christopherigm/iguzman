@@ -520,7 +520,6 @@ export function VideoActions({
   copying,
   extraActionsOpen,
   onCopy,
-  onRetry,
   onRedownload,
   onToggleExtra,
   onDelete,
@@ -531,7 +530,6 @@ export function VideoActions({
   copying: boolean;
   extraActionsOpen: boolean;
   onCopy: () => void;
-  onRetry: () => void;
   onRedownload: () => void;
   onToggleExtra: () => void;
   onDelete: () => void;
@@ -551,18 +549,6 @@ export function VideoActions({
         iconSize="15px"
         iconColor="#ef4444"
         disabled={!isOnline}
-      />
-
-      <Button
-        unstyled
-        className="vi-icon-btn"
-        onClick={onRetry}
-        disabled={isBusy || !isOnline}
-        aria-label={t('retry')}
-        title={t('retry')}
-        icon="/icons/retry.svg"
-        iconSize="15px"
-        iconColor="var(--foreground, #171717)"
       />
 
       <Button

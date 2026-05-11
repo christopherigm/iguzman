@@ -26,12 +26,7 @@ import './video-item.css';
 
 /* ── Props ──────────────────────────────────────────── */
 
-export type ReprocessAction =
-  | 'fps'
-  | 'h264'
-  | 'bars'
-  | 'retry'
-  | 'burnCaptions';
+export type ReprocessAction = 'fps' | 'h264' | 'bars' | 'burnCaptions';
 
 export interface ReadOnlyVideoItemProps {
   video: StoredVideo;
@@ -119,11 +114,6 @@ export function ReadOnlyVideoItem({
     opfsUrls,
   ]);
 
-  /* ── Retry → move to pinned for reprocessing ─────── */
-  const handleRetry = useCallback(() => {
-    onReprocess(video.uuid, 'retry');
-  }, [onReprocess, video.uuid]);
-
   /* ── Download captions file ──────────────────────── */
   const handleDownloadCaptions = useCallback(() => {
     if (!video.captionsFile) return;
@@ -198,7 +188,6 @@ export function ReadOnlyVideoItem({
           copying={copying}
           extraActionsOpen={extraActionsOpen}
           onCopy={handleCopy}
-          onRetry={handleRetry}
           onRedownload={handleRedownload}
           onToggleExtra={() => setExtraActionsOpen((p) => !p)}
           onDelete={() => setConfirmRemove(true)}

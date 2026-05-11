@@ -3,6 +3,9 @@ import {
   fetchVideoMetadata,
   listSubtitlesViaYtDlp,
 } from '@repo/helpers/download-video';
+import logger from '@/lib/logger';
+
+const log = logger.child({ module: 'api/video-metadata' });
 
 export interface CaptionOption {
   lang: string;
@@ -17,6 +20,7 @@ export async function GET(request: Request) {
   const exhaustive = searchParams.get('exhaustive') === 'true';
 
   if (!url) {
+    log.warn('GET /api/video-metadata – missing url parameter');
     return NextResponse.json(
       { error: 'Missing url parameter' },
       { status: 400 },
@@ -67,11 +71,9 @@ export async function GET(request: Request) {
     let captions = [...captionMap.values()];
 
     if (captions.length === 0 && exhaustive) {
-      console.log(
-        `No captions found for ${url} via standard metadata, trying yt-dlp fallback...`,
-      );
+      log.info({ url }, 'No captions in standard metadata, trying yt-dlp fallback');
       const fallback = await listSubtitlesViaYtDlp(url);
-      console.log(`yt-dlp found ${fallback.length} captions for ${url}`);
+      log.info({ url, count: fallback.length }, 'yt-dlp caption fallback complete');
       captions = fallback.map((s) => ({
         lang: s.lang,
         label: s.label,
@@ -80,8 +82,10 @@ export async function GET(request: Request) {
       }));
     }
 
+    log.info({ url, heightCount: heights.length, captionCount: captions.length }, 'Video metadata fetched');
     return NextResponse.json({ heights, captions });
   } catch (err) {
+    log.error({ err, url }, 'Failed to fetch video metadata');
     return NextResponse.json(
       {
         error: err instanceof Error ? err.message : 'Failed to fetch metadata',

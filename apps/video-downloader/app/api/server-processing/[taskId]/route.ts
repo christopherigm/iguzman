@@ -39,6 +39,7 @@ export async function POST(
   const { taskId } = await params;
 
   if (!taskId || !/^[0-9a-f]{24}$/i.test(taskId)) {
+    log.warn({ taskId }, 'Invalid taskId format in broker callback');
     return NextResponse.json({ error: 'Invalid taskId' }, { status: 400 });
   }
 
@@ -46,11 +47,13 @@ export async function POST(
   try {
     body = (await request.json()) as UpdateBody;
   } catch {
+    log.warn({ taskId }, 'Failed to parse broker callback body as JSON');
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
   const task = await getTask(taskId);
   if (!task) {
+    log.warn({ taskId }, 'Task not found in broker callback');
     return NextResponse.json({ error: 'Task not found' }, { status: 404 });
   }
 
@@ -58,6 +61,7 @@ export async function POST(
 
   if (body.status) {
     if (!ALLOWED_STATUSES.has(body.status)) {
+      log.warn({ taskId, status: body.status }, 'Invalid status value in broker callback');
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
     patch.status = body.status;
@@ -66,6 +70,7 @@ export async function POST(
   if (typeof body.progress === 'number') {
     const progress = Math.round(body.progress);
     if (progress < 0 || progress > 100) {
+      log.warn({ taskId, progress }, 'Progress out of range in broker callback');
       return NextResponse.json(
         { error: 'progress must be 0-100' },
         { status: 400 },
@@ -104,11 +109,13 @@ export async function POST(
   }
 
   if (!Object.keys(patch).length) {
+    log.info({ taskId }, 'Broker callback had no updatable fields — skipped');
     return NextResponse.json({ ok: true, skipped: true });
   }
 
   try {
     await updateTask(taskId, patch);
+    log.info({ taskId, patch }, 'Task updated from broker callback');
     return NextResponse.json({ ok: true });
   } catch (err) {
     log.error(

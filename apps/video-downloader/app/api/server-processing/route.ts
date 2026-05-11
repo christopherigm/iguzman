@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getClient } from '@/lib/ws-client-db';
-import { getTask, updateTask } from '@/lib/video-task-db';
+import { createTask, getTask, updateTask } from '@/lib/video-task-db';
 import type { TaskStatus } from '@/lib/types';
 import logger from '@/lib/logger';
 
@@ -33,13 +33,19 @@ export async function POST(request: NextRequest) {
 
   try {
     body = (await request.json()) as typeof body;
-  } catch {
+  } catch (err) {
+    log.warn({ err }, 'Failed to parse request body as JSON');
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { clientUuid, op, taskId, params } = body;
+  const { clientUuid, op, params } = body;
+  let { taskId } = body;
 
   if (!clientUuid || !op || !taskId || !params) {
+    log.warn(
+      { clientUuid, op, taskId, hasParams: !!params },
+      'Missing required fields in request body',
+    );
     return NextResponse.json(
       { error: 'Missing clientUuid, op, taskId, or params' },
       { status: 400 },
@@ -47,10 +53,12 @@ export async function POST(request: NextRequest) {
   }
 
   if (!/^[0-9a-f]{24}$/i.test(taskId)) {
+    log.warn({ taskId, clientUuid, op }, 'Invalid taskId format');
     return NextResponse.json({ error: 'Invalid taskId' }, { status: 400 });
   }
 
   if (!VALID_OPS.includes(op as ProcessingOp)) {
+    log.warn({ op, clientUuid, taskId }, 'Unknown processing op requested');
     return NextResponse.json(
       { error: `Invalid op. Valid: ${VALID_OPS.join(', ')}` },
       { status: 400 },
@@ -59,21 +67,39 @@ export async function POST(request: NextRequest) {
 
   const client = await getClient(clientUuid);
   if (!client) {
+    log.warn({ clientUuid, taskId, op }, 'Client not found in registry');
     return NextResponse.json(
       { error: 'Client not registered' },
       { status: 404 },
     );
   }
 
-  const task = await getTask(taskId);
+  let task = await getTask(taskId);
+  const inputFileParam =
+    typeof params.inputFile === 'string' ? params.inputFile : undefined;
+
   if (!task) {
-    return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    // OPFS video: original task was removed from DB. Create a temporary one so
+    // the broker has a task to write progress/results back to.
+    if (!inputFileParam) {
+      log.warn({ taskId, clientUuid, op }, 'Task not found in database');
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+    const tempTask = await createTask({ url: 'opfs://local' });
+    const newId = tempTask._id.toString();
+    await updateTask(newId, { file: inputFileParam });
+    task = { ...tempTask, file: inputFileParam };
+    taskId = newId;
+    log.info(
+      { originalTaskId: body.taskId, newTaskId: newId, clientUuid, op },
+      'Created temp task for OPFS video',
+    );
   }
 
-  let inputFile =
-    typeof params.inputFile === 'string' ? params.inputFile : undefined;
+  let inputFile = inputFileParam;
   if (!inputFile) {
     if (!task.file) {
+      log.warn({ taskId, clientUuid, op }, 'Task has no output file to use as input');
       return NextResponse.json(
         { error: 'Task has no output file yet' },
         { status: 422 },
@@ -83,6 +109,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!WS_BROKER_URL) {
+    log.error({ taskId, clientUuid, op }, 'WS_BROKER_URL env var is not configured');
     return NextResponse.json(
       { error: 'WS_BROKER_URL not configured' },
       { status: 503 },

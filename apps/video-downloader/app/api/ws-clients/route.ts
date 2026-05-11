@@ -17,12 +17,11 @@ async function fetchBrokerStatus(): Promise<Map<string, boolean>> {
         uuid: string;
         connected: boolean;
       }>;
-      console.log('data' + JSON.stringify(data));
+      log.info({ clientCount: data.length }, 'Fetched broker client status');
       for (const c of data) connected.set(c.uuid, c.connected);
     }
   } catch {
-    // broker unreachable — all clients show as disconnected
-    console.warn('WS broker unreachable, showing all clients as disconnected');
+    log.warn('WS broker unreachable — showing all clients as disconnected');
   }
   return connected;
 }
@@ -49,14 +48,17 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as { uuid?: string; label?: string };
   } catch {
+    log.warn('Failed to parse POST /api/ws-clients body as JSON');
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
   const { uuid, label } = body;
   if (!uuid || typeof uuid !== 'string' || !/^[0-9a-f-]{36}$/i.test(uuid)) {
+    log.warn({ uuid }, 'Invalid UUID format in POST /api/ws-clients');
     return NextResponse.json({ error: 'Invalid uuid' }, { status: 400 });
   }
   if (!label || typeof label !== 'string' || label.trim().length === 0) {
+    log.warn({ uuid }, 'Missing or empty label in POST /api/ws-clients');
     return NextResponse.json({ error: 'label is required' }, { status: 400 });
   }
 
@@ -73,12 +75,14 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const uuid = request.nextUrl.searchParams.get('uuid');
   if (!uuid || !/^[0-9a-f-]{36}$/i.test(uuid)) {
+    log.warn({ uuid }, 'Invalid UUID format in DELETE /api/ws-clients');
     return NextResponse.json({ error: 'Invalid uuid' }, { status: 400 });
   }
 
   try {
     const deleted = await deregisterClient(uuid.toLowerCase());
     if (!deleted) {
+      log.warn({ uuid }, 'WS client not found in DELETE /api/ws-clients');
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
     log.info({ uuid }, 'WS client deregistered');

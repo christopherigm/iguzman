@@ -17,6 +17,7 @@ export async function GET(
   const { id } = await params;
 
   if (!id || !/^[0-9a-f]{24}$/i.test(id)) {
+    log.warn({ taskId: id }, 'Invalid task ID format in GET');
     return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
   }
 
@@ -24,6 +25,7 @@ export async function GET(
     const task = await getTask(id);
 
     if (!task) {
+      log.warn({ taskId: id }, 'Task not found in GET');
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
@@ -50,12 +52,14 @@ export async function DELETE(
   const { id } = await params;
 
   if (!id || !/^[0-9a-f]{24}$/i.test(id)) {
+    log.warn({ taskId: id }, 'Invalid task ID format in DELETE');
     return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
   }
 
   try {
     const task = await getTask(id);
     if (!task) {
+      log.warn({ taskId: id }, 'Task not found in DELETE');
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 

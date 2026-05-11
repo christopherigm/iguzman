@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
+    log.warn('Failed to parse request body as JSON');
     return NextResponse.json(
       { error: { code: 'INVALID_URL' as const, message: 'Invalid JSON body' } },
       { status: 400 },
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
   } = body;
 
   if (!url || typeof url !== 'string') {
+    log.warn({ url }, 'Missing or invalid url parameter');
     return NextResponse.json(
       {
         error: {
@@ -57,6 +59,10 @@ export async function POST(request: Request) {
   /* 1. Deduplicate: return the existing task if one is already running */
   const existing = await findActiveTaskByUrl(url);
   if (existing) {
+    log.info(
+      { taskId: existing._id.toHexString(), url, status: existing.status },
+      'Returning existing active task (dedup)',
+    );
     return NextResponse.json(
       {
         task: {
