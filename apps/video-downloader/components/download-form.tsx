@@ -23,11 +23,6 @@ import {
   getOPFSStorageInfo,
   clearOPFSStorage,
 } from '@/lib/opfs';
-import {
-  WsClientPanel,
-  THIS_DEVICE_UUID,
-  type WsClientPanelLabels,
-} from './ws-client-panel';
 import type { CaptionOption } from '@/app/api/video-metadata/route';
 import './download-form.css';
 
@@ -78,10 +73,19 @@ function formatStorageUsage(
   let divisor: number;
   let unit: string;
 
-  if (totalBytes >= 1e9) { divisor = 1e9; unit = 'GB'; }
-  else if (totalBytes >= 1e6) { divisor = 1e6; unit = 'MB'; }
-  else if (totalBytes >= 1e3) { divisor = 1e3; unit = 'KB'; }
-  else { divisor = 1; unit = 'B'; }
+  if (totalBytes >= 1e9) {
+    divisor = 1e9;
+    unit = 'GB';
+  } else if (totalBytes >= 1e6) {
+    divisor = 1e6;
+    unit = 'MB';
+  } else if (totalBytes >= 1e3) {
+    divisor = 1e3;
+    unit = 'KB';
+  } else {
+    divisor = 1;
+    unit = 'B';
+  }
 
   const usedValue = usedBytes / divisor;
   const totalValue = totalBytes / divisor;
@@ -262,8 +266,6 @@ export interface DownloadFormProps {
     maxHeight?: number;
     captionsEnabled?: boolean;
     captionUrl?: string;
-    /** UUID of the selected ws-client for server FFmpeg, or null for local WASM. */
-    wsClientUuid: string | null;
     /** Whether to store the downloaded video in the browser's Origin Private File System. */
     opfsEnabled: boolean;
   }) => void;
@@ -348,10 +350,6 @@ export function DownloadForm({
 
   const [showOpfsConfirm, setShowOpfsConfirm] = useState(false);
   const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
-
-  const [selectedWsClientUuid, setSelectedWsClientUuid] = useState<
-    string | null
-  >(null);
 
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
     null,
@@ -537,10 +535,6 @@ export function DownloadForm({
       ...(captionsEnabled &&
         !justAudio &&
         selectedCaptionUrl && { captionUrl: selectedCaptionUrl }),
-      wsClientUuid:
-        !selectedWsClientUuid || selectedWsClientUuid === THIS_DEVICE_UUID
-          ? null
-          : selectedWsClientUuid,
       opfsEnabled,
     });
 
@@ -559,7 +553,6 @@ export function DownloadForm({
     selectedCaptionUrl,
     onVideoAdded,
     opfsEnabled,
-    selectedWsClientUuid,
   ]);
 
   const handleSubmit = useCallback(() => {
@@ -646,21 +639,6 @@ export function DownloadForm({
 
   const platformIcon = PLATFORM_ICONS[platform];
 
-  const wsClientLabels: WsClientPanelLabels = {
-    thisDevice: t('thisDevice'),
-    addServer: t('addServer'),
-    deleteServer: t('deleteServer'),
-    addServerTitle: t('addServerTitle'),
-    addServerText: t('addServerText'),
-    wsClientUuidLabel: t('wsClientUuidLabel'),
-    wsClientNameLabel: t('wsClientNameLabel'),
-    deleteServerTitle: t('deleteServerTitle'),
-    deleteServerText: (label) => t('deleteServerText', { label }),
-    installHint: t('installHint'),
-    downloadLinux: t('downloadLinux'),
-    downloadWindows: t('downloadWindows'),
-  };
-
   const formContent = (
     <Box
       elevation={4}
@@ -716,7 +694,7 @@ export function DownloadForm({
         <button
           type="submit"
           className="df-icon-btn df-icon-btn--download"
-          disabled={!validPlatformUrl}
+          disabled={!validPlatformUrl || captionsLoading}
           aria-label={t('download')}
         >
           <Icon
@@ -827,24 +805,6 @@ export function DownloadForm({
           />
         </OptionRow>
 
-        {/* <OptionRow label={t('fps')} disabled={fpsDisabled}>
-          <FPSSelect
-            value={effectiveFps}
-            onChange={setFps}
-            disabled={fpsDisabled}
-            options={fpsOptions}
-          />
-        </OptionRow> */}
-
-        {effectiveFps !== 'original' && (
-          <OptionRow label={t('server')} disabled={false}>
-            <WsClientPanel
-              showManagement
-              onChange={setSelectedWsClientUuid}
-              labels={wsClientLabels}
-            />
-          </OptionRow>
-        )}
       </Box>
 
       {opfsSupported &&

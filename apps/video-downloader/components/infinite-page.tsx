@@ -76,6 +76,20 @@ function InfinitePageInner() {
                 }
               } catch {}
             }
+
+            let captionsKey: string | null = null;
+            if (video.captionsFile) {
+              try {
+                const captionsRes = await fetch(video.captionsFile);
+                if (captionsRes.ok) {
+                  const captionsBlob = await captionsRes.blob();
+                  const captionsFilename = video.captionsFile.split('/').pop()!;
+                  captionsKey = `captions_${captionsFilename}`;
+                  await writeToOPFS(captionsKey, captionsBlob);
+                }
+              } catch {}
+            }
+
             await fetch(`/api/download-video/${video.taskId}`, {
               method: 'DELETE',
             }).catch(() => {});
@@ -92,6 +106,7 @@ function InfinitePageInner() {
             updateCompleted(video.uuid, {
               opfsKey: video.file,
               opfsThumbnailKey: thumbKey,
+              opfsCaptionsKey: captionsKey,
               opfsStored: true,
               serverFileDeleted: true,
               downloadURL: null,

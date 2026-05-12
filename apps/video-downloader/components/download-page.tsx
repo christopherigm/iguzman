@@ -28,7 +28,6 @@ interface VideoAddedEntry {
   maxHeight?: number;
   captionsEnabled?: boolean;
   captionUrl?: string;
-  wsClientUuid: string | null;
   opfsEnabled: boolean;
 }
 
@@ -101,6 +100,19 @@ function useOPFSRecovery({
               } catch {}
             }
 
+            let captionsKey: string | null = null;
+            if (video.captionsFile) {
+              try {
+                const captionsRes = await fetch(video.captionsFile);
+                if (captionsRes.ok) {
+                  const captionsBlob = await captionsRes.blob();
+                  const captionsFilename = video.captionsFile.split('/').pop()!;
+                  captionsKey = `captions_${captionsFilename}`;
+                  await writeToOPFS(captionsKey, captionsBlob);
+                }
+              } catch {}
+            }
+
             await fetch(`/api/download-video/${video.taskId}`, {
               method: 'DELETE',
             }).catch(() => {});
@@ -119,6 +131,7 @@ function useOPFSRecovery({
             updateCompleted(video.uuid, {
               opfsKey: video.file,
               opfsThumbnailKey: thumbKey,
+              opfsCaptionsKey: captionsKey,
               opfsStored: true,
               serverFileDeleted: true,
               downloadURL: `opfs://${video.file}`,
@@ -168,7 +181,6 @@ function DownloadPageInner() {
         maxHeight: entry.maxHeight ?? null,
         captionsEnabled: entry.captionsEnabled ?? false,
         captionUrl: entry.captionUrl ?? null,
-        wsClientUuid: entry.wsClientUuid,
         opfsEnabled: entry.opfsEnabled,
       });
     },

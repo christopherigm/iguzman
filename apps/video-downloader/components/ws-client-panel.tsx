@@ -81,15 +81,18 @@ export function WsClientPanel({
       .then((data: Array<{ uuid: string; connected: boolean }> | null) => {
         if (!data) return;
         const statusMap = new Map(data.map((c) => [c.uuid, c.connected]));
-        setClients((prev) =>
-          prev.map((c) => ({
+        let updatedClients: StoredWsClient[] = [];
+        setClients((prev) => {
+          updatedClients = prev.map((c) => ({
             ...c,
             connected: statusMap.get(c.uuid) ?? false,
-          })),
-        );
+          }));
+          return updatedClients;
+        });
         const cur = selectedUuidRef.current;
         if (cur !== THIS_DEVICE_UUID && statusMap.get(cur) !== true) {
-          const firstConnected = data.find((c) => c.connected);
+          // Use stored order (matches visual list order) to find first connected
+          const firstConnected = updatedClients.find((c) => c.connected);
           const next = firstConnected?.uuid ?? THIS_DEVICE_UUID;
           selectedUuidRef.current = next;
           setSelectedUuid(next);

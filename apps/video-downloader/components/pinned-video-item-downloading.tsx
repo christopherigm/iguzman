@@ -119,6 +119,20 @@ export function PinnedVideoItemDownloading({
               } catch {}
             }
 
+            let captionsKey: string | null = null;
+            if (task.captionsFile) {
+              try {
+                const captionsRes = await fetch(
+                  resolveMediaUrl(`/api/media/${task.captionsFile}`),
+                );
+                if (captionsRes.ok) {
+                  const captionsBlob = await captionsRes.blob();
+                  captionsKey = `captions_${task.captionsFile}`;
+                  await writeToOPFS(captionsKey, captionsBlob);
+                }
+              } catch {}
+            }
+
             if (task._id) {
               fetch(`/api/download-video/${task._id}`, {
                 method: 'DELETE',
@@ -139,6 +153,7 @@ export function PinnedVideoItemDownloading({
             onUpdate(video.uuid, {
               opfsKey: file,
               opfsThumbnailKey: thumbKey,
+              opfsCaptionsKey: captionsKey,
               opfsStored: true,
               serverFileDeleted: true,
               downloadURL: `opfs://${file}`,

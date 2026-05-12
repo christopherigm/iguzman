@@ -684,7 +684,7 @@ export function VideoExtraActions({
               deleteServerText: (label) => t('deleteServerText', { label }),
               installHint: t('installHint'),
               downloadLinux: t('downloadLinux'),
-              downloadWindows: t('downloadWindows'),
+              // downloadWindows: t('downloadWindows'), // Future: fix Windows client and uncomment this
             }}
           />
         ) : null}

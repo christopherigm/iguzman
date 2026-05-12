@@ -65,6 +65,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   opfsKey: string | null;
   /** OPFS filename key for the thumbnail. Null if not stored. */
   opfsThumbnailKey: string | null;
+  /** OPFS filename key for the captions text file. Null if not stored. */
+  opfsCaptionsKey: string | null;
   /** Whether the video file has been successfully written to OPFS. */
   opfsStored: boolean;
   /** Whether the server temp file has been confirmed deleted after OPFS migration. */
@@ -127,6 +129,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     opfsEnabled: v.opfsEnabled ?? false,
     opfsKey: v.opfsKey ?? null,
     opfsThumbnailKey: v.opfsThumbnailKey ?? null,
+    opfsCaptionsKey: v.opfsCaptionsKey ?? null,
     opfsStored: v.opfsStored ?? false,
     serverFileDeleted: v.serverFileDeleted ?? false,
   };
@@ -348,6 +351,7 @@ export function useVideoStore() {
         opfsEnabled: partial.opfsEnabled ?? false,
         opfsKey: null,
         opfsThumbnailKey: null,
+        opfsCaptionsKey: null,
         opfsStored: false,
         serverFileDeleted: false,
       };

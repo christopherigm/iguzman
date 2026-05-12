@@ -406,9 +406,15 @@ export function PinnedVideoItemServer({
 
     let srtContent: string;
     try {
-      const srtRes = await fetch(resolveMediaUrl(video.captionsFile));
-      if (!srtRes.ok) throw new Error('Failed to fetch captions file');
-      const originalSrt = await srtRes.text();
+      let originalSrt: string;
+      if (video.opfsEnabled && video.opfsCaptionsKey) {
+        const captionsFile = await readFromOPFS(video.opfsCaptionsKey);
+        originalSrt = await captionsFile.text();
+      } else {
+        const srtRes = await fetch(resolveMediaUrl(video.captionsFile));
+        if (!srtRes.ok) throw new Error('Failed to fetch captions file');
+        originalSrt = await srtRes.text();
+      }
 
       if (config.translate && config.translateTo) {
         onUpdate(video.uuid, {
@@ -491,6 +497,8 @@ export function PinnedVideoItemServer({
     video.captionsFile,
     video.justAudio,
     video.uuid,
+    video.opfsEnabled,
+    video.opfsCaptionsKey,
     onUpdate,
     generate,
     runServerProcessing,
@@ -505,7 +513,6 @@ export function PinnedVideoItemServer({
       completeAfter?: boolean,
     ) => {
       const file = task.file;
-      const name = task.name;
       const downloadURL = file ? `/api/media/${file}` : null;
 
       setJobPhase('idle');
@@ -514,18 +521,18 @@ export function PinnedVideoItemServer({
       onUpdate(video.uuid, {
         status: 'done',
         file: file ?? null,
-        name: name ?? null,
+        name: task.name ?? video.name,
         downloadURL,
-        thumbnail: task.thumbnail ?? null,
-        duration: task.duration ?? null,
-        uploader: task.uploader ?? null,
+        thumbnail: task.thumbnail ?? video.thumbnail,
+        duration: task.duration ?? video.duration,
+        uploader: task.uploader ?? video.uploader,
         isH265: task.isH265 ?? false,
-        sourceFps: task.sourceFps ?? null,
-        width: task.width ?? null,
-        height: task.height ?? null,
+        sourceFps: task.sourceFps ?? video.sourceFps,
+        width: task.width ?? video.width,
+        height: task.height ?? video.height,
         captionsFile: task.captionsFile
           ? `/api/media/${task.captionsFile}`
-          : null,
+          : video.captionsFile,
         captionUrl: null,
         serverTaskId: null,
         ...donePatch,
@@ -579,6 +586,14 @@ export function PinnedVideoItemServer({
     },
     [
       video.uuid,
+      video.name,
+      video.thumbnail,
+      video.duration,
+      video.uploader,
+      video.sourceFps,
+      video.width,
+      video.height,
+      video.captionsFile,
       video.opfsEnabled,
       video.opfsKey,
       onUpdate,
