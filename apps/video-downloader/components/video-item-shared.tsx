@@ -390,10 +390,30 @@ export function VideoMediaPreview({
   opfsVideoUrl?: string | null;
   opfsThumbnailUrl?: string | null;
 }) {
+  const isOnline = useOnlineStatus();
+  const t = useTranslations('VideoGrid');
   const isOpfs = downloadURL?.startsWith('opfs://') ?? false;
 
   if (!downloadURL) return null;
   if (isOpfs && !opfsVideoUrl) return null;
+
+  // When offline and the media is not stored locally on the device, show a placeholder
+  if (!isOnline && !opfsVideoUrl) {
+    return (
+      <Box
+        className="vi-media-wrapper"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        minHeight={80}
+        color="var(--foreground-muted, #999)"
+      >
+        <Typography variant="caption">
+          {t('videoNotAvailableOffline')}
+        </Typography>
+      </Box>
+    );
+  }
 
   const src = opfsVideoUrl ?? resolveMediaUrl(downloadURL);
   const thumbnailSrc =
@@ -702,7 +722,9 @@ export function VideoExtraActions({
             unstyled
             className="vi-fps-btn"
             onClick={onConvert}
-            disabled={isBusy || h264Error || (serverSelected && !wsClientOnline)}
+            disabled={
+              isBusy || h264Error || (serverSelected && !wsClientOnline)
+            }
             aria-label={t('convertH264')}
             title={t('convertH264')}
             icon="/icons/convert.svg"

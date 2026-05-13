@@ -31,9 +31,22 @@ function InfinitePageInner() {
 
   /* ── OPFS recovery: re-establish blob URLs on mount ── */
   useEffect(() => {
-    if (!storeLoaded || !isOPFSSupported()) return;
-    const opfsVideos = completed.filter((v) => v.opfsEnabled);
+    if (!storeLoaded) return;
     void (async () => {
+      /* ── Remove dead server-only videos whose file has already been deleted ── */
+      for (const video of completed) {
+        if (!video.opfsEnabled && video.serverFileDeleted) {
+          if (video.taskId) {
+            await fetch(`/api/download-video/${video.taskId}`, {
+              method: 'DELETE',
+            }).catch(() => {});
+          }
+          removeCompleted(video.uuid);
+        }
+      }
+
+      if (!isOPFSSupported()) return;
+      const opfsVideos = completed.filter((v) => v.opfsEnabled);
       for (const video of opfsVideos) {
         if (video.opfsStored && video.opfsKey) {
           try {
@@ -53,7 +66,10 @@ function InfinitePageInner() {
               }).catch(() => {});
               updateCompleted(video.uuid, { serverFileDeleted: true });
             }
-          } catch {}
+          } catch {
+            /* OPFS file evicted by browser — server already deleted, remove from store */
+            removeCompleted(video.uuid);
+          }
         } else if (
           !video.opfsStored &&
           !video.serverFileDeleted &&
@@ -111,7 +127,16 @@ function InfinitePageInner() {
               serverFileDeleted: true,
               downloadURL: null,
             });
-          } catch {}
+          } catch {
+            /* Server file not found — delete MongoDB record and remove from store */
+            await fetch(`/api/download-video/${video.taskId}`, {
+              method: 'DELETE',
+            }).catch(() => {});
+            removeCompleted(video.uuid);
+          }
+        } else if (!video.opfsStored && video.serverFileDeleted) {
+          /* No OPFS data and server already deleted — remove from store */
+          removeCompleted(video.uuid);
         }
       }
     })();
@@ -134,6 +159,23 @@ function InfinitePageInner() {
   const [capturedFrames, setCapturedFrames] = useState<Map<string, string>>(
     new Map(),
   );
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    // Read the actual value on mount — the lazy initializer runs on the server
+    // where navigator is undefined, so it can't be used for SSR-safe init.
+    // The 'offline' event only fires on status *changes*, so a device that is
+    // already offline when the app loads would never trigger it without this.
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   function shuffle(list: StoredVideo[]) {
     const shuffled = [...list];
@@ -147,12 +189,14 @@ function InfinitePageInner() {
   useEffect(() => {
     if (!storeLoaded) return;
     const eligible = completed.filter(
-      (v) => (v.downloadURL || v.opfsStored) && !v.justAudio,
+      (v) =>
+        (isOnline ? (v.downloadURL ?? false) || v.opfsStored : v.opfsStored) &&
+        !v.justAudio,
     );
     setVideos(shuffle(eligible));
     setLoaded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeLoaded]); // run once when store hydrates; completed is captured at that moment for a fixed random order
+  }, [storeLoaded, isOnline]); // re-filter when online status changes
 
   function handleReshuffle() {
     if (swiperRef.current) {
@@ -311,7 +355,11 @@ function InfinitePageInner() {
     const opfsUrls = video.opfsEnabled ? getUrls(video.uuid) : null;
     const href =
       opfsUrls?.videoUrl ??
-      (video.opfsStored ? null : video.downloadURL ? resolveMediaUrl(video.downloadURL) : null);
+      (video.opfsStored
+        ? null
+        : video.downloadURL
+          ? resolveMediaUrl(video.downloadURL)
+          : null);
     if (!href) return;
     const a = document.createElement('a');
     a.href = href;
@@ -400,7 +448,11 @@ function InfinitePageInner() {
               : null);
           const videoSrc =
             opfsUrls?.videoUrl ??
-            (video.opfsStored ? null : video.downloadURL ? resolveMediaUrl(video.downloadURL) : null);
+            (video.opfsStored
+              ? null
+              : video.downloadURL
+                ? resolveMediaUrl(video.downloadURL)
+                : null);
           return (
             <SwiperSlide
               key={video.uuid}

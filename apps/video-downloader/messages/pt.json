@@ -260,7 +260,8 @@
     "errorNoServerAvailable": "Nenhum servidor de processamento disponível. Adicione um servidor ou tente novamente mais tarde.",
     "fpsDeviceOnlyTitle": "Interpolação de FPS indisponível",
     "fpsDeviceOnlyText": "A interpolação de FPS no dispositivo não está disponível para resoluções FHD e superiores. Adicione um servidor para processar este vídeo.",
-    "wsClientOffline": "offline"
+    "wsClientOffline": "offline",
+    "videoNotAvailableOffline": "Vídeo não disponível offline"
   },
   "Offline": {
     "title": "Você está offline",

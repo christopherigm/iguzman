@@ -260,7 +260,8 @@
     "errorNoServerAvailable": "Aucun serveur de traitement disponible. Ajoutez un serveur ou réessayez plus tard.",
     "fpsDeviceOnlyTitle": "Interpolation FPS non disponible",
     "fpsDeviceOnlyText": "L'interpolation FPS sur l'appareil n'est pas disponible pour les résolutions FHD et supérieures. Ajoutez un serveur pour traiter cette vidéo.",
-    "wsClientOffline": "hors ligne"
+    "wsClientOffline": "hors ligne",
+    "videoNotAvailableOffline": "Vidéo non disponible hors ligne"
   },
   "Offline": {
     "title": "Vous êtes hors ligne",
