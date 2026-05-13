@@ -159,24 +159,6 @@ function InfinitePageInner() {
   const [capturedFrames, setCapturedFrames] = useState<Map<string, string>>(
     new Map(),
   );
-  const [isOnline, setIsOnline] = useState(true);
-
-  useEffect(() => {
-    // Read the actual value on mount — the lazy initializer runs on the server
-    // where navigator is undefined, so it can't be used for SSR-safe init.
-    // The 'offline' event only fires on status *changes*, so a device that is
-    // already offline when the app loads would never trigger it without this.
-    setIsOnline(navigator.onLine);
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
   function shuffle(list: StoredVideo[]) {
     const shuffled = [...list];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -188,15 +170,11 @@ function InfinitePageInner() {
 
   useEffect(() => {
     if (!storeLoaded) return;
-    const eligible = completed.filter(
-      (v) =>
-        (isOnline ? (v.downloadURL ?? false) || v.opfsStored : v.opfsStored) &&
-        !v.justAudio,
-    );
+    const eligible = completed.filter((v) => v.opfsStored && !v.justAudio);
     setVideos(shuffle(eligible));
     setLoaded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeLoaded, isOnline]); // re-filter when online status changes
+  }, [storeLoaded]);
 
   function handleReshuffle() {
     if (swiperRef.current) {

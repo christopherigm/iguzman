@@ -119,7 +119,7 @@ function OptionRow({
     <Box
       className={`df-option-row${disabled ? ' df-option-row--disabled' : ''}`}
     >
-      <Typography variant="label" className="df-option-label">
+      <Typography variant="body-sm" fontWeight={500}>
         {label}
       </Typography>
       <Box className="df-option-control">{children}</Box>
@@ -293,7 +293,6 @@ export function DownloadForm({
   const [ios, setIos] = useState(false);
   const [autoDownload, setAutoDownload] = useState(true);
   const [opfsSupported, setOpfsSupported] = useState(false);
-  const [opfsEnabled, setOpfsEnabled] = useState(false);
   const [storageInfo, setStorageInfo] = useState<{
     usedBytes: number;
     totalBytes: number;
@@ -305,10 +304,6 @@ export function DownloadForm({
     if (isIOSDevice) setAutoDownload(false);
     const supported = isOPFSSupported();
     setOpfsSupported(supported);
-    if (supported) {
-      const saved = localStorage.getItem('vd-opfs-enabled');
-      if (saved !== null) setOpfsEnabled(saved === 'true');
-    }
   }, []);
 
   useEffect(() => {
@@ -348,7 +343,6 @@ export function DownloadForm({
   );
   const [captionsUnavailable, setCaptionsUnavailable] = useState(false);
 
-  const [showOpfsConfirm, setShowOpfsConfirm] = useState(false);
   const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
 
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
@@ -512,11 +506,6 @@ export function DownloadForm({
   const effectiveEnhance = justAudio ? false : enhance;
   const effectiveFps: FPSValue = justAudio ? 'original' : fps;
 
-  const persistOpfsEnabled = useCallback((value: boolean) => {
-    setOpfsEnabled(value);
-    localStorage.setItem('vd-opfs-enabled', String(value));
-  }, []);
-
   /* Handlers */
   const handleClear = useCallback(() => {
     setUrl('');
@@ -535,7 +524,7 @@ export function DownloadForm({
       ...(captionsEnabled &&
         !justAudio &&
         selectedCaptionUrl && { captionUrl: selectedCaptionUrl }),
-      opfsEnabled,
+      opfsEnabled: opfsSupported,
     });
 
     /* Reset the URL field and captions toggle after submission */
@@ -552,7 +541,7 @@ export function DownloadForm({
     captionsEnabled,
     selectedCaptionUrl,
     onVideoAdded,
-    opfsEnabled,
+    opfsSupported,
   ]);
 
   const handleSubmit = useCallback(() => {
@@ -718,38 +707,14 @@ export function DownloadForm({
 
       {/* ── Options ──────────────────────────────────── */}
       <Box className="df-options" marginTop={8}>
-        <Box display="flex" justifyContent="space-between" gap={12}>
-          {opfsSupported && (
-            <Box width="50%">
-              <OptionRow label={t('saveToDevice')} disabled={switchesDisabled}>
-                <Switch
-                  checked={opfsEnabled}
-                  onChange={
-                    switchesDisabled
-                      ? undefined
-                      : (checked) => {
-                          if (checked) {
-                            setShowOpfsConfirm(true);
-                          } else {
-                            persistOpfsEnabled(false);
-                          }
-                        }
-                  }
-                />
-              </OptionRow>
-            </Box>
-          )}
-          {!ios && (
-            <Box width="50%">
-              <OptionRow label={t('autoDownload')} disabled={switchesDisabled}>
-                <Switch
-                  checked={autoDownload}
-                  onChange={switchesDisabled ? undefined : setAutoDownload}
-                />
-              </OptionRow>
-            </Box>
-          )}
-        </Box>
+        {!ios && (
+          <OptionRow label={t('autoDownload')} disabled={switchesDisabled}>
+            <Switch
+              checked={autoDownload}
+              onChange={switchesDisabled ? undefined : setAutoDownload}
+            />
+          </OptionRow>
+        )}
         {(resolutions.length > 0 || metadataLoading) && (
           <OptionRow
             label={t('resolution')}
@@ -804,7 +769,6 @@ export function DownloadForm({
             onChange={switchesDisabled ? undefined : setJustAudio}
           />
         </OptionRow>
-
       </Box>
 
       {opfsSupported &&
@@ -820,16 +784,13 @@ export function DownloadForm({
                 alignItems="center"
                 marginBottom={6}
               >
-                <Typography
-                  variant="caption"
-                  color="var(--foreground-muted, #999)"
-                >
+                <Typography variant="body-sm" fontWeight={500}>
                   {t('opfsStorageLabel')}
                 </Typography>
                 <Box display="flex" alignItems="center" gap={6}>
                   <Typography
-                    variant="caption"
-                    color="var(--foreground-muted, #999)"
+                    variant="body-sm"
+                    fontWeight={500}
                     marginRight={8}
                   >
                     {(() => {
@@ -888,19 +849,6 @@ export function DownloadForm({
           text={t('fpsBoostText', { fps: effectiveFps })}
           okCallback={handleFpsWarningOk}
           cancelCallback={handleFpsWarningCancel}
-        />
-      ) : null}
-
-      {/* ── OPFS Confirmation Modal ──────────────── */}
-      {showOpfsConfirm ? (
-        <ConfirmationModal
-          title={t('opfsConfirmTitle')}
-          text={t('opfsConfirmText')}
-          okCallback={() => {
-            persistOpfsEnabled(true);
-            setShowOpfsConfirm(false);
-          }}
-          cancelCallback={() => setShowOpfsConfirm(false)}
         />
       ) : null}
 

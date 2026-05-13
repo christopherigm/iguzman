@@ -52,7 +52,8 @@ function buildFpsOptions(
   const base = sourceFps && sourceFps > 0 ? sourceFps : 30;
   return FPS_MULTIPLIERS.map((m) => {
     const value = Math.round(base * m);
-    return { value, label: `${value} FPS (${m}x)` };
+    return { value, label: `${value} FPS` };
+    // return { value, label: `${value} FPS (${m}x)` };
   });
 }
 
@@ -310,7 +311,7 @@ export function VideoDetailsPanel({
             <dd>{video.sourceFps}</dd>
           </>
         ) : null}
-        <dt>{t('detailJustAudio')}</dt>
+        {/* <dt>{t('detailJustAudio')}</dt>
         <dd>{video.justAudio ? t('yes') : t('no')}</dd>
         {!video.justAudio && video.width && video.height ? (
           <>
@@ -319,7 +320,7 @@ export function VideoDetailsPanel({
               {video.width}×{video.height}
             </dd>
           </>
-        ) : null}
+        ) : null} */}
         {video.duration ? (
           <>
             <dt>{t('detailDuration')}</dt>
@@ -631,6 +632,7 @@ export function VideoExtraActions({
   onConvert,
   onDownloadCaptions,
   onBurnCaptions,
+  onMakeOffline,
   initialWsClientUuid,
   onWsClientChange,
   t,
@@ -645,6 +647,7 @@ export function VideoExtraActions({
   onConvert: () => void;
   onDownloadCaptions?: () => void;
   onBurnCaptions?: () => void;
+  onMakeOffline?: () => Promise<void>;
   initialWsClientUuid?: string | null;
   onWsClientChange?: (uuid: string) => void;
   t: TranslationFn;
@@ -656,6 +659,7 @@ export function VideoExtraActions({
   const [fpsDeviceModalFps, setFpsDeviceModalFps] = useState<number | null>(
     null,
   );
+  const [offlineMigrating, setOfflineMigrating] = useState(false);
 
   const serverSelected = currentWsUuid !== THIS_DEVICE_UUID;
   const canProcess =
@@ -717,6 +721,32 @@ export function VideoExtraActions({
           />
         ) : null}
 
+        {onMakeOffline &&
+        !video.opfsStored &&
+        !!video.file &&
+        !video.serverFileDeleted ? (
+          <Button
+            unstyled
+            className="vi-fps-btn"
+            onClick={() => {
+              setOfflineMigrating(true);
+              onMakeOffline()
+                .catch(() => {})
+                .finally(() => setOfflineMigrating(false));
+            }}
+            disabled={isBusy || offlineMigrating}
+            aria-label={
+              offlineMigrating ? t('savingToDevice') : t('makeOffline')
+            }
+            title={offlineMigrating ? t('savingToDevice') : t('makeOffline')}
+            icon="/icons/offline.svg"
+            iconSize="14px"
+            iconColor="var(--accent, #8b5cf6)"
+          >
+            {offlineMigrating ? t('savingToDevice') : t('makeOffline')}
+          </Button>
+        ) : null}
+
         {video.isH265 && !video.h264Converted ? (
           <Button
             unstyled
@@ -771,7 +801,7 @@ export function VideoExtraActions({
             unstyled
             className="vi-fps-btn"
             onClick={onBurnCaptions}
-            disabled={isBusy}
+            disabled={!canProcess || isBusy}
             aria-label={t('burnCaptions')}
             title={t('burnCaptions')}
             icon="/icons/write.svg"

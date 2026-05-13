@@ -20,7 +20,12 @@ import {
   VideoFooterLink,
 } from './video-item-shared';
 import { useOPFSUrls } from './opfs-url-context';
-import { deleteFromOPFS } from '@/lib/opfs';
+import {
+  deleteFromOPFS,
+  writeToOPFS,
+  readFromOPFS,
+  isOPFSSupported,
+} from '@/lib/opfs';
 import { BurnCaptionsModal } from './burn-captions-modal';
 import './video-item.css';
 
@@ -49,7 +54,7 @@ export function ReadOnlyVideoItem({
   onUpdate,
 }: ReadOnlyVideoItemProps) {
   const t = useTranslations('VideoGrid');
-  const { getUrls } = useOPFSUrls();
+  const { getUrls, registerUrls } = useOPFSUrls();
   const opfsUrls = video.opfsEnabled ? getUrls(video.uuid) : null;
 
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -113,6 +118,72 @@ export function ReadOnlyVideoItem({
     video.thumbnail,
     opfsUrls,
   ]);
+
+  /* ── Make video offline (save to OPFS) ─────────────── */
+  const handleMakeOffline = useCallback(async () => {
+    if (!video.file || !isOPFSSupported()) return;
+
+    const videoRes = await fetch(resolveMediaUrl(`/api/media/${video.file}`));
+    if (!videoRes.ok)
+      throw new Error(`Failed to fetch video: ${videoRes.status}`);
+    const videoBlob = await videoRes.blob();
+    const key = video.file;
+    await writeToOPFS(key, videoBlob);
+
+    let thumbKey: string | null = null;
+    if (video.thumbnail) {
+      try {
+        const thumbRes = await fetch(
+          resolveMediaUrl(`/api/media/${video.thumbnail}`),
+        );
+        if (thumbRes.ok) {
+          const thumbBlob = await thumbRes.blob();
+          thumbKey = `thumb_${video.thumbnail}`;
+          await writeToOPFS(thumbKey, thumbBlob);
+        }
+      } catch {}
+    }
+
+    let captionsKey: string | null = null;
+    if (video.captionsFile) {
+      try {
+        const captionsRes = await fetch(video.captionsFile);
+        if (captionsRes.ok) {
+          const captionsBlob = await captionsRes.blob();
+          const captionsFilename = video.captionsFile.split('/').pop()!;
+          captionsKey = `captions_${captionsFilename}`;
+          await writeToOPFS(captionsKey, captionsBlob);
+        }
+      } catch {}
+    }
+
+    const videoFile = await readFromOPFS(key);
+    const videoUrl = URL.createObjectURL(videoFile);
+    let thumbnailUrl: string | null = null;
+    if (thumbKey) {
+      try {
+        const thumbFile = await readFromOPFS(thumbKey);
+        thumbnailUrl = URL.createObjectURL(thumbFile);
+      } catch {}
+    }
+    registerUrls(video.uuid, { videoUrl, thumbnailUrl });
+
+    if (video.taskId && !video.serverFileDeleted) {
+      await fetch(`/api/download-video/${video.taskId}`, {
+        method: 'DELETE',
+      }).catch(() => {});
+    }
+
+    onUpdate(video.uuid, {
+      opfsEnabled: true,
+      opfsKey: key,
+      opfsThumbnailKey: thumbKey,
+      opfsCaptionsKey: captionsKey,
+      opfsStored: true,
+      serverFileDeleted: video.taskId ? true : video.serverFileDeleted,
+      downloadURL: `opfs://${key}`,
+    });
+  }, [video, onUpdate, registerUrls]);
 
   /* ── Download captions file ──────────────────────── */
   const handleDownloadCaptions = useCallback(() => {
@@ -208,6 +279,7 @@ export function ReadOnlyVideoItem({
           onConvert={() => onReprocess(video.uuid, 'h264')}
           onDownloadCaptions={handleDownloadCaptions}
           onBurnCaptions={() => setShowBurnModal(true)}
+          onMakeOffline={handleMakeOffline}
           initialWsClientUuid={video.wsClientUuid ?? null}
           onWsClientChange={handleWsClientChange}
           t={t}

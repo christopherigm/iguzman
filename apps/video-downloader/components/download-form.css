@@ -113,17 +113,6 @@
   pointer-events: none;
 }
 
-.df-option-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--foreground, #171717);
-  letter-spacing: 0.01em;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
 .df-option-control {
   display: flex;
   align-items: center;
