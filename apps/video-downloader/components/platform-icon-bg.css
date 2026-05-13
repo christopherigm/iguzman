@@ -1,0 +1,32 @@
+/* ── PlatformIconBg ───────────────────────────────────── */
+
+.pib-root {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.pib-gradient {
+  position: absolute;
+  inset: 0;
+}
+
+.pib-icon {
+  position: absolute;
+  height: auto;
+  opacity: 0.07;
+  --color: var(--foreground, #171717);
+}
+
+.pib-root--top .pib-icon {
+  top: -8%;
+  left: -8%;
+}
+
+.pib-root--bottom .pib-icon {
+  bottom: -8%;
+  left: -8%;
+}

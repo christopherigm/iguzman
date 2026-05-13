@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Button } from './button';
 import { Box } from './box';
 import { Typography } from './typography';
@@ -66,7 +67,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     if (cancelCallback && e.target === e.currentTarget) cancelCallback();
   };
 
-  return (
+  const modal = (
     <Box
       className="ui-confirmation-modal-overlay"
       display="flex"
@@ -149,6 +150,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       </Box>
     </Box>
   );
+
+  if (typeof document === 'undefined') return null;
+  return ReactDOM.createPortal(modal, document.body);
 };
 
 export default ConfirmationModal;

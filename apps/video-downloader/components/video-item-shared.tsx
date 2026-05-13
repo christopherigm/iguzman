@@ -562,14 +562,14 @@ export function VideoActions({
     <Box className="vi-actions" display="flex" justifyContent="space-evenly">
       <Button
         unstyled
-        className="vi-icon-btn vi-icon-btn--danger"
+        className="vi-icon-btn"
         onClick={onDelete}
         aria-label={t('delete')}
         title={t('delete')}
         icon="/icons/delete-video.svg"
         iconSize="15px"
-        iconColor="#ef4444"
-        disabled={!isOnline}
+        iconColor="var(--foreground, #171717)"
+        // disabled={!isOnline}
       />
 
       <Button
@@ -915,6 +915,50 @@ export function VideoCardHeader({
         iconColor="var(--foreground, #171717)"
       />
     </Box>
+  );
+}
+
+/* ── Platform icon background ───────────────────────── */
+
+export function PlatformIconBg({
+  platform,
+  position = 'bottom-left',
+  widthPct = 40,
+  iconMarginTop,
+  iconMarginLeft,
+}: {
+  platform: string;
+  position?: 'top-left' | 'bottom-left';
+  widthPct?: number;
+  iconMarginTop?: number | string;
+  iconMarginLeft?: number | string;
+}) {
+  const icon = PLATFORM_ICONS[platform];
+  const isTop = position === 'top-left';
+
+  if (!icon || platform === 'unknown') return null;
+
+  return (
+    <div className={`pib-root pib-root--${isTop ? 'top' : 'bottom'}`}>
+      <div
+        className="pib-gradient"
+        style={{
+          background: `radial-gradient(ellipse at ${isTop ? 'top' : 'bottom'} left, color-mix(in srgb, var(--accent, #06b6d4) 40%, transparent) 0%, transparent 70%)`,
+        }}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={icon}
+        alt=""
+        aria-hidden="true"
+        className="pib-icon"
+        style={{
+          width: `${widthPct}%`,
+          marginTop: iconMarginTop,
+          marginLeft: iconMarginLeft,
+        }}
+      />
+    </div>
   );
 }
 

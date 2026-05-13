@@ -1,3 +1,5 @@
+@import './platform-icon-bg.css';
+
 /* ── VideoItem Card ───────────────────────────────────── */
 
 .vi-card {
@@ -10,6 +12,7 @@
     border-color 280ms ease,
     transform 200ms ease;
   position: relative;
+  isolation: isolate;
 }
 
 /* ── Status bar (top 3px accent strip) ───────────────── */
@@ -81,10 +84,6 @@
 .vi-icon-btn:disabled {
   opacity: 0.28;
   cursor: not-allowed;
-}
-
-.vi-icon-btn--danger:hover:not(:disabled) {
-  background: color-mix(in srgb, #ef4444 10%, transparent);
 }
 
 /* ── Collapsible details panel ───────────────────────── */
@@ -205,8 +204,8 @@
 }
 
 .vi-original-link {
-  font-size: 11px;
-  color: var(--foreground-muted, #888);
+  font-size: 12px;
+  color: var(--foreground, #888);
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;

@@ -18,6 +18,7 @@ import {
   VideoExtraActions,
   VideoCardHeader,
   VideoFooterLink,
+  PlatformIconBg,
 } from './video-item-shared';
 import { useOPFSUrls } from './opfs-url-context';
 import {
@@ -210,12 +211,17 @@ export function ReadOnlyVideoItem({
       flexDirection="column"
       styles={{ overflow: 'hidden' }}
     >
+      <PlatformIconBg
+        platform={video.platform}
+        position="bottom-left"
+        widthPct={50}
+        iconMarginLeft={20}
+      />
       {/* ── Status bar ────────────────────────────── */}
       <Box
         className="vi-status-bar"
         backgroundColor={STATUS_COLORS[video.status]}
       />
-
       {/* ── Header row ────────────────────────────── */}
       <VideoCardHeader
         video={video}
@@ -224,7 +230,6 @@ export function ReadOnlyVideoItem({
         onToggleDetails={() => setDetailsOpen((p) => !p)}
         t={t}
       />
-
       {/* ── Details panel (collapsible) ───────────── */}
       {detailsOpen ? (
         <VideoDetailsPanel
@@ -239,7 +244,6 @@ export function ReadOnlyVideoItem({
           t={t}
         />
       ) : null}
-
       {/* ── Media preview ─────────────────────────── */}
       <VideoMediaPreview
         downloadURL={video.downloadURL}
@@ -248,7 +252,6 @@ export function ReadOnlyVideoItem({
         opfsVideoUrl={opfsUrls?.videoUrl}
         opfsThumbnailUrl={opfsUrls?.thumbnailUrl}
       />
-
       {/* ── Footer actions ────────────────────────── */}
       <Box className="vi-footer">
         <VideoFooterLink video={video} />
@@ -265,7 +268,6 @@ export function ReadOnlyVideoItem({
           t={t}
         />
       </Box>
-
       {/* ── Extra actions panel (collapsible) ─────────── */}
       {extraActionsOpen ? (
         <VideoExtraActions
@@ -285,7 +287,6 @@ export function ReadOnlyVideoItem({
           t={t}
         />
       ) : null}
-
       {/* ── Confirmation modals ───────────────────── */}
       {showBurnModal ? (
         <BurnCaptionsModal
@@ -293,7 +294,6 @@ export function ReadOnlyVideoItem({
           onCancel={() => setShowBurnModal(false)}
         />
       ) : null}
-
       {confirmRemove ? (
         <ConfirmationModal
           title={t('confirmDeleteTitle')}

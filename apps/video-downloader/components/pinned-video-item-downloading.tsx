@@ -20,6 +20,7 @@ import {
   VideoMediaPreview,
   VideoFooterLink,
   isIOS,
+  PlatformIconBg,
 } from './video-item-shared';
 import { useOPFSUrls } from './opfs-url-context';
 import { writeToOPFS, readFromOPFS } from '@/lib/opfs';
@@ -314,12 +315,17 @@ export function PinnedVideoItemDownloading({
       flexDirection="column"
       styles={{ overflow: 'hidden' }}
     >
+      <PlatformIconBg
+        platform={video.platform}
+        position="bottom-left"
+        widthPct={50}
+        iconMarginLeft={20}
+      />
       {/* ── Status bar ──────────────────────────────── */}
       <Box
         className="vi-status-bar"
         backgroundColor={STATUS_COLORS[video.status]}
       />
-
       {/* ── Header row ──────────────────────────────── */}
       <VideoCardHeader
         video={video}
@@ -328,7 +334,6 @@ export function PinnedVideoItemDownloading({
         onToggleDetails={() => setDetailsOpen((p) => !p)}
         t={t}
       />
-
       {/* ── Details panel (collapsible) ───────────────── */}
       {detailsOpen ? (
         <VideoDetailsPanel
@@ -343,7 +348,6 @@ export function PinnedVideoItemDownloading({
           t={t}
         />
       ) : null}
-
       {/* ── Media preview ───────────────────────────── */}
       <VideoMediaPreview
         downloadURL={video.downloadURL}
@@ -351,34 +355,34 @@ export function PinnedVideoItemDownloading({
         thumbnail={video.thumbnail}
         compact
       />
-
       {/* ── Progress bar ────────────────────────────── */}
       {showProgressBar ? <ProgressBar margin="0" /> : null}
-
       {/* ── Status hint ─────────────────────────────── */}
       {opfsMigrating ? (
         <Typography variant="caption" className="vi-ffmpeg-hint">
           {t('savingToDevice')}
         </Typography>
       ) : null}
-
       {/* ── Footer ──────────────────────────────────── */}
       <Box className="vi-footer">
         <VideoFooterLink video={video} />
-        <Box className="vi-actions" display="flex" justifyContent="space-evenly">
+        <Box
+          className="vi-actions"
+          display="flex"
+          justifyContent="space-evenly"
+        >
           <Button
             unstyled
-            className="vi-icon-btn vi-icon-btn--danger"
+            className="vi-icon-btn"
             onClick={() => setConfirmRemove(true)}
             aria-label={t('delete')}
             title={t('delete')}
             icon="/icons/delete-video.svg"
             iconSize="15px"
-            iconColor="#ef4444"
+            iconColor="var(--foreground, #171717)"
           />
         </Box>
       </Box>
-
       {/* ── Delete confirmation ──────────────────────── */}
       {confirmRemove ? (
         <ConfirmationModal

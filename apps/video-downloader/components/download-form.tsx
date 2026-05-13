@@ -17,30 +17,21 @@ import {
   type Platform,
 } from '@repo/helpers/checkers';
 import { stripQueryParams } from '@repo/helpers/clean-url';
-import { isIOS, buildResolutionLabel } from './video-item-shared';
+import {
+  isIOS,
+  buildResolutionLabel,
+  PlatformIconBg,
+} from './video-item-shared';
 import {
   isOPFSSupported,
   getOPFSStorageInfo,
   clearOPFSStorage,
 } from '@/lib/opfs';
 import type { CaptionOption } from '@/app/api/video-metadata/route';
+import './platform-icon-bg.css';
 import './download-form.css';
 
 /* ── Constants ──────────────────────────────────────── */
-
-const PLATFORM_ICONS: Record<Platform, string> = {
-  facebook: '/icons/facebook.svg',
-  instagram: '/icons/instagram.svg',
-  pinterest: '/icons/pinterest.svg',
-  rednote: '/icons/rednote.svg',
-  tidal: '/icons/tidal.svg',
-  tiktok: '/icons/tiktok.svg',
-  x: '/icons/x.svg',
-  youtube: '/icons/youtube.svg',
-  unknown: '/icons/url.svg',
-};
-
-type FPSValue = 'original' | '60' | '90' | '120';
 
 interface DuplicateEntry {
   uuid: string;
@@ -123,49 +114,6 @@ function OptionRow({
         {label}
       </Typography>
       <Box className="df-option-control">{children}</Box>
-    </Box>
-  );
-}
-
-function FPSSelect({
-  value,
-  onChange,
-  disabled,
-  options,
-}: {
-  value: FPSValue;
-  onChange: (v: FPSValue) => void;
-  disabled: boolean;
-  options: { value: FPSValue; label: string }[];
-}) {
-  return (
-    <Box className="df-select-wrapper">
-      <select
-        className="df-select"
-        value={disabled ? 'original' : value}
-        onChange={(e) => onChange(e.target.value as FPSValue)}
-        disabled={disabled}
-        aria-label="FPS"
-      >
-        {options.map((opt) => (
-          <option
-            key={opt.value}
-            value={opt.value}
-            style={{
-              backgroundColor: 'var(--surface-1, #f4f4f5)',
-            }}
-          >
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <span className="df-select-chevron">
-        <Icon
-          icon="/icons/chevron-down.svg"
-          size={14}
-          color="var(--foreground, #171717)"
-        />
-      </span>
     </Box>
   );
 }
@@ -324,8 +272,6 @@ export function DownloadForm({
   }, [opfsSupported]);
   const [justAudio, setJustAudio] = useState(false);
   const [enhance] = useState(false);
-  const [fps, setFps] = useState<FPSValue>('original');
-  const [showFpsWarning, setShowFpsWarning] = useState(false);
 
   const [resolutions, setResolutions] = useState<number[]>([]);
   const [selectedResolution, setSelectedResolution] = useState<number | null>(
@@ -347,16 +293,6 @@ export function DownloadForm({
 
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
     null,
-  );
-
-  const fpsOptions = useMemo(
-    () => [
-      { value: 'original' as FPSValue, label: t('fpsOriginal') },
-      { value: '60' as FPSValue, label: t('fps60') },
-      { value: '90' as FPSValue, label: t('fps90') },
-      { value: '120' as FPSValue, label: t('fps120') },
-    ],
-    [t],
   );
 
   /* Paste from clipboard when the URL input is focused */
@@ -499,12 +435,10 @@ export function DownloadForm({
   /* Disabled flags */
   const switchesDisabled = !validPlatformUrl;
   // const _enhanceDisabled = switchesDisabled || justAudio;
-  const fpsDisabled = switchesDisabled || justAudio;
   const captionsDisabled = switchesDisabled || justAudio || captionsUnavailable;
 
-  /* Effective values (justAudio overrides enhance & fps) */
+  /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
-  const effectiveFps: FPSValue = justAudio ? 'original' : fps;
 
   /* Handlers */
   const handleClear = useCallback(() => {
@@ -515,7 +449,7 @@ export function DownloadForm({
     onVideoAdded?.({
       originalURL: url,
       platform,
-      fps: effectiveFps,
+      fps: 'original',
       justAudio,
       enhance: effectiveEnhance,
       autoDownload,
@@ -534,7 +468,6 @@ export function DownloadForm({
     url,
     justAudio,
     autoDownload,
-    effectiveFps,
     effectiveEnhance,
     platform,
     selectedResolution,
@@ -557,13 +490,8 @@ export function DownloadForm({
       return;
     }
 
-    if (effectiveFps !== 'original') {
-      setShowFpsWarning(true);
-      return;
-    }
-
     submitDownload();
-  }, [validPlatformUrl, url, completedVideos, effectiveFps, submitDownload]);
+  }, [validPlatformUrl, url, completedVideos, submitDownload]);
 
   const handleDuplicateClose = useCallback(() => {
     setDuplicateEntry(null);
@@ -585,16 +513,6 @@ export function DownloadForm({
     onMoveToFirst?.(duplicateEntry.uuid);
     setDuplicateEntry(null);
   }, [duplicateEntry, onMoveToFirst]);
-
-  const handleFpsWarningCancel = useCallback(() => {
-    setShowFpsWarning(false);
-    setFps('original');
-  }, []);
-
-  const handleFpsWarningOk = useCallback(() => {
-    setShowFpsWarning(false);
-    submitDownload();
-  }, [submitDownload]);
 
   /* Hint text below input */
   const hint = useMemo(() => {
@@ -626,8 +544,6 @@ export function DownloadForm({
     onClearStorage?.();
   }, [onClearStorage]);
 
-  const platformIcon = PLATFORM_ICONS[platform];
-
   const formContent = (
     <Box
       elevation={4}
@@ -636,25 +552,22 @@ export function DownloadForm({
       flexDirection="column"
       width="100%"
       backgroundColor="var(--surface-1, #fff)"
+      styles={{
+        position: 'relative',
+        overflow: 'hidden',
+        isolation: 'isolate',
+      }}
     >
+      <PlatformIconBg
+        platform={platform}
+        position="top-left"
+        widthPct={50}
+        iconMarginTop={35}
+        iconMarginLeft={35}
+      />
+
       {/* ── URL Input Row ────────────────────────────── */}
       <Box className="df-input-row">
-        {platform !== 'unknown' ? (
-          <Box
-            className={`df-platform-badge${knownPlatform ? ' df-platform-badge--active' : ''}`}
-          >
-            <Icon
-              icon={platformIcon}
-              size={22}
-              color={
-                knownPlatform
-                  ? 'var(--accent, #06b6d4)'
-                  : 'var(--foreground, #888)'
-              }
-            />
-          </Box>
-        ) : null}
-
         <Box className="df-input-wrapper">
           <TextInput
             value={url}
@@ -841,16 +754,6 @@ export function DownloadForm({
           {formContent}
         </form>
       </Box>
-
-      {/* ── FPS Boost Confirmation Modal ──────────── */}
-      {showFpsWarning ? (
-        <ConfirmationModal
-          title={t('fpsBoostTitle')}
-          text={t('fpsBoostText', { fps: effectiveFps })}
-          okCallback={handleFpsWarningOk}
-          cancelCallback={handleFpsWarningCancel}
-        />
-      ) : null}
 
       {/* ── Clear Storage Confirmation Modal ─────── */}
       {showClearStorageConfirm ? (

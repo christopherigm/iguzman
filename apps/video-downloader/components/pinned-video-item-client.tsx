@@ -22,6 +22,7 @@ import {
   VideoMediaPreview,
   VideoStatusHints,
   VideoFooterLink,
+  PlatformIconBg,
 } from './video-item-shared';
 import { useOPFSUrls } from './opfs-url-context';
 import { readFromOPFS } from '@/lib/opfs';
@@ -522,12 +523,17 @@ export function PinnedVideoItemClient({
       flexDirection="column"
       styles={{ overflow: 'hidden' }}
     >
+      <PlatformIconBg
+        platform={video.platform}
+        position="bottom-left"
+        widthPct={50}
+        iconMarginLeft={20}
+      />
       {/* ── Status bar ──────────────────────────────── */}
       <Box
         className="vi-status-bar"
         backgroundColor={STATUS_COLORS[video.status]}
       />
-
       {/* ── Header row ──────────────────────────────── */}
       <VideoCardHeader
         video={video}
@@ -536,7 +542,6 @@ export function PinnedVideoItemClient({
         onToggleDetails={() => setDetailsOpen((p) => !p)}
         t={t}
       />
-
       {/* ── Details panel (collapsible) ───────────────── */}
       {detailsOpen ? (
         <VideoDetailsPanel
@@ -551,7 +556,6 @@ export function PinnedVideoItemClient({
           t={t}
         />
       ) : null}
-
       {/* ── Media preview ───────────────────────────── */}
       <VideoMediaPreview
         downloadURL={video.downloadURL}
@@ -563,7 +567,6 @@ export function PinnedVideoItemClient({
           video.opfsEnabled ? getUrls(video.uuid).thumbnailUrl : null
         }
       />
-
       {/* ── Progress bar ────────────────────────────── */}
       {isProcessing || displayFFmpegStatus !== 'idle' ? (
         <ProgressBar
@@ -571,7 +574,6 @@ export function PinnedVideoItemClient({
           margin="0"
         />
       ) : null}
-
       {/* ── Status hints ────────────────────────────── */}
       <VideoStatusHints
         ffmpegStatus={displayFFmpegStatus}
@@ -580,20 +582,23 @@ export function PinnedVideoItemClient({
         uploading={uploading}
         t={t}
       />
-
       {/* ── Footer ──────────────────────────────────── */}
       <Box className="vi-footer">
         <VideoFooterLink video={video} />
-        <Box className="vi-actions" display="flex" justifyContent="space-evenly">
+        <Box
+          className="vi-actions"
+          display="flex"
+          justifyContent="space-evenly"
+        >
           <Button
             unstyled
-            className="vi-icon-btn vi-icon-btn--danger"
+            className="vi-icon-btn"
             onClick={() => setConfirmRemove(true)}
             aria-label={t('delete')}
             title={t('delete')}
             icon="/icons/delete-video.svg"
             iconSize="15px"
-            iconColor="#ef4444"
+            iconColor="var(--foreground, #171717)"
           />
           <Button
             unstyled
@@ -609,7 +614,6 @@ export function PinnedVideoItemClient({
           />
         </Box>
       </Box>
-
       {/* ── Delete confirmation ──────────────────────── */}
       {confirmRemove ? (
         <ConfirmationModal

@@ -20,6 +20,7 @@ import {
   VideoDetailsPanel,
   VideoMediaPreview,
   VideoFooterLink,
+  PlatformIconBg,
 } from './video-item-shared';
 import { useOPFSUrls } from './opfs-url-context';
 import { readFromOPFS } from '@/lib/opfs';
@@ -226,7 +227,10 @@ export function PinnedVideoItemServer({
           };
           file = uploadedFile;
           opfsInputFileRef.current = uploadedFile;
-          onUpdate(video.uuid, { file: uploadedFile, serverFileDeleted: false });
+          onUpdate(video.uuid, {
+            file: uploadedFile,
+            serverFileDeleted: false,
+          });
         } catch {
           setOpfsUploading(false);
           onUpdate(video.uuid, {
@@ -636,11 +640,7 @@ export function PinnedVideoItemServer({
           }
 
           if (task.status === 'done' && opts?.donePatch) {
-            void handleServerTaskDone(
-              task,
-              opts.donePatch,
-              opts.completeAfter,
-            );
+            void handleServerTaskDone(task, opts.donePatch, opts.completeAfter);
           } else if (task.status === 'error') {
             setJobPhase('idle');
             onUpdate(video.uuid, {
@@ -789,12 +789,17 @@ export function PinnedVideoItemServer({
       flexDirection="column"
       styles={{ overflow: 'hidden' }}
     >
+      <PlatformIconBg
+        platform={video.platform}
+        position="bottom-left"
+        widthPct={50}
+        iconMarginLeft={20}
+      />
       {/* ── Status bar ──────────────────────────────── */}
       <Box
         className="vi-status-bar"
         backgroundColor={STATUS_COLORS[video.status]}
       />
-
       {/* ── Header row ──────────────────────────────── */}
       <VideoCardHeader
         video={video}
@@ -803,7 +808,6 @@ export function PinnedVideoItemServer({
         onToggleDetails={() => setDetailsOpen((p) => !p)}
         t={t}
       />
-
       {/* ── Details panel (collapsible) ───────────────── */}
       {detailsOpen ? (
         <VideoDetailsPanel
@@ -824,7 +828,6 @@ export function PinnedVideoItemServer({
           t={t}
         />
       ) : null}
-
       {/* ── Media preview ───────────────────────────── */}
       <VideoMediaPreview
         downloadURL={video.downloadURL}
@@ -836,32 +839,33 @@ export function PinnedVideoItemServer({
           video.opfsEnabled ? getUrls(video.uuid).thumbnailUrl : null
         }
       />
-
       {/* ── Progress bar ────────────────────────────── */}
       {showProgressBar ? (
         <ProgressBar value={progressValue} margin="0" />
       ) : null}
-
       {/* ── Status hint ─────────────────────────────── */}
       {statusHint ? (
         <Typography variant="caption" className="vi-ffmpeg-hint">
           {statusHint}
         </Typography>
       ) : null}
-
       {/* ── Footer ──────────────────────────────────── */}
       <Box className="vi-footer">
         <VideoFooterLink video={video} />
-        <Box className="vi-actions" display="flex" justifyContent="space-evenly">
+        <Box
+          className="vi-actions"
+          display="flex"
+          justifyContent="space-evenly"
+        >
           <Button
             unstyled
-            className="vi-icon-btn vi-icon-btn--danger"
+            className="vi-icon-btn"
             onClick={() => setConfirmRemove(true)}
             aria-label={t('delete')}
             title={t('delete')}
             icon="/icons/delete-video.svg"
             iconSize="15px"
-            iconColor="#ef4444"
+            iconColor="var(--foreground, #171717)"
           />
           <Button
             unstyled
@@ -877,7 +881,6 @@ export function PinnedVideoItemServer({
           />
         </Box>
       </Box>
-
       {/* ── Delete confirmation ──────────────────────── */}
       {confirmRemove ? (
         <ConfirmationModal

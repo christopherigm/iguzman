@@ -1,0 +1,6 @@
+
+> video-downloader@0.2.164 check-types /home/christopher/Documents/iguzman/apps/video-downloader
+> next typegen && tsc --noEmit
+
+Generating route types...
+✓ Types generated successfully
