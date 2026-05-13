@@ -289,6 +289,8 @@ function InfinitePageInner() {
       if (video.opfsKey) void deleteFromOPFS(video.opfsKey).catch(() => {});
       if (video.opfsThumbnailKey)
         void deleteFromOPFS(video.opfsThumbnailKey).catch(() => {});
+      if (video.opfsCaptionsKey)
+        void deleteFromOPFS(video.opfsCaptionsKey).catch(() => {});
       revokeUrls(video.uuid);
     }
     removeCompleted(video.uuid);

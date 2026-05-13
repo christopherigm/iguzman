@@ -4,11 +4,14 @@ import { useRef, useState, useCallback } from 'react';
 import { fetchFile } from '@ffmpeg/util';
 
 const CORE_VERSION = '0.12.10';
-const BASE_URL = `https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@${CORE_VERSION}/dist/umd`;
+// Single-threaded core avoids Chromium 148+ pthread initialization deadlock on Linux desktop.
+// @ffmpeg/core-mt (multi-threaded) hangs on Linux Chromium 148 when the Emscripten pthread
+// proxy workers are created but never signal ready. All FFmpeg operations work on a single
+// thread — processing is slower but reliable across all browsers and platforms.
+const BASE_URL = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 
 const CORE_URL = `${BASE_URL}/ffmpeg-core.js`;
 const WASM_URL = `${BASE_URL}/ffmpeg-core.wasm`;
-const WORKER_URL = `${BASE_URL}/ffmpeg-core.worker.js`;
 
 export type FFmpegStatus = 'idle' | 'loading' | 'processing' | 'ready';
 
@@ -114,7 +117,6 @@ export function useFFmpeg() {
         payload: {
           coreURL: CORE_URL,
           wasmURL: WASM_URL,
-          workerURL: WORKER_URL,
         },
       });
     });
@@ -170,7 +172,6 @@ export function useFFmpeg() {
             payload: {
               coreURL: CORE_URL,
               wasmURL: WASM_URL,
-              workerURL: WORKER_URL,
               videoData,
               ...extraPayload,
             },

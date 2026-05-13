@@ -236,6 +236,8 @@ export function ReadOnlyVideoItem({
             if (video.opfsKey) void deleteFromOPFS(video.opfsKey);
             if (video.opfsThumbnailKey)
               void deleteFromOPFS(video.opfsThumbnailKey);
+            if (video.opfsCaptionsKey)
+              void deleteFromOPFS(video.opfsCaptionsKey);
             onRemove(video.uuid);
           }}
           cancelCallback={() => setConfirmRemove(false)}

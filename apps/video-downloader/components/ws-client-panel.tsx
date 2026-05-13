@@ -41,10 +41,14 @@ export interface WsClientPanelLabels {
   downloadLinux?: string;
   /** Label for the Windows download button. */
   downloadWindows?: string;
+  /** Appended to offline client names in the dropdown. */
+  offline?: string;
 }
 
 interface WsClientPanelProps {
   onChange: (uuid: string) => void;
+  /** Called whenever the online status of the selected client changes. */
+  onOnlineChange?: (isOnline: boolean) => void;
   labels: WsClientPanelLabels;
   /** Pre-select a specific UUID on mount (e.g. from a stored video). */
   initialValue?: string | null;
@@ -58,6 +62,7 @@ interface WsClientPanelProps {
 
 export function WsClientPanel({
   onChange,
+  onOnlineChange,
   labels,
   initialValue,
   compact = false,
@@ -197,6 +202,10 @@ export function WsClientPanel({
   const selectedClient = clients.find((c) => c.uuid === selectedUuid);
   const isOnline = isThisDevice || (selectedClient?.connected ?? false);
 
+  useEffect(() => {
+    onOnlineChange?.(isOnline);
+  }, [isOnline, onOnlineChange]);
+
   /* ── Select element (shared between both modes) ────── */
 
   const dotClass = isOnline ? 'wcp-dot--online' : 'wcp-dot--offline';
@@ -227,7 +236,7 @@ export function WsClientPanel({
           value={c.uuid}
           style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
         >
-          {c.label}
+          {c.label} ({labels.offline ?? 'offline'})
         </option>
       ))}
     </>

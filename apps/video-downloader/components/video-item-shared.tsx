@@ -632,11 +632,17 @@ export function VideoExtraActions({
   const [currentWsUuid, setCurrentWsUuid] = useState<string>(
     initialWsClientUuid ?? THIS_DEVICE_UUID,
   );
+  const [wsClientOnline, setWsClientOnline] = useState(true);
   const [fpsDeviceModalFps, setFpsDeviceModalFps] = useState<number | null>(
     null,
   );
 
-  const canProcess = !isBusy && !!video.downloadURL && !video.justAudio;
+  const serverSelected = currentWsUuid !== THIS_DEVICE_UUID;
+  const canProcess =
+    !isBusy &&
+    !!video.downloadURL &&
+    !video.justAudio &&
+    (!serverSelected || wsClientOnline);
 
   const isFhdOrHigher =
     video.height != null
@@ -671,6 +677,7 @@ export function VideoExtraActions({
               setCurrentWsUuid(uuid);
               onWsClientChange(uuid);
             }}
+            onOnlineChange={setWsClientOnline}
             labels={{
               thisDevice: t('thisDevice'),
               server: t('server'),
@@ -685,6 +692,7 @@ export function VideoExtraActions({
               installHint: t('installHint'),
               downloadLinux: t('downloadLinux'),
               // downloadWindows: t('downloadWindows'), // Future: fix Windows client and uncomment this
+              offline: t('wsClientOffline'),
             }}
           />
         ) : null}
@@ -694,7 +702,7 @@ export function VideoExtraActions({
             unstyled
             className="vi-fps-btn"
             onClick={onConvert}
-            disabled={isBusy || h264Error}
+            disabled={isBusy || h264Error || (serverSelected && !wsClientOnline)}
             aria-label={t('convertH264')}
             title={t('convertH264')}
             icon="/icons/convert.svg"

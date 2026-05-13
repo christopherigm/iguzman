@@ -439,7 +439,7 @@ function generateAssContent(params: {
 async function ensureLoaded(
   coreURL: string,
   wasmURL: string,
-  workerURL: string,
+  workerURL?: string,
 ): Promise<FFmpeg> {
   if (ffmpeg?.loaded) return ffmpeg;
 
@@ -449,7 +449,7 @@ async function ensureLoaded(
       await instance.load({
         coreURL: await toBlobURL(coreURL, 'text/javascript'),
         wasmURL: await toBlobURL(wasmURL, 'application/wasm'),
-        workerURL: await toBlobURL(workerURL, 'text/javascript'),
+        ...(workerURL && { workerURL: await toBlobURL(workerURL, 'text/javascript') }),
       });
       ffmpeg = instance;
     })();
@@ -487,7 +487,7 @@ self.onmessage = async (
       const { coreURL, wasmURL, workerURL } = payload as {
         coreURL: string;
         wasmURL: string;
-        workerURL: string;
+        workerURL?: string;
       };
       await ensureLoaded(coreURL, wasmURL, workerURL);
       self.postMessage({ id, type: 'loaded' });
@@ -497,7 +497,7 @@ self.onmessage = async (
     const { coreURL, wasmURL, workerURL } = payload as {
       coreURL: string;
       wasmURL: string;
-      workerURL: string;
+      workerURL?: string;
     };
     const ff = await ensureLoaded(coreURL, wasmURL, workerURL);
 

@@ -194,6 +194,8 @@ function DownloadPageInner() {
         if (video.opfsKey) await deleteFromOPFS(video.opfsKey).catch(() => {});
         if (video.opfsThumbnailKey)
           await deleteFromOPFS(video.opfsThumbnailKey).catch(() => {});
+        if (video.opfsCaptionsKey)
+          await deleteFromOPFS(video.opfsCaptionsKey).catch(() => {});
         revokeUrls(uuid);
       }
       removeCompleted(uuid);

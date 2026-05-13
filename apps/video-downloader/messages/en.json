@@ -259,7 +259,8 @@
     "errorOpfsUploadFailed": "Failed to upload video to server.",
     "errorNoServerAvailable": "No processing server is available. Please add a server or try again later.",
     "fpsDeviceOnlyTitle": "FPS Interpolation Unavailable",
-    "fpsDeviceOnlyText": "On-device FPS interpolation is not available for FHD and higher resolutions. Add a server to process this video."
+    "fpsDeviceOnlyText": "On-device FPS interpolation is not available for FHD and higher resolutions. Add a server to process this video.",
+    "wsClientOffline": "offline"
   },
   "Offline": {
     "title": "You are offline",
