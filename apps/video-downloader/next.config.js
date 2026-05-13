@@ -1,20 +1,22 @@
 import createNextIntlPlugin from 'next-intl/plugin';
-import withPWAInit from '@ducanh2912/next-pwa';
+import withSerwistInit from '@serwist/next';
+import { spawnSync } from 'node:child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const withPWA = withPWAInit({
-  dest: 'public',
+const revision =
+  spawnSync('git', ['rev-parse', 'HEAD'], {
+    encoding: 'utf-8',
+  }).stdout?.trim() ?? crypto.randomUUID();
+
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
-  register: true,
-  skipWaiting: true,
-  cacheOnFrontendNav: true,
-  aggressiveFrontEndNavCaching: true,
-  fallbacks: {
-    document: '/~offline',
-  },
+  cacheOnNavigation: true,
+  additionalPrecacheEntries: [{ url: '/~offline', revision }],
 });
 
 /** @type {import('next').NextConfig} */
@@ -61,4 +63,4 @@ const nextConfig = {
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
-export default withPWA(withNextIntl(nextConfig));
+export default withSerwist(withNextIntl(nextConfig));

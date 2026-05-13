@@ -9,7 +9,9 @@
     "allowArbitraryExtensions": true,
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "lib": ["es2022", "DOM", "DOM.Iterable", "webworker"],
+    "types": ["@serwist/next/typings"]
   },
   "include": [
     "**/*.ts",
@@ -18,5 +20,5 @@
     "next.config.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "public/sw.js"]
 }
