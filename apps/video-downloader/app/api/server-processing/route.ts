@@ -13,6 +13,7 @@ const VALID_OPS = [
   'convertToH264',
   'convertToH265',
   'burnSubtitles',
+  'scaleDown',
 ] as const;
 
 type ProcessingOp = (typeof VALID_OPS)[number];
@@ -23,6 +24,7 @@ const STATUS_BY_OP: Record<ProcessingOp, TaskStatus> = {
   convertToH264: 'converting',
   convertToH265: 'converting',
   burnSubtitles: 'burning',
+  scaleDown: 'processing',
 };
 
 export async function POST(request: NextRequest) {

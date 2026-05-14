@@ -12,6 +12,7 @@ import {
 import { get as httpsGet } from 'https';
 import { get as httpGet } from 'http';
 import { randomUUID } from 'crypto';
+import { cpus } from 'os';
 import {
   detectPlatform,
   isFacebook,
@@ -43,6 +44,16 @@ const DEFAULT_BINARY = 'yt-dlp';
 
 /** Default ffmpeg binary path. */
 const DEFAULT_FFMPEG = 'ffmpeg';
+
+const CPU_COUNT = String(cpus().length);
+const THREAD_FLAGS = [
+  '-threads',
+  CPU_COUNT,
+  '-filter_threads',
+  CPU_COUNT,
+  '-filter_complex_threads',
+  CPU_COUNT,
+];
 
 /** Default gallery-dl binary path. */
 const DEFAULT_GALLERY_DL = 'gallery-dl';
@@ -459,9 +470,14 @@ const execFileAsync = (bin: string, args: string[]): Promise<string> =>
  */
 const execFileCaptureBoth = (bin: string, args: string[]): Promise<string> =>
   new Promise((resolve) => {
-    execFile(bin, args, { maxBuffer: EXEC_MAX_BUFFER }, (_error, stdout, stderr) => {
-      resolve((stdout ?? '') + '\n' + (stderr ?? ''));
-    });
+    execFile(
+      bin,
+      args,
+      { maxBuffer: EXEC_MAX_BUFFER },
+      (_error, stdout, stderr) => {
+        resolve((stdout ?? '') + '\n' + (stderr ?? ''));
+      },
+    );
   });
 
 /**
@@ -611,7 +627,10 @@ const isPreferredAudioExt = (ext: string): boolean =>
  * 4. A "combined" format has both video and audio codecs — useful for
  *    platforms that serve muxed streams (e.g. Instagram).
  */
-const selectBestFormats = (formats: FormatInfo[], maxHeight?: number): FormatSelection => {
+const selectBestFormats = (
+  formats: FormatInfo[],
+  maxHeight?: number,
+): FormatSelection => {
   const videoOnly: FormatInfo[] = [];
   const audioOnly: FormatInfo[] = [];
   const combined: FormatInfo[] = [];
@@ -770,7 +789,10 @@ const selectBestFormats = (formats: FormatInfo[], maxHeight?: number): FormatSel
  *
  * @returns A {@link FormatSelection} with only `bestCombined` populated.
  */
-const selectBestTikTokFormat = (formats: FormatInfo[]): FormatSelection => {
+const selectBestTikTokFormat = (
+  formats: FormatInfo[],
+  maxHeight?: number,
+): FormatSelection => {
   const combined: FormatInfo[] = [];
 
   for (const f of formats) {
@@ -784,7 +806,12 @@ const selectBestTikTokFormat = (formats: FormatInfo[]): FormatSelection => {
 
   // Filter to web-compatible extensions when possible
   const filteredCombined = combined.filter((f) => isPreferredVideoExt(f.ext));
-  const pool = filteredCombined.length > 0 ? filteredCombined : combined;
+  let pool = filteredCombined.length > 0 ? filteredCombined : combined;
+
+  if (maxHeight) {
+    const capped = pool.filter((f) => (f.height ?? 0) <= maxHeight);
+    if (capped.length > 0) pool = capped;
+  }
 
   const bestCombined =
     pool.length > 0
@@ -1445,33 +1472,42 @@ const isIosUnsupportedCodec = async (
 };
 
 /**
- * Transcodes the video stream of `filePath` to H.264 using ffmpeg,
- * replacing the original file in-place. Audio is copied without
- * re-encoding. `+faststart` is applied for web-optimised playback.
+ * Transcodes a video file to an iOS-compatible format in-place, optimised
+ * for **speed** over compression efficiency.
  *
- * A temporary file is written next to the original and atomically
- * renamed over it so a partial transcode never corrupts the source.
+ * - Uses the `ultrafast` libx264 preset — typically 3–5× faster than a
+ *   quality-oriented encode at the cost of ~15–30 % larger output files.
+ * - Always re-encodes audio to AAC 128 kbps so that Opus / Vorbis / other
+ *   non-iOS-safe codecs (common in VP9/WebM streams from YouTube) are
+ *   converted in the same pass. Copying Opus audio into an MP4 container
+ *   produces a file that iOS Safari still cannot play.
+ *
+ * A temporary file is written next to the original and atomically renamed
+ * over it so a partial transcode never corrupts the source.
  *
  * @throws When ffmpeg exits with a non-zero code.
  */
-const transcodeToH264InPlace = async (
+const transcodeForIosInPlace = async (
   filePath: string,
   ffmpegBinary: string,
 ): Promise<void> => {
   const tmpPath = `${filePath}.ios_tmp_${randomUUID()}.mp4`;
   try {
     await execFileAsync(ffmpegBinary, [
+      ...THREAD_FLAGS,
       '-y',
       '-i',
       filePath,
       '-c:v',
       'libx264',
       '-preset',
-      'fast',
+      'ultrafast',
       '-crf',
       '23',
       '-c:a',
-      'copy',
+      'aac',
+      '-b:a',
+      '128k',
       '-movflags',
       '+faststart',
       tmpPath,
@@ -1612,13 +1648,28 @@ const repairTikTokH265Audio = async (
   jsRuntimes: string,
   ffmpegBinary: string,
 ): Promise<boolean> => {
-  /* ---- 1. Check codec & audio presence ---- */
+  /* ---- 1. Check codec & audio presence (single ffprobe call) ---- */
 
-  const isH265 = await isH265Codec(h265FilePath, ffmpegBinary);
-  if (!isH265) return false;
-
-  const audioPresent = await hasAudioStream(h265FilePath, ffmpegBinary);
-  if (audioPresent) return false;
+  try {
+    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
+    const output = await execFileAsync(ffprobeBinary, [
+      '-v',
+      'error',
+      '-show_streams',
+      '-of',
+      'json',
+      h265FilePath,
+    ]);
+    const { streams = [] } = JSON.parse(output) as {
+      streams?: { codec_type: string; codec_name: string }[];
+    };
+    const videoStream = streams.find((s) => s.codec_type === 'video');
+    const codec = videoStream?.codec_name?.toLowerCase() ?? '';
+    if (codec !== 'hevc' && codec !== 'h265') return false;
+    if (streams.some((s) => s.codec_type === 'audio')) return false;
+  } catch {
+    return false;
+  }
 
   /* ---- 2. Download H.264 version ---- */
 
@@ -1794,7 +1845,7 @@ const createVideoFromImage = async (
   outputPath: string,
   ffmpegBinary: string,
 ): Promise<void> => {
-  const args: string[] = ['-y'];
+  const args: string[] = [...THREAD_FLAGS, '-y'];
 
   if (audioPath) {
     // Loop image for the duration of the audio
@@ -2462,7 +2513,8 @@ const downloadVideo = async ({
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
-  const audioFmt: AudioOutputFormat = audioFormat ?? (iosDevice ? 'm4a' : 'flac');
+  const audioFmt: AudioOutputFormat =
+    audioFormat ?? (iosDevice ? 'm4a' : 'flac');
 
   /* ---- 1. Check yt-dlp availability ---- */
 
@@ -2567,7 +2619,7 @@ const downloadVideo = async ({
     if (formats.length > 0) {
       formatSelection =
         isTiktok(url) && !justAudio
-          ? selectBestTikTokFormat(formats)
+          ? selectBestTikTokFormat(formats, maxHeight)
           : selectBestFormats(formats, maxHeight);
     }
   } catch {
@@ -2868,9 +2920,12 @@ const downloadVideo = async ({
   if (iosDevice && !justAudio && fileName) {
     try {
       const filePath = `${outputFolder}/${fileName}`;
-      const needsTranscode = await isIosUnsupportedCodec(filePath, ffmpegBinary);
+      const needsTranscode = await isIosUnsupportedCodec(
+        filePath,
+        ffmpegBinary,
+      );
       if (needsTranscode) {
-        await transcodeToH264InPlace(filePath, ffmpegBinary);
+        await transcodeForIosInPlace(filePath, ffmpegBinary);
         // After transcode the codec is H.264; clear any stale isH265 flag.
         result.isH265 = false;
       }
@@ -2903,7 +2958,8 @@ const downloadVideo = async ({
   if (requestCaptions) {
     try {
       const captionUrlToUse =
-        providedCaptionUrl ?? (videoMetadata ? fetchCaptions(videoMetadata) : null);
+        providedCaptionUrl ??
+        (videoMetadata ? fetchCaptions(videoMetadata) : null);
       if (captionUrlToUse) {
         let captionsFile: string | null = null;
         if (captionUrlToUse.startsWith('YTDLP_SUBS://')) {
@@ -2967,7 +3023,9 @@ export interface SubtitleInfo {
  * en   json3, vtt, srv1
  * ```
  */
-const parseListSubsOutput = (output: string): Array<{ lang: string; type: 'manual' | 'auto' }> => {
+const parseListSubsOutput = (
+  output: string,
+): Array<{ lang: string; type: 'manual' | 'auto' }> => {
   const results: Array<{ lang: string; type: 'manual' | 'auto' }> = [];
   const seen = new Set<string>();
   let currentType: 'manual' | 'auto' | null = null;
@@ -2975,7 +3033,10 @@ const parseListSubsOutput = (output: string): Array<{ lang: string; type: 'manua
   for (const line of output.split('\n')) {
     const trimmed = line.trim();
 
-    if (trimmed.includes('Available subtitles') && !trimmed.includes('automatic')) {
+    if (
+      trimmed.includes('Available subtitles') &&
+      !trimmed.includes('automatic')
+    ) {
       currentType = 'manual';
       continue;
     }
@@ -2984,7 +3045,12 @@ const parseListSubsOutput = (output: string): Array<{ lang: string; type: 'manua
       continue;
     }
     if (currentType === null) continue;
-    if (trimmed.startsWith('Language') || trimmed.startsWith('[') || trimmed === '') continue;
+    if (
+      trimmed.startsWith('Language') ||
+      trimmed.startsWith('[') ||
+      trimmed === ''
+    )
+      continue;
 
     const match = trimmed.match(/^(\S+)\s+/);
     if (!match) continue;
