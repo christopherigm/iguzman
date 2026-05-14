@@ -75,6 +75,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   serverFileDeleted: boolean;
   /** File size in bytes. Null for videos added before this field was introduced. */
   fileSize: number | null;
+  /** Target height for a pending scale-down operation. Null when not pending. */
+  scaleDownTargetHeight: number | null;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -138,6 +140,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     opfsStored: v.opfsStored ?? false,
     serverFileDeleted: v.serverFileDeleted ?? false,
     fileSize: v.fileSize ?? null,
+    scaleDownTargetHeight: v.scaleDownTargetHeight ?? null,
   };
 }
 
@@ -362,6 +365,7 @@ export function useVideoStore() {
         opfsStored: false,
         serverFileDeleted: false,
         fileSize: null,
+        scaleDownTargetHeight: null,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional

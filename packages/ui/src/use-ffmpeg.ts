@@ -364,6 +364,34 @@ export function useFFmpeg() {
     [sendVideoOp],
   );
 
+  /**
+   * Scale down a video to a lower resolution.
+   *
+   * @param videoUrl     URL (or object-URL) of the source video.
+   * @param targetHeight Target short-side pixels (e.g. 720 for HD).
+   *                     For landscape videos this becomes the output height;
+   *                     for portrait videos it becomes the output width.
+   * @returns            `{ objectUrl, blob }` – object-URL for immediate use
+   *                     and the raw Blob for uploading back to the server.
+   */
+  const scaleDown = useCallback(
+    async (
+      videoUrl: string,
+      targetHeight: number,
+      onProgress?: (p: number) => void,
+    ): Promise<{ objectUrl: string; blob: Blob }> => {
+      const data = await sendVideoOp(
+        'scaleDown',
+        videoUrl,
+        { targetHeight },
+        onProgress,
+      );
+      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      return { objectUrl: URL.createObjectURL(blob), blob };
+    },
+    [sendVideoOp],
+  );
+
   return {
     status,
     progress,
@@ -377,5 +405,6 @@ export function useFFmpeg() {
     removeBlackBars,
     extractAudio,
     burnSubtitles,
+    scaleDown,
   } as const;
 }

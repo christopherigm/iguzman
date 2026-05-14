@@ -29,6 +29,7 @@
  *         karaokeMode?: 'k'|'kf'|'ko', karaokeHighlightColour?: string
  *       }
  *   } }
+ *   { id, type: 'scaleDown', payload: { videoData: Uint8Array, targetHeight: number } }
  *
  * Outgoing (worker → main):
  *   { id, type: 'progress',  payload: { progress: number } }
@@ -565,7 +566,7 @@ self.onmessage = async (
             );
           }
 
-          const videoFilter = `minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1`;
+          const videoFilter = `minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=obmc:me_mode=bidir:vsbmc=1:search_param=16`;
 
           // minterpolate does not reliably fire FFmpeg progress events, so
           // parse frame numbers from the log as a fallback progress source.
@@ -602,11 +603,13 @@ self.onmessage = async (
             '-c:v',
             'libx264',
             '-preset',
-            'ultrafast',
+            'fast',
             '-crf',
-            '18',
+            '23',
             '-c:a',
             'copy',
+            '-movflags',
+            '+faststart',
             output,
           ]);
           ff.off('log', frameLogHandler);
@@ -632,11 +635,13 @@ self.onmessage = async (
             '-c:v',
             'libx264',
             '-preset',
-            'fast',
+            'faster',
             '-crf',
             '23',
             '-c:a',
             'copy',
+            '-movflags',
+            '+faststart',
             output,
           ]);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
@@ -661,13 +666,15 @@ self.onmessage = async (
             '-c:v',
             'libx265',
             '-preset',
-            'medium',
+            'fast',
             '-crf',
             '28',
             '-tag:v',
             'hvc1',
             '-c:a',
             'copy',
+            '-movflags',
+            '+faststart',
             output,
           ]);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
@@ -754,6 +761,7 @@ self.onmessage = async (
             };
             ff.on('log', detectLogHandler);
             await ff.exec([
+              ...(durationSec > 60 ? ['-t', '60'] : []),
               '-i',
               input,
               '-vf',
@@ -818,8 +826,16 @@ self.onmessage = async (
             input,
             '-vf',
             `crop=${crop}`,
+            '-c:v',
+            'libx264',
+            '-preset',
+            'fast',
+            '-crf',
+            '23',
             '-c:a',
             'copy',
+            '-movflags',
+            '+faststart',
             output,
           ]);
           ff.off('log', cropLogHandler);
@@ -849,6 +865,8 @@ self.onmessage = async (
               ? [
                   '-i',
                   input,
+                  '-map',
+                  '0:a:0',
                   '-vn',
                   '-acodec',
                   'pcm_s16le',
@@ -858,7 +876,7 @@ self.onmessage = async (
                   '1',
                   output,
                 ]
-              : ['-i', input, '-vn', '-c:a', 'copy', output];
+              : ['-i', input, '-map', '0:a:0', '-vn', '-c:a', 'copy', output];
 
           const code = await ff.exec(args);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
@@ -1034,9 +1052,17 @@ self.onmessage = async (
             input,
             '-vf',
             vf,
+            '-c:v',
+            'libx264',
+            '-preset',
+            'fast',
+            '-crf',
+            '23',
             '-c:a',
             'copy',
             ...(needsRotation ? ['-metadata:s:v:0', 'rotate=0'] : []),
+            '-movflags',
+            '+faststart',
             output,
           ]);
           ff.off('log', burnLogHandler);
@@ -1064,6 +1090,99 @@ self.onmessage = async (
           await ff.deleteFile(output);
           sendProgress(100);
 
+          self.postMessage(
+            { id, type: 'result', payload: { data: result } },
+            { transfer: [result.buffer as ArrayBuffer] },
+          );
+          break;
+        }
+
+        case 'scaleDown': {
+          /* Unregister the global progress handler — this case uses
+             frame-based progress parsing from log output. */
+          ff.off('progress', progressHandler);
+
+          const { videoData, targetHeight } = payload as {
+            videoData: Uint8Array;
+            targetHeight: number;
+          };
+          const input = 'input_scale.mp4';
+          const output = 'output_scaled.mp4';
+          await ff.writeFile(input, videoData);
+
+          /* Probe input dimensions and duration for progress reporting. */
+          let probeLog = '';
+          const probeHandler = ({ message }: { message: string }) => {
+            probeLog += message + '\n';
+          };
+          ff.on('log', probeHandler);
+          await ff.exec(['-i', input]);
+          ff.off('log', probeHandler);
+
+          const dimMatch = probeLog.match(/(\d{2,5})x(\d{2,5})/);
+          const origW = dimMatch ? Number(dimMatch[1]) : 0;
+          const origH = dimMatch ? Number(dimMatch[2]) : 0;
+
+          const durMatch = probeLog.match(
+            /Duration:\s+(\d+):(\d+):(\d+(?:\.\d+)?)/,
+          );
+          const durationSec = durMatch
+            ? Number(durMatch[1]) * 3600 +
+              Number(durMatch[2]) * 60 +
+              Number(durMatch[3])
+            : 0;
+          const fpsMatch = probeLog.match(/(\d+(?:\.\d+)?)\s*(?:fps|tbr)/);
+          const srcFps = fpsMatch ? Number(fpsMatch[1]) : 30;
+          const estimatedFrames = durationSec > 0 ? durationSec * srcFps : 0;
+
+          /* For portrait videos (height > width) target the width;
+             for landscape target the height. */
+          const isPortrait = origH > origW && origW > 0;
+          const scaleFilter = isPortrait
+            ? `scale=${targetHeight}:-2:flags=lanczos`
+            : `scale=-2:${targetHeight}:flags=lanczos`;
+
+          let lastFrame = 0;
+          const frameLogHandler = ({ message }: { message: string }) => {
+            if (estimatedFrames > 0) {
+              const m = message.match(/frame=\s*(\d+)/);
+              if (m) {
+                const frame = Number(m[1]);
+                if (frame > lastFrame) {
+                  lastFrame = frame;
+                  sendProgress(
+                    Math.min(99, Math.round((frame / estimatedFrames) * 100)),
+                  );
+                }
+              }
+            }
+          };
+          ff.on('log', frameLogHandler);
+
+          const code = await ff.exec([
+            '-i',
+            input,
+            '-vf',
+            scaleFilter,
+            '-c:v',
+            'libx264',
+            '-preset',
+            'fast',
+            '-crf',
+            '23',
+            '-c:a',
+            'copy',
+            '-movflags',
+            '+faststart',
+            output,
+          ]);
+          ff.off('log', frameLogHandler);
+
+          if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
+          const result = (await ff.readFile(output)) as Uint8Array;
+          await ff.deleteFile(input);
+          await ff.deleteFile(output);
+          sendProgress(100);
           self.postMessage(
             { id, type: 'result', payload: { data: result } },
             { transfer: [result.buffer as ArrayBuffer] },

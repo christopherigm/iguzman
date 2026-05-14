@@ -519,6 +519,16 @@ export interface InterpolateFpsOptions {
    * Valid range: 4–64.
    */
   searchParam?: number;
+  /**
+   * Motion interpolation mode. Default `'mci'` (motion-compensated).
+   * `'blend'` is significantly faster at the cost of quality.
+   */
+  miMode?: 'mci' | 'blend' | 'dup';
+  /**
+   * Motion compensation mode (only applies when `miMode='mci'`). Default `'obmc'`.
+   * `'aobmc'` = highest quality but slowest; `'obmc'` = faster, similar results.
+   */
+  mcMode?: 'obmc' | 'aobmc' | 'no';
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
   /** Called with a value 0–100 as encoding progresses. */
@@ -625,6 +635,25 @@ export interface BurnSubtitlesOptions {
   onProgress?: (pct: number) => void;
 }
 
+export interface ScaleDownOptions {
+  /** Absolute path to the input video file. */
+  inputPath: string;
+  /** Absolute path where the output file will be written. */
+  outputPath: string;
+  /**
+   * Target short-side pixels (e.g. 720 for HD).
+   * For landscape videos this sets the output height;
+   * for portrait videos it sets the output width.
+   * Width/height is automatically calculated to preserve aspect ratio
+   * and is rounded to the nearest multiple of 2 by the `-2` scale flag.
+   */
+  targetHeight: number;
+  /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
+  ffmpegBinary?: string;
+  /** Called with a value 0–100 as encoding progresses. */
+  onProgress?: (pct: number) => void;
+}
+
 /* ── Public API ──────────────────────────────────────────────────────── */
 
 /**
@@ -641,6 +670,8 @@ export async function interpolateFps(
     outputPath,
     targetFps,
     searchParam = 16,
+    miMode = 'mci',
+    mcMode = 'obmc',
     ffmpegBinary = DEFAULT_FFMPEG,
     onProgress,
   } = options;
@@ -648,7 +679,7 @@ export async function interpolateFps(
   const { durationSec } = await probeVideo(inputPath, ffmpegBinary);
 
   const estimatedFrames = durationSec > 0 ? durationSec * targetFps : 0;
-  const videoFilter = `minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1:search_param=${searchParam}`;
+  const videoFilter = `minterpolate=fps=${targetFps}:mi_mode=${miMode}:mc_mode=${mcMode}:me_mode=bidir:vsbmc=1:search_param=${searchParam}`;
 
   await runFFmpeg(
     [
@@ -664,6 +695,8 @@ export async function interpolateFps(
       '23',
       '-c:a',
       'copy',
+      '-movflags',
+      '+faststart',
       outputPath,
     ],
     ffmpegBinary,
@@ -705,6 +738,8 @@ export async function convertToH264(
       '23',
       '-c:a',
       'copy',
+      '-movflags',
+      '+faststart',
       outputPath,
     ],
     ffmpegBinary,
@@ -741,13 +776,17 @@ export async function convertToH265(
       '-c:v',
       'libx265',
       '-preset',
-      'medium',
+      'fast',
       '-crf',
       '28',
+      '-x265-params',
+      `pools=${CPU_COUNT}`,
       '-tag:v',
       'hvc1',
       '-c:a',
       'copy',
+      '-movflags',
+      '+faststart',
       outputPath,
     ],
     ffmpegBinary,
@@ -793,9 +832,15 @@ export async function removeBlackBars(
   if (!crop) {
     /* Step 1 (0–49 %): cropdetect pass — no output file, so no encoding
        frames; we parse frame numbers from the null-muxer log. */
+    /* Limit to a 60 s window; enough for any stable bar pattern and avoids
+       scanning the entire file on long videos. */
+    const detectSec = durationSec > 0 ? Math.min(durationSec, 60) : 60;
+    const detectArgs: string[] = durationSec > 60 ? ['-t', '60'] : [];
+    const detectFrames = Math.round(detectSec * fps);
     await new Promise<void>((resolve, reject) => {
       const proc = spawn(ffmpegBinary, [
         ...THREAD_FLAGS,
+        ...detectArgs,
         '-i',
         inputPath,
         '-vf',
@@ -812,14 +857,14 @@ export async function removeBlackBars(
         const text = chunk.toString();
         log += text;
 
-        if (onProgress && estimatedFrames > 0) {
+        if (onProgress && detectFrames > 0) {
           const m = text.match(/frame=\s*(\d+)/);
           if (m) {
             const frame = Number(m[1]);
             if (frame > lastFrame) {
               lastFrame = frame;
               onProgress(
-                Math.min(49, Math.round((frame / estimatedFrames) * 50)),
+                Math.min(49, Math.round((frame / detectFrames) * 50)),
               );
             }
           }
@@ -883,8 +928,16 @@ export async function removeBlackBars(
       inputPath,
       '-vf',
       `crop=${crop}`,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
+      '-crf',
+      '23',
       '-c:a',
       'copy',
+      '-movflags',
+      '+faststart',
       outputPath,
     ]);
 
@@ -958,6 +1011,8 @@ export async function extractAudio(
       ? [
           '-i',
           inputPath,
+          '-map',
+          '0:a:0',
           '-vn',
           '-acodec',
           'pcm_s16le',
@@ -967,7 +1022,7 @@ export async function extractAudio(
           '1',
           outputPath,
         ]
-      : ['-i', inputPath, '-vn', '-c:a', 'copy', outputPath];
+      : ['-i', inputPath, '-map', '0:a:0', '-vn', '-c:a', 'copy', outputPath];
 
   await runFFmpeg(args, ffmpegBinary, onProgress, estimatedFrames);
 
@@ -1082,9 +1137,17 @@ export async function burnSubtitles(
         inputPath,
         '-vf',
         vf,
+        '-c:v',
+        'libx264',
+        '-preset',
+        'fast',
+        '-crf',
+        '23',
         '-c:a',
         'copy',
         ...(needsRotation ? ['-metadata:s:v:0', 'rotate=0'] : []),
+        '-movflags',
+        '+faststart',
         outputPath,
       ],
       ffmpegBinary,
@@ -1105,6 +1168,67 @@ export async function burnSubtitles(
       }
     }
   }
+
+  return outputPath;
+}
+
+/**
+ * Scales a video down to a lower resolution.
+ *
+ * The short side of the video is set to `targetHeight` while the long side
+ * is calculated automatically to preserve the original aspect ratio.
+ * Both dimensions are rounded to the nearest multiple of 2.
+ *
+ * @returns The resolved `outputPath`.
+ * @throws When ffmpeg exits with a non-zero code.
+ */
+export async function scaleDown(options: ScaleDownOptions): Promise<string> {
+  const {
+    inputPath,
+    outputPath,
+    targetHeight,
+    ffmpegBinary = DEFAULT_FFMPEG,
+    onProgress,
+  } = options;
+
+  const {
+    width: origW,
+    height: origH,
+    durationSec,
+    fps,
+  } = await probeVideo(inputPath, ffmpegBinary);
+  const estimatedFrames = durationSec > 0 ? durationSec * fps : 0;
+
+  /* For portrait videos (height > width) target the width dimension;
+     for landscape target the height. The `-2` flag auto-calculates the
+     other dimension, rounding it to the nearest multiple of 2. */
+  const isPortrait = origH > origW && origW > 0;
+  const scaleFilter = isPortrait
+    ? `scale=${targetHeight}:-2:flags=lanczos`
+    : `scale=-2:${targetHeight}:flags=lanczos`;
+
+  await runFFmpeg(
+    [
+      '-i',
+      inputPath,
+      '-vf',
+      scaleFilter,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
+      '-crf',
+      '23',
+      '-c:a',
+      'copy',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ],
+    ffmpegBinary,
+    onProgress,
+    estimatedFrames,
+  );
 
   return outputPath;
 }

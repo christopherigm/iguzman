@@ -230,7 +230,6 @@ export function DownloadForm({
   onVideoAdded,
   completedVideos,
   onMoveToFirst,
-  onClearStorage: _onClearStorage,
   onRemoveVideosByUuids,
 }: DownloadFormProps = {}) {
   const t = useTranslations('DownloadForm');

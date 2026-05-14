@@ -93,7 +93,7 @@ export function Slider({
       <Box
         width="100%"
         marginTop={2}
-        aria-hidden="true"
+        aria-hidden={true}
         styles={{ position: 'relative', height: '20px' }}
       >
         {steps.map((step, i) => (

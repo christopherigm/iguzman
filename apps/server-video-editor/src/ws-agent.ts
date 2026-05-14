@@ -11,6 +11,7 @@ import {
   convertToH264,
   convertToH265,
   burnSubtitles,
+  scaleDown,
 } from './ffmpeg-ops.js';
 import { tmpdir } from 'node:os';
 import { join, extname } from 'node:path';
@@ -25,7 +26,8 @@ type WsOp =
   | 'removeBlackBars'
   | 'convertToH264'
   | 'convertToH265'
-  | 'burnSubtitles';
+  | 'burnSubtitles'
+  | 'scaleDown';
 
 interface JobMessage {
   type: 'job';
@@ -35,6 +37,7 @@ interface JobMessage {
     taskId: string;
     inputFile: string;
     fps?: number;
+    targetHeight?: number;
     subtitlesFile?: string;
     srtContent?: string;
     alignment?: number;
@@ -160,6 +163,13 @@ async function handleJob(ws: WebSocket, msg: JobMessage): Promise<void> {
         animation: params.animation as Parameters<
           typeof burnSubtitles
         >[0]['animation'],
+        onProgress: sendProgress,
+      });
+    } else if (op === 'scaleDown') {
+      await scaleDown({
+        inputPath,
+        outputPath,
+        targetHeight: params.targetHeight ?? 720,
         onProgress: sendProgress,
       });
     } else {

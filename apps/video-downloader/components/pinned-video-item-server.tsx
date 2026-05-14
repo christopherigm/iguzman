@@ -112,6 +112,7 @@ export function PinnedVideoItemServer({
   const convertH265ResumeChecked = useRef(false);
   const blackBarsResumeChecked = useRef(false);
   const burnResumeChecked = useRef(false);
+  const scaleDownResumeChecked = useRef(false);
   // Tracks the server input file so handleServerTaskDone can delete it after
   // the result is saved to OPFS (both the uploaded-from-OPFS case and the
   // still-on-server case use the same cleanup path).
@@ -165,7 +166,8 @@ export function PinnedVideoItemServer({
         | 'removeBlackBars'
         | 'convertToH264'
         | 'convertToH265'
-        | 'burnSubtitles';
+        | 'burnSubtitles'
+        | 'scaleDown';
       extraParams?: Record<string, unknown>;
       donePatch: Partial<StoredVideo>;
       errorKey: string;
@@ -416,6 +418,36 @@ export function PinnedVideoItemServer({
         completeAfter: true,
       }),
     [runServerProcessing],
+  );
+
+  /* ── Scale down ─────────────────────────────────────── */
+  const handleScaleDown = useCallback(
+    (targetHeight: number) => {
+      const origH = video.height ?? 0;
+      const origW = video.width ?? 0;
+      let donePatch: Partial<typeof video> = { scaleDownTargetHeight: null };
+      if (origH > 0 && origW > 0) {
+        const isPortrait = origH > origW;
+        if (isPortrait) {
+          const newW = targetHeight;
+          const newH = Math.round((origH * targetHeight) / origW / 2) * 2;
+          donePatch = { ...donePatch, height: newH, width: newW };
+        } else {
+          const newH = targetHeight;
+          const newW = Math.round((origW * targetHeight) / origH / 2) * 2;
+          donePatch = { ...donePatch, height: newH, width: newW };
+        }
+      }
+      return runServerProcessing({
+        activeStatus: 'processing',
+        op: 'scaleDown',
+        extraParams: { targetHeight },
+        donePatch,
+        errorKey: 'errorScaleDownFailed',
+        completeAfter: true,
+      });
+    },
+    [runServerProcessing, video.height, video.width],
   );
 
   /* ── Burn captions ──────────────────────────────────── */
@@ -790,6 +822,27 @@ export function PinnedVideoItemServer({
     video.burnCaptionsConfig,
     video.status,
     handleBurnCaptions,
+  ]);
+
+  /* ── Resume interrupted scale-down ───────────────────── */
+  useEffect(() => {
+    if (scaleDownResumeChecked.current) return;
+    scaleDownResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.justAudio &&
+      video.scaleDownTargetHeight != null &&
+      video.status === 'processing';
+
+    if (needsResume)
+      queueMicrotask(() => handleScaleDown(video.scaleDownTargetHeight!));
+  }, [
+    video.file,
+    video.justAudio,
+    video.scaleDownTargetHeight,
+    video.status,
+    handleScaleDown,
   ]);
 
   /* ── Warn before closing during active processing ────── */

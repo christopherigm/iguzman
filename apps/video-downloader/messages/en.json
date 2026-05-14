@@ -274,7 +274,12 @@
     "fpsDeviceOnlyTitle": "FPS Interpolation Unavailable",
     "fpsDeviceOnlyText": "On-device FPS interpolation is not available for FHD and higher resolutions. Add a server to process this video.",
     "wsClientOffline": "offline",
-    "videoNotAvailableOffline": "Video not available offline"
+    "videoNotAvailableOffline": "Video not available offline",
+    "scaleDown": "Scale Down",
+    "scalingDown": "Scaling down… {progress}%",
+    "scaleDownTitle": "Scale Down Resolution",
+    "scaleDownText": "Select a lower resolution. The video will be re-encoded to the chosen size.",
+    "errorScaleDownFailed": "Resolution scale-down failed."
   },
   "Offline": {
     "title": "You are offline",

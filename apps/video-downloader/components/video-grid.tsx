@@ -152,6 +152,12 @@ export function VideoGrid({
             captionsBurned: false,
           });
           break;
+        case 'scaleDown':
+          onReprocessCompleted(uuid, {
+            status: 'processing' as VideoStatus,
+            scaleDownTargetHeight: extra as number,
+          });
+          break;
       }
     },
     [onReprocessCompleted],

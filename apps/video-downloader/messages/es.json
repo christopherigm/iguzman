@@ -274,7 +274,12 @@
     "fpsDeviceOnlyTitle": "Interpolación de FPS no disponible",
     "fpsDeviceOnlyText": "La interpolación de FPS en el dispositivo no está disponible para resoluciones FHD y superiores. Añade un servidor para procesar este video.",
     "wsClientOffline": "sin conexión",
-    "videoNotAvailableOffline": "Video no disponible sin conexión"
+    "videoNotAvailableOffline": "Video no disponible sin conexión",
+    "scaleDown": "Reducir resolución",
+    "scalingDown": "Reduciendo resolución… {progress}%",
+    "scaleDownTitle": "Reducir resolución",
+    "scaleDownText": "Selecciona una resolución menor. El video se recodificará al tamaño elegido.",
+    "errorScaleDownFailed": "Error al reducir la resolución."
   },
   "Offline": {
     "title": "Estás sin conexión",

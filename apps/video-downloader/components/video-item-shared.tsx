@@ -645,6 +645,7 @@ export function VideoExtraActions({
   h264Error,
   h265Error,
   blackBarsError,
+  scaleDownError,
   onRemoveBlackBars,
   onInterpolateFps,
   onConvert,
@@ -652,6 +653,7 @@ export function VideoExtraActions({
   onDownloadCaptions,
   onBurnCaptions,
   onMakeOffline,
+  onScaleDown,
   initialWsClientUuid,
   onWsClientChange,
   t,
@@ -662,6 +664,7 @@ export function VideoExtraActions({
   h264Error: boolean;
   h265Error: boolean;
   blackBarsError: boolean;
+  scaleDownError?: boolean;
   onRemoveBlackBars: () => void;
   onInterpolateFps: (fps: number) => void;
   onConvert: () => void;
@@ -669,6 +672,7 @@ export function VideoExtraActions({
   onDownloadCaptions?: () => void;
   onBurnCaptions?: () => void;
   onMakeOffline?: () => Promise<void>;
+  onScaleDown?: (targetHeight: number) => void;
   initialWsClientUuid?: string | null;
   onWsClientChange?: (uuid: string) => void;
   t: TranslationFn;
@@ -681,6 +685,7 @@ export function VideoExtraActions({
     null,
   );
   const [offlineMigrating, setOfflineMigrating] = useState(false);
+  const [showScaleDownModal, setShowScaleDownModal] = useState(false);
 
   const serverSelected = currentWsUuid !== THIS_DEVICE_UUID;
   const canProcess =
@@ -695,6 +700,17 @@ export function VideoExtraActions({
           ? Math.min(video.height, video.width)
           : video.height) >= 1080
       : false;
+
+  /* Resolutions available for scale-down: only those smaller than the
+     current short-side pixel count (Math.min of height × width). */
+  const SCALE_DOWN_STEPS = [2160, 1440, 1080, 720, 480, 360] as const;
+  const currentShortSide =
+    video.height != null && video.width != null
+      ? Math.min(video.height, video.width)
+      : (video.height ?? 0);
+  const availableScaleResolutions = SCALE_DOWN_STEPS.filter(
+    (h) => currentShortSide > 0 && h < currentShortSide,
+  );
 
   const handleFpsClick = (fps: number) => {
     if (isFhdOrHigher && currentWsUuid === THIS_DEVICE_UUID) {
@@ -712,6 +728,33 @@ export function VideoExtraActions({
           text={t('fpsDeviceOnlyText')}
           okCallback={() => setFpsDeviceModalFps(null)}
         />
+      ) : null}
+      {showScaleDownModal ? (
+        <ConfirmationModal
+          title={t('scaleDownTitle')}
+          text={t('scaleDownText')}
+          okCallback={() => setShowScaleDownModal(false)}
+          panelMaxWidth="340px"
+        >
+          <Box
+            display="flex"
+            styles={{ flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}
+          >
+            {availableScaleResolutions.map((h) => (
+              <Button
+                key={h}
+                unstyled
+                className="vi-fps-btn"
+                onClick={() => {
+                  setShowScaleDownModal(false);
+                  onScaleDown?.(h);
+                }}
+              >
+                {buildResolutionLabel(h)}
+              </Button>
+            ))}
+          </Box>
+        </ConfirmationModal>
       ) : null}
       <Box className="vi-extra-actions">
         {onWsClientChange ? (
@@ -806,7 +849,7 @@ export function VideoExtraActions({
                 }
                 aria-label={t('convertH265')}
                 title={t('convertH265')}
-                icon="/icons/convert.svg"
+                icon="/icons/h265.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
               >
@@ -864,6 +907,26 @@ export function VideoExtraActions({
                 iconColor="var(--accent, #8b5cf6)"
               >
                 {t('burnCaptions')}
+              </Button>
+            </Grid>
+          ) : null}
+
+          {!video.justAudio &&
+          !!onScaleDown &&
+          availableScaleResolutions.length > 0 ? (
+            <Grid size={{ xs: 6 }}>
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={() => setShowScaleDownModal(true)}
+                disabled={!canProcess || scaleDownError}
+                aria-label={t('scaleDown')}
+                title={t('scaleDown')}
+                icon="/icons/scale-down.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+              >
+                {t('scaleDown')}
               </Button>
             </Grid>
           ) : null}

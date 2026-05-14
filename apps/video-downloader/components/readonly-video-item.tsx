@@ -32,7 +32,13 @@ import './video-item.css';
 
 /* ── Props ──────────────────────────────────────────── */
 
-export type ReprocessAction = 'fps' | 'h264' | 'h265' | 'bars' | 'burnCaptions';
+export type ReprocessAction =
+  | 'fps'
+  | 'h264'
+  | 'h265'
+  | 'bars'
+  | 'burnCaptions'
+  | 'scaleDown';
 
 export interface ReadOnlyVideoItemProps {
   video: StoredVideo;
@@ -292,6 +298,7 @@ export function ReadOnlyVideoItem({
           onConvertH265={() => onReprocess(video.uuid, 'h265')}
           onDownloadCaptions={handleDownloadCaptions}
           onBurnCaptions={() => setShowBurnModal(true)}
+          onScaleDown={(height) => onReprocess(video.uuid, 'scaleDown', height)}
           onMakeOffline={handleMakeOffline}
           initialWsClientUuid={video.wsClientUuid ?? null}
           onWsClientChange={handleWsClientChange}
