@@ -18,11 +18,8 @@ import {
   resolveResolutionLabel,
   PlatformIconBg,
 } from './video-item-shared';
-import {
-  isOPFSSupported,
-  getOPFSStorageInfo,
-  clearOPFSStorage,
-} from '@/lib/opfs';
+import { isOPFSSupported, getOPFSStorageInfo } from '@/lib/opfs';
+import { ClearStorageModal } from './clear-storage-modal';
 import type { CaptionOption } from '@/app/api/video-metadata/route';
 import './platform-icon-bg.css';
 import './download-form.css';
@@ -224,13 +221,16 @@ export interface DownloadFormProps {
   onMoveToFirst?: (uuid: string) => void;
   /** Called after OPFS and completed-video storage have been cleared. */
   onClearStorage?: () => void;
+  /** Called after a category of OPFS videos is cleared; receives the UUIDs removed. */
+  onRemoveVideosByUuids?: (uuids: string[]) => void;
 }
 
 export function DownloadForm({
   onVideoAdded,
   completedVideos,
   onMoveToFirst,
-  onClearStorage,
+  onClearStorage: _onClearStorage,
+  onRemoveVideosByUuids,
 }: DownloadFormProps = {}) {
   const t = useTranslations('DownloadForm');
   const [url, setUrl] = useState('');
@@ -484,22 +484,12 @@ export function DownloadForm({
     setDuplicateEntry(null);
   }, [duplicateEntry, onMoveToFirst]);
 
-  const handleClearStorage = useCallback(async () => {
-    await clearOPFSStorage();
-    try {
-      const raw = localStorage.getItem('vd_completed_v2');
-      if (raw) {
-        const all = JSON.parse(raw) as Array<{ opfsEnabled?: boolean }>;
-        const kept = all.filter((v) => !v.opfsEnabled);
-        localStorage.setItem('vd_completed_v2', JSON.stringify(kept));
-      }
-    } catch {
-      // Malformed storage — leave it untouched
-    }
-    setStorageInfo(null);
+  const handleStorageModalClose = useCallback(async () => {
     setShowClearStorageConfirm(false);
-    onClearStorage?.();
-  }, [onClearStorage]);
+    /* Refresh the storage bar after any category clears */
+    const info = await getOPFSStorageInfo();
+    setStorageInfo(info);
+  }, []);
 
   const formContent = (
     <Box
@@ -720,15 +710,11 @@ export function DownloadForm({
         </form>
       </Box>
 
-      {/* ── Clear Storage Confirmation Modal ─────── */}
-      {showClearStorageConfirm ? (
-        <ConfirmationModal
-          title={t('clearStorageTitle')}
-          text={t('clearStorageText')}
-          okCallback={() => {
-            void handleClearStorage();
-          }}
-          cancelCallback={() => setShowClearStorageConfirm(false)}
+      {/* ── Clear Storage Modal ───────────────────── */}
+      {showClearStorageConfirm && onRemoveVideosByUuids ? (
+        <ClearStorageModal
+          onClose={() => void handleStorageModalClose()}
+          onRemoveVideosByUuids={onRemoveVideosByUuids}
         />
       ) : null}
 

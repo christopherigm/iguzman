@@ -160,6 +160,7 @@ function DownloadPageInner() {
     updateCompleted,
     removePinned,
     removeCompleted,
+    removeCompletedBulk,
     clearCompleted,
     moveCompletedToFirst,
     storageError,
@@ -210,6 +211,7 @@ function DownloadPageInner() {
         completedVideos={completed}
         onMoveToFirst={moveCompletedToFirst}
         onClearStorage={clearCompleted}
+        onRemoveVideosByUuids={removeCompletedBulk}
       />
       {storageError ? (
         <Typography

@@ -48,9 +48,25 @@
     "duplicateMoveToFirst": "Mover al primer lugar",
     "opfsStorageLabel": "Almacenamiento del dispositivo",
     "opfsStorageUsage": "{used} / {total} ({pct}%)",
-    "clearStorageLabel": "Borrar almacenamiento del dispositivo",
-    "clearStorageTitle": "Borrar almacenamiento del dispositivo",
-    "clearStorageText": "Esto eliminará permanentemente todos los videos almacenados en el almacenamiento del navegador de tu dispositivo. Los videos almacenados en el servidor no se verán afectados. Esta acción no se puede deshacer."
+    "clearStorageLabel": "Borrar almacenamiento del dispositivo"
+  },
+  "ClearStorageModal": {
+    "title": "Gestionar almacenamiento del dispositivo",
+    "orphanTitle": "Archivos huérfanos",
+    "orphanDescription": "Archivos en el almacenamiento del dispositivo sin registro de video asociado",
+    "audioTitle": "Audios",
+    "audioDescription": "Descargas de solo audio",
+    "largeTitle": "Videos grandes",
+    "largeDescription": "Videos de más de 100 MB",
+    "mediumTitle": "Videos medianos",
+    "mediumDescription": "Videos entre 30 MB y 100 MB",
+    "otherTitle": "Otros archivos",
+    "otherDescription": "Videos de menos de 30 MB o con tamaño desconocido",
+    "clearCategory": "Borrar",
+    "clearing": "Borrando…",
+    "fileCount": "{count, plural, one {# archivo} other {# archivos}}",
+    "emptyMessage": "No se encontraron archivos almacenados en el dispositivo.",
+    "toggleFileList": "Mostrar u ocultar lista de archivos"
   },
   "Admin": {
     "title": "Panel de administración",

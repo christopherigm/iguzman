@@ -437,6 +437,12 @@ export function useVideoStore() {
     setCompleted((prev) => prev.filter((v) => v.uuid !== uuid));
   }, []);
 
+  /** Remove a specific set of completed video entries by UUID. */
+  const removeCompletedBulk = useCallback((uuids: string[]) => {
+    const set = new Set(uuids);
+    setCompleted((prev) => prev.filter((v) => !set.has(v.uuid)));
+  }, []);
+
   /** Remove all completed video entries. */
   const clearCompleted = useCallback(() => {
     setCompleted([]);
@@ -463,6 +469,7 @@ export function useVideoStore() {
     updateCompleted,
     removePinned,
     removeCompleted,
+    removeCompletedBulk,
     clearCompleted,
     moveCompletedToFirst,
     storageError,

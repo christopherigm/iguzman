@@ -48,9 +48,25 @@
     "duplicateMoveToFirst": "Move to first place",
     "opfsStorageLabel": "Device storage",
     "opfsStorageUsage": "{used} / {total} ({pct}%)",
-    "clearStorageLabel": "Clear device storage",
-    "clearStorageTitle": "Clear Device Storage",
-    "clearStorageText": "This will permanently delete all videos stored in your browser's device storage. Videos stored on the server will remain untouched. This action cannot be undone."
+    "clearStorageLabel": "Clear device storage"
+  },
+  "ClearStorageModal": {
+    "title": "Manage Device Storage",
+    "orphanTitle": "Orphan Files",
+    "orphanDescription": "Files in device storage not linked to any video record",
+    "audioTitle": "Audios",
+    "audioDescription": "Audio-only downloads",
+    "largeTitle": "Large Videos",
+    "largeDescription": "Videos over 100 MB",
+    "mediumTitle": "Medium Videos",
+    "mediumDescription": "Videos between 30 MB and 100 MB",
+    "otherTitle": "Other Files",
+    "otherDescription": "Videos under 30 MB or with unknown size",
+    "clearCategory": "Clear",
+    "clearing": "Clearing…",
+    "fileCount": "{count, plural, one {# file} other {# files}}",
+    "emptyMessage": "No device-stored files found.",
+    "toggleFileList": "Toggle file list"
   },
   "Admin": {
     "title": "Admin Dashboard",

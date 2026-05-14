@@ -53,6 +53,24 @@ export async function clearOPFSStorage(): Promise<void> {
   }
 }
 
+export async function listOPFSFiles(): Promise<
+  { name: string; size: number }[]
+> {
+  const results: { name: string; size: number }[] = [];
+  try {
+    const dir = await getDir();
+    for await (const [name, handle] of dir.entries()) {
+      if (handle.kind === 'file') {
+        const file = await (handle as FileSystemFileHandle).getFile();
+        results.push({ name, size: file.size });
+      }
+    }
+  } catch {
+    // OPFS unavailable or directory empty
+  }
+  return results;
+}
+
 export async function getOPFSStorageInfo(): Promise<{
   usedBytes: number;
   totalBytes: number;

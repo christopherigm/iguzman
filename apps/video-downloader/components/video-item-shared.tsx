@@ -9,7 +9,6 @@ import { Icon } from '@repo/ui/core-elements/icon';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { Button } from '@repo/ui/core-elements/button';
 import type { StoredVideo, VideoStatus } from './use-video-store';
-import Image from 'next/image';
 import {
   WsClientPanel,
   THIS_DEVICE_UUID,
@@ -433,12 +432,12 @@ export function VideoMediaPreview({
       <>
         {thumbnailSrc ? (
           <Box className="vi-media-wrapper">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               className="vi-thumbnail"
               src={thumbnailSrc}
               alt=""
               loading="lazy"
-              unoptimized
             />
           </Box>
         ) : null}
