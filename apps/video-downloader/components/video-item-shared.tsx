@@ -200,6 +200,11 @@ export function formatProcessingTime(seconds: number): string {
   return `${m}m ${s}s`;
 }
 
+export function formatFileSize(bytes: number): string {
+  if (bytes >= 1_000_000_000) return `${(bytes / 1_000_000_000).toFixed(2)} GB`;
+  return `${(bytes / 1_000_000).toFixed(2)} MB`;
+}
+
 export async function uploadProcessedVideo(
   file: string,
   blob: Blob,
@@ -323,6 +328,12 @@ export function VideoDetailsPanel({
           <>
             <dt>{t('detailDuration')}</dt>
             <dd>{Math.round(video.duration)}s</dd>
+          </>
+        ) : null}
+        {video.fileSize != null ? (
+          <>
+            <dt>{t('detailFileSize')}</dt>
+            <dd>{formatFileSize(video.fileSize)}</dd>
           </>
         ) : null}
 

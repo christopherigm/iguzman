@@ -71,6 +71,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   opfsStored: boolean;
   /** Whether the server temp file has been confirmed deleted after OPFS migration. */
   serverFileDeleted: boolean;
+  /** File size in bytes. Null for videos added before this field was introduced. */
+  fileSize: number | null;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -132,6 +134,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     opfsCaptionsKey: v.opfsCaptionsKey ?? null,
     opfsStored: v.opfsStored ?? false,
     serverFileDeleted: v.serverFileDeleted ?? false,
+    fileSize: v.fileSize ?? null,
   };
 }
 
@@ -354,6 +357,7 @@ export function useVideoStore() {
         opfsCaptionsKey: null,
         opfsStored: false,
         serverFileDeleted: false,
+        fileSize: null,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional

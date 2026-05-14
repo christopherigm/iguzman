@@ -290,7 +290,6 @@ export function DownloadForm({
   const [metadataLoading, setMetadataLoading] = useState(false);
 
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
-  const [captionsLoading, setCaptionsLoading] = useState(false);
   const [availableCaptions, setAvailableCaptions] = useState<CaptionOption[]>(
     [],
   );
@@ -318,11 +317,14 @@ export function DownloadForm({
     }
   }, [url]);
 
-  /* Fetch available resolutions for YouTube URLs.
+  /* Fetch resolutions and captions together in a single exhaustive call.
    * Retries up to 20 times with exponential backoff (1 s, 2 s, 4 s … capped at 30 s)
    * on network errors or non-2xx responses. */
   useEffect(() => {
     setCaptionsUnavailable(false);
+    setAvailableCaptions([]);
+    setSelectedCaptionUrl(null);
+    setCaptionsEnabled(false);
 
     if (!isValidUrl(url) || justAudio) {
       setResolutions([]);
@@ -342,18 +344,30 @@ export function DownloadForm({
       setMetadataLoading(true);
       try {
         const res = await fetch(
-          `/api/video-metadata?url=${encodeURIComponent(url)}`,
+          `/api/video-metadata?url=${encodeURIComponent(url)}&exhaustive=true`,
         );
         if (cancelled) return;
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as {
           heights?: number[];
           widthByHeight?: Record<number, number>;
+          captions?: CaptionOption[];
         };
         const heights = data.heights ?? [];
         setResolutions(heights);
         setWidthByHeight(data.widthByHeight ?? {});
         setSelectedResolution(heights[0] ?? null);
+        const captions = data.captions ?? [];
+        if (captions.length === 0) {
+          setCaptionsUnavailable(true);
+        } else {
+          setAvailableCaptions(captions);
+          const preferred = captions.find(
+            (c) => /orig/i.test(c.lang) || /orig/i.test(c.label),
+          );
+          setSelectedCaptionUrl((preferred ?? captions[0])?.url ?? null);
+          setCaptionsEnabled(true);
+        }
         setMetadataLoading(false);
       } catch {
         if (cancelled) return;
@@ -377,66 +391,6 @@ export function DownloadForm({
     };
   }, [url, justAudio]);
 
-  /* Fetch available captions when the switch is enabled and URL is valid.
-   * Retries up to 20 times with exponential backoff (1 s, 2 s, 4 s … capped at 30 s)
-   * on network errors or non-2xx responses. */
-  useEffect(() => {
-    if (!captionsEnabled || !isValidUrl(url)) {
-      setAvailableCaptions([]);
-      setSelectedCaptionUrl(null);
-      setCaptionsLoading(false);
-      return;
-    }
-
-    const MAX_ATTEMPTS = 20;
-    let attempt = 0;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout>;
-
-    const tryFetch = async () => {
-      if (cancelled) return;
-      setCaptionsLoading(true);
-      try {
-        const res = await fetch(
-          `/api/video-metadata?url=${encodeURIComponent(url)}&exhaustive=true`,
-        );
-        if (cancelled) return;
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { captions?: CaptionOption[] };
-        const captions = data.captions ?? [];
-        if (captions.length === 0) {
-          setCaptionsEnabled(false);
-          setCaptionsUnavailable(true);
-        } else {
-          setAvailableCaptions(captions);
-          const preferred = captions.find(
-            (c) => /orig/i.test(c.lang) || /orig/i.test(c.label),
-          );
-          setSelectedCaptionUrl((preferred ?? captions[0])?.url ?? null);
-        }
-        setCaptionsLoading(false);
-      } catch {
-        if (cancelled) return;
-        attempt += 1;
-        if (attempt < MAX_ATTEMPTS) {
-          const delay = Math.min(1000 * 2 ** (attempt - 1), 30_000);
-          timer = setTimeout(tryFetch, delay);
-        } else {
-          setCaptionsLoading(false);
-        }
-      }
-    };
-
-    /* Initial debounce before the first attempt */
-    timer = setTimeout(tryFetch, 800);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      setCaptionsLoading(false);
-    };
-  }, [captionsEnabled, url]);
-
   /* Derived state */
   const hasText = url.length > 0;
   const validUrl = useMemo(() => isValidUrl(url), [url]);
@@ -450,7 +404,8 @@ export function DownloadForm({
   /* Disabled flags */
   const switchesDisabled = !validPlatformUrl;
   // const _enhanceDisabled = switchesDisabled || justAudio;
-  const captionsDisabled = switchesDisabled || justAudio || captionsUnavailable;
+  const captionsDisabled =
+    switchesDisabled || justAudio || captionsUnavailable || metadataLoading;
 
   /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
@@ -598,7 +553,7 @@ export function DownloadForm({
         <button
           type="submit"
           className="df-icon-btn df-icon-btn--download"
-          disabled={!validPlatformUrl || captionsLoading}
+          disabled={!validPlatformUrl || metadataLoading}
           aria-label={t('download')}
         >
           <Icon
@@ -646,35 +601,41 @@ export function DownloadForm({
         >
           <div className="df-advanced-inner">
             <hr className="df-divider" />
-            {(resolutions.length > 0 || metadataLoading) && (
-              <OptionRow
-                label={t('resolution')}
-                disabled={switchesDisabled || metadataLoading || justAudio}
-              >
-                {metadataLoading ? (
-                  <Spinner size={18} thickness={2} label={t('resolution')} />
-                ) : (
-                  <ResolutionSelect
-                    value={selectedResolution}
-                    onChange={setSelectedResolution}
-                    disabled={switchesDisabled || justAudio}
-                    options={resolutions.map((h) => ({
-                      value: h,
-                      label: (() => {
-                        const name = resolveResolutionLabel(
-                          h,
-                          widthByHeight[h],
-                        );
-                        return name ? `${name} ${h}` : `${h}p`;
-                      })(),
-                    }))}
-                  />
-                )}
-              </OptionRow>
-            )}
             <OptionRow
-              label={t('checkForCaptions')}
-              disabled={captionsDisabled || captionsLoading}
+              label={t('resolution')}
+              disabled={
+                switchesDisabled ||
+                metadataLoading ||
+                justAudio ||
+                resolutions.length === 0
+              }
+            >
+              {metadataLoading ? (
+                <Spinner size={18} thickness={2} label={t('resolution')} />
+              ) : (
+                <ResolutionSelect
+                  value={selectedResolution}
+                  onChange={setSelectedResolution}
+                  disabled={
+                    switchesDisabled || justAudio || resolutions.length === 0
+                  }
+                  options={resolutions.map((h) => ({
+                    value: h,
+                    label: (() => {
+                      const name = resolveResolutionLabel(h, widthByHeight[h]);
+                      return name ? `${name} ${h}` : `${h}p`;
+                    })(),
+                  }))}
+                />
+              )}
+            </OptionRow>
+            <OptionRow
+              label={
+                captionsUnavailable
+                  ? t('captionsUnavailable')
+                  : t('downloadCaptions')
+              }
+              disabled={captionsDisabled}
             >
               <Box
                 display="flex"
@@ -686,13 +647,7 @@ export function DownloadForm({
                   checked={captionsEnabled}
                   onChange={captionsDisabled ? undefined : setCaptionsEnabled}
                 />
-                {captionsEnabled && captionsLoading ? (
-                  <Spinner
-                    size={18}
-                    thickness={2}
-                    label={t('captionsLoading')}
-                  />
-                ) : captionsEnabled && availableCaptions.length > 0 ? (
+                {captionsEnabled && availableCaptions.length > 0 ? (
                   <CaptionSelect
                     value={selectedCaptionUrl}
                     onChange={setSelectedCaptionUrl}

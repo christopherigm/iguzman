@@ -158,6 +158,7 @@ export function PinnedVideoItemDownloading({
               opfsStored: true,
               serverFileDeleted: true,
               downloadURL: `opfs://${file}`,
+              fileSize: videoBlob.size,
             });
 
             if (video.autoDownload) {
@@ -200,19 +201,31 @@ export function PinnedVideoItemDownloading({
         return;
       }
 
-      if (video.autoDownload && downloadURL && file) {
-        triggerBrowserDownload(
-          downloadURL,
-          `${name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}-${file}`,
-        );
-        if (video.justAudio) {
-          const thumbSrc = task.thumbnail
-            ? resolveMediaUrl(`/api/media/${task.thumbnail}`)
-            : null;
-          if (thumbSrc) downloadThumbnail(thumbSrc, name);
+      void (async () => {
+        if (file) {
+          try {
+            const headRes = await fetch(
+              resolveMediaUrl(`/api/media/${file}`),
+              { method: 'HEAD' },
+            );
+            const cl = headRes.headers.get('content-length');
+            if (cl) onUpdate(video.uuid, { fileSize: parseInt(cl, 10) });
+          } catch {}
         }
-      }
-      onComplete(video.uuid);
+        if (video.autoDownload && downloadURL && file) {
+          triggerBrowserDownload(
+            downloadURL,
+            `${name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}-${file}`,
+          );
+          if (video.justAudio) {
+            const thumbSrc = task.thumbnail
+              ? resolveMediaUrl(`/api/media/${task.thumbnail}`)
+              : null;
+            if (thumbSrc) downloadThumbnail(thumbSrc, name);
+          }
+        }
+        onComplete(video.uuid);
+      })();
     },
     [
       onUpdate,
