@@ -543,7 +543,7 @@ export function DownloadForm({
         <button
           type="submit"
           className="df-icon-btn df-icon-btn--download"
-          disabled={!validPlatformUrl || metadataLoading}
+          disabled={!validPlatformUrl}
           aria-label={t('download')}
         >
           <Icon

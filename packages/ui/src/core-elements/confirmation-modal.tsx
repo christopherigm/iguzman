@@ -105,7 +105,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         }}
       >
         <Box
-          padding={24}
+          padding={12}
           flex="1 1 auto"
           minHeight={0}
           styles={{ overflowY: 'auto' }}
@@ -136,7 +136,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           display="flex"
           justifyContent="flex-end"
           gap={8}
-          padding="12px 24px 20px"
+          padding="12px 12px 12px"
           styles={{
             flexShrink: 0,
             borderTop: '1px solid var(--border, rgba(0, 0, 0, 0.08))',
