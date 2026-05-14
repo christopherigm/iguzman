@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CSSProperties } from 'react';
 import { UIComponentProps, buildStyleProps, getBoxShadow } from './utils';
 import { Icon } from './icon';
+import { Spinner } from './spinner';
 import './button.css';
 
 /**
@@ -61,6 +62,12 @@ const ICON_GAPS: Record<ButtonSize, string> = {
   lg: '8px',
 };
 
+const SPINNER_SIZES: Record<ButtonSize, number> = {
+  sm: 13,
+  md: 15,
+  lg: 17,
+};
+
 /**
  * Props for `Button` component.
  */
@@ -107,11 +114,13 @@ export interface ButtonProps extends UIComponentProps {
   /** Accessible label when visible text is absent or insufficient (e.g. icon-only buttons). */
   'aria-label'?: string;
   /** Indicates whether a toggle button is currently pressed. */
-  'aria-pressed'?: React.AriaAttributes['aria-pressed'];
+  'aria-pressed'?: boolean;
   /** Indicates whether a control is expanded or collapsed. */
-  'aria-expanded'?: React.AriaAttributes['aria-expanded'];
+  'aria-expanded'?: boolean;
   /** IDs of elements whose contents are controlled by this button. */
   'aria-controls'?: string;
+  /** Shows a loading spinner and disables the button while true. */
+  isLoading?: boolean;
 }
 
 /**
@@ -139,6 +148,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
     iconPosition = 'start',
     iconSize,
     iconColor,
+    isLoading,
   } = props;
   const [isHovered, setIsHovered] = React.useState(false);
 
@@ -146,6 +156,8 @@ export const Button: React.FC<ButtonProps> = (props) => {
   const ariaPressed = props['aria-pressed'];
   const ariaExpanded = props['aria-expanded'];
   const ariaControls = props['aria-controls'];
+
+  const isDisabled = disabled || isLoading;
 
   const content = props.children ?? text;
 
@@ -157,29 +169,42 @@ export const Button: React.FC<ButtonProps> = (props) => {
     />
   ) : null;
 
+  const spinnerEl = isLoading ? (
+    <Spinner size={SPINNER_SIZES[size]} thickness={2} />
+  ) : null;
+
   // Allow content-less buttons (e.g. icon-only) when aria-label provides the accessible name.
-  if ((content === undefined || content === null) && !ariaLabel && !icon) {
+  if (
+    (content === undefined || content === null) &&
+    !ariaLabel &&
+    !icon &&
+    !isLoading
+  ) {
     return null;
   }
 
-  const hasGap = iconEl && content !== undefined && content !== null;
-  const iconFlexDefaults: CSSProperties = iconEl
-    ? {
-        display: 'inline-flex',
-        alignItems: 'center',
-        ...(hasGap ? { gap: ICON_GAPS[size] } : {}),
-      }
-    : {};
+  const hasGap =
+    (iconEl || spinnerEl) && content !== undefined && content !== null;
+  const iconFlexDefaults: CSSProperties =
+    iconEl || spinnerEl
+      ? {
+          display: 'inline-flex',
+          alignItems: 'center',
+          ...(hasGap ? { gap: ICON_GAPS[size] } : {}),
+        }
+      : {};
 
-  const contentWithIcon = iconEl ? (
-    <>
-      {iconPosition !== 'end' && iconEl}
-      {content}
-      {iconPosition === 'end' && iconEl}
-    </>
-  ) : (
-    content
-  );
+  const contentWithIcon =
+    iconEl || spinnerEl ? (
+      <>
+        {spinnerEl}
+        {iconPosition !== 'end' && iconEl}
+        {content}
+        {iconPosition === 'end' && iconEl}
+      </>
+    ) : (
+      content
+    );
 
   const defaultStyle: CSSProperties = {
     ...SIZE_STYLES[size],
@@ -226,17 +251,21 @@ export const Button: React.FC<ButtonProps> = (props) => {
         <button
           id={id}
           title={title}
-          disabled={disabled}
+          disabled={isDisabled}
           className={[unstyled ? undefined : 'ui-button-wave', className]
             .filter(Boolean)
             .join(' ')}
           style={finalStyle}
           aria-label={ariaLabel}
-          aria-pressed={ariaPressed !== undefined ? ariaPressed : undefined}
-          aria-expanded={ariaExpanded !== undefined ? ariaExpanded : undefined}
           aria-controls={ariaControls}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          {...(ariaPressed !== undefined
+            ? { 'aria-pressed': ariaPressed }
+            : {})}
+          {...(ariaExpanded !== undefined
+            ? { 'aria-expanded': ariaExpanded }
+            : {})}
         >
           {contentWithIcon}
           {!unstyled && <span aria-hidden className="ui-wave" />}
@@ -254,7 +283,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
       type={type}
       id={id}
       title={title}
-      disabled={disabled}
+      disabled={isDisabled}
       className={[unstyled ? undefined : 'ui-button-wave', className]
         .filter(Boolean)
         .join(' ')}
@@ -263,9 +292,9 @@ export const Button: React.FC<ButtonProps> = (props) => {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       aria-label={ariaLabel}
-      aria-pressed={ariaPressed !== undefined ? ariaPressed : undefined}
-      aria-expanded={ariaExpanded !== undefined ? ariaExpanded : undefined}
       aria-controls={ariaControls}
+      {...(ariaPressed !== undefined ? { 'aria-pressed': ariaPressed } : {})}
+      {...(ariaExpanded !== undefined ? { 'aria-expanded': ariaExpanded } : {})}
     >
       {contentWithIcon}
       {!unstyled && <span aria-hidden className="ui-wave" />}

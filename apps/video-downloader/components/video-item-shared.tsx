@@ -311,8 +311,6 @@ export function VideoDetailsPanel({
             <dd>{video.sourceFps}</dd>
           </>
         ) : null}
-        {/* <dt>{t('detailJustAudio')}</dt>
-        <dd>{video.justAudio ? t('yes') : t('no')}</dd>
         {!video.justAudio && video.width && video.height ? (
           <>
             <dt>{t('detailResolution')}</dt>
@@ -320,7 +318,7 @@ export function VideoDetailsPanel({
               {video.width}×{video.height}
             </dd>
           </>
-        ) : null} */}
+        ) : null}
         {video.duration ? (
           <>
             <dt>{t('detailDuration')}</dt>
@@ -742,6 +740,7 @@ export function VideoExtraActions({
             icon="/icons/offline.svg"
             iconSize="14px"
             iconColor="var(--accent, #8b5cf6)"
+            isLoading={offlineMigrating}
           >
             {offlineMigrating ? t('savingToDevice') : t('makeOffline')}
           </Button>
@@ -812,24 +811,26 @@ export function VideoExtraActions({
           </Button>
         ) : null}
 
-        <Box>
-          {buildFpsOptions(video.sourceFps).map(({ value, label }) => {
-            const alreadyApplied =
-              video.fpsApplied && value <= Number(video.fps);
-            return (
-              <Button
-                key={value}
-                unstyled
-                className="vi-fps-btn"
-                onClick={() => handleFpsClick(value)}
-                disabled={!canProcess || alreadyApplied || fpsError}
-                title={label}
-              >
-                {label}
-              </Button>
-            );
-          })}
-        </Box>
+        {!video.justAudio ? (
+          <Box>
+            {buildFpsOptions(video.sourceFps).map(({ value, label }) => {
+              const alreadyApplied =
+                video.fpsApplied && value <= Number(video.fps);
+              return (
+                <Button
+                  key={value}
+                  unstyled
+                  className="vi-fps-btn"
+                  onClick={() => handleFpsClick(value)}
+                  disabled={!canProcess || alreadyApplied || fpsError}
+                  title={label}
+                >
+                  {label}
+                </Button>
+              );
+            })}
+          </Box>
+        ) : null}
       </Box>
     </>
   );

@@ -169,30 +169,50 @@
   align-items: center;
 }
 
-/* ── Validation message ──────────────────────────────── */
+/* ── Advanced Options Toggle ─────────────────────────── */
 
-.df-hint {
-  font-size: 12px;
-  font-weight: 400;
-  padding: 0 4px;
-  min-height: 18px;
-  line-height: 18px;
-  transition:
-    color 200ms ease,
-    opacity 200ms ease;
+.df-advanced-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 180ms ease;
 }
 
-.df-hint--error {
-  color: #ef4444;
+.df-advanced-toggle:hover {
+  background: color-mix(in srgb, var(--foreground, #111) 4%, transparent);
 }
 
-.df-hint--success {
-  color: var(--accent, #06b6d4);
+.df-chevron--open {
+  transform: rotate(180deg);
+  transition: transform 200ms ease;
 }
 
-.df-hint--muted {
-  color: var(--foreground-muted, #999);
-  opacity: 0.6;
+.df-chevron--closed {
+  transform: rotate(0deg);
+  transition: transform 200ms ease;
+}
+
+/* ── Advanced Options Panel (animated expand/collapse) ── */
+
+.df-advanced-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 250ms ease;
+}
+
+.df-advanced-panel--open {
+  grid-template-rows: 1fr;
+}
+
+.df-advanced-inner {
+  overflow: hidden;
+  min-height: 0;
 }
 
 /* ── WS Client (Server) Controls ──────────────────── */

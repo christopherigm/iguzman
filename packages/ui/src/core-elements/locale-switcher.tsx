@@ -77,10 +77,10 @@ export function LocaleSwitcher({
       <button
         className="locale-switcher__trigger"
         onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={`Language: ${currentLabel}`}
         type="button"
+        {...(open !== undefined ? { 'aria-expanded': open } : {})}
       >
         <span className="locale-switcher__flag" aria-hidden="true">
           {currentFlag}
@@ -92,14 +92,20 @@ export function LocaleSwitcher({
       </button>
 
       {open && (
-        <ul className="locale-switcher__dropdown" role="listbox">
+        <ul
+          className="locale-switcher__dropdown"
+          role="listbox"
+          aria-label={`Language: ${currentLabel}`}
+        >
           {locales.map((locale) => (
             <li
               key={locale}
               className={`locale-switcher__option${locale === currentLocale ? ' locale-switcher__option--active' : ''}`}
               role="option"
-              aria-selected={locale === currentLocale}
               onClick={() => switchLocale(locale)}
+              {...(locale === currentLocale
+                ? { 'aria-selected': true }
+                : { 'aria-selected': false })}
             >
               <span className="locale-switcher__flag" aria-hidden="true">
                 {resolvedFlags[locale] ?? '🌐'}

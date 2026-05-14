@@ -31,19 +31,25 @@ export async function GET(request: Request) {
     const meta = await fetchVideoMetadata(url);
     const formats = meta.formats ?? [];
 
+    const videoFormats = formats.filter(
+      (f) =>
+        f.vcodec !== 'none' &&
+        f.vcodec != null &&
+        f.height != null &&
+        f.height > 0,
+    );
+
     const heights = [
-      ...new Set(
-        formats
-          .filter(
-            (f) =>
-              f.vcodec !== 'none' &&
-              f.vcodec != null &&
-              f.height != null &&
-              f.height > 0,
-          )
-          .map((f) => f.height as number),
-      ),
+      ...new Set(videoFormats.map((f) => f.height as number)),
     ].sort((a, b) => b - a);
+
+    // Map each unique height to its associated width (first match wins).
+    const widthByHeight: Record<number, number> = {};
+    for (const f of videoFormats) {
+      if (f.height != null && f.width != null && !(f.height in widthByHeight)) {
+        widthByHeight[f.height] = f.width;
+      }
+    }
 
     /* ── Extract available captions ───────────────────── */
     const captionMap = new Map<string, CaptionOption>();
@@ -71,9 +77,15 @@ export async function GET(request: Request) {
     let captions = [...captionMap.values()];
 
     if (captions.length === 0 && exhaustive) {
-      log.info({ url }, 'No captions in standard metadata, trying yt-dlp fallback');
+      log.info(
+        { url },
+        'No captions in standard metadata, trying yt-dlp fallback',
+      );
       const fallback = await listSubtitlesViaYtDlp(url);
-      log.info({ url, count: fallback.length }, 'yt-dlp caption fallback complete');
+      log.info(
+        { url, count: fallback.length },
+        'yt-dlp caption fallback complete',
+      );
       captions = fallback.map((s) => ({
         lang: s.lang,
         label: s.label,
@@ -82,8 +94,11 @@ export async function GET(request: Request) {
       }));
     }
 
-    log.info({ url, heightCount: heights.length, captionCount: captions.length }, 'Video metadata fetched');
-    return NextResponse.json({ heights, captions });
+    log.info(
+      { url, heightCount: heights.length, captionCount: captions.length },
+      'Video metadata fetched',
+    );
+    return NextResponse.json({ heights, widthByHeight, captions });
   } catch (err) {
     log.error({ err, url }, 'Failed to fetch video metadata');
     return NextResponse.json(

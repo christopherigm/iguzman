@@ -23,7 +23,7 @@ import {
   PlatformIconBg,
 } from './video-item-shared';
 import { useOPFSUrls } from './opfs-url-context';
-import { writeToOPFS, readFromOPFS } from '@/lib/opfs';
+import { writeToOPFS, readFromOPFS, deleteFromOPFS } from '@/lib/opfs';
 import './video-item.css';
 
 /* ── API types ──────────────────────────────────────── */
@@ -100,13 +100,14 @@ export function PinnedVideoItemDownloading({
       if (video.opfsEnabled && file) {
         setOpfsMigrating(true);
         void (async () => {
+          let thumbKey: string | null = null;
+          let captionsKey: string | null = null;
           try {
             const videoRes = await fetch(resolveMediaUrl(`/api/media/${file}`));
             if (!videoRes.ok) throw new Error('video fetch failed');
             const videoBlob = await videoRes.blob();
             await writeToOPFS(file, videoBlob);
 
-            let thumbKey: string | null = null;
             if (task.thumbnail) {
               try {
                 const thumbRes = await fetch(
@@ -120,7 +121,6 @@ export function PinnedVideoItemDownloading({
               } catch {}
             }
 
-            let captionsKey: string | null = null;
             if (task.captionsFile) {
               try {
                 const captionsRes = await fetch(
@@ -168,6 +168,30 @@ export function PinnedVideoItemDownloading({
             }
           } catch (err) {
             console.error('OPFS migration failed:', err);
+            const isQuotaError =
+              err instanceof DOMException && err.name === 'QuotaExceededError';
+            if (isQuotaError) {
+              // Clean up any partially written OPFS files
+              await deleteFromOPFS(file);
+              if (thumbKey) await deleteFromOPFS(thumbKey);
+              if (captionsKey) await deleteFromOPFS(captionsKey);
+              // Remove server file and MongoDB entry
+              if (task._id) {
+                fetch(`/api/download-video/${task._id}`, {
+                  method: 'DELETE',
+                }).catch(() => {});
+              }
+              onUpdate(video.uuid, {
+                status: 'error',
+                error: t('errorStorageQuota'),
+                opfsKey: null,
+                opfsThumbnailKey: null,
+                opfsCaptionsKey: null,
+                opfsStored: false,
+                downloadURL: null,
+                serverFileDeleted: true,
+              });
+            }
           } finally {
             setOpfsMigrating(false);
             onComplete(video.uuid);

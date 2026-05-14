@@ -62,11 +62,15 @@ function parseColorStop(part: string): ColorStop | null {
 function autoPosition(stops: ColorStop[]): ColorStop[] {
   const n = stops.length;
   return stops.map((s, i) =>
-    s.position >= 0 ? s : { ...s, position: n === 1 ? 0 : Math.round((i / (n - 1)) * 100) },
+    s.position >= 0
+      ? s
+      : { ...s, position: n === 1 ? 0 : Math.round((i / (n - 1)) * 100) },
   );
 }
 
-function parseCss(css: string): { type: GradientType; stops: ColorStop[]; angle: number } | null {
+function parseCss(
+  css: string,
+): { type: GradientType; stops: ColorStop[]; angle: number } | null {
   const v = css.trim();
   if (!v) return null;
 
@@ -80,8 +84,11 @@ function parseCss(css: string): { type: GradientType; stops: ColorStop[]; angle:
       angle = parseFloat(anglePart[1]);
       stopParts = parts.slice(1);
     }
-    const raw = stopParts.map(parseColorStop).filter((s): s is ColorStop => s !== null);
-    if (raw.length >= 2) return { type: 'linear', stops: autoPosition(raw), angle };
+    const raw = stopParts
+      .map(parseColorStop)
+      .filter((s): s is ColorStop => s !== null);
+    if (raw.length >= 2)
+      return { type: 'linear', stops: autoPosition(raw), angle };
   }
 
   const radialMatch = v.match(/^radial-gradient\((.+)\)$/s);
@@ -97,8 +104,11 @@ function parseCss(css: string): { type: GradientType; stops: ColorStop[]; angle:
     ) {
       stopParts = parts.slice(1);
     }
-    const raw = stopParts.map(parseColorStop).filter((s): s is ColorStop => s !== null);
-    if (raw.length >= 2) return { type: 'radial', stops: autoPosition(raw), angle: 135 };
+    const raw = stopParts
+      .map(parseColorStop)
+      .filter((s): s is ColorStop => s !== null);
+    if (raw.length >= 2)
+      return { type: 'radial', stops: autoPosition(raw), angle: 135 };
   }
 
   // solid hex / rgb / hsl
@@ -109,7 +119,11 @@ function parseCss(css: string): { type: GradientType; stops: ColorStop[]; angle:
   return null;
 }
 
-function buildCss(type: GradientType, stops: ColorStop[], angle: number): string {
+function buildCss(
+  type: GradientType,
+  stops: ColorStop[],
+  angle: number,
+): string {
   if (type === 'solid') return stops[0]?.color ?? '#000000';
   const stopsStr = stops.map((s) => `${s.color} ${s.position}%`).join(', ');
   if (type === 'linear') return `linear-gradient(${angle}deg, ${stopsStr})`;
@@ -145,7 +159,12 @@ const DEFAULT_LABELS: Required<GradientBuilderLabels> = {
   rawCss: 'CSS value',
 };
 
-export function GradientBuilder({ value, onChange, label, labels }: GradientBuilderProps) {
+export function GradientBuilder({
+  value,
+  onChange,
+  label,
+  labels,
+}: GradientBuilderProps) {
   const l: Required<GradientBuilderLabels> = { ...DEFAULT_LABELS, ...labels };
 
   const [type, setType] = useState<GradientType>('linear');
@@ -169,7 +188,11 @@ export function GradientBuilder({ value, onChange, label, labels }: GradientBuil
     setRawCss(value);
   }, [value]);
 
-  const emit = (nextType: GradientType, nextStops: ColorStop[], nextAngle: number) => {
+  const emit = (
+    nextType: GradientType,
+    nextStops: ColorStop[],
+    nextAngle: number,
+  ) => {
     const css = buildCss(nextType, nextStops, nextAngle);
     internalRef.current = true;
     setRawCss(css);
@@ -182,9 +205,14 @@ export function GradientBuilder({ value, onChange, label, labels }: GradientBuil
 
   const handleTypeChange = (next: GradientType) => {
     setType(next);
-    const firstStop: ColorStop = stops[0] ?? DEFAULT_STOPS[0] ?? { color: '#000000', position: 0 };
+    const firstStop: ColorStop = stops[0] ??
+      DEFAULT_STOPS[0] ?? { color: '#000000', position: 0 };
     const nextStops: ColorStop[] =
-      next === 'solid' ? [firstStop] : stops.length >= 2 ? stops : DEFAULT_STOPS;
+      next === 'solid'
+        ? [firstStop]
+        : stops.length >= 2
+          ? stops
+          : DEFAULT_STOPS;
     setStops(nextStops);
     emit(next, nextStops, angle);
   };
@@ -209,12 +237,16 @@ export function GradientBuilder({ value, onChange, label, labels }: GradientBuil
   };
 
   const addStop = () => {
-    const last: ColorStop =
-      stops[stops.length - 1] ?? DEFAULT_STOPS[1] ?? { color: '#e040fb', position: 100 };
-    const prev: ColorStop =
-      stops[stops.length - 2] ?? DEFAULT_STOPS[0] ?? { color: '#2196f3', position: 0 };
+    const last: ColorStop = stops[stops.length - 1] ??
+      DEFAULT_STOPS[1] ?? { color: '#e040fb', position: 100 };
+    const prev: ColorStop = stops[stops.length - 2] ??
+      DEFAULT_STOPS[0] ?? { color: '#2196f3', position: 0 };
     const pos = Math.round((prev.position + last.position) / 2);
-    const next: ColorStop[] = [...stops.slice(0, -1), { color: '#ffffff', position: pos }, last];
+    const next: ColorStop[] = [
+      ...stops.slice(0, -1),
+      { color: '#ffffff', position: pos },
+      last,
+    ];
     setStops(next);
     emit(type, next, angle);
   };
@@ -249,7 +281,10 @@ export function GradientBuilder({ value, onChange, label, labels }: GradientBuil
       {label && <label className="gb__label">{label}</label>}
 
       {/* Live preview */}
-      <Box className="gb__preview" styles={rawCss ? { background: rawCss } : undefined} />
+      <Box
+        className="gb__preview"
+        styles={rawCss ? { background: rawCss } : undefined}
+      />
 
       {/* Type tabs */}
       <Box display="flex" gap="6px">
@@ -280,6 +315,7 @@ export function GradientBuilder({ value, onChange, label, labels }: GradientBuil
                 value={angle}
                 onChange={(e) => handleAngleChange(e.target.value)}
                 className="gb__range"
+                aria-label={l.angle}
               />
               <input
                 type="number"
@@ -288,6 +324,7 @@ export function GradientBuilder({ value, onChange, label, labels }: GradientBuil
                 value={angle}
                 onChange={(e) => handleAngleChange(e.target.value)}
                 className="gb__angle-num"
+                aria-label={l.angle}
               />
               <Typography as="span" variant="body-sm">
                 °
@@ -297,7 +334,11 @@ export function GradientBuilder({ value, onChange, label, labels }: GradientBuil
 
           {/* Color stops */}
           <Box flexDirection="column" gap="8px">
-            <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+            >
               <Typography as="span" variant="body-sm" className="gb__sublabel">
                 {type === 'solid' ? l.color : l.stops}
               </Typography>
@@ -331,6 +372,7 @@ export function GradientBuilder({ value, onChange, label, labels }: GradientBuil
                       value={stop.position}
                       onChange={(e) => handleStopPosition(i, e.target.value)}
                       className="gb__pos-num"
+                      aria-label={`${l.stops} ${i + 1} position`}
                     />
                     <Typography as="span" variant="body-sm">
                       %

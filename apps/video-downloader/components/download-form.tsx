@@ -11,15 +11,11 @@ import { Button } from '@repo/ui/core-elements/button';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Spinner } from '@repo/ui/core-elements/spinner';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import {
-  detectPlatform,
-  isYoutube,
-  type Platform,
-} from '@repo/helpers/checkers';
+import { detectPlatform, type Platform } from '@repo/helpers/checkers';
 import { stripQueryParams } from '@repo/helpers/clean-url';
 import {
   isIOS,
-  buildResolutionLabel,
+  resolveResolutionLabel,
   PlatformIconBg,
 } from './video-item-shared';
 import {
@@ -239,7 +235,7 @@ export function DownloadForm({
   const t = useTranslations('DownloadForm');
   const [url, setUrl] = useState('');
   const [ios, setIos] = useState(false);
-  const [autoDownload, setAutoDownload] = useState(true);
+  const [autoDownload, setAutoDownload] = useState(false);
   const [opfsSupported, setOpfsSupported] = useState(false);
   const [storageInfo, setStorageInfo] = useState<{
     usedBytes: number;
@@ -249,9 +245,19 @@ export function DownloadForm({
   useEffect(() => {
     const isIOSDevice = isIOS();
     setIos(isIOSDevice);
-    if (isIOSDevice) setAutoDownload(false);
+    if (isIOSDevice) {
+      setAutoDownload(false);
+    } else {
+      const stored = localStorage.getItem('vd_auto_download');
+      setAutoDownload(stored !== null ? stored === 'true' : false);
+    }
     const supported = isOPFSSupported();
     setOpfsSupported(supported);
+  }, []);
+
+  const handleAutoDownloadChange = useCallback((value: boolean) => {
+    setAutoDownload(value);
+    localStorage.setItem('vd_auto_download', String(value));
   }, []);
 
   useEffect(() => {
@@ -272,8 +278,12 @@ export function DownloadForm({
   }, [opfsSupported]);
   const [justAudio, setJustAudio] = useState(false);
   const [enhance] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [resolutions, setResolutions] = useState<number[]>([]);
+  const [widthByHeight, setWidthByHeight] = useState<Record<number, number>>(
+    {},
+  );
   const [selectedResolution, setSelectedResolution] = useState<number | null>(
     null,
   );
@@ -314,8 +324,9 @@ export function DownloadForm({
   useEffect(() => {
     setCaptionsUnavailable(false);
 
-    if (!isValidUrl(url) || !isYoutube(url)) {
+    if (!isValidUrl(url) || justAudio) {
       setResolutions([]);
+      setWidthByHeight({});
       setSelectedResolution(null);
       setMetadataLoading(false);
       return;
@@ -335,9 +346,13 @@ export function DownloadForm({
         );
         if (cancelled) return;
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { heights?: number[] };
+        const data = (await res.json()) as {
+          heights?: number[];
+          widthByHeight?: Record<number, number>;
+        };
         const heights = data.heights ?? [];
         setResolutions(heights);
+        setWidthByHeight(data.widthByHeight ?? {});
         setSelectedResolution(heights[0] ?? null);
         setMetadataLoading(false);
       } catch {
@@ -360,7 +375,7 @@ export function DownloadForm({
       clearTimeout(timer);
       setMetadataLoading(false);
     };
-  }, [url]);
+  }, [url, justAudio]);
 
   /* Fetch available captions when the switch is enabled and URL is valid.
    * Retries up to 20 times with exponential backoff (1 s, 2 s, 4 s … capped at 30 s)
@@ -514,19 +529,6 @@ export function DownloadForm({
     setDuplicateEntry(null);
   }, [duplicateEntry, onMoveToFirst]);
 
-  /* Hint text below input */
-  const hint = useMemo(() => {
-    if (!hasText) return { text: t('hintEmpty'), variant: 'muted' };
-    if (!validUrl) return { text: t('hintInvalidUrl'), variant: 'error' };
-    if (!knownPlatform) return { text: t('hintUnsupported'), variant: 'error' };
-    return {
-      text: t('hintDetected', {
-        platform: platform.charAt(0).toUpperCase() + platform.slice(1),
-      }),
-      variant: 'success',
-    };
-  }, [hasText, validUrl, knownPlatform, platform, t]);
-
   const handleClearStorage = useCallback(async () => {
     await clearOPFSStorage();
     try {
@@ -607,14 +609,6 @@ export function DownloadForm({
         </button>
       </Box>
 
-      {/* ── Hint ─────────────────────────────────────── */}
-      <Typography
-        variant="caption"
-        className={`df-hint df-hint--${hint.variant}`}
-      >
-        {hint.text}
-      </Typography>
-
       {/* ── Divider ──────────────────────────────────── */}
       <hr className="df-divider" />
 
@@ -624,120 +618,136 @@ export function DownloadForm({
           <OptionRow label={t('autoDownload')} disabled={switchesDisabled}>
             <Switch
               checked={autoDownload}
-              onChange={switchesDisabled ? undefined : setAutoDownload}
+              onChange={switchesDisabled ? undefined : handleAutoDownloadChange}
             />
           </OptionRow>
         )}
-        {(resolutions.length > 0 || metadataLoading) && (
-          <OptionRow
-            label={t('resolution')}
-            disabled={switchesDisabled || metadataLoading || justAudio}
-          >
-            {metadataLoading ? (
-              <Spinner size={18} thickness={2} label={t('resolution')} />
-            ) : (
-              <ResolutionSelect
-                value={selectedResolution}
-                onChange={setSelectedResolution}
-                disabled={switchesDisabled || justAudio}
-                options={resolutions.map((h) => ({
-                  value: h,
-                  label: buildResolutionLabel(h),
-                }))}
-              />
-            )}
-          </OptionRow>
-        )}
-
-        <OptionRow
-          label={t('checkForCaptions')}
-          disabled={captionsDisabled || captionsLoading}
-        >
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            gap={20}
-          >
-            <Switch
-              checked={captionsEnabled}
-              onChange={captionsDisabled ? undefined : setCaptionsEnabled}
-            />
-            {captionsEnabled && captionsLoading ? (
-              <Spinner size={18} thickness={2} label={t('captionsLoading')} />
-            ) : captionsEnabled && availableCaptions.length > 0 ? (
-              <CaptionSelect
-                value={selectedCaptionUrl}
-                onChange={setSelectedCaptionUrl}
-                disabled={captionsDisabled}
-                options={availableCaptions}
-              />
-            ) : null}
-          </Box>
-        </OptionRow>
-
         <OptionRow label={t('justAudio')} disabled={switchesDisabled}>
           <Switch
             checked={justAudio}
             onChange={switchesDisabled ? undefined : setJustAudio}
           />
         </OptionRow>
-      </Box>
-
-      {opfsSupported &&
-        storageInfo !== null &&
-        storageInfo.usedBytes > 0 &&
-        storageInfo.totalBytes > 0 && (
-          <>
+        <button
+          type="button"
+          className="df-advanced-toggle"
+          onClick={() => setAdvancedOpen((prev) => !prev)}
+          aria-label={t('toggleAdvanced')}
+        >
+          <Icon
+            icon="/icons/chevron-down.svg"
+            size={14}
+            color="var(--foreground-muted, #999)"
+            className={advancedOpen ? 'df-chevron--open' : 'df-chevron--closed'}
+          />
+        </button>
+        <div
+          className={`df-advanced-panel${advancedOpen ? ' df-advanced-panel--open' : ''}`}
+        >
+          <div className="df-advanced-inner">
             <hr className="df-divider" />
-            <Box marginTop={8}>
+            {(resolutions.length > 0 || metadataLoading) && (
+              <OptionRow
+                label={t('resolution')}
+                disabled={switchesDisabled || metadataLoading || justAudio}
+              >
+                {metadataLoading ? (
+                  <Spinner size={18} thickness={2} label={t('resolution')} />
+                ) : (
+                  <ResolutionSelect
+                    value={selectedResolution}
+                    onChange={setSelectedResolution}
+                    disabled={switchesDisabled || justAudio}
+                    options={resolutions.map((h) => ({
+                      value: h,
+                      label: (() => {
+                        const name = resolveResolutionLabel(
+                          h,
+                          widthByHeight[h],
+                        );
+                        return name ? `${name} ${h}` : `${h}p`;
+                      })(),
+                    }))}
+                  />
+                )}
+              </OptionRow>
+            )}
+            <OptionRow
+              label={t('checkForCaptions')}
+              disabled={captionsDisabled || captionsLoading}
+            >
               <Box
                 display="flex"
-                justifyContent="space-between"
                 alignItems="center"
-                marginBottom={6}
+                justifyContent="space-between"
+                gap={20}
               >
-                <Typography variant="body-sm" fontWeight={500}>
-                  {t('opfsStorageLabel')}
-                </Typography>
-                <Box display="flex" alignItems="center" gap={6}>
-                  <Typography
-                    variant="body-sm"
-                    fontWeight={500}
-                    marginRight={8}
-                  >
-                    {(() => {
-                      const { used, total, pct } = formatStorageUsage(
-                        storageInfo.usedBytes,
-                        storageInfo.totalBytes,
-                      );
-                      return t('opfsStorageUsage', { used, total, pct });
-                    })()}
-                  </Typography>
-                  <button
-                    type="button"
-                    className="df-icon-btn df-icon-btn--download"
-                    onClick={() => setShowClearStorageConfirm(true)}
-                    aria-label={t('clearStorageLabel')}
-                  >
-                    <Icon
-                      icon="/icons/clear.svg"
-                      size={18}
-                      color="var(--accent-foreground, white)"
-                    />
-                  </button>
-                </Box>
+                <Switch
+                  checked={captionsEnabled}
+                  onChange={captionsDisabled ? undefined : setCaptionsEnabled}
+                />
+                {captionsEnabled && captionsLoading ? (
+                  <Spinner
+                    size={18}
+                    thickness={2}
+                    label={t('captionsLoading')}
+                  />
+                ) : captionsEnabled && availableCaptions.length > 0 ? (
+                  <CaptionSelect
+                    value={selectedCaptionUrl}
+                    onChange={setSelectedCaptionUrl}
+                    disabled={captionsDisabled}
+                    options={availableCaptions}
+                  />
+                ) : null}
               </Box>
-              <ProgressBar
-                value={Math.round(
-                  (storageInfo.usedBytes / storageInfo.totalBytes) * 100,
-                )}
-                size={4}
-                label={t('opfsStorageLabel')}
-              />
-            </Box>
-          </>
-        )}
+            </OptionRow>
+            {opfsSupported &&
+              storageInfo !== null &&
+              storageInfo.usedBytes > 0 &&
+              storageInfo.totalBytes > 0 && (
+                <>
+                  <OptionRow label={t('opfsStorageLabel')} disabled={false}>
+                    <Box display="flex" alignItems="center" gap={6}>
+                      <Typography
+                        variant="body-sm"
+                        fontWeight={500}
+                        marginRight={8}
+                      >
+                        {(() => {
+                          const { used, total, pct } = formatStorageUsage(
+                            storageInfo.usedBytes,
+                            storageInfo.totalBytes,
+                          );
+                          return t('opfsStorageUsage', { used, total, pct });
+                        })()}
+                      </Typography>
+                      <button
+                        type="button"
+                        className="df-icon-btn df-icon-btn--download"
+                        onClick={() => setShowClearStorageConfirm(true)}
+                        aria-label={t('clearStorageLabel')}
+                      >
+                        <Icon
+                          icon="/icons/clear.svg"
+                          size={18}
+                          color="var(--accent-foreground, white)"
+                        />
+                      </button>
+                    </Box>
+                  </OptionRow>
+                  <ProgressBar
+                    value={Math.round(
+                      (storageInfo.usedBytes / storageInfo.totalBytes) * 100,
+                    )}
+                    size={4}
+                    label={t('opfsStorageLabel')}
+                  />
+                </>
+              )}
+          </div>
+        </div>
+      </Box>
     </Box>
   );
 

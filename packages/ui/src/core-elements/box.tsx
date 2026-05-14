@@ -6,8 +6,8 @@ export interface BoxProps extends UIComponentProps {
   role?: string;
   /** Accessible label for the element when visible text is absent. */
   'aria-label'?: string;
-  /** Hides element from assistive technology when `true` or `"true"`. */
-  'aria-hidden'?: React.AriaAttributes['aria-hidden'];
+  /** Hides element from assistive technology when `true`. */
+  'aria-hidden'?: boolean;
   /** ID of another element that labels this one. */
   'aria-labelledby'?: string;
   /** ID of another element that describes this one. */
@@ -37,7 +37,8 @@ export interface BoxProps extends UIComponentProps {
  * </Box>
  */
 export const Box: React.FC<BoxProps> = (props) => {
-  const { styles, children, className, id, role, onClick, onAnimationEnd } = props;
+  const { styles, children, className, id, role, onClick, onAnimationEnd } =
+    props;
 
   const style: CSSProperties = { ...buildStyleProps(props), ...styles };
 
@@ -46,14 +47,18 @@ export const Box: React.FC<BoxProps> = (props) => {
       id={id}
       className={className}
       style={style}
-      role={role}
       aria-label={props['aria-label']}
-      aria-hidden={props['aria-hidden']}
       aria-labelledby={props['aria-labelledby']}
       aria-describedby={props['aria-describedby']}
-      aria-modal={props['aria-modal']}
       onClick={onClick}
       onAnimationEnd={onAnimationEnd}
+      {...(role !== undefined ? { role } : {})}
+      {...(props['aria-hidden'] !== undefined
+        ? { 'aria-hidden': props['aria-hidden'] }
+        : {})}
+      {...(props['aria-modal'] !== undefined
+        ? { 'aria-modal': props['aria-modal'] }
+        : {})}
     >
       {children}
     </div>
