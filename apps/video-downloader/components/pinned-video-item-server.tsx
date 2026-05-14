@@ -578,12 +578,21 @@ export function PinnedVideoItemServer({
             downloadURL: `opfs://${newKey}`,
             opfsStored: true,
             serverFileDeleted: true,
+            fileSize: blob.size,
           });
         } catch (err) {
           console.error('OPFS save-back failed:', err);
         } finally {
           setOpfsMigrating(false);
         }
+      } else if (file) {
+        try {
+          const headRes = await fetch(resolveMediaUrl(`/api/media/${file}`), {
+            method: 'HEAD',
+          });
+          const cl = headRes.headers.get('content-length');
+          if (cl) onUpdate(video.uuid, { fileSize: parseInt(cl, 10) });
+        } catch {}
       }
 
       if (completeAfter) onComplete(video.uuid);

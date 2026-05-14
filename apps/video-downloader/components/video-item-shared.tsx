@@ -294,8 +294,6 @@ export function VideoDetailsPanel({
         >
           {t(`status_${video.status}`)}
         </dd>
-        <dt>{t('detailStorage')}</dt>
-        <dd>{video.opfsStored ? t('storageOpfs') : t('storageServer')}</dd>
         {video.h264Converted ? (
           <>
             <dt>{t('detailCodec')}</dt>

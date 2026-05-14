@@ -182,7 +182,11 @@ export function PinnedVideoItemClient({
         }
         setLocalProgress(null);
 
-        onUpdate(video.uuid, { status: 'done', ...opts.donePatch });
+        onUpdate(video.uuid, {
+          status: 'done',
+          fileSize: blob.size,
+          ...opts.donePatch,
+        });
 
         if (video.opfsEnabled) {
           // Save result directly to OPFS — skip server upload
