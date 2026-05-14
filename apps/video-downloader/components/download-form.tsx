@@ -21,6 +21,7 @@ import {
 import { isOPFSSupported, getOPFSStorageInfo } from '@/lib/opfs';
 import { ClearStorageModal } from './clear-storage-modal';
 import type { CaptionOption } from '@/app/api/video-metadata/route';
+import { Divider } from '@repo/ui/core-elements/divider';
 import './platform-icon-bg.css';
 import './download-form.css';
 
@@ -555,7 +556,7 @@ export function DownloadForm({
       </Box>
 
       {/* ── Divider ──────────────────────────────────── */}
-      <hr className="df-divider" />
+      <Divider />
 
       {/* ── Options ──────────────────────────────────── */}
       <Box className="df-options" marginTop={8}>
@@ -590,7 +591,7 @@ export function DownloadForm({
           className={`df-advanced-panel${advancedOpen ? ' df-advanced-panel--open' : ''}`}
         >
           <div className="df-advanced-inner">
-            <hr className="df-divider" />
+            <Divider />
             <OptionRow
               label={t('resolution')}
               disabled={

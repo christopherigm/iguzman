@@ -1,0 +1,38 @@
+
+> iguzman@ check-types /home/christopher/Documents/iguzman
+> turbo run check-types "--filter=video-downloader"
+
+• turbo 2.9.3
+
+   • Packages in scope: video-downloader
+   • Running check-types in 1 packages
+   • Remote caching disabled
+
+@repo/i18n:check-types: cache miss, executing 38c0333c994bb0e7
+@repo/helpers:check-types: cache hit, replaying logs 13f303088a30391a
+@repo/helpers:check-types: 
+@repo/helpers:check-types: > @repo/helpers@ check-types /home/christopher/Documents/iguzman/packages/helpers
+@repo/helpers:check-types: > tsc --noEmit
+@repo/helpers:check-types: 
+@repo/ui:check-types: cache miss, executing 5e1ce55168d051a9
+@repo/ui:check-types: 
+@repo/ui:check-types: > @repo/ui@0.0.0 check-types /home/christopher/Documents/iguzman/packages/ui
+@repo/ui:check-types: > tsc --noEmit
+@repo/ui:check-types: 
+@repo/i18n:check-types: 
+@repo/i18n:check-types: > @repo/i18n@0.0.0 check-types /home/christopher/Documents/iguzman/packages/i18n
+@repo/i18n:check-types: > tsc --noEmit
+@repo/i18n:check-types: 
+@repo/i18n:check-types: src/navigation.ts(4,16): error TS2883: The inferred type of 'redirect' cannot be named without a reference to 'RedirectType' from '.pnpm/next@16.2.4_@babel+core@7.29.0_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/next/dist/client/components/redirect-error'. This is likely not portable. A type annotation is necessary.
+@repo/i18n:check-types: src/navigation.ts(4,39): error TS2883: The inferred type of 'useRouter' cannot be named without a reference to 'NavigateOptions' from '.pnpm/next@16.2.4_@babel+core@7.29.0_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/next/dist/shared/lib/app-router-context.shared-runtime'. This is likely not portable. A type annotation is necessary.
+@repo/i18n:check-types: src/navigation.ts(4,39): error TS2883: The inferred type of 'useRouter' cannot be named without a reference to 'PrefetchOptions' from '.pnpm/next@16.2.4_@babel+core@7.29.0_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/next/dist/shared/lib/app-router-context.shared-runtime'. This is likely not portable. A type annotation is necessary.
+@repo/i18n:check-types:  ELIFECYCLE  Command failed with exit code 2.
+ ERROR  @repo/i18n#check-types: command (/home/christopher/Documents/iguzman/packages/i18n) /home/christopher/.local/share/pnpm/.tools/pnpm/9.0.0/bin/pnpm run check-types exited (2)
+
+ Tasks:    1 successful, 3 total
+Cached:    1 cached, 3 total
+  Time:    968ms 
+Failed:    @repo/i18n#check-types
+
+ ERROR  run failed: command  exited (2)
+ ELIFECYCLE  Command failed with exit code 2.

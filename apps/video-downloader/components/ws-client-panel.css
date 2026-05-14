@@ -1,9 +1,10 @@
 /* ── WsClientPanel — full management mode ─────────── */
 
 .wcp-controls {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
 }
 
 .wcp-select-wrapper {
@@ -70,7 +71,6 @@
   background: var(--foreground-muted, #aaa);
   opacity: 0.5;
 }
-
 
 .wcp-delete-btn {
   display: inline-flex;

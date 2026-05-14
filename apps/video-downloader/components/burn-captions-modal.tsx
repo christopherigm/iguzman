@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
+import { useState, useRef, useLayoutEffect, type CSSProperties } from 'react';
 import { useTranslations } from 'next-intl';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Box } from '@repo/ui/core-elements/box';
@@ -28,7 +28,14 @@ const hexToRgba = (hex: string, opacity: number): string => {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 };
 
-const buildSubtitlePreviewStyle = (cfg: BurnCaptionsConfig): CSSProperties => {
+/**
+ * scale = previewWidth / videoWidth — both margin and font are in video-pixel
+ * units, so a single scale factor converts them to preview-pixel units.
+ */
+const buildSubtitlePreviewStyle = (
+  cfg: BurnCaptionsConfig,
+  scale: number,
+): CSSProperties => {
   const {
     alignment,
     marginV,
@@ -45,18 +52,20 @@ const buildSubtitlePreviewStyle = (cfg: BurnCaptionsConfig): CSSProperties => {
   const isLeft = [1, 4, 7].includes(alignment);
   const isRight = [3, 6, 9].includes(alignment);
 
-  const scaledMargin = Math.max(3, Math.round(marginV * 0.3));
-  const scaledFont = Math.max(8, Math.round(fontSize * 0.525));
+  const scaledMargin = Math.max(2, Math.round(marginV * scale));
+  const scaledFont = Math.max(8, Math.round(fontSize * scale));
   const transforms: string[] = [];
 
   const s: CSSProperties = {
     position: 'absolute',
+    left: '6%',
+    width: '88%',
     fontSize: scaledFont,
     color: primaryColor,
     lineHeight: 1.3,
-    display: 'inline-block',
-    maxWidth: '88%',
-    whiteSpace: 'nowrap',
+    display: 'block',
+    wordBreak: 'break-word',
+    textAlign: isLeft ? 'left' : isRight ? 'right' : 'center',
     fontWeight:
       fontStyle === 'bold' || fontStyle === 'bold-italic' ? 'bold' : 'normal',
     fontStyle:
@@ -70,14 +79,6 @@ const buildSubtitlePreviewStyle = (cfg: BurnCaptionsConfig): CSSProperties => {
   else {
     s.top = '50%';
     transforms.push('translateY(-50%)');
-  }
-
-  if (isLeft) s.left = '6%';
-  else if (isRight) s.right = '6%';
-  else {
-    s.left = '50%';
-    s.textAlign = 'center';
-    transforms.push('translateX(-50%)');
   }
 
   if (transforms.length) s.transform = transforms.join(' ');
@@ -119,6 +120,12 @@ export const TRANSLATE_LANGUAGES = [
 export interface BurnCaptionsModalProps {
   onConfirm: (config: BurnCaptionsConfig) => void;
   onCancel: () => void;
+  /** Video URL shown as preview background. */
+  videoUrl?: string | null;
+  /** Video width in pixels — used to compute the subtitle scale factor. */
+  videoWidth?: number | null;
+  /** Video height in pixels — used to compute the subtitle scale factor. */
+  videoHeight?: number | null;
 }
 
 const FONT_STYLES: BurnCaptionsFontStyle[] = [
@@ -169,9 +176,32 @@ const DEFAULT_CONFIG: BurnCaptionsConfig = {
 export function BurnCaptionsModal({
   onConfirm,
   onCancel,
+  videoUrl,
+  videoWidth,
 }: BurnCaptionsModalProps) {
   const t = useTranslations('VideoGrid');
   const [config, setConfig] = useState<BurnCaptionsConfig>(DEFAULT_CONFIG);
+
+  /* ── Preview scaling ─────────────────────────────── */
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [previewWidth, setPreviewWidth] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    // Measure immediately so the first paint already has the correct scale.
+    setPreviewWidth(el.getBoundingClientRect().width);
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setPreviewWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Fall back to 1920 when the actual video width is unknown.
+  const effectiveVideoWidth = videoWidth ?? 1920;
+  const scale = previewWidth > 0 ? previewWidth / effectiveVideoWidth : 0;
 
   const set = <K extends keyof BurnCaptionsConfig>(
     key: K,
@@ -199,6 +229,30 @@ export function BurnCaptionsModal({
       panelMaxWidth="480px"
     >
       <Box className="bcm-config">
+        {/* Subtitle preview */}
+        <Box className="bcm-section">
+          <Typography variant="caption" className="bcm-label">
+            {t('burnCaptionsPreview')}
+          </Typography>
+          <div className="bcm-preview" ref={previewRef}>
+            {videoUrl ? (
+              <video
+                className="bcm-preview-media"
+                src={videoUrl}
+                muted
+                preload="metadata"
+              />
+            ) : (
+              <div className="bcm-preview-placeholder" />
+            )}
+            {scale > 0 ? (
+              <span style={buildSubtitlePreviewStyle(config, scale)}>
+                {PREVIEW_SAMPLE}
+              </span>
+            ) : null}
+          </div>
+        </Box>
+
         {/* Translate subtitles */}
         <Box className="bcm-section">
           <Typography variant="caption" className="bcm-label">
@@ -274,25 +328,13 @@ export function BurnCaptionsModal({
               type="range"
               className="bcm-range"
               min={0}
-              max={100}
+              max={300}
               step={4}
               value={config.marginV}
               onChange={(e) => set('marginV', Number(e.target.value))}
               aria-label={t('burnCaptionsMarginV')}
             />
             <span className="bcm-range-value">{config.marginV}px</span>
-          </Box>
-        </Box>
-
-        {/* Subtitle preview */}
-        <Box className="bcm-section">
-          <Typography variant="caption" className="bcm-label">
-            {t('burnCaptionsPreview')}
-          </Typography>
-          <Box className="bcm-preview">
-            <span style={buildSubtitlePreviewStyle(config)}>
-              {PREVIEW_SAMPLE}
-            </span>
           </Box>
         </Box>
 

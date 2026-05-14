@@ -292,6 +292,9 @@ export function ReadOnlyVideoItem({
         <BurnCaptionsModal
           onConfirm={handleBurnCaptions}
           onCancel={() => setShowBurnModal(false)}
+          videoUrl={opfsUrls?.videoUrl ?? video.downloadURL ?? null}
+          videoWidth={video.width}
+          videoHeight={video.height}
         />
       ) : null}
       {confirmRemove ? (

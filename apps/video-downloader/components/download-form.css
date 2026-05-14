@@ -76,15 +76,6 @@
   opacity: 0.35;
 }
 
-/* ── Divider ─────────────────────────────────────────── */
-
-.df-divider {
-  height: 1px;
-  background: var(--surface-2, #e5e7eb);
-  border: none;
-  margin: 0;
-}
-
 /* ── Options Section ─────────────────────────────────── */
 
 .df-options {

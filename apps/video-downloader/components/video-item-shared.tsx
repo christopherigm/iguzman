@@ -8,12 +8,14 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { Button } from '@repo/ui/core-elements/button';
+import { Grid } from '@repo/ui/core-elements/grid';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import {
   WsClientPanel,
   THIS_DEVICE_UUID,
   type StoredWsClient,
 } from './ws-client-panel';
+import Divider from '@repo/ui/core-elements/divider';
 
 export { THIS_DEVICE_UUID, type StoredWsClient };
 
@@ -575,7 +577,6 @@ export function VideoActions({
         icon="/icons/delete-video.svg"
         iconSize="15px"
         iconColor="var(--foreground, #171717)"
-        // disabled={!isOnline}
       />
 
       <Button
@@ -726,98 +727,116 @@ export function VideoExtraActions({
             }}
           />
         ) : null}
+        {/* ── Divider ──────────────────────────────────── */}
+        <Divider marginTop={5} opacity={0.5} />
+        <Grid container spacing={1} marginTop={5} marginBottom={5}>
+          {onMakeOffline &&
+          !video.opfsStored &&
+          !!video.file &&
+          !video.serverFileDeleted ? (
+            <Grid size={{ xs: 6 }}>
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={() => {
+                  setOfflineMigrating(true);
+                  onMakeOffline()
+                    .catch(() => {})
+                    .finally(() => setOfflineMigrating(false));
+                }}
+                disabled={isBusy || offlineMigrating}
+                aria-label={
+                  offlineMigrating ? t('savingToDevice') : t('makeOffline')
+                }
+                title={
+                  offlineMigrating ? t('savingToDevice') : t('makeOffline')
+                }
+                icon="/icons/offline.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+                isLoading={offlineMigrating}
+              >
+                {offlineMigrating ? t('savingToDevice') : t('makeOffline')}
+              </Button>
+            </Grid>
+          ) : null}
 
-        {onMakeOffline &&
-        !video.opfsStored &&
-        !!video.file &&
-        !video.serverFileDeleted ? (
-          <Button
-            unstyled
-            className="vi-fps-btn"
-            onClick={() => {
-              setOfflineMigrating(true);
-              onMakeOffline()
-                .catch(() => {})
-                .finally(() => setOfflineMigrating(false));
-            }}
-            disabled={isBusy || offlineMigrating}
-            aria-label={
-              offlineMigrating ? t('savingToDevice') : t('makeOffline')
-            }
-            title={offlineMigrating ? t('savingToDevice') : t('makeOffline')}
-            icon="/icons/offline.svg"
-            iconSize="14px"
-            iconColor="var(--accent, #8b5cf6)"
-            isLoading={offlineMigrating}
-          >
-            {offlineMigrating ? t('savingToDevice') : t('makeOffline')}
-          </Button>
-        ) : null}
+          {video.isH265 && !video.h264Converted ? (
+            <Grid size={{ xs: 6 }}>
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={onConvert}
+                disabled={
+                  isBusy || h264Error || (serverSelected && !wsClientOnline)
+                }
+                aria-label={t('convertH264')}
+                title={t('convertH264')}
+                icon="/icons/convert.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+              >
+                {t('convertH264')}
+              </Button>
+            </Grid>
+          ) : null}
 
-        {video.isH265 && !video.h264Converted ? (
-          <Button
-            unstyled
-            className="vi-fps-btn"
-            onClick={onConvert}
-            disabled={
-              isBusy || h264Error || (serverSelected && !wsClientOnline)
-            }
-            aria-label={t('convertH264')}
-            title={t('convertH264')}
-            icon="/icons/convert.svg"
-            iconSize="14px"
-            iconColor="var(--accent, #8b5cf6)"
-          >
-            {t('convertH264')}
-          </Button>
-        ) : null}
+          {!video.justAudio && !video.blackBarsRemoved ? (
+            <Grid size={{ xs: 6 }}>
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={onRemoveBlackBars}
+                disabled={!canProcess || blackBarsError}
+                aria-label={t('removeBlackBars')}
+                title={t('removeBlackBars')}
+                icon="/icons/remove-black-bars.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+              >
+                {t('removeBlackBars')}
+              </Button>
+            </Grid>
+          ) : null}
 
-        {!video.justAudio && !video.blackBarsRemoved ? (
-          <Button
-            unstyled
-            className="vi-fps-btn"
-            onClick={onRemoveBlackBars}
-            disabled={!canProcess || blackBarsError}
-            aria-label={t('removeBlackBars')}
-            title={t('removeBlackBars')}
-            icon="/icons/remove-black-bars.svg"
-            iconSize="14px"
-            iconColor="var(--accent, #8b5cf6)"
-          >
-            {t('removeBlackBars')}
-          </Button>
-        ) : null}
+          {video.captionsFile && onDownloadCaptions ? (
+            <Grid size={{ xs: 6 }}>
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={onDownloadCaptions}
+                aria-label={t('downloadCaptions')}
+                title={t('downloadCaptions')}
+                icon="/icons/captions.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+              >
+                {t('downloadCaptions')}
+              </Button>
+            </Grid>
+          ) : null}
 
-        {video.captionsFile && onDownloadCaptions ? (
-          <Button
-            unstyled
-            className="vi-fps-btn"
-            onClick={onDownloadCaptions}
-            aria-label={t('downloadCaptions')}
-            title={t('downloadCaptions')}
-            icon="/icons/captions.svg"
-            iconSize="14px"
-            iconColor="var(--accent, #8b5cf6)"
-          >
-            {t('downloadCaptions')}
-          </Button>
-        ) : null}
+          {video.captionsFile && !video.justAudio && onBurnCaptions ? (
+            <Grid size={{ xs: 6 }}>
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={onBurnCaptions}
+                disabled={!canProcess || isBusy}
+                aria-label={t('burnCaptions')}
+                title={t('burnCaptions')}
+                icon="/icons/write.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+              >
+                {t('burnCaptions')}
+              </Button>
+            </Grid>
+          ) : null}
+        </Grid>
 
-        {video.captionsFile && !video.justAudio && onBurnCaptions ? (
-          <Button
-            unstyled
-            className="vi-fps-btn"
-            onClick={onBurnCaptions}
-            disabled={!canProcess || isBusy}
-            aria-label={t('burnCaptions')}
-            title={t('burnCaptions')}
-            icon="/icons/write.svg"
-            iconSize="14px"
-            iconColor="var(--accent, #8b5cf6)"
-          >
-            {t('burnCaptions')}
-          </Button>
-        ) : null}
+        {/* ── Divider ──────────────────────────────────── */}
+        <Divider marginBottom={5} opacity={0.5} />
 
         {!video.justAudio ? (
           <Box>

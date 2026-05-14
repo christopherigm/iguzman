@@ -306,42 +306,40 @@ export function WsClientPanel({
   return (
     <>
       <Box className="wcp-controls">
-        <Button
-          text={labels.addServer ?? 'Add server'}
-          disabled={addingServer || deletingServer}
-          onClick={() => {
-            setNewUuid('');
-            setNewLabel('');
-            setShowAddModal(true);
-          }}
-          kind="success"
-        />
+        <Box display="flex" alignItems="center" gap={8}>
+          <Button
+            text={labels.addServer ?? 'Add server'}
+            disabled={addingServer || deletingServer}
+            onClick={() => {
+              setNewUuid('');
+              setNewLabel('');
+              setShowAddModal(true);
+            }}
+            kind="success"
+          />
 
-        {clients.length > 0 && selectedUuid !== THIS_DEVICE_UUID ? (
-          <button
-            type="button"
-            className="wcp-delete-btn"
-            disabled={deletingServer || addingServer}
-            onClick={() => setShowDeleteModal(true)}
-            aria-label={labels.deleteServer ?? 'Delete server'}
-          >
-            <Icon
-              icon="/icons/delete-video.svg"
-              size={18}
-              color="var(--foreground, #171717)"
-            />
-          </button>
-        ) : null}
+          {clients.length > 0 && selectedUuid !== THIS_DEVICE_UUID ? (
+            <button
+              type="button"
+              className="wcp-delete-btn"
+              disabled={deletingServer || addingServer}
+              onClick={() => setShowDeleteModal(true)}
+              aria-label={labels.deleteServer ?? 'Delete server'}
+            >
+              <Icon
+                icon="/icons/delete-video.svg"
+                size={18}
+                color="var(--foreground, #171717)"
+              />
+            </button>
+          ) : null}
+
+          {(addingServer || deletingServer) && (
+            <Spinner size={18} thickness={2} />
+          )}
+        </Box>
 
         {selectEl}
-
-        {addingServer || deletingServer ? (
-          <Spinner
-            size={18}
-            thickness={2}
-            label={labels.addServer ?? 'Server'}
-          />
-        ) : null}
       </Box>
 
       {showAddModal ? (
