@@ -11,6 +11,7 @@ const VALID_OPS = [
   'interpolateFps',
   'removeBlackBars',
   'convertToH264',
+  'convertToH265',
   'burnSubtitles',
 ] as const;
 
@@ -20,6 +21,7 @@ const STATUS_BY_OP: Record<ProcessingOp, TaskStatus> = {
   interpolateFps: 'processing',
   removeBlackBars: 'processing',
   convertToH264: 'converting',
+  convertToH265: 'converting',
   burnSubtitles: 'burning',
 };
 
@@ -99,7 +101,10 @@ export async function POST(request: NextRequest) {
   let inputFile = inputFileParam;
   if (!inputFile) {
     if (!task.file) {
-      log.warn({ taskId, clientUuid, op }, 'Task has no output file to use as input');
+      log.warn(
+        { taskId, clientUuid, op },
+        'Task has no output file to use as input',
+      );
       return NextResponse.json(
         { error: 'Task has no output file yet' },
         { status: 422 },
@@ -109,7 +114,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (!WS_BROKER_URL) {
-    log.error({ taskId, clientUuid, op }, 'WS_BROKER_URL env var is not configured');
+    log.error(
+      { taskId, clientUuid, op },
+      'WS_BROKER_URL env var is not configured',
+    );
     return NextResponse.json(
       { error: 'WS_BROKER_URL not configured' },
       { status: 503 },

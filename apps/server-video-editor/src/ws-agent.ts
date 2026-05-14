@@ -9,6 +9,7 @@ import {
   interpolateFps,
   removeBlackBars,
   convertToH264,
+  convertToH265,
   burnSubtitles,
 } from './ffmpeg-ops.js';
 import { tmpdir } from 'node:os';
@@ -23,6 +24,7 @@ type WsOp =
   | 'interpolateFps'
   | 'removeBlackBars'
   | 'convertToH264'
+  | 'convertToH265'
   | 'burnSubtitles';
 
 interface JobMessage {
@@ -125,6 +127,8 @@ async function handleJob(ws: WebSocket, msg: JobMessage): Promise<void> {
       });
     } else if (op === 'convertToH264') {
       await convertToH264({ inputPath, outputPath, onProgress: sendProgress });
+    } else if (op === 'convertToH265') {
+      await convertToH265({ inputPath, outputPath, onProgress: sendProgress });
     } else if (op === 'burnSubtitles') {
       let srtContent: string;
       if (params.srtContent) {
@@ -153,7 +157,9 @@ async function handleJob(ws: WebSocket, msg: JobMessage): Promise<void> {
         backColour: params.backColour,
         borderStyle: params.borderStyle,
         outline: params.outline,
-        animation: params.animation as Parameters<typeof burnSubtitles>[0]['animation'],
+        animation: params.animation as Parameters<
+          typeof burnSubtitles
+        >[0]['animation'],
         onProgress: sendProgress,
       });
     } else {

@@ -237,6 +237,25 @@ export function useFFmpeg() {
   );
 
   /**
+   * Convert an H.264 (AVC) video to H.265 (HEVC) using FFmpeg WASM.
+   *
+   * @param videoUrl   URL (or object-URL) of the source H.264 video
+   * @returns          `{ objectUrl, blob }` – object-URL for immediate use
+   *                   and the raw Blob for uploading back to the server.
+   */
+  const convertToH265 = useCallback(
+    async (
+      videoUrl: string,
+      onProgress?: (p: number) => void,
+    ): Promise<{ objectUrl: string; blob: Blob }> => {
+      const data = await sendVideoOp('convertToH265', videoUrl, {}, onProgress);
+      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      return { objectUrl: URL.createObjectURL(blob), blob };
+    },
+    [sendVideoOp],
+  );
+
+  /**
    * Detect and remove horizontal black bars (letterboxing) from a video.
    *
    * @param videoUrl    URL (or object-URL) of the source video.
@@ -354,6 +373,7 @@ export function useFFmpeg() {
     cores,
     interpolateFps,
     convertToH264,
+    convertToH265,
     removeBlackBars,
     extractAudio,
     burnSubtitles,

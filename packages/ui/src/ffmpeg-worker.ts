@@ -11,6 +11,7 @@
  *   { id, type: 'load', payload: { coreURL, wasmURL, workerURL } }
  *   { id, type: 'interpolateFps',  payload: { videoData: Uint8Array, targetFps: number } }
  *   { id, type: 'convertToH264',   payload: { videoData: Uint8Array } }
+ *   { id, type: 'convertToH265',   payload: { videoData: Uint8Array } }
  *   { id, type: 'removeBlackBars', payload: { videoData: Uint8Array, limit?: number, round?: number, cropString?: string } }
  *   { id, type: 'extractAudio',    payload: { videoData: Uint8Array, format?: string } }
  *   { id, type: 'burnSubtitles',   payload: {
@@ -126,7 +127,7 @@ function parseSrt(srt: string): SrtEvent[] {
   const blocks = srt.trim().split(/\n[ \t]*\n/);
   for (const block of blocks) {
     const lines = block.trim().split('\n');
-    const tsIdx = lines.findIndex(l => l.includes('-->'));
+    const tsIdx = lines.findIndex((l) => l.includes('-->'));
     if (tsIdx === -1) continue;
     const [startRaw = '', endRaw = ''] = lines[tsIdx]!.split('-->');
     const startCs = parseSrtTimeToCentiseconds(startRaw);
@@ -157,10 +158,8 @@ function computeDefaultPosition(
 ): { x: number; y: number } {
   const col = (alignment - 1) % 3; // 0=left 1=center 2=right
   const row = Math.floor((alignment - 1) / 3); // 0=bottom 1=middle 2=top
-  const x =
-    col === 0 ? marginL : col === 1 ? playResX / 2 : playResX - marginR;
-  const y =
-    row === 0 ? playResY - marginV : row === 1 ? playResY / 2 : marginV;
+  const x = col === 0 ? marginL : col === 1 ? playResX / 2 : playResX - marginR;
+  const y = row === 0 ? playResY - marginV : row === 1 ? playResY / 2 : marginV;
   return { x, y };
 }
 
@@ -201,8 +200,7 @@ function buildOverrideTags(
         const pos = hasExplicitPos
           ? { x: posX!, y: posY! }
           : computeDefaultPosition(alignment, playResX, playResY, marginV);
-        const startY =
-          type === 'slideUp' ? pos.y + offset : pos.y - offset;
+        const startY = type === 'slideUp' ? pos.y + offset : pos.y - offset;
         tags.push(
           `\\move(${Math.round(pos.x)},${Math.round(startY)},${Math.round(pos.x)},${Math.round(pos.y)},0,${dur})`,
         );
@@ -245,11 +243,11 @@ function applyKaraokeToText(
   const NL_MARKER = '\x00NL\x00';
   const normalized = text.replace(/\\N/g, ` ${NL_MARKER} `);
   const tokens = normalized.split(/\s+/).filter(Boolean);
-  const wordCount = tokens.filter(t => t !== NL_MARKER).length;
+  const wordCount = tokens.filter((t) => t !== NL_MARKER).length;
   if (wordCount === 0) return text;
   const csPerWord = Math.max(1, Math.round(durationCs / wordCount));
   return tokens
-    .map(t => (t === NL_MARKER ? '\\N' : `{\\${mode}${csPerWord}}${t}`))
+    .map((t) => (t === NL_MARKER ? '\\N' : `{\\${mode}${csPerWord}}${t}`))
     .join(' ')
     .replace(/\s*\\N\s*/g, '\\N');
 }
@@ -297,9 +295,9 @@ function generateAssContent(params: {
   } = params;
 
   const allTypes = animation.types ?? ['none'];
-  const activeTypes = allTypes.filter(t => t !== 'none');
+  const activeTypes = allTypes.filter((t) => t !== 'none');
   const hasKaraoke = activeTypes.includes('karaoke');
-  const nonKaraokeTypes = activeTypes.filter(t => t !== 'karaoke');
+  const nonKaraokeTypes = activeTypes.filter((t) => t !== 'karaoke');
   const karaokeMode = animation.karaokeMode ?? 'kf';
   const karaokeHighlight = animation.karaokeHighlightColour ?? '&H0000FFFF';
 
@@ -326,10 +324,19 @@ function generateAssContent(params: {
       if (!splitPerLine) {
         let finalText = text;
         if (hasKaraoke) {
-          finalText = applyKaraokeToText(finalText, endCs - startCs, karaokeMode);
+          finalText = applyKaraokeToText(
+            finalText,
+            endCs - startCs,
+            karaokeMode,
+          );
         }
         const overrideTags = buildOverrideTags(
-          nonKaraokeTypes, animation, playResX, playResY, alignment, marginV,
+          nonKaraokeTypes,
+          animation,
+          playResX,
+          playResY,
+          alignment,
+          marginV,
         );
         let tagBlock: string;
         if (borderStyle === 3) {
@@ -340,23 +347,33 @@ function generateAssContent(params: {
           tagBlock = overrideTags;
         }
         if (tagBlock) finalText = `${tagBlock}${finalText}`;
-        return [`Dialogue: 0,${formatAssTimestamp(startCs)},${formatAssTimestamp(endCs)},Default,,0,0,0,,${finalText}`];
+        return [
+          `Dialogue: 0,${formatAssTimestamp(startCs)},${formatAssTimestamp(endCs)},Default,,0,0,0,,${finalText}`,
+        ];
       }
 
       /* lineHeight must exceed (fontSize + 2*outline) so boxes don't overlap.
          Adding 30 % of fontSize provides a small visible gap between boxes. */
       const lineHeight = Math.round(fontSize * 1.3 + 2 * outline);
-      const defaultPos = computeDefaultPosition(alignment, playResX, playResY, marginV);
+      const defaultPos = computeDefaultPosition(
+        alignment,
+        playResX,
+        playResY,
+        marginV,
+      );
       const row = Math.floor((alignment - 1) / 3); // 0=bottom 1=middle 2=top
       const totalWords = rawLines.reduce(
-        (s, l) => s + l.split(/\s+/).filter(Boolean).length, 0,
+        (s, l) => s + l.split(/\s+/).filter(Boolean).length,
+        0,
       );
 
       return rawLines.map((line, i) => {
         let lineY: number;
         if (row === 0) {
           // bottom-aligned: last line at base position, earlier lines go up
-          lineY = Math.round(defaultPos.y - (rawLines.length - 1 - i) * lineHeight);
+          lineY = Math.round(
+            defaultPos.y - (rawLines.length - 1 - i) * lineHeight,
+          );
         } else if (row === 2) {
           // top-aligned: first line at base, later lines go down
           lineY = Math.round(defaultPos.y + i * lineHeight);
@@ -370,14 +387,22 @@ function generateAssContent(params: {
         let finalLine = line;
         if (hasKaraoke) {
           const lineWords = line.split(/\s+/).filter(Boolean).length;
-          const lineDuration = totalWords > 0
-            ? Math.round(((endCs - startCs) * lineWords) / totalWords)
-            : endCs - startCs;
+          const lineDuration =
+            totalWords > 0
+              ? Math.round(((endCs - startCs) * lineWords) / totalWords)
+              : endCs - startCs;
           finalLine = applyKaraokeToText(finalLine, lineDuration, karaokeMode);
         }
 
         const overrideTags = buildOverrideTags(
-          nonKaraokeTypes, animation, playResX, playResY, alignment, marginV, lineX, lineY,
+          nonKaraokeTypes,
+          animation,
+          playResX,
+          playResY,
+          alignment,
+          marginV,
+          lineX,
+          lineY,
         );
         // overrideTags always contains \pos (or \move for slide) when posX/posY given
         const tagBlock = overrideTags
@@ -449,7 +474,9 @@ async function ensureLoaded(
       await instance.load({
         coreURL: await toBlobURL(coreURL, 'text/javascript'),
         wasmURL: await toBlobURL(wasmURL, 'application/wasm'),
-        ...(workerURL && { workerURL: await toBlobURL(workerURL, 'text/javascript') }),
+        ...(workerURL && {
+          workerURL: await toBlobURL(workerURL, 'text/javascript'),
+        }),
       });
       ffmpeg = instance;
     })();
@@ -608,6 +635,37 @@ self.onmessage = async (
             'fast',
             '-crf',
             '23',
+            '-c:a',
+            'copy',
+            output,
+          ]);
+          if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
+          const result = (await ff.readFile(output)) as Uint8Array;
+          await ff.deleteFile(input);
+          await ff.deleteFile(output);
+          self.postMessage(
+            { id, type: 'result', payload: { data: result } },
+            { transfer: [result.buffer as ArrayBuffer] },
+          );
+          break;
+        }
+
+        case 'convertToH265': {
+          const { videoData } = payload as { videoData: Uint8Array };
+          const input = 'input_h264.mp4';
+          const output = 'output_h265.mp4';
+          await ff.writeFile(input, videoData);
+          const code = await ff.exec([
+            '-i',
+            input,
+            '-c:v',
+            'libx265',
+            '-preset',
+            'medium',
+            '-crf',
+            '28',
+            '-tag:v',
+            'hvc1',
             '-c:a',
             'copy',
             output,
@@ -905,10 +963,8 @@ self.onmessage = async (
           /* After transpose=1/2 the displayed frame swaps width ↔ height.
              ASS PlayRes must match the frame the subtitles filter sees. */
           const needsRotation = rotation !== 0;
-          const playResX =
-            rotation === 90 || rotation === 270 ? origH : origW;
-          const playResY =
-            rotation === 90 || rotation === 270 ? origW : origH;
+          const playResX = rotation === 90 || rotation === 270 ? origH : origW;
+          const playResY = rotation === 90 || rotation === 270 ? origW : origH;
 
           /* Generate ASS content from SRT — embeds all style + animation tags.
              This replaces the old SRT + force_style approach: styles live in

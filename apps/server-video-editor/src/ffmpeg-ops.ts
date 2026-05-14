@@ -536,6 +536,17 @@ export interface ConvertToH264Options {
   onProgress?: (pct: number) => void;
 }
 
+export interface ConvertToH265Options {
+  /** Absolute path to the input video file. */
+  inputPath: string;
+  /** Absolute path where the output file will be written. */
+  outputPath: string;
+  /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
+  ffmpegBinary?: string;
+  /** Called with a value 0–100 as encoding progresses. */
+  onProgress?: (pct: number) => void;
+}
+
 export interface RemoveBlackBarsOptions {
   /** Absolute path to the input video file. */
   inputPath: string;
@@ -692,6 +703,49 @@ export async function convertToH264(
       'faster',
       '-crf',
       '23',
+      '-c:a',
+      'copy',
+      outputPath,
+    ],
+    ffmpegBinary,
+    onProgress,
+    estimatedFrames,
+  );
+
+  return outputPath;
+}
+
+/**
+ * Converts a video to H.265 (HEVC) while copying the audio stream.
+ *
+ * @returns The resolved `outputPath`.
+ * @throws When ffmpeg exits with a non-zero code.
+ */
+export async function convertToH265(
+  options: ConvertToH265Options,
+): Promise<string> {
+  const {
+    inputPath,
+    outputPath,
+    ffmpegBinary = DEFAULT_FFMPEG,
+    onProgress,
+  } = options;
+
+  const { durationSec, fps } = await probeVideo(inputPath, ffmpegBinary);
+  const estimatedFrames = durationSec > 0 ? durationSec * fps : 0;
+
+  await runFFmpeg(
+    [
+      '-i',
+      inputPath,
+      '-c:v',
+      'libx265',
+      '-preset',
+      'medium',
+      '-crf',
+      '28',
+      '-tag:v',
+      'hvc1',
       '-c:a',
       'copy',
       outputPath,

@@ -318,6 +318,12 @@ export function WsClientPanel({
             kind="success"
           />
 
+          {(addingServer || deletingServer) && (
+            <Spinner size={18} thickness={2} />
+          )}
+        </Box>
+
+        <Box display="flex" alignItems="center" gap={8}>
           {clients.length > 0 && selectedUuid !== THIS_DEVICE_UUID ? (
             <button
               type="button"
@@ -334,12 +340,8 @@ export function WsClientPanel({
             </button>
           ) : null}
 
-          {(addingServer || deletingServer) && (
-            <Spinner size={18} thickness={2} />
-          )}
+          {selectEl}
         </Box>
-
-        {selectEl}
       </Box>
 
       {showAddModal ? (

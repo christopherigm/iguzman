@@ -32,7 +32,7 @@ import './video-item.css';
 
 /* ── Props ──────────────────────────────────────────── */
 
-export type ReprocessAction = 'fps' | 'h264' | 'bars' | 'burnCaptions';
+export type ReprocessAction = 'fps' | 'h264' | 'h265' | 'bars' | 'burnCaptions';
 
 export interface ReadOnlyVideoItemProps {
   video: StoredVideo;
@@ -148,7 +148,7 @@ export function ReadOnlyVideoItem({
     let captionsKey: string | null = null;
     if (video.captionsFile) {
       try {
-        const captionsRes = await fetch(video.captionsFile);
+        const captionsRes = await fetch(resolveMediaUrl(video.captionsFile));
         if (captionsRes.ok) {
           const captionsBlob = await captionsRes.blob();
           const captionsFilename = video.captionsFile.split('/').pop()!;
@@ -187,12 +187,21 @@ export function ReadOnlyVideoItem({
   }, [video, onUpdate, registerUrls]);
 
   /* ── Download captions file ──────────────────────── */
-  const handleDownloadCaptions = useCallback(() => {
+  const handleDownloadCaptions = useCallback(async () => {
+    const name = video.name ?? 'video';
+    if (video.opfsCaptionsKey) {
+      try {
+        const file = await readFromOPFS(video.opfsCaptionsKey);
+        await triggerBrowserDownload(file, `${name}-captions.txt`);
+      } catch (err) {
+        console.error('Failed to read captions from OPFS:', err);
+      }
+      return;
+    }
     if (!video.captionsFile) return;
     const url = resolveMediaUrl(video.captionsFile);
-    const name = video.name ?? 'video';
-    triggerBrowserDownload(url, `${name}-captions.txt`);
-  }, [video.captionsFile, video.name]);
+    await triggerBrowserDownload(url, `${name}-captions.txt`);
+  }, [video.captionsFile, video.opfsCaptionsKey, video.name]);
 
   /* ── Burn captions: collect config then hand off to PinnedVideoItem ── */
   const handleBurnCaptions = useCallback(
@@ -275,10 +284,12 @@ export function ReadOnlyVideoItem({
           isBusy={false}
           fpsError={false}
           h264Error={false}
+          h265Error={false}
           blackBarsError={false}
           onRemoveBlackBars={() => onReprocess(video.uuid, 'bars')}
           onInterpolateFps={(fps) => onReprocess(video.uuid, 'fps', fps)}
           onConvert={() => onReprocess(video.uuid, 'h264')}
+          onConvertH265={() => onReprocess(video.uuid, 'h265')}
           onDownloadCaptions={handleDownloadCaptions}
           onBurnCaptions={() => setShowBurnModal(true)}
           onMakeOffline={handleMakeOffline}

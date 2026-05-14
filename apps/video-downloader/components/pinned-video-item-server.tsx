@@ -109,6 +109,7 @@ export function PinnedVideoItemServer({
 
   const fpsResumeChecked = useRef(false);
   const convertResumeChecked = useRef(false);
+  const convertH265ResumeChecked = useRef(false);
   const blackBarsResumeChecked = useRef(false);
   const burnResumeChecked = useRef(false);
   // Tracks the server input file so handleServerTaskDone can delete it after
@@ -163,6 +164,7 @@ export function PinnedVideoItemServer({
         | 'interpolateFps'
         | 'removeBlackBars'
         | 'convertToH264'
+        | 'convertToH265'
         | 'burnSubtitles';
       extraParams?: Record<string, unknown>;
       donePatch: Partial<StoredVideo>;
@@ -385,6 +387,19 @@ export function PinnedVideoItemServer({
         op: 'convertToH264',
         donePatch: { h264Converted: true, isH265: false },
         errorKey: 'errorConvertFailed',
+        completeAfter: true,
+      }),
+    [runServerProcessing],
+  );
+
+  /* ── H.264 → H.265 conversion ───────────────────────── */
+  const handleConvertH265 = useCallback(
+    () =>
+      runServerProcessing({
+        activeStatus: 'converting',
+        op: 'convertToH265',
+        donePatch: { h265Converted: true, isH265: true },
+        errorKey: 'errorConvertH265Failed',
         completeAfter: true,
       }),
     [runServerProcessing],
@@ -708,6 +723,28 @@ export function PinnedVideoItemServer({
     video.h264Converted,
     video.status,
     handleConvertH264,
+  ]);
+
+  /* ── Resume interrupted H.265 conversion ──────────────────── */
+  useEffect(() => {
+    if (convertH265ResumeChecked.current) return;
+    convertH265ResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.isH265 &&
+      !video.justAudio &&
+      !video.h265Converted &&
+      video.status === 'converting';
+
+    if (needsResume) queueMicrotask(() => handleConvertH265());
+  }, [
+    video.file,
+    video.isH265,
+    video.justAudio,
+    video.h265Converted,
+    video.status,
+    handleConvertH265,
   ]);
 
   /* ── Resume interrupted black-bar removal ─────────────── */

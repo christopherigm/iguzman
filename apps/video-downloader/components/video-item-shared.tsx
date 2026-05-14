@@ -301,6 +301,12 @@ export function VideoDetailsPanel({
             <dd>H.264 ({t('converted')})</dd>
           </>
         ) : null}
+        {video.h265Converted ? (
+          <>
+            <dt>{t('detailCodec')}</dt>
+            <dd>H.265 ({t('converted')})</dd>
+          </>
+        ) : null}
         {video.error ? (
           <>
             <dt>{t('detailError')}</dt>
@@ -477,6 +483,7 @@ export function VideoStatusHints({
   videoStatus,
   uploading,
   opfsMigrating,
+  conversionTarget,
   t,
 }: {
   ffmpegStatus: string;
@@ -484,6 +491,7 @@ export function VideoStatusHints({
   videoStatus: VideoStatus;
   uploading: boolean;
   opfsMigrating?: boolean;
+  conversionTarget?: 'h264' | 'h265';
   t: TranslationFn;
 }) {
   if (opfsMigrating) {
@@ -504,11 +512,13 @@ export function VideoStatusHints({
 
   if (ffmpegStatus === 'processing') {
     const message =
-      videoStatus === 'converting'
-        ? t('convertingH264', { progress: ffmpegProgress })
-        : videoStatus === 'burning'
-          ? t('burningCaptions', { progress: ffmpegProgress })
-          : t('ffmpegProcessing', { progress: ffmpegProgress });
+      videoStatus === 'converting' && conversionTarget === 'h265'
+        ? t('convertingH265', { progress: ffmpegProgress })
+        : videoStatus === 'converting'
+          ? t('convertingH264', { progress: ffmpegProgress })
+          : videoStatus === 'burning'
+            ? t('burningCaptions', { progress: ffmpegProgress })
+            : t('ffmpegProcessing', { progress: ffmpegProgress });
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
         {message}
@@ -633,10 +643,12 @@ export function VideoExtraActions({
   isBusy,
   fpsError,
   h264Error,
+  h265Error,
   blackBarsError,
   onRemoveBlackBars,
   onInterpolateFps,
   onConvert,
+  onConvertH265,
   onDownloadCaptions,
   onBurnCaptions,
   onMakeOffline,
@@ -648,10 +660,12 @@ export function VideoExtraActions({
   isBusy: boolean;
   fpsError: boolean;
   h264Error: boolean;
+  h265Error: boolean;
   blackBarsError: boolean;
   onRemoveBlackBars: () => void;
   onInterpolateFps: (fps: number) => void;
   onConvert: () => void;
+  onConvertH265: () => void;
   onDownloadCaptions?: () => void;
   onBurnCaptions?: () => void;
   onMakeOffline?: () => Promise<void>;
@@ -777,6 +791,26 @@ export function VideoExtraActions({
                 iconColor="var(--accent, #8b5cf6)"
               >
                 {t('convertH264')}
+              </Button>
+            </Grid>
+          ) : null}
+
+          {!video.justAudio && !video.isH265 && !video.h265Converted ? (
+            <Grid size={{ xs: 6 }}>
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={onConvertH265}
+                disabled={
+                  isBusy || h265Error || (serverSelected && !wsClientOnline)
+                }
+                aria-label={t('convertH265')}
+                title={t('convertH265')}
+                icon="/icons/convert.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+              >
+                {t('convertH265')}
               </Button>
             </Grid>
           ) : null}

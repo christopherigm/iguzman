@@ -88,6 +88,7 @@ export function PinnedVideoItemClient({
 
   const fpsResumeChecked = useRef(false);
   const convertResumeChecked = useRef(false);
+  const convertH265ResumeChecked = useRef(false);
   const blackBarsResumeChecked = useRef(false);
   const burnResumeChecked = useRef(false);
 
@@ -105,6 +106,7 @@ export function PinnedVideoItemClient({
     cores: ffmpegCores,
     interpolateFps,
     convertToH264,
+    convertToH265,
     removeBlackBars,
     burnSubtitles,
   } = useFFmpeg();
@@ -295,7 +297,20 @@ export function PinnedVideoItemClient({
       }),
     [runProcessing, convertToH264],
   );
-
+  /* ── H.264 → H.265 conversion ──────────────────────── */
+  const handleConvertH265 = useCallback(
+    () =>
+      runProcessing({
+        activeStatus: 'converting',
+        process: (url, onProgress) => convertToH265(url, onProgress),
+        donePatch: { h265Converted: true, isH265: true },
+        taskUpdate: { isH265: true },
+        errorKey: 'errorConvertH265Failed',
+        downloadPrefix: 'video',
+        completeAfter: true,
+      }),
+    [runProcessing, convertToH265],
+  );
   /* ── Remove black bars ──────────────────────────────── */
   const handleRemoveBlackBars = useCallback(
     () =>
@@ -459,6 +474,28 @@ export function PinnedVideoItemClient({
     handleConvertH264,
   ]);
 
+  /* ── Resume interrupted H.265 conversion ──────────────────── */
+  useEffect(() => {
+    if (convertH265ResumeChecked.current) return;
+    convertH265ResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.isH265 &&
+      !video.justAudio &&
+      !video.h265Converted &&
+      video.status === 'converting';
+
+    if (needsResume) queueMicrotask(() => handleConvertH265());
+  }, [
+    video.file,
+    video.isH265,
+    video.justAudio,
+    video.h265Converted,
+    video.status,
+    handleConvertH265,
+  ]);
+
   /* ── Resume interrupted black-bar removal ─────────────── */
   useEffect(() => {
     if (blackBarsResumeChecked.current) return;
@@ -584,6 +621,9 @@ export function PinnedVideoItemClient({
         ffmpegProgress={displayFFmpegProgress}
         videoStatus={video.status}
         uploading={uploading}
+        conversionTarget={
+          video.status === 'converting' && !video.isH265 ? 'h265' : 'h264'
+        }
         t={t}
       />
       {/* ── Footer ──────────────────────────────────── */}

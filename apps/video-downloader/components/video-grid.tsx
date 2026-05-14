@@ -134,6 +134,11 @@ export function VideoGrid({
             status: 'converting' as VideoStatus,
           });
           break;
+        case 'h265':
+          onReprocessCompleted(uuid, {
+            status: 'converting' as VideoStatus,
+          });
+          break;
         case 'bars':
           onReprocessCompleted(uuid, {
             status: 'processing' as VideoStatus,

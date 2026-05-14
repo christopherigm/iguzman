@@ -41,6 +41,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   isH265: boolean;
   /** Whether the H.265→H.264 conversion has been applied successfully. */
   h264Converted: boolean;
+  /** Whether the H.264→H.265 conversion has been applied successfully. */
+  h265Converted: boolean;
   /** Whether black bars have been removed from the video. */
   blackBarsRemoved: boolean;
   /** MongoDB task ID (for polling and deletion). */
@@ -112,6 +114,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     fpsApplied: v.fpsApplied ?? v.status === 'done',
     isH265: v.isH265 ?? false,
     h264Converted: v.h264Converted ?? false,
+    h265Converted: v.h265Converted ?? false,
     blackBarsRemoved: v.blackBarsRemoved ?? false,
     taskId: v.taskId ?? null,
     sourceFps: v.sourceFps ?? null,
@@ -338,6 +341,7 @@ export function useVideoStore() {
         fpsApplied: false,
         isH265: false,
         h264Converted: false,
+        h265Converted: false,
         blackBarsRemoved: false,
         taskId: null,
         sourceFps: null,
