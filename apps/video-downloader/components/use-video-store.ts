@@ -390,16 +390,21 @@ export function useVideoStore() {
   );
 
   /** Atomically move a video from pinned to completed.
-   *  Preserves the current status (e.g. 'done' or 'error'). */
+   *  Normalises any lingering busy status to 'done' so the completed section
+   *  never displays a processing state (guards against edge cases where the
+   *  browser was closed between the final status update and onComplete). */
   const completeVideo = useCallback((uuid: string) => {
     setPinned((prev) => {
       const video = prev.find((v) => v.uuid === uuid);
       if (video) {
+        const finalStatus: VideoStatus = BUSY_STATUSES.has(video.status)
+          ? 'done'
+          : video.status;
         setCompleted((c) => {
           /* Guard against React Strict Mode double-invocation of functional
              updaters: if the video is already in completed, skip the add. */
           if (c.some((v) => v.uuid === uuid)) return c;
-          return [{ ...video }, ...c];
+          return [{ ...video, status: finalStatus }, ...c];
         });
       }
       return prev.filter((v) => v.uuid !== uuid);

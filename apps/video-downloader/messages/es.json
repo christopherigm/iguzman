@@ -180,6 +180,8 @@
     "ffmpegLoading": "Cargando procesador de video…",
     "ffmpegProcessing": "Interpolando fotogramas… {progress}%",
     "queueWaiting": "Esperando en la cola de procesamiento…",
+    "downloadPending": "En cola de descarga…",
+    "downloadActive": "Descargando del servidor…",
     "errorFfmpegFailed": "La interpolación de FPS falló. Descargando el original.",
     "convertH264": "Convertir a H.264",
     "convertingH264": "Convirtiendo H.265 → H.264… {progress}%",

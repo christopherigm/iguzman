@@ -179,6 +179,8 @@
     "ffmpegLoading": "Loading video processor…",
     "ffmpegProcessing": "Interpolating frames… {progress}%",
     "queueWaiting": "Waiting in processing queue…",
+    "downloadPending": "Queued for download…",
+    "downloadActive": "Downloading from server…",
     "uploadingProcessed": "Uploading processed video to server…",
     "errorFfmpegFailed": "FPS interpolation failed. Downloading original instead.",
     "convertH264": "Convert to H.264",

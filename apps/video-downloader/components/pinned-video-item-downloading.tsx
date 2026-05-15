@@ -78,8 +78,10 @@ export function PinnedVideoItemDownloading({
       const name = task.name;
       const downloadURL = file ? `/api/media/${file}` : null;
 
+      // Update metadata without changing status yet — status stays 'downloading'
+      // until OPFS migration (or the non-OPFS path below) fully completes.
+      // This keeps the component as PinnedVideoItemDownloading during migration.
       onUpdate(video.uuid, {
-        status: 'done',
         file: file ?? null,
         name: name ?? null,
         downloadURL,
@@ -152,6 +154,7 @@ export function PinnedVideoItemDownloading({
             registerUrls(video.uuid, { videoUrl, thumbnailUrl });
 
             onUpdate(video.uuid, {
+              status: 'done',
               opfsKey: file,
               opfsThumbnailKey: thumbKey,
               opfsCaptionsKey: captionsKey,
@@ -192,6 +195,10 @@ export function PinnedVideoItemDownloading({
                 downloadURL: null,
                 serverFileDeleted: true,
               });
+            } else {
+              // Non-quota OPFS error: download succeeded, only device storage
+              // failed. Mark as done so the video moves to the completed list.
+              onUpdate(video.uuid, { status: 'done' });
             }
           } finally {
             setOpfsMigrating(false);
@@ -204,10 +211,9 @@ export function PinnedVideoItemDownloading({
       void (async () => {
         if (file) {
           try {
-            const headRes = await fetch(
-              resolveMediaUrl(`/api/media/${file}`),
-              { method: 'HEAD' },
-            );
+            const headRes = await fetch(resolveMediaUrl(`/api/media/${file}`), {
+              method: 'HEAD',
+            });
             const cl = headRes.headers.get('content-length');
             if (cl) onUpdate(video.uuid, { fileSize: parseInt(cl, 10) });
           } catch {}
@@ -224,6 +230,7 @@ export function PinnedVideoItemDownloading({
             if (thumbSrc) downloadThumbnail(thumbSrc, name);
           }
         }
+        onUpdate(video.uuid, { status: 'done' });
         onComplete(video.uuid);
       })();
     },
@@ -398,6 +405,14 @@ export function PinnedVideoItemDownloading({
       {opfsMigrating ? (
         <Typography variant="caption" className="vi-ffmpeg-hint">
           {t('savingToDevice')}
+        </Typography>
+      ) : video.status === 'pending' ? (
+        <Typography variant="caption" className="vi-ffmpeg-hint">
+          {t('downloadPending')}
+        </Typography>
+      ) : video.status === 'downloading' ? (
+        <Typography variant="caption" className="vi-ffmpeg-hint">
+          {t('downloadActive')}
         </Typography>
       ) : null}
       {/* ── Footer ──────────────────────────────────── */}
