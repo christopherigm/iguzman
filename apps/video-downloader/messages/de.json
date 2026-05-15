@@ -48,7 +48,10 @@
     "duplicateMoveToFirst": "An erste Stelle verschieben",
     "opfsStorageLabel": "Gerätespeicher",
     "opfsStorageUsage": "{used} / {total} ({pct}%)",
-    "clearStorageLabel": "Gerätespeicher leeren"
+    "clearStorageLabel": "Gerätespeicher leeren",
+    "smartDownload": "Video-Schnell-Download",
+    "smartCaptions": "Untertitel",
+    "smartMaxHeight": "Max. Auflösung"
   },
   "ClearStorageModal": {
     "title": "Gerätespeicher verwalten",

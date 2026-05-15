@@ -48,7 +48,10 @@
     "duplicateMoveToFirst": "Move to first place",
     "opfsStorageLabel": "Device storage",
     "opfsStorageUsage": "{used} / {total} ({pct}%)",
-    "clearStorageLabel": "Clear device storage"
+    "clearStorageLabel": "Clear device storage",
+    "smartDownload": "Video Smart Download",
+    "smartCaptions": "Captions",
+    "smartMaxHeight": "Max resolution"
   },
   "ClearStorageModal": {
     "title": "Manage Device Storage",

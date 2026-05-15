@@ -7,6 +7,7 @@ interface SwitchProps extends UIComponentProps {
   checked?: boolean;
   defaultChecked?: boolean;
   onChange?: (checked: boolean) => void;
+  disabled?: boolean;
   className?: string;
   id?: string;
   'aria-label'?: string;
@@ -16,6 +17,7 @@ export const Switch = ({
   checked,
   defaultChecked = false,
   onChange,
+  disabled = false,
   className,
   id,
   ...props
@@ -27,6 +29,7 @@ export const Switch = ({
   const safeStyle: CSSProperties = buildStyleProps(props);
 
   const toggle = () => {
+    if (disabled) return;
     const next = !value;
     if (!isControlled) setInternalChecked(next);
     onChange?.(next);
@@ -57,7 +60,8 @@ export const Switch = ({
         ? 'var(--accent, #06b6d4)'
         : 'var(--surface-2, #e5e7eb)',
       border: 'none',
-      cursor: 'pointer',
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.5 : 1,
       ...safeStyle,
     },
   };
@@ -78,11 +82,11 @@ export const Switch = ({
   );
 
   return value ? (
-    <button role="switch" {...sharedProps} aria-checked="true">
+    <button role="switch" {...sharedProps} aria-checked="true" disabled={disabled}>
       {thumb}
     </button>
   ) : (
-    <button role="switch" {...sharedProps} aria-checked="false">
+    <button role="switch" {...sharedProps} aria-checked="false" disabled={disabled}>
       {thumb}
     </button>
   );

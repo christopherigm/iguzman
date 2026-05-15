@@ -16,6 +16,7 @@ import { stripQueryParams } from '@repo/helpers/clean-url';
 import {
   isIOS,
   resolveResolutionLabel,
+  buildResolutionLabel,
   PlatformIconBg,
 } from './video-item-shared';
 import { isOPFSSupported, getOPFSStorageInfo } from '@/lib/opfs';
@@ -194,6 +195,15 @@ function CaptionSelect({
   );
 }
 
+const SMART_RESOLUTION_OPTIONS: { value: number; label: string }[] = [
+  { value: 360, label: buildResolutionLabel(360) },
+  { value: 480, label: buildResolutionLabel(480) },
+  { value: 720, label: buildResolutionLabel(720) },
+  { value: 1080, label: buildResolutionLabel(1080) },
+  { value: 1440, label: buildResolutionLabel(1440) },
+  { value: 2160, label: buildResolutionLabel(2160) },
+];
+
 /* ── Main Component ─────────────────────────────────── */
 
 export interface DownloadFormProps {
@@ -253,11 +263,32 @@ export function DownloadForm({
     }
     const supported = isOPFSSupported();
     setOpfsSupported(supported);
+    const storedSmart = localStorage.getItem('vd_smart_download');
+    setSmartDownload(storedSmart === 'true');
+    const storedSmartCaptions = localStorage.getItem('vd_smart_captions');
+    setSmartCaptions(storedSmartCaptions !== 'false');
+    const storedSmartHeight = localStorage.getItem('vd_smart_max_height');
+    setSmartMaxHeight(storedSmartHeight ? Number(storedSmartHeight) : 1080);
   }, []);
 
   const handleAutoDownloadChange = useCallback((value: boolean) => {
     setAutoDownload(value);
     localStorage.setItem('vd_auto_download', String(value));
+  }, []);
+
+  const handleSmartDownloadChange = useCallback((value: boolean) => {
+    setSmartDownload(value);
+    localStorage.setItem('vd_smart_download', String(value));
+  }, []);
+
+  const handleSmartCaptionsChange = useCallback((value: boolean) => {
+    setSmartCaptions(value);
+    localStorage.setItem('vd_smart_captions', String(value));
+  }, []);
+
+  const handleSmartMaxHeightChange = useCallback((value: number) => {
+    setSmartMaxHeight(value);
+    localStorage.setItem('vd_smart_max_height', String(value));
   }, []);
 
   useEffect(() => {
@@ -298,6 +329,10 @@ export function DownloadForm({
   );
   const [captionsUnavailable, setCaptionsUnavailable] = useState(false);
 
+  const [smartDownload, setSmartDownload] = useState(false);
+  const [smartCaptions, setSmartCaptions] = useState(true);
+  const [smartMaxHeight, setSmartMaxHeight] = useState(1080);
+
   const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
 
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
@@ -326,7 +361,7 @@ export function DownloadForm({
     setSelectedCaptionUrl(null);
     setCaptionsEnabled(false);
 
-    if (!isValidUrl(url) || justAudio) {
+    if (!isValidUrl(url) || justAudio || smartDownload) {
       setResolutions([]);
       setWidthByHeight({});
       setSelectedResolution(null);
@@ -389,7 +424,7 @@ export function DownloadForm({
       clearTimeout(timer);
       setMetadataLoading(false);
     };
-  }, [url, justAudio]);
+  }, [url, justAudio, smartDownload]);
 
   /* Derived state */
   const hasText = url.length > 0;
@@ -403,7 +438,6 @@ export function DownloadForm({
 
   /* Disabled flags */
   const switchesDisabled = !validPlatformUrl;
-  // const _enhanceDisabled = switchesDisabled || justAudio;
   const captionsDisabled =
     switchesDisabled || justAudio || captionsUnavailable || metadataLoading;
 
@@ -416,6 +450,19 @@ export function DownloadForm({
   }, []);
 
   const submitDownload = useCallback(() => {
+    const effectiveCaptionsEnabled = smartDownload
+      ? smartCaptions && !justAudio
+      : captionsEnabled && !justAudio;
+    const effectiveMaxHeight = smartDownload
+      ? !justAudio
+        ? smartMaxHeight
+        : undefined
+      : (selectedResolution ?? undefined);
+    const effectiveCaptionUrl =
+      !smartDownload && captionsEnabled && !justAudio && selectedCaptionUrl
+        ? selectedCaptionUrl
+        : undefined;
+
     onVideoAdded?.({
       originalURL: url,
       platform,
@@ -423,11 +470,9 @@ export function DownloadForm({
       justAudio,
       enhance: effectiveEnhance,
       autoDownload,
-      ...(selectedResolution != null && { maxHeight: selectedResolution }),
-      captionsEnabled: captionsEnabled && !justAudio,
-      ...(captionsEnabled &&
-        !justAudio &&
-        selectedCaptionUrl && { captionUrl: selectedCaptionUrl }),
+      ...(effectiveMaxHeight != null && { maxHeight: effectiveMaxHeight }),
+      captionsEnabled: effectiveCaptionsEnabled,
+      ...(effectiveCaptionUrl != null && { captionUrl: effectiveCaptionUrl }),
       opfsEnabled: opfsSupported,
     });
 
@@ -445,6 +490,9 @@ export function DownloadForm({
     selectedCaptionUrl,
     onVideoAdded,
     opfsSupported,
+    smartDownload,
+    smartCaptions,
+    smartMaxHeight,
   ]);
 
   const handleSubmit = useCallback(() => {
@@ -554,24 +602,18 @@ export function DownloadForm({
         </button>
       </Box>
 
-      {/* ── Divider ──────────────────────────────────── */}
-      <Divider />
-
       {/* ── Options ──────────────────────────────────── */}
       <Box className="df-options" marginTop={8}>
         {!ios && (
-          <OptionRow label={t('autoDownload')} disabled={switchesDisabled}>
+          <OptionRow label={t('autoDownload')} disabled={false}>
             <Switch
               checked={autoDownload}
-              onChange={switchesDisabled ? undefined : handleAutoDownloadChange}
+              onChange={handleAutoDownloadChange}
             />
           </OptionRow>
         )}
-        <OptionRow label={t('justAudio')} disabled={switchesDisabled}>
-          <Switch
-            checked={justAudio}
-            onChange={switchesDisabled ? undefined : setJustAudio}
-          />
+        <OptionRow label={t('justAudio')} disabled={false}>
+          <Switch checked={justAudio} onChange={setJustAudio} />
         </OptionRow>
         <button
           type="button"
@@ -591,62 +633,108 @@ export function DownloadForm({
         >
           <div className="df-advanced-inner">
             <Divider />
-            <OptionRow
-              label={t('resolution')}
-              disabled={
-                switchesDisabled ||
-                metadataLoading ||
-                justAudio ||
-                resolutions.length === 0
-              }
-            >
-              {metadataLoading ? (
-                <Spinner size={18} thickness={2} label={t('resolution')} />
-              ) : (
-                <ResolutionSelect
-                  value={selectedResolution}
-                  onChange={setSelectedResolution}
+            {!smartDownload && (
+              <>
+                <OptionRow
+                  label={t('resolution')}
                   disabled={
-                    switchesDisabled || justAudio || resolutions.length === 0
+                    switchesDisabled ||
+                    metadataLoading ||
+                    justAudio ||
+                    resolutions.length === 0
                   }
-                  options={resolutions.map((h) => ({
-                    value: h,
-                    label: (() => {
-                      const name = resolveResolutionLabel(h, widthByHeight[h]);
-                      return name ? `${name} ${h}` : `${h}p`;
-                    })(),
-                  }))}
-                />
-              )}
+                >
+                  {metadataLoading ? (
+                    <Spinner size={18} thickness={2} label={t('resolution')} />
+                  ) : (
+                    <ResolutionSelect
+                      value={selectedResolution}
+                      onChange={setSelectedResolution}
+                      disabled={
+                        switchesDisabled ||
+                        justAudio ||
+                        resolutions.length === 0
+                      }
+                      options={resolutions.map((h) => ({
+                        value: h,
+                        label: (() => {
+                          const name = resolveResolutionLabel(
+                            h,
+                            widthByHeight[h],
+                          );
+                          return name ? `${name} ${h}` : `${h}p`;
+                        })(),
+                      }))}
+                    />
+                  )}
+                </OptionRow>
+                <OptionRow
+                  label={
+                    captionsUnavailable
+                      ? t('captionsUnavailable')
+                      : t('downloadCaptions')
+                  }
+                  disabled={captionsDisabled}
+                >
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    gap={20}
+                  >
+                    <Switch
+                      checked={captionsEnabled}
+                      onChange={
+                        captionsDisabled ? undefined : setCaptionsEnabled
+                      }
+                    />
+                    {captionsEnabled && availableCaptions.length > 0 ? (
+                      <CaptionSelect
+                        value={selectedCaptionUrl}
+                        onChange={setSelectedCaptionUrl}
+                        disabled={captionsDisabled}
+                        options={availableCaptions}
+                      />
+                    ) : null}
+                  </Box>
+                </OptionRow>
+              </>
+            )}
+            <OptionRow label={t('smartDownload')} disabled={justAudio}>
+              <Switch
+                checked={smartDownload}
+                onChange={justAudio ? undefined : handleSmartDownloadChange}
+              />
             </OptionRow>
-            <OptionRow
-              label={
-                captionsUnavailable
-                  ? t('captionsUnavailable')
-                  : t('downloadCaptions')
-              }
-              disabled={captionsDisabled}
+            <div
+              className={`df-smart-sub-row-wrap${smartDownload ? ' df-smart-sub-row-wrap--open' : ''}`}
             >
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-                gap={20}
-              >
-                <Switch
-                  checked={captionsEnabled}
-                  onChange={captionsDisabled ? undefined : setCaptionsEnabled}
-                />
-                {captionsEnabled && availableCaptions.length > 0 ? (
-                  <CaptionSelect
-                    value={selectedCaptionUrl}
-                    onChange={setSelectedCaptionUrl}
-                    disabled={captionsDisabled}
-                    options={availableCaptions}
-                  />
-                ) : null}
-              </Box>
-            </OptionRow>
+              <div className="df-smart-sub-row-inner">
+                <div className="df-smart-sub-row">
+                  <Box className="df-smart-sub-row-label">
+                    <Typography variant="body-sm" fontWeight={500}>
+                      {t('smartCaptions')}
+                    </Typography>
+                    <Switch
+                      checked={smartCaptions}
+                      onChange={handleSmartCaptionsChange}
+                      disabled={justAudio}
+                    />
+                  </Box>
+                  <Box className="df-smart-sub-row-label">
+                    <Typography variant="body-sm" fontWeight={500}>
+                      {t('smartMaxHeight')}
+                    </Typography>
+                    <ResolutionSelect
+                      value={smartMaxHeight}
+                      onChange={handleSmartMaxHeightChange}
+                      disabled={justAudio}
+                      options={SMART_RESOLUTION_OPTIONS}
+                    />
+                  </Box>
+                </div>
+              </div>
+            </div>
             {opfsSupported &&
               storageInfo !== null &&
               storageInfo.usedBytes > 0 &&

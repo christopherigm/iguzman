@@ -48,7 +48,10 @@
     "duplicateMoveToFirst": "Mover para o primeiro lugar",
     "opfsStorageLabel": "Armazenamento do dispositivo",
     "opfsStorageUsage": "{used} / {total} ({pct}%)",
-    "clearStorageLabel": "Limpar armazenamento do dispositivo"
+    "clearStorageLabel": "Limpar armazenamento do dispositivo",
+    "smartDownload": "Download rápido de vídeo",
+    "smartCaptions": "Legendas",
+    "smartMaxHeight": "Resolução máxima"
   },
   "ClearStorageModal": {
     "title": "Gerenciar armazenamento do dispositivo",

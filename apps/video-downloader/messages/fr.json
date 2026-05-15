@@ -48,7 +48,10 @@
     "duplicateMoveToFirst": "Déplacer en première position",
     "opfsStorageLabel": "Stockage de l'appareil",
     "opfsStorageUsage": "{used} / {total} ({pct}%)",
-    "clearStorageLabel": "Vider le stockage de l'appareil"
+    "clearStorageLabel": "Vider le stockage de l'appareil",
+    "smartDownload": "Téléchargement vidéo rapide",
+    "smartCaptions": "Sous-titres",
+    "smartMaxHeight": "Résolution max"
   },
   "ClearStorageModal": {
     "title": "Gérer le stockage de l'appareil",

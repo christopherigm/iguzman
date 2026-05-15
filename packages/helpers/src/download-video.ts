@@ -653,7 +653,11 @@ const selectBestFormats = (
   let videoPool = filteredVideo.length > 0 ? filteredVideo : videoOnly;
 
   if (maxHeight) {
-    const capped = videoPool.filter((f) => (f.height ?? 0) <= maxHeight);
+    // Use the short side (min of height/width) so portrait videos are capped
+    // by width rather than height — "1080p" means 1080px on the short side.
+    const capped = videoPool.filter(
+      (f) => Math.min(f.height ?? 0, f.width ?? Infinity) <= maxHeight,
+    );
     if (capped.length > 0) videoPool = capped;
   }
 
@@ -749,7 +753,9 @@ const selectBestFormats = (
   let combinedPool = filteredCombined.length > 0 ? filteredCombined : combined;
 
   if (maxHeight) {
-    const capped = combinedPool.filter((f) => (f.height ?? 0) <= maxHeight);
+    const capped = combinedPool.filter(
+      (f) => Math.min(f.height ?? 0, f.width ?? Infinity) <= maxHeight,
+    );
     if (capped.length > 0) combinedPool = capped;
   }
 
@@ -809,7 +815,9 @@ const selectBestTikTokFormat = (
   let pool = filteredCombined.length > 0 ? filteredCombined : combined;
 
   if (maxHeight) {
-    const capped = pool.filter((f) => (f.height ?? 0) <= maxHeight);
+    const capped = pool.filter(
+      (f) => Math.min(f.height ?? 0, f.width ?? Infinity) <= maxHeight,
+    );
     if (capped.length > 0) pool = capped;
   }
 

@@ -197,10 +197,10 @@ export const Button: React.FC<ButtonProps> = (props) => {
   const contentWithIcon =
     iconEl || spinnerEl ? (
       <>
-        {spinnerEl}
         {iconPosition !== 'end' && iconEl}
         {content}
         {iconPosition === 'end' && iconEl}
+        {spinnerEl}
       </>
     ) : (
       content
