@@ -1007,29 +1007,6 @@ export function VideoCardHeader({
       >
         {displayName}
       </Typography>
-      {video.isH265 && !video.h264Converted ? (
-        <Badge variant="subtle" size="sm" color="#16dd00">
-          H265
-        </Badge>
-      ) : null}
-      {video.fpsApplied ? (
-        <Badge variant="subtle" size="sm" color="#f59e0b">
-          {video.fps} FPS
-        </Badge>
-      ) : video.sourceFps != null ? (
-        <Badge variant="subtle" size="sm" color="#f59e0b">
-          {video.sourceFps} FPS
-        </Badge>
-      ) : video.fps !== 'original' ? (
-        <Badge variant="subtle" size="sm" color="#f59e0b">
-          {video.fps} FPS
-        </Badge>
-      ) : null}
-      {!video.justAudio && resolveResolutionLabel(video.height, video.width) ? (
-        <Badge variant="subtle" size="sm" color="#38bdf8">
-          {resolveResolutionLabel(video.height, video.width)}
-        </Badge>
-      ) : null}
       <Button
         unstyled
         className="vi-icon-btn"
@@ -1093,18 +1070,69 @@ export function VideoFooterLink({ video }: { video: StoredVideo }) {
   const platformIcon =
     PLATFORM_ICONS[video.platform] ?? PLATFORM_ICONS.unknown!;
 
+  const fpsBadge = video.fpsApplied
+    ? `${video.fps} FPS`
+    : video.sourceFps != null
+      ? `${video.sourceFps} FPS`
+      : video.fps !== 'original'
+        ? `${video.fps} FPS`
+        : null;
+
+  const resolutionLabel = !video.justAudio
+    ? resolveResolutionLabel(video.height, video.width)
+    : null;
+
   return (
-    <Box className="vi-link-row">
-      <Icon icon={platformIcon} size={24} color="var(--accent, #06b6d4)" />
-      <a
-        className="vi-original-link"
-        href={video.originalURL}
-        target="_blank"
-        rel="noopener noreferrer"
-        title={video.originalURL}
+    <Box
+      className="vi-link-row"
+      display="flex"
+      justifyContent="space-between"
+      alignItems="center"
+    >
+      <Box
+        display="flex"
+        alignItems="center"
+        styles={{ gap: '6px', minWidth: 0 }}
       >
-        {video.originalURL}
-      </a>
+        <a
+          href={video.originalURL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={video.originalURL}
+        >
+          <Icon icon={platformIcon} size={24} color="var(--accent, #06b6d4)" />
+        </a>
+        <a
+          className="vi-original-link"
+          href={video.originalURL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={video.originalURL}
+        >
+          {video.originalURL}
+        </a>
+      </Box>
+      <Box
+        display="flex"
+        alignItems="center"
+        styles={{ gap: '4px', flexShrink: 0 }}
+      >
+        {video.isH265 && !video.h264Converted ? (
+          <Badge variant="subtle" size="sm" color="#16dd00">
+            H265
+          </Badge>
+        ) : null}
+        {fpsBadge ? (
+          <Badge variant="subtle" size="sm" color="#f59e0b">
+            {fpsBadge}
+          </Badge>
+        ) : null}
+        {resolutionLabel ? (
+          <Badge variant="subtle" size="sm" color="#38bdf8">
+            {resolutionLabel}
+          </Badge>
+        ) : null}
+      </Box>
     </Box>
   );
 }

@@ -22,6 +22,7 @@
   background: transparent;
   border: none;
   border-bottom: 1.5px solid var(--border, #b0b0b0);
+  border-bottom-color: var(--border, #b0b0b0);
   border-radius: 4px 4px 0 0;
   outline: none;
   caret-color: var(--accent, #06b6d4);

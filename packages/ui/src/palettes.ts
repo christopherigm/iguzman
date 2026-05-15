@@ -46,7 +46,7 @@ const palettes: Record<string, PaletteDefinition> = {
       '--foreground': '#ededed',
       '--surface-1': '#333333',
       '--surface-2': '#3c3c3c',
-      '--border': '#333333',
+      '--border': '#444',
       '--accent': '#22d3ee',
       '--accent-foreground': '#0a0a0a',
       '--error': '#f87171',

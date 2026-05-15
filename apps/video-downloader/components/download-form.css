@@ -30,6 +30,15 @@
   min-width: 0;
 }
 
+.df-smart-hint {
+  margin-top: 4px;
+  opacity: 0.5;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Icon Buttons ────────────────────────────────────── */
 
 .df-icon-btn {

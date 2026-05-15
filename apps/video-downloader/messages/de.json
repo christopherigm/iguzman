@@ -51,7 +51,9 @@
     "clearStorageLabel": "Gerätespeicher leeren",
     "smartDownload": "Video-Schnell-Download",
     "smartCaptions": "Untertitel",
-    "smartMaxHeight": "Max. Auflösung"
+    "smartMaxHeight": "Max. Auflösung",
+    "smartDownloadHintOn": "Video Smart Download AN: {resolution}",
+    "smartDownloadHintCaptions": "+ Untertitel"
   },
   "ClearStorageModal": {
     "title": "Gerätespeicher verwalten",

@@ -51,7 +51,9 @@
     "clearStorageLabel": "Vider le stockage de l'appareil",
     "smartDownload": "Téléchargement vidéo rapide",
     "smartCaptions": "Sous-titres",
-    "smartMaxHeight": "Résolution max"
+    "smartMaxHeight": "Résolution max",
+    "smartDownloadHintOn": "Video Smart Download ON : {resolution}",
+    "smartDownloadHintCaptions": "+ sous-titres"
   },
   "ClearStorageModal": {
     "title": "Gérer le stockage de l'appareil",

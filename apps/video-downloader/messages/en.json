@@ -51,7 +51,9 @@
     "clearStorageLabel": "Clear device storage",
     "smartDownload": "Video Smart Download",
     "smartCaptions": "Captions",
-    "smartMaxHeight": "Max resolution"
+    "smartMaxHeight": "Max resolution",
+    "smartDownloadHintOn": "Video Smart Download ON: {resolution}",
+    "smartDownloadHintCaptions": "+ captions"
   },
   "ClearStorageModal": {
     "title": "Manage Device Storage",

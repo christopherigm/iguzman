@@ -51,7 +51,9 @@
     "clearStorageLabel": "Borrar almacenamiento del dispositivo",
     "smartDownload": "Descarga inteligente de video",
     "smartCaptions": "Subtítulos",
-    "smartMaxHeight": "Resolución máxima"
+    "smartMaxHeight": "Resolución máxima",
+    "smartDownloadHintOn": "Video Smart Download ON: {resolution}",
+    "smartDownloadHintCaptions": "+ subtítulos"
   },
   "ClearStorageModal": {
     "title": "Gestionar almacenamiento del dispositivo",

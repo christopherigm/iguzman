@@ -543,7 +543,7 @@ export function DownloadForm({
     <Box
       elevation={4}
       borderRadius={16}
-      padding={10}
+      padding={7}
       flexDirection="column"
       width="100%"
       backgroundColor="var(--surface-1, #fff)"
@@ -570,6 +570,20 @@ export function DownloadForm({
             onFocus={handleInputFocus}
             label={t('inputLabel')}
           />
+          {smartDownload && !justAudio && (
+            <Typography
+              variant="caption"
+              className="df-smart-hint"
+              color="var(--accent, #06b6d4)"
+            >
+              {t('smartDownloadHintOn', {
+                resolution:
+                  resolveResolutionLabel(smartMaxHeight) ??
+                  `${smartMaxHeight}p`,
+              })}
+              {smartCaptions && ` ${t('smartDownloadHintCaptions')}`}
+            </Typography>
+          )}
         </Box>
 
         {url && (
