@@ -41,6 +41,8 @@ export async function POST(request: Request) {
     maxHeight,
     captionsEnabled = false,
     captionUrl,
+    commentsEnabled = false,
+    maxComments,
   } = body;
 
   if (!url || typeof url !== 'string') {
@@ -86,6 +88,8 @@ export async function POST(request: Request) {
     maxHeight,
     captionsEnabled,
     captionUrl,
+    commentsEnabled,
+    maxComments,
   });
   const taskId = task._id.toHexString();
 
@@ -110,6 +114,8 @@ export async function POST(request: Request) {
         maxHeight,
         captions: captionsEnabled,
         captionUrl,
+        commentsEnabled,
+        maxComments,
         outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
         cookies: IS_PRODUCTION
           ? '/app/media/netscape-cookies.txt'
@@ -162,6 +168,7 @@ export async function POST(request: Request) {
             result.formatSelection?.bestCombined?.height ??
             null,
           captionsFile: result.captionsFile ?? null,
+          commentsFile: result.commentsFile ?? null,
         });
       }
     } catch (err) {

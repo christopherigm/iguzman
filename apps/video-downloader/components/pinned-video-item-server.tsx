@@ -590,6 +590,9 @@ export function PinnedVideoItemServer({
           ? `/api/media/${task.captionsFile}`
           : video.captionsFile,
         captionUrl: null,
+        commentsFile: task.commentsFile
+          ? `/api/media/${task.commentsFile}`
+          : video.commentsFile,
         serverTaskId: null,
         ...donePatch,
       });

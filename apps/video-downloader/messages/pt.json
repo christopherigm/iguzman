@@ -27,8 +27,11 @@
     "fpsBoostText": "Aumentar os FPS para {fps} usa o navegador do seu dispositivo para processar o vídeo, o que pode levar mais tempo. Se você fechar ou atualizar a página, o processamento será retomado automaticamente na sua próxima visita.",
     "resolution": "Resolução",
     "downloadCaptions": "Baixar legendas",
+    "downloadComments": "Baixar comentários",
     "subtitles": "Legendas",
     "captionsUnavailable": "Legendas não disponíveis para este vídeo",
+    "comments": "Comentários",
+    "commentsUnavailable": "Comentários não disponíveis para este vídeo",
     "server": "Servidor",
     "addServer": "Adicionar servidor",
     "addServerTitle": "Adicionar servidor",
@@ -209,6 +212,7 @@
     "searchActive": "Buscando: \"{query}\"",
     "clearSearch": "Limpar pesquisa",
     "downloadCaptions": "Baixar legendas",
+    "downloadComments": "Baixar comentários",
     "burnCaptions": "Gravar legendas",
     "burningCaptions": "Gravando legendas… {progress}%",
     "errorBurnCaptionsFailed": "Falha ao gravar as legendas no vídeo.",
@@ -287,7 +291,8 @@
     "scaleDownTitle": "Reduzir resolução",
     "scaleDownText": "Selecione uma resolução menor. O vídeo será recodificado no tamanho escolhido.",
     "errorScaleDownFailed": "Falha ao reduzir a resolução.",
-    "convertH265ServerOnly": "A conversão H.265 requer um servidor de processamento"
+    "convertH265ServerOnly": "A conversão H.265 requer um servidor de processamento",
+    "toggleComments": "Alternar comentários"
   },
   "Offline": {
     "title": "Você está offline",

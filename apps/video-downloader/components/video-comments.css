@@ -1,0 +1,114 @@
+/* ── Comments root ─────────────────────────────────── */
+
+.vc-root {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px 12px 4px;
+  border-top: 1px solid color-mix(in srgb, var(--foreground, #111) 8%, transparent);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground, #111) 20%, transparent) transparent;
+}
+
+.vc-root::-webkit-scrollbar {
+  width: 4px;
+}
+
+.vc-root::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground, #111) 20%, transparent);
+  border-radius: 2px;
+}
+
+/* ── Comment list ──────────────────────────────────── */
+
+.vc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 4px;
+}
+
+/* ── Individual comment ────────────────────────────── */
+
+.vc-comment {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.vc-comment--reply {
+  margin-top: 8px;
+}
+
+/* ── Avatar ────────────────────────────────────────── */
+
+.vc-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.vc-avatar--initials {
+  background: var(--accent, #06b6d4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Comment body ──────────────────────────────────── */
+
+.vc-comment-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vc-comment-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.vc-author {
+  line-height: 1.2;
+}
+
+.vc-date {
+  font-size: 11px;
+}
+
+.vc-text {
+  margin-top: 2px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+/* ── Footer (likes) ────────────────────────────────── */
+
+.vc-comment-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ── Replies ───────────────────────────────────────── */
+
+.vc-replies-toggle {
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  margin-top: 4px;
+  display: block;
+}
+
+.vc-replies {
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 2px solid color-mix(in srgb, var(--foreground, #111) 10%, transparent);
+  display: flex;
+  flex-direction: column;
+}

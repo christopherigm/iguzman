@@ -168,6 +168,11 @@
   object-fit: cover;
 }
 
+.vi-video--with-comments {
+  max-height: 300px;
+  object-fit: contain;
+}
+
 .vi-thumbnail {
   display: block;
   width: 100%;

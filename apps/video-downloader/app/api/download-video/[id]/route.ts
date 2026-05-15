@@ -90,6 +90,15 @@ export async function DELETE(
       }
     }
 
+    if (task.commentsFile) {
+      const commentsPath = join(MEDIA_DIR, task.commentsFile);
+      try {
+        await unlink(commentsPath);
+      } catch {
+        /* Comments file may already be gone — acceptable */
+      }
+    }
+
     await deleteTask(id);
 
     log.info({ taskId: id, file: task.file }, 'Task deleted');

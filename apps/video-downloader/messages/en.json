@@ -27,8 +27,11 @@
     "fpsBoostText": "FPS boosting to {fps} uses your device's browser to process the video, which can take longer to complete. If you close or refresh the page, processing will automatically resume on your next visit.",
     "resolution": "Resolution",
     "downloadCaptions": "Download captions",
+    "downloadComments": "Download comments",
     "subtitles": "Subtitles",
     "captionsUnavailable": "Captions not available for this video",
+    "comments": "Comments",
+    "commentsUnavailable": "Comments not available for this video",
     "server": "Server",
     "addServer": "Add server",
     "addServerTitle": "Add Server",
@@ -289,7 +292,8 @@
     "scaleDownTitle": "Scale Down Resolution",
     "scaleDownText": "Select a lower resolution. The video will be re-encoded to the chosen size.",
     "errorScaleDownFailed": "Resolution scale-down failed.",
-    "convertH265ServerOnly": "H.265 conversion requires a processing server"
+    "convertH265ServerOnly": "H.265 conversion requires a processing server",
+    "toggleComments": "Toggle comments"
   },
   "Offline": {
     "title": "You are offline",

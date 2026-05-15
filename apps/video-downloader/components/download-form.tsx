@@ -195,6 +195,51 @@ function CaptionSelect({
   );
 }
 
+const COMMENT_COUNT_OPTIONS: { value: 5 | 10 | 20; label: string }[] = [
+  { value: 5, label: '5' },
+  { value: 10, label: '10' },
+  { value: 20, label: '20' },
+];
+
+function CommentCountSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: 5 | 10 | 20;
+  onChange: (v: 5 | 10 | 20) => void;
+  disabled: boolean;
+}) {
+  return (
+    <Box className="df-select-wrapper">
+      <select
+        className="df-select"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value) as 5 | 10 | 20)}
+        disabled={disabled}
+        aria-label="Max comments"
+      >
+        {COMMENT_COUNT_OPTIONS.map((opt) => (
+          <option
+            key={opt.value}
+            value={opt.value}
+            style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+          >
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      <span className="df-select-chevron">
+        <Icon
+          icon="/icons/chevron-down.svg"
+          size={14}
+          color="var(--foreground, #171717)"
+        />
+      </span>
+    </Box>
+  );
+}
+
 const SMART_RESOLUTION_OPTIONS: { value: number; label: string }[] = [
   { value: 360, label: buildResolutionLabel(360) },
   { value: 480, label: buildResolutionLabel(480) },
@@ -218,6 +263,8 @@ export interface DownloadFormProps {
     maxHeight?: number;
     captionsEnabled?: boolean;
     captionUrl?: string;
+    commentsEnabled?: boolean;
+    maxComments?: number;
     /** Whether to store the downloaded video in the browser's Origin Private File System. */
     opfsEnabled: boolean;
   }) => void;
@@ -267,6 +314,8 @@ export function DownloadForm({
     setSmartDownload(storedSmart === 'true');
     const storedSmartCaptions = localStorage.getItem('vd_smart_captions');
     setSmartCaptions(storedSmartCaptions !== 'false');
+    const storedSmartComments = localStorage.getItem('vd_smart_comments');
+    setSmartComments(storedSmartComments === 'true');
     const storedSmartHeight = localStorage.getItem('vd_smart_max_height');
     setSmartMaxHeight(storedSmartHeight ? Number(storedSmartHeight) : 1080);
   }, []);
@@ -284,6 +333,11 @@ export function DownloadForm({
   const handleSmartCaptionsChange = useCallback((value: boolean) => {
     setSmartCaptions(value);
     localStorage.setItem('vd_smart_captions', String(value));
+  }, []);
+
+  const handleSmartCommentsChange = useCallback((value: boolean) => {
+    setSmartComments(value);
+    localStorage.setItem('vd_smart_comments', String(value));
   }, []);
 
   const handleSmartMaxHeightChange = useCallback((value: number) => {
@@ -329,6 +383,12 @@ export function DownloadForm({
   );
   const [captionsUnavailable, setCaptionsUnavailable] = useState(false);
 
+  const [commentsEnabled, setCommentsEnabled] = useState(false);
+  const [commentsUnavailable, setCommentsUnavailable] = useState(false);
+  const [commentCount, setCommentCount] = useState<5 | 10 | 20>(20);
+  const [smartComments, setSmartComments] = useState(false);
+  const [totalCommentCount, setTotalCommentCount] = useState<number | null>(null);
+
   const [smartDownload, setSmartDownload] = useState(false);
   const [smartCaptions, setSmartCaptions] = useState(true);
   const [smartMaxHeight, setSmartMaxHeight] = useState(1080);
@@ -360,6 +420,9 @@ export function DownloadForm({
     setAvailableCaptions([]);
     setSelectedCaptionUrl(null);
     setCaptionsEnabled(false);
+    setCommentsEnabled(false);
+    setCommentsUnavailable(false);
+    setTotalCommentCount(null);
 
     if (!isValidUrl(url) || justAudio || smartDownload) {
       setResolutions([]);
@@ -387,6 +450,7 @@ export function DownloadForm({
           heights?: number[];
           widthByHeight?: Record<number, number>;
           captions?: CaptionOption[];
+          commentCount?: number | null;
         };
         const heights = data.heights ?? [];
         setResolutions(heights);
@@ -402,6 +466,13 @@ export function DownloadForm({
           );
           setSelectedCaptionUrl((preferred ?? captions[0])?.url ?? null);
           setCaptionsEnabled(true);
+        }
+        const count = data.commentCount ?? null;
+        setTotalCommentCount(count);
+        if (count) {
+          setCommentsEnabled(true);
+        } else {
+          setCommentsUnavailable(true);
         }
         setMetadataLoading(false);
       } catch {
@@ -440,6 +511,7 @@ export function DownloadForm({
   const switchesDisabled = !validPlatformUrl;
   const captionsDisabled =
     switchesDisabled || justAudio || captionsUnavailable || metadataLoading;
+  const commentsUnsupported = platform === 'facebook' || platform === 'instagram';
 
   /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
@@ -462,6 +534,8 @@ export function DownloadForm({
       !smartDownload && captionsEnabled && !justAudio && selectedCaptionUrl
         ? selectedCaptionUrl
         : undefined;
+    const effectiveCommentsEnabled = !justAudio && !commentsUnsupported && (smartDownload ? smartComments : commentsEnabled);
+    const effectiveMaxComments = smartDownload ? 10 : commentCount;
 
     onVideoAdded?.({
       originalURL: url,
@@ -473,12 +547,16 @@ export function DownloadForm({
       ...(effectiveMaxHeight != null && { maxHeight: effectiveMaxHeight }),
       captionsEnabled: effectiveCaptionsEnabled,
       ...(effectiveCaptionUrl != null && { captionUrl: effectiveCaptionUrl }),
+      commentsEnabled: effectiveCommentsEnabled,
+      ...(effectiveCommentsEnabled && { maxComments: effectiveMaxComments }),
       opfsEnabled: opfsSupported,
     });
 
-    /* Reset the URL field and captions toggle after submission */
+    /* Reset the URL field and captions/comments toggles after submission */
     setUrl('');
     setCaptionsEnabled(false);
+    setCommentsEnabled(false);
+    setTotalCommentCount(null);
   }, [
     url,
     justAudio,
@@ -488,6 +566,9 @@ export function DownloadForm({
     selectedResolution,
     captionsEnabled,
     selectedCaptionUrl,
+    commentsEnabled,
+    commentCount,
+    smartComments,
     onVideoAdded,
     opfsSupported,
     smartDownload,
@@ -713,6 +794,37 @@ export function DownloadForm({
                     ) : null}
                   </Box>
                 </OptionRow>
+                <OptionRow
+                  label={
+                    commentsUnavailable
+                      ? t('commentsUnavailable')
+                      : t('downloadComments')
+                  }
+                  disabled={switchesDisabled || justAudio || commentsUnavailable || metadataLoading}
+                >
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    gap={20}
+                  >
+                    <Switch
+                      checked={commentsEnabled}
+                      onChange={
+                        switchesDisabled || justAudio || commentsUnavailable || metadataLoading
+                          ? undefined
+                          : setCommentsEnabled
+                      }
+                    />
+                    {commentsEnabled ? (
+                      <CommentCountSelect
+                        value={commentCount}
+                        onChange={setCommentCount}
+                        disabled={false}
+                      />
+                    ) : null}
+                  </Box>
+                </OptionRow>
               </>
             )}
             <OptionRow label={t('smartDownload')} disabled={justAudio}>
@@ -738,8 +850,15 @@ export function DownloadForm({
                   </Box>
                   <Box className="df-smart-sub-row-label">
                     <Typography variant="body-sm" fontWeight={500}>
-                      {t('smartMaxHeight')}
+                      {t('comments')}
                     </Typography>
+                    <Switch
+                      checked={smartComments}
+                      onChange={handleSmartCommentsChange}
+                      disabled={justAudio || commentsUnsupported}
+                    />
+                  </Box>
+                  <Box className="df-smart-sub-row-label">
                     <ResolutionSelect
                       value={smartMaxHeight}
                       onChange={handleSmartMaxHeightChange}

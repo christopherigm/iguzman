@@ -28,6 +28,8 @@ interface VideoAddedEntry {
   maxHeight?: number;
   captionsEnabled?: boolean;
   captionUrl?: string;
+  commentsEnabled?: boolean;
+  maxComments?: number;
   opfsEnabled: boolean;
 }
 
@@ -113,6 +115,19 @@ function useOPFSRecovery({
               } catch {}
             }
 
+            let commentsKey: string | null = null;
+            if (video.commentsFile) {
+              try {
+                const commentsRes = await fetch(video.commentsFile);
+                if (commentsRes.ok) {
+                  const commentsBlob = await commentsRes.blob();
+                  const commentsFilename = video.commentsFile.split('/').pop()!;
+                  commentsKey = `comments_${commentsFilename}`;
+                  await writeToOPFS(commentsKey, commentsBlob);
+                }
+              } catch {}
+            }
+
             await fetch(`/api/download-video/${video.taskId}`, {
               method: 'DELETE',
             }).catch(() => {});
@@ -132,6 +147,7 @@ function useOPFSRecovery({
               opfsKey: video.file,
               opfsThumbnailKey: thumbKey,
               opfsCaptionsKey: captionsKey,
+              opfsCommentsKey: commentsKey,
               opfsStored: true,
               serverFileDeleted: true,
               downloadURL: `opfs://${video.file}`,
@@ -182,6 +198,8 @@ function DownloadPageInner() {
         maxHeight: entry.maxHeight ?? null,
         captionsEnabled: entry.captionsEnabled ?? false,
         captionUrl: entry.captionUrl ?? null,
+        commentsEnabled: entry.commentsEnabled ?? false,
+        maxComments: entry.maxComments ?? null,
         opfsEnabled: entry.opfsEnabled,
       });
     },
@@ -197,6 +215,8 @@ function DownloadPageInner() {
           await deleteFromOPFS(video.opfsThumbnailKey).catch(() => {});
         if (video.opfsCaptionsKey)
           await deleteFromOPFS(video.opfsCaptionsKey).catch(() => {});
+        if (video.opfsCommentsKey)
+          await deleteFromOPFS(video.opfsCommentsKey).catch(() => {});
         revokeUrls(uuid);
       }
       removeCompleted(uuid);

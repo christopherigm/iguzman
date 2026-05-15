@@ -107,6 +107,9 @@ export function PinnedVideoItemDownloading({
           ? `/api/media/${task.captionsFile}`
           : null,
         captionUrl: null,
+        commentsFile: task.commentsFile
+          ? `/api/media/${task.commentsFile}`
+          : null,
       });
 
       // Migrate to OPFS before moving to completed
@@ -147,6 +150,20 @@ export function PinnedVideoItemDownloading({
               } catch {}
             }
 
+            let commentsKey: string | null = null;
+            if (task.commentsFile) {
+              try {
+                const commentsRes = await fetch(
+                  resolveMediaUrl(`/api/media/${task.commentsFile}`),
+                );
+                if (commentsRes.ok) {
+                  const commentsBlob = await commentsRes.blob();
+                  commentsKey = `comments_${task.commentsFile}`;
+                  await writeToOPFS(commentsKey, commentsBlob);
+                }
+              } catch {}
+            }
+
             if (task._id) {
               fetch(`/api/download-video/${task._id}`, {
                 method: 'DELETE',
@@ -169,6 +186,7 @@ export function PinnedVideoItemDownloading({
               opfsKey: file,
               opfsThumbnailKey: thumbKey,
               opfsCaptionsKey: captionsKey,
+              opfsCommentsKey: commentsKey,
               opfsStored: true,
               serverFileDeleted: true,
               downloadURL: `opfs://${file}`,
@@ -291,6 +309,9 @@ export function PinnedVideoItemDownloading({
           ...(video.maxHeight != null && { maxHeight: video.maxHeight }),
           ...(video.captionsEnabled && { captionsEnabled: true }),
           ...(video.captionUrl && { captionUrl: video.captionUrl }),
+          ...(video.commentsEnabled && { commentsEnabled: true }),
+          ...(video.commentsEnabled &&
+            video.maxComments != null && { maxComments: video.maxComments }),
         }),
       });
       const data: TaskCreateResponse = await res.json();
@@ -316,6 +337,8 @@ export function PinnedVideoItemDownloading({
     video.maxHeight,
     video.captionsEnabled,
     video.captionUrl,
+    video.commentsEnabled,
+    video.maxComments,
     pollForTask,
     t,
   ]);

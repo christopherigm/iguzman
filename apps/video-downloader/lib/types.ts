@@ -14,6 +14,10 @@ export type VideoDownloadInput = Pick<
   captionsEnabled?: boolean;
   /** Direct URL to an SRT caption file selected by the user. */
   captionUrl?: string;
+  /** When true, comments are downloaded and saved as a separate JSON file. */
+  commentsEnabled?: boolean;
+  /** Maximum number of top-level comments to download. */
+  maxComments?: number;
 };
 
 /* ── Result metadata ───────────────────────────────── */
@@ -34,6 +38,8 @@ export interface VideoResultFields {
   height: number | null;
   /** Filename of the saved captions file (e.g. `uuid.txt`). `null` when no captions were downloaded. */
   captionsFile: string | null;
+  /** Filename of the saved comments JSON file (e.g. `uuid.comments.json`). `null` when no comments were downloaded. */
+  commentsFile: string | null;
 }
 
 /* ── Status ────────────────────────────────────────── */

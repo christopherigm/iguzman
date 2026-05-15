@@ -27,8 +27,11 @@
     "fpsBoostText": "Die FPS-Erhöhung auf {fps} nutzt den Browser Ihres Geräts zur Videoverarbeitung, was länger dauern kann. Wenn Sie die Seite schließen oder aktualisieren, wird die Verarbeitung bei Ihrem nächsten Besuch automatisch fortgesetzt.",
     "resolution": "Auflösung",
     "downloadCaptions": "Untertitel herunterladen",
+    "downloadComments": "Kommentare herunterladen",
     "subtitles": "Untertitel",
     "captionsUnavailable": "Für dieses Video sind keine Untertitel verfügbar",
+    "comments": "Kommentare",
+    "commentsUnavailable": "Für dieses Video sind keine Kommentare verfügbar",
     "server": "Server",
     "addServer": "Server hinzufügen",
     "addServerTitle": "Server hinzufügen",
@@ -209,6 +212,7 @@
     "searchActive": "Suche nach: \"{query}\"",
     "clearSearch": "Suche löschen",
     "downloadCaptions": "Untertitel herunterladen",
+    "downloadComments": "Kommentare herunterladen",
     "burnCaptions": "Untertitel einbrennen",
     "burningCaptions": "Untertitel werden eingebrannt… {progress}%",
     "errorBurnCaptionsFailed": "Fehler beim Einbrennen der Untertitel.",
@@ -287,7 +291,8 @@
     "scaleDownTitle": "Auflösung reduzieren",
     "scaleDownText": "Wähle eine niedrigere Auflösung. Das Video wird auf die gewählte Größe neu kodiert.",
     "errorScaleDownFailed": "Auflösungsreduzierung fehlgeschlagen.",
-    "convertH265ServerOnly": "H.265-Konvertierung erfordert einen Verarbeitungsserver"
+    "convertH265ServerOnly": "H.265-Konvertierung erfordert einen Verarbeitungsserver",
+    "toggleComments": "Kommentare umschalten"
   },
   "Offline": {
     "title": "Du bist offline",

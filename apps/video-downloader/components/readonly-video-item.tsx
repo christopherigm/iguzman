@@ -20,6 +20,7 @@ import {
   VideoFooterLink,
   PlatformIconBg,
 } from './video-item-shared';
+import { VideoComments } from './video-comments';
 import { useOPFSUrls } from './opfs-url-context';
 import {
   deleteFromOPFS,
@@ -66,6 +67,7 @@ export function ReadOnlyVideoItem({
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [extraActionsOpen, setExtraActionsOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [copying, setCopying] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [showBurnModal, setShowBurnModal] = useState(false);
@@ -164,6 +166,19 @@ export function ReadOnlyVideoItem({
       } catch {}
     }
 
+    let commentsKey: string | null = null;
+    if (video.commentsFile) {
+      try {
+        const commentsRes = await fetch(resolveMediaUrl(video.commentsFile));
+        if (commentsRes.ok) {
+          const commentsBlob = await commentsRes.blob();
+          const commentsFilename = video.commentsFile.split('/').pop()!;
+          commentsKey = `comments_${commentsFilename}`;
+          await writeToOPFS(commentsKey, commentsBlob);
+        }
+      } catch {}
+    }
+
     const videoFile = await readFromOPFS(key);
     const videoUrl = URL.createObjectURL(videoFile);
     let thumbnailUrl: string | null = null;
@@ -186,6 +201,7 @@ export function ReadOnlyVideoItem({
       opfsKey: key,
       opfsThumbnailKey: thumbKey,
       opfsCaptionsKey: captionsKey,
+      opfsCommentsKey: commentsKey,
       opfsStored: true,
       serverFileDeleted: video.taskId ? true : video.serverFileDeleted,
       downloadURL: `opfs://${key}`,
@@ -264,9 +280,17 @@ export function ReadOnlyVideoItem({
         downloadURL={video.downloadURL}
         justAudio={video.justAudio}
         thumbnail={video.thumbnail}
+        withComments={commentsOpen}
         opfsVideoUrl={opfsUrls?.videoUrl}
         opfsThumbnailUrl={opfsUrls?.thumbnailUrl}
       />
+      {/* ── Comments panel ────────────────────────── */}
+      {commentsOpen && video.commentsFile ? (
+        <VideoComments
+          commentsUrl={video.commentsFile}
+          opfsCommentsKey={video.opfsCommentsKey}
+        />
+      ) : null}
       {/* ── Footer actions ────────────────────────── */}
       <Box className="vi-footer">
         <VideoFooterLink video={video} />
@@ -276,9 +300,11 @@ export function ReadOnlyVideoItem({
           isBusy={false}
           copying={copying}
           extraActionsOpen={extraActionsOpen}
+          commentsOpen={commentsOpen}
           onCopy={handleCopy}
           onRedownload={handleRedownload}
           onToggleExtra={() => setExtraActionsOpen((p) => !p)}
+          onToggleComments={video.commentsFile ? () => setCommentsOpen((p) => !p) : undefined}
           onDelete={() => setConfirmRemove(true)}
           t={t}
         />
@@ -331,6 +357,8 @@ export function ReadOnlyVideoItem({
               void deleteFromOPFS(video.opfsThumbnailKey);
             if (video.opfsCaptionsKey)
               void deleteFromOPFS(video.opfsCaptionsKey);
+            if (video.opfsCommentsKey)
+              void deleteFromOPFS(video.opfsCommentsKey);
             onRemove(video.uuid);
           }}
           cancelCallback={() => setConfirmRemove(false)}

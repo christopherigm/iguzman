@@ -3,6 +3,7 @@ import {
   fetchVideoMetadata,
   listSubtitlesViaYtDlp,
 } from '@repo/helpers/download-video';
+import { isFacebook, isInstagram } from '@repo/helpers/checkers';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/video-metadata' });
@@ -94,11 +95,19 @@ export async function GET(request: Request) {
       }));
     }
 
+    // yt-dlp reports comment_count for Facebook/Instagram but never populates
+    // the comments array in the info.json, so offering comment download there
+    // always silently fails. Suppress it so the UI doesn't enable the toggle.
+    const supportsCommentDownload = !isFacebook(url) && !isInstagram(url);
+    const commentCount = supportsCommentDownload
+      ? ((meta as typeof meta & { comment_count?: number }).comment_count ?? null)
+      : null;
+
     log.info(
-      { url, heightCount: heights.length, captionCount: captions.length },
+      { url, heightCount: heights.length, captionCount: captions.length, commentCount },
       'Video metadata fetched',
     );
-    return NextResponse.json({ heights, widthByHeight, captions });
+    return NextResponse.json({ heights, widthByHeight, captions, commentCount });
   } catch (err) {
     log.error({ err, url }, 'Failed to fetch video metadata');
     return NextResponse.json(

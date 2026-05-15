@@ -53,6 +53,14 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   captionsEnabled: boolean;
   /** URL of the selected caption/subtitle track. */
   captionUrl: string | null;
+  /** Whether comments were requested for this download. */
+  commentsEnabled: boolean;
+  /** Maximum number of top-level comments requested. */
+  maxComments: number | null;
+  /** Filename of the saved comments JSON file. Null when not downloaded. */
+  commentsFile: string | null;
+  /** OPFS filename key for the comments JSON file. Null if not stored. */
+  opfsCommentsKey: string | null;
   /** Config stored when user triggers burn-captions; null when not pending or after completion. */
   burnCaptionsConfig: BurnCaptionsConfig | null;
   /** Whether captions have been successfully burned into the video. */
@@ -125,6 +133,10 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     captionsEnabled: v.captionsEnabled ?? false,
     captionUrl: v.captionUrl ?? null,
     captionsFile: v.captionsFile ?? null,
+    commentsEnabled: v.commentsEnabled ?? false,
+    maxComments: v.maxComments ?? null,
+    commentsFile: v.commentsFile ?? null,
+    opfsCommentsKey: v.opfsCommentsKey ?? null,
     burnCaptionsConfig: v.burnCaptionsConfig ?? null,
     captionsBurned: v.captionsBurned ?? false,
     thumbnail:
@@ -314,6 +326,8 @@ export function useVideoStore() {
         maxHeight?: number | null;
         captionsEnabled?: boolean;
         captionUrl?: string | null;
+        commentsEnabled?: boolean;
+        maxComments?: number | null;
         wsClientUuid?: string | null;
         opfsEnabled?: boolean;
       },
@@ -354,6 +368,10 @@ export function useVideoStore() {
         captionsEnabled: partial.captionsEnabled ?? false,
         captionUrl: partial.captionUrl ?? null,
         captionsFile: null,
+        commentsEnabled: partial.commentsEnabled ?? false,
+        maxComments: partial.maxComments ?? null,
+        commentsFile: null,
+        opfsCommentsKey: null,
         burnCaptionsConfig: null,
         captionsBurned: false,
         wsClientUuid: partial.wsClientUuid ?? null,

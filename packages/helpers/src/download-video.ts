@@ -255,6 +255,19 @@ export interface DownloadVideoOptions {
    * instead of auto-detecting captions from metadata.
    */
   captionUrl?: string;
+  /**
+   * When `true`, comments are downloaded using yt-dlp's `--write-comments`
+   * flag and saved as a separate JSON file alongside the video.
+   * Has no effect when `justAudio` is `true`.
+   * @defaultValue false
+   */
+  commentsEnabled?: boolean;
+  /**
+   * Maximum number of top-level comments to download.
+   * Nested replies are capped at 5 per thread.
+   * @defaultValue 20
+   */
+  maxComments?: number;
 }
 
 /** A single format entry from yt-dlp's `--dump-json` output. */
@@ -371,6 +384,8 @@ export interface VideoMetadata {
   subtitles: Record<string, { ext: string; url: string }[]>;
   /** Available formats returned by yt-dlp. */
   formats?: FormatInfo[];
+  /** Total number of comments on the video, as reported by the platform. Null when unavailable. */
+  comment_count?: number;
 }
 
 /** Result returned by {@link downloadVideo}. */
@@ -434,6 +449,11 @@ export interface DownloadVideoResult {
    * `undefined` for audio-only downloads or when the probe fails.
    */
   fps?: number;
+  /**
+   * Filename of the locally-saved comments JSON file (e.g. `uuid.comments.json`).
+   * Present only when `commentsEnabled` is `true` and comments were fetched.
+   */
+  commentsFile?: string;
   /**
    * Structured error object. Present when something goes wrong.
    * When set, `file` and `name` will be absent.
@@ -2518,6 +2538,8 @@ const downloadVideo = async ({
   iosDevice = false,
   maxHeight,
   captionUrl: providedCaptionUrl,
+  commentsEnabled = false,
+  maxComments = 20,
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
@@ -2997,7 +3019,94 @@ const downloadVideo = async ({
     }
   }
 
+  /* ---- 11. Fetch comments ---- */
+
+  if (commentsEnabled && !justAudio) {
+    try {
+      const commentsFilename = await downloadComments(
+        url,
+        binary,
+        cookies,
+        jsRuntimes,
+        outputFolder,
+        fileId,
+        maxComments,
+      );
+      if (commentsFilename) result.commentsFile = commentsFilename;
+    } catch (err) {
+      console.warn('downloadComments threw (non-fatal):', err);
+    }
+  }
+
   return result;
+};
+
+/* ------------------------------------------------------------------ */
+/*  Comment download via yt-dlp --write-comments                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Downloads comments for the given URL via yt-dlp's `--write-comments` flag.
+ * Extracts the `comments` array from the written info.json and saves it as
+ * a standalone JSON file. Returns the filename on success, null on failure.
+ */
+const downloadComments = async (
+  url: string,
+  binary: string,
+  cookies: string,
+  jsRuntimes: string,
+  outputFolder: string,
+  fileId: string,
+  maxComments: number,
+): Promise<string | null> => {
+  const tmpFolder = `${outputFolder}/_comments_${randomUUID()}`;
+  ensureFolder(tmpFolder);
+
+  try {
+    const args = [
+      '--write-comments',
+      '--write-info-json',
+      '--skip-download',
+      '--no-playlist',
+      '--extractor-args',
+      `youtube:comment_sort=top;max_comments=${maxComments},all,5,5`,
+      '--js-runtimes',
+      `node:${jsRuntimes}`,
+      '-o',
+      `${tmpFolder}/%(id)s.%(ext)s`,
+    ];
+
+    if (cookies) args.push('--cookies', cookies);
+    args.push(url);
+
+    await execFileAsync(binary, args);
+
+    const files = readdirSync(tmpFolder);
+    const infoFile = files.find((f) => f.endsWith('.info.json'));
+    if (!infoFile) {
+      console.warn('downloadComments: no .info.json found in tmp folder for', url, '— files:', files);
+      return null;
+    }
+
+    const raw = readFileSync(`${tmpFolder}/${infoFile}`, 'utf8');
+    const info = JSON.parse(raw) as { comments?: unknown[] };
+    const comments = info.comments;
+
+    if (!Array.isArray(comments) || comments.length === 0) {
+      console.warn('downloadComments: info.json present but comments field is', comments == null ? 'missing' : 'empty', 'for', url);
+      return null;
+    }
+
+    const commentsFilename = `${fileId}.comments.json`;
+    writeFileSync(`${outputFolder}/${commentsFilename}`, JSON.stringify(comments));
+
+    return commentsFilename;
+  } catch (err) {
+    console.warn('downloadComments: unexpected error for', url, err);
+    return null;
+  } finally {
+    removeFolder(tmpFolder);
+  }
 };
 
 /* ------------------------------------------------------------------ */

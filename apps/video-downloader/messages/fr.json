@@ -27,8 +27,11 @@
     "fpsBoostText": "L'augmentation des IPS à {fps} utilise le navigateur de votre appareil pour traiter la vidéo, ce qui peut prendre plus de temps. Si vous fermez ou actualisez la page, le traitement reprendra automatiquement lors de votre prochaine visite.",
     "resolution": "Résolution",
     "downloadCaptions": "Télécharger les sous-titres",
+    "downloadComments": "Télécharger les commentaires",
     "subtitles": "Sous-titres",
     "captionsUnavailable": "Sous-titres non disponibles pour cette vidéo",
+    "comments": "Commentaires",
+    "commentsUnavailable": "Commentaires non disponibles pour cette vidéo",
     "server": "Serveur",
     "addServer": "Ajouter un serveur",
     "addServerTitle": "Ajouter un serveur",
@@ -209,6 +212,7 @@
     "searchActive": "Recherche: \"{query}\"",
     "clearSearch": "Effacer la recherche",
     "downloadCaptions": "Télécharger les sous-titres",
+    "downloadComments": "Télécharger les commentaires",
     "burnCaptions": "Incruster les sous-titres",
     "burningCaptions": "Incrustation des sous-titres… {progress}%",
     "errorBurnCaptionsFailed": "Échec de l'incrustation des sous-titres.",
@@ -287,7 +291,8 @@
     "scaleDownTitle": "Réduire la résolution",
     "scaleDownText": "Sélectionnez une résolution inférieure. La vidéo sera réencodée à la taille choisie.",
     "errorScaleDownFailed": "Échec de la réduction de résolution.",
-    "convertH265ServerOnly": "La conversion H.265 nécessite un serveur de traitement"
+    "convertH265ServerOnly": "La conversion H.265 nécessite un serveur de traitement",
+    "toggleComments": "Afficher/masquer les commentaires"
   },
   "Offline": {
     "title": "Vous êtes hors ligne",

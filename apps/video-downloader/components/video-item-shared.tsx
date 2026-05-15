@@ -401,6 +401,7 @@ export function VideoMediaPreview({
   justAudio,
   thumbnail,
   compact,
+  withComments,
   opfsVideoUrl,
   opfsThumbnailUrl,
 }: {
@@ -408,6 +409,7 @@ export function VideoMediaPreview({
   justAudio: boolean;
   thumbnail: string | null;
   compact?: boolean;
+  withComments?: boolean;
   opfsVideoUrl?: string | null;
   opfsThumbnailUrl?: string | null;
 }) {
@@ -471,7 +473,7 @@ export function VideoMediaPreview({
   return (
     <Box className="vi-media-wrapper">
       <video
-        className={`vi-video${compact ? ' vi-video--compact' : ''}`}
+        className={`vi-video${compact ? ' vi-video--compact' : ''}${withComments ? ' vi-video--with-comments' : ''}`}
         src={src}
         loop
         playsInline
@@ -564,9 +566,11 @@ export function VideoActions({
   isBusy,
   copying,
   extraActionsOpen,
+  commentsOpen,
   onCopy,
   onRedownload,
   onToggleExtra,
+  onToggleComments,
   onDelete,
   t,
 }: {
@@ -574,9 +578,11 @@ export function VideoActions({
   isBusy: boolean;
   copying: boolean;
   extraActionsOpen: boolean;
+  commentsOpen?: boolean;
   onCopy: () => void;
   onRedownload: () => void;
   onToggleExtra: () => void;
+  onToggleComments?: () => void;
   onDelete: () => void;
   t: TranslationFn;
 }) {
@@ -607,6 +613,19 @@ export function VideoActions({
           copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
         }
       />
+
+      {video.commentsFile && onToggleComments ? (
+        <Button
+          unstyled
+          className="vi-icon-btn"
+          onClick={onToggleComments}
+          aria-label={t('toggleComments')}
+          title={t('toggleComments')}
+          icon={commentsOpen ? '/icons/comments-no.svg' : '/icons/comments.svg'}
+          iconSize="15px"
+          iconColor={commentsOpen ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'}
+        />
+      ) : null}
 
       {video.downloadURL ? (
         <Button

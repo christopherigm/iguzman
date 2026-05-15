@@ -71,6 +71,8 @@ export async function createTask(
     checkCodec: params.checkCodec,
     captionsEnabled: params.captionsEnabled,
     captionUrl: params.captionUrl,
+    commentsEnabled: params.commentsEnabled,
+    maxComments: params.maxComments,
     status: 'pending',
     progress: 0,
     result: null,
@@ -85,6 +87,7 @@ export async function createTask(
     width: null,
     height: null,
     captionsFile: null,
+    commentsFile: null,
     createdAt: now,
     updatedAt: now,
   };
