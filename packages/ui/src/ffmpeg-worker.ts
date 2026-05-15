@@ -11,7 +11,6 @@
  *   { id, type: 'load', payload: { coreURL, wasmURL, workerURL } }
  *   { id, type: 'interpolateFps',  payload: { videoData: Uint8Array, targetFps: number } }
  *   { id, type: 'convertToH264',   payload: { videoData: Uint8Array } }
- *   { id, type: 'convertToH265',   payload: { videoData: Uint8Array } }
  *   { id, type: 'removeBlackBars', payload: { videoData: Uint8Array, limit?: number, round?: number, cropString?: string } }
  *   { id, type: 'extractAudio',    payload: { videoData: Uint8Array, format?: string } }
  *   { id, type: 'burnSubtitles',   payload: {
@@ -638,43 +637,6 @@ self.onmessage = async (
             'faster',
             '-crf',
             '23',
-            '-c:a',
-            'copy',
-            '-movflags',
-            '+faststart',
-            output,
-          ]);
-          if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
-          const result = (await ff.readFile(output)) as Uint8Array;
-          await ff.deleteFile(input);
-          await ff.deleteFile(output);
-          self.postMessage(
-            { id, type: 'result', payload: { data: result } },
-            { transfer: [result.buffer as ArrayBuffer] },
-          );
-          break;
-        }
-
-        case 'convertToH265': {
-          const { videoData } = payload as { videoData: Uint8Array };
-          const input = 'input_h264.mp4';
-          const output = 'output_h265.mp4';
-          await ff.writeFile(input, videoData);
-          const code = await ff.exec([
-            '-i',
-            input,
-            '-c:v',
-            'libx265',
-            '-preset',
-            'fast',
-            '-crf',
-            '28',
-            // pools=none disables libx265's internal thread pool, which hangs
-            // indefinitely in single-threaded WASM when thread creation fails.
-            '-x265-params',
-            'pools=none:frame-threads=1',
-            '-tag:v',
-            'hvc1',
             '-c:a',
             'copy',
             '-movflags',

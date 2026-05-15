@@ -104,6 +104,7 @@ export function PinnedVideoItemServer({
   const [jobPhase, setJobPhase] = useState<'idle' | 'dispatching' | 'polling'>(
     'idle',
   );
+  const [conversionTarget, setConversionTarget] = useState<'h264' | 'h265'>('h264');
   const [opfsUploading, setOpfsUploading] = useState(false);
   const [opfsMigrating, setOpfsMigrating] = useState(false);
 
@@ -383,27 +384,31 @@ export function PinnedVideoItemServer({
 
   /* ── H.265 → H.264 conversion ───────────────────────── */
   const handleConvertH264 = useCallback(
-    () =>
-      runServerProcessing({
+    () => {
+      setConversionTarget('h264');
+      return runServerProcessing({
         activeStatus: 'converting',
         op: 'convertToH264',
         donePatch: { h264Converted: true, isH265: false },
         errorKey: 'errorConvertFailed',
         completeAfter: true,
-      }),
+      });
+    },
     [runServerProcessing],
   );
 
   /* ── H.264 → H.265 conversion ───────────────────────── */
   const handleConvertH265 = useCallback(
-    () =>
-      runServerProcessing({
+    () => {
+      setConversionTarget('h265');
+      return runServerProcessing({
         activeStatus: 'converting',
         op: 'convertToH265',
         donePatch: { h265Converted: true, isH265: true },
         errorKey: 'errorConvertH265Failed',
         completeAfter: true,
-      }),
+      });
+    },
     [runServerProcessing],
   );
 
@@ -788,6 +793,7 @@ export function PinnedVideoItemServer({
       video.file &&
       !video.justAudio &&
       !video.blackBarsRemoved &&
+      video.scaleDownTargetHeight == null &&
       video.status === 'processing' &&
       (video.fps === 'original' || !!video.fpsApplied);
 
@@ -796,6 +802,7 @@ export function PinnedVideoItemServer({
     video.file,
     video.justAudio,
     video.blackBarsRemoved,
+    video.scaleDownTargetHeight,
     video.status,
     video.fps,
     video.fpsApplied,
@@ -924,6 +931,7 @@ export function PinnedVideoItemServer({
           ffmpegProcessingTime={null}
           ffmpegCores={null}
           uploading={false}
+          conversionTarget={conversionTarget}
           t={t}
         />
       ) : null}

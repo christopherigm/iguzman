@@ -168,7 +168,9 @@
     "status_downloading": "Téléchargement",
     "status_queued": "En file d'attente",
     "status_processing": "Traitement",
-    "status_converting": "Conversion en H.264",
+    "status_converting": "Conversion",
+    "status_converting_h264": "Conversion en H.264",
+    "status_converting_h265": "Conversion en H.265",
     "status_done": "Terminé",
     "status_error": "Erreur",
     "filterAll": "Toutes les plateformes",
@@ -284,7 +286,8 @@
     "scalingDown": "Réduction en cours… {progress}%",
     "scaleDownTitle": "Réduire la résolution",
     "scaleDownText": "Sélectionnez une résolution inférieure. La vidéo sera réencodée à la taille choisie.",
-    "errorScaleDownFailed": "Échec de la réduction de résolution."
+    "errorScaleDownFailed": "Échec de la réduction de résolution.",
+    "convertH265ServerOnly": "La conversion H.265 nécessite un serveur de traitement"
   },
   "Offline": {
     "title": "Vous êtes hors ligne",

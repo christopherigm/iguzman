@@ -268,6 +268,7 @@ export function VideoDetailsPanel({
   ffmpegProcessingTime,
   ffmpegCores,
   uploading,
+  conversionTarget,
   t,
 }: {
   video: StoredVideo;
@@ -278,6 +279,7 @@ export function VideoDetailsPanel({
   ffmpegProcessingTime: number | null;
   ffmpegCores: number | null;
   uploading: boolean;
+  conversionTarget?: 'h264' | 'h265';
   t: TranslationFn;
 }) {
   const ffmpegActive =
@@ -293,7 +295,9 @@ export function VideoDetailsPanel({
           className="vi-status-badge"
           style={{ color: STATUS_COLORS[video.status] }}
         >
-          {t(`status_${video.status}`)}
+          {video.status === 'converting' && conversionTarget
+            ? t(`status_converting_${conversionTarget}`)
+            : t(`status_${video.status}`)}
         </dd>
         {video.h264Converted && !video.isH265 ? (
           <>
@@ -349,7 +353,9 @@ export function VideoDetailsPanel({
             ? t('ffmpegLoading')
             : ffmpegStatus === 'processing'
               ? video.status === 'converting'
-                ? t('convertingH264', { progress: ffmpegProgress })
+                ? conversionTarget === 'h265'
+                  ? t('convertingH265', { progress: ffmpegProgress })
+                  : t('convertingH264', { progress: ffmpegProgress })
                 : t('ffmpegProcessing', { progress: ffmpegProgress })
               : uploading
                 ? t('uploadingProcessed')
@@ -844,11 +850,9 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={onConvertH265}
-                disabled={
-                  isBusy || h265Error || (serverSelected && !wsClientOnline)
-                }
+                disabled={isBusy || h265Error || !serverSelected || !wsClientOnline}
                 aria-label={t('convertH265')}
-                title={t('convertH265')}
+                title={!serverSelected ? t('convertH265ServerOnly') : t('convertH265')}
                 icon="/icons/h265.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"

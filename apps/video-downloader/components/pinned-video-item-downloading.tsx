@@ -55,11 +55,22 @@ export function PinnedVideoItemDownloading({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [opfsMigrating, setOpfsMigrating] = useState(false);
+  const [copying, setCopying] = useState(false);
 
   const downloadTriggered = useRef(false);
   const pollResumeChecked = useRef(false);
 
   const { startPolling, stopPolling } = usePollTask();
+
+  const handleCopy = useCallback(async () => {
+    try {
+      setCopying(true);
+      await navigator.clipboard.writeText(video.originalURL);
+      setTimeout(() => setCopying(false), 1200);
+    } catch {
+      setCopying(false);
+    }
+  }, [video.originalURL]);
 
   const isActive =
     video.status === 'pending' ||
@@ -432,6 +443,18 @@ export function PinnedVideoItemDownloading({
             icon="/icons/delete-video.svg"
             iconSize="15px"
             iconColor="var(--foreground, #171717)"
+          />
+          <Button
+            unstyled
+            className="vi-icon-btn"
+            onClick={handleCopy}
+            aria-label={t('copyLink')}
+            title={copying ? t('copied') : t('copyLink')}
+            icon="/icons/copy.svg"
+            iconSize="15px"
+            iconColor={
+              copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+            }
           />
         </Box>
       </Box>

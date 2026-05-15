@@ -168,7 +168,9 @@
     "status_downloading": "Downloading",
     "status_queued": "Queued",
     "status_processing": "Processing",
-    "status_converting": "Converting to H.264",
+    "status_converting": "Converting",
+    "status_converting_h264": "Converting to H.264",
+    "status_converting_h265": "Converting to H.265",
     "status_done": "Done",
     "status_error": "Error",
     "filterAll": "All platforms",
@@ -286,7 +288,8 @@
     "scalingDown": "Scaling down… {progress}%",
     "scaleDownTitle": "Scale Down Resolution",
     "scaleDownText": "Select a lower resolution. The video will be re-encoded to the chosen size.",
-    "errorScaleDownFailed": "Resolution scale-down failed."
+    "errorScaleDownFailed": "Resolution scale-down failed.",
+    "convertH265ServerOnly": "H.265 conversion requires a processing server"
   },
   "Offline": {
     "title": "You are offline",
