@@ -586,34 +586,35 @@ export function DownloadForm({
           )}
         </Box>
 
-        {url && (
+        <Box display="flex" marginTop={12} gap={8}>
+          {url && (
+            <button
+              type="button"
+              className="df-icon-btn"
+              onClick={handleClear}
+              disabled={!hasText}
+              aria-label={t('clearUrl')}
+            >
+              <Icon
+                icon="/icons/delete.svg"
+                size={18}
+                color="var(--foreground, #171717)"
+              />
+            </button>
+          )}
           <button
-            type="button"
-            className="df-icon-btn"
-            onClick={handleClear}
-            disabled={!hasText}
-            aria-label={t('clearUrl')}
+            type="submit"
+            className="df-icon-btn df-icon-btn--download"
+            disabled={!validPlatformUrl}
+            aria-label={t('download')}
           >
             <Icon
-              icon="/icons/delete.svg"
+              icon="/icons/download.svg"
               size={18}
-              color="var(--foreground, #171717)"
+              color="var(--accent-foreground, white)"
             />
           </button>
-        )}
-
-        <button
-          type="submit"
-          className="df-icon-btn df-icon-btn--download"
-          disabled={!validPlatformUrl}
-          aria-label={t('download')}
-        >
-          <Icon
-            icon="/icons/download.svg"
-            size={18}
-            color="var(--accent-foreground, white)"
-          />
-        </button>
+        </Box>
       </Box>
 
       {/* ── Options ──────────────────────────────────── */}

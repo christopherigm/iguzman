@@ -2,8 +2,7 @@
 
 .df-input-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: top;
 }
 
 .df-platform-badge {
@@ -60,9 +59,6 @@
 
 .df-icon-btn:hover:not(:disabled) {
   background: var(--surface-2, #f0f0f0);
-}
-
-.df-icon-btn:active:not(:disabled) {
 }
 
 .df-icon-btn:disabled {

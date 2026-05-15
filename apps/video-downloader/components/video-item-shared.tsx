@@ -295,13 +295,13 @@ export function VideoDetailsPanel({
         >
           {t(`status_${video.status}`)}
         </dd>
-        {video.h264Converted ? (
+        {video.h264Converted && !video.isH265 ? (
           <>
             <dt>{t('detailCodec')}</dt>
             <dd>H.264 ({t('converted')})</dd>
           </>
         ) : null}
-        {video.h265Converted ? (
+        {video.h265Converted && video.isH265 ? (
           <>
             <dt>{t('detailCodec')}</dt>
             <dd>H.265 ({t('converted')})</dd>
@@ -818,7 +818,7 @@ export function VideoExtraActions({
             </Grid>
           ) : null}
 
-          {video.isH265 && !video.h264Converted ? (
+          {video.isH265 ? (
             <Grid size={{ xs: 6 }}>
               <Button
                 unstyled
@@ -838,7 +838,7 @@ export function VideoExtraActions({
             </Grid>
           ) : null}
 
-          {!video.justAudio && !video.isH265 && !video.h265Converted ? (
+          {!video.justAudio && !video.isH265 ? (
             <Grid size={{ xs: 6 }}>
               <Button
                 unstyled
@@ -1099,6 +1099,7 @@ export function VideoFooterLink({ video }: { video: StoredVideo }) {
           target="_blank"
           rel="noopener noreferrer"
           aria-label={video.originalURL}
+          style={{ display: 'flex', alignItems: 'center' }}
         >
           <Icon icon={platformIcon} size={24} color="var(--accent, #06b6d4)" />
         </a>
@@ -1117,7 +1118,7 @@ export function VideoFooterLink({ video }: { video: StoredVideo }) {
         alignItems="center"
         styles={{ gap: '4px', flexShrink: 0 }}
       >
-        {video.isH265 && !video.h264Converted ? (
+        {video.isH265 ? (
           <Badge variant="subtle" size="sm" color="#16dd00">
             H265
           </Badge>

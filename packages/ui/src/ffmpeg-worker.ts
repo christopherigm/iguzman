@@ -669,6 +669,10 @@ self.onmessage = async (
             'fast',
             '-crf',
             '28',
+            // pools=none disables libx265's internal thread pool, which hangs
+            // indefinitely in single-threaded WASM when thread creation fails.
+            '-x265-params',
+            'pools=none:frame-threads=1',
             '-tag:v',
             'hvc1',
             '-c:a',
