@@ -1388,16 +1388,25 @@ const fetchSrt = async (
  * @returns Captions text, or `null` when none are available.
  */
 const fetchCaptions = (metadata: VideoMetadata): string | null => {
-  const preferredLangs = ['en', 'en-US', 'es', 'es-ES'];
+  // 1. Manual subtitles (any language) — highest quality.
+  for (const entries of Object.values(metadata.subtitles ?? {})) {
+    const entry = entries.find((e) => e.ext === 'srt' || e.ext === 'vtt');
+    if (entry?.url) return entry.url;
+  }
 
+  // 2. Automatic captions — preferred languages first.
+  const preferredLangs = ['en', 'en-US', 'es', 'es-ES'];
   for (const lang of preferredLangs) {
     const entries = metadata.automatic_captions[lang];
     if (!entries) continue;
+    const entry = entries.find((e) => e.ext === 'srt' || e.ext === 'vtt');
+    if (entry?.url) return entry.url;
+  }
 
-    const srtEntry = entries.find((e) => e.ext === 'srt');
-    if (srtEntry?.url) {
-      return srtEntry.url;
-    }
+  // 3. Any other automatic caption track.
+  for (const entries of Object.values(metadata.automatic_captions)) {
+    const entry = entries.find((e) => e.ext === 'srt' || e.ext === 'vtt');
+    if (entry?.url) return entry.url;
   }
 
   return null;
@@ -2987,9 +2996,25 @@ const downloadVideo = async ({
 
   if (requestCaptions) {
     try {
-      const captionUrlToUse =
+      let captionUrlToUse =
         providedCaptionUrl ??
         (videoMetadata ? fetchCaptions(videoMetadata) : null);
+
+      // For platforms like TikTok/Facebook, standard metadata has no caption
+      // URLs — they require a yt-dlp --list-subs call to discover them.
+      if (!captionUrlToUse) {
+        const subs = await listSubtitlesViaYtDlp(url, {
+          binary,
+          cookies,
+          jsRuntimes,
+        });
+        if (subs.length > 0) {
+          const preferred =
+            subs.find((s) => /orig/i.test(s.lang)) ?? subs[0];
+          captionUrlToUse = preferred?.url ?? null;
+        }
+      }
+
       if (captionUrlToUse) {
         let captionsFile: string | null = null;
         if (captionUrlToUse.startsWith('YTDLP_SUBS://')) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
@@ -11,7 +11,13 @@ import { Button } from '@repo/ui/core-elements/button';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Spinner } from '@repo/ui/core-elements/spinner';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { detectPlatform, type Platform } from '@repo/helpers/checkers';
+import {
+  detectPlatform,
+  isFacebook,
+  isInstagram,
+  isTiktok,
+  type Platform,
+} from '@repo/helpers/checkers';
 import { stripQueryParams } from '@repo/helpers/clean-url';
 import {
   isIOS,
@@ -43,6 +49,10 @@ function isValidUrl(input: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isScrapeCreatorsUrl(url: string): boolean {
+  return isFacebook(url) || isInstagram(url) || isTiktok(url);
 }
 
 function isServerPath(url: string | null): url is string {
@@ -195,10 +205,11 @@ function CaptionSelect({
   );
 }
 
-const COMMENT_COUNT_OPTIONS: { value: 5 | 10 | 20; label: string }[] = [
+const COMMENT_COUNT_OPTIONS: { value: 5 | 10 | 20 | 50; label: string }[] = [
   { value: 5, label: '5' },
   { value: 10, label: '10' },
   { value: 20, label: '20' },
+  { value: 50, label: '50' },
 ];
 
 function CommentCountSelect({
@@ -206,8 +217,8 @@ function CommentCountSelect({
   onChange,
   disabled,
 }: {
-  value: 5 | 10 | 20;
-  onChange: (v: 5 | 10 | 20) => void;
+  value: 5 | 10 | 20 | 50;
+  onChange: (v: 5 | 10 | 20 | 50) => void;
   disabled: boolean;
 }) {
   return (
@@ -215,7 +226,7 @@ function CommentCountSelect({
       <select
         className="df-select"
         value={value}
-        onChange={(e) => onChange(Number(e.target.value) as 5 | 10 | 20)}
+        onChange={(e) => onChange(Number(e.target.value) as 5 | 10 | 20 | 50)}
         disabled={disabled}
         aria-label="Max comments"
       >
@@ -299,6 +310,14 @@ export function DownloadForm({
     totalBytes: number;
   } | null>(null);
 
+  const [scrapeCredits, setScrapeCredits] = useState<number | null>(null);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
+  const [pendingCommentsType, setPendingCommentsType] = useState<
+    'regular' | 'smart' | null
+  >(null);
+  const scrapeKeyRef = useRef('');
+
   useEffect(() => {
     const isIOSDevice = isIOS();
     setIos(isIOSDevice);
@@ -318,6 +337,10 @@ export function DownloadForm({
     setSmartComments(storedSmartComments === 'true');
     const storedSmartHeight = localStorage.getItem('vd_smart_max_height');
     setSmartMaxHeight(storedSmartHeight ? Number(storedSmartHeight) : 1080);
+    const storedScrapeKey = localStorage.getItem('vd_scrape_key') ?? '';
+    scrapeKeyRef.current = storedScrapeKey;
+    const storedCredits = localStorage.getItem('vd_scrape_credits');
+    setScrapeCredits(storedCredits !== null ? Number(storedCredits) : null);
   }, []);
 
   const handleAutoDownloadChange = useCallback((value: boolean) => {
@@ -338,6 +361,58 @@ export function DownloadForm({
   const handleSmartCommentsChange = useCallback((value: boolean) => {
     setSmartComments(value);
     localStorage.setItem('vd_smart_comments', String(value));
+  }, []);
+
+  const handleCommentsToggleChange = useCallback(
+    (value: boolean) => {
+      if (!value) {
+        setCommentsEnabled(false);
+        return;
+      }
+      if (isScrapeCreatorsUrl(url) && !scrapeKeyRef.current) {
+        setPendingCommentsType('regular');
+        setKeyInput('');
+        setShowKeyModal(true);
+        return;
+      }
+      setCommentsEnabled(true);
+    },
+    [url],
+  );
+
+  const handleSmartCommentsToggleChange = useCallback(
+    (value: boolean) => {
+      if (!value) {
+        handleSmartCommentsChange(false);
+        return;
+      }
+      if (!scrapeKeyRef.current) {
+        setPendingCommentsType('smart');
+        setKeyInput('');
+        setShowKeyModal(true);
+        return;
+      }
+      handleSmartCommentsChange(true);
+    },
+    [handleSmartCommentsChange],
+  );
+
+  const handleKeyConfirm = useCallback(() => {
+    const trimmed = keyInput.trim();
+    if (!trimmed) return;
+    localStorage.setItem('vd_scrape_key', trimmed);
+    scrapeKeyRef.current = trimmed;
+    setShowKeyModal(false);
+    if (pendingCommentsType === 'regular') setCommentsEnabled(true);
+    if (pendingCommentsType === 'smart') handleSmartCommentsChange(true);
+    setPendingCommentsType(null);
+    setKeyInput('');
+  }, [keyInput, pendingCommentsType, handleSmartCommentsChange]);
+
+  const handleKeyCancel = useCallback(() => {
+    setShowKeyModal(false);
+    setPendingCommentsType(null);
+    setKeyInput('');
   }, []);
 
   const handleSmartMaxHeightChange = useCallback((value: number) => {
@@ -385,9 +460,11 @@ export function DownloadForm({
 
   const [commentsEnabled, setCommentsEnabled] = useState(false);
   const [commentsUnavailable, setCommentsUnavailable] = useState(false);
-  const [commentCount, setCommentCount] = useState<5 | 10 | 20>(20);
+  const [commentCount, setCommentCount] = useState<5 | 10 | 20 | 50>(20);
   const [smartComments, setSmartComments] = useState(false);
-  const [totalCommentCount, setTotalCommentCount] = useState<number | null>(null);
+  const [totalCommentCount, setTotalCommentCount] = useState<number | null>(
+    null,
+  );
 
   const [smartDownload, setSmartDownload] = useState(false);
   const [smartCaptions, setSmartCaptions] = useState(true);
@@ -469,8 +546,11 @@ export function DownloadForm({
         }
         const count = data.commentCount ?? null;
         setTotalCommentCount(count);
-        if (count) {
-          setCommentsEnabled(true);
+        // SC platforms (FB/IG/TikTok) always support comments — user must opt in
+        if (isScrapeCreatorsUrl(url)) {
+          setCommentsUnavailable(false);
+        } else if (count != null) {
+          setCommentsUnavailable(false);
         } else {
           setCommentsUnavailable(true);
         }
@@ -511,8 +591,6 @@ export function DownloadForm({
   const switchesDisabled = !validPlatformUrl;
   const captionsDisabled =
     switchesDisabled || justAudio || captionsUnavailable || metadataLoading;
-  const commentsUnsupported = platform === 'facebook' || platform === 'instagram';
-
   /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
 
@@ -534,7 +612,8 @@ export function DownloadForm({
       !smartDownload && captionsEnabled && !justAudio && selectedCaptionUrl
         ? selectedCaptionUrl
         : undefined;
-    const effectiveCommentsEnabled = !justAudio && !commentsUnsupported && (smartDownload ? smartComments : commentsEnabled);
+    const effectiveCommentsEnabled =
+      !justAudio && (smartDownload ? smartComments : commentsEnabled);
     const effectiveMaxComments = smartDownload ? 10 : commentCount;
 
     onVideoAdded?.({
@@ -651,20 +730,6 @@ export function DownloadForm({
             onFocus={handleInputFocus}
             label={t('inputLabel')}
           />
-          {smartDownload && !justAudio && (
-            <Typography
-              variant="caption"
-              className="df-smart-hint"
-              color="var(--accent, #06b6d4)"
-            >
-              {t('smartDownloadHintOn', {
-                resolution:
-                  resolveResolutionLabel(smartMaxHeight) ??
-                  `${smartMaxHeight}p`,
-              })}
-              {smartCaptions && ` ${t('smartDownloadHintCaptions')}`}
-            </Typography>
-          )}
         </Box>
 
         <Box display="flex" marginTop={12} gap={8}>
@@ -697,6 +762,21 @@ export function DownloadForm({
           </button>
         </Box>
       </Box>
+      {smartDownload && !justAudio && (
+        <Typography
+          variant="caption"
+          className="df-smart-hint"
+          color="var(--accent, #06b6d4)"
+        >
+          {t('smartDownloadHintOn', {
+            resolution:
+              resolveResolutionLabel(smartMaxHeight) ?? `${smartMaxHeight}p`,
+          })}
+          {smartCaptions && ` ${t('smartDownloadHintCaptions')}`}
+          {smartComments &&
+            ` ${scrapeCredits != null ? t('smartDownloadHintCommentsCredits', { credits: scrapeCredits }) : t('smartDownloadHintComments')}`}
+        </Typography>
+      )}
 
       {/* ── Options ──────────────────────────────────── */}
       <Box className="df-options" marginTop={8}>
@@ -798,9 +878,18 @@ export function DownloadForm({
                   label={
                     commentsUnavailable
                       ? t('commentsUnavailable')
-                      : t('downloadComments')
+                      : scrapeCredits != null && isScrapeCreatorsUrl(url)
+                        ? t('downloadCommentsWithCredits', {
+                            credits: scrapeCredits,
+                          })
+                        : t('downloadComments')
                   }
-                  disabled={switchesDisabled || justAudio || commentsUnavailable || metadataLoading}
+                  disabled={
+                    switchesDisabled ||
+                    justAudio ||
+                    commentsUnavailable ||
+                    metadataLoading
+                  }
                 >
                   <Box
                     display="flex"
@@ -811,9 +900,12 @@ export function DownloadForm({
                     <Switch
                       checked={commentsEnabled}
                       onChange={
-                        switchesDisabled || justAudio || commentsUnavailable || metadataLoading
+                        switchesDisabled ||
+                        justAudio ||
+                        commentsUnavailable ||
+                        metadataLoading
                           ? undefined
-                          : setCommentsEnabled
+                          : handleCommentsToggleChange
                       }
                     />
                     {commentsEnabled ? (
@@ -854,8 +946,10 @@ export function DownloadForm({
                     </Typography>
                     <Switch
                       checked={smartComments}
-                      onChange={handleSmartCommentsChange}
-                      disabled={justAudio || commentsUnsupported}
+                      onChange={
+                        justAudio ? undefined : handleSmartCommentsToggleChange
+                      }
+                      disabled={justAudio}
                     />
                   </Box>
                   <Box className="df-smart-sub-row-label">
@@ -939,6 +1033,32 @@ export function DownloadForm({
           onRemoveVideosByUuids={onRemoveVideosByUuids}
         />
       ) : null}
+
+      {/* ── ScrapeCreators API Key Modal ─────────── */}
+      {showKeyModal && (
+        <ConfirmationModal
+          title={t('scrapeKeyModalTitle')}
+          text={t('scrapeKeyModalText')}
+          okCallback={handleKeyConfirm}
+          cancelCallback={handleKeyCancel}
+          panelMaxWidth="480px"
+        >
+          <TextInput
+            label={t('scrapeKeyInputLabel')}
+            value={keyInput}
+            onChange={setKeyInput}
+          />
+          <Typography variant="body-sm" marginTop={8}>
+            <a
+              href="https://app.scrapecreators.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t('scrapeKeyGetKey')}
+            </a>
+          </Typography>
+        </ConfirmationModal>
+      )}
 
       {/* ── Duplicate Video Modal ─────────────────── */}
       {duplicateEntry ? (

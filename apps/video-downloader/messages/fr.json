@@ -55,8 +55,16 @@
     "smartDownload": "Téléchargement vidéo rapide",
     "smartCaptions": "Sous-titres",
     "smartMaxHeight": "Résolution max",
-    "smartDownloadHintOn": "Video Smart Download ON : {resolution}",
-    "smartDownloadHintCaptions": "+ sous-titres"
+    "smartDownloadHintOn": "Smart Download : {resolution}",
+    "smartDownloadHintCaptions": "+ sous-titres",
+    "smartDownloadHintComments": "+ commentaires",
+    "smartDownloadHintCommentsCredits": "+ commentaires ({credits} restants)",
+    "downloadCommentsWithCredits": "Télécharger les commentaires ({credits} restants)",
+    "commentsWithCredits": "Commentaires ({credits} restants)",
+    "scrapeKeyModalTitle": "Clé API requise",
+    "scrapeKeyModalText": "Les commentaires de Facebook, Instagram et TikTok sont récupérés via ScrapeCreators. Entrez votre clé API ci-dessous pour activer cette fonctionnalité.",
+    "scrapeKeyInputLabel": "Clé API ScrapeCreators",
+    "scrapeKeyGetKey": "Obtenez votre clé API sur app.scrapecreators.com"
   },
   "ClearStorageModal": {
     "title": "Gérer le stockage de l'appareil",

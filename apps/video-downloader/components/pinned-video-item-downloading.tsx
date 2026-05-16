@@ -298,9 +298,12 @@ export function PinnedVideoItemDownloading({
   const handleDownload = useCallback(async () => {
     onUpdate(video.uuid, { error: null });
     try {
+      const scrapeKey = localStorage.getItem('vd_scrape_key') ?? '';
+      const downloadHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (scrapeKey) downloadHeaders['x-scrapecreators-key'] = scrapeKey;
       const res = await fetch('/api/download-video', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: downloadHeaders,
         body: JSON.stringify({
           url: video.originalURL,
           justAudio: video.justAudio,

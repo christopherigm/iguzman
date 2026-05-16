@@ -33,9 +33,6 @@
   margin-top: 4px;
   opacity: 0.5;
   line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ── Icon Buttons ────────────────────────────────────── */

@@ -1,4 +1,4 @@
-import { getBrowser } from './browser';
+import { newContext } from './browser';
 
 export interface ExtractResult {
   title: string;
@@ -13,8 +13,8 @@ export interface ExtractResult {
  * visible text content alongside the page title.
  */
 export async function extractUrl(url: string): Promise<ExtractResult> {
-  const browser = await getBrowser();
-  const page = await browser.newPage();
+  const context = await newContext();
+  const page = await context.newPage();
 
   try {
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
@@ -80,6 +80,6 @@ export async function extractUrl(url: string): Promise<ExtractResult> {
       og_image: result.og_image,
     };
   } finally {
-    await page.close();
+    await context.close();
   }
 }

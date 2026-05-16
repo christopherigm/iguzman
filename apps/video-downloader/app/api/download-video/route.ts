@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import downloadVideo from '@repo/helpers/download-video';
+import { writeFileSync } from 'fs';
+import downloadVideo, {
+  listSubtitlesViaYtDlp,
+} from '@repo/helpers/download-video';
 import {
   createTask,
   updateTask,
@@ -7,6 +10,10 @@ import {
 } from '@/lib/video-task-db';
 import logger from '@/lib/logger';
 import type { VideoDownloadInput } from '@/lib/types';
+import {
+  isScrapeCreatorsPlatform,
+  fetchAllSocialComments,
+} from '@/lib/scrapecreators';
 
 const log = logger.child({ module: 'api/download-video' });
 
@@ -21,6 +28,7 @@ type RequestBody = Partial<VideoDownloadInput> &
   Pick<VideoDownloadInput, 'url'>;
 
 export async function POST(request: Request) {
+  const scrapeKey = request.headers.get('x-scrapecreators-key') ?? undefined;
   let body: RequestBody;
 
   try {
@@ -58,6 +66,33 @@ export async function POST(request: Request) {
     );
   }
 
+  /* 0. Resolve caption URL when captions are requested but no URL was supplied.
+   *    Platforms like TikTok/Facebook don't expose subtitle URLs in standard
+   *    yt-dlp metadata, so we run --list-subs here (matching what the
+   *    exhaustive /api/video-metadata call does for non-smart downloads). */
+  let resolvedCaptionUrl = captionUrl;
+  if (captionsEnabled && !justAudio && !resolvedCaptionUrl) {
+    try {
+      const subs = await listSubtitlesViaYtDlp(url);
+      if (subs.length > 0) {
+        const preferred =
+          subs.find((s) => /orig/i.test(s.lang)) ??
+          subs.find((s) => /^en/i.test(s.lang)) ??
+          subs[0];
+        resolvedCaptionUrl = preferred?.url;
+        log.info(
+          { url, lang: preferred?.lang, captionUrl: resolvedCaptionUrl },
+          'Resolved caption URL via subtitle listing',
+        );
+      }
+    } catch (err) {
+      log.warn(
+        { err, url },
+        'Subtitle listing failed (captions will be skipped)',
+      );
+    }
+  }
+
   /* 1. Deduplicate: return the existing task if one is already running */
   const existing = await findActiveTaskByUrl(url);
   if (existing) {
@@ -87,7 +122,7 @@ export async function POST(request: Request) {
     iosDevice,
     maxHeight,
     captionsEnabled,
-    captionUrl,
+    captionUrl: resolvedCaptionUrl,
     commentsEnabled,
     maxComments,
   });
@@ -113,7 +148,7 @@ export async function POST(request: Request) {
         iosDevice,
         maxHeight,
         captions: captionsEnabled,
-        captionUrl,
+        captionUrl: resolvedCaptionUrl,
         commentsEnabled,
         maxComments,
         outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
@@ -148,6 +183,43 @@ export async function POST(request: Request) {
           },
           'Download completed',
         );
+
+        /* ── ScrapeCreators fallback for social platforms ──────────────
+         * yt-dlp cannot retrieve comments from Facebook, Instagram, or
+         * TikTok. When commentsEnabled is set and yt-dlp came up empty,
+         * fetch via ScrapeCreators and write the comments file ourselves. */
+        let commentsFile = result.commentsFile ?? null;
+        if (
+          commentsEnabled &&
+          !justAudio &&
+          !commentsFile &&
+          isScrapeCreatorsPlatform(url)
+        ) {
+          try {
+            const comments = await fetchAllSocialComments(
+              url,
+              maxComments ?? 20,
+              scrapeKey,
+            );
+            if (comments.length > 0 && result.file) {
+              const fileId = result.file.replace(/\.[^.]+$/, '');
+              const folder = IS_PRODUCTION ? '/app/media' : './public/media';
+              const filename = `${fileId}.comments.json`;
+              writeFileSync(`${folder}/${filename}`, JSON.stringify(comments));
+              commentsFile = filename;
+              log.info(
+                { taskId, url, count: comments.length },
+                'ScrapeCreators comments saved',
+              );
+            }
+          } catch (err) {
+            log.warn(
+              { err, taskId, url },
+              'ScrapeCreators comment fetch failed (non-fatal)',
+            );
+          }
+        }
+
         await updateTask(taskId, {
           status: 'done',
           progress: 100,
@@ -168,7 +240,7 @@ export async function POST(request: Request) {
             result.formatSelection?.bestCombined?.height ??
             null,
           captionsFile: result.captionsFile ?? null,
-          commentsFile: result.commentsFile ?? null,
+          commentsFile,
         });
       }
     } catch (err) {
