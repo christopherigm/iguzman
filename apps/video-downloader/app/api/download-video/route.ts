@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { writeFileSync } from 'fs';
-import downloadVideo, {
-  listSubtitlesViaYtDlp,
-} from '@repo/helpers/download-video';
+import downloadVideo from '@repo/helpers/download-video';
 import {
   createTask,
   updateTask,
@@ -23,6 +21,12 @@ const log = logger.child({ module: 'api/download-video' });
 
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const IS_PRODUCTION = NODE_ENV === 'production';
+
+const MAX_DOWNLOAD_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 5_000;
+
+const isRateLimitError = (msg: string): boolean =>
+  msg.includes('429') || /too many requests/i.test(msg);
 
 type RequestBody = Partial<VideoDownloadInput> &
   Pick<VideoDownloadInput, 'url'>;
@@ -66,33 +70,6 @@ export async function POST(request: Request) {
     );
   }
 
-  /* 0. Resolve caption URL when captions are requested but no URL was supplied.
-   *    Platforms like TikTok/Facebook don't expose subtitle URLs in standard
-   *    yt-dlp metadata, so we run --list-subs here (matching what the
-   *    exhaustive /api/video-metadata call does for non-smart downloads). */
-  let resolvedCaptionUrl = captionUrl;
-  if (captionsEnabled && !justAudio && !resolvedCaptionUrl) {
-    try {
-      const subs = await listSubtitlesViaYtDlp(url);
-      if (subs.length > 0) {
-        const preferred =
-          subs.find((s) => /orig/i.test(s.lang)) ??
-          subs.find((s) => /^en/i.test(s.lang)) ??
-          subs[0];
-        resolvedCaptionUrl = preferred?.url;
-        log.info(
-          { url, lang: preferred?.lang, captionUrl: resolvedCaptionUrl },
-          'Resolved caption URL via subtitle listing',
-        );
-      }
-    } catch (err) {
-      log.warn(
-        { err, url },
-        'Subtitle listing failed (captions will be skipped)',
-      );
-    }
-  }
-
   /* 1. Deduplicate: return the existing task if one is already running */
   const existing = await findActiveTaskByUrl(url);
   if (existing) {
@@ -122,7 +99,7 @@ export async function POST(request: Request) {
     iosDevice,
     maxHeight,
     captionsEnabled,
-    captionUrl: resolvedCaptionUrl,
+    captionUrl,
     commentsEnabled,
     maxComments,
   });
@@ -141,21 +118,34 @@ export async function POST(request: Request) {
     log.info({ taskId, url, justAudio, checkCodec }, 'Download started');
 
     try {
-      const result = await downloadVideo({
+      const downloadInput = {
         url,
         justAudio,
         checkCodec,
         iosDevice,
         maxHeight,
         captions: captionsEnabled,
-        captionUrl: resolvedCaptionUrl,
+        captionUrl,
         commentsEnabled,
         maxComments,
         outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
         cookies: IS_PRODUCTION
           ? '/app/media/netscape-cookies.txt'
           : './netscape-cookies.txt',
-      });
+      };
+
+      let result = await downloadVideo(downloadInput);
+
+      for (let attempt = 1; attempt <= MAX_DOWNLOAD_RETRIES; attempt++) {
+        if (!result.error || !isRateLimitError(result.error.message)) break;
+        const delayMs = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+        log.warn(
+          { taskId, url, attempt, delayMs },
+          'Download rate-limited by platform, retrying',
+        );
+        await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+        result = await downloadVideo(downloadInput);
+      }
 
       if (result.error) {
         log.error(

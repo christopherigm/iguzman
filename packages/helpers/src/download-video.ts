@@ -472,6 +472,11 @@ export interface DownloadVideoResult {
  *
  * @returns The contents of `stdout` on success.
  */
+const isRateLimited = (err: unknown): boolean => {
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes('429') || /too many requests/i.test(msg);
+};
+
 const execFileAsync = (bin: string, args: string[]): Promise<string> =>
   new Promise((resolve, reject) => {
     execFile(bin, args, { maxBuffer: EXEC_MAX_BUFFER }, (error, stdout) => {
@@ -2694,7 +2699,15 @@ const downloadVideo = async ({
         formatSelection,
       );
       separateStreamsOk = true;
-    } catch {
+    } catch (err) {
+      if (isRateLimited(err)) {
+        return {
+          error: {
+            code: 'DOWNLOAD_FAILED',
+            message: `yt-dlp download failed: ${err instanceof Error ? err.message : String(err)}`,
+          },
+        };
+      }
       // Separate-streams approach failed — fall through to yt-dlp merge.
     }
 
@@ -2710,7 +2723,15 @@ const downloadVideo = async ({
 
       try {
         await execFileAsync(binary, mergeArgs);
-      } catch {
+      } catch (mergeErr) {
+        if (isRateLimited(mergeErr)) {
+          return {
+            error: {
+              code: 'DOWNLOAD_FAILED',
+              message: `yt-dlp download failed: ${mergeErr instanceof Error ? mergeErr.message : String(mergeErr)}`,
+            },
+          };
+        }
         // Retry without explicit format selection
         try {
           await execFileAsync(
@@ -2777,6 +2798,15 @@ const downloadVideo = async ({
     try {
       await execFileAsync(binary, args);
     } catch (error) {
+      if (isRateLimited(error)) {
+        ytDlpFailed = true;
+        return {
+          error: {
+            code: 'DOWNLOAD_FAILED',
+            message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        };
+      }
       // If download failed with format selection, retry without it
       // (let yt-dlp pick the best format on its own).
       if (formatSelection) {
