@@ -104,7 +104,9 @@ export function PinnedVideoItemServer({
   const [jobPhase, setJobPhase] = useState<'idle' | 'dispatching' | 'polling'>(
     'idle',
   );
-  const [conversionTarget, setConversionTarget] = useState<'h264' | 'h265'>('h264');
+  const [conversionTarget, setConversionTarget] = useState<'h264' | 'h265'>(
+    'h264',
+  );
   const [opfsUploading, setOpfsUploading] = useState(false);
   const [opfsMigrating, setOpfsMigrating] = useState(false);
 
@@ -132,6 +134,10 @@ export function PinnedVideoItemServer({
   const { generate } = useGroq({
     proxyBase: '/api/groq',
     model: 'llama-3.3-70b-versatile',
+    getAuthHeaders: (): Record<string, string> => {
+      const key = localStorage.getItem('vd_groq_key');
+      return key ? { 'x-groq-api-key': key } : {};
+    },
   });
   const { startPolling } = usePollTask();
 
@@ -383,34 +389,28 @@ export function PinnedVideoItemServer({
   );
 
   /* ── H.265 → H.264 conversion ───────────────────────── */
-  const handleConvertH264 = useCallback(
-    () => {
-      setConversionTarget('h264');
-      return runServerProcessing({
-        activeStatus: 'converting',
-        op: 'convertToH264',
-        donePatch: { h264Converted: true, isH265: false },
-        errorKey: 'errorConvertFailed',
-        completeAfter: true,
-      });
-    },
-    [runServerProcessing],
-  );
+  const handleConvertH264 = useCallback(() => {
+    setConversionTarget('h264');
+    return runServerProcessing({
+      activeStatus: 'converting',
+      op: 'convertToH264',
+      donePatch: { h264Converted: true, isH265: false },
+      errorKey: 'errorConvertFailed',
+      completeAfter: true,
+    });
+  }, [runServerProcessing]);
 
   /* ── H.264 → H.265 conversion ───────────────────────── */
-  const handleConvertH265 = useCallback(
-    () => {
-      setConversionTarget('h265');
-      return runServerProcessing({
-        activeStatus: 'converting',
-        op: 'convertToH265',
-        donePatch: { h265Converted: true, isH265: true },
-        errorKey: 'errorConvertH265Failed',
-        completeAfter: true,
-      });
-    },
-    [runServerProcessing],
-  );
+  const handleConvertH265 = useCallback(() => {
+    setConversionTarget('h265');
+    return runServerProcessing({
+      activeStatus: 'converting',
+      op: 'convertToH265',
+      donePatch: { h265Converted: true, isH265: true },
+      errorKey: 'errorConvertH265Failed',
+      completeAfter: true,
+    });
+  }, [runServerProcessing]);
 
   /* ── Remove black bars ──────────────────────────────── */
   const handleRemoveBlackBars = useCallback(

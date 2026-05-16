@@ -23,6 +23,8 @@ export interface ConfirmationModalProps {
   children?: React.ReactNode;
   /** Override the panel's max-width (default: 420px). */
   panelMaxWidth?: string;
+  /** When true, the OK button is rendered in a disabled state. */
+  okDisabled?: boolean;
 }
 
 /**
@@ -43,6 +45,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   cancelCallback,
   children,
   panelMaxWidth,
+  okDisabled,
 }) => {
   // Prevent body scroll while modal is open
   useEffect(() => {
@@ -145,7 +148,13 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           {cancelCallback && (
             <Button text="Cancel" onClick={cancelCallback} size="md" />
           )}
-          <Button text="OK" onClick={okCallback} kind="success" size="md" />
+          <Button
+            text="OK"
+            onClick={okCallback}
+            kind="success"
+            size="md"
+            disabled={okDisabled}
+          />
         </Box>
       </Box>
     </Box>

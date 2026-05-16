@@ -1,10 +1,10 @@
 {
   "Metadata": {
-    "title": "Baixador de Vídeos",
+    "title": "Media 2 Go",
     "description": ""
   },
   "HomePage": {
-    "title": "Baixador de Vídeos"
+    "title": "Media 2 Go"
   },
   "DownloadForm": {
     "inputLabel": "Cole a URL do vídeo",
@@ -125,9 +125,9 @@
   "TermsPage": {
     "title": "Termos e Condições",
     "lastUpdated": "Última atualização: abril de 2026",
-    "intro": "Leia atentamente estes Termos e Condições antes de usar o Baixador de Vídeos. Ao usar esta aplicação, você concorda em ficar vinculado por estes termos. Se não concordar, por favor, interrompa o uso.",
+    "intro": "Leia atentamente estes Termos e Condições antes de usar o Media 2 Go. Ao usar esta aplicação, você concorda em ficar vinculado por estes termos. Se não concordar, por favor, interrompa o uso.",
     "s1Title": "1. Propósito e uso pretendido",
-    "s1Body": "O Baixador de Vídeos é uma ferramenta de uso pessoal que permite baixar vídeos publicamente disponíveis de plataformas compatíveis para consumo privado. Não se destina à redistribuição comercial, coleta massiva de dados ou qualquer uso que viole leis aplicáveis ou direitos de terceiros.",
+    "s1Body": "O Media 2 Go é uma ferramenta de uso pessoal que permite baixar vídeos publicamente disponíveis de plataformas compatíveis para consumo privado. Não se destina à redistribuição comercial, coleta massiva de dados ou qualquer uso que viole leis aplicáveis ou direitos de terceiros.",
     "s2Title": "2. Sua responsabilidade",
     "s2Body": "Você é o único responsável por garantir que seu uso desta aplicação esteja em conformidade com todas as leis, regulamentos e termos de serviço aplicáveis das plataformas das quais você baixa conteúdo. Não monitoramos, controlamos nem assumimos responsabilidade pelo conteúdo que você baixa.",
     "s3Title": "3. Direitos autorais e propriedade intelectual",
@@ -240,6 +240,10 @@
     "burnCaptionsMarginV": "Margem",
     "burnCaptionsTranslate": "Traduzir legendas",
     "burnCaptionsTranslateLang": "Idioma alvo",
+    "burnCaptionsGroqKeyLabel": "Chave API Groq",
+    "burnCaptionsGroqKeySave": "Salvar",
+    "burnCaptionsGroqKeyTitle": "Chave API necessária",
+    "burnCaptionsGroqKeyHint": "A tradução de legendas requer uma conta e chave API do Groq. Obtenha a sua em",
     "burnCaptionsPreview": "Visualização",
     "burnCaptionsBorderStyle": "Estilo de borda",
     "burnCaptionsBorderStyleBox": "Caixa opaca",

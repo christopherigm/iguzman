@@ -1,10 +1,10 @@
 {
   "Metadata": {
-    "title": "Video-Downloader",
+    "title": "Media 2 Go",
     "description": ""
   },
   "HomePage": {
-    "title": "Video-Downloader"
+    "title": "Media 2 Go"
   },
   "DownloadForm": {
     "inputLabel": "Video-URL einfügen",
@@ -125,9 +125,9 @@
   "TermsPage": {
     "title": "Nutzungsbedingungen",
     "lastUpdated": "Zuletzt aktualisiert: April 2026",
-    "intro": "Bitte lies diese Nutzungsbedingungen sorgfältig durch, bevor du den Video-Downloader verwendest. Durch die Nutzung dieser Anwendung erklärst du dich mit diesen Bedingungen einverstanden. Wenn du nicht einverstanden bist, stelle bitte die Nutzung ein.",
+    "intro": "Bitte lies diese Nutzungsbedingungen sorgfältig durch, bevor du Media 2 Go verwendest. Durch die Nutzung dieser Anwendung erklärst du dich mit diesen Bedingungen einverstanden. Wenn du nicht einverstanden bist, stelle bitte die Nutzung ein.",
     "s1Title": "1. Zweck und bestimmungsgemäßer Gebrauch",
-    "s1Body": "Der Video-Downloader ist ein Werkzeug für den persönlichen Gebrauch, mit dem du öffentlich verfügbare Videos von unterstützten Plattformen für deinen privaten Konsum herunterladen kannst. Er ist nicht für die kommerzielle Weiterverbreitung, das massenhafte Herunterladen oder eine Verwendung bestimmt, die gegen geltendes Recht oder Rechte Dritter verstößt.",
+    "s1Body": "Media 2 Go ist ein Werkzeug für den persönlichen Gebrauch, mit dem du öffentlich verfügbare Videos von unterstützten Plattformen für deinen privaten Konsum herunterladen kannst. Er ist nicht für die kommerzielle Weiterverbreitung, das massenhafte Herunterladen oder eine Verwendung bestimmt, die gegen geltendes Recht oder Rechte Dritter verstößt.",
     "s2Title": "2. Deine Verantwortung",
     "s2Body": "Du bist allein dafür verantwortlich, sicherzustellen, dass deine Nutzung dieser Anwendung allen geltenden Gesetzen, Vorschriften und Nutzungsbedingungen der Plattformen entspricht, von denen du Inhalte herunterlädst. Wir überwachen, kontrollieren oder übernehmen keine Verantwortung für die von dir heruntergeladenen Inhalte.",
     "s3Title": "3. Urheberrecht und geistiges Eigentum",
@@ -240,6 +240,10 @@
     "burnCaptionsMarginV": "Abstand",
     "burnCaptionsTranslate": "Untertitel übersetzen",
     "burnCaptionsTranslateLang": "Zielsprache",
+    "burnCaptionsGroqKeyLabel": "Groq API-Schlüssel",
+    "burnCaptionsGroqKeySave": "Speichern",
+    "burnCaptionsGroqKeyTitle": "API-Schlüssel erforderlich",
+    "burnCaptionsGroqKeyHint": "Für die Untertitelübersetzung wird ein Groq-Konto und API-Schlüssel benötigt. Erhalten Sie Ihren unter",
     "burnCaptionsPreview": "Vorschau",
     "burnCaptionsBorderStyle": "Rahmenstil",
     "burnCaptionsBorderStyleBox": "Opaque Box",

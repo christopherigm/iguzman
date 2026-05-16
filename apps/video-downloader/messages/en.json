@@ -1,10 +1,10 @@
 {
   "Metadata": {
-    "title": "Video Downloader",
+    "title": "Media 2 Go",
     "description": ""
   },
   "HomePage": {
-    "title": "Video Downloader"
+    "title": "Media 2 Go"
   },
   "DownloadForm": {
     "inputLabel": "Paste video URL",
@@ -125,9 +125,9 @@
   "TermsPage": {
     "title": "Terms and Conditions",
     "lastUpdated": "Last updated: April 2026",
-    "intro": "Please read these Terms and Conditions carefully before using Video Downloader. By using this application, you agree to be bound by these terms. If you do not agree, please discontinue use.",
+    "intro": "Please read these Terms and Conditions carefully before using Media 2 Go. By using this application, you agree to be bound by these terms. If you do not agree, please discontinue use.",
     "s1Title": "1. Purpose and Intended Use",
-    "s1Body": "Video Downloader is a personal-use tool that enables you to download publicly available videos from supported platforms for your own private consumption. It is not intended for commercial redistribution, mass scraping, or any use that violates applicable laws or third-party rights.",
+    "s1Body": "Media 2 Go is a personal-use tool that enables you to download publicly available videos from supported platforms for your own private consumption. It is not intended for commercial redistribution, mass scraping, or any use that violates applicable laws or third-party rights.",
     "s2Title": "2. Your Responsibility",
     "s2Body": "You are solely responsible for ensuring that your use of this application complies with all applicable laws, regulations, and the terms of service of the platforms from which you download content. We do not monitor, control, or take responsibility for the content you download.",
     "s3Title": "3. Copyright and Intellectual Property",
@@ -241,6 +241,10 @@
     "burnCaptionsMarginV": "Margin",
     "burnCaptionsTranslate": "Translate Subtitles",
     "burnCaptionsTranslateLang": "Target Language",
+    "burnCaptionsGroqKeyLabel": "Groq API Key",
+    "burnCaptionsGroqKeySave": "Save",
+    "burnCaptionsGroqKeyTitle": "API Key Required",
+    "burnCaptionsGroqKeyHint": "Subtitle translation requires a Groq account and API key. Get yours at",
     "burnCaptionsPreview": "Preview",
     "burnCaptionsBorderStyle": "Border Style",
     "burnCaptionsBorderStyleBox": "Opaque Box",

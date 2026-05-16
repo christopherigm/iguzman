@@ -85,7 +85,9 @@ export function PinnedVideoItemClient({
     status: 'loading' | 'processing';
     progress: number;
   } | null>(null);
-  const [conversionTarget, setConversionTarget] = useState<'h264' | 'h265'>('h264');
+  const [conversionTarget, setConversionTarget] = useState<'h264' | 'h265'>(
+    'h264',
+  );
 
   const fpsResumeChecked = useRef(false);
   const convertResumeChecked = useRef(false);
@@ -96,6 +98,10 @@ export function PinnedVideoItemClient({
   const { generate } = useGroq({
     proxyBase: '/api/groq',
     model: 'llama-3.3-70b-versatile',
+    getAuthHeaders: (): Record<string, string> => {
+      const key = localStorage.getItem('vd_groq_key');
+      return key ? { 'x-groq-api-key': key } : {};
+    },
   });
 
   const {
@@ -290,21 +296,18 @@ export function PinnedVideoItemClient({
   );
 
   /* ── H.265 → H.264 conversion ───────────────────────── */
-  const handleConvertH264 = useCallback(
-    () => {
-      setConversionTarget('h264');
-      return runProcessing({
-        activeStatus: 'converting',
-        process: (url, onProgress) => convertToH264(url, onProgress),
-        donePatch: { h264Converted: true, isH265: false },
-        taskUpdate: { isH265: false },
-        errorKey: 'errorConvertFailed',
-        downloadPrefix: 'video',
-        completeAfter: true,
-      });
-    },
-    [runProcessing, convertToH264],
-  );
+  const handleConvertH264 = useCallback(() => {
+    setConversionTarget('h264');
+    return runProcessing({
+      activeStatus: 'converting',
+      process: (url, onProgress) => convertToH264(url, onProgress),
+      donePatch: { h264Converted: true, isH265: false },
+      taskUpdate: { isH265: false },
+      errorKey: 'errorConvertFailed',
+      downloadPrefix: 'video',
+      completeAfter: true,
+    });
+  }, [runProcessing, convertToH264]);
   /* ── Remove black bars ──────────────────────────────── */
   const handleRemoveBlackBars = useCallback(
     () =>

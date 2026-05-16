@@ -2,9 +2,11 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Video Downloader',
-    short_name: 'VidDL2',
-    description: 'Download videos from popular platforms',
+    name: 'Media 2 Go',
+    short_name: 'Media 2 Go',
+    description:
+      'Download, store, and watch videos from any platform — offline-ready, anytime, anywhere.',
+
     start_url: '/',
     display: 'standalone',
     background_color: '#000000',

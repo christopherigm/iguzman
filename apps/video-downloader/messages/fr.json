@@ -1,10 +1,10 @@
 {
   "Metadata": {
-    "title": "Téléchargeur de Vidéos",
+    "title": "Media 2 Go",
     "description": ""
   },
   "HomePage": {
-    "title": "Téléchargeur de Vidéos"
+    "title": "Media 2 Go"
   },
   "DownloadForm": {
     "inputLabel": "Collez l'URL de la vidéo",
@@ -125,9 +125,9 @@
   "TermsPage": {
     "title": "Conditions Générales d'Utilisation",
     "lastUpdated": "Dernière mise à jour : avril 2026",
-    "intro": "Veuillez lire attentivement ces Conditions Générales d'Utilisation avant d'utiliser le Téléchargeur de Vidéos. En utilisant cette application, vous acceptez d'être lié par ces conditions. Si vous n'acceptez pas, veuillez cesser d'utiliser l'application.",
+    "intro": "Veuillez lire attentivement ces Conditions Générales d'Utilisation avant d'utiliser Media 2 Go. En utilisant cette application, vous acceptez d'être lié par ces conditions. Si vous n'acceptez pas, veuillez cesser d'utiliser l'application.",
     "s1Title": "1. Objet et utilisation prévue",
-    "s1Body": "Le Téléchargeur de Vidéos est un outil à usage personnel qui vous permet de télécharger des vidéos publiquement disponibles depuis des plateformes prises en charge pour votre consommation privée. Il n'est pas destiné à la redistribution commerciale, à l'extraction massive de données, ni à toute utilisation enfreignant les lois applicables ou les droits de tiers.",
+    "s1Body": "Media 2 Go est un outil à usage personnel qui vous permet de télécharger des vidéos publiquement disponibles depuis des plateformes prises en charge pour votre consommation privée. Il n'est pas destiné à la redistribution commerciale, à l'extraction massive de données, ni à toute utilisation enfreignant les lois applicables ou les droits de tiers.",
     "s2Title": "2. Votre responsabilité",
     "s2Body": "Vous êtes seul responsable de vous assurer que votre utilisation de cette application est conforme à toutes les lois, réglementations et conditions d'utilisation applicables des plateformes depuis lesquelles vous téléchargez du contenu. Nous ne surveillons pas, ne contrôlons pas et n'assumons aucune responsabilité pour le contenu que vous téléchargez.",
     "s3Title": "3. Droits d'auteur et propriété intellectuelle",
@@ -240,6 +240,10 @@
     "burnCaptionsMarginV": "Marge",
     "burnCaptionsTranslate": "Traduire les sous-titres",
     "burnCaptionsTranslateLang": "Langue cible",
+    "burnCaptionsGroqKeyLabel": "Clé API Groq",
+    "burnCaptionsGroqKeySave": "Enregistrer",
+    "burnCaptionsGroqKeyTitle": "Clé API requise",
+    "burnCaptionsGroqKeyHint": "La traduction des sous-titres nécessite un compte et une clé API Groq. Obtenez la vôtre sur",
     "burnCaptionsPreview": "Aperçu",
     "burnCaptionsBorderStyle": "Style de bordure",
     "burnCaptionsBorderStyleBox": "Boîte opaque",

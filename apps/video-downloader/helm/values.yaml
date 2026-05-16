@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# Video Downloader Application – Helm Values
+# Media 2 Go Application – Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
@@ -47,6 +47,7 @@ ingress:
     - secretName: media2go-tls
       hosts:
         - media2go.app
+        - vd2.iguzman.com.mx
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.
 env:

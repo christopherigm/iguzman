@@ -1,10 +1,10 @@
 {
   "Metadata": {
-    "title": "Descargador de Videos",
+    "title": "Media 2 Go",
     "description": ""
   },
   "HomePage": {
-    "title": "Descargador de Videos"
+    "title": "Media 2 Go"
   },
   "DownloadForm": {
     "inputLabel": "Pega la URL del video",
@@ -125,9 +125,9 @@
   "TermsPage": {
     "title": "Términos y Condiciones",
     "lastUpdated": "Última actualización: abril de 2026",
-    "intro": "Lee detenidamente estos Términos y Condiciones antes de usar el Descargador de Videos. Al usar esta aplicación, aceptas quedar vinculado por estos términos. Si no estás de acuerdo, deja de utilizar la aplicación.",
+    "intro": "Lee detenidamente estos Términos y Condiciones antes de usar Media 2 Go. Al usar esta aplicación, aceptas quedar vinculado por estos términos. Si no estás de acuerdo, deja de utilizar la aplicación.",
     "s1Title": "1. Propósito y uso previsto",
-    "s1Body": "El Descargador de Videos es una herramienta de uso personal que te permite descargar videos públicamente disponibles de plataformas compatibles para tu consumo privado. No está destinada a la redistribución comercial, la extracción masiva de datos ni cualquier uso que infrinja las leyes aplicables o los derechos de terceros.",
+    "s1Body": "Media 2 Go es una herramienta de uso personal que te permite descargar videos públicamente disponibles de plataformas compatibles para tu consumo privado. No está destinada a la redistribución comercial, la extracción masiva de datos ni cualquier uso que infrinja las leyes aplicables o los derechos de terceros.",
     "s2Title": "2. Tu responsabilidad",
     "s2Body": "Eres el único responsable de asegurarte de que tu uso de esta aplicación cumpla con todas las leyes, regulaciones y términos de servicio aplicables de las plataformas desde las que descargas contenido. No supervisamos, controlamos ni asumimos responsabilidad por el contenido que descargues.",
     "s3Title": "3. Derechos de autor y propiedad intelectual",
@@ -242,6 +242,10 @@
     "burnCaptionsMarginV": "Margen",
     "burnCaptionsTranslate": "Traducir subtítulos",
     "burnCaptionsTranslateLang": "Idioma destino",
+    "burnCaptionsGroqKeyLabel": "Clave API de Groq",
+    "burnCaptionsGroqKeySave": "Guardar",
+    "burnCaptionsGroqKeyTitle": "Se requiere clave API",
+    "burnCaptionsGroqKeyHint": "La traducción de subtítulos requiere una cuenta y clave API de Groq. Obtén la tuya en",
     "burnCaptionsPreview": "Vista previa",
     "burnCaptionsBorderStyle": "Estilo de borde",
     "burnCaptionsBorderStyleBox": "Caja opaca",

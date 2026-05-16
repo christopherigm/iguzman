@@ -1,12 +1,21 @@
 'use client';
 
-import { useState, useRef, useLayoutEffect, type CSSProperties } from 'react';
+import {
+  useState,
+  useRef,
+  useLayoutEffect,
+  useEffect,
+  useCallback,
+  type CSSProperties,
+} from 'react';
 import { useTranslations } from 'next-intl';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
+import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Button } from '@repo/ui/core-elements/button';
 import type {
   BurnCaptionsConfig,
   BurnCaptionsAnimationConfig,
@@ -182,6 +191,21 @@ export function BurnCaptionsModal({
   const t = useTranslations('VideoGrid');
   const [config, setConfig] = useState<BurnCaptionsConfig>(DEFAULT_CONFIG);
 
+  /* ── Groq API key ────────────────────────────────── */
+  const [groqKey, setGroqKey] = useState('');
+  const [groqKeyInput, setGroqKeyInput] = useState('');
+
+  useEffect(() => {
+    setGroqKey(localStorage.getItem('vd_groq_key') ?? '');
+  }, []);
+
+  const handleSaveGroqKey = useCallback(() => {
+    const trimmed = groqKeyInput.trim();
+    if (!trimmed) return;
+    localStorage.setItem('vd_groq_key', trimmed);
+    setGroqKey(trimmed);
+  }, [groqKeyInput]);
+
   /* ── Preview scaling ─────────────────────────────── */
   const previewRef = useRef<HTMLDivElement>(null);
   const [previewWidth, setPreviewWidth] = useState(0);
@@ -227,6 +251,7 @@ export function BurnCaptionsModal({
       okCallback={() => onConfirm(config)}
       cancelCallback={onCancel}
       panelMaxWidth="480px"
+      okDisabled={config.translate && !groqKey}
     >
       <Box className="bcm-config">
         {/* Subtitle preview */}
@@ -294,6 +319,45 @@ export function BurnCaptionsModal({
               </span>
             </Box>
           </Box>
+          {config.translate && !groqKey && (
+            <Box display="flex" flexDirection="column" gap={8} marginTop={8}>
+              <Typography
+                variant="caption"
+                className="bcm-label"
+                fontWeight={600}
+              >
+                {t('burnCaptionsGroqKeyTitle')}
+              </Typography>
+              <Box display="flex" alignItems="flex-end" gap={8}>
+                <TextInput
+                  label={t('burnCaptionsGroqKeyLabel')}
+                  value={groqKeyInput}
+                  onChange={setGroqKeyInput}
+                />
+                <Button
+                  text={t('burnCaptionsGroqKeySave')}
+                  onClick={handleSaveGroqKey}
+                  disabled={!groqKeyInput.trim()}
+                  size="md"
+                  kind="success"
+                />
+              </Box>
+              <Typography
+                variant="caption"
+                color="var(--foreground-muted, #888)"
+              >
+                {t('burnCaptionsGroqKeyHint')}{' '}
+                <a
+                  href="https://console.groq.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--accent, #06b6d4)' }}
+                >
+                  console.groq.com
+                </a>
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Position grid */}
@@ -310,7 +374,7 @@ export function BurnCaptionsModal({
                   data-pos={pos}
                   className={`bcm-align-btn${config.alignment === pos ? ' bcm-align-btn--active' : ''}`}
                   onClick={() => set('alignment', pos)}
-                  aria-pressed={config.alignment === pos}
+                  aria-pressed={config.alignment === pos ? true : false}
                   aria-label={`Position ${pos}`}
                 />
               )),
