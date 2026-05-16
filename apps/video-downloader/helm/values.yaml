@@ -39,11 +39,14 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
+    - host: media2go.app
+      paths:
+        - path: /
+          pathType: Prefix
   tls:
-    - secretName: vd2-tls
+    - secretName: media2go-tls
       hosts:
-        - vd2.iguzman.com.mx
-
+        - media2go.app
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.
 env:
