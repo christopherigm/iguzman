@@ -6,34 +6,35 @@ import { useTranslations, useLocale } from 'next-intl';
 import { Navbar } from '@repo/ui/core-elements/navbar';
 import type { NavbarProps } from '@repo/ui/core-elements/navbar';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
+import { Button } from '@repo/ui/core-elements/button';
+import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Box } from '@repo/ui/core-elements/box';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { setSearchQuery, useSearchQuery } from './use-search-store';
 
 type NavbarWithSearchProps = Omit<
   NavbarProps,
-  'onSearch' | 'onSearchChange' | 'items' | 'searchValue' | 'rightSlot'
+  | 'onSearch'
+  | 'onSearchChange'
+  | 'items'
+  | 'searchValue'
+  | 'rightSlot'
+  | 'searchBox'
 >;
 
-/**
- * Thin client wrapper around `Navbar` that wires the search box
- * to the shared search store so `VideoGrid` can filter in real-time.
- * Builds nav items dynamically, hiding the current page's item.
- *
- * When `searchBox` is enabled, a `SpeechButton` is rendered next to the
- * search icon.  Press it to record voice, release to transcribe — the
- * resulting text is injected into the search box and updates the grid.
- */
 export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const pathname = usePathname();
   const t = useTranslations('Navbar');
   const locale = useLocale();
   const whisperLang = locale.slice(0, 2);
   const searchQuery = useSearchQuery();
-  const [speechTranscript, setSpeechTranscript] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalQuery, setModalQuery] = useState('');
 
-  // When the search store is cleared externally (e.g. the "Clear search" button
-  // in VideoGrid), reset the controlled value so the navbar search box clears too.
+  // When the search store is cleared externally (e.g. "Clear search" in VideoGrid),
+  // keep modal query in sync.
   useEffect(() => {
-    if (!searchQuery) setSpeechTranscript('');
+    if (!searchQuery) setModalQuery('');
   }, [searchQuery]);
 
   const allItems = [
@@ -43,37 +44,69 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   ];
   const items = allItems.filter((item) => item.href !== pathname);
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value);
-  }, []);
-
-  const handleSearch = useCallback((value: string) => {
+  const handleQueryChange = useCallback((value: string) => {
+    setModalQuery(value);
     setSearchQuery(value);
   }, []);
 
   const handleTranscript = useCallback((text: string) => {
     const cleaned = text.replace(/[.,!?]+$/, '');
-    setSpeechTranscript(cleaned);
+    setModalQuery(cleaned);
     setSearchQuery(cleaned);
   }, []);
 
+  const handleOk = useCallback(() => {
+    setModalOpen(false);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    setModalQuery('');
+    setSearchQuery('');
+    setModalOpen(false);
+  }, []);
+
   return (
-    <Navbar
-      {...props}
-      items={items}
-      onSearchChange={handleSearchChange}
-      onSearch={handleSearch}
-      searchValue={speechTranscript}
-      rightSlot={
-        props.searchBox ? (
-          <SpeechButton
-            mode="batch"
-            language={whisperLang}
-            onTranscript={handleTranscript}
-            micIcon="/icons/mic.svg"
+    <>
+      <Navbar
+        {...props}
+        searchBox={false}
+        items={items}
+        rightSlot={
+          <Button
+            icon="/icons/search.svg"
+            aria-label={t('searchModal.openLabel')}
+            onClick={() => setModalOpen(true)}
+            iconSize="20px"
+            styles={{ cursor: 'pointer' }}
+            kind="success"
           />
-        ) : undefined
-      }
-    />
+        }
+      />
+      {modalOpen && (
+        <ConfirmationModal
+          title={t('searchModal.title')}
+          text={t('searchModal.description')}
+          okCallback={handleOk}
+          cancelCallback={handleCancel}
+          panelMaxWidth="480px"
+        >
+          <Box display="flex" flexDirection="column" gap={12}>
+            <TextInput
+              label={t('searchModal.inputLabel')}
+              value={modalQuery}
+              onChange={handleQueryChange}
+            />
+            <Box display="flex" justifyContent="center">
+              <SpeechButton
+                mode="batch"
+                language={whisperLang}
+                onTranscript={handleTranscript}
+                micIcon="/icons/mic.svg"
+              />
+            </Box>
+          </Box>
+        </ConfirmationModal>
+      )}
+    </>
   );
 }

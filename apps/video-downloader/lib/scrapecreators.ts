@@ -112,9 +112,10 @@ async function fetchTikTok(
   url: string,
   max: number,
   key: string,
-): Promise<NormalizedComment[]> {
+): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
   const all: NormalizedComment[] = [];
   let cursor: number | undefined;
+  let creditsRemaining: number | null = null;
 
   while (all.length < max) {
     const params: Record<string, string> = { url };
@@ -125,6 +126,7 @@ async function fetchTikTok(
       params,
       key,
     );
+    creditsRemaining = data.credits_remaining ?? creditsRemaining;
     for (const c of data.comments ?? []) {
       all.push({
         id: c.cid,
@@ -141,16 +143,17 @@ async function fetchTikTok(
     if (!data.has_more || (data.comments ?? []).length === 0) break;
     cursor = data.cursor;
   }
-  return all;
+  return { comments: all, creditsRemaining };
 }
 
 async function fetchInstagram(
   url: string,
   max: number,
   key: string,
-): Promise<NormalizedComment[]> {
+): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
   const all: NormalizedComment[] = [];
   let cursor: string | undefined;
+  let creditsRemaining: number | null = null;
 
   while (all.length < max) {
     const params: Record<string, string> = { url };
@@ -161,6 +164,7 @@ async function fetchInstagram(
       params,
       key,
     );
+    creditsRemaining = data.credits_remaining ?? creditsRemaining;
     if (!data.success) break;
     for (const c of data.comments ?? []) {
       all.push({
@@ -178,16 +182,17 @@ async function fetchInstagram(
     if (!data.cursor || (data.comments ?? []).length === 0) break;
     cursor = data.cursor;
   }
-  return all;
+  return { comments: all, creditsRemaining };
 }
 
 async function fetchFacebook(
   url: string,
   max: number,
   key: string,
-): Promise<NormalizedComment[]> {
+): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
   const all: NormalizedComment[] = [];
   let cursor: string | undefined;
+  let creditsRemaining: number | null = null;
 
   while (all.length < max) {
     const params: Record<string, string> = { url };
@@ -198,6 +203,7 @@ async function fetchFacebook(
       params,
       key,
     );
+    creditsRemaining = data.credits_remaining ?? creditsRemaining;
     if (!data.success) break;
     for (const c of data.comments ?? []) {
       all.push({
@@ -214,7 +220,7 @@ async function fetchFacebook(
     if (!data.has_next_page || (data.comments ?? []).length === 0) break;
     cursor = data.cursor;
   }
-  return all;
+  return { comments: all, creditsRemaining };
 }
 
 /* ── Public API ─────────────────────────────────────── */
@@ -279,7 +285,7 @@ export async function fetchAllSocialComments(
   url: string,
   maxComments: number,
   keyOverride?: string,
-): Promise<NormalizedComment[]> {
+): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
   const key = resolveKey(keyOverride);
   if (!key) throw new Error('No ScrapeCreators API key available');
   if (isTiktok(url)) return fetchTikTok(url, maxComments, key);

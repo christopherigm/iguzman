@@ -371,6 +371,7 @@ export function useVideoStore() {
         commentsEnabled: partial.commentsEnabled ?? false,
         maxComments: partial.maxComments ?? null,
         commentsFile: null,
+        scrapeCreditsRemaining: null,
         opfsCommentsKey: null,
         burnCaptionsConfig: null,
         captionsBurned: false,

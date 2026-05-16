@@ -204,6 +204,7 @@ export async function POST(request: Request) {
          * TikTok. When commentsEnabled is set and yt-dlp came up empty,
          * fetch via ScrapeCreators and write the comments file ourselves. */
         let commentsFile = result.commentsFile ?? null;
+        let scrapeCreditsRemaining: number | null = null;
         if (
           commentsEnabled &&
           !justAudio &&
@@ -211,11 +212,12 @@ export async function POST(request: Request) {
           isScrapeCreatorsPlatform(url)
         ) {
           try {
-            const comments = await fetchAllSocialComments(
+            const { comments, creditsRemaining } = await fetchAllSocialComments(
               url,
               maxComments ?? 20,
               scrapeKey,
             );
+            scrapeCreditsRemaining = creditsRemaining;
             if (comments.length > 0 && result.file) {
               const fileId = result.file.replace(/\.[^.]+$/, '');
               const folder = IS_PRODUCTION ? '/app/media' : './public/media';
@@ -256,6 +258,7 @@ export async function POST(request: Request) {
             null,
           captionsFile: result.captionsFile ?? null,
           commentsFile,
+          scrapeCreditsRemaining,
         });
       }
     } catch (err) {

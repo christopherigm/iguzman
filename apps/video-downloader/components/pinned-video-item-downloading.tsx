@@ -89,6 +89,16 @@ export function PinnedVideoItemDownloading({
       const name = task.name;
       const downloadURL = file ? `/api/media/${file}` : null;
 
+      if (task.scrapeCreditsRemaining != null) {
+        const credits = String(task.scrapeCreditsRemaining);
+        localStorage.setItem('vd_scrape_credits', credits);
+        window.dispatchEvent(
+          new CustomEvent('vd-credits-update', {
+            detail: task.scrapeCreditsRemaining,
+          }),
+        );
+      }
+
       // Update metadata without changing status yet — status stays 'downloading'
       // until OPFS migration (or the non-OPFS path below) fully completes.
       // This keeps the component as PinnedVideoItemDownloading during migration.

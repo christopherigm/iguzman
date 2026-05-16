@@ -11,7 +11,6 @@ export default function MainLayout({ children }: Props) {
       <NavbarWithSearch
         logo="/logo.png"
         version={`v${packageJson.version}`}
-        searchBox
         translucent
       />
       {children}

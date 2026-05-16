@@ -343,6 +343,15 @@ export function DownloadForm({
     setScrapeCredits(storedCredits !== null ? Number(storedCredits) : null);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: CustomEvent<number>) => {
+      setScrapeCredits(e.detail);
+    };
+    window.addEventListener('vd-credits-update', handler as EventListener);
+    return () =>
+      window.removeEventListener('vd-credits-update', handler as EventListener);
+  }, []);
+
   const handleAutoDownloadChange = useCallback((value: boolean) => {
     setAutoDownload(value);
     localStorage.setItem('vd_auto_download', String(value));
@@ -614,7 +623,7 @@ export function DownloadForm({
         : undefined;
     const effectiveCommentsEnabled =
       !justAudio && (smartDownload ? smartComments : commentsEnabled);
-    const effectiveMaxComments = smartDownload ? 10 : commentCount;
+    const effectiveMaxComments = smartDownload ? 30 : commentCount;
 
     onVideoAdded?.({
       originalURL: url,

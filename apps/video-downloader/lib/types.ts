@@ -40,6 +40,8 @@ export interface VideoResultFields {
   captionsFile: string | null;
   /** Filename of the saved comments JSON file (e.g. `uuid.comments.json`). `null` when no comments were downloaded. */
   commentsFile: string | null;
+  /** Remaining ScrapeCreators API credits after a comments fetch. `null` when not applicable. */
+  scrapeCreditsRemaining: number | null;
 }
 
 /* ── Status ────────────────────────────────────────── */
