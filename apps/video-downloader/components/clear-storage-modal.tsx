@@ -29,6 +29,7 @@ interface StoredEntry {
   opfsKey: string | null;
   opfsThumbnailKey: string | null;
   opfsCaptionsKey: string | null;
+  opfsCommentsKey: string | null;
 }
 
 interface OPFSFile {
@@ -79,6 +80,7 @@ function buildCategories(
     if (e.opfsKey) referencedKeys.add(e.opfsKey);
     if (e.opfsThumbnailKey) referencedKeys.add(e.opfsThumbnailKey);
     if (e.opfsCaptionsKey) referencedKeys.add(e.opfsCaptionsKey);
+    if (e.opfsCommentsKey) referencedKeys.add(e.opfsCommentsKey);
   }
 
   const orphanFiles = opfsFiles.filter((f) => !referencedKeys.has(f.name));
@@ -195,6 +197,7 @@ export function ClearStorageModal({
           if (rec.opfsKey) await deleteFromOPFS(rec.opfsKey);
           if (rec.opfsThumbnailKey) await deleteFromOPFS(rec.opfsThumbnailKey);
           if (rec.opfsCaptionsKey) await deleteFromOPFS(rec.opfsCaptionsKey);
+          if (rec.opfsCommentsKey) await deleteFromOPFS(rec.opfsCommentsKey);
         }
 
         /* Remove records from localStorage */

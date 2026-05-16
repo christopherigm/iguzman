@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { writeFileSync } from 'fs';
-import downloadVideo from '@repo/helpers/download-video';
+import downloadVideo, {
+  listSubtitlesViaYtDlp,
+} from '@repo/helpers/download-video';
 import {
   createTask,
   updateTask,
@@ -118,6 +120,29 @@ export async function POST(request: Request) {
     log.info({ taskId, url, justAudio, checkCodec }, 'Download started');
 
     try {
+      let resolvedCaptionUrl = captionUrl;
+      if (captionsEnabled && !justAudio && !resolvedCaptionUrl) {
+        try {
+          const subs = await listSubtitlesViaYtDlp(url);
+          if (subs.length > 0) {
+            const preferred =
+              subs.find((s) => /orig/i.test(s.lang)) ??
+              subs.find((s) => /^en/i.test(s.lang)) ??
+              subs[0];
+            resolvedCaptionUrl = preferred?.url;
+            log.info(
+              { url, lang: preferred?.lang, captionUrl: resolvedCaptionUrl },
+              'Resolved caption URL via subtitle listing',
+            );
+          }
+        } catch (err) {
+          log.warn(
+            { err, url },
+            'Subtitle listing failed (captions will be skipped)',
+          );
+        }
+      }
+
       const downloadInput = {
         url,
         justAudio,
@@ -125,7 +150,7 @@ export async function POST(request: Request) {
         iosDevice,
         maxHeight,
         captions: captionsEnabled,
-        captionUrl,
+        captionUrl: resolvedCaptionUrl,
         commentsEnabled,
         maxComments,
         outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
