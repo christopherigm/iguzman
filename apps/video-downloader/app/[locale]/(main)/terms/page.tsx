@@ -90,6 +90,11 @@ export default async function TermsPage({ params }: Props) {
           <Typography as="h2" variant="h5" marginBottom={10}>{t('s12Title')}</Typography>
           <Typography variant="body">{t('s12Body')}</Typography>
         </Box>
+
+        <Box className="terms-section">
+          <Typography as="h2" variant="h5" marginBottom={10}>{t('s13Title')}</Typography>
+          <Typography variant="body">{t('s13Body')}</Typography>
+        </Box>
       </Container>
       <PageBottomSpacer />
     </>

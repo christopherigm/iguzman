@@ -103,7 +103,7 @@
   },
   "Navbar": {
     "home": "Home",
-    "infinite": "Infinite",
+    "reelMode": "Reel Mode",
     "terms": "Terms",
     "searchModal": {
       "title": "Search",
@@ -130,7 +130,7 @@
   },
   "TermsPage": {
     "title": "Terms and Conditions",
-    "lastUpdated": "Last updated: April 2026",
+    "lastUpdated": "Last updated: May 2026",
     "intro": "Please read these Terms and Conditions carefully before using Media 2 Go. By using this application, you agree to be bound by these terms. If you do not agree, please discontinue use.",
     "s1Title": "1. Purpose and Intended Use",
     "s1Body": "Media 2 Go is a personal-use tool that enables you to download publicly available videos from supported platforms for your own private consumption. It is not intended for commercial redistribution, mass scraping, or any use that violates applicable laws or third-party rights.",
@@ -144,8 +144,8 @@
     "s5Body": "This application uses yt-dlp, an open-source tool published under the Unlicense. yt-dlp is legal software. Courts in multiple jurisdictions have held that Terms of Service violations alone do not constitute illegal activity. Whether a specific download is lawful in your jurisdiction depends on local copyright law and the nature of the content.",
     "s6Title": "6. No DRM Circumvention",
     "s6Body": "This application only downloads content from publicly accessible streams. It does not circumvent Digital Rights Management (DRM) or technical protection measures. Circumventing DRM may violate laws such as the DMCA § 1201 (United States), the EU Copyright Directive, or equivalent legislation in your country, and is not supported by this application.",
-    "s7Title": "7. Privacy and Data",
-    "s7Body": "Downloaded media files are stored temporarily on the server and are associated only with your browser session. We do not collect, store, or share personally identifiable information. URLs you submit are used solely to perform the download you requested and are not retained after the session ends. Files are automatically purged after a period of inactivity.",
+    "s7Title": "7. Privacy and No Data Collection",
+    "s7Body": "We do not collect, store, or share any user information in any form. This application uses no cookies for identification, no analytics services, no tracking pixels, and no third-party data collection of any kind. No personal data, usage data, or behavioral data is gathered at any point. When you submit a URL, it is used solely to initiate the requested download and is not retained. We have no way of identifying who you are or how you use this application.",
     "s8Title": "8. Third-Party Tools",
     "s8Body": "This application relies on third-party open-source tools including yt-dlp (Unlicense) and FFmpeg (LGPL/GPL). These tools are provided under their respective open-source licenses. We are not affiliated with, endorsed by, or responsible for these projects or their developers. Their availability and behavior may change at any time.",
     "s9Title": "9. Service Availability",
@@ -155,7 +155,9 @@
     "s11Title": "11. Limitation of Liability",
     "s11Body": "To the fullest extent permitted by applicable law, we shall not be liable for any direct, indirect, incidental, special, or consequential damages arising from your use of this application, including but not limited to copyright claims, platform account suspensions, data loss, or any other harm resulting from downloaded content.",
     "s12Title": "12. Changes to These Terms",
-    "s12Body": "We reserve the right to update these Terms and Conditions at any time without prior notice. Continued use of the application after changes are posted constitutes your acceptance of the revised terms. The date at the top of this page reflects the most recent revision."
+    "s12Body": "We reserve the right to update these Terms and Conditions at any time without prior notice. Continued use of the application after changes are posted constitutes your acceptance of the revised terms. The date at the top of this page reflects the most recent revision.",
+    "s13Title": "13. Local Storage and Media Management",
+    "s13Body": "All downloaded and processed media files are stored exclusively on your device using the Origin Private File System (OPFS), a browser-native sandboxed storage layer. No files are uploaded to or retained on our servers at any point. You are solely responsible for managing, organizing, backing up, or deleting all media stored in your browser. Clearing your browser's site data or storage permissions will permanently delete these files with no possibility of recovery. We bear no responsibility for any data loss resulting from your storage management actions, browser updates, or device changes."
   },
   "VideoGrid": {
     "title": "Downloads",

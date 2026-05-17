@@ -103,7 +103,7 @@
   },
   "Navbar": {
     "home": "Accueil",
-    "infinite": "Infini",
+    "reelMode": "Mode Reel",
     "terms": "Conditions",
     "searchModal": {
       "title": "Rechercher",
@@ -130,7 +130,7 @@
   },
   "TermsPage": {
     "title": "Conditions Générales d'Utilisation",
-    "lastUpdated": "Dernière mise à jour : avril 2026",
+    "lastUpdated": "Dernière mise à jour : mai 2026",
     "intro": "Veuillez lire attentivement ces Conditions Générales d'Utilisation avant d'utiliser Media 2 Go. En utilisant cette application, vous acceptez d'être lié par ces conditions. Si vous n'acceptez pas, veuillez cesser d'utiliser l'application.",
     "s1Title": "1. Objet et utilisation prévue",
     "s1Body": "Media 2 Go est un outil à usage personnel qui vous permet de télécharger des vidéos publiquement disponibles depuis des plateformes prises en charge pour votre consommation privée. Il n'est pas destiné à la redistribution commerciale, à l'extraction massive de données, ni à toute utilisation enfreignant les lois applicables ou les droits de tiers.",
@@ -144,8 +144,8 @@
     "s5Body": "Cette application utilise yt-dlp, un outil open source publié sous la licence Unlicense. yt-dlp est un logiciel légal. Des tribunaux de plusieurs juridictions ont jugé que les violations des Conditions d'Utilisation ne constituent pas à elles seules une activité illégale. La légalité d'un téléchargement spécifique dans votre juridiction dépend du droit d'auteur local et de la nature du contenu.",
     "s6Title": "6. Absence de contournement du DRM",
     "s6Body": "Cette application télécharge uniquement du contenu depuis des flux publiquement accessibles. Elle ne contourne pas les systèmes de Gestion des Droits Numériques (DRM) ni les mesures de protection technique. Le contournement du DRM peut violer des lois telles que le DMCA § 1201 (États-Unis), la Directive européenne sur le droit d'auteur ou une législation équivalente dans votre pays, et n'est pas pris en charge par cette application.",
-    "s7Title": "7. Confidentialité et données",
-    "s7Body": "Les fichiers multimédias téléchargés sont stockés temporairement sur le serveur et associés uniquement à votre session de navigateur. Nous ne collectons, ne stockons ni ne partageons aucune information personnelle identifiable. Les URL que vous soumettez sont utilisées uniquement pour effectuer le téléchargement demandé et ne sont pas conservées après la fin de la session. Les fichiers sont automatiquement supprimés après une période d'inactivité.",
+    "s7Title": "7. Confidentialité et absence de collecte de données",
+    "s7Body": "Nous ne collectons, ne stockons ni ne partageons aucune information sur les utilisateurs, sous quelque forme que ce soit. Cette application n'utilise ni cookies d'identification, ni services d'analyse, ni pixels de suivi, ni aucun autre mécanisme de collecte de données par des tiers. Aucune donnée personnelle, donnée d'utilisation ou donnée comportementale n'est recueillie à quelque moment que ce soit. Les URL que vous soumettez sont utilisées uniquement pour initier le téléchargement demandé et ne sont pas conservées. Nous n'avons aucun moyen de vous identifier ni de savoir comment vous utilisez cette application.",
     "s8Title": "8. Outils tiers",
     "s8Body": "Cette application s'appuie sur des outils open source tiers, dont yt-dlp (Unlicense) et FFmpeg (LGPL/GPL). Ces outils sont fournis sous leurs licences open source respectives. Nous ne sommes pas affiliés à ces projets ou à leurs développeurs et n'en sommes pas responsables. Leur disponibilité et leur comportement peuvent évoluer à tout moment.",
     "s9Title": "9. Disponibilité du service",
@@ -155,7 +155,9 @@
     "s11Title": "11. Limitation de responsabilité",
     "s11Body": "Dans toute la mesure permise par la loi applicable, nous ne serons pas responsables des dommages directs, indirects, accessoires, spéciaux ou consécutifs découlant de votre utilisation de cette application, y compris, mais sans s'y limiter, les réclamations pour droits d'auteur, les suspensions de comptes sur les plateformes, la perte de données ou tout autre préjudice résultant du contenu téléchargé.",
     "s12Title": "12. Modifications des présentes conditions",
-    "s12Body": "Nous nous réservons le droit de mettre à jour ces Conditions Générales d'Utilisation à tout moment sans préavis. La poursuite de l'utilisation de l'application après la publication de modifications vaut acceptation des conditions révisées. La date en haut de cette page reflète la dernière révision."
+    "s12Body": "Nous nous réservons le droit de mettre à jour ces Conditions Générales d'Utilisation à tout moment sans préavis. La poursuite de l'utilisation de l'application après la publication de modifications vaut acceptation des conditions révisées. La date en haut de cette page reflète la dernière révision.",
+    "s13Title": "13. Stockage local et gestion des médias",
+    "s13Body": "Tous les fichiers multimédias téléchargés et traités sont stockés exclusivement sur votre appareil via l'Origin Private File System (OPFS), une couche de stockage isolée native au navigateur. Aucun fichier n'est téléversé ni conservé sur nos serveurs à quelque moment que ce soit. Vous êtes seul responsable de la gestion, de l'organisation, de la sauvegarde ou de la suppression de tous les médias stockés dans votre navigateur. Effacer les données du site ou les autorisations de stockage de votre navigateur supprimera définitivement ces fichiers sans possibilité de récupération. Nous déclinons toute responsabilité en cas de perte de données résultant de vos actions de gestion du stockage, de mises à jour du navigateur ou de changements d'appareil."
   },
   "VideoGrid": {
     "title": "Téléchargements",

@@ -103,7 +103,7 @@
   },
   "Navbar": {
     "home": "Inicio",
-    "infinite": "Infinito",
+    "reelMode": "Modo Reel",
     "terms": "Términos",
     "searchModal": {
       "title": "Buscar",
@@ -130,7 +130,7 @@
   },
   "TermsPage": {
     "title": "Términos y Condiciones",
-    "lastUpdated": "Última actualización: abril de 2026",
+    "lastUpdated": "Última actualización: mayo de 2026",
     "intro": "Lee detenidamente estos Términos y Condiciones antes de usar Media 2 Go. Al usar esta aplicación, aceptas quedar vinculado por estos términos. Si no estás de acuerdo, deja de utilizar la aplicación.",
     "s1Title": "1. Propósito y uso previsto",
     "s1Body": "Media 2 Go es una herramienta de uso personal que te permite descargar videos públicamente disponibles de plataformas compatibles para tu consumo privado. No está destinada a la redistribución comercial, la extracción masiva de datos ni cualquier uso que infrinja las leyes aplicables o los derechos de terceros.",
@@ -144,8 +144,8 @@
     "s5Body": "Esta aplicación utiliza yt-dlp, una herramienta de código abierto publicada bajo la licencia Unlicense. yt-dlp es un software legal. Tribunales de múltiples jurisdicciones han determinado que las infracciones de los Términos de Servicio por sí solas no constituyen una actividad ilegal. Si una descarga concreta es legal en tu jurisdicción depende de la legislación local sobre derechos de autor y la naturaleza del contenido.",
     "s6Title": "6. Sin elusión de DRM",
     "s6Body": "Esta aplicación solo descarga contenido de transmisiones públicamente accesibles. No elude la Gestión de Derechos Digitales (DRM) ni las medidas de protección técnica. Eludir el DRM puede infringir leyes como el DMCA § 1201 (Estados Unidos), la Directiva de Derechos de Autor de la UE o legislaciones equivalentes en tu país, y no está soportado por esta aplicación.",
-    "s7Title": "7. Privacidad y datos",
-    "s7Body": "Los archivos multimedia descargados se almacenan temporalmente en el servidor y están asociados únicamente a tu sesión de navegador. No recopilamos, almacenamos ni compartimos información de identificación personal. Las URL que envías se utilizan únicamente para realizar la descarga que solicitaste y no se conservan una vez finalizada la sesión. Los archivos se eliminan automáticamente tras un período de inactividad.",
+    "s7Title": "7. Privacidad y sin recopilación de datos",
+    "s7Body": "No recopilamos, almacenamos ni compartimos ningún tipo de información del usuario. Esta aplicación no utiliza cookies de identificación, servicios de analítica, píxeles de seguimiento ni ningún otro mecanismo de recopilación de datos de terceros. No se recaban datos personales, de uso ni de comportamiento en ningún momento. Las URL que envías se utilizan únicamente para iniciar la descarga solicitada y no se conservan. No tenemos forma de identificar quién eres ni cómo utilizas esta aplicación.",
     "s8Title": "8. Herramientas de terceros",
     "s8Body": "Esta aplicación depende de herramientas de código abierto de terceros como yt-dlp (Unlicense) y FFmpeg (LGPL/GPL). Estas herramientas se proporcionan bajo sus respectivas licencias de código abierto. No estamos afiliados ni somos responsables de estos proyectos o sus desarrolladores. Su disponibilidad y comportamiento pueden cambiar en cualquier momento.",
     "s9Title": "9. Disponibilidad del servicio",
@@ -155,7 +155,9 @@
     "s11Title": "11. Limitación de responsabilidad",
     "s11Body": "En la máxima medida permitida por la legislación aplicable, no seremos responsables de ningún daño directo, indirecto, incidental, especial o consecuente derivado del uso de esta aplicación, incluidos, entre otros, reclamaciones por derechos de autor, suspensión de cuentas en plataformas, pérdida de datos u otros daños resultantes del contenido descargado.",
     "s12Title": "12. Cambios en estos términos",
-    "s12Body": "Nos reservamos el derecho de actualizar estos Términos y Condiciones en cualquier momento sin previo aviso. El uso continuado de la aplicación tras la publicación de cambios constituye tu aceptación de los términos revisados. La fecha en la parte superior de esta página refleja la revisión más reciente."
+    "s12Body": "Nos reservamos el derecho de actualizar estos Términos y Condiciones en cualquier momento sin previo aviso. El uso continuado de la aplicación tras la publicación de cambios constituye tu aceptación de los términos revisados. La fecha en la parte superior de esta página refleja la revisión más reciente.",
+    "s13Title": "13. Almacenamiento local y gestión de medios",
+    "s13Body": "Todos los archivos multimedia descargados y procesados se almacenan exclusivamente en tu dispositivo mediante el Sistema de Archivos Privado de Origen (OPFS), una capa de almacenamiento aislada nativa del navegador. Ningún archivo se sube ni se retiene en nuestros servidores en ningún momento. Eres el único responsable de gestionar, organizar, hacer copias de seguridad o eliminar todos los medios almacenados en tu navegador. Borrar los datos del sitio o los permisos de almacenamiento de tu navegador eliminará permanentemente estos archivos sin posibilidad de recuperación. No asumimos ninguna responsabilidad por la pérdida de datos derivada de tus acciones de gestión del almacenamiento, actualizaciones del navegador o cambios de dispositivo."
   },
   "VideoGrid": {
     "title": "Descargas",

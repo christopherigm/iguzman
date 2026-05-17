@@ -103,7 +103,7 @@
   },
   "Navbar": {
     "home": "Startseite",
-    "infinite": "Endlos",
+    "reelMode": "Reel-Modus",
     "terms": "Nutzungsbedingungen",
     "searchModal": {
       "title": "Suchen",
@@ -130,7 +130,7 @@
   },
   "TermsPage": {
     "title": "Nutzungsbedingungen",
-    "lastUpdated": "Zuletzt aktualisiert: April 2026",
+    "lastUpdated": "Zuletzt aktualisiert: Mai 2026",
     "intro": "Bitte lies diese Nutzungsbedingungen sorgfältig durch, bevor du Media 2 Go verwendest. Durch die Nutzung dieser Anwendung erklärst du dich mit diesen Bedingungen einverstanden. Wenn du nicht einverstanden bist, stelle bitte die Nutzung ein.",
     "s1Title": "1. Zweck und bestimmungsgemäßer Gebrauch",
     "s1Body": "Media 2 Go ist ein Werkzeug für den persönlichen Gebrauch, mit dem du öffentlich verfügbare Videos von unterstützten Plattformen für deinen privaten Konsum herunterladen kannst. Er ist nicht für die kommerzielle Weiterverbreitung, das massenhafte Herunterladen oder eine Verwendung bestimmt, die gegen geltendes Recht oder Rechte Dritter verstößt.",
@@ -144,8 +144,8 @@
     "s5Body": "Diese Anwendung verwendet yt-dlp, ein Open-Source-Tool, das unter der Unlicense veröffentlicht wurde. yt-dlp ist legale Software. Gerichte in verschiedenen Jurisdiktionen haben entschieden, dass Verstöße gegen Nutzungsbedingungen allein keine illegale Aktivität darstellen. Ob ein bestimmter Download in deiner Jurisdiktion rechtmäßig ist, hängt vom lokalen Urheberrecht und der Art der Inhalte ab.",
     "s6Title": "6. Keine DRM-Umgehung",
     "s6Body": "Diese Anwendung lädt ausschließlich Inhalte von öffentlich zugänglichen Streams herunter. Sie umgeht kein Digital Rights Management (DRM) oder technische Schutzmaßnahmen. Die Umgehung von DRM kann gegen Gesetze wie § 1201 DMCA (USA), die EU-Urheberrechtsrichtlinie oder entsprechende Gesetze in deinem Land verstoßen und wird von dieser Anwendung nicht unterstützt.",
-    "s7Title": "7. Datenschutz und Daten",
-    "s7Body": "Heruntergeladene Mediendateien werden vorübergehend auf dem Server gespeichert und sind ausschließlich deiner Browser-Sitzung zugeordnet. Wir erfassen, speichern oder geben keine personenbezogenen Daten weiter. Die von dir eingegebenen URLs werden ausschließlich zur Durchführung des angeforderten Downloads verwendet und nach Sitzungsende nicht gespeichert. Dateien werden nach einer Inaktivitätsperiode automatisch gelöscht.",
+    "s7Title": "7. Datenschutz und keine Datenerhebung",
+    "s7Body": "Wir erheben, speichern oder teilen keinerlei Nutzerinformationen. Diese Anwendung verwendet weder Identifikations-Cookies noch Analysedienste, Tracking-Pixel oder Datenerhebungsmechanismen von Drittanbietern. Es werden zu keinem Zeitpunkt persönliche Daten, Nutzungsdaten oder Verhaltensdaten erfasst. Die von dir eingegebenen URLs werden ausschließlich zur Durchführung des angeforderten Downloads verwendet und danach nicht gespeichert. Wir haben keine Möglichkeit, deine Identität oder dein Nutzungsverhalten zu ermitteln.",
     "s8Title": "8. Drittanbieter-Tools",
     "s8Body": "Diese Anwendung ist auf Open-Source-Tools von Drittanbietern angewiesen, darunter yt-dlp (Unlicense) und FFmpeg (LGPL/GPL). Diese Tools werden unter ihren jeweiligen Open-Source-Lizenzen bereitgestellt. Wir sind nicht mit diesen Projekten oder deren Entwicklern verbunden und übernehmen keine Verantwortung für sie. Ihre Verfügbarkeit und ihr Verhalten können sich jederzeit ändern.",
     "s9Title": "9. Dienstverfügbarkeit",
@@ -155,7 +155,9 @@
     "s11Title": "11. Haftungsbeschränkung",
     "s11Body": "Im größtmöglichen gesetzlich zulässigen Umfang haften wir nicht für direkte, indirekte, zufällige, besondere oder Folgeschäden, die aus der Nutzung dieser Anwendung entstehen, einschließlich, aber nicht beschränkt auf Urheberrechtsansprüche, Kontosperrungen auf Plattformen, Datenverlust oder sonstige Schäden durch heruntergeladene Inhalte.",
     "s12Title": "12. Änderungen dieser Bedingungen",
-    "s12Body": "Wir behalten uns das Recht vor, diese Nutzungsbedingungen jederzeit ohne vorherige Ankündigung zu aktualisieren. Die fortgesetzte Nutzung der Anwendung nach der Veröffentlichung von Änderungen gilt als Zustimmung zu den überarbeiteten Bedingungen. Das Datum oben auf dieser Seite gibt die letzte Überarbeitung an."
+    "s12Body": "Wir behalten uns das Recht vor, diese Nutzungsbedingungen jederzeit ohne vorherige Ankündigung zu aktualisieren. Die fortgesetzte Nutzung der Anwendung nach der Veröffentlichung von Änderungen gilt als Zustimmung zu den überarbeiteten Bedingungen. Das Datum oben auf dieser Seite gibt die letzte Überarbeitung an.",
+    "s13Title": "13. Lokaler Speicher und Medienverwaltung",
+    "s13Body": "Alle heruntergeladenen und verarbeiteten Mediendateien werden ausschließlich auf deinem Gerät im Origin Private File System (OPFS) gespeichert, einer browsereigenen, isolierten Speicherschicht. Zu keinem Zeitpunkt werden Dateien auf unsere Server hochgeladen oder dort gespeichert. Du bist allein verantwortlich für die Verwaltung, Organisation, Sicherung und Löschung aller in deinem Browser gespeicherten Medien. Das Löschen der Website-Daten oder Speicherberechtigungen deines Browsers löscht diese Dateien unwiderruflich ohne Wiederherstellungsmöglichkeit. Wir übernehmen keine Verantwortung für Datenverluste, die durch deine Speicherverwaltung, Browser-Updates oder Gerätewechsel entstehen."
   },
   "VideoGrid": {
     "title": "Downloads",
