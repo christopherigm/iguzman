@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import type { BurnCaptionsConfig } from '@/lib/types';
-import type { StoredVideo } from './use-video-store';
+import type { StoredVideo, VideoStatus } from './use-video-store';
 import {
   STATUS_COLORS,
   THIS_DEVICE_UUID,
@@ -51,6 +51,7 @@ export interface ReadOnlyVideoItemProps {
   ) => void;
   onRemove: (uuid: string) => void;
   onUpdate: (uuid: string, patch: Partial<StoredVideo>) => void;
+  onDuplicate: (newVideo: StoredVideo) => void;
 }
 
 /* ── Component ──────────────────────────────────────── */
@@ -60,6 +61,7 @@ export function ReadOnlyVideoItem({
   onReprocess,
   onRemove,
   onUpdate,
+  onDuplicate,
 }: ReadOnlyVideoItemProps) {
   const t = useTranslations('VideoGrid');
   const { getUrls, registerUrls } = useOPFSUrls();
@@ -209,6 +211,71 @@ export function ReadOnlyVideoItem({
     });
   }, [video, onUpdate, registerUrls]);
 
+  /* ── Duplicate video (OPFS only) ─────────────────── */
+  const handleDuplicate = useCallback(async () => {
+    if (!video.opfsStored || !video.opfsKey) return;
+
+    const newUuid = crypto.randomUUID();
+    const ext = (key: string) => key.match(/(\.[^.]+)$/)?.[1] ?? '';
+
+    const newOpfsKey = `dup_${newUuid}${ext(video.opfsKey)}`;
+    const videoFile = await readFromOPFS(video.opfsKey);
+    await writeToOPFS(newOpfsKey, videoFile);
+    const videoUrl = URL.createObjectURL(videoFile);
+
+    let newThumbnailKey: string | null = null;
+    let thumbnailUrl: string | null = null;
+    if (video.opfsThumbnailKey) {
+      try {
+        const thumbFile = await readFromOPFS(video.opfsThumbnailKey);
+        newThumbnailKey = `dup_thumb_${newUuid}${ext(video.opfsThumbnailKey)}`;
+        await writeToOPFS(newThumbnailKey, thumbFile);
+        thumbnailUrl = URL.createObjectURL(thumbFile);
+      } catch {}
+    }
+
+    let newCaptionsKey: string | null = null;
+    if (video.opfsCaptionsKey) {
+      try {
+        const captionsFile = await readFromOPFS(video.opfsCaptionsKey);
+        newCaptionsKey = `dup_captions_${newUuid}${ext(video.opfsCaptionsKey)}`;
+        await writeToOPFS(newCaptionsKey, captionsFile);
+      } catch {}
+    }
+
+    let newCommentsKey: string | null = null;
+    if (video.opfsCommentsKey) {
+      try {
+        const commentsFile = await readFromOPFS(video.opfsCommentsKey);
+        newCommentsKey = `dup_comments_${newUuid}${ext(video.opfsCommentsKey)}`;
+        await writeToOPFS(newCommentsKey, commentsFile);
+      } catch {}
+    }
+
+    registerUrls(newUuid, { videoUrl, thumbnailUrl });
+
+    const newVideo: StoredVideo = {
+      ...video,
+      uuid: newUuid,
+      name: video.name ? `(Copy) ${video.name}` : null,
+      fulltitle: video.fulltitle ? `(Copy) ${video.fulltitle}` : null,
+      createdAt: Date.now(),
+      opfsKey: newOpfsKey,
+      opfsThumbnailKey: newThumbnailKey,
+      opfsCaptionsKey: newCaptionsKey,
+      opfsCommentsKey: newCommentsKey,
+      downloadURL: `opfs://${newOpfsKey}`,
+      file: null,
+      taskId: null,
+      serverTaskId: null,
+      serverFileDeleted: true,
+      status: 'done' as VideoStatus,
+      error: null,
+    };
+
+    onDuplicate(newVideo);
+  }, [video, registerUrls, onDuplicate]);
+
   /* ── Download captions file ──────────────────────── */
   const handleDownloadCaptions = useCallback(async () => {
     const name = video.name ?? 'video';
@@ -327,6 +394,7 @@ export function ReadOnlyVideoItem({
           onBurnCaptions={() => setShowBurnModal(true)}
           onScaleDown={(height) => onReprocess(video.uuid, 'scaleDown', height)}
           onMakeOffline={handleMakeOffline}
+          onDuplicate={handleDuplicate}
           initialWsClientUuid={video.wsClientUuid ?? null}
           onWsClientChange={handleWsClientChange}
           t={t}

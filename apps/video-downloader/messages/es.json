@@ -126,7 +126,9 @@
     "videoDeletedFromServer": "Video eliminado del servidor",
     "nextVideoIn": "Siguiente video en {seconds}s",
     "objectFitLabel": "Alternar ajuste de objeto",
-    "autoSwipeLabel": "Activar/desactivar avance automático"
+    "autoSwipeLabel": "Activar/desactivar avance automático",
+    "confirmDeleteTitle": "¿Eliminar video?",
+    "confirmDeleteText": "Esto eliminará el video de tus descargas. Esta acción no se puede deshacer."
   },
   "TermsPage": {
     "title": "Términos y Condiciones",
@@ -317,7 +319,8 @@
     "scaleDownText": "Selecciona una resolución menor. El video se recodificará al tamaño elegido.",
     "errorScaleDownFailed": "Error al reducir la resolución.",
     "convertH265ServerOnly": "La conversión a H.265 requiere un servidor de procesamiento",
-    "toggleComments": "Alternar comentarios"
+    "toggleComments": "Alternar comentarios",
+    "duplicateVideo": "Duplicar video"
   },
   "Offline": {
     "title": "Estás sin conexión",

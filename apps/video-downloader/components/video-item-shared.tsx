@@ -649,7 +649,7 @@ export function VideoActions({
         onClick={onCopy}
         aria-label={t('copyLink')}
         title={copying ? t('copied') : t('copyLink')}
-        icon="/icons/copy.svg"
+        icon="/icons/url.svg"
         iconSize="15px"
         iconColor={
           copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
@@ -725,6 +725,7 @@ export function VideoExtraActions({
   onBurnCaptions,
   onMakeOffline,
   onScaleDown,
+  onDuplicate,
   initialWsClientUuid,
   onWsClientChange,
   t,
@@ -744,6 +745,7 @@ export function VideoExtraActions({
   onBurnCaptions?: () => void;
   onMakeOffline?: () => Promise<void>;
   onScaleDown?: (targetHeight: number) => void;
+  onDuplicate?: () => Promise<void>;
   initialWsClientUuid?: string | null;
   onWsClientChange?: (uuid: string) => void;
   t: TranslationFn;
@@ -757,6 +759,7 @@ export function VideoExtraActions({
   );
   const [offlineMigrating, setOfflineMigrating] = useState(false);
   const [showScaleDownModal, setShowScaleDownModal] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
 
   const serverSelected = currentWsUuid !== THIS_DEVICE_UUID;
   const canProcess =
@@ -982,6 +985,30 @@ export function VideoExtraActions({
                 iconColor="var(--accent, #8b5cf6)"
               >
                 {t('burnCaptions')}
+              </Button>
+            </Grid>
+          ) : null}
+
+          {onDuplicate ? (
+            <Grid size={{ xs: 6 }}>
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={() => {
+                  setDuplicating(true);
+                  onDuplicate()
+                    .catch(() => {})
+                    .finally(() => setDuplicating(false));
+                }}
+                disabled={!video.opfsStored || duplicating}
+                aria-label={t('duplicateVideo')}
+                title={t('duplicateVideo')}
+                icon="/icons/copy.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+                isLoading={duplicating}
+              >
+                {t('duplicateVideo')}
               </Button>
             </Grid>
           ) : null}

@@ -11,7 +11,10 @@ import type { BurnCaptionsConfig } from '@/lib/types';
 import { PinnedVideoItemDownloading } from './pinned-video-item-downloading';
 import { PinnedVideoItemClient } from './pinned-video-item-client';
 import { PinnedVideoItemServer } from './pinned-video-item-server';
-import { ReadOnlyVideoItem, type ReprocessAction } from './readonly-video-item';
+import {
+  ReadOnlyVideoItem,
+  type ReprocessAction,
+} from './readonly-video-item';
 import { VideoToolbar } from './video-toolbar';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import { useSearchQuery, setSearchQuery } from './use-search-store';
@@ -32,6 +35,7 @@ export interface VideoGridProps {
   onUpdateCompleted: (uuid: string, patch: Partial<StoredVideo>) => void;
   onReprocessCompleted: (uuid: string, patch: Partial<StoredVideo>) => void;
   onRemoveCompleted: (uuid: string) => void;
+  onDuplicateCompleted: (afterUuid: string, newVideo: StoredVideo) => void;
 }
 
 /* ── Component ──────────────────────────────────────── */
@@ -45,6 +49,7 @@ export function VideoGrid({
   onUpdateCompleted,
   onReprocessCompleted,
   onRemoveCompleted,
+  onDuplicateCompleted,
 }: VideoGridProps) {
   const t = useTranslations('VideoGrid');
   const searchQuery = useSearchQuery();
@@ -368,6 +373,9 @@ export function VideoGrid({
                 onReprocess={handleReprocess}
                 onRemove={onRemoveCompleted}
                 onUpdate={onUpdateCompleted}
+                onDuplicate={(newVideo) =>
+                  onDuplicateCompleted(video.uuid, newVideo)
+                }
               />
             </Grid>
           ))}

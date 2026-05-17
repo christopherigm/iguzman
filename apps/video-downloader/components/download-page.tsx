@@ -189,6 +189,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
     removeCompletedBulk,
     clearCompleted,
     moveCompletedToFirst,
+    insertAfterCompleted,
     storageError,
   } = useVideoStore();
 
@@ -264,6 +265,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
         onUpdateCompleted={updateCompleted}
         onReprocessCompleted={reprocessVideo}
         onRemoveCompleted={handleRemoveCompleted}
+        onDuplicateCompleted={insertAfterCompleted}
       />
     </>
   );

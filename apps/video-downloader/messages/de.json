@@ -126,7 +126,9 @@
     "videoDeletedFromServer": "Video vom Server gelöscht",
     "nextVideoIn": "Nächstes Video in {seconds}s",
     "objectFitLabel": "Objektanpassung umschalten",
-    "autoSwipeLabel": "Automatisches Weiterblättern umschalten"
+    "autoSwipeLabel": "Automatisches Weiterblättern umschalten",
+    "confirmDeleteTitle": "Video löschen?",
+    "confirmDeleteText": "Das Video wird aus deinen Downloads entfernt. Diese Aktion kann nicht rückgängig gemacht werden."
   },
   "TermsPage": {
     "title": "Nutzungsbedingungen",
@@ -315,7 +317,8 @@
     "scaleDownText": "Wähle eine niedrigere Auflösung. Das Video wird auf die gewählte Größe neu kodiert.",
     "errorScaleDownFailed": "Auflösungsreduzierung fehlgeschlagen.",
     "convertH265ServerOnly": "H.265-Konvertierung erfordert einen Verarbeitungsserver",
-    "toggleComments": "Kommentare umschalten"
+    "toggleComments": "Kommentare umschalten",
+    "duplicateVideo": "Video duplizieren"
   },
   "Offline": {
     "title": "Du bist offline",

@@ -89,6 +89,8 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
           okCallback={handleOk}
           cancelCallback={handleCancel}
           panelMaxWidth="480px"
+          position="top-center"
+          backgroundBlur=""
         >
           <Box display="flex" flexDirection="column" gap={12}>
             <TextInput

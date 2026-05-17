@@ -257,10 +257,13 @@ function initializeStore(): {
   const rawPinned = readStorageArray(PINNED_KEY).map(recoverPinnedState);
   const completed = readStorageArray(COMPLETED_KEY);
 
-  /* Move any errored items from pinned to completed on load. */
+  /* Move any errored or fully-done items from pinned to completed on load.
+     'done' items can end up in pinned when the page is closed between the
+     status-update and onComplete calls; they belong in completed. OPFS
+     recovery for those items runs via useOPFSRecovery in download-page.tsx. */
   const pinned: StoredVideo[] = [];
   for (const v of rawPinned) {
-    if (v.status === 'error') {
+    if (v.status === 'error' || v.status === 'done') {
       completed.unshift(v);
     } else {
       pinned.push(v);
@@ -502,6 +505,18 @@ export function useVideoStore() {
     });
   }, []);
 
+  /** Insert a new completed entry immediately after the one with `afterUuid`. */
+  const insertAfterCompleted = useCallback(
+    (afterUuid: string, entry: StoredVideo) => {
+      setCompleted((prev) => {
+        const idx = prev.findIndex((v) => v.uuid === afterUuid);
+        if (idx === -1) return [entry, ...prev];
+        return [...prev.slice(0, idx + 1), entry, ...prev.slice(idx + 1)];
+      });
+    },
+    [],
+  );
+
   return {
     pinned,
     completed,
@@ -516,6 +531,7 @@ export function useVideoStore() {
     removeCompletedBulk,
     clearCompleted,
     moveCompletedToFirst,
+    insertAfterCompleted,
     storageError,
   } as const;
 }

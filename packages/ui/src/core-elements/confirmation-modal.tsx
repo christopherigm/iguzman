@@ -7,6 +7,32 @@ import { Box } from './box';
 import { Typography } from './typography';
 import './confirmation-modal.css';
 
+export type ModalPosition =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'center-left'
+  | 'center'
+  | 'center-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right';
+
+const POSITION_MAP: Record<
+  ModalPosition,
+  { alignItems: string; justifyContent: string }
+> = {
+  'top-left': { alignItems: 'flex-start', justifyContent: 'flex-start' },
+  'top-center': { alignItems: 'flex-start', justifyContent: 'center' },
+  'top-right': { alignItems: 'flex-start', justifyContent: 'flex-end' },
+  'center-left': { alignItems: 'center', justifyContent: 'flex-start' },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  'center-right': { alignItems: 'center', justifyContent: 'flex-end' },
+  'bottom-left': { alignItems: 'flex-end', justifyContent: 'flex-start' },
+  'bottom-center': { alignItems: 'flex-end', justifyContent: 'center' },
+  'bottom-right': { alignItems: 'flex-end', justifyContent: 'flex-end' },
+};
+
 /**
  * Props for the `ConfirmationModal` component.
  */
@@ -25,6 +51,10 @@ export interface ConfirmationModalProps {
   panelMaxWidth?: string;
   /** When true, the OK button is rendered in a disabled state. */
   okDisabled?: boolean;
+  /** Where to place the panel within the overlay (default: 'center'). */
+  position?: ModalPosition;
+  /** CSS backdrop-filter applied to the overlay (default: 'blur(2px)'). */
+  backgroundBlur?: string;
 }
 
 /**
@@ -46,7 +76,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   children,
   panelMaxWidth,
   okDisabled,
+  position = 'center',
+  backgroundBlur = 'blur(2px)',
 }) => {
+  const { alignItems, justifyContent } = POSITION_MAP[position];
   // Prevent body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -74,9 +107,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     <Box
       className="ui-confirmation-modal-overlay"
       display="flex"
-      alignItems="center"
-      justifyContent="center"
+      alignItems={alignItems}
+      justifyContent={justifyContent}
       backgroundColor="rgba(0, 0, 0, 0.55)"
+      padding={16}
       styles={{
         position: 'fixed',
         top: 0,
@@ -84,7 +118,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         bottom: 0,
         left: 0,
         zIndex: 1100,
-        backdropFilter: 'blur(2px)',
+        backdropFilter: backgroundBlur,
       }}
       onClick={handleOverlayClick}
     >

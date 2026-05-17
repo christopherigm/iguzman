@@ -126,7 +126,9 @@
     "videoDeletedFromServer": "Video deleted from server",
     "nextVideoIn": "Next video in {seconds}s",
     "objectFitLabel": "Toggle object fit",
-    "autoSwipeLabel": "Toggle auto-advance"
+    "autoSwipeLabel": "Toggle auto-advance",
+    "confirmDeleteTitle": "Delete video?",
+    "confirmDeleteText": "This will remove the video from your downloads. This action cannot be undone."
   },
   "TermsPage": {
     "title": "Terms and Conditions",
@@ -316,7 +318,8 @@
     "scaleDownText": "Select a lower resolution. The video will be re-encoded to the chosen size.",
     "errorScaleDownFailed": "Resolution scale-down failed.",
     "convertH265ServerOnly": "H.265 conversion requires a processing server",
-    "toggleComments": "Toggle comments"
+    "toggleComments": "Toggle comments",
+    "duplicateVideo": "Duplicate Video"
   },
   "Offline": {
     "title": "You are offline",

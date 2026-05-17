@@ -11,6 +11,7 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Button } from '@repo/ui/core-elements/button';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { useVideoStore } from './use-video-store';
 import type { StoredVideo } from './use-video-store';
 import { resolveMediaUrl, PLATFORM_ICONS } from './video-item-shared';
@@ -159,6 +160,7 @@ function InfinitePageInner() {
   const [capturedFrames, setCapturedFrames] = useState<Map<string, string>>(
     new Map(),
   );
+  const [confirmDelete, setConfirmDelete] = useState(false);
   function shuffle(list: StoredVideo[]) {
     const shuffled = [...list];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -304,9 +306,10 @@ function InfinitePageInner() {
     setCurrentTime(time);
   }
 
-  function handleDelete() {
+  function confirmAndDelete() {
     const video = videos[activeIndex];
     if (!video) return;
+    setConfirmDelete(false);
     if (video.opfsEnabled) {
       if (video.opfsKey) void deleteFromOPFS(video.opfsKey).catch(() => {});
       if (video.opfsThumbnailKey)
@@ -325,6 +328,11 @@ function InfinitePageInner() {
       setActiveIndex(newIndex);
       return next;
     });
+  }
+
+  function handleDelete() {
+    if (!videos[activeIndex]) return;
+    setConfirmDelete(true);
   }
 
   function handleDownload() {
@@ -645,6 +653,14 @@ function InfinitePageInner() {
           <Image src="/icons/random.svg" alt="" width={24} height={24} />
         </Button>
       </Box>
+      {confirmDelete && (
+        <ConfirmationModal
+          title={t('confirmDeleteTitle')}
+          text={t('confirmDeleteText')}
+          okCallback={confirmAndDelete}
+          cancelCallback={() => setConfirmDelete(false)}
+        />
+      )}
     </>
   );
 }
