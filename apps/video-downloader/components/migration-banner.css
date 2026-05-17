@@ -1,0 +1,48 @@
+.mb-image-wrapper {
+  position: relative;
+  line-height: 0;
+}
+
+.mb-image-wrapper img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.mb-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 160ms ease;
+}
+
+.mb-close-btn:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.mb-body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mb-link {
+  color: var(--accent, #06b6d4);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mb-link:hover {
+  text-decoration: underline;
+}
