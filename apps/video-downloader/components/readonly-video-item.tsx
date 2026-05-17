@@ -76,6 +76,7 @@ export function ReadOnlyVideoItem({
   );
 
   const displayName =
+    video.fulltitle ??
     video.name ??
     video.uploader ??
     (video.justAudio ? t('untitledAudio') : t('untitledVideo'));

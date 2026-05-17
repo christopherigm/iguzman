@@ -382,6 +382,16 @@ export interface VideoMetadata {
   automatic_captions: Record<string, { ext: string; url: string }[]>;
   /** Manual subtitles keyed by language code. */
   subtitles: Record<string, { ext: string; url: string }[]>;
+  /** Platform-specific user ID or handle (e.g. `@username`). */
+  uploader_id?: string;
+  /** URL to the uploader's profile page. */
+  uploader_url?: string;
+  /** Upload date in YYYYMMDD format (may be unreliable on Facebook). */
+  upload_date?: string;
+  /** Upload timestamp as Unix seconds (preferred over upload_date when available). */
+  timestamp?: number;
+  /** Tags / hashtags associated with the video. */
+  tags?: string[];
   /** Available formats returned by yt-dlp. */
   formats?: FormatInfo[];
   /** Total number of comments on the video, as reported by the platform. Null when unavailable. */

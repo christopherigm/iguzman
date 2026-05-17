@@ -30,6 +30,13 @@ const RETRY_BASE_DELAY_MS = 5_000;
 const isRateLimitError = (msg: string): boolean =>
   msg.includes('429') || /too many requests/i.test(msg);
 
+/** Converts yt-dlp's YYYYMMDD upload_date string to a Unix timestamp in seconds. */
+function parseUploadDate(date: string): number | null {
+  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(date);
+  if (!m) return null;
+  return Date.UTC(parseInt(m[1]!), parseInt(m[2]!) - 1, parseInt(m[3]!)) / 1000;
+}
+
 type RequestBody = Partial<VideoDownloadInput> &
   Pick<VideoDownloadInput, 'url'>;
 
@@ -237,16 +244,25 @@ export async function POST(request: Request) {
           }
         }
 
+        const meta = result.metadata;
         await updateTask(taskId, {
           status: 'done',
           progress: 100,
           result,
           file: result.file ?? null,
           name: result.name ?? null,
+          fulltitle: meta?.fulltitle ?? meta?.title ?? null,
           isH265: result.isH265 ?? null,
           thumbnail: result.thumbnail ?? null,
-          duration: result.metadata?.duration ?? null,
-          uploader: result.metadata?.uploader ?? null,
+          duration: meta?.duration ?? null,
+          uploader: meta?.uploader ?? null,
+          uploader_id: meta?.uploader_id ?? null,
+          uploader_url: meta?.uploader_url ?? null,
+          uploadTimestamp:
+            meta?.timestamp ??
+            (meta?.upload_date ? parseUploadDate(meta.upload_date) : null),
+          description: meta?.description ?? null,
+          tags: meta?.tags?.length ? meta.tags : null,
           sourceFps: result.fps ?? null,
           width:
             result.formatSelection?.bestVideo?.width ??

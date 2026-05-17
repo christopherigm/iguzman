@@ -78,6 +78,7 @@ export function PinnedVideoItemDownloading({
     video.status === 'queued';
 
   const displayName =
+    video.fulltitle ??
     video.name ??
     video.uploader ??
     (video.justAudio ? t('untitledAudio') : t('untitledVideo'));

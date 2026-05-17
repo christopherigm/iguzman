@@ -128,6 +128,7 @@ export function PinnedVideoItemClient({
     video.status === 'translating';
 
   const displayName =
+    video.fulltitle ??
     video.name ??
     video.uploader ??
     (video.justAudio ? t('untitledAudio') : t('untitledVideo'));

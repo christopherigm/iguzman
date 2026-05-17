@@ -26,10 +26,22 @@ export type VideoDownloadInput = Pick<
 export interface VideoResultFields {
   file: string | null;
   name: string | null;
+  /** Full title as returned by yt-dlp (untruncated). Falls back to `name` on the frontend for older entries. */
+  fulltitle: string | null;
   isH265: boolean | null;
   thumbnail: string | null;
   duration: number | null;
   uploader: string | null;
+  /** Platform-specific user handle (e.g. `@username`). `null` when unavailable. */
+  uploader_id: string | null;
+  /** URL to the uploader's profile page. `null` when unavailable. */
+  uploader_url: string | null;
+  /** Upload timestamp as Unix seconds. Coalesced from yt-dlp `timestamp` → parsed `upload_date`. `null` when unavailable. */
+  uploadTimestamp: number | null;
+  /** Video description as returned by the platform. `null` when unavailable. */
+  description: string | null;
+  /** Tags / hashtags associated with the video. `null` when unavailable. */
+  tags: string[] | null;
   /** Source video FPS as detected by ffprobe. `null` when unavailable. */
   sourceFps: number | null;
   /** Video width in pixels. `null` for audio-only or when unavailable. */

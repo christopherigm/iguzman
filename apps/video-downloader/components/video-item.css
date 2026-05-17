@@ -53,6 +53,23 @@
   word-break: break-word;
 }
 
+.vi-subtitle {
+  font-size: 11px;
+  color: var(--foreground-muted, #999);
+  margin: 0;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vi-description-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
 /* ── Icon buttons ────────────────────────────────────── */
 
 .vi-icon-btn {

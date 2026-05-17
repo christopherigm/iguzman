@@ -288,8 +288,50 @@ export function VideoDetailsPanel({
   return (
     <Box className="vi-details">
       <dl className="vi-dl">
+        {video.description ? (
+          <>
+            <dt>{t('detailDescription')}</dt>
+            <dd className="vi-description-text">{video.description}</dd>
+          </>
+        ) : null}
+
         <dt>UUID</dt>
         <dd>{video.uuid}</dd>
+        {video.tags?.length ? (
+          <>
+            <dt>{t('detailTags')}</dt>
+            <dd>
+              <Box display="flex" styles={{ flexWrap: 'wrap', gap: '4px' }}>
+                {video.tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="subtle"
+                    size="sm"
+                    color="var(--foreground-muted, #999)"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </Box>
+            </dd>
+          </>
+        ) : null}
+        {video.uploader_url ? (
+          <>
+            <dt>{t('detailUploaderUrl')}</dt>
+            <dd>
+              <a
+                href={video.uploader_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="vi-original-link"
+                title={video.uploader_url}
+              >
+                {video.uploader_url}
+              </a>
+            </dd>
+          </>
+        ) : null}
         <dt>{t('detailStatus')}</dt>
         <dd
           className="vi-status-badge"
@@ -623,7 +665,11 @@ export function VideoActions({
           title={t('toggleComments')}
           icon={commentsOpen ? '/icons/comments-no.svg' : '/icons/comments.svg'}
           iconSize="15px"
-          iconColor={commentsOpen ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'}
+          iconColor={
+            commentsOpen
+              ? 'var(--accent, #06b6d4)'
+              : 'var(--foreground, #171717)'
+          }
         />
       ) : null}
 
@@ -869,9 +915,15 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={onConvertH265}
-                disabled={isBusy || h265Error || !serverSelected || !wsClientOnline}
+                disabled={
+                  isBusy || h265Error || !serverSelected || !wsClientOnline
+                }
                 aria-label={t('convertH265')}
-                title={!serverSelected ? t('convertH265ServerOnly') : t('convertH265')}
+                title={
+                  !serverSelected
+                    ? t('convertH265ServerOnly')
+                    : t('convertH265')
+                }
                 icon="/icons/h265.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
@@ -1021,15 +1073,40 @@ export function VideoCardHeader({
   onToggleDetails: () => void;
   t: TranslationFn;
 }) {
+  const uploaderHandle =
+    video.uploader_id != null
+      ? video.uploader_id.startsWith('@')
+        ? video.uploader_id
+        : `@${video.uploader_id}`
+      : null;
+
+  const uploadDateStr =
+    video.uploadTimestamp != null
+      ? new Date(video.uploadTimestamp * 1000).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : null;
+
+  const subtitle = [uploaderHandle, uploadDateStr].filter(Boolean).join(' · ');
+
   return (
     <Box className="vi-header">
-      <Typography
-        as="span"
-        variant="body"
-        className={`vi-name${detailsOpen ? ' vi-name--expanded' : ''}`}
-      >
-        {displayName}
-      </Typography>
+      <Box styles={{ minWidth: 0, flex: 1 }}>
+        <Typography
+          as="span"
+          variant="body"
+          className={`vi-name${detailsOpen ? ' vi-name--expanded' : ''}`}
+        >
+          {displayName}
+        </Typography>
+        {subtitle ? (
+          <Typography as="p" variant="caption" className="vi-subtitle">
+            {subtitle}
+          </Typography>
+        ) : null}
+      </Box>
       <Button
         unstyled
         className="vi-icon-btn"
