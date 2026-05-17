@@ -175,10 +175,14 @@ export function PinnedVideoItemDownloading({
               } catch {}
             }
 
+            let serverFileDeleted = false;
             if (task._id) {
-              fetch(`/api/download-video/${task._id}`, {
-                method: 'DELETE',
-              }).catch(() => {});
+              try {
+                const res = await fetch(`/api/download-video/${task._id}`, {
+                  method: 'DELETE',
+                });
+                serverFileDeleted = res.ok || res.status === 404;
+              } catch {}
             }
 
             const videoFile = await readFromOPFS(file);
@@ -199,7 +203,7 @@ export function PinnedVideoItemDownloading({
               opfsCaptionsKey: captionsKey,
               opfsCommentsKey: commentsKey,
               opfsStored: true,
-              serverFileDeleted: true,
+              serverFileDeleted,
               downloadURL: `opfs://${file}`,
               fileSize: videoBlob.size,
             });

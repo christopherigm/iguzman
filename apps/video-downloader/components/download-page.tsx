@@ -70,10 +70,15 @@ function useOPFSRecovery({
 
             // Server not yet told to delete — do it now.
             if (!video.serverFileDeleted && video.taskId) {
-              await fetch(`/api/download-video/${video.taskId}`, {
-                method: 'DELETE',
-              }).catch(() => {});
-              updateCompleted(video.uuid, { serverFileDeleted: true });
+              try {
+                const res = await fetch(`/api/download-video/${video.taskId}`, {
+                  method: 'DELETE',
+                });
+                // Only mark deleted when the server confirms (404 = already gone).
+                if (res.ok || res.status === 404) {
+                  updateCompleted(video.uuid, { serverFileDeleted: true });
+                }
+              } catch {}
             }
           } catch {
             // OPFS file evicted by browser — nothing to recover.
@@ -129,9 +134,13 @@ function useOPFSRecovery({
               } catch {}
             }
 
-            await fetch(`/api/download-video/${video.taskId}`, {
-              method: 'DELETE',
-            }).catch(() => {});
+            let serverFileDeleted = false;
+            try {
+              const res = await fetch(`/api/download-video/${video.taskId}`, {
+                method: 'DELETE',
+              });
+              serverFileDeleted = res.ok || res.status === 404;
+            } catch {}
 
             const videoFile = await readFromOPFS(video.file);
             const videoUrl = URL.createObjectURL(videoFile);
@@ -150,7 +159,7 @@ function useOPFSRecovery({
               opfsCaptionsKey: captionsKey,
               opfsCommentsKey: commentsKey,
               opfsStored: true,
-              serverFileDeleted: true,
+              serverFileDeleted,
               downloadURL: `opfs://${video.file}`,
             });
           } catch {

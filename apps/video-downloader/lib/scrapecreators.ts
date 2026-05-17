@@ -113,37 +113,24 @@ async function fetchTikTok(
   max: number,
   key: string,
 ): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
-  const all: NormalizedComment[] = [];
-  let cursor: number | undefined;
-  let creditsRemaining: number | null = null;
-
-  while (all.length < max) {
-    const params: Record<string, string> = { url };
-    if (cursor !== undefined) params.cursor = String(cursor);
-
-    const data = await apiFetch<TikTokResponse>(
-      '/v1/tiktok/video/comments',
-      params,
-      key,
-    );
-    creditsRemaining = data.credits_remaining ?? creditsRemaining;
-    for (const c of data.comments ?? []) {
-      all.push({
-        id: c.cid,
-        text: c.text,
-        timestamp: c.create_time,
-        author: c.user.nickname,
-        author_id: c.user.uid,
-        author_thumbnail: c.user.avatar_thumb?.url_list?.[0],
-        like_count: c.digg_count,
-        parent: 'root',
-      });
-      if (all.length >= max) break;
-    }
-    if (!data.has_more || (data.comments ?? []).length === 0) break;
-    cursor = data.cursor;
-  }
-  return { comments: all, creditsRemaining };
+  const data = await apiFetch<TikTokResponse>(
+    '/v1/tiktok/video/comments',
+    { url },
+    key,
+  );
+  const comments: NormalizedComment[] = (data.comments ?? [])
+    .slice(0, max)
+    .map((c) => ({
+      id: c.cid,
+      text: c.text,
+      timestamp: c.create_time,
+      author: c.user.nickname,
+      author_id: c.user.uid,
+      author_thumbnail: c.user.avatar_thumb?.url_list?.[0],
+      like_count: c.digg_count,
+      parent: 'root',
+    }));
+  return { comments, creditsRemaining: data.credits_remaining ?? null };
 }
 
 async function fetchInstagram(
@@ -151,38 +138,25 @@ async function fetchInstagram(
   max: number,
   key: string,
 ): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
-  const all: NormalizedComment[] = [];
-  let cursor: string | undefined;
-  let creditsRemaining: number | null = null;
-
-  while (all.length < max) {
-    const params: Record<string, string> = { url };
-    if (cursor) params.cursor = cursor;
-
-    const data = await apiFetch<InstagramResponse>(
-      '/v2/instagram/post/comments',
-      params,
-      key,
-    );
-    creditsRemaining = data.credits_remaining ?? creditsRemaining;
-    if (!data.success) break;
-    for (const c of data.comments ?? []) {
-      all.push({
-        id: c.id,
-        text: c.text,
-        timestamp: toUnix(c.created_at),
-        author: c.user.username,
-        author_id: c.user.id,
-        author_thumbnail: c.user.profile_pic_url,
-        like_count: c.comment_like_count,
-        parent: 'root',
-      });
-      if (all.length >= max) break;
-    }
-    if (!data.cursor || (data.comments ?? []).length === 0) break;
-    cursor = data.cursor;
-  }
-  return { comments: all, creditsRemaining };
+  const data = await apiFetch<InstagramResponse>(
+    '/v2/instagram/post/comments',
+    { url },
+    key,
+  );
+  if (!data.success) return { comments: [], creditsRemaining: data.credits_remaining ?? null };
+  const comments: NormalizedComment[] = (data.comments ?? [])
+    .slice(0, max)
+    .map((c) => ({
+      id: c.id,
+      text: c.text,
+      timestamp: toUnix(c.created_at),
+      author: c.user.username,
+      author_id: c.user.id,
+      author_thumbnail: c.user.profile_pic_url,
+      like_count: c.comment_like_count,
+      parent: 'root',
+    }));
+  return { comments, creditsRemaining: data.credits_remaining ?? null };
 }
 
 async function fetchFacebook(
@@ -190,37 +164,24 @@ async function fetchFacebook(
   max: number,
   key: string,
 ): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
-  const all: NormalizedComment[] = [];
-  let cursor: string | undefined;
-  let creditsRemaining: number | null = null;
-
-  while (all.length < max) {
-    const params: Record<string, string> = { url };
-    if (cursor) params.cursor = cursor;
-
-    const data = await apiFetch<FacebookResponse>(
-      '/v1/facebook/post/comments',
-      params,
-      key,
-    );
-    creditsRemaining = data.credits_remaining ?? creditsRemaining;
-    if (!data.success) break;
-    for (const c of data.comments ?? []) {
-      all.push({
-        id: c.id,
-        text: c.text,
-        timestamp: toUnix(c.created_at),
-        author: c.author.name,
-        author_id: c.author.id,
-        like_count: c.reaction_count,
-        parent: 'root',
-      });
-      if (all.length >= max) break;
-    }
-    if (!data.has_next_page || (data.comments ?? []).length === 0) break;
-    cursor = data.cursor;
-  }
-  return { comments: all, creditsRemaining };
+  const data = await apiFetch<FacebookResponse>(
+    '/v1/facebook/post/comments',
+    { url },
+    key,
+  );
+  if (!data.success) return { comments: [], creditsRemaining: data.credits_remaining ?? null };
+  const comments: NormalizedComment[] = (data.comments ?? [])
+    .slice(0, max)
+    .map((c) => ({
+      id: c.id,
+      text: c.text,
+      timestamp: toUnix(c.created_at),
+      author: c.author.name,
+      author_id: c.author.id,
+      like_count: c.reaction_count,
+      parent: 'root',
+    }));
+  return { comments, creditsRemaining: data.credits_remaining ?? null };
 }
 
 /* ── Public API ─────────────────────────────────────── */
