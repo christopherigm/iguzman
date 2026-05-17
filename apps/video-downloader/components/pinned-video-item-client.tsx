@@ -678,7 +678,7 @@ export function PinnedVideoItemClient({
             onClick={handleCopy}
             aria-label={t('copyLink')}
             title={copying ? t('copied') : t('copyLink')}
-            icon="/icons/copy.svg"
+            icon="/icons/url.svg"
             iconSize="15px"
             iconColor={
               copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'

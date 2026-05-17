@@ -314,7 +314,9 @@ export function PinnedVideoItemDownloading({
     onUpdate(video.uuid, { error: null });
     try {
       const scrapeKey = localStorage.getItem('vd_scrape_key') ?? '';
-      const downloadHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      const downloadHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
       if (scrapeKey) downloadHeaders['x-scrapecreators-key'] = scrapeKey;
       const res = await fetch('/api/download-video', {
         method: 'POST',
@@ -491,7 +493,7 @@ export function PinnedVideoItemDownloading({
             onClick={handleCopy}
             aria-label={t('copyLink')}
             title={copying ? t('copied') : t('copyLink')}
-            icon="/icons/copy.svg"
+            icon="/icons/url.svg"
             iconSize="15px"
             iconColor={
               copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
