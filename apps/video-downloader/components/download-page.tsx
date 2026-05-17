@@ -14,6 +14,7 @@ import {
   readFromOPFS,
   deleteFromOPFS,
 } from '@/lib/opfs';
+import { MigrationBanner } from './migration-banner';
 import './download-page.css';
 
 /* ── Entry shape from DownloadForm ──────────────────── */
@@ -164,7 +165,7 @@ function useOPFSRecovery({
 
 /* ── Component ──────────────────────────────────────── */
 
-function DownloadPageInner() {
+function DownloadPageInner({ serverDate }: { serverDate: string }) {
   const {
     pinned,
     completed,
@@ -233,6 +234,7 @@ function DownloadPageInner() {
         onClearStorage={clearCompleted}
         onRemoveVideosByUuids={removeCompletedBulk}
       />
+      <MigrationBanner serverDate={serverDate} />
       {storageError ? (
         <Typography
           as="p"
@@ -258,10 +260,10 @@ function DownloadPageInner() {
   );
 }
 
-export function DownloadPage() {
+export function DownloadPage({ serverDate }: { serverDate: string }) {
   return (
     <OPFSUrlProvider>
-      <DownloadPageInner />
+      <DownloadPageInner serverDate={serverDate} />
     </OPFSUrlProvider>
   );
 }

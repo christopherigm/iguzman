@@ -10,6 +10,7 @@ type Props = {
 export default async function Home({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const serverDate = new Date().toISOString();
 
   return (
     <Container
@@ -22,7 +23,7 @@ export default async function Home({ params }: Props) {
       <br />
       <br />
       <br />
-      <DownloadPage />
+      <DownloadPage serverDate={serverDate} />
       <br />
       <ThemeSwitch hideOnMobile />
       <br />
