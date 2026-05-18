@@ -40,6 +40,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const allItems = [
     { label: t('home'), href: '/' },
     { label: t('reelMode'), href: '/reel-mode' },
+    { label: t('credits'), href: '/credits' },
     { label: t('terms'), href: '/terms' },
   ];
   const items = allItems.filter((item) => item.href !== pathname);
@@ -72,14 +73,16 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
         searchBox={false}
         items={items}
         rightSlot={
-          <Button
-            icon="/icons/search.svg"
-            aria-label={t('searchModal.openLabel')}
-            onClick={() => setModalOpen(true)}
-            iconSize="20px"
-            styles={{ cursor: 'pointer' }}
-            kind="success"
-          />
+          <Box display="flex" alignItems="center" gap={8}>
+            <Button
+              icon="/icons/search.svg"
+              aria-label={t('searchModal.openLabel')}
+              onClick={() => setModalOpen(true)}
+              iconSize="20px"
+              styles={{ cursor: 'pointer' }}
+              kind="success"
+            />
+          </Box>
         }
       />
       {modalOpen && (

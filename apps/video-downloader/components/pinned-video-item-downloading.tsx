@@ -90,26 +90,22 @@ export function PinnedVideoItemDownloading({
       const name = task.name;
       const downloadURL = file ? `/api/media/${file}` : null;
 
-      if (task.scrapeCreditsRemaining != null) {
-        const credits = String(task.scrapeCreditsRemaining);
-        localStorage.setItem('vd_scrape_credits', credits);
-        window.dispatchEvent(
-          new CustomEvent('vd-credits-update', {
-            detail: task.scrapeCreditsRemaining,
-          }),
-        );
-      }
-
       // Update metadata without changing status yet — status stays 'downloading'
       // until OPFS migration (or the non-OPFS path below) fully completes.
       // This keeps the component as PinnedVideoItemDownloading during migration.
       onUpdate(video.uuid, {
         file: file ?? null,
         name: name ?? null,
+        fulltitle: task.fulltitle ?? null,
         downloadURL,
         thumbnail: task.thumbnail ?? null,
         duration: task.duration ?? null,
         uploader: task.uploader ?? null,
+        uploader_id: task.uploader_id ?? null,
+        uploader_url: task.uploader_url ?? null,
+        uploadTimestamp: task.uploadTimestamp ?? null,
+        description: task.description ?? null,
+        tags: task.tags ?? null,
         isH265: task.isH265 ?? false,
         sourceFps: task.sourceFps ?? null,
         width: task.width ?? null,
@@ -313,11 +309,11 @@ export function PinnedVideoItemDownloading({
   const handleDownload = useCallback(async () => {
     onUpdate(video.uuid, { error: null });
     try {
-      const scrapeKey = localStorage.getItem('vd_scrape_key') ?? '';
+      const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
       const downloadHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      if (scrapeKey) downloadHeaders['x-scrapecreators-key'] = scrapeKey;
+      if (creditsKey) downloadHeaders['x-credits-key'] = creditsKey;
       const res = await fetch('/api/download-video', {
         method: 'POST',
         headers: downloadHeaders,

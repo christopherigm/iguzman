@@ -55,7 +55,8 @@
     "smartDownload": "Download rápido de vídeo",
     "smartCaptions": "Legendas",
     "smartMaxHeight": "Resolução máxima",
-    "smartDownloadHintOn": "Smart Download: {resolution}",
+    "smartDownloadHintOn": "Smart: {resolution}",
+    "smartDownloadHintCredits": "({credits} créditos disponíveis)",
     "smartDownloadHintCaptions": "+ legendas",
     "smartDownloadHintComments": "+ comentários",
     "smartDownloadHintCommentsCredits": "+ comentários ({credits} restantes)",
@@ -104,6 +105,7 @@
   "Navbar": {
     "home": "Início",
     "reelMode": "Modo Reel",
+    "credits": "Créditos",
     "terms": "Termos e Condições",
     "searchModal": {
       "title": "Pesquisar",
@@ -328,5 +330,25 @@
     "close": "Fechar",
     "heading": "Estamos migrando para o Media 2 Go!",
     "body": "Após 31 de maio (faltam {days} dias), vd2.iguzman.com.mx será somente leitura — não haverá novos downloads disponíveis lá. Visite nosso novo site para continuar baixando."
+  },
+  "Credits": {
+    "balanceLabel": "{credits} créditos",
+    "buyCredits": "Comprar Créditos",
+    "buyMore": "Comprar Mais",
+    "restoreKey": "Restaurar Chave",
+    "purchaseTitle": "Comprar Créditos",
+    "purchaseText": "Selecione um pacote de créditos. Os créditos são usados para tradução de legendas, download de comentários e processamento no servidor.",
+    "creditsCount": "{credits} créditos",
+    "purchaseNote": "Sua chave é salva no seu navegador. Guarde-a em local seguro caso troque de dispositivo.",
+    "purchaseError": "Algo deu errado. Por favor, tente novamente.",
+    "redirecting": "Redirecionando...",
+    "checkout": "Ir para pagamento",
+    "restoreTitle": "Restaurar Chave de Créditos",
+    "restoreText": "Insira sua chave de créditos para restaurar seu saldo neste dispositivo.",
+    "restoreKeyLabel": "Chave de Créditos",
+    "restoreInvalidKey": "Chave não encontrada. Verifique e tente novamente.",
+    "restoreError": "Não foi possível verificar a chave. Tente novamente.",
+    "verifying": "Verificando...",
+    "restore": "Restaurar"
   }
 }
