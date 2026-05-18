@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getClient } from '@/lib/ws-client-db';
+import { join } from 'node:path';
+import { unlink } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { createTask, getTask, updateTask } from '@/lib/video-task-db';
 import type { TaskStatus } from '@/lib/types';
 import {
@@ -7,13 +9,26 @@ import {
   requireCredits,
   creditsErrorResponse,
 } from '@/lib/credits-middleware';
+import {
+  interpolateFps,
+  convertToH264,
+  convertToH265,
+  removeBlackBars,
+  burnSubtitles,
+  scaleDown,
+  type AnimationOptions,
+} from '@repo/helpers/ffmpeg-helper';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/server-processing' });
 
 const CREDITS_PER_SERVER_OP = 2;
 
-const WS_BROKER_URL = process.env.WS_BROKER_URL ?? '';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'development';
+const IS_PROD = NODE_ENV === 'production';
+const MEDIA_DIR = IS_PROD ? '/app/media' : './public/media';
+const FFMPEG_BINARY = 'ffmpeg';
+
 const VALID_OPS = [
   'interpolateFps',
   'removeBlackBars',
@@ -34,9 +49,123 @@ const STATUS_BY_OP: Record<ProcessingOp, TaskStatus> = {
   scaleDown: 'processing',
 };
 
+async function runFfmpegJob(
+  taskId: string,
+  op: ProcessingOp,
+  inputFileName: string,
+  params: Record<string, unknown>,
+): Promise<void> {
+  const inputPath = join(MEDIA_DIR, inputFileName);
+  const ext = inputFileName.split('.').pop() ?? 'mp4';
+  const outputFileName = `${randomUUID()}.${ext}`;
+  const outputPath = join(MEDIA_DIR, outputFileName);
+
+  let lastProgress = -1;
+  const onProgress = (pct: number) => {
+    const rounded = Math.round(pct);
+    if (rounded > lastProgress) {
+      lastProgress = rounded;
+      updateTask(taskId, { progress: rounded }).catch(() => {});
+    }
+  };
+
+  try {
+    switch (op) {
+      case 'interpolateFps':
+        await interpolateFps({
+          inputPath,
+          outputPath,
+          targetFps: Number(params.fps ?? 60),
+          ffmpegBinary: FFMPEG_BINARY,
+          onProgress,
+        });
+        break;
+
+      case 'convertToH264':
+        await convertToH264({
+          inputPath,
+          outputPath,
+          ffmpegBinary: FFMPEG_BINARY,
+          onProgress,
+        });
+        break;
+
+      case 'convertToH265':
+        await convertToH265({
+          inputPath,
+          outputPath,
+          ffmpegBinary: FFMPEG_BINARY,
+          onProgress,
+        });
+        break;
+
+      case 'removeBlackBars':
+        await removeBlackBars({
+          inputPath,
+          outputPath,
+          ffmpegBinary: FFMPEG_BINARY,
+          onProgress,
+        });
+        break;
+
+      case 'burnSubtitles':
+        await burnSubtitles({
+          inputPath,
+          outputPath,
+          srtContent: String(params.srtContent ?? ''),
+          alignment: Number(params.alignment ?? 2),
+          marginV: Number(params.marginV ?? 40),
+          fontSize: Number(params.fontSize ?? 16),
+          bold: Boolean(params.bold),
+          italic: Boolean(params.italic),
+          primaryColour: String(params.primaryColour ?? '&H00FFFFFF'),
+          backColour: String(params.backColour ?? '&H70000000'),
+          borderStyle: Number(params.borderStyle ?? 3) as 1 | 3,
+          outline: Number(params.outline ?? 0),
+          animation: (params.animation ?? {}) as AnimationOptions,
+          ffmpegBinary: FFMPEG_BINARY,
+          onProgress,
+        });
+        break;
+
+      case 'scaleDown':
+        await scaleDown({
+          inputPath,
+          outputPath,
+          targetHeight: Number(params.targetHeight ?? 720),
+          ffmpegBinary: FFMPEG_BINARY,
+          onProgress,
+        });
+        break;
+    }
+
+    const extraFields: Partial<{ isH265: boolean }> = {};
+    if (op === 'convertToH265') extraFields.isH265 = true;
+    if (op === 'convertToH264') extraFields.isH265 = false;
+
+    await updateTask(taskId, {
+      status: 'done',
+      file: outputFileName,
+      progress: 100,
+      error: null,
+      ...extraFields,
+    });
+
+    log.info({ taskId, op, outputFileName }, 'FFmpeg job completed');
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log.error({ err, taskId, op }, 'FFmpeg job failed');
+    await updateTask(taskId, {
+      status: 'error',
+      error: { code: 'DOWNLOAD_FAILED', message },
+      progress: 0,
+    }).catch(() => {});
+    unlink(outputPath).catch(() => {});
+  }
+}
+
 export async function POST(request: NextRequest) {
   let body: {
-    clientUuid?: string;
     op?: string;
     taskId?: string;
     params?: Record<string, unknown>;
@@ -44,12 +173,12 @@ export async function POST(request: NextRequest) {
 
   try {
     body = (await request.json()) as typeof body;
-  } catch (err) {
-    log.warn({ err }, 'Failed to parse request body as JSON');
+  } catch {
+    log.warn('Failed to parse request body as JSON');
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { clientUuid, op, params } = body;
+  const { op, params } = body;
   let { taskId } = body;
 
   const creditsKey = getCreditsKey(request);
@@ -57,49 +186,44 @@ export async function POST(request: NextRequest) {
   const creditResult = await requireCredits(creditsKey, CREDITS_PER_SERVER_OP);
   if (!creditResult.ok) return creditsErrorResponse(creditResult.error);
 
-  if (!clientUuid || !op || !taskId || !params) {
-    log.warn(
-      { clientUuid, op, taskId, hasParams: !!params },
-      'Missing required fields in request body',
-    );
-    return NextResponse.json(
-      { error: 'Missing clientUuid, op, taskId, or params' },
-      { status: 400 },
-    );
-  }
-
-  if (!/^[0-9a-f]{24}$/i.test(taskId)) {
-    log.warn({ taskId, clientUuid, op }, 'Invalid taskId format');
-    return NextResponse.json({ error: 'Invalid taskId' }, { status: 400 });
+  if (!op || !params) {
+    log.warn({ op, hasParams: !!params }, 'Missing op or params');
+    return NextResponse.json({ error: 'Missing op or params' }, { status: 400 });
   }
 
   if (!VALID_OPS.includes(op as ProcessingOp)) {
-    log.warn({ op, clientUuid, taskId }, 'Unknown processing op requested');
+    log.warn({ op }, 'Unknown processing op');
     return NextResponse.json(
       { error: `Invalid op. Valid: ${VALID_OPS.join(', ')}` },
       { status: 400 },
     );
   }
 
-  const client = await getClient(clientUuid);
-  if (!client) {
-    log.warn({ clientUuid, taskId, op }, 'Client not found in registry');
-    return NextResponse.json(
-      { error: 'Client not registered' },
-      { status: 404 },
-    );
+  if (taskId && !/^[0-9a-f]{24}$/i.test(taskId)) {
+    log.warn({ taskId }, 'Invalid taskId format');
+    return NextResponse.json({ error: 'Invalid taskId' }, { status: 400 });
   }
 
-  let task = await getTask(taskId);
   const inputFileParam =
     typeof params.inputFile === 'string' ? params.inputFile : undefined;
 
+  if (
+    inputFileParam &&
+    (inputFileParam.includes('/') || inputFileParam.includes('..'))
+  ) {
+    log.warn({ inputFileParam }, 'Path traversal attempt in inputFile');
+    return NextResponse.json({ error: 'Invalid inputFile' }, { status: 400 });
+  }
+
+  let task = taskId ? await getTask(taskId) : null;
+
   if (!task) {
-    // OPFS video: original task was removed from DB. Create a temporary one so
-    // the broker has a task to write progress/results back to.
     if (!inputFileParam) {
-      log.warn({ taskId, clientUuid, op }, 'Task not found in database');
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+      log.warn({ taskId, op }, 'Task not found and no inputFile provided');
+      return NextResponse.json(
+        { error: 'Task not found' },
+        { status: 404 },
+      );
     }
     const tempTask = await createTask({ url: 'opfs://local' });
     const newId = tempTask._id.toString();
@@ -107,81 +231,23 @@ export async function POST(request: NextRequest) {
     task = { ...tempTask, file: inputFileParam };
     taskId = newId;
     log.info(
-      { originalTaskId: body.taskId, newTaskId: newId, clientUuid, op },
+      { originalTaskId: body.taskId, newTaskId: newId, op },
       'Created temp task for OPFS video',
     );
   }
 
-  let inputFile = inputFileParam;
+  const inputFile = inputFileParam ?? task.file;
   if (!inputFile) {
-    if (!task.file) {
-      log.warn(
-        { taskId, clientUuid, op },
-        'Task has no output file to use as input',
-      );
-      return NextResponse.json(
-        { error: 'Task has no output file yet' },
-        { status: 422 },
-      );
-    }
-    inputFile = task.file;
+    log.warn({ taskId }, 'No input file available');
+    return NextResponse.json({ error: 'No input file available' }, { status: 422 });
   }
 
-  if (!WS_BROKER_URL) {
-    log.error(
-      { taskId, clientUuid, op },
-      'WS_BROKER_URL env var is not configured',
-    );
-    return NextResponse.json(
-      { error: 'WS_BROKER_URL not configured' },
-      { status: 503 },
-    );
-  }
-
-  const brokerParams = { ...params, taskId, inputFile };
   const activeStatus = STATUS_BY_OP[op as ProcessingOp];
+  await updateTask(taskId!, { status: activeStatus, progress: 0, error: null });
 
-  await updateTask(taskId, {
-    status: activeStatus,
-    progress: 0,
-    error: null,
-  });
+  const jobParams = { ...params, inputFile };
+  void runFfmpegJob(taskId!, op as ProcessingOp, inputFile, jobParams);
 
-  try {
-    const res = await fetch(`${WS_BROKER_URL}/api/jobs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        jobId: taskId,
-        taskId,
-        clientUuid,
-        op,
-        params: brokerParams,
-      }),
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      log.warn(
-        { taskId, status: res.status, text },
-        'Broker rejected processing task dispatch',
-      );
-      return NextResponse.json(
-        { error: `Broker error: ${res.status}`, detail: text },
-        { status: res.status === 409 ? 409 : 502 },
-      );
-    }
-  } catch (err) {
-    log.error({ err, taskId }, 'Failed to reach ws-broker');
-    return NextResponse.json(
-      { error: 'ws-broker unreachable' },
-      { status: 503 },
-    );
-  }
-
-  log.info({ taskId, clientUuid, op }, 'Server processing task dispatched');
+  log.info({ taskId, op, inputFile }, 'Server FFmpeg job started');
   return NextResponse.json({ taskId }, { status: 201 });
 }

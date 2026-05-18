@@ -273,8 +273,7 @@ export function VideoGrid({
                 video.status === 'pending' ||
                 video.status === 'downloading' ||
                 video.status === 'queued';
-              const isServerMode =
-                !!video.wsClientUuid && video.wsClientUuid !== '__local__';
+              const isServerMode = video.useServerProcessing === true;
 
               return (
                 <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>

@@ -271,83 +271,31 @@ export function PinnedVideoItemServer({
         ...opts.extraParams,
       };
 
-      const tryDispatch = async (
-        clientUuid: string,
-      ): Promise<string | null> => {
-        try {
-          const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
-          const res = await fetchWithRetry('/api/server-processing', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
-            },
-            body: JSON.stringify({
-              clientUuid,
-              op: opts.op,
-              taskId: video.taskId ?? '',
-              params,
-            }),
-          });
-
-          if (res.status === 409 || res.status === 503 || res.status === 404) {
-            return null;
-          }
-
-          if (!res.ok) {
-            const data = (await res.json().catch(() => ({}))) as {
-              error?: string;
-            };
-            throw new Error(data.error ?? `Server error ${res.status}`);
-          }
-
-          const data = (await res.json()) as { taskId: string };
-          return data.taskId;
-        } catch (err) {
-          if (err instanceof Error && !err.message.startsWith('Server error')) {
-            throw err;
-          }
-          return null;
-        }
-      };
-
       try {
-        let dispatchedTaskId: string | null = await tryDispatch(
-          video.wsClientUuid!,
-        );
+        const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
+        const res = await fetchWithRetry('/api/server-processing', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
+          },
+          body: JSON.stringify({
+            op: opts.op,
+            taskId: video.taskId ?? '',
+            params,
+          }),
+        });
 
-        // Preferred server unavailable — try any other connected server
-        if (!dispatchedTaskId) {
-          const clientsRes = await fetch('/api/ws-clients').catch(() => null);
-          const clients = clientsRes?.ok
-            ? ((await clientsRes.json()) as Array<{
-                uuid: string;
-                connected: boolean;
-              }>)
-            : [];
-          const alternative = clients.find(
-            (c) => c.connected && c.uuid !== video.wsClientUuid,
-          );
-          if (alternative) {
-            dispatchedTaskId = await tryDispatch(alternative.uuid);
-            if (dispatchedTaskId) {
-              onUpdate(video.uuid, { wsClientUuid: alternative.uuid });
-            }
-          }
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          throw new Error(data.error ?? `Server error ${res.status}`);
         }
 
-        if (!dispatchedTaskId) {
-          setJobPhase('idle');
-          onUpdate(video.uuid, {
-            status: 'error',
-            error: t('errorNoServerAvailable'),
-            serverTaskId: null,
-          });
-          return;
-        }
-
-        onUpdate(video.uuid, { serverTaskId: dispatchedTaskId });
-        pollForTaskRef.current(dispatchedTaskId, {
+        const data = (await res.json()) as { taskId: string };
+        onUpdate(video.uuid, { serverTaskId: data.taskId });
+        pollForTaskRef.current(data.taskId, {
           donePatch: opts.donePatch,
           completeAfter: opts.completeAfter,
           activeStatus: opts.activeStatus,
@@ -368,7 +316,6 @@ export function PinnedVideoItemServer({
       video.file,
       video.justAudio,
       video.taskId,
-      video.wsClientUuid,
       video.serverTaskId,
       video.opfsEnabled,
       video.opfsStored,

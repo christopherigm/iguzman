@@ -582,6 +582,33 @@ export interface ExtractAudioOptions {
   onProgress?: (pct: number) => void;
 }
 
+export interface ConvertToH265Options {
+  /** Absolute path to the input video file. */
+  inputPath: string;
+  /** Absolute path where the output file will be written. */
+  outputPath: string;
+  /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
+  ffmpegBinary?: string;
+  /** Called with a value 0–100 as encoding progresses. */
+  onProgress?: (pct: number) => void;
+}
+
+export interface ScaleDownOptions {
+  /** Absolute path to the input video file. */
+  inputPath: string;
+  /** Absolute path where the output file will be written. */
+  outputPath: string;
+  /**
+   * Target short-side pixels (e.g. 720 for HD).
+   * Width/height is automatically calculated to preserve aspect ratio.
+   */
+  targetHeight: number;
+  /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
+  ffmpegBinary?: string;
+  /** Called with a value 0–100 as encoding progresses. */
+  onProgress?: (pct: number) => void;
+}
+
 export interface BurnSubtitlesOptions {
   /** Absolute path to the input video file. */
   inputPath: string;
@@ -629,7 +656,7 @@ export interface BurnSubtitlesOptions {
  * Interpolates a video to a higher frame rate using `minterpolate`.
  *
  * @returns The resolved `outputPath`.
- * @throws When the input resolution exceeds QHD+ (2560×1440) or ffmpeg fails.
+ * @throws When ffmpeg exits with a non-zero code.
  */
 export async function interpolateFps(
   options: InterpolateFpsOptions,
@@ -645,16 +672,7 @@ export async function interpolateFps(
     onProgress,
   } = options;
 
-  const { width, height, durationSec } = await probeVideo(
-    inputPath,
-    ffmpegBinary,
-  );
-
-  if (width > 2560 || height > 1440) {
-    throw new Error(
-      `Video resolution ${width}x${height} exceeds QHD+ (2560×1440). FPS interpolation is not supported for resolutions above QHD+.`,
-    );
-  }
+  const { durationSec } = await probeVideo(inputPath, ffmpegBinary);
 
   const estimatedFrames = durationSec > 0 ? durationSec * targetFps : 0;
   const videoFilter = `minterpolate=fps=${targetFps}:mi_mode=${miMode}:mc_mode=${mcMode}:me_mode=bidir:vsbmc=1:search_param=${searchParam}`;
@@ -1064,6 +1082,12 @@ export async function burnSubtitles(
         inputPath,
         '-vf',
         vf,
+        '-c:v',
+        'libx264',
+        '-preset',
+        'fast',
+        '-crf',
+        '23',
         '-c:a',
         'copy',
         ...(needsRotation ? ['-metadata:s:v:0', 'rotate=0'] : []),
@@ -1089,6 +1113,111 @@ export async function burnSubtitles(
       }
     }
   }
+
+  return outputPath;
+}
+
+/**
+ * Converts a video to H.265 (HEVC) while copying the audio stream.
+ *
+ * @returns The resolved `outputPath`.
+ * @throws When ffmpeg exits with a non-zero code.
+ */
+export async function convertToH265(
+  options: ConvertToH265Options,
+): Promise<string> {
+  const {
+    inputPath,
+    outputPath,
+    ffmpegBinary = DEFAULT_FFMPEG,
+    onProgress,
+  } = options;
+
+  const { durationSec, fps } = await probeVideo(inputPath, ffmpegBinary);
+  const estimatedFrames = durationSec > 0 ? durationSec * fps : 0;
+
+  await runFFmpeg(
+    [
+      '-i',
+      inputPath,
+      '-c:v',
+      'libx265',
+      '-preset',
+      'fast',
+      '-crf',
+      '28',
+      '-x265-params',
+      `pools=${CPU_COUNT}`,
+      '-tag:v',
+      'hvc1',
+      '-c:a',
+      'copy',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ],
+    ffmpegBinary,
+    onProgress,
+    estimatedFrames,
+  );
+
+  return outputPath;
+}
+
+/**
+ * Scales a video down to a lower resolution.
+ *
+ * The short side of the video is set to `targetHeight` while the long side
+ * is calculated automatically to preserve the original aspect ratio.
+ * Both dimensions are rounded to the nearest multiple of 2.
+ *
+ * @returns The resolved `outputPath`.
+ * @throws When ffmpeg exits with a non-zero code.
+ */
+export async function scaleDown(options: ScaleDownOptions): Promise<string> {
+  const {
+    inputPath,
+    outputPath,
+    targetHeight,
+    ffmpegBinary = DEFAULT_FFMPEG,
+    onProgress,
+  } = options;
+
+  const {
+    width: origW,
+    height: origH,
+    durationSec,
+    fps,
+  } = await probeVideo(inputPath, ffmpegBinary);
+  const estimatedFrames = durationSec > 0 ? durationSec * fps : 0;
+
+  const isPortrait = origH > origW && origW > 0;
+  const scaleFilter = isPortrait
+    ? `scale=${targetHeight}:-2:flags=lanczos`
+    : `scale=-2:${targetHeight}:flags=lanczos`;
+
+  await runFFmpeg(
+    [
+      '-i',
+      inputPath,
+      '-vf',
+      scaleFilter,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'fast',
+      '-crf',
+      '23',
+      '-c:a',
+      'copy',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ],
+    ffmpegBinary,
+    onProgress,
+    estimatedFrames,
+  );
 
   return outputPath;
 }

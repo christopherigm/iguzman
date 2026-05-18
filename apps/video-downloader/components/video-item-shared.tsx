@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
@@ -9,15 +9,10 @@ import { Icon } from '@repo/ui/core-elements/icon';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { Button } from '@repo/ui/core-elements/button';
 import { Grid } from '@repo/ui/core-elements/grid';
+import { Switch } from '@repo/ui/core-elements/switch';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import type { StoredVideo, VideoStatus } from './use-video-store';
-import {
-  WsClientPanel,
-  THIS_DEVICE_UUID,
-  type StoredWsClient,
-} from './ws-client-panel';
 import Divider from '@repo/ui/core-elements/divider';
-
-export { THIS_DEVICE_UUID, type StoredWsClient };
 
 /* ── Constants ──────────────────────────────────────── */
 
@@ -726,8 +721,8 @@ export function VideoExtraActions({
   onMakeOffline,
   onScaleDown,
   onDuplicate,
-  initialWsClientUuid,
-  onWsClientChange,
+  useServerProcessing,
+  onServerModeChange,
   t,
 }: {
   video: StoredVideo;
@@ -746,14 +741,15 @@ export function VideoExtraActions({
   onMakeOffline?: () => Promise<void>;
   onScaleDown?: (targetHeight: number) => void;
   onDuplicate?: () => Promise<void>;
-  initialWsClientUuid?: string | null;
-  onWsClientChange?: (uuid: string) => void;
+  useServerProcessing?: boolean;
+  onServerModeChange?: (enabled: boolean) => void;
   t: TranslationFn;
 }) {
-  const [currentWsUuid, setCurrentWsUuid] = useState<string>(
-    initialWsClientUuid ?? THIS_DEVICE_UUID,
-  );
-  const [wsClientOnline, setWsClientOnline] = useState(true);
+  const [serverMode, setServerMode] = useState(useServerProcessing ?? false);
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const [creditsLoading, setCreditsLoading] = useState(false);
+  const autoEnabledRef = useRef(false);
+  const [showServerOffModal, setShowServerOffModal] = useState(false);
   const [fpsDeviceModalFps, setFpsDeviceModalFps] = useState<number | null>(
     null,
   );
@@ -761,12 +757,40 @@ export function VideoExtraActions({
   const [showScaleDownModal, setShowScaleDownModal] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
 
-  const serverSelected = currentWsUuid !== THIS_DEVICE_UUID;
-  const canProcess =
-    !isBusy &&
-    !!video.downloadURL &&
-    !video.justAudio &&
-    (!serverSelected || wsClientOnline);
+  useEffect(() => {
+    if (!onServerModeChange) return;
+    setCreditsLoading(true);
+    const key = localStorage.getItem('vd_credits_key');
+    if (!key) {
+      setCreditsBalance(0);
+      setCreditsLoading(false);
+      return;
+    }
+    fetch('/api/credits/balance', { headers: { 'x-credits-key': key } })
+      .then((res) =>
+        res.ok
+          ? (res.json() as Promise<{ credits: number }>)
+          : Promise.resolve({ credits: 0 }),
+      )
+      .then((data) => {
+        setCreditsBalance(data.credits);
+        if (
+          data.credits > 0 &&
+          !useServerProcessing &&
+          !autoEnabledRef.current
+        ) {
+          autoEnabledRef.current = true;
+          setServerMode(true);
+          onServerModeChange(true);
+        }
+      })
+      .catch(() => setCreditsBalance(0))
+      .finally(() => setCreditsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const serverSelected = serverMode;
+  const canProcess = !isBusy && !!video.downloadURL && !video.justAudio;
 
   const isFhdOrHigher =
     video.height != null
@@ -787,7 +811,7 @@ export function VideoExtraActions({
   );
 
   const handleFpsClick = (fps: number) => {
-    if (isFhdOrHigher && currentWsUuid === THIS_DEVICE_UUID) {
+    if (isFhdOrHigher && !serverSelected) {
       setFpsDeviceModalFps(fps);
       return;
     }
@@ -796,6 +820,18 @@ export function VideoExtraActions({
 
   return (
     <>
+      {showServerOffModal ? (
+        <ConfirmationModal
+          title={t('serverOffConfirmTitle')}
+          text={t('serverOffConfirmText')}
+          okCallback={() => {
+            setServerMode(false);
+            onServerModeChange?.(false);
+            setShowServerOffModal(false);
+          }}
+          cancelCallback={() => setShowServerOffModal(false)}
+        />
+      ) : null}
       {fpsDeviceModalFps !== null ? (
         <ConfirmationModal
           title={t('fpsDeviceOnlyTitle')}
@@ -831,35 +867,51 @@ export function VideoExtraActions({
         </ConfirmationModal>
       ) : null}
       <Box className="vi-extra-actions">
-        {onWsClientChange ? (
-          <WsClientPanel
-            showManagement
-            initialValue={initialWsClientUuid}
-            onChange={(uuid) => {
-              setCurrentWsUuid(uuid);
-              onWsClientChange(uuid);
-            }}
-            onOnlineChange={setWsClientOnline}
-            labels={{
-              thisDevice: t('thisDevice'),
-              server: t('server'),
-              addServer: t('addServer'),
-              deleteServer: t('deleteServer'),
-              addServerTitle: t('addServerTitle'),
-              addServerText: t('addServerText'),
-              wsClientUuidLabel: t('wsClientUuidLabel'),
-              wsClientNameLabel: t('wsClientNameLabel'),
-              deleteServerTitle: t('deleteServerTitle'),
-              deleteServerText: (label) => t('deleteServerText', { label }),
-              installHint: t('installHint'),
-              downloadLinux: t('downloadLinux'),
-              // downloadWindows: t('downloadWindows'), // Future: fix Windows client and uncomment this
-              offline: t('wsClientOffline'),
-            }}
-          />
+        {onServerModeChange ? (
+          creditsLoading ? (
+            <ProgressBar marginTop={4} />
+          ) : creditsBalance !== null && creditsBalance > 0 ? (
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              width="100%"
+              gap={8}
+            >
+              <Typography variant="caption">{t('useServer')}</Typography>
+              <Switch
+                checked={serverMode}
+                onChange={(v) => {
+                  if (!v) {
+                    setShowServerOffModal(true);
+                    return;
+                  }
+                  setServerMode(true);
+                  onServerModeChange(true);
+                }}
+                aria-label={t('useServer')}
+              />
+            </Box>
+          ) : (
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              width="100%"
+              gap={8}
+            >
+              <Typography variant="caption">{t('serverNoCredits')}</Typography>
+              <Button
+                text={t('serverBuyCredits')}
+                href="/credits"
+                size="sm"
+                kind="success"
+              />
+            </Box>
+          )
         ) : null}
         {/* ── Divider ──────────────────────────────────── */}
-        <Divider marginTop={5} opacity={0.5} />
+        <Divider marginTop={2} opacity={0.5} />
         <Grid container spacing={1} marginTop={5} marginBottom={5}>
           {onMakeOffline &&
           !video.opfsStored &&
@@ -898,9 +950,7 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={onConvert}
-                disabled={
-                  isBusy || h264Error || (serverSelected && !wsClientOnline)
-                }
+                disabled={isBusy || h264Error}
                 aria-label={t('convertH264')}
                 title={t('convertH264')}
                 icon="/icons/convert.svg"
@@ -918,9 +968,7 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={onConvertH265}
-                disabled={
-                  isBusy || h265Error || !serverSelected || !wsClientOnline
-                }
+                disabled={isBusy || h265Error || !serverSelected}
                 aria-label={t('convertH265')}
                 title={
                   !serverSelected

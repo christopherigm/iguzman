@@ -8,7 +8,6 @@ import type { BurnCaptionsConfig } from '@/lib/types';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import {
   STATUS_COLORS,
-  THIS_DEVICE_UUID,
   resolveMediaUrl,
   triggerBrowserDownload,
   downloadThumbnail,
@@ -73,9 +72,6 @@ export function ReadOnlyVideoItem({
   const [copying, setCopying] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [showBurnModal, setShowBurnModal] = useState(false);
-  const [selectedWsClientUuid, setSelectedWsClientUuid] = useState<string>(
-    video.wsClientUuid ?? THIS_DEVICE_UUID,
-  );
 
   const displayName =
     video.fulltitle ??
@@ -83,13 +79,10 @@ export function ReadOnlyVideoItem({
     video.uploader ??
     (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
 
-  /* ── Change ws-client selection ──────────────────── */
-  const handleWsClientChange = useCallback(
-    (uuid: string) => {
-      setSelectedWsClientUuid(uuid);
-      onUpdate(video.uuid, {
-        wsClientUuid: uuid === THIS_DEVICE_UUID ? null : uuid,
-      });
+  /* ── Server mode toggle ──────────────────────────── */
+  const handleServerModeChange = useCallback(
+    (enabled: boolean) => {
+      onUpdate(video.uuid, { useServerProcessing: enabled });
     },
     [onUpdate, video.uuid],
   );
@@ -394,8 +387,8 @@ export function ReadOnlyVideoItem({
           onScaleDown={(height) => onReprocess(video.uuid, 'scaleDown', height)}
           onMakeOffline={handleMakeOffline}
           onDuplicate={handleDuplicate}
-          initialWsClientUuid={video.wsClientUuid ?? null}
-          onWsClientChange={handleWsClientChange}
+          useServerProcessing={video.useServerProcessing}
+          onServerModeChange={handleServerModeChange}
           t={t}
         />
       ) : null}

@@ -65,8 +65,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   burnCaptionsConfig: BurnCaptionsConfig | null;
   /** Whether captions have been successfully burned into the video. */
   captionsBurned: boolean;
-  /** UUID of the ws-client selected for server-side FFmpeg. Null or '__local__' = local WASM. */
-  wsClientUuid: string | null;
+  /** Whether to use server-side FFmpeg processing (true) or local WASM (false). */
+  useServerProcessing: boolean;
   /** Task ID of the last server-side FFmpeg job dispatched for this video. Null when idle. */
   serverTaskId: string | null;
   /** Whether Origin Private File System device-local storage was requested for this video. */
@@ -149,7 +149,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
       v.thumbnail ??
       ((v as unknown as Record<string, unknown>).thumbnailFile as string) ??
       null,
-    wsClientUuid: v.wsClientUuid ?? null,
+    useServerProcessing: v.useServerProcessing ?? false,
     serverTaskId: v.serverTaskId ?? null,
     opfsEnabled: v.opfsEnabled ?? true,
     opfsKey: v.opfsKey ?? null,
@@ -337,7 +337,7 @@ export function useVideoStore() {
         captionUrl?: string | null;
         commentsEnabled?: boolean;
         maxComments?: number | null;
-        wsClientUuid?: string | null;
+        useServerProcessing?: boolean;
         opfsEnabled?: boolean;
       },
     ): string => {
@@ -390,7 +390,7 @@ export function useVideoStore() {
         opfsCommentsKey: null,
         burnCaptionsConfig: null,
         captionsBurned: false,
-        wsClientUuid: partial.wsClientUuid ?? null,
+        useServerProcessing: partial.useServerProcessing ?? false,
         serverTaskId: null,
         opfsEnabled: partial.opfsEnabled ?? true,
         opfsKey: null,

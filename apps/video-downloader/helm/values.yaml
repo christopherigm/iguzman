@@ -6,7 +6,7 @@
 revisionHistoryLimit: 2 # how many old ReplicaSets to keep for rollbacks
 
 # -- Number of pod replicas
-replicaCount: 3
+replicaCount: 4
 
 # ─── Container image ────────────────────────────────────────
 image:
@@ -93,12 +93,13 @@ probes:
 
 # ─── Node affinity (schedule on specific nodes) ─────────────
 nodeAffinity:
-  enabled: false
+  enabled: true
   # List of node names where the pods should be scheduled.
-  nodeNames: []
-  # - node-1
-  # - node-2
-  # - node-3
+  nodeNames:
+    - node1
+    - node2
+    - node4
+    - node6
 
 # ─── Nginx sidecar (serves media files) ─────────────────────
 # Replaces the Next.js GET /api/media/* endpoint with a high-

@@ -9,15 +9,9 @@ import { Button } from '@repo/ui/core-elements/button';
 import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
 import { Container } from '@repo/ui/core-elements/container';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import { CREDIT_PACKS, type CreditPack } from '../lib/credit-packs';
 
 const LS_KEY = 'vd_credits_key';
-
-type Pack = {
-  id: string;
-  credits: number;
-  priceCents: number;
-  label: string;
-};
 
 function PackButton({
   pack,
@@ -25,7 +19,7 @@ function PackButton({
   onSelect,
   creditsLabel,
 }: {
-  pack: Pack;
+  pack: CreditPack;
   isSelected: boolean;
   onSelect: (id: string) => void;
   creditsLabel: string;
@@ -63,18 +57,6 @@ function PackButton({
     </button>
   );
 }
-
-const PACKS: {
-  id: string;
-  credits: number;
-  priceCents: number;
-  label: string;
-}[] = [
-  { id: 'basic', credits: 100, priceCents: 999, label: 'Basic' },
-  { id: 'value', credits: 275, priceCents: 2499, label: 'Value' },
-  { id: 'pro', credits: 650, priceCents: 4999, label: 'Pro' },
-  { id: 'max', credits: 1300, priceCents: 9999, label: 'Max' },
-];
 
 export function CreditsPageContent() {
   const t = useTranslations('Credits');
@@ -242,7 +224,7 @@ export function CreditsPageContent() {
                 >
                   {t('purchaseText')}
                 </Typography>
-                {PACKS.map((pack) => (
+                {CREDIT_PACKS.map((pack) => (
                   <PackButton
                     key={pack.id}
                     pack={pack}
@@ -405,7 +387,7 @@ export function CreditsPageContent() {
                 >
                   {t('purchaseText')}
                 </Typography>
-                {PACKS.map((pack) => (
+                {CREDIT_PACKS.map((pack) => (
                   <PackButton
                     key={pack.id}
                     pack={pack}
