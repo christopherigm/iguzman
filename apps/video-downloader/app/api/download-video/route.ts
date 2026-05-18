@@ -14,6 +14,13 @@ import {
   isScrapeCreatorsPlatform,
   fetchAllSocialComments,
 } from '@/lib/scrapecreators';
+import {
+  getCreditsKey,
+  requireCredits,
+  creditsErrorResponse,
+} from '@/lib/credits-middleware';
+
+const CREDITS_PER_COMMENTS = 1;
 
 const log = logger.child({ module: 'api/download-video' });
 
@@ -41,7 +48,6 @@ type RequestBody = Partial<VideoDownloadInput> &
   Pick<VideoDownloadInput, 'url'>;
 
 export async function POST(request: Request) {
-  const scrapeKey = request.headers.get('x-scrapecreators-key') ?? undefined;
   let body: RequestBody;
 
   try {
@@ -77,6 +83,16 @@ export async function POST(request: Request) {
       },
       { status: 400 },
     );
+  }
+
+  /* 0. Credit gate: if comments are requested for a ScrapeCreators platform,
+        validate and deduct 1 credit before starting the download. */
+  let creditsKey: string | null = null;
+  if (commentsEnabled && isScrapeCreatorsPlatform(url)) {
+    creditsKey = getCreditsKey(request);
+    if (!creditsKey) return creditsErrorResponse('NO_CREDITS_KEY');
+    const creditResult = await requireCredits(creditsKey, CREDITS_PER_COMMENTS);
+    if (!creditResult.ok) return creditsErrorResponse(creditResult.error);
   }
 
   /* 1. Deduplicate: return the existing task if one is already running */
@@ -222,7 +238,6 @@ export async function POST(request: Request) {
             const { comments, creditsRemaining } = await fetchAllSocialComments(
               url,
               maxComments ?? 20,
-              scrapeKey,
             );
             scrapeCreditsRemaining = creditsRemaining;
             if (comments.length > 0 && result.file) {

@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getClient } from '@/lib/ws-client-db';
 import { createTask, getTask, updateTask } from '@/lib/video-task-db';
 import type { TaskStatus } from '@/lib/types';
+import {
+  getCreditsKey,
+  requireCredits,
+  creditsErrorResponse,
+} from '@/lib/credits-middleware';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/server-processing' });
+
+const CREDITS_PER_SERVER_OP = 2;
 
 const WS_BROKER_URL = process.env.WS_BROKER_URL ?? '';
 const VALID_OPS = [
@@ -44,6 +51,11 @@ export async function POST(request: NextRequest) {
 
   const { clientUuid, op, params } = body;
   let { taskId } = body;
+
+  const creditsKey = getCreditsKey(request);
+  if (!creditsKey) return creditsErrorResponse('NO_CREDITS_KEY');
+  const creditResult = await requireCredits(creditsKey, CREDITS_PER_SERVER_OP);
+  if (!creditResult.ok) return creditsErrorResponse(creditResult.error);
 
   if (!clientUuid || !op || !taskId || !params) {
     log.warn(

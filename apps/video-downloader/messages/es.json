@@ -55,7 +55,8 @@
     "smartDownload": "Descarga inteligente de video",
     "smartCaptions": "Subtítulos",
     "smartMaxHeight": "Resolución máxima",
-    "smartDownloadHintOn": "Smart Download: {resolution}",
+    "smartDownloadHintOn": "Smart: {resolution}",
+    "smartDownloadHintCredits": "({credits} créditos disponibles)",
     "smartDownloadHintCaptions": "+ subtítulos",
     "smartDownloadHintComments": "+ comentarios",
     "smartDownloadHintCommentsCredits": "+ comentarios ({credits} restantes)",
@@ -104,6 +105,7 @@
   "Navbar": {
     "home": "Inicio",
     "reelMode": "Modo Reel",
+    "credits": "Créditos",
     "terms": "Términos y Condiciones",
     "searchModal": {
       "title": "Buscar",
@@ -330,5 +332,25 @@
     "close": "Cerrar",
     "heading": "¡Nos mudamos a Media 2 Go!",
     "body": "Después del 31 de mayo (quedan {days} días), vd2.iguzman.com.mx será solo de lectura — no se podrán hacer nuevas descargas ahí. Visítanos en nuestro nuevo sitio para seguir descargando."
+  },
+  "Credits": {
+    "balanceLabel": "{credits} créditos",
+    "buyCredits": "Comprar Créditos",
+    "buyMore": "Comprar Más",
+    "restoreKey": "Restaurar Clave",
+    "purchaseTitle": "Comprar Créditos",
+    "purchaseText": "Selecciona un paquete de créditos. Los créditos se usan para traducción de subtítulos, descarga de comentarios y procesamiento en servidor.",
+    "creditsCount": "{credits} créditos",
+    "purchaseNote": "Tu clave se guarda en tu navegador. Guárdala en un lugar seguro por si cambias de dispositivo.",
+    "purchaseError": "Algo salió mal. Inténtalo de nuevo.",
+    "redirecting": "Redirigiendo...",
+    "checkout": "Ir al pago",
+    "restoreTitle": "Restaurar Clave de Créditos",
+    "restoreText": "Ingresa tu clave de créditos para restaurar tu saldo en este dispositivo.",
+    "restoreKeyLabel": "Clave de Créditos",
+    "restoreInvalidKey": "Clave no encontrada. Verifica e inténtalo de nuevo.",
+    "restoreError": "No se pudo verificar la clave. Inténtalo de nuevo.",
+    "verifying": "Verificando...",
+    "restore": "Restaurar"
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
@@ -310,14 +310,6 @@ export function DownloadForm({
     totalBytes: number;
   } | null>(null);
 
-  const [scrapeCredits, setScrapeCredits] = useState<number | null>(null);
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [keyInput, setKeyInput] = useState('');
-  const [pendingCommentsType, setPendingCommentsType] = useState<
-    'regular' | 'smart' | null
-  >(null);
-  const scrapeKeyRef = useRef('');
-
   useEffect(() => {
     const isIOSDevice = isIOS();
     setIos(isIOSDevice);
@@ -337,19 +329,20 @@ export function DownloadForm({
     setSmartComments(storedSmartComments === 'true');
     const storedSmartHeight = localStorage.getItem('vd_smart_max_height');
     setSmartMaxHeight(storedSmartHeight ? Number(storedSmartHeight) : 1080);
-    const storedScrapeKey = localStorage.getItem('vd_scrape_key') ?? '';
-    scrapeKeyRef.current = storedScrapeKey;
-    const storedCredits = localStorage.getItem('vd_scrape_credits');
-    setScrapeCredits(storedCredits !== null ? Number(storedCredits) : null);
-  }, []);
 
-  useEffect(() => {
-    const handler = (e: CustomEvent<number>) => {
-      setScrapeCredits(e.detail);
-    };
-    window.addEventListener('vd-credits-update', handler as EventListener);
-    return () =>
-      window.removeEventListener('vd-credits-update', handler as EventListener);
+    const creditsKey = localStorage.getItem('vd_credits_key');
+    if (creditsKey) {
+      fetch('/api/credits/balance', {
+        headers: { 'x-credits-key': creditsKey },
+      })
+        .then((res) =>
+          res.ok ? (res.json() as Promise<{ credits: number }>) : null,
+        )
+        .then((data) => {
+          if (data) setCreditsBalance(data.credits);
+        })
+        .catch(() => undefined);
+    }
   }, []);
 
   const handleAutoDownloadChange = useCallback((value: boolean) => {
@@ -370,58 +363,6 @@ export function DownloadForm({
   const handleSmartCommentsChange = useCallback((value: boolean) => {
     setSmartComments(value);
     localStorage.setItem('vd_smart_comments', String(value));
-  }, []);
-
-  const handleCommentsToggleChange = useCallback(
-    (value: boolean) => {
-      if (!value) {
-        setCommentsEnabled(false);
-        return;
-      }
-      if (isScrapeCreatorsUrl(url) && !scrapeKeyRef.current) {
-        setPendingCommentsType('regular');
-        setKeyInput('');
-        setShowKeyModal(true);
-        return;
-      }
-      setCommentsEnabled(true);
-    },
-    [url],
-  );
-
-  const handleSmartCommentsToggleChange = useCallback(
-    (value: boolean) => {
-      if (!value) {
-        handleSmartCommentsChange(false);
-        return;
-      }
-      if (!scrapeKeyRef.current) {
-        setPendingCommentsType('smart');
-        setKeyInput('');
-        setShowKeyModal(true);
-        return;
-      }
-      handleSmartCommentsChange(true);
-    },
-    [handleSmartCommentsChange],
-  );
-
-  const handleKeyConfirm = useCallback(() => {
-    const trimmed = keyInput.trim();
-    if (!trimmed) return;
-    localStorage.setItem('vd_scrape_key', trimmed);
-    scrapeKeyRef.current = trimmed;
-    setShowKeyModal(false);
-    if (pendingCommentsType === 'regular') setCommentsEnabled(true);
-    if (pendingCommentsType === 'smart') handleSmartCommentsChange(true);
-    setPendingCommentsType(null);
-    setKeyInput('');
-  }, [keyInput, pendingCommentsType, handleSmartCommentsChange]);
-
-  const handleKeyCancel = useCallback(() => {
-    setShowKeyModal(false);
-    setPendingCommentsType(null);
-    setKeyInput('');
   }, []);
 
   const handleSmartMaxHeightChange = useCallback((value: number) => {
@@ -479,6 +420,7 @@ export function DownloadForm({
   const [smartCaptions, setSmartCaptions] = useState(true);
   const [smartMaxHeight, setSmartMaxHeight] = useState(1080);
 
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
   const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
 
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
@@ -782,8 +724,9 @@ export function DownloadForm({
               resolveResolutionLabel(smartMaxHeight) ?? `${smartMaxHeight}p`,
           })}
           {smartCaptions && ` ${t('smartDownloadHintCaptions')}`}
-          {smartComments &&
-            ` ${scrapeCredits != null ? t('smartDownloadHintCommentsCredits', { credits: scrapeCredits }) : t('smartDownloadHintComments')}`}
+          {smartComments && ` ${t('smartDownloadHintComments')}`}
+          {creditsBalance !== null &&
+            ` ${t('smartDownloadHintCredits', { credits: creditsBalance })}`}
         </Typography>
       )}
 
@@ -887,11 +830,7 @@ export function DownloadForm({
                   label={
                     commentsUnavailable
                       ? t('commentsUnavailable')
-                      : scrapeCredits != null && isScrapeCreatorsUrl(url)
-                        ? t('downloadCommentsWithCredits', {
-                            credits: scrapeCredits,
-                          })
-                        : t('downloadComments')
+                      : t('downloadComments')
                   }
                   disabled={
                     switchesDisabled ||
@@ -914,7 +853,7 @@ export function DownloadForm({
                         commentsUnavailable ||
                         metadataLoading
                           ? undefined
-                          : handleCommentsToggleChange
+                          : setCommentsEnabled
                       }
                     />
                     {commentsEnabled ? (
@@ -956,7 +895,7 @@ export function DownloadForm({
                     <Switch
                       checked={smartComments}
                       onChange={
-                        justAudio ? undefined : handleSmartCommentsToggleChange
+                        justAudio ? undefined : handleSmartCommentsChange
                       }
                       disabled={justAudio}
                     />
@@ -1042,32 +981,6 @@ export function DownloadForm({
           onRemoveVideosByUuids={onRemoveVideosByUuids}
         />
       ) : null}
-
-      {/* ── ScrapeCreators API Key Modal ─────────── */}
-      {showKeyModal && (
-        <ConfirmationModal
-          title={t('scrapeKeyModalTitle')}
-          text={t('scrapeKeyModalText')}
-          okCallback={handleKeyConfirm}
-          cancelCallback={handleKeyCancel}
-          panelMaxWidth="480px"
-        >
-          <TextInput
-            label={t('scrapeKeyInputLabel')}
-            value={keyInput}
-            onChange={setKeyInput}
-          />
-          <Typography variant="body-sm" marginTop={8}>
-            <a
-              href="https://app.scrapecreators.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t('scrapeKeyGetKey')}
-            </a>
-          </Typography>
-        </ConfirmationModal>
-      )}
 
       {/* ── Duplicate Video Modal ─────────────────── */}
       {duplicateEntry ? (

@@ -55,7 +55,8 @@
     "smartDownload": "Téléchargement vidéo rapide",
     "smartCaptions": "Sous-titres",
     "smartMaxHeight": "Résolution max",
-    "smartDownloadHintOn": "Smart Download : {resolution}",
+    "smartDownloadHintOn": "Smart : {resolution}",
+    "smartDownloadHintCredits": "({credits} crédits disponibles)",
     "smartDownloadHintCaptions": "+ sous-titres",
     "smartDownloadHintComments": "+ commentaires",
     "smartDownloadHintCommentsCredits": "+ commentaires ({credits} restants)",
@@ -104,6 +105,7 @@
   "Navbar": {
     "home": "Accueil",
     "reelMode": "Mode Reel",
+    "credits": "Crédits",
     "terms": "Termes et Conditions",
     "searchModal": {
       "title": "Rechercher",
@@ -328,5 +330,25 @@
     "close": "Fermer",
     "heading": "Nous déménageons vers Media 2 Go !",
     "body": "Après le 31 mai (encore {days} jours), vd2.iguzman.com.mx passera en lecture seule — plus de nouveaux téléchargements disponibles là-bas. Retrouvez-nous sur notre nouveau site."
+  },
+  "Credits": {
+    "balanceLabel": "{credits} crédits",
+    "buyCredits": "Acheter des crédits",
+    "buyMore": "Acheter plus",
+    "restoreKey": "Restaurer la clé",
+    "purchaseTitle": "Acheter des crédits",
+    "purchaseText": "Sélectionnez un pack de crédits. Les crédits sont utilisés pour la traduction de sous-titres, le téléchargement de commentaires et le traitement serveur.",
+    "creditsCount": "{credits} crédits",
+    "purchaseNote": "Votre clé est sauvegardée dans votre navigateur. Conservez-la en lieu sûr en cas de changement d'appareil.",
+    "purchaseError": "Une erreur s'est produite. Veuillez réessayer.",
+    "redirecting": "Redirection...",
+    "checkout": "Passer à la caisse",
+    "restoreTitle": "Restaurer la clé de crédits",
+    "restoreText": "Entrez votre clé de crédits pour restaurer votre solde sur cet appareil.",
+    "restoreKeyLabel": "Clé de crédits",
+    "restoreInvalidKey": "Clé introuvable. Vérifiez et réessayez.",
+    "restoreError": "Impossible de vérifier la clé. Veuillez réessayer.",
+    "verifying": "Vérification...",
+    "restore": "Restaurer"
   }
 }

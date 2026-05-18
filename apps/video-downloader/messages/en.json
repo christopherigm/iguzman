@@ -55,7 +55,8 @@
     "smartDownload": "Video Smart Download",
     "smartCaptions": "Captions",
     "smartMaxHeight": "Max resolution",
-    "smartDownloadHintOn": "Smart Download: {resolution}",
+    "smartDownloadHintOn": "Smart: {resolution}",
+    "smartDownloadHintCredits": "({credits} credits available)",
     "smartDownloadHintCaptions": "+ captions",
     "smartDownloadHintComments": "+ comments",
     "smartDownloadHintCommentsCredits": "+ comments ({credits} left)",
@@ -104,6 +105,7 @@
   "Navbar": {
     "home": "Home",
     "reelMode": "Reel Mode",
+    "credits": "Credits",
     "terms": "Terms and Conditions",
     "searchModal": {
       "title": "Search",
@@ -329,5 +331,25 @@
     "close": "Close",
     "heading": "We're moving to Media 2 Go!",
     "body": "After May 31 ({days} days left), vd2.iguzman.com.mx will become read-only — no new downloads will be available there. Head over to our new home to keep downloading."
+  },
+  "Credits": {
+    "balanceLabel": "{credits} credits",
+    "buyCredits": "Buy Credits",
+    "buyMore": "Buy More",
+    "restoreKey": "Restore Key",
+    "purchaseTitle": "Buy Credits",
+    "purchaseText": "Select a credit pack. Credits are used for subtitle translation, comment downloads, and server processing.",
+    "creditsCount": "{credits} credits",
+    "purchaseNote": "Your key is saved in your browser. Save it somewhere safe in case you switch devices.",
+    "purchaseError": "Something went wrong. Please try again.",
+    "redirecting": "Redirecting...",
+    "checkout": "Go to Checkout",
+    "restoreTitle": "Restore Credits Key",
+    "restoreText": "Enter your credits key to restore your balance on this device.",
+    "restoreKeyLabel": "Credits Key",
+    "restoreInvalidKey": "Key not found. Please check and try again.",
+    "restoreError": "Could not verify the key. Please try again.",
+    "verifying": "Verifying...",
+    "restore": "Restore"
   }
 }

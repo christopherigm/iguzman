@@ -55,7 +55,8 @@
     "smartDownload": "Video-Schnell-Download",
     "smartCaptions": "Untertitel",
     "smartMaxHeight": "Max. Auflösung",
-    "smartDownloadHintOn": "Smart Download: {resolution}",
+    "smartDownloadHintOn": "Smart: {resolution}",
+    "smartDownloadHintCredits": "({credits} Credits verfügbar)",
     "smartDownloadHintCaptions": "+ Untertitel",
     "smartDownloadHintComments": "+ Kommentare",
     "smartDownloadHintCommentsCredits": "+ Kommentare ({credits} übrig)",
@@ -104,6 +105,7 @@
   "Navbar": {
     "home": "Startseite",
     "reelMode": "Reel-Modus",
+    "credits": "Credits",
     "terms": "Nutzungsbedingungen und Konditionen",
     "searchModal": {
       "title": "Suchen",
@@ -328,5 +330,25 @@
     "close": "Schließen",
     "heading": "Wir wechseln zu Media 2 Go!",
     "body": "Nach dem 31. Mai (noch {days} Tage) wird vd2.iguzman.com.mx nur lesbar — neue Downloads sind dort nicht mehr möglich. Besuche uns auf unserer neuen Seite."
+  },
+  "Credits": {
+    "balanceLabel": "{credits} Credits",
+    "buyCredits": "Credits kaufen",
+    "buyMore": "Mehr kaufen",
+    "restoreKey": "Schlüssel wiederherstellen",
+    "purchaseTitle": "Credits kaufen",
+    "purchaseText": "Wähle ein Credit-Paket. Credits werden für Untertitelübersetzung, Kommentar-Downloads und Serververarbeitung verwendet.",
+    "creditsCount": "{credits} Credits",
+    "purchaseNote": "Dein Schlüssel wird in deinem Browser gespeichert. Bewahre ihn sicher auf, falls du das Gerät wechselst.",
+    "purchaseError": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "redirecting": "Weiterleitung...",
+    "checkout": "Zur Kasse",
+    "restoreTitle": "Credits-Schlüssel wiederherstellen",
+    "restoreText": "Gib deinen Credits-Schlüssel ein, um dein Guthaben auf diesem Gerät wiederherzustellen.",
+    "restoreKeyLabel": "Credits-Schlüssel",
+    "restoreInvalidKey": "Schlüssel nicht gefunden. Bitte überprüfe und versuche es erneut.",
+    "restoreError": "Der Schlüssel konnte nicht verifiziert werden. Bitte versuche es erneut.",
+    "verifying": "Wird überprüft...",
+    "restore": "Wiederherstellen"
   }
 }

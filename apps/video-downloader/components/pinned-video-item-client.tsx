@@ -99,8 +99,8 @@ export function PinnedVideoItemClient({
     proxyBase: '/api/groq',
     model: 'llama-3.3-70b-versatile',
     getAuthHeaders: (): Record<string, string> => {
-      const key = localStorage.getItem('vd_groq_key');
-      return key ? { 'x-groq-api-key': key } : {};
+      const key = localStorage.getItem('vd_credits_key');
+      return key ? { 'x-credits-key': key } : {};
     },
   });
 

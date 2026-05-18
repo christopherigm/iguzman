@@ -135,8 +135,8 @@ export function PinnedVideoItemServer({
     proxyBase: '/api/groq',
     model: 'llama-3.3-70b-versatile',
     getAuthHeaders: (): Record<string, string> => {
-      const key = localStorage.getItem('vd_groq_key');
-      return key ? { 'x-groq-api-key': key } : {};
+      const key = localStorage.getItem('vd_credits_key');
+      return key ? { 'x-credits-key': key } : {};
     },
   });
   const { startPolling } = usePollTask();
@@ -275,9 +275,13 @@ export function PinnedVideoItemServer({
         clientUuid: string,
       ): Promise<string | null> => {
         try {
+          const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
           const res = await fetchWithRetry('/api/server-processing', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
+            },
             body: JSON.stringify({
               clientUuid,
               op: opts.op,
