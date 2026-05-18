@@ -3,6 +3,7 @@ import {
   fetchVideoMetadata,
   listSubtitlesViaYtDlp,
 } from '@repo/helpers/download-video';
+import { getBalance } from '@/lib/credits-middleware';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/video-metadata' });
@@ -14,13 +15,18 @@ export interface CaptionOption {
   type: 'auto' | 'manual';
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const url = searchParams.get('url');
-  const exhaustive = searchParams.get('exhaustive') === 'true';
+export async function POST(request: Request) {
+  let body: { url?: string; exhaustive?: boolean; creditsKey?: string };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const { url, exhaustive = false, creditsKey } = body;
 
   if (!url) {
-    log.warn('GET /api/video-metadata – missing url parameter');
+    log.warn('POST /api/video-metadata - missing url in body');
     return NextResponse.json(
       { error: 'Missing url parameter' },
       { status: 400 },
@@ -43,7 +49,6 @@ export async function GET(request: Request) {
       ...new Set(videoFormats.map((f) => f.height as number)),
     ].sort((a, b) => b - a);
 
-    // Map each unique height to its associated width (first match wins).
     const widthByHeight: Record<number, number> = {};
     for (const f of videoFormats) {
       if (f.height != null && f.width != null && !(f.height in widthByHeight)) {
@@ -70,7 +75,6 @@ export async function GET(request: Request) {
       }
     };
 
-    // Prefer manual subtitles over auto-generated ones
     addCaptions(meta.subtitles ?? {}, 'manual');
     addCaptions(meta.automatic_captions ?? {}, 'auto');
 
@@ -97,6 +101,12 @@ export async function GET(request: Request) {
     const commentCount =
       (meta as typeof meta & { comment_count?: number }).comment_count ?? null;
 
+    let credits: number | undefined;
+    if (creditsKey) {
+      const balance = await getBalance(creditsKey);
+      if (balance !== null) credits = balance;
+    }
+
     log.info(
       {
         url,
@@ -106,11 +116,13 @@ export async function GET(request: Request) {
       },
       'Video metadata fetched',
     );
+
     return NextResponse.json({
       heights,
       widthByHeight,
       captions,
       commentCount,
+      ...(credits !== undefined && { credits }),
     });
   } catch (err) {
     log.error({ err, url }, 'Failed to fetch video metadata');

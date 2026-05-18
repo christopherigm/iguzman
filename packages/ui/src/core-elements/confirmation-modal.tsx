@@ -7,30 +7,15 @@ import { Box } from './box';
 import { Typography } from './typography';
 import './confirmation-modal.css';
 
-export type ModalPosition =
-  | 'top-left'
-  | 'top-center'
-  | 'top-right'
-  | 'center-left'
-  | 'center'
-  | 'center-right'
-  | 'bottom-left'
-  | 'bottom-center'
-  | 'bottom-right';
+export type ModalPosition = 'top' | 'center' | 'bottom';
 
 const POSITION_MAP: Record<
   ModalPosition,
   { alignItems: string; justifyContent: string }
 > = {
-  'top-left': { alignItems: 'flex-start', justifyContent: 'flex-start' },
-  'top-center': { alignItems: 'flex-start', justifyContent: 'center' },
-  'top-right': { alignItems: 'flex-start', justifyContent: 'flex-end' },
-  'center-left': { alignItems: 'center', justifyContent: 'flex-start' },
+  top: { alignItems: 'flex-start', justifyContent: 'center' },
   center: { alignItems: 'center', justifyContent: 'center' },
-  'center-right': { alignItems: 'center', justifyContent: 'flex-end' },
-  'bottom-left': { alignItems: 'flex-end', justifyContent: 'flex-start' },
-  'bottom-center': { alignItems: 'flex-end', justifyContent: 'center' },
-  'bottom-right': { alignItems: 'flex-end', justifyContent: 'flex-end' },
+  bottom: { alignItems: 'flex-end', justifyContent: 'center' },
 };
 
 /**
@@ -110,7 +95,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       alignItems={alignItems}
       justifyContent={justifyContent}
       backgroundColor="rgba(0, 0, 0, 0.55)"
-      padding={16}
+      paddingY={16}
       styles={{
         position: 'fixed',
         top: 0,

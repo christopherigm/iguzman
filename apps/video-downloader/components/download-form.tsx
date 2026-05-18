@@ -9,15 +9,8 @@ import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { Button } from '@repo/ui/core-elements/button';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Spinner } from '@repo/ui/core-elements/spinner';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import {
-  detectPlatform,
-  isFacebook,
-  isInstagram,
-  isTiktok,
-  type Platform,
-} from '@repo/helpers/checkers';
+import { detectPlatform, type Platform } from '@repo/helpers/checkers';
 import { stripQueryParams } from '@repo/helpers/clean-url';
 import {
   isIOS,
@@ -49,10 +42,6 @@ function isValidUrl(input: string): boolean {
   } catch {
     return false;
   }
-}
-
-function isScrapeCreatorsUrl(url: string): boolean {
-  return isFacebook(url) || isInstagram(url) || isTiktok(url);
 }
 
 function isServerPath(url: string | null): url is string {
@@ -353,6 +342,19 @@ export function DownloadForm({
   const handleSmartDownloadChange = useCallback((value: boolean) => {
     setSmartDownload(value);
     localStorage.setItem('vd_smart_download', String(value));
+    if (value) {
+      setMetadataFetched(false);
+      setResolutions([]);
+      setWidthByHeight({});
+      setSelectedResolution(null);
+      setCaptionsEnabled(false);
+      setAvailableCaptions([]);
+      setSelectedCaptionUrl(null);
+      setCaptionsUnavailable(false);
+      setCommentsEnabled(false);
+      setCommentsUnavailable(false);
+      setTotalCommentCount(null);
+    }
   }, []);
 
   const handleSmartCaptionsChange = useCallback((value: boolean) => {
@@ -398,6 +400,7 @@ export function DownloadForm({
     null,
   );
   const [metadataLoading, setMetadataLoading] = useState(false);
+  const [metadataFetched, setMetadataFetched] = useState(false);
 
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [availableCaptions, setAvailableCaptions] = useState<CaptionOption[]>(
@@ -440,93 +443,20 @@ export function DownloadForm({
     }
   }, [url]);
 
-  /* Fetch resolutions and captions together in a single exhaustive call.
-   * Retries up to 20 times with exponential backoff (1 s, 2 s, 4 s … capped at 30 s)
-   * on network errors or non-2xx responses. */
+  /* Clear metadata whenever the URL changes */
   useEffect(() => {
-    setCaptionsUnavailable(false);
+    setMetadataFetched(false);
+    setResolutions([]);
+    setWidthByHeight({});
+    setSelectedResolution(null);
+    setCaptionsEnabled(false);
     setAvailableCaptions([]);
     setSelectedCaptionUrl(null);
-    setCaptionsEnabled(false);
+    setCaptionsUnavailable(false);
     setCommentsEnabled(false);
     setCommentsUnavailable(false);
     setTotalCommentCount(null);
-
-    if (!isValidUrl(url) || justAudio || smartDownload) {
-      setResolutions([]);
-      setWidthByHeight({});
-      setSelectedResolution(null);
-      setMetadataLoading(false);
-      return;
-    }
-
-    const MAX_ATTEMPTS = 20;
-    let attempt = 0;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout>;
-
-    const tryFetch = async () => {
-      if (cancelled) return;
-      setMetadataLoading(true);
-      try {
-        const res = await fetch(
-          `/api/video-metadata?url=${encodeURIComponent(url)}&exhaustive=true`,
-        );
-        if (cancelled) return;
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as {
-          heights?: number[];
-          widthByHeight?: Record<number, number>;
-          captions?: CaptionOption[];
-          commentCount?: number | null;
-        };
-        const heights = data.heights ?? [];
-        setResolutions(heights);
-        setWidthByHeight(data.widthByHeight ?? {});
-        setSelectedResolution(heights[0] ?? null);
-        const captions = data.captions ?? [];
-        if (captions.length === 0) {
-          setCaptionsUnavailable(true);
-        } else {
-          setAvailableCaptions(captions);
-          const preferred = captions.find(
-            (c) => /orig/i.test(c.lang) || /orig/i.test(c.label),
-          );
-          setSelectedCaptionUrl((preferred ?? captions[0])?.url ?? null);
-          setCaptionsEnabled(true);
-        }
-        const count = data.commentCount ?? null;
-        setTotalCommentCount(count);
-        // SC platforms (FB/IG/TikTok) always support comments — user must opt in
-        if (isScrapeCreatorsUrl(url)) {
-          setCommentsUnavailable(false);
-        } else if (count != null) {
-          setCommentsUnavailable(false);
-        } else {
-          setCommentsUnavailable(true);
-        }
-        setMetadataLoading(false);
-      } catch {
-        if (cancelled) return;
-        attempt += 1;
-        if (attempt < MAX_ATTEMPTS) {
-          const delay = Math.min(1000 * 2 ** (attempt - 1), 30_000);
-          timer = setTimeout(tryFetch, delay);
-        } else {
-          setMetadataLoading(false);
-        }
-      }
-    };
-
-    /* Initial debounce before the first attempt */
-    timer = setTimeout(tryFetch, 800);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      setMetadataLoading(false);
-    };
-  }, [url, justAudio, smartDownload]);
+  }, [url]);
 
   /* Derived state */
   const hasText = url.length > 0;
@@ -540,12 +470,89 @@ export function DownloadForm({
 
   /* Disabled flags */
   const switchesDisabled = !validPlatformUrl;
-  const captionsDisabled =
-    switchesDisabled || justAudio || captionsUnavailable || metadataLoading;
+  const captionsDisabled = switchesDisabled || justAudio || captionsUnavailable;
+  const noCreditsForPlatform =
+    platform !== 'youtube' && (creditsBalance === null || creditsBalance <= 0);
+  const commentsDisabled =
+    switchesDisabled ||
+    justAudio ||
+    commentsUnavailable ||
+    noCreditsForPlatform;
   /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
 
   /* Handlers */
+  const handleCheckSpecs = useCallback(async () => {
+    if (!validPlatformUrl) return;
+    setMetadataLoading(true);
+    setMetadataFetched(false);
+    try {
+      const creditsKey = localStorage.getItem('vd_credits_key');
+      const res = await fetch('/api/video-metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          exhaustive: true,
+          ...(creditsKey && { creditsKey }),
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as {
+        heights?: number[];
+        widthByHeight?: Record<number, number>;
+        captions?: CaptionOption[];
+        commentCount?: number | null;
+        credits?: number;
+      };
+
+      const heights = data.heights ?? [];
+      setResolutions(heights);
+      setWidthByHeight(data.widthByHeight ?? {});
+      setSelectedResolution(heights[0] ?? null);
+
+      const captions = data.captions ?? [];
+      if (captions.length === 0) {
+        setCaptionsUnavailable(true);
+      } else {
+        setAvailableCaptions(captions);
+        const preferred = captions.find(
+          (c) => /orig/i.test(c.lang) || /orig/i.test(c.label),
+        );
+        setSelectedCaptionUrl((preferred ?? captions[0])?.url ?? null);
+        setCaptionsEnabled(true);
+      }
+
+      const count = data.commentCount ?? null;
+      setTotalCommentCount(count);
+      const isScrapePlatform =
+        platform === 'facebook' ||
+        platform === 'instagram' ||
+        platform === 'tiktok';
+      if (isScrapePlatform || count != null) {
+        setCommentsUnavailable(false);
+      } else {
+        setCommentsUnavailable(true);
+      }
+
+      const newBalance = data.credits !== undefined ? data.credits : null;
+      if (newBalance !== null) setCreditsBalance(newBalance);
+      const effectiveBalance = newBalance ?? creditsBalance;
+      if (
+        platform !== 'youtube' &&
+        (effectiveBalance === null || effectiveBalance <= 0)
+      ) {
+        setCommentsEnabled(false);
+      }
+
+      setMetadataFetched(true);
+    } catch {
+      // leave controls hidden on error
+    } finally {
+      setMetadataLoading(false);
+    }
+  }, [validPlatformUrl, url, platform, creditsBalance]);
+
   const handleClear = useCallback(() => {
     setUrl('');
   }, []);
@@ -756,115 +763,114 @@ export function DownloadForm({
             className={advancedOpen ? 'df-chevron--open' : 'df-chevron--closed'}
           />
         </button>
-        <div
+        <Box
           className={`df-advanced-panel${advancedOpen ? ' df-advanced-panel--open' : ''}`}
         >
-          <div className="df-advanced-inner">
+          <Box className="df-advanced-inner">
             <Divider />
             {!smartDownload && (
               <>
-                <OptionRow
-                  label={t('resolution')}
-                  disabled={
-                    switchesDisabled ||
-                    metadataLoading ||
-                    justAudio ||
-                    resolutions.length === 0
-                  }
-                >
-                  {metadataLoading ? (
-                    <Spinner size={18} thickness={2} label={t('resolution')} />
-                  ) : (
-                    <ResolutionSelect
-                      value={selectedResolution}
-                      onChange={setSelectedResolution}
+                <Button
+                  text={metadataLoading ? t('checkingSpecs') : t('checkSpecs')}
+                  onClick={() => void handleCheckSpecs()}
+                  disabled={!validPlatformUrl || metadataLoading || justAudio}
+                  width="100%"
+                  size="md"
+                  kind="success"
+                  marginTop={8}
+                  marginBottom={8}
+                />
+                {metadataFetched && (
+                  <>
+                    <OptionRow
+                      label={t('resolution')}
                       disabled={
                         switchesDisabled ||
                         justAudio ||
                         resolutions.length === 0
                       }
-                      options={resolutions.map((h) => ({
-                        value: h,
-                        label: (() => {
-                          const name = resolveResolutionLabel(
-                            h,
-                            widthByHeight[h],
-                          );
-                          return name ? `${name} ${h}` : `${h}p`;
-                        })(),
-                      }))}
-                    />
-                  )}
-                </OptionRow>
-                <OptionRow
-                  label={
-                    captionsUnavailable
-                      ? t('captionsUnavailable')
-                      : t('downloadCaptions')
-                  }
-                  disabled={captionsDisabled}
-                >
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    gap={20}
-                  >
-                    <Switch
-                      checked={captionsEnabled}
-                      onChange={
-                        captionsDisabled ? undefined : setCaptionsEnabled
-                      }
-                    />
-                    {captionsEnabled && availableCaptions.length > 0 ? (
-                      <CaptionSelect
-                        value={selectedCaptionUrl}
-                        onChange={setSelectedCaptionUrl}
-                        disabled={captionsDisabled}
-                        options={availableCaptions}
+                    >
+                      <ResolutionSelect
+                        value={selectedResolution}
+                        onChange={setSelectedResolution}
+                        disabled={
+                          switchesDisabled ||
+                          justAudio ||
+                          resolutions.length === 0
+                        }
+                        options={resolutions.map((h) => ({
+                          value: h,
+                          label: (() => {
+                            const name = resolveResolutionLabel(
+                              h,
+                              widthByHeight[h],
+                            );
+                            return name ? `${name} ${h}` : `${h}p`;
+                          })(),
+                        }))}
                       />
-                    ) : null}
-                  </Box>
-                </OptionRow>
-                <OptionRow
-                  label={
-                    commentsUnavailable
-                      ? t('commentsUnavailable')
-                      : t('downloadComments')
-                  }
-                  disabled={
-                    switchesDisabled ||
-                    justAudio ||
-                    commentsUnavailable ||
-                    metadataLoading
-                  }
-                >
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    gap={20}
-                  >
-                    <Switch
-                      checked={commentsEnabled}
-                      onChange={
-                        switchesDisabled ||
-                        justAudio ||
-                        commentsUnavailable ||
-                        metadataLoading
-                          ? undefined
-                          : setCommentsEnabled
+                    </OptionRow>
+                    <OptionRow
+                      label={
+                        captionsUnavailable
+                          ? t('captionsUnavailable')
+                          : t('downloadCaptions')
                       }
-                    />
-                    {commentsEnabled ? (
-                      <CommentCountSelect
-                        value={commentCount}
-                        onChange={setCommentCount}
-                        disabled={false}
-                      />
-                    ) : null}
-                  </Box>
-                </OptionRow>
+                      disabled={captionsDisabled}
+                    >
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        gap={20}
+                      >
+                        <Switch
+                          checked={captionsEnabled}
+                          onChange={
+                            captionsDisabled ? undefined : setCaptionsEnabled
+                          }
+                        />
+                        {captionsEnabled && availableCaptions.length > 0 ? (
+                          <CaptionSelect
+                            value={selectedCaptionUrl}
+                            onChange={setSelectedCaptionUrl}
+                            disabled={captionsDisabled}
+                            options={availableCaptions}
+                          />
+                        ) : null}
+                      </Box>
+                    </OptionRow>
+                    <OptionRow
+                      label={
+                        commentsUnavailable
+                          ? t('commentsUnavailable')
+                          : t('downloadComments')
+                      }
+                      disabled={commentsDisabled}
+                    >
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        gap={20}
+                      >
+                        <Switch
+                          checked={commentsEnabled}
+                          onChange={
+                            commentsDisabled ? undefined : setCommentsEnabled
+                          }
+                        />
+                        {commentsEnabled ? (
+                          <CommentCountSelect
+                            value={commentCount}
+                            onChange={setCommentCount}
+                            disabled={false}
+                          />
+                        ) : null}
+                      </Box>
+                    </OptionRow>
+                  </>
+                )}
               </>
             )}
             <OptionRow label={t('smartDownload')} disabled={justAudio}>
@@ -873,11 +879,11 @@ export function DownloadForm({
                 onChange={justAudio ? undefined : handleSmartDownloadChange}
               />
             </OptionRow>
-            <div
+            <Box
               className={`df-smart-sub-row-wrap${smartDownload ? ' df-smart-sub-row-wrap--open' : ''}`}
             >
-              <div className="df-smart-sub-row-inner">
-                <div className="df-smart-sub-row">
+              <Box className="df-smart-sub-row-inner">
+                <Box className="df-smart-sub-row">
                   <Box className="df-smart-sub-row-label">
                     <Typography variant="body-sm" fontWeight={500}>
                       {t('smartCaptions')}
@@ -908,9 +914,9 @@ export function DownloadForm({
                       options={SMART_RESOLUTION_OPTIONS}
                     />
                   </Box>
-                </div>
-              </div>
-            </div>
+                </Box>
+              </Box>
+            </Box>
             {opfsSupported &&
               storageInfo !== null &&
               storageInfo.usedBytes > 0 &&
@@ -954,8 +960,8 @@ export function DownloadForm({
                   />
                 </>
               )}
-          </div>
-        </div>
+          </Box>
+        </Box>
       </Box>
     </Box>
   );

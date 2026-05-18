@@ -92,7 +92,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
           okCallback={handleOk}
           cancelCallback={handleCancel}
           panelMaxWidth="480px"
-          position="top-center"
+          position="top"
           backgroundBlur=""
         >
           <Box display="flex" flexDirection="column" gap={12}>

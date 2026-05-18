@@ -55,6 +55,8 @@
     "smartDownload": "Téléchargement vidéo rapide",
     "smartCaptions": "Sous-titres",
     "smartMaxHeight": "Résolution max",
+    "checkSpecs": "Vérifier les spécifications",
+    "checkingSpecs": "Vérification...",
     "smartDownloadHintOn": "Smart : {resolution}",
     "smartDownloadHintCredits": "({credits} crédits disponibles)",
     "smartDownloadHintCaptions": "+ sous-titres",

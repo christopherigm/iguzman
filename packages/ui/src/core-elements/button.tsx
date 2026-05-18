@@ -209,12 +209,13 @@ export const Button: React.FC<ButtonProps> = (props) => {
   const defaultStyle: CSSProperties = {
     ...SIZE_STYLES[size],
     ...iconFlexDefaults,
-    ...KIND_STYLES[kind ?? 'default'],
+    ...KIND_STYLES[isDisabled ? 'default' : (kind ?? 'default')],
     border: 'none',
     cursor: 'pointer',
     fontWeight: 600,
     transition:
       'background 150ms ease, color 150ms ease, box-shadow 450ms ease',
+    ...(isDisabled ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
   };
 
   const handleMouseEnter = () => {
@@ -244,6 +245,8 @@ export const Button: React.FC<ButtonProps> = (props) => {
 
   const shouldUseLink = href !== undefined && onClick === undefined;
 
+  const showWave = !unstyled && !isDisabled;
+
   if (shouldUseLink) {
     const hrefString = href instanceof URL ? href.toString() : String(href);
     return (
@@ -252,7 +255,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
           id={id}
           title={title}
           disabled={isDisabled}
-          className={[unstyled ? undefined : 'ui-button-wave', className]
+          className={[showWave ? 'ui-button-wave' : undefined, className]
             .filter(Boolean)
             .join(' ')}
           style={finalStyle}
@@ -268,7 +271,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
             : {})}
         >
           {contentWithIcon}
-          {!unstyled && <span aria-hidden className="ui-wave" />}
+          {showWave && <span aria-hidden className="ui-wave" />}
         </button>
       </Link>
     );
@@ -284,7 +287,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
       id={id}
       title={title}
       disabled={isDisabled}
-      className={[unstyled ? undefined : 'ui-button-wave', className]
+      className={[showWave ? 'ui-button-wave' : undefined, className]
         .filter(Boolean)
         .join(' ')}
       style={finalStyle}
@@ -297,7 +300,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
       {...(ariaExpanded !== undefined ? { 'aria-expanded': ariaExpanded } : {})}
     >
       {contentWithIcon}
-      {!unstyled && <span aria-hidden className="ui-wave" />}
+      {showWave && <span aria-hidden className="ui-wave" />}
     </button>
   );
 };

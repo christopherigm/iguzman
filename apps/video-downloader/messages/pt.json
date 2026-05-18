@@ -55,6 +55,8 @@
     "smartDownload": "Download rápido de vídeo",
     "smartCaptions": "Legendas",
     "smartMaxHeight": "Resolução máxima",
+    "checkSpecs": "Verificar especificações",
+    "checkingSpecs": "Verificando...",
     "smartDownloadHintOn": "Smart: {resolution}",
     "smartDownloadHintCredits": "({credits} créditos disponíveis)",
     "smartDownloadHintCaptions": "+ legendas",

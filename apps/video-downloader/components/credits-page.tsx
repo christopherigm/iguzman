@@ -245,6 +245,7 @@ export function CreditsPageContent() {
                   disabled={checkoutLoading}
                   width="100%"
                   kind="success"
+                  size="md"
                 />
                 <Box
                   styles={{
@@ -283,6 +284,7 @@ export function CreditsPageContent() {
                   onClick={handleRestore}
                   disabled={restoreLoading || !keyInput.trim()}
                   width="100%"
+                  size="md"
                 />
               </Box>
             ) : (
@@ -337,6 +339,7 @@ export function CreditsPageContent() {
                   disabled={checkoutLoading}
                   width="100%"
                   kind="success"
+                  size="md"
                 />
               </Box>
             )}

@@ -21,6 +21,14 @@ export interface UIComponentProps {
   minHeight?: CSSProperties['minHeight'];
   maxHeight?: CSSProperties['maxHeight'];
   padding?: CSSProperties['padding'];
+  paddingTop?: CSSProperties['paddingTop'];
+  paddingBottom?: CSSProperties['paddingBottom'];
+  paddingLeft?: CSSProperties['paddingLeft'];
+  paddingRight?: CSSProperties['paddingRight'];
+  /** Shorthand for paddingLeft + paddingRight. Individual side props take precedence. */
+  paddingX?: CSSProperties['paddingLeft'];
+  /** Shorthand for paddingTop + paddingBottom. Individual side props take precedence. */
+  paddingY?: CSSProperties['paddingTop'];
   margin?: CSSProperties['margin'];
   marginTop?: CSSProperties['marginTop'];
   marginBottom?: CSSProperties['marginBottom'];
@@ -87,6 +95,10 @@ const CSS_PROP_KEYS: (keyof UIComponentProps & keyof CSSProperties)[] = [
   'minHeight',
   'maxHeight',
   'padding',
+  'paddingTop',
+  'paddingBottom',
+  'paddingLeft',
+  'paddingRight',
   'margin',
   'marginTop',
   'marginBottom',
@@ -106,6 +118,14 @@ const CSS_PROP_KEYS: (keyof UIComponentProps & keyof CSSProperties)[] = [
  */
 export function buildStyleProps(props: UIComponentProps): CSSProperties {
   const style: Record<string, unknown> = {};
+  if (props.paddingX !== undefined) {
+    style.paddingLeft = props.paddingX;
+    style.paddingRight = props.paddingX;
+  }
+  if (props.paddingY !== undefined) {
+    style.paddingTop = props.paddingY;
+    style.paddingBottom = props.paddingY;
+  }
   for (const key of CSS_PROP_KEYS) {
     if (props[key] !== undefined) style[key] = props[key];
   }

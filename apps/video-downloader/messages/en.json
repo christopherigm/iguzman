@@ -55,6 +55,8 @@
     "smartDownload": "Video Smart Download",
     "smartCaptions": "Captions",
     "smartMaxHeight": "Max resolution",
+    "checkSpecs": "Check video specs",
+    "checkingSpecs": "Checking...",
     "smartDownloadHintOn": "Smart: {resolution}",
     "smartDownloadHintCredits": "({credits} credits available)",
     "smartDownloadHintCaptions": "+ captions",

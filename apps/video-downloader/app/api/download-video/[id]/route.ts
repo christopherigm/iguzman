@@ -30,12 +30,8 @@ export async function GET(
     }
 
     const { result: _result, ...taskBase } = task;
-    const payload =
-      task.status === 'processing'
-        ? taskBase
-        : { ...taskBase, result: _result };
 
-    return NextResponse.json({ task: payload });
+    return NextResponse.json({ task: taskBase });
   } catch (err) {
     log.error({ err, taskId: id }, 'Failed to fetch task');
     return NextResponse.json(
