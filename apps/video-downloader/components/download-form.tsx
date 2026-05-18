@@ -529,11 +529,8 @@ export function DownloadForm({
         platform === 'facebook' ||
         platform === 'instagram' ||
         platform === 'tiktok';
-      if (isScrapePlatform || count != null) {
-        setCommentsUnavailable(false);
-      } else {
-        setCommentsUnavailable(true);
-      }
+      const commentsAvailable = isScrapePlatform || count != null;
+      setCommentsUnavailable(!commentsAvailable);
 
       const newBalance = data.credits !== undefined ? data.credits : null;
       if (newBalance !== null) setCreditsBalance(newBalance);
@@ -543,6 +540,8 @@ export function DownloadForm({
         (effectiveBalance === null || effectiveBalance <= 0)
       ) {
         setCommentsEnabled(false);
+      } else if (platform === 'youtube' && commentsAvailable) {
+        setCommentsEnabled(true);
       }
 
       setMetadataFetched(true);
@@ -869,10 +868,24 @@ export function DownloadForm({
                         ) : null}
                       </Box>
                     </OptionRow>
+                    {noCreditsForPlatform && !commentsUnavailable && (
+                      <OptionRow
+                        label={t('commentsNoCredits')}
+                        disabled={justAudio}
+                      >
+                        <Button
+                          text={t('commentsBuyCredits')}
+                          href="/credits"
+                          size="sm"
+                          kind="success"
+                        />
+                      </OptionRow>
+                    )}
                   </>
                 )}
               </>
             )}
+            <Divider />
             <OptionRow label={t('smartDownload')} disabled={justAudio}>
               <Switch
                 checked={smartDownload}

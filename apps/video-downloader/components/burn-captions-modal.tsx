@@ -4,6 +4,7 @@ import {
   useState,
   useRef,
   useLayoutEffect,
+  useEffect,
   type CSSProperties,
 } from 'react';
 import { useTranslations } from 'next-intl';
@@ -12,6 +13,8 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Icon } from '@repo/ui/core-elements/icon';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Button } from '@repo/ui/core-elements/button';
 import type {
   BurnCaptionsConfig,
   BurnCaptionsAnimationConfig,
@@ -186,6 +189,26 @@ export function BurnCaptionsModal({
 }: BurnCaptionsModalProps) {
   const t = useTranslations('VideoGrid');
   const [config, setConfig] = useState<BurnCaptionsConfig>(DEFAULT_CONFIG);
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const [creditsLoading, setCreditsLoading] = useState(true);
+
+  useEffect(() => {
+    const key = localStorage.getItem('vd_credits_key');
+    if (!key) {
+      setCreditsBalance(0);
+      setCreditsLoading(false);
+      return;
+    }
+    fetch('/api/credits/balance', { headers: { 'x-credits-key': key } })
+      .then((res) =>
+        res.ok
+          ? (res.json() as Promise<{ credits: number }>)
+          : Promise.resolve({ credits: 0 }),
+      )
+      .then((data) => setCreditsBalance(data.credits))
+      .catch(() => setCreditsBalance(0))
+      .finally(() => setCreditsLoading(false));
+  }, []);
 
   /* ── Preview scaling ─────────────────────────────── */
   const previewRef = useRef<HTMLDivElement>(null);
@@ -263,42 +286,67 @@ export function BurnCaptionsModal({
           <Typography variant="caption" className="bcm-label">
             {t('burnCaptionsTranslate')}
           </Typography>
-          <Box className="bcm-row">
-            <Switch
-              checked={config.translate ?? false}
-              onChange={(v) => set('translate', v)}
-            />
-            <Box className="bcm-select-wrapper">
-              <select
-                className="bcm-select"
-                value={config.translateTo ?? 'en'}
-                onChange={(e) => set('translateTo', e.target.value)}
-                disabled={!config.translate}
-                aria-label={t('burnCaptionsTranslateLang')}
-              >
-                {TRANSLATE_LANGUAGES.map((lang) => (
-                  <option
-                    key={lang.value}
-                    value={lang.value}
-                    style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
-                  >
-                    {lang.flag} {lang.label}
-                  </option>
-                ))}
-              </select>
-              <span className="bcm-select-chevron">
-                <Icon
-                  icon="/icons/chevron-down.svg"
-                  size={14}
-                  color={
-                    config.translate
-                      ? 'var(--foreground, #171717)'
-                      : 'var(--foreground-muted, #aaa)'
-                  }
-                />
-              </span>
+          {creditsLoading ? (
+            <ProgressBar marginTop={8} />
+          ) : creditsBalance !== null && creditsBalance > 0 ? (
+            <Box className="bcm-row">
+              <Switch
+                checked={config.translate ?? false}
+                onChange={(v) => set('translate', v)}
+              />
+              <Box className="bcm-select-wrapper">
+                <select
+                  className="bcm-select"
+                  value={config.translateTo ?? 'en'}
+                  onChange={(e) => set('translateTo', e.target.value)}
+                  disabled={!config.translate}
+                  aria-label={t('burnCaptionsTranslateLang')}
+                >
+                  {TRANSLATE_LANGUAGES.map((lang) => (
+                    <option
+                      key={lang.value}
+                      value={lang.value}
+                      style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+                    >
+                      {lang.flag} {lang.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="bcm-select-chevron">
+                  <Icon
+                    icon="/icons/chevron-down.svg"
+                    size={14}
+                    color={
+                      config.translate
+                        ? 'var(--foreground, #171717)'
+                        : 'var(--foreground-muted, #aaa)'
+                    }
+                  />
+                </span>
+              </Box>
             </Box>
-          </Box>
+          ) : (
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap={8}
+              marginTop={4}
+            >
+              <Typography
+                variant="caption"
+                color="var(--foreground-muted, #aaa)"
+              >
+                {t('burnCaptionsTranslateNoCredits')}
+              </Typography>
+              <Button
+                text={t('burnCaptionsTranslateBuyCredits')}
+                href="/credits"
+                size="sm"
+                kind="success"
+              />
+            </Box>
+          )}
         </Box>
 
         {/* Position grid */}

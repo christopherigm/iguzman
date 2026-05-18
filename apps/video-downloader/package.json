@@ -1,10 +1,11 @@
 {
   "name": "video-downloader",
-  "version": "0.2.205",
+  "version": "0.2.207",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
+    "dev:stripe": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
