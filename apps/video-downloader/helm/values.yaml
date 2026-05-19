@@ -119,6 +119,86 @@ nginx:
       cpu: 200m
       memory: 128Mi
 
+# ─── WireGuard VPN sidecar ───────────────────────────────────
+# Routes all public-IP egress through a Surfshark WireGuard server
+# so yt-dlp calls leave the cluster behind a VPN IP.
+#
+# All containers in a pod share a network namespace: wg-quick's
+# routes and iptables rules affect every container. Three rules
+# must be followed in wg0.conf or the pod will break:
+#
+# ① No "DNS = ..." in [Interface]
+#   wg-quick's DNS management redirects port-53 traffic through the
+#   VPN for all containers. Kubernetes CoreDNS already handles DNS
+#   via a 10.x.x.x ClusterIP that is excluded from AllowedIPs and
+#   always routes via eth0 — no VPN involvement needed.
+#
+# ② No "AllowedIPs = 0.0.0.0/0" in [Peer]
+#   0.0.0.0/0 triggers wg-quick's policy-routing mode (kernel ip rule
+#   entries) which captures ALL traffic — including internal cluster
+#   traffic — before the tunnel is established, breaking the pod.
+#   Use the public-only CIDR list below instead. It is the complement
+#   of 10/8 + 169.254/16 + 172.16/12 + 192.168/16, so private ranges
+#   route via eth0 (Calico) automatically with no PostUp tricks.
+#
+# ③ Add PostUp/PreDown endpoint host routes in [Interface]
+#   The Surfshark server IP (e.g. 212.102.44.115) falls inside the
+#   208.0.0.0/4 AllowedIPs range. Without a /32 host route via eth0,
+#   wg-quick routes its own handshake UDP packets back through wg0
+#   (a loop), the tunnel never connects (0 B received), and all
+#   public-IP traffic silently drops. The PostUp line reads the
+#   resolved endpoint IP at startup and adds a /32 that beats the /4.
+#
+# Minimal wg0.conf (source: apps/video-downloader/us-den.conf):
+#
+#   [Interface]
+#   Address    = 10.14.0.2/16
+#   PrivateKey = <your-private-key>
+#   PostUp  = ip route add $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1
+#   PreDown = ip route del $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1 2>/dev/null || true
+#
+#   [Peer]
+#   PublicKey  = <server-public-key>
+#   AllowedIPs = 0.0.0.0/5, 8.0.0.0/7, 11.0.0.0/8, 12.0.0.0/6, 16.0.0.0/4, 32.0.0.0/3, 64.0.0.0/2, 128.0.0.0/3, 160.0.0.0/5, 168.0.0.0/8, 169.0.0.0/9, 169.128.0.0/10, 169.192.0.0/11, 169.224.0.0/12, 169.240.0.0/13, 169.248.0.0/14, 169.252.0.0/15, 169.255.0.0/16, 170.0.0.0/15, 172.0.0.0/12, 172.32.0.0/11, 172.64.0.0/10, 172.128.0.0/9, 173.0.0.0/8, 174.0.0.0/7, 176.0.0.0/4, 192.0.0.0/9, 192.128.0.0/11, 192.160.0.0/13, 192.169.0.0/16, 192.170.0.0/15, 192.172.0.0/14, 192.176.0.0/12, 192.192.0.0/10, 193.0.0.0/8, 194.0.0.0/7, 196.0.0.0/6, 200.0.0.0/5, 208.0.0.0/4
+#   Endpoint   = us-den.prod.surfshark.com:51820
+#
+# Initial setup:
+#   kubectl create secret generic video-downloader-wireguard \
+#     --from-file=wg0.conf=./apps/video-downloader/us-den.conf \
+#     -n video-downloader-2
+#
+# Updating the config:
+#   kubectl create secret generic video-downloader-wireguard \
+#     --from-file=wg0.conf=./apps/video-downloader/us-den.conf \
+#     -n video-downloader-2 --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl rollout restart deployment/video-downloader -n video-downloader-2
+#
+# Verifying the tunnel (both checks must pass):
+#   kubectl exec -n video-downloader-2 deploy/video-downloader \
+#     -c wireguard -- wg show wg0
+#   # → "latest handshake" line present, "transfer: X received" > 0
+#
+#   kubectl exec -n video-downloader-2 deploy/video-downloader \
+#     -c video-downloader -- curl -s --max-time 15 https://ipinfo.io/ip
+#   # → US Surfshark IP, not the node's real IP
+#
+# Set wireguard.enabled: true to activate.
+wireguard:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/wireguard
+    tag: latest
+    pullPolicy: IfNotPresent
+  # Name of the Kubernetes Secret that holds wg0.conf.
+  secretName: "video-downloader-wireguard"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
 # ─── Resources ──────────────────────────────────────────────
 # Comment out to allow pods to use all available node resources.
 # resources:

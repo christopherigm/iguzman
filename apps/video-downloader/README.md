@@ -99,6 +99,91 @@ kubectl logs deploy/video-downloader -n video-downloader-2
 
 ---
 
+### WireGuard VPN sidecar
+
+The WireGuard sidecar routes all public-IP egress from the pod through a Surfshark server so that yt-dlp calls leave the cluster behind a VPN IP instead of the node's real IP. It is disabled by default (`wireguard.enabled: false` in `values.yaml`).
+
+#### How it works
+
+All containers in a Kubernetes pod share a single network namespace. wg-quick injects per-prefix routes for every CIDR in `AllowedIPs` into the shared routing table, so the `video-downloader` container's connections to public IPs automatically flow through `wg0` without any application changes.
+
+#### wg0.conf requirements
+
+Three rules that must be followed — each one has a specific reason:
+
+| Rule | Why |
+|---|---|
+| Use public-only `AllowedIPs` — **not** `0.0.0.0/0` | `0.0.0.0/0` triggers wg-quick's policy-routing mode, which installs kernel `ip rule` entries before the tunnel is established and breaks pod networking during startup. Split AllowedIPs uses simple per-prefix route injection instead. |
+| Add `PostUp`/`PreDown` endpoint host routes | The Surfshark server IP (e.g. `212.102.44.115`) falls inside the `208.0.0.0/4` AllowedIPs range. Without a `/32` host route via `eth0`, WireGuard's own handshake UDP packets loop back through `wg0` and the tunnel never connects (`0 B received`). |
+| Omit `DNS =` | All containers in the pod share the network namespace. wg-quick's DNS management redirects port-53 traffic through the VPN, breaking DNS for every container including `video-downloader`. Let Kubernetes CoreDNS handle DNS — it resolves via a `10.x.x.x` ClusterIP that is excluded from `AllowedIPs` and always routes via `eth0`. |
+
+Minimal working `wg0.conf` (`apps/video-downloader/us-den.conf`):
+
+```ini
+[Interface]
+Address    = 10.14.0.2/16
+PrivateKey = <your-private-key>
+PostUp  = ip route add $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1
+PreDown = ip route del $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1 2>/dev/null || true
+
+[Peer]
+PublicKey  = <server-public-key>
+AllowedIPs = 0.0.0.0/5, 8.0.0.0/7, 11.0.0.0/8, 12.0.0.0/6, 16.0.0.0/4, 32.0.0.0/3, 64.0.0.0/2, 128.0.0.0/3, 160.0.0.0/5, 168.0.0.0/8, 169.0.0.0/9, 169.128.0.0/10, 169.192.0.0/11, 169.224.0.0/12, 169.240.0.0/13, 169.248.0.0/14, 169.252.0.0/15, 169.255.0.0/16, 170.0.0.0/15, 172.0.0.0/12, 172.32.0.0/11, 172.64.0.0/10, 172.128.0.0/9, 173.0.0.0/8, 174.0.0.0/7, 176.0.0.0/4, 192.0.0.0/9, 192.128.0.0/11, 192.160.0.0/13, 192.169.0.0/16, 192.170.0.0/15, 192.172.0.0/14, 192.176.0.0/12, 192.192.0.0/10, 193.0.0.0/8, 194.0.0.0/7, 196.0.0.0/6, 200.0.0.0/5, 208.0.0.0/4
+Endpoint   = us-den.prod.surfshark.com:51820
+```
+
+The `AllowedIPs` list is the mathematical complement of `10.0.0.0/8 + 169.254.0.0/16 + 172.16.0.0/12 + 192.168.0.0/16` — all public unicast IPv4 space. Private ranges route via `eth0` (Calico) and are never sent to the VPN. The `PostUp` dynamically reads the resolved endpoint IP from the live WireGuard config at startup, so it works correctly even if Surfshark changes the server IP.
+
+#### Enabling the sidecar
+
+**1.** Download a WireGuard config from Surfshark dashboard → VPN → Manual Setup → WireGuard → US server. Edit it to match the format above (remove `DNS =`, replace `AllowedIPs`, add `PostUp`/`PreDown`). Save as `apps/video-downloader/us-den.conf`.
+
+**2.** Create the Kubernetes secret:
+
+```bash
+kubectl create secret generic video-downloader-wireguard \
+  --from-file=wg0.conf=./apps/video-downloader/us-den.conf \
+  -n video-downloader-2
+```
+
+**3.** Enable in `helm/values.yaml`:
+
+```yaml
+wireguard:
+  enabled: true
+```
+
+**4.** Deploy:
+
+```bash
+pnpm helm video-downloader -y
+```
+
+#### Verifying the tunnel
+
+```bash
+# Handshake must show "latest handshake" and "transfer: X received" > 0
+kubectl exec -n video-downloader-2 deploy/video-downloader \
+  -c wireguard -- wg show wg0
+
+# Must return a US Surfshark IP, not the node's real IP
+kubectl exec -n video-downloader-2 deploy/video-downloader \
+  -c video-downloader -- curl -s --max-time 15 https://ipinfo.io/ip
+```
+
+#### Updating the config
+
+```bash
+kubectl create secret generic video-downloader-wireguard \
+  --from-file=wg0.conf=./apps/video-downloader/us-den.conf \
+  -n video-downloader-2 \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl rollout restart deployment/video-downloader -n video-downloader-2
+```
+
+---
+
 ## Environment variables
 
 Copy `env.example` to `.env` before deploying:

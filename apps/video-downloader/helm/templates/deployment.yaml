@@ -143,7 +143,44 @@ spec:
               readOnly: true
         {{- end }}
 
-      {{- if or .Values.hostPathVolume.enabled .Values.nginx.enabled }}
+        {{- /* ── WireGuard VPN sidecar ── */}}
+        {{- if .Values.wireguard.enabled }}
+        - name: wireguard
+          image: "{{ .Values.wireguard.image.repository }}:{{ .Values.wireguard.image.tag }}"
+          imagePullPolicy: {{ .Values.wireguard.image.pullPolicy }}
+
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - SYS_MODULE
+
+          startupProbe:
+            exec:
+              command: ["wg", "show", "wg0"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+
+          livenessProbe:
+            exec:
+              command: ["wg", "show", "wg0"]
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+
+          {{- with .Values.wireguard.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          volumeMounts:
+            - name: wireguard-config
+              mountPath: /config/wg_confs
+              readOnly: true
+        {{- end }}
+
+      {{- if or .Values.hostPathVolume.enabled .Values.nginx.enabled .Values.wireguard.enabled }}
       volumes:
         {{- if .Values.hostPathVolume.enabled }}
         - name: media-data
@@ -155,5 +192,13 @@ spec:
         - name: nginx-config
           configMap:
             name: {{ include "video-downloader.fullname" . }}-nginx
+        {{- end }}
+        {{- if .Values.wireguard.enabled }}
+        - name: wireguard-config
+          secret:
+            secretName: {{ .Values.wireguard.secretName }}
+            items:
+              - key: wg0.conf
+                path: wg0.conf
         {{- end }}
       {{- end }}
