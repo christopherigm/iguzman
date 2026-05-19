@@ -53,11 +53,17 @@ function buildFpsOptions(
   });
 }
 
-const FPS_CREDIT_KEYS: (keyof OperationCredits)[] = [
-  'interpolateFps2x',
-  'interpolateFps4x',
-  'interpolateFps8x',
-];
+function fpsInterpolateCost(
+  oc: OperationCredits,
+  targetFps: number,
+  sourceFps: number | null | undefined,
+): number {
+  if (!sourceFps || sourceFps <= 0) return oc.interpolateFps2x;
+  const ratio = targetFps / sourceFps;
+  if (ratio <= 3) return oc.interpolateFps2x;
+  if (ratio <= 6) return oc.interpolateFps4x;
+  return oc.interpolateFps8x;
+}
 
 function CreditBadge({ amount }: { amount: number }) {
   return (
@@ -1158,9 +1164,8 @@ export function VideoExtraActions({
 
         {!video.justAudio ? (
           <Box>
-            {buildFpsOptions(video.sourceFps).map(({ value, label }, idx) => {
-              const fpsCreditKey = FPS_CREDIT_KEYS[idx];
-              const fpsCost = fpsCreditKey && oc ? oc[fpsCreditKey] : null;
+            {buildFpsOptions(video.sourceFps).map(({ value, label }) => {
+              const fpsCost = oc ? fpsInterpolateCost(oc, value, video.sourceFps) : null;
               const alreadyApplied =
                 video.fpsApplied && value <= Number(video.fps);
               return (

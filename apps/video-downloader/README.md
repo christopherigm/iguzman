@@ -123,8 +123,12 @@ Minimal working `wg0.conf` (`apps/video-downloader/us-den.conf`):
 [Interface]
 Address    = 10.14.0.2/16
 PrivateKey = <your-private-key>
+# ① Prevent the VPN endpoint's own UDP traffic from looping through wg0
 PostUp  = ip route add $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1
 PreDown = ip route del $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1 2>/dev/null || true
+# ② Bypass VPN for Groq API — Surfshark IPs are blocked by Groq (returns 403)
+PostUp  = GROQ_IP=$(getent hosts api.groq.com | awk '{print $1; exit}'); ip route add ${GROQ_IP}/32 via 169.254.1.1 dev eth0
+PreDown = GROQ_IP=$(getent hosts api.groq.com | awk '{print $1; exit}'); ip route del ${GROQ_IP}/32 2>/dev/null || true
 
 [Peer]
 PublicKey  = <server-public-key>
@@ -248,13 +252,28 @@ Copy `env.example` to `.env` before deploying:
 cp env.example .env
 ```
 
-| Variable                 | Description                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| `MONGO_URI`              | MongoDB connection string (defaults to in-cluster service)                         |
-| `GROQ_API_KEY`           | Optional Groq API key for subtitle translation                                     |
-| `WS_BROKER_URL`          | Internal URL of the ws-broker service                                              |
-| `SCRAPECREATORS_API_KEY` | Optional ScrapeCreators API key for comment scraping (TikTok, Instagram, Facebook) |
-| `LOG_LEVEL`              | Override default log level (`debug` in dev, `info` in prod)                        |
+| Variable                 | How to set                                                   | Description                                                                        |
+| ------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `MONGO_URI`              | `helm/values.yaml` → `env`                                   | MongoDB connection string (defaults to in-cluster service)                         |
+| `GROQ_API_KEY`           | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | Groq API key for subtitle translation. **Note:** route via `eth0` (not VPN) in `wg0.conf` — Surfshark IPs are blocked by Groq |
+| `WS_BROKER_URL`          | `helm/values.yaml` → `env`                                   | Internal URL of the ws-broker service                                              |
+| `SCRAPECREATORS_API_KEY` | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | ScrapeCreators API key for comment scraping (TikTok, Instagram, Facebook)          |
+| `LOG_LEVEL`              | `helm/values.yaml` → `env`                                   | Override default log level (`debug` in dev, `info` in prod)                        |
+
+To add a secret value:
+
+```bash
+# Create (or patch) the shared secret
+kubectl create secret generic vd2-secrets \
+  --from-literal=groq-api-key=<YOUR_GROQ_KEY> \
+  -n video-downloader-2 \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Then redeploy (Helm only — no new image needed)
+helm upgrade --install video-downloader ./apps/video-downloader/helm \
+  --namespace video-downloader-2 \
+  --reuse-values
+```
 
 ---
 

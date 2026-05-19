@@ -258,7 +258,7 @@ export function ReadOnlyVideoItem({
       opfsCaptionsKey: newCaptionsKey,
       opfsCommentsKey: newCommentsKey,
       downloadURL: `opfs://${newOpfsKey}`,
-      taskId: null,
+      taskId: video.taskId,
       serverTaskId: null,
       serverFileDeleted: true,
       status: 'done' as VideoStatus,

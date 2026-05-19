@@ -146,11 +146,22 @@ async function runFfmpegJob(
     if (op === 'convertToH265') extraFields.isH265 = true;
     if (op === 'convertToH264') extraFields.isH265 = false;
 
+    const probed = await getVideoMetaFromFile(outputPath);
+    const updatedCredits = calculateOperationCredits({
+      width: probed.width,
+      height: probed.height,
+      durationSeconds: probed.durationSeconds,
+    });
+
     await updateTask(taskId, {
       status: 'done',
       file: outputFileName,
       progress: 100,
       error: null,
+      ...(probed.width != null ? { width: probed.width } : {}),
+      ...(probed.height != null ? { height: probed.height } : {}),
+      ...(probed.durationSeconds != null ? { duration: probed.durationSeconds } : {}),
+      operationCredits: updatedCredits,
       ...extraFields,
     });
 
@@ -244,22 +255,12 @@ export async function POST(request: NextRequest) {
   }
 
   /* ── Dynamic credit cost ────────────────────────────────────────────── */
-  let metaWidth = task.width ?? null;
-  let metaHeight = task.height ?? null;
-  let metaDuration = task.duration ?? null;
-
-  if (!metaWidth && !metaHeight && !metaDuration) {
-    const inputPath = join(MEDIA_DIR, inputFile);
-    const probed = await getVideoMetaFromFile(inputPath);
-    metaWidth = probed.width ?? null;
-    metaHeight = probed.height ?? null;
-    metaDuration = probed.durationSeconds ?? null;
-  }
-
+  const inputPath = join(MEDIA_DIR, inputFile);
+  const inputMeta = await getVideoMetaFromFile(inputPath);
   const opCredits = calculateOperationCredits({
-    width: metaWidth,
-    height: metaHeight,
-    durationSeconds: metaDuration,
+    width: inputMeta.width,
+    height: inputMeta.height,
+    durationSeconds: inputMeta.durationSeconds,
   });
 
   const OP_CREDIT_KEYS: Partial<Record<ProcessingOp, keyof typeof opCredits>> = {

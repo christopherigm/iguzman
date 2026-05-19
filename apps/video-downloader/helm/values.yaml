@@ -61,10 +61,14 @@ env:
   WS_BROKER_URL: 'http://ws-broker.video-downloader-2.svc.cluster.local'
 
 # Sensitive values – reference existing Kubernetes Secrets.
-# envFromSecret:
-#   - name: DATABASE_URL
-#     secretName: vd2-secrets
-#     secretKey: database-url
+# Create the secret first:
+#   kubectl create secret generic vd2-secrets \
+#     --from-literal=groq-api-key=<YOUR_KEY> \
+#     -n video-downloader-2
+envFromSecret:
+  - name: GROQ_API_KEY
+    secretName: vd2-secrets
+    secretKey: groq-api-key
 
 # ─── Host-path volume (media storage) ───────────────────────
 hostPathVolume:
@@ -154,8 +158,12 @@ nginx:
 #   [Interface]
 #   Address    = 10.14.0.2/16
 #   PrivateKey = <your-private-key>
+#   # ① Prevent the VPN endpoint's own UDP traffic from looping through wg0
 #   PostUp  = ip route add $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1
 #   PreDown = ip route del $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1 2>/dev/null || true
+#   # ② Bypass VPN for Groq API — Surfshark IPs are blocked by Groq
+#   PostUp  = for IP in $(nslookup api.groq.com 2>/dev/null | awk '/^Address: /{print $2}' || getent hosts api.groq.com 2>/dev/null | awk '{print $1}'); do ip route add ${IP}/32 via 169.254.1.1 dev eth0 2>/dev/null || true; done
+#   PreDown = for IP in $(nslookup api.groq.com 2>/dev/null | awk '/^Address: /{print $2}' || getent hosts api.groq.com 2>/dev/null | awk '{print $1}'); do ip route del ${IP}/32 via 169.254.1.1 dev eth0 2>/dev/null || true; done
 #
 #   [Peer]
 #   PublicKey  = <server-public-key>
