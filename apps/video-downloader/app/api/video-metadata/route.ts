@@ -34,7 +34,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const meta = await fetchVideoMetadata(url);
+    const [meta, balance] = await Promise.all([
+      fetchVideoMetadata(url),
+      creditsKey ? getBalance(creditsKey) : Promise.resolve(null),
+    ]);
     const formats = meta.formats ?? [];
 
     const videoFormats = formats.filter(
@@ -101,11 +104,7 @@ export async function POST(request: Request) {
     const commentCount =
       (meta as typeof meta & { comment_count?: number }).comment_count ?? null;
 
-    let credits: number | undefined;
-    if (creditsKey) {
-      const balance = await getBalance(creditsKey);
-      if (balance !== null) credits = balance;
-    }
+    const credits = balance !== null ? balance : undefined;
 
     log.info(
       {

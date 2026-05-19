@@ -255,7 +255,6 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
           {storageError}
         </Typography>
       ) : null}
-      <br />
       <VideoGrid
         pinned={pinned}
         completed={completed}

@@ -86,21 +86,7 @@ export async function POST(request: Request) {
     );
   }
 
-  /* 0. Credit gate: if comments are requested for a ScrapeCreators platform,
-        validate and deduct 1 credit. If credits are missing or exhausted,
-        silently disable comments and continue with the download. */
-  let creditsKey: string | null = null;
-  if (commentsEnabled && isScrapeCreatorsPlatform(url)) {
-    creditsKey = getCreditsKey(request);
-    if (!creditsKey) {
-      commentsEnabled = false;
-    } else {
-      const creditResult = await requireCredits(creditsKey, CREDITS_PER_COMMENTS);
-      if (!creditResult.ok) commentsEnabled = false;
-    }
-  }
-
-  /* 1. Deduplicate: return the existing task if one is already running */
+  /* 0. Deduplicate: return the existing task if one is already running */
   const existing = await findActiveTaskByUrl(url);
   if (existing) {
     log.info(
@@ -119,6 +105,20 @@ export async function POST(request: Request) {
       },
       { status: 202 },
     );
+  }
+
+  /* 1. Credit gate: if comments are requested for a ScrapeCreators platform,
+        validate and deduct 1 credit. If credits are missing or exhausted,
+        silently disable comments and continue with the download. */
+  let creditsKey: string | null = null;
+  if (commentsEnabled && isScrapeCreatorsPlatform(url)) {
+    creditsKey = getCreditsKey(request);
+    if (!creditsKey) {
+      commentsEnabled = false;
+    } else {
+      const creditResult = await requireCredits(creditsKey, CREDITS_PER_COMMENTS);
+      if (!creditResult.ok) commentsEnabled = false;
+    }
   }
 
   /* 2. Create the task document immediately */

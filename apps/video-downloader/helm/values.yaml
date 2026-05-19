@@ -6,7 +6,7 @@
 revisionHistoryLimit: 2 # how many old ReplicaSets to keep for rollbacks
 
 # -- Number of pod replicas
-replicaCount: 4
+replicaCount: 3
 
 # ─── Container image ────────────────────────────────────────
 image:
@@ -97,7 +97,6 @@ nodeAffinity:
   # List of node names where the pods should be scheduled.
   nodeNames:
     - node1
-    - node2
     - node4
     - node6
 

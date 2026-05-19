@@ -31,7 +31,7 @@ export function MigrationBanner({ serverDate }: MigrationBannerProps) {
   if (!visible) return null;
 
   return (
-    <Box maxWidth={400} width="100%" marginTop={12}>
+    <Box maxWidth={400} width="100%">
       <Box
         elevation={2}
         borderRadius={14}

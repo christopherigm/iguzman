@@ -2,7 +2,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { Container } from '@repo/ui/core-elements/container';
 import { DownloadPage } from '@/components/download-page';
 import { ThemeSwitch } from '@repo/ui/theme-switch';
-import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
+import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -21,14 +21,13 @@ export default async function Home({ params }: Props) {
         alignItems="center"
         flexDirection="column"
         paddingX={10}
+        paddingTop={16}
+        gap={16}
       >
-        <br />
         <DownloadPage serverDate={serverDate} />
-        <br />
         <ThemeSwitch hideOnMobile />
-        <br />
-        <br />
       </Container>
+      <PageBottomSpacer />
     </>
   );
 }

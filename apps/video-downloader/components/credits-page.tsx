@@ -199,8 +199,7 @@ export function CreditsPageContent() {
         display="flex"
         justifyContent="center"
         paddingX={10}
-        marginTop={24}
-        marginBottom={24}
+        paddingTop={16}
       >
         <Box maxWidth={400} width="100%">
           <Box
