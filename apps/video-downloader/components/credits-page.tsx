@@ -10,6 +10,7 @@ import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
 import { Container } from '@repo/ui/core-elements/container';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { CREDIT_PACKS, type CreditPack } from '../lib/credit-packs';
+import { setCreditsBalance } from './use-credits-store';
 
 const LS_KEY = 'vd_credits_key';
 
@@ -78,6 +79,13 @@ export function CreditsPageContent() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
+  const [couponInput, setCouponInput] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponModal, setCouponModal] = useState<{
+    success: boolean;
+    creditsAdded?: number;
+  } | null>(null);
+
   const fetchBalance = useCallback(async (key: string) => {
     try {
       const res = await fetch('/api/credits/balance', {
@@ -86,9 +94,49 @@ export function CreditsPageContent() {
       if (res.ok) {
         const data = (await res.json()) as { credits: number };
         setBalance(data.credits);
+        setCreditsBalance(data.credits);
       }
     } catch {
       // silently ignore
+    }
+  }, []);
+
+  const handleRedeemCoupon = useCallback(async (code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+    setCouponLoading(true);
+    try {
+      const existingKey = localStorage.getItem(LS_KEY) ?? undefined;
+      const res = await fetch('/api/credits/redeem', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(existingKey ? { 'x-credits-key': existingKey } : {}),
+        },
+        body: JSON.stringify({ code: trimmed }),
+      });
+      if (!res.ok) {
+        setCouponModal({ success: false });
+        return;
+      }
+      const data = (await res.json()) as {
+        creditsAdded: number;
+        creditsRemaining: number;
+        newKey?: string;
+      };
+      if (data.newKey) {
+        localStorage.setItem(LS_KEY, data.newKey);
+        setHasKey(true);
+        setKeyValue(data.newKey);
+      }
+      setBalance(data.creditsRemaining);
+      setCreditsBalance(data.creditsRemaining);
+      setCouponModal({ success: true, creditsAdded: data.creditsAdded });
+      setCouponInput('');
+    } catch {
+      setCouponModal({ success: false });
+    } finally {
+      setCouponLoading(false);
     }
   }, []);
 
@@ -98,32 +146,49 @@ export function CreditsPageContent() {
     const params = new URLSearchParams(window.location.search);
     const keyParam = params.get('credits_key');
     const creditsAdded = parseInt(params.get('credits_added') ?? '0', 10);
+    const couponParam = params.get('coupon');
+
+    const newUrl = new URL(window.location.href);
+    let urlChanged = false;
 
     if (keyParam) {
       localStorage.setItem(LS_KEY, keyParam);
-      const newUrl = new URL(window.location.href);
       newUrl.searchParams.delete('credits_key');
       newUrl.searchParams.delete('credits_added');
+      urlChanged = true;
+    }
+
+    if (couponParam) {
+      newUrl.searchParams.delete('coupon');
+      urlChanged = true;
+    }
+
+    if (urlChanged) {
       window.history.replaceState({}, '', newUrl.toString());
     }
 
     const key = localStorage.getItem(LS_KEY);
-    if (!key) return;
 
-    setHasKey(true);
-    setKeyValue(key);
-    void fetchBalance(key);
+    if (key) {
+      setHasKey(true);
+      setKeyValue(key);
+      void fetchBalance(key);
 
-    if (creditsAdded > 0) {
-      let attempts = 0;
-      const poll = setInterval(() => {
-        attempts++;
-        void fetchBalance(key);
-        if (attempts >= 10) clearInterval(poll);
-      }, 1500);
-      return () => clearInterval(poll);
+      if (creditsAdded > 0) {
+        let attempts = 0;
+        const poll = setInterval(() => {
+          attempts++;
+          void fetchBalance(key);
+          if (attempts >= 10) clearInterval(poll);
+        }, 1500);
+        return () => clearInterval(poll);
+      }
     }
-  }, [fetchBalance]);
+
+    if (couponParam) {
+      void handleRedeemCoupon(couponParam);
+    }
+  }, [fetchBalance, handleRedeemCoupon]);
 
   const handleCopyKey = useCallback(async () => {
     if (!keyValue) return;
@@ -137,6 +202,7 @@ export function CreditsPageContent() {
     setHasKey(false);
     setKeyValue(null);
     setBalance(null);
+    setCreditsBalance(0);
     setShowKey(false);
     setShowDeleteModal(false);
   }, []);
@@ -159,6 +225,7 @@ export function CreditsPageContent() {
       setHasKey(true);
       setKeyValue(trimmed);
       setBalance(data.credits);
+      setCreditsBalance(data.credits);
     } catch {
       setRestoreError(t('restoreError'));
     } finally {
@@ -251,6 +318,33 @@ export function CreditsPageContent() {
                   kind="success"
                   size="md"
                 />
+
+                <Box
+                  styles={{
+                    borderTop: '1px solid var(--border, #e5e7eb)',
+                    paddingTop: '12px',
+                  }}
+                >
+                  <Typography variant="body-sm" fontWeight={600}>
+                    {t('couponTitle')}
+                  </Typography>
+                </Box>
+                <TextInput
+                  label={t('couponInputLabel')}
+                  value={couponInput}
+                  onChange={setCouponInput}
+                />
+                <Button
+                  kind="success"
+                  text={
+                    couponLoading ? t('couponRedeeming') : t('couponButton')
+                  }
+                  onClick={() => void handleRedeemCoupon(couponInput)}
+                  disabled={couponLoading || !couponInput.trim()}
+                  width="100%"
+                  size="md"
+                />
+
                 <Box
                   styles={{
                     borderTop: '1px solid var(--border, #e5e7eb)',
@@ -267,7 +361,6 @@ export function CreditsPageContent() {
                   <Typography
                     variant="caption"
                     color="var(--foreground-muted, #888)"
-                    marginBottom={8}
                   >
                     {t('restoreText')}
                   </Typography>
@@ -414,6 +507,32 @@ export function CreditsPageContent() {
                   kind="success"
                   size="md"
                 />
+
+                <Box
+                  styles={{
+                    borderTop: '1px solid var(--border, #e5e7eb)',
+                    paddingTop: '12px',
+                  }}
+                >
+                  <Typography variant="body-sm" fontWeight={600}>
+                    {t('couponTitle')}
+                  </Typography>
+                </Box>
+                <TextInput
+                  label={t('couponInputLabel')}
+                  value={couponInput}
+                  onChange={setCouponInput}
+                />
+                <Button
+                  kind="success"
+                  text={
+                    couponLoading ? t('couponRedeeming') : t('couponButton')
+                  }
+                  onClick={() => void handleRedeemCoupon(couponInput)}
+                  disabled={couponLoading || !couponInput.trim()}
+                  width="100%"
+                  size="md"
+                />
               </Box>
             )}
           </Box>
@@ -427,6 +546,24 @@ export function CreditsPageContent() {
           text={t('deleteKeyText')}
           okCallback={handleDeleteKey}
           cancelCallback={() => setShowDeleteModal(false)}
+        />
+      ) : null}
+
+      {couponModal?.success ? (
+        <ConfirmationModal
+          title={t('couponSuccessTitle')}
+          text={t('couponSuccessText', {
+            credits: couponModal.creditsAdded ?? 0,
+          })}
+          okCallback={() => setCouponModal(null)}
+        />
+      ) : null}
+
+      {couponModal !== null && !couponModal.success ? (
+        <ConfirmationModal
+          title={t('couponErrorTitle')}
+          text={t('couponErrorText')}
+          okCallback={() => setCouponModal(null)}
         />
       ) : null}
     </>

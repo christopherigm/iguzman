@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { redeemCoupon } from '@/lib/credits-db';
+import { redeemCoupon, createCreditKey, getCreditKey } from '@/lib/credits-db';
 import { getCreditsKey } from '@/lib/credits-middleware';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/credits/redeem' });
 
 export async function POST(request: NextRequest) {
-  const key = getCreditsKey(request);
-  if (!key) {
-    return NextResponse.json({ error: 'NO_CREDITS_KEY' }, { status: 401 });
-  }
-
   let body: { code?: string };
   try {
     body = (await request.json()) as typeof body;
@@ -23,12 +18,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing coupon code' }, { status: 400 });
   }
 
+  let key = getCreditsKey(request);
+  let newKey: string | undefined;
+
+  if (!key) {
+    key = await createCreditKey(0);
+    newKey = key;
+  }
+
   const added = await redeemCoupon(code, key);
   if (added === null) {
     log.info({ code }, 'Coupon redemption failed');
     return NextResponse.json({ error: 'INVALID_COUPON' }, { status: 400 });
   }
 
-  log.info({ code, added }, 'Coupon redeemed successfully');
-  return NextResponse.json({ creditsAdded: added });
+  const keyDoc = await getCreditKey(key);
+  const creditsRemaining = keyDoc?.credits ?? added;
+
+  log.info({ code, added, creditsRemaining }, 'Coupon redeemed successfully');
+  return NextResponse.json({
+    creditsAdded: added,
+    creditsRemaining,
+    ...(newKey ? { newKey } : {}),
+  });
 }

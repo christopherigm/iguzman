@@ -107,18 +107,22 @@ export async function POST(request: Request) {
     );
   }
 
-  /* 1. Credit gate: if comments are requested for a ScrapeCreators platform,
-        validate and deduct 1 credit. If credits are missing or exhausted,
-        silently disable comments and continue with the download. */
-  let creditsKey: string | null = null;
+  /* 1. Credit gate: every download costs 1 credit.
+        Non-YouTube downloads with comments cost 1 additional credit. */
+  const creditsKey = getCreditsKey(request);
+  if (!creditsKey) {
+    return creditsErrorResponse('NO_CREDITS_KEY');
+  }
+  const baseResult = await requireCredits(creditsKey, 1);
+  if (!baseResult.ok) {
+    return creditsErrorResponse(baseResult.error);
+  }
+  let creditsRemaining = baseResult.remaining;
+
   if (commentsEnabled && isScrapeCreatorsPlatform(url)) {
-    creditsKey = getCreditsKey(request);
-    if (!creditsKey) {
-      commentsEnabled = false;
-    } else {
-      const creditResult = await requireCredits(creditsKey, CREDITS_PER_COMMENTS);
-      if (!creditResult.ok) commentsEnabled = false;
-    }
+    const creditResult = await requireCredits(creditsKey, CREDITS_PER_COMMENTS);
+    if (!creditResult.ok) commentsEnabled = false;
+    else creditsRemaining = creditResult.remaining;
   }
 
   /* 2. Create the task document immediately */
@@ -325,6 +329,7 @@ export async function POST(request: Request) {
         justAudio,
         checkCodec,
       },
+      creditsRemaining,
     },
     { status: 202 },
   );

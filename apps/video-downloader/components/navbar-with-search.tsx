@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { usePathname } from '@repo/i18n/navigation';
+import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
 import { Navbar } from '@repo/ui/core-elements/navbar';
 import type { NavbarProps } from '@repo/ui/core-elements/navbar';
@@ -11,6 +12,7 @@ import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Box } from '@repo/ui/core-elements/box';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { setSearchQuery, useSearchQuery } from './use-search-store';
+import { useCreditsBalance } from './use-credits-store';
 
 type NavbarWithSearchProps = Omit<
   NavbarProps,
@@ -28,6 +30,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const locale = useLocale();
   const whisperLang = locale.slice(0, 2);
   const searchQuery = useSearchQuery();
+  const creditsBalance = useCreditsBalance();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalQuery, setModalQuery] = useState('');
 
@@ -40,7 +43,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const allItems = [
     { label: t('home'), href: '/' },
     { label: t('reelMode'), href: '/reel-mode' },
-    { label: t('credits'), href: '/credits' },
+    { label: t('buyCredits'), href: '/credits' },
     { label: t('terms'), href: '/terms' },
   ];
   const items = allItems.filter((item) => item.href !== pathname);
@@ -73,7 +76,21 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
         searchBox={false}
         items={items}
         rightSlot={
-          <Box display="flex" alignItems="center" gap={8}>
+          <Box display="flex" alignItems="center" gap={14}>
+            <Link
+              href="/credits"
+              prefetch
+              style={{
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                whiteSpace: 'nowrap',
+                textDecoration: 'none',
+                color: 'inherit',
+                cursor: 'pointer',
+              }}
+            >
+              🪙 {creditsBalance}
+            </Link>
             <Button
               icon="/icons/search.svg"
               aria-label={t('searchModal.openLabel')}

@@ -97,6 +97,7 @@
     "home": "Início",
     "reelMode": "Modo Reel",
     "credits": "Créditos",
+    "buyCredits": "Comprar créditos",
     "terms": "Termos e Condições",
     "searchModal": {
       "title": "Pesquisar",
@@ -342,6 +343,15 @@
     "deleteKeyTitle": "Excluir Chave de Créditos?",
     "deleteKeyText": "Isso removerá permanentemente sua chave de créditos deste dispositivo. Não guardamos uma cópia — esta ação não pode ser desfeita.",
     "deleteKeyConfirm": "Excluir",
-    "deleteKeyCancel": "Cancelar"
+    "deleteKeyCancel": "Cancelar",
+    "couponTitle": "Resgatar um Cupom",
+    "couponInputLabel": "Código do Cupom",
+    "couponButton": "Resgatar",
+    "couponRedeeming": "Resgatando...",
+    "couponSuccessTitle": "Créditos Adicionados!",
+    "couponSuccessText": "{credits} créditos foram adicionados à sua conta.",
+    "couponErrorTitle": "Cupom Inválido",
+    "couponErrorText": "Este cupom é inválido, expirou ou já foi utilizado.",
+    "couponGenericError": "Algo deu errado. Por favor, tente novamente."
   }
 }

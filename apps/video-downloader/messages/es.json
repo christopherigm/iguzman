@@ -97,6 +97,7 @@
     "home": "Inicio",
     "reelMode": "Modo Reel",
     "credits": "Créditos",
+    "buyCredits": "Comprar créditos",
     "terms": "Términos y Condiciones",
     "searchModal": {
       "title": "Buscar",
@@ -344,6 +345,15 @@
     "deleteKeyTitle": "¿Eliminar Clave de Créditos?",
     "deleteKeyText": "Esto eliminará permanentemente tu clave de créditos de este dispositivo. No guardamos una copia — esta acción no se puede deshacer.",
     "deleteKeyConfirm": "Eliminar",
-    "deleteKeyCancel": "Cancelar"
+    "deleteKeyCancel": "Cancelar",
+    "couponTitle": "Canjear un Cupón",
+    "couponInputLabel": "Código de Cupón",
+    "couponButton": "Canjear",
+    "couponRedeeming": "Canjeando...",
+    "couponSuccessTitle": "¡Créditos Añadidos!",
+    "couponSuccessText": "Se han añadido {credits} créditos a tu cuenta.",
+    "couponErrorTitle": "Cupón No Válido",
+    "couponErrorText": "Este cupón no es válido, ha expirado o ya fue utilizado.",
+    "couponGenericError": "Algo salió mal. Inténtalo de nuevo."
   }
 }

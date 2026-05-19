@@ -97,6 +97,7 @@
     "home": "Home",
     "reelMode": "Reel Mode",
     "credits": "Credits",
+    "buyCredits": "Buy credits",
     "terms": "Terms and Conditions",
     "searchModal": {
       "title": "Search",
@@ -343,6 +344,15 @@
     "deleteKeyTitle": "Delete Credits Key?",
     "deleteKeyText": "This will permanently remove your credits key from this device. We do not store a copy — this action cannot be undone.",
     "deleteKeyConfirm": "Delete",
-    "deleteKeyCancel": "Cancel"
+    "deleteKeyCancel": "Cancel",
+    "couponTitle": "Redeem a Coupon",
+    "couponInputLabel": "Coupon Code",
+    "couponButton": "Redeem",
+    "couponRedeeming": "Redeeming...",
+    "couponSuccessTitle": "Credits Added!",
+    "couponSuccessText": "{credits} credits have been added to your account.",
+    "couponErrorTitle": "Invalid Coupon",
+    "couponErrorText": "This coupon is invalid, expired, or has already been used.",
+    "couponGenericError": "Something went wrong. Please try again."
   }
 }

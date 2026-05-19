@@ -97,6 +97,7 @@
     "home": "Accueil",
     "reelMode": "Mode Reel",
     "credits": "Crédits",
+    "buyCredits": "Acheter des crédits",
     "terms": "Termes et Conditions",
     "searchModal": {
       "title": "Rechercher",
@@ -342,6 +343,15 @@
     "deleteKeyTitle": "Supprimer la clé de crédits ?",
     "deleteKeyText": "Cela supprimera définitivement votre clé de crédits de cet appareil. Nous ne conservons pas de copie — cette action est irréversible.",
     "deleteKeyConfirm": "Supprimer",
-    "deleteKeyCancel": "Annuler"
+    "deleteKeyCancel": "Annuler",
+    "couponTitle": "Utiliser un coupon",
+    "couponInputLabel": "Code coupon",
+    "couponButton": "Utiliser",
+    "couponRedeeming": "En cours...",
+    "couponSuccessTitle": "Crédits ajoutés !",
+    "couponSuccessText": "{credits} crédits ont été ajoutés à votre compte.",
+    "couponErrorTitle": "Coupon invalide",
+    "couponErrorText": "Ce coupon est invalide, expiré ou a déjà été utilisé.",
+    "couponGenericError": "Une erreur s'est produite. Veuillez réessayer."
   }
 }

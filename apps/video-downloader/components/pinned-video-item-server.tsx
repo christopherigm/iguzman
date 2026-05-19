@@ -25,6 +25,7 @@ import {
 import { useOPFSUrls } from './opfs-url-context';
 import { readFromOPFS } from '@/lib/opfs';
 import { saveProcessedToOPFS } from '@/lib/opfs-processing';
+import { setCreditsBalance } from './use-credits-store';
 import './video-item.css';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -138,6 +139,7 @@ export function PinnedVideoItemServer({
       const key = localStorage.getItem('vd_credits_key');
       return key ? { 'x-credits-key': key } : {};
     },
+    onCreditsUpdate: setCreditsBalance,
   });
   const { startPolling } = usePollTask();
 
@@ -293,7 +295,8 @@ export function PinnedVideoItemServer({
           throw new Error(data.error ?? `Server error ${res.status}`);
         }
 
-        const data = (await res.json()) as { taskId: string };
+        const data = (await res.json()) as { taskId: string; creditsRemaining?: number };
+        if (data.creditsRemaining !== undefined) setCreditsBalance(data.creditsRemaining);
         onUpdate(video.uuid, { serverTaskId: data.taskId });
         pollForTaskRef.current(data.taskId, {
           donePatch: opts.donePatch,

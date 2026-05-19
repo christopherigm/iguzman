@@ -3,7 +3,11 @@ import {
   fetchVideoMetadata,
   listSubtitlesViaYtDlp,
 } from '@repo/helpers/download-video';
-import { getBalance } from '@/lib/credits-middleware';
+import {
+  getCreditsKey,
+  requireCredits,
+  creditsErrorResponse,
+} from '@/lib/credits-middleware';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/video-metadata' });
@@ -16,14 +20,19 @@ export interface CaptionOption {
 }
 
 export async function POST(request: Request) {
-  let body: { url?: string; exhaustive?: boolean; creditsKey?: string };
+  const creditsKey = getCreditsKey(request);
+  if (!creditsKey) return creditsErrorResponse('NO_CREDITS_KEY');
+  const creditsResult = await requireCredits(creditsKey, 1);
+  if (!creditsResult.ok) return creditsErrorResponse(creditsResult.error);
+
+  let body: { url?: string; exhaustive?: boolean };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { url, exhaustive = false, creditsKey } = body;
+  const { url, exhaustive = false } = body;
 
   if (!url) {
     log.warn('POST /api/video-metadata - missing url in body');
@@ -33,11 +42,10 @@ export async function POST(request: Request) {
     );
   }
 
+  const remainingCredits = creditsResult.remaining;
+
   try {
-    const [meta, balance] = await Promise.all([
-      fetchVideoMetadata(url),
-      creditsKey ? getBalance(creditsKey) : Promise.resolve(null),
-    ]);
+    const meta = await fetchVideoMetadata(url);
     const formats = meta.formats ?? [];
 
     const videoFormats = formats.filter(
@@ -104,8 +112,6 @@ export async function POST(request: Request) {
     const commentCount =
       (meta as typeof meta & { comment_count?: number }).comment_count ?? null;
 
-    const credits = balance !== null ? balance : undefined;
-
     log.info(
       {
         url,
@@ -121,7 +127,7 @@ export async function POST(request: Request) {
       widthByHeight,
       captions,
       commentCount,
-      ...(credits !== undefined && { credits }),
+      creditsRemaining: remainingCredits,
     });
   } catch (err) {
     log.error({ err, url }, 'Failed to fetch video metadata');

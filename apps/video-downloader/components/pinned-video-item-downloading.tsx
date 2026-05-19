@@ -24,12 +24,14 @@ import {
 } from './video-item-shared';
 import { useOPFSUrls } from './opfs-url-context';
 import { writeToOPFS, readFromOPFS, deleteFromOPFS } from '@/lib/opfs';
+import { setCreditsBalance } from './use-credits-store';
 import './video-item.css';
 
 /* ── API types ──────────────────────────────────────── */
 
 interface TaskCreateResponse {
   task: { _id: string; status: string };
+  creditsRemaining?: number;
   error?: DownloadVideoError;
 }
 
@@ -337,6 +339,9 @@ export function PinnedVideoItemDownloading({
           error: data.error?.message ?? 'Failed to start download',
         });
         return;
+      }
+      if (data.creditsRemaining !== undefined) {
+        setCreditsBalance(data.creditsRemaining);
       }
       const taskId = data.task._id;
       onUpdate(video.uuid, { status: 'downloading', taskId, error: null });

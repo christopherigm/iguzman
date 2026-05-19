@@ -30,6 +30,8 @@ export interface UseGroqOptions {
   webSearch?: boolean;
   /** Returns auth headers to attach to every proxy request. */
   getAuthHeaders?: () => Record<string, string>;
+  /** Called with the remaining credits balance after a successful generation (from x-credits-remaining header). */
+  onCreditsUpdate?: (remaining: number) => void;
 }
 
 export interface UseGroqReturn {
@@ -56,6 +58,7 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
     seed: seedOption,
     webSearch = false,
     getAuthHeaders,
+    onCreditsUpdate,
   } = options;
 
   const [streamingText, setStreamingText] = useState('');
@@ -98,6 +101,12 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
 
         if (!res.ok) throw new Error(`Groq proxy: ${res.status} ${res.statusText}`);
         if (!res.body) throw new Error('Groq proxy: empty response body');
+
+        const creditsHeader = res.headers.get('x-credits-remaining');
+        if (creditsHeader !== null && onCreditsUpdate) {
+          const parsed = parseInt(creditsHeader, 10);
+          if (!isNaN(parsed)) onCreditsUpdate(parsed);
+        }
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -151,7 +160,7 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
         abortControllerRef.current = null;
       }
     },
-    [isGenerating, proxyBase, model, temperature, seedOption, webSearch, getAuthHeaders],
+    [isGenerating, proxyBase, model, temperature, seedOption, webSearch, getAuthHeaders, onCreditsUpdate],
   );
 
   const abort = useCallback((): void => {

@@ -21,6 +21,7 @@ import {
 import { isOPFSSupported, getOPFSStorageInfo } from '@/lib/opfs';
 import { ClearStorageModal } from './clear-storage-modal';
 import type { CaptionOption } from '@/app/api/video-metadata/route';
+import { useCreditsBalance, setCreditsBalance } from './use-credits-store';
 import { Divider } from '@repo/ui/core-elements/divider';
 import './platform-icon-bg.css';
 import './download-form.css';
@@ -318,20 +319,6 @@ export function DownloadForm({
     setSmartComments(storedSmartComments === 'true');
     const storedSmartHeight = localStorage.getItem('vd_smart_max_height');
     setSmartMaxHeight(storedSmartHeight ? Number(storedSmartHeight) : 1080);
-
-    const creditsKey = localStorage.getItem('vd_credits_key');
-    if (creditsKey) {
-      fetch('/api/credits/balance', {
-        headers: { 'x-credits-key': creditsKey },
-      })
-        .then((res) =>
-          res.ok ? (res.json() as Promise<{ credits: number }>) : null,
-        )
-        .then((data) => {
-          if (data) setCreditsBalance(data.credits);
-        })
-        .catch(() => undefined);
-    }
   }, []);
 
   const handleAutoDownloadChange = useCallback((value: boolean) => {
@@ -423,7 +410,7 @@ export function DownloadForm({
   const [smartCaptions, setSmartCaptions] = useState(true);
   const [smartMaxHeight, setSmartMaxHeight] = useState(1080);
 
-  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const creditsBalance = useCreditsBalance();
   const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
 
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
@@ -472,12 +459,16 @@ export function DownloadForm({
   const switchesDisabled = !validPlatformUrl;
   const captionsDisabled = switchesDisabled || justAudio || captionsUnavailable;
   const noCreditsForPlatform =
-    platform !== 'youtube' && (creditsBalance === null || creditsBalance <= 0);
+    platform !== 'youtube' && creditsBalance <= 0;
   const commentsDisabled =
     switchesDisabled ||
     justAudio ||
     commentsUnavailable ||
     noCreditsForPlatform;
+
+  /* Credit cost */
+  const effectiveCommentsEnabled = smartDownload ? smartComments : commentsEnabled;
+  const creditCost = platform !== 'youtube' && !justAudio && effectiveCommentsEnabled ? 2 : 1;
   /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
 
@@ -490,12 +481,11 @@ export function DownloadForm({
       const creditsKey = localStorage.getItem('vd_credits_key');
       const res = await fetch('/api/video-metadata', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url,
-          exhaustive: true,
-          ...(creditsKey && { creditsKey }),
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(creditsKey && { 'x-credits-key': creditsKey }),
+        },
+        body: JSON.stringify({ url, exhaustive: true }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as {
@@ -503,7 +493,7 @@ export function DownloadForm({
         widthByHeight?: Record<number, number>;
         captions?: CaptionOption[];
         commentCount?: number | null;
-        credits?: number;
+        creditsRemaining?: number;
       };
 
       const heights = data.heights ?? [];
@@ -532,13 +522,10 @@ export function DownloadForm({
       const commentsAvailable = isScrapePlatform || count != null;
       setCommentsUnavailable(!commentsAvailable);
 
-      const newBalance = data.credits !== undefined ? data.credits : null;
-      if (newBalance !== null) setCreditsBalance(newBalance);
-      const effectiveBalance = newBalance ?? creditsBalance;
-      if (
-        platform !== 'youtube' &&
-        (effectiveBalance === null || effectiveBalance <= 0)
-      ) {
+      if (data.creditsRemaining !== undefined) setCreditsBalance(data.creditsRemaining);
+      const effectiveBalance =
+        data.creditsRemaining !== undefined ? data.creditsRemaining : creditsBalance;
+      if (platform !== 'youtube' && effectiveBalance <= 0) {
         setCommentsEnabled(false);
       } else if (platform === 'youtube' && commentsAvailable) {
         setCommentsEnabled(true);
@@ -708,7 +695,7 @@ export function DownloadForm({
           <button
             type="submit"
             className="df-icon-btn df-icon-btn--download"
-            disabled={!validPlatformUrl}
+            disabled={!validPlatformUrl || creditsBalance < creditCost}
             aria-label={t('download')}
           >
             <Icon
@@ -719,20 +706,19 @@ export function DownloadForm({
           </button>
         </Box>
       </Box>
-      {smartDownload && !justAudio && (
+      {validPlatformUrl && !justAudio && (
         <Typography
           variant="caption"
           className="df-smart-hint"
           color="var(--accent, #06b6d4)"
         >
-          {t('smartDownloadHintOn', {
+          {`🪙 ${creditCost}`}
+          {smartDownload && ` ${t('smartDownloadHintOn', {
             resolution:
               resolveResolutionLabel(smartMaxHeight) ?? `${smartMaxHeight}p`,
-          })}
-          {smartCaptions && ` ${t('smartDownloadHintCaptions')}`}
-          {smartComments && ` ${t('smartDownloadHintComments')}`}
-          {creditsBalance !== null &&
-            ` ${t('smartDownloadHintCredits', { credits: creditsBalance })}`}
+          })}`}
+          {smartDownload && smartCaptions && ` ${t('smartDownloadHintCaptions')}`}
+          {smartDownload && smartComments && ` ${t('smartDownloadHintComments')}`}
         </Typography>
       )}
 
@@ -770,9 +756,9 @@ export function DownloadForm({
             {!smartDownload && (
               <>
                 <Button
-                  text={metadataLoading ? t('checkingSpecs') : t('checkSpecs')}
+                  text={metadataLoading ? t('checkingSpecs') : `${t('checkSpecs')} 🪙 1`}
                   onClick={() => void handleCheckSpecs()}
-                  disabled={!validPlatformUrl || metadataLoading || justAudio}
+                  disabled={!validPlatformUrl || metadataLoading || justAudio || creditsBalance < 1}
                   width="100%"
                   size="md"
                   kind="success"
@@ -910,6 +896,7 @@ export function DownloadForm({
                   <Box className="df-smart-sub-row-label">
                     <Typography variant="body-sm" fontWeight={500}>
                       {t('comments')}
+                      {platform !== 'youtube' && platform !== 'unknown' && ' 🪙 1'}
                     </Typography>
                     <Switch
                       checked={smartComments}

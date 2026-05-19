@@ -1,0 +1,102 @@
+#!/bin/sh
+# Coupon management CLI for video-downloader
+#
+# Usage:
+#   coupon create -quantity <n> -value <credits> [-max-redemptions <n>]
+#   coupon list [-redeemed true|false] [-amount <credits>]
+#
+# Required env:
+#   INTERNAL_SECRET   — must match the server's INTERNAL_SECRET env var
+#
+# Optional env:
+#   INTERNAL_ENDPOINT — defaults to http://localhost:3000
+
+set -e
+
+ENDPOINT="${INTERNAL_ENDPOINT:-http://localhost:3000}"
+SECRET="${INTERNAL_SECRET:-}"
+
+if [ -z "$SECRET" ]; then
+  printf 'Error: INTERNAL_SECRET environment variable is not set.\n' >&2
+  exit 1
+fi
+
+CMD="${1:-}"
+if [ -z "$CMD" ]; then
+  printf 'Usage:\n'
+  printf '  coupon create -quantity <n> -value <credits> [-max-redemptions <n>]\n'
+  printf '  coupon list [-redeemed true|false] [-amount <credits>]\n'
+  exit 1
+fi
+shift
+
+case "$CMD" in
+  create)
+    QUANTITY=1
+    VALUE=""
+    MAX_REDEMPTIONS=1
+
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        -quantity)        QUANTITY="$2";        shift 2 ;;
+        -value)           VALUE="$2";           shift 2 ;;
+        -max-redemptions) MAX_REDEMPTIONS="$2"; shift 2 ;;
+        *)
+          printf 'Unknown flag: %s\n' "$1" >&2
+          printf 'Usage: coupon create -quantity <n> -value <credits> [-max-redemptions <n>]\n' >&2
+          exit 1
+          ;;
+      esac
+    done
+
+    if [ -z "$VALUE" ]; then
+      printf 'Error: -value is required\n' >&2
+      exit 1
+    fi
+
+    curl -sf -X POST "${ENDPOINT}/api/internal/coupons" \
+      -H "x-internal-secret: ${SECRET}" \
+      -H "Content-Type: application/json" \
+      -d "{\"quantity\":${QUANTITY},\"value\":${VALUE},\"maxRedemptions\":${MAX_REDEMPTIONS}}" \
+      | jq .
+    ;;
+
+  list)
+    PARAMS=""
+
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        -redeemed)
+          PARAMS="${PARAMS}${PARAMS:+&}redeemed=$2"
+          shift 2
+          ;;
+        -amount)
+          PARAMS="${PARAMS}${PARAMS:+&}amount=$2"
+          shift 2
+          ;;
+        *)
+          printf 'Unknown flag: %s\n' "$1" >&2
+          printf 'Usage: coupon list [-redeemed true|false] [-amount <credits>]\n' >&2
+          exit 1
+          ;;
+      esac
+    done
+
+    URL="${ENDPOINT}/api/internal/coupons"
+    if [ -n "$PARAMS" ]; then
+      URL="${URL}?${PARAMS}"
+    fi
+
+    curl -sf "$URL" \
+      -H "x-internal-secret: ${SECRET}" \
+      | jq '.coupons[] | {code: .code, credits: .credits, redeemed: .redeemed, maxRedemptions: .maxRedemptions, createdAt: .createdAt, fullyRedeemed: (.redeemed >= .maxRedemptions), redemptions: [.redemptions[]? | {key: .key, redeemedAt: .redeemedAt}]}'
+    ;;
+
+  *)
+    printf 'Unknown command: %s\n' "$CMD" >&2
+    printf 'Usage:\n'
+    printf '  coupon create -quantity <n> -value <credits> [-max-redemptions <n>]\n'
+    printf '  coupon list [-redeemed true|false] [-amount <credits>]\n'
+    exit 1
+    ;;
+esac

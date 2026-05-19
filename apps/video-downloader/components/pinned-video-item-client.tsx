@@ -27,6 +27,7 @@ import {
 import { useOPFSUrls } from './opfs-url-context';
 import { readFromOPFS } from '@/lib/opfs';
 import { saveProcessedToOPFS } from '@/lib/opfs-processing';
+import { setCreditsBalance } from './use-credits-store';
 import './video-item.css';
 
 /* ── Helpers ────────────────────────────────────────── */
@@ -102,6 +103,7 @@ export function PinnedVideoItemClient({
       const key = localStorage.getItem('vd_credits_key');
       return key ? { 'x-credits-key': key } : {};
     },
+    onCreditsUpdate: setCreditsBalance,
   });
 
   const {

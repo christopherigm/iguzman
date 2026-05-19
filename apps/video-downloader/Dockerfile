@@ -92,6 +92,9 @@ COPY apps/video-downloader/netscape-cookies.txt /app/netscape-cookies.txt
 # COPY --chown=nextjs:nodejs apps/video-downloader/netscape-cookies.txt /app/netscape-cookies.txt
 RUN chmod 644 /app/netscape-cookies.txt
 
+COPY apps/video-downloader/scripts/coupon /usr/local/bin/coupon
+RUN chmod +x /usr/local/bin/coupon
+
 
 # USER nextjs
 

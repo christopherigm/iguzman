@@ -15,7 +15,26 @@ import {
   deleteFromOPFS,
 } from '@/lib/opfs';
 import { MigrationBanner } from './migration-banner';
+import { setCreditsBalance } from './use-credits-store';
 import './download-page.css';
+
+/* ── Credits initializer ────────────────────────────── */
+
+function CreditsInitializer() {
+  useEffect(() => {
+    const creditsKey = localStorage.getItem('vd_credits_key');
+    if (!creditsKey) return;
+    fetch('/api/credits/balance', { headers: { 'x-credits-key': creditsKey } })
+      .then((res) =>
+        res.ok ? (res.json() as Promise<{ credits: number }>) : null,
+      )
+      .then((data) => {
+        if (data) setCreditsBalance(data.credits);
+      })
+      .catch(() => undefined);
+  }, []);
+  return null;
+}
 
 /* ── Entry shape from DownloadForm ──────────────────── */
 
@@ -237,6 +256,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
 
   return (
     <>
+      <CreditsInitializer />
       <DownloadForm
         onVideoAdded={handleVideoAdded}
         completedVideos={completed}

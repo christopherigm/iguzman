@@ -1,6 +1,6 @@
 import { type Collection, type WithId } from 'mongodb';
 import { connectToDatabase } from '@repo/helpers/mongo-db';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 
 const DB_NAME = 'videos';
 const IS_PROD = process.env.NODE_ENV?.trim() === 'production';
@@ -17,12 +17,19 @@ export interface CreditKeyDocument {
   lastUsedAt: Date | null;
 }
 
+export interface CouponRedemption {
+  key: string;
+  redeemedAt: Date;
+}
+
 export interface CouponDocument {
   code: string;
   credits: number;
   maxRedemptions: number;
   redeemed: number;
   expiresAt: Date | null;
+  createdAt: Date;
+  redemptions: CouponRedemption[];
 }
 
 /* ── Collection accessors ───────────────────────────── */
@@ -116,7 +123,10 @@ export async function redeemCoupon(
       $expr: { $lt: ['$redeemed', '$maxRedemptions'] },
       $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
     },
-    { $inc: { redeemed: 1 } },
+    {
+      $inc: { redeemed: 1 },
+      $push: { redemptions: { key, redeemedAt: now } } as Parameters<typeof col.findOneAndUpdate>[1],
+    },
     { returnDocument: 'after' },
   );
 
@@ -124,4 +134,71 @@ export async function redeemCoupon(
 
   await addCredits(key, coupon.credits);
   return coupon.credits;
+}
+
+/* ── Coupon management ──────────────────────────────── */
+
+const COUPON_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+function generateCouponCode(): string {
+  const bytes = randomBytes(8);
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += COUPON_CHARS[bytes[i]! % COUPON_CHARS.length];
+  }
+  return code;
+}
+
+export async function createCoupons(
+  quantity: number,
+  credits: number,
+  maxRedemptions = 1,
+): Promise<string[]> {
+  const col = await getCouponsCollection();
+  const now = new Date();
+  const codes: string[] = [];
+
+  for (let i = 0; i < quantity; i++) {
+    let code = generateCouponCode();
+    let inserted = false;
+    while (!inserted) {
+      try {
+        await col.insertOne({
+          code,
+          credits,
+          maxRedemptions,
+          redeemed: 0,
+          expiresAt: null,
+          createdAt: now,
+          redemptions: [],
+        });
+        inserted = true;
+      } catch {
+        code = generateCouponCode();
+      }
+    }
+    codes.push(code);
+  }
+
+  return codes;
+}
+
+export async function listCoupons(filters?: {
+  redeemed?: boolean;
+  credits?: number;
+}): Promise<WithId<CouponDocument>[]> {
+  const col = await getCouponsCollection();
+  const query: Record<string, unknown> = {};
+
+  if (filters?.redeemed === true) {
+    query['redeemed'] = { $gt: 0 };
+  } else if (filters?.redeemed === false) {
+    query['redeemed'] = 0;
+  }
+
+  if (filters?.credits !== undefined) {
+    query['credits'] = filters.credits;
+  }
+
+  return col.find(query).sort({ createdAt: -1 }).toArray();
 }

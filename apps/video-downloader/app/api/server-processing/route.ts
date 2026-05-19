@@ -249,5 +249,5 @@ export async function POST(request: NextRequest) {
   void runFfmpegJob(taskId!, op as ProcessingOp, inputFile, jobParams);
 
   log.info({ taskId, op, inputFile }, 'Server FFmpeg job started');
-  return NextResponse.json({ taskId }, { status: 201 });
+  return NextResponse.json({ taskId, creditsRemaining: creditResult.remaining }, { status: 201 });
 }
