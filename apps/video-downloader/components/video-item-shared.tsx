@@ -917,7 +917,7 @@ export function VideoExtraActions({
           !video.opfsStored &&
           !!video.file &&
           !video.serverFileDeleted ? (
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
               <Button
                 unstyled
                 className="vi-fps-btn"
@@ -945,7 +945,7 @@ export function VideoExtraActions({
           ) : null}
 
           {video.isH265 ? (
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
               <Button
                 unstyled
                 className="vi-fps-btn"
@@ -963,7 +963,7 @@ export function VideoExtraActions({
           ) : null}
 
           {!video.justAudio && !video.isH265 ? (
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
               <Button
                 unstyled
                 className="vi-fps-btn"
@@ -985,7 +985,7 @@ export function VideoExtraActions({
           ) : null}
 
           {!video.justAudio && !video.blackBarsRemoved ? (
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
               <Button
                 unstyled
                 className="vi-fps-btn"
@@ -1003,7 +1003,7 @@ export function VideoExtraActions({
           ) : null}
 
           {video.captionsFile && onDownloadCaptions ? (
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
               <Button
                 unstyled
                 className="vi-fps-btn"
@@ -1020,7 +1020,7 @@ export function VideoExtraActions({
           ) : null}
 
           {video.captionsFile && !video.justAudio && onBurnCaptions ? (
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
               <Button
                 unstyled
                 className="vi-fps-btn"
@@ -1038,7 +1038,7 @@ export function VideoExtraActions({
           ) : null}
 
           {onDuplicate ? (
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
               <Button
                 unstyled
                 className="vi-fps-btn"
@@ -1064,7 +1064,7 @@ export function VideoExtraActions({
           {!video.justAudio &&
           !!onScaleDown &&
           availableScaleResolutions.length > 0 ? (
-            <Grid size={{ xs: 6 }}>
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
               <Button
                 unstyled
                 className="vi-fps-btn"
