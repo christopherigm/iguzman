@@ -19,6 +19,7 @@ import {
   requireCredits,
   creditsErrorResponse,
 } from '@/lib/credits-middleware';
+import { calculateOperationCredits } from '@/lib/operation-credits';
 
 const CREDITS_PER_COMMENTS = 1;
 
@@ -269,6 +270,20 @@ export async function POST(request: Request) {
         }
 
         const meta = result.metadata;
+        const resolvedWidth =
+          result.formatSelection?.bestVideo?.width ??
+          result.formatSelection?.bestCombined?.width ??
+          null;
+        const resolvedHeight =
+          result.formatSelection?.bestVideo?.height ??
+          result.formatSelection?.bestCombined?.height ??
+          null;
+        const operationCredits = calculateOperationCredits({
+          width: resolvedWidth,
+          height: resolvedHeight,
+          durationSeconds: meta?.duration ?? null,
+        });
+
         await updateTask(taskId, {
           status: 'done',
           progress: 100,
@@ -288,17 +303,12 @@ export async function POST(request: Request) {
           description: meta?.description ?? null,
           tags: meta?.tags?.length ? meta.tags : null,
           sourceFps: result.fps ?? null,
-          width:
-            result.formatSelection?.bestVideo?.width ??
-            result.formatSelection?.bestCombined?.width ??
-            null,
-          height:
-            result.formatSelection?.bestVideo?.height ??
-            result.formatSelection?.bestCombined?.height ??
-            null,
+          width: resolvedWidth,
+          height: resolvedHeight,
           captionsFile: result.captionsFile ?? null,
           commentsFile,
           scrapeCreditsRemaining,
+          operationCredits,
         });
       }
     } catch (err) {

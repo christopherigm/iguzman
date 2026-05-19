@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import type { Platform } from '@repo/helpers/checkers';
 import type {
   BurnCaptionsConfig,
+  OperationCredits,
   VideoResultFields,
   VideoStatus,
 } from '@/lib/types';
@@ -85,6 +86,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   fileSize: number | null;
   /** Target height for a pending scale-down operation. Null when not pending. */
   scaleDownTargetHeight: number | null;
+  /** Per-operation server credit costs computed after download. Null until download completes. */
+  operationCredits: OperationCredits | null;
 }
 
 /* ── Constants ──────────────────────────────────────── */
@@ -159,6 +162,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     serverFileDeleted: v.serverFileDeleted ?? false,
     fileSize: v.fileSize ?? null,
     scaleDownTargetHeight: v.scaleDownTargetHeight ?? null,
+    operationCredits: v.operationCredits ?? null,
   };
 }
 
@@ -400,6 +404,7 @@ export function useVideoStore() {
         serverFileDeleted: false,
         fileSize: null,
         scaleDownTargetHeight: null,
+        operationCredits: null,
       };
       setPinned((prev) => {
         /* Guard against React Strict Mode double-invocation of functional

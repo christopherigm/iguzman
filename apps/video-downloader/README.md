@@ -111,11 +111,11 @@ All containers in a Kubernetes pod share a single network namespace. wg-quick in
 
 Three rules that must be followed — each one has a specific reason:
 
-| Rule | Why |
-|---|---|
-| Use public-only `AllowedIPs` — **not** `0.0.0.0/0` | `0.0.0.0/0` triggers wg-quick's policy-routing mode, which installs kernel `ip rule` entries before the tunnel is established and breaks pod networking during startup. Split AllowedIPs uses simple per-prefix route injection instead. |
-| Add `PostUp`/`PreDown` endpoint host routes | The Surfshark server IP (e.g. `212.102.44.115`) falls inside the `208.0.0.0/4` AllowedIPs range. Without a `/32` host route via `eth0`, WireGuard's own handshake UDP packets loop back through `wg0` and the tunnel never connects (`0 B received`). |
-| Omit `DNS =` | All containers in the pod share the network namespace. wg-quick's DNS management redirects port-53 traffic through the VPN, breaking DNS for every container including `video-downloader`. Let Kubernetes CoreDNS handle DNS — it resolves via a `10.x.x.x` ClusterIP that is excluded from `AllowedIPs` and always routes via `eth0`. |
+| Rule                                               | Why                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Use public-only `AllowedIPs` — **not** `0.0.0.0/0` | `0.0.0.0/0` triggers wg-quick's policy-routing mode, which installs kernel `ip rule` entries before the tunnel is established and breaks pod networking during startup. Split AllowedIPs uses simple per-prefix route injection instead.                                                                                               |
+| Add `PostUp`/`PreDown` endpoint host routes        | The Surfshark server IP (e.g. `212.102.44.115`) falls inside the `208.0.0.0/4` AllowedIPs range. Without a `/32` host route via `eth0`, WireGuard's own handshake UDP packets loop back through `wg0` and the tunnel never connects (`0 B received`).                                                                                  |
+| Omit `DNS =`                                       | All containers in the pod share the network namespace. wg-quick's DNS management redirects port-53 traffic through the VPN, breaking DNS for every container including `video-downloader`. Let Kubernetes CoreDNS handle DNS — it resolves via a `10.x.x.x` ClusterIP that is excluded from `AllowedIPs` and always routes via `eth0`. |
 
 Minimal working `wg0.conf` (`apps/video-downloader/us-den.conf`):
 
@@ -181,6 +181,62 @@ kubectl create secret generic video-downloader-wireguard \
 
 kubectl rollout restart deployment/video-downloader -n video-downloader-2
 ```
+
+---
+
+## Coupon management
+
+Coupons are managed via the `scripts/coupon` CLI using `kubectl exec`. Pass `INTERNAL_SECRET` inline — it must match the value in your Kubernetes secret.
+
+### Create coupons
+
+```bash
+kubectl exec -n video-downloader-2 deploy/video-downloader -c video-downloader -- \
+  sh -c 'INTERNAL_SECRET=<your-secret> coupon create -quantity <n> -value <credits> [-max-redemptions <n>]'
+```
+
+| Flag                   | Required        | Description                                 |
+| ---------------------- | --------------- | ------------------------------------------- |
+| `-quantity <n>`        | No (default: 1) | Number of distinct coupon codes to generate |
+| `-value <credits>`     | Yes             | Credit amount each coupon grants            |
+| `-max-redemptions <n>` | No (default: 1) | How many times each code can be redeemed    |
+
+Example — generate 5 single-use coupons worth 1500 credits each:
+
+```bash
+kubectl exec -n video-downloader-2 deploy/video-downloader -c video-downloader -- \
+  sh -c 'INTERNAL_SECRET=<your-secret> coupon create -quantity 5 -value 1500'
+```
+
+### List coupons
+
+```bash
+kubectl exec -n video-downloader-2 deploy/video-downloader -c video-downloader -- \
+  sh -c 'INTERNAL_SECRET=<your-secret> coupon list [-redeemed true|false] [-amount <credits>]'
+```
+
+| Flag                    | Description                 |
+| ----------------------- | --------------------------- |
+| `-redeemed true\|false` | Filter by redemption status |
+| `-amount <credits>`     | Filter by credit value      |
+
+Examples:
+
+```bash
+# All coupons
+kubectl exec -n video-downloader-2 deploy/video-downloader -c video-downloader -- \
+  sh -c 'INTERNAL_SECRET=<your-secret> coupon list'
+
+# Only unredeemed coupons
+kubectl exec -n video-downloader-2 deploy/video-downloader -c video-downloader -- \
+  sh -c 'INTERNAL_SECRET=<your-secret> coupon list -redeemed false'
+
+# Unredeemed 1500-credit coupons
+kubectl exec -n video-downloader-2 deploy/video-downloader -c video-downloader -- \
+  sh -c 'INTERNAL_SECRET=<your-secret> coupon list -redeemed false -amount 1500'
+```
+
+Output is formatted JSON with `code`, `credits`, `redeemed`, `maxRedemptions`, `createdAt`, `fullyRedeemed`, and `redemptions`.
 
 ---
 

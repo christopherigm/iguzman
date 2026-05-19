@@ -18,11 +18,14 @@ import {
   scaleDown,
   type AnimationOptions,
 } from '@repo/helpers/ffmpeg-helper';
+import {
+  calculateOperationCredits,
+  getVideoMetaFromFile,
+  interpolateFpsCost,
+} from '@/lib/operation-credits';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/server-processing' });
-
-const CREDITS_PER_SERVER_OP = 2;
 
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'development';
 const IS_PROD = NODE_ENV === 'production';
@@ -183,8 +186,6 @@ export async function POST(request: NextRequest) {
 
   const creditsKey = getCreditsKey(request);
   if (!creditsKey) return creditsErrorResponse('NO_CREDITS_KEY');
-  const creditResult = await requireCredits(creditsKey, CREDITS_PER_SERVER_OP);
-  if (!creditResult.ok) return creditsErrorResponse(creditResult.error);
 
   if (!op || !params) {
     log.warn({ op, hasParams: !!params }, 'Missing op or params');
@@ -241,6 +242,45 @@ export async function POST(request: NextRequest) {
     log.warn({ taskId }, 'No input file available');
     return NextResponse.json({ error: 'No input file available' }, { status: 422 });
   }
+
+  /* ── Dynamic credit cost ────────────────────────────────────────────── */
+  let metaWidth = task.width ?? null;
+  let metaHeight = task.height ?? null;
+  let metaDuration = task.duration ?? null;
+
+  if (!metaWidth && !metaHeight && !metaDuration) {
+    const inputPath = join(MEDIA_DIR, inputFile);
+    const probed = await getVideoMetaFromFile(inputPath);
+    metaWidth = probed.width ?? null;
+    metaHeight = probed.height ?? null;
+    metaDuration = probed.durationSeconds ?? null;
+  }
+
+  const opCredits = calculateOperationCredits({
+    width: metaWidth,
+    height: metaHeight,
+    durationSeconds: metaDuration,
+  });
+
+  const OP_CREDIT_KEYS: Partial<Record<ProcessingOp, keyof typeof opCredits>> = {
+    removeBlackBars: 'removeBlackBars',
+    convertToH264: 'convertToH264',
+    convertToH265: 'convertToH265',
+    burnSubtitles: 'burnSubtitles',
+    scaleDown: 'scaleDown',
+  };
+
+  let opCost: number;
+  if (op === 'interpolateFps') {
+    opCost = interpolateFpsCost(opCredits, Number(params.fps ?? 60), task.sourceFps ?? null);
+  } else {
+    const key = OP_CREDIT_KEYS[op as ProcessingOp];
+    opCost = key ? opCredits[key] : opCredits.convertToH264;
+  }
+
+  const creditResult = await requireCredits(creditsKey, opCost);
+  if (!creditResult.ok) return creditsErrorResponse(creditResult.error);
+  /* ──────────────────────────────────────────────────────────────────── */
 
   const activeStatus = STATUS_BY_OP[op as ProcessingOp];
   await updateTask(taskId!, { status: activeStatus, progress: 0, error: null });

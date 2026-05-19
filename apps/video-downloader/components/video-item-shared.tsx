@@ -11,6 +11,7 @@ import { Button } from '@repo/ui/core-elements/button';
 import { Grid } from '@repo/ui/core-elements/grid';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import type { OperationCredits } from '@/lib/types';
 import type { StoredVideo, VideoStatus } from './use-video-store';
 import Divider from '@repo/ui/core-elements/divider';
 
@@ -49,8 +50,39 @@ function buildFpsOptions(
   return FPS_MULTIPLIERS.map((m) => {
     const value = Math.round(base * m);
     return { value, label: `${value} FPS` };
-    // return { value, label: `${value} FPS (${m}x)` };
   });
+}
+
+const FPS_CREDIT_KEYS: (keyof OperationCredits)[] = [
+  'interpolateFps2x',
+  'interpolateFps4x',
+  'interpolateFps8x',
+];
+
+function CreditBadge({ amount }: { amount: number }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '2px',
+        marginLeft: '4px',
+        fontSize: '1em',
+        opacity: 0.8,
+        verticalAlign: 'middle',
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/icons/coin.svg"
+        width={10}
+        height={10}
+        alt=""
+        aria-hidden="true"
+      />
+      {amount}
+    </span>
+  );
 }
 
 /* ── Helpers ────────────────────────────────────────── */
@@ -792,6 +824,15 @@ export function VideoExtraActions({
   const serverSelected = serverMode;
   const canProcess = !isBusy && !!video.downloadURL && !video.justAudio;
 
+  const canAffordOp = (cost: number | null | undefined): boolean => {
+    if (!serverSelected) return true;
+    if (cost == null) return true;
+    if (creditsLoading || creditsBalance === null) return true;
+    return creditsBalance >= cost;
+  };
+
+  const oc = video.operationCredits;
+
   const isFhdOrHigher =
     video.height != null
       ? (video.width != null
@@ -950,7 +991,9 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={onConvert}
-                disabled={isBusy || h264Error}
+                disabled={
+                  isBusy || h264Error || !canAffordOp(oc?.convertToH264)
+                }
                 aria-label={t('convertH264')}
                 title={t('convertH264')}
                 icon="/icons/convert.svg"
@@ -958,6 +1001,9 @@ export function VideoExtraActions({
                 iconColor="var(--accent, #8b5cf6)"
               >
                 {t('convertH264')}
+                {serverSelected && oc ? (
+                  <CreditBadge amount={oc.convertToH264} />
+                ) : null}
               </Button>
             </Grid>
           ) : null}
@@ -968,7 +1014,12 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={onConvertH265}
-                disabled={isBusy || h265Error || !serverSelected}
+                disabled={
+                  isBusy ||
+                  h265Error ||
+                  !serverSelected ||
+                  !canAffordOp(oc?.convertToH265)
+                }
                 aria-label={t('convertH265')}
                 title={
                   !serverSelected
@@ -980,6 +1031,9 @@ export function VideoExtraActions({
                 iconColor="var(--accent, #8b5cf6)"
               >
                 {t('convertH265')}
+                {serverSelected && oc ? (
+                  <CreditBadge amount={oc.convertToH265} />
+                ) : null}
               </Button>
             </Grid>
           ) : null}
@@ -990,7 +1044,11 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={onRemoveBlackBars}
-                disabled={!canProcess || blackBarsError}
+                disabled={
+                  !canProcess ||
+                  blackBarsError ||
+                  !canAffordOp(oc?.removeBlackBars)
+                }
                 aria-label={t('removeBlackBars')}
                 title={t('removeBlackBars')}
                 icon="/icons/remove-black-bars.svg"
@@ -998,6 +1056,9 @@ export function VideoExtraActions({
                 iconColor="var(--accent, #8b5cf6)"
               >
                 {t('removeBlackBars')}
+                {serverSelected && oc ? (
+                  <CreditBadge amount={oc.removeBlackBars} />
+                ) : null}
               </Button>
             </Grid>
           ) : null}
@@ -1025,7 +1086,9 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={onBurnCaptions}
-                disabled={!canProcess || isBusy}
+                disabled={
+                  !canProcess || isBusy || !canAffordOp(oc?.burnSubtitles)
+                }
                 aria-label={t('burnCaptions')}
                 title={t('burnCaptions')}
                 icon="/icons/write.svg"
@@ -1033,6 +1096,9 @@ export function VideoExtraActions({
                 iconColor="var(--accent, #8b5cf6)"
               >
                 {t('burnCaptions')}
+                {serverSelected && oc ? (
+                  <CreditBadge amount={oc.burnSubtitles} />
+                ) : null}
               </Button>
             </Grid>
           ) : null}
@@ -1069,7 +1135,9 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={() => setShowScaleDownModal(true)}
-                disabled={!canProcess || scaleDownError}
+                disabled={
+                  !canProcess || scaleDownError || !canAffordOp(oc?.scaleDown)
+                }
                 aria-label={t('scaleDown')}
                 title={t('scaleDown')}
                 icon="/icons/scale-down.svg"
@@ -1077,6 +1145,9 @@ export function VideoExtraActions({
                 iconColor="var(--accent, #8b5cf6)"
               >
                 {t('scaleDown')}
+                {serverSelected && oc ? (
+                  <CreditBadge amount={oc.scaleDown} />
+                ) : null}
               </Button>
             </Grid>
           ) : null}
@@ -1087,7 +1158,9 @@ export function VideoExtraActions({
 
         {!video.justAudio ? (
           <Box>
-            {buildFpsOptions(video.sourceFps).map(({ value, label }) => {
+            {buildFpsOptions(video.sourceFps).map(({ value, label }, idx) => {
+              const fpsCreditKey = FPS_CREDIT_KEYS[idx];
+              const fpsCost = fpsCreditKey && oc ? oc[fpsCreditKey] : null;
               const alreadyApplied =
                 video.fpsApplied && value <= Number(video.fps);
               return (
@@ -1096,10 +1169,18 @@ export function VideoExtraActions({
                   unstyled
                   className="vi-fps-btn"
                   onClick={() => handleFpsClick(value)}
-                  disabled={!canProcess || alreadyApplied || fpsError}
+                  disabled={
+                    !canProcess ||
+                    alreadyApplied ||
+                    fpsError ||
+                    !canAffordOp(fpsCost)
+                  }
                   title={label}
                 >
                   {label}
+                  {serverSelected && fpsCost !== null ? (
+                    <CreditBadge amount={fpsCost} />
+                  ) : null}
                 </Button>
               );
             })}

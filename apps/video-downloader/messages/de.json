@@ -56,7 +56,9 @@
     "scrapeKeyModalTitle": "API-Schlüssel erforderlich",
     "scrapeKeyModalText": "Kommentare von Facebook, Instagram und TikTok werden über ScrapeCreators abgerufen. Gib deinen API-Schlüssel ein, um diese Funktion zu aktivieren.",
     "scrapeKeyInputLabel": "ScrapeCreators-API-Schlüssel",
-    "scrapeKeyGetKey": "API-Schlüssel erhalten auf app.scrapecreators.com"
+    "scrapeKeyGetKey": "API-Schlüssel erhalten auf app.scrapecreators.com",
+    "creditsRequiredTitle": "Credits erforderlich",
+    "creditsRequiredText": "Zum Herunterladen von Videos sind Credits erforderlich. Kaufe Credits oder löse einen Gutscheincode ein, um fortzufahren."
   },
   "ClearStorageModal": {
     "title": "Gerätespeicher verwalten",

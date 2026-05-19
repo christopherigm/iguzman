@@ -119,6 +119,7 @@ export function PinnedVideoItemDownloading({
         commentsFile: task.commentsFile
           ? `/api/media/${task.commentsFile}`
           : null,
+        operationCredits: task.operationCredits ?? null,
       });
 
       // Migrate to OPFS before moving to completed

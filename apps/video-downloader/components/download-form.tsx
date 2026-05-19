@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { Box } from '@repo/ui/core-elements/box';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { TextInput } from '@repo/ui/core-elements/text-input';
@@ -291,6 +292,7 @@ export function DownloadForm({
   onRemoveVideosByUuids,
 }: DownloadFormProps = {}) {
   const t = useTranslations('DownloadForm');
+  const router = useRouter();
   const [url, setUrl] = useState('');
   const [ios, setIos] = useState(false);
   const [autoDownload, setAutoDownload] = useState(false);
@@ -412,6 +414,8 @@ export function DownloadForm({
 
   const creditsBalance = useCreditsBalance();
   const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const prevValidPlatformUrlRef = useRef(false);
 
   const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
     null,
@@ -471,6 +475,17 @@ export function DownloadForm({
   const creditCost = platform !== 'youtube' && !justAudio && effectiveCommentsEnabled ? 2 : 1;
   /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
+
+  /* Show credits modal when URL first becomes valid and user has no credits/key */
+  useEffect(() => {
+    if (validPlatformUrl && !prevValidPlatformUrlRef.current) {
+      const key = localStorage.getItem('vd_credits_key');
+      if (creditsBalance <= 0 || !key) {
+        setShowCreditsModal(true);
+      }
+    }
+    prevValidPlatformUrlRef.current = validPlatformUrl;
+  }, [validPlatformUrl, creditsBalance]);
 
   /* Handlers */
   const handleCheckSpecs = useCallback(async () => {
@@ -987,6 +1002,17 @@ export function DownloadForm({
           onRemoveVideosByUuids={onRemoveVideosByUuids}
         />
       ) : null}
+
+      {/* ── No Credits Modal ─────────────────────── */}
+      {showCreditsModal && (
+        <ConfirmationModal
+          title={t('creditsRequiredTitle')}
+          text={t('creditsRequiredText')}
+          okCallback={() => router.push('/credits')}
+          cancelCallback={() => setShowCreditsModal(false)}
+          panelMaxWidth="440px"
+        />
+      )}
 
       {/* ── Duplicate Video Modal ─────────────────── */}
       {duplicateEntry ? (

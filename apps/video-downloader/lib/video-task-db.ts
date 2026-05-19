@@ -95,6 +95,7 @@ export async function createTask(
     captionsFile: null,
     commentsFile: null,
     scrapeCreditsRemaining: null,
+    operationCredits: null,
     createdAt: now,
     updatedAt: now,
   };

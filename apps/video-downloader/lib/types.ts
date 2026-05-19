@@ -20,6 +20,20 @@ export type VideoDownloadInput = Pick<
   maxComments?: number;
 };
 
+/* ── Operation credits ─────────────────────────────── */
+
+/** Per-operation server-processing credit costs, computed after download based on resolution + duration. */
+export interface OperationCredits {
+  scaleDown: number;
+  removeBlackBars: number;
+  convertToH264: number;
+  convertToH265: number;
+  burnSubtitles: number;
+  interpolateFps2x: number;
+  interpolateFps4x: number;
+  interpolateFps8x: number;
+}
+
 /* ── Result metadata ───────────────────────────────── */
 
 /** Metadata fields extracted from a completed download, shared across DB / polling / frontend. */
@@ -54,6 +68,8 @@ export interface VideoResultFields {
   commentsFile: string | null;
   /** Remaining ScrapeCreators API credits after a comments fetch. `null` when not applicable. */
   scrapeCreditsRemaining: number | null;
+  /** Per-operation server credit costs computed after download. `null` until the download completes. */
+  operationCredits: OperationCredits | null;
 }
 
 /* ── Status ────────────────────────────────────────── */
