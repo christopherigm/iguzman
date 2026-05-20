@@ -252,13 +252,13 @@ Copy `env.example` to `.env` before deploying:
 cp env.example .env
 ```
 
-| Variable                 | How to set                                                   | Description                                                                        |
-| ------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| `MONGO_URI`              | `helm/values.yaml` → `env`                                   | MongoDB connection string (defaults to in-cluster service)                         |
+| Variable                 | How to set                                                      | Description                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `MONGO_URI`              | `helm/values.yaml` → `env`                                      | MongoDB connection string (defaults to in-cluster service)                                                                    |
 | `GROQ_API_KEY`           | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | Groq API key for subtitle translation. **Note:** route via `eth0` (not VPN) in `wg0.conf` — Surfshark IPs are blocked by Groq |
-| `WS_BROKER_URL`          | `helm/values.yaml` → `env`                                   | Internal URL of the ws-broker service                                              |
-| `SCRAPECREATORS_API_KEY` | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | ScrapeCreators API key for comment scraping (TikTok, Instagram, Facebook)          |
-| `LOG_LEVEL`              | `helm/values.yaml` → `env`                                   | Override default log level (`debug` in dev, `info` in prod)                        |
+| `WS_BROKER_URL`          | `helm/values.yaml` → `env`                                      | Internal URL of the ws-broker service                                                                                         |
+| `SCRAPECREATORS_API_KEY` | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | ScrapeCreators API key for comment scraping (TikTok, Instagram, Facebook)                                                     |
+| `LOG_LEVEL`              | `helm/values.yaml` → `env`                                      | Override default log level (`debug` in dev, `info` in prod)                                                                   |
 
 To add a secret value:
 

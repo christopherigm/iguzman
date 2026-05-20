@@ -73,6 +73,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
     <>
       <Navbar
         {...props}
+        hiddenPaths={['/reel-mode', ...(props.hiddenPaths ?? [])]}
         searchBox={false}
         items={items}
         rightSlot={

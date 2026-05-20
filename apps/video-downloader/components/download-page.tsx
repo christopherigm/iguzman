@@ -208,7 +208,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
     removeCompletedBulk,
     clearCompleted,
     moveCompletedToFirst,
-    insertAfterCompleted,
+    insertBeforeCompleted,
     storageError,
   } = useVideoStore();
 
@@ -284,7 +284,16 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
         onUpdateCompleted={updateCompleted}
         onReprocessCompleted={reprocessVideo}
         onRemoveCompleted={handleRemoveCompleted}
-        onDuplicateCompleted={insertAfterCompleted}
+        onDuplicateCompleted={(beforeUuid, newVideo) => {
+          insertBeforeCompleted(beforeUuid, newVideo);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              document
+                .querySelector(`[data-video-uuid="${newVideo.uuid}"]`)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+          });
+        }}
       />
     </>
   );

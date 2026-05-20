@@ -69,7 +69,8 @@ RUN apk add --no-cache \
     jq \
     wget \
     python3 \
-    py3-pip
+    py3-pip \
+    ttf-dejavu
 
 RUN pip install --break-system-packages --no-cache-dir --upgrade \
     "yt-dlp[default,curl-cffi]" \

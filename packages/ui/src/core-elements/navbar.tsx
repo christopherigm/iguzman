@@ -70,6 +70,11 @@ export interface NavbarProps extends UIComponentProps {
    * of the hamburger icon (e.g. a `SpeechButton`).
    */
   rightSlot?: React.ReactNode;
+  /**
+   * List of path strings where the navbar (and drawer) should not be rendered.
+   * Uses exact matching against the value returned by `usePathname`.
+   */
+  hiddenPaths?: string[];
 }
 
 // ── useScrollDirection ───────────────────────────────────────────────
@@ -321,9 +326,11 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     translucent = false,
     searchValue,
     rightSlot,
+    hiddenPaths,
     ...uiProps
   } = props;
 
+  const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [computedLogoWidth, setComputedLogoWidth] = useState(logoWidth);
@@ -363,6 +370,9 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [activeDropdown]);
+
+  const pathnameWithoutLocale = pathname.replace(/^\/[a-z]{2}(-[A-Z]{2})?(\/|$)/, '/');
+  if (hiddenPaths?.includes(pathnameWithoutLocale)) return null;
 
   const isHidden = scrollDirection === 'down';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Box } from '@repo/ui/core-elements/box';
 import { Button } from '@repo/ui/core-elements/button';
@@ -117,6 +117,47 @@ export function VideoGrid({
     setPerPage(n);
     setPage(1);
   }, []);
+
+  /* ── Scroll to top of list on page change ────────── */
+  const completedTopRef = useRef<HTMLDivElement>(null);
+  const isFirstMount = useRef(true);
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    completedTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [safePage]);
+
+  /* ── Scroll to newly duplicated video ────────────── */
+  const [pendingScrollUuid, setPendingScrollUuid] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pendingScrollUuid) return;
+
+    const idx = filtered.findIndex((v) => v.uuid === pendingScrollUuid);
+    if (idx === -1) {
+      setPendingScrollUuid(null);
+      return;
+    }
+
+    const targetPage = Math.floor(idx / perPage) + 1;
+    if (targetPage !== safePage) {
+      setPage(targetPage);
+      return;
+    }
+
+    const raf = requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-video-uuid="${pendingScrollUuid}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      setPendingScrollUuid(null);
+    });
+
+    return () => cancelAnimationFrame(raf);
+  }, [pendingScrollUuid, filtered, safePage, perPage]);
 
   /* ── Reprocess handler: move completed → pinned ──── */
   const handleReprocess = useCallback(
@@ -306,6 +347,7 @@ export function VideoGrid({
         </Box>
       ) : null}
 
+      <div ref={completedTopRef} />
       <VideoToolbar
         videos={completed}
         activePlatform={activePlatform}
@@ -366,15 +408,16 @@ export function VideoGrid({
       ) : (
         <Grid container spacing={2}>
           {pageVideos.map((video) => (
-            <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+            <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }} data-video-uuid={video.uuid}>
               <ReadOnlyVideoItem
                 video={video}
                 onReprocess={handleReprocess}
                 onRemove={onRemoveCompleted}
                 onUpdate={onUpdateCompleted}
-                onDuplicate={(newVideo) =>
-                  onDuplicateCompleted(video.uuid, newVideo)
-                }
+                onDuplicate={(newVideo) => {
+                  onDuplicateCompleted(video.uuid, newVideo);
+                  setPendingScrollUuid(newVideo.uuid);
+                }}
               />
             </Grid>
           ))}

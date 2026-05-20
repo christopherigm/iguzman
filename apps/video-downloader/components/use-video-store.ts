@@ -510,13 +510,13 @@ export function useVideoStore() {
     });
   }, []);
 
-  /** Insert a new completed entry immediately after the one with `afterUuid`. */
-  const insertAfterCompleted = useCallback(
-    (afterUuid: string, entry: StoredVideo) => {
+  /** Insert a new completed entry immediately before the one with `beforeUuid`. */
+  const insertBeforeCompleted = useCallback(
+    (beforeUuid: string, entry: StoredVideo) => {
       setCompleted((prev) => {
-        const idx = prev.findIndex((v) => v.uuid === afterUuid);
+        const idx = prev.findIndex((v) => v.uuid === beforeUuid);
         if (idx === -1) return [entry, ...prev];
-        return [...prev.slice(0, idx + 1), entry, ...prev.slice(idx + 1)];
+        return [...prev.slice(0, idx), entry, ...prev.slice(idx)];
       });
     },
     [],
@@ -536,7 +536,7 @@ export function useVideoStore() {
     removeCompletedBulk,
     clearCompleted,
     moveCompletedToFirst,
-    insertAfterCompleted,
+    insertBeforeCompleted,
     storageError,
   } as const;
 }

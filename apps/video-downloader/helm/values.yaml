@@ -204,8 +204,8 @@ wireguard:
       cpu: 50m
       memory: 64Mi
     limits:
-      cpu: 200m
-      memory: 128Mi
+      cpu: 800m
+      memory: 512Mi
 
 # ─── Resources ──────────────────────────────────────────────
 # Comment out to allow pods to use all available node resources.

@@ -25,6 +25,7 @@ export interface GridProps extends UIComponentProps {
   spacingX?: number;
   /** Vertical gap in base-unit multiples. Overrides `spacing` for the y-axis. */
   spacingY?: number;
+  [key: `data-${string}`]: string | undefined;
 }
 
 const SPACING_UNIT = 8;
@@ -111,8 +112,12 @@ export const Grid: React.FC<GridProps> = (props) => {
 
   const finalStyle = { ...style, ...styles } as CSSProperties;
 
+  const dataProps = Object.fromEntries(
+    Object.entries(props).filter(([key]) => key.startsWith('data-')),
+  );
+
   return (
-    <div id={id} className={gridClassName} style={finalStyle}>
+    <div id={id} className={gridClassName} style={finalStyle} {...dataProps}>
       {children}
     </div>
   );
