@@ -40,8 +40,10 @@ const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
 const MAX_DOWNLOAD_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 5_000;
 
-const isRateLimitError = (msg: string): boolean =>
-  msg.includes('429') || /too many requests/i.test(msg);
+const isTransientError = (msg: string): boolean =>
+  msg.includes('429') ||
+  /too many requests/i.test(msg) ||
+  /sign in to confirm you'?re not a bot/i.test(msg);
 
 /** Converts yt-dlp's YYYYMMDD upload_date string to a Unix timestamp in seconds. */
 function parseUploadDate(date: string): number | null {
@@ -200,11 +202,11 @@ export async function POST(request: Request) {
       let result = await downloadVideo(downloadInput);
 
       for (let attempt = 1; attempt <= MAX_DOWNLOAD_RETRIES; attempt++) {
-        if (!result.error || !isRateLimitError(result.error.message)) break;
+        if (!result.error || !isTransientError(result.error.message)) break;
         const delayMs = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
         log.warn(
           { taskId, url, attempt, delayMs },
-          'Download rate-limited by platform, retrying',
+          'Download blocked by platform (transient), retrying',
         );
         await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
         result = await downloadVideo(downloadInput);
