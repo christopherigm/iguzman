@@ -703,11 +703,14 @@ export function PinnedVideoItemServer({
     if (convertResumeChecked.current) return;
     convertResumeChecked.current = true;
 
+    // Don't check h264Converted — it stays true after the first conversion and
+    // would block resuming a second H265→H264 pass on the same video.
+    // isH265 + status === 'converting' is sufficient: 'converting' is only set
+    // by codec conversion jobs, and isH265 reflects the file's current codec.
     const needsResume =
       video.file &&
       video.isH265 &&
       !video.justAudio &&
-      !video.h264Converted &&
       video.status === 'converting';
 
     if (needsResume) queueMicrotask(() => handleConvertH264());
@@ -715,7 +718,6 @@ export function PinnedVideoItemServer({
     video.file,
     video.isH265,
     video.justAudio,
-    video.h264Converted,
     video.status,
     handleConvertH264,
   ]);
@@ -725,11 +727,12 @@ export function PinnedVideoItemServer({
     if (convertH265ResumeChecked.current) return;
     convertH265ResumeChecked.current = true;
 
+    // Same reasoning as H264 resume above — h265Converted stays true after the
+    // first pass and breaks resume on a second H264→H265 round-trip.
     const needsResume =
       video.file &&
       !video.isH265 &&
       !video.justAudio &&
-      !video.h265Converted &&
       video.status === 'converting';
 
     if (needsResume) queueMicrotask(() => handleConvertH265());
@@ -737,7 +740,6 @@ export function PinnedVideoItemServer({
     video.file,
     video.isH265,
     video.justAudio,
-    video.h265Converted,
     video.status,
     handleConvertH265,
   ]);
@@ -809,16 +811,6 @@ export function PinnedVideoItemServer({
     video.status,
     handleScaleDown,
   ]);
-
-  /* ── Warn before closing during active processing ────── */
-  useEffect(() => {
-    if (!isProcessing) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [isProcessing]);
 
   /* ── Auto-move errored items to completed ─────────────── */
   useEffect(() => {

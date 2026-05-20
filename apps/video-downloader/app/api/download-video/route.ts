@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { join } from 'node:path';
 import { writeFileSync } from 'fs';
 import downloadVideo, {
   listSubtitlesViaYtDlp,
@@ -19,7 +20,10 @@ import {
   requireCredits,
   creditsErrorResponse,
 } from '@/lib/credits-middleware';
-import { calculateOperationCredits } from '@/lib/operation-credits';
+import {
+  calculateOperationCredits,
+  getVideoMetaFromFile,
+} from '@/lib/operation-credits';
 
 const CREDITS_PER_COMMENTS = 1;
 
@@ -31,6 +35,7 @@ const log = logger.child({ module: 'api/download-video' });
 
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const IS_PRODUCTION = NODE_ENV === 'production';
+const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
 
 const MAX_DOWNLOAD_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 5_000;
@@ -186,7 +191,7 @@ export async function POST(request: Request) {
         captionUrl: resolvedCaptionUrl,
         commentsEnabled,
         maxComments,
-        outputFolder: IS_PRODUCTION ? '/app/media' : './public/media',
+        outputFolder: MEDIA_DIR,
         cookies: IS_PRODUCTION
           ? '/app/media/netscape-cookies.txt'
           : './netscape-cookies.txt',
@@ -278,10 +283,26 @@ export async function POST(request: Request) {
           result.formatSelection?.bestVideo?.height ??
           result.formatSelection?.bestCombined?.height ??
           null;
+
+        // Probe duration from the file when yt-dlp metadata doesn't include it
+        let resolvedDuration = meta?.duration ?? null;
+        if (resolvedDuration == null && result.file) {
+          try {
+            const probed = await getVideoMetaFromFile(
+              join(MEDIA_DIR, result.file),
+            );
+            if (probed.durationSeconds != null) {
+              resolvedDuration = probed.durationSeconds;
+            }
+          } catch {
+            // non-fatal — duration stays null
+          }
+        }
+
         const operationCredits = calculateOperationCredits({
           width: resolvedWidth,
           height: resolvedHeight,
-          durationSeconds: meta?.duration ?? null,
+          durationSeconds: resolvedDuration,
         });
 
         await updateTask(taskId, {
@@ -293,7 +314,7 @@ export async function POST(request: Request) {
           fulltitle: meta?.fulltitle ?? meta?.title ?? null,
           isH265: result.isH265 ?? null,
           thumbnail: result.thumbnail ?? null,
-          duration: meta?.duration ?? null,
+          duration: resolvedDuration,
           uploader: meta?.uploader ?? null,
           uploader_id: meta?.uploader_id ?? null,
           uploader_url: meta?.uploader_url ?? null,
