@@ -289,6 +289,7 @@
     "serverDispatching": "Enviando al servidor…",
     "serverProcessing": "Procesando en servidor… {progress}%",
     "savingToDevice": "Guardando en dispositivo…",
+    "savingToDeviceWithPct": "Guardando en dispositivo… {pct}%",
     "errorStorageQuota": "Almacenamiento del dispositivo insuficiente. El video no pudo guardarse en tu dispositivo.",
     "makeOffline": "Guardar en dispositivo",
     "uploadingFromDevice": "Subiendo desde el dispositivo…",

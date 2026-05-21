@@ -1,0 +1,70 @@
+{{- if .Values.nginx.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "video-downloader.mediaNginxName" . }}
+  labels:
+    {{- include "video-downloader.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.mediaNginx.replicas }}
+  selector:
+    matchLabels:
+      {{- include "video-downloader.mediaNginxSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "video-downloader.mediaNginxSelectorLabels" . | nindent 8 }}
+    spec:
+      # Pin to the node that owns the SMB share so reads hit local disk.
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.mediaNginx.nodeName }}
+
+      containers:
+        - name: nginx
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.nginx.port }}
+              protocol: TCP
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+          {{- with .Values.nginx.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          volumeMounts:
+            - name: media-data
+              mountPath: {{ .Values.hostPathVolume.mountPath }}
+              readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+
+      volumes:
+        # hostPath on master resolves to the local SMB-server disk — no network hop.
+        - name: media-data
+          hostPath:
+            path: /{{ .Values.hostPathVolume.volumeMountPath }}/{{ .Release.Namespace }}/media
+            type: Directory
+        - name: nginx-config
+          configMap:
+            name: {{ include "video-downloader.fullname" . }}-nginx
+{{- end }}

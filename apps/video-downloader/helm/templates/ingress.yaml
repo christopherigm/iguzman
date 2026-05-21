@@ -38,15 +38,15 @@ spec:
                 name: {{ include "video-downloader.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
-          {{- /* ── Nginx: serve media files directly ── */}}
+          {{- /* ── media-nginx: serve media files from master's local disk ── */}}
           {{- if $.Values.nginx.enabled }}
           - path: /api/media/
             pathType: Prefix
             backend:
               service:
-                name: {{ include "video-downloader.fullname" $ }}
+                name: {{ include "video-downloader.mediaNginxName" $ }}
                 port:
-                  name: nginx
+                  number: {{ $.Values.nginx.port }}
           {{- end }}
           {{- /* ── Next.js: everything else ── */}}
           {{- $paths := .paths | default (list (dict "path" "/" "pathType" "Prefix")) }}

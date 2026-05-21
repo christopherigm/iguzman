@@ -17,7 +17,6 @@ import {
   downloadThumbnail,
   VideoCardHeader,
   VideoDetailsPanel,
-  VideoMediaPreview,
   VideoFooterLink,
   isIOS,
   PlatformIconBg,
@@ -33,6 +32,32 @@ interface TaskCreateResponse {
   task: { _id: string; status: string };
   creditsRemaining?: number;
   error?: DownloadVideoError;
+}
+
+/* ── OPFS migration helpers ─────────────────────────── */
+
+interface MigrationParams {
+  file: string;
+  name: string | null;
+  thumbnail: string | null;
+  /** Raw filename (not the /api/media/ path). */
+  captionsFile: string | null;
+  /** Raw filename (not the /api/media/ path). */
+  commentsFile: string | null;
+  taskId: string | null;
+}
+
+function extractMigrationParams(video: StoredVideo): MigrationParams | null {
+  if (!video.file) return null;
+  return {
+    file: video.file,
+    name: video.name,
+    thumbnail: video.thumbnail,
+    // Stored as /api/media/<filename> — extract the raw filename
+    captionsFile: video.captionsFile?.split('/').pop() ?? null,
+    commentsFile: video.commentsFile?.split('/').pop() ?? null,
+    taskId: video.taskId,
+  };
 }
 
 /* ── Props ──────────────────────────────────────────── */
@@ -57,10 +82,18 @@ export function PinnedVideoItemDownloading({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [opfsMigrating, setOpfsMigrating] = useState(false);
+  const [opfsProgress, setOpfsProgress] = useState<number | undefined>(undefined);
   const [copying, setCopying] = useState(false);
 
   const downloadTriggered = useRef(false);
   const pollResumeChecked = useRef(false);
+  const migrationInFlight = useRef(false);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+  // Always-current references used by stable event listeners and timer callbacks
+  const videoRef = useRef(video);
+  const runMigrationRef = useRef<((p: MigrationParams) => void) | null>(null);
+  videoRef.current = video;
 
   const { startPolling, stopPolling } = usePollTask();
 
@@ -85,6 +118,184 @@ export function PinnedVideoItemDownloading({
     video.uploader ??
     (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
 
+  /* ── OPFS migration ─────────────────────────────────── */
+  const runOpfsMigration = useCallback(
+    async (params: MigrationParams) => {
+      if (migrationInFlight.current || !mountedRef.current) return;
+      migrationInFlight.current = true;
+
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+
+      setOpfsMigrating(true);
+      setOpfsProgress(undefined);
+
+      const { file, name, thumbnail, captionsFile, commentsFile, taskId } = params;
+      let thumbKey: string | null = null;
+      let captionsKey: string | null = null;
+      let commentsKey: string | null = null;
+      let scheduleRetry = false;
+
+      try {
+        // Stream video bytes and track download progress
+        const videoRes = await fetch(resolveMediaUrl(`/api/media/${file}`));
+        if (!videoRes.ok) throw new Error(`video fetch failed: ${videoRes.status}`);
+
+        const cl = videoRes.headers.get('content-length');
+        const totalSize = cl ? parseInt(cl, 10) : null;
+        let received = 0;
+        const reader = videoRes.body!.getReader();
+        const chunks: Uint8Array[] = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          received += value.byteLength;
+          if (totalSize && mountedRef.current) {
+            setOpfsProgress(Math.round((received / totalSize) * 100));
+          }
+        }
+
+        // Cast needed: stream reader returns Uint8Array<ArrayBufferLike> but
+        // Blob only accepts ArrayBufferView<ArrayBuffer> — safe in practice.
+        const videoBlob = new Blob(chunks as unknown as BlobPart[], {
+          type: videoRes.headers.get('content-type') ?? 'video/mp4',
+        });
+        await writeToOPFS(file, videoBlob);
+        if (mountedRef.current) setOpfsProgress(100);
+
+        if (thumbnail) {
+          try {
+            const r = await fetch(resolveMediaUrl(`/api/media/${thumbnail}`));
+            if (r.ok) {
+              thumbKey = `thumb_${thumbnail}`;
+              await writeToOPFS(thumbKey, await r.blob());
+            }
+          } catch {}
+        }
+
+        if (captionsFile) {
+          try {
+            const r = await fetch(resolveMediaUrl(`/api/media/${captionsFile}`));
+            if (r.ok) {
+              captionsKey = `captions_${captionsFile}`;
+              await writeToOPFS(captionsKey, await r.blob());
+            }
+          } catch {}
+        }
+
+        if (commentsFile) {
+          try {
+            const r = await fetch(resolveMediaUrl(`/api/media/${commentsFile}`));
+            if (r.ok) {
+              commentsKey = `comments_${commentsFile}`;
+              await writeToOPFS(commentsKey, await r.blob());
+            }
+          } catch {}
+        }
+
+        const videoFile = await readFromOPFS(file);
+        const videoUrl = URL.createObjectURL(videoFile);
+        let thumbnailUrl: string | null = null;
+        if (thumbKey) {
+          try {
+            thumbnailUrl = URL.createObjectURL(await readFromOPFS(thumbKey));
+          } catch {}
+        }
+        registerUrls(video.uuid, { videoUrl, thumbnailUrl });
+
+        // Mark opfsStored: true BEFORE deleting the server file so a reload
+        // mid-delete can still re-fetch the video on next visit.
+        onUpdate(video.uuid, {
+          status: 'done',
+          opfsKey: file,
+          opfsThumbnailKey: thumbKey,
+          opfsCaptionsKey: captionsKey,
+          opfsCommentsKey: commentsKey,
+          opfsStored: true,
+          downloadURL: `opfs://${file}`,
+          fileSize: videoBlob.size,
+        });
+
+        if (taskId) {
+          fetch(`/api/download-video/${taskId}`, { method: 'DELETE' })
+            .then((r) => {
+              if ((r.ok || r.status === 404) && mountedRef.current) {
+                onUpdate(video.uuid, { serverFileDeleted: true });
+              }
+            })
+            .catch(() => {});
+        }
+
+        if (video.autoDownload) {
+          triggerBrowserDownload(
+            videoUrl,
+            `${name ?? 'video'}-${Date.now()}-${file}`,
+          );
+        }
+
+        onComplete(video.uuid);
+      } catch (err) {
+        console.error('OPFS migration failed:', err);
+        const isQuotaError =
+          err instanceof DOMException && err.name === 'QuotaExceededError';
+
+        if (isQuotaError) {
+          await deleteFromOPFS(file).catch(() => {});
+          if (thumbKey) await deleteFromOPFS(thumbKey).catch(() => {});
+          if (captionsKey) await deleteFromOPFS(captionsKey).catch(() => {});
+          if (taskId) {
+            fetch(`/api/download-video/${taskId}`, { method: 'DELETE' }).catch(() => {});
+          }
+          if (mountedRef.current) {
+            onUpdate(video.uuid, {
+              status: 'error',
+              error: t('errorStorageQuota'),
+              opfsKey: null,
+              opfsThumbnailKey: null,
+              opfsCaptionsKey: null,
+              opfsStored: false,
+              downloadURL: null,
+              serverFileDeleted: true,
+            });
+          }
+          onComplete(video.uuid);
+        } else {
+          // Transient error (network blip, background tab fetch killed):
+          // keep status as 'downloading' so the visibilitychange handler or
+          // the retry timer can restart the migration without losing the video.
+          scheduleRetry = true;
+        }
+      } finally {
+        if (mountedRef.current) {
+          setOpfsProgress(undefined);
+          setOpfsMigrating(false);
+        }
+        if (scheduleRetry) {
+          // Retry after a delay; skip if tab is backgrounded — the
+          // visibilitychange handler will pick it up when the user returns.
+          retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            migrationInFlight.current = false;
+            if (mountedRef.current && document.visibilityState === 'visible') {
+              runMigrationRef.current?.(params);
+            }
+          }, 5000);
+        } else {
+          migrationInFlight.current = false;
+        }
+      }
+    },
+    [onUpdate, onComplete, video.uuid, video.autoDownload, registerUrls, t],
+  );
+
+  // Keep ref current so stable callbacks (timer, visibilitychange) always
+  // call the latest version without re-registering listeners.
+  runMigrationRef.current = (p) => void runOpfsMigration(p);
+
   /* ── Handle completed download ─────────────────────── */
   const handleTaskDone = useCallback(
     (task: TaskData) => {
@@ -92,9 +303,9 @@ export function PinnedVideoItemDownloading({
       const name = task.name;
       const downloadURL = file ? `/api/media/${file}` : null;
 
-      // Update metadata without changing status yet — status stays 'downloading'
-      // until OPFS migration (or the non-OPFS path below) fully completes.
-      // This keeps the component as PinnedVideoItemDownloading during migration.
+      // Persist all server-returned metadata. Status stays 'downloading' until
+      // the OPFS migration (or non-OPFS path below) fully completes so this
+      // component remains mounted during the save phase.
       onUpdate(video.uuid, {
         file: file ?? null,
         name: name ?? null,
@@ -122,135 +333,19 @@ export function PinnedVideoItemDownloading({
         operationCredits: task.operationCredits ?? null,
       });
 
-      // Migrate to OPFS before moving to completed
       if (video.opfsEnabled && file) {
-        setOpfsMigrating(true);
-        void (async () => {
-          let thumbKey: string | null = null;
-          let captionsKey: string | null = null;
-          try {
-            const videoRes = await fetch(resolveMediaUrl(`/api/media/${file}`));
-            if (!videoRes.ok) throw new Error('video fetch failed');
-            const videoBlob = await videoRes.blob();
-            await writeToOPFS(file, videoBlob);
-
-            if (task.thumbnail) {
-              try {
-                const thumbRes = await fetch(
-                  resolveMediaUrl(`/api/media/${task.thumbnail}`),
-                );
-                if (thumbRes.ok) {
-                  const thumbBlob = await thumbRes.blob();
-                  thumbKey = `thumb_${task.thumbnail}`;
-                  await writeToOPFS(thumbKey, thumbBlob);
-                }
-              } catch {}
-            }
-
-            if (task.captionsFile) {
-              try {
-                const captionsRes = await fetch(
-                  resolveMediaUrl(`/api/media/${task.captionsFile}`),
-                );
-                if (captionsRes.ok) {
-                  const captionsBlob = await captionsRes.blob();
-                  captionsKey = `captions_${task.captionsFile}`;
-                  await writeToOPFS(captionsKey, captionsBlob);
-                }
-              } catch {}
-            }
-
-            let commentsKey: string | null = null;
-            if (task.commentsFile) {
-              try {
-                const commentsRes = await fetch(
-                  resolveMediaUrl(`/api/media/${task.commentsFile}`),
-                );
-                if (commentsRes.ok) {
-                  const commentsBlob = await commentsRes.blob();
-                  commentsKey = `comments_${task.commentsFile}`;
-                  await writeToOPFS(commentsKey, commentsBlob);
-                }
-              } catch {}
-            }
-
-            let serverFileDeleted = false;
-            if (task._id) {
-              try {
-                const res = await fetch(`/api/download-video/${task._id}`, {
-                  method: 'DELETE',
-                });
-                serverFileDeleted = res.ok || res.status === 404;
-              } catch {}
-            }
-
-            const videoFile = await readFromOPFS(file);
-            const videoUrl = URL.createObjectURL(videoFile);
-            let thumbnailUrl: string | null = null;
-            if (thumbKey) {
-              try {
-                const thumbFile = await readFromOPFS(thumbKey);
-                thumbnailUrl = URL.createObjectURL(thumbFile);
-              } catch {}
-            }
-            registerUrls(video.uuid, { videoUrl, thumbnailUrl });
-
-            onUpdate(video.uuid, {
-              status: 'done',
-              opfsKey: file,
-              opfsThumbnailKey: thumbKey,
-              opfsCaptionsKey: captionsKey,
-              opfsCommentsKey: commentsKey,
-              opfsStored: true,
-              serverFileDeleted,
-              downloadURL: `opfs://${file}`,
-              fileSize: videoBlob.size,
-            });
-
-            if (video.autoDownload) {
-              triggerBrowserDownload(
-                videoUrl,
-                `${name ?? 'video'}-${Date.now()}-${file}`,
-              );
-            }
-          } catch (err) {
-            console.error('OPFS migration failed:', err);
-            const isQuotaError =
-              err instanceof DOMException && err.name === 'QuotaExceededError';
-            if (isQuotaError) {
-              // Clean up any partially written OPFS files
-              await deleteFromOPFS(file);
-              if (thumbKey) await deleteFromOPFS(thumbKey);
-              if (captionsKey) await deleteFromOPFS(captionsKey);
-              // Remove server file and MongoDB entry
-              if (task._id) {
-                fetch(`/api/download-video/${task._id}`, {
-                  method: 'DELETE',
-                }).catch(() => {});
-              }
-              onUpdate(video.uuid, {
-                status: 'error',
-                error: t('errorStorageQuota'),
-                opfsKey: null,
-                opfsThumbnailKey: null,
-                opfsCaptionsKey: null,
-                opfsStored: false,
-                downloadURL: null,
-                serverFileDeleted: true,
-              });
-            } else {
-              // Non-quota OPFS error: download succeeded, only device storage
-              // failed. Mark as done so the video moves to the completed list.
-              onUpdate(video.uuid, { status: 'done' });
-            }
-          } finally {
-            setOpfsMigrating(false);
-            onComplete(video.uuid);
-          }
-        })();
+        void runOpfsMigration({
+          file,
+          name: name ?? null,
+          thumbnail: task.thumbnail ?? null,
+          captionsFile: task.captionsFile ?? null,
+          commentsFile: task.commentsFile ?? null,
+          taskId: task._id,
+        });
         return;
       }
 
+      // Non-OPFS path: HEAD for file size, trigger browser download if requested.
       void (async () => {
         if (file) {
           try {
@@ -284,7 +379,7 @@ export function PinnedVideoItemDownloading({
       video.opfsEnabled,
       video.autoDownload,
       video.justAudio,
-      registerUrls,
+      runOpfsMigration,
     ],
   );
 
@@ -390,20 +485,48 @@ export function PinnedVideoItemDownloading({
     };
   }, [video.taskId, stopPolling]);
 
-  /* ── Warn before closing during active download ──────── */
+  /* ── Warn before closing before task ID is established ── */
   useEffect(() => {
-    if (!isActive) return;
+    if (video.status !== 'pending' && video.status !== 'queued') return;
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [isActive]);
+  }, [video.status]);
 
   /* ── Auto-move errored items to completed ─────────────── */
   useEffect(() => {
     if (video.status === 'error') onComplete(video.uuid);
   }, [video.status, video.uuid, onComplete]);
+
+  /* ── Restart migration when tab becomes visible ─────── */
+  useEffect(() => {
+    const handleVisibility = () => {
+      const v = videoRef.current;
+      if (
+        document.visibilityState === 'visible' &&
+        v.opfsEnabled &&
+        !v.opfsStored &&
+        v.file &&
+        !migrationInFlight.current
+      ) {
+        const params = extractMigrationParams(v);
+        if (params) runMigrationRef.current?.(params);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  /* ── Cleanup on unmount ─────────────────────────────── */
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, []);
 
   const showProgressBar = isActive || opfsMigrating;
 
@@ -448,19 +571,19 @@ export function PinnedVideoItemDownloading({
           t={t}
         />
       ) : null}
-      {/* ── Media preview ───────────────────────────── */}
-      <VideoMediaPreview
-        downloadURL={video.downloadURL}
-        justAudio={video.justAudio}
-        thumbnail={video.thumbnail}
-        compact
-      />
       {/* ── Progress bar ────────────────────────────── */}
-      {showProgressBar ? <ProgressBar margin="0" /> : null}
+      {showProgressBar ? (
+        <ProgressBar
+          margin="0"
+          value={opfsMigrating ? opfsProgress : undefined}
+        />
+      ) : null}
       {/* ── Status hint ─────────────────────────────── */}
       {opfsMigrating ? (
         <Typography variant="caption" className="vi-ffmpeg-hint">
-          {t('savingToDevice')}
+          {opfsProgress !== undefined
+            ? t('savingToDeviceWithPct', { pct: opfsProgress })
+            : t('savingToDevice')}
         </Typography>
       ) : video.status === 'pending' ? (
         <Typography variant="caption" className="vi-ffmpeg-hint">

@@ -10,9 +10,9 @@ import { Badge } from '@repo/ui/core-elements/badge';
 import { Button } from '@repo/ui/core-elements/button';
 import { Grid } from '@repo/ui/core-elements/grid';
 import { Switch } from '@repo/ui/core-elements/switch';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import type { OperationCredits } from '@/lib/types';
 import type { StoredVideo, VideoStatus } from './use-video-store';
+import { useCreditsBalance } from './use-credits-store';
 import Divider from '@repo/ui/core-elements/divider';
 
 /* ── Constants ──────────────────────────────────────── */
@@ -784,8 +784,7 @@ export function VideoExtraActions({
   t: TranslationFn;
 }) {
   const [serverMode, setServerMode] = useState(useServerProcessing ?? false);
-  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
-  const [creditsLoading, setCreditsLoading] = useState(false);
+  const creditsBalance = useCreditsBalance();
   const autoEnabledRef = useRef(false);
   const [showServerOffModal, setShowServerOffModal] = useState(false);
   const [fpsDeviceModalFps, setFpsDeviceModalFps] = useState<number | null>(
@@ -797,35 +796,12 @@ export function VideoExtraActions({
 
   useEffect(() => {
     if (!onServerModeChange) return;
-    setCreditsLoading(true);
-    const key = localStorage.getItem('vd_credits_key');
-    if (!key) {
-      setCreditsBalance(0);
-      setCreditsLoading(false);
-      return;
+    if (creditsBalance > 0 && !useServerProcessing && !autoEnabledRef.current) {
+      autoEnabledRef.current = true;
+      setServerMode(true);
+      onServerModeChange(true);
     }
-    fetch('/api/credits/balance', { headers: { 'x-credits-key': key } })
-      .then((res) =>
-        res.ok
-          ? (res.json() as Promise<{ credits: number }>)
-          : Promise.resolve({ credits: 0 }),
-      )
-      .then((data) => {
-        setCreditsBalance(data.credits);
-        if (
-          data.credits > 0 &&
-          !useServerProcessing &&
-          !autoEnabledRef.current
-        ) {
-          autoEnabledRef.current = true;
-          setServerMode(true);
-          onServerModeChange(true);
-        }
-      })
-      .catch(() => setCreditsBalance(0))
-      .finally(() => setCreditsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [creditsBalance, onServerModeChange, useServerProcessing]);
 
   const serverSelected = serverMode;
   const canProcess = !isBusy && !!video.downloadURL && !video.justAudio;
@@ -833,7 +809,6 @@ export function VideoExtraActions({
   const canAffordOp = (cost: number | null | undefined): boolean => {
     if (!serverSelected) return true;
     if (cost == null) return true;
-    if (creditsLoading || creditsBalance === null) return true;
     return creditsBalance >= cost;
   };
 
@@ -915,9 +890,7 @@ export function VideoExtraActions({
       ) : null}
       <Box className="vi-extra-actions">
         {onServerModeChange ? (
-          creditsLoading ? (
-            <ProgressBar marginTop={4} />
-          ) : creditsBalance !== null && creditsBalance > 0 ? (
+          creditsBalance > 0 ? (
             <Box
               display="flex"
               alignItems="center"

@@ -287,6 +287,7 @@
     "serverDispatching": "An Server senden…",
     "serverProcessing": "Server verarbeitet… {progress}%",
     "savingToDevice": "Auf Gerät speichern…",
+    "savingToDeviceWithPct": "Auf Gerät speichern… {pct}%",
     "errorStorageQuota": "Nicht genügend Gerätespeicher. Das Video konnte nicht auf Ihrem Gerät gespeichert werden.",
     "makeOffline": "Auf Gerät speichern",
     "uploadingFromDevice": "Vom Gerät hochladen…",

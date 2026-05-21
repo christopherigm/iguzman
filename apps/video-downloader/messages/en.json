@@ -288,6 +288,7 @@
     "serverDispatching": "Sending to server…",
     "serverProcessing": "Server processing… {progress}%",
     "savingToDevice": "Saving to device…",
+    "savingToDeviceWithPct": "Saving to device… {pct}%",
     "errorStorageQuota": "Not enough device storage. The video could not be saved to your device.",
     "makeOffline": "Save to device",
     "uploadingFromDevice": "Uploading from device…",

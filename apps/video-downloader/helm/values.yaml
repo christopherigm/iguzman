@@ -104,9 +104,11 @@ nodeAffinity:
     - node4
     - node6
 
-# ─── Nginx sidecar (serves media files) ─────────────────────
-# Replaces the Next.js GET /api/media/* endpoint with a high-
-# performance static-file server that shares the same volume.
+# ─── Dedicated media-nginx (serves media files) ─────────────
+# A standalone nginx Deployment pinned to the master node so
+# it reads video files from local disk instead of over SMB.
+# GET /api/media/* requests are routed here by the ingress.
+# Write operations (PUT/DELETE) are proxied to the Next.js service.
 nginx:
   enabled: true
   image:
@@ -114,7 +116,6 @@ nginx:
     tag: 'alpine'
     pullPolicy: IfNotPresent
   port: 8080 # port the nginx container listens on
-  servicePort: 8080 # port exposed by the Service for nginx
   resources:
     requests:
       cpu: 50m
@@ -122,6 +123,11 @@ nginx:
     limits:
       cpu: 200m
       memory: 128Mi
+
+mediaNginx:
+  # Node name where the SMB share lives (reads hit local disk, not network).
+  nodeName: master
+  replicas: 1
 
 # ─── WireGuard VPN sidecar ───────────────────────────────────
 # Routes all public-IP egress through a Surfshark WireGuard server

@@ -20,5 +20,9 @@ Replicas: {{ .Values.replicaCount }}
 
 {{- if .Values.nginx.enabled }}
 
-Nginx sidecar: ENABLED (serving /api/media/* on port {{ .Values.nginx.port }})
+Media nginx: ENABLED
+  Deployment : {{ include "video-downloader.mediaNginxName" . }} (pinned to {{ .Values.mediaNginx.nodeName }})
+  Replicas   : {{ .Values.mediaNginx.replicas }}
+  Routes     : GET /api/media/* → local disk reads on {{ .Values.mediaNginx.nodeName }}
+               PUT/DELETE /api/media/* → proxied to {{ include "video-downloader.fullname" . }}:{{ .Values.service.port }}
 {{- end }}
