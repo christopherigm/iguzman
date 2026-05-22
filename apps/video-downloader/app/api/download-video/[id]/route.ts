@@ -2,6 +2,7 @@ import { unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { NextResponse } from 'next/server';
 import { getTask, deleteTask } from '@/lib/video-task-db';
+import { USE_R2, deleteObject } from '@/lib/r2';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/download-video/[id]' });
@@ -9,6 +10,19 @@ const log = logger.child({ module: 'api/download-video/[id]' });
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const IS_PRODUCTION = NODE_ENV === 'production';
 const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
+
+async function deleteMediaFile(filename: string | null | undefined): Promise<void> {
+  if (!filename) return;
+  if (USE_R2) {
+    await deleteObject(filename);
+  } else {
+    try {
+      await unlink(join(MEDIA_DIR, filename));
+    } catch {
+      // File may already be gone — acceptable
+    }
+  }
+}
 
 export async function GET(
   _request: Request,
@@ -59,41 +73,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    if (task.file) {
-      const filePath = join(MEDIA_DIR, task.file);
-      try {
-        await unlink(filePath);
-      } catch {
-        /* File may already be gone — acceptable */
-      }
-    }
-
-    if (task.thumbnail) {
-      const thumbPath = join(MEDIA_DIR, task.thumbnail);
-      try {
-        await unlink(thumbPath);
-      } catch {
-        /* Thumbnail may already be gone — acceptable */
-      }
-    }
-
-    if (task.captionsFile) {
-      const captionsPath = join(MEDIA_DIR, task.captionsFile);
-      try {
-        await unlink(captionsPath);
-      } catch {
-        /* Captions file may already be gone — acceptable */
-      }
-    }
-
-    if (task.commentsFile) {
-      const commentsPath = join(MEDIA_DIR, task.commentsFile);
-      try {
-        await unlink(commentsPath);
-      } catch {
-        /* Comments file may already be gone — acceptable */
-      }
-    }
+    await Promise.all([
+      deleteMediaFile(task.file),
+      deleteMediaFile(task.thumbnail),
+      deleteMediaFile(task.captionsFile),
+      deleteMediaFile(task.commentsFile),
+    ]);
 
     await deleteTask(id);
 

@@ -6,6 +6,7 @@ import { Readable } from 'node:stream';
 import { randomUUID } from 'node:crypto';
 import { unlink } from 'node:fs/promises';
 import logger from '@/lib/logger';
+import { USE_R2, uploadFromWebStream } from '@/lib/r2';
 
 const log = logger.child({ module: 'api/media' });
 
@@ -36,6 +37,20 @@ export async function POST(request: NextRequest) {
   }
 
   const fileName = `${randomUUID()}.${ext.toLowerCase()}`;
+
+  if (USE_R2) {
+    try {
+      const cl = request.headers.get('content-length');
+      const contentLength = cl ? parseInt(cl, 10) : undefined;
+      await uploadFromWebStream(fileName, request.body, contentLength);
+      log.info({ fileName }, 'POST /api/media – file saved to R2');
+      return NextResponse.json({ file: fileName }, { status: 201 });
+    } catch (err) {
+      log.error({ err, fileName }, 'POST /api/media – R2 upload failed');
+      return NextResponse.json({ error: 'Failed to save file' }, { status: 500 });
+    }
+  }
+
   const filePath = join(MEDIA_DIR, fileName);
 
   try {

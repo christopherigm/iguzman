@@ -49,25 +49,3 @@ app.kubernetes.io/name: {{ include "video-downloader.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/*
-PVC name for shared storage.
-*/}}
-{{- define "video-downloader.pvcName" -}}
-{{- printf "%s-shared" (include "video-downloader.fullname" .) }}
-{{- end }}
-
-{{/*
-Name for the dedicated media-nginx Deployment and Service.
-*/}}
-{{- define "video-downloader.mediaNginxName" -}}
-{{- printf "%s-media-nginx" (include "video-downloader.fullname" .) }}
-{{- end }}
-
-{{/*
-Selector labels for the media-nginx Deployment.
-Must be distinct from the main app's selector labels.
-*/}}
-{{- define "video-downloader.mediaNginxSelectorLabels" -}}
-app.kubernetes.io/name: {{ include "video-downloader.name" . }}-media-nginx
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}

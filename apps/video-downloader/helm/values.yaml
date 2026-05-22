@@ -58,7 +58,7 @@ ingress:
 env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
-  WS_BROKER_URL: 'http://ws-broker.video-downloader-2.svc.cluster.local'
+  NEXT_PUBLIC_BASE_URL: 'https://media2go.app'
 
 # Sensitive values – reference existing Kubernetes Secrets.
 # Create the secret first:
@@ -66,31 +66,74 @@ env:
 #     --from-literal=groq-api-key=<YOUR_KEY> \
 #     -n video-downloader-2
 envFromSecret:
+  # All sensitive values live in the vd2-secrets Kubernetes Secret.
+  # Use cli/setup-k8s-secrets/setup-k8s-secrets.sh to create or update it.
   - name: GROQ_API_KEY
     secretName: vd2-secrets
     secretKey: groq-api-key
+  - name: SCRAPECREATORS_API_KEY
+    secretName: vd2-secrets
+    secretKey: scrapecreators-api-key
+  - name: STRIPE_SECRET_KEY
+    secretName: vd2-secrets
+    secretKey: stripe-secret-key
+  - name: STRIPE_WEBHOOK_SECRET
+    secretName: vd2-secrets
+    secretKey: stripe-webhook-secret
+  - name: INTERNAL_SECRET
+    secretName: vd2-secrets
+    secretKey: internal-secret
+  - name: R2_ACCOUNT_ID
+    secretName: vd2-secrets
+    secretKey: r2-account-id
+  - name: R2_ACCESS_KEY_ID
+    secretName: vd2-secrets
+    secretKey: r2-access-key-id
+  - name: R2_SECRET_ACCESS_KEY
+    secretName: vd2-secrets
+    secretKey: r2-secret-access-key
+  - name: R2_BUCKET_NAME
+    secretName: vd2-secrets
+    secretKey: r2-bucket-name
+  - name: R2_PUBLIC_URL
+    secretName: vd2-secrets
+    secretKey: r2-public-url
+  - name: MONGO_URI
+    secretName: vd2-secrets
+    secretKey: mongo-uri
 
 # ─── Host-path volume (media storage) ───────────────────────
+# Disabled: media is now stored in R2 Object Storage.
 hostPathVolume:
-  enabled: true
-  volumeMountPath: /shared-master # base path on the host node
-  mountPath: /app/media # path inside each container
+  enabled: false
+  volumeMountPath: /shared-master
+  mountPath: /app/media
 
-# ─── Health probes (file-based in shared storage) ───────────
+# ─── yt-dlp cookies file ────────────────────────────────────
+# Mounted from a Kubernetes Secret so all pods share one copy.
+# Create the secret:
+#   kubectl create secret generic vd2-cookies \
+#     --from-file=netscape-cookies.txt=./apps/video-downloader/netscape-cookies.txt \
+#     -n video-downloader-2
+cookiesSecret:
+  secretName: "vd2-cookies"
+  mountPath: /app/netscape-cookies.txt
+  subPath: netscape-cookies.txt
+
+# ─── Health probes (HTTP) ────────────────────────────────────
 probes:
-  # File that both probes check for existence.
-  healthFile: /app/media/.healthy
-
   startupProbe:
-    exec:
-      command: ['test', '-f', '/app/media/.healthy']
+    httpGet:
+      path: /api/health
+      port: 3000
     initialDelaySeconds: 5
     periodSeconds: 5
-    failureThreshold: 30 # allow up to ~150 s for first boot
+    failureThreshold: 30
 
   livenessProbe:
-    exec:
-      command: ['test', '-f', '/app/media/.healthy']
+    httpGet:
+      path: /api/health
+      port: 3000
     initialDelaySeconds: 0
     periodSeconds: 10
     failureThreshold: 3
@@ -100,34 +143,9 @@ nodeAffinity:
   enabled: true
   # List of node names where the pods should be scheduled.
   nodeNames:
-    - node1
-    - node4
     - node6
-
-# ─── Dedicated media-nginx (serves media files) ─────────────
-# A standalone nginx Deployment pinned to the master node so
-# it reads video files from local disk instead of over SMB.
-# GET /api/media/* requests are routed here by the ingress.
-# Write operations (PUT/DELETE) are proxied to the Next.js service.
-nginx:
-  enabled: true
-  image:
-    repository: nginx
-    tag: 'alpine'
-    pullPolicy: IfNotPresent
-  port: 8080 # port the nginx container listens on
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 128Mi
-
-mediaNginx:
-  # Node name where the SMB share lives (reads hit local disk, not network).
-  nodeName: master
-  replicas: 1
+    # - node4
+    # - node1
 
 # ─── WireGuard VPN sidecar ───────────────────────────────────
 # Routes all public-IP egress through a Surfshark WireGuard server

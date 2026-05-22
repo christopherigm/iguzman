@@ -218,15 +218,16 @@ export function PinnedVideoItemServer({
         }
       }
 
-      // For OPFS videos whose server copy was deleted, upload the local blob
-      // to the server so the server FFmpeg agent has a file to work with.
+      // Always re-upload OPFS videos to the server before dispatching a
+      // server FFmpeg job. Relying on serverFileDeleted to skip the upload
+      // caused NoSuchKey failures when the state was stale (e.g. the task/
+      // file were deleted server-side but the page was reloaded before the
+      // serverFileDeleted:true patch could be persisted).
       let file = opts.sourceFile ?? video.file;
-      if (
-        video.opfsEnabled &&
-        video.opfsStored &&
-        video.opfsKey &&
-        video.serverFileDeleted
-      ) {
+      if (video.opfsEnabled && video.opfsStored && video.opfsKey) {
+        // If there was a stale server copy (serverFileDeleted=false), delete it
+        // now so it doesn't remain as an orphan in R2 after we upload a fresh copy.
+        const staleServerFile = !video.serverFileDeleted && video.file ? video.file : null;
         setOpfsUploading(true);
         try {
           const opfsFile = await readFromOPFS(video.opfsKey);
@@ -239,6 +240,9 @@ export function PinnedVideoItemServer({
           const { file: uploadedFile } = (await uploadRes.json()) as {
             file: string;
           };
+          if (staleServerFile) {
+            fetch(`/api/media/${staleServerFile}`, { method: 'DELETE' }).catch(() => {});
+          }
           file = uploadedFile;
           opfsInputFileRef.current = uploadedFile;
           onUpdate(video.uuid, {
@@ -257,12 +261,6 @@ export function PinnedVideoItemServer({
       }
 
       if (!file) return;
-
-      // For OPFS videos whose server copy is still present, track the input
-      // file so handleServerTaskDone can clean it up after OPFS save-back.
-      if (video.opfsEnabled && video.opfsStored && !video.serverFileDeleted) {
-        opfsInputFileRef.current = file;
-      }
 
       onUpdate(video.uuid, { status: opts.activeStatus, error: null });
       setJobPhase('dispatching');

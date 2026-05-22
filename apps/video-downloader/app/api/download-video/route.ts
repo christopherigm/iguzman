@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { join } from 'node:path';
 import { writeFileSync } from 'fs';
+import { unlink, copyFile } from 'node:fs/promises';
 import downloadVideo, {
   listSubtitlesViaYtDlp,
 } from '@repo/helpers/download-video';
@@ -24,6 +25,7 @@ import {
   calculateOperationCredits,
   getVideoMetaFromFile,
 } from '@/lib/operation-credits';
+import { USE_R2, uploadFromPath, deleteObject } from '@/lib/r2';
 
 const CREDITS_PER_COMMENTS = 1;
 
@@ -37,8 +39,31 @@ const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const IS_PRODUCTION = NODE_ENV === 'production';
 const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
 
+// When R2 is active, downloads land in /tmp and are uploaded after completion.
+// The cookies file is now mounted from a Kubernetes Secret.
+const DOWNLOAD_DIR = USE_R2 ? '/tmp' : MEDIA_DIR;
+const COOKIES_PATH = IS_PRODUCTION ? '/app/netscape-cookies.txt' : './netscape-cookies.txt';
+
 const MAX_DOWNLOAD_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 5_000;
+
+// yt-dlp writes updated cookies back to the file on exit. When the cookies
+// file is mounted read-only (K8s Secret), this causes an OSError. We copy it
+// to /tmp once per process so yt-dlp has a writable path.
+const WRITABLE_COOKIES_PATH = IS_PRODUCTION ? '/tmp/netscape-cookies.txt' : COOKIES_PATH;
+let _cookiesCopied = false;
+async function getWritableCookiesPath(): Promise<string> {
+  if (!IS_PRODUCTION) return COOKIES_PATH;
+  if (!_cookiesCopied) {
+    try {
+      await copyFile(COOKIES_PATH, WRITABLE_COOKIES_PATH);
+      _cookiesCopied = true;
+    } catch {
+      return COOKIES_PATH;
+    }
+  }
+  return WRITABLE_COOKIES_PATH;
+}
 
 const isTransientError = (msg: string): boolean =>
   msg.includes('429') ||
@@ -193,10 +218,8 @@ export async function POST(request: Request) {
         captionUrl: resolvedCaptionUrl,
         commentsEnabled,
         maxComments,
-        outputFolder: MEDIA_DIR,
-        cookies: IS_PRODUCTION
-          ? '/app/media/netscape-cookies.txt'
-          : './netscape-cookies.txt',
+        outputFolder: DOWNLOAD_DIR,
+        cookies: await getWritableCookiesPath(),
       };
 
       let result = await downloadVideo(downloadInput);
@@ -259,9 +282,8 @@ export async function POST(request: Request) {
             scrapeCreditsRemaining = creditsRemaining;
             if (comments.length > 0 && result.file) {
               const fileId = result.file.replace(/\.[^.]+$/, '');
-              const folder = IS_PRODUCTION ? '/app/media' : './public/media';
               const filename = `${fileId}.comments.json`;
-              writeFileSync(`${folder}/${filename}`, JSON.stringify(comments));
+              writeFileSync(join(DOWNLOAD_DIR, filename), JSON.stringify(comments));
               commentsFile = filename;
               log.info(
                 { taskId, url, count: comments.length },
@@ -291,7 +313,7 @@ export async function POST(request: Request) {
         if (resolvedDuration == null && result.file) {
           try {
             const probed = await getVideoMetaFromFile(
-              join(MEDIA_DIR, result.file),
+              join(DOWNLOAD_DIR, result.file),
             );
             if (probed.durationSeconds != null) {
               resolvedDuration = probed.durationSeconds;
@@ -306,6 +328,28 @@ export async function POST(request: Request) {
           height: resolvedHeight,
           durationSeconds: resolvedDuration,
         });
+
+        /* ── Upload local files to R2, then clean up temp copies ─────── */
+        if (USE_R2) {
+          const filesToUpload = [
+            result.file,
+            result.thumbnail,
+            result.captionsFile,
+            commentsFile,
+          ].filter((f): f is string => !!f);
+
+          await Promise.all(
+            filesToUpload.map(async (f) => {
+              const localPath = join(DOWNLOAD_DIR, f);
+              try {
+                await uploadFromPath(f, localPath);
+                unlink(localPath).catch(() => {});
+              } catch (err) {
+                log.warn({ err, file: f, taskId }, 'R2 upload failed for file');
+              }
+            }),
+          );
+        }
 
         await updateTask(taskId, {
           status: 'done',

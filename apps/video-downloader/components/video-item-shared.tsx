@@ -94,8 +94,7 @@ function CreditBadge({ amount }: { amount: number }) {
 /* ── Helpers ────────────────────────────────────────── */
 
 export function resolveMediaUrl(url: string): string {
-  if (process.env.NODE_ENV !== 'development') return url;
-  return url.replace('/api/media/', '/media/');
+  return url;
 }
 
 export function isIOS(): boolean {

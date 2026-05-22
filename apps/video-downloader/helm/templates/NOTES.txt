@@ -17,12 +17,4 @@ Then open http://localhost:{{ .Values.service.port }} in your browser.
 {{- end }}
 
 Replicas: {{ .Values.replicaCount }}
-
-{{- if .Values.nginx.enabled }}
-
-Media nginx: ENABLED
-  Deployment : {{ include "video-downloader.mediaNginxName" . }} (pinned to {{ .Values.mediaNginx.nodeName }})
-  Replicas   : {{ .Values.mediaNginx.replicas }}
-  Routes     : GET /api/media/* → local disk reads on {{ .Values.mediaNginx.nodeName }}
-               PUT/DELETE /api/media/* → proxied to {{ include "video-downloader.fullname" . }}:{{ .Values.service.port }}
-{{- end }}
+Media:    R2 Object Storage (GET /api/media/* → pre-signed URL redirect)

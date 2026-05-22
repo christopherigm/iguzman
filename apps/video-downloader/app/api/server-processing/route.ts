@@ -23,6 +23,7 @@ import {
   getVideoMetaFromFile,
   interpolateFpsCost,
 } from '@/lib/operation-credits';
+import { USE_R2, uploadFromPath, downloadToPath } from '@/lib/r2';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/server-processing' });
@@ -30,6 +31,7 @@ const log = logger.child({ module: 'api/server-processing' });
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'development';
 const IS_PROD = NODE_ENV === 'production';
 const MEDIA_DIR = IS_PROD ? '/app/media' : './public/media';
+const TEMP_DIR = '/tmp';
 const FFMPEG_BINARY = 'ffmpeg';
 
 const VALID_OPS = [
@@ -57,11 +59,14 @@ async function runFfmpegJob(
   op: ProcessingOp,
   inputFileName: string,
   params: Record<string, unknown>,
+  preDownloadedInput?: string,
 ): Promise<void> {
-  const inputPath = join(MEDIA_DIR, inputFileName);
+  // In R2 mode the input was pre-downloaded to TEMP_DIR; otherwise read from MEDIA_DIR.
+  const inputPath = preDownloadedInput ?? join(MEDIA_DIR, inputFileName);
   const ext = inputFileName.split('.').pop() ?? 'mp4';
   const outputFileName = `${randomUUID()}.${ext}`;
-  const outputPath = join(MEDIA_DIR, outputFileName);
+  // In R2 mode write output to TEMP_DIR so we can upload it; otherwise write to MEDIA_DIR.
+  const outputPath = USE_R2 ? join(TEMP_DIR, outputFileName) : join(MEDIA_DIR, outputFileName);
 
   let lastProgress = -1;
   const onProgress = (pct: number) => {
@@ -153,6 +158,25 @@ async function runFfmpegJob(
       durationSeconds: probed.durationSeconds,
     });
 
+    if (USE_R2) {
+      try {
+        await uploadFromPath(outputFileName, outputPath);
+      } catch (uploadErr) {
+        log.error({ err: uploadErr, taskId, outputFileName }, 'R2 upload of FFmpeg output failed');
+        await updateTask(taskId, {
+          status: 'error',
+          error: { code: 'DOWNLOAD_FAILED', message: 'Failed to upload processed file to storage' },
+          progress: 0,
+        }).catch(() => {});
+        unlink(outputPath).catch(() => {});
+        if (preDownloadedInput) unlink(preDownloadedInput).catch(() => {});
+        return;
+      }
+      // Clean up temp files after successful upload
+      unlink(outputPath).catch(() => {});
+      if (preDownloadedInput) unlink(preDownloadedInput).catch(() => {});
+    }
+
     await updateTask(taskId, {
       status: 'done',
       file: outputFileName,
@@ -175,6 +199,7 @@ async function runFfmpegJob(
       progress: 0,
     }).catch(() => {});
     unlink(outputPath).catch(() => {});
+    if (preDownloadedInput) unlink(preDownloadedInput).catch(() => {});
   }
 }
 
@@ -254,9 +279,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No input file available' }, { status: 422 });
   }
 
-  /* ── Dynamic credit cost ────────────────────────────────────────────── */
-  const inputPath = join(MEDIA_DIR, inputFile);
-  const inputMeta = await getVideoMetaFromFile(inputPath);
+  /* ── Download from R2 to temp (if R2 mode) ──────────────────────────── */
+  let tempInputPath: string | undefined;
+  if (USE_R2) {
+    tempInputPath = join(TEMP_DIR, inputFile);
+    try {
+      await downloadToPath(inputFile, tempInputPath);
+    } catch (err) {
+      log.error({ err, taskId, inputFile }, 'Failed to download input from R2');
+      return NextResponse.json({ error: 'Failed to fetch input file' }, { status: 500 });
+    }
+  }
+
+  /* ── Dynamic credit cost ─────────────────────────────────────────────── */
+  const probeInputPath = tempInputPath ?? join(MEDIA_DIR, inputFile);
+  const inputMeta = await getVideoMetaFromFile(probeInputPath);
   const opCredits = calculateOperationCredits({
     width: inputMeta.width,
     height: inputMeta.height,
@@ -280,14 +317,18 @@ export async function POST(request: NextRequest) {
   }
 
   const creditResult = await requireCredits(creditsKey, opCost);
-  if (!creditResult.ok) return creditsErrorResponse(creditResult.error);
-  /* ──────────────────────────────────────────────────────────────────── */
+  if (!creditResult.ok) {
+    // Clean up temp file if credit check fails
+    if (tempInputPath) unlink(tempInputPath).catch(() => {});
+    return creditsErrorResponse(creditResult.error);
+  }
+  /* ────────────────────────────────────────────────────────────────────── */
 
   const activeStatus = STATUS_BY_OP[op as ProcessingOp];
   await updateTask(taskId!, { status: activeStatus, progress: 0, error: null });
 
   const jobParams = { ...params, inputFile };
-  void runFfmpegJob(taskId!, op as ProcessingOp, inputFile, jobParams);
+  void runFfmpegJob(taskId!, op as ProcessingOp, inputFile, jobParams, tempInputPath);
 
   log.info({ taskId, op, inputFile }, 'Server FFmpeg job started');
   return NextResponse.json({ taskId, creditsRemaining: creditResult.remaining }, { status: 201 });

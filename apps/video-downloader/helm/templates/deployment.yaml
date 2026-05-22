@@ -60,17 +60,29 @@ spec:
 
           {{- /* ── Probes ── */}}
           startupProbe:
+            {{- if .Values.probes.startupProbe.httpGet }}
+            httpGet:
+              path: {{ .Values.probes.startupProbe.httpGet.path }}
+              port: {{ .Values.probes.startupProbe.httpGet.port }}
+            {{- else if .Values.probes.startupProbe.exec }}
             exec:
               command:
                 {{- toYaml .Values.probes.startupProbe.exec.command | nindent 16 }}
+            {{- end }}
             initialDelaySeconds: {{ .Values.probes.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.startupProbe.failureThreshold }}
 
           livenessProbe:
+            {{- if .Values.probes.livenessProbe.httpGet }}
+            httpGet:
+              path: {{ .Values.probes.livenessProbe.httpGet.path }}
+              port: {{ .Values.probes.livenessProbe.httpGet.port }}
+            {{- else if .Values.probes.livenessProbe.exec }}
             exec:
               command:
                 {{- toYaml .Values.probes.livenessProbe.exec.command | nindent 16 }}
+            {{- end }}
             initialDelaySeconds: {{ .Values.probes.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.livenessProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.livenessProbe.failureThreshold }}
@@ -82,10 +94,18 @@ spec:
           {{- end }}
 
           {{- /* ── Volume mounts ── */}}
-          {{- if .Values.hostPathVolume.enabled }}
+          {{- if or .Values.hostPathVolume.enabled .Values.cookiesSecret }}
           volumeMounts:
+            {{- if .Values.hostPathVolume.enabled }}
             - name: media-data
               mountPath: {{ .Values.hostPathVolume.mountPath }}
+            {{- end }}
+            {{- if .Values.cookiesSecret }}
+            - name: cookies-file
+              mountPath: {{ .Values.cookiesSecret.mountPath }}
+              subPath: {{ .Values.cookiesSecret.subPath }}
+              readOnly: true
+            {{- end }}
           {{- end }}
 
         {{- /* ── WireGuard VPN sidecar ── */}}
@@ -125,7 +145,7 @@ spec:
               readOnly: true
         {{- end }}
 
-      {{- if or .Values.hostPathVolume.enabled .Values.wireguard.enabled }}
+      {{- if or .Values.hostPathVolume.enabled .Values.wireguard.enabled .Values.cookiesSecret }}
       volumes:
         {{- if .Values.hostPathVolume.enabled }}
         - name: media-data
@@ -140,5 +160,13 @@ spec:
             items:
               - key: wg0.conf
                 path: wg0.conf
+        {{- end }}
+        {{- if .Values.cookiesSecret }}
+        - name: cookies-file
+          secret:
+            secretName: {{ .Values.cookiesSecret.secretName }}
+            items:
+              - key: netscape-cookies.txt
+                path: {{ .Values.cookiesSecret.subPath }}
         {{- end }}
       {{- end }}

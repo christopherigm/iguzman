@@ -56,9 +56,21 @@ const nextConfig = {
           { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
         ],
       },
+      // Cloudflare must never cache sw.js — a stale file means users keep
+      // running the old service worker indefinitely after a deployment.
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+        ],
+      },
     ];
   },
   allowedDevOrigins: ['127.0.0.1', '*'],
+
+  logging: {
+    incomingRequests: false,
+  },
 };
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
