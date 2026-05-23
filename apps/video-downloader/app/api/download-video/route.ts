@@ -281,18 +281,18 @@ export async function POST(request: Request) {
         }
 
         const meta = result.metadata;
-        const resolvedWidth =
+        let resolvedWidth =
           result.formatSelection?.bestVideo?.width ??
           result.formatSelection?.bestCombined?.width ??
           null;
-        const resolvedHeight =
+        let resolvedHeight =
           result.formatSelection?.bestVideo?.height ??
           result.formatSelection?.bestCombined?.height ??
           null;
 
-        // Probe duration from the file when yt-dlp metadata doesn't include it
+        // Probe duration (and resolution when missing) from the file when yt-dlp metadata doesn't include it
         let resolvedDuration = meta?.duration ?? null;
-        if (resolvedDuration == null && result.file) {
+        if ((resolvedDuration == null || resolvedWidth == null || resolvedHeight == null) && result.file) {
           try {
             const probed = await getVideoMetaFromFile(
               join(DOWNLOAD_DIR, result.file),
@@ -300,8 +300,14 @@ export async function POST(request: Request) {
             if (probed.durationSeconds != null) {
               resolvedDuration = probed.durationSeconds;
             }
+            if (resolvedWidth == null && probed.width != null) {
+              resolvedWidth = probed.width;
+            }
+            if (resolvedHeight == null && probed.height != null) {
+              resolvedHeight = probed.height;
+            }
           } catch {
-            // non-fatal — duration stays null
+            // non-fatal — duration/resolution stays null
           }
         }
 

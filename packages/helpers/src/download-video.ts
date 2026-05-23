@@ -21,8 +21,6 @@ import {
   isYoutube,
 } from './checkers';
 import type { Platform } from './checkers';
-import { extractAudioFromVideo } from './extract-audio-from-video';
-import { addAudioToVideoInTime } from './add-audio-to-video-in-time';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -624,29 +622,6 @@ const fetchMetadata = async (
 /*  Format detection & selection                                      */
 /* ------------------------------------------------------------------ */
 
-/**
- * Fetches all available formats for a URL using `yt-dlp --dump-json`.
- *
- * When metadata has already been fetched (and includes a `formats`
- * field) it is reused to avoid a second network round-trip.
- *
- * @returns An array of {@link FormatInfo} objects.
- */
-const fetchAvailableFormats = async (
-  url: string,
-  binary: string,
-  cookies: string,
-  jsRuntimes: string,
-  existingMetadata?: VideoMetadata,
-): Promise<FormatInfo[]> => {
-  // Re-use formats from metadata when available
-  if (existingMetadata?.formats && existingMetadata.formats.length > 0) {
-    return existingMetadata.formats;
-  }
-
-  const meta = await fetchMetadata(url, binary, cookies, jsRuntimes);
-  return (meta as VideoMetadata & { formats?: FormatInfo[] }).formats ?? [];
-};
 
 /**
  * Returns `true` when the extension is in the preferred list.
@@ -827,21 +802,30 @@ const selectBestFormats = (
 };
 
 /**
- * Selects the best combined (video + audio) format for TikTok downloads.
+ * Selects the best video and audio formats for TikTok downloads.
  *
- * TikTok serves muxed streams where video and audio are combined in a
- * single format. Instead of merging separate streams, this function
- * picks the combined format with the **highest resolution** directly.
+ * TikTok's H.265/HEVC combined streams frequently omit the audio track in
+ * the downloaded file despite listing an audio codec in yt-dlp's metadata.
+ * To fix this, we select the highest-resolution format as the video source
+ * and pair it with a reliable, separate audio source so that yt-dlp merges
+ * both streams in a single invocation — no post-download repair needed.
  *
- * This avoids H.265/HEVC streams that are known to cause missing-audio
- * issues in many players and browsers.
+ * Audio source priority:
+ *  1. Dedicated audio-only formats (when TikTok provides them).
+ *  2. The best non-H.265 combined format — yt-dlp extracts only its audio
+ *     track when it is used as the audio half of a `videoId+audioId` selector.
  *
- * @returns A {@link FormatSelection} with only `bestCombined` populated.
+ * Falls back to the best single combined stream when no separate audio
+ * source can be found.
+ *
+ * @returns A {@link FormatSelection} with `bestVideo` + `bestAudio` set for
+ *          an explicit merge, or `bestCombined` as a last resort.
  */
 const selectBestTikTokFormat = (
   formats: FormatInfo[],
   maxHeight?: number,
 ): FormatSelection => {
+  const audioOnly: FormatInfo[] = [];
   const combined: FormatInfo[] = [];
 
   for (const f of formats) {
@@ -850,6 +834,8 @@ const selectBestTikTokFormat = (
 
     if (hasVideo && hasAudio) {
       combined.push(f);
+    } else if (hasAudio && !hasVideo) {
+      audioOnly.push(f);
     }
   }
 
@@ -864,39 +850,65 @@ const selectBestTikTokFormat = (
     if (capped.length > 0) pool = capped;
   }
 
-  const bestCombined =
-    pool.length > 0
-      ? pool.sort((a, b) => {
-          // 1. Max resolution (height)
-          const aH = a.height ?? 0;
-          const bH = b.height ?? 0;
-          if (bH !== aH) return bH - aH;
+  const sortByVideoQuality = (a: FormatInfo, b: FormatInfo): number => {
+    const aH = a.height ?? 0;
+    const bH = b.height ?? 0;
+    if (bH !== aH) return bH - aH;
 
-          // 2. Max width (for same height)
-          const aW = a.width ?? 0;
-          const bW = b.width ?? 0;
-          if (bW !== aW) return bW - aW;
+    const aW = a.width ?? 0;
+    const bW = b.width ?? 0;
+    if (bW !== aW) return bW - aW;
 
-          // 3. Max bitrate
-          const aTbr = a.tbr ?? 0;
-          const bTbr = b.tbr ?? 0;
-          if (bTbr !== aTbr) return bTbr - aTbr;
+    const aTbr = a.tbr ?? 0;
+    const bTbr = b.tbr ?? 0;
+    if (bTbr !== aTbr) return bTbr - aTbr;
 
-          // 4. Prefer mp4 > webm > mov
-          const extOrder = (ext: string) => {
-            const idx = (
-              PREFERRED_VIDEO_EXTENSIONS as readonly string[]
-            ).indexOf(ext);
-            return idx === -1 ? 999 : idx;
-          };
-          return extOrder(a.ext) - extOrder(b.ext);
-        })[0]!
-      : null;
+    const extOrder = (ext: string) => {
+      const idx = (PREFERRED_VIDEO_EXTENSIONS as readonly string[]).indexOf(ext);
+      return idx === -1 ? 999 : idx;
+    };
+    return extOrder(a.ext) - extOrder(b.ext);
+  };
 
+  // Best video: highest-resolution combined format (H.265 wins on resolution).
+  const bestVideo = pool.length > 0 ? [...pool].sort(sortByVideoQuality)[0]! : null;
+
+  // Best audio: prefer audio-only streams; fall back to the best non-H.265
+  // combined format as an audio source (yt-dlp uses only its audio track
+  // when the format appears in the audio half of a merge selector).
+  const isH265Vcodec = (vcodec: string) => /hev[c1]|h265/i.test(vcodec);
+
+  let bestAudio: FormatInfo | null = null;
+
+  if (audioOnly.length > 0) {
+    const filteredAudio = audioOnly.filter((f) => isPreferredAudioExt(f.ext));
+    const audioPool = filteredAudio.length > 0 ? filteredAudio : audioOnly;
+    bestAudio =
+      [...audioPool].sort((a, b) => {
+        const aAbr = a.abr ?? a.tbr ?? 0;
+        const bAbr = b.abr ?? b.tbr ?? 0;
+        return bAbr - aAbr;
+      })[0] ?? null;
+  } else {
+    // No audio-only formats — use the best non-H.265 combined stream as the
+    // audio source. Its video track is ignored by yt-dlp during merging.
+    const nonH265 = combined.filter((f) => !isH265Vcodec(f.vcodec ?? ''));
+    if (nonH265.length > 0) {
+      bestAudio = [...nonH265].sort(sortByVideoQuality)[0]!;
+    }
+  }
+
+  // When both a video source and a distinct audio source exist, return them
+  // for an explicit merge — yt-dlp handles both downloads and the mux in one pass.
+  if (bestVideo && bestAudio && bestVideo.format_id !== bestAudio.format_id) {
+    return { bestVideo, bestAudio, bestCombined: null, allFormats: formats };
+  }
+
+  // Fallback: best single combined stream.
   return {
     bestVideo: null,
     bestAudio: null,
-    bestCombined,
+    bestCombined: bestVideo,
     allFormats: formats,
   };
 };
@@ -1620,197 +1632,116 @@ const getVideoFps = async (
   }
 };
 
-/**
- * Probes a media file with ffprobe to check whether it contains an
- * audio stream.
- *
- * @returns `true` when at least one audio stream is found, `false` otherwise.
- */
-const hasAudioStream = async (
-  filePath: string,
-  ffmpegBinary: string,
-): Promise<boolean> => {
-  try {
-    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
-    const output = await execFileAsync(ffprobeBinary, [
-      '-v',
-      'error',
-      '-select_streams',
-      'a:0',
-      '-show_entries',
-      'stream=codec_name',
-      '-of',
-      'default=noprint_wrappers=1:nokey=1',
-      filePath,
-    ]);
-    return output.trim().length > 0;
-  } catch {
-    return false;
-  }
-};
+
+/* ------------------------------------------------------------------ */
+/*  TikTok H.265 download with explicit audio merge                   */
+/* ------------------------------------------------------------------ */
 
 /**
- * Downloads an H.264-encoded version of a TikTok video using yt-dlp
- * with `-S "codec:h264"` to prefer H.264 streams.
+ * Downloads a TikTok H.265 video with properly muxed audio.
  *
- * @param url        - TikTok video URL.
- * @param outputPath - Absolute path where the file will be saved.
- * @param cookies    - Path to the Netscape cookies file.
- * @param jsRuntimes - Path to the Node.js binary for yt-dlp.
+ * yt-dlp's TikTok extractor incorrectly reports H.265 formats as combined
+ * (acodec: aac) when they are actually video-only streams (identifiable by
+ * `/media-video-hvc1/` in the CDN URL). Because yt-dlp thinks the H.265
+ * format already has audio, a `{h265Id}+{h264Id}` merge selector collapses
+ * to just the H.265 download — still no audio.
+ *
+ * Fix: use `--load-info-json` with the already-fetched metadata JSON so that
+ * both the H.265 video and a genuine H.264 combined stream are downloaded as
+ * two explicit separate format fetches. yt-dlp reads the cached CDN URLs
+ * from the JSON file and does NOT re-scrape TikTok's webpage, avoiding the
+ * HTTP 429 that triggered the old repair path.
+ *
+ * Steps:
+ * 1. Write videoMetadata to a temp JSON file (already in --dump-json format).
+ * 2. Download H.265 with `--load-info-json` → video-only file.
+ * 3. Download H.264 with `--load-info-json` → combined file (has audio).
+ * 4. Extract audio from H.264 with ffmpeg.
+ * 5. Merge H.265 video + extracted audio → outputPath.
+ * 6. Clean up all temp files.
+ *
+ * @throws When any step fails — callers should fall back to the regular path.
  */
-const downloadTikTokH264Video = async (
-  url: string,
+const downloadTikTokH265WithAudio = async (
+  videoMetadata: VideoMetadata,
+  formatSelection: FormatSelection,
   outputPath: string,
-  cookies: string,
-  jsRuntimes: string,
-): Promise<void> => {
-  const args: string[] = [
-    url,
-    '-S',
-    'codec:h264',
-    '--no-abort-on-error',
-    '--no-playlist',
-    '--js-runtimes',
-    `node:${jsRuntimes}`,
-  ];
-
-  if (cookies) {
-    args.push('--cookies', cookies);
-  }
-
-  args.push('--merge-output-format', 'mp4', '-o', outputPath, '--quiet');
-
-  await execFileAsync(DEFAULT_BINARY, args);
-};
-
-/**
- * Repairs a TikTok H.265 video that has no audio by downloading a
- * secondary H.264 version, extracting its audio track, and merging
- * that audio into the original H.265 video.
- *
- * **Flow:**
- * 1. Probe the downloaded file — skip if it is not H.265 or already has audio.
- * 2. Download an H.264 copy of the same TikTok URL (`-S codec:h264`).
- * 3. Extract the audio track from the H.264 video (WAV via ffmpeg).
- * 4. Merge the extracted audio into the H.265 video.
- * 5. Replace the original file with the merged result.
- * 6. Clean up temporary H.264 video and WAV files.
- *
- * @returns `true` when the repair was performed, `false` when skipped
- *          (not H.265, already has audio, or a step failed).
- */
-const repairTikTokH265Audio = async (
-  h265FilePath: string,
-  h265FileName: string,
-  url: string,
   outputFolder: string,
-  cookies: string,
-  jsRuntimes: string,
+  fileId: string,
+  binary: string,
   ffmpegBinary: string,
-): Promise<boolean> => {
-  /* ---- 1. Check codec & audio presence (single ffprobe call) ---- */
+): Promise<void> => {
+  const metaJsonPath = `${outputFolder}/${fileId}.tiktok_meta.json`;
+  const videoTmpPath = `${outputFolder}/${fileId}_hvc.mp4`;
+  const audioSrcPath = `${outputFolder}/${fileId}_h264.mp4`;
+  const audioPath = `${outputFolder}/${fileId}_audio.m4a`;
 
-  try {
-    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
-    const output = await execFileAsync(ffprobeBinary, [
-      '-v',
-      'error',
-      '-show_streams',
-      '-of',
-      'json',
-      h265FilePath,
-    ]);
-    const { streams = [] } = JSON.parse(output) as {
-      streams?: { codec_type: string; codec_name: string }[];
-    };
-    const videoStream = streams.find((s) => s.codec_type === 'video');
-    const codec = videoStream?.codec_name?.toLowerCase() ?? '';
-    if (codec !== 'hevc' && codec !== 'h265') return false;
-    if (streams.some((s) => s.codec_type === 'audio')) return false;
-  } catch {
-    return false;
-  }
-
-  /* ---- 2. Download H.264 version ---- */
-
-  const h264Id = randomUUID();
-  const h264FileName = `${h264Id}.mp4`;
-  const h264FilePath = `${outputFolder}/${h264FileName}`;
-  const audioFileName = `${h264Id}.wav`;
-  const audioFilePath = `${outputFolder}/${audioFileName}`;
-
-  const cleanup = () => {
-    try {
-      rmSync(h264FilePath, { force: true });
-    } catch {
-      /* ignore */
-    }
-    try {
-      rmSync(audioFilePath, { force: true });
-    } catch {
-      /* ignore */
+  const cleanup = (): void => {
+    for (const p of [metaJsonPath, videoTmpPath, audioSrcPath, audioPath]) {
+      try {
+        rmSync(p, { force: true });
+      } catch {
+        /* ignore */
+      }
     }
   };
 
   try {
-    await downloadTikTokH264Video(url, h264FilePath, cookies, jsRuntimes);
-  } catch {
+    writeFileSync(metaJsonPath, JSON.stringify(videoMetadata));
+
+    // Download H.265 video (video-only despite acodec=aac in yt-dlp metadata)
+    await execFileAsync(binary, [
+      '--load-info-json',
+      metaJsonPath,
+      '-f',
+      formatSelection.bestVideo!.format_id,
+      '-o',
+      videoTmpPath,
+      '--quiet',
+    ]);
+
+    // Download H.264 combined (genuinely has audio) — no webpage re-scrape
+    await execFileAsync(binary, [
+      '--load-info-json',
+      metaJsonPath,
+      '-f',
+      formatSelection.bestAudio!.format_id,
+      '-o',
+      audioSrcPath,
+      '--quiet',
+    ]);
+
+    // Extract audio track from H.264
+    await execFileAsync(ffmpegBinary, [
+      '-y',
+      '-i',
+      audioSrcPath,
+      '-vn',
+      '-acodec',
+      'aac',
+      '-b:a',
+      '192k',
+      audioPath,
+    ]);
+
+    // Merge H.265 video + extracted audio
+    await execFileAsync(ffmpegBinary, [
+      '-y',
+      '-i',
+      videoTmpPath,
+      '-i',
+      audioPath,
+      '-c:v',
+      'copy',
+      '-c:a',
+      'copy',
+      '-movflags',
+      '+faststart',
+      outputPath,
+    ]);
+  } finally {
     cleanup();
-    return false;
   }
-
-  /* ---- 3. Extract audio from H.264 video ---- */
-
-  try {
-    await extractAudioFromVideo({
-      src: h264FileName,
-      dest: audioFileName,
-      outputFolder,
-    });
-  } catch {
-    cleanup();
-    return false;
-  }
-
-  /* ---- 4. Merge audio into H.265 video ---- */
-
-  const mergedFileName = `merged_${h265FileName}`;
-  const mergedFilePath = `${outputFolder}/${mergedFileName}`;
-
-  try {
-    await addAudioToVideoInTime({
-      srcVideo: h265FileName,
-      srcAudio: audioFileName,
-      dest: mergedFileName,
-      offset: 0,
-      format: 'wav',
-      outputFolder,
-    });
-  } catch {
-    cleanup();
-    try {
-      rmSync(mergedFilePath, { force: true });
-    } catch {
-      /* ignore */
-    }
-    return false;
-  }
-
-  /* ---- 5. Replace original with merged file ---- */
-
-  try {
-    rmSync(h265FilePath, { force: true });
-    renameSync(mergedFilePath, h265FilePath);
-  } catch {
-    // If replacement fails, try to keep whichever file exists.
-    return false;
-  }
-
-  /* ---- 6. Cleanup temporary files ---- */
-
-  cleanup();
-
-  return true;
 };
 
 /* ------------------------------------------------------------------ */
@@ -2404,6 +2335,7 @@ const downloadSeparateStreams = async (
   binary: string,
   ffmpegBinary: string,
   formatSelection?: FormatSelection,
+  infoJsonPath?: string,
 ): Promise<void> => {
   const videoId = randomUUID();
   const combinedId = randomUUID();
@@ -2436,6 +2368,7 @@ const downloadSeparateStreams = async (
   const buildStreamArgs = (
     formatSelector: string,
     outputTemplate: string,
+    writeInfoJson?: string,
   ): string[] => {
     const args: string[] = [
       url,
@@ -2447,6 +2380,9 @@ const downloadSeparateStreams = async (
     ];
     if (isFacebook(url)) args.push('--impersonate', 'chrome');
     if (cookies) args.push('--cookies', cookies);
+    if (writeInfoJson) {
+      args.push('--write-info-json', '-o', `infojson:${writeInfoJson}`);
+    }
     args.push('-o', outputTemplate, '--quiet');
     return args;
   };
@@ -2473,7 +2409,7 @@ const downloadSeparateStreams = async (
     /* ---- Step 2: Download combined video+audio stream ---- */
     await execFileAsync(
       binary,
-      buildStreamArgs(combinedSelector, combinedTemplate),
+      buildStreamArgs(combinedSelector, combinedTemplate, infoJsonPath),
     );
     combinedFile = findDownloadedFile(combinedId);
     if (!combinedFile)
@@ -2645,51 +2581,54 @@ const downloadVideo = async ({
   const fileName = `${fileId}.${fileExt}`;
   const outputPath = `${outputFolder}/${fileName}`;
 
-  /* ---- 4. Fetch metadata (if requested, or needed for name/captions) ---- */
+  /* ---- 4. Pre-flight metadata & format selection (conditional) ---- */
+
+  // Skip the --dump-json round-trip for simple downloads where nothing
+  // requires format data or metadata fields before the download begins.
+  // --write-info-json is added to the actual download command instead,
+  // so yt-dlp writes title/thumbnail/captions to a sidecar file at zero
+  // extra cost (yt-dlp fetches this data internally anyway).
+  //
+  // Pre-flight IS required when:
+  //  • maxHeight — we need the formats list to cap resolution before download.
+  //  • requestMetadata — caller explicitly wants the full VideoMetadata object.
+  //  • justAudio — extractAudioMetadata needs artist/album/cover fields.
+  //  • TikTok — format pre-selection avoids the expensive H.265 audio-repair
+  //    path (downloading the video a second time and re-merging its audio).
+  const needsPreflightMetadata =
+    !!maxHeight || requestMetadata || justAudio || isTiktok(url);
 
   let videoMetadata: VideoMetadata | undefined;
-
-  // We always fetch metadata now because --dump-json also returns the
-  // `formats` array, which we reuse for format selection (step 4b).
-  // For audio downloads, metadata is essential so that artist, album,
-  // cover art, etc. can be embedded into the output file by yt-dlp's
-  // post-processors.
-  try {
-    videoMetadata = await fetchMetadata(url, binary, cookies, jsRuntimes);
-  } catch (error) {
-    if (requestMetadata || justAudio) {
-      return {
-        error: {
-          code: 'METADATA_FAILED',
-          message: `Failed to retrieve video metadata: ${error instanceof Error ? error.message : String(error)}`,
-        },
-      };
-    }
-    // Metadata failed but wasn't strictly required — continue anyway.
-  }
-
-  /* ---- 4b. Detect available formats & select best streams ---- */
-
   let formatSelection: FormatSelection | undefined;
+  const infoJsonPath = `${outputFolder}/${fileId}.info.json`;
 
-  try {
-    const formats = await fetchAvailableFormats(
-      url,
-      binary,
-      cookies,
-      jsRuntimes,
-      videoMetadata,
-    );
-
-    if (formats.length > 0) {
-      formatSelection =
-        isTiktok(url) && !justAudio
-          ? selectBestTikTokFormat(formats, maxHeight)
-          : selectBestFormats(formats, maxHeight);
+  if (needsPreflightMetadata) {
+    /* ---- 4a. Fetch metadata ---- */
+    try {
+      videoMetadata = await fetchMetadata(url, binary, cookies, jsRuntimes);
+    } catch (error) {
+      if (requestMetadata || justAudio) {
+        return {
+          error: {
+            code: 'METADATA_FAILED',
+            message: `Failed to retrieve video metadata: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        };
+      }
+      // Metadata failed but wasn't strictly required — continue without it.
     }
-  } catch {
-    // Format detection is best-effort. When it fails we fall back to
-    // yt-dlp's built-in format selection in the download step.
+
+    /* ---- 4b. Select best streams from fetched formats ---- */
+    if (videoMetadata?.formats && videoMetadata.formats.length > 0) {
+      try {
+        formatSelection =
+          isTiktok(url) && !justAudio
+            ? selectBestTikTokFormat(videoMetadata.formats, maxHeight)
+            : selectBestFormats(videoMetadata.formats, maxHeight);
+      } catch {
+        // Format selection is best-effort; yt-dlp's built-in selector is the fallback.
+      }
+    }
   }
 
   /* ---- 5. Download the video (or audio only) ---- */
@@ -2718,6 +2657,7 @@ const downloadVideo = async ({
         binary,
         ffmpegBinary,
         formatSelection,
+        !needsPreflightMetadata ? infoJsonPath : undefined,
       );
       separateStreamsOk = true;
     } catch (err) {
@@ -2741,6 +2681,9 @@ const downloadVideo = async ({
         jsRuntimes,
         formatSelection,
       );
+      if (!needsPreflightMetadata) {
+        mergeArgs.push('--write-info-json', '-o', `infojson:${infoJsonPath}`);
+      }
 
       try {
         await execFileAsync(binary, mergeArgs);
@@ -2799,6 +2742,36 @@ const downloadVideo = async ({
   } else {
     /* ---- 5b. All other platforms: standard yt-dlp download ---- */
 
+    // TikTok H.265 special path — yt-dlp misreports H.265 formats as combined
+    // (acodec: aac) when they are video-only. Use --load-info-json to fetch
+    // H.265 video + H.264 audio as two explicit downloads without re-scraping
+    // TikTok's page (which would trigger HTTP 429).
+    let tikTokH265Done = false;
+    if (
+      !justAudio &&
+      isTiktok(url) &&
+      videoMetadata &&
+      formatSelection?.bestVideo &&
+      formatSelection?.bestAudio &&
+      /hev[c1]|h265/i.test(formatSelection.bestVideo.vcodec ?? '')
+    ) {
+      try {
+        await downloadTikTokH265WithAudio(
+          videoMetadata,
+          formatSelection,
+          outputPath,
+          outputFolder,
+          fileId,
+          binary,
+          ffmpegBinary,
+        );
+        tikTokH265Done = true;
+      } catch {
+        // Fall through to the regular yt-dlp download below.
+      }
+    }
+
+    if (!tikTokH265Done) {
     const args = justAudio
       ? buildAudioDownloadArgs(
           url,
@@ -2815,6 +2788,10 @@ const downloadVideo = async ({
           jsRuntimes,
           formatSelection,
         );
+
+    if (!needsPreflightMetadata) {
+      args.push('--write-info-json', '-o', `infojson:${infoJsonPath}`);
+    }
 
     try {
       await execFileAsync(binary, args);
@@ -2861,6 +2838,30 @@ const downloadVideo = async ({
         };
       }
     }
+    } // end if (!tikTokH265Done)
+  }
+
+  /* ---- 4c. Read post-download info.json (simple path only) ---- */
+
+  // When we skipped the pre-flight --dump-json, yt-dlp wrote a sidecar
+  // .info.json during the download. Read it now so subsequent steps
+  // (title, thumbnail, captions) have the same metadata they would have
+  // had with the pre-flight call — at zero extra round-trip cost.
+  if (!needsPreflightMetadata) {
+    try {
+      if (existsSync(infoJsonPath)) {
+        const raw = readFileSync(infoJsonPath, 'utf8');
+        videoMetadata = JSON.parse(raw) as VideoMetadata;
+      }
+    } catch {
+      // Best-effort; step 6 will fall back to a separate title fetch if needed.
+    } finally {
+      try {
+        rmSync(infoJsonPath, { force: true });
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   /* ---- 5c. Instagram image fallback: verify output exists ---- */
@@ -2893,24 +2894,6 @@ const downloadVideo = async ({
           message: 'yt-dlp produced no output and gallery-dl fallback failed.',
         },
       };
-    }
-  }
-
-  /* ---- 5b. Repair TikTok H.265 videos with missing audio ---- */
-
-  if (isTiktok(url) && !justAudio) {
-    try {
-      await repairTikTokH265Audio(
-        outputPath,
-        fileName,
-        url,
-        outputFolder,
-        cookies,
-        jsRuntimes,
-        ffmpegBinary,
-      );
-    } catch {
-      // Repair is best-effort; continue with the original download.
     }
   }
 
