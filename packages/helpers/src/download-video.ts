@@ -268,6 +268,14 @@ export interface DownloadVideoOptions {
    * @defaultValue 20
    */
   maxComments?: number;
+  /**
+   * When `true`, skips the startup checks that verify whether `yt-dlp`
+   * and `ffmpeg` binaries are installed. Useful in environments where
+   * the binaries are guaranteed to be present and the extra process
+   * spawns would add latency.
+   * @defaultValue false
+   */
+  binaryCheckBypass?: boolean;
 }
 
 /** A single format entry from yt-dlp's `--dump-json` output. */
@@ -2563,7 +2571,8 @@ const downloadVideo = async ({
   maxHeight,
   captionUrl: providedCaptionUrl,
   commentsEnabled = false,
-  maxComments = 20,
+  maxComments = 0,
+  binaryCheckBypass = false,
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
@@ -2572,24 +2581,26 @@ const downloadVideo = async ({
 
   /* ---- 1. Check yt-dlp availability ---- */
 
-  const binaryExists = await isBinaryAvailable(binary);
-  if (!binaryExists) {
-    return {
-      error: {
-        code: 'BINARY_NOT_FOUND',
-        message:
-          'yt-dlp binary was not found. ' +
-          'Install it via: brew install yt-dlp (macOS), ' +
-          'sudo apt install yt-dlp (Debian/Ubuntu), ' +
-          'pip install yt-dlp (pip), ' +
-          'or download from https://github.com/yt-dlp/yt-dlp#installation',
-      },
-    };
+  if (!binaryCheckBypass) {
+    const binaryExists = await isBinaryAvailable(binary);
+    if (!binaryExists) {
+      return {
+        error: {
+          code: 'BINARY_NOT_FOUND',
+          message:
+            'yt-dlp binary was not found. ' +
+            'Install it via: brew install yt-dlp (macOS), ' +
+            'sudo apt install yt-dlp (Debian/Ubuntu), ' +
+            'pip install yt-dlp (pip), ' +
+            'or download from https://github.com/yt-dlp/yt-dlp#installation',
+        },
+      };
+    }
   }
 
   /* ---- 1b. Check ffmpeg availability (required for audio extraction) ---- */
 
-  if (justAudio) {
+  if (!binaryCheckBypass && justAudio) {
     const ffmpegExists = await isBinaryAvailable(ffmpegBinary, '-version');
     if (!ffmpegExists) {
       return {
@@ -3049,8 +3060,7 @@ const downloadVideo = async ({
           jsRuntimes,
         });
         if (subs.length > 0) {
-          const preferred =
-            subs.find((s) => /orig/i.test(s.lang)) ?? subs[0];
+          const preferred = subs.find((s) => /orig/i.test(s.lang)) ?? subs[0];
           captionUrlToUse = preferred?.url ?? null;
         }
       }
@@ -3149,7 +3159,12 @@ const downloadComments = async (
     const files = readdirSync(tmpFolder);
     const infoFile = files.find((f) => f.endsWith('.info.json'));
     if (!infoFile) {
-      console.warn('downloadComments: no .info.json found in tmp folder for', url, '— files:', files);
+      console.warn(
+        'downloadComments: no .info.json found in tmp folder for',
+        url,
+        '— files:',
+        files,
+      );
       return null;
     }
 
@@ -3158,12 +3173,20 @@ const downloadComments = async (
     const comments = info.comments;
 
     if (!Array.isArray(comments) || comments.length === 0) {
-      console.warn('downloadComments: info.json present but comments field is', comments == null ? 'missing' : 'empty', 'for', url);
+      console.warn(
+        'downloadComments: info.json present but comments field is',
+        comments == null ? 'missing' : 'empty',
+        'for',
+        url,
+      );
       return null;
     }
 
     const commentsFilename = `${fileId}.comments.json`;
-    writeFileSync(`${outputFolder}/${commentsFilename}`, JSON.stringify(comments));
+    writeFileSync(
+      `${outputFolder}/${commentsFilename}`,
+      JSON.stringify(comments),
+    );
 
     return commentsFilename;
   } catch (err) {

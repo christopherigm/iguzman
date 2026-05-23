@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { join } from 'node:path';
 import { writeFileSync } from 'fs';
-import { unlink, copyFile } from 'node:fs/promises';
+import { unlink } from 'node:fs/promises';
 import downloadVideo, {
   listSubtitlesViaYtDlp,
 } from '@repo/helpers/download-video';
@@ -26,6 +26,7 @@ import {
   getVideoMetaFromFile,
 } from '@/lib/operation-credits';
 import { USE_R2, uploadFromPath, deleteObject } from '@/lib/r2';
+import { getWritableCookiesPath } from '@/lib/writable-cookies';
 
 const CREDITS_PER_COMMENTS = 1;
 
@@ -40,30 +41,10 @@ const IS_PRODUCTION = NODE_ENV === 'production';
 const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
 
 // When R2 is active, downloads land in /tmp and are uploaded after completion.
-// The cookies file is now mounted from a Kubernetes Secret.
 const DOWNLOAD_DIR = USE_R2 ? '/tmp' : MEDIA_DIR;
-const COOKIES_PATH = IS_PRODUCTION ? '/app/netscape-cookies.txt' : './netscape-cookies.txt';
 
 const MAX_DOWNLOAD_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 5_000;
-
-// yt-dlp writes updated cookies back to the file on exit. When the cookies
-// file is mounted read-only (K8s Secret), this causes an OSError. We copy it
-// to /tmp once per process so yt-dlp has a writable path.
-const WRITABLE_COOKIES_PATH = IS_PRODUCTION ? '/tmp/netscape-cookies.txt' : COOKIES_PATH;
-let _cookiesCopied = false;
-async function getWritableCookiesPath(): Promise<string> {
-  if (!IS_PRODUCTION) return COOKIES_PATH;
-  if (!_cookiesCopied) {
-    try {
-      await copyFile(COOKIES_PATH, WRITABLE_COOKIES_PATH);
-      _cookiesCopied = true;
-    } catch {
-      return COOKIES_PATH;
-    }
-  }
-  return WRITABLE_COOKIES_PATH;
-}
 
 const isTransientError = (msg: string): boolean =>
   msg.includes('429') ||
@@ -220,6 +201,7 @@ export async function POST(request: Request) {
         maxComments,
         outputFolder: DOWNLOAD_DIR,
         cookies: await getWritableCookiesPath(),
+        binaryCheckBypass: true,
       };
 
       let result = await downloadVideo(downloadInput);

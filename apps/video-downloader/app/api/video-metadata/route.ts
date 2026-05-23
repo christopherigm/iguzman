@@ -8,6 +8,7 @@ import {
   requireCredits,
   creditsErrorResponse,
 } from '@/lib/credits-middleware';
+import { getWritableCookiesPath } from '@/lib/writable-cookies';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/video-metadata' });
@@ -45,7 +46,8 @@ export async function POST(request: Request) {
   const remainingCredits = creditsResult.remaining;
 
   try {
-    const meta = await fetchVideoMetadata(url);
+    const cookies = await getWritableCookiesPath();
+    const meta = await fetchVideoMetadata(url, { cookies });
     const formats = meta.formats ?? [];
 
     const videoFormats = formats.filter(
@@ -96,7 +98,7 @@ export async function POST(request: Request) {
         { url },
         'No captions in standard metadata, trying yt-dlp fallback',
       );
-      const fallback = await listSubtitlesViaYtDlp(url);
+      const fallback = await listSubtitlesViaYtDlp(url, { cookies });
       log.info(
         { url, count: fallback.length },
         'yt-dlp caption fallback complete',
