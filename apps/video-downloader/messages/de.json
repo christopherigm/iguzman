@@ -98,6 +98,7 @@
   "Navbar": {
     "home": "Startseite",
     "reelMode": "Reel-Modus",
+    "musicPlayer": "Musik-Player",
     "credits": "Credits",
     "buyCredits": "Credits kaufen",
     "terms": "Nutzungsbedingungen und Konditionen",
@@ -357,5 +358,22 @@
     "couponErrorTitle": "Ungültiger Gutschein",
     "couponErrorText": "Dieser Gutschein ist ungültig, abgelaufen oder wurde bereits verwendet.",
     "couponGenericError": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
+  },
+  "MusicPlayer": {
+    "loading": "Bibliothek wird geladen…",
+    "emptyAudioOnly": "Noch keine Audiotracks gespeichert. Lade zuerst etwas herunter oder aktiviere \"Videos einschließen\", um auch Videodateien abzuspielen.",
+    "emptyWithVideos": "Noch keine Dateien auf deinem Gerät gespeichert. Lade zuerst etwas herunter.",
+    "includeVideos": "Videos einschließen",
+    "playlist": "Wiedergabeliste",
+    "unknownTitle": "Unbekannter Titel",
+    "unknownArtist": "Unbekannter Künstler",
+    "seekLabel": "Springen",
+    "play": "Abspielen",
+    "pause": "Pausieren",
+    "previous": "Vorheriger Titel",
+    "next": "Nächster Titel",
+    "shuffle": "Zufällig",
+    "repeat": "Wiederholen",
+    "return": "Zurück"
   }
 }

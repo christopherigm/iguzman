@@ -98,6 +98,7 @@
   "Navbar": {
     "home": "Início",
     "reelMode": "Modo Reel",
+    "musicPlayer": "Reprodutor de Música",
     "credits": "Créditos",
     "buyCredits": "Comprar créditos",
     "terms": "Termos e Condições",
@@ -357,5 +358,22 @@
     "couponErrorTitle": "Cupom Inválido",
     "couponErrorText": "Este cupom é inválido, expirou ou já foi utilizado.",
     "couponGenericError": "Algo deu errado. Por favor, tente novamente."
+  },
+  "MusicPlayer": {
+    "loading": "Carregando sua biblioteca…",
+    "emptyAudioOnly": "Nenhuma faixa de áudio salva ainda. Baixe algo primeiro ou ative \"Incluir vídeos\" para também reproduzir arquivos de vídeo.",
+    "emptyWithVideos": "Nenhum arquivo salvo no seu dispositivo ainda. Baixe algo primeiro.",
+    "includeVideos": "Incluir vídeos",
+    "playlist": "Playlist",
+    "unknownTitle": "Faixa desconhecida",
+    "unknownArtist": "Artista desconhecido",
+    "seekLabel": "Avançar",
+    "play": "Reproduzir",
+    "pause": "Pausar",
+    "previous": "Faixa anterior",
+    "next": "Próxima faixa",
+    "shuffle": "Aleatório",
+    "repeat": "Repetir",
+    "return": "Voltar"
   }
 }

@@ -98,6 +98,7 @@
   "Navbar": {
     "home": "Home",
     "reelMode": "Reel Mode",
+    "musicPlayer": "Music Player",
     "credits": "Credits",
     "buyCredits": "Buy credits",
     "terms": "Terms and Conditions",
@@ -358,5 +359,22 @@
     "couponErrorTitle": "Invalid Coupon",
     "couponErrorText": "This coupon is invalid, expired, or has already been used.",
     "couponGenericError": "Something went wrong. Please try again."
+  },
+  "MusicPlayer": {
+    "loading": "Loading your library…",
+    "emptyAudioOnly": "No audio tracks saved to your device yet. Download some audio first, or turn on \"Include videos\" to also play video files.",
+    "emptyWithVideos": "No media files saved to your device yet. Download something first.",
+    "includeVideos": "Include videos",
+    "playlist": "Playlist",
+    "unknownTitle": "Unknown track",
+    "unknownArtist": "Unknown artist",
+    "seekLabel": "Seek",
+    "play": "Play",
+    "pause": "Pause",
+    "previous": "Previous track",
+    "next": "Next track",
+    "shuffle": "Shuffle",
+    "repeat": "Repeat",
+    "return": "Return"
   }
 }

@@ -349,7 +349,7 @@ export async function POST(request: Request) {
           isH265: result.isH265 ?? null,
           thumbnail: result.thumbnail ?? null,
           duration: resolvedDuration,
-          uploader: meta?.uploader ?? null,
+          uploader: meta?.uploader ?? result.audioMetadata?.artist ?? null,
           uploader_id: meta?.uploader_id ?? null,
           uploader_url: meta?.uploader_url ?? null,
           uploadTimestamp:

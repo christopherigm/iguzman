@@ -60,7 +60,9 @@ export async function GET(
 
   if (USE_R2) {
     // Custom domain path: redirect directly — R2 → client, no server proxy.
-    if (R2_PUBLIC_URL) {
+    // Only in production; in dev the redirect would be cross-origin (127.0.0.1
+    // → media2go.app) and CORS would block the fetch.
+    if (R2_PUBLIC_URL && IS_PRODUCTION) {
       return NextResponse.redirect(`${R2_PUBLIC_URL}/${filename}`);
     }
 

@@ -213,7 +213,7 @@ export interface DownloadVideoOptions {
    * quality. FLAC is recommended as it is lossless, widely supported
    * by audio players, and supports embedded metadata & cover art.
    *
-   * @defaultValue 'flac'
+   * @defaultValue 'm4a'
    */
   audioFormat?: AudioOutputFormat;
   /**
@@ -622,7 +622,6 @@ const fetchMetadata = async (
 /*  Format detection & selection                                      */
 /* ------------------------------------------------------------------ */
 
-
 /**
  * Returns `true` when the extension is in the preferred list.
  */
@@ -864,14 +863,17 @@ const selectBestTikTokFormat = (
     if (bTbr !== aTbr) return bTbr - aTbr;
 
     const extOrder = (ext: string) => {
-      const idx = (PREFERRED_VIDEO_EXTENSIONS as readonly string[]).indexOf(ext);
+      const idx = (PREFERRED_VIDEO_EXTENSIONS as readonly string[]).indexOf(
+        ext,
+      );
       return idx === -1 ? 999 : idx;
     };
     return extOrder(a.ext) - extOrder(b.ext);
   };
 
   // Best video: highest-resolution combined format (H.265 wins on resolution).
-  const bestVideo = pool.length > 0 ? [...pool].sort(sortByVideoQuality)[0]! : null;
+  const bestVideo =
+    pool.length > 0 ? [...pool].sort(sortByVideoQuality)[0]! : null;
 
   // Best audio: prefer audio-only streams; fall back to the best non-H.265
   // combined format as an audio source (yt-dlp uses only its audio track
@@ -971,7 +973,7 @@ const buildAudioDownloadArgs = (
   outputPath: string,
   cookies: string,
   jsRuntimes: string,
-  audioFormat: AudioOutputFormat = 'flac',
+  audioFormat: AudioOutputFormat = 'm4a',
   formatSelection?: FormatSelection,
 ): string[] => {
   const formatSelector = formatSelection
@@ -1631,7 +1633,6 @@ const getVideoFps = async (
     return undefined;
   }
 };
-
 
 /* ------------------------------------------------------------------ */
 /*  TikTok H.265 download with explicit audio merge                   */
@@ -2512,8 +2513,7 @@ const downloadVideo = async ({
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
-  const audioFmt: AudioOutputFormat =
-    audioFormat ?? (iosDevice ? 'm4a' : 'flac');
+  const audioFmt: AudioOutputFormat = audioFormat ?? 'm4a';
 
   /* ---- 1. Check yt-dlp availability ---- */
 
@@ -2772,72 +2772,72 @@ const downloadVideo = async ({
     }
 
     if (!tikTokH265Done) {
-    const args = justAudio
-      ? buildAudioDownloadArgs(
-          url,
-          outputPath,
-          cookies,
-          jsRuntimes,
-          audioFmt,
-          formatSelection,
-        )
-      : buildDownloadArgs(
-          url,
-          outputPath,
-          cookies,
-          jsRuntimes,
-          formatSelection,
-        );
+      const args = justAudio
+        ? buildAudioDownloadArgs(
+            url,
+            outputPath,
+            cookies,
+            jsRuntimes,
+            audioFmt,
+            formatSelection,
+          )
+        : buildDownloadArgs(
+            url,
+            outputPath,
+            cookies,
+            jsRuntimes,
+            formatSelection,
+          );
 
-    if (!needsPreflightMetadata) {
-      args.push('--write-info-json', '-o', `infojson:${infoJsonPath}`);
-    }
-
-    try {
-      await execFileAsync(binary, args);
-    } catch (error) {
-      if (isRateLimited(error)) {
-        ytDlpFailed = true;
-        return {
-          error: {
-            code: 'DOWNLOAD_FAILED',
-            message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
-          },
-        };
+      if (!needsPreflightMetadata) {
+        args.push('--write-info-json', '-o', `infojson:${infoJsonPath}`);
       }
-      // If download failed with format selection, retry without it
-      // (let yt-dlp pick the best format on its own).
-      if (formatSelection) {
-        try {
-          const fallbackArgs = justAudio
-            ? buildAudioDownloadArgs(
-                url,
-                outputPath,
-                cookies,
-                jsRuntimes,
-                audioFmt,
-              )
-            : buildDownloadArgs(url, outputPath, cookies, jsRuntimes);
-          await execFileAsync(binary, fallbackArgs);
-        } catch (fallbackError) {
+
+      try {
+        await execFileAsync(binary, args);
+      } catch (error) {
+        if (isRateLimited(error)) {
           ytDlpFailed = true;
           return {
             error: {
               code: 'DOWNLOAD_FAILED',
-              message: `yt-dlp download failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+              message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
             },
           };
         }
-      } else {
-        ytDlpFailed = true;
-        return {
-          error: {
-            code: 'DOWNLOAD_FAILED',
-            message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
-          },
-        };
+        // If download failed with format selection, retry without it
+        // (let yt-dlp pick the best format on its own).
+        if (formatSelection) {
+          try {
+            const fallbackArgs = justAudio
+              ? buildAudioDownloadArgs(
+                  url,
+                  outputPath,
+                  cookies,
+                  jsRuntimes,
+                  audioFmt,
+                )
+              : buildDownloadArgs(url, outputPath, cookies, jsRuntimes);
+            await execFileAsync(binary, fallbackArgs);
+          } catch (fallbackError) {
+            ytDlpFailed = true;
+            return {
+              error: {
+                code: 'DOWNLOAD_FAILED',
+                message: `yt-dlp download failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
+              },
+            };
+          }
+        } else {
+          ytDlpFailed = true;
+          return {
+            error: {
+              code: 'DOWNLOAD_FAILED',
+              message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          };
+        }
       }
-    }
     } // end if (!tikTokH265Done)
   }
 

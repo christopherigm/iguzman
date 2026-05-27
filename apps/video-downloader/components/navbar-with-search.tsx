@@ -43,6 +43,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const allItems = [
     { label: t('home'), href: '/' },
     { label: t('reelMode'), href: '/reel-mode' },
+    { label: t('musicPlayer'), href: '/music-player' },
     { label: t('buyCredits'), href: '/credits' },
     { label: t('terms'), href: '/terms' },
   ];
@@ -73,7 +74,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
     <>
       <Navbar
         {...props}
-        hiddenPaths={['/reel-mode', ...(props.hiddenPaths ?? [])]}
+        hiddenPaths={['/reel-mode', '/music-player', ...(props.hiddenPaths ?? [])]}
         searchBox={false}
         items={items}
         rightSlot={
