@@ -109,6 +109,7 @@ export function PinnedVideoItemServer({
     'h264',
   );
   const [opfsUploading, setOpfsUploading] = useState(false);
+  const [opfsUploadProgress, setOpfsUploadProgress] = useState(0);
   const [opfsMigrating, setOpfsMigrating] = useState(false);
 
   const fpsResumeChecked = useRef(false);
@@ -232,14 +233,25 @@ export function PinnedVideoItemServer({
         try {
           const opfsFile = await readFromOPFS(video.opfsKey);
           const ext = video.opfsKey.split('.').pop() ?? 'mp4';
-          const uploadRes = await fetch(
-            `/api/media?ext=${encodeURIComponent(ext)}`,
-            { method: 'POST', body: opfsFile },
-          );
-          if (!uploadRes.ok) throw new Error('Upload failed');
-          const { file: uploadedFile } = (await uploadRes.json()) as {
-            file: string;
-          };
+          setOpfsUploadProgress(0);
+          const uploadedFile = await new Promise<string>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `/api/media?ext=${encodeURIComponent(ext)}`);
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable)
+                setOpfsUploadProgress(Math.round((e.loaded / e.total) * 100));
+            };
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                const data = JSON.parse(xhr.responseText) as { file: string };
+                resolve(data.file);
+              } else {
+                reject(new Error('Upload failed'));
+              }
+            };
+            xhr.onerror = () => reject(new Error('Upload failed'));
+            xhr.send(opfsFile);
+          });
           if (staleServerFile) {
             fetch(`/api/media/${staleServerFile}`, { method: 'DELETE' }).catch(() => {});
           }
@@ -817,7 +829,10 @@ export function PinnedVideoItemServer({
 
   /* ── Status hint text ────────────────────────────────── */
   const statusHint = (() => {
-    if (opfsUploading) return t('uploadingFromDevice');
+    if (opfsUploading)
+      return opfsUploadProgress > 0
+        ? t('uploadingFromDeviceWithPct', { pct: opfsUploadProgress })
+        : t('uploadingFromDevice');
     if (opfsMigrating) return t('savingToDevice');
     if (jobPhase === 'dispatching') return t('serverDispatching');
     if (jobPhase === 'polling' && jobProgress > 0)
@@ -833,7 +848,11 @@ export function PinnedVideoItemServer({
     opfsUploading ||
     opfsMigrating;
   const progressValue =
-    jobPhase === 'polling' && jobProgress > 0 ? jobProgress : undefined;
+    opfsUploading && opfsUploadProgress > 0
+      ? opfsUploadProgress
+      : jobPhase === 'polling' && jobProgress > 0
+        ? jobProgress
+        : undefined;
 
   return (
     <Box

@@ -291,6 +291,7 @@
     "errorStorageQuota": "Nicht genügend Gerätespeicher. Das Video konnte nicht auf Ihrem Gerät gespeichert werden.",
     "makeOffline": "Auf Gerät speichern",
     "uploadingFromDevice": "Vom Gerät hochladen…",
+    "uploadingFromDeviceWithPct": "Vom Gerät hochladen… {pct}%",
     "errorOpfsUploadFailed": "Video konnte nicht auf den Server hochgeladen werden.",
     "fpsDeviceOnlyTitle": "FPS-Interpolation nicht verfügbar",
     "fpsDeviceOnlyText": "Die geräteseitige FPS-Interpolation ist für FHD und höhere Auflösungen nicht verfügbar. Aktiviere 'Server verwenden', um dieses Video zu verarbeiten.",

@@ -292,6 +292,7 @@
     "errorStorageQuota": "Not enough device storage. The video could not be saved to your device.",
     "makeOffline": "Save to device",
     "uploadingFromDevice": "Uploading from device…",
+    "uploadingFromDeviceWithPct": "Uploading from device… {pct}%",
     "errorOpfsUploadFailed": "Failed to upload video to server.",
     "fpsDeviceOnlyTitle": "FPS Interpolation Unavailable",
     "fpsDeviceOnlyText": "On-device FPS interpolation is not available for FHD and higher resolutions. Enable 'Use server' to process this video.",

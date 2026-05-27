@@ -291,6 +291,7 @@
     "errorStorageQuota": "Stockage insuffisant sur l'appareil. La vidéo n'a pas pu être enregistrée sur votre appareil.",
     "makeOffline": "Enregistrer sur l'appareil",
     "uploadingFromDevice": "Téléversement depuis l'appareil…",
+    "uploadingFromDeviceWithPct": "Téléversement depuis l'appareil… {pct}%",
     "errorOpfsUploadFailed": "Échec du téléversement de la vidéo vers le serveur.",
     "fpsDeviceOnlyTitle": "Interpolation FPS non disponible",
     "fpsDeviceOnlyText": "L'interpolation FPS sur l'appareil n'est pas disponible pour les résolutions FHD et supérieures. Activez 'Utiliser le serveur' pour traiter cette vidéo.",

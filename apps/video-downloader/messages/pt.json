@@ -291,6 +291,7 @@
     "errorStorageQuota": "Armazenamento insuficiente no dispositivo. O vídeo não pôde ser salvo no seu dispositivo.",
     "makeOffline": "Salvar no dispositivo",
     "uploadingFromDevice": "Enviando do dispositivo…",
+    "uploadingFromDeviceWithPct": "Enviando do dispositivo… {pct}%",
     "errorOpfsUploadFailed": "Falha ao enviar o vídeo para o servidor.",
     "fpsDeviceOnlyTitle": "Interpolação de FPS indisponível",
     "fpsDeviceOnlyText": "A interpolação de FPS no dispositivo não está disponível para resoluções FHD e superiores. Ative 'Usar servidor' para processar este vídeo.",
