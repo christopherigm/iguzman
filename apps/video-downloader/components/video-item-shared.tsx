@@ -37,6 +37,7 @@ export const STATUS_COLORS: Record<VideoStatus, string> = {
   converting: '#8b5cf6',
   burning: '#ec4899',
   translating: '#a855f7',
+  uploading: '#0ea5e9',
   done: '#22c55e',
   error: '#ef4444',
 };
@@ -616,6 +617,14 @@ export function VideoStatusHints({
     );
   }
 
+  if (videoStatus === 'uploading') {
+    return (
+      <Typography variant="caption" className="vi-ffmpeg-hint">
+        {t('preparingDownload')}
+      </Typography>
+    );
+  }
+
   if (videoStatus === 'queued') {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
@@ -749,6 +758,7 @@ export function VideoExtraActions({
   h265Error,
   blackBarsError,
   scaleDownError,
+  metadataError,
   onRemoveBlackBars,
   onInterpolateFps,
   onConvert,
@@ -758,6 +768,7 @@ export function VideoExtraActions({
   onMakeOffline,
   onScaleDown,
   onDuplicate,
+  onGetMetadata,
   useServerProcessing,
   onServerModeChange,
   t,
@@ -769,6 +780,7 @@ export function VideoExtraActions({
   h265Error: boolean;
   blackBarsError: boolean;
   scaleDownError?: boolean;
+  metadataError?: boolean;
   onRemoveBlackBars: () => void;
   onInterpolateFps: (fps: number) => void;
   onConvert: () => void;
@@ -778,6 +790,7 @@ export function VideoExtraActions({
   onMakeOffline?: () => Promise<void>;
   onScaleDown?: (targetHeight: number) => void;
   onDuplicate?: () => Promise<void>;
+  onGetMetadata?: () => Promise<void>;
   useServerProcessing?: boolean;
   onServerModeChange?: (enabled: boolean) => void;
   t: TranslationFn;
@@ -792,6 +805,7 @@ export function VideoExtraActions({
   const [offlineMigrating, setOfflineMigrating] = useState(false);
   const [showScaleDownModal, setShowScaleDownModal] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [fetchingMetadata, setFetchingMetadata] = useState(false);
 
   useEffect(() => {
     if (!onServerModeChange) return;
@@ -1101,6 +1115,34 @@ export function VideoExtraActions({
                 isLoading={duplicating}
               >
                 {t('duplicateVideo')}
+              </Button>
+            </Grid>
+          ) : null}
+
+          {onGetMetadata &&
+          (video.platform === 'facebook' ||
+            video.platform === 'instagram' ||
+            video.platform === 'tiktok') ? (
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
+              <Button
+                unstyled
+                className="vi-fps-btn"
+                onClick={() => {
+                  setFetchingMetadata(true);
+                  onGetMetadata()
+                    .catch(() => {})
+                    .finally(() => setFetchingMetadata(false));
+                }}
+                disabled={fetchingMetadata || metadataError || creditsBalance < 1}
+                aria-label={t('getMetadata')}
+                title={t('getMetadata')}
+                icon="/icons/fields.svg"
+                iconSize="14px"
+                iconColor="var(--accent, #8b5cf6)"
+                isLoading={fetchingMetadata}
+              >
+                {t('getMetadata')}
+                <CreditBadge amount={1} />
               </Button>
             </Grid>
           ) : null}

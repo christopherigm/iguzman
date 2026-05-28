@@ -105,6 +105,7 @@ const BUSY_STATUSES = new Set<VideoStatus>([
   'converting',
   'burning',
   'translating',
+  'uploading',
 ]);
 
 /* ── Helpers ────────────────────────────────────────── */

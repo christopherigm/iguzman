@@ -82,6 +82,7 @@ export type TaskStatus =
   | 'converting'
   | 'burning'
   | 'translating'
+  | 'uploading'
   | 'done'
   | 'error';
 

@@ -264,6 +264,8 @@
     "burnCaptionsBorderStyleOutlineHint": "Chaque caractère est entouré d'une bordure colorée. Le texte reste propre sans masquer l'image.",
     "status_burning": "Gravure des sous-titres",
     "status_translating": "Traduction des sous-titres",
+    "status_uploading": "Envoi en cours",
+    "preparingDownload": "Préparation du fichier à télécharger…",
     "translatingCaptions": "Traduction en cours…",
     "errorTranslateFailed": "Échec de la traduction des sous-titres.",
     "burnCaptionsAnimation": "Animation",
@@ -309,7 +311,10 @@
     "serverOffConfirmTitle": "Passer au traitement sur l'appareil ?",
     "serverOffConfirmText": "Le traitement sur cet appareil utilise FFmpeg dans le navigateur, ce qui est nettement plus lent que le serveur pour les vidéos volumineuses ou en haute résolution.",
     "toggleComments": "Afficher/masquer les commentaires",
-    "duplicateVideo": "Dupliquer la vidéo"
+    "duplicateVideo": "Dupliquer la vidéo",
+    "getMetadata": "Récupérer les métadonnées",
+    "fetchingMetadata": "Récupération des métadonnées…",
+    "errorGetMetadataFailed": "Impossible de récupérer les métadonnées."
   },
   "Offline": {
     "title": "Vous êtes hors ligne",

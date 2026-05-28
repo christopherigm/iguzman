@@ -264,6 +264,8 @@
     "burnCaptionsBorderStyleOutlineHint": "Jedes Zeichen wird von einem farbigen Rand umgeben. Der Text bleibt sauber, ohne das Bild zu verdecken.",
     "status_burning": "Untertitel einbrennen",
     "status_translating": "Untertitel übersetzen",
+    "status_uploading": "Hochladen",
+    "preparingDownload": "Datei wird zum Download vorbereitet…",
     "translatingCaptions": "Untertitel werden übersetzt…",
     "errorTranslateFailed": "Untertitel konnten nicht übersetzt werden.",
     "burnCaptionsAnimation": "Animation",
@@ -309,7 +311,10 @@
     "serverOffConfirmTitle": "Zur Geräteverarbeitung wechseln?",
     "serverOffConfirmText": "Die Verarbeitung auf diesem Gerät nutzt FFmpeg im Browser, was bei großen oder hochauflösenden Videos deutlich langsamer ist als die Server-Verarbeitung.",
     "toggleComments": "Kommentare umschalten",
-    "duplicateVideo": "Video duplizieren"
+    "duplicateVideo": "Video duplizieren",
+    "getMetadata": "Metadaten abrufen",
+    "fetchingMetadata": "Metadaten werden geladen…",
+    "errorGetMetadataFailed": "Metadaten konnten nicht abgerufen werden."
   },
   "Offline": {
     "title": "Du bist offline",

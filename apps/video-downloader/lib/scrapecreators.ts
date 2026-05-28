@@ -237,6 +237,149 @@ export async function fetchSocialCommentCount(
   }
 }
 
+/* ── Social metadata types ──────────────────────────── */
+
+export interface SocialMetadataResult {
+  name: string | null;
+  fulltitle: string | null;
+  uploader: string | null;
+  uploader_id: string | null;
+  uploader_url: string | null;
+  description: string | null;
+  uploadTimestamp: number | null;
+  tags: string[] | null;
+  creditsRemaining: number | null;
+}
+
+interface FacebookPostResponse {
+  success?: boolean;
+  description?: string;
+  creation_time?: string;
+  author?: { id?: string; name?: string; url?: string };
+  credits_remaining?: number;
+}
+
+interface InstagramPostResponse {
+  data?: {
+    xdt_shortcode_media?: {
+      edge_media_to_caption?: {
+        edges?: Array<{ node?: { text?: string } }>;
+      };
+      owner?: { username?: string; full_name?: string };
+      taken_at_timestamp?: number;
+    };
+  };
+  credits_remaining?: number;
+}
+
+interface TikTokVideoDetailResponse {
+  aweme_detail?: {
+    desc?: string;
+    author?: { nickname?: string; unique_id?: string };
+    create_time?: number;
+  };
+  credits_remaining?: number;
+}
+
+/**
+ * Fetches post/video metadata (title, author, description, timestamp) for a
+ * Facebook, Instagram, or TikTok URL using ScrapeCreators.
+ */
+export async function fetchSocialMetadata(
+  url: string,
+  keyOverride?: string,
+): Promise<SocialMetadataResult> {
+  const key = resolveKey(keyOverride);
+  if (!key) throw new Error('No ScrapeCreators API key available');
+
+  if (isFacebook(url)) {
+    const data = await apiFetch<FacebookPostResponse>(
+      '/v1/facebook/post',
+      { url },
+      key,
+    );
+    const description = data.description ?? null;
+    const authorName = data.author?.name ?? null;
+    const authorId = data.author?.id ?? null;
+    const authorUrl = data.author?.url ?? null;
+    const uploadTimestamp = data.creation_time
+      ? Math.floor(new Date(data.creation_time).getTime() / 1000)
+      : null;
+    return {
+      name: description ? description.slice(0, 100) : null,
+      fulltitle: description,
+      uploader: authorName,
+      uploader_id: authorId,
+      uploader_url: authorUrl,
+      description,
+      uploadTimestamp,
+      tags: null,
+      creditsRemaining: data.credits_remaining ?? null,
+    };
+  }
+
+  if (isInstagram(url)) {
+    const data = await apiFetch<InstagramPostResponse>(
+      '/v1/instagram/post',
+      { url },
+      key,
+    );
+    const media = data.data?.xdt_shortcode_media;
+    const caption = media?.edge_media_to_caption?.edges?.[0]?.node?.text ?? null;
+    const username = media?.owner?.username ?? null;
+    const fullName = media?.owner?.full_name ?? null;
+    const uploadTimestamp = media?.taken_at_timestamp ?? null;
+    return {
+      name: caption ? caption.slice(0, 100) : null,
+      fulltitle: caption,
+      uploader: fullName,
+      uploader_id: username
+        ? username.startsWith('@')
+          ? username
+          : `@${username}`
+        : null,
+      uploader_url: username
+        ? `https://www.instagram.com/${username}/`
+        : null,
+      description: caption,
+      uploadTimestamp,
+      tags: null,
+      creditsRemaining: data.credits_remaining ?? null,
+    };
+  }
+
+  if (isTiktok(url)) {
+    const data = await apiFetch<TikTokVideoDetailResponse>(
+      '/v2/tiktok/video',
+      { url },
+      key,
+    );
+    const detail = data.aweme_detail;
+    const desc = detail?.desc ?? null;
+    const nickname = detail?.author?.nickname ?? null;
+    const uniqueId = detail?.author?.unique_id ?? null;
+    return {
+      name: desc ? desc.slice(0, 100) : null,
+      fulltitle: desc,
+      uploader: nickname,
+      uploader_id: uniqueId
+        ? uniqueId.startsWith('@')
+          ? uniqueId
+          : `@${uniqueId}`
+        : null,
+      uploader_url: uniqueId
+        ? `https://www.tiktok.com/@${uniqueId.replace(/^@/, '')}`
+        : null,
+      description: desc,
+      uploadTimestamp: detail?.create_time ?? null,
+      tags: null,
+      creditsRemaining: data.credits_remaining ?? null,
+    };
+  }
+
+  throw new Error('fetchSocialMetadata: unsupported platform');
+}
+
 /**
  * Fetches up to `maxComments` comments from a social media URL using
  * ScrapeCreators. The `keyOverride` (browser-supplied) takes precedence over

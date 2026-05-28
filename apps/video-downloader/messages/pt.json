@@ -264,6 +264,8 @@
     "burnCaptionsBorderStyleOutlineHint": "Cada caractere é rodeado por uma borda colorida. O texto fica limpo sem bloquear a imagem.",
     "status_burning": "Gravando legendas",
     "status_translating": "Traduzindo legendas",
+    "status_uploading": "Enviando",
+    "preparingDownload": "Preparando arquivo para download…",
     "translatingCaptions": "Traduzindo legendas…",
     "errorTranslateFailed": "Falha ao traduzir as legendas.",
     "burnCaptionsAnimation": "Animação",
@@ -309,7 +311,10 @@
     "serverOffConfirmTitle": "Mudar para processamento no dispositivo?",
     "serverOffConfirmText": "O processamento neste dispositivo usa FFmpeg no navegador, que é significativamente mais lento que o servidor para vídeos grandes ou de alta resolução.",
     "toggleComments": "Alternar comentários",
-    "duplicateVideo": "Duplicar vídeo"
+    "duplicateVideo": "Duplicar vídeo",
+    "getMetadata": "Obter metadados",
+    "fetchingMetadata": "Obtendo metadados…",
+    "errorGetMetadataFailed": "Falha ao obter metadados."
   },
   "Offline": {
     "title": "Você está offline",

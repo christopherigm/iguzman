@@ -20,6 +20,7 @@ import {
   PlatformIconBg,
 } from './video-item-shared';
 import { VideoComments } from './video-comments';
+import { setCreditsBalance } from './use-credits-store';
 import { useOPFSUrls } from './opfs-url-context';
 import {
   deleteFromOPFS,
@@ -72,6 +73,7 @@ export function ReadOnlyVideoItem({
   const [copying, setCopying] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [showBurnModal, setShowBurnModal] = useState(false);
+  const [metadataError, setMetadataError] = useState(false);
 
   const displayName =
     video.fulltitle ??
@@ -294,6 +296,55 @@ export function ReadOnlyVideoItem({
     [onReprocess, video.uuid],
   );
 
+  /* ── Fetch metadata from ScrapeCreators ─────────────── */
+  const handleGetMetadata = useCallback(async () => {
+    setMetadataError(false);
+    const creditsKey = localStorage.getItem('vd_credits_key');
+    try {
+      const res = await fetch('/api/social-metadata', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
+        },
+        body: JSON.stringify({ url: video.originalURL }),
+      });
+      if (!res.ok) {
+        setMetadataError(true);
+        return;
+      }
+      const data = (await res.json()) as {
+        name: string | null;
+        fulltitle: string | null;
+        uploader: string | null;
+        uploader_id: string | null;
+        uploader_url: string | null;
+        description: string | null;
+        uploadTimestamp: number | null;
+        tags: string[] | null;
+        creditsRemaining: number | null;
+      };
+      if (data.creditsRemaining != null) {
+        setCreditsBalance(data.creditsRemaining);
+      }
+      const patch: Record<string, unknown> = {};
+      if (data.fulltitle != null) patch.fulltitle = data.fulltitle;
+      if (data.name != null) patch.name = data.name;
+      if (data.uploader != null) patch.uploader = data.uploader;
+      if (data.uploader_id != null) patch.uploader_id = data.uploader_id;
+      if (data.uploader_url != null) patch.uploader_url = data.uploader_url;
+      if (data.description != null) patch.description = data.description;
+      if (data.uploadTimestamp != null)
+        patch.uploadTimestamp = data.uploadTimestamp;
+      if (data.tags != null) patch.tags = data.tags;
+      if (Object.keys(patch).length > 0) {
+        onUpdate(video.uuid, patch as Partial<StoredVideo>);
+      }
+    } catch {
+      setMetadataError(true);
+    }
+  }, [video.originalURL, video.uuid, onUpdate]);
+
   return (
     <Box
       elevation={2}
@@ -378,6 +429,7 @@ export function ReadOnlyVideoItem({
           h264Error={false}
           h265Error={false}
           blackBarsError={false}
+          metadataError={metadataError}
           onRemoveBlackBars={() => onReprocess(video.uuid, 'bars')}
           onInterpolateFps={(fps) => onReprocess(video.uuid, 'fps', fps)}
           onConvert={() => onReprocess(video.uuid, 'h264')}
@@ -387,6 +439,7 @@ export function ReadOnlyVideoItem({
           onScaleDown={(height) => onReprocess(video.uuid, 'scaleDown', height)}
           onMakeOffline={handleMakeOffline}
           onDuplicate={handleDuplicate}
+          onGetMetadata={handleGetMetadata}
           useServerProcessing={video.useServerProcessing}
           onServerModeChange={handleServerModeChange}
           t={t}

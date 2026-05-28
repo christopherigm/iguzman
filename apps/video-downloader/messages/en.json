@@ -265,6 +265,8 @@
     "burnCaptionsBorderStyleOutlineHint": "Each character is surrounded by a colored border. Keeps the text clean without blocking the picture.",
     "status_burning": "Burning Captions",
     "status_translating": "Translating Captions",
+    "status_uploading": "Uploading",
+    "preparingDownload": "Preparing file to download…",
     "translatingCaptions": "Translating captions…",
     "errorTranslateFailed": "Failed to translate captions.",
     "burnCaptionsAnimation": "Animation",
@@ -310,7 +312,10 @@
     "serverOffConfirmTitle": "Switch to device processing?",
     "serverOffConfirmText": "Processing on this device uses FFmpeg in the browser, which is significantly slower than server processing for large or high-resolution videos.",
     "toggleComments": "Toggle comments",
-    "duplicateVideo": "Duplicate Video"
+    "duplicateVideo": "Duplicate Video",
+    "getMetadata": "Get metadata",
+    "fetchingMetadata": "Fetching metadata…",
+    "errorGetMetadataFailed": "Failed to fetch metadata."
   },
   "Offline": {
     "title": "You are offline",

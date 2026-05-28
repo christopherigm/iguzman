@@ -66,7 +66,9 @@ async function runFfmpegJob(
   const ext = inputFileName.split('.').pop() ?? 'mp4';
   const outputFileName = `${randomUUID()}.${ext}`;
   // In R2 mode write output to TEMP_DIR so we can upload it; otherwise write to MEDIA_DIR.
-  const outputPath = USE_R2 ? join(TEMP_DIR, outputFileName) : join(MEDIA_DIR, outputFileName);
+  const outputPath = USE_R2
+    ? join(TEMP_DIR, outputFileName)
+    : join(MEDIA_DIR, outputFileName);
 
   let lastProgress = -1;
   const onProgress = (pct: number) => {
@@ -159,13 +161,20 @@ async function runFfmpegJob(
     });
 
     if (USE_R2) {
+      await updateTask(taskId, { status: 'uploading', progress: 100 }).catch(() => {});
       try {
         await uploadFromPath(outputFileName, outputPath);
       } catch (uploadErr) {
-        log.error({ err: uploadErr, taskId, outputFileName }, 'R2 upload of FFmpeg output failed');
+        log.error(
+          { err: uploadErr, taskId, outputFileName },
+          'R2 upload of FFmpeg output failed',
+        );
         await updateTask(taskId, {
           status: 'error',
-          error: { code: 'DOWNLOAD_FAILED', message: 'Failed to upload processed file to storage' },
+          error: {
+            code: 'DOWNLOAD_FAILED',
+            message: 'Failed to upload processed file to storage',
+          },
           progress: 0,
         }).catch(() => {});
         unlink(outputPath).catch(() => {});
@@ -184,7 +193,9 @@ async function runFfmpegJob(
       error: null,
       ...(probed.width != null ? { width: probed.width } : {}),
       ...(probed.height != null ? { height: probed.height } : {}),
-      ...(probed.durationSeconds != null ? { duration: probed.durationSeconds } : {}),
+      ...(probed.durationSeconds != null
+        ? { duration: probed.durationSeconds }
+        : {}),
       operationCredits: updatedCredits,
       ...extraFields,
     });
@@ -225,7 +236,10 @@ export async function POST(request: NextRequest) {
 
   if (!op || !params) {
     log.warn({ op, hasParams: !!params }, 'Missing op or params');
-    return NextResponse.json({ error: 'Missing op or params' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Missing op or params' },
+      { status: 400 },
+    );
   }
 
   if (!VALID_OPS.includes(op as ProcessingOp)) {
@@ -257,10 +271,7 @@ export async function POST(request: NextRequest) {
   if (!task) {
     if (!inputFileParam) {
       log.warn({ taskId, op }, 'Task not found and no inputFile provided');
-      return NextResponse.json(
-        { error: 'Task not found' },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
     const tempTask = await createTask({ url: 'opfs://local' });
     const newId = tempTask._id.toString();
@@ -276,7 +287,10 @@ export async function POST(request: NextRequest) {
   const inputFile = inputFileParam ?? task.file;
   if (!inputFile) {
     log.warn({ taskId }, 'No input file available');
-    return NextResponse.json({ error: 'No input file available' }, { status: 422 });
+    return NextResponse.json(
+      { error: 'No input file available' },
+      { status: 422 },
+    );
   }
 
   /* ── Download from R2 to temp (if R2 mode) ──────────────────────────── */
@@ -287,7 +301,10 @@ export async function POST(request: NextRequest) {
       await downloadToPath(inputFile, tempInputPath);
     } catch (err) {
       log.error({ err, taskId, inputFile }, 'Failed to download input from R2');
-      return NextResponse.json({ error: 'Failed to fetch input file' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to fetch input file' },
+        { status: 500 },
+      );
     }
   }
 
@@ -300,17 +317,22 @@ export async function POST(request: NextRequest) {
     durationSeconds: inputMeta.durationSeconds,
   });
 
-  const OP_CREDIT_KEYS: Partial<Record<ProcessingOp, keyof typeof opCredits>> = {
-    removeBlackBars: 'removeBlackBars',
-    convertToH264: 'convertToH264',
-    convertToH265: 'convertToH265',
-    burnSubtitles: 'burnSubtitles',
-    scaleDown: 'scaleDown',
-  };
+  const OP_CREDIT_KEYS: Partial<Record<ProcessingOp, keyof typeof opCredits>> =
+    {
+      removeBlackBars: 'removeBlackBars',
+      convertToH264: 'convertToH264',
+      convertToH265: 'convertToH265',
+      burnSubtitles: 'burnSubtitles',
+      scaleDown: 'scaleDown',
+    };
 
   let opCost: number;
   if (op === 'interpolateFps') {
-    opCost = interpolateFpsCost(opCredits, Number(params.fps ?? 60), task.sourceFps ?? null);
+    opCost = interpolateFpsCost(
+      opCredits,
+      Number(params.fps ?? 60),
+      task.sourceFps ?? null,
+    );
   } else {
     const key = OP_CREDIT_KEYS[op as ProcessingOp];
     opCost = key ? opCredits[key] : opCredits.convertToH264;
@@ -328,8 +350,17 @@ export async function POST(request: NextRequest) {
   await updateTask(taskId!, { status: activeStatus, progress: 0, error: null });
 
   const jobParams = { ...params, inputFile };
-  void runFfmpegJob(taskId!, op as ProcessingOp, inputFile, jobParams, tempInputPath);
+  void runFfmpegJob(
+    taskId!,
+    op as ProcessingOp,
+    inputFile,
+    jobParams,
+    tempInputPath,
+  );
 
   log.info({ taskId, op, inputFile }, 'Server FFmpeg job started');
-  return NextResponse.json({ taskId, creditsRemaining: creditResult.remaining }, { status: 201 });
+  return NextResponse.json(
+    { taskId, creditsRemaining: creditResult.remaining },
+    { status: 201 },
+  );
 }
