@@ -20,6 +20,7 @@
   --mp-btn-lg-hover:    rgba(255, 255, 255, 0.22);
   --mp-seek-thumb:      #fff;
   --mp-seek-track:      rgba(255, 255, 255, 0.2);
+  --mp-compact-bg:      rgb(8, 12, 22);
 }
 
 [data-theme='light'] .music-player {
@@ -42,6 +43,7 @@
   --mp-btn-lg-hover:    rgba(15, 23, 42, 0.15);
   --mp-seek-thumb:      #0f172a;
   --mp-seek-track:      rgba(15, 23, 42, 0.15);
+  --mp-compact-bg:      rgb(232, 240, 250);
 }
 
 /* ── Cover Art ── */
@@ -222,4 +224,117 @@
 @keyframes mp-bar {
   0%, 100% { transform: scaleY(0.5); }
   50% { transform: scaleY(1); }
+}
+
+/* ── Compact Fixed Header ── */
+
+.mp-compact-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background: var(--mp-compact-bg);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.28s ease;
+  pointer-events: none;
+}
+
+.mp-compact-header--visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mp-compact-header__inner {
+  max-width: 540px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 12px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.mp-compact-header__top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mp-compact-header__thumb {
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  background: var(--mp-surface);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mp-compact-header__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mp-compact-header__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--mp-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mp-compact-header__artist {
+  margin: 0;
+  font-size: 13px;
+  color: var(--mp-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mp-compact-header__timestamps {
+  display: flex;
+  justify-content: space-between;
+  color: var(--mp-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mp-compact-header__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* ── Compact overlay playlist ── */
+
+.mp-compact-playlist {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--mp-border);
+}
+
+.mp-compact-playlist__items {
+  flex: 1;
+  overflow-y: auto;
 }

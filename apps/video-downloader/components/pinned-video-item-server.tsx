@@ -25,6 +25,102 @@ import {
 import { useOPFSUrls } from './opfs-url-context';
 import { readFromOPFS } from '@/lib/opfs';
 import { saveProcessedToOPFS } from '@/lib/opfs-processing';
+
+// Files larger than this threshold are split into chunks so each request stays
+// under Cloudflare's 100 MB proxy limit. 90 MB gives a comfortable margin.
+const MULTIPART_THRESHOLD = 90 * 1024 * 1024;
+
+async function uploadOpfsFile(
+  file: File,
+  ext: string,
+  onProgress: (pct: number) => void,
+): Promise<string> {
+  if (file.size <= MULTIPART_THRESHOLD) {
+    return new Promise<string>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/api/media?ext=${encodeURIComponent(ext)}`);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable)
+          onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve((JSON.parse(xhr.responseText) as { file: string }).file);
+        } else {
+          reject(new Error('Upload failed'));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Upload failed'));
+      xhr.send(file);
+    });
+  }
+
+  // Chunked path: split into ≤90 MB pieces and use R2 multipart upload.
+  const initRes = await fetch(
+    `/api/media/multipart?action=initiate&ext=${encodeURIComponent(ext)}`,
+    { method: 'POST' },
+  );
+  if (!initRes.ok) throw new Error('Upload failed');
+  const { key, uploadId } = (await initRes.json()) as { key: string; uploadId: string };
+
+  const numChunks = Math.ceil(file.size / MULTIPART_THRESHOLD);
+  const parts: { partNumber: number; etag: string }[] = [];
+
+  try {
+    for (let i = 0; i < numChunks; i++) {
+      const start = i * MULTIPART_THRESHOLD;
+      const chunk = file.slice(start, Math.min(start + MULTIPART_THRESHOLD, file.size));
+      const partNumber = i + 1;
+
+      const etag = await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open(
+          'POST',
+          `/api/media/multipart?action=part` +
+            `&key=${encodeURIComponent(key)}` +
+            `&uploadId=${encodeURIComponent(uploadId)}` +
+            `&partNumber=${partNumber}`,
+        );
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable)
+            onProgress(Math.round(((i + e.loaded / e.total) / numChunks) * 100));
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve((JSON.parse(xhr.responseText) as { etag: string }).etag);
+          } else {
+            reject(new Error('Upload failed'));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Upload failed'));
+        xhr.send(chunk);
+      });
+
+      parts.push({ partNumber, etag });
+    }
+  } catch (err) {
+    fetch(
+      `/api/media/multipart?action=abort` +
+        `&key=${encodeURIComponent(key)}` +
+        `&uploadId=${encodeURIComponent(uploadId)}`,
+      { method: 'POST' },
+    ).catch(() => {});
+    throw err;
+  }
+
+  const completeRes = await fetch(
+    `/api/media/multipart?action=complete` +
+      `&key=${encodeURIComponent(key)}` +
+      `&uploadId=${encodeURIComponent(uploadId)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parts }),
+    },
+  );
+  if (!completeRes.ok) throw new Error('Upload failed');
+  return ((await completeRes.json()) as { file: string }).file;
+}
 import { setCreditsBalance } from './use-credits-store';
 import './video-item.css';
 
@@ -234,24 +330,7 @@ export function PinnedVideoItemServer({
           const opfsFile = await readFromOPFS(video.opfsKey);
           const ext = video.opfsKey.split('.').pop() ?? 'mp4';
           setOpfsUploadProgress(0);
-          const uploadedFile = await new Promise<string>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `/api/media?ext=${encodeURIComponent(ext)}`);
-            xhr.upload.onprogress = (e) => {
-              if (e.lengthComputable)
-                setOpfsUploadProgress(Math.round((e.loaded / e.total) * 100));
-            };
-            xhr.onload = () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                const data = JSON.parse(xhr.responseText) as { file: string };
-                resolve(data.file);
-              } else {
-                reject(new Error('Upload failed'));
-              }
-            };
-            xhr.onerror = () => reject(new Error('Upload failed'));
-            xhr.send(opfsFile);
-          });
+          const uploadedFile = await uploadOpfsFile(opfsFile, ext, setOpfsUploadProgress);
           if (staleServerFile) {
             fetch(`/api/media/${staleServerFile}`, { method: 'DELETE' }).catch(() => {});
           }

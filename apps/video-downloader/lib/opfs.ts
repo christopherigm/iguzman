@@ -71,6 +71,16 @@ export async function listOPFSFiles(): Promise<
   return results;
 }
 
+export async function requestPersistentStorage(): Promise<boolean> {
+  if (
+    typeof navigator === 'undefined' ||
+    !('storage' in navigator) ||
+    typeof navigator.storage.persist !== 'function'
+  )
+    return false;
+  return navigator.storage.persist();
+}
+
 export async function getOPFSStorageInfo(): Promise<{
   usedBytes: number;
   totalBytes: number;

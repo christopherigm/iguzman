@@ -97,6 +97,21 @@ kubectl rollout status deploy/video-downloader -n video-downloader-2
 kubectl logs deploy/video-downloader -n video-downloader-2
 ```
 
+### Reset / restart deployment
+
+Restart the running pods without redeploying (picks up new ConfigMap/Secret values):
+
+```bash
+kubectl rollout restart deployment/video-downloader -n video-downloader-2
+```
+
+Full uninstall and redeploy (use when the release is in a broken state):
+
+```bash
+helm uninstall video-downloader -n video-downloader-2
+pnpm helm video-downloader
+```
+
 ---
 
 ### WireGuard VPN sidecar

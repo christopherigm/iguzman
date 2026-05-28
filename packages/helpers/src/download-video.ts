@@ -2901,13 +2901,26 @@ const downloadVideo = async ({
 
   let videoName: string | undefined;
 
+  const cleanVideoTitle = (
+    meta: VideoMetadata & Record<string, unknown>,
+  ): string => {
+    const raw = (meta.fulltitle || meta.title) as string;
+    const artist =
+      str(meta.artist) ?? str(meta.creator) ?? str(meta.uploader) ?? null;
+    return artist ? cleanTitle(raw, artist) : raw;
+  };
+
   if (videoMetadata) {
-    videoName = videoMetadata.fulltitle || videoMetadata.title;
+    videoName = cleanVideoTitle(
+      videoMetadata as VideoMetadata & Record<string, unknown>,
+    );
   } else {
     // Fetch title separately when metadata wasn't requested
     try {
       const titleMeta = await fetchMetadata(url, binary, cookies, jsRuntimes);
-      videoName = titleMeta.fulltitle || titleMeta.title;
+      videoName = cleanVideoTitle(
+        titleMeta as VideoMetadata & Record<string, unknown>,
+      );
     } catch {
       // Title is best-effort; proceed without it.
     }

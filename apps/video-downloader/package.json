@@ -1,6 +1,6 @@
 {
   "name": "video-downloader",
-  "version": "0.2.243",
+  "version": "0.2.247",
   "type": "module",
   "private": true,
   "scripts": {
@@ -9,11 +9,13 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "upgrade-yt-dlp": "pip install --user --upgrade \"yt-dlp[default,curl-cffi]\""
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.0.0",
-    "@aws-sdk/s3-request-presigner": "^3.0.0",
+    "@aws-sdk/client-s3": "^3.1055.0",
+    "@aws-sdk/lib-storage": "^3.1055.0",
+    "@aws-sdk/s3-request-presigner": "^3.1055.0",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@repo/helpers": "workspace:*",

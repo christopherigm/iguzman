@@ -13,6 +13,7 @@ import {
   writeToOPFS,
   readFromOPFS,
   deleteFromOPFS,
+  requestPersistentStorage,
 } from '@/lib/opfs';
 import { MigrationBanner } from './migration-banner';
 import { setCreditsBalance } from './use-credits-store';
@@ -33,6 +34,11 @@ function CreditsInitializer() {
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (isOPFSSupported()) void requestPersistentStorage();
+  }, []);
+
   return null;
 }
 

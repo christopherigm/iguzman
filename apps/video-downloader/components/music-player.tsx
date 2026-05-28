@@ -164,6 +164,7 @@ export function MusicPlayer() {
   const [includeVideos, setIncludeVideos] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>('none');
   const [currentTime, setCurrentTime] = useState(0);
@@ -180,6 +181,7 @@ export function MusicPlayer() {
   const shouldPlayRef = useRef(false);
   const handlePrevRef = useRef<() => void>(() => {});
   const handleNextRef = useRef<() => void>(() => {});
+  const coverRef = useRef<HTMLDivElement>(null);
 
   const playlist = useMemo(
     () =>
@@ -428,6 +430,20 @@ export function MusicPlayer() {
     navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
   }, [isPlaying]);
 
+  /* Collapse to compact header when cover art scrolls out of view */
+  useEffect(() => {
+    const el = coverRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => setIsCompact(!(entries[0]?.isIntersecting ?? true)),
+      { threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+    // Re-run when playlist becomes non-empty so coverRef is populated
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playlist.length > 0]);
+
   /* Revoke blob URLs on unmount */
   useEffect(() => {
     return () => {
@@ -445,6 +461,92 @@ export function MusicPlayer() {
     currentTrack?.uploader ?? fileArtist ?? t('unknownArtist');
   const seekPct =
     duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+
+  /* Shared playlist rows — rendered in both the normal view and the compact overlay */
+  const playlistRows = playlist.map((track, i) => {
+    const isActive = i === currentIndex;
+    const title = isActive
+      ? trackTitle
+      : (track.fulltitle ?? track.name ?? t('unknownTitle'));
+    const artist = isActive
+      ? trackArtist
+      : (track.uploader ?? t('unknownArtist'));
+    return (
+      <PlaylistButton
+        key={track.uuid}
+        isActive={isActive}
+        onClick={() => playTrack(i)}
+        aria-label={`${title}${track.uploader ? ' — ' + track.uploader : ''}`}
+        aria-pressed={isActive}
+      >
+        <TrackThumbnail track={track} />
+        <Box flex="1" minWidth={0}>
+          <Typography
+            as="p"
+            variant="none"
+            color={
+              isActive
+                ? 'var(--accent, #68c3f7)'
+                : 'var(--mp-text-strong)'
+            }
+            fontWeight={500}
+            margin={0}
+            styles={{
+              fontSize: 14,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              transition: 'color 150ms',
+            }}
+          >
+            {title}
+          </Typography>
+          <Typography
+            as="p"
+            variant="none"
+            color="var(--mp-text-muted)"
+            styles={{
+              fontSize: 12,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              margin: '3px 0 0',
+            }}
+          >
+            {artist}
+          </Typography>
+        </Box>
+        {isActive && isPlaying ? (
+          <Box
+            className="music-player__now-playing"
+            display="flex"
+            alignItems="flex-end"
+            gap={3}
+            height={16}
+            aria-hidden={true}
+            styles={{ flexShrink: 0 }}
+          >
+            <span />
+            <span />
+            <span />
+          </Box>
+        ) : (
+          <Typography
+            as="span"
+            variant="none"
+            color="var(--mp-text-dim)"
+            styles={{
+              fontSize: 12,
+              flexShrink: 0,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {track.duration ? formatTime(track.duration) : '--:--'}
+          </Typography>
+        )}
+      </PlaylistButton>
+    );
+  });
 
   return (
     <Box
@@ -537,7 +639,141 @@ export function MusicPlayer() {
         </Box>
       ) : (
         <>
+          {/* Full-screen compact overlay — slides in when cover art scrolls off screen.
+              Contains the mini controls at the top and the full scrollable playlist below. */}
+          <div
+            className={`mp-compact-header${isCompact ? ' mp-compact-header--visible' : ''}`}
+          >
+            <div className="mp-compact-header__inner">
+              <div className="mp-compact-header__top">
+                <div className="mp-compact-header__thumb">
+                  {thumbnailUrl ? (
+                    <Image
+                      src={thumbnailUrl}
+                      alt={trackTitle}
+                      fill
+                      sizes="46px"
+                      style={{ objectFit: 'cover' }}
+                      unoptimized
+                    />
+                  ) : (
+                    <Icon
+                      icon="/icons/music.svg"
+                      size="52px"
+                      color="var(--mp-icon-placeholder)"
+                    />
+                  )}
+                </div>
+                <div className="mp-compact-header__info">
+                  <p className="mp-compact-header__title" title={trackTitle}>
+                    {trackTitle}
+                  </p>
+                  <p className="mp-compact-header__artist">{trackArtist}</p>
+                </div>
+              </div>
+              <input
+                type="range"
+                aria-label={t('seekLabel')}
+                className="music-player__seek"
+                min={0}
+                max={duration || 1}
+                value={currentTime}
+                step={0.1}
+                onChange={(e) => handleSeek(Number(e.target.value))}
+                style={
+                  {
+                    background: `linear-gradient(to right, var(--mp-seek-thumb) ${seekPct}%, var(--mp-seek-track) ${seekPct}%)`,
+                  } as CSSProperties
+                }
+              />
+              <div className="mp-compact-header__timestamps">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+              <div className="mp-compact-header__controls">
+                <PlayerButton
+                  icon="/icons/random.svg"
+                  size="sm"
+                  active={shuffle}
+                  onClick={() => setShuffle((s) => !s)}
+                  aria-label={t('shuffle')}
+                  aria-pressed={shuffle}
+                />
+                <PlayerButton
+                  icon="/icons/skip-prev.svg"
+                  size="md"
+                  onClick={handlePrev}
+                  aria-label={t('previous')}
+                />
+                <PlayerButton
+                  icon={isPlaying ? '/icons/pause.svg' : '/icons/play.svg'}
+                  size="lg"
+                  disabled={!trackUrl}
+                  onClick={handlePlayPause}
+                  aria-label={isPlaying ? t('pause') : t('play')}
+                />
+                <PlayerButton
+                  icon="/icons/skip-next.svg"
+                  size="md"
+                  onClick={handleNext}
+                  aria-label={t('next')}
+                />
+                <PlayerButton
+                  icon="/icons/repeat.svg"
+                  size="sm"
+                  active={repeat !== 'none'}
+                  onClick={cycleRepeat}
+                  aria-label={t('repeat')}
+                  aria-pressed={repeat !== 'none'}
+                >
+                  {repeat === 'one' && (
+                    <Typography
+                      as="span"
+                      variant="none"
+                      color="var(--accent, #68c3f7)"
+                      fontWeight={700}
+                      styles={{
+                        position: 'absolute',
+                        bottom: 4,
+                        right: 4,
+                        fontSize: 9,
+                        lineHeight: 1,
+                      }}
+                    >
+                      1
+                    </Typography>
+                  )}
+                </PlayerButton>
+              </div>
+            </div>
+
+            {/* Playlist section inside the overlay — header pinned, items scroll */}
+            <div className="mp-compact-playlist">
+              <Typography
+                as="div"
+                variant="none"
+                color="var(--mp-text-dim)"
+                fontWeight={700}
+                paddingTop={14}
+                paddingBottom={8}
+                paddingX={16}
+                styles={{
+                  fontSize: 11,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  flexShrink: 0,
+                }}
+              >
+                {t('playlist')} · {playlist.length}
+              </Typography>
+              <div className="mp-compact-playlist__items">
+                {playlistRows}
+              </div>
+            </div>
+          </div>
+
           {/* Cover Art */}
+          <div ref={coverRef} style={{ flexShrink: 0 }}>
           <Box
             className="music-player__cover-wrap"
             borderRadius={16}
@@ -588,6 +824,7 @@ export function MusicPlayer() {
               </Box>
             ) : null}
           </Box>
+          </div>
 
           {/* Track metadata */}
           <Box
@@ -756,90 +993,7 @@ export function MusicPlayer() {
             >
               {t('playlist')} · {playlist.length}
             </Typography>
-            {playlist.map((track, i) => {
-              const isActive = i === currentIndex;
-              const title = isActive
-                ? trackTitle
-                : (track.fulltitle ?? track.name ?? t('unknownTitle'));
-              const artist = isActive
-                ? trackArtist
-                : (track.uploader ?? t('unknownArtist'));
-              return (
-                <PlaylistButton
-                  key={track.uuid}
-                  isActive={isActive}
-                  onClick={() => playTrack(i)}
-                  aria-label={`${title}${track.uploader ? ' — ' + track.uploader : ''}`}
-                  aria-pressed={isActive}
-                >
-                  <TrackThumbnail track={track} />
-                  <Box flex="1" minWidth={0}>
-                    <Typography
-                      as="p"
-                      variant="none"
-                      color={
-                        isActive
-                          ? 'var(--accent, #68c3f7)'
-                          : 'var(--mp-text-strong)'
-                      }
-                      fontWeight={500}
-                      margin={0}
-                      styles={{
-                        fontSize: 14,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        transition: 'color 150ms',
-                      }}
-                    >
-                      {title}
-                    </Typography>
-                    <Typography
-                      as="p"
-                      variant="none"
-                      color="var(--mp-text-muted)"
-                      styles={{
-                        fontSize: 12,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        margin: '3px 0 0',
-                      }}
-                    >
-                      {artist}
-                    </Typography>
-                  </Box>
-                  {isActive && isPlaying ? (
-                    <Box
-                      className="music-player__now-playing"
-                      display="flex"
-                      alignItems="flex-end"
-                      gap={3}
-                      height={16}
-                      aria-hidden={true}
-                      styles={{ flexShrink: 0 }}
-                    >
-                      <span />
-                      <span />
-                      <span />
-                    </Box>
-                  ) : (
-                    <Typography
-                      as="span"
-                      variant="none"
-                      color="var(--mp-text-dim)"
-                      styles={{
-                        fontSize: 12,
-                        flexShrink: 0,
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
-                    >
-                      {track.duration ? formatTime(track.duration) : '--:--'}
-                    </Typography>
-                  )}
-                </PlaylistButton>
-              );
-            })}
+            {playlistRows}
           </Box>
 
           <Box height={80} />

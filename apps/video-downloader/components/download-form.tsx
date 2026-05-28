@@ -46,6 +46,22 @@ function isValidUrl(input: string): boolean {
   }
 }
 
+function cleanUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (
+      (parsed.hostname === 'www.youtube.com' || parsed.hostname === 'youtube.com') &&
+      parsed.pathname === '/watch' &&
+      parsed.searchParams.has('v')
+    ) {
+      return url;
+    }
+  } catch {
+    // not a valid URL — fall through to stripQueryParams
+  }
+  return stripQueryParams(url);
+}
+
 function isServerPath(url: string | null): url is string {
   if (!url) return false;
   return (
@@ -427,7 +443,7 @@ export function DownloadForm({
     try {
       const text = (await navigator.clipboard.readText()).trim();
       if (isValidUrl(text)) {
-        setUrl(stripQueryParams(text));
+        setUrl(cleanUrl(text));
       }
     } catch {
       // Clipboard permission denied — silently ignore
@@ -685,7 +701,7 @@ export function DownloadForm({
         <Box className="df-input-wrapper">
           <TextInput
             value={url}
-            onChange={(v: string) => setUrl(stripQueryParams(v))}
+            onChange={(v: string) => setUrl(cleanUrl(v))}
             onFocus={handleInputFocus}
             label={t('inputLabel')}
           />

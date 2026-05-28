@@ -98,11 +98,14 @@ function useScrollDirection(threshold = 5): 'up' | 'down' | null {
         return;
       }
       const currentY = window.scrollY;
-      if (
-        Math.abs(currentY - lastScrollY.current) < threshold ||
-        currentY < 300
-      )
+      // Always show navbar near the top and keep the reference current so that
+      // fast upward scrolls past this boundary don't leave lastScrollY stale.
+      if (currentY < 300) {
+        setDirection(null);
+        lastScrollY.current = currentY;
         return;
+      }
+      if (Math.abs(currentY - lastScrollY.current) < threshold) return;
       setDirection(currentY > lastScrollY.current ? 'down' : 'up');
       lastScrollY.current = currentY;
     };

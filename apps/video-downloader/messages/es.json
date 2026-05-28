@@ -375,6 +375,7 @@
     "previous": "Pista anterior",
     "next": "Siguiente pista",
     "shuffle": "Aleatorio",
-    "repeat": "Repetir"
+    "repeat": "Repetir",
+    "return": "Volver"
   }
 }

@@ -72,6 +72,7 @@ RUN apk add --no-cache \
     py3-pip \
     ttf-dejavu
 
+ARG CACHEBUST=1
 RUN pip install --break-system-packages --no-cache-dir --upgrade \
     "yt-dlp[default,curl-cffi]" \
     gallery-dl
