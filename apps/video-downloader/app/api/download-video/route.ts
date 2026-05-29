@@ -15,6 +15,7 @@ import type { VideoDownloadInput } from '@/lib/types';
 import {
   isScrapeCreatorsPlatform,
   fetchAllSocialComments,
+  fetchSocialMetadata,
 } from '@/lib/scrapecreators';
 import {
   getCreditsKey,
@@ -29,6 +30,7 @@ import { USE_R2, uploadFromPath, deleteObject } from '@/lib/r2';
 import { getWritableCookiesPath } from '@/lib/writable-cookies';
 
 const CREDITS_PER_COMMENTS = 1;
+const CREDITS_PER_METADATA = 1;
 
 const log = logger.child({ module: 'api/download-video' });
 
@@ -84,8 +86,10 @@ export async function POST(request: Request) {
     captionUrl,
     commentsEnabled: commentsEnabledParam = false,
     maxComments,
+    metadataEnabled: metadataEnabledParam = false,
   } = body;
   let commentsEnabled = commentsEnabledParam;
+  let metadataEnabled = metadataEnabledParam;
 
   if (!url || typeof url !== 'string') {
     log.warn({ url }, 'Missing or invalid url parameter');
@@ -139,6 +143,12 @@ export async function POST(request: Request) {
     else creditsRemaining = creditResult.remaining;
   }
 
+  if (metadataEnabled && isScrapeCreatorsPlatform(url)) {
+    const creditResult = await requireCredits(creditsKey, CREDITS_PER_METADATA);
+    if (!creditResult.ok) metadataEnabled = false;
+    else creditsRemaining = creditResult.remaining;
+  }
+
   /* 2. Create the task document immediately */
   const task = await createTask({
     url,
@@ -150,6 +160,7 @@ export async function POST(request: Request) {
     captionUrl,
     commentsEnabled,
     maxComments,
+    metadataEnabled,
   });
   const taskId = task._id.toHexString();
 
@@ -339,24 +350,56 @@ export async function POST(request: Request) {
           );
         }
 
+        /* ── ScrapeCreators metadata enrichment ──────────────────────
+         * When metadataEnabled is set and the platform supports it, fetch
+         * post details (title, uploader, description, timestamp) and
+         * overwrite the yt-dlp values with the richer ScrapeCreators data. */
+        let enrichedName: string | null = result.name ?? null;
+        let enrichedFulltitle: string | null = meta?.fulltitle ?? meta?.title ?? null;
+        let enrichedUploader: string | null = meta?.uploader ?? result.audioMetadata?.artist ?? null;
+        let enrichedUploaderId: string | null = meta?.uploader_id ?? null;
+        let enrichedUploaderUrl: string | null = meta?.uploader_url ?? null;
+        let enrichedUploadTimestamp: number | null =
+          meta?.timestamp ??
+          (meta?.upload_date ? parseUploadDate(meta.upload_date) : null);
+        let enrichedDescription: string | null = meta?.description ?? null;
+        let enrichedTags: string[] | null = meta?.tags?.length ? meta.tags : null;
+
+        if (metadataEnabled && isScrapeCreatorsPlatform(url)) {
+          try {
+            const scraped = await fetchSocialMetadata(url);
+            if (scraped.creditsRemaining !== null)
+              scrapeCreditsRemaining = scraped.creditsRemaining;
+            if (scraped.name != null) enrichedName = scraped.name;
+            if (scraped.fulltitle != null) enrichedFulltitle = scraped.fulltitle;
+            if (scraped.uploader != null) enrichedUploader = scraped.uploader;
+            if (scraped.uploader_id != null) enrichedUploaderId = scraped.uploader_id;
+            if (scraped.uploader_url != null) enrichedUploaderUrl = scraped.uploader_url;
+            if (scraped.uploadTimestamp != null) enrichedUploadTimestamp = scraped.uploadTimestamp;
+            if (scraped.description != null) enrichedDescription = scraped.description;
+            if (scraped.tags != null) enrichedTags = scraped.tags;
+            log.info({ taskId, url }, 'ScrapeCreators metadata applied');
+          } catch (err) {
+            log.warn({ err, taskId, url }, 'ScrapeCreators metadata fetch failed (non-fatal)');
+          }
+        }
+
         await updateTask(taskId, {
           status: 'done',
           progress: 100,
           result,
           file: result.file ?? null,
-          name: result.name ?? null,
-          fulltitle: meta?.fulltitle ?? meta?.title ?? null,
+          name: enrichedName,
+          fulltitle: enrichedFulltitle,
           isH265: result.isH265 ?? null,
           thumbnail: result.thumbnail ?? null,
           duration: resolvedDuration,
-          uploader: meta?.uploader ?? result.audioMetadata?.artist ?? null,
-          uploader_id: meta?.uploader_id ?? null,
-          uploader_url: meta?.uploader_url ?? null,
-          uploadTimestamp:
-            meta?.timestamp ??
-            (meta?.upload_date ? parseUploadDate(meta.upload_date) : null),
-          description: meta?.description ?? null,
-          tags: meta?.tags?.length ? meta.tags : null,
+          uploader: enrichedUploader,
+          uploader_id: enrichedUploaderId,
+          uploader_url: enrichedUploaderUrl,
+          uploadTimestamp: enrichedUploadTimestamp,
+          description: enrichedDescription,
+          tags: enrichedTags,
           sourceFps: result.fps ?? null,
           width: resolvedWidth,
           height: resolvedHeight,

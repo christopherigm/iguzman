@@ -426,6 +426,7 @@ export function PinnedVideoItemDownloading({
           ...(video.commentsEnabled && { commentsEnabled: true }),
           ...(video.commentsEnabled &&
             video.maxComments != null && { maxComments: video.maxComments }),
+          ...(video.metadataEnabled && { metadataEnabled: true }),
         }),
       });
       const data: TaskCreateResponse = await res.json();
@@ -456,6 +457,7 @@ export function PinnedVideoItemDownloading({
     video.captionUrl,
     video.commentsEnabled,
     video.maxComments,
+    video.metadataEnabled,
     pollForTask,
     t,
   ]);

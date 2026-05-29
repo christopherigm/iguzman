@@ -73,6 +73,7 @@ export async function createTask(
     captionUrl: params.captionUrl,
     commentsEnabled: params.commentsEnabled,
     maxComments: params.maxComments,
+    metadataEnabled: params.metadataEnabled,
     status: 'pending',
     progress: 0,
     result: null,

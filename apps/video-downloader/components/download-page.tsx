@@ -56,6 +56,7 @@ interface VideoAddedEntry {
   captionUrl?: string;
   commentsEnabled?: boolean;
   maxComments?: number;
+  metadataEnabled?: boolean;
   opfsEnabled: boolean;
 }
 
@@ -236,6 +237,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
         captionUrl: entry.captionUrl ?? null,
         commentsEnabled: entry.commentsEnabled ?? false,
         maxComments: entry.maxComments ?? null,
+        metadataEnabled: entry.metadataEnabled ?? false,
         opfsEnabled: entry.opfsEnabled,
       });
     },
@@ -267,7 +269,6 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
         onVideoAdded={handleVideoAdded}
         completedVideos={completed}
         onMoveToFirst={moveCompletedToFirst}
-        onClearStorage={clearCompleted}
         onRemoveVideosByUuids={removeCompletedBulk}
       />
       <MigrationBanner serverDate={serverDate} />

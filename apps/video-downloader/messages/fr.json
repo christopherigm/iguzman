@@ -50,6 +50,8 @@
     "smartDownloadHintCredits": "({credits} crédits disponibles)",
     "smartDownloadHintCaptions": "+ sous-titres",
     "smartDownloadHintComments": "+ commentaires",
+    "smartDownloadHintMetadata": "+ métadonnées",
+    "smartMetadata": "Métadonnées",
     "smartDownloadHintCommentsCredits": "+ commentaires ({credits} restants)",
     "downloadCommentsWithCredits": "Télécharger les commentaires ({credits} restants)",
     "commentsWithCredits": "Commentaires ({credits} restants)",

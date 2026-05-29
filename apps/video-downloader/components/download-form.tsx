@@ -24,6 +24,7 @@ import { ClearStorageModal } from './clear-storage-modal';
 import type { CaptionOption } from '@/app/api/video-metadata/route';
 import { useCreditsBalance, setCreditsBalance } from './use-credits-store';
 import { Divider } from '@repo/ui/core-elements/divider';
+import { Grid } from '@repo/ui/core-elements/grid';
 import './platform-icon-bg.css';
 import './download-form.css';
 
@@ -50,7 +51,8 @@ function cleanUrl(url: string): string {
   try {
     const parsed = new URL(url);
     if (
-      (parsed.hostname === 'www.youtube.com' || parsed.hostname === 'youtube.com') &&
+      (parsed.hostname === 'www.youtube.com' ||
+        parsed.hostname === 'youtube.com') &&
       parsed.pathname === '/watch' &&
       parsed.searchParams.has('v')
     ) {
@@ -283,6 +285,8 @@ export interface DownloadFormProps {
     captionUrl?: string;
     commentsEnabled?: boolean;
     maxComments?: number;
+    /** Whether to fetch ScrapeCreators metadata after download. */
+    metadataEnabled?: boolean;
     /** Whether to store the downloaded video in the browser's Origin Private File System. */
     opfsEnabled: boolean;
   }) => void;
@@ -295,8 +299,6 @@ export interface DownloadFormProps {
   }>;
   /** Called when the user wants to move an existing completed video to the top of the list. */
   onMoveToFirst?: (uuid: string) => void;
-  /** Called after OPFS and completed-video storage have been cleared. */
-  onClearStorage?: () => void;
   /** Called after a category of OPFS videos is cleared; receives the UUIDs removed. */
   onRemoveVideosByUuids?: (uuids: string[]) => void;
 }
@@ -337,6 +339,8 @@ export function DownloadForm({
     setSmartComments(storedSmartComments === 'true');
     const storedSmartHeight = localStorage.getItem('vd_smart_max_height');
     setSmartMaxHeight(storedSmartHeight ? Number(storedSmartHeight) : 1080);
+    const storedSmartMetadata = localStorage.getItem('vd_smart_metadata');
+    setSmartMetadata(storedSmartMetadata === 'true');
   }, []);
 
   const handleAutoDownloadChange = useCallback((value: boolean) => {
@@ -358,7 +362,6 @@ export function DownloadForm({
       setCaptionsUnavailable(false);
       setCommentsEnabled(false);
       setCommentsUnavailable(false);
-      setTotalCommentCount(null);
     }
   }, []);
 
@@ -370,6 +373,11 @@ export function DownloadForm({
   const handleSmartCommentsChange = useCallback((value: boolean) => {
     setSmartComments(value);
     localStorage.setItem('vd_smart_comments', String(value));
+  }, []);
+
+  const handleSmartMetadataChange = useCallback((value: boolean) => {
+    setSmartMetadata(value);
+    localStorage.setItem('vd_smart_metadata', String(value));
   }, []);
 
   const handleSmartMaxHeightChange = useCallback((value: number) => {
@@ -419,14 +427,12 @@ export function DownloadForm({
   const [commentsEnabled, setCommentsEnabled] = useState(false);
   const [commentsUnavailable, setCommentsUnavailable] = useState(false);
   const [commentCount, setCommentCount] = useState<5 | 10 | 20 | 50>(20);
-  const [smartComments, setSmartComments] = useState(false);
-  const [totalCommentCount, setTotalCommentCount] = useState<number | null>(
-    null,
-  );
 
   const [smartDownload, setSmartDownload] = useState(false);
   const [smartCaptions, setSmartCaptions] = useState(true);
   const [smartMaxHeight, setSmartMaxHeight] = useState(1080);
+  const [smartComments, setSmartComments] = useState(false);
+  const [smartMetadata, setSmartMetadata] = useState(false);
 
   const creditsBalance = useCreditsBalance();
   const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
@@ -462,11 +468,9 @@ export function DownloadForm({
     setCaptionsUnavailable(false);
     setCommentsEnabled(false);
     setCommentsUnavailable(false);
-    setTotalCommentCount(null);
   }, [url]);
 
   /* Derived state */
-  const hasText = url.length > 0;
   const validUrl = useMemo(() => isValidUrl(url), [url]);
   const platform = useMemo<Platform>(
     () => (validUrl ? detectPlatform(url) : 'unknown'),
@@ -478,8 +482,7 @@ export function DownloadForm({
   /* Disabled flags */
   const switchesDisabled = !validPlatformUrl;
   const captionsDisabled = switchesDisabled || justAudio || captionsUnavailable;
-  const noCreditsForPlatform =
-    platform !== 'youtube' && creditsBalance <= 0;
+  const noCreditsForPlatform = platform !== 'youtube' && creditsBalance <= 0;
   const commentsDisabled =
     switchesDisabled ||
     justAudio ||
@@ -487,8 +490,18 @@ export function DownloadForm({
     noCreditsForPlatform;
 
   /* Credit cost */
-  const effectiveCommentsEnabled = smartDownload ? smartComments : commentsEnabled;
-  const creditCost = platform !== 'youtube' && !justAudio && effectiveCommentsEnabled ? 2 : 1;
+  const effectiveCommentsEnabled = smartDownload
+    ? smartComments
+    : commentsEnabled;
+  const isScrapePlatform =
+    platform === 'facebook' ||
+    platform === 'instagram' ||
+    platform === 'tiktok';
+  const effectiveMetadataEnabled = smartDownload ? smartMetadata : false;
+  const creditCost =
+    1 +
+    (platform !== 'youtube' && !justAudio && effectiveCommentsEnabled ? 1 : 0) +
+    (isScrapePlatform && !justAudio && effectiveMetadataEnabled ? 1 : 0);
   /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
 
@@ -545,7 +558,6 @@ export function DownloadForm({
       }
 
       const count = data.commentCount ?? null;
-      setTotalCommentCount(count);
       const isScrapePlatform =
         platform === 'facebook' ||
         platform === 'instagram' ||
@@ -553,9 +565,12 @@ export function DownloadForm({
       const commentsAvailable = isScrapePlatform || count != null;
       setCommentsUnavailable(!commentsAvailable);
 
-      if (data.creditsRemaining !== undefined) setCreditsBalance(data.creditsRemaining);
+      if (data.creditsRemaining !== undefined)
+        setCreditsBalance(data.creditsRemaining);
       const effectiveBalance =
-        data.creditsRemaining !== undefined ? data.creditsRemaining : creditsBalance;
+        data.creditsRemaining !== undefined
+          ? data.creditsRemaining
+          : creditsBalance;
       if (platform !== 'youtube' && effectiveBalance <= 0) {
         setCommentsEnabled(false);
       } else if (platform === 'youtube' && commentsAvailable) {
@@ -590,6 +605,8 @@ export function DownloadForm({
     const effectiveCommentsEnabled =
       !justAudio && (smartDownload ? smartComments : commentsEnabled);
     const effectiveMaxComments = smartDownload ? 30 : commentCount;
+    const effectiveMetadataEnabled =
+      !justAudio && smartDownload && smartMetadata && platform !== 'youtube';
 
     onVideoAdded?.({
       originalURL: url,
@@ -603,6 +620,7 @@ export function DownloadForm({
       ...(effectiveCaptionUrl != null && { captionUrl: effectiveCaptionUrl }),
       commentsEnabled: effectiveCommentsEnabled,
       ...(effectiveCommentsEnabled && { maxComments: effectiveMaxComments }),
+      metadataEnabled: effectiveMetadataEnabled,
       opfsEnabled: opfsSupported,
     });
 
@@ -610,7 +628,6 @@ export function DownloadForm({
     setUrl('');
     setCaptionsEnabled(false);
     setCommentsEnabled(false);
-    setTotalCommentCount(null);
   }, [
     url,
     justAudio,
@@ -623,6 +640,8 @@ export function DownloadForm({
     commentsEnabled,
     commentCount,
     smartComments,
+    smartMetadata,
+    isScrapePlatform,
     onVideoAdded,
     opfsSupported,
     smartDownload,
@@ -713,7 +732,6 @@ export function DownloadForm({
               type="button"
               className="df-icon-btn"
               onClick={handleClear}
-              disabled={!hasText}
               aria-label={t('clearUrl')}
             >
               <Icon
@@ -744,12 +762,21 @@ export function DownloadForm({
           color="var(--accent, #06b6d4)"
         >
           {`🪙 ${creditCost}`}
-          {smartDownload && ` ${t('smartDownloadHintOn', {
-            resolution:
-              resolveResolutionLabel(smartMaxHeight) ?? `${smartMaxHeight}p`,
-          })}`}
-          {smartDownload && smartCaptions && ` ${t('smartDownloadHintCaptions')}`}
-          {smartDownload && smartComments && ` ${t('smartDownloadHintComments')}`}
+          {smartDownload &&
+            ` ${t('smartDownloadHintOn', {
+              resolution:
+                resolveResolutionLabel(smartMaxHeight) ?? `${smartMaxHeight}p`,
+            })}`}
+          {smartDownload &&
+            smartCaptions &&
+            ` ${t('smartDownloadHintCaptions')}`}
+          {smartDownload &&
+            smartComments &&
+            ` ${t('smartDownloadHintComments')}`}
+          {smartDownload &&
+            smartMetadata &&
+            isScrapePlatform &&
+            ` ${t('smartDownloadHintMetadata')}`}
         </Typography>
       )}
 
@@ -787,9 +814,18 @@ export function DownloadForm({
             {!smartDownload && (
               <>
                 <Button
-                  text={metadataLoading ? t('checkingSpecs') : `${t('checkSpecs')} 🪙 1`}
+                  text={
+                    metadataLoading
+                      ? t('checkingSpecs')
+                      : `${t('checkSpecs')} 🪙 1`
+                  }
                   onClick={() => void handleCheckSpecs()}
-                  disabled={!validPlatformUrl || metadataLoading || justAudio || creditsBalance < 1}
+                  disabled={
+                    !validPlatformUrl ||
+                    metadataLoading ||
+                    justAudio ||
+                    creditsBalance < 1
+                  }
                   width="100%"
                   size="md"
                   kind="success"
@@ -913,39 +949,79 @@ export function DownloadForm({
               className={`df-smart-sub-row-wrap${smartDownload ? ' df-smart-sub-row-wrap--open' : ''}`}
             >
               <Box className="df-smart-sub-row-inner">
-                <Box className="df-smart-sub-row">
-                  <Box className="df-smart-sub-row-label">
-                    <Typography variant="body-sm" fontWeight={500}>
-                      {t('smartCaptions')}
-                    </Typography>
-                    <Switch
-                      checked={smartCaptions}
-                      onChange={handleSmartCaptionsChange}
-                      disabled={justAudio}
-                    />
-                  </Box>
-                  <Box className="df-smart-sub-row-label">
-                    <Typography variant="body-sm" fontWeight={500}>
-                      {t('comments')}
-                      {platform !== 'youtube' && platform !== 'unknown' && ' 🪙 1'}
-                    </Typography>
-                    <Switch
-                      checked={smartComments}
-                      onChange={
-                        justAudio ? undefined : handleSmartCommentsChange
-                      }
-                      disabled={justAudio}
-                    />
-                  </Box>
-                  <Box className="df-smart-sub-row-label">
-                    <ResolutionSelect
-                      value={smartMaxHeight}
-                      onChange={handleSmartMaxHeightChange}
-                      disabled={justAudio}
-                      options={SMART_RESOLUTION_OPTIONS}
-                    />
-                  </Box>
-                </Box>
+                <Grid container spacing={1} marginTop={5} marginBottom={5}>
+                  <Grid size={{ xs: 6 }} padding={5}>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      gap={8}
+                    >
+                      <Typography variant="body-sm" fontWeight={500}>
+                        {t('smartCaptions')}
+                      </Typography>
+                      <Switch
+                        checked={smartCaptions}
+                        onChange={handleSmartCaptionsChange}
+                        disabled={justAudio}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid size={{ xs: 6 }} padding={5}>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      gap={8}
+                    >
+                      <Typography variant="body-sm" fontWeight={500}>
+                        {t('comments')}
+                        {platform !== 'youtube' &&
+                          platform !== 'unknown' &&
+                          ' 🪙 1'}
+                      </Typography>
+                      <Switch
+                        checked={smartComments}
+                        onChange={
+                          justAudio ? undefined : handleSmartCommentsChange
+                        }
+                        disabled={justAudio}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid size={{ xs: 6 }} padding={5}>
+                    <Box display="flex" justifyContent="center">
+                      <ResolutionSelect
+                        value={smartMaxHeight}
+                        onChange={handleSmartMaxHeightChange}
+                        disabled={justAudio}
+                        options={SMART_RESOLUTION_OPTIONS}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid size={{ xs: 6 }} padding={5}>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      gap={8}
+                    >
+                      <Typography variant="body-sm" fontWeight={500}>
+                        {t('smartMetadata')}
+                        {isScrapePlatform && ' 🪙 1'}
+                      </Typography>
+                      <Switch
+                        checked={smartMetadata}
+                        onChange={
+                          justAudio || platform === 'youtube'
+                            ? undefined
+                            : handleSmartMetadataChange
+                        }
+                        disabled={justAudio || platform === 'youtube'}
+                      />
+                    </Box>
+                  </Grid>
+                </Grid>
               </Box>
             </Box>
             {opfsSupported &&

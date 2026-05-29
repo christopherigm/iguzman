@@ -58,6 +58,8 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
   commentsEnabled: boolean;
   /** Maximum number of top-level comments requested. */
   maxComments: number | null;
+  /** Whether ScrapeCreators metadata enrichment was requested for this download. */
+  metadataEnabled: boolean;
   /** Filename of the saved comments JSON file. Null when not downloaded. */
   commentsFile: string | null;
   /** OPFS filename key for the comments JSON file. Null if not stored. */
@@ -145,6 +147,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     captionsFile: v.captionsFile ?? null,
     commentsEnabled: v.commentsEnabled ?? false,
     maxComments: v.maxComments ?? null,
+    metadataEnabled: v.metadataEnabled ?? false,
     commentsFile: v.commentsFile ?? null,
     opfsCommentsKey: v.opfsCommentsKey ?? null,
     burnCaptionsConfig: v.burnCaptionsConfig ?? null,
@@ -342,6 +345,7 @@ export function useVideoStore() {
         captionUrl?: string | null;
         commentsEnabled?: boolean;
         maxComments?: number | null;
+        metadataEnabled?: boolean;
         useServerProcessing?: boolean;
         opfsEnabled?: boolean;
       },
@@ -390,6 +394,7 @@ export function useVideoStore() {
         captionsFile: null,
         commentsEnabled: partial.commentsEnabled ?? false,
         maxComments: partial.maxComments ?? null,
+        metadataEnabled: partial.metadataEnabled ?? false,
         commentsFile: null,
         scrapeCreditsRemaining: null,
         opfsCommentsKey: null,

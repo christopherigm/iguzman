@@ -18,6 +18,8 @@ export type VideoDownloadInput = Pick<
   commentsEnabled?: boolean;
   /** Maximum number of top-level comments to download. */
   maxComments?: number;
+  /** When true, post metadata is fetched from ScrapeCreators after download (FB/IG/TT only). */
+  metadataEnabled?: boolean;
 };
 
 /* ── Operation credits ─────────────────────────────── */
