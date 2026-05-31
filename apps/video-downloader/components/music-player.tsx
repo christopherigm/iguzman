@@ -61,8 +61,10 @@ function PlaylistButton({
       type="button"
       className={`mp-playlist-btn${isActive ? ' mp-playlist-btn--active' : ''}`}
       onClick={onClick}
-      aria-label={aria['aria-label']}
-      aria-pressed={aria['aria-pressed']}
+      {...(aria && {
+        'aria-label': aria['aria-label'],
+        'aria-pressed': aria['aria-pressed'],
+      })}
     >
       {children}
     </button>
@@ -485,9 +487,7 @@ export function MusicPlayer() {
             as="p"
             variant="none"
             color={
-              isActive
-                ? 'var(--accent, #68c3f7)'
-                : 'var(--mp-text-strong)'
+              isActive ? 'var(--accent, #68c3f7)' : 'var(--mp-text-strong)'
             }
             fontWeight={500}
             margin={0}
@@ -766,64 +766,62 @@ export function MusicPlayer() {
               >
                 {t('playlist')} · {playlist.length}
               </Typography>
-              <div className="mp-compact-playlist__items">
-                {playlistRows}
-              </div>
+              <div className="mp-compact-playlist__items">{playlistRows}</div>
             </div>
           </div>
 
           {/* Cover Art */}
           <div ref={coverRef} style={{ flexShrink: 0 }}>
-          <Box
-            className="music-player__cover-wrap"
-            borderRadius={16}
-            backgroundColor="var(--mp-surface)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            styles={{
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.65)',
-              flexShrink: 0,
-            }}
-          >
-            {loading && (
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                backgroundColor="rgba(0,0,0,0.5)"
-                styles={{ position: 'absolute', inset: 0, zIndex: 1 }}
-              >
-                <Spinner size={32} />
-              </Box>
-            )}
-            {thumbnailUrl && !loading ? (
-              <Image
-                src={thumbnailUrl}
-                alt={trackTitle}
-                fill
-                sizes="(max-width: 600px) 240px, 300px"
-                style={{ objectFit: 'contain' }}
-                unoptimized
-              />
-            ) : !loading ? (
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                width="100%"
-                height="100%"
-              >
-                <Icon
-                  icon="/icons/music.svg"
-                  size="80px"
-                  color="var(--mp-icon-placeholder)"
+            <Box
+              className="music-player__cover-wrap"
+              borderRadius={16}
+              backgroundColor="var(--mp-surface)"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              styles={{
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 24px 64px rgba(0,0,0,0.65)',
+                flexShrink: 0,
+              }}
+            >
+              {loading && (
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  backgroundColor="rgba(0,0,0,0.5)"
+                  styles={{ position: 'absolute', inset: 0, zIndex: 1 }}
+                >
+                  <Spinner size={32} />
+                </Box>
+              )}
+              {thumbnailUrl && !loading ? (
+                <Image
+                  src={thumbnailUrl}
+                  alt={trackTitle}
+                  fill
+                  sizes="(max-width: 600px) 240px, 300px"
+                  style={{ objectFit: 'contain' }}
+                  unoptimized
                 />
-              </Box>
-            ) : null}
-          </Box>
+              ) : !loading ? (
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  width="100%"
+                  height="100%"
+                >
+                  <Icon
+                    icon="/icons/music.svg"
+                    size="80px"
+                    color="var(--mp-icon-placeholder)"
+                  />
+                </Box>
+              ) : null}
+            </Box>
           </div>
 
           {/* Track metadata */}

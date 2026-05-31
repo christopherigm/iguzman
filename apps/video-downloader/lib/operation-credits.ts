@@ -18,9 +18,9 @@ const BASE: Record<keyof OperationCredits, number> = {
   convertToH264: 3,
   convertToH265: 4,
   burnSubtitles: 3,
-  interpolateFps2x: 5,
-  interpolateFps4x: 7,
-  interpolateFps8x: 10,
+  interpolateFps2x: 10,
+  interpolateFps4x: 20,
+  interpolateFps8x: 40,
 };
 
 function resolutionFactor(

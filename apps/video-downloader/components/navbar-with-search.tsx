@@ -22,10 +22,16 @@ type NavbarWithSearchProps = Omit<
   | 'searchValue'
   | 'rightSlot'
   | 'searchBox'
->;
+> & {
+  searchHiddenPaths?: string[];
+  creditsHiddenPaths?: string[];
+};
 
 export function NavbarWithSearch(props: NavbarWithSearchProps) {
+  const { searchHiddenPaths, creditsHiddenPaths, ...navbarProps } = props;
   const pathname = usePathname();
+  const showSearch = !searchHiddenPaths?.includes(pathname);
+  const showCredits = !creditsHiddenPaths?.includes(pathname);
   const t = useTranslations('Navbar');
   const locale = useLocale();
   const whisperLang = locale.slice(0, 2);
@@ -73,34 +79,38 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   return (
     <>
       <Navbar
-        {...props}
-        hiddenPaths={['/reel-mode', '/music-player', ...(props.hiddenPaths ?? [])]}
+        {...navbarProps}
+        hiddenPaths={['/reel-mode', '/music-player', ...(navbarProps.hiddenPaths ?? [])]}
         searchBox={false}
         items={items}
         rightSlot={
           <Box display="flex" alignItems="center" gap={14}>
-            <Link
-              href="/credits"
-              prefetch
-              style={{
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                whiteSpace: 'nowrap',
-                textDecoration: 'none',
-                color: 'inherit',
-                cursor: 'pointer',
-              }}
-            >
-              🪙 {creditsBalance}
-            </Link>
-            <Button
-              icon="/icons/search.svg"
-              aria-label={t('searchModal.openLabel')}
-              onClick={() => setModalOpen(true)}
-              iconSize="20px"
-              styles={{ cursor: 'pointer' }}
-              kind="success"
-            />
+            {showCredits && (
+              <Link
+                href="/credits"
+                prefetch
+                style={{
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  whiteSpace: 'nowrap',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  cursor: 'pointer',
+                }}
+              >
+                🪙 {creditsBalance}
+              </Link>
+            )}
+            {showSearch && (
+              <Button
+                icon="/icons/search.svg"
+                aria-label={t('searchModal.openLabel')}
+                onClick={() => setModalOpen(true)}
+                iconSize="20px"
+                styles={{ cursor: 'pointer' }}
+                kind="success"
+              />
+            )}
           </Box>
         }
       />

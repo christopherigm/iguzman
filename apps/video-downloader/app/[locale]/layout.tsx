@@ -111,6 +111,8 @@ export default async function LocaleLayout({ children, params }: Props) {
               logo="/logo.png"
               version={`v${packageJson.version}`}
               translucent
+              searchHiddenPaths={['/credits', '/terms']}
+              creditsHiddenPaths={['/terms']}
             />
             {children}
           </PaletteProvider>
