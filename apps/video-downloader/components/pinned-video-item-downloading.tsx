@@ -88,6 +88,7 @@ export function PinnedVideoItemDownloading({
   const downloadTriggered = useRef(false);
   const pollResumeChecked = useRef(false);
   const migrationInFlight = useRef(false);
+  const migrationRetryCount = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
   // Always-current references used by stable event listeners and timer callbacks
@@ -141,7 +142,11 @@ export function PinnedVideoItemDownloading({
       try {
         // Stream video bytes and track download progress
         const videoRes = await fetch(resolveMediaUrl(`/api/media/${file}`));
-        if (!videoRes.ok) throw new Error(`video fetch failed: ${videoRes.status}`);
+        if (!videoRes.ok) {
+          throw Object.assign(new Error(`video fetch failed: ${videoRes.status}`), {
+            httpStatus: videoRes.status,
+          });
+        }
 
         const cl = videoRes.headers.get('content-length');
         const totalSize = cl ? parseInt(cl, 10) : null;
@@ -242,24 +247,32 @@ export function PinnedVideoItemDownloading({
         console.error('OPFS migration failed:', err);
         const isQuotaError =
           err instanceof DOMException && err.name === 'QuotaExceededError';
+        // 4xx means the file is gone from the server (e.g. R2 upload never
+        // completed). Retrying will never succeed — treat as terminal.
+        const httpStatus = (err as { httpStatus?: number }).httpStatus;
+        const isClientError = httpStatus !== undefined && httpStatus >= 400 && httpStatus < 500;
+        const MAX_MIGRATION_RETRIES = 3;
+        const isTerminal = isQuotaError || isClientError || migrationRetryCount.current >= MAX_MIGRATION_RETRIES;
 
-        if (isQuotaError) {
+        if (isTerminal) {
           await deleteFromOPFS(file).catch(() => {});
           if (thumbKey) await deleteFromOPFS(thumbKey).catch(() => {});
           if (captionsKey) await deleteFromOPFS(captionsKey).catch(() => {});
-          if (taskId) {
-            fetch(`/api/download-video/${taskId}`, { method: 'DELETE' }).catch(() => {});
+          if (isQuotaError || isClientError) {
+            if (taskId) {
+              fetch(`/api/download-video/${taskId}`, { method: 'DELETE' }).catch(() => {});
+            }
           }
           if (mountedRef.current) {
             onUpdate(video.uuid, {
               status: 'error',
-              error: t('errorStorageQuota'),
+              error: isQuotaError ? t('errorStorageQuota') : t('errorGeneric'),
               opfsKey: null,
               opfsThumbnailKey: null,
               opfsCaptionsKey: null,
               opfsStored: false,
               downloadURL: null,
-              serverFileDeleted: true,
+              ...(isQuotaError || isClientError ? { serverFileDeleted: true } : {}),
             });
           }
           onComplete(video.uuid);
@@ -267,6 +280,7 @@ export function PinnedVideoItemDownloading({
           // Transient error (network blip, background tab fetch killed):
           // keep status as 'downloading' so the visibilitychange handler or
           // the retry timer can restart the migration without losing the video.
+          migrationRetryCount.current += 1;
           scheduleRetry = true;
         }
       } finally {

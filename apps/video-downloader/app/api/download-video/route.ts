@@ -330,21 +330,26 @@ export async function POST(request: Request) {
 
         /* ── Upload local files to R2, then clean up temp copies ─────── */
         if (USE_R2) {
-          const filesToUpload = [
-            result.file,
-            result.thumbnail,
-            result.captionsFile,
-            commentsFile,
-          ].filter((f): f is string => !!f);
+          // Main video file — failure is fatal: let it propagate so the task
+          // is marked 'error' instead of 'done' with a file missing from R2.
+          if (result.file) {
+            const localVideoPath = join(DOWNLOAD_DIR, result.file);
+            await uploadFromPath(result.file, localVideoPath);
+            unlink(localVideoPath).catch(() => {});
+          }
+
+          // Optional files (thumbnail, captions, comments) — best-effort only.
+          const optionalFiles = [result.thumbnail, result.captionsFile, commentsFile]
+            .filter((f): f is string => !!f);
 
           await Promise.all(
-            filesToUpload.map(async (f) => {
+            optionalFiles.map(async (f) => {
               const localPath = join(DOWNLOAD_DIR, f);
               try {
                 await uploadFromPath(f, localPath);
                 unlink(localPath).catch(() => {});
               } catch (err) {
-                log.warn({ err, file: f, taskId }, 'R2 upload failed for file');
+                log.warn({ err, file: f, taskId }, 'R2 upload failed for optional file');
               }
             }),
           );
