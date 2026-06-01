@@ -101,13 +101,25 @@ export function ReadOnlyVideoItem({
   }, [video.originalURL]);
 
   /* ── Re-download (trigger browser save) ─────────── */
-  const handleRedownload = useCallback(() => {
+  const handleRedownload = useCallback(async () => {
     if (!video.downloadURL) return;
-    const url = opfsUrls?.videoUrl ?? video.downloadURL;
-    triggerBrowserDownload(
-      url,
-      `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`,
-    );
+    const filename = `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`;
+
+    let urlOrBlob: string | File = opfsUrls?.videoUrl ?? video.downloadURL;
+
+    // 'opfs://' is not a navigable URL — the blob URL from the context should
+    // normally be used instead, but if it isn't registered yet (e.g. the React
+    // state batching didn't commit the registerUrls call before this component
+    // mounted), read the file directly from OPFS so the download still works.
+    if (typeof urlOrBlob === 'string' && urlOrBlob.startsWith('opfs://') && video.opfsKey) {
+      try {
+        urlOrBlob = await readFromOPFS(video.opfsKey);
+      } catch {
+        return;
+      }
+    }
+
+    await triggerBrowserDownload(urlOrBlob, filename);
     if (video.justAudio) {
       const thumbSrc =
         opfsUrls?.thumbnailUrl ??
@@ -123,6 +135,7 @@ export function ReadOnlyVideoItem({
     video.name,
     video.justAudio,
     video.thumbnail,
+    video.opfsKey,
     opfsUrls,
   ]);
 

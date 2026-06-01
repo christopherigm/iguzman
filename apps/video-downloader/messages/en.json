@@ -367,6 +367,39 @@
     "couponErrorText": "This coupon is invalid, expired, or has already been used.",
     "couponGenericError": "Something went wrong. Please try again."
   },
+  "FeatureSlider": {
+    "offline": {
+      "title": "Watch Anywhere, Even Offline",
+      "body1": "Download your favorite videos and take them with you on planes, trains, or anywhere with no internet connection.",
+      "body2": "Once saved to your device, content plays anytime — no Wi-Fi required."
+    },
+    "reelMode": {
+      "title": "Your Reels, All in One Place",
+      "body1": "Collect your favorite short videos from TikTok, Instagram, YouTube, and more into a single personal library.",
+      "body2": "Discover, save, and replay what matters to you — no algorithm needed."
+    },
+    "subtitles": {
+      "title": "Subtitles & Translations",
+      "body1": "Download captions alongside your videos and burn them directly into the footage.",
+      "body2": "Need another language? Translate subtitles automatically and get perfectly timed text in any locale."
+    },
+    "musicPlayer": {
+      "title": "Built-in Music Player",
+      "body1": "Download the audio track from any video and enjoy it in the integrated music player.",
+      "body2": "Browse your audio library, create playlists, and listen in the background while you multitask."
+    },
+    "videoEditor": {
+      "title": "Powerful Video Editor",
+      "body1": "Transform your downloads right in the browser: resize video, boost frame rate, convert to H.265, and remove black bars.",
+      "body2": "No extra software or account needed — everything runs on your device."
+    },
+    "prev": "Previous slide",
+    "next": "Next slide",
+    "close": "Close",
+    "dontShowAgain": "Don't show again",
+    "dontShowAgainTitle": "Hide Feature Banner?",
+    "dontShowAgainText": "The feature banner will no longer be shown."
+  },
   "MusicPlayer": {
     "loading": "Loading your library…",
     "emptyAudioOnly": "No audio tracks saved to your device yet. Download some audio first, or turn on \"Include videos\" to also play video files.",

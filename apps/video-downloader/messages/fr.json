@@ -366,6 +366,39 @@
     "couponErrorText": "Ce coupon est invalide, expiré ou a déjà été utilisé.",
     "couponGenericError": "Une erreur s'est produite. Veuillez réessayer."
   },
+  "FeatureSlider": {
+    "offline": {
+      "title": "Regardez partout, même sans internet",
+      "body1": "Téléchargez vos vidéos préférées et emportez-les en avion, en train ou partout où il n'y a pas d'internet.",
+      "body2": "Une fois enregistré sur votre appareil, le contenu est prêt à être lu à tout moment, sans Wi-Fi."
+    },
+    "reelMode": {
+      "title": "Vos Reels, tous au même endroit",
+      "body1": "Rassemblez vos courtes vidéos préférées de TikTok, Instagram, YouTube et plus encore dans une bibliothèque personnelle.",
+      "body2": "Découvrez, sauvegardez et rejouez ce qui vous importe, sans algorithme."
+    },
+    "subtitles": {
+      "title": "Sous-titres et traductions",
+      "body1": "Téléchargez les sous-titres avec vos vidéos et gravez-les directement dans la vidéo.",
+      "body2": "Besoin d'une autre langue ? Traduisez les sous-titres automatiquement et obtenez un texte parfaitement synchronisé."
+    },
+    "musicPlayer": {
+      "title": "Lecteur de musique intégré",
+      "body1": "Téléchargez la piste audio de n'importe quelle vidéo et profitez-en dans le lecteur de musique intégré.",
+      "body2": "Parcourez votre bibliothèque audio, créez des listes de lecture et écoutez en arrière-plan pendant vos autres tâches."
+    },
+    "videoEditor": {
+      "title": "Éditeur vidéo puissant",
+      "body1": "Transformez vos téléchargements directement dans le navigateur : redimensionnez, augmentez le FPS, convertissez en H.265 et supprimez les barres noires.",
+      "body2": "Aucun logiciel supplémentaire ou compte nécessaire — tout fonctionne sur votre appareil."
+    },
+    "prev": "Diapositive précédente",
+    "next": "Diapositive suivante",
+    "close": "Fermer",
+    "dontShowAgain": "Ne plus afficher",
+    "dontShowAgainTitle": "Masquer la bannière des fonctionnalités ?",
+    "dontShowAgainText": "La bannière des fonctionnalités ne sera plus affichée."
+  },
   "MusicPlayer": {
     "loading": "Chargement de votre bibliothèque…",
     "emptyAudioOnly": "Aucune piste audio enregistrée pour l'instant. Téléchargez d'abord du contenu ou activez \"Inclure les vidéos\" pour lire aussi des fichiers vidéo.",

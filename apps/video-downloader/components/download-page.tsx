@@ -16,6 +16,7 @@ import {
   requestPersistentStorage,
 } from '@/lib/opfs';
 import { MigrationBanner } from './migration-banner';
+import { FeatureSlider } from './feature-slider';
 import { setCreditsBalance } from './use-credits-store';
 import './download-page.css';
 
@@ -272,6 +273,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
         onRemoveVideosByUuids={removeCompletedBulk}
       />
       <MigrationBanner serverDate={serverDate} />
+      <FeatureSlider />
       {storageError ? (
         <Typography
           as="p"

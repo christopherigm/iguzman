@@ -6,7 +6,7 @@
 revisionHistoryLimit: 2 # how many old ReplicaSets to keep for rollbacks
 
 # -- Number of pod replicas
-replicaCount: 3
+replicaCount: 4
 
 # ─── Container image ────────────────────────────────────────
 image:
@@ -37,10 +37,6 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-read-timeout: '600'
     nginx.ingress.kubernetes.io/proxy-send-timeout: '600'
   hosts:
-    - host: vd2.iguzman.com.mx
-      paths:
-        - path: /
-          pathType: Prefix
     - host: media2go.app
       paths:
         - path: /
@@ -54,7 +50,6 @@ ingress:
       hosts:
         - media2go.app
         - www.media2go.app
-        - vd2.iguzman.com.mx
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.
 env:
@@ -146,7 +141,7 @@ nodeAffinity:
   # List of node names where the pods should be scheduled.
   nodeNames:
     - node6
-    # - node4
+    - node4
     # - node1
 
 # ─── WireGuard VPN sidecar ───────────────────────────────────

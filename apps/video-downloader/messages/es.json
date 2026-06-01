@@ -368,6 +368,39 @@
     "couponErrorText": "Este cupón no es válido, ha expirado o ya fue utilizado.",
     "couponGenericError": "Algo salió mal. Inténtalo de nuevo."
   },
+  "FeatureSlider": {
+    "offline": {
+      "title": "Ver en cualquier lugar, incluso sin conexión",
+      "body1": "Descarga tus vídeos favoritos y llévalos contigo en aviones, trenes o donde no haya internet.",
+      "body2": "Una vez guardados en tu dispositivo, el contenido se reproduce en cualquier momento, sin Wi-Fi."
+    },
+    "reelMode": {
+      "title": "Tus Reels, todos en un solo lugar",
+      "body1": "Reúne tus vídeos cortos favoritos de TikTok, Instagram, YouTube y más en una biblioteca personal única.",
+      "body2": "Descubre, guarda y reproduce lo que más te importa, sin ningún algoritmo de por medio."
+    },
+    "subtitles": {
+      "title": "Subtítulos y traducciones",
+      "body1": "Descarga los subtítulos junto con tus vídeos e incorpóralos directamente en el vídeo.",
+      "body2": "¿Necesitas otro idioma? Traduce los subtítulos automáticamente y obtén texto perfectamente sincronizado."
+    },
+    "musicPlayer": {
+      "title": "Reproductor de música integrado",
+      "body1": "Descarga la pista de audio de cualquier vídeo y disfrútala en el reproductor de música integrado.",
+      "body2": "Explora tu biblioteca de audio, crea listas de reproducción y escucha en segundo plano mientras trabajas."
+    },
+    "videoEditor": {
+      "title": "Editor de vídeo potente",
+      "body1": "Transforma tus descargas directamente en el navegador: cambia resolución, aumenta FPS, convierte a H.265 y elimina las barras negras.",
+      "body2": "Sin software adicional ni cuenta necesaria — todo se ejecuta en tu dispositivo."
+    },
+    "prev": "Diapositiva anterior",
+    "next": "Diapositiva siguiente",
+    "close": "Cerrar",
+    "dontShowAgain": "No mostrar más",
+    "dontShowAgainTitle": "¿Ocultar banner de características?",
+    "dontShowAgainText": "El banner de características ya no se mostrará."
+  },
   "MusicPlayer": {
     "loading": "Cargando tu biblioteca…",
     "emptyAudioOnly": "Aún no tienes pistas de audio guardadas. Descarga algo primero o activa \"Incluir videos\" para reproducir también archivos de video.",

@@ -366,6 +366,39 @@
     "couponErrorText": "Dieser Gutschein ist ungültig, abgelaufen oder wurde bereits verwendet.",
     "couponGenericError": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
   },
+  "FeatureSlider": {
+    "offline": {
+      "title": "Überall schauen, auch ohne Internet",
+      "body1": "Lade deine Lieblingsvideos herunter und nimm sie mit auf Reisen – im Flugzeug, im Zug oder überall, wo kein Internet vorhanden ist.",
+      "body2": "Einmal auf deinem Gerät gespeichert, ist dein Inhalt jederzeit abrufbereit – ganz ohne WLAN."
+    },
+    "reelMode": {
+      "title": "Deine Reels, alles an einem Ort",
+      "body1": "Sammle deine Lieblings-Kurzvideos von TikTok, Instagram, YouTube und mehr in einer persönlichen Bibliothek.",
+      "body2": "Entdecke, speichere und spiele ab, was dir wichtig ist – ganz ohne Algorithmus."
+    },
+    "subtitles": {
+      "title": "Untertitel und Übersetzungen",
+      "body1": "Lade Untertitel zusammen mit deinen Videos herunter und brenne sie direkt ins Videobild ein.",
+      "body2": "Brauchst du eine andere Sprache? Übersetze Untertitel automatisch und erhalte perfekt synchronisierten Text."
+    },
+    "musicPlayer": {
+      "title": "Integrierter Musikplayer",
+      "body1": "Lade den Audiotrack eines beliebigen Videos herunter und genieße ihn im integrierten Musikplayer.",
+      "body2": "Durchsuche deine Audiobibliothek, erstelle Playlists und höre im Hintergrund, während du andere Aufgaben erledigst."
+    },
+    "videoEditor": {
+      "title": "Leistungsstarker Video-Editor",
+      "body1": "Bearbeite deine Downloads direkt im Browser: Größe ändern, Bildrate erhöhen, zu H.265 konvertieren und schwarze Balken entfernen.",
+      "body2": "Keine zusätzliche Software oder Konto nötig – alles läuft auf deinem Gerät."
+    },
+    "prev": "Vorherige Folie",
+    "next": "Nächste Folie",
+    "close": "Schließen",
+    "dontShowAgain": "Nicht mehr anzeigen",
+    "dontShowAgainTitle": "Feature-Banner ausblenden?",
+    "dontShowAgainText": "Das Feature-Banner wird nicht mehr angezeigt."
+  },
   "MusicPlayer": {
     "loading": "Bibliothek wird geladen…",
     "emptyAudioOnly": "Noch keine Audiotracks gespeichert. Lade zuerst etwas herunter oder aktiviere \"Videos einschließen\", um auch Videodateien abzuspielen.",

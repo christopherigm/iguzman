@@ -366,6 +366,39 @@
     "couponErrorText": "Este cupom é inválido, expirou ou já foi utilizado.",
     "couponGenericError": "Algo deu errado. Por favor, tente novamente."
   },
+  "FeatureSlider": {
+    "offline": {
+      "title": "Assista em qualquer lugar, mesmo sem internet",
+      "body1": "Baixe seus vídeos favoritos e leve-os em aviões, trens ou onde não houver conexão com a internet.",
+      "body2": "Uma vez salvos no seu dispositivo, o conteúdo é reproduzido a qualquer momento, sem Wi-Fi."
+    },
+    "reelMode": {
+      "title": "Seus Reels, todos em um só lugar",
+      "body1": "Reúna seus vídeos curtos favoritos do TikTok, Instagram, YouTube e muito mais em uma biblioteca pessoal.",
+      "body2": "Descubra, salve e reproduza o que importa para você, sem nenhum algoritmo."
+    },
+    "subtitles": {
+      "title": "Legendas e traduções",
+      "body1": "Baixe as legendas junto com seus vídeos e grave-as diretamente no vídeo.",
+      "body2": "Precisa de outro idioma? Traduza as legendas automaticamente e obtenha texto perfeitamente sincronizado."
+    },
+    "musicPlayer": {
+      "title": "Player de música integrado",
+      "body1": "Baixe a faixa de áudio de qualquer vídeo e aproveite-a no player de música integrado.",
+      "body2": "Navegue pela sua biblioteca de áudio, crie playlists e ouça em segundo plano enquanto faz outras tarefas."
+    },
+    "videoEditor": {
+      "title": "Editor de vídeo poderoso",
+      "body1": "Transforme seus downloads diretamente no navegador: redimensione, aumente o FPS, converta para H.265 e remova as barras pretas.",
+      "body2": "Sem software adicional ou conta necessária — tudo funciona no seu dispositivo."
+    },
+    "prev": "Slide anterior",
+    "next": "Próximo slide",
+    "close": "Fechar",
+    "dontShowAgain": "Não mostrar novamente",
+    "dontShowAgainTitle": "Ocultar banner de recursos?",
+    "dontShowAgainText": "O banner de recursos não será mais exibido."
+  },
   "MusicPlayer": {
     "loading": "Carregando sua biblioteca…",
     "emptyAudioOnly": "Nenhuma faixa de áudio salva ainda. Baixe algo primeiro ou ative \"Incluir vídeos\" para também reproduzir arquivos de vídeo.",

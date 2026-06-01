@@ -1,0 +1,94 @@
+.fs-wrapper {
+  --swiper-pagination-color: #06b6d4;
+  --swiper-pagination-bullet-inactive-color: rgba(255, 255, 255, 0.4);
+  --swiper-pagination-bullet-inactive-opacity: 1;
+}
+
+.fs-swiper {
+  width: 100%;
+}
+
+.fs-image-wrapper {
+  position: relative;
+  line-height: 0;
+}
+
+.fs-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 160ms ease;
+}
+
+.fs-close-btn:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.fs-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.fs-body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Controls row: [prev] [dots] [next] */
+.fs-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+}
+
+/*
+ * Swiper forces position:absolute + bottom/left/width on its pagination element.
+ * Override so the div stays in the flex flow and the dots center naturally.
+ */
+.fs-pagination {
+  position: static !important;
+  width: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  flex: 1;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.fs-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 0;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.fs-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}

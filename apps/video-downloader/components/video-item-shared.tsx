@@ -879,6 +879,7 @@ export function VideoExtraActions({
           title={t('scaleDownTitle')}
           text={t('scaleDownText')}
           okCallback={() => setShowScaleDownModal(false)}
+          cancelCallback={() => setShowScaleDownModal(false)}
           panelMaxWidth="340px"
         >
           <Box
@@ -1133,7 +1134,9 @@ export function VideoExtraActions({
                     .catch(() => {})
                     .finally(() => setFetchingMetadata(false));
                 }}
-                disabled={fetchingMetadata || metadataError || creditsBalance < 1}
+                disabled={
+                  fetchingMetadata || metadataError || creditsBalance < 1
+                }
                 aria-label={t('getMetadata')}
                 title={t('getMetadata')}
                 icon="/icons/fields.svg"
@@ -1179,7 +1182,9 @@ export function VideoExtraActions({
         {!video.justAudio ? (
           <Box>
             {buildFpsOptions(video.sourceFps).map(({ value, label }) => {
-              const fpsCost = oc ? fpsInterpolateCost(oc, value, video.sourceFps) : null;
+              const fpsCost = oc
+                ? fpsInterpolateCost(oc, value, video.sourceFps)
+                : null;
               const alreadyApplied =
                 video.fpsApplied && value <= Number(video.fps);
               return (
