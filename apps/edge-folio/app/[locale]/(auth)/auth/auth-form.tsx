@@ -22,6 +22,8 @@ import {
   loginWithPasskey,
   registerPasskey,
   getPasskeyCredentials,
+  getProfile,
+  storeUser,
 } from '@/lib/auth';
 
 const REMEMBERED_EMAIL_KEY = 'auth_remembered_email';
@@ -80,6 +82,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     setLoading(true);
     try {
       await login({ email, password });
+      storeUser(await getProfile());
 
       const { count } = await getPasskeyCredentials();
       if (count === 0) {
@@ -109,6 +112,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     setLoading(true);
     try {
       await loginWithPasskey(email);
+      storeUser(await getProfile());
       router.push('/');
     } catch (err) {
       if (err instanceof LoginError) {
@@ -159,6 +163,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
               onClick={handleRegisterPasskey}
               size="md"
               width="100%"
+              kind="success"
             />
             <LinkButton
               onClick={() => router.push('/')}
@@ -202,6 +207,8 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         size="md"
         width="100%"
         marginTop={4}
+        kind={email && password ? 'success' : undefined}
+        disabled={!email || !password}
       />
       <Typography variant="none" className="auth-form__divider">
         {t('signIn.orDivider')}
@@ -354,6 +361,12 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         size="md"
         width="100%"
         marginTop={4}
+        kind={
+          email && password && password2 && password === password2
+            ? 'success'
+            : undefined
+        }
+        disabled={!email || !password || !password2 || password !== password2}
       />
       <Box display="flex" flexDirection="column" gap={8} alignItems="center">
         <LinkButton
@@ -425,6 +438,8 @@ function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
             size="md"
             width="100%"
             marginTop={4}
+            kind={email ? 'success' : undefined}
+            disabled={!email}
           />
           <Box display="flex" justifyContent="center">
             <LinkButton

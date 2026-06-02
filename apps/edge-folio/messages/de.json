@@ -19,7 +19,8 @@
   },
   "Navbar": {
     "home": "Startseite",
-    "account": "Konto"
+    "account": "Konto",
+    "signOut": "Abmelden"
   },
   "AccountPage": {
     "title": "Mein Konto",
@@ -54,6 +55,16 @@
     "passkeyAdded": "Passkey hinzugefügt.",
     "passkeyAddError": "Passkey konnte nicht hinzugefügt werden. Bitte erneut versuchen.",
     "loading": "Lädt…"
+  },
+  "Footer": {
+    "appHeading": "App",
+    "legalHeading": "Rechtliches",
+    "home": "Startseite",
+    "account": "Konto",
+    "privacyPolicy": "Datenschutz",
+    "terms": "Nutzungsbedingungen",
+    "userData": "Nutzerdaten",
+    "copyright": "© {year} Edge Folio. Alle Rechte vorbehalten."
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",

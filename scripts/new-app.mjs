@@ -59,7 +59,7 @@ function toTitleCase(str) {
 
 // ── Template Functions ─────────────────────────────────────────────────
 
-function packageJson(name, port, includeI18n, includePwa) {
+function packageJson(name, port, includeI18n, includePwa, includeAuth) {
   const pkg = {
     name,
     version: '0.1.0',
@@ -103,6 +103,10 @@ function packageJson(name, port, includeI18n, includePwa) {
   if (includePwa) {
     pkg.dependencies['@serwist/next'] = '^9.5.11';
     pkg.devDependencies['serwist'] = '^9.5.11';
+  }
+
+  if (includeAuth) {
+    pkg.dependencies['@simplewebauthn/browser'] = '^13.1.0';
   }
 
   return JSON.stringify(pkg, null, 2) + '\n';
@@ -354,7 +358,7 @@ const IOS_SPLASH_LINKS = `
         <link rel="apple-touch-startup-image" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-1668x2388.jpg" />
         <link rel="apple-touch-startup-image" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-2048x2732.jpg" />`;
 
-function layoutTsx(name, palette, includeI18n, includePwa) {
+function layoutTsx(name, palette, includeI18n, includePwa, includeAuth) {
   const title = toTitleCase(name);
   const accent = PALETTE_ACCENT[palette] ?? '#06b6d4';
 
@@ -393,6 +397,39 @@ export const viewport: Viewport = {
 
     const splashLinks = includePwa ? IOS_SPLASH_LINKS : '';
 
+    const navbarImport = includeAuth
+      ? `import { NavbarWrapper } from './navbar-wrapper';
+import { Footer } from './footer';`
+      : `import { Navbar } from '@repo/ui/core-elements/navbar';`;
+
+    const tNavDecl = includeAuth
+      ? `
+  const tNav = (await getTranslations({ locale, namespace: 'Navbar' })) as (
+    key: string,
+  ) => string;
+`
+      : '';
+
+    const navbarJsx = includeAuth
+      ? `            <NavbarWrapper
+              logo="/logo-navbar.png"
+              version={\`v\${packageJson.version}\`}
+              labels={{
+                home: tNav('home'),
+                account: tNav('account'),
+                signOut: tNav('signOut'),
+              }}
+            />
+            {children}
+            <Footer />`
+      : `            <Navbar
+              logo="/logo.png"
+              items={[{ label: 'Home', href: '/' }]}
+              fixedItems={[]}
+              version={\`v\${packageJson.version}\`}
+            />
+            {children}`;
+
     return `${metaImport}
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
@@ -406,7 +443,7 @@ import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
-import { Navbar } from '@repo/ui/core-elements/navbar';
+${navbarImport}
 import packageJson from '@/package.json';
 import '../globals.css';
 
@@ -445,7 +482,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   setRequestLocale(locale);
 
   const messages = await getMessages();
-
+${tNavDecl}
   const cookieStore = await cookies();
   const themeModeCookie = cookieStore.get('theme-mode')?.value as
     | ThemeMode
@@ -470,13 +507,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           initialResolved={initialResolved}
         >
           <PaletteProvider palette="${palette}" accent="${accent}">
-            <Navbar
-              logo="/logo.png"
-              items={[{ label: 'Home', href: '/' }]}
-              fixedItems={[]}
-              version={\`v\${packageJson.version}\`}
-            />
-            {children}
+${navbarJsx}
           </PaletteProvider>
         </ThemeProvider>
       </NextIntlClientProvider>
@@ -663,7 +694,39 @@ export default function Home() {
 `;
 }
 
-function proxyTs() {
+function proxyTs(includeAuth) {
+  if (includeAuth) {
+    return `import { NextRequest, NextResponse } from 'next/server';
+import createMiddleware from 'next-intl/middleware';
+import { routing } from '@repo/i18n/routing';
+
+const intlMiddleware = createMiddleware(routing);
+
+const PROTECTED_PREFIXES = ['/account'];
+
+function isProtectedPath(pathname: string): boolean {
+  const withoutLocale = pathname.replace(/^\\/[a-z]{2}(-[A-Z]{2})?/, '');
+  return PROTECTED_PREFIXES.some((prefix) => withoutLocale.startsWith(prefix));
+}
+
+export default function proxy(request: NextRequest) {
+  if (isProtectedPath(request.nextUrl.pathname)) {
+    const token = request.cookies.get('access_token')?.value;
+    if (!token) {
+      const locale = request.nextUrl.pathname.split('/')[1] ?? 'en';
+      return NextResponse.redirect(new URL(\`/\${locale}/auth\`, request.url));
+    }
+  }
+
+  return intlMiddleware(request);
+}
+
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\\\..*).*)',],
+};
+`;
+  }
+
   return `import createMiddleware from 'next-intl/middleware';
 import { routing } from '@repo/i18n/routing';
 
@@ -720,32 +783,198 @@ declare module 'next-intl' {
 `;
 }
 
-function messagesJson(lang, name) {
+function messagesJson(lang, name, includeAuth) {
   const title = toTitleCase(name);
 
-  if (lang === 'en') {
-    return (
-      JSON.stringify(
-        {
-          Metadata: { title, description: '' },
-          HomePage: { title },
-        },
-        null,
-        2,
-      ) + '\n'
-    );
+  const base = {
+    Metadata: { title, description: '' },
+    HomePage: { title },
+  };
+
+  if (!includeAuth) {
+    return JSON.stringify(base, null, 2) + '\n';
   }
 
-  return (
-    JSON.stringify(
-      {
-        Metadata: { title, description: '' },
-        HomePage: { title },
-      },
-      null,
-      2,
-    ) + '\n'
-  );
+  const authMessages =
+    lang === 'en'
+      ? {
+          Navbar: { home: 'Home', account: 'Account', signOut: 'Sign out' },
+          Footer: {
+            appHeading: 'App',
+            legalHeading: 'Legal',
+            home: 'Home',
+            account: 'Account',
+            privacyPolicy: 'Privacy Policy',
+            terms: 'Terms of Service',
+            userData: 'User Data',
+            copyright: `© {year} ${title}. All rights reserved.`,
+          },
+          VerifyEmailPage: {
+            loading: 'Verifying your email…',
+            successTitle: 'Email Verified',
+            successDetail: 'Your email has been verified. You can now sign in.',
+            redirecting: 'Redirecting in {seconds}…',
+            redirectProgress: 'Redirect progress',
+            expiredTitle: 'Link Expired',
+            expiredDetail:
+              'This verification link has expired. Please sign up again to request a new one.',
+            invalidTitle: 'Invalid Link',
+            invalidDetail:
+              'This verification link is invalid. Please check your email or sign up again.',
+          },
+          AuthPage: {
+            tabSignIn: 'Sign In',
+            tabSignUp: 'Sign Up',
+            tabReset: 'Reset Password',
+            signIn: {
+              title: 'Sign In',
+              subtitle: 'Welcome back',
+              emailLabel: 'Email',
+              passwordLabel: 'Password',
+              submitButton: 'Sign In',
+              submitting: 'Signing in…',
+              errorInvalidCredentials: 'Invalid email or password.',
+              errorGeneric: 'Something went wrong. Please try again.',
+              forgotPassword: 'Forgot your password?',
+              noAccount: "Don't have an account? Sign up",
+              orDivider: 'or',
+              passkeyButton: 'Sign in with passkey',
+              errorPasskeyFailed:
+                'Passkey authentication failed. Please try again.',
+              errorEmailRequired: 'Please enter your email first.',
+              rememberEmail: 'Remember email',
+            },
+            signUp: {
+              title: 'Create Account',
+              subtitle: `Join ${title} today`,
+              emailLabel: 'Email',
+              firstNameLabel: 'First Name',
+              lastNameLabel: 'Last Name',
+              passwordLabel: 'Password',
+              confirmPasswordLabel: 'Confirm Password',
+              submitButton: 'Create Account',
+              submitting: 'Creating account…',
+              successDetail:
+                'Account created! Please check your email to verify your account.',
+              errorEmailTaken: 'An account with this email already exists.',
+              errorPasswordMismatch: 'Passwords do not match.',
+              errorGeneric: 'Something went wrong. Please try again.',
+              haveAccount: 'Already have an account? Sign in',
+              forgotPassword: 'Forgot your password?',
+            },
+            resetPassword: {
+              title: 'Reset Password',
+              subtitle: 'Enter your email to receive a reset link',
+              emailLabel: 'Email',
+              submitButton: 'Send Reset Link',
+              submitting: 'Sending…',
+              successDetail:
+                'If an account with that email exists, a password reset link has been sent.',
+              errorGeneric: 'Something went wrong. Please try again.',
+              backToSignIn: 'Back to Sign In',
+            },
+            passkey: {
+              promptTitle: 'Set up a passkey?',
+              promptDescription:
+                'Sign in faster and more securely with a passkey. Use your fingerprint, face, or device PIN.',
+              registerButton: 'Set up passkey',
+              skipButton: 'Skip for now',
+              successMessage: 'Passkey registered successfully!',
+              errorGeneric:
+                'Failed to register passkey. You can try again later.',
+            },
+          },
+        }
+      : {
+          Navbar: { home: 'Home', account: 'Account', signOut: 'Sign out' },
+          Footer: {
+            appHeading: 'App',
+            legalHeading: 'Legal',
+            home: 'Home',
+            account: 'Account',
+            privacyPolicy: 'Privacy Policy',
+            terms: 'Terms of Service',
+            userData: 'User Data',
+            copyright: `© {year} ${title}. All rights reserved.`,
+          },
+          VerifyEmailPage: {
+            loading: 'Verifying your email…',
+            successTitle: 'Email Verified',
+            successDetail: 'Your email has been verified. You can now sign in.',
+            redirecting: 'Redirecting in {seconds}…',
+            redirectProgress: 'Redirect progress',
+            expiredTitle: 'Link Expired',
+            expiredDetail:
+              'This verification link has expired. Please sign up again to request a new one.',
+            invalidTitle: 'Invalid Link',
+            invalidDetail:
+              'This verification link is invalid. Please check your email or sign up again.',
+          },
+          AuthPage: {
+            tabSignIn: 'Sign In',
+            tabSignUp: 'Sign Up',
+            tabReset: 'Reset Password',
+            signIn: {
+              title: 'Sign In',
+              subtitle: 'Welcome back',
+              emailLabel: 'Email',
+              passwordLabel: 'Password',
+              submitButton: 'Sign In',
+              submitting: 'Signing in…',
+              errorInvalidCredentials: 'Invalid email or password.',
+              errorGeneric: 'Something went wrong. Please try again.',
+              forgotPassword: 'Forgot your password?',
+              noAccount: "Don't have an account? Sign up",
+              orDivider: 'or',
+              passkeyButton: 'Sign in with passkey',
+              errorPasskeyFailed:
+                'Passkey authentication failed. Please try again.',
+              errorEmailRequired: 'Please enter your email first.',
+              rememberEmail: 'Remember email',
+            },
+            signUp: {
+              title: 'Create Account',
+              subtitle: `Join ${title} today`,
+              emailLabel: 'Email',
+              firstNameLabel: 'First Name',
+              lastNameLabel: 'Last Name',
+              passwordLabel: 'Password',
+              confirmPasswordLabel: 'Confirm Password',
+              submitButton: 'Create Account',
+              submitting: 'Creating account…',
+              successDetail:
+                'Account created! Please check your email to verify your account.',
+              errorEmailTaken: 'An account with this email already exists.',
+              errorPasswordMismatch: 'Passwords do not match.',
+              errorGeneric: 'Something went wrong. Please try again.',
+              haveAccount: 'Already have an account? Sign in',
+              forgotPassword: 'Forgot your password?',
+            },
+            resetPassword: {
+              title: 'Reset Password',
+              subtitle: 'Enter your email to receive a reset link',
+              emailLabel: 'Email',
+              submitButton: 'Send Reset Link',
+              submitting: 'Sending…',
+              successDetail:
+                'If an account with that email exists, a password reset link has been sent.',
+              errorGeneric: 'Something went wrong. Please try again.',
+              backToSignIn: 'Back to Sign In',
+            },
+            passkey: {
+              promptTitle: 'Set up a passkey?',
+              promptDescription:
+                'Sign in faster and more securely with a passkey. Use your fingerprint, face, or device PIN.',
+              registerButton: 'Set up passkey',
+              skipButton: 'Skip for now',
+              successMessage: 'Passkey registered successfully!',
+              errorGeneric:
+                'Failed to register passkey. You can try again later.',
+            },
+          },
+        };
+
+  return JSON.stringify({ ...base, ...authMessages }, null, 2) + '\n';
 }
 
 function loggerTs(name) {
@@ -997,10 +1226,13 @@ CMD ["node", "apps/${name}/server.js"]
 `;
 }
 
-function envExample(name, registryUser = 'my-dockerhub-username') {
+function envExample(name, registryUser = 'my-dockerhub-username', includeAuth) {
+  const authVars = includeAuth
+    ? `\n# Django API base URL (server-side only, never NEXT_PUBLIC_)\nAPI_URL=http://localhost:8000\n`
+    : '';
   return `DOCKER_REGISTRY=${registryUser}
 NAMESPACE=${name}
-`;
+${authVars}`;
 }
 
 function helmChartYaml(name) {
@@ -1394,6 +1626,1658 @@ Shared volume: {{ .Values.sharedStorage.mountPath }} ({{ .Values.sharedStorage.s
 `;
 }
 
+// ── Auth Template Functions ───────────────────────────────────────────
+
+function libAuthTs() {
+  return `export interface UserProfile {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile_picture: string | null;
+}
+
+const USER_PROFILE_KEY = 'app_user';
+
+export function storeUser(profile: UserProfile): void {
+  const raw = (profile.first_name?.trim() || profile.email) ?? '';
+  const displayName = raw.substring(0, 10);
+  localStorage.setItem(USER_PROFILE_KEY, JSON.stringify({ displayName }));
+  window.dispatchEvent(new CustomEvent('app-auth', { detail: { displayName } }));
+}
+
+export function clearUser(): void {
+  localStorage.removeItem(USER_PROFILE_KEY);
+  window.dispatchEvent(new CustomEvent('app-auth', { detail: { displayName: null } }));
+}
+
+export function getStoredUser(): { displayName: string } | null {
+  try {
+    const raw = localStorage.getItem(USER_PROFILE_KEY);
+    return raw ? (JSON.parse(raw) as { displayName: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly data: Record<string, unknown>,
+  ) {
+    super('API request failed');
+  }
+}
+
+export class LoginError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly data: Record<string, unknown>,
+  ) {
+    super('Login failed');
+  }
+}
+
+export async function login(payload: {
+  email: string;
+  password: string;
+}): Promise<void> {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new LoginError(res.status, data);
+  }
+}
+
+export async function logout(): Promise<void> {
+  await fetch('/api/auth/logout', { method: 'POST' });
+}
+
+export async function signUp(payload: {
+  email: string;
+  password: string;
+  password2: string;
+  first_name?: string;
+  last_name?: string;
+}): Promise<void> {
+  const res = await fetch('/api/auth/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  const res = await fetch(\`/api/auth/verify-email/\${token}\`);
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  const res = await fetch('/api/auth/password-reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}
+
+export async function getProfile(): Promise<UserProfile> {
+  const res = await fetch('/api/auth/profile');
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<UserProfile>;
+}
+
+export async function updateProfile(payload: {
+  first_name?: string;
+  last_name?: string;
+}): Promise<UserProfile> {
+  const res = await fetch('/api/auth/profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<UserProfile>;
+}
+
+export async function uploadProfilePicture(
+  base64Image: string,
+): Promise<{ profile_picture: string | null }> {
+  const res = await fetch('/api/auth/profile/picture', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64_image: base64Image }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<{ profile_picture: string | null }>;
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+  newPassword2: string,
+): Promise<void> {
+  const res = await fetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password2: newPassword2,
+    }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}
+
+export async function deletePasskeyCredential(id: number): Promise<void> {
+  const res = await fetch(\`/api/auth/passkey/credentials/\${id}\`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, {});
+  }
+}
+
+export async function getPasskeyCredentials(): Promise<{
+  count: number;
+  credentials: { id: number; name: string; created_at: string }[];
+}> {
+  const res = await fetch('/api/auth/passkey/credentials');
+  if (!res.ok) return { count: 0, credentials: [] };
+  return res.json() as Promise<{
+    count: number;
+    credentials: { id: number; name: string; created_at: string }[];
+  }>;
+}
+
+export async function registerPasskey(
+  name = 'My passkey',
+): Promise<{ id: number; name: string }> {
+  const { startRegistration } = await import('@simplewebauthn/browser');
+
+  const optionsRes = await fetch('/api/auth/passkey/register/options', {
+    method: 'POST',
+  });
+  if (!optionsRes.ok) {
+    const data: Record<string, unknown> = await optionsRes.json().catch(() => ({}));
+    throw new ApiError(optionsRes.status, data);
+  }
+
+  const { options, challenge_id } = (await optionsRes.json()) as {
+    options: Parameters<typeof startRegistration>[0]['optionsJSON'];
+    challenge_id: string;
+  };
+
+  const credential = await startRegistration({ optionsJSON: options });
+
+  const verifyRes = await fetch('/api/auth/passkey/register/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential, challenge_id, name }),
+  });
+  if (!verifyRes.ok) {
+    const data: Record<string, unknown> = await verifyRes.json().catch(() => ({}));
+    throw new ApiError(verifyRes.status, data);
+  }
+
+  return verifyRes.json() as Promise<{ id: number; name: string }>;
+}
+
+export async function loginWithPasskey(email: string): Promise<void> {
+  const { startAuthentication } = await import('@simplewebauthn/browser');
+
+  const optionsRes = await fetch('/api/auth/passkey/authenticate/options', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!optionsRes.ok) {
+    const data: Record<string, unknown> = await optionsRes.json().catch(() => ({}));
+    throw new LoginError(optionsRes.status, data);
+  }
+
+  const { options, challenge_id } = (await optionsRes.json()) as {
+    options: Parameters<typeof startAuthentication>[0]['optionsJSON'];
+    challenge_id: string;
+  };
+
+  const credential = await startAuthentication({ optionsJSON: options });
+
+  const verifyRes = await fetch('/api/auth/passkey/authenticate/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, credential, challenge_id }),
+  });
+  if (!verifyRes.ok) {
+    const data: Record<string, unknown> = await verifyRes.json().catch(() => ({}));
+    throw new LoginError(verifyRes.status, data);
+  }
+}
+`;
+}
+
+function navbarWrapperTsx() {
+  return `'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Navbar } from '@repo/ui/core-elements/navbar';
+import type { MenuItem } from '@repo/ui/core-elements/navbar';
+import { logout, clearUser, getStoredUser } from '@/lib/auth';
+
+interface NavbarWrapperProps {
+  logo: string;
+  version: string;
+  labels: {
+    home: string;
+    account: string;
+    signOut: string;
+  };
+}
+
+export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDisplayName(getStoredUser()?.displayName ?? null);
+
+    const handler = (e: Event) => {
+      setDisplayName(
+        (e as CustomEvent<{ displayName: string | null }>).detail.displayName,
+      );
+    };
+    window.addEventListener('app-auth', handler);
+    return () => window.removeEventListener('app-auth', handler);
+  }, []);
+
+  const handleSignOut = async () => {
+    await logout();
+    clearUser();
+    router.push('/auth');
+  };
+
+  const accountItem: MenuItem = displayName
+    ? {
+        label: displayName,
+        children: [
+          { label: labels.account, href: '/account' },
+          { label: labels.signOut, onClick: handleSignOut },
+        ],
+      }
+    : { label: labels.account, href: '/account' };
+
+  const items: MenuItem[] = [{ label: labels.home, href: '/' }, accountItem];
+
+  return (
+    <Navbar
+      logo={logo}
+      items={items}
+      fixedItems={[]}
+      version={version}
+      translucent
+    />
+  );
+}
+`;
+}
+
+function footerTsx(name) {
+  const title = toTitleCase(name);
+  return `import Image from 'next/image';
+import Link from 'next/link';
+import { getTranslations, getLocale } from 'next-intl/server';
+import { Container } from '@repo/ui/core-elements/container';
+import { Grid } from '@repo/ui/core-elements/grid';
+import { Box } from '@repo/ui/core-elements/box';
+import { Typography } from '@repo/ui/core-elements/typography';
+import { ThemeSwitch } from '@repo/ui/theme-switch';
+import { LocaleSwitcher } from '@repo/ui/core-elements/locale-switcher';
+import { routing } from '@repo/i18n/routing';
+import './footer.css';
+
+export async function Footer() {
+  const [t, locale] = await Promise.all([
+    getTranslations('Footer'),
+    getLocale(),
+  ]);
+
+  const appLinks = [
+    { label: t('home'), href: '/' },
+    { label: t('account'), href: '/account' },
+  ];
+
+  const legalLinks = [
+    { label: t('privacyPolicy'), href: '/privacy-policy' },
+    { label: t('terms'), href: '/terms' },
+    { label: t('userData'), href: '/user-data' },
+  ];
+
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <footer className="footer">
+      <Container paddingX={10}>
+        <Grid container spacing={4}>
+          {/* Column 1 – Brand */}
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <Box display="flex" flexDirection="column" gap="20px">
+              <Image
+                src="/logo-navbar.png"
+                alt="${title}"
+                width={140}
+                height={44}
+                className="footer__logo"
+              />
+              <Typography as="span" variant="h5" fontWeight={700}>
+                ${title}
+              </Typography>
+              <Box
+                display="flex"
+                alignItems="center"
+                gap="12px"
+                flexWrap="wrap"
+              >
+                <ThemeSwitch />
+                <LocaleSwitcher
+                  locales={routing.locales}
+                  currentLocale={locale}
+                />
+              </Box>
+            </Box>
+          </Grid>
+
+          {/* Column 2 – App */}
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <Typography
+              as="h3"
+              variant="h5"
+              fontWeight={700}
+              className="footer__col-heading"
+            >
+              {t('appHeading')}
+            </Typography>
+            <Grid container spacingY={1} spacingX={2}>
+              {appLinks.map((link) => (
+                <Grid key={link.href} size={{ xs: 6, sm: 12 }}>
+                  <Link href={link.href} prefetch className="footer__link">
+                    {link.label}
+                  </Link>
+                </Grid>
+              ))}
+            </Grid>
+          </Grid>
+
+          {/* Column 3 – Legal */}
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <Typography
+              as="h3"
+              variant="h5"
+              fontWeight={700}
+              className="footer__col-heading"
+            >
+              {t('legalHeading')}
+            </Typography>
+            <Grid container spacingY={1} spacingX={2}>
+              {legalLinks.map((link) => (
+                <Grid key={link.href} size={{ xs: 6, sm: 12 }}>
+                  <Link href={link.href} prefetch className="footer__link">
+                    {link.label}
+                  </Link>
+                </Grid>
+              ))}
+            </Grid>
+          </Grid>
+        </Grid>
+
+        {/* Bottom bar */}
+        <Box className="footer__bottom">
+          <Typography
+            as="p"
+            variant="body-sm"
+            textAlign="center"
+            className="footer__description"
+          >
+            {t('copyright', { year: currentYear })}
+          </Typography>
+        </Box>
+      </Container>
+    </footer>
+  );
+}
+`;
+}
+
+function footerCss() {
+  return `.footer {
+  width: 100%;
+  background: var(--background);
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  padding-top: 56px;
+}
+
+.footer__logo {
+  object-fit: contain;
+  object-position: left center;
+}
+
+.footer__description {
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.footer__col-heading {
+  margin-bottom: 20px;
+}
+
+.footer__link {
+  font-size: 14px;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  width: fit-content;
+}
+
+.footer__link:hover {
+  color: var(--accent);
+}
+
+.footer__bottom {
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  padding: 20px 0;
+  margin-top: 40px;
+}
+
+@media (max-width: 599px) {
+  .footer {
+    padding-top: 40px;
+  }
+}
+`;
+}
+
+function authFormCss() {
+  return `.auth-form__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-form__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  margin-bottom: 4px;
+}
+
+.auth-form__tab-btn {
+  flex: 1;
+  padding: 10px 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted-foreground, #6b7280);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: -1px;
+}
+
+.auth-form__tab-btn[data-active='true'] {
+  font-weight: 600;
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+}
+
+.auth-form__error {
+  color: var(--error, #ef4444);
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--error-bg, rgba(239, 68, 68, 0.08));
+}
+
+.auth-form__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted-foreground, #6b7280);
+  font-size: 13px;
+}
+
+.auth-form__divider::before,
+.auth-form__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border, #e5e7eb);
+}
+
+.auth-form__passkey-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border, #e5e7eb);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  padding: 0;
+}
+
+.auth-form__passkey-icon-btn:hover:not(:disabled) {
+  background: var(--surface-2, #f3f4f6);
+}
+
+.auth-form__passkey-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.auth-form__success {
+  color: var(--success, #22c55e);
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--success-bg, rgba(34, 197, 94, 0.08));
+  text-align: center;
+}
+`;
+}
+
+function authFormTsx() {
+  return `'use client';
+
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import { useRouter } from '@repo/i18n/navigation';
+import { Container } from '@repo/ui/core-elements/container';
+import { Box } from '@repo/ui/core-elements/box';
+import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Button } from '@repo/ui/core-elements/button';
+import { LinkButton } from '@repo/ui/core-elements/link-button';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Typography } from '@repo/ui/core-elements/typography';
+import { Switch } from '@repo/ui/core-elements/switch';
+import './auth-form.css';
+import {
+  login,
+  LoginError,
+  signUp,
+  requestPasswordReset,
+  ApiError,
+  loginWithPasskey,
+  registerPasskey,
+  getPasskeyCredentials,
+  getProfile,
+  storeUser,
+} from '@/lib/auth';
+
+const REMEMBERED_EMAIL_KEY = 'auth_remembered_email';
+const REMEMBER_EMAIL_PREF_KEY = 'auth_remember_email';
+
+type Tab = 'sign-in' | 'sign-up' | 'reset-password';
+
+function ErrorMessage({ message }: { message: string }) {
+  return (
+    <Typography variant="caption" role="alert" className="auth-form__error">
+      {message}
+    </Typography>
+  );
+}
+
+// ── Sign-in tab ───────────────────────────────────────────────────────────────
+
+function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
+  const t = useTranslations('AuthPage');
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [passkeyPrompt, setPasskeyPrompt] = useState(false);
+  const [passkeySuccess, setPasskeySuccess] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(false);
+
+  useEffect(() => {
+    const pref = localStorage.getItem(REMEMBER_EMAIL_PREF_KEY) === 'true';
+    setRememberEmail(pref);
+    if (pref) {
+      const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? '';
+      if (saved) setEmail(saved);
+    }
+  }, []);
+
+  function handleEmailChange(value: string) {
+    setEmail(value);
+    if (rememberEmail) localStorage.setItem(REMEMBERED_EMAIL_KEY, value);
+  }
+
+  function handleRememberEmailChange(checked: boolean) {
+    setRememberEmail(checked);
+    localStorage.setItem(REMEMBER_EMAIL_PREF_KEY, String(checked));
+    if (checked) {
+      if (email) localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+    } else {
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await login({ email, password });
+      storeUser(await getProfile());
+
+      const { count } = await getPasskeyCredentials();
+      if (count === 0) {
+        setPasskeyPrompt(true);
+        setLoading(false);
+        return;
+      }
+
+      router.push('/');
+    } catch (err) {
+      if (err instanceof LoginError && err.status === 401) {
+        setError(t('signIn.errorInvalidCredentials'));
+      } else {
+        setError(t('signIn.errorGeneric'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePasskeySignIn() {
+    if (!email) {
+      setError(t('signIn.errorEmailRequired'));
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      await loginWithPasskey(email);
+      storeUser(await getProfile());
+      router.push('/');
+    } catch (err) {
+      if (err instanceof LoginError) {
+        setError(t('signIn.errorPasskeyFailed'));
+      } else {
+        setError(t('signIn.errorGeneric'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRegisterPasskey() {
+    setError(null);
+    setLoading(true);
+    try {
+      await registerPasskey();
+      setPasskeySuccess(true);
+      setTimeout(() => router.push('/'), 1500);
+    } catch {
+      setError(t('passkey.errorGeneric'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (passkeyPrompt) {
+    return (
+      <Box display="flex" flexDirection="column" gap={16} alignItems="center">
+        <Typography variant="body-sm" fontWeight={600}>
+          {t('passkey.promptTitle')}
+        </Typography>
+        <Typography variant="caption" styles={{ textAlign: 'center' }}>
+          {t('passkey.promptDescription')}
+        </Typography>
+        {passkeySuccess && (
+          <Typography variant="caption" className="auth-form__success">
+            {t('passkey.successMessage')}
+          </Typography>
+        )}
+        {error && <ErrorMessage message={error} />}
+        {loading && <ProgressBar />}
+        {!passkeySuccess && (
+          <>
+            <Button
+              text={t('passkey.registerButton')}
+              type="button"
+              onClick={handleRegisterPasskey}
+              size="md"
+              width="100%"
+              kind="success"
+            />
+            <LinkButton
+              onClick={() => router.push('/')}
+              label={t('passkey.skipButton')}
+            />
+          </>
+        )}
+      </Box>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="auth-form__form">
+      <TextInput
+        label={t('signIn.emailLabel')}
+        type="email"
+        value={email}
+        onChange={handleEmailChange}
+        required
+        autoComplete="email"
+      />
+      <TextInput
+        label={t('signIn.passwordLabel')}
+        type="password"
+        value={password}
+        onChange={setPassword}
+        required
+        autoComplete="current-password"
+      />
+      <Box display="flex" alignItems="center" gap={8}>
+        <Switch checked={rememberEmail} onChange={handleRememberEmailChange} />
+        <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+          {t('signIn.rememberEmail')}
+        </Typography>
+      </Box>
+      {error && <ErrorMessage message={error} />}
+      {loading && <ProgressBar label={t('signIn.submitting')} />}
+      <Button
+        text={loading ? t('signIn.submitting') : t('signIn.submitButton')}
+        type="submit"
+        size="md"
+        width="100%"
+        marginTop={4}
+        kind={email && password ? 'success' : undefined}
+        disabled={!email || !password}
+      />
+      <Typography variant="none" className="auth-form__divider">
+        {t('signIn.orDivider')}
+      </Typography>
+      <Box display="flex" justifyContent="center" gap={12}>
+        <Button
+          unstyled
+          type="button"
+          onClick={handlePasskeySignIn}
+          disabled={!email}
+          className="auth-form__passkey-icon-btn"
+          aria-label={t('signIn.passkeyButton')}
+          title={t('signIn.passkeyButton')}
+        >
+          <Image src="/icons/fingerprint.svg" width={28} height={28} alt="" />
+        </Button>
+      </Box>
+      <Box display="flex" flexDirection="column" gap={8} alignItems="center">
+        <LinkButton
+          onClick={() => switchTab('reset-password')}
+          label={t('signIn.forgotPassword')}
+        />
+        <LinkButton
+          onClick={() => switchTab('sign-up')}
+          label={t('signIn.noAccount')}
+        />
+      </Box>
+    </form>
+  );
+}
+
+// ── Sign-up tab ───────────────────────────────────────────────────────────────
+
+function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
+  const t = useTranslations('AuthPage');
+  const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (password !== password2) {
+      setError(t('signUp.errorPasswordMismatch'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signUp({
+        email,
+        password,
+        password2,
+        first_name: firstName || undefined,
+        last_name: lastName || undefined,
+      });
+      setSuccess(t('signUp.successDetail'));
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const emailErr = (err.data as Record<string, string[]>)?.email;
+        if (emailErr) {
+          setError(
+            Array.isArray(emailErr)
+              ? (emailErr[0] ?? t('signUp.errorGeneric'))
+              : String(emailErr),
+          );
+        } else {
+          setError(t('signUp.errorGeneric'));
+        }
+      } else {
+        setError(t('signUp.errorGeneric'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        gap={16}
+        alignItems="center"
+        styles={{ textAlign: 'center' }}
+      >
+        <Typography variant="body-sm">{success}</Typography>
+        <LinkButton
+          onClick={() => switchTab('sign-in')}
+          label={t('signUp.haveAccount')}
+        />
+      </Box>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="auth-form__form">
+      <Box display="flex" gap={12}>
+        <TextInput
+          label={t('signUp.firstNameLabel')}
+          type="text"
+          value={firstName}
+          onChange={setFirstName}
+          autoComplete="given-name"
+        />
+        <TextInput
+          label={t('signUp.lastNameLabel')}
+          type="text"
+          value={lastName}
+          onChange={setLastName}
+          autoComplete="family-name"
+        />
+      </Box>
+      <TextInput
+        label={t('signUp.emailLabel')}
+        type="email"
+        value={email}
+        onChange={setEmail}
+        required
+        autoComplete="email"
+      />
+      <TextInput
+        label={t('signUp.passwordLabel')}
+        type="password"
+        value={password}
+        onChange={setPassword}
+        required
+        autoComplete="new-password"
+      />
+      <TextInput
+        label={t('signUp.confirmPasswordLabel')}
+        type="password"
+        value={password2}
+        onChange={setPassword2}
+        required
+        autoComplete="new-password"
+      />
+      {error && <ErrorMessage message={error} />}
+      {loading && <ProgressBar label={t('signUp.submitting')} />}
+      <Button
+        text={loading ? t('signUp.submitting') : t('signUp.submitButton')}
+        type="submit"
+        size="md"
+        width="100%"
+        marginTop={4}
+        kind={
+          email && password && password2 && password === password2
+            ? 'success'
+            : undefined
+        }
+        disabled={!email || !password || !password2 || password !== password2}
+      />
+      <Box display="flex" flexDirection="column" gap={8} alignItems="center">
+        <LinkButton
+          onClick={() => switchTab('sign-in')}
+          label={t('signUp.haveAccount')}
+        />
+        <LinkButton
+          onClick={() => switchTab('reset-password')}
+          label={t('signUp.forgotPassword')}
+        />
+      </Box>
+    </form>
+  );
+}
+
+// ── Reset-password tab ────────────────────────────────────────────────────────
+
+function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
+  const t = useTranslations('AuthPage');
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      await requestPasswordReset(email);
+      setSuccess(t('resetPassword.successDetail'));
+    } catch {
+      setError(t('resetPassword.errorGeneric'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      {success ? (
+        <Box display="flex" flexDirection="column" gap={16}>
+          <Typography variant="body-sm">{success}</Typography>
+          <LinkButton
+            onClick={() => switchTab('sign-in')}
+            label={t('resetPassword.backToSignIn')}
+          />
+        </Box>
+      ) : (
+        <form onSubmit={handleSubmit} className="auth-form__form">
+          <TextInput
+            label={t('resetPassword.emailLabel')}
+            type="email"
+            value={email}
+            onChange={setEmail}
+            required
+            autoComplete="email"
+          />
+          {error && <ErrorMessage message={error} />}
+          {loading && <ProgressBar label={t('resetPassword.submitting')} />}
+          <Button
+            text={
+              loading
+                ? t('resetPassword.submitting')
+                : t('resetPassword.submitButton')
+            }
+            type="submit"
+            size="md"
+            width="100%"
+            marginTop={4}
+            kind={email ? 'success' : undefined}
+            disabled={!email}
+          />
+          <Box display="flex" justifyContent="center">
+            <LinkButton
+              onClick={() => switchTab('sign-in')}
+              label={t('resetPassword.backToSignIn')}
+            />
+          </Box>
+        </form>
+      )}
+    </>
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
+export function AuthForm() {
+  const t = useTranslations('AuthPage');
+  const [tab, setTab] = useState<Tab>('sign-in');
+
+  const tabHeadings: Record<Tab, { title: string; subtitle: string }> = {
+    'sign-in': { title: t('signIn.title'), subtitle: t('signIn.subtitle') },
+    'sign-up': { title: t('signUp.title'), subtitle: t('signUp.subtitle') },
+    'reset-password': {
+      title: t('resetPassword.title'),
+      subtitle: t('resetPassword.subtitle'),
+    },
+  };
+
+  useEffect(() => {
+    const readHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'sign-up' || hash === 'reset-password') {
+        setTab(hash);
+      } else {
+        setTab('sign-in');
+      }
+    };
+    readHash();
+    window.addEventListener('hashchange', readHash);
+    return () => window.removeEventListener('hashchange', readHash);
+  }, []);
+
+  const switchTab = (newTab: Tab) => {
+    window.location.hash = newTab;
+    setTab(newTab);
+  };
+
+  const tabLabels: Record<Tab, string> = {
+    'sign-in': t('tabSignIn'),
+    'sign-up': t('tabSignUp'),
+    'reset-password': t('tabReset'),
+  };
+
+  const { title, subtitle } = tabHeadings[tab];
+
+  return (
+    <Container
+      display="flex"
+      alignItems="center"
+      styles={{
+        minHeight: '100vh',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+      }}
+      paddingTop={16}
+      paddingX={10}
+    >
+      <Box width="100%" maxWidth={420} marginBottom={20}>
+        <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
+          {title}
+        </Typography>
+        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+          {subtitle}
+        </Typography>
+      </Box>
+      <Box
+        width="100%"
+        maxWidth={420}
+        padding={10}
+        borderRadius={12}
+        flexDirection="column"
+        gap={20}
+        elevation={5}
+        backgroundColor="var(--surface-1)"
+      >
+        <Box className="auth-form__tabs">
+          {(['sign-in', 'sign-up', 'reset-password'] as Tab[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => switchTab(id)}
+              data-active={String(tab === id)}
+              className="auth-form__tab-btn"
+            >
+              {tabLabels[id]}
+            </button>
+          ))}
+        </Box>
+
+        {tab === 'sign-in' && <SignInTab switchTab={switchTab} />}
+        {tab === 'sign-up' && <SignUpTab switchTab={switchTab} />}
+        {tab === 'reset-password' && <ResetPasswordTab switchTab={switchTab} />}
+      </Box>
+    </Container>
+  );
+}
+`;
+}
+
+function authPageTsx() {
+  return `import { setRequestLocale } from 'next-intl/server';
+import { AuthForm } from './auth-form';
+import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
+
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function AuthPage({ params }: Props) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  return (
+    <>
+      <NavbarSpacer />
+      <AuthForm />
+    </>
+  );
+}
+`;
+}
+
+function verifyEmailPageTsx() {
+  return `import { setRequestLocale } from 'next-intl/server';
+import { VerifyEmailClient } from './verify-email-client';
+
+type Props = {
+  params: Promise<{ locale: string; token: string }>;
+};
+
+export default async function VerifyEmailPage({ params }: Props) {
+  const { locale, token } = await params;
+  setRequestLocale(locale);
+
+  return <VerifyEmailClient token={token} />;
+}
+`;
+}
+
+function verifyEmailClientTsx() {
+  return `'use client';
+
+import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from '@repo/i18n/navigation';
+import { Container } from '@repo/ui/core-elements/container';
+import { Box } from '@repo/ui/core-elements/box';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Typography } from '@repo/ui/core-elements/typography';
+import { verifyEmail, ApiError } from '@/lib/auth';
+
+type Status = 'loading' | 'success' | 'expired' | 'invalid';
+
+const REDIRECT_SECONDS = 3;
+
+interface Props {
+  token: string;
+}
+
+export function VerifyEmailClient({ token }: Props) {
+  const t = useTranslations('VerifyEmailPage');
+  const router = useRouter();
+  const [status, setStatus] = useState<Status>('loading');
+  const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
+
+  useEffect(() => {
+    verifyEmail(token)
+      .then(() => setStatus('success'))
+      .catch((err) => {
+        if (err instanceof ApiError) {
+          const detail = String((err.data as Record<string, unknown>).detail ?? '');
+          if (detail.toLowerCase().includes('expired')) {
+            setStatus('expired');
+          } else {
+            setStatus('invalid');
+          }
+        } else {
+          setStatus('invalid');
+        }
+      });
+  }, [token]);
+
+  useEffect(() => {
+    if (status !== 'success') return;
+
+    if (countdown === 0) {
+      router.push('/');
+      return;
+    }
+
+    const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [status, countdown, router]);
+
+  return (
+    <Container
+      display="flex"
+      alignItems="center"
+      styles={{
+        minHeight: '100vh',
+        flexDirection: 'column',
+        justifyContent: 'center',
+      }}
+      paddingX={10}
+    >
+      <Box
+        width="100%"
+        maxWidth={420}
+        padding={10}
+        borderRadius={12}
+        flexDirection="column"
+        gap={20}
+        elevation={5}
+        backgroundColor="var(--surface-1)"
+      >
+        {status === 'loading' && (
+          <Box display="flex" flexDirection="column" gap={16}>
+            <ProgressBar label={t('loading')} />
+            <Typography
+              variant="body-sm"
+              color="var(--muted-foreground, #6b7280)"
+              textAlign="center"
+            >
+              {t('loading')}
+            </Typography>
+          </Box>
+        )}
+
+        {status === 'success' && (
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={12}
+            alignItems="center"
+            styles={{ textAlign: 'center' }}
+          >
+            <Typography variant="h5">{t('successTitle')}</Typography>
+            <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+              {t('successDetail')}
+            </Typography>
+            <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+              {t('redirecting', { seconds: countdown })}
+            </Typography>
+            <ProgressBar
+              value={((REDIRECT_SECONDS - countdown) / REDIRECT_SECONDS) * 100}
+              label={t('redirectProgress')}
+            />
+          </Box>
+        )}
+
+        {status === 'expired' && (
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={12}
+            alignItems="center"
+            styles={{ textAlign: 'center' }}
+          >
+            <Typography variant="h5" role="alert" color="var(--error, #ef4444)">
+              {t('expiredTitle')}
+            </Typography>
+            <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+              {t('expiredDetail')}
+            </Typography>
+          </Box>
+        )}
+
+        {status === 'invalid' && (
+          <Box
+            display="flex"
+            flexDirection="column"
+            gap={12}
+            alignItems="center"
+            styles={{ textAlign: 'center' }}
+          >
+            <Typography variant="h5" role="alert" color="var(--error, #ef4444)">
+              {t('invalidTitle')}
+            </Typography>
+            <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+              {t('invalidDetail')}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    </Container>
+  );
+}
+`;
+}
+
+// ── Auth API Route Handlers ───────────────────────────────────────────
+
+function apiAuthLoginRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const body: unknown = await request.json();
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/login/\`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data = (await res.json()) as Record<string, unknown>;
+  if (!res.ok) return NextResponse.json(data, { status: res.status });
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieStore = await cookies();
+  cookieStore.set('access_token', data.access as string, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 60,
+  });
+  cookieStore.set('refresh_token', data.refresh as string, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+
+  return NextResponse.json({ ok: true });
+}
+`;
+}
+
+function apiAuthLogoutRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+
+export async function POST() {
+  const cookieStore = await cookies();
+  cookieStore.delete('access_token');
+  cookieStore.delete('refresh_token');
+  return NextResponse.json({ ok: true });
+}
+`;
+}
+
+function apiAuthSignupRouteTs() {
+  return `import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const body: unknown = await request.json();
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/signup/\`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data: unknown = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+`;
+}
+
+function apiAuthProfileRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET() {
+  const token = (await cookies()).get('access_token')?.value;
+  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/profile/\`, {
+    headers: { Authorization: \`Bearer \${token}\` },
+  });
+  const data: unknown = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+
+export async function PUT(request: NextRequest) {
+  const token = (await cookies()).get('access_token')?.value;
+  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+
+  const body: unknown = await request.json();
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/profile/\`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: \`Bearer \${token}\`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data: unknown = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+`;
+}
+
+function apiAuthProfilePictureRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const token = (await cookies()).get('access_token')?.value;
+  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+
+  const body: unknown = await request.json();
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/profile/picture/\`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: \`Bearer \${token}\`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data: unknown = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+`;
+}
+
+function apiAuthChangePasswordRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const token = (await cookies()).get('access_token')?.value;
+  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+
+  const body: unknown = await request.json();
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/change-password/\`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: \`Bearer \${token}\`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (res.status === 204) return new NextResponse(null, { status: 204 });
+  const data: unknown = await res.json().catch(() => ({}));
+  return NextResponse.json(data, { status: res.status });
+}
+`;
+}
+
+function apiAuthPasswordResetRouteTs() {
+  return `import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const body: unknown = await request.json();
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/password-reset/\`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data: unknown = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+`;
+}
+
+function apiAuthVerifyEmailRouteTs() {
+  return `import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
+  const { token } = await params;
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/verify-email/\${token}/\`);
+  const data: Record<string, unknown> = await res.json().catch(() => ({}));
+  return NextResponse.json(data, { status: res.status });
+}
+`;
+}
+
+function apiPasskeyRegisterOptionsRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+
+export async function POST() {
+  const token = (await cookies()).get('access_token')?.value;
+  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/passkey/register/options/\`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: \`Bearer \${token}\`,
+    },
+  });
+
+  const data: unknown = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+`;
+}
+
+function apiPasskeyRegisterVerifyRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const token = (await cookies()).get('access_token')?.value;
+  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+
+  const body: unknown = await request.json();
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/passkey/register/verify/\`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: \`Bearer \${token}\`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data: unknown = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+`;
+}
+
+function apiPasskeyAuthOptionsRouteTs() {
+  return `import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const body: unknown = await request.json();
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/passkey/authenticate/options/\`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data: unknown = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+`;
+}
+
+function apiPasskeyAuthVerifyRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const body: unknown = await request.json();
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/passkey/authenticate/verify/\`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data = (await res.json()) as Record<string, unknown>;
+  if (!res.ok) return NextResponse.json(data, { status: res.status });
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieStore = await cookies();
+  cookieStore.set('access_token', data.access as string, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 60,
+  });
+  cookieStore.set('refresh_token', data.refresh as string, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+
+  return NextResponse.json({ ok: true });
+}
+`;
+}
+
+function apiPasskeyCredentialsRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  const token = (await cookies()).get('access_token')?.value;
+  if (!token) return NextResponse.json({ count: 0, credentials: [] });
+
+  const res = await fetch(\`\${process.env.API_URL}/api/auth/passkey/credentials/\`, {
+    headers: { Authorization: \`Bearer \${token}\` },
+  });
+
+  if (!res.ok) return NextResponse.json({ count: 0, credentials: [] });
+  const data: unknown = await res.json();
+  return NextResponse.json(data);
+}
+`;
+}
+
+function apiPasskeyCredentialByIdRouteTs() {
+  return `import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const token = (await cookies()).get('access_token')?.value;
+  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+  const res = await fetch(
+    \`\${process.env.API_URL}/api/auth/passkey/credentials/\${id}/\`,
+    { method: 'DELETE', headers: { Authorization: \`Bearer \${token}\` } },
+  );
+
+  return new NextResponse(null, { status: res.status });
+}
+`;
+}
+
 // ── Main ───────────────────────────────────────────────────────────────
 
 async function main() {
@@ -1430,6 +3314,10 @@ async function main() {
   const pwaInput = await prompt('  Include PWA (serwist)? [y/n]', 'y');
   const includePwa = pwaInput.toLowerCase().startsWith('y');
 
+  // Auth
+  const authInput = await prompt('  Include auth (navbar, footer, sign-in/up pages, API routes)? [y/n]', 'y');
+  const includeAuth = authInput.toLowerCase().startsWith('y');
+
   // Palette
   let palette = 'cyan';
   while (true) {
@@ -1458,7 +3346,7 @@ async function main() {
   // Static files (always created)
   writeFile(
     appPath('package.json'),
-    packageJson(name, port, includeI18n, includePwa),
+    packageJson(name, port, includeI18n, includePwa, includeAuth),
   );
   writeFile(appPath('next.config.js'), nextConfig(includeI18n, includePwa));
   writeFile(appPath('tsconfig.json'), tsConfig(includePwa));
@@ -1475,26 +3363,52 @@ async function main() {
     // i18n variant: files go under app/[locale]/
     writeFile(
       appPath('app/[locale]/layout.tsx'),
-      layoutTsx(name, palette, true, includePwa),
+      layoutTsx(name, palette, true, includePwa, includeAuth),
     );
     writeFile(appPath('app/[locale]/page.tsx'), pageTsx(name, true));
-    writeFile(appPath('proxy.ts'), proxyTs());
+    writeFile(appPath('proxy.ts'), proxyTs(includeAuth));
     writeFile(appPath('i18n/request.ts'), i18nRequestTs());
     writeFile(appPath('global.d.ts'), globalDts());
-    writeFile(appPath('messages/de.json'), messagesJson('de', name));
-    writeFile(appPath('messages/en.json'), messagesJson('en', name));
-    writeFile(appPath('messages/es.json'), messagesJson('es', name));
-    writeFile(appPath('messages/fr.json'), messagesJson('fr', name));
-    writeFile(appPath('messages/pt.json'), messagesJson('pt', name));
+    writeFile(appPath('messages/de.json'), messagesJson('de', name, includeAuth));
+    writeFile(appPath('messages/en.json'), messagesJson('en', name, includeAuth));
+    writeFile(appPath('messages/es.json'), messagesJson('es', name, includeAuth));
+    writeFile(appPath('messages/fr.json'), messagesJson('fr', name, includeAuth));
+    writeFile(appPath('messages/pt.json'), messagesJson('pt', name, includeAuth));
 
     if (includePwa) {
       writeFile(appPath('app/[locale]/~offline/page.tsx'), offlinePageTsx());
+    }
+
+    if (includeAuth) {
+      writeFile(appPath('lib/auth.ts'), libAuthTs());
+      writeFile(appPath('app/[locale]/navbar-wrapper.tsx'), navbarWrapperTsx());
+      writeFile(appPath('app/[locale]/footer.tsx'), footerTsx(name));
+      writeFile(appPath('app/[locale]/footer.css'), footerCss());
+      writeFile(appPath('app/[locale]/(auth)/auth/page.tsx'), authPageTsx());
+      writeFile(appPath('app/[locale]/(auth)/auth/auth-form.tsx'), authFormTsx());
+      writeFile(appPath('app/[locale]/(auth)/auth/auth-form.css'), authFormCss());
+      writeFile(appPath('app/[locale]/(auth)/verify-email/[token]/page.tsx'), verifyEmailPageTsx());
+      writeFile(appPath('app/[locale]/(auth)/verify-email/[token]/verify-email-client.tsx'), verifyEmailClientTsx());
+      writeFile(appPath('app/api/auth/login/route.ts'), apiAuthLoginRouteTs());
+      writeFile(appPath('app/api/auth/logout/route.ts'), apiAuthLogoutRouteTs());
+      writeFile(appPath('app/api/auth/signup/route.ts'), apiAuthSignupRouteTs());
+      writeFile(appPath('app/api/auth/profile/route.ts'), apiAuthProfileRouteTs());
+      writeFile(appPath('app/api/auth/profile/picture/route.ts'), apiAuthProfilePictureRouteTs());
+      writeFile(appPath('app/api/auth/change-password/route.ts'), apiAuthChangePasswordRouteTs());
+      writeFile(appPath('app/api/auth/password-reset/route.ts'), apiAuthPasswordResetRouteTs());
+      writeFile(appPath('app/api/auth/verify-email/[token]/route.ts'), apiAuthVerifyEmailRouteTs());
+      writeFile(appPath('app/api/auth/passkey/register/options/route.ts'), apiPasskeyRegisterOptionsRouteTs());
+      writeFile(appPath('app/api/auth/passkey/register/verify/route.ts'), apiPasskeyRegisterVerifyRouteTs());
+      writeFile(appPath('app/api/auth/passkey/authenticate/options/route.ts'), apiPasskeyAuthOptionsRouteTs());
+      writeFile(appPath('app/api/auth/passkey/authenticate/verify/route.ts'), apiPasskeyAuthVerifyRouteTs());
+      writeFile(appPath('app/api/auth/passkey/credentials/route.ts'), apiPasskeyCredentialsRouteTs());
+      writeFile(appPath('app/api/auth/passkey/credentials/[id]/route.ts'), apiPasskeyCredentialByIdRouteTs());
     }
   } else {
     // No i18n: files go directly under app/
     writeFile(
       appPath('app/layout.tsx'),
-      layoutTsx(name, palette, false, includePwa),
+      layoutTsx(name, palette, false, includePwa, includeAuth),
     );
     writeFile(appPath('app/page.tsx'), pageTsx(name, false));
 
@@ -1515,7 +3429,7 @@ async function main() {
 
   // Deployment files
   writeFile(appPath('Dockerfile'), dockerfile(name));
-  writeFile(appPath('env.example'), envExample(name, registryUser));
+  writeFile(appPath('env.example'), envExample(name, registryUser, includeAuth));
 
   // Helm chart
   writeFile(appPath('helm/Chart.yaml'), helmChartYaml(name));
@@ -1534,6 +3448,7 @@ async function main() {
   console.log(`    Port:     ${port}`);
   console.log(`    i18n:     ${includeI18n ? 'yes' : 'no'}`);
   console.log(`    PWA:      ${includePwa ? 'yes (serwist)' : 'no'}`);
+  console.log(`    Auth:     ${includeAuth ? 'yes (navbar, footer, auth pages, API routes)' : 'no'}`);
   console.log(`    Palette:  ${palette}`);
   console.log(`    Registry: ${registryUser}/${name}`);
   console.log('');

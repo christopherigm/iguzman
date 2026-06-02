@@ -6,6 +6,29 @@ export interface UserProfile {
   profile_picture: string | null;
 }
 
+const USER_PROFILE_KEY = 'ef_user';
+
+export function storeUser(profile: UserProfile): void {
+  const raw = (profile.first_name?.trim() || profile.email) ?? '';
+  const displayName = raw.substring(0, 10);
+  localStorage.setItem(USER_PROFILE_KEY, JSON.stringify({ displayName }));
+  window.dispatchEvent(new CustomEvent('ef-auth', { detail: { displayName } }));
+}
+
+export function clearUser(): void {
+  localStorage.removeItem(USER_PROFILE_KEY);
+  window.dispatchEvent(new CustomEvent('ef-auth', { detail: { displayName: null } }));
+}
+
+export function getStoredUser(): { displayName: string } | null {
+  try {
+    const raw = localStorage.getItem(USER_PROFILE_KEY);
+    return raw ? (JSON.parse(raw) as { displayName: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,

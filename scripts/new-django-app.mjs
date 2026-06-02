@@ -51,7 +51,7 @@ function packageJson(name) {
   return JSON.stringify(pkg, null, 2) + '\n';
 }
 
-function requirementsTxt(includeRedis, includeEmail) {
+function requirementsTxt(includeRedis, includeEmail, includePasskey) {
   const deps = [
     'Django==5.2.11',
     'djangorestframework==3.16.1',
@@ -64,6 +64,7 @@ function requirementsTxt(includeRedis, includeEmail) {
     'django-cors-headers==4.9.0',
   ];
   if (includeRedis) deps.push('django-redis==5.4.0');
+  if (includePasskey) deps.push('webauthn==2.7.1');
   return deps.join('\n') + '\n';
 }
 
@@ -104,7 +105,7 @@ exec "$@"
 `;
 }
 
-function settingsPy(moduleName, host, frontendUrl, includeRedis, includeEmail) {
+function settingsPy(moduleName, host, frontendUrl, includeRedis, includeEmail, includePasskey) {
   const cacheSection = includeRedis
     ? `
 _REDIS_URL = os.environ.get('REDIS_URL', '')
@@ -348,7 +349,11 @@ LOGGING = {
 }
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-${emailSection}`;
+${emailSection}${includePasskey ? `
+WEBAUTHN_RP_ID = os.environ.get('WEBAUTHN_RP_ID', 'localhost')
+WEBAUTHN_RP_NAME = os.environ.get('WEBAUTHN_RP_NAME', '${toTitleCase(moduleName)}')
+WEBAUTHN_RP_ORIGIN = os.environ.get('WEBAUTHN_RP_ORIGIN', 'http://localhost:3000')
+` : ''}`;
 }
 
 function urlsPy(moduleName) {
@@ -681,13 +686,13 @@ class UsersConfig(AppConfig):
 `;
 }
 
-function usersModelsPy(includeEmail) {
+function usersModelsPy(includeEmail, includePasskey) {
   const emailModels = includeEmail
     ? `
 
 class EmailVerificationToken(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='email_verification_token')
-    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_expired(self):
@@ -702,7 +707,7 @@ class EmailVerificationToken(models.Model):
 
 class PasswordResetToken(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='password_reset_token')
-    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_expired(self):
@@ -713,6 +718,22 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f'PasswordResetToken for {self.user.username}'`
+    : '';
+
+  const passkeyModel = includePasskey
+    ? `
+
+class PasskeyCredential(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='passkey_credentials')
+    credential_id = models.CharField(max_length=512, unique=True)
+    public_key = models.BinaryField()
+    sign_count = models.PositiveIntegerField(default=0)
+    transports = models.JSONField(default=list, blank=True)
+    name = models.CharField(max_length=64, default='My passkey')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Passkey '{self.name}' for {self.user.email}"`
     : '';
 
   const uuidImport = includeEmail
@@ -738,7 +759,7 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f'Profile of {self.user.username}'
-${emailModels}
+${emailModels}${passkeyModel}
 `;
 }
 
@@ -763,7 +784,7 @@ def save_user_profile(sender, instance, **kwargs):
 `;
 }
 
-function usersSerializersPy(includeEmail) {
+function usersSerializersPy(includeEmail, includePasskey) {
   const emailSerializers = includeEmail
     ? `
 
@@ -806,7 +827,30 @@ class ResendVerificationSerializer(serializers.Serializer):
         return value`
     : '';
 
+  const passkeySerializers = includePasskey
+    ? `
+
+
+# ── Passkey serializers ───────────────────────────────────────────────────────
+
+class PasskeyAuthenticationOptionsSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasskeyAuthenticationVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    credential = serializers.JSONField()
+    challenge_id = serializers.CharField()
+
+
+class PasskeyRegistrationVerifySerializer(serializers.Serializer):
+    credential = serializers.JSONField()
+    challenge_id = serializers.CharField()
+    name = serializers.CharField(max_length=64, default='My passkey', required=False)`
+    : '';
+
   return `from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -814,34 +858,70 @@ from core.serializers import ImageProcessingSerializer
 from .models import UserProfile
 
 
-class SignUpSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    password2 = serializers.CharField(write_only=True)
+def build_username(email: str) -> str:
+    """Derive a stable Django username from an email address."""
+    if len(email) <= 150:
+        return email
+    import hashlib
+    return email[:100] + hashlib.md5(email.encode()).hexdigest()[:50]
 
-    class Meta:
-        model = User
-        fields = ('username', 'email', 'password', 'password2', 'first_name', 'last_name')
 
-    def validate(self, data):
-        if data['password'] != data['password2']:
-            raise serializers.ValidationError({'password2': 'Passwords do not match.'})
-        return data
+class SignUpSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(required=False, allow_blank=True, default='')
+    last_name = serializers.CharField(required=False, allow_blank=True, default='')
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password2 = serializers.CharField(write_only=True, required=True, label='Confirm password')
+
+    def validate_email(self, value):
+        username = build_username(value)
+        if User.objects.filter(username=username).exists():
+            raise serializers.ValidationError('A user with this email already exists.')
+        return value
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({'password': 'Passwords do not match.'})
+        return attrs
 
     def create(self, validated_data):
         validated_data.pop('password2')
+        email = validated_data['email']
         password = validated_data.pop('password')
-        user = User(**validated_data)
+        username = build_username(email)
+        user = User(
+            username=username,
+            email=email,
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+        )
         user.set_password(password)
         user.is_active = False
         user.save()
+        UserProfile.objects.get_or_create(user=user)
         return user
 ${emailSerializers}
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop('username', None)
+        self.fields['email'] = serializers.EmailField(write_only=True)
+
+    def validate(self, attrs):
+        email = attrs.pop('email', '')
+        try:
+            user = User.objects.get(email=email, is_active=True)
+        except User.DoesNotExist:
+            raise serializers.ValidationError(
+                {'detail': 'No active account found with the given credentials.'}
+            )
+        attrs['username'] = user.username
+        return super().validate(attrs)
+
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        token['username'] = user.username
         token['email'] = user.email
         return token
 
@@ -849,13 +929,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name')
-
-    def validate_username(self, value):
-        user = self.instance
-        if User.objects.exclude(pk=user.pk).filter(username=value).exists():
-            raise serializers.ValidationError('Username already in use.')
-        return value
+        fields = ('email', 'first_name', 'last_name')
 
     def validate_email(self, value):
         user = self.instance
@@ -869,7 +943,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'profile_picture')
+        fields = ('id', 'email', 'first_name', 'last_name', 'profile_picture')
 
     def get_profile_picture(self, obj):
         try:
@@ -886,14 +960,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class ProfilePictureSerializer(ImageProcessingSerializer):
     def save(self, user):
-        profile = user.profile
+        profile, _ = UserProfile.objects.get_or_create(user=user)
         self.save_to_field(profile.profile_picture, f'profile_{user.id}.jpg')
         profile.save(update_fields=['profile_picture'])
         return profile
+${passkeySerializers}
 `;
 }
 
-function usersViewsPy(includeEmail) {
+function usersViewsPy(includeEmail, includePasskey) {
   const emailViews = includeEmail
     ? `
 
@@ -916,7 +991,7 @@ class VerifyEmailView(APIView):
             return Response({'detail': 'Token has expired.'}, status=status.HTTP_400_BAD_REQUEST)
 
         user.is_active = True
-        user.save()
+        user.save(update_fields=['is_active'])
         verification.delete()
         return Response({'detail': 'Email verified successfully.'})
 
@@ -926,18 +1001,21 @@ class ResendVerificationView(APIView):
 
     def post(self, request):
         serializer = ResendVerificationSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            try:
-                user = User.objects.get(email=email, is_active=False)
-                token, _ = EmailVerificationToken.objects.get_or_create(user=user)
-                if token.is_expired():
-                    token.delete()
-                    token = EmailVerificationToken.objects.create(user=user)
-                _send_verification_email(request, user, token)
-            except User.DoesNotExist:
-                pass
-        return Response({'detail': 'If the email exists and is unverified, a new link has been sent.'})
+        generic_response = Response(
+            {'detail': 'If the email exists and is unverified, a new link has been sent.'}
+        )
+        if not serializer.is_valid():
+            return generic_response
+
+        email = serializer.validated_data['email']
+        try:
+            user = User.objects.get(email=email, is_active=False)
+            EmailVerificationToken.objects.filter(user=user).delete()
+            token = EmailVerificationToken.objects.create(user=user)
+            _send_verification_email(user, token)
+        except User.DoesNotExist:
+            pass
+        return generic_response
 
 
 class PasswordResetRequestView(APIView):
@@ -945,14 +1023,17 @@ class PasswordResetRequestView(APIView):
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.get_user()
-            token, _ = PasswordResetToken.objects.get_or_create(user=user)
-            if token.is_expired():
-                token.delete()
-                token = PasswordResetToken.objects.create(user=user)
-            _send_password_reset_email(request, user, token)
-        return Response({'detail': 'If the account exists, a reset link has been sent.'})
+        generic_response = Response(
+            {'detail': 'If the account exists, a reset link has been sent.'}
+        )
+        if not serializer.is_valid():
+            return generic_response
+
+        user = serializer.get_user()
+        PasswordResetToken.objects.filter(user=user).delete()
+        token = PasswordResetToken.objects.create(user=user)
+        _send_password_reset_email(user, token)
+        return generic_response
 
 
 class PasswordResetConfirmView(APIView):
@@ -962,7 +1043,9 @@ class PasswordResetConfirmView(APIView):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            token_obj = PasswordResetToken.objects.get(token=serializer.validated_data['token'])
+            token_obj = PasswordResetToken.objects.select_related('user').get(
+                token=serializer.validated_data['token']
+            )
         except PasswordResetToken.DoesNotExist:
             return Response({'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -972,9 +1055,213 @@ class PasswordResetConfirmView(APIView):
 
         user = token_obj.user
         user.set_password(serializer.validated_data['new_password'])
-        user.save()
+        user.save(update_fields=['password'])
         token_obj.delete()
         return Response({'detail': 'Password reset successful.'})`
+    : '';
+
+  const passkeyViews = includePasskey
+    ? `
+
+
+# ── Passkey (WebAuthn) views ─────────────────────────────────────────────────
+
+
+class PasskeyRegistrationOptionsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        rp_id, rp_origin = _get_rp_id_and_origin()
+
+        existing_credentials = [
+            PublicKeyCredentialDescriptor(id=base64url_to_bytes(c.credential_id))
+            for c in PasskeyCredential.objects.filter(user=request.user)
+        ]
+
+        options = generate_registration_options(
+            rp_id=rp_id,
+            rp_name=settings.WEBAUTHN_RP_NAME,
+            user_name=request.user.email,
+            user_id=str(request.user.id).encode(),
+            user_display_name=request.user.get_full_name() or request.user.email,
+            authenticator_selection=AuthenticatorSelectionCriteria(
+                resident_key=ResidentKeyRequirement.REQUIRED,
+                user_verification=UserVerificationRequirement.PREFERRED,
+            ),
+            exclude_credentials=existing_credentials,
+        )
+
+        challenge_id = uuid.uuid4().hex
+        cache.set(f'webauthn:reg:{challenge_id}', options.challenge, WEBAUTHN_CHALLENGE_TTL)
+
+        return Response({
+            'options': json.loads(options_to_json(options)),
+            'challenge_id': challenge_id,
+        })
+
+
+class PasskeyRegistrationVerifyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = PasskeyRegistrationVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        challenge_id = serializer.validated_data['challenge_id']
+        challenge = cache.get(f'webauthn:reg:{challenge_id}')
+        if challenge is None:
+            return Response(
+                {'detail': 'Challenge expired or invalid.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        cache.delete(f'webauthn:reg:{challenge_id}')
+
+        rp_id, rp_origin = _get_rp_id_and_origin()
+
+        try:
+            verification = verify_registration_response(
+                credential=serializer.validated_data['credential'],
+                expected_challenge=challenge,
+                expected_rp_id=rp_id,
+                expected_origin=rp_origin,
+            )
+        except Exception as e:
+            return Response(
+                {'detail': f'Registration verification failed: {e}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        credential = PasskeyCredential.objects.create(
+            user=request.user,
+            credential_id=bytes_to_base64url(verification.credential_id),
+            public_key=verification.credential_public_key,
+            sign_count=verification.sign_count,
+            name=serializer.validated_data.get('name', 'My passkey'),
+        )
+
+        return Response(
+            {'id': credential.id, 'name': credential.name},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class PasskeyAuthenticationOptionsView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasskeyAuthenticationOptionsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+        rp_id, rp_origin = _get_rp_id_and_origin()
+
+        allow_credentials = []
+        try:
+            from .serializers import build_username
+            user = User.objects.get(username=build_username(email), is_active=True)
+            allow_credentials = [
+                PublicKeyCredentialDescriptor(id=base64url_to_bytes(c.credential_id))
+                for c in PasskeyCredential.objects.filter(user=user)
+            ]
+        except User.DoesNotExist:
+            pass
+
+        options = generate_authentication_options(
+            rp_id=rp_id,
+            allow_credentials=allow_credentials,
+            user_verification=UserVerificationRequirement.PREFERRED,
+        )
+
+        challenge_id = uuid.uuid4().hex
+        cache.set(f'webauthn:auth:{challenge_id}', options.challenge, WEBAUTHN_CHALLENGE_TTL)
+
+        return Response({
+            'options': json.loads(options_to_json(options)),
+            'challenge_id': challenge_id,
+        })
+
+
+class PasskeyAuthenticationVerifyView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasskeyAuthenticationVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+        challenge_id = serializer.validated_data['challenge_id']
+
+        challenge = cache.get(f'webauthn:auth:{challenge_id}')
+        if challenge is None:
+            return Response(
+                {'detail': 'Challenge expired or invalid.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        cache.delete(f'webauthn:auth:{challenge_id}')
+
+        rp_id, rp_origin = _get_rp_id_and_origin()
+
+        from .serializers import build_username
+        try:
+            user = User.objects.get(username=build_username(email), is_active=True)
+        except User.DoesNotExist:
+            return Response({'detail': 'Authentication failed.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        credential_data = serializer.validated_data['credential']
+        credential_id_b64 = credential_data.get('id', '')
+
+        try:
+            stored = PasskeyCredential.objects.get(credential_id=credential_id_b64, user=user)
+        except PasskeyCredential.DoesNotExist:
+            return Response({'detail': 'Authentication failed.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            verification = verify_authentication_response(
+                credential=credential_data,
+                expected_challenge=challenge,
+                expected_rp_id=rp_id,
+                expected_origin=rp_origin,
+                credential_public_key=bytes(stored.public_key),
+                credential_current_sign_count=stored.sign_count,
+            )
+        except Exception:
+            return Response({'detail': 'Authentication failed.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        stored.sign_count = verification.new_sign_count
+        stored.save(update_fields=['sign_count'])
+
+        token = CustomTokenObtainPairSerializer.get_token(user)
+        return Response({
+            'access': str(token.access_token),
+            'refresh': str(token),
+        })
+
+
+class PasskeyCredentialListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        creds = PasskeyCredential.objects.filter(user=request.user).order_by('-created_at')
+        return Response({
+            'count': creds.count(),
+            'credentials': [
+                {'id': c.id, 'name': c.name, 'created_at': c.created_at}
+                for c in creds
+            ],
+        })
+
+
+class PasskeyCredentialDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        try:
+            cred = PasskeyCredential.objects.get(pk=pk, user=request.user)
+        except PasskeyCredential.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        cred.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)`
     : '';
 
   const emailImports = includeEmail
@@ -990,23 +1277,46 @@ from .serializers import (
 )`
     : '';
 
-  const signUpBody = includeEmail
-    ? `    def perform_create(self, serializer):
-        user = serializer.save()
-        token = EmailVerificationToken.objects.create(user=user)
-        email_sent = _send_verification_email(self.request, user, token)
-        self._email_sent = email_sent
+  const passkeyImports = includePasskey
+    ? `import json
+import uuid
 
-    def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        response.data['email_sent'] = getattr(self, '_email_sent', False)
-        return response`
-    : `    pass`;
+from django.core.cache import cache
+from webauthn import (
+    generate_authentication_options,
+    generate_registration_options,
+    options_to_json,
+    verify_authentication_response,
+    verify_registration_response,
+)
+from webauthn.helpers import base64url_to_bytes, bytes_to_base64url
+from webauthn.helpers.structs import (
+    AuthenticatorSelectionCriteria,
+    PublicKeyCredentialDescriptor,
+    ResidentKeyRequirement,
+    UserVerificationRequirement,
+)
+
+from .models import PasskeyCredential
+from .serializers import (
+    CustomTokenObtainPairSerializer,
+    PasskeyAuthenticationOptionsSerializer,
+    PasskeyAuthenticationVerifySerializer,
+    PasskeyRegistrationVerifySerializer,
+)
+
+WEBAUTHN_CHALLENGE_TTL = 300  # 5 minutes
+
+
+def _get_rp_id_and_origin():
+    return settings.WEBAUTHN_RP_ID, settings.WEBAUTHN_RP_ORIGIN
+`
+    : '';
 
   const emailHelpers = includeEmail
     ? `
 
-def _send_verification_email(request, user, token):
+def _send_verification_email(user, token):
     try:
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         verification_url = f'{frontend_url}/verify-email/{token.token}'
@@ -1022,7 +1332,7 @@ def _send_verification_email(request, user, token):
         return False
 
 
-def _send_password_reset_email(request, user, token):
+def _send_password_reset_email(user, token):
     try:
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         reset_url = f'{frontend_url}/reset-password/{token.token}'
@@ -1038,13 +1348,16 @@ def _send_password_reset_email(request, user, token):
         return False`
     : '';
 
+  const passkeySettingsImport = includePasskey ? `from django.conf import settings\n` : '';
+
   return `from django.contrib.auth.models import User
-from rest_framework import generics, status
+from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-${emailImports}
+${passkeySettingsImport}${emailImports}
+${passkeyImports}
 from .serializers import (
     CustomTokenObtainPairSerializer,
     ProfilePictureSerializer,
@@ -1054,12 +1367,26 @@ from .serializers import (
 )
 ${emailHelpers}
 
-class SignUpView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = SignUpSerializer
+class SignUpView(APIView):
     permission_classes = [AllowAny]
 
-${signUpBody}
+    def post(self, request):
+        serializer = SignUpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()${includeEmail ? `
+        token = EmailVerificationToken.objects.create(user=user)
+        email_sent = _send_verification_email(user, token)` : ''}
+        return Response(
+            {
+                'id': user.id,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,${includeEmail ? `
+                'email_sent': email_sent,` : ''}
+                'detail': '${includeEmail ? 'Account created. Please verify your email to activate your account.' : 'Account created successfully.'}',
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class LoginView(TokenObtainPairView):
@@ -1098,16 +1425,26 @@ class ProfilePictureView(APIView):
         if profile.profile_picture:
             picture_url = request.build_absolute_uri(profile.profile_picture.url)
         return Response({'profile_picture': picture_url})
-${emailViews}
+${emailViews}${passkeyViews}
 `;
 }
 
-function usersUrlsPy(includeEmail) {
+function usersUrlsPy(includeEmail, includePasskey) {
   const emailPaths = includeEmail
     ? `    path('verify-email/<uuid:token>/', VerifyEmailView.as_view(), name='auth-verify-email'),
     path('resend-verification/', ResendVerificationView.as_view(), name='auth-resend-verification'),
     path('password-reset/', PasswordResetRequestView.as_view(), name='auth-password-reset'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='auth-password-reset-confirm'),`
+    : '';
+
+  const passkeyPaths = includePasskey
+    ? `    # Passkey
+    path('passkey/register/options/', PasskeyRegistrationOptionsView.as_view(), name='passkey-register-options'),
+    path('passkey/register/verify/', PasskeyRegistrationVerifyView.as_view(), name='passkey-register-verify'),
+    path('passkey/authenticate/options/', PasskeyAuthenticationOptionsView.as_view(), name='passkey-auth-options'),
+    path('passkey/authenticate/verify/', PasskeyAuthenticationVerifyView.as_view(), name='passkey-auth-verify'),
+    path('passkey/credentials/', PasskeyCredentialListView.as_view(), name='passkey-credentials'),
+    path('passkey/credentials/<int:pk>/', PasskeyCredentialDetailView.as_view(), name='passkey-credential-detail'),`
     : '';
 
   const emailImports = includeEmail
@@ -1118,6 +1455,16 @@ function usersUrlsPy(includeEmail) {
     PasswordResetConfirmView,`
     : '';
 
+  const passkeyImports = includePasskey
+    ? `
+    PasskeyRegistrationOptionsView,
+    PasskeyRegistrationVerifyView,
+    PasskeyAuthenticationOptionsView,
+    PasskeyAuthenticationVerifyView,
+    PasskeyCredentialListView,
+    PasskeyCredentialDetailView,`
+    : '';
+
   return `from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
@@ -1125,7 +1472,7 @@ from .views import (
     SignUpView,
     LoginView,
     ProfileView,
-    ProfilePictureView,${emailImports}
+    ProfilePictureView,${emailImports}${passkeyImports}
 )
 
 urlpatterns = [
@@ -1136,6 +1483,7 @@ urlpatterns = [
     path('profile/', ProfileView.as_view(), name='auth-profile'),
     path('profile/picture/', ProfilePictureView.as_view(), name='auth-profile-picture'),
 ${emailPaths}
+${passkeyPaths}
 ]
 `;
 }
@@ -1245,6 +1593,56 @@ class Migration(migrations.Migration):
 `;
 }
 
+function migration0004Passkey() {
+  return `# Generated migration
+
+import django.db.models.deletion
+import users.models
+import uuid
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('users', '0003_passwordresettoken'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='emailverificationtoken',
+            name='token',
+            field=models.UUIDField(default=uuid.uuid4, editable=False, unique=True),
+        ),
+        migrations.AlterField(
+            model_name='passwordresettoken',
+            name='token',
+            field=models.UUIDField(default=uuid.uuid4, editable=False, unique=True),
+        ),
+        migrations.AlterField(
+            model_name='userprofile',
+            name='profile_picture',
+            field=models.ImageField(blank=True, null=True, upload_to=users.models.profile_picture_upload_path),
+        ),
+        migrations.CreateModel(
+            name='PasskeyCredential',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('credential_id', models.CharField(max_length=512, unique=True)),
+                ('public_key', models.BinaryField()),
+                ('sign_count', models.PositiveIntegerField(default=0)),
+                ('transports', models.JSONField(blank=True, default=list)),
+                ('name', models.CharField(default='My passkey', max_length=64)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='passkey_credentials', to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
+    ]
+`;
+}
+
 // ── Email Templates ────────────────────────────────────────────────────
 
 function verificationEmailTxt() {
@@ -1289,12 +1687,25 @@ from .models import BasePicture
 `;
 }
 
-function usersAdminPy() {
+function usersAdminPy(includePasskey) {
+  const passkeyAdmin = includePasskey
+    ? `
+
+@admin.register(PasskeyCredential)
+class PasskeyCredentialAdmin(admin.ModelAdmin):
+    list_display = ('user', 'name', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__email', 'name')
+    readonly_fields = ('credential_id', 'sign_count', 'created_at')`
+    : '';
+
+  const passkeyImport = includePasskey ? ', PasskeyCredential' : '';
+
   return `from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 
-from .models import UserProfile
+from .models import UserProfile${passkeyImport}
 
 
 class UserProfileInline(admin.StackedInline):
@@ -1305,7 +1716,7 @@ class UserProfileInline(admin.StackedInline):
 
 class UserAdmin(BaseUserAdmin):
     inlines = (UserProfileInline,)
-
+${passkeyAdmin}
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
@@ -1400,6 +1811,7 @@ function envExample(
   registryUser,
   includeRedis,
   includeEmail,
+  includePasskey,
 ) {
   const redisVars = includeRedis
     ? `REDIS_URL=redis://redis.${name}.svc.cluster.local:6379/0
@@ -1413,6 +1825,15 @@ EMAIL_HOST_PASSWORD=
 EMAIL_HOST=smtp.ionos.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
+`
+    : '';
+
+  const passkeyVars = includePasskey
+    ? `
+# WebAuthn / Passkeys
+WEBAUTHN_RP_ID=localhost
+WEBAUTHN_RP_NAME=${toTitleCase(name)}
+WEBAUTHN_RP_ORIGIN=http://localhost:3000
 `
     : '';
 
@@ -1441,7 +1862,7 @@ DB_PASSWORD=
 # Media
 MEDIA_ROOT=/app/media
 
-${redisVars}${emailVars}`;
+${redisVars}${emailVars}${passkeyVars}`;
 }
 
 // ── Helm Templates ─────────────────────────────────────────────────────
@@ -1986,6 +2407,13 @@ async function main() {
   );
   const includeEmail = emailInput.toLowerCase().startsWith('y');
 
+  // Passkey (requires email + redis for challenge cache)
+  let includePasskey = false;
+  if (includeEmail && includeRedis) {
+    const passkeyInput = await prompt('  Include passkeys (WebAuthn)? [y/n]', 'y');
+    includePasskey = passkeyInput.toLowerCase().startsWith('y');
+  }
+
   // Docker registry user
   const registryUser = await prompt('  Docker registry user', 'docker');
 
@@ -2001,7 +2429,7 @@ async function main() {
   writeFile(appPath('package.json'), packageJson(name));
   writeFile(
     appPath('requirements.txt'),
-    requirementsTxt(includeRedis, includeEmail),
+    requirementsTxt(includeRedis, includeEmail, includePasskey),
   );
   writeFile(appPath('manage.py'), managePy(moduleName));
   writeFile(appPath('entrypoint.sh'), entrypointSh());
@@ -2017,6 +2445,7 @@ async function main() {
       registryUser,
       includeRedis,
       includeEmail,
+      includePasskey,
     ),
   );
   writeFile(
@@ -2029,6 +2458,7 @@ async function main() {
       registryUser,
       includeRedis,
       includeEmail,
+      includePasskey,
     ),
   );
 
@@ -2036,7 +2466,7 @@ async function main() {
   writeFile(appPath(`${moduleName}/__init__.py`), initPy());
   writeFile(
     appPath(`${moduleName}/settings.py`),
-    settingsPy(moduleName, host, frontendUrl, includeRedis, includeEmail),
+    settingsPy(moduleName, host, frontendUrl, includeRedis, includeEmail, includePasskey),
   );
   writeFile(appPath(`${moduleName}/urls.py`), urlsPy(moduleName));
   writeFile(appPath(`${moduleName}/wsgi.py`), wsgiPy(moduleName));
@@ -2054,12 +2484,12 @@ async function main() {
   // Users app
   writeFile(appPath('users/__init__.py'), initPy());
   writeFile(appPath('users/apps.py'), usersAppsPy());
-  writeFile(appPath('users/admin.py'), usersAdminPy());
-  writeFile(appPath('users/models.py'), usersModelsPy(includeEmail));
+  writeFile(appPath('users/admin.py'), usersAdminPy(includePasskey));
+  writeFile(appPath('users/models.py'), usersModelsPy(includeEmail, includePasskey));
   writeFile(appPath('users/signals.py'), usersSignalsPy());
-  writeFile(appPath('users/serializers.py'), usersSerializersPy(includeEmail));
-  writeFile(appPath('users/views.py'), usersViewsPy(includeEmail));
-  writeFile(appPath('users/urls.py'), usersUrlsPy(includeEmail));
+  writeFile(appPath('users/serializers.py'), usersSerializersPy(includeEmail, includePasskey));
+  writeFile(appPath('users/views.py'), usersViewsPy(includeEmail, includePasskey));
+  writeFile(appPath('users/urls.py'), usersUrlsPy(includeEmail, includePasskey));
   writeFile(appPath('users/migrations/__init__.py'), initPy());
   writeFile(appPath('users/migrations/0001_initial.py'), migration0001());
 
@@ -2079,6 +2509,13 @@ async function main() {
     writeFile(
       appPath('users/templates/users/password_reset_email.txt'),
       passwordResetEmailTxt(),
+    );
+  }
+
+  if (includePasskey) {
+    writeFile(
+      appPath('users/migrations/0004_passkeycredential.py'),
+      migration0004Passkey(),
     );
   }
 
@@ -2119,6 +2556,7 @@ async function main() {
   console.log(`    Frontend: ${frontendUrl}`);
   console.log(`    Redis:    ${includeRedis ? 'yes' : 'no'}`);
   console.log(`    Email:    ${includeEmail ? 'yes' : 'no'}`);
+  console.log(`    Passkeys: ${includePasskey ? 'yes (WebAuthn)' : 'no'}`);
   console.log(`    Registry: ${registryUser}/${name}`);
   console.log('');
   console.log('  Next steps:');

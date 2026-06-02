@@ -19,7 +19,8 @@
   },
   "Navbar": {
     "home": "Accueil",
-    "account": "Mon Compte"
+    "account": "Mon Compte",
+    "signOut": "Se déconnecter"
   },
   "AccountPage": {
     "title": "Mon Compte",
@@ -54,6 +55,16 @@
     "passkeyAdded": "Clé d'accès ajoutée.",
     "passkeyAddError": "Impossible d'ajouter la clé d'accès. Veuillez réessayer.",
     "loading": "Chargement…"
+  },
+  "Footer": {
+    "appHeading": "Application",
+    "legalHeading": "Légal",
+    "home": "Accueil",
+    "account": "Mon Compte",
+    "privacyPolicy": "Politique de Confidentialité",
+    "terms": "Conditions d'Utilisation",
+    "userData": "Données Utilisateur",
+    "copyright": "© {year} Edge Folio. Tous droits réservés."
   },
   "AuthPage": {
     "tabSignIn": "Se connecter",

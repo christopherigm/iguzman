@@ -19,7 +19,8 @@
   },
   "Navbar": {
     "home": "Home",
-    "account": "Account"
+    "account": "Account",
+    "signOut": "Sign out"
   },
   "AccountPage": {
     "title": "My Account",
@@ -54,6 +55,16 @@
     "passkeyAdded": "Passkey added.",
     "passkeyAddError": "Failed to add passkey. Please try again.",
     "loading": "Loading…"
+  },
+  "Footer": {
+    "appHeading": "App",
+    "legalHeading": "Legal",
+    "home": "Home",
+    "account": "Account",
+    "privacyPolicy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "userData": "User Data",
+    "copyright": "© {year} Edge Folio. All rights reserved."
   },
   "AuthPage": {
     "tabSignIn": "Sign In",
