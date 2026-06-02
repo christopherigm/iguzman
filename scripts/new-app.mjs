@@ -20,6 +20,20 @@ const VALID_PALETTES = [
   'fuchsia',
 ];
 
+// Light-mode accent color for each palette (mirrors packages/ui/src/palettes.ts)
+const PALETTE_ACCENT = {
+  cyan:    '#06b6d4',
+  ocean:   '#2563eb',
+  rose:    '#e11d48',
+  emerald: '#059669',
+  amber:   '#d97706',
+  violet:  '#7c3aed',
+  slate:   '#475569',
+  coral:   '#ea580c',
+  teal:    '#0d9488',
+  fuchsia: '#c026d3',
+};
+
 // ── Helpers ────────────────────────────────────────────────────────────
 
 function validateAppName(name) {
@@ -66,6 +80,7 @@ function packageJson(name, port, includeI18n, includePwa) {
       '@repo/ui': 'workspace:*',
       react: '^19.2.4',
       'react-dom': '^19.2.4',
+      swiper: '^12.1.3',
     },
     devDependencies: {
       '@repo/eslint-config': 'workspace:*',
@@ -73,12 +88,12 @@ function packageJson(name, port, includeI18n, includePwa) {
       '@types/node': '^25.5.2',
       '@types/react': '19.2.14',
       '@types/react-dom': '19.2.3',
-      eslint: '^9.39.2',
-      typescript: '5.9.3',
+      eslint: '^10.2.0',
+      typescript: '6.0.2',
     },
   };
 
-  pkg.dependencies['pino'] = '^9';
+  pkg.dependencies['pino'] = '^10.3.1';
 
   if (includeI18n) {
     pkg.dependencies['@repo/i18n'] = 'workspace:^';
@@ -86,37 +101,18 @@ function packageJson(name, port, includeI18n, includePwa) {
   }
 
   if (includePwa) {
-    pkg.dependencies['@ducanh2912/next-pwa'] = '^10.2.9';
+    pkg.dependencies['@serwist/next'] = '^9.5.11';
+    pkg.devDependencies['serwist'] = '^9.5.11';
   }
 
   return JSON.stringify(pkg, null, 2) + '\n';
 }
 
 function nextConfig(includeI18n, includePwa) {
-  if (includeI18n && includePwa) {
-    return `import createNextIntlPlugin from 'next-intl/plugin';
-import withPWAInit from '@ducanh2912/next-pwa';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const withPWA = withPWAInit({
-  dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
-  register: true,
-  skipWaiting: true,
-  cacheOnFrontendNav: true,
-  fallbacks: {
-    document: '/~offline',
-  },
-});
-
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  output: 'standalone',
+  const baseConfig = `  output: 'standalone',
   outputFileTracingRoot: process.env.NODE_ENV === 'production' ? path.join(__dirname, '../../') : undefined,
   allowedDevOrigins: ['127.0.0.1', '*'],
+  logging: { incomingRequests: false },
   images: {
     dangerouslyAllowLocalIP: true,
     qualities: [75, 80, 85, 90],
@@ -125,13 +121,43 @@ const nextConfig = {
         protocol: 'http',
         hostname: '127.0.0.1',
       },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
     ],
-  },
+  },`;
+
+  if (includeI18n && includePwa) {
+    return `import createNextIntlPlugin from 'next-intl/plugin';
+import withSerwistInit from '@serwist/next';
+import { spawnSync } from 'node:child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const revision =
+  spawnSync('git', ['rev-parse', 'HEAD'], {
+    encoding: 'utf-8',
+  }).stdout?.trim() ?? crypto.randomUUID();
+
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
+  cacheOnNavigation: true,
+  additionalPrecacheEntries: [{ url: '/~offline', revision }],
+});
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+${baseConfig}
 };
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
-export default withPWA(withNextIntl(nextConfig));
+export default withSerwist(withNextIntl(nextConfig));
 `;
   }
 
@@ -144,19 +170,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  outputFileTracingRoot: process.env.NODE_ENV === 'production' ? path.join(__dirname, '../../') : undefined,
-  allowedDevOrigins: ['127.0.0.1', '*'],
-  images: {
-    dangerouslyAllowLocalIP: true,
-    qualities: [75, 80, 85, 90],
-    remotePatterns: [
-      {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-      },
-    ],
-  },
+${baseConfig}
 };
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
@@ -166,41 +180,32 @@ export default withNextIntl(nextConfig);
   }
 
   if (includePwa) {
-    return `import withPWAInit from '@ducanh2912/next-pwa';
+    return `import withSerwistInit from '@serwist/next';
+import { spawnSync } from 'node:child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const withPWA = withPWAInit({
-  dest: 'public',
+const revision =
+  spawnSync('git', ['rev-parse', 'HEAD'], {
+    encoding: 'utf-8',
+  }).stdout?.trim() ?? crypto.randomUUID();
+
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
-  register: true,
-  skipWaiting: true,
-  cacheOnFrontendNav: true,
-  fallbacks: {
-    document: '/~offline',
-  },
+  cacheOnNavigation: true,
+  additionalPrecacheEntries: [{ url: '/~offline', revision }],
 });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  outputFileTracingRoot: process.env.NODE_ENV === 'production' ? path.join(__dirname, '../../') : undefined,
-  allowedDevOrigins: ['127.0.0.1', '*'],
-  images: {
-    dangerouslyAllowLocalIP: true,
-    qualities: [75, 80, 85, 90],
-    remotePatterns: [
-      {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-      },
-    ],
-  },
+${baseConfig}
 };
 
-export default withPWA(nextConfig);
+export default withSerwist(nextConfig);
 `;
   }
 
@@ -211,50 +216,40 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  outputFileTracingRoot: process.env.NODE_ENV === 'production' ? path.join(__dirname, '../../') : undefined,
-  allowedDevOrigins: ['127.0.0.1', '*'],
-  images: {
-    dangerouslyAllowLocalIP: true,
-    qualities: [75, 80, 85, 90],
-    remotePatterns: [
-      {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-      },
-    ],
-  },
+${baseConfig}
 };
 
 export default nextConfig;
 `;
 }
 
-function tsConfig() {
-  return (
-    JSON.stringify(
-      {
-        extends: '@repo/typescript-config/nextjs.json',
-        compilerOptions: {
-          plugins: [{ name: 'next' }],
-          allowArbitraryExtensions: true,
-          paths: {
-            '@/*': ['./*'],
-          },
-        },
-        include: [
-          '**/*.ts',
-          '**/*.tsx',
-          'next-env.d.ts',
-          'next.config.js',
-          '.next/types/**/*.ts',
-        ],
-        exclude: ['node_modules'],
+function tsConfig(includePwa) {
+  const config = {
+    extends: '@repo/typescript-config/nextjs.json',
+    compilerOptions: {
+      plugins: [{ name: 'next' }],
+      allowArbitraryExtensions: true,
+      paths: {
+        '@/*': ['./*'],
       },
-      null,
-      2,
-    ) + '\n'
-  );
+    },
+    include: [
+      '**/*.ts',
+      '**/*.tsx',
+      'next-env.d.ts',
+      'next.config.js',
+      '.next/types/**/*.ts',
+    ],
+    exclude: ['node_modules'],
+  };
+
+  if (includePwa) {
+    config.compilerOptions.lib = ['es2022', 'DOM', 'DOM.Iterable', 'webworker'];
+    config.compilerOptions.types = ['@serwist/next/typings'];
+    config.exclude = ['node_modules', 'public/sw.js'];
+  }
+
+  return JSON.stringify(config, null, 2) + '\n';
 }
 
 function eslintConfig() {
@@ -305,8 +300,8 @@ next-env.d.ts
   if (includePwa) {
     content += `
 # PWA generated files
-public/sw.js
-public/sw.js.map
+public/sw*
+public/swe-worker*
 `;
   }
 
@@ -328,6 +323,7 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
+  touch-action: pan-x pan-y;
 }
 
 * {
@@ -343,8 +339,24 @@ a {
 `;
 }
 
+const IOS_SPLASH_LINKS = `
+        {/* iOS PWA splash screens */}
+        <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-640x1136.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-750x1334.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-828x1792.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/icons/splash/splash-1125x2436.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/icons/splash/splash-1242x2208.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/icons/splash/splash-1170x2532.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/icons/splash/splash-1179x2556.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/icons/splash/splash-1284x2778.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/icons/splash/splash-1290x2796.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-1536x2048.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-1668x2388.jpg" />
+        <link rel="apple-touch-startup-image" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-2048x2732.jpg" />`;
+
 function layoutTsx(name, palette, includeI18n, includePwa) {
   const title = toTitleCase(name);
+  const accent = PALETTE_ACCENT[palette] ?? '#06b6d4';
 
   if (includeI18n) {
     const metaImport = includePwa
@@ -354,14 +366,17 @@ function layoutTsx(name, palette, includeI18n, includePwa) {
     const viewportExport = includePwa
       ? `
 export const viewport: Viewport = {
-  themeColor: '#68c3f7',
+  themeColor: '${accent}',
+  userScalable: false,
+  initialScale: 1,
+  maximumScale: 1,
 };
 `
       : '';
 
     const extendedMeta = includePwa
       ? `
-    manifest: '/manifest.json',
+    manifest: '/manifest.webmanifest',
     icons: {
       icon: '/favicon.ico',
       apple: '/icons/icon-192x192.png',
@@ -375,6 +390,8 @@ export const viewport: Viewport = {
       telephone: false,
     },`
       : '';
+
+    const splashLinks = includePwa ? IOS_SPLASH_LINKS : '';
 
     return `${metaImport}
 import { cookies } from 'next/headers';
@@ -445,14 +462,14 @@ export default async function LocaleLayout({ children, params }: Props) {
       suppressHydrationWarning
     >
       <head>
-        <ThemeScript />
+        <ThemeScript />${splashLinks}
       </head>
       <NextIntlClientProvider messages={messages}>
         <ThemeProvider
           initialMode={initialMode}
           initialResolved={initialResolved}
         >
-          <PaletteProvider palette="${palette}">
+          <PaletteProvider palette="${palette}" accent="${accent}">
             <Navbar
               logo="/logo.png"
               items={[{ label: 'Home', href: '/' }]}
@@ -476,14 +493,17 @@ export default async function LocaleLayout({ children, params }: Props) {
   const viewportExport = includePwa
     ? `
 export const viewport: Viewport = {
-  themeColor: '#68c3f7',
+  themeColor: '${accent}',
+  userScalable: false,
+  initialScale: 1,
+  maximumScale: 1,
 };
 `
     : '';
 
   const extendedMeta = includePwa
     ? `
-  manifest: '/manifest.json',
+  manifest: '/manifest.webmanifest',
   icons: {
     icon: '/favicon.ico',
     apple: '/icons/icon-192x192.png',
@@ -497,6 +517,8 @@ export const viewport: Viewport = {
     telephone: false,
   },`
     : '';
+
+  const splashLinks = includePwa ? IOS_SPLASH_LINKS : '';
 
   return `${metaImport}
 import { cookies } from 'next/headers';
@@ -533,13 +555,13 @@ export default async function RootLayout({ children }: Props) {
       suppressHydrationWarning
     >
       <head>
-        <ThemeScript />
+        <ThemeScript />${splashLinks}
       </head>
       <ThemeProvider
         initialMode={initialMode}
         initialResolved={initialResolved}
       >
-        <PaletteProvider palette="${palette}">
+        <PaletteProvider palette="${palette}" accent="${accent}">
           <Navbar
             logo="/logo.png"
             items={[{ label: 'Home', href: '/' }]}
@@ -780,53 +802,106 @@ function offlinePageTsx() {
 `;
 }
 
-function manifestJson(name) {
+function manifestTs(name) {
   const title = toTitleCase(name);
-  return (
-    JSON.stringify(
+  return `import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: '${title}',
+    short_name: '${title}',
+    description: '${title} application',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#000000',
+    theme_color: '#68c3f7',
+    orientation: 'portrait-primary',
+    icons: [
       {
-        name: title,
-        short_name: title,
-        description: `${title} application`,
-        start_url: '/',
-        display: 'standalone',
-        background_color: '#000000',
-        theme_color: '#68c3f7',
-        orientation: 'portrait-primary',
-        icons: [
-          {
-            src: '/icons/icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any',
-          },
-          {
-            src: '/icons/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any',
-          },
-          {
-            src: '/icons/icon-maskable-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-          {
-            src: '/icons/icon-maskable-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
+        src: '/icons/icon-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
       },
-      null,
-      2,
-    ) + '\n'
-  );
+      {
+        src: '/icons/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-maskable-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/icons/icon-maskable-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+    ],
+  };
+}
+`;
+}
+
+function swTs() {
+  return `import { defaultCache } from '@serwist/next/worker';
+import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
+import { Serwist } from 'serwist';
+
+declare global {
+  interface WorkerGlobalScope extends SerwistGlobalConfig {
+    // \`injectionPoint\` is the string that will be replaced by the actual
+    // precache manifest. By default it is set to \`"self.__SW_MANIFEST"\`.
+    __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
+  }
+}
+
+declare const self: ServiceWorkerGlobalScope;
+
+const serwist = new Serwist({
+  precacheEntries: self.__SW_MANIFEST,
+  skipWaiting: true,
+  clientsClaim: true,
+  navigationPreload: true,
+  runtimeCaching: defaultCache,
+});
+
+serwist.addEventListeners();
+`;
 }
 
 // ── Deployment Template Functions ─────────────────────────────────────
+
+function dockerignore() {
+  return `# Dependencies & build artifacts
+node_modules
+.next
+.turbo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dev / editor
+.DS_Store
+.vscode
+.idea
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Helm / k8s configs (not needed inside the container)
+helm
+`;
+}
 
 function dockerfile(name) {
   return `# syntax=docker.io/docker/dockerfile:1
@@ -853,7 +928,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY --from=pruner /app/out/json/ ./
-RUN corepack enable pnpm && pnpm i --frozen-lockfile
+RUN corepack enable pnpm && pnpm i --no-frozen-lockfile
 
 # ---------------------------------------------------------------------------
 # Stage 3 – Build the Next.js application.
@@ -1352,7 +1427,7 @@ async function main() {
   const includeI18n = i18nInput.toLowerCase().startsWith('y');
 
   // PWA
-  const pwaInput = await prompt('  Include PWA (next-pwa)? [y/n]', 'y');
+  const pwaInput = await prompt('  Include PWA (serwist)? [y/n]', 'y');
   const includePwa = pwaInput.toLowerCase().startsWith('y');
 
   // Palette
@@ -1386,9 +1461,10 @@ async function main() {
     packageJson(name, port, includeI18n, includePwa),
   );
   writeFile(appPath('next.config.js'), nextConfig(includeI18n, includePwa));
-  writeFile(appPath('tsconfig.json'), tsConfig());
+  writeFile(appPath('tsconfig.json'), tsConfig(includePwa));
   writeFile(appPath('eslint.config.js'), eslintConfig());
   writeFile(appPath('.gitignore'), gitignore(includePwa));
+  writeFile(appPath('.dockerignore'), dockerignore());
   writeFile(appPath('app/globals.css'), globalsCss());
   writeFile(appPath('css.d.ts'), cssDts());
 
@@ -1429,7 +1505,9 @@ async function main() {
 
   // PWA files
   if (includePwa) {
-    writeFile(appPath('public/manifest.json'), manifestJson(name));
+    writeFile(appPath('app/manifest.ts'), manifestTs(name));
+    writeFile(appPath('app/sw.ts'), swTs());
+    writeFile(appPath('public/icons/splash/.gitkeep'), '');
   }
 
   // Logger
@@ -1455,7 +1533,7 @@ async function main() {
   console.log(`  Done! Created apps/${name} with the following setup:`);
   console.log(`    Port:     ${port}`);
   console.log(`    i18n:     ${includeI18n ? 'yes' : 'no'}`);
-  console.log(`    PWA:      ${includePwa ? 'yes' : 'no'}`);
+  console.log(`    PWA:      ${includePwa ? 'yes (serwist)' : 'no'}`);
   console.log(`    Palette:  ${palette}`);
   console.log(`    Registry: ${registryUser}/${name}`);
   console.log('');
