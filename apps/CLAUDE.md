@@ -62,6 +62,28 @@ import Link from 'next/link';
 <a href="https://example.com" target="_blank" rel="noopener noreferrer">External</a>
 ```
 
+## Next.js Proxy (i18n + Auth Middleware)
+
+Next.js 16 renamed `middleware.ts` to `proxy.ts`. Use `proxy.ts` at the app root — never `middleware.ts`.
+
+```ts
+// proxy.ts
+import createMiddleware from 'next-intl/middleware';
+import { NextRequest, NextResponse } from 'next/server';
+import { routing } from '@repo/i18n/routing';
+
+const intlMiddleware = createMiddleware(routing);
+
+export default function proxy(request: NextRequest) {
+  // auth guard or other logic here, then:
+  return intlMiddleware(request);
+}
+
+export const config = {
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+};
+```
+
 ## TypeScript — CSS Module Declarations
 
 Each app includes a `css.d.ts` file at its root for ambient module declarations for CSS subpath imports that TypeScript cannot resolve (e.g. `swiper/css`):

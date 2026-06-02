@@ -43,6 +43,8 @@ This is a **Turborepo monorepo** with Next.js applications and shared packages.
 - **horoscope** — Next.js app
 - **video-downloader** — The most actively maintained app; client-side video editing using FFmpeg WASM. Requires `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers (already configured in `next.config.ts`) for SharedArrayBuffer support
 - **website-api** — Django REST API backend for the website app
+- **edge-folio** — Next.js PWA: privacy-first career app for engineers (Immutable Matrix, job tailoring, ATS export, client-side OPFS+WebGPU codebase extraction). See `apps/edge-folio/CLAUDE.md`.
+- **edge-folio-api** — Django REST API backend for edge-folio. See `apps/edge-folio-api/CLAUDE.md`.
 
 ### Packages (`packages/`)
 

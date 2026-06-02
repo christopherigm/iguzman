@@ -59,8 +59,9 @@ function requirementsTxt(includeRedis, includeEmail) {
     'Pillow==11.1.0',
     'whitenoise==6.9.0',
     'gunicorn==23.0.0',
-    'psycopg2-binary==2.9.10',
+    'psycopg[binary]==3.2.4',
     'django-colorfield==0.11.0',
+    'django-cors-headers==4.9.0',
   ];
   if (includeRedis) deps.push('django-redis==5.4.0');
   return deps.join('\n') + '\n';
@@ -106,25 +107,21 @@ exec "$@"
 function settingsPy(moduleName, host, frontendUrl, includeRedis, includeEmail) {
   const cacheSection = includeRedis
     ? `
-REDIS_URL = os.environ.get('REDIS_URL', '')
-REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
+_REDIS_URL = os.environ.get('REDIS_URL', '')
 
-if REDIS_URL:
-    redis_location = REDIS_URL
-    if REDIS_PASSWORD:
-        from urllib.parse import urlparse, urlunparse
-        parsed = urlparse(REDIS_URL)
-        redis_location = urlunparse(parsed._replace(
-            netloc=f':{REDIS_PASSWORD}@{parsed.hostname}:{parsed.port}'
-        ))
+if _REDIS_URL:
+    _redis_options: dict = {
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+    }
+    _redis_password = os.environ.get('REDIS_PASSWORD', '')
+    if _redis_password:
+        _redis_options['PASSWORD'] = _redis_password
 
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': redis_location,
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
+            'LOCATION': _REDIS_URL,
+            'OPTIONS': _redis_options,
         }
     }
     SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
@@ -146,17 +143,19 @@ CACHES = {
 
   const emailSection = includeEmail
     ? `
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+_EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 
-if EMAIL_HOST_USER:
+if _EMAIL_HOST_USER:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.ionos.com')
-    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
     EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+    EMAIL_HOST_USER = _EMAIL_HOST_USER
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
     DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'noreply@localhost'
 
 EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS = int(
     os.environ.get('EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS', 24)
@@ -168,6 +167,7 @@ PASSWORD_RESET_TOKEN_EXPIRY_HOURS = int(
     : '';
 
   return `import os
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -182,10 +182,23 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 # so Django knows requests are HTTPS even though it receives them over HTTP internally.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-CSRF_TRUSTED_ORIGINS = os.environ.get(
-    'CSRF_TRUSTED_ORIGINS',
-    'https://${host},${frontendUrl}',
-).split(',')
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS',
+        'https://${host},${frontendUrl}',
+    ).split(',')
+    if origin.strip()
+]
+
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CORS_ALLOWED_ORIGINS',
+        '${frontendUrl}',
+    ).split(',')
+    if origin.strip()
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -194,6 +207,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
     'colorfield',
@@ -204,6 +218,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -231,16 +246,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = '${moduleName}.wsgi.application'
 
-DB_HOST = os.environ.get('DB_HOST', '')
+_DB_HOST = os.environ.get('DB_HOST', '')
 
-if DB_HOST:
+if _DB_HOST:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('DB_NAME', 'postgres'),
             'USER': os.environ.get('DB_USER', 'postgres'),
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': DB_HOST,
+            'HOST': _DB_HOST,
             'PORT': os.environ.get('DB_PORT', '5432'),
         }
     }
@@ -264,33 +279,72 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media'))
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ${cacheSection}
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-    ),
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100,
 }
-
-from datetime import timedelta
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': True,
     'ALGORITHM': 'HS256',
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.environ.get('DJANGO_LOG_LEVEL', 'WARNING'),
+            'propagate': False,
+        },
+    },
 }
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
@@ -661,7 +715,9 @@ class PasswordResetToken(models.Model):
         return f'PasswordResetToken for {self.user.username}'`
     : '';
 
-  const uuidImport = includeEmail ? '\nimport uuid\nfrom datetime import timedelta' : '';
+  const uuidImport = includeEmail
+    ? '\nimport uuid\nfrom datetime import timedelta'
+    : '';
 
   return `from django.contrib.auth.models import User
 from django.db import models
@@ -1217,6 +1273,59 @@ If you did not request a password reset, ignore this email. Your password will n
 `;
 }
 
+// ── Admin ──────────────────────────────────────────────────────────────
+
+function coreAdminPy() {
+  return `from django.contrib import admin
+
+from .models import BasePicture
+
+# Register your core models here.
+# Example:
+# @admin.register(MyModel)
+# class MyModelAdmin(admin.ModelAdmin):
+#     list_display = ('name', 'enabled', 'created')
+#     list_filter = ('enabled',)
+`;
+}
+
+function usersAdminPy() {
+  return `from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
+
+from .models import UserProfile
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = 'Profile'
+
+
+class UserAdmin(BaseUserAdmin):
+    inlines = (UserProfileInline,)
+
+
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
+`;
+}
+
+// ── Gunicorn ───────────────────────────────────────────────────────────
+
+function gunicornConfPy() {
+  return `import multiprocessing
+
+bind = '0.0.0.0:8000'
+workers = int(__import__('os').environ.get('GUNICORN_WORKERS', multiprocessing.cpu_count() * 2 + 1))
+timeout = int(__import__('os').environ.get('GUNICORN_TIMEOUT', 120))
+loglevel = __import__('os').environ.get('GUNICORN_LOG_LEVEL', 'warning')
+accesslog = '-'
+errorlog = '-'
+`;
+}
+
 // ── Deployment Templates ───────────────────────────────────────────────
 
 function dockerfile(name, moduleName) {
@@ -1227,10 +1336,11 @@ function dockerfile(name, moduleName) {
 # ---------------------------------------------------------------------------
 FROM python:3.12-slim AS deps
 
-WORKDIR /install
+WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
-RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 # ---------------------------------------------------------------------------
 # Stage 2 – Build static files.
@@ -1243,10 +1353,10 @@ COPY . .
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV DJANGO_SETTINGS_MODULE=${moduleName}.settings
-ENV SECRET_KEY=build-time-secret-key
 
-RUN python manage.py collectstatic --noinput
+RUN DJANGO_SETTINGS_MODULE=${moduleName}.settings \
+    SECRET_KEY=build-time-secret-key \
+    python manage.py collectstatic --noinput
 
 # ---------------------------------------------------------------------------
 # Stage 3 – Minimal production image.
@@ -1276,16 +1386,62 @@ USER django
 EXPOSE 8000
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["gunicorn", "${moduleName}.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120"]
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "${moduleName}.wsgi:application"]
 `
     .replace(/\${moduleName}/g, moduleName)
     .replace(/\${name}/g, name);
 }
 
-function envExample(name, registryUser) {
-  return `DOCKER_REGISTRY=${registryUser}
+function envExample(
+  name,
+  moduleName,
+  host,
+  frontendUrl,
+  registryUser,
+  includeRedis,
+  includeEmail,
+) {
+  const redisVars = includeRedis
+    ? `REDIS_URL=redis://redis.${name}.svc.cluster.local:6379/0
+REDIS_PASSWORD=
+`
+    : '';
+
+  const emailVars = includeEmail
+    ? `EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_HOST=smtp.ionos.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+`
+    : '';
+
+  return `# Docker / Helm
+DOCKER_REGISTRY=${registryUser}
 NAMESPACE=${name}
-`;
+
+# Django
+SECRET_KEY=django-insecure-change-me
+DEBUG=True
+ALLOWED_HOSTS=*
+DJANGO_SETTINGS_MODULE=${moduleName}.settings
+
+# CORS / CSRF
+CORS_ALLOWED_ORIGINS=${frontendUrl}
+CSRF_TRUSTED_ORIGINS=https://${host},${frontendUrl}
+FRONTEND_URL=${frontendUrl}
+
+# Database (leave DB_HOST empty to use SQLite locally)
+DB_HOST=
+DB_PORT=5432
+DB_NAME=postgres
+DB_USER=postgres
+DB_PASSWORD=
+
+# Media
+MEDIA_ROOT=/app/media
+
+${redisVars}${emailVars}`;
 }
 
 // ── Helm Templates ─────────────────────────────────────────────────────
@@ -1300,7 +1456,15 @@ appVersion: '0.1.0'
 `;
 }
 
-function helmValuesYaml(name, moduleName, host, frontendUrl, registryUser, includeRedis, includeEmail) {
+function helmValuesYaml(
+  name,
+  moduleName,
+  host,
+  frontendUrl,
+  registryUser,
+  includeRedis,
+  includeEmail,
+) {
   const redisEnv = includeRedis
     ? `  REDIS_URL: 'redis://redis.${name}.svc.cluster.local:6379/0'
 `
@@ -1315,9 +1479,9 @@ function helmValuesYaml(name, moduleName, host, frontendUrl, registryUser, inclu
     : '';
 
   const redisSecret = includeRedis
-    ? `#   - name: REDIS_PASSWORD
-#     secretName: ${name}-secrets
-#     secretKey: redis-password
+    ? `  - name: REDIS_PASSWORD
+    secretName: ${name}-secrets
+    secretKey: redis-password
 `
     : '';
 
@@ -1381,9 +1545,11 @@ env:
   DB_NAME: 'postgres'
   DB_USER: 'postgres'
 ${redisEnv}${emailEnv}  FRONTEND_URL: '${frontendUrl}'
+  CORS_ALLOWED_ORIGINS: '${frontendUrl}'
   DEBUG: 'False'
   ALLOWED_HOSTS: '${host},localhost,127.0.0.1'
   CSRF_TRUSTED_ORIGINS: 'https://${host}'
+  GUNICORN_WORKERS: '3'
 
 # Sensitive values – reference existing Kubernetes Secrets.
 envFromSecret:
@@ -1806,14 +1972,18 @@ async function main() {
 
   // Frontend URL
   const defaultFrontend = `https://${name.replace(/-api$/, '')}.iguzman.com.mx`;
-  const frontendUrl = (await prompt('  Frontend URL', defaultFrontend)) || defaultFrontend;
+  const frontendUrl =
+    (await prompt('  Frontend URL', defaultFrontend)) || defaultFrontend;
 
   // Redis
   const redisInput = await prompt('  Include Redis cache? [y/n]', 'y');
   const includeRedis = redisInput.toLowerCase().startsWith('y');
 
   // Email
-  const emailInput = await prompt('  Include email (signup verification + password reset)? [y/n]', 'y');
+  const emailInput = await prompt(
+    '  Include email (signup verification + password reset)? [y/n]',
+    'y',
+  );
   const includeEmail = emailInput.toLowerCase().startsWith('y');
 
   // Docker registry user
@@ -1829,16 +1999,45 @@ async function main() {
 
   // Root files
   writeFile(appPath('package.json'), packageJson(name));
-  writeFile(appPath('requirements.txt'), requirementsTxt(includeRedis, includeEmail));
+  writeFile(
+    appPath('requirements.txt'),
+    requirementsTxt(includeRedis, includeEmail),
+  );
   writeFile(appPath('manage.py'), managePy(moduleName));
   writeFile(appPath('entrypoint.sh'), entrypointSh());
   writeFile(appPath('Dockerfile'), dockerfile(name, moduleName));
-  writeFile(appPath('.env'), envExample(name, registryUser));
-  writeFile(appPath('env.example'), envExample(name, registryUser));
+  writeFile(appPath('gunicorn.conf.py'), gunicornConfPy());
+  writeFile(
+    appPath('.env'),
+    envExample(
+      name,
+      moduleName,
+      host,
+      frontendUrl,
+      registryUser,
+      includeRedis,
+      includeEmail,
+    ),
+  );
+  writeFile(
+    appPath('env.example'),
+    envExample(
+      name,
+      moduleName,
+      host,
+      frontendUrl,
+      registryUser,
+      includeRedis,
+      includeEmail,
+    ),
+  );
 
   // Django project package
   writeFile(appPath(`${moduleName}/__init__.py`), initPy());
-  writeFile(appPath(`${moduleName}/settings.py`), settingsPy(moduleName, host, frontendUrl, includeRedis, includeEmail));
+  writeFile(
+    appPath(`${moduleName}/settings.py`),
+    settingsPy(moduleName, host, frontendUrl, includeRedis, includeEmail),
+  );
   writeFile(appPath(`${moduleName}/urls.py`), urlsPy(moduleName));
   writeFile(appPath(`${moduleName}/wsgi.py`), wsgiPy(moduleName));
   writeFile(appPath(`${moduleName}/asgi.py`), asgiPy(moduleName));
@@ -1846,6 +2045,7 @@ async function main() {
   // Core app
   writeFile(appPath('core/__init__.py'), initPy());
   writeFile(appPath('core/apps.py'), coreAppsPy());
+  writeFile(appPath('core/admin.py'), coreAdminPy());
   writeFile(appPath('core/fields.py'), coreFieldsPy());
   writeFile(appPath('core/models.py'), coreModelsPy());
   writeFile(appPath('core/serializers.py'), coreSerializersPy());
@@ -1854,6 +2054,7 @@ async function main() {
   // Users app
   writeFile(appPath('users/__init__.py'), initPy());
   writeFile(appPath('users/apps.py'), usersAppsPy());
+  writeFile(appPath('users/admin.py'), usersAdminPy());
   writeFile(appPath('users/models.py'), usersModelsPy(includeEmail));
   writeFile(appPath('users/signals.py'), usersSignalsPy());
   writeFile(appPath('users/serializers.py'), usersSerializersPy(includeEmail));
@@ -1863,10 +2064,22 @@ async function main() {
   writeFile(appPath('users/migrations/0001_initial.py'), migration0001());
 
   if (includeEmail) {
-    writeFile(appPath('users/migrations/0002_emailverificationtoken.py'), migration0002Email());
-    writeFile(appPath('users/migrations/0003_passwordresettoken.py'), migration0003PasswordReset());
-    writeFile(appPath('users/templates/users/verification_email.txt'), verificationEmailTxt());
-    writeFile(appPath('users/templates/users/password_reset_email.txt'), passwordResetEmailTxt());
+    writeFile(
+      appPath('users/migrations/0002_emailverificationtoken.py'),
+      migration0002Email(),
+    );
+    writeFile(
+      appPath('users/migrations/0003_passwordresettoken.py'),
+      migration0003PasswordReset(),
+    );
+    writeFile(
+      appPath('users/templates/users/verification_email.txt'),
+      verificationEmailTxt(),
+    );
+    writeFile(
+      appPath('users/templates/users/password_reset_email.txt'),
+      passwordResetEmailTxt(),
+    );
   }
 
   // Create empty media + staticfiles directories
@@ -1875,12 +2088,29 @@ async function main() {
 
   // Helm chart
   writeFile(appPath('helm/Chart.yaml'), helmChartYaml(name));
-  writeFile(appPath('helm/values.yaml'), helmValuesYaml(name, moduleName, host, frontendUrl, registryUser, includeRedis, includeEmail));
+  writeFile(
+    appPath('helm/values.yaml'),
+    helmValuesYaml(
+      name,
+      moduleName,
+      host,
+      frontendUrl,
+      registryUser,
+      includeRedis,
+      includeEmail,
+    ),
+  );
   writeFile(appPath('helm/templates/_helpers.tpl'), helmHelpersTpl(name));
-  writeFile(appPath('helm/templates/deployment.yaml'), helmDeploymentYaml(name));
+  writeFile(
+    appPath('helm/templates/deployment.yaml'),
+    helmDeploymentYaml(name),
+  );
   writeFile(appPath('helm/templates/service.yaml'), helmServiceYaml(name));
   writeFile(appPath('helm/templates/ingress.yaml'), helmIngressYaml(name));
-  writeFile(appPath('helm/templates/nginx-configmap.yaml'), helmNginxConfigmap(name));
+  writeFile(
+    appPath('helm/templates/nginx-configmap.yaml'),
+    helmNginxConfigmap(name),
+  );
   writeFile(appPath('helm/templates/NOTES.txt'), helmNotesTxt(name));
 
   console.log(`  Done! Created apps/${name} with the following setup:`);
