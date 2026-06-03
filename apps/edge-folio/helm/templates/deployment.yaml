@@ -60,17 +60,17 @@ spec:
 
           {{- /* ── Probes ── */}}
           startupProbe:
-            exec:
-              command:
-                {{- toYaml .Values.probes.startupProbe.exec.command | nindent 16 }}
+            httpGet:
+              path: {{ .Values.probes.startupProbe.httpGet.path }}
+              port: {{ .Values.service.targetPort }}
             initialDelaySeconds: {{ .Values.probes.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.startupProbe.failureThreshold }}
 
           livenessProbe:
-            exec:
-              command:
-                {{- toYaml .Values.probes.livenessProbe.exec.command | nindent 16 }}
+            httpGet:
+              path: {{ .Values.probes.livenessProbe.httpGet.path }}
+              port: {{ .Values.service.targetPort }}
             initialDelaySeconds: {{ .Values.probes.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.livenessProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.livenessProbe.failureThreshold }}

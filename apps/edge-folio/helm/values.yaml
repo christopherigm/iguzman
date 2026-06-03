@@ -48,14 +48,12 @@ ingress:
 env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
-  # Add your own env vars here, for example:
-  # API_URL: "https://api.example.com"
 
 # Sensitive values – reference existing Kubernetes Secrets.
-# envFromSecret:
-#   - name: DATABASE_URL
-#     secretName: edge-folio-secrets
-#     secretKey: database-url
+envFromSecret:
+  - name: API_URL
+    secretName: edge-folio-secrets
+    secretKey: API_URL
 
 # ─── Shared storage (ReadWriteMany) ─────────────────────────
 sharedStorage:
@@ -66,21 +64,18 @@ sharedStorage:
   size: 1Gi
   mountPath: /app/shared # path inside each container
 
-# ─── Health probes (file-based in shared storage) ───────────
+# ─── Health probes (HTTP-based) ─────────────────────────────
 probes:
-  # File that both probes check for existence.
-  healthFile: /app/shared/.healthy
-
   startupProbe:
-    exec:
-      command: ['test', '-f', '/app/shared/.healthy']
+    httpGet:
+      path: /
     initialDelaySeconds: 5
     periodSeconds: 5
     failureThreshold: 30 # allow up to ~150 s for first boot
 
   livenessProbe:
-    exec:
-      command: ['test', '-f', '/app/shared/.healthy']
+    httpGet:
+      path: /
     initialDelaySeconds: 0
     periodSeconds: 10
     failureThreshold: 3

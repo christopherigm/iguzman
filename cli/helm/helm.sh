@@ -49,12 +49,19 @@ setup_strings() {
     OP_HINT="espacio = marcar/desmarcar  ·  enter = confirmar"
     OP_NONE_SELECTED="No se seleccionó ninguna operación."
     OP_STATUS="Estado (helm status)"
+    OP_STATUS_DESC="Muestra el estado del release y los pods activos"
     OP_REVEAL_SECRETS="Revelar secretos"
-    OP_DEPLOY="Desplegar"
+    OP_REVEAL_SECRETS_DESC="Decodifica e imprime los valores del secreto de Kubernetes"
+    OP_DEPLOY="Desplegar / Actualizar"
+    OP_DEPLOY_DESC="helm upgrade --install — instala o aplica cambios del chart"
     OP_FORCE_REDEPLOY="Redesplegar forzado (--force)"
+    OP_FORCE_REDEPLOY_DESC="Igual que actualizar pero reemplaza recursos si es necesario"
     OP_ROLLOUT_RESTART="Rollout restart"
+    OP_ROLLOUT_RESTART_DESC="Reinicia pods con una actualización rolling sin cambiar el chart"
     OP_ROLLBACK="Rollback"
+    OP_ROLLBACK_DESC="Revierte el release a una revisión anterior"
     OP_UNINSTALL="Desinstalar"
+    OP_UNINSTALL_DESC="Elimina el release y todos sus recursos del clúster"
     IMAGE_TAG_PROMPT="Tag de imagen"
     REPLICAS_PROMPT="Número de réplicas (vacío = valor del chart)"
     ACTION_INSTALL="Instalar"
@@ -102,12 +109,19 @@ setup_strings() {
     OP_HINT="space = toggle  ·  enter = confirm"
     OP_NONE_SELECTED="No operations selected."
     OP_STATUS="Status (helm status)"
+    OP_STATUS_DESC="Show release status and currently running pods"
     OP_REVEAL_SECRETS="Reveal secrets"
-    OP_DEPLOY="Deploy"
+    OP_REVEAL_SECRETS_DESC="Decode and print Kubernetes secret values"
+    OP_DEPLOY="Deploy / Upgrade"
+    OP_DEPLOY_DESC="helm upgrade --install — install or apply chart changes"
     OP_FORCE_REDEPLOY="Force redeploy (--force)"
+    OP_FORCE_REDEPLOY_DESC="Same as upgrade but replaces resources if needed"
     OP_ROLLOUT_RESTART="Rollout restart"
+    OP_ROLLOUT_RESTART_DESC="Restart pods with a rolling update without changing the chart"
     OP_ROLLBACK="Rollback"
+    OP_ROLLBACK_DESC="Revert the release to a previous revision"
     OP_UNINSTALL="Uninstall"
+    OP_UNINSTALL_DESC="Remove the release and all its resources from the cluster"
     IMAGE_TAG_PROMPT="Image tag"
     REPLICAS_PROMPT="Replica count (empty = chart default)"
     ACTION_INSTALL="Install"
@@ -223,6 +237,7 @@ interactive_select() {
 interactive_multiselect() {
   local num="${#MENU_ITEMS[@]}"
   local cursor=0
+  local lpi=2  # lines per item (label + description)
 
   render_multiselect() {
     local j
@@ -242,6 +257,7 @@ interactive_multiselect() {
         label_str="${lbl}"
       fi
       printf "  %s  %s  %s\n" "${ptr}" "${chk}" "${label_str}"
+      printf "          %s\n" "$(clr_dim "${MENU_DESCS[$j]:-}")"
     done
   }
 
@@ -258,10 +274,10 @@ interactive_multiselect() {
         IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
         if   [[ "${key}" == 'A' ]]; then
           cursor=$(( (cursor - 1 + num) % num ))
-          printf "\033[%dA" "${num}"; render_multiselect
+          printf "\033[%dA" $((num * lpi)); render_multiselect
         elif [[ "${key}" == 'B' ]]; then
           cursor=$(( (cursor + 1) % num ))
-          printf "\033[%dA" "${num}"; render_multiselect
+          printf "\033[%dA" $((num * lpi)); render_multiselect
         fi
       fi
       continue
@@ -273,7 +289,7 @@ interactive_multiselect() {
       else
         MENU_CHECKED[$cursor]=1
       fi
-      printf "\033[%dA" "${num}"; render_multiselect
+      printf "\033[%dA" $((num * lpi)); render_multiselect
       continue
     fi
 
@@ -625,6 +641,15 @@ main() {
     "${OP_ROLLOUT_RESTART}"
     "${OP_ROLLBACK}"
     "${OP_UNINSTALL}"
+  )
+  MENU_DESCS=(
+    "${OP_STATUS_DESC}"
+    "${OP_REVEAL_SECRETS_DESC}"
+    "${OP_DEPLOY_DESC}"
+    "${OP_FORCE_REDEPLOY_DESC}"
+    "${OP_ROLLOUT_RESTART_DESC}"
+    "${OP_ROLLBACK_DESC}"
+    "${OP_UNINSTALL_DESC}"
   )
   MENU_CHECKED=(0 0 1 0 0 0 0)
 

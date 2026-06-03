@@ -1245,7 +1245,7 @@ appVersion: '0.1.0'
 `;
 }
 
-function helmValuesYaml(name, registryUser) {
+function helmValuesYaml(name, registryUser, includeAuth) {
   return `# ─────────────────────────────────────────────────────────────
 # ${toTitleCase(name)} Application – Helm Values
 # ─────────────────────────────────────────────────────────────
@@ -1296,14 +1296,15 @@ ingress:
 env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
-  # Add your own env vars here, for example:
-  # API_URL: "https://api.example.com"
 
 # Sensitive values – reference existing Kubernetes Secrets.
-# envFromSecret:
+${includeAuth ? `envFromSecret:
+  - name: API_URL
+    secretName: ${name}-secrets
+    secretKey: API_URL` : `# envFromSecret:
 #   - name: DATABASE_URL
 #     secretName: ${name}-secrets
-#     secretKey: database-url
+#     secretKey: database-url`}
 
 # ─── Shared storage (ReadWriteMany) ─────────────────────────
 sharedStorage:
@@ -1314,21 +1315,18 @@ sharedStorage:
   size: 1Gi
   mountPath: /app/shared # path inside each container
 
-# ─── Health probes (file-based in shared storage) ───────────
+# ─── Health probes (HTTP-based) ─────────────────────────────
 probes:
-  # File that both probes check for existence.
-  healthFile: /app/shared/.healthy
-
   startupProbe:
-    exec:
-      command: ['test', '-f', '/app/shared/.healthy']
+    httpGet:
+      path: /
     initialDelaySeconds: 5
     periodSeconds: 5
     failureThreshold: 30 # allow up to ~150 s for first boot
 
   livenessProbe:
-    exec:
-      command: ['test', '-f', '/app/shared/.healthy']
+    httpGet:
+      path: /
     initialDelaySeconds: 0
     periodSeconds: 10
     failureThreshold: 3
@@ -1477,17 +1475,17 @@ spec:
 
           {{- /* ── Probes ── */}}
           startupProbe:
-            exec:
-              command:
-                {{- toYaml .Values.probes.startupProbe.exec.command | nindent 16 }}
+            httpGet:
+              path: {{ .Values.probes.startupProbe.httpGet.path }}
+              port: {{ .Values.service.targetPort }}
             initialDelaySeconds: {{ .Values.probes.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.startupProbe.failureThreshold }}
 
           livenessProbe:
-            exec:
-              command:
-                {{- toYaml .Values.probes.livenessProbe.exec.command | nindent 16 }}
+            httpGet:
+              path: {{ .Values.probes.livenessProbe.httpGet.path }}
+              port: {{ .Values.service.targetPort }}
             initialDelaySeconds: {{ .Values.probes.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.livenessProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.livenessProbe.failureThreshold }}
@@ -3433,7 +3431,7 @@ async function main() {
 
   // Helm chart
   writeFile(appPath('helm/Chart.yaml'), helmChartYaml(name));
-  writeFile(appPath('helm/values.yaml'), helmValuesYaml(name, registryUser));
+  writeFile(appPath('helm/values.yaml'), helmValuesYaml(name, registryUser, includeAuth));
   writeFile(appPath('helm/templates/_helpers.tpl'), helmHelpersTpl(name));
   writeFile(
     appPath('helm/templates/deployment.yaml'),
