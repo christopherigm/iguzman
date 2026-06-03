@@ -29,7 +29,9 @@ service:
 
 # ─── Redis configuration ────────────────────────────────────
 auth:
-  password: '' # set via --set or envFromSecret
+  password: ''          # set directly (stored in Helm values — avoid in prod)
+  existingSecret: ''    # name of an existing k8s Secret that holds the password
+  existingSecretKey: 'redis-password' # key within that Secret
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.

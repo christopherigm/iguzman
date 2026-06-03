@@ -7,7 +7,7 @@ FROM python:3.12-slim AS deps
 
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
+COPY apps/edge-folio-api/requirements.txt .
 RUN pip install --upgrade pip     && pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 # ---------------------------------------------------------------------------
@@ -17,7 +17,7 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 COPY --from=deps /install /usr/local
-COPY . .
+COPY apps/edge-folio-api/ .
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -44,7 +44,7 @@ RUN addgroup --system --gid 1001 django && \
     adduser --system --uid 1001 --ingroup django django && \
     mkdir -p /app/media && chown -R django:django /app
 
-COPY entrypoint.sh /entrypoint.sh
+COPY apps/edge-folio-api/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 USER django

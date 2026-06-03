@@ -57,7 +57,13 @@ spec:
 
           {{- /* ── Environment variables ── */}}
           env:
-            {{- if .Values.auth.password }}
+            {{- if .Values.auth.existingSecret }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: {{ .Values.auth.existingSecretKey }}
+            {{- else if .Values.auth.password }}
             - name: POSTGRES_PASSWORD
               value: {{ .Values.auth.password | quote }}
             {{- end }}

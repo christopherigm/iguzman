@@ -43,22 +43,29 @@ spec:
               protocol: TCP
 
           {{- /* ── Command with custom config ── */}}
-          {{- if or .Values.customConfig .Values.auth.password }}
+          {{- $authEnabled := or .Values.auth.password .Values.auth.existingSecret }}
+          {{- if or .Values.customConfig $authEnabled }}
           command: ['redis-server']
           args:
             {{- if .Values.customConfig }}
             - '/etc/redis/redis.conf'
             {{- end }}
-            {{- if .Values.auth.password }}
+            {{- if $authEnabled }}
             - '--requirepass'
             - '$(REDIS_PASSWORD)'
             {{- end }}
           {{- end }}
 
           {{- /* ── Environment variables ── */}}
-          {{- if or .Values.auth.password .Values.env .Values.envFromSecret }}
+          {{- if or $authEnabled .Values.env .Values.envFromSecret }}
           env:
-            {{- if .Values.auth.password }}
+            {{- if .Values.auth.existingSecret }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: {{ .Values.auth.existingSecretKey }}
+            {{- else if .Values.auth.password }}
             - name: REDIS_PASSWORD
               value: {{ .Values.auth.password | quote }}
             {{- end }}

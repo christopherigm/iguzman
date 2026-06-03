@@ -45,7 +45,13 @@ spec:
 
           {{- /* ── Environment variables ── */}}
           env:
-            {{- if .Values.auth.rootPassword }}
+            {{- if .Values.auth.existingSecret }}
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret }}
+                  key: {{ .Values.auth.existingSecretKey }}
+            {{- else if .Values.auth.rootPassword }}
             - name: MYSQL_ROOT_PASSWORD
               value: {{ .Values.auth.rootPassword | quote }}
             {{- end }}

@@ -29,9 +29,11 @@ service:
 
 # ─── PostgreSQL configuration ───────────────────────────────
 auth:
-  password: '' # POSTGRES_PASSWORD – set via --set or envFromSecret
-  user: 'postgres' # POSTGRES_USER (default superuser)
-  database: '' # optional: POSTGRES_DB (creates a default database)
+  password: ''          # set directly (stored in Helm values — avoid in prod)
+  existingSecret: ''    # name of an existing k8s Secret that holds the password
+  existingSecretKey: 'postgres-password' # key within that Secret
+  user: 'postgres'      # POSTGRES_USER (default superuser)
+  database: ''          # optional: POSTGRES_DB (creates a default database)
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.

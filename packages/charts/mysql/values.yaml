@@ -29,10 +29,12 @@ service:
 
 # ─── MySQL configuration ────────────────────────────────────
 auth:
-  rootPassword: '' # set via --set or envFromSecret
-  database: '' # optional: create a default database
-  user: '' # optional: create a non-root user
-  password: '' # optional: password for the non-root user
+  rootPassword: ''      # set directly (stored in Helm values — avoid in prod)
+  existingSecret: ''    # name of an existing k8s Secret that holds the root password
+  existingSecretKey: 'mysql-root-password' # key within that Secret
+  database: ''          # optional: create a default database
+  user: ''              # optional: create a non-root user
+  password: ''          # optional: password for the non-root user
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.

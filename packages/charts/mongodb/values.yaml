@@ -29,9 +29,11 @@ service:
 
 # ─── MongoDB configuration ──────────────────────────────────
 auth:
-  rootUsername: 'root' # MONGO_INITDB_ROOT_USERNAME
-  rootPassword: '' # set via --set or envFromSecret
-  database: '' # optional: MONGO_INITDB_DATABASE
+  rootUsername: 'root'  # MONGO_INITDB_ROOT_USERNAME
+  rootPassword: ''      # set directly (stored in Helm values — avoid in prod)
+  existingSecret: ''    # name of an existing k8s Secret that holds the root password
+  existingSecretKey: 'mongo-root-password' # key within that Secret
+  database: ''          # optional: MONGO_INITDB_DATABASE
 
 # ─── Environment variables ──────────────────────────────────
 # Plain environment variables injected into the container.

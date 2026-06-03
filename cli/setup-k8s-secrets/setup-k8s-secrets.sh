@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # setup-k8s-secrets.sh
 #
-# Interactive Kubernetes secrets setup for the video-downloader app.
-# Creates or updates secrets in the target namespace:
+# Generic Kubernetes secrets setup.
+# Scans apps/ for env.example files, presents an app selector, then
+# creates or updates a single "<app>-secrets" secret in the target namespace.
 #
-#   vd2-secrets                  — all sensitive env vars (API keys, R2, Stripe…)
-#   vd2-cookies                  — yt-dlp Netscape cookies file
-#   video-downloader-wireguard   — WireGuard VPN config
+# Keys ending in _FILE trigger a file-path prompt; the file content is
+# embedded as the secret value (not the path).
 #
 # Run: bash cli/setup-k8s-secrets/setup-k8s-secrets.sh
 
@@ -19,12 +19,10 @@ BOLD='\033[1m'
 DIM='\033[2m'
 GREEN='\033[32m'
 RED='\033[31m'
-YELLOW='\033[33m'
 CYAN='\033[36m'
+YELLOW='\033[33m'
 
-clr_green()       { printf "${GREEN}%s${RESET}" "$*"; }
 clr_red()         { printf "${RED}%s${RESET}" "$*"; }
-clr_yellow()      { printf "${YELLOW}%s${RESET}" "$*"; }
 clr_cyan()        { printf "${CYAN}%s${RESET}" "$*"; }
 clr_bold()        { printf "${BOLD}%s${RESET}" "$*"; }
 clr_dim()         { printf "${DIM}%s${RESET}" "$*"; }
@@ -40,96 +38,54 @@ setup_strings() {
 
   if [[ "${lang}" == "es" ]]; then
     WELCOME="Configuración de Secretos de Kubernetes"
-    SUBTITLE="Crea o actualiza los secretos de k8s para video-downloader."
+    SUBTITLE="Crea o actualiza secretos k8s a partir del env.example de la app."
     KUBECTL_MISSING="kubectl no está instalado o no está en PATH."
     KUBECTL_MISSING_HINT="Instálalo con: snap install kubectl --classic"
+    APP_PROMPT="Selecciona la aplicación"
+    APP_NOT_FOUND="No se encontraron apps con env.example en apps/."
     NS_PROMPT="Namespace de Kubernetes"
-    NS_DEFAULT="video-downloader-2"
-    SELECT_TITLE="Selecciona los secretos a configurar:"
+    SECRET_LABEL="Nombre del secreto"
+    SELECT_TITLE="Selecciona las variables a configurar:"
     SELECT_PROMPT="Flechas para navegar · Espacio para seleccionar · Enter para confirmar"
     SELECT_HINT="(a = seleccionar todo  ·  n = deseleccionar todo)"
     NOTHING_SELECTED="Nada seleccionado — saliendo."
     CONFIRM_PROMPT="¿Continuar? [s/n]"
     CONFIRM_YES_CHARS="sy"
     CANCELLED="Cancelado."
-    PROMPT_SECRET="(oculto)"
-    PROMPT_LEAVE_BLANK="(Enter para omitir)"
+    PROMPT_FILE_PATH="Ruta al archivo"
+    FILE_NOT_FOUND="Archivo no encontrado"
     APPLYING="Aplicando"
     DONE="Listo"
     FAILED="Error al aplicar"
     SECRET_EXISTS="El secreto existe — parcheando solo las claves seleccionadas."
     SECRET_NEW="El secreto no existe — creando."
+    SUMMARY_TITLE="Resumen de secretos aplicados:"
     ALL_DONE="¡Configuración completada!"
-    # Group labels
-    GRP_R2="Almacenamiento R2 (Cloudflare)"
-    GRP_GROQ="API Groq"
-    GRP_SCRAPE="API ScrapeCreators"
-    GRP_STRIPE="Stripe (pagos)"
-    GRP_INTERNAL="Secreto Interno"
-    GRP_MONGO="MongoDB"
-    GRP_COOKIES="Archivo de Cookies (yt-dlp)"
-    GRP_WIREGUARD="Configuración WireGuard VPN"
-    # Prompts
-    PROMPT_R2_ACCOUNT="R2 Account ID"
-    PROMPT_R2_KEY="R2 Access Key ID"
-    PROMPT_R2_SECRET="R2 Secret Access Key"
-    PROMPT_R2_BUCKET="R2 Bucket Name"
-    PROMPT_R2_PUBLIC_URL="R2 Public URL"
-    PROMPT_GROQ="Groq API Key"
-    PROMPT_SCRAPE="ScrapeCreators API Key"
-    PROMPT_STRIPE_SK="Stripe Secret Key"
-    PROMPT_STRIPE_WH="Stripe Webhook Secret"
-    PROMPT_INTERNAL="Internal Secret"
-    PROMPT_MONGO_URI="MongoDB URI"
-    PROMPT_COOKIES_FILE="Ruta al archivo netscape-cookies.txt"
-    PROMPT_WG_FILE="Ruta al archivo wg0.conf"
-    FILE_NOT_FOUND="Archivo no encontrado"
   else
     WELCOME="Kubernetes Secrets Setup"
-    SUBTITLE="Creates or updates k8s secrets for the video-downloader app."
+    SUBTITLE="Creates or updates k8s secrets from an app's env.example."
     KUBECTL_MISSING="kubectl is not installed or not in PATH."
     KUBECTL_MISSING_HINT="Install it with: snap install kubectl --classic"
+    APP_PROMPT="Select application"
+    APP_NOT_FOUND="No apps with env.example found in apps/."
     NS_PROMPT="Kubernetes namespace"
-    NS_DEFAULT="video-downloader-2"
-    SELECT_TITLE="Select secrets to configure:"
+    SECRET_LABEL="Secret name"
+    SELECT_TITLE="Select variables to configure:"
     SELECT_PROMPT="Arrow keys to navigate · Space to toggle · Enter to confirm"
     SELECT_HINT="(a = select all  ·  n = deselect all)"
     NOTHING_SELECTED="Nothing selected — exiting."
     CONFIRM_PROMPT="Proceed? [y/n]"
     CONFIRM_YES_CHARS="y"
     CANCELLED="Cancelled."
-    PROMPT_SECRET="(hidden)"
-    PROMPT_LEAVE_BLANK="(Enter to skip)"
+    PROMPT_FILE_PATH="Path to file"
+    FILE_NOT_FOUND="File not found"
     APPLYING="Applying"
     DONE="Done"
     FAILED="Failed to apply"
     SECRET_EXISTS="Secret exists — patching only the selected keys."
     SECRET_NEW="Secret does not exist — creating."
+    SUMMARY_TITLE="Applied secrets summary:"
     ALL_DONE="Setup complete!"
-    # Group labels
-    GRP_R2="R2 Object Storage (Cloudflare)"
-    GRP_GROQ="Groq API"
-    GRP_SCRAPE="ScrapeCreators API"
-    GRP_STRIPE="Stripe (payments)"
-    GRP_INTERNAL="Internal Secret"
-    GRP_MONGO="MongoDB"
-    GRP_COOKIES="Cookies File (yt-dlp)"
-    GRP_WIREGUARD="WireGuard VPN Config"
-    # Prompts
-    PROMPT_R2_ACCOUNT="R2 Account ID"
-    PROMPT_R2_KEY="R2 Access Key ID"
-    PROMPT_R2_SECRET="R2 Secret Access Key"
-    PROMPT_R2_BUCKET="R2 Bucket Name"
-    PROMPT_R2_PUBLIC_URL="R2 Public URL"
-    PROMPT_GROQ="Groq API Key"
-    PROMPT_SCRAPE="ScrapeCreators API Key"
-    PROMPT_STRIPE_SK="Stripe Secret Key"
-    PROMPT_STRIPE_WH="Stripe Webhook Secret"
-    PROMPT_INTERNAL="Internal Secret"
-    PROMPT_MONGO_URI="MongoDB URI"
-    PROMPT_COOKIES_FILE="Path to netscape-cookies.txt"
-    PROMPT_WG_FILE="Path to wg0.conf"
-    FILE_NOT_FOUND="File not found"
   fi
 }
 
@@ -148,9 +104,66 @@ print_header() {
 
 pad_right() { printf "%-${2}s" "${1}"; }
 
+# ── Single-select list ────────────────────────────────────────────────────────
+# Input:  APP_NAMES[]
+# Output: APP_SELECTED (index)
+
+interactive_select() {
+  local num="${#APP_NAMES[@]}"
+  local cursor=0
+
+  render_select() {
+    local j
+    for j in "${!APP_NAMES[@]}"; do
+      local lbl; lbl="$(pad_right "${APP_NAMES[$j]}" 46)"
+      local ptr label_str
+      if [[ $j -eq $cursor ]]; then
+        ptr="$(clr_cyan '▶')"
+        label_str="$(clr_bold_cyan "${lbl}")"
+      else
+        ptr=" "
+        label_str="${lbl}"
+      fi
+      printf "  %s  %s\n" "${ptr}" "${label_str}"
+    done
+  }
+
+  render_select
+  printf '\033[?25l'
+
+  while true; do
+    local key esc
+    IFS= read -r -s -n1 key 2>/dev/null || key=""
+
+    if [[ "${key}" == $'\x1b' ]]; then
+      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
+      if [[ "${esc}" == '[' ]]; then
+        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
+        if   [[ "${key}" == 'A' ]]; then
+          cursor=$(( (cursor - 1 + num) % num ))
+          printf "\033[%dA" "${num}"; render_select
+        elif [[ "${key}" == 'B' ]]; then
+          cursor=$(( (cursor + 1) % num ))
+          printf "\033[%dA" "${num}"; render_select
+        fi
+      fi
+      continue
+    fi
+
+    if [[ "${key}" == $'\r' || "${key}" == $'\n' || "${key}" == '' ]]; then break; fi
+    if [[ "${key}" == $'\x03' || "${key}" == $'\x04' ]]; then
+      printf '\033[?25h'; echo ""; exit 0
+    fi
+  done
+
+  printf '\033[?25h'
+  echo ""
+  APP_SELECTED="${cursor}"
+}
+
 # ── Multi-select checkbox ─────────────────────────────────────────────────────
-# CB_LABELS   — display labels (array)
-# CB_SELECTED — indices of items selected on exit
+# Input:  CB_LABELS[]
+# Output: CB_SELECTED[] (selected indices)
 
 interactive_checkbox() {
   local num="${#CB_LABELS[@]}"
@@ -159,7 +172,7 @@ interactive_checkbox() {
   local i
   for i in "${!CB_LABELS[@]}"; do selected[$i]=0; done
 
-  render() {
+  render_checkbox() {
     local j
     for j in "${!CB_LABELS[@]}"; do
       local lbl; lbl="$(pad_right "${CB_LABELS[$j]}" 44)"
@@ -180,7 +193,7 @@ interactive_checkbox() {
     done
   }
 
-  render
+  render_checkbox
   printf '\033[?25l'
 
   while true; do
@@ -191,37 +204,33 @@ interactive_checkbox() {
       IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
       if [[ "${esc}" == '[' ]]; then
         IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if [[ "${key}" == 'A' ]]; then
+        if   [[ "${key}" == 'A' ]]; then
           cursor=$(( (cursor - 1 + num) % num ))
-          printf "\033[%dA" "${num}"; render
+          printf "\033[%dA" "${num}"; render_checkbox
         elif [[ "${key}" == 'B' ]]; then
           cursor=$(( (cursor + 1) % num ))
-          printf "\033[%dA" "${num}"; render
+          printf "\033[%dA" "${num}"; render_checkbox
         fi
       fi
       continue
     fi
 
     if [[ "${key}" == $'\r' || "${key}" == $'\n' || "${key}" == '' ]]; then break; fi
-
     if [[ "${key}" == $'\x03' || "${key}" == $'\x04' ]]; then
       printf '\033[?25h'; echo ""; exit 0
     fi
 
     if [[ "${key}" == ' ' ]]; then
       selected[$cursor]=$(( 1 - selected[$cursor] ))
-      printf "\033[%dA" "${num}"; render
-      continue
+      printf "\033[%dA" "${num}"; render_checkbox; continue
     fi
-
     if [[ "${key}" == 'a' || "${key}" == 'A' ]]; then
       for i in "${!CB_LABELS[@]}"; do selected[$i]=1; done
-      printf "\033[%dA" "${num}"; render; continue
+      printf "\033[%dA" "${num}"; render_checkbox; continue
     fi
-
     if [[ "${key}" == 'n' || "${key}" == 'N' ]]; then
       for i in "${!CB_LABELS[@]}"; do selected[$i]=0; done
-      printf "\033[%dA" "${num}"; render; continue
+      printf "\033[%dA" "${num}"; render_checkbox; continue
     fi
   done
 
@@ -236,7 +245,6 @@ interactive_checkbox() {
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-# Read a visible value (file paths, bucket names)
 prompt_visible() {
   local label="$1" default="${2:-}"
   if [[ -n "${default}" ]]; then
@@ -250,23 +258,10 @@ prompt_visible() {
   printf '%s' "${val}"
 }
 
-# Read a secret value (hidden input)
-prompt_secret() {
-  local label="$1"
-  printf "  %s %s: " "$(clr_bold "${label}")" "$(clr_dim "${PROMPT_SECRET}")"
-  local val
-  IFS= read -r -s val || true
-  echo ""
-  printf '%s' "${val}"
-}
-
-# base64 encode (portable: Linux uses -w0, macOS uses no -w flag)
 b64enc() {
   printf '%s' "$1" | base64 -w0 2>/dev/null || printf '%s' "$1" | base64
 }
 
-# Patch existing k8s secret with only the provided key=value pairs.
-# Usage: patch_secret SECRET_NAME NAMESPACE key=value [key=value …]
 patch_secret() {
   local name="$1" ns="$2"; shift 2
   local json='{"data":{'
@@ -281,8 +276,6 @@ patch_secret() {
   kubectl patch secret "${name}" -n "${ns}" --type=merge -p "${json}"
 }
 
-# Create a brand-new generic secret from key=value literals.
-# Usage: create_secret SECRET_NAME NAMESPACE key=value [key=value …]
 create_secret() {
   local name="$1" ns="$2"; shift 2
   local args=()
@@ -290,38 +283,59 @@ create_secret() {
   kubectl create secret generic "${name}" "${args[@]}" -n "${ns}"
 }
 
-# Create or update a file-based secret (single key).
-# Usage: apply_file_secret SECRET_NAME NAMESPACE FILE_KEY FILE_PATH
-apply_file_secret() {
-  local name="$1" ns="$2" file_key="$3" file_path="$4"
-  kubectl create secret generic "${name}" \
-    --from-file="${file_key}=${file_path}" \
-    -n "${ns}" \
-    --dry-run=client -o yaml | kubectl apply -f -
-}
-
-# Apply a list of key=value items to vd2-secrets (patch if exists, create if not).
-apply_vd2_secrets() {
-  local ns="$1"; shift
+apply_secret() {
+  local name="$1" ns="$2"; shift 2
   if [[ $# -eq 0 ]]; then return; fi
 
-  printf "\n  %s %s...\n" "$(clr_bold_yellow '→')" "${APPLYING} vd2-secrets"
+  printf "\n  %s %s...\n" "$(clr_bold_yellow '→')" "${APPLYING} ${name}"
 
-  if kubectl get secret vd2-secrets -n "${ns}" &>/dev/null 2>&1; then
+  if kubectl get secret "${name}" -n "${ns}" &>/dev/null 2>&1; then
     printf "  %s\n" "$(clr_dim "${SECRET_EXISTS}")"
-    if patch_secret vd2-secrets "${ns}" "$@"; then
-      printf "  %s vd2-secrets\n" "$(clr_bold_green "✓ ${DONE}:")"
+    if patch_secret "${name}" "${ns}" "$@"; then
+      printf "  %s %s\n" "$(clr_bold_green "✓ ${DONE}:")" "${name}"
     else
-      printf "  %s vd2-secrets\n" "$(clr_red "✗ ${FAILED}:")"
+      printf "  %s %s\n" "$(clr_red "✗ ${FAILED}:")" "${name}"
     fi
   else
     printf "  %s\n" "$(clr_dim "${SECRET_NEW}")"
-    if create_secret vd2-secrets "${ns}" "$@"; then
-      printf "  %s vd2-secrets\n" "$(clr_bold_green "✓ ${DONE}:")"
+    if create_secret "${name}" "${ns}" "$@"; then
+      printf "  %s %s\n" "$(clr_bold_green "✓ ${DONE}:")" "${name}"
     else
-      printf "  %s vd2-secrets\n" "$(clr_red "✗ ${FAILED}:")"
+      printf "  %s %s\n" "$(clr_red "✗ ${FAILED}:")" "${name}"
     fi
   fi
+}
+
+# ── env.example parser ────────────────────────────────────────────────────────
+# Fills ENV_KEYS[], ENV_DEFAULTS[], ENV_SECTIONS[].
+# Each key carries the most recent section comment above it.
+# NAMESPACE and DOCKER_REGISTRY are skipped (build/deploy meta vars).
+
+parse_env_example() {
+  local file="$1"
+  ENV_KEYS=()
+  ENV_DEFAULTS=()
+  ENV_SECTIONS=()
+  local current_section=""
+
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    [[ -z "${line//[[:space:]]/}" ]] && continue
+
+    if [[ "${line}" =~ ^[[:space:]]*#[[:space:]]*(.*) ]]; then
+      local cmt="${BASH_REMATCH[1]}"
+      [[ -n "${cmt}" ]] && current_section="${cmt}"
+      continue
+    fi
+
+    if [[ "${line}" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      local k="${BASH_REMATCH[1]}"
+      local v="${BASH_REMATCH[2]}"
+      [[ "${k}" == "NAMESPACE" || "${k}" == "DOCKER_REGISTRY" ]] && continue
+      ENV_KEYS+=("${k}")
+      ENV_DEFAULTS+=("${v}")
+      ENV_SECTIONS+=("${current_section}")
+    fi
+  done < "${file}"
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -337,38 +351,72 @@ main() {
   clear
   print_header
 
-  # Check kubectl
+  # kubectl check
   if ! command -v kubectl &>/dev/null; then
     printf "  %s %s\n" "$(clr_bold_red '✗')" "${KUBECTL_MISSING}"
     printf "  %s\n\n" "$(clr_dim "${KUBECTL_MISSING_HINT}")"
     exit 1
   fi
 
-  # Namespace
-  printf "  %s (%s): " "$(clr_bold "${NS_PROMPT}")" "$(clr_dim "${NS_DEFAULT}")"
-  local ns_input; read -r ns_input || true
-  local NAMESPACE="${ns_input:-${NS_DEFAULT}}"
+  # Repo root
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  local repo_root
+  repo_root="$(cd "${script_dir}/../.." 2>/dev/null && pwd)"
+
+  # Discover apps with env.example
+  APP_NAMES=()
+  APP_PATHS=()
+  for d in "${repo_root}/apps"/*/; do
+    if [[ -f "${d}env.example" ]]; then
+      APP_NAMES+=("$(basename "${d}")")
+      APP_PATHS+=("${d}env.example")
+    fi
+  done
+
+  if [[ ${#APP_NAMES[@]} -eq 0 ]]; then
+    printf "  %s\n\n" "$(clr_bold_red "${APP_NOT_FOUND}")"
+    exit 1
+  fi
+
+  # App selection
+  printf "  %s:\n\n" "$(clr_bold "${APP_PROMPT}")"
+  APP_SELECTED=0
+  interactive_select
+  local app_name="${APP_NAMES[${APP_SELECTED}]}"
+  local env_file="${APP_PATHS[${APP_SELECTED}]}"
   echo ""
 
-  # Secret group checklist
+  # Parse env.example
+  ENV_KEYS=(); ENV_DEFAULTS=(); ENV_SECTIONS=()
+  parse_env_example "${env_file}"
+
+  if [[ ${#ENV_KEYS[@]} -eq 0 ]]; then
+    printf "  %s\n\n" "$(clr_bold_red "No variables found in ${env_file}.")"
+    exit 1
+  fi
+
+  # Namespace — use NAMESPACE= from env.example as default if present
+  local ns_default="default"
+  local ns_from_file
+  ns_from_file="$(grep -m1 '^NAMESPACE=' "${env_file}" 2>/dev/null | cut -d= -f2-)" || true
+  [[ -n "${ns_from_file}" ]] && ns_default="${ns_from_file}"
+
+  printf "  %s (%s): " "$(clr_bold "${NS_PROMPT}")" "$(clr_dim "${ns_default}")"
+  local ns_input; read -r ns_input || true
+  local NAMESPACE="${ns_input:-${ns_default}}"
+
+  # Secret name
+  local secret_name="${app_name}-secrets"
+  printf "  %s: %s\n\n" "$(clr_dim "${SECRET_LABEL}")" "$(clr_cyan "${secret_name}")"
+
+  # Checklist
+  CB_LABELS=("${ENV_KEYS[@]}")
+
   printf "  %s\n" "$(clr_bold "${SELECT_TITLE}")"
   printf "  %s\n" "$(clr_dim "${SELECT_PROMPT}")"
   printf "  %s\n\n" "$(clr_dim "${SELECT_HINT}")"
 
-  CB_LABELS=(
-    "${PROMPT_R2_ACCOUNT}"    # 0
-    "${PROMPT_R2_KEY}"        # 1
-    "${PROMPT_R2_SECRET}"     # 2
-    "${PROMPT_R2_BUCKET}"     # 3
-    "${PROMPT_R2_PUBLIC_URL}" # 4
-    "${GRP_GROQ}"             # 5
-    "${GRP_SCRAPE}"           # 6
-    "${GRP_STRIPE}"           # 7
-    "${GRP_INTERNAL}"         # 8
-    "${GRP_MONGO}"            # 9
-    "${GRP_COOKIES}"          # 10
-    "${GRP_WIREGUARD}"        # 11
-  )
   CB_SELECTED=()
   interactive_checkbox
   echo ""
@@ -381,12 +429,13 @@ main() {
   # Summary
   printf "  %s\n" "$(clr_bold "Selected:")"
   for idx in "${CB_SELECTED[@]}"; do
-    printf "    %s %s\n" "$(clr_cyan '•')" "${CB_LABELS[$idx]}"
+    printf "    %s %s\n" "$(clr_cyan '•')" "${ENV_KEYS[$idx]}"
   done
   echo ""
 
-  printf "  %s (${CONFIRM_YES_CHARS:0:1}): " "${CONFIRM_PROMPT}"
-  local confirm; read -r confirm || true; confirm="${confirm:-${CONFIRM_YES_CHARS:0:1}}"
+  printf "  %s (%s): " "${CONFIRM_PROMPT}" "${CONFIRM_YES_CHARS:0:1}"
+  local confirm; read -r confirm || true
+  confirm="${confirm:-${CONFIRM_YES_CHARS:0:1}}"
   local confirm_char="${confirm:0:1}"; confirm_char="${confirm_char,,}"
   if [[ "${CONFIRM_YES_CHARS}" != *"${confirm_char}"* ]]; then
     printf "  %s\n\n" "${CANCELLED}"; exit 0
@@ -395,154 +444,51 @@ main() {
 
   # ── Collect values ───────────────────────────────────────────────────────────
 
-  local vd2_items=()
-  local do_cookies=0 cookies_file=""
-  local do_wireguard=0 wg_file=""
-
-  # Find the repo root (two levels up from this script's dir)
-  _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
-  _REPO_ROOT="$(cd "${_SCRIPT_DIR}/../.." 2>/dev/null && pwd)"
+  local secret_items=()
+  local last_section=""
 
   for idx in "${CB_SELECTED[@]}"; do
-    case "${idx}" in
+    local key="${ENV_KEYS[$idx]}"
+    local default="${ENV_DEFAULTS[$idx]}"
+    local section="${ENV_SECTIONS[$idx]}"
 
-      # ── R2 Account ID ─────────────────────────────────────────────────────
-      0)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_R2}: ${PROMPT_R2_ACCOUNT} ──")"
-        local r2_acct; r2_acct="$(prompt_visible "${PROMPT_R2_ACCOUNT}")"
-        echo ""
-        [[ -n "${r2_acct}" ]] && vd2_items+=("r2-account-id=${r2_acct}")
-        ;;
+    if [[ -n "${section}" && "${section}" != "${last_section}" ]]; then
+      printf "  %s\n" "$(clr_bold_cyan "── ${section} ──")"
+      last_section="${section}"
+    fi
 
-      # ── R2 Access Key ID ──────────────────────────────────────────────────
-      1)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_R2}: ${PROMPT_R2_KEY} ──")"
-        local r2_key; r2_key="$(prompt_visible "${PROMPT_R2_KEY}")"
-        echo ""
-        [[ -n "${r2_key}" ]] && vd2_items+=("r2-access-key-id=${r2_key}")
-        ;;
-
-      # ── R2 Secret Access Key ──────────────────────────────────────────────
-      2)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_R2}: ${PROMPT_R2_SECRET} ──")"
-        local r2_sec; r2_sec="$(prompt_visible "${PROMPT_R2_SECRET}")"
-        echo ""
-        [[ -n "${r2_sec}" ]] && vd2_items+=("r2-secret-access-key=${r2_sec}")
-        ;;
-
-      # ── R2 Bucket Name ────────────────────────────────────────────────────
-      3)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_R2}: ${PROMPT_R2_BUCKET} ──")"
-        local r2_bkt
-        printf "  %s: " "$(clr_bold "${PROMPT_R2_BUCKET}")"
-        IFS= read -r r2_bkt || true
-        echo ""
-        [[ -n "${r2_bkt}" ]] && vd2_items+=("r2-bucket-name=${r2_bkt}")
-        ;;
-
-      # ── R2 Public URL ─────────────────────────────────────────────────────
-      4)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_R2}: ${PROMPT_R2_PUBLIC_URL} ──")"
-        local r2_url
-        printf "  %s: " "$(clr_bold "${PROMPT_R2_PUBLIC_URL}")"
-        IFS= read -r r2_url || true
-        echo ""
-        [[ -n "${r2_url}" ]] && vd2_items+=("r2-public-url=${r2_url}")
-        ;;
-
-      # ── Groq API ──────────────────────────────────────────────────────────
-      5)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_GROQ} ──")"
-        local groq; groq="$(prompt_visible "${PROMPT_GROQ}")"
-        echo ""
-        [[ -n "${groq}" ]] && vd2_items+=("groq-api-key=${groq}")
-        ;;
-
-      # ── ScrapeCreators ────────────────────────────────────────────────────
-      6)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_SCRAPE} ──")"
-        local scrape; scrape="$(prompt_visible "${PROMPT_SCRAPE}")"
-        echo ""
-        [[ -n "${scrape}" ]] && vd2_items+=("scrapecreators-api-key=${scrape}")
-        ;;
-
-      # ── Stripe ────────────────────────────────────────────────────────────
-      7)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_STRIPE} ──")"
-        local stripe_sk; stripe_sk="$(prompt_visible "${PROMPT_STRIPE_SK}")"
-        local stripe_wh; stripe_wh="$(prompt_visible "${PROMPT_STRIPE_WH}")"
-        echo ""
-        [[ -n "${stripe_sk}" ]] && vd2_items+=("stripe-secret-key=${stripe_sk}")
-        [[ -n "${stripe_wh}" ]] && vd2_items+=("stripe-webhook-secret=${stripe_wh}")
-        ;;
-
-      # ── Internal Secret ───────────────────────────────────────────────────
-      8)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_INTERNAL} ──")"
-        local internal; internal="$(prompt_visible "${PROMPT_INTERNAL}")"
-        echo ""
-        [[ -n "${internal}" ]] && vd2_items+=("internal-secret=${internal}")
-        ;;
-
-      # ── MongoDB URI ───────────────────────────────────────────────────────
-      9)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_MONGO} ──")"
-        local mongo_uri; mongo_uri="$(prompt_visible "${PROMPT_MONGO_URI}")"
-        echo ""
-        [[ -n "${mongo_uri}" ]] && vd2_items+=("mongo-uri=${mongo_uri}")
-        ;;
-
-      # ── Cookies File ──────────────────────────────────────────────────────
-      10)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_COOKIES} ──")"
-        local default_cookies="${_REPO_ROOT}/apps/video-downloader/netscape-cookies.txt"
-        cookies_file="$(prompt_visible "${PROMPT_COOKIES_FILE}" "${default_cookies}")"
-        echo ""
-        do_cookies=1
-        ;;
-
-      # ── WireGuard Config ──────────────────────────────────────────────────
-      11)
-        printf "  %s\n" "$(clr_bold_cyan "── ${GRP_WIREGUARD} ──")"
-        local default_wg="${_REPO_ROOT}/apps/video-downloader/us-den.conf"
-        wg_file="$(prompt_visible "${PROMPT_WG_FILE}" "${default_wg}")"
-        echo ""
-        do_wireguard=1
-        ;;
-
-    esac
-    :
+    if [[ "${key}" == *_FILE ]]; then
+      local file_path
+      file_path="$(prompt_visible "${key} — ${PROMPT_FILE_PATH}" "${default}")"
+      echo ""
+      if [[ -z "${file_path}" ]]; then continue; fi
+      if [[ ! -f "${file_path}" ]]; then
+        printf "  %s: %s\n" "$(clr_bold_red "✗ ${FILE_NOT_FOUND}")" "$(clr_dim "${file_path}")"
+        continue
+      fi
+      local file_content
+      file_content="$(< "${file_path}")"
+      secret_items+=("${key}=${file_content}")
+    else
+      local val
+      val="$(prompt_visible "${key}" "${default}")"
+      echo ""
+      [[ -n "${val}" ]] && secret_items+=("${key}=${val}")
+    fi
   done
 
-  # ── Apply secrets ────────────────────────────────────────────────────────────
+  # ── Apply ────────────────────────────────────────────────────────────────────
 
-  # vd2-secrets (API keys / R2 / Stripe / Internal)
-  if [[ ${#vd2_items[@]} -gt 0 ]]; then
-    apply_vd2_secrets "${NAMESPACE}" "${vd2_items[@]}"
-  fi
+  if [[ ${#secret_items[@]} -gt 0 ]]; then
+    apply_secret "${secret_name}" "${NAMESPACE}" "${secret_items[@]}"
 
-  # vd2-cookies
-  if [[ "${do_cookies}" -eq 1 ]]; then
-    printf "\n  %s %s...\n" "$(clr_bold_yellow '→')" "${APPLYING} vd2-cookies"
-    if [[ ! -f "${cookies_file}" ]]; then
-      printf "  %s: %s\n" "$(clr_red "✗ ${FILE_NOT_FOUND}")" "$(clr_dim "${cookies_file}")"
-    elif apply_file_secret vd2-cookies "${NAMESPACE}" netscape-cookies.txt "${cookies_file}"; then
-      printf "  %s vd2-cookies\n" "$(clr_bold_green "✓ ${DONE}:")"
-    else
-      printf "  %s vd2-cookies\n" "$(clr_red "✗ ${FAILED}:")"
-    fi
-  fi
-
-  # video-downloader-wireguard
-  if [[ "${do_wireguard}" -eq 1 ]]; then
-    printf "\n  %s %s...\n" "$(clr_bold_yellow '→')" "${APPLYING} video-downloader-wireguard"
-    if [[ ! -f "${wg_file}" ]]; then
-      printf "  %s: %s\n" "$(clr_red "✗ ${FILE_NOT_FOUND}")" "$(clr_dim "${wg_file}")"
-    elif apply_file_secret video-downloader-wireguard "${NAMESPACE}" wg0.conf "${wg_file}"; then
-      printf "  %s video-downloader-wireguard\n" "$(clr_bold_green "✓ ${DONE}:")"
-    else
-      printf "  %s video-downloader-wireguard\n" "$(clr_red "✗ ${FAILED}:")"
-    fi
+    echo ""
+    printf "  %s\n" "$(clr_bold "${SUMMARY_TITLE}")"
+    for item in "${secret_items[@]}"; do
+      local key="${item%%=*}"
+      local val="${item#*=}"
+      printf "    %s %-40s %s\n" "$(clr_cyan '•')" "$(clr_bold "${key}")" "${val}"
+    done
   fi
 
   echo ""

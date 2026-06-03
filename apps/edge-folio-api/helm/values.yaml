@@ -40,42 +40,16 @@ ingress:
         - api-edge-folio.iguzman.com.mx
 
 # ─── Environment variables ──────────────────────────────────
+# Non-secret vars not present in env.example / the k8s secret.
 env:
-  DJANGO_SETTINGS_MODULE: 'edge_folio_api.settings'
-  MEDIA_ROOT: '/app/media'
-  DB_HOST: 'postgres.edge-folio-api.svc.cluster.local'
-  DB_PORT: '5432'
-  DB_NAME: 'postgres'
-  DB_USER: 'postgres'
-  REDIS_URL: 'redis://redis.edge-folio-api.svc.cluster.local:6379/0'
-  EMAIL_HOST: 'smtp.ionos.com'
-  EMAIL_PORT: '587'
-  EMAIL_USE_TLS: 'True'
   EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
-  FRONTEND_URL: 'https://edge-folio.iguzman.com.mx'
-  CORS_ALLOWED_ORIGINS: 'https://edge-folio.iguzman.com.mx'
-  DEBUG: 'False'
-  ALLOWED_HOSTS: 'api.edge-folio.iguzman.com.mx,localhost,127.0.0.1'
-  CSRF_TRUSTED_ORIGINS: 'https://api-edge-folio.iguzman.com.mx'
   GUNICORN_WORKERS: '3'
 
-# Sensitive values – reference existing Kubernetes Secrets.
-envFromSecret:
-  - name: DB_PASSWORD
-    secretName: edge-folio-api-secrets
-    secretKey: db-password
-  - name: SECRET_KEY
-    secretName: edge-folio-api-secrets
-    secretKey: secret-key
-  - name: REDIS_PASSWORD
-    secretName: edge-folio-api-secrets
-    secretKey: redis-password
-  - name: EMAIL_HOST_USER
-    secretName: edge-folio-api-secrets
-    secretKey: email-host-user
-  - name: EMAIL_HOST_PASSWORD
-    secretName: edge-folio-api-secrets
-    secretKey: email-host-password
+# Load all env.example variables from the pre-existing secret.
+# Keys in the secret match env.example names exactly.
+envFrom:
+  - secretRef:
+      name: edge-folio-api-secrets
 
 # ─── Shared storage (media files via hostPath) ───────────────
 sharedStorage:

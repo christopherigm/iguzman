@@ -1886,34 +1886,8 @@ function helmValuesYaml(
   includeRedis,
   includeEmail,
 ) {
-  const redisEnv = includeRedis
-    ? `  REDIS_URL: 'redis://redis.${name}.svc.cluster.local:6379/0'
-`
-    : '';
-
   const emailEnv = includeEmail
-    ? `  EMAIL_HOST: 'smtp.ionos.com'
-  EMAIL_PORT: '587'
-  EMAIL_USE_TLS: 'True'
-  EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
-`
-    : '';
-
-  const redisSecret = includeRedis
-    ? `  - name: REDIS_PASSWORD
-    secretName: ${name}-secrets
-    secretKey: redis-password
-`
-    : '';
-
-  const emailSecret = includeEmail
-    ? `  - name: EMAIL_HOST_USER
-    secretName: ${name}-secrets
-    secretKey: email-host-user
-  - name: EMAIL_HOST_PASSWORD
-    secretName: ${name}-secrets
-    secretKey: email-host-password
-`
+    ? `  EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'\n`
     : '';
 
   return `# ─────────────────────────────────────────────────────────────
@@ -1958,29 +1932,16 @@ ingress:
         - ${host}
 
 # ─── Environment variables ──────────────────────────────────
+# Non-secret vars not present in env.example / the k8s secret.
 env:
-  DJANGO_SETTINGS_MODULE: '${moduleName}.settings'
-  MEDIA_ROOT: '/app/media'
-  DB_HOST: 'postgres.${name}.svc.cluster.local'
-  DB_PORT: '5432'
-  DB_NAME: 'postgres'
-  DB_USER: 'postgres'
-${redisEnv}${emailEnv}  FRONTEND_URL: '${frontendUrl}'
-  CORS_ALLOWED_ORIGINS: '${frontendUrl}'
-  DEBUG: 'False'
-  ALLOWED_HOSTS: '${host},localhost,127.0.0.1'
-  CSRF_TRUSTED_ORIGINS: 'https://${host}'
-  GUNICORN_WORKERS: '3'
+${emailEnv}  GUNICORN_WORKERS: '3'
 
-# Sensitive values – reference existing Kubernetes Secrets.
-envFromSecret:
-  - name: DB_PASSWORD
-    secretName: ${name}-secrets
-    secretKey: db-password
-  - name: SECRET_KEY
-    secretName: ${name}-secrets
-    secretKey: secret-key
-${redisSecret}${emailSecret}
+# Load all env.example variables from the pre-existing secret.
+# Keys in the secret match env.example names exactly.
+envFrom:
+  - secretRef:
+      name: ${name}-secrets
+
 # ─── Shared storage (media files via hostPath) ───────────────
 sharedStorage:
   enabled: true
@@ -2136,18 +2097,15 @@ spec:
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
 
-          {{- if or .Values.env .Values.envFromSecret }}
+          {{- if .Values.envFrom }}
+          envFrom:
+            {{- toYaml .Values.envFrom | nindent 12 }}
+          {{- end }}
+          {{- if .Values.env }}
           env:
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
-            {{- end }}
-            {{- range .Values.envFromSecret }}
-            - name: {{ .name }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .secretName }}
-                  key: {{ .secretKey }}
             {{- end }}
           {{- end }}
 
