@@ -11,11 +11,12 @@
     "new-django-app": "node scripts/new-django-app.mjs",
     "docker": "node scripts/docker-build.mjs",
     "helm": "bash cli/helm/helm.sh",
+    "secrets": "bash cli/setup-k8s-secrets/setup-k8s-secrets.sh",
     "sync-website-hosts": "node scripts/sync-website-hosts.mjs",
     "deploy-app": "bash cli/deploy-app/deploy-app.sh",
     "django-superuser": "bash cli/django-superuser/django-superuser.sh",
     "deploy-postgres": "node scripts/deploy-postgres.mjs",
-    "deploy-mongodb": "node scripts/deploy-mongodb.mjs",
+    "deploy-mongodb": "bash cli/deploy-mongodb/deploy-mongodb.sh",
     "deploy-mysql": "node scripts/deploy-mysql.mjs",
     "deploy-redis": "node scripts/deploy-redis.mjs",
     "generate-icons": "node scripts/generate-icons.mjs"

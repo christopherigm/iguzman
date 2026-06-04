@@ -9,6 +9,9 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify(body),
   });
 
+  if (!res.headers.get('content-type')?.includes('application/json')) {
+    return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
+  }
   const data = (await res.json()) as Record<string, unknown>;
   if (!res.ok) return NextResponse.json(data, { status: res.status });
 

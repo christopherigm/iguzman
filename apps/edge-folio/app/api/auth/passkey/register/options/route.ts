@@ -13,6 +13,9 @@ export async function POST() {
     },
   });
 
+  if (!res.headers.get('content-type')?.includes('application/json')) {
+    return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
+  }
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
