@@ -24,6 +24,7 @@ import {
   getPasskeyCredentials,
   getProfile,
   storeUser,
+  type UserProfile,
 } from '@/lib/auth';
 
 const REMEMBERED_EMAIL_KEY = 'auth_remembered_email';
@@ -50,6 +51,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
   const [loading, setLoading] = useState(false);
   const [passkeyPrompt, setPasskeyPrompt] = useState(false);
   const [passkeySuccess, setPasskeySuccess] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
   const [rememberEmail, setRememberEmail] = useState(false);
 
   useEffect(() => {
@@ -82,7 +84,9 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     setLoading(true);
     try {
       await login({ email, password });
-      storeUser(await getProfile());
+      const profile = await getProfile();
+      storeUser(profile);
+      setCurrentProfile(profile);
 
       const { count } = await getPasskeyCredentials();
       if (count === 0) {
@@ -91,7 +95,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         return;
       }
 
-      router.push('/');
+      router.push(profile.job_title ? '/' : '/onboarding');
     } catch (err) {
       if (err instanceof LoginError && err.status === 401) {
         setError(t('signIn.errorInvalidCredentials'));
@@ -112,8 +116,9 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     setLoading(true);
     try {
       await loginWithPasskey(email);
-      storeUser(await getProfile());
-      router.push('/');
+      const profile = await getProfile();
+      storeUser(profile);
+      router.push(profile.job_title ? '/' : '/onboarding');
     } catch (err) {
       if (err instanceof LoginError) {
         setError(t('signIn.errorPasskeyFailed'));
@@ -131,7 +136,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     try {
       await registerPasskey();
       setPasskeySuccess(true);
-      setTimeout(() => router.push('/'), 1500);
+      setTimeout(() => router.push(currentProfile?.job_title ? '/' : '/onboarding'), 1500);
     } catch {
       setError(t('passkey.errorGeneric'));
     } finally {
@@ -166,7 +171,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
               kind="success"
             />
             <LinkButton
-              onClick={() => router.push('/')}
+              onClick={() => router.push(currentProfile?.job_title ? '/' : '/onboarding')}
               label={t('passkey.skipButton')}
             />
           </>

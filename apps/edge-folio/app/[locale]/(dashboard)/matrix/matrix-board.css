@@ -89,3 +89,59 @@
   align-items: flex-end;
   flex-wrap: wrap;
 }
+
+/* ── Enhance button ───────────────────────────────────────────────────────── */
+
+.matrix__enhance-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    opacity 150ms ease;
+}
+
+.matrix__enhance-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground, #171717) 8%, transparent);
+}
+
+.matrix__enhance-btn--active {
+  background: color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent);
+}
+
+.matrix__enhance-btn--busy {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Enhance preview panel ────────────────────────────────────────────────── */
+
+.matrix__enhance-preview {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--primary, #06b6d4) 30%, transparent);
+  background: color-mix(in srgb, var(--primary, #06b6d4) 5%, transparent);
+}
+
+/* ── Enhance options modal content ────────────────────────────────────────── */
+
+.matrix__enhance-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0;
+}
+
+/* ── Text field label row (label + action buttons) ────────────────────────── */
+
+.matrix__field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

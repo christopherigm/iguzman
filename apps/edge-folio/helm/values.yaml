@@ -54,6 +54,9 @@ envFromSecret:
   - name: API_URL
     secretName: edge-folio-secrets
     secretKey: API_URL
+  - name: GROQ_API_KEY
+    secretName: edge-folio-secrets
+    secretKey: GROQ_API_KEY
 
 # ─── Shared storage (ReadWriteMany) ─────────────────────────
 sharedStorage:

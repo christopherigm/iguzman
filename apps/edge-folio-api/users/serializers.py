@@ -130,10 +130,14 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     profile_picture = serializers.SerializerMethodField()
+    job_title = serializers.SerializerMethodField()
+    years_of_experience = serializers.SerializerMethodField()
+    preferred_stack = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'profile_picture')
+        fields = ('id', 'email', 'first_name', 'last_name', 'profile_picture',
+                  'job_title', 'years_of_experience', 'preferred_stack')
 
     def get_profile_picture(self, obj):
         try:
@@ -146,6 +150,35 @@ class UserProfileSerializer(serializers.ModelSerializer):
             return picture.url
         except UserProfile.DoesNotExist:
             return None
+
+    def get_job_title(self, obj):
+        try:
+            return obj.profile.job_title
+        except UserProfile.DoesNotExist:
+            return ''
+
+    def get_years_of_experience(self, obj):
+        try:
+            return obj.profile.years_of_experience
+        except UserProfile.DoesNotExist:
+            return None
+
+    def get_preferred_stack(self, obj):
+        try:
+            return obj.profile.preferred_stack or []
+        except UserProfile.DoesNotExist:
+            return []
+
+
+class OnboardingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ('job_title', 'years_of_experience', 'preferred_stack')
+
+    def validate_preferred_stack(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError('Must be a list of strings.')
+        return [str(item).strip() for item in value if str(item).strip()]
 
 
 class ProfilePictureSerializer(ImageProcessingSerializer):

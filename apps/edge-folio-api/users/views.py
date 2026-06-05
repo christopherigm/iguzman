@@ -29,6 +29,7 @@ from webauthn.helpers.structs import (
 from .models import EmailVerificationToken, PasskeyCredential, PasswordResetToken
 from .serializers import (
     CustomTokenObtainPairSerializer,
+    OnboardingSerializer,
     PasskeyAuthenticationOptionsSerializer,
     PasskeyAuthenticationVerifySerializer,
     PasskeyRegistrationVerifySerializer,
@@ -230,6 +231,18 @@ class PasswordResetConfirmView(APIView):
 
 
 # ── Passkey (WebAuthn) views ─────────────────────────────────────────────────
+
+
+class OnboardingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        from .models import UserProfile as UserProfileModel
+        profile, _ = UserProfileModel.objects.get_or_create(user=request.user)
+        serializer = OnboardingSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(UserProfileSerializer(request.user, context={'request': request}).data)
 
 
 class PasskeyRegistrationOptionsView(APIView):

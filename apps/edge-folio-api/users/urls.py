@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from .views import (
     LoginView,
+    OnboardingView,
     PasskeyAuthenticationOptionsView,
     PasskeyAuthenticationVerifyView,
     PasskeyCredentialDetailView,
@@ -24,6 +25,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='auth-token-refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='auth-token-verify'),
     path('profile/', ProfileView.as_view(), name='auth-profile'),
+    path('onboarding/', OnboardingView.as_view(), name='auth-onboarding'),
     path('profile/picture/', ProfilePictureView.as_view(), name='auth-profile-picture'),
     path('verify-email/<uuid:token>/', VerifyEmailView.as_view(), name='auth-verify-email'),
     path('resend-verification/', ResendVerificationView.as_view(), name='auth-resend-verification'),

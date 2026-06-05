@@ -4,7 +4,7 @@ import { routing } from '@repo/i18n/routing';
 
 const intlMiddleware = createMiddleware(routing);
 
-const PROTECTED_PREFIXES = ['/dashboard', '/matrix', '/applications', '/extract', '/profile', '/account'];
+const PROTECTED_PREFIXES = ['/dashboard', '/matrix', '/applications', '/extract', '/profile', '/account', '/onboarding'];
 
 function isProtectedPath(pathname: string): boolean {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(-[A-Z]{2})?/, '');

@@ -1,0 +1,575 @@
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
+import { useRouter } from '@repo/i18n/navigation';
+import { Container } from '@repo/ui/core-elements/container';
+import { Box } from '@repo/ui/core-elements/box';
+import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Button } from '@repo/ui/core-elements/button';
+import { Typography } from '@repo/ui/core-elements/typography';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Badge } from '@repo/ui/core-elements/badge';
+import { Slider } from '@repo/ui/core-elements/slider';
+import type { SliderStep } from '@repo/ui/core-elements/slider';
+import { saveOnboarding, getProfile } from '@/lib/auth';
+import type { SwInboundMessage, SwOutboundMessage } from '@/lib/sw-types';
+import './onboarding-form.css';
+
+const YEARS_STEPS: SliderStep[] = [
+  { value: 0, label: '< 1' },
+  { value: 1, label: '1–2' },
+  { value: 3, label: '3–5' },
+  { value: 6, label: '6–9' },
+  { value: 10, label: '10–14' },
+  { value: 15, label: '15+' },
+];
+
+const TECH_SUGGESTIONS = [
+  'TypeScript', 'JavaScript', 'Python', 'Go', 'Rust', 'Java', 'C#', 'Ruby', 'PHP',
+  'React', 'Next.js', 'Vue', 'Angular', 'Svelte',
+  'Node.js', 'Django', 'FastAPI', 'Spring Boot', '.NET',
+  'PostgreSQL', 'MySQL', 'MongoDB', 'Redis',
+  'Docker', 'Kubernetes', 'AWS', 'GCP', 'Azure',
+  'GraphQL', 'REST', 'gRPC', 'Terraform', 'Linux',
+];
+
+type ModelStatus = 'unconfigured' | 'checking' | 'idle' | 'downloading' | 'ready' | 'error';
+
+// ── Step indicator ────────────────────────────────────────────────────────────
+
+function StepIndicator({ current, total }: { current: number; total: number }) {
+  const t = useTranslations('OnboardingPage');
+  return (
+    <Box display="flex" flexDirection="column" gap={8} alignItems="center" width="100%">
+      <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+        {t('stepOf', { current, total })}
+      </Typography>
+      <Box display="flex" alignItems="center" gap={0} className="onboarding__steps">
+        {Array.from({ length: total }, (_, i) => {
+          const num = i + 1;
+          const done = num < current;
+          const active = num === current;
+          return (
+            <Box key={num} display="flex" alignItems="center" gap={0}>
+              <Box
+                className={[
+                  'onboarding__step-dot',
+                  done ? 'onboarding__step-dot--done' : '',
+                  active ? 'onboarding__step-dot--active' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <Typography
+                  variant="caption"
+                  fontWeight={600}
+                  styles={{ fontSize: 12, lineHeight: '1' }}
+                >
+                  {done ? '✓' : String(num)}
+                </Typography>
+              </Box>
+              {num < total && (
+                <Box
+                  className={[
+                    'onboarding__step-line',
+                    done ? 'onboarding__step-line--done' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                />
+              )}
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+}
+
+// ── Tech tag input ────────────────────────────────────────────────────────────
+
+function TechTagInput({
+  tags,
+  onChange,
+}: {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const t = useTranslations('OnboardingPage');
+  const [input, setInput] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function addTag(raw: string) {
+    const tag = raw.trim().replace(/,$/, '');
+    if (!tag || tags.includes(tag)) return;
+    onChange([...tags, tag]);
+    setInput('');
+  }
+
+  function removeTag(tag: string) {
+    onChange(tags.filter((t) => t !== tag));
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(input);
+    } else if (e.key === 'Backspace' && !input && tags.length > 0) {
+      onChange(tags.slice(0, -1));
+    }
+  }
+
+  function toggleSuggestion(tech: string) {
+    if (tags.includes(tech)) {
+      removeTag(tech);
+    } else {
+      addTag(tech);
+    }
+  }
+
+  return (
+    <Box display="flex" flexDirection="column" gap={12}>
+      <Typography
+        as="label"
+        variant="caption"
+        fontWeight={600}
+        color="var(--foreground, #1a1a1a)"
+        styles={{ fontSize: 13 }}
+      >
+        {t('techStackLabel')}
+      </Typography>
+
+      {tags.length > 0 && (
+        <Box display="flex" flexWrap="wrap" gap={8} className="onboarding__tags">
+          {tags.map((tag) => (
+            <Box key={tag} className="onboarding__tag">
+              <Typography variant="caption" styles={{ fontSize: 13 }}>
+                {tag}
+              </Typography>
+              <Button
+                unstyled
+                type="button"
+                className="onboarding__tag-remove"
+                onClick={() => removeTag(tag)}
+                aria-label={`Remove ${tag}`}
+              >
+                ×
+              </Button>
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      <input
+        ref={inputRef}
+        type="text"
+        className="onboarding__tech-input"
+        placeholder={t('techStackPlaceholder')}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => { if (input.trim()) addTag(input); }}
+        aria-label={t('techStackLabel')}
+      />
+
+      <Box display="flex" flexDirection="column" gap={6}>
+        <Typography
+          variant="caption"
+          color="var(--muted-foreground, #6b7280)"
+          styles={{ fontSize: 12 }}
+        >
+          {t('techStackHint')}
+        </Typography>
+        <Box display="flex" flexWrap="wrap" gap={6}>
+          {TECH_SUGGESTIONS.map((tech) => (
+            <Button
+              key={tech}
+              unstyled
+              type="button"
+              className={[
+                'onboarding__suggestion',
+                tags.includes(tech) ? 'onboarding__suggestion--selected' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => toggleSuggestion(tech)}
+            >
+              {tech}
+            </Button>
+          ))}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// ── Model status banner ────────────────────────────────────────────────────────
+
+function ModelBanner({
+  status,
+  progress,
+}: {
+  status: ModelStatus;
+  progress: number;
+}) {
+  const t = useTranslations('OnboardingPage');
+
+  if (status === 'unconfigured') {
+    return (
+      <Box className="onboarding__model-banner onboarding__model-banner--idle">
+        <Typography variant="caption" styles={{ fontSize: 13 }}>
+          {t('modelUnconfigured')}
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (status === 'checking') {
+    return (
+      <Box className="onboarding__model-banner onboarding__model-banner--idle">
+        <Typography variant="caption" styles={{ fontSize: 13 }}>
+          {t('modelPreparing')}
+        </Typography>
+        <ProgressBar />
+      </Box>
+    );
+  }
+
+  if (status === 'idle') {
+    return (
+      <Box className="onboarding__model-banner onboarding__model-banner--idle">
+        <Typography variant="caption" styles={{ fontSize: 13 }}>
+          {t('modelIdle')}
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (status === 'downloading') {
+    const pct = Math.round(progress);
+    return (
+      <Box className="onboarding__model-banner onboarding__model-banner--downloading">
+        <Typography variant="caption" styles={{ fontSize: 13 }}>
+          {t('modelDownloading', { pct })}
+        </Typography>
+        <ProgressBar value={pct > 0 ? pct : undefined} />
+      </Box>
+    );
+  }
+
+  if (status === 'ready') {
+    return (
+      <Box className="onboarding__model-banner onboarding__model-banner--ready">
+        <Typography variant="caption" fontWeight={600} styles={{ fontSize: 13 }}>
+          ✓ {t('modelReady')}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return null;
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
+export function OnboardingForm() {
+  const t = useTranslations('OnboardingPage');
+  const router = useRouter();
+
+  const [step, setStep] = useState(1);
+  const [jobTitle, setJobTitle] = useState('');
+  const [yearsValue, setYearsValue] = useState<string | number>(YEARS_STEPS[0]!.value);
+  const [techStack, setTechStack] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [modelStatus, setModelStatus] = useState<ModelStatus>('unconfigured');
+  const [modelProgress, setModelProgress] = useState(0);
+
+  // Redirect if onboarding already complete
+  useEffect(() => {
+    getProfile()
+      .then((profile) => {
+        if (profile.job_title) {
+          router.replace('/matrix');
+        }
+      })
+      .catch(() => {
+        // not logged in — proxy will redirect to /auth
+      });
+  }, [router]);
+
+  // Trigger SW model download on mount
+  useEffect(() => {
+    const modelId = process.env.NEXT_PUBLIC_EDGE_MODEL_ID;
+    const filesRaw = process.env.NEXT_PUBLIC_EDGE_MODEL_FILES;
+    if (!modelId || !filesRaw) return;
+
+    let files: string[];
+    try {
+      files = JSON.parse(filesRaw) as string[];
+    } catch {
+      return;
+    }
+
+    if (!('serviceWorker' in navigator)) return;
+
+    function handleMessage(event: MessageEvent<SwOutboundMessage>) {
+      const msg = event.data;
+      if (!msg?.type) return;
+      switch (msg.type) {
+        case 'MODEL_CACHE_STATUS': {
+          const allCached = Object.values(msg.cached).every(Boolean);
+          if (allCached) {
+            setModelStatus('ready');
+            setModelProgress(100);
+          } else {
+            setModelStatus('idle');
+            navigator.serviceWorker.ready
+              .then((reg) => {
+                const msg: SwInboundMessage = { type: 'FETCH_MODEL_TO_OPFS', modelId: modelId as string, files };
+                reg.active?.postMessage(msg);
+                setModelStatus('downloading');
+              })
+              .catch(() => undefined);
+          }
+          break;
+        }
+        case 'MODEL_FETCH_START':
+          setModelStatus('downloading');
+          break;
+        case 'MODEL_FETCH_FILE_DONE':
+          setModelProgress(((msg.fileIndex + 1) / msg.fileCount) * 100);
+          break;
+        case 'MODEL_FETCH_COMPLETE':
+          setModelStatus('ready');
+          setModelProgress(100);
+          break;
+        case 'MODEL_FETCH_ERROR':
+          setModelStatus('error');
+          break;
+      }
+    }
+
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    setModelStatus('checking');
+
+    navigator.serviceWorker.ready
+      .then((reg) => {
+        const msg: SwInboundMessage = { type: 'CHECK_MODEL_CACHED', modelId, files };
+        reg.active?.postMessage(msg);
+      })
+      .catch(() => setModelStatus('unconfigured'));
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
+  const handleFinish = useCallback(async () => {
+    setError(null);
+    setSaving(true);
+    try {
+      await saveOnboarding({
+        job_title: jobTitle.trim(),
+        years_of_experience: typeof yearsValue === 'number' ? yearsValue : null,
+        preferred_stack: techStack,
+      });
+      router.push('/matrix');
+    } catch {
+      setError(t('errorSave'));
+    } finally {
+      setSaving(false);
+    }
+  }, [jobTitle, yearsValue, techStack, router, t]);
+
+  const stepTitles = [t('step1Title'), t('step2Title'), t('step3Title')];
+  const stepSubtitles = [t('step1Subtitle'), t('step2Subtitle'), t('step3Subtitle')];
+
+  const yearsLabel = (() => {
+    const step = YEARS_STEPS.find((s) => s.value === yearsValue);
+    return step ? step.label : String(yearsValue);
+  })();
+
+  return (
+    <Container
+      display="flex"
+      alignItems="center"
+      styles={{
+        minHeight: '100vh',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        paddingTop: 'var(--ui-navbar-height)',
+      }}
+      paddingX={10}
+    >
+      <Box width="100%" maxWidth={520} marginTop={24} marginBottom={16}>
+        <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
+          {t('title')}
+        </Typography>
+        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+          {t('subtitle')}
+        </Typography>
+      </Box>
+
+      <Box width="100%" maxWidth={520} marginBottom={24}>
+        <StepIndicator current={step} total={3} />
+      </Box>
+
+      <Box
+        width="100%"
+        maxWidth={520}
+        padding={10}
+        borderRadius={12}
+        flexDirection="column"
+        gap={24}
+        elevation={5}
+        backgroundColor="var(--surface-1)"
+        marginBottom={40}
+      >
+        <Box display="flex" flexDirection="column" gap={4}>
+          <Typography as="h2" variant="h3" fontWeight={600}>
+            {stepTitles[step - 1]}
+          </Typography>
+          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+            {stepSubtitles[step - 1]}
+          </Typography>
+        </Box>
+
+        {/* ── Step 1: Role ── */}
+        {step === 1 && (
+          <Box display="flex" flexDirection="column" gap={20}>
+            <TextInput
+              label={t('jobTitleLabel')}
+              type="text"
+              value={jobTitle}
+              onChange={setJobTitle}
+              placeholder={t('jobTitlePlaceholder')}
+              autoComplete="organization-title"
+            />
+            <Slider
+              label={t('yearsLabel')}
+              steps={YEARS_STEPS}
+              value={yearsValue}
+              onChange={setYearsValue}
+            />
+          </Box>
+        )}
+
+        {/* ── Step 2: Tech stack ── */}
+        {step === 2 && (
+          <TechTagInput tags={techStack} onChange={setTechStack} />
+        )}
+
+        {/* ── Step 3: Review + model status ── */}
+        {step === 3 && (
+          <Box display="flex" flexDirection="column" gap={16}>
+            <Box className="onboarding__review-card">
+              <Box className="onboarding__review-row">
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                  styles={{ fontSize: 12 }}
+                >
+                  {t('reviewJobTitle')}
+                </Typography>
+                <Typography variant="caption" fontWeight={600} styles={{ fontSize: 14 }}>
+                  {jobTitle || '—'}
+                </Typography>
+              </Box>
+              <Box className="onboarding__review-row">
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                  styles={{ fontSize: 12 }}
+                >
+                  {t('reviewYears')}
+                </Typography>
+                <Typography variant="caption" fontWeight={600} styles={{ fontSize: 14 }}>
+                  {yearsValue === 0
+                    ? t('reviewYearsLess')
+                    : t('reviewYearsValue', { years: yearsLabel })}
+                </Typography>
+              </Box>
+              <Box className="onboarding__review-row" alignItems="flex-start">
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                  styles={{ fontSize: 12, flexShrink: 0 }}
+                >
+                  {t('reviewStack')}
+                </Typography>
+                {techStack.length > 0 ? (
+                  <Box display="flex" flexWrap="wrap" gap={4} justifyContent="flex-end">
+                    {techStack.map((tech) => (
+                      <Badge key={tech} variant="subtle" size="sm">
+                        {tech}
+                      </Badge>
+                    ))}
+                  </Box>
+                ) : (
+                  <Typography
+                    variant="caption"
+                    color="var(--muted-foreground, #6b7280)"
+                    styles={{ fontSize: 14 }}
+                  >
+                    {t('reviewStackEmpty')}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+
+            <ModelBanner status={modelStatus} progress={modelProgress} />
+
+            {error && (
+              <Typography
+                variant="caption"
+                role="alert"
+                className="onboarding__error"
+              >
+                {error}
+              </Typography>
+            )}
+            {saving && <ProgressBar label={t('finishing')} />}
+          </Box>
+        )}
+
+        {/* ── Navigation ── */}
+        <Box display="flex" justifyContent="space-between" gap={12} marginTop={4}>
+          {step > 1 ? (
+            <Button
+              text={t('back')}
+              type="button"
+              size="md"
+              onClick={() => setStep((s) => s - 1)}
+              disabled={saving}
+            />
+          ) : (
+            <Box />
+          )}
+
+          {step < 3 ? (
+            <Button
+              text={t('next')}
+              type="button"
+              size="md"
+              kind={step === 1 && jobTitle.trim() ? 'success' : undefined}
+              disabled={step === 1 && !jobTitle.trim()}
+              onClick={() => setStep((s) => s + 1)}
+            />
+          ) : (
+            <Button
+              text={saving ? t('finishing') : t('finish')}
+              type="button"
+              size="md"
+              kind="success"
+              disabled={saving}
+              onClick={() => void handleFinish()}
+            />
+          )}
+        </Box>
+      </Box>
+    </Container>
+  );
+}

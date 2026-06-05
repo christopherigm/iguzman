@@ -4,6 +4,9 @@ export interface UserProfile {
   first_name: string;
   last_name: string;
   profile_picture: string | null;
+  job_title: string;
+  years_of_experience: number | null;
+  preferred_stack: string[];
 }
 
 const USER_PROFILE_KEY = 'ef_user';
@@ -119,6 +122,23 @@ export async function updateProfile(payload: {
 }): Promise<UserProfile> {
   const res = await fetch('/api/auth/profile', {
     method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<UserProfile>;
+}
+
+export async function saveOnboarding(payload: {
+  job_title: string;
+  years_of_experience: number | null;
+  preferred_stack: string[];
+}): Promise<UserProfile> {
+  const res = await fetch('/api/auth/onboarding', {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });

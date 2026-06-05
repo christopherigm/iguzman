@@ -16,6 +16,9 @@ class UserProfile(models.Model):
         null=True,
         blank=True,
     )
+    job_title = models.CharField(max_length=150, blank=True, default='')
+    years_of_experience = models.PositiveSmallIntegerField(null=True, blank=True)
+    preferred_stack = models.JSONField(default=list, blank=True)
 
     def __str__(self):
         return f'Profile of {self.user.username}'

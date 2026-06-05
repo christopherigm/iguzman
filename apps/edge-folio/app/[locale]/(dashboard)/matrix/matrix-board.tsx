@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { Container } from '@repo/ui/core-elements/container';
 import { Box } from '@repo/ui/core-elements/box';
 import { Button } from '@repo/ui/core-elements/button';
@@ -11,6 +11,9 @@ import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Toast } from '@repo/ui/core-elements/toast';
+import { Slider } from '@repo/ui/core-elements/slider';
+import { SpeechButton } from '@repo/ui/core-elements/speech-button';
+import { useGroqProxy } from '@repo/ui/use-groq';
 import {
   getSkills,
   createSkill,
@@ -25,6 +28,26 @@ import {
   type Category,
 } from '@/lib/matrix';
 import './matrix-board.css';
+
+const PARAGRAPH_WORD_COUNTS: Record<string, { min: number; max: number }> = {
+  xs:      { min: 10,  max: 20  },
+  sm:      { min: 25,  max: 40  },
+  md:      { min: 50,  max: 75 },
+  'md-lg': { min: 80, max: 120 },
+  lg:      { min: 130, max: 180 },
+  xl:      { min: 200, max: 270 },
+};
+
+const PARAGRAPH_LENGTH_STEPS = [
+  { value: 'xs',    label: 'XS'  },
+  { value: 'sm',    label: 'S'   },
+  { value: 'md',    label: 'M'   },
+  { value: 'md-lg', label: 'M-L' },
+  { value: 'lg',    label: 'L'   },
+  { value: 'xl',    label: 'XL'  },
+];
+
+const PARAGRAPH_COUNT_STEPS = [1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) }));
 
 const CATEGORIES: Category[] = [
   'impact',
@@ -68,6 +91,7 @@ interface BulletFormProps {
 
 function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormProps) {
   const t = useTranslations('MatrixPage');
+  const locale = useLocale();
   const [text, setText] = useState(initial?.text ?? '');
   const [selectedCategory, setSelectedCategory] = useState<Category>(
     initial?.category ?? category,
@@ -78,6 +102,69 @@ function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormP
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ── AI Enhance ──────────────────────────────────────────────────────────────
+  const { streamingText, isGenerating, generate, abort, reset: resetLlm } =
+    useGroqProxy({ temperature: 0.7 });
+  const [enhancePreview, setEnhancePreview] = useState('');
+  const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
+  const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
+  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState('sm');
+
+  useEffect(() => {
+    if (streamingText) setEnhancePreview(streamingText);
+  }, [streamingText]);
+
+  // Abort streaming if form unmounts mid-generation.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (isGenerating) abort(); }, []);
+
+  const handleConfirmEnhanceOptions = async () => {
+    setShowEnhanceOptions(false);
+    const currentText = text.trim();
+    if (!currentText) return;
+    setEnhancePreview('');
+    resetLlm();
+    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
+    const isEs = locale === 'es';
+    const messages = isEs
+      ? [
+          {
+            role: 'system' as const,
+            content: `Eres un coach profesional de carrera. Reescribe y amplía el siguiente logro profesional en prosa impactante para un portafolio. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? 's' : ''}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado — sin explicaciones, etiquetas ni marcas de formato.`,
+          },
+          { role: 'user' as const, content: currentText },
+        ]
+      : [
+          {
+            role: 'system' as const,
+            content: `You are a professional career coach and resume expert. Rewrite and expand the following career achievement into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? 'paragraph' : 'paragraphs'}. Each paragraph must be between ${min} and ${max} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text — no explanations, labels, or formatting marks.`,
+          },
+          { role: 'user' as const, content: currentText },
+        ];
+    await generate(messages);
+  };
+
+  const handleAcceptEnhance = () => {
+    if (enhancePreview) setText(enhancePreview);
+    setEnhancePreview('');
+    resetLlm();
+  };
+
+  const handleDiscardEnhance = () => {
+    if (isGenerating) abort();
+    setEnhancePreview('');
+    resetLlm();
+  };
+
+  // ── Voice input ──────────────────────────────────────────────────────────────
+  const textRef = useRef(text);
+  textRef.current = text;
+  const handleTranscript = useCallback((transcript: string) => {
+    const current = textRef.current;
+    setText(current ? `${current} ${transcript}` : transcript);
+  }, []);
+
+  // ── Form submit ──────────────────────────────────────────────────────────────
   function toggleSkill(id: number) {
     setSelectedSkillIds((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
@@ -106,67 +193,140 @@ function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormP
     }
   }
 
+  const llmBusy = isGenerating;
+  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
+
   return (
-    <form onSubmit={handleSubmit} className="matrix__add-form">
-      <TextInput
-        multirow
-        rows={4}
-        label={t('textLabel')}
-        value={text}
-        onChange={setText}
-        required
-        maxLength={500}
-        width="100%"
-      />
-      <select
-        className="matrix__select"
-        value={selectedCategory}
-        onChange={(e) => setSelectedCategory(e.target.value as Category)}
-        aria-label={t('categoryLabel')}
-      >
-        {CATEGORIES.map((cat) => (
-          <option key={cat} value={cat}>
-            {t(`categories.${cat}`)}
-          </option>
-        ))}
-      </select>
-      {skills.length > 0 && (
-        <Box>
-          <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
-            {t('skillsLabel')}
+    <>
+      {showEnhanceOptions && (
+        <ConfirmationModal
+          title={t('enhanceOptionsTitle')}
+          text={t('enhanceOptionsText')}
+          okCallback={handleConfirmEnhanceOptions}
+          cancelCallback={() => setShowEnhanceOptions(false)}
+        >
+          <Box className="matrix__enhance-options">
+            <Slider
+              steps={PARAGRAPH_COUNT_STEPS}
+              value={enhanceParagraphs}
+              onChange={(v) => setEnhanceParagraphs(Number(v))}
+              label={t('enhanceParagraphsLabel')}
+            />
+            <Slider
+              steps={PARAGRAPH_LENGTH_STEPS}
+              value={enhanceParagraphLength}
+              onChange={(v) => setEnhanceParagraphLength(String(v))}
+              label={`${t('enhanceLengthLabel')} (${currentLengthWordRange.min}–${currentLengthWordRange.max} words/para)`}
+            />
+          </Box>
+        </ConfirmationModal>
+      )}
+      <form onSubmit={handleSubmit} className="matrix__add-form">
+        {/* Label row with voice + enhance buttons */}
+        <Box className="matrix__field-label-row">
+          <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+            {t('textLabel')}
           </Typography>
-          <Box display="flex" flexWrap="wrap" gap={6}>
-            {skills.map((skill) => (
-              <Button
-                key={skill.id}
-                type="button"
-                unstyled
-                className={`matrix__skill-checkbox${selectedSkillIds.includes(skill.id) ? ' matrix__skill-checkbox--selected' : ''}`}
-                onClick={() => toggleSkill(skill.id)}
-                aria-pressed={selectedSkillIds.includes(skill.id)}
-              >
-                {skill.name}
-              </Button>
-            ))}
+          <Box display="flex" alignItems="center" gap={6}>
+            <SpeechButton
+              language={locale === 'es' ? 'es' : 'en'}
+              onTranscript={handleTranscript}
+              micIcon="/icons/mic.svg"
+            />
+            <Button
+              unstyled
+              type="button"
+              icon="/icons/enhance.svg"
+              iconSize="16px"
+              iconColor={enhancePreview ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+              disabled={llmBusy || !text.trim()}
+              onClick={() => setShowEnhanceOptions(true)}
+              aria-label={t('enhanceLabel')}
+              title={t('enhanceLabel')}
+              className={[
+                'matrix__enhance-btn',
+                llmBusy || !text.trim() ? 'matrix__enhance-btn--busy' : '',
+                enhancePreview ? 'matrix__enhance-btn--active' : '',
+              ].filter(Boolean).join(' ')}
+            />
           </Box>
         </Box>
-      )}
-      {error && (
-        <Typography variant="caption" color="var(--error, #ef4444)">
-          {error}
-        </Typography>
-      )}
-      <Box display="flex" gap={8} justifyContent="flex-end">
-        <Button text={t('cancel')} type="button" size="sm" onClick={onCancel} />
-        <Button
-          text={saving ? t('saving') : t('save')}
-          type="submit"
-          size="sm"
-          kind="success"
-          disabled={saving || !text.trim()}
+        <TextInput
+          multirow
+          rows={4}
+          value={text}
+          onChange={setText}
+          required
+          maxLength={500}
+          width="100%"
+          aria-label={t('textLabel')}
         />
-      </Box>
-    </form>
+        {/* Enhance preview panel */}
+        {enhancePreview && (
+          <Box className="matrix__enhance-preview" flexDirection="column" gap={10}>
+            <Typography variant="body-sm">{enhancePreview}</Typography>
+            <Box display="flex" gap={8} alignItems="center" marginTop={12}>
+              {isGenerating ? (
+                <Button text={t('enhanceStop')} type="button" size="sm" onClick={handleDiscardEnhance} />
+              ) : (
+                <>
+                  <Button text={t('enhanceDiscard')} type="button" size="sm" onClick={handleDiscardEnhance} />
+                  <Button text={t('enhanceAccept')} type="button" size="sm" kind="success" onClick={handleAcceptEnhance} />
+                </>
+              )}
+            </Box>
+          </Box>
+        )}
+        <select
+          className="matrix__select"
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value as Category)}
+          aria-label={t('categoryLabel')}
+        >
+          {CATEGORIES.map((cat) => (
+            <option key={cat} value={cat}>
+              {t(`categories.${cat}`)}
+            </option>
+          ))}
+        </select>
+        {skills.length > 0 && (
+          <Box>
+            <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
+              {t('skillsLabel')}
+            </Typography>
+            <Box display="flex" flexWrap="wrap" gap={6}>
+              {skills.map((skill) => (
+                <Button
+                  key={skill.id}
+                  type="button"
+                  unstyled
+                  className={`matrix__skill-checkbox${selectedSkillIds.includes(skill.id) ? ' matrix__skill-checkbox--selected' : ''}`}
+                  onClick={() => toggleSkill(skill.id)}
+                  aria-pressed={selectedSkillIds.includes(skill.id)}
+                >
+                  {skill.name}
+                </Button>
+              ))}
+            </Box>
+          </Box>
+        )}
+        {error && (
+          <Typography variant="caption" color="var(--error, #ef4444)">
+            {error}
+          </Typography>
+        )}
+        <Box display="flex" gap={8} justifyContent="flex-end">
+          <Button text={t('cancel')} type="button" size="sm" onClick={onCancel} />
+          <Button
+            text={saving ? t('saving') : t('save')}
+            type="submit"
+            size="sm"
+            kind="success"
+            disabled={saving || !text.trim()}
+          />
+        </Box>
+      </form>
+    </>
   );
 }
 
