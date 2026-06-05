@@ -563,6 +563,64 @@ export default logger;
 EOF
 }
 
+gen_lib_api_fetch_ts() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'TSEOF'
+import { cookies } from 'next/headers';
+
+const API = process.env.API_URL;
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+const COOKIE_OPTS = { httpOnly: true, secure: IS_PROD, sameSite: 'strict' as const, path: '/' };
+
+async function refreshAccessToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const refresh = cookieStore.get('refresh_token')?.value;
+  if (!refresh) return null;
+
+  const res = await fetch(`${API}/api/auth/token/refresh/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh }),
+  });
+
+  if (!res.ok) {
+    cookieStore.delete('access_token');
+    cookieStore.delete('refresh_token');
+    return null;
+  }
+
+  const data = (await res.json()) as { access: string; refresh?: string };
+  cookieStore.set('access_token', data.access, { ...COOKIE_OPTS, maxAge: 60 * 60 });
+  if (data.refresh) {
+    cookieStore.set('refresh_token', data.refresh, { ...COOKIE_OPTS, maxAge: 60 * 60 * 24 * 7 });
+  }
+  return data.access;
+}
+
+export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const cookieStore = await cookies();
+  let token = cookieStore.get('access_token')?.value;
+  if (!token) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
+
+  const withAuth = (t: string): RequestInit => ({
+    ...init,
+    headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${t}` },
+  });
+
+  let res = await fetch(`${API}${path}`, withAuth(token));
+
+  if (res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (!newToken) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
+    res = await fetch(`${API}${path}`, withAuth(newToken));
+  }
+
+  return res;
+}
+TSEOF
+}
+
 gen_page_tsx() {
   local out="$1"; mkdir -p "$(dirname "$out")"
   cat > "$out" << TSEOF
@@ -1108,23 +1166,19 @@ TSEOF
   # profile
   mkdir -p "${base}/profile"
   cat > "${base}/profile/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiFetch } from '@/lib/api-fetch';
 
 export async function GET() {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
-  const res = await fetch(`${process.env.API_URL}/api/auth/profile/`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await apiFetch('/api/auth/profile/');
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });
 }
 
 export async function PUT(request: NextRequest) {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
   const body: unknown = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/profile/`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body),
+  const res = await apiFetch('/api/auth/profile/', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });
@@ -1134,15 +1188,13 @@ TSEOF
   # profile/picture
   mkdir -p "${base}/profile/picture"
   cat > "${base}/profile/picture/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiFetch } from '@/lib/api-fetch';
 
 export async function POST(request: NextRequest) {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
   const body: unknown = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/profile/picture/`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body),
+  const res = await apiFetch('/api/auth/profile/picture/', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });
@@ -1152,15 +1204,13 @@ TSEOF
   # change-password
   mkdir -p "${base}/change-password"
   cat > "${base}/change-password/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiFetch } from '@/lib/api-fetch';
 
 export async function POST(request: NextRequest) {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
   const body: unknown = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/change-password/`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body),
+  const res = await apiFetch('/api/auth/change-password/', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
   if (res.status === 204) return new NextResponse(null, { status: 204 });
   const data: unknown = await res.json().catch(() => ({}));
@@ -1202,14 +1252,12 @@ TSEOF
   # passkey routes
   mkdir -p "${base}/passkey/register/options"
   cat > "${base}/passkey/register/options/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { apiFetch } from '@/lib/api-fetch';
 
 export async function POST() {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
-  const res = await fetch(`${process.env.API_URL}/api/auth/passkey/register/options/`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  const res = await apiFetch('/api/auth/passkey/register/options/', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
   });
   if (!res.headers.get('content-type')?.includes('application/json')) return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
   const data: unknown = await res.json();
@@ -1219,15 +1267,13 @@ TSEOF
 
   mkdir -p "${base}/passkey/register/verify"
   cat > "${base}/passkey/register/verify/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import { apiFetch } from '@/lib/api-fetch';
 
 export async function POST(request: NextRequest) {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
   const body: unknown = await request.json();
-  const res = await fetch(`${process.env.API_URL}/api/auth/passkey/register/verify/`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body),
+  const res = await apiFetch('/api/auth/passkey/register/verify/', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
   if (!res.headers.get('content-type')?.includes('application/json')) return NextResponse.json({ detail: 'Upstream error' }, { status: 502 });
   const data: unknown = await res.json();
@@ -1273,13 +1319,11 @@ TSEOF
 
   mkdir -p "${base}/passkey/credentials"
   cat > "${base}/passkey/credentials/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { apiFetch } from '@/lib/api-fetch';
 
 export async function GET() {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ count: 0, credentials: [] });
-  const res = await fetch(`${process.env.API_URL}/api/auth/passkey/credentials/`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await apiFetch('/api/auth/passkey/credentials/');
   if (!res.ok) return NextResponse.json({ count: 0, credentials: [] });
   const data: unknown = await res.json();
   return NextResponse.json(data);
@@ -1288,19 +1332,15 @@ TSEOF
 
   mkdir -p "${base}/passkey/credentials/[id]"
   cat > "${base}/passkey/credentials/[id]/route.ts" << 'TSEOF'
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { apiFetch } from '@/lib/api-fetch';
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
-  const res = await fetch(`${process.env.API_URL}/api/auth/passkey/credentials/${id}/`, {
-    method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await apiFetch(`/api/auth/passkey/credentials/${id}/`, { method: 'DELETE' });
   return new NextResponse(null, { status: res.status });
 }
 TSEOF
@@ -2804,6 +2844,7 @@ main() {
     gen_footer_tsx                   "${app_dir}/app/[locale]/footer.tsx"
     gen_footer_css                   "${app_dir}/app/[locale]/footer.css"
     gen_lib_auth_ts                  "${app_dir}/lib/auth.ts"
+    gen_lib_api_fetch_ts             "${app_dir}/lib/api-fetch.ts"
     gen_auth_pages                   "${app_dir}/app/[locale]/(auth)"
     gen_account_pages                "${app_dir}/app/[locale]/account"
     gen_api_auth_routes              "${app_dir}/app/api/auth"

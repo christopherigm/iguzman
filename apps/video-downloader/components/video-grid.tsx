@@ -74,6 +74,7 @@ export function VideoGrid({
         (v) =>
           v.name?.toLowerCase().includes(q) ||
           v.uploader?.toLowerCase().includes(q) ||
+          v.description?.toLowerCase().includes(q) ||
           v.originalURL?.toLowerCase().includes(q),
       );
     }
