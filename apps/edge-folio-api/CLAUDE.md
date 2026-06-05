@@ -79,6 +79,96 @@ Follow the existing patterns in `users/`:
 - Use `APIView` for custom multi-method endpoints.
 - Separate read serializers (for output) from write serializers (for input) when they differ — see `UserProfileSerializer` vs `UserProfileUpdateSerializer`.
 
+## Caching Rule
+
+All data in this API is **per-user**. Cache keys must always be user-scoped.
+
+### Cache key naming
+
+```
+{app}:{model_plural}:{user_id}          — list
+{app}:{model_singular}:{user_id}:{pk}   — detail
+```
+
+Examples: `matrix:skills:42`, `matrix:bullet:42:7`
+
+### Caching GET responses
+
+```python
+from django.core.cache import cache
+
+CACHE_TTL = 300  # 5 minutes
+
+# In a generics view, override list() / retrieve():
+def list(self, request, *args, **kwargs):
+    cache_key = f'myapp:mymodels:{request.user.id}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+    response = super().list(request, *args, **kwargs)
+    cache.set(cache_key, response.data, CACHE_TTL)
+    return response
+```
+
+### Cache invalidation on writes
+
+Invalidate in every write path (create, update, destroy). Define helpers at the top of `views.py` and `admin.py`:
+
+```python
+def _invalidate_mymodel(user_id, pk=None):
+    cache.delete(f'myapp:mymodels:{user_id}')
+    if pk is not None:
+        cache.delete(f'myapp:mymodel:{user_id}:{pk}')
+```
+
+Call in write methods:
+```python
+def create(self, request, *args, **kwargs):
+    response = super().create(request, *args, **kwargs)
+    _invalidate_mymodel(request.user.id)
+    return response
+
+def update(self, request, *args, **kwargs):
+    response = super().update(request, *args, **kwargs)
+    _invalidate_mymodel(request.user.id, kwargs.get('pk'))
+    return response
+
+def destroy(self, request, *args, **kwargs):
+    pk = kwargs.get('pk')
+    response = super().destroy(request, *args, **kwargs)
+    _invalidate_mymodel(request.user.id, pk)
+    return response
+```
+
+### Admin cache invalidation
+
+Override `save_model` and `delete_model` in every `ModelAdmin`:
+
+```python
+def save_model(self, request, obj, form, change):
+    super().save_model(request, obj, form, change)
+    _invalidate_mymodel(obj.user_id, obj.pk)
+
+def delete_model(self, request, obj):
+    _invalidate_mymodel(obj.user_id, obj.pk)
+    super().delete_model(request, obj)
+```
+
+**Note:** Call `super().save_model(...)` *before* invalidating; call `super().delete_model(...)` *after* invalidating.
+
+### Cross-model invalidation
+
+When model A embeds model B in its read serializer, writes to B must also bust A's cache. Example: `BulletPointReadSerializer` embeds skills, so any skill write also calls `cache.delete(f'matrix:bullets:{user_id}')`.
+
+## Models — Full-Stack Coverage Rule
+
+When adding a **new model** or a **new field to an existing model**, automatically do all of this in the same task:
+
+1. **`admin.py`** — register the model (or add the field to `list_display` / `fields` / `readonly_fields`). Add `save_model`/`delete_model` cache invalidation.
+2. **Serializer** — create or update a DRF serializer for the model/field.
+3. **View** — create or update the corresponding API view with `list`/`retrieve` caching and write invalidation.
+4. **URL / endpoint** — wire the view into the router or `urlpatterns`.
+
 ## Key Environment Variables
 
 See `env.example`. Locally, `.env` is loaded.

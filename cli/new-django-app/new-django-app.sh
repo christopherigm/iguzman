@@ -1048,6 +1048,22 @@ from .models import BasePicture
 PYEOF
 }
 
+gen_core_cache_py() {
+  local out="$1"
+  mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'PYEOF'
+from django.core.cache import cache
+
+
+def invalidate_pattern(pattern):
+    """Delete all keys matching a glob pattern (Redis only; silently skipped on LocMemCache)."""
+    try:
+        cache.delete_pattern(pattern)
+    except AttributeError:
+        pass
+PYEOF
+}
+
 gen_users_apps_py() {
   local out="$1"
   mkdir -p "$(dirname "$out")"
@@ -2766,6 +2782,7 @@ main() {
   gen_core_models_py     "${app_dir}/core/models.py"
   gen_core_serializers_py "${app_dir}/core/serializers.py"
   gen_init_py            "${app_dir}/core/migrations/__init__.py"
+  [[ "${include_redis}" == "y" ]] && gen_core_cache_py "${app_dir}/core/cache.py" || true
 
   # Users app
   gen_init_py            "${app_dir}/users/__init__.py"
