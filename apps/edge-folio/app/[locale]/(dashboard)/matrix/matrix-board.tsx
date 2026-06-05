@@ -188,7 +188,7 @@ function BulletCard({ bullet, skills, onEdit, onDelete }: BulletCardProps) {
       display="flex"
       flexDirection="column"
       gap={8}
-      padding={12}
+      padding={8}
       borderRadius={8}
       border="1px solid var(--border, #e5e7eb)"
       backgroundColor="var(--surface-1, #fff)"
@@ -232,7 +232,7 @@ interface CategorySectionProps {
   category: Category;
   bullets: BulletPoint[];
   skills: Skill[];
-  onBulletSaved: (bullet: BulletPoint, isNew: boolean) => void;
+  onEdit: (bullet: BulletPoint) => void;
   onBulletDeleted: (id: number) => void;
 }
 
@@ -240,20 +240,11 @@ function CategorySection({
   category,
   bullets,
   skills,
-  onBulletSaved,
+  onEdit,
   onBulletDeleted,
 }: CategorySectionProps) {
   const t = useTranslations('MatrixPage');
-  const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<BulletPoint | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
-
-  function handleSaved(bullet: BulletPoint) {
-    const isNew = !editing;
-    setAdding(false);
-    setEditing(null);
-    onBulletSaved(bullet, isNew);
-  }
 
   return (
     <>
@@ -274,49 +265,28 @@ function CategorySection({
         flexDirection="column"
         gap={12}
         borderRadius={12}
-        padding={16}
+        padding={12}
         backgroundColor="var(--surface-1)"
         border="1px solid var(--border, #e5e7eb)"
       >
-        <Box display="flex" alignItems="center" justifyContent="space-between" gap={8}>
-          <Box display="flex" alignItems="center" gap={8}>
-            <CategoryBadge category={category} label={t(`categories.${category}`)} />
-            <Typography as="span" variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 12 }}>
-              {bullets.length}
-            </Typography>
-          </Box>
-          {!adding && !editing && (
-            <Button
-              text={t('addBullet')}
-              type="button"
-              size="sm"
-              onClick={() => setAdding(true)}
-            />
-          )}
+        <Box display="flex" alignItems="center" gap={8}>
+          <CategoryBadge category={category} label={t(`categories.${category}`)} />
+          <Typography as="span" variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 12 }}>
+            {bullets.length}
+          </Typography>
         </Box>
 
-        {bullets.map((bullet) =>
-          editing?.id === bullet.id ? (
-            <BulletForm
-              key={bullet.id}
-              category={category}
-              skills={skills}
-              initial={bullet}
-              onSave={handleSaved}
-              onCancel={() => setEditing(null)}
-            />
-          ) : (
-            <BulletCard
-              key={bullet.id}
-              bullet={bullet}
-              skills={skills}
-              onEdit={setEditing}
-              onDelete={setPendingDeleteId}
-            />
-          ),
-        )}
+        {bullets.map((bullet) => (
+          <BulletCard
+            key={bullet.id}
+            bullet={bullet}
+            skills={skills}
+            onEdit={onEdit}
+            onDelete={setPendingDeleteId}
+          />
+        ))}
 
-        {bullets.length === 0 && !adding && (
+        {bullets.length === 0 && (
           <Typography
             as="p"
             variant="caption"
@@ -327,15 +297,6 @@ function CategorySection({
           >
             {t('emptyCategory')}
           </Typography>
-        )}
-
-        {adding && (
-          <BulletForm
-            category={category}
-            skills={skills}
-            onSave={handleSaved}
-            onCancel={() => setAdding(false)}
-          />
         )}
       </Box>
     </>
@@ -417,7 +378,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
       )}
     <Box
       borderRadius={12}
-      padding={20}
+      padding={12}
       backgroundColor="var(--surface-1)"
       border="1px solid var(--border, #e5e7eb)"
     >
@@ -519,6 +480,23 @@ export function MatrixBoard() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingBullet, setEditingBullet] = useState<BulletPoint | null>(null);
+
+  function openAdd() {
+    setEditingBullet(null);
+    setFormOpen(true);
+  }
+
+  function openEdit(bullet: BulletPoint) {
+    setEditingBullet(bullet);
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    setEditingBullet(null);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -538,10 +516,13 @@ export function MatrixBoard() {
     load();
   }, [load]);
 
-  function handleBulletSaved(bullet: BulletPoint, isNew: boolean) {
+  function handleBulletSaved(bullet: BulletPoint) {
     setBullets((prev) =>
-      isNew ? [...prev, bullet] : prev.map((b) => (b.id === bullet.id ? bullet : b)),
+      editingBullet === null
+        ? [...prev, bullet]
+        : prev.map((b) => (b.id === bullet.id ? bullet : b)),
     );
+    closeForm();
   }
 
   async function handleBulletDeleted(id: number) {
@@ -596,7 +577,7 @@ export function MatrixBoard() {
       <Box
         width="100%"
         marginTop={24}
-        marginBottom={32}
+        marginBottom={24}
         display="flex"
         alignItems="flex-start"
         justifyContent="space-between"
@@ -611,7 +592,22 @@ export function MatrixBoard() {
             {t('subtitle')}
           </Typography>
         </Box>
+        {!formOpen && (
+          <Button text={t('addBullet')} type="button" size="sm" onClick={openAdd} />
+        )}
       </Box>
+
+      {formOpen && (
+        <Box marginBottom={24}>
+          <BulletForm
+            category={editingBullet?.category ?? 'impact'}
+            skills={skills}
+            initial={editingBullet ?? undefined}
+            onSave={handleBulletSaved}
+            onCancel={closeForm}
+          />
+        </Box>
+      )}
 
       <Box
         display="grid"
@@ -625,7 +621,7 @@ export function MatrixBoard() {
             category={cat}
             bullets={bulletsByCategory[cat]}
             skills={skills}
-            onBulletSaved={handleBulletSaved}
+            onEdit={openEdit}
             onBulletDeleted={handleBulletDeleted}
           />
         ))}
