@@ -6,7 +6,7 @@ from datetime import timedelta
 
 
 def profile_picture_upload_path(instance, filename):
-    return f'profile_pictures/{instance.user.id}/{filename}'
+    return f'profile_pictures/{filename}'
 
 
 class UserProfile(models.Model):

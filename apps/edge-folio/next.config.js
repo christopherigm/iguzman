@@ -37,6 +37,10 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'localhost',
       },
+      {
+        protocol: 'https',
+        hostname: 'r2.iguzman.com.mx',
+      },
     ],
   },
 };

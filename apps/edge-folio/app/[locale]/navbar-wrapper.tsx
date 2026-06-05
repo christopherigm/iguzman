@@ -28,8 +28,8 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
         (e as CustomEvent<{ displayName: string | null }>).detail.displayName,
       );
     };
-    window.addEventListener('ef-auth', handler);
-    return () => window.removeEventListener('ef-auth', handler);
+    window.addEventListener('app-auth', handler);
+    return () => window.removeEventListener('app-auth', handler);
   }, []);
 
   const handleSignOut = async () => {

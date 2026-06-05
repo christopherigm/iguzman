@@ -12,12 +12,12 @@ export function storeUser(profile: UserProfile): void {
   const raw = (profile.first_name?.trim() || profile.email) ?? '';
   const displayName = raw.substring(0, 10);
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify({ displayName }));
-  window.dispatchEvent(new CustomEvent('ef-auth', { detail: { displayName } }));
+  window.dispatchEvent(new CustomEvent('app-auth', { detail: { displayName } }));
 }
 
 export function clearUser(): void {
   localStorage.removeItem(USER_PROFILE_KEY);
-  window.dispatchEvent(new CustomEvent('ef-auth', { detail: { displayName: null } }));
+  window.dispatchEvent(new CustomEvent('app-auth', { detail: { displayName: null } }));
 }
 
 export function getStoredUser(): { displayName: string } | null {

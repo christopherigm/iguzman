@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
@@ -149,7 +151,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class ProfilePictureSerializer(ImageProcessingSerializer):
     def save(self, user):
         profile, _ = UserProfile.objects.get_or_create(user=user)
-        self.save_to_field(profile.profile_picture, f'profile_{user.id}.jpg')
+        if profile.profile_picture:
+            profile.profile_picture.delete(save=False)
+        self.save_to_field(profile.profile_picture, f'{uuid.uuid4().hex}.jpg')
         profile.save(update_fields=['profile_picture'])
         return profile
 

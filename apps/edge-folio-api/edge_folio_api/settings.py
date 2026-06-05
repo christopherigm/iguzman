@@ -113,17 +113,41 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
-    },
-}
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
+# File upload cap — large enough for PDF resumes processed in memory, never stored.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
+
+_R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', '')
+
+if _R2_ACCOUNT_ID:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+        },
+    }
+    AWS_S3_ENDPOINT_URL = f'https://{_R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
+    AWS_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', '')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', '')
+    AWS_S3_CUSTOM_DOMAIN = os.environ.get('R2_PUBLIC_DOMAIN', '')
+    AWS_S3_REGION_NAME = 'auto'
+    AWS_QUERYSTRING_AUTH = False
+    AWS_DEFAULT_ACL = None
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+else:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+        },
+    }
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', str(BASE_DIR / 'media')))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

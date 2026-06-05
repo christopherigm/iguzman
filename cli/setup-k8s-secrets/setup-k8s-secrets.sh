@@ -468,7 +468,7 @@ main() {
       fi
       local file_content
       file_content="$(< "${file_path}")"
-      secret_items+=("${key}=${file_content}")
+      secret_items+=("${key%_FILE}=${file_content}")
     else
       local val
       val="$(prompt_visible "${key}" "${default}")"

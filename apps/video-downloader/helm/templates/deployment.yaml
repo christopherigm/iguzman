@@ -158,7 +158,7 @@ spec:
           secret:
             secretName: {{ .Values.wireguard.secretName }}
             items:
-              - key: wg0.conf
+              - key: {{ .Values.wireguard.secretKey }}
                 path: wg0.conf
         {{- end }}
         {{- if .Values.cookiesSecret }}
@@ -166,7 +166,7 @@ spec:
           secret:
             secretName: {{ .Values.cookiesSecret.secretName }}
             items:
-              - key: netscape-cookies.txt
+              - key: {{ .Values.cookiesSecret.secretKey }}
                 path: {{ .Values.cookiesSecret.subPath }}
         {{- end }}
       {{- end }}

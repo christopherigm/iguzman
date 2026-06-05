@@ -11,11 +11,5 @@ spec:
       targetPort: {{ .Values.service.targetPort }}
       protocol: TCP
       name: http
-    {{- if .Values.nginx.enabled }}
-    - port: {{ .Values.nginx.port }}
-      targetPort: {{ .Values.nginx.port }}
-      protocol: TCP
-      name: nginx-http
-    {{- end }}
   selector:
     {{- include "edge-folio-api.selectorLabels" . | nindent 4 }}

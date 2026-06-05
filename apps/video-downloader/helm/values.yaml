@@ -63,41 +63,47 @@ env:
 #     --from-literal=groq-api-key=<YOUR_KEY> \
 #     -n video-downloader-2
 envFromSecret:
-  # All sensitive values live in the vd2-secrets Kubernetes Secret.
+  # All sensitive values live in the video-downloader-secrets Kubernetes Secret.
   # Use cli/setup-k8s-secrets/setup-k8s-secrets.sh to create or update it.
   - name: GROQ_API_KEY
-    secretName: vd2-secrets
-    secretKey: groq-api-key
+    secretName: video-downloader-secrets
+    secretKey: GROQ_API_KEY
   - name: SCRAPECREATORS_API_KEY
-    secretName: vd2-secrets
-    secretKey: scrapecreators-api-key
+    secretName: video-downloader-secrets
+    secretKey: SCRAPECREATORS_API_KEY
   - name: STRIPE_SECRET_KEY
-    secretName: vd2-secrets
-    secretKey: stripe-secret-key
+    secretName: video-downloader-secrets
+    secretKey: STRIPE_SECRET_KEY
   - name: STRIPE_WEBHOOK_SECRET
-    secretName: vd2-secrets
-    secretKey: stripe-webhook-secret
+    secretName: video-downloader-secrets
+    secretKey: STRIPE_WEBHOOK_SECRET
   - name: INTERNAL_SECRET
-    secretName: vd2-secrets
-    secretKey: internal-secret
+    secretName: video-downloader-secrets
+    secretKey: INTERNAL_SECRET
   - name: R2_ACCOUNT_ID
-    secretName: vd2-secrets
-    secretKey: r2-account-id
+    secretName: video-downloader-secrets
+    secretKey: R2_ACCOUNT_ID
   - name: R2_ACCESS_KEY_ID
-    secretName: vd2-secrets
-    secretKey: r2-access-key-id
+    secretName: video-downloader-secrets
+    secretKey: R2_ACCESS_KEY_ID
   - name: R2_SECRET_ACCESS_KEY
-    secretName: vd2-secrets
-    secretKey: r2-secret-access-key
+    secretName: video-downloader-secrets
+    secretKey: R2_SECRET_ACCESS_KEY
   - name: R2_BUCKET_NAME
-    secretName: vd2-secrets
-    secretKey: r2-bucket-name
+    secretName: video-downloader-secrets
+    secretKey: R2_BUCKET_NAME
   - name: R2_PUBLIC_URL
-    secretName: vd2-secrets
-    secretKey: r2-public-url
+    secretName: video-downloader-secrets
+    secretKey: R2_PUBLIC_URL
   - name: MONGO_URI
-    secretName: vd2-secrets
-    secretKey: mongo-uri
+    secretName: video-downloader-secrets
+    secretKey: MONGO_URI
+  - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    secretName: video-downloader-secrets
+    secretKey: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  - name: LOG_LEVEL
+    secretName: video-downloader-secrets
+    secretKey: LOG_LEVEL
 
 # ─── Host-path volume (media storage) ───────────────────────
 # Disabled: media is now stored in R2 Object Storage.
@@ -107,13 +113,12 @@ hostPathVolume:
   mountPath: /app/media
 
 # ─── yt-dlp cookies file ────────────────────────────────────
-# Mounted from a Kubernetes Secret so all pods share one copy.
-# Create the secret:
-#   kubectl create secret generic vd2-cookies \
-#     --from-file=netscape-cookies.txt=./apps/video-downloader/netscape-cookies.txt \
-#     -n video-downloader-2
+# Cookies content is stored as the COOKIES key in video-downloader-secrets
+# and mounted as a file at /app/netscape-cookies.txt.
+# Use cli/setup-k8s-secrets/setup-k8s-secrets.sh to set it.
 cookiesSecret:
-  secretName: "vd2-cookies"
+  secretName: "video-downloader-secrets"
+  secretKey: COOKIES
   mountPath: /app/netscape-cookies.txt
   subPath: netscape-cookies.txt
 
@@ -218,8 +223,9 @@ wireguard:
     repository: lscr.io/linuxserver/wireguard
     tag: latest
     pullPolicy: IfNotPresent
-  # Name of the Kubernetes Secret that holds wg0.conf.
-  secretName: "video-downloader-wireguard"
+  # Name of the Kubernetes Secret that holds the WireGuard config (WG_CONFIG key).
+  secretName: "video-downloader-secrets"
+  secretKey: WG_CONFIG
   resources:
     requests:
       cpu: 50m

@@ -28,15 +28,6 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
-          {{- if $.Values.nginx.enabled }}
-          - path: /media
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "edge-folio-api.fullname" $ }}
-                port:
-                  number: {{ $.Values.nginx.port }}
-          {{- end }}
           {{- $paths := .paths | default (list (dict "path" "/" "pathType" "Prefix")) }}
           {{- range $paths }}
           - path: {{ .path }}
