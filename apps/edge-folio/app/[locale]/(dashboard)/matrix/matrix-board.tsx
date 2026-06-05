@@ -19,6 +19,7 @@ import {
   createBullet,
   updateBullet,
   deleteBullet,
+  MatrixError,
   type Skill,
   type BulletPoint,
   type Category,
@@ -355,6 +356,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
   const [newProficiency, setNewProficiency] = useState(3);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
   const [toastKey, setToastKey] = useState(0);
 
@@ -366,6 +368,13 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!newName.trim()) return;
+    const isDuplicate = skills.some(
+      (s) => s.name.toLowerCase() === newName.trim().toLowerCase(),
+    );
+    if (isDuplicate) {
+      showToast(t('skillDuplicateError'), 'error');
+      return;
+    }
     setSaving(true);
     try {
       const skill = await createSkill({ name: newName.trim(), proficiency: newProficiency });
@@ -373,8 +382,10 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
       setNewName('');
       setNewProficiency(3);
       setAdding(false);
-    } catch {
-      showToast(t('skillDeleteError'), 'error');
+    } catch (err) {
+      const isDuplicate =
+        err instanceof MatrixError && err.status === 400 && Array.isArray(err.data.name);
+      showToast(isDuplicate ? t('skillDuplicateError') : t('skillSaveError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -391,6 +402,19 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
   }
 
   return (
+    <>
+      {pendingDeleteId !== null && (
+        <ConfirmationModal
+          title={t('confirmDeleteTitle')}
+          text={t('confirmDeleteText')}
+          okCallback={() => {
+            const id = pendingDeleteId;
+            setPendingDeleteId(null);
+            handleDelete(id);
+          }}
+          cancelCallback={() => setPendingDeleteId(null)}
+        />
+      )}
     <Box
       borderRadius={12}
       padding={20}
@@ -431,7 +455,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
                 type="button"
                 className="matrix__skill-delete-btn"
                 aria-label={t('delete')}
-                onClick={() => handleDelete(skill.id)}
+                onClick={() => setPendingDeleteId(skill.id)}
               >
                 ×
               </Button>
@@ -481,8 +505,9 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
         </form>
       )}
 
-      {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} />}
+      {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} position='top-center' />}
     </Box>
+    </>
   );
 }
 

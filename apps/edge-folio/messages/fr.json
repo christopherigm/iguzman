@@ -101,6 +101,8 @@
     "noSkills": "Aucune compétence pour l'instant. Ajoutez la première.",
     "skillDeleted": "Compétence supprimée.",
     "skillDeleteError": "Impossible de supprimer la compétence.",
+    "skillSaveError": "Impossible d'enregistrer la compétence.",
+    "skillDuplicateError": "Une compétence avec ce nom existe déjà.",
     "bulletSaved": "Point enregistré.",
     "bulletSaveError": "Impossible d'enregistrer le point.",
     "bulletDeleted": "Point supprimé.",

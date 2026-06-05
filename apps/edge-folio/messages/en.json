@@ -101,6 +101,8 @@
     "noSkills": "No skills yet. Add your first one.",
     "skillDeleted": "Skill deleted.",
     "skillDeleteError": "Failed to delete skill.",
+    "skillSaveError": "Failed to save skill.",
+    "skillDuplicateError": "A skill with this name already exists.",
     "bulletSaved": "Bullet point saved.",
     "bulletSaveError": "Failed to save bullet point.",
     "bulletDeleted": "Bullet point deleted.",

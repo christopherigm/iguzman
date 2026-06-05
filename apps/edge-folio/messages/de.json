@@ -101,6 +101,8 @@
     "noSkills": "Noch keine Fähigkeiten. Füge deine erste hinzu.",
     "skillDeleted": "Fähigkeit gelöscht.",
     "skillDeleteError": "Fähigkeit konnte nicht gelöscht werden.",
+    "skillSaveError": "Fähigkeit konnte nicht gespeichert werden.",
+    "skillDuplicateError": "Eine Fähigkeit mit diesem Namen existiert bereits.",
     "bulletSaved": "Punkt gespeichert.",
     "bulletSaveError": "Punkt konnte nicht gespeichert werden.",
     "bulletDeleted": "Punkt gelöscht.",

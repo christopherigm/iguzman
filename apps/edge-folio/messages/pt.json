@@ -101,6 +101,8 @@
     "noSkills": "Nenhuma habilidade ainda. Adicione a primeira.",
     "skillDeleted": "Habilidade excluída.",
     "skillDeleteError": "Falha ao excluir habilidade.",
+    "skillSaveError": "Falha ao salvar habilidade.",
+    "skillDuplicateError": "Já existe uma habilidade com este nome.",
     "bulletSaved": "Ponto salvo.",
     "bulletSaveError": "Falha ao salvar ponto.",
     "bulletDeleted": "Ponto excluído.",

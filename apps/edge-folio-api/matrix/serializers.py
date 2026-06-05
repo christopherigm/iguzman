@@ -9,6 +9,16 @@ class SkillSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'proficiency', 'created', 'modified')
         read_only_fields = ('id', 'created', 'modified')
 
+    def validate_name(self, value):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            qs = Skill.objects.filter(user=request.user, name__iexact=value)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError('A skill with this name already exists.')
+        return value
+
     def validate_proficiency(self, value):
         if not 1 <= value <= 5:
             raise serializers.ValidationError('Proficiency must be between 1 and 5.')
