@@ -24,6 +24,7 @@ interface ThemeContextValue {
 // --- Constants ---
 
 const COOKIE_NAME = 'theme-mode';
+const RESOLVED_COOKIE_NAME = 'theme-resolved';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 400; // ~13 months
 
 // --- Context ---
@@ -48,6 +49,10 @@ function setThemeCookie(mode: ThemeMode): void {
   document.cookie = `${COOKIE_NAME}=${mode};path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax`;
 }
 
+function setResolvedCookie(resolved: ResolvedTheme): void {
+  document.cookie = `${RESOLVED_COOKIE_NAME}=${resolved};path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax`;
+}
+
 function applyThemeToDOM(resolved: ResolvedTheme): void {
   document.documentElement.setAttribute('data-theme', resolved);
   document.documentElement.style.colorScheme = resolved;
@@ -63,7 +68,7 @@ interface ThemeProviderProps {
 
 function ThemeProvider({
   children,
-  initialMode = 'system',
+  initialMode = 'light',
   initialResolved = 'light',
 }: ThemeProviderProps) {
   const [mode, setModeState] = useState<ThemeMode>(initialMode);
@@ -80,12 +85,14 @@ function ThemeProvider({
       const next: ResolvedTheme = e.matches ? 'dark' : 'light';
       setResolved(next);
       applyThemeToDOM(next);
+      setResolvedCookie(next);
     };
 
     const current = getSystemTheme();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResolved(current);
     applyThemeToDOM(current);
+    setResolvedCookie(current);
 
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
@@ -128,7 +135,7 @@ function ThemeScript() {
   return (
     <script
       dangerouslySetInnerHTML={{
-        __html: `(function(){try{var m=document.cookie.match(/(^|;)\\s*${COOKIE_NAME}=([^;]+)/);var mode=m?m[2]:'system';var resolved=mode;if(mode==='system'){resolved=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',resolved);document.documentElement.style.colorScheme=resolved}catch(e){}})()`,
+        __html: `(function(){try{var m=document.cookie.match(/(^|;)\\s*${COOKIE_NAME}=([^;]+)/);var mode=m?m[2]:'system';var resolved=mode;if(mode==='system'){resolved=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.cookie='${RESOLVED_COOKIE_NAME}='+resolved+';path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax'}document.documentElement.setAttribute('data-theme',resolved);document.documentElement.style.colorScheme=resolved}catch(e){}})()`,
       }}
     />
   );
@@ -136,7 +143,7 @@ function ThemeScript() {
 
 // --- Exports ---
 
-export { ThemeProvider, useTheme, ThemeScript, COOKIE_NAME };
+export { ThemeProvider, useTheme, ThemeScript, COOKIE_NAME, RESOLVED_COOKIE_NAME };
 export type {
   ThemeMode,
   ResolvedTheme,

@@ -7,7 +7,7 @@ import {
   getTranslations,
   setRequestLocale,
 } from 'next-intl/server';
-import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
+import { ThemeProvider, ThemeScript, RESOLVED_COOKIE_NAME } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
@@ -72,9 +72,14 @@ export default async function LocaleLayout({ children, params }: Props) {
   const themeModeCookie = cookieStore.get('theme-mode')?.value as
     | ThemeMode
     | undefined;
+  const themeResolvedCookie = cookieStore.get(RESOLVED_COOKIE_NAME)?.value as
+    | ResolvedTheme
+    | undefined;
   const initialMode: ThemeMode = themeModeCookie ?? 'system';
   const initialResolved: ResolvedTheme =
-    initialMode === 'dark' ? 'dark' : 'light';
+    initialMode === 'system'
+      ? (themeResolvedCookie ?? 'light')
+      : (initialMode as ResolvedTheme);
 
   return (
     <html
