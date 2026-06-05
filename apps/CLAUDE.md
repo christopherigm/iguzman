@@ -23,6 +23,25 @@ Every `<input>`, `<select>`, and `<textarea>` element must have an accessible la
 
 **Rule:** if a `<Typography>` or plain text immediately precedes or follows the control, reuse its translation key as the `aria-label` value — never hardcode strings.
 
+## Styling — Native Form Elements (dark-mode safety)
+
+Every `<select>`, `<input>`, and `<textarea>` that receives custom background or text styling **must** include all three properties together:
+
+```css
+background: var(--surface-2);
+color: var(--foreground);
+color-scheme: light dark;
+```
+
+**Why all three are required:**
+
+- `background` + `color` must always travel as a pair — setting one without the other leaves the other value at the browser's OS-theme default, which can produce unreadable combinations (e.g. light text on a white background in dark mode).
+- `color-scheme: light dark` tells the browser to render the native dropdown chrome — including `<option>` items, scrollbars, and autocomplete suggestions, which are outside CSS reach — matching the current OS/app theme. Without it, the OS dark theme bleeds into native controls even when `background` and `color` are set.
+
+**Token to use:** always use `--surface-2` (defined in every palette for both light and dark). Never use `--surface-0` — it does not exist in the palette system and will silently fall back to whatever hardcoded default you provide, breaking dark mode.
+
+**Never comment out only `background` or only `color`** as a workaround — remove both or keep both.
+
 ## i18n — Static Text
 
 All static text **must** use `next-intl` translations. Never hardcode user-visible strings directly in JSX.

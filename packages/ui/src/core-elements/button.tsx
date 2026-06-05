@@ -238,7 +238,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
         ...defaultStyle,
         ...buildStyleProps(props as UIComponentProps),
         ...props.styles,
-        boxShadow: getBoxShadow(isHovered ? 5 : 0) ?? 'none',
+        boxShadow: getBoxShadow(isHovered ? 3 : 0) ?? 'none',
         position: 'relative',
         overflow: 'hidden',
       };

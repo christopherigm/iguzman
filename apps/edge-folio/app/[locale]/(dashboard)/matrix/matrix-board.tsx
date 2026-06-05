@@ -8,6 +8,9 @@ import { Button } from '@repo/ui/core-elements/button';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import { Badge } from '@repo/ui/core-elements/badge';
+import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Toast } from '@repo/ui/core-elements/toast';
 import {
   getSkills,
   createSkill,
@@ -30,21 +33,25 @@ const CATEGORIES: Category[] = [
   'other',
 ];
 
+const CATEGORY_COLORS: Record<Category, string> = {
+  impact:        '#06b6d4',
+  technical:     '#8b5cf6',
+  leadership:    '#f97316',
+  collaboration: '#22c55e',
+  other:         '#6b7280',
+};
+
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
 function CategoryBadge({ category, label }: { category: Category; label: string }) {
   return (
-    <span className={`matrix__category-badge matrix__category-badge--${category}`}>
+    <Badge
+      variant="subtle"
+      color={CATEGORY_COLORS[category]}
+      style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}
+    >
       {label}
-    </span>
-  );
-}
-
-function StatusMsg({ text, kind }: { text: string; kind: 'success' | 'error' }) {
-  return (
-    <span className={kind === 'success' ? 'matrix__success' : 'matrix__error'}>
-      {text}
-    </span>
+    </Badge>
   );
 }
 
@@ -100,14 +107,15 @@ function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormP
 
   return (
     <form onSubmit={handleSubmit} className="matrix__add-form">
-      <textarea
-        className="matrix__textarea"
+      <TextInput
+        multirow
+        rows={4}
+        label={t('textLabel')}
         value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={t('textPlaceholder')}
-        aria-label={t('textLabel')}
+        onChange={setText}
         required
         maxLength={500}
+        width="100%"
       />
       <select
         className="matrix__select"
@@ -126,23 +134,28 @@ function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormP
           <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
             {t('skillsLabel')}
           </Typography>
-          <Box className="matrix__skill-checkboxes">
+          <Box display="flex" flexWrap="wrap" gap={6}>
             {skills.map((skill) => (
-              <button
+              <Button
                 key={skill.id}
                 type="button"
+                unstyled
                 className={`matrix__skill-checkbox${selectedSkillIds.includes(skill.id) ? ' matrix__skill-checkbox--selected' : ''}`}
                 onClick={() => toggleSkill(skill.id)}
                 aria-pressed={selectedSkillIds.includes(skill.id)}
               >
                 {skill.name}
-              </button>
+              </Button>
             ))}
           </Box>
         </Box>
       )}
-      {error && <StatusMsg text={error} kind="error" />}
-      <Box className="matrix__form-actions">
+      {error && (
+        <Typography variant="caption" color="var(--error, #ef4444)">
+          {error}
+        </Typography>
+      )}
+      <Box display="flex" gap={8} justifyContent="flex-end">
         <Button text={t('cancel')} type="button" size="sm" onClick={onCancel} />
         <Button
           text={saving ? t('saving') : t('save')}
@@ -169,25 +182,37 @@ function BulletCard({ bullet, skills, onEdit, onDelete }: BulletCardProps) {
   const t = useTranslations('MatrixPage');
 
   return (
-    <Box className="matrix__bullet">
-      <p className="matrix__bullet-text">{bullet.text}</p>
-      <Box className="matrix__bullet-meta">
-        <span className="matrix__source-badge">
+    <Box
+      className="matrix__bullet"
+      display="flex"
+      flexDirection="column"
+      gap={8}
+      padding={12}
+      borderRadius={8}
+      border="1px solid var(--border, #e5e7eb)"
+      backgroundColor="var(--surface-1, #fff)"
+    >
+      <Typography as="p" variant="body-sm" color="var(--foreground)" styles={{ fontSize: 13, lineHeight: 1.5 }}>
+        {bullet.text}
+      </Typography>
+      <Box display="flex" alignItems="center" flexWrap="wrap" gap={6}>
+        <Badge
+          size="sm"
+          variant="filled"
+          color="var(--muted, #f3f4f6)"
+          textColor="var(--muted-foreground, #6b7280)"
+          style={{ borderRadius: '4px', fontWeight: 500 }}
+        >
           {bullet.source === 'manual' ? t('sourceManual') : t('sourceExtracted')}
-        </span>
+        </Badge>
         {bullet.skills.map((skill) => (
-          <span key={skill.id} className="matrix__skill-tag">
+          <Badge key={skill.id} size="sm" variant="outlined" color="var(--primary, #06b6d4)">
             {skill.name}
-          </span>
+          </Badge>
         ))}
       </Box>
-      <Box className="matrix__bullet-actions">
-        <Button
-          text={t('edit')}
-          type="button"
-          size="sm"
-          onClick={() => onEdit(bullet)}
-        />
+      <Box display="flex" alignItems="center" gap={6} justifyContent="flex-end" marginTop={2}>
+        <Button text={t('edit')} type="button" size="sm" onClick={() => onEdit(bullet)} />
         <Button
           text={t('delete')}
           type="button"
@@ -243,11 +268,21 @@ function CategorySection({
           cancelCallback={() => setPendingDeleteId(null)}
         />
       )}
-      <Box className="matrix__section">
-        <Box className="matrix__section-header">
-          <Box className="matrix__section-title-row">
+      <Box
+        display="flex"
+        flexDirection="column"
+        gap={12}
+        borderRadius={12}
+        padding={16}
+        backgroundColor="var(--surface-1)"
+        border="1px solid var(--border, #e5e7eb)"
+      >
+        <Box display="flex" alignItems="center" justifyContent="space-between" gap={8}>
+          <Box display="flex" alignItems="center" gap={8}>
             <CategoryBadge category={category} label={t(`categories.${category}`)} />
-            <span className="matrix__section-count">{bullets.length}</span>
+            <Typography as="span" variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 12 }}>
+              {bullets.length}
+            </Typography>
           </Box>
           {!adding && !editing && (
             <Button
@@ -281,7 +316,16 @@ function CategorySection({
         )}
 
         {bullets.length === 0 && !adding && (
-          <p className="matrix__empty">{t('emptyCategory')}</p>
+          <Typography
+            as="p"
+            variant="caption"
+            color="var(--muted-foreground, #6b7280)"
+            textAlign="center"
+            paddingTop={16}
+            paddingBottom={8}
+          >
+            {t('emptyCategory')}
+          </Typography>
         )}
 
         {adding && (
@@ -312,6 +356,12 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
+  const [toastKey, setToastKey] = useState(0);
+
+  function showToast(text: string, kind: 'success' | 'error') {
+    setToast({ text, kind });
+    setToastKey((k) => k + 1);
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -324,7 +374,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
       setNewProficiency(3);
       setAdding(false);
     } catch {
-      setToast({ text: t('skillDeleteError'), kind: 'error' });
+      showToast(t('skillDeleteError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -334,15 +384,27 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
     try {
       await deleteSkill(id);
       onSkillDeleted(id);
-      setToast({ text: t('skillDeleted'), kind: 'success' });
+      showToast(t('skillDeleted'), 'success');
     } catch {
-      setToast({ text: t('skillDeleteError'), kind: 'error' });
+      showToast(t('skillDeleteError'), 'error');
     }
   }
 
   return (
-    <Box className="matrix__skills-panel">
-      <Box className="matrix__skills-panel-header">
+    <Box
+      borderRadius={12}
+      padding={20}
+      backgroundColor="var(--surface-1)"
+      border="1px solid var(--border, #e5e7eb)"
+    >
+      <Box
+        display="flex"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={12}
+        flexWrap="wrap"
+        marginBottom={16}
+      >
         <Box>
           <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
             {t('skillsSection')}
@@ -357,19 +419,22 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
       </Box>
 
       {skills.length > 0 && (
-        <Box className="matrix__skill-list">
+        <Box display="flex" flexWrap="wrap" gap={8} marginBottom={12}>
           {skills.map((skill) => (
             <span key={skill.id} className="matrix__skill-item">
               {skill.name}
-              <span className="matrix__skill-proficiency">{skill.proficiency}/5</span>
-              <button
+              <Typography as="span" variant="caption" color="var(--primary, #06b6d4)" fontWeight={600} styles={{ fontSize: 11 }}>
+                {skill.proficiency}/5
+              </Typography>
+              <Button
+                unstyled
                 type="button"
                 className="matrix__skill-delete-btn"
                 aria-label={t('delete')}
                 onClick={() => handleDelete(skill.id)}
               >
                 ×
-              </button>
+              </Button>
             </span>
           ))}
         </Box>
@@ -383,15 +448,14 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
 
       {adding && (
         <form onSubmit={handleAdd} className="matrix__skill-add-form">
-          <input
-            className="matrix__skill-add-input"
-            type="text"
+          <TextInput
+            label={t('skillNameLabel')}
             value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder={t('skillNameLabel')}
-            aria-label={t('skillNameLabel')}
+            onChange={setNewName}
             required
             maxLength={100}
+            flex={1}
+            minWidth={140}
           />
           <select
             className="matrix__select"
@@ -417,7 +481,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
         </form>
       )}
 
-      {toast && <StatusMsg text={toast.text} kind={toast.kind} />}
+      {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} />}
     </Box>
   );
 }
@@ -504,8 +568,17 @@ export function MatrixBoard() {
       paddingX={10}
       styles={{ paddingTop: 'var(--ui-navbar-height)', paddingBottom: '60px' }}
     >
-      <Box width="100%" marginTop={24} marginBottom={32} className="matrix__header">
-        <Box className="matrix__header-text">
+      <Box
+        width="100%"
+        marginTop={24}
+        marginBottom={32}
+        display="flex"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={16}
+        flexWrap="wrap"
+      >
+        <Box display="flex" flexDirection="column" gap={4}>
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
             {t('title')}
           </Typography>
@@ -515,7 +588,12 @@ export function MatrixBoard() {
         </Box>
       </Box>
 
-      <Box className="matrix__grid">
+      <Box
+        display="grid"
+        gap={20}
+        marginBottom={40}
+        styles={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}
+      >
         {CATEGORIES.map((cat) => (
           <CategorySection
             key={cat}

@@ -13,6 +13,27 @@
 | Any heading, body copy, label, or caption               | `<Typography as="h1–h6\|p\|span" variant="...">`  | Bare `<h1>`–`<h6>`, `<p>`, `<span>` for content text    |
 | Any structural `<div>` wrapper                          | `<Box>`                                           | Bare `<div>`                                            |
 | Any clickable button or internal-link button            | `<Button>` or `<LinkButton>`                      | Bare `<button>` or `<a>` for internal navigation        |
+| Any text field or textarea                              | `<TextInput>` / `<TextInput multirow>`            | Bare `<input>` or `<textarea>`                          |
+| Status tag, category label, or metadata chip           | `<Badge>`                                         | One-off `<span>` with pill/tag styling                  |
+| Transient success/error notification                    | `<Toast>`                                         | One-off inline `<span>` with success/error color        |
+
+### Pre-flight checklist — run this before finishing any `.tsx` file
+
+Grep the file for each of these patterns and replace every hit with the corresponding component:
+
+| If you find…                  | Replace with                                            |
+| ----------------------------- | ------------------------------------------------------- |
+| `<p ` or `<p>`                | `<Typography as="p" variant="...">`                     |
+| `<h1>`–`<h6>`                 | `<Typography as="hN" variant="hN">`                     |
+| `<span` (content text)        | `<Typography as="span" variant="...">`                  |
+| `<div` (structural wrapper)   | `<Box>`                                                 |
+| `<button`                     | `<Button>` (or `<Button unstyled>` for custom-styled)   |
+| `<input`                      | `<TextInput>`                                           |
+| `<textarea`                   | `<TextInput multirow>`                                  |
+| one-off pill/tag `<span>`     | `<Badge>`                                               |
+| inline success/error `<span>` | `<Typography>` (inline) or `<Toast>` (transient banner) |
+
+A `<span>` used purely as a layout/structural container (not rendering text or acting as a tag) does not need to become `<Typography>` or `<Badge>` — use judgment. The trigger is a `<span>` whose primary content is text or a label.
 
 ### `UIComponentProps` — shared layout props (all core-elements accept these)
 

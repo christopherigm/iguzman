@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Styling Rule — Props First, CSS Last
+
+**When styling any `@repo/ui` component (`Box`, `Typography`, `Button`, `Container`, etc.), always use UIComponentProps. Never write a CSS class whose only content is layout, spacing, sizing, border, or color properties.**
+
+A CSS class attached to a `@repo/ui` component is only valid if it contains exclusively:
+- Pseudo-selectors (`:hover`, `:focus`, `:disabled`)
+- Transitions and animations
+- `@media` breakpoint overrides
+- `::before` / `::after` pseudo-elements
+
+For CSS properties not covered by UIComponentProps (e.g. `gridTemplateColumns`, `fontSize`, `letterSpacing`), use the `styles` escape-hatch prop — never a CSS class.
+
+See `packages/ui/CLAUDE.md` → "Component-props-first rule" for the full reference table.
+
 ## Commands
 
 All commands are run from the repo root using `pnpm`.
