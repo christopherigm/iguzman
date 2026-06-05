@@ -43,8 +43,9 @@ setup_strings() {
     PASSKEY_PROMPT="¿Incluir passkeys (WebAuthn)?"
     R2_PROMPT="¿Incluir almacenamiento Cloudflare R2?"
     REGISTRY_PROMPT="Usuario del registro Docker"
-    STEP_CONFIG="[1/2] Configuración"
-    STEP_FILES="[2/2] Generando archivos"
+    STEP_CONFIG="[1/3] Configuración"
+    STEP_FILES="[2/3] Generando archivos"
+    STEP_SETUP="[3/3] Configurando entorno"
     DONE_MSG="¡Listo!"
     NEXT_STEPS="Próximos pasos"
     LBL_MODULE="Módulo"
@@ -55,9 +56,24 @@ setup_strings() {
     LBL_PASSKEYS="Passkeys"
     LBL_R2="R2"
     LBL_REGISTRY="Registro"
+    CREATING="Creando"
     YES_STR="sí"
     NO_STR="no"
     CONFIRM_YES_CHARS="sy"
+    PREREQ_CHECKING="Verificando requisitos previos..."
+    PREREQ_MISSING_PYTHON="python3 no está instalado."
+    PREREQ_MISSING_PIP="pip no está instalado."
+    PREREQ_MISSING_DJANGO="Django no está instalado globalmente."
+    PREREQ_FIX="Instala las herramientas faltantes ejecutando:"
+    PREREQ_CMD="bash cli/setup-dev-env/setup-dev-env.sh"
+    SETUP_VENV="Creando entorno virtual..."
+    SETUP_VENV_DONE="Entorno virtual creado."
+    SETUP_DEPS="Instalando dependencias de Python..."
+    SETUP_DEPS_DONE="Dependencias instaladas."
+    SETUP_MIGRATE="Aplicando migraciones de base de datos..."
+    SETUP_MIGRATE_DONE="Migraciones aplicadas."
+    SETUP_SUPERUSER="Creando superusuario — sigue las instrucciones:"
+    SETUP_DONE="Superusuario creado."
   else
     WELCOME="New Django App"
     SUBTITLE="Scaffold a new Django REST API application."
@@ -72,8 +88,9 @@ setup_strings() {
     PASSKEY_PROMPT="Include passkeys (WebAuthn)?"
     R2_PROMPT="Include Cloudflare R2 object storage?"
     REGISTRY_PROMPT="Docker registry user"
-    STEP_CONFIG="[1/2] Configuration"
-    STEP_FILES="[2/2] Generating files"
+    STEP_CONFIG="[1/3] Configuration"
+    STEP_FILES="[2/3] Generating files"
+    STEP_SETUP="[3/3] Setting up environment"
     DONE_MSG="Done!"
     NEXT_STEPS="Next steps"
     LBL_MODULE="Module"
@@ -84,9 +101,24 @@ setup_strings() {
     LBL_PASSKEYS="Passkeys"
     LBL_R2="R2"
     LBL_REGISTRY="Registry"
+    CREATING="Creating"
     YES_STR="yes"
     NO_STR="no"
     CONFIRM_YES_CHARS="y"
+    PREREQ_CHECKING="Checking prerequisites..."
+    PREREQ_MISSING_PYTHON="python3 is not installed."
+    PREREQ_MISSING_PIP="pip is not installed."
+    PREREQ_MISSING_DJANGO="Django is not installed globally."
+    PREREQ_FIX="Install missing tools first by running:"
+    PREREQ_CMD="bash cli/setup-dev-env/setup-dev-env.sh"
+    SETUP_VENV="Creating virtual environment..."
+    SETUP_VENV_DONE="Virtual environment created."
+    SETUP_DEPS="Installing Python dependencies..."
+    SETUP_DEPS_DONE="Dependencies installed."
+    SETUP_MIGRATE="Applying database migrations..."
+    SETUP_MIGRATE_DONE="Migrations applied."
+    SETUP_SUPERUSER="Creating superuser — follow the prompts:"
+    SETUP_DONE="Superuser created."
   fi
 }
 
@@ -119,8 +151,8 @@ prompt_visible() {
 # confirm_yn LABEL DEFAULT — returns 0 (yes) or 1 (no)
 confirm_yn() {
   local label="$1" default="${2:-y}"
-  local suffix
-  [[ "${default}" == "y" ]] && suffix="[Y/n]" || suffix="[y/N]"
+  local suffix default_upper="${default^^}"
+  suffix="[Y/N] (${default_upper})"
   printf "  %s %s: " "$(clr_bold "${label}")" "$(clr_dim "${suffix}")" >/dev/tty
   local val
   IFS= read -r val </dev/tty || true
@@ -148,6 +180,35 @@ validate_app_name() {
   [[ -z "${n}" ]]                      && echo "${APP_NAME_REQUIRED}" && return
   [[ ! "${n}" =~ ^[a-z][a-z0-9-]*$ ]] && echo "${APP_NAME_INVALID}"  && return
   [[ -d "${repo_root}/apps/${n}" ]]    && echo "Directory apps/${n} already exists." && return
+  echo ""
+}
+
+check_prerequisites() {
+  printf "  %s\n" "$(clr_dim "${PREREQ_CHECKING}")"
+
+  local ok=1
+
+  if ! command -v python3 &>/dev/null; then
+    printf "  %s  %s\n" "$(clr_bold_red '✗')" "${PREREQ_MISSING_PYTHON}"
+    ok=0
+  else
+    if ! (command -v pip3 &>/dev/null || python3 -m pip --version &>/dev/null 2>&1); then
+      printf "  %s  %s\n" "$(clr_bold_red '✗')" "${PREREQ_MISSING_PIP}"
+      ok=0
+    fi
+    if ! python3 -m django --version &>/dev/null 2>&1; then
+      printf "  %s  %s\n" "$(clr_bold_red '✗')" "${PREREQ_MISSING_DJANGO}"
+      ok=0
+    fi
+  fi
+
+  if [[ "${ok}" -eq 0 ]]; then
+    echo ""
+    printf "  %s\n" "${PREREQ_FIX}"
+    printf "  %s\n\n" "$(clr_bold_cyan "${PREREQ_CMD}")"
+    exit 1
+  fi
+
   echo ""
 }
 
@@ -189,9 +250,9 @@ psycopg[binary]==3.2.4
 django-colorfield==0.11.0
 django-cors-headers==4.9.0
 PYEOF
-  [[ "${include_redis}"   == "y" ]] && echo "django-redis==5.4.0"         >> "$out"
-  [[ "${include_passkey}" == "y" ]] && echo "webauthn==2.7.1"             >> "$out"
-  [[ "${include_r2}"      == "y" ]] && echo "django-storages[s3]==1.14.4" >> "$out"
+  [[ "${include_redis}"   == "y" ]] && echo "django-redis==5.4.0"         >> "$out" || true
+  [[ "${include_passkey}" == "y" ]] && echo "webauthn==2.7.1"             >> "$out" || true
+  [[ "${include_r2}"      == "y" ]] && echo "django-storages[s3]==1.14.4" >> "$out" || true
 }
 
 gen_manage_py() {
@@ -2549,6 +2610,50 @@ Replicas: {{ .Values.replicaCount }}
 EOF
 }
 
+gen_gitignore() {
+  local out="$1"
+  mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'EOF'
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Django
+db.sqlite3
+*.sqlite3
+staticfiles/
+media/
+
+# Environment
+.env
+*.env.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+EOF
+}
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 main() {
@@ -2561,6 +2666,9 @@ main() {
 
   clear
   print_header
+
+  # ── Prerequisites ─────────────────────────────────────────────────────────────
+  check_prerequisites
 
   # ── Repo root ─────────────────────────────────────────────────────────────────
   local script_dir
@@ -2617,12 +2725,12 @@ main() {
     echo ""
   fi
 
-  if confirm_yn "${R2_PROMPT}" "n"; then include_r2="y"; fi
+  if confirm_yn "${R2_PROMPT}" "y"; then include_r2="y"; fi
   echo ""
 
   # Docker registry
   local registry_user
-  registry_user="$(prompt_visible "${REGISTRY_PROMPT}" "docker")"
+  registry_user="$(prompt_visible "${REGISTRY_PROMPT}" "my-username")"
   echo ""
 
   # ── [2/2] Generate files ──────────────────────────────────────────────────────
@@ -2633,6 +2741,7 @@ main() {
   printf "  %s %s\n\n" "$(clr_bold_yellow '→')" "${CREATING} apps/${name}..."
 
   # Root files
+  gen_gitignore      "${app_dir}/.gitignore"
   gen_package_json   "${app_dir}/package.json"
   gen_requirements_txt "${app_dir}/requirements.txt"
   gen_manage_py      "${app_dir}/manage.py"
@@ -2695,6 +2804,26 @@ main() {
 
   printf "  %s %s\n" "$(clr_bold_green '✓')" "All files written."
 
+  # ── [3/3] Environment setup ───────────────────────────────────────────────────
+  echo ""
+  printf "  %s\n\n" "$(clr_bold_cyan "── ${STEP_SETUP} ──")"
+
+  printf "  %s  %s\n" "$(clr_bold_yellow '→')" "${SETUP_VENV}"
+  python3 -m venv "${app_dir}/venv"
+  printf "  %s  %s\n\n" "$(clr_bold_green '✓')" "${SETUP_VENV_DONE}"
+
+  printf "  %s  %s\n" "$(clr_bold_yellow '→')" "${SETUP_DEPS}"
+  "${app_dir}/venv/bin/pip" install -r "${app_dir}/requirements.txt"
+  printf "  %s  %s\n\n" "$(clr_bold_green '✓')" "${SETUP_DEPS_DONE}"
+
+  printf "  %s  %s\n\n" "$(clr_bold_yellow '→')" "${SETUP_MIGRATE}"
+  (cd "${app_dir}" && "${app_dir}/venv/bin/python" manage.py migrate --noinput)
+  printf "  %s  %s\n\n" "$(clr_bold_green '✓')" "${SETUP_MIGRATE_DONE}"
+
+  printf "  %s  %s\n\n" "$(clr_bold_yellow '→')" "${SETUP_SUPERUSER}"
+  (cd "${app_dir}" && "${app_dir}/venv/bin/python" manage.py createsuperuser)
+  echo ""
+
   # ── Summary ───────────────────────────────────────────────────────────────────
   local sep
   sep="$(printf '─%.0s' {1..53})"
@@ -2712,14 +2841,9 @@ main() {
 
   # ── Next steps ────────────────────────────────────────────────────────────────
   printf "  %s\n" "$(clr_bold_cyan "── ${NEXT_STEPS} ──")"
-  printf "  %s  %s\n" "$(clr_dim '1.')" "cd apps/${name}"
-  printf "  %s  %s\n" "$(clr_dim '2.')" "python3 -m venv venv && source venv/bin/activate"
-  printf "  %s  %s\n" "$(clr_dim '3.')" "pip install -r requirements.txt"
-  printf "  %s  %s\n" "$(clr_dim '4.')" "python3 manage.py migrate"
-  printf "  %s  %s\n" "$(clr_dim '5.')" "python3 manage.py createsuperuser"
-  printf "  %s  %s\n" "$(clr_dim '6.')" "python3 manage.py runserver"
-  printf "  %s  %s\n" "$(clr_dim '7.')" "cp apps/${name}/env.example apps/${name}/.env"
-  printf "  %s  %s\n" "$(clr_dim '8.')" "Update .env with your secrets before deploying"
+  printf "  %s  %s\n" "$(clr_dim '1.')" "cd apps/${name} && source venv/bin/activate"
+  printf "  %s  %s\n" "$(clr_dim '2.')" "python3 manage.py runserver"
+  printf "  %s  %s\n" "$(clr_dim '3.')" "Update .env with your secrets before deploying"
   echo ""
   printf "  %s\n\n" "$(clr_bold_green "✓ apps/${name} is ready!")"
 }

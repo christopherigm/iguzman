@@ -28,7 +28,6 @@ setup_strings() {
     APP_NAME_REQUIRED="El nombre es requerido."
     APP_NAME_INVALID="El nombre debe empezar con letra y contener solo minúsculas, números y guiones."
     PORT_PROMPT="Puerto de desarrollo"
-    LOCALES_PROMPT="Idiomas (separados por comas)"
     PALETTE_LABEL="Paleta:"
     PALETTE_ENTER_NUM="Ingresa número"
     REGISTRY_PROMPT="Usuario del registro Docker"
@@ -41,7 +40,6 @@ setup_strings() {
     ABORTED_MSG="Cancelado."
     LBL_PORT="Puerto"
     LBL_PALETTE="Paleta"
-    LBL_LOCALES="Idiomas"
     LBL_AUTH="Auth"
     LBL_PWA="PWA"
     LBL_REGISTRY="Registro"
@@ -50,9 +48,8 @@ setup_strings() {
     NEXT_STEPS="Próximos pasos"
     NEXT_STEP_AUTH_API="# Configura API_URL en .env.local e inicia la API Django"
     NEXT_STEP_PWA_ICONS="# Agrega íconos PWA a"
-    YES_STR="sí"
-    NO_STR="no"
-    CONFIRM_YES_CHARS="sy"
+    COPYING_ENV_MSG="Copiando .env.local…"
+    INSTALLING_DEPS_MSG="Instalando dependencias (pnpm install)…"
   else
     WELCOME="New Next.js App"
     SUBTITLE="Scaffold a new Next.js PWA application."
@@ -60,7 +57,6 @@ setup_strings() {
     APP_NAME_REQUIRED="App name is required."
     APP_NAME_INVALID="Name must start with a letter and contain only lowercase letters, numbers, and hyphens."
     PORT_PROMPT="Dev port"
-    LOCALES_PROMPT="Locales (comma-separated)"
     PALETTE_LABEL="Palette:"
     PALETTE_ENTER_NUM="Enter number"
     REGISTRY_PROMPT="Docker registry user"
@@ -73,7 +69,6 @@ setup_strings() {
     ABORTED_MSG="Aborted."
     LBL_PORT="Port"
     LBL_PALETTE="Palette"
-    LBL_LOCALES="Locales"
     LBL_AUTH="Auth"
     LBL_PWA="PWA"
     LBL_REGISTRY="Registry"
@@ -82,9 +77,8 @@ setup_strings() {
     NEXT_STEPS="Next steps"
     NEXT_STEP_AUTH_API="# Set API_URL in .env.local and start the Django API"
     NEXT_STEP_PWA_ICONS="# Add PWA icons to"
-    YES_STR="yes"
-    NO_STR="no"
-    CONFIRM_YES_CHARS="y"
+    COPYING_ENV_MSG="Copying .env.local…"
+    INSTALLING_DEPS_MSG="Installing dependencies (pnpm install)…"
   fi
 }
 
@@ -114,7 +108,7 @@ prompt_visible() {
 
 confirm_yn() {
   local label="$1" default="${2:-y}"
-  local suffix; [[ "${default}" == "y" ]] && suffix="[Y/n]" || suffix="[y/N]"
+  local suffix default_upper="${default^^}"; suffix="[Y/N] (${default_upper})"
   printf "  %s %s: " "$(clr_bold "${label}")" "$(clr_dim "${suffix}")" >/dev/tty
   local val; IFS= read -r val </dev/tty || true
   val="${val:-${default}}"; local char="${val:0:1}"; char="${char,,}"
@@ -167,12 +161,19 @@ validate_app_name() {
 
 gen_package_json() {
   local out="$1"; mkdir -p "$(dirname "$out")"
-  local auth_dep="" pwa_dep="" ts_comma="," pwa_devdep=""
-  [[ "${include_auth}" == "y" ]] && auth_dep='
-    "@simplewebauthn/browser": "^13.1.0",'
+  local ts_comma="," pwa_devdep="" deps_tail=""
+  if [[ "${include_pwa}" == "y" && "${include_auth}" == "y" ]]; then
+    deps_tail=',
+    "@serwist/next": "^9.5.11",
+    "@simplewebauthn/browser": "^13.1.0"'
+  elif [[ "${include_pwa}" == "y" ]]; then
+    deps_tail=',
+    "@serwist/next": "^9.5.11"'
+  elif [[ "${include_auth}" == "y" ]]; then
+    deps_tail=',
+    "@simplewebauthn/browser": "^13.1.0"'
+  fi
   if [[ "${include_pwa}" == "y" ]]; then
-    pwa_dep='
-    "@serwist/next": "^9.5.11",'
     pwa_devdep='
     "serwist": "^9.5.11"'
   else
@@ -200,8 +201,7 @@ gen_package_json() {
     "swiper": "^12.1.3",
     "pino": "^10.3.1",
     "@repo/i18n": "workspace:^",
-    "next-intl": "^4",${auth_dep}${pwa_dep}
-    "next": "^15.0.0"
+    "next-intl": "^4"${deps_tail}
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -2739,11 +2739,6 @@ main() {
   port="$(prompt_visible "${PORT_PROMPT}" '3000')"
   [[ -z "${port}" ]] && port="3000"
 
-  locales_input="$(prompt_visible "${LOCALES_PROMPT}" 'en,es')"
-  [[ -z "${locales_input}" ]] && locales_input="en,es"
-  IFS=',' read -ra locales_arr <<< "${locales_input//[[:space:]]/}"
-  [[ ! " ${locales_arr[*]} " =~ " en " ]] && locales_arr=("en" "${locales_arr[@]}")
-
   palette="$(select_palette)"
   accent="$(palette_to_accent "${palette}")"
 
@@ -2761,7 +2756,6 @@ main() {
   echo "  ┌─────────────────────────────────┐"
   printf "  │  %-31s│\n" "$(clr_bold "${name}")"
   printf "  │  %-31s│\n" "$(clr_dim "${LBL_PORT}: ${port}  ${LBL_PALETTE}: ${palette}")"
-  printf "  │  %-31s│\n" "$(clr_dim "${LBL_LOCALES}: ${locales_arr[*]}")"
   printf "  │  %-31s│\n" "$(clr_dim "${LBL_AUTH}: ${include_auth}  ${LBL_PWA}: ${include_pwa}")"
   printf "  │  %-31s│\n" "$(clr_dim "${LBL_REGISTRY}: ${registry_user}")"
   printf "  │  %-31s│\n" "$(clr_dim "${LBL_HOST}: ${host}")"
@@ -2823,6 +2817,14 @@ main() {
   touch "${app_dir}/public/icons/.gitkeep"
   touch "${app_dir}/public/icons/splash/.gitkeep"
 
+  # Copy env.example → .env.local
+  printf "  %s\n" "$(clr_dim "${COPYING_ENV_MSG}")"
+  cp "${app_dir}/env.example" "${app_dir}/.env.local"
+
+  # Install dependencies
+  printf "  %s\n\n" "$(clr_dim "${INSTALLING_DEPS_MSG}")"
+  (cd "${repo_root}" && pnpm install)
+
   # ── Done ──────────────────────────────────────────────────────────────────
   echo ""
   printf "  %s\n" "$(clr_bold_cyan "── ${DONE_MSG} ──")"
@@ -2831,13 +2833,11 @@ main() {
   echo ""
   printf "  %s\n" "$(clr_bold_cyan "── ${NEXT_STEPS} ──")"
   echo ""
-  printf "  %s  %s\n" "$(clr_dim '1.')" "$(clr_cyan "cp apps/${name}/env.example apps/${name}/.env.local")"
   [[ "${include_auth}" == "y" ]] && \
-  printf "  %s  %s\n" "$(clr_dim '2.')" "$(clr_cyan "${NEXT_STEP_AUTH_API}")"
-  printf "  %s  %s\n" "$(clr_dim '3.')" "$(clr_cyan 'pnpm install')"
-  printf "  %s  %s\n" "$(clr_dim '4.')" "$(clr_cyan "pnpm dev --filter=${name}")"
+  printf "  %s  %s\n" "$(clr_dim '1.')" "$(clr_cyan "${NEXT_STEP_AUTH_API}")"
+  printf "  %s  %s\n" "$(clr_dim '2.')" "$(clr_cyan "pnpm dev --filter=${name}")"
   [[ "${include_pwa}" == "y" ]] && \
-  printf "  %s  %s\n" "$(clr_dim '5.')" "$(clr_cyan "${NEXT_STEP_PWA_ICONS} apps/${name}/public/icons/")"
+  printf "  %s  %s\n" "$(clr_dim '3.')" "$(clr_cyan "${NEXT_STEP_PWA_ICONS} apps/${name}/public/icons/")"
   echo ""
 }
 

@@ -8,7 +8,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "new-app": "bash cli/new-nextjs-app/new-nextjs-app.sh",
-    "new-django-app": "bash cli/new-django-app/new-django-app.sh",
+    "new-api": "bash cli/new-django-app/new-django-app.sh",
     "docker": "node scripts/docker-build.mjs",
     "helm": "bash cli/helm/helm.sh",
     "secrets": "bash cli/setup-k8s-secrets/setup-k8s-secrets.sh",
@@ -20,7 +20,7 @@
     "deploy-mongodb": "bash cli/deploy-mongodb/deploy-mongodb.sh",
     "deploy-mysql": "node scripts/deploy-mysql.mjs",
     "deploy-redis": "node scripts/deploy-redis.mjs",
-    "generate-icons": "node scripts/generate-icons.mjs"
+    "generate-icons": "bash cli/generate-icons/generate-icons.sh"
   },
   "devDependencies": {
     "prettier": "^3.8.1",
