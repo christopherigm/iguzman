@@ -12,7 +12,8 @@ import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { Slider } from '@repo/ui/core-elements/slider';
 import type { SliderStep } from '@repo/ui/core-elements/slider';
-import { saveOnboarding, getProfile } from '@/lib/auth';
+import { saveOnboarding, getProfile, uploadResume } from '@/lib/auth';
+import type { ResumeImportResult } from '@/lib/auth';
 import type { SwInboundMessage, SwOutboundMessage } from '@/lib/sw-types';
 import './onboarding-form.css';
 
@@ -284,6 +285,13 @@ export function OnboardingForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  type ResumeState = 'idle' | 'uploading' | 'done' | 'error' | 'skipped';
+  const [resumeState, setResumeState] = useState<ResumeState>('idle');
+  const [resumeResult, setResumeResult] = useState<ResumeImportResult | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [modelStatus, setModelStatus] = useState<ModelStatus>('unconfigured');
   const [modelProgress, setModelProgress] = useState(0);
 
@@ -384,8 +392,21 @@ export function OnboardingForm() {
     }
   }, [jobTitle, yearsValue, techStack, router, t]);
 
-  const stepTitles = [t('step1Title'), t('step2Title'), t('step3Title')];
-  const stepSubtitles = [t('step1Subtitle'), t('step2Subtitle'), t('step3Subtitle')];
+  const handleResumeFile = useCallback(async (file: File) => {
+    setResumeError(null);
+    setResumeState('uploading');
+    try {
+      const result = await uploadResume(file);
+      setResumeResult(result);
+      setResumeState('done');
+    } catch {
+      setResumeState('error');
+      setResumeError(t('resumeError'));
+    }
+  }, [t]);
+
+  const stepTitles = [t('step1Title'), t('step2Title'), t('step3Title'), t('step4Title')];
+  const stepSubtitles = [t('step1Subtitle'), t('step2Subtitle'), t('step3Subtitle'), t('step4Subtitle')];
 
   const yearsLabel = (() => {
     const step = YEARS_STEPS.find((s) => s.value === yearsValue);
@@ -414,7 +435,7 @@ export function OnboardingForm() {
       </Box>
 
       <Box width="100%" maxWidth={520} marginBottom={24}>
-        <StepIndicator current={step} total={3} />
+        <StepIndicator current={step} total={4} />
       </Box>
 
       <Box
@@ -462,8 +483,113 @@ export function OnboardingForm() {
           <TechTagInput tags={techStack} onChange={setTechStack} />
         )}
 
-        {/* ── Step 3: Review + model status ── */}
+        {/* ── Step 3: Resume upload ── */}
         {step === 3 && (
+          <Box display="flex" flexDirection="column" gap={16}>
+            {(resumeState === 'idle' || resumeState === 'error') && (
+              <>
+                <Box
+                  className={[
+                    'onboarding__upload-zone',
+                    isDragging ? 'onboarding__upload-zone--dragging' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t('resumeDropZone')}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) void handleResumeFile(file);
+                  }}
+                >
+                  <Typography variant="body-sm" styles={{ pointerEvents: 'none' }}>
+                    {t('resumeDropZone')}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="var(--muted-foreground, #6b7280)"
+                    styles={{ fontSize: 12, pointerEvents: 'none' }}
+                  >
+                    {t('resumeDropHint')}
+                  </Typography>
+                </Box>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  aria-hidden="true"
+                  className="onboarding__file-input"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleResumeFile(file);
+                  }}
+                />
+              </>
+            )}
+
+            {resumeState === 'uploading' && (
+              <Box className="onboarding__upload-zone onboarding__upload-zone--loading">
+                <ProgressBar label={t('resumeAnalyzing')} />
+              </Box>
+            )}
+
+            {resumeState === 'done' && resumeResult && (
+              <Box className="onboarding__upload-zone onboarding__upload-zone--done">
+                <Typography variant="body-sm" fontWeight={600}>
+                  ✓ {t('resumeSuccess', {
+                    bullets: resumeResult.bullets_imported,
+                    skills: resumeResult.skills_imported,
+                  })}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                  styles={{ fontSize: 12 }}
+                >
+                  {t('resumeSuccessHint')}
+                </Typography>
+              </Box>
+            )}
+
+            {resumeState === 'skipped' && (
+              <Box className="onboarding__upload-zone onboarding__upload-zone--skipped">
+                <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+                  {t('resumeSkipped')}
+                </Typography>
+              </Box>
+            )}
+
+            {resumeState === 'error' && resumeError && (
+              <Typography variant="caption" role="alert" className="onboarding__error">
+                {resumeError}
+              </Typography>
+            )}
+
+            {(resumeState === 'idle' || resumeState === 'error') && (
+              <Button
+                unstyled
+                type="button"
+                className="onboarding__skip-btn"
+                onClick={() => {
+                  setResumeState('skipped');
+                  setResumeError(null);
+                }}
+              >
+                {t('resumeSkip')}
+              </Button>
+            )}
+          </Box>
+        )}
+
+        {/* ── Step 4: Review + model status ── */}
+        {step === 4 && (
           <Box display="flex" flexDirection="column" gap={16}>
             <Box className="onboarding__review-card">
               <Box className="onboarding__review-row">
@@ -518,6 +644,20 @@ export function OnboardingForm() {
                   </Typography>
                 )}
               </Box>
+              <Box className="onboarding__review-row">
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                  styles={{ fontSize: 12 }}
+                >
+                  {t('reviewResume')}
+                </Typography>
+                <Typography variant="caption" fontWeight={600} styles={{ fontSize: 14 }}>
+                  {resumeResult
+                    ? t('reviewResumeImported', { bullets: resumeResult.bullets_imported })
+                    : t('reviewResumeSkipped')}
+                </Typography>
+              </Box>
             </Box>
 
             <ModelBanner status={modelStatus} progress={modelProgress} />
@@ -549,13 +689,16 @@ export function OnboardingForm() {
             <Box />
           )}
 
-          {step < 3 ? (
+          {step < 4 ? (
             <Button
               text={t('next')}
               type="button"
               size="md"
               kind={step === 1 && jobTitle.trim() ? 'success' : undefined}
-              disabled={step === 1 && !jobTitle.trim()}
+              disabled={
+                (step === 1 && !jobTitle.trim()) ||
+                (step === 3 && resumeState === 'uploading')
+              }
               onClick={() => setStep((s) => s + 1)}
             />
           ) : (

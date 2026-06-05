@@ -231,7 +231,7 @@ export function PinnedVideoItemServer({
 
   const { generate } = useGroq({
     proxyBase: '/api/groq',
-    model: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
     getAuthHeaders: (): Record<string, string> => {
       const key = localStorage.getItem('vd_credits_key');
       return key ? { 'x-credits-key': key } : {};

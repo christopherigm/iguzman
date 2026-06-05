@@ -184,6 +184,25 @@ export async function changePassword(
   }
 }
 
+export interface ResumeImportResult {
+  bullets_imported: number;
+  skills_imported: number;
+}
+
+export async function uploadResume(file: File): Promise<ResumeImportResult> {
+  const form = new FormData();
+  form.append('resume', file);
+  const res = await fetch('/api/auth/resume', {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<ResumeImportResult>;
+}
+
 export async function deletePasskeyCredential(id: number): Promise<void> {
   const res = await fetch(`/api/auth/passkey/credentials/${id}`, {
     method: 'DELETE',

@@ -2,7 +2,10 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
 
@@ -256,3 +259,6 @@ EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS = int(
 PASSWORD_RESET_TOKEN_EXPIRY_HOURS = int(
     os.environ.get('PASSWORD_RESET_TOKEN_EXPIRY_HOURS', 1)
 )
+
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')

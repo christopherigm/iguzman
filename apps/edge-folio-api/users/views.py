@@ -1,9 +1,15 @@
 import json
+import logging
+import urllib.error
+import urllib.request
 import uuid
 
+import pdfplumber
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
+
+logger = logging.getLogger(__name__)
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from rest_framework import generics, status
@@ -37,6 +43,7 @@ from .serializers import (
     PasswordResetRequestSerializer,
     ProfilePictureSerializer,
     ResendVerificationSerializer,
+    ResumeUploadSerializer,
     SignUpSerializer,
     UserProfileSerializer,
     UserProfileUpdateSerializer,
@@ -243,6 +250,158 @@ class OnboardingView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(UserProfileSerializer(request.user, context={'request': request}).data)
+
+
+def _extract_pdf_text(file_obj) -> str:
+    text_parts = []
+    try:
+        with pdfplumber.open(file_obj) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    text_parts.append(text.strip())
+    except Exception as exc:
+        logger.warning('PDF text extraction failed: %s', exc)
+    return '\n'.join(text_parts)
+
+
+def _call_groq_for_resume(text: str, api_key: str) -> dict:
+    prompt = (
+        'You are a resume parser. Extract professional accomplishments and skills.\n\n'
+        'Return ONLY a valid JSON object:\n'
+        '{"bullets":[{"text":"...","category":"impact|technical|leadership|collaboration|other"}],"skills":["..."]}\n\n'
+        'Rules:\n'
+        '- Each bullet: one factual sentence under 500 chars describing a verifiable achievement\n'
+        '- category: impact=business outcome, technical=engineering, leadership=team lead, '
+        'collaboration=cross-team, other=else\n'
+        '- skills: programming languages, frameworks, tools, cloud platforms only\n'
+        '- At most 20 bullets and 30 skills\n'
+        '- Return valid JSON only — no markdown fences\n\n'
+        f'Resume:\n{text[:8000]}'
+    )
+    model = getattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b')
+    payload = json.dumps({
+        'model': model,
+        'messages': [{'role': 'user', 'content': prompt}],
+        'temperature': 0.1,
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.groq.com/openai/v1/chat/completions',
+        data=payload,
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {api_key}',
+            'User-Agent': 'groq-python/0.11.0',
+        },
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = json.loads(resp.read().decode('utf-8'))
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode('utf-8', errors='replace')
+        logger.warning('Groq HTTP %s: %s', exc.code, error_body)
+        raise
+    raw = body['choices'][0]['message']['content'].strip()
+    if raw.startswith('```'):
+        raw = raw.split('\n', 1)[1] if '\n' in raw else raw[3:]
+        raw = raw.rstrip('`').strip()
+    return json.loads(raw)
+
+
+class ResumeUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from matrix.models import BulletPoint, Skill
+
+        serializer = ResumeUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        resume_file = serializer.validated_data['resume']
+
+        raw_text = _extract_pdf_text(resume_file)
+        if not raw_text.strip():
+            return Response(
+                {'detail': 'Could not extract text from the uploaded PDF.'},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        groq_api_key = settings.GROQ_API_KEY
+        if not groq_api_key:
+            return Response(
+                {'detail': 'Resume analysis is not configured on this server.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            structured = _call_groq_for_resume(raw_text, groq_api_key)
+        except (urllib.error.URLError, json.JSONDecodeError, KeyError) as exc:
+            logger.warning('Groq resume analysis failed: %s', exc)
+            return Response(
+                {'detail': 'Resume analysis failed. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        bullets_data = structured.get('bullets', [])
+        skills_data = structured.get('skills', [])
+        if not isinstance(bullets_data, list):
+            bullets_data = []
+        if not isinstance(skills_data, list):
+            skills_data = []
+
+        # Upsert skills
+        skill_objs: dict[str, Skill] = {}
+        for raw_name in skills_data[:30]:
+            if not isinstance(raw_name, str):
+                continue
+            name = raw_name.strip()[:100]
+            if not name:
+                continue
+            obj, _ = Skill.objects.get_or_create(
+                user=request.user,
+                name=name,
+                defaults={'enabled': True, 'proficiency': 3},
+            )
+            skill_objs[name.lower()] = obj
+
+        # Create bullet points
+        valid_categories = {'impact', 'technical', 'leadership', 'collaboration', 'other'}
+        base_order = BulletPoint.objects.filter(user=request.user).count()
+        bullets_created = 0
+
+        for i, item in enumerate(bullets_data[:20]):
+            if not isinstance(item, dict):
+                continue
+            text = str(item.get('text', '')).strip()
+            if not text or len(text) > 500:
+                continue
+            category = item.get('category', 'other')
+            if category not in valid_categories:
+                category = 'other'
+            bullet = BulletPoint.objects.create(
+                user=request.user,
+                text=text,
+                category=category,
+                source='extracted',
+                is_approved=False,
+                order=base_order + i,
+            )
+            text_lower = text.lower()
+            for skill_key, skill_obj in skill_objs.items():
+                if skill_key in text_lower:
+                    bullet.skills.add(skill_obj)
+            bullets_created += 1
+
+        try:
+            cache.delete(f'matrix:bullets:{request.user.id}')
+            cache.delete(f'matrix:skills:{request.user.id}')
+        except Exception as exc:
+            logger.warning('Cache invalidation failed after resume import: %s', exc)
+
+        return Response(
+            {'bullets_imported': bullets_created, 'skills_imported': len(skill_objs)},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class PasskeyRegistrationOptionsView(APIView):

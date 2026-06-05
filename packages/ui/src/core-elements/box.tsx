@@ -14,10 +14,26 @@ export interface BoxProps extends UIComponentProps {
   'aria-describedby'?: string;
   /** Whether this element is a modal dialog. */
   'aria-modal'?: boolean;
+  /** Tab order for keyboard navigation. */
+  tabIndex?: number;
   /** Click handler. */
   onClick?: React.MouseEventHandler<HTMLDivElement>;
+  /** Key-down handler. */
+  onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
   /** Animation end handler. */
   onAnimationEnd?: React.AnimationEventHandler<HTMLDivElement>;
+  /** Drag-over handler (call `e.preventDefault()` to allow drop). */
+  onDragOver?: React.DragEventHandler<HTMLDivElement>;
+  /** Drag-enter handler. */
+  onDragEnter?: React.DragEventHandler<HTMLDivElement>;
+  /** Drag-leave handler. */
+  onDragLeave?: React.DragEventHandler<HTMLDivElement>;
+  /** Drop handler. */
+  onDrop?: React.DragEventHandler<HTMLDivElement>;
+  /** Drag-start handler. */
+  onDragStart?: React.DragEventHandler<HTMLDivElement>;
+  /** Drag-end handler. */
+  onDragEnd?: React.DragEventHandler<HTMLDivElement>;
 }
 
 /**
@@ -37,8 +53,12 @@ export interface BoxProps extends UIComponentProps {
  * </Box>
  */
 export const Box: React.FC<BoxProps> = (props) => {
-  const { styles, children, className, id, role, onClick, onAnimationEnd } =
-    props;
+  const {
+    styles, children, className, id, role,
+    onClick, onKeyDown, onAnimationEnd,
+    onDragOver, onDragEnter, onDragLeave, onDrop, onDragStart, onDragEnd,
+    tabIndex,
+  } = props;
 
   const style: CSSProperties = { ...buildStyleProps(props), ...styles };
 
@@ -47,11 +67,19 @@ export const Box: React.FC<BoxProps> = (props) => {
       id={id}
       className={className}
       style={style}
+      tabIndex={tabIndex}
       aria-label={props['aria-label']}
       aria-labelledby={props['aria-labelledby']}
       aria-describedby={props['aria-describedby']}
       onClick={onClick}
+      onKeyDown={onKeyDown}
       onAnimationEnd={onAnimationEnd}
+      onDragOver={onDragOver}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       {...(role !== undefined ? { role } : {})}
       {...(props['aria-hidden'] !== undefined
         ? { 'aria-hidden': props['aria-hidden'] }

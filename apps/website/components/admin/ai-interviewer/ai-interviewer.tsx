@@ -86,7 +86,7 @@ export interface AiInterviewerProps {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODEL = 'openai/gpt-oss-120b';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const MIN_SCOPING_ROUNDS = 3;
 const VISIBLE_STAGES: InterviewStage[] = [

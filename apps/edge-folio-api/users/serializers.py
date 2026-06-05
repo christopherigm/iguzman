@@ -207,3 +207,16 @@ class PasskeyRegistrationVerifySerializer(serializers.Serializer):
     credential = serializers.JSONField()
     challenge_id = serializers.CharField()
     name = serializers.CharField(max_length=64, default='My passkey', required=False)
+
+
+class ResumeUploadSerializer(serializers.Serializer):
+    resume = serializers.FileField()
+
+    def validate_resume(self, value):
+        content_type = getattr(value, 'content_type', '')
+        name = getattr(value, 'name', '')
+        if not (content_type == 'application/pdf' or name.lower().endswith('.pdf')):
+            raise serializers.ValidationError('Only PDF files are accepted.')
+        if value.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError('File size must not exceed 10 MB.')
+        return value

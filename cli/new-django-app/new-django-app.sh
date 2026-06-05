@@ -250,6 +250,7 @@ psycopg[binary]==3.2.4
 django-colorfield==0.11.0
 django-cors-headers==4.9.0
 PYEOF
+  echo "python-dotenv==1.1.1" >> "$out"
   [[ "${include_redis}"   == "y" ]] && echo "django-redis==5.4.0"         >> "$out" || true
   [[ "${include_passkey}" == "y" ]] && echo "webauthn==2.7.1"             >> "$out" || true
   [[ "${include_r2}"      == "y" ]] && echo "django-storages[s3]==1.14.4" >> "$out" || true
@@ -390,7 +391,10 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
 
