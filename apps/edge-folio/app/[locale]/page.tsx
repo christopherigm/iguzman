@@ -25,17 +25,6 @@ export default async function Home({ params }: Props) {
         flexDirection="column"
         alignItems="center"
       >
-        <h1
-          style={{
-            fontSize: 24,
-            fontWeight: 600,
-            color: 'var(--foreground)',
-            marginBottom: 16,
-          }}
-        >
-          Edge Folio
-        </h1>
-        <ThemeSwitch hideOnMobile />
       </Box>
     </Container>
   );
