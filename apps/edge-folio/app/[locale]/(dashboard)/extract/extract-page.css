@@ -1,0 +1,229 @@
+.extract__gate {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e5e7eb);
+}
+
+.extract__gate-icon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Locked (model not configured) ── */
+
+.extract__gate--locked {
+  background: var(--surface-2, #f3f4f6);
+  color: var(--muted-foreground, #6b7280);
+}
+
+.extract__gate--locked .extract__gate-icon {
+  background: var(--surface-1, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  color: var(--muted-foreground, #6b7280);
+}
+
+/* ── Downloading ── */
+
+.extract__gate--downloading {
+  background: rgba(6, 182, 212, 0.06);
+  border-color: rgba(6, 182, 212, 0.3);
+  color: var(--foreground);
+}
+
+.extract__gate--downloading .extract__gate-icon {
+  background: rgba(6, 182, 212, 0.12);
+  color: var(--primary, #06b6d4);
+}
+
+/* ── Ready ── */
+
+.extract__gate--ready {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: var(--success, #22c55e);
+  color: var(--foreground);
+  animation: extract-gate-appear 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.extract__gate--ready .extract__gate-icon {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success, #22c55e);
+}
+
+@keyframes extract-gate-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Unsupported browser banner ── */
+
+.extract__unsupported {
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-2, #f3f4f6);
+}
+
+/* ── Selected directory card ── */
+
+.extract__dir-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-2, #f3f4f6);
+  animation: extract-gate-appear 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.extract__dir-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 182, 212, 0.12);
+  color: var(--primary, #06b6d4);
+}
+
+.extract__dir-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground, #6b7280);
+}
+
+.extract__dir-stats-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--muted-foreground, #6b7280);
+  flex-shrink: 0;
+}
+
+/* ── Top-level file entries ── */
+
+.extract__dir-entries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.extract__dir-entry {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-1, #fff);
+  max-width: 160px;
+}
+
+.extract__dir-entry-icon {
+  flex-shrink: 0;
+  color: var(--primary, #06b6d4);
+  display: flex;
+  align-items: center;
+}
+
+/* ── Change button ── */
+
+.extract__change-btn {
+  flex-shrink: 0;
+  font-size: 13px !important;
+  color: var(--primary, #06b6d4) !important;
+  padding: 0 !important;
+  white-space: nowrap;
+}
+
+.extract__change-btn:hover {
+  text-decoration: underline;
+}
+
+/* ── Dir card loading state ── */
+
+.extract__dir-card--loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── Extraction phase cards ── */
+
+.extract__phase {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-2, #f3f4f6);
+  animation: extract-gate-appear 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Review bullet cards ── */
+
+.extract__review-bullet {
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-1, #fff);
+  transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.extract__review-bullet--deselected {
+  opacity: 0.45;
+  border-color: transparent;
+}
+
+/* ── Select all toggle ── */
+
+.extract__select-all-btn {
+  flex-shrink: 0;
+  font-size: 13px !important;
+  color: var(--primary, #06b6d4) !important;
+  padding: 0 !important;
+  white-space: nowrap;
+}
+
+.extract__select-all-btn:hover {
+  text-decoration: underline;
+}
+
+/* ── Done banner ── */
+
+.extract__done {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--success, #22c55e);
+  background: rgba(34, 197, 94, 0.08);
+  animation: extract-gate-appear 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Error banner ── */
+
+.extract__error {
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.06);
+}

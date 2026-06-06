@@ -11,6 +11,8 @@ interface NavbarWrapperProps {
   version: string;
   labels: {
     home: string;
+    matrix: string;
+    extract: string;
     account: string;
     signOut: string;
   };
@@ -48,7 +50,18 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
       }
     : { label: labels.account, href: '/account' };
 
-  const items: MenuItem[] = [{ label: labels.home, href: '/' }, accountItem];
+  const dashboardItems: MenuItem[] = displayName
+    ? [
+        { label: labels.matrix, href: '/matrix' },
+        { label: labels.extract, href: '/extract' },
+      ]
+    : [];
+
+  const items: MenuItem[] = [
+    { label: labels.home, href: '/' },
+    ...dashboardItems,
+    accountItem,
+  ];
 
   return (
     <Navbar
