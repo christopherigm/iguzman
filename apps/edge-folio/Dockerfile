@@ -34,6 +34,18 @@ COPY --from=deps /app/ ./
 COPY --from=pruner /app/out/full/ ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+# NEXT_PUBLIC_* vars are baked into the client bundle at build time by Next.js.
+# They cannot be injected at runtime via K8s secrets or container env vars.
+ARG NEXT_PUBLIC_ENABLE_SW=true
+ARG NEXT_PUBLIC_EDGE_MODEL_ID=onnx-community/gemma-4-E2B-it-ONNX
+ARG NEXT_PUBLIC_EDGE_MODEL_REVISION=main
+ARG NEXT_PUBLIC_EDGE_MODEL_FILES='["onnx/decoder_model_merged_q4f16.onnx","onnx/decoder_model_merged_q4f16.onnx_data","onnx/decoder_model_merged_q4f16.onnx_data_1","onnx/embed_tokens_q4f16.onnx","onnx/embed_tokens_q4f16.onnx_data","tokenizer.json","tokenizer_config.json","generation_config.json","preprocessor_config.json"]'
+ENV NEXT_PUBLIC_ENABLE_SW=$NEXT_PUBLIC_ENABLE_SW
+ENV NEXT_PUBLIC_EDGE_MODEL_ID=$NEXT_PUBLIC_EDGE_MODEL_ID
+ENV NEXT_PUBLIC_EDGE_MODEL_REVISION=$NEXT_PUBLIC_EDGE_MODEL_REVISION
+ENV NEXT_PUBLIC_EDGE_MODEL_FILES=$NEXT_PUBLIC_EDGE_MODEL_FILES
 
 RUN corepack enable pnpm && pnpm exec turbo run build --filter=edge-folio --no-daemon
 
@@ -75,9 +87,11 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Copy only what the standalone server needs
-COPY --from=builder /app/apps/edge-folio/public ./apps/edge-folio/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/edge-folio/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/edge-folio/.next/static ./apps/edge-folio/.next/static
+# public/ must come last so sw.js and other generated assets are never clobbered
+# by anything in the standalone output
+COPY --from=builder /app/apps/edge-folio/public ./apps/edge-folio/public
 
 USER nextjs
 

@@ -187,7 +187,7 @@ gen_package_json() {
   "private": true,
   "scripts": {
     "dev": "next dev --port ${port}",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "check-types": "next typegen && tsc --noEmit"
@@ -389,6 +389,7 @@ WORKDIR /app
 COPY --from=deps /app/ ./
 COPY --from=pruner /app/out/full/ ./
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 RUN corepack enable pnpm && pnpm exec turbo run build --filter=${name} --no-daemon
 RUN find -L /app/node_modules/.pnpm -maxdepth 5 \\
       -path "*/next@*/node_modules/@swc/helpers" -type d \\
@@ -405,9 +406,9 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN apk add --no-cache curl jq wget
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-COPY --from=builder /app/apps/${name}/public ./apps/${name}/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/${name}/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/${name}/.next/static ./apps/${name}/.next/static
+COPY --from=builder /app/apps/${name}/public ./apps/${name}/public
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
@@ -652,6 +653,7 @@ TSEOF
 gen_layout_tsx() {
   local out="$1"; mkdir -p "$(dirname "$out")"
   local meta_import navbar_import tNav_decl navbar_jsx viewport_export meta_extra splash_links=""
+  local serwist_import="" serwist_open="" serwist_close=""
 
   if [[ "${include_pwa}" == "y" ]]; then
     meta_import="import type { Metadata, Viewport } from 'next';"
@@ -701,17 +703,25 @@ import { Footer } from './footer';"
             {children}"
   fi
 
+  if [[ "${include_pwa}" == "y" ]]; then
+    serwist_import="import { SerwistProvider } from '@serwist/next/react';"
+    serwist_open="      <SerwistProvider swUrl=\"/sw.js\">"
+    serwist_close="      </SerwistProvider>"
+  fi
+
   cat > "$out" << EOF
 ${meta_import}
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
-import { ThemeProvider, ThemeScript } from '@repo/ui/theme-provider';
+import { ThemeProvider, ThemeScript, RESOLVED_COOKIE_NAME } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
+import { palettes } from '@repo/ui/palettes';
 import { routing } from '@repo/i18n/routing';
 ${navbar_import}
+${serwist_import}
 import packageJson from '@/package.json';
 import '../globals.css';
 
@@ -743,14 +753,22 @@ export default async function LocaleLayout({ children, params }: Props) {
 ${tNav_decl}
   const cookieStore = await cookies();
   const themeModeCookie = cookieStore.get('theme-mode')?.value as ThemeMode | undefined;
+  const themeResolvedCookie = cookieStore.get(RESOLVED_COOKIE_NAME)?.value as ResolvedTheme | undefined;
   const initialMode: ThemeMode = themeModeCookie ?? 'system';
-  const initialResolved: ResolvedTheme = initialMode === 'dark' ? 'dark' : 'light';
+  const initialResolved: ResolvedTheme =
+    initialMode === 'system' ? (themeResolvedCookie ?? 'light') : (initialMode as ResolvedTheme);
+
+  const paletteVars = palettes['${palette}']?.[initialResolved] ?? {};
+  const bodyStyle = Object.fromEntries(Object.entries(paletteVars)) as React.CSSProperties;
+  (bodyStyle as Record<string, string>)['--accent'] = '${accent}';
 
   return (
     <html lang={locale} data-theme={initialResolved} style={{ colorScheme: initialResolved }} suppressHydrationWarning>
       <head>
         <ThemeScript />${splash_links}
       </head>
+      <body style={bodyStyle}>
+${serwist_open}
       <NextIntlClientProvider messages={messages}>
         <ThemeProvider initialMode={initialMode} initialResolved={initialResolved}>
           <PaletteProvider palette="${palette}" accent="${accent}">
@@ -758,6 +776,8 @@ ${navbar_jsx}
           </PaletteProvider>
         </ThemeProvider>
       </NextIntlClientProvider>
+${serwist_close}
+      </body>
     </html>
   );
 }

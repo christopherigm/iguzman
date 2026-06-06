@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, use, useMemo } from 'react';
+import { createContext, use, useMemo, useEffect } from 'react';
 import { useTheme } from './theme-provider';
 import { palettes, DEFAULT_PALETTE } from './palettes';
 import type { PaletteDefinition } from './palettes';
@@ -58,6 +58,15 @@ function PaletteProvider({
     return { ...vars, ...styleProp };
   }, [variables, styleProp, accent]);
 
+  useEffect(() => {
+    for (const [key, value] of Object.entries(style)) {
+      document.body.style.setProperty(key, String(value));
+    }
+    if (className) {
+      document.body.classList.add(...className.split(' ').filter(Boolean));
+    }
+  }, [style, className]);
+
   const contextValue = useMemo<PaletteContextValue>(
     () => ({ name: definition.name, definition }),
     [definition],
@@ -65,9 +74,7 @@ function PaletteProvider({
 
   return (
     <PaletteContext value={contextValue}>
-      <body style={style} className={className}>
-        {children}
-      </body>
+      {children}
     </PaletteContext>
   );
 }

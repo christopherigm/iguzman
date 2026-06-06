@@ -1,11 +1,11 @@
 {
   "name": "edge-folio",
-  "version": "0.1.7",
+  "version": "0.1.10",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "check-types": "next typegen && tsc --noEmit"

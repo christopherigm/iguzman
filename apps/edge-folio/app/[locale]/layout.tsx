@@ -7,10 +7,12 @@ import {
   getTranslations,
   setRequestLocale,
 } from 'next-intl/server';
+import { SerwistProvider } from '@serwist/next/react';
 import { ThemeProvider, ThemeScript, RESOLVED_COOKIE_NAME } from '@repo/ui/theme-provider';
 import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
 import { PaletteProvider } from '@repo/ui/palette-provider';
 import { routing } from '@repo/i18n/routing';
+import { palettes } from '@repo/ui/palettes';
 import { NavbarWrapper } from './navbar-wrapper';
 import { Footer } from './footer';
 import packageJson from '@/package.json';
@@ -89,6 +91,12 @@ export default async function LocaleLayout({ children, params }: Props) {
       ? (themeResolvedCookie ?? 'light')
       : (initialMode as ResolvedTheme);
 
+  const paletteVars = palettes['cyan']?.[initialResolved] ?? {};
+  const bodyStyle = Object.fromEntries(
+    Object.entries(paletteVars).map(([k, v]) => [k, v]),
+  ) as React.CSSProperties;
+  (bodyStyle as Record<string, string>)['--accent'] = '#06b6d4';
+
   return (
     <html
       lang={locale}
@@ -160,28 +168,32 @@ export default async function LocaleLayout({ children, params }: Props) {
           href="/icons/splash/splash-2048x2732.jpg"
         />
       </head>
-      <NextIntlClientProvider messages={messages}>
-        <ThemeProvider
-          initialMode={initialMode}
-          initialResolved={initialResolved}
-        >
-          <PaletteProvider palette="cyan" accent="#06b6d4">
-            <NavbarWrapper
-              logo="/logo-navbar.png"
-              version={`v${packageJson.version}`}
-              labels={{
-                home: tNav('home'),
-                matrix: tNav('matrix'),
-                extract: tNav('extract'),
-                account: tNav('account'),
-                signOut: tNav('signOut'),
-              }}
-            />
-            {children}
-            <Footer />
-          </PaletteProvider>
-        </ThemeProvider>
-      </NextIntlClientProvider>
+      <body style={bodyStyle}>
+        <SerwistProvider swUrl="/sw.js" disable={process.env.NODE_ENV !== 'production'}>
+          <NextIntlClientProvider messages={messages}>
+            <ThemeProvider
+              initialMode={initialMode}
+              initialResolved={initialResolved}
+            >
+              <PaletteProvider palette="cyan" accent="#06b6d4">
+                <NavbarWrapper
+                  logo="/logo-navbar.png"
+                  version={`v${packageJson.version}`}
+                  labels={{
+                    home: tNav('home'),
+                    matrix: tNav('matrix'),
+                    extract: tNav('extract'),
+                    account: tNav('account'),
+                    signOut: tNav('signOut'),
+                  }}
+                />
+                {children}
+                <Footer />
+              </PaletteProvider>
+            </ThemeProvider>
+          </NextIntlClientProvider>
+        </SerwistProvider>
+      </body>
     </html>
   );
 }
