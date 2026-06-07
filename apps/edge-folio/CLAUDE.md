@@ -113,14 +113,48 @@ app/[locale]/
 
 Authentication guard (redirect unauthenticated users) lives in `proxy.ts` alongside the next-intl middleware.
 
-## Edge AI — OPFS + WebGPU
+## Client-Side AST Extraction — web-tree-sitter
 
-The "Extract Experience" feature runs inference entirely in the browser:
+The "Extract Experience" feature parses a local repository **structurally** in the browser using `web-tree-sitter` (WASM). No model download, no GPU required.
 
-- The service worker (`app/sw.ts`) silently fetches and caches Qwen2.5-Coder-1.5B-Instruct weights (q4f16, ~1.34 GB) into the **Origin Private File System (OPFS)** during onboarding.
-- Client-side inference uses **WebGPU** (`navigator.gpu`) — gate all WebGPU code behind a feature check.
-- OPFS reads/writes must run in a **Web Worker** (not the main thread).
-- Only NDA-sanitized metadata (stack names, metrics, patterns — no variable names, logic, or proprietary names) is ever sent to the Django backend.
+### How it works
+
+1. The user picks a local directory via the **File System Access API** (`showDirectoryPicker`).
+2. A **Web Worker** (`lib/ast-worker.ts`) runs the extraction pipeline:
+   - **Manifest parsing** (no AST needed): reads `package.json`, `requirements.txt`, `go.mod`, `Cargo.toml`, `Dockerfile`, `docker-compose.yml`, K8s manifests, `.kicad_pro` files — extracts dependency names and infra signals only.
+   - **Import extraction** (tree-sitter): for `.ts`/`.tsx`/`.js`/`.jsx` and `.py` files, parses AST import declarations. Only module source strings are captured — variable names, function names, and business logic are never read.
+   - Falls back to regex-based import extraction when grammar WASM files are unavailable.
+3. The worker outputs a **Skeleton JSON** (`lib/skeleton-json.ts`): languages, frameworks, dependency lists, infra flags, KiCad presence — zero proprietary content.
+4. The Skeleton JSON is shown to the user for review, then POSTed to Django in Task 2.4 for cloud LLM synthesis into bullet points.
+
+### WASM setup
+
+After `pnpm install`, run the setup script to copy the core WASM and download language grammar files:
+
+```bash
+pnpm prepare-wasm    # copies tree-sitter.wasm + downloads grammar WASMs to public/wasm/
+```
+
+Files placed in `public/wasm/`:
+| File | Source |
+|---|---|
+| `tree-sitter.wasm` | `node_modules/web-tree-sitter/` (copied automatically) |
+| `tree-sitter-javascript.wasm` | GitHub release of tree-sitter-javascript |
+| `tree-sitter-typescript.wasm` | GitHub release of tree-sitter-typescript |
+| `tree-sitter-python.wasm` | GitHub release of tree-sitter-python |
+
+The worker loads grammars via `Parser.Language.load('/wasm/tree-sitter-*.wasm')`. Missing grammar files trigger the regex fallback — they are not required for the feature to function.
+
+### Key files
+
+| File | Role |
+|---|---|
+| `lib/skeleton-json.ts` | `SkeletonJson` type — the sanitized output |
+| `lib/ast-worker-types.ts` | Message types for main thread ↔ worker |
+| `lib/ast-worker.ts` | Web Worker: manifest + import extraction |
+| `lib/use-ast-extractor.ts` | React hook managing the worker lifecycle |
+| `lib/use-directory-picker.ts` | File System Access API picker (unchanged) |
+| `public/wasm/` | WASM grammar files served as static assets |
 
 ## Environment Variables
 

@@ -22,6 +22,24 @@ const withSerwist = withSerwistInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  webpack(config) {
+    // onnxruntime-node contains native binaries (.node) that webpack cannot
+    // parse. stt-worker.ts runs as a browser Web Worker — the Node.js ONNX
+    // backend is never needed. Alias it to false so webpack emits an empty
+    // module instead of trying to bundle the binary.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'onnxruntime-node': false,
+    };
+    // web-tree-sitter has a conditional require('fs') for its Node.js path.
+    // ast-worker.ts runs in the browser — mark Node.js built-ins as empty.
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      path: false,
+    };
+    return config;
+  },
   async headers() {
     return [
       {

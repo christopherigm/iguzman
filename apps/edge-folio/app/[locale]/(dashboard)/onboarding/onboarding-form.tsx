@@ -14,57 +14,44 @@ import { Slider } from '@repo/ui/core-elements/slider';
 import type { SliderStep } from '@repo/ui/core-elements/slider';
 import { saveOnboarding, getProfile, uploadResume } from '@/lib/auth';
 import type { ResumeImportResult } from '@/lib/auth';
-import { useModelStatus } from '@/lib/use-model-status';
-import type { ModelStatus } from '@/lib/use-model-status';
 import './onboarding-form.css';
 
 // ── Readiness handshake ──────────────────────────────────────────────────────
 
-function ReadinessHandshake({
-  status,
-  progress,
-}: {
-  status: ModelStatus;
-  progress: number;
-}) {
+function ReadinessHandshake() {
   const t = useTranslations('OnboardingPage');
-
-  if (status === 'ready') {
-    return (
-      <Box className="onboarding__handshake">
-        <Box className="onboarding__handshake-icon" aria-hidden={true}>
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2L4 6v6c0 5.5 3.5 10.3 8 11.6C16.5 22.3 20 17.5 20 12V6l-8-4z"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M9 12l2 2 4-4"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Box>
-        <Box display="flex" flexDirection="column" gap={4}>
-          <Typography variant="body-sm" fontWeight={700} styles={{ fontSize: 15 }}>
-            {t('handshakeTitle')}
-          </Typography>
-          <Typography variant="caption" color="var(--foreground)" styles={{ fontSize: 13 }}>
-            {t('handshakeBody')}
-          </Typography>
-          <Typography variant="caption" color="var(--success, #22c55e)" styles={{ fontSize: 12 }}>
-            {t('handshakeDetail')}
-          </Typography>
-        </Box>
+  return (
+    <Box className="onboarding__handshake">
+      <Box className="onboarding__handshake-icon" aria-hidden={true}>
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M12 2L4 6v6c0 5.5 3.5 10.3 8 11.6C16.5 22.3 20 17.5 20 12V6l-8-4z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M9 12l2 2 4-4"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </Box>
-    );
-  }
-
-  return <ModelBanner status={status} progress={progress} />;
+      <Box display="flex" flexDirection="column" gap={4}>
+        <Typography variant="body-sm" fontWeight={700} styles={{ fontSize: 15 }}>
+          {t('handshakeTitle')}
+        </Typography>
+        <Typography variant="caption" color="var(--foreground)" styles={{ fontSize: 13 }}>
+          {t('handshakeBody')}
+        </Typography>
+        <Typography variant="caption" color="var(--success, #22c55e)" styles={{ fontSize: 12 }}>
+          {t('handshakeDetail')}
+        </Typography>
+      </Box>
+    </Box>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -255,73 +242,6 @@ function TechTagInput({
   );
 }
 
-// ── Model status banner ────────────────────────────────────────────────────────
-
-function ModelBanner({
-  status,
-  progress,
-}: {
-  status: ModelStatus;
-  progress: number;
-}) {
-  const t = useTranslations('OnboardingPage');
-
-  if (status === 'unconfigured') {
-    return (
-      <Box className="onboarding__model-banner onboarding__model-banner--idle">
-        <Typography variant="caption" styles={{ fontSize: 13 }}>
-          {t('modelUnconfigured')}
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (status === 'checking') {
-    return (
-      <Box className="onboarding__model-banner onboarding__model-banner--idle">
-        <Typography variant="caption" styles={{ fontSize: 13 }}>
-          {t('modelPreparing')}
-        </Typography>
-        <ProgressBar />
-      </Box>
-    );
-  }
-
-  if (status === 'idle') {
-    return (
-      <Box className="onboarding__model-banner onboarding__model-banner--idle">
-        <Typography variant="caption" styles={{ fontSize: 13 }}>
-          {t('modelIdle')}
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (status === 'downloading') {
-    const pct = Math.round(progress);
-    return (
-      <Box className="onboarding__model-banner onboarding__model-banner--downloading">
-        <Typography variant="caption" styles={{ fontSize: 13 }}>
-          {t('modelDownloading', { pct })}
-        </Typography>
-        <ProgressBar value={pct > 0 ? pct : undefined} />
-      </Box>
-    );
-  }
-
-  if (status === 'ready') {
-    return (
-      <Box className="onboarding__model-banner onboarding__model-banner--ready">
-        <Typography variant="caption" fontWeight={600} styles={{ fontSize: 13 }}>
-          ✓ {t('modelReady')}
-        </Typography>
-      </Box>
-    );
-  }
-
-  return null;
-}
-
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function OnboardingForm() {
@@ -341,8 +261,6 @@ export function OnboardingForm() {
   const [resumeError, setResumeError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const { status: modelStatus, progress: modelProgress } = useModelStatus();
 
   // Redirect if onboarding already complete
   useEffect(() => {
@@ -642,7 +560,7 @@ export function OnboardingForm() {
               </Box>
             </Box>
 
-            <ReadinessHandshake status={modelStatus} progress={modelProgress} />
+            <ReadinessHandshake />
 
             {error && (
               <Typography

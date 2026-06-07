@@ -1,6 +1,6 @@
 {
   "name": "edge-folio",
-  "version": "0.1.16",
+  "version": "0.1.20",
   "type": "module",
   "private": true,
   "scripts": {
@@ -8,13 +8,14 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "prepare-wasm": "node scripts/prepare-wasm.mjs"
   },
   "dependencies": {
     "@repo/helpers": "workspace:*",
     "@swc/helpers": "^0.5.21",
     "@repo/ui": "workspace:*",
-    "@huggingface/transformers": "^3.0.0",
+    "web-tree-sitter": "^0.24.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "swiper": "^12.1.3",
