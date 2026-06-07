@@ -48,10 +48,3 @@ Selector labels.
 app.kubernetes.io/name: {{ include "edge-folio.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
-
-{{/*
-PVC name for shared storage.
-*/}}
-{{- define "edge-folio.pvcName" -}}
-{{- printf "%s-shared" (include "edge-folio.fullname" .) }}
-{{- end }}

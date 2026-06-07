@@ -19,6 +19,12 @@ import type { ExtractedBullet } from '@/lib/extract-prompt';
 import { createBullet } from '@/lib/matrix';
 import './extract-page.css';
 
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)} MB`;
+  return `${(bytes / 1024).toFixed(0)} KB`;
+}
+
 type ExtractionPhase =
   | 'idle'
   | 'loading-engine'
@@ -33,9 +39,11 @@ export function ExtractPage() {
   const t = useTranslations('ExtractPage');
   const router = useRouter();
 
-  const { status, progress } = useModelStatus();
+  const { status, progress, bytesLoaded } = useModelStatus();
   const { isSupported, status: pickerStatus, dir, pick, clear } = useDirectoryPicker();
   const {
+    webgpuSupported,
+    webgpuChecked,
     status: engineStatus,
     loadProgress: engineLoadProgress,
     load: engineLoad,
@@ -47,9 +55,35 @@ export function ExtractPage() {
   const [approvedSet, setApprovedSet] = useState<Set<number>>(new Set());
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [savedCount, setSavedCount] = useState(0);
+  const [opfsFiles, setOpfsFiles] = useState<string[]>([]);
 
   // Guard against Strict Mode double-invocation
   const runningRef = useRef(false);
+
+  useEffect(() => {
+    // if (extractionPhase !== 'loading-engine') return;
+    void (async () => {
+      try {
+        const root = await navigator.storage.getDirectory();
+        const entries: string[] = [];
+        for await (const [name, handle] of root.entries()) {
+          if (handle.kind === 'file') {
+            entries.push(name);
+          } else {
+            entries.push(`${name}/`);
+            try {
+              for await (const [child] of (handle as FileSystemDirectoryHandle).entries()) {
+                entries.push(`  ${name}/${child}`);
+              }
+            } catch { /* ignore unreadable subdirs */ }
+          }
+        }
+        setOpfsFiles(entries.length > 0 ? entries : ['(empty)']);
+      } catch {
+        setOpfsFiles(['(error reading OPFS)']);
+      }
+    })();
+  }, [extractionPhase]);
 
   const startExtraction = useCallback(() => {
     const modelId = process.env.NEXT_PUBLIC_EDGE_MODEL_ID;
@@ -172,6 +206,15 @@ export function ExtractPage() {
     clear();
   }, [resetExtraction, clear]);
 
+  const clearModels = useCallback(async () => {
+    try {
+      const root = await navigator.storage.getDirectory();
+      await root.removeEntry('models', { recursive: true });
+    } catch {
+      // directory may not exist yet
+    }
+  }, []);
+
   const inProgress =
     extractionPhase === 'loading-engine' ||
     extractionPhase === 'reading' ||
@@ -198,6 +241,12 @@ export function ExtractPage() {
           {t('subtitle')}
         </Typography>
       </Box>
+                  <Button
+                    text={t('clearModels')}
+                    type="button"
+                    size="md"
+                    onClick={() => void clearModels()}
+                  />
 
       <Box width="100%" maxWidth={600} marginBottom={40}>
 
@@ -247,6 +296,15 @@ export function ExtractPage() {
                 {t('modelDownloadingBody')}
               </Typography>
               <ProgressBar value={progress > 0 ? progress : undefined} />
+              {bytesLoaded > 0 && (
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                  styles={{ fontSize: 12 }}
+                >
+                  {t('modelDownloadedBytes', { size: formatBytes(bytesLoaded) })}
+                </Typography>
+              )}
             </Box>
           </Box>
         )}
@@ -293,8 +351,24 @@ export function ExtractPage() {
               </Box>
             )}
 
+            {/* ── WebGPU checking / unsupported ── */}
+            {isSupported && !webgpuChecked && (
+              <Box className="extract__unsupported">
+                <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+                  {t('gpuChecking')}
+                </Typography>
+              </Box>
+            )}
+            {isSupported && webgpuChecked && !webgpuSupported && (
+              <Box className="extract__unsupported">
+                <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+                  {t('gpuUnsupported')}
+                </Typography>
+              </Box>
+            )}
+
             {/* ── Directory picker (idle, before dir is selected) ── */}
-            {isSupported && pickerStatus !== 'ready' && extractionPhase === 'idle' && (
+            {isSupported && webgpuChecked && webgpuSupported && pickerStatus !== 'ready' && extractionPhase === 'idle' && (
               <Box display="flex" flexDirection="column" alignItems="flex-start" gap={12}>
                 {pickerStatus === 'error' && (
                   <Typography variant="body-sm" color="var(--error, #ef4444)">
@@ -323,7 +397,7 @@ export function ExtractPage() {
             )}
 
             {/* ── Dir selected + idle: show card + begin button ── */}
-            {isSupported && pickerStatus === 'ready' && dir && extractionPhase === 'idle' && (
+            {isSupported && webgpuChecked && webgpuSupported && pickerStatus === 'ready' && dir && extractionPhase === 'idle' && (
               <Box display="flex" flexDirection="column" gap={16}>
                 <DirCard dir={dir} onClear={resetAndChangDir} t={t} />
                 <Button
@@ -346,6 +420,27 @@ export function ExtractPage() {
                 <ProgressBar value={engineLoadProgress > 0 ? engineLoadProgress : undefined} />
               </Box>
             )}
+
+            {opfsFiles.length > 0 && (
+                  <Box display="flex" flexDirection="column" gap={4} marginTop={8}>
+                    <Typography
+                      variant="caption"
+                      color="var(--muted-foreground, #6b7280)"
+                      styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}
+                    >
+                      OPFS
+                    </Typography>
+                    {opfsFiles.map((f, i) => (
+                      <Typography
+                        key={i}
+                        variant="caption"
+                        styles={{ fontSize: 11, fontFamily: 'monospace', whiteSpace: 'pre' }}
+                      >
+                        {f}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
 
             {/* ── Reading files ── */}
             {extractionPhase === 'reading' && (
@@ -465,6 +560,12 @@ export function ExtractPage() {
                     size="md"
                     onClick={resetExtraction}
                   />
+                  <Button
+                    text={t('clearModels')}
+                    type="button"
+                    size="md"
+                    onClick={() => void clearModels()}
+                  />
                 </Box>
               </Box>
             )}
@@ -503,6 +604,12 @@ export function ExtractPage() {
                     size="md"
                     onClick={resetAndChangDir}
                   />
+                  <Button
+                    text={t('clearModels')}
+                    type="button"
+                    size="md"
+                    onClick={() => void clearModels()}
+                  />
                 </Box>
               </Box>
             )}
@@ -520,7 +627,7 @@ export function ExtractPage() {
                     {extractionError}
                   </Typography>
                 </Box>
-                <Box display="flex" gap={12}>
+                <Box display="flex" gap={12} flexWrap="wrap">
                   <Button
                     text={t('tryAgain')}
                     type="button"
@@ -528,6 +635,12 @@ export function ExtractPage() {
                     kind="success"
                     onClick={startExtraction}
                     disabled={!dir?.handle}
+                  />
+                  <Button
+                    text={t('clearModels')}
+                    type="button"
+                    size="md"
+                    onClick={() => void clearModels()}
                   />
                   <Button
                     text={t('changeDirCta')}

@@ -269,6 +269,7 @@ parse_env_keys() {
     if [[ "${line}" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)= ]]; then
       local k="${BASH_REMATCH[1]}"
       [[ "${k}" == "NAMESPACE" || "${k}" == "DOCKER_REGISTRY" ]] && continue
+      [[ "${k}" == NEXT_PUBLIC_* ]] && continue
       [[ "${k}" == *_FILE ]] && k="${k%_FILE}"
       ENV_KEYS+=("${k}")
     fi

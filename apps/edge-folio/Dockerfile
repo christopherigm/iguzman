@@ -39,9 +39,9 @@ ENV NODE_ENV=production
 # NEXT_PUBLIC_* vars are baked into the client bundle at build time by Next.js.
 # They cannot be injected at runtime via K8s secrets or container env vars.
 ARG NEXT_PUBLIC_ENABLE_SW=true
-ARG NEXT_PUBLIC_EDGE_MODEL_ID=onnx-community/gemma-4-E2B-it-ONNX
+ARG NEXT_PUBLIC_EDGE_MODEL_ID=onnx-community/Qwen2.5-Coder-1.5B-Instruct
 ARG NEXT_PUBLIC_EDGE_MODEL_REVISION=main
-ARG NEXT_PUBLIC_EDGE_MODEL_FILES='["onnx/decoder_model_merged_q4f16.onnx","onnx/decoder_model_merged_q4f16.onnx_data","onnx/embed_tokens_q4f16.onnx","onnx/embed_tokens_q4f16.onnx_data","tokenizer.json","tokenizer_config.json","generation_config.json","preprocessor_config.json"]'
+ARG NEXT_PUBLIC_EDGE_MODEL_FILES='["onnx/model_q4f16.onnx","onnx/model.onnx_data","config.json","tokenizer.json","tokenizer_config.json","generation_config.json","special_tokens_map.json"]'
 ENV NEXT_PUBLIC_ENABLE_SW=$NEXT_PUBLIC_ENABLE_SW
 ENV NEXT_PUBLIC_EDGE_MODEL_ID=$NEXT_PUBLIC_EDGE_MODEL_ID
 ENV NEXT_PUBLIC_EDGE_MODEL_REVISION=$NEXT_PUBLIC_EDGE_MODEL_REVISION

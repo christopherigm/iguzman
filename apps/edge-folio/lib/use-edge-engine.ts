@@ -13,6 +13,7 @@ export interface GenerateCallbacks {
 
 export interface UseEdgeEngineResult {
   webgpuSupported: boolean;
+  webgpuChecked: boolean;
   status: EdgeEngineStatus;
   loadProgress: number;
   device: 'webgpu' | 'wasm' | null;
@@ -23,6 +24,7 @@ export interface UseEdgeEngineResult {
 
 export function useEdgeEngine(): UseEdgeEngineResult {
   const [webgpuSupported, setWebgpuSupported] = useState(false);
+  const [webgpuChecked, setWebgpuChecked] = useState(false);
   const [status, setStatus] = useState<EdgeEngineStatus>('idle');
   const [loadProgress, setLoadProgress] = useState(0);
   const [device, setDevice] = useState<'webgpu' | 'wasm' | null>(null);
@@ -37,11 +39,19 @@ export function useEdgeEngine(): UseEdgeEngineResult {
   }, [status]);
 
   useEffect(() => {
-    if (!('gpu' in navigator)) return;
+    if (!('gpu' in navigator)) {
+      setWebgpuChecked(true);
+      return;
+    }
     navigator.gpu
       .requestAdapter()
-      .then((adapter) => setWebgpuSupported(!!adapter))
-      .catch(() => setWebgpuSupported(false));
+      .then((adapter) => {
+        setWebgpuSupported(!!adapter);
+        setWebgpuChecked(true);
+      })
+      .catch(() => {
+        setWebgpuChecked(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -68,6 +78,7 @@ export function useEdgeEngine(): UseEdgeEngineResult {
           setDevice(msg.device);
           break;
         case 'LOAD_ERROR':
+          console.error('[edge-engine] load failed:', msg.error);
           setStatus('error');
           break;
         case 'GENERATE_TOKEN':
@@ -128,5 +139,5 @@ export function useEdgeEngine(): UseEdgeEngineResult {
     workerRef.current?.postMessage({ type: 'ABORT', id } satisfies EdgeWorkerInbound);
   }, []);
 
-  return { webgpuSupported, status, loadProgress, device, load, generate, abort };
+  return { webgpuSupported, webgpuChecked, status, loadProgress, device, load, generate, abort };
 }

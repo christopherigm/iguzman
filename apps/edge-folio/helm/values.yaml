@@ -58,15 +58,6 @@ envFromSecret:
     secretName: edge-folio-secrets
     secretKey: GROQ_API_KEY
 
-# ─── Shared storage (ReadWriteMany) ─────────────────────────
-sharedStorage:
-  enabled: true
-  storageClass: '' # leave empty for the cluster default
-  accessModes:
-    - ReadWriteMany
-  size: 1Gi
-  mountPath: /app/shared # path inside each container
-
 # ─── Health probes (HTTP-based) ─────────────────────────────
 probes:
   startupProbe:

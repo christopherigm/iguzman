@@ -117,7 +117,7 @@ Authentication guard (redirect unauthenticated users) lives in `proxy.ts` alongs
 
 The "Extract Experience" feature runs inference entirely in the browser:
 
-- The service worker (`app/sw.ts`) silently fetches and caches Gemma 4b weights into the **Origin Private File System (OPFS)** during onboarding.
+- The service worker (`app/sw.ts`) silently fetches and caches Qwen2.5-Coder-1.5B-Instruct weights (q4f16, ~1.34 GB) into the **Origin Private File System (OPFS)** during onboarding.
 - Client-side inference uses **WebGPU** (`navigator.gpu`) — gate all WebGPU code behind a feature check.
 - OPFS reads/writes must run in a **Web Worker** (not the main thread).
 - Only NDA-sanitized metadata (stack names, metrics, patterns — no variable names, logic, or proprietary names) is ever sent to the Django backend.

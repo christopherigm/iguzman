@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { SwInboundMessage, SwOutboundMessage } from './sw-types';
 
 export type ModelStatus = 'unconfigured' | 'checking' | 'idle' | 'downloading' | 'ready' | 'error';
 
-export function useModelStatus(): { status: ModelStatus; progress: number } {
+export function useModelStatus(): { status: ModelStatus; progress: number; bytesLoaded: number } {
   const [status, setStatus] = useState<ModelStatus>('unconfigured');
   const [progress, setProgress] = useState(0);
+  const [bytesLoaded, setBytesLoaded] = useState(0);
+  const completedBytesRef = useRef(0);
+  const currentFileBytesRef = useRef(0);
 
   useEffect(() => {
     const modelId = process.env.NEXT_PUBLIC_EDGE_MODEL_ID;
@@ -49,9 +52,18 @@ export function useModelStatus(): { status: ModelStatus; progress: number } {
           break;
         }
         case 'MODEL_FETCH_START':
+          completedBytesRef.current = 0;
+          currentFileBytesRef.current = 0;
+          setBytesLoaded(0);
           setStatus('downloading');
           break;
+        case 'MODEL_FETCH_BYTES':
+          currentFileBytesRef.current = msg.bytesLoaded;
+          setBytesLoaded(completedBytesRef.current + msg.bytesLoaded);
+          break;
         case 'MODEL_FETCH_FILE_DONE':
+          completedBytesRef.current += currentFileBytesRef.current;
+          currentFileBytesRef.current = 0;
           setProgress(((msg.fileIndex + 1) / msg.fileCount) * 100);
           break;
         case 'MODEL_FETCH_COMPLETE':
@@ -79,5 +91,5 @@ export function useModelStatus(): { status: ModelStatus; progress: number } {
     };
   }, []);
 
-  return { status, progress };
+  return { status, progress, bytesLoaded };
 }

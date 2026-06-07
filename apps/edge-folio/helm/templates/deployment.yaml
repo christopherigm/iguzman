@@ -81,16 +81,3 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
 
-          {{- /* ── Volume mounts ── */}}
-          {{- if .Values.sharedStorage.enabled }}
-          volumeMounts:
-            - name: shared-data
-              mountPath: {{ .Values.sharedStorage.mountPath }}
-          {{- end }}
-
-      {{- if .Values.sharedStorage.enabled }}
-      volumes:
-        - name: shared-data
-          persistentVolumeClaim:
-            claimName: {{ include "edge-folio.pvcName" . }}
-      {{- end }}

@@ -26,12 +26,13 @@ async function readFromOPFS(modelId: string, relativePath: string): Promise<Resp
     }
     const fileHandle = await dir.getFileHandle(filename);
     const file = await fileHandle.getFile();
-    const buffer = await file.arrayBuffer();
-    return new Response(buffer, {
+    // Stream from OPFS instead of pre-loading into ArrayBuffer — avoids
+    // doubling peak memory (OPFS buffer + hub.js's Uint8Array pre-allocation).
+    return new Response(file.stream(), {
       status: 200,
       headers: {
         'content-type': mimeType(filename),
-        'content-length': String(buffer.byteLength),
+        'content-length': String(file.size),
       },
     });
   } catch {
@@ -48,6 +49,7 @@ const nativeFetch = self.fetch.bind(self);
     const opfsResp = await readFromOPFS(match[1], match[2]);
     if (opfsResp) return opfsResp;
     // File not cached — refuse to go to network (privacy guarantee)
+    console.error('[edge-worker] model file not in OPFS:', match[2], '(model:', match[1] + ')');
     return new Response(null, {
       status: 404,
       statusText: `Model file not in local cache: ${match[2]}`,
@@ -87,6 +89,7 @@ async function handleLoad(msg: Extract<EdgeWorkerInbound, { type: 'LOAD' }>): Pr
   try {
     pipe = await pipeline('text-generation', msg.modelId, {
       device: msg.device,
+      dtype: 'q4f16',
       progress_callback: (info: { status: string; progress?: number; file?: string }) => {
         if (info.status === 'progress' && info.progress !== undefined) {
           send({ type: 'LOAD_PROGRESS', progress: Math.round(info.progress), file: info.file });

@@ -72,7 +72,10 @@ setup_strings() {
     TOOL_DJANGO="Framework web de Python"
     TOOL_CLAUDE="Asistente de código con IA"
     TOOL_OPENCODE="Agente de código con IA para terminal"
-    NOTE_BASH_GIT_PROMPT="Snippet de activación agregado automáticamente a ~/.bash_profile (macOS) o ~/.bashrc (Linux).\n  Reinicia tu shell o ejecuta: source ~/.bashrc"
+    NOTE_BASH_GIT_PROMPT="Snippet de activación agregado automáticamente a tu archivo de configuración de shell (~/.zshrc, ~/.bash_profile o ~/.bashrc).\n  Reinicia tu shell o ejecuta: source ~/.zshrc"
+    BREW_MISSING="Homebrew no está instalado. La mayoría de las herramientas en macOS lo requieren."
+    BREW_INSTALL_PROMPT="¿Instalar Homebrew ahora? [s/n]"
+    BREW_REQUIRED="Homebrew es necesario en macOS. Instálalo desde https://brew.sh y vuelve a ejecutar el script."
     CONFIRM_YES_CHARS="sy"
   else
     WELCOME="Development Environment Setup"
@@ -112,7 +115,10 @@ setup_strings() {
     TOOL_DJANGO="Python web framework"
     TOOL_CLAUDE="AI coding assistant CLI"
     TOOL_OPENCODE="Terminal-based AI coding agent"
-    NOTE_BASH_GIT_PROMPT="Source snippet automatically added to ~/.bash_profile (macOS) or ~/.bashrc (Linux).\n  Restart your shell or run: source ~/.bashrc"
+    NOTE_BASH_GIT_PROMPT="Source snippet automatically added to your shell config (~/.zshrc, ~/.bash_profile, or ~/.bashrc).\n  Restart your shell or run: source ~/.zshrc"
+    BREW_MISSING="Homebrew is not installed. Most macOS tools require it."
+    BREW_INSTALL_PROMPT="Install Homebrew now? [y/n]"
+    BREW_REQUIRED="Homebrew is required on macOS. Install it from https://brew.sh and re-run this script."
     CONFIRM_YES_CHARS="y"
   fi
 }
@@ -191,16 +197,24 @@ install_helm() {
 }
 
 install_bash_git_prompt() {
-  local dest="${HOME}/.bash-git-prompt"
-  if [[ ! -d "${dest}" ]]; then
-    git clone https://github.com/magicmonty/bash-git-prompt.git "${dest}" --depth=1 || return 1
-  fi
-
   local config_file snippet
-  if is_mac; then
-    config_file="${HOME}/.bash_profile"
+
+  if is_mac && has_brew; then
+    brew install bash-git-prompt || return 1
+    # Detect the user's default shell to write to the right config file
+    local shell_name
+    shell_name="$(basename "${SHELL:-bash}")"
+    if [[ "${shell_name}" == "zsh" ]]; then
+      config_file="${HOME}/.zshrc"
+    else
+      config_file="${HOME}/.bash_profile"
+    fi
     snippet='\n# bash-git-prompt\nif [ -f "$(brew --prefix)/opt/bash-git-prompt/share/gitprompt.sh" ]; then\n  __GIT_PROMPT_DIR=$(brew --prefix)/opt/bash-git-prompt/share\n  GIT_PROMPT_ONLY_IN_REPO=1\n  source "$(brew --prefix)/opt/bash-git-prompt/share/gitprompt.sh"\nfi\n'
   else
+    local dest="${HOME}/.bash-git-prompt"
+    if [[ ! -d "${dest}" ]]; then
+      git clone https://github.com/magicmonty/bash-git-prompt.git "${dest}" --depth=1 || return 1
+    fi
     config_file="${HOME}/.bashrc"
     snippet='\n# bash-git-prompt\nif [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then\n    GIT_PROMPT_ONLY_IN_REPO=1\n    source "$HOME/.bash-git-prompt/gitprompt.sh"\nfi\n'
   fi
@@ -238,7 +252,10 @@ install_django() {
 }
 
 install_pnpm() {
-  if command -v npm &>/dev/null; then sudo npm install -g pnpm; return $?; fi
+  if command -v npm &>/dev/null; then
+    if is_mac; then npm install -g pnpm; else sudo npm install -g pnpm; fi
+    return $?
+  fi
   if is_mac && has_brew; then brew install pnpm; return $?; fi
   if is_linux; then curl -fsSL https://get.pnpm.io/install.sh | sh -; return $?; fi
   echo "  $(clr_yellow 'Please install pnpm manually: https://pnpm.io/installation')"
@@ -246,7 +263,10 @@ install_pnpm() {
 }
 
 install_claude() {
-  if command -v npm &>/dev/null; then sudo npm install -g @anthropic-ai/claude-code; return $?; fi
+  if command -v npm &>/dev/null; then
+    if is_mac; then npm install -g @anthropic-ai/claude-code; else sudo npm install -g @anthropic-ai/claude-code; fi
+    return $?
+  fi
   echo "  $(clr_yellow 'npm not found. Install Node.js first, then run: npm install -g @anthropic-ai/claude-code')"
   return 1
 }
@@ -605,6 +625,27 @@ main() {
   [[ "${raw_lang,,}" == es* ]] && lang="es"
 
   setup_strings "${lang}"
+
+  # ── Step 1b: Ensure Homebrew on macOS ──────────────────────────────────────
+  if is_mac && ! has_brew; then
+    printf "\n  %s\n" "$(clr_yellow "${BREW_MISSING}")"
+    printf "  %s: " "${BREW_INSTALL_PROMPT}"
+    local brew_ans; read -r brew_ans
+    brew_ans="${brew_ans:-n}"
+    local first_brew="${brew_ans:0:1}"
+    if [[ "${CONFIRM_YES_CHARS}" == *"${first_brew,,}"* ]]; then
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      # Add brew to PATH for the current session (needed on Apple Silicon)
+      if [[ -x "/opt/homebrew/bin/brew" ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+      elif [[ -x "/usr/local/bin/brew" ]]; then
+        eval "$(/usr/local/bin/brew shellenv)"
+      fi
+    else
+      printf "\n  %s\n\n" "$(clr_yellow "${BREW_REQUIRED}")"
+      exit 1
+    fi
+  fi
 
   # ── Step 2: Header ──────────────────────────────────────────────────────────
   clear

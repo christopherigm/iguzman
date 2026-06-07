@@ -178,4 +178,10 @@ const serwist = new Serwist({
   runtimeCaching: defaultCache,
 });
 
-serwist.addEventListeners();
+self.addEventListener('install', serwist.handleInstall);
+self.addEventListener('activate', serwist.handleActivate);
+self.addEventListener('fetch', (event: FetchEvent) => {
+  if (!event.request.url.startsWith('http')) return;
+  serwist.handleFetch(event);
+});
+self.addEventListener('message', serwist.handleCache);

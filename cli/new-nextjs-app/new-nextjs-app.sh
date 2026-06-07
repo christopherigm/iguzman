@@ -981,7 +981,13 @@ const serwist = new Serwist({
   runtimeCaching: defaultCache,
 });
 
-serwist.addEventListeners();
+self.addEventListener('install', serwist.handleInstall);
+self.addEventListener('activate', serwist.handleActivate);
+self.addEventListener('fetch', (event: FetchEvent) => {
+  if (!event.request.url.startsWith('http')) return;
+  serwist.handleFetch(event);
+});
+self.addEventListener('message', serwist.handleCache);
 TSEOF
 }
 
@@ -2502,14 +2508,6 @@ env:
 
 ${secret_block}
 
-sharedStorage:
-  enabled: true
-  storageClass: ''
-  accessModes:
-    - ReadWriteMany
-  size: 1Gi
-  mountPath: /app/shared
-
 probes:
   startupProbe:
     httpGet:
@@ -2574,9 +2572,6 @@ app.kubernetes.io/name: {{ include "${name}.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{- define "${name}.pvcName" -}}
-{{- printf "%s-shared" (include "${name}.fullname" .) }}
-{{- end }}
 EOF
 
   # deployment.yaml
@@ -2653,17 +2648,6 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.sharedStorage.enabled }}
-          volumeMounts:
-            - name: shared-data
-              mountPath: {{ .Values.sharedStorage.mountPath }}
-          {{- end }}
-      {{- if .Values.sharedStorage.enabled }}
-      volumes:
-        - name: shared-data
-          persistentVolumeClaim:
-            claimName: {{ include "${name}.pvcName" . }}
-      {{- end }}
 EOF
 
   # service.yaml
@@ -2732,28 +2716,6 @@ spec:
 HELMEOF
   # Replace APP_NAME placeholder with actual name
   sed -i "s/APP_NAME/${name}/g" "${base}/templates/ingress.yaml"
-
-  # pvc.yaml
-  cat > "${base}/templates/pvc.yaml" << 'HELMEOF'
-{{- if .Values.sharedStorage.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "APP_NAME.pvcName" . }}
-  labels:
-    {{- include "APP_NAME.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    {{- toYaml .Values.sharedStorage.accessModes | nindent 4 }}
-  {{- if .Values.sharedStorage.storageClass }}
-  storageClassName: {{ .Values.sharedStorage.storageClass | quote }}
-  {{- end }}
-  resources:
-    requests:
-      storage: {{ .Values.sharedStorage.size }}
-{{- end }}
-HELMEOF
-  sed -i "s/APP_NAME/${name}/g" "${base}/templates/pvc.yaml"
 
   # NOTES.txt
   cat > "${base}/templates/NOTES.txt" << EOF
