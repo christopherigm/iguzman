@@ -1,0 +1,110 @@
+# ─────────────────────────────────────────────────────────────
+# Cinelog Api Application – Helm Values
+# ─────────────────────────────────────────────────────────────
+
+revisionHistoryLimit: 2
+replicaCount: 1
+
+# ─── Container image ────────────────────────────────────────
+image:
+  repository: elizabethguzmanalvarez25/cinelog-api
+  tag: 'latest'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# ─── Name overrides ─────────────────────────────────────────
+nameOverride: ''
+fullnameOverride: ''
+
+# ─── Service ────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# ─── Ingress ────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: cinelog-api.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: cinelog-api-tls
+      hosts:
+        - cinelog-api.iguzman.com.mx
+
+# ─── Environment variables ──────────────────────────────────
+# Non-secret vars not present in env.example / the k8s secret.
+env:
+  EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
+  GUNICORN_WORKERS: '3'
+
+# Load all env.example variables from the pre-existing secret.
+# Keys in the secret match env.example names exactly.
+# R2 vars to add to the secret when enabling R2 storage:
+#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_DOMAIN
+envFrom:
+  - secretRef:
+      name: cinelog-api-secrets
+
+# ─── Health probes ──────────────────────────────────────────
+probes:
+  startupProbe:
+    httpGet:
+      path: /admin/
+      port: 8000
+    initialDelaySeconds: 15
+    periodSeconds: 5
+    failureThreshold: 30
+
+  livenessProbe:
+    httpGet:
+      path: /admin/
+      port: 8000
+    periodSeconds: 10
+    failureThreshold: 3
+
+# ─── Node affinity ──────────────────────────────────────────
+nodeAffinity:
+  enabled: false
+  nodeNames: []
+
+# ─── Resources ──────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# ─── Celery worker ──────────────────────────────────────────
+celery:
+  enabled: true
+  replicaCount: 1
+  concurrency: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# ─── Redis ──────────────────────────────────────────────────
+redis:
+  enabled: true
+  image: redis:7-alpine
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi

@@ -21,7 +21,7 @@ const withSerwist = withSerwistInit({
 const nextConfig = {
   output: 'standalone',
   outputFileTracingRoot: process.env.NODE_ENV === 'production' ? path.join(__dirname, '../../') : undefined,
-  allowedDevOrigins: ['127.0.0.1', '*'],
+  allowedDevOrigins: ['127.0.0.1', '192.168.0.29', '*'],
   logging: { incomingRequests: false },
   images: {
     dangerouslyAllowLocalIP: true,

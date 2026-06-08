@@ -1,7 +1,6 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-  "HomePage": { "title": "Cinelog" },
-  "Navbar": { "home": "Inicio", "account": "Cuenta", "signOut": "Cerrar sesión" },
+"Navbar": { "home": "Inicio", "account": "Cuenta", "signOut": "Cerrar sesión" },
   "Footer": {
     "appHeading": "Aplicación", "legalHeading": "Legal",
     "home": "Inicio", "account": "Cuenta",
@@ -56,6 +55,17 @@
       "successMessage": "¡Llave de acceso registrada exitosamente!",
       "errorGeneric": "No se pudo registrar la llave. Puedes intentarlo más tarde."
     }
+  },
+  "ScannerPage": {
+    "subtitle": "Apunta la cámara al código de barras",
+    "statusPending": "Buscando…",
+    "statusSaved": "Agregado al catálogo",
+    "statusQueued": "Procesando…",
+    "statusExists": "Ya en el catálogo",
+    "statusError": "Error al buscar",
+    "scanCount": "{count} escaneados",
+    "permissionDenied": "Acceso a la cámara denegado",
+    "permissionHelp": "Permite el acceso a la cámara en la configuración de tu navegador."
   },
   "AccountPage": {
     "title": "Mi cuenta", "subtitle": "Administra tu perfil y configuración de seguridad",

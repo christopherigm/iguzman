@@ -1,7 +1,6 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-  "HomePage": { "title": "Cinelog" },
-  "Navbar": { "home": "Home", "account": "Account", "signOut": "Sign out" },
+"Navbar": { "home": "Home", "account": "Account", "signOut": "Sign out" },
   "Footer": {
     "appHeading": "App", "legalHeading": "Legal",
     "home": "Home", "account": "Account",
@@ -56,6 +55,17 @@
       "successMessage": "Passkey registered successfully!",
       "errorGeneric": "Failed to register passkey. You can try again later."
     }
+  },
+  "ScannerPage": {
+    "subtitle": "Point camera at barcode",
+    "statusPending": "Looking up…",
+    "statusSaved": "Added to catalog",
+    "statusQueued": "Processing…",
+    "statusExists": "Already in catalog",
+    "statusError": "Lookup failed",
+    "scanCount": "{count} scanned",
+    "permissionDenied": "Camera access denied",
+    "permissionHelp": "Please allow camera access in your browser settings."
   },
   "AccountPage": {
     "title": "My Account", "subtitle": "Manage your profile and security settings",
