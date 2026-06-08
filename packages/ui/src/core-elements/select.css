@@ -1,0 +1,111 @@
+/* ── Select: Material Design floating-label ────────────────────── */
+
+.ui-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 100px;
+  font-family: inherit;
+}
+
+/* ── Native <select> ────────────────────────────────────────────── */
+
+.ui-select {
+  width: 100%;
+  padding: 20px 36px 6px 12px;
+  font-size: 1em;
+  font-family: inherit;
+  line-height: 1.5;
+  color: var(--foreground, #1a1a1a);
+  background: var(--surface-2, transparent);
+  color-scheme: light dark;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-bottom: 1.5px solid var(--border, #b0b0b0);
+  border-radius: 4px 4px 0 0;
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Custom chevron via background-image */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath fill='%23757575' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.ui-select-wrapper--no-label .ui-select {
+  padding: 6px 36px 6px 12px;
+}
+
+
+.ui-select:focus {
+  border-bottom-color: var(--accent, #06b6d4);
+}
+
+/* ── Disabled state ───────────────────────────────────────────── */
+
+.ui-select:disabled {
+  color: var(--muted, #757575);
+  border-bottom-color: var(--border, #b0b0b0);
+  border-bottom-style: dashed;
+  background-color: transparent;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ui-select:disabled:hover {
+  background-color: transparent;
+}
+
+.ui-select-wrapper:has(:disabled) .ui-select-label {
+  color: var(--muted, #757575);
+  opacity: 0.6;
+}
+
+.ui-select:disabled ~ .ui-select-bar {
+  display: none;
+}
+
+/* ── Floating label ───────────────────────────────────────────── */
+
+.ui-select-label {
+  position: absolute;
+  left: 12px;
+  top: 13px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--muted, #757575);
+  pointer-events: none;
+  transform-origin: left top;
+  transition:
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    font-size 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ui-select-wrapper--active .ui-select-label {
+  transform: translateY(-10px) scale(0.75);
+  color: var(--accent, #06b6d4);
+}
+
+/* ── Active indicator bar (Material bottom-line animation) ───── */
+
+.ui-select-bar {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--accent, #06b6d4);
+  transition:
+    width 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    left 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ui-select:focus ~ .ui-select-bar {
+  width: 100%;
+  left: 0;
+}

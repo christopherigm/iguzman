@@ -47,15 +47,12 @@ ingress:
 # Plain (non-sensitive) environment variables.
 env:
   NODE_ENV: 'production'
-  PORT: '4000'
-  LOG_LEVEL: 'info'
 
-# Sensitive values – reference existing Kubernetes Secrets.
-# Create the secret first (see README), then uncomment below.
-envFromSecret:
-  - name: SCRAPER_API_KEY
-    secretName: scraper-secrets
-    secretKey: api-key
+# Load all keys from the Kubernetes secret as environment variables.
+# Run setup-k8s-secrets first to create the secret.
+envFrom:
+  - secretRef:
+      name: scraper-secrets
 
 # ─── Health probes (HTTP against /health endpoint) ──────────
 probes:

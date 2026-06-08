@@ -1,0 +1,246 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { useTranslations } from 'next-intl';
+import { useRouter } from '@repo/i18n/navigation';
+import { Container } from '@repo/ui/core-elements/container';
+import { Box } from '@repo/ui/core-elements/box';
+import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Button } from '@repo/ui/core-elements/button';
+import { LinkButton } from '@repo/ui/core-elements/link-button';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Typography } from '@repo/ui/core-elements/typography';
+import { Switch } from '@repo/ui/core-elements/switch';
+import './auth-form.css';
+import { login, LoginError, signUp, requestPasswordReset, ApiError, loginWithPasskey, registerPasskey, getPasskeyCredentials, getProfile, storeUser } from '@/lib/auth';
+
+const REMEMBERED_EMAIL_KEY = 'auth_remembered_email';
+const REMEMBER_EMAIL_PREF_KEY = 'auth_remember_email';
+
+type Tab = 'sign-in' | 'sign-up' | 'reset-password';
+
+function ErrorMessage({ message }: { message: string }) {
+  return <Typography variant="caption" role="alert" className="auth-form__error">{message}</Typography>;
+}
+
+function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
+  const t = useTranslations('AuthPage');
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [passkeyPrompt, setPasskeyPrompt] = useState(false);
+  const [passkeySuccess, setPasskeySuccess] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(false);
+
+  useEffect(() => {
+    const pref = localStorage.getItem(REMEMBER_EMAIL_PREF_KEY) === 'true';
+    setRememberEmail(pref);
+    if (pref) { const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ''; if (saved) setEmail(saved); }
+  }, []);
+
+  function handleEmailChange(value: string) {
+    setEmail(value);
+    if (rememberEmail) localStorage.setItem(REMEMBERED_EMAIL_KEY, value);
+  }
+
+  function handleRememberEmailChange(checked: boolean) {
+    setRememberEmail(checked);
+    localStorage.setItem(REMEMBER_EMAIL_PREF_KEY, String(checked));
+    if (checked) { if (email) localStorage.setItem(REMEMBERED_EMAIL_KEY, email); }
+    else { localStorage.removeItem(REMEMBERED_EMAIL_KEY); }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault(); setError(null); setLoading(true);
+    try {
+      await login({ email, password });
+      storeUser(await getProfile());
+      const { count } = await getPasskeyCredentials();
+      if (count === 0) { setPasskeyPrompt(true); setLoading(false); return; }
+      router.push('/');
+    } catch (err) {
+      setError(err instanceof LoginError && err.status === 401 ? t('signIn.errorInvalidCredentials') : t('signIn.errorGeneric'));
+    } finally { setLoading(false); }
+  }
+
+  async function handlePasskeySignIn() {
+    if (!email) { setError(t('signIn.errorEmailRequired')); return; }
+    setError(null); setLoading(true);
+    try { await loginWithPasskey(email); storeUser(await getProfile()); router.push('/'); }
+    catch (err) { setError(err instanceof LoginError ? t('signIn.errorPasskeyFailed') : t('signIn.errorGeneric')); }
+    finally { setLoading(false); }
+  }
+
+  async function handleRegisterPasskey() {
+    setError(null); setLoading(true);
+    try { await registerPasskey(); setPasskeySuccess(true); setTimeout(() => router.push('/'), 1500); }
+    catch { setError(t('passkey.errorGeneric')); }
+    finally { setLoading(false); }
+  }
+
+  if (passkeyPrompt) {
+    return (
+      <Box display="flex" flexDirection="column" gap={16} alignItems="center">
+        <Typography variant="body-sm" fontWeight={600}>{t('passkey.promptTitle')}</Typography>
+        <Typography variant="caption" styles={{ textAlign: 'center' }}>{t('passkey.promptDescription')}</Typography>
+        {passkeySuccess && <Typography variant="caption" className="auth-form__success">{t('passkey.successMessage')}</Typography>}
+        {error && <ErrorMessage message={error} />}
+        {loading && <ProgressBar />}
+        {!passkeySuccess && (
+          <>
+            <Button text={t('passkey.registerButton')} type="button" onClick={handleRegisterPasskey} size="md" width="100%" kind="success" />
+            <LinkButton onClick={() => router.push('/')} label={t('passkey.skipButton')} />
+          </>
+        )}
+      </Box>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="auth-form__form">
+      <TextInput label={t('signIn.emailLabel')} type="email" value={email} onChange={handleEmailChange} required autoComplete="email" />
+      <TextInput label={t('signIn.passwordLabel')} type="password" value={password} onChange={setPassword} required autoComplete="current-password" />
+      <Box display="flex" alignItems="center" gap={8}>
+        <Switch checked={rememberEmail} onChange={handleRememberEmailChange} />
+        <Typography variant="caption" color="var(--muted-foreground, #6b7280)">{t('signIn.rememberEmail')}</Typography>
+      </Box>
+      {error && <ErrorMessage message={error} />}
+      {loading && <ProgressBar label={t('signIn.submitting')} />}
+      <Button text={loading ? t('signIn.submitting') : t('signIn.submitButton')} type="submit" size="md" width="100%" marginTop={4} kind={email && password ? 'success' : undefined} disabled={!email || !password} />
+      <Typography variant="none" className="auth-form__divider">{t('signIn.orDivider')}</Typography>
+      <Box display="flex" justifyContent="center" gap={12}>
+        <Button unstyled type="button" onClick={handlePasskeySignIn} disabled={!email} className="auth-form__passkey-icon-btn" aria-label={t('signIn.passkeyButton')} title={t('signIn.passkeyButton')}>
+          <Image src="/icons/fingerprint.svg" width={28} height={28} alt="" />
+        </Button>
+      </Box>
+      <Box display="flex" flexDirection="column" gap={8} alignItems="center">
+        <LinkButton onClick={() => switchTab('reset-password')} label={t('signIn.forgotPassword')} />
+        <LinkButton onClick={() => switchTab('sign-up')} label={t('signIn.noAccount')} />
+      </Box>
+    </form>
+  );
+}
+
+function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
+  const t = useTranslations('AuthPage');
+  const [email, setEmail] = useState(''); const [firstName, setFirstName] = useState(''); const [lastName, setLastName] = useState('');
+  const [password, setPassword] = useState(''); const [password2, setPassword2] = useState('');
+  const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null); const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault(); setError(null); setSuccess(null);
+    if (password !== password2) { setError(t('signUp.errorPasswordMismatch')); return; }
+    setLoading(true);
+    try {
+      await signUp({ email, password, password2, first_name: firstName || undefined, last_name: lastName || undefined });
+      setSuccess(t('signUp.successDetail'));
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const emailErr = (err.data as Record<string, string[]>)?.email;
+        setError(emailErr ? (Array.isArray(emailErr) ? (emailErr[0] ?? t('signUp.errorGeneric')) : String(emailErr)) : t('signUp.errorGeneric'));
+      } else { setError(t('signUp.errorGeneric')); }
+    } finally { setLoading(false); }
+  }
+
+  if (success) return (
+    <Box display="flex" flexDirection="column" gap={16} alignItems="center" styles={{ textAlign: 'center' }}>
+      <Typography variant="body-sm">{success}</Typography>
+      <LinkButton onClick={() => switchTab('sign-in')} label={t('signUp.haveAccount')} />
+    </Box>
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className="auth-form__form">
+      <Box display="flex" gap={12}>
+        <TextInput label={t('signUp.firstNameLabel')} type="text" value={firstName} onChange={setFirstName} autoComplete="given-name" />
+        <TextInput label={t('signUp.lastNameLabel')} type="text" value={lastName} onChange={setLastName} autoComplete="family-name" />
+      </Box>
+      <TextInput label={t('signUp.emailLabel')} type="email" value={email} onChange={setEmail} required autoComplete="email" />
+      <TextInput label={t('signUp.passwordLabel')} type="password" value={password} onChange={setPassword} required autoComplete="new-password" />
+      <TextInput label={t('signUp.confirmPasswordLabel')} type="password" value={password2} onChange={setPassword2} required autoComplete="new-password" />
+      {error && <ErrorMessage message={error} />}
+      {loading && <ProgressBar label={t('signUp.submitting')} />}
+      <Button text={loading ? t('signUp.submitting') : t('signUp.submitButton')} type="submit" size="md" width="100%" marginTop={4} kind={email && password && password2 && password === password2 ? 'success' : undefined} disabled={!email || !password || !password2 || password !== password2} />
+      <Box display="flex" flexDirection="column" gap={8} alignItems="center">
+        <LinkButton onClick={() => switchTab('sign-in')} label={t('signUp.haveAccount')} />
+        <LinkButton onClick={() => switchTab('reset-password')} label={t('signUp.forgotPassword')} />
+      </Box>
+    </form>
+  );
+}
+
+function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
+  const t = useTranslations('AuthPage');
+  const [email, setEmail] = useState(''); const [error, setError] = useState<string | null>(null); const [success, setSuccess] = useState<string | null>(null); const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault(); setError(null); setSuccess(null); setLoading(true);
+    try { await requestPasswordReset(email); setSuccess(t('resetPassword.successDetail')); }
+    catch { setError(t('resetPassword.errorGeneric')); }
+    finally { setLoading(false); }
+  }
+
+  return success ? (
+    <Box display="flex" flexDirection="column" gap={16}>
+      <Typography variant="body-sm">{success}</Typography>
+      <LinkButton onClick={() => switchTab('sign-in')} label={t('resetPassword.backToSignIn')} />
+    </Box>
+  ) : (
+    <form onSubmit={handleSubmit} className="auth-form__form">
+      <TextInput label={t('resetPassword.emailLabel')} type="email" value={email} onChange={setEmail} required autoComplete="email" />
+      {error && <ErrorMessage message={error} />}
+      {loading && <ProgressBar label={t('resetPassword.submitting')} />}
+      <Button text={loading ? t('resetPassword.submitting') : t('resetPassword.submitButton')} type="submit" size="md" width="100%" marginTop={4} kind={email ? 'success' : undefined} disabled={!email} />
+      <Box display="flex" justifyContent="center">
+        <LinkButton onClick={() => switchTab('sign-in')} label={t('resetPassword.backToSignIn')} />
+      </Box>
+    </form>
+  );
+}
+
+export function AuthForm() {
+  const t = useTranslations('AuthPage');
+  const [tab, setTab] = useState<Tab>('sign-in');
+
+  useEffect(() => {
+    const readHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      setTab(hash === 'sign-up' || hash === 'reset-password' ? (hash as Tab) : 'sign-in');
+    };
+    readHash();
+    window.addEventListener('hashchange', readHash);
+    return () => window.removeEventListener('hashchange', readHash);
+  }, []);
+
+  const switchTab = (newTab: Tab) => { window.location.hash = newTab; setTab(newTab); };
+
+  const tabLabels: Record<Tab, string> = { 'sign-in': t('tabSignIn'), 'sign-up': t('tabSignUp'), 'reset-password': t('tabReset') };
+  const tabHeadings: Record<Tab, { title: string; subtitle: string }> = {
+    'sign-in': { title: t('signIn.title'), subtitle: t('signIn.subtitle') },
+    'sign-up': { title: t('signUp.title'), subtitle: t('signUp.subtitle') },
+    'reset-password': { title: t('resetPassword.title'), subtitle: t('resetPassword.subtitle') },
+  };
+  const { title, subtitle } = tabHeadings[tab];
+
+  return (
+    <Container display="flex" alignItems="center" styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'flex-start' }} paddingTop={16} paddingX={10}>
+      <Box width="100%" maxWidth={420} marginBottom={20}>
+        <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>{title}</Typography>
+        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">{subtitle}</Typography>
+      </Box>
+      <Box width="100%" maxWidth={420} padding={10} borderRadius={12} flexDirection="column" gap={20} elevation={5} backgroundColor="var(--surface-1)">
+        <Box className="auth-form__tabs">
+          {(['sign-in', 'sign-up', 'reset-password'] as Tab[]).map((id) => (
+            <button key={id} onClick={() => switchTab(id)} data-active={String(tab === id)} className="auth-form__tab-btn">{tabLabels[id]}</button>
+          ))}
+        </Box>
+        {tab === 'sign-in' && <SignInTab switchTab={switchTab} />}
+        {tab === 'sign-up' && <SignUpTab switchTab={switchTab} />}
+        {tab === 'reset-password' && <ResetPasswordTab switchTab={switchTab} />}
+      </Box>
+    </Container>
+  );
+}

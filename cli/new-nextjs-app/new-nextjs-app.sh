@@ -50,10 +50,11 @@ setup_strings() {
     LBL_HOST="Host"
     DONE_MSG="¡Listo!"
     NEXT_STEPS="Próximos pasos"
-    NEXT_STEP_AUTH_API="# Configura API_URL en .env.local e inicia la API Django"
+    NEXT_STEP_AUTH_API="# Configura API_URL en .env e inicia la API Django"
     NEXT_STEP_PWA_ICONS="# Agrega íconos PWA a"
-    COPYING_ENV_MSG="Copiando .env.local…"
+    COPYING_ENV_MSG="Copiando .env.example → .env…"
     INSTALLING_DEPS_MSG="Instalando dependencias (pnpm install)…"
+    ENV_REMINDER="Recuerda actualizar los valores en apps/APP_NAME/.env si es necesario."
   else
     WELCOME="New Next.js App"
     SUBTITLE="Scaffold a new Next.js PWA application."
@@ -79,10 +80,11 @@ setup_strings() {
     LBL_HOST="Host"
     DONE_MSG="Done!"
     NEXT_STEPS="Next steps"
-    NEXT_STEP_AUTH_API="# Set API_URL in .env.local and start the Django API"
+    NEXT_STEP_AUTH_API="# Set API_URL in .env and start the Django API"
     NEXT_STEP_PWA_ICONS="# Add PWA icons to"
-    COPYING_ENV_MSG="Copying .env.local…"
+    COPYING_ENV_MSG="Copying .env.example → .env…"
     INSTALLING_DEPS_MSG="Installing dependencies (pnpm install)…"
+    ENV_REMINDER="Remember to update the values in apps/APP_NAME/.env if needed."
   fi
 }
 
@@ -342,6 +344,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .env*
+!.env.example
 .vercel
 *.tsbuildinfo
 next-env.d.ts
@@ -694,7 +697,7 @@ import { Footer } from './footer';"
               labels={{ home: tNav('home'), account: tNav('account'), signOut: tNav('signOut') }}
             />
             {children}
-            <Footer />"
+            <Footer logo=\"/logo-navbar.png\" />"
   else
     navbar_import="import { Navbar } from '@repo/ui/core-elements/navbar';"
     tNav_decl=""
@@ -857,7 +860,7 @@ import { LocaleSwitcher } from '@repo/ui/core-elements/locale-switcher';
 import { routing } from '@repo/i18n/routing';
 import './footer.css';
 
-export async function Footer() {
+export async function Footer({ logo }: { logo: string }) {
   const [t, locale] = await Promise.all([getTranslations('Footer'), getLocale()]);
 
   const appLinks = [
@@ -876,7 +879,7 @@ export async function Footer() {
         <Grid container spacing={4}>
           <Grid size={{ xs: 12, sm: 4 }}>
             <Box display="flex" flexDirection="column" gap="20px">
-              <Image src="/logo-navbar.png" alt="${title}" width={140} height={44} className="footer__logo" />
+              <Image src={logo} alt="${title}" width={140} height={44} className="footer__logo" />
               <Typography as="span" variant="h5" fontWeight={700}>${title}</Typography>
               <Box display="flex" alignItems="center" gap="12px" flexWrap="wrap">
                 <ThemeSwitch />
@@ -2804,7 +2807,7 @@ main() {
   gen_dockerfile                     "${app_dir}/Dockerfile"
   gen_css_dts                        "${app_dir}/css.d.ts"
   gen_global_dts                     "${app_dir}/global.d.ts"
-  gen_env_example                    "${app_dir}/env.example"
+  gen_env_example                    "${app_dir}/.env.example"
   gen_proxy_ts                       "${app_dir}/proxy.ts"
   gen_globals_css                    "${app_dir}/app/globals.css"
   gen_i18n_request_ts                "${app_dir}/i18n/request.ts"
@@ -2839,14 +2842,17 @@ main() {
   # Helm
   gen_helm_files                     "${app_dir}/helm"
 
-  # Public placeholder dirs
+  # Public placeholder dirs + core UI icons required by @repo/ui components
   mkdir -p "${app_dir}/public/icons/splash"
-  touch "${app_dir}/public/icons/.gitkeep"
   touch "${app_dir}/public/icons/splash/.gitkeep"
+  local cli_icons="${repo_root}/cli/new-nextjs-app/public/icons"
+  cp "${cli_icons}/hamburger.svg" "${cli_icons}/close.svg" "${cli_icons}/search.svg" \
+     "${cli_icons}/chevron-down.svg" "${cli_icons}/mic.svg" "${cli_icons}/fingerprint.svg" \
+     "${app_dir}/public/icons/"
 
-  # Copy env.example → .env.local
+  # Copy .env.example → .env
   printf "  %s\n" "$(clr_dim "${COPYING_ENV_MSG}")"
-  cp "${app_dir}/env.example" "${app_dir}/.env.local"
+  cp "${app_dir}/.env.example" "${app_dir}/.env"
 
   # Install dependencies
   printf "  %s\n\n" "$(clr_dim "${INSTALLING_DEPS_MSG}")"
@@ -2865,6 +2871,8 @@ main() {
   printf "  %s  %s\n" "$(clr_dim '2.')" "$(clr_cyan "pnpm dev --filter=${name}")"
   [[ "${include_pwa}" == "y" ]] && \
   printf "  %s  %s\n" "$(clr_dim '3.')" "$(clr_cyan "${NEXT_STEP_PWA_ICONS} apps/${name}/public/icons/")"
+  echo ""
+  printf "  %s  %s\n" "$(clr_bold_yellow '!')" "$(clr_bold_yellow "${ENV_REMINDER/APP_NAME/${name}}")"
   echo ""
 }
 

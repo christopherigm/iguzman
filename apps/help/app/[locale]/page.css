@@ -1,0 +1,13 @@
+.help-sidebar {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 599px) { /* xs */
+  .help-layout {
+    flex-direction: column;
+  }
+  .help-sidebar {
+    width: 100%;
+  }
+}

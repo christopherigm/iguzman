@@ -81,7 +81,7 @@ export default async function LocaleLayout({ children, params }: Props) {
               labels={{ home: tNav('home'), account: tNav('account'), signOut: tNav('signOut') }}
             />
             {children}
-            <Footer />
+            <Footer logo="/logo-navbar.png" />
           </PaletteProvider>
         </ThemeProvider>
       </NextIntlClientProvider>

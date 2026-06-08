@@ -12,10 +12,11 @@ import { type System } from '@/lib/system';
 import './footer.css';
 
 type Props = {
+  logo: string;
   system: System | null;
 };
 
-export async function Footer({ system }: Props) {
+export async function Footer({ logo, system }: Props) {
   const [t, locale] = await Promise.all([
     getTranslations('Footer'),
     getLocale(),
@@ -51,15 +52,13 @@ export async function Footer({ system }: Props) {
           {/* Column 1 – Brand */}
           <Grid size={{ xs: 12, sm: 4 }}>
             <Box display="flex" flexDirection="column" gap="20px">
-              {system?.img_logo && (
-                <Image
-                  src={system.img_logo}
-                  alt={system.site_name}
-                  width={140}
-                  height={44}
-                  className="footer__logo"
-                />
-              )}
+              <Image
+                src={logo}
+                alt={system?.site_name ?? ''}
+                width={140}
+                height={44}
+                className="footer__logo"
+              />
               {system?.site_name && (
                 <Typography as="span" variant="h5" fontWeight={700}>
                   {system.site_name}

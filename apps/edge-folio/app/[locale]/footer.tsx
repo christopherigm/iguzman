@@ -10,7 +10,7 @@ import { LocaleSwitcher } from '@repo/ui/core-elements/locale-switcher';
 import { routing } from '@repo/i18n/routing';
 import './footer.css';
 
-export async function Footer() {
+export async function Footer({ logo }: { logo: string }) {
   const [t, locale] = await Promise.all([
     getTranslations('Footer'),
     getLocale(),
@@ -37,7 +37,7 @@ export async function Footer() {
           <Grid size={{ xs: 12, sm: 4 }}>
             <Box display="flex" flexDirection="column" gap="20px">
               <Image
-                src="/logo-navbar.png"
+                src={logo}
                 alt="Edge Folio"
                 width={140}
                 height={44}

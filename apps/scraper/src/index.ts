@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { searchWeb, type SearchEngine } from './search';
 import { extractUrl } from './extract';
 import { closeBrowser } from './browser';
@@ -10,6 +11,12 @@ const app = Fastify({
   logger: {
     level: process.env['LOG_LEVEL'] ?? 'info',
   },
+});
+
+app.register(cors, {
+  origin: true,
+  allowedHeaders: ['Content-Type', 'X-API-Key'],
+  methods: ['GET', 'POST', 'OPTIONS'],
 });
 
 // ── Auth ──────────────────────────────────────────────────────────────────────

@@ -1,0 +1,51 @@
+.ui-code-block {
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 100%;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.15));
+  background: var(--surface-2, #18181b);
+}
+
+.ui-code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px 6px 16px;
+  border-bottom: 1px solid var(--border, rgba(128, 128, 128, 0.12));
+  min-height: 36px;
+}
+
+.ui-code-block-lang {
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 11px;
+  color: var(--foreground-muted, #888);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.ui-code-block-pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: hidden;
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--foreground, #e0e0e0);
+  tab-size: 2;
+}
+
+.ui-code-block-pre code {
+  font-family: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+.ui-code-block-copy-wrap {
+  opacity: 0.65;
+  transition: opacity 150ms ease;
+}
+
+.ui-code-block-copy-wrap:hover {
+  opacity: 1;
+}

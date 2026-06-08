@@ -110,7 +110,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             />
             {children}
             <FooterVisibility>
-              <Footer system={system} />
+              <Footer logo={system?.img_logo ?? '/logo.png'} system={system} />
             </FooterVisibility>
           </PaletteProvider>
         </ThemeProvider>

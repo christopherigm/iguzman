@@ -95,6 +95,8 @@ setup_strings() {
     SECRETS_TITLE="Secretos de Kubernetes"
     SECRET_NOT_FOUND="Secreto no encontrado."
     ALL_DONE="¡Todo listo!"
+    NS_CREATED="Namespace creado."
+    NS_CREATE_FAILED="Error al crear el namespace."
   else
     WELCOME="Helm Operations"
     SUBTITLE="Manage Helm releases on the Kubernetes cluster."
@@ -155,6 +157,8 @@ setup_strings() {
     SECRETS_TITLE="Kubernetes Secrets"
     SECRET_NOT_FOUND="Secret not found."
     ALL_DONE="All done!"
+    NS_CREATED="Namespace created."
+    NS_CREATE_FAILED="Failed to create namespace."
   fi
 }
 
@@ -330,6 +334,18 @@ confirm_step() {
 
 release_exists() {
   helm status "$1" -n "$2" &>/dev/null 2>&1
+}
+
+ensure_namespace() {
+  local ns="$1"
+  if ! kubectl get namespace "${ns}" &>/dev/null 2>&1; then
+    if kubectl create namespace "${ns}" &>/dev/null 2>&1; then
+      printf "  %s %s \"%s\"\n\n" "$(clr_bold_green '✓')" "${NS_CREATED}" "${ns}"
+    else
+      printf "  %s %s \"%s\"\n\n" "$(clr_bold_red '✗')" "${NS_CREATE_FAILED}" "${ns}"
+      exit 1
+    fi
+  fi
 }
 
 read_file_value() {
@@ -623,6 +639,7 @@ main() {
   if [[ -z "${namespace}" ]]; then
     printf "  %s\n\n" "$(clr_bold_red "${NS_REQUIRED}")"; exit 1
   fi
+  ensure_namespace "${namespace}"
 
   # Operation multi-select
   # Display order == execution order:

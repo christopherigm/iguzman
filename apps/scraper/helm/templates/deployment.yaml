@@ -43,19 +43,16 @@ spec:
               protocol: TCP
 
           {{- /* ── Environment variables ── */}}
-          {{- if or .Values.env .Values.envFromSecret }}
+          {{- if .Values.env }}
           env:
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range .Values.envFromSecret }}
-            - name: {{ .name }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .secretName }}
-                  key: {{ .secretKey }}
-            {{- end }}
+          {{- end }}
+          {{- if .Values.envFrom }}
+          envFrom:
+            {{- toYaml .Values.envFrom | nindent 12 }}
           {{- end }}
 
           {{- /* ── Probes (HTTP /health endpoint) ── */}}

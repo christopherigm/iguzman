@@ -72,6 +72,7 @@ setup_strings() {
     TOOL_DJANGO="Framework web de Python"
     TOOL_CLAUDE="Asistente de código con IA"
     TOOL_OPENCODE="Agente de código con IA para terminal"
+    TOOL_FFMPEG="Procesamiento de audio y video"
     NOTE_BASH_GIT_PROMPT="Snippet de activación agregado automáticamente a tu archivo de configuración de shell (~/.zshrc, ~/.bash_profile o ~/.bashrc).\n  Reinicia tu shell o ejecuta: source ~/.zshrc"
     BREW_MISSING="Homebrew no está instalado. La mayoría de las herramientas en macOS lo requieren."
     BREW_INSTALL_PROMPT="¿Instalar Homebrew ahora? [s/n]"
@@ -115,6 +116,7 @@ setup_strings() {
     TOOL_DJANGO="Python web framework"
     TOOL_CLAUDE="AI coding assistant CLI"
     TOOL_OPENCODE="Terminal-based AI coding agent"
+    TOOL_FFMPEG="Audio and video processing"
     NOTE_BASH_GIT_PROMPT="Source snippet automatically added to your shell config (~/.zshrc, ~/.bash_profile, or ~/.bashrc).\n  Restart your shell or run: source ~/.zshrc"
     BREW_MISSING="Homebrew is not installed. Most macOS tools require it."
     BREW_INSTALL_PROMPT="Install Homebrew now? [y/n]"
@@ -292,12 +294,21 @@ install_opencode() {
   return 1
 }
 
+install_ffmpeg() {
+  if is_mac && has_brew; then brew install ffmpeg; return $?; fi
+  if has_apt; then sudo apt-get update && sudo apt-get install -y ffmpeg; return $?; fi
+  if has_dnf; then sudo dnf install -y ffmpeg; return $?; fi
+  if has_yum; then sudo yum install -y ffmpeg; return $?; fi
+  echo "  $(clr_yellow 'Please install FFmpeg manually: https://ffmpeg.org/download.html')"
+  return 1
+}
+
 # ── Tool definitions ──────────────────────────────────────────────────────────
 # Each entry: ID|LABEL|DESCRIPTION|CHECK_CMD|VERSION_CMD|INSTALL_FN
 
 build_tools() {
-  TOOL_IDS=(git nodejs pnpm docker kubectl helm bash-git-prompt python django claude opencode)
-  TOOL_LABELS=(Git Node.js pnpm Docker kubectl Helm bash-git-prompt Python Django "Claude Code" OpenCode)
+  TOOL_IDS=(git nodejs pnpm docker kubectl helm bash-git-prompt python django claude opencode ffmpeg)
+  TOOL_LABELS=(Git Node.js pnpm Docker kubectl Helm bash-git-prompt Python Django "Claude Code" OpenCode FFmpeg)
   TOOL_DESCS=(
     "${TOOL_GIT}"
     "${TOOL_NODEJS}"
@@ -310,6 +321,7 @@ build_tools() {
     "${TOOL_DJANGO}"
     "${TOOL_CLAUDE}"
     "${TOOL_OPENCODE}"
+    "${TOOL_FFMPEG}"
   )
   TOOL_INSTALLED=()
   TOOL_VERSIONS=()
@@ -361,6 +373,10 @@ build_tools() {
 
   # opencode
   if command -v opencode &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(opencode --version 2>/dev/null)");
+  else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
+
+  # ffmpeg
+  if command -v ffmpeg &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(ffmpeg -version 2>/dev/null | head -1)");
   else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
 }
 
@@ -726,6 +742,7 @@ main() {
             django)          install_django          && ok=1 || true ;;
             claude)          install_claude          && ok=1 || true ;;
             opencode)        install_opencode        && ok=1 || true ;;
+            ffmpeg)          install_ffmpeg          && ok=1 || true ;;
           esac
 
           if [[ "${ok}" -eq 1 ]]; then

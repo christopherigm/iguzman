@@ -47,6 +47,7 @@ setup_strings() {
     DONE_APP="Aplicación"
     DONE_ICONS="Iconos"
     DONE_FAVICON="Favicon"
+    APP_HINT="¿No ves tu app? Agrega un archivo logo.png o logo.jpg en su carpeta public/."
   else
     WELCOME="PWA Icon Generator"
     SUBTITLE="Generate PWA icons and favicon.ico from the app logo."
@@ -63,6 +64,7 @@ setup_strings() {
     DONE_APP="App"
     DONE_ICONS="Icons"
     DONE_FAVICON="Favicon"
+    APP_HINT="Don't see your app? Add a logo.png or logo.jpg file to its public/ folder."
   fi
 }
 
@@ -238,6 +240,7 @@ main() {
     fi
   else
     printf "  %s:\n\n" "$(clr_bold "${APP_PROMPT}")"
+    printf "  %s\n\n" "$(clr_dim "${APP_HINT}")"
     MENU_ITEMS=("${APP_NAMES[@]}")
     MENU_SELECTED=0
     interactive_select

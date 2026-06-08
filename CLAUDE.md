@@ -82,6 +82,12 @@ The download polling uses **Server-Sent Events** (`/api/download-video/[id]/stre
 
 Filter state in `VideoGrid` is stored in URL search params (`?platform=`, `?status=`, `?audio=`, `?per=`, `?page=`), making filters bookmarkable/shareable.
 
+## Help App — Keep Documentation in Sync
+
+`apps/help/` is the developer documentation hub for this monorepo. **Any change to a documented CLI script, pnpm command, or app API must be reflected in `apps/help/` in the same task** — update both the source constant/code block and all five locale files (`messages/en.json`, `es.json`, `de.json`, `fr.json`, `pt.json`).
+
+See `apps/help/CLAUDE.md` for the full inventory: which scripts map to which constants and panel files.
+
 ## Key Conventions
 
 - **Workspace dependencies** use `workspace:*` protocol: `"@repo/ui": "workspace:*"`

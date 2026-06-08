@@ -10,7 +10,7 @@ import { LocaleSwitcher } from '@repo/ui/core-elements/locale-switcher';
 import { routing } from '@repo/i18n/routing';
 import './footer.css';
 
-export async function Footer() {
+export async function Footer({ logo }: { logo: string }) {
   const [t, locale] = await Promise.all([getTranslations('Footer'), getLocale()]);
 
   const appLinks = [
@@ -29,7 +29,7 @@ export async function Footer() {
         <Grid container spacing={4}>
           <Grid size={{ xs: 12, sm: 4 }}>
             <Box display="flex" flexDirection="column" gap="20px">
-              <Image src="/logo-navbar.png" alt="Cinelog" width={140} height={44} className="footer__logo" />
+              <Image src={logo} alt="Cinelog" width={140} height={44} className="footer__logo" />
               <Typography as="span" variant="h5" fontWeight={700}>Cinelog</Typography>
               <Box display="flex" alignItems="center" gap="12px" flexWrap="wrap">
                 <ThemeSwitch />

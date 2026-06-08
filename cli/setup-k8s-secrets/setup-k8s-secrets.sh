@@ -61,6 +61,8 @@ setup_strings() {
     SECRET_NEW="El secreto no existe — creando."
     SUMMARY_TITLE="Resumen de secretos aplicados:"
     ALL_DONE="¡Configuración completada!"
+    NS_CREATED="Namespace creado."
+    NS_CREATE_FAILED="Error al crear el namespace."
   else
     WELCOME="Kubernetes Secrets Setup"
     SUBTITLE="Creates or updates k8s secrets from an app's env.example."
@@ -86,6 +88,8 @@ setup_strings() {
     SECRET_NEW="Secret does not exist — creating."
     SUMMARY_TITLE="Applied secrets summary:"
     ALL_DONE="Setup complete!"
+    NS_CREATED="Namespace created."
+    NS_CREATE_FAILED="Failed to create namespace."
   fi
 }
 
@@ -303,6 +307,18 @@ apply_secret() {
   fi
 }
 
+ensure_namespace() {
+  local ns="$1"
+  if ! kubectl get namespace "${ns}" &>/dev/null 2>&1; then
+    if kubectl create namespace "${ns}" &>/dev/null 2>&1; then
+      printf "  %s %s \"%s\"\n\n" "$(clr_bold_green '✓')" "${NS_CREATED}" "${ns}"
+    else
+      printf "  %s %s \"%s\"\n\n" "$(clr_bold_red '✗')" "${NS_CREATE_FAILED}" "${ns}"
+      exit 1
+    fi
+  fi
+}
+
 # ── env.example parser ────────────────────────────────────────────────────────
 # Fills ENV_KEYS[], ENV_DEFAULTS[], ENV_SECTIONS[].
 # Each key carries the most recent section comment above it.
@@ -402,6 +418,7 @@ main() {
   printf "  %s (%s): " "$(clr_bold "${NS_PROMPT}")" "$(clr_dim "${ns_default}")"
   local ns_input; read -r ns_input || true
   local NAMESPACE="${ns_input:-${ns_default}}"
+  ensure_namespace "${NAMESPACE}"
 
   # Secret name
   local secret_name="${app_name}-secrets"

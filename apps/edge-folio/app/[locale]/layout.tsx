@@ -188,7 +188,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                   }}
                 />
                 {children}
-                <Footer />
+                <Footer logo="/logo-navbar.png" />
               </PaletteProvider>
             </ThemeProvider>
           </NextIntlClientProvider>
