@@ -175,7 +175,7 @@ to_title_case() {
   local str="$1" result="" word
   IFS='-' read -ra words <<< "${str}"
   for word in "${words[@]}"; do
-    [[ -n "${word}" ]] && result+="${word^} "
+    [[ -n "${word}" ]] && result+="$(echo "${word:0:1}" | tr '[:lower:]' '[:upper:]')${word:1} "
   done
   echo "${result% }"
 }
@@ -257,7 +257,10 @@ django-cors-headers==4.9.0
 PYEOF
   echo "python-dotenv==1.1.1" >> "$out"
   [[ "${include_redis}"   == "y" ]] && echo "django-redis==5.4.0"         >> "$out" || true
-  [[ "${include_passkey}" == "y" ]] && echo "webauthn==2.7.1"             >> "$out" || true
+  if [[ "${include_passkey}" == "y" ]]; then
+    echo "webauthn==2.7.1" >> "$out"
+    echo "cbor2==5.9.0"    >> "$out"
+  fi
   [[ "${include_r2}"      == "y" ]] && echo "django-storages[s3]==1.14.4" >> "$out" || true
 }
 
@@ -2835,7 +2838,9 @@ main() {
   printf "  %s\n\n" "$(clr_bold_cyan "── ${STEP_SETUP} ──")"
 
   printf "  %s  %s\n" "$(clr_bold_yellow '→')" "${SETUP_VENV}"
-  python3 -m venv "${app_dir}/venv"
+  local python_bin
+  python_bin="$(command -v python3.13 2>/dev/null || command -v python3.12 2>/dev/null || command -v python3.11 2>/dev/null || command -v python3.10 2>/dev/null || echo "python3")"
+  "${python_bin}" -m venv "${app_dir}/venv"
   printf "  %s  %s\n\n" "$(clr_bold_green '✓')" "${SETUP_VENV_DONE}"
 
   printf "  %s  %s\n" "$(clr_bold_yellow '→')" "${SETUP_DEPS}"
