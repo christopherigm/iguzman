@@ -29,7 +29,7 @@ service:
 
 # ─── Redis configuration ────────────────────────────────────
 auth:
-  password: ''          # set directly (stored in Helm values — avoid in prod)
+  password: 'redis'     # set directly (stored in Helm values — avoid in prod)
   existingSecret: ''    # name of an existing k8s Secret that holds the password
   existingSecretKey: 'redis-password' # key within that Secret
 

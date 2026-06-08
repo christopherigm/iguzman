@@ -101,6 +101,8 @@ celery:
 redis:
   enabled: true
   image: redis:7-alpine
+  auth:
+    password: 'redis'
   resources:
     requests:
       cpu: 50m

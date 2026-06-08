@@ -83,10 +83,15 @@ spec:
           {{- end }}
 
           {{- /* ── Probes ── */}}
+          {{- $pingCmd := list "redis-cli" }}
+          {{- if $authEnabled }}
+          {{- $pingCmd = concat $pingCmd (list "-a" "$(REDIS_PASSWORD)") }}
+          {{- end }}
+          {{- $pingCmd = append $pingCmd "ping" }}
           startupProbe:
             exec:
               command:
-                {{- toYaml .Values.probes.startupProbe.exec.command | nindent 16 }}
+                {{- toYaml $pingCmd | nindent 16 }}
             initialDelaySeconds: {{ .Values.probes.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.startupProbe.failureThreshold }}
@@ -94,7 +99,7 @@ spec:
           livenessProbe:
             exec:
               command:
-                {{- toYaml .Values.probes.livenessProbe.exec.command | nindent 16 }}
+                {{- toYaml $pingCmd | nindent 16 }}
             initialDelaySeconds: {{ .Values.probes.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.livenessProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.livenessProbe.failureThreshold }}
@@ -102,7 +107,7 @@ spec:
           readinessProbe:
             exec:
               command:
-                {{- toYaml .Values.probes.readinessProbe.exec.command | nindent 16 }}
+                {{- toYaml $pingCmd | nindent 16 }}
             initialDelaySeconds: {{ .Values.probes.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.readinessProbe.periodSeconds }}
             failureThreshold: {{ .Values.probes.readinessProbe.failureThreshold }}

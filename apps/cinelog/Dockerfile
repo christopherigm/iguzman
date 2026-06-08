@@ -36,6 +36,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN apk add --no-cache curl jq wget
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+RUN npm install --os=linux --libc=musl --cpu=x64 sharp
 COPY --from=builder --chown=nextjs:nodejs /app/apps/cinelog/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/cinelog/.next/static ./apps/cinelog/.next/static
 COPY --from=builder /app/apps/cinelog/public ./apps/cinelog/public

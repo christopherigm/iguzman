@@ -21,11 +21,26 @@ spec:
       containers:
         - name: redis
           image: {{ .Values.redis.image }}
+          {{- if .Values.redis.auth.password }}
+          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          env:
+            - name: REDIS_PASSWORD
+              value: {{ .Values.redis.auth.password | quote }}
+          {{- end }}
           ports:
             - containerPort: 6379
           livenessProbe:
             exec:
-              command: ["redis-cli", "ping"]
+              command:
+                {{- if .Values.redis.auth.password }}
+                - redis-cli
+                - -a
+                - $(REDIS_PASSWORD)
+                - ping
+                {{- else }}
+                - redis-cli
+                - ping
+                {{- end }}
             periodSeconds: 10
             failureThreshold: 3
           {{- with .Values.redis.resources }}

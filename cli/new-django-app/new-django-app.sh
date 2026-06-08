@@ -312,14 +312,31 @@ gen_gunicorn_conf_py() {
   local out="$1"
   mkdir -p "$(dirname "$out")"
   cat > "$out" << 'PYEOF'
+import logging
 import multiprocessing
+import os
+
+from gunicorn.glogging import Logger
+
+
+class _HealthCheckFilter(logging.Filter):
+    def filter(self, record):
+        return 'kube-probe' not in record.getMessage()
+
+
+class _Logger(Logger):
+    def setup(self, cfg):
+        super().setup(cfg)
+        self.access_log.addFilter(_HealthCheckFilter())
+
 
 bind = '0.0.0.0:8000'
-workers = int(__import__('os').environ.get('GUNICORN_WORKERS', multiprocessing.cpu_count() * 2 + 1))
-timeout = int(__import__('os').environ.get('GUNICORN_TIMEOUT', 120))
-loglevel = __import__('os').environ.get('GUNICORN_LOG_LEVEL', 'warning')
+workers = int(os.environ.get('GUNICORN_WORKERS', multiprocessing.cpu_count() * 2 + 1))
+timeout = int(os.environ.get('GUNICORN_TIMEOUT', 120))
+loglevel = os.environ.get('GUNICORN_LOG_LEVEL', 'warning')
 accesslog = '-'
 errorlog = '-'
+logger_class = _Logger
 PYEOF
 }
 
@@ -2226,7 +2243,7 @@ CSRF_TRUSTED_ORIGINS=https://${host},${frontend_url}
 FRONTEND_URL=${frontend_url}
 
 # Database (leave DB_HOST empty to use SQLite locally)
-DB_HOST=
+DB_HOST=postgres.${name}.svc.cluster.local
 DB_PORT=5432
 DB_NAME=postgres
 DB_USER=postgres

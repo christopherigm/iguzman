@@ -2,7 +2,7 @@ revisionHistoryLimit: 2
 replicaCount: 1
 
 image:
-  repository: elizabethguzmanalvarez25/cinelog
+  repository: christopherguzman/cinelog
   tag: 'latest'
   pullPolicy: IfNotPresent
 
