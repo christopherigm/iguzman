@@ -15,7 +15,7 @@ type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-const VALID_TABS = ['getting-started', 'commands', 'services', 'tools'] as const;
+const VALID_TABS = ['getting-started', 'commands', 'services', 'tools', 'dev-cycle'] as const;
 type Tab = (typeof VALID_TABS)[number];
 
 // ── Getting Started tab ───────────────────────────────────────────────────────
@@ -33,6 +33,15 @@ const VERIFY_COMMANDS =
   'kubectl version --client\n' +
   'helm version\n' +
   'kubectl get nodes';
+
+// ── Development Cycle tab ─────────────────────────────────────────────────────
+
+const GIT_SAVE_COMMAND = 'git add .\ngit commit -m "your commit message"';
+const GIT_PUSH_COMMAND = 'git push origin main';
+const GIT_PULL_COMMAND = 'git pull origin main';
+const GIT_UNDO_COMMAND = 'git checkout .';
+const GIT_NEW_BRANCH_COMMAND = 'git checkout -b feature/my-feature';
+const GIT_SWITCH_MAIN_COMMAND = 'git checkout main';
 
 // ── Commands tab ─────────────────────────────────────────────────────────────
 
@@ -83,12 +92,14 @@ export default async function Home({ params, searchParams }: Props) {
     tab === 'getting-started' ? t('gettingStartedTitle') :
     tab === 'services' ? t('servicesTitle') :
     tab === 'tools' ? t('toolsTitle') :
+    tab === 'dev-cycle' ? t('devCycleTitle') :
     t('title');
 
   const subheading =
     tab === 'getting-started' ? t('gettingStartedSubtitle') :
     tab === 'services' ? t('servicesSubtitle') :
     tab === 'tools' ? t('toolsSubtitle') :
+    tab === 'dev-cycle' ? t('devCycleSubtitle') :
     t('subtitle');
 
   const menuLabels = {
@@ -96,6 +107,7 @@ export default async function Home({ params, searchParams }: Props) {
     commands: t('menuCommands'),
     services: t('menuServices'),
     tools: t('menuTools'),
+    'dev-cycle': t('menuDevCycle'),
   };
 
   return (
@@ -179,6 +191,58 @@ export default async function Home({ params, searchParams }: Props) {
             {tab === 'services' && <ScraperPanel />}
 
             {tab === 'tools' && <ToolsPanel />}
+
+            {tab === 'dev-cycle' && (
+              <>
+                <Typography
+                  as="p"
+                  variant="none"
+                  color="var(--foreground-muted)"
+                  fontWeight={600}
+                  marginBottom={24}
+                  styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}
+                >
+                  {t('devCycleGitGroup')}
+                </Typography>
+
+                <Section heading={t('devCycleSaveSection')} description={t('devCycleSaveDescription')} code={GIT_SAVE_COMMAND} />
+                <Section heading={t('devCyclePushSection')} description={t('devCyclePushDescription')} code={GIT_PUSH_COMMAND} />
+                <Section heading={t('devCyclePullSection')} description={t('devCyclePullDescription')} code={GIT_PULL_COMMAND} />
+                <Section heading={t('devCycleUndoSection')} description={t('devCycleUndoDescription')} code={GIT_UNDO_COMMAND} />
+
+                <Typography
+                  as="p"
+                  variant="none"
+                  color="var(--foreground-muted)"
+                  fontWeight={600}
+                  marginTop={8}
+                  marginBottom={24}
+                  styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}
+                >
+                  {t('devCycleBranchGroup')}
+                </Typography>
+
+                <Section heading={t('devCycleNewBranchSection')} description={t('devCycleNewBranchDescription')} code={GIT_NEW_BRANCH_COMMAND} />
+                <Section heading={t('devCycleSwitchMainSection')} description={t('devCycleSwitchMainDescription')} code={GIT_SWITCH_MAIN_COMMAND} />
+
+                <Typography
+                  as="p"
+                  variant="none"
+                  color="var(--foreground-muted)"
+                  fontWeight={600}
+                  marginTop={8}
+                  marginBottom={24}
+                  styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}
+                >
+                  {t('devCycleDeployGroup')}
+                </Typography>
+
+                <Section heading={t('devCycleSecretsSection')} description={t('devCycleSecretsDescription')} code={SECRETS_COMMAND} />
+                <Section heading={t('devCycleLogsSection')} description={t('devCycleLogsDescription')} code={LOGS_COMMAND} />
+                <Section heading={t('devCycleRevealSecretsSection')} description={t('devCycleRevealSecretsDescription')} code={HELM_COMMANDS} />
+                <Section heading={t('devCycleDeploySection')} description={t('devCycleDeployDescription')} code={DEPLOY_APP_COMMANDS} />
+              </>
+            )}
           </Box>
         </Box>
       </Container>

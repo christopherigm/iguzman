@@ -4,7 +4,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Button } from '@repo/ui/core-elements/button';
 import { Box } from '@repo/ui/core-elements/box';
 
-const TABS = ['getting-started', 'commands', 'services', 'tools'] as const;
+const TABS = ['getting-started', 'commands', 'services', 'tools', 'dev-cycle'] as const;
 type Tab = (typeof TABS)[number];
 
 interface TabMenuProps {
