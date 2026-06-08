@@ -1,3 +1,5 @@
+import type { SkeletonJson } from './skeleton-json';
+
 export type Category = 'impact' | 'technical' | 'leadership' | 'collaboration' | 'other';
 export type Source = 'manual' | 'extracted';
 
@@ -115,4 +117,24 @@ export function updateBullet(id: number, payload: UpdateBulletPayload): Promise<
 
 export function deleteBullet(id: number): Promise<void> {
   return request(`/api/matrix/bullets/${id}`, { method: 'DELETE' });
+}
+
+// ── Skeleton synthesis ────────────────────────────────────────────────────────
+
+export interface DraftBullet {
+  text: string;
+  category: Category;
+  skills: string[];
+}
+
+export interface SynthesisResult {
+  drafts: DraftBullet[];
+}
+
+export function synthesizeSkeleton(skeleton: SkeletonJson): Promise<SynthesisResult> {
+  return request('/api/matrix/extract', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(skeleton),
+  });
 }

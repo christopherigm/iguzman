@@ -4,6 +4,7 @@ from .views import (
     BulletPointDetailView,
     BulletPointListCreateView,
     BulletReorderView,
+    SkeletonSynthesisView,
     SkillDetailView,
     SkillListCreateView,
 )
@@ -14,4 +15,5 @@ urlpatterns = [
     path('bullets/', BulletPointListCreateView.as_view(), name='matrix-bullets'),
     path('bullets/reorder/', BulletReorderView.as_view(), name='matrix-bullets-reorder'),
     path('bullets/<int:pk>/', BulletPointDetailView.as_view(), name='matrix-bullet-detail'),
+    path('extract/', SkeletonSynthesisView.as_view(), name='matrix-extract'),
 ]

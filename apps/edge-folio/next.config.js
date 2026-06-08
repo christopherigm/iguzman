@@ -22,22 +22,34 @@ const withSerwist = withSerwistInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  webpack(config) {
+  // Turbopack (dev mode) needs its own alias config — it ignores webpack().
+  // web-tree-sitter has a conditional require('fs'/'path') for its Node.js
+  // code path; in the browser that branch is dead but Turbopack still
+  // resolves the import at build time. Point both to an empty shim.
+  turbopack: {
+    resolveAlias: {
+      fs: './lib/browser-empty.js',
+      path: './lib/browser-empty.js',
+    },
+  },
+  webpack(config, { isServer }) {
     // onnxruntime-node contains native binaries (.node) that webpack cannot
-    // parse. stt-worker.ts runs as a browser Web Worker — the Node.js ONNX
-    // backend is never needed. Alias it to false so webpack emits an empty
-    // module instead of trying to bundle the binary.
+    // parse. Alias it to false so webpack emits an empty module instead.
     config.resolve.alias = {
       ...config.resolve.alias,
       'onnxruntime-node': false,
     };
-    // web-tree-sitter has a conditional require('fs') for its Node.js path.
-    // ast-worker.ts runs in the browser — mark Node.js built-ins as empty.
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
-    };
+    if (!isServer) {
+      // web-tree-sitter has a conditional require('fs') for its Node.js code
+      // path. resolve.alias:false silently returns an empty module at build
+      // time — resolve.fallback:false does not suppress the "Module not found"
+      // error, which is why we use alias here instead.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        fs: false,
+        path: false,
+      };
+    }
     return config;
   },
   async headers() {

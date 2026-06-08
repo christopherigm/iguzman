@@ -1,3 +1,9 @@
+import json
+import logging
+import urllib.error
+import urllib.request
+
+from django.conf import settings
 from django.core.cache import cache
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +16,8 @@ from .serializers import (
     BulletPointWriteSerializer,
     SkillSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 CACHE_TTL = 300  # 5 minutes
 
@@ -193,3 +201,134 @@ class BulletReorderView(APIView):
         _invalidate_bullet(request.user.id)
 
         return Response({'detail': 'Reordered.'})
+
+
+# ── Skeleton synthesis ────────────────────────────────────────────────────────
+
+def _call_groq_for_skeleton(skeleton: dict, api_key: str) -> dict:
+    languages = ', '.join(skeleton.get('languages', [])[:20]) or 'none detected'
+    frameworks = ', '.join(skeleton.get('frameworks', [])[:20]) or 'none detected'
+    runtime_deps = ', '.join(skeleton.get('runtimeDeps', [])[:30]) or 'none'
+    dev_deps = ', '.join(skeleton.get('devDeps', [])[:20]) or 'none'
+    imported_modules = ', '.join(skeleton.get('importedModules', [])[:30]) or 'none'
+
+    infra = skeleton.get('infra', {})
+    infra_parts = []
+    if infra.get('hasDocker'):
+        infra_parts.append('Docker')
+    if infra.get('hasKubernetes'):
+        infra_parts.append('Kubernetes')
+    infra_parts.extend(infra.get('ciSystems', [])[:5])
+    infra_parts.extend(infra.get('cloudHints', [])[:5])
+    infra_str = ', '.join(infra_parts) or 'none detected'
+
+    kicad = skeleton.get('kicadFiles', [])
+    kicad_str = f'{len(kicad)} KiCad project file(s)' if kicad else 'none'
+
+    file_stats = skeleton.get('fileStats', {})
+    total_files = file_stats.get('totalFiles', 0)
+    code_files = file_stats.get('codeFiles', 0)
+    project_name = skeleton.get('projectName', 'Unknown')
+
+    prompt = (
+        'You are a senior technical resume writer. Given a codebase structure summary '
+        '(no source code, no proprietary data), generate professional resume bullet points '
+        'a software engineer could use on their CV.\n\n'
+        'Return ONLY a valid JSON object:\n'
+        '{"drafts":[{"text":"...","category":"impact|technical|leadership|collaboration|other","skills":["skill1","skill2"]}]}\n\n'
+        'Rules:\n'
+        '- Each bullet: one factual, achievement-oriented sentence under 500 chars. Use STAR format where possible.\n'
+        '- Infer plausible achievements from the tech stack without inventing metrics or team sizes.\n'
+        '- category: impact=business/product outcome, technical=engineering depth, '
+        'leadership=ownership/architecture, collaboration=cross-team, other=else\n'
+        '- skills: only languages, frameworks, and tools clearly visible in this project\n'
+        '- Generate 5–12 bullets depending on the richness of the structure\n'
+        '- Return valid JSON only — no markdown fences, no explanation\n\n'
+        f'Project: "{project_name}"\n'
+        f'Files: {code_files} code / {total_files} total\n'
+        f'Languages: {languages}\n'
+        f'Frameworks: {frameworks}\n'
+        f'Runtime deps: {runtime_deps}\n'
+        f'Dev deps: {dev_deps}\n'
+        f'Imports: {imported_modules}\n'
+        f'Infrastructure: {infra_str}\n'
+        f'Hardware design: {kicad_str}\n'
+    )
+
+    model = getattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b')
+    payload = json.dumps({
+        'model': model,
+        'messages': [{'role': 'user', 'content': prompt}],
+        'temperature': 0.2,
+        'seed': 42,
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.groq.com/openai/v1/chat/completions',
+        data=payload,
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {api_key}',
+            'User-Agent': 'groq-python/0.11.0',
+        },
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = json.loads(resp.read().decode('utf-8'))
+    except urllib.error.HTTPError as exc:
+        logger.warning('Groq skeleton synthesis HTTP %s: %s', exc.code, exc.read().decode('utf-8', errors='replace'))
+        raise
+    raw = body['choices'][0]['message']['content'].strip()
+    if raw.startswith('```'):
+        raw = raw.split('\n', 1)[1] if '\n' in raw else raw[3:]
+        raw = raw.rstrip('`').strip()
+    return json.loads(raw)
+
+
+class SkeletonSynthesisView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        skeleton = request.data
+        if not isinstance(skeleton, dict):
+            return Response(
+                {'detail': 'Expected a Skeleton JSON object.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        groq_api_key = settings.GROQ_API_KEY
+        if not groq_api_key:
+            return Response(
+                {'detail': 'AI synthesis is not configured on this server.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            result = _call_groq_for_skeleton(skeleton, groq_api_key)
+        except (urllib.error.URLError, json.JSONDecodeError, KeyError) as exc:
+            logger.warning('Groq skeleton synthesis failed: %s', exc)
+            return Response(
+                {'detail': 'AI analysis failed. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        valid_categories = {'impact', 'technical', 'leadership', 'collaboration', 'other'}
+        drafts = []
+        for item in result.get('drafts', [])[:15]:
+            if not isinstance(item, dict):
+                continue
+            text = str(item.get('text', '')).strip()
+            if not text or len(text) > 500:
+                continue
+            category = item.get('category', 'technical')
+            if category not in valid_categories:
+                category = 'technical'
+            raw_skills = item.get('skills', [])
+            skills = [
+                s.strip()[:100]
+                for s in raw_skills
+                if isinstance(s, str) and s.strip()
+            ][:10]
+            drafts.append({'text': text, 'category': category, 'skills': skills})
+
+        return Response({'drafts': drafts})

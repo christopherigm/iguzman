@@ -17,6 +17,9 @@
     "generate:component": "turbo gen react-component",
     "check-types": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "next": ">=15"
+  },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",

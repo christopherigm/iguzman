@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@repo/i18n/navigation';
 import { Container } from '@repo/ui/core-elements/container';
@@ -12,9 +12,27 @@ import { Badge } from '@repo/ui/core-elements/badge';
 import { useDirectoryPicker } from '@/lib/use-directory-picker';
 import { useAstExtractor } from '@/lib/use-ast-extractor';
 import type { SkeletonJson } from '@/lib/skeleton-json';
+import {
+  synthesizeSkeleton,
+  createSkill,
+  createBullet,
+  getSkills,
+  type Category,
+  type DraftBullet,
+  MatrixError,
+} from '@/lib/matrix';
 import './extract-page.css';
 
-// ── Phase label map ───────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface EditableDraft extends DraftBullet {
+  id: string;
+  included: boolean;
+}
+
+type SynthStatus = 'idle' | 'synthesizing' | 'done' | 'synth-error' | 'saving' | 'saved' | 'save-error';
+
+// ── Phase label ───────────────────────────────────────────────────────────────
 
 function PhaseLabel({ phase, t }: { phase: string; t: ReturnType<typeof useTranslations<'ExtractPage'>> }) {
   const map: Record<string, string> = {
@@ -95,7 +113,7 @@ function SkeletonReview({
           </Typography>
         </SkeletonRow>
 
-        {skeleton.infra.hasDocker || skeleton.infra.hasKubernetes || skeleton.kicadFiles.length > 0 ? (
+        {(skeleton.infra.hasDocker || skeleton.infra.hasKubernetes || skeleton.kicadFiles.length > 0 || hasInfra) && (
           <SkeletonRow label={t('skeletonInfra')}>
             <Box display="flex" flexWrap="wrap" gap={4}>
               {skeleton.infra.hasDocker && <Badge variant="subtle" size="sm">Docker</Badge>}
@@ -105,7 +123,7 @@ function SkeletonReview({
               {skeleton.kicadFiles.map((f) => <Badge key={f} variant="outlined" size="sm">KiCad</Badge>)}
             </Box>
           </SkeletonRow>
-        ) : !hasInfra ? null : null}
+        )}
 
         {skeleton.importedModules.length > 0 && (
           <SkeletonRow label={t('skeletonModules')}>
@@ -115,12 +133,6 @@ function SkeletonReview({
             </Typography>
           </SkeletonRow>
         )}
-      </Box>
-
-      <Box className="extract__coming-soon">
-        <Typography variant="caption" styles={{ fontSize: 13 }}>
-          {t('analyzeComingSoon')}
-        </Typography>
       </Box>
     </Box>
   );
@@ -205,7 +217,7 @@ function DirCard({
                 <Box aria-hidden={true} className="extract__dir-entry-icon">
                   {entry.kind === 'directory' ? (
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" fill="currentColor" />
+                      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2V17a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" fill="currentColor" />
                     </svg>
                   ) : (
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
@@ -230,6 +242,122 @@ function DirCard({
   );
 }
 
+// ── Draft bullet card ─────────────────────────────────────────────────────────
+
+const CATEGORY_CHOICES: Category[] = ['impact', 'technical', 'leadership', 'collaboration', 'other'];
+
+function DraftBulletCard({
+  draft,
+  index,
+  onChange,
+  t,
+}: {
+  draft: EditableDraft;
+  index: number;
+  onChange: (id: string, patch: Partial<EditableDraft>) => void;
+  t: ReturnType<typeof useTranslations<'ExtractPage'>>;
+}) {
+  const textId = `draft-text-${draft.id}`;
+  const catId = `draft-cat-${draft.id}`;
+
+  const categoryLabels: Record<Category, string> = {
+    impact: t('synthCategoryImpact'),
+    technical: t('synthCategoryTechnical'),
+    leadership: t('synthCategoryLeadership'),
+    collaboration: t('synthCategoryCollaboration'),
+    other: t('synthCategoryOther'),
+  };
+
+  return (
+    <Box
+      className={[
+        'extract__review-bullet',
+        !draft.included ? 'extract__review-bullet--deselected' : '',
+      ].filter(Boolean).join(' ')}
+    >
+      <Box display="flex" alignItems="flex-start" gap={12}>
+        <button
+          type="button"
+          className={['extract__check-btn', draft.included ? 'extract__check-btn--checked' : ''].filter(Boolean).join(' ')}
+          onClick={() => onChange(draft.id, { included: !draft.included })}
+          aria-label={draft.included ? t('synthExclude', { n: index + 1 }) : t('synthInclude', { n: index + 1 })}
+        >
+          {draft.included && (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden={true}>
+              <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+
+        <Box display="flex" flexDirection="column" gap={10} flex="1" minWidth={0}>
+          <Box display="flex" flexDirection="column" gap={4}>
+            <label htmlFor={textId}>
+              <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {t('synthBulletTextLabel')}
+              </Typography>
+            </label>
+            <textarea
+              id={textId}
+              className="extract__draft-textarea"
+              value={draft.text}
+              onChange={(e) => onChange(draft.id, { text: e.target.value })}
+              rows={3}
+              maxLength={500}
+              disabled={!draft.included}
+              aria-label={t('synthBulletTextLabel')}
+            />
+          </Box>
+
+          <Box display="flex" alignItems="center" gap={8} flexWrap="wrap">
+            <label htmlFor={catId} style={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {t('synthCategoryLabel')}
+              </Typography>
+            </label>
+            <select
+              id={catId}
+              className="extract__draft-select"
+              value={draft.category}
+              onChange={(e) => onChange(draft.id, { category: e.target.value as Category })}
+              aria-label={t('synthCategoryLabel')}
+              disabled={!draft.included}
+            >
+              {CATEGORY_CHOICES.map((cat) => (
+                <option key={cat} value={cat}>{categoryLabels[cat]}</option>
+              ))}
+            </select>
+          </Box>
+
+          {draft.skills.length > 0 && (
+            <Box display="flex" flexDirection="column" gap={6}>
+              <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {t('synthSkillsLabel')}
+              </Typography>
+              <Box display="flex" flexWrap="wrap" gap={4}>
+                {draft.skills.map((skill) => (
+                  <Box key={skill} className="extract__draft-skill-tag">
+                    <Typography as="span" variant="caption" styles={{ fontSize: 12 }}>{skill}</Typography>
+                    {draft.included && (
+                      <button
+                        type="button"
+                        className="extract__draft-skill-remove"
+                        onClick={() => onChange(draft.id, { skills: draft.skills.filter((s) => s !== skill) })}
+                        aria-label={t('synthRemoveSkill', { skill })}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export function ExtractPage() {
@@ -238,6 +366,11 @@ export function ExtractPage() {
 
   const { isSupported, status: pickerStatus, dir, pick, clear } = useDirectoryPicker();
   const { status: extractStatus, phase, skeleton, error, extract, reset } = useAstExtractor();
+
+  const [synthStatus, setSynthStatus] = useState<SynthStatus>('idle');
+  const [drafts, setDrafts] = useState<EditableDraft[]>([]);
+  const [synthError, setSynthError] = useState<string | null>(null);
+  const [savedCount, setSavedCount] = useState(0);
 
   const isRunning = extractStatus === 'running';
 
@@ -249,11 +382,101 @@ export function ExtractPage() {
   const resetAll = useCallback(() => {
     reset();
     clear();
+    setSynthStatus('idle');
+    setDrafts([]);
+    setSynthError(null);
   }, [reset, clear]);
 
   const resetExtraction = useCallback(() => {
     reset();
+    setSynthStatus('idle');
+    setDrafts([]);
+    setSynthError(null);
   }, [reset]);
+
+  const handleSynthesize = useCallback(async () => {
+    if (!skeleton) return;
+    setSynthStatus('synthesizing');
+    setSynthError(null);
+    try {
+      const result = await synthesizeSkeleton(skeleton);
+      const editable: EditableDraft[] = result.drafts.map((d, i) => ({
+        ...d,
+        id: `draft-${i}-${Math.random().toString(36).slice(2, 7)}`,
+        included: true,
+      }));
+      setDrafts(editable);
+      setSynthStatus('done');
+    } catch {
+      setSynthError(t('synthesizeError'));
+      setSynthStatus('synth-error');
+    }
+  }, [skeleton, t]);
+
+  const handleDraftChange = useCallback((id: string, patch: Partial<EditableDraft>) => {
+    setDrafts((prev) => prev.map((d) => d.id === id ? { ...d, ...patch } : d));
+  }, []);
+
+  const handleSelectAll = useCallback((included: boolean) => {
+    setDrafts((prev) => prev.map((d) => ({ ...d, included })));
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    const included = drafts.filter((d) => d.included && d.text.trim());
+    if (!included.length) return;
+    setSynthStatus('saving');
+    setSynthError(null);
+
+    try {
+      const skillsData = await getSkills();
+      const nameMap: Record<string, number> = {};
+      for (const s of skillsData.results) {
+        nameMap[s.name.toLowerCase()] = s.id;
+      }
+
+      const allSkillNames = new Set(
+        included.flatMap((d) => d.skills.map((s) => s.trim())).filter(Boolean),
+      );
+
+      for (const name of allSkillNames) {
+        if (!nameMap[name.toLowerCase()]) {
+          try {
+            const skill = await createSkill({ name, proficiency: 3 });
+            nameMap[name.toLowerCase()] = skill.id;
+          } catch (err) {
+            if (err instanceof MatrixError && err.status === 400) {
+              // duplicate — skill exists, will be linked if it shows up in future getSkills
+            }
+          }
+        }
+      }
+
+      const results = await Promise.allSettled(
+        included.map((d, i) => {
+          const skillIds = d.skills
+            .map((s) => nameMap[s.trim().toLowerCase()])
+            .filter((id): id is number => id !== undefined);
+          return createBullet({
+            text: d.text.trim(),
+            category: d.category,
+            source: 'extracted',
+            is_approved: false,
+            order: i,
+            skill_ids: skillIds,
+          });
+        }),
+      );
+
+      const saved = results.filter((r) => r.status === 'fulfilled').length;
+      setSavedCount(saved);
+      setSynthStatus('saved');
+    } catch {
+      setSynthError(t('synthSaveError'));
+      setSynthStatus('save-error');
+    }
+  }, [drafts, t]);
+
+  const includedCount = drafts.filter((d) => d.included).length;
 
   return (
     <Container
@@ -342,35 +565,169 @@ export function ExtractPage() {
               </Box>
             )}
 
-            {/* ── Done: show skeleton ── */}
+            {/* ── Done: show skeleton + synthesis flow ── */}
             {extractStatus === 'done' && skeleton && (
-              <Box display="flex" flexDirection="column" gap={16}>
+              <Box display="flex" flexDirection="column" gap={20}>
                 <SkeletonReview skeleton={skeleton} t={t} />
-                <Box display="flex" gap={12} flexWrap="wrap">
-                  <Button
-                    text={t('viewMatrix')}
-                    type="button"
-                    size="md"
-                    kind="success"
-                    onClick={() => router.push('/matrix')}
-                  />
-                  <Button
-                    text={t('tryAgain')}
-                    type="button"
-                    size="md"
-                    onClick={resetExtraction}
-                  />
-                  <Button
-                    text={t('changeDirCta')}
-                    type="button"
-                    size="md"
-                    onClick={resetAll}
-                  />
-                </Box>
+
+                {/* Synthesis: idle — show Synthesize button */}
+                {synthStatus === 'idle' && (
+                  <Box display="flex" flexDirection="column" gap={12}>
+                    <Button
+                      text={t('synthesizeCta')}
+                      type="button"
+                      size="md"
+                      kind="success"
+                      onClick={handleSynthesize}
+                      icon="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    />
+                    <Box display="flex" gap={12} flexWrap="wrap">
+                      <Button
+                        text={t('viewMatrix')}
+                        type="button"
+                        size="md"
+                        onClick={() => router.push('/matrix')}
+                      />
+                      <Button
+                        text={t('tryAgain')}
+                        type="button"
+                        size="md"
+                        onClick={resetExtraction}
+                      />
+                      <Button
+                        text={t('changeDirCta')}
+                        type="button"
+                        size="md"
+                        onClick={resetAll}
+                      />
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Synthesis: loading */}
+                {synthStatus === 'synthesizing' && (
+                  <Box className="extract__phase">
+                    <Typography variant="body-sm" fontWeight={600} styles={{ fontSize: 15 }}>
+                      {t('synthesizing')}
+                    </Typography>
+                    <ProgressBar />
+                  </Box>
+                )}
+
+                {/* Synthesis: error */}
+                {synthStatus === 'synth-error' && (
+                  <Box display="flex" flexDirection="column" gap={12}>
+                    <Box className="extract__error">
+                      <Typography variant="body-sm" color="var(--error, #ef4444)" fontWeight={600} styles={{ fontSize: 14 }}>
+                        {synthError ?? t('synthesizeError')}
+                      </Typography>
+                    </Box>
+                    <Box display="flex" gap={12} flexWrap="wrap">
+                      <Button text={t('synthesizeCta')} type="button" size="md" kind="success" onClick={handleSynthesize} />
+                      <Button text={t('viewMatrix')} type="button" size="md" onClick={() => router.push('/matrix')} />
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Synthesis: done — draft review */}
+                {(synthStatus === 'done' || synthStatus === 'saving' || synthStatus === 'save-error') && (
+                  <Box display="flex" flexDirection="column" gap={16}>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={8}>
+                      <Box display="flex" flexDirection="column" gap={2}>
+                        <Typography variant="body-sm" fontWeight={600} styles={{ fontSize: 15 }}>
+                          {t('synthTitle')}
+                        </Typography>
+                        <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 13 }}>
+                          {t('synthSubtitle')}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" gap={12}>
+                        <Button
+                          text={t('synthSelectAll')}
+                          type="button"
+                          size="sm"
+                          unstyled
+                          onClick={() => handleSelectAll(true)}
+                          className="extract__select-all-btn"
+                        />
+                        <Button
+                          text={t('synthDeselectAll')}
+                          type="button"
+                          size="sm"
+                          unstyled
+                          onClick={() => handleSelectAll(false)}
+                          className="extract__select-all-btn"
+                        />
+                      </Box>
+                    </Box>
+
+                    {drafts.length === 0 ? (
+                      <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+                        {t('synthNoDrafts')}
+                      </Typography>
+                    ) : (
+                      <Box display="flex" flexDirection="column" gap={10}>
+                        {drafts.map((draft, i) => (
+                          <DraftBulletCard
+                            key={draft.id}
+                            draft={draft}
+                            index={i}
+                            onChange={handleDraftChange}
+                            t={t}
+                          />
+                        ))}
+                      </Box>
+                    )}
+
+                    {synthStatus === 'save-error' && (
+                      <Box className="extract__error">
+                        <Typography variant="body-sm" color="var(--error, #ef4444)" fontWeight={600} styles={{ fontSize: 14 }}>
+                          {synthError ?? t('synthSaveError')}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    <Box display="flex" gap={12} flexWrap="wrap" alignItems="center">
+                      <Button
+                        text={synthStatus === 'saving' ? t('synthSaving') : t('synthSave', { count: includedCount })}
+                        type="button"
+                        size="md"
+                        kind="success"
+                        disabled={synthStatus === 'saving' || includedCount === 0}
+                        onClick={handleSave}
+                      />
+                      <Button
+                        text={t('viewMatrix')}
+                        type="button"
+                        size="md"
+                        onClick={() => router.push('/matrix')}
+                        disabled={synthStatus === 'saving'}
+                      />
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Synthesis: saved */}
+                {synthStatus === 'saved' && (
+                  <Box display="flex" flexDirection="column" gap={12}>
+                    <Box className="extract__done">
+                      <Typography variant="body-sm" fontWeight={600} styles={{ fontSize: 15 }}>
+                        {t('synthSaved', { count: savedCount })}
+                      </Typography>
+                      <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 13, marginTop: 4 }}>
+                        {t('synthSavedHint')}
+                      </Typography>
+                    </Box>
+                    <Box display="flex" gap={12} flexWrap="wrap">
+                      <Button text={t('viewMatrix')} type="button" size="md" kind="success" onClick={() => router.push('/matrix')} />
+                      <Button text={t('changeDirCta')} type="button" size="md" onClick={resetAll} />
+                    </Box>
+                  </Box>
+                )}
               </Box>
             )}
 
-            {/* ── Error ── */}
+            {/* ── Extraction error ── */}
             {extractStatus === 'error' && (
               <Box display="flex" flexDirection="column" gap={12}>
                 <Box className="extract__error">

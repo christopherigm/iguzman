@@ -251,13 +251,112 @@
   border-bottom: none;
 }
 
-/* ── Coming soon placeholder for Task 2.4 ── */
+/* ── Draft bullet card ── */
 
-.extract__coming-soon {
-  padding: 14px 16px;
-  border-radius: 10px;
-  border: 1px dashed var(--border, #e5e7eb);
+.extract__check-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 2px solid var(--border, #e5e7eb);
+  background: var(--surface-1, #fff);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.extract__check-btn--checked {
+  background: var(--success, #22c55e);
+  border-color: var(--success, #22c55e);
+  color: #fff;
+}
+
+.extract__check-btn:hover:not(.extract__check-btn--checked) {
+  border-color: var(--primary, #06b6d4);
+}
+
+.extract__draft-textarea {
+  width: 100%;
+  resize: vertical;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e5e7eb);
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: inherit;
+  background: var(--surface-2);
+  color: var(--foreground);
+  color-scheme: light dark;
+  transition: border-color 0.15s ease;
+}
+
+.extract__draft-textarea:focus {
+  outline: none;
+  border-color: var(--primary, #06b6d4);
+}
+
+.extract__draft-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  resize: none;
+}
+
+.extract__draft-select {
+  border-radius: 6px;
+  border: 1px solid var(--border, #e5e7eb);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--surface-2);
+  color: var(--foreground);
+  color-scheme: light dark;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.extract__draft-select:focus {
+  outline: none;
+  border-color: var(--primary, #06b6d4);
+}
+
+.extract__draft-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Draft skill tag ── */
+
+.extract__draft-skill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e5e7eb);
   background: var(--surface-2, #f3f4f6);
+}
+
+.extract__draft-skill-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
   color: var(--muted-foreground, #6b7280);
-  text-align: center;
+  padding: 0;
+  border-radius: 3px;
+  transition: color 0.1s ease, background 0.1s ease;
+}
+
+.extract__draft-skill-remove:hover {
+  color: var(--error, #ef4444);
+  background: rgba(239, 68, 68, 0.08);
 }
