@@ -37,6 +37,9 @@ fi
 
 # ── Output helpers ─────────────────────────────────────────────────────────────
 
+# Portable case helper (macOS bash 3 does not support ${var,,})
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
 ok()   { printf "  ${BGRN}✓${R}  %s\n"  "$*"; }
 fail() { printf "  ${BRED}✗${R}  %s\n"  "$*"; }
 info() { printf "  ${CYN}→${R}  %s\n"  "$*"; }
@@ -246,20 +249,17 @@ interactive_select_options() {
   printf '\033[?25l'  # hide cursor
 
   while true; do
-    local key esc
+    local key seq
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if [[ "${key}" == 'A' ]]; then
-          cursor=$(( (cursor - 1 + num) % num ))
-          printf "\033[%dA" "${num}"; _render
-        elif [[ "${key}" == 'B' ]]; then
-          cursor=$(( (cursor + 1) % num ))
-          printf "\033[%dA" "${num}"; _render
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        cursor=$(( (cursor - 1 + num) % num ))
+        printf "\033[%dA" "${num}"; _render
+      elif [[ "${seq}" == '[B' ]]; then
+        cursor=$(( (cursor + 1) % num ))
+        printf "\033[%dA" "${num}"; _render
       fi
       continue
     fi
@@ -699,7 +699,7 @@ main() {
   printf "  Select language / Selecciona idioma [en/es] (en): "
   local raw_lang; read -r raw_lang
   local lang="en"
-  [[ "${raw_lang,,}" == es* ]] && lang="es"
+  [[ "$(lc "${raw_lang}")" == es* ]] && lang="es"
   setup_strings "${lang}"
 
   clear
@@ -711,7 +711,7 @@ main() {
     local dry_ans; read -r dry_ans
     dry_ans="${dry_ans:-n}"
     local fc="${dry_ans:0:1}"
-    [[ "${CONFIRM_YES_CHARS}" == *"${fc,,}"* ]] && DRY_RUN=true
+    [[ "${CONFIRM_YES_CHARS}" == *"$(lc "${fc}")"* ]] && DRY_RUN=true
     echo ""
     if ${DRY_RUN}; then
       printf "  ${BYEL}⚠  %s${R}\n\n" "${DRY_RUN_NOTE}"
@@ -728,7 +728,7 @@ main() {
     printf "  ${B}%s${R} (docker): " "${RUNTIME_PROMPT}"
     local raw_rt; read -r raw_rt
     raw_rt="${raw_rt:-docker}"
-    [[ "${raw_rt,,}" == mk* || "${raw_rt,,}" == micro* ]] && RUNTIME="microk8s" || RUNTIME="docker"
+    [[ "$(lc "${raw_rt}")" == mk* || "$(lc "${raw_rt}")" == micro* ]] && RUNTIME="microk8s" || RUNTIME="docker"
     echo ""
   elif ${has_docker}; then
     RUNTIME="docker"
@@ -805,7 +805,7 @@ main() {
     local confirm; read -r confirm
     confirm="${confirm:-n}"
     local fc="${confirm:0:1}"
-    if [[ "${CONFIRM_YES_CHARS}" != *"${fc,,}"* ]]; then
+    if [[ "${CONFIRM_YES_CHARS}" != *"$(lc "${fc}")"* ]]; then
       echo ""
       printf "  %s\n\n" "${SKIPPED}"
       exit 0

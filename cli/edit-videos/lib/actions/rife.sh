@@ -109,7 +109,7 @@ run_rife() {
 
   # ── MPG pre-conversion ────────────────────────────────────────────────────
   local mpg_intermediate=""
-  local _src_ext="${src##*.}"; _src_ext="${_src_ext,,}"
+  local _src_ext="${src##*.}"; _src_ext="$(lc "${_src_ext}")"
   if [[ "${_src_ext}" == "mpg" || "${_src_ext}" == "mpeg" || \
         "${_src_ext}" == "m2v" || "${_src_ext}" == "vob" ]]; then
     mpg_intermediate="$(mktemp /tmp/edit_videos_rife_mpg_XXXXXX.mp4)"

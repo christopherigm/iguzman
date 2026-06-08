@@ -132,20 +132,17 @@ interactive_select() {
   printf '\033[?25l'
 
   while true; do
-    local key esc
+    local key seq
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if   [[ "${key}" == 'A' ]]; then
-          cursor=$(( (cursor - 1 + num) % num ))
-          printf "\033[%dA" "${num}"; render_select
-        elif [[ "${key}" == 'B' ]]; then
-          cursor=$(( (cursor + 1) % num ))
-          printf "\033[%dA" "${num}"; render_select
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        cursor=$(( (cursor - 1 + num) % num ))
+        printf "\033[%dA" "${num}"; render_select
+      elif [[ "${seq}" == '[B' ]]; then
+        cursor=$(( (cursor + 1) % num ))
+        printf "\033[%dA" "${num}"; render_select
       fi
       continue
     fi
@@ -197,20 +194,17 @@ interactive_checkbox() {
   printf '\033[?25l'
 
   while true; do
-    local key esc
+    local key seq
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if   [[ "${key}" == 'A' ]]; then
-          cursor=$(( (cursor - 1 + num) % num ))
-          printf "\033[%dA" "${num}"; render_checkbox
-        elif [[ "${key}" == 'B' ]]; then
-          cursor=$(( (cursor + 1) % num ))
-          printf "\033[%dA" "${num}"; render_checkbox
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        cursor=$(( (cursor - 1 + num) % num ))
+        printf "\033[%dA" "${num}"; render_checkbox
+      elif [[ "${seq}" == '[B' ]]; then
+        cursor=$(( (cursor + 1) % num ))
+        printf "\033[%dA" "${num}"; render_checkbox
       fi
       continue
     fi
@@ -244,6 +238,9 @@ interactive_checkbox() {
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+# Portable case helper (macOS bash 3 does not support ${var,,})
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 
 prompt_visible() {
   local label="$1" default="${2:-}"
@@ -345,7 +342,7 @@ main() {
   printf "  Select language / Selecciona idioma [en/es] (en): "
   local raw_lang; read -r raw_lang || true
   local lang="en"
-  [[ "${raw_lang,,}" == es* ]] && lang="es"
+  [[ "$(lc "${raw_lang}")" == es* ]] && lang="es"
   setup_strings "${lang}"
 
   clear
@@ -436,7 +433,7 @@ main() {
   printf "  %s (%s): " "${CONFIRM_PROMPT}" "${CONFIRM_YES_CHARS:0:1}"
   local confirm; read -r confirm || true
   confirm="${confirm:-${CONFIRM_YES_CHARS:0:1}}"
-  local confirm_char="${confirm:0:1}"; confirm_char="${confirm_char,,}"
+  local confirm_char="${confirm:0:1}"; confirm_char="$(lc "${confirm_char}")"
   if [[ "${CONFIRM_YES_CHARS}" != *"${confirm_char}"* ]]; then
     printf "  %s\n\n" "${CANCELLED}"; exit 0
   fi

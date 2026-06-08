@@ -38,6 +38,9 @@ fi
 
 # ── Output helpers ────────────────────────────────────────────────────────────
 
+# Portable case helper (macOS bash 3 does not support ${var^^})
+uc() { printf '%s' "$1" | tr '[:lower:]' '[:upper:]'; }
+
 ok()   { printf "  ${BGRN}✓${R}  %s\n"  "$*"; }
 fail() { printf "  ${RED}✗${R}  %s\n"  "$*"; }
 info() { printf "  ${CYN}→${R}  %s\n"  "$*"; }
@@ -137,18 +140,18 @@ _audit_ports_proto() {
     [[ -z "${process}" ]] && process="kernel"
 
     if is_loopback_addr "${laddr}"; then
-      sub "${proto^^} ${laddr}  [${process}]  (loopback)"
+      sub "$(uc "${proto}") ${laddr}  [${process}]  (loopback)"
     elif is_known_port "${port}"; then
       if (( port >= 30000 && port <= 32767 )); then
         svc="k8s-NodePort"
       else
         svc="${KNOWN_PORTS[$port]}"
       fi
-      ok "${proto^^} ${laddr}  [${process}]  ${CYN}${svc}${R}"
+      ok "$(uc "${proto}") ${laddr}  [${process}]  ${CYN}${svc}${R}"
     else
-      crit "${proto^^} ${laddr}  [${process}]  ${BRED}UNEXPECTED${R}"
+      crit "$(uc "${proto}") ${laddr}  [${process}]  ${BRED}UNEXPECTED${R}"
       add_finding "MEDIUM" "Open Ports" \
-        "Unexpected ${proto^^} port ${port} open (process: ${process}, addr: ${laddr})" \
+        "Unexpected $(uc "${proto}") port ${port} open (process: ${process}, addr: ${laddr})" \
         "Identify: ss -${ss_flag}lnp | grep :${port} — if unneeded: ufw deny ${port}/${proto} && systemctl stop <service>"
       # Increment caller's counter via nameref (bash 4.3+)
       printf -v "${unknown_ref}" '%d' "$(( ${!unknown_ref} + 1 ))" 2>/dev/null || true

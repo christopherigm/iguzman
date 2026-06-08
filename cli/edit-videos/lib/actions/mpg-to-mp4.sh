@@ -12,7 +12,7 @@ MPG_NEEDS_ENCODE=0
 
 detect_mpg_format() {
   local input="$1"
-  local ext="${input##*.}"; ext="${ext,,}"
+  local ext="${input##*.}"; ext="$(lc "${ext}")"
   case "${ext}" in
     mpg|mpeg|m2v|vob)
       MPG_NEEDS_ENCODE=1

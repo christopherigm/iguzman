@@ -130,16 +130,16 @@ interactive_select() {
   printf '\033[?25l'
 
   while true; do
-    local key esc
+    local key seq
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if   [[ "${key}" == 'A' ]]; then cursor=$(( (cursor - 1 + num) % num ))
-        elif [[ "${key}" == 'B' ]]; then cursor=$(( (cursor + 1) % num ))
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        cursor=$(( (cursor - 1 + num) % num ))
+        printf "\033[%dA" "${num}"; render_select
+      elif [[ "${seq}" == '[B' ]]; then
+        cursor=$(( (cursor + 1) % num ))
         printf "\033[%dA" "${num}"; render_select
       fi
       continue
@@ -184,16 +184,16 @@ interactive_multiselect() {
   printf '\033[?25l'
 
   while true; do
-    local key esc i
+    local key seq i
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if   [[ "${key}" == 'A' ]]; then cursor=$(( (cursor - 1 + num) % num ))
-        elif [[ "${key}" == 'B' ]]; then cursor=$(( (cursor + 1) % num ))
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        cursor=$(( (cursor - 1 + num) % num ))
+        printf "\033[%dA" "${num}"; render_multiselect
+      elif [[ "${seq}" == '[B' ]]; then
+        cursor=$(( (cursor + 1) % num ))
         printf "\033[%dA" "${num}"; render_multiselect
       fi
       continue
@@ -219,6 +219,9 @@ interactive_multiselect() {
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+# Portable case helper (macOS bash 3 does not support ${var,,})
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 
 prompt_visible() {
   local label="$1" default="${2:-}"
@@ -297,7 +300,7 @@ main() {
   printf "  Select language / Selecciona idioma [en/es] (en): "
   local raw_lang; read -r raw_lang || true
   local lang="en"
-  [[ "${raw_lang,,}" == es* ]] && lang="es"
+  [[ "$(lc "${raw_lang}")" == es* ]] && lang="es"
   setup_strings "${lang}"
 
   clear

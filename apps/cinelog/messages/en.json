@@ -1,0 +1,77 @@
+{
+  "Metadata": { "title": "Cinelog", "description": "" },
+  "HomePage": { "title": "Cinelog" },
+  "Navbar": { "home": "Home", "account": "Account", "signOut": "Sign out" },
+  "Footer": {
+    "appHeading": "App", "legalHeading": "Legal",
+    "home": "Home", "account": "Account",
+    "privacyPolicy": "Privacy Policy", "terms": "Terms of Service", "userData": "User Data",
+    "copyright": "© {year} Cinelog. All rights reserved."
+  },
+  "VerifyEmailPage": {
+    "loading": "Verifying your email…",
+    "successTitle": "Email Verified", "successDetail": "Your email has been verified. You can now sign in.",
+    "redirecting": "Redirecting in {seconds}…", "redirectProgress": "Redirect progress",
+    "expiredTitle": "Link Expired", "expiredDetail": "This verification link has expired. Please sign up again to request a new one.",
+    "invalidTitle": "Invalid Link", "invalidDetail": "This verification link is invalid. Please check your email or sign up again."
+  },
+  "AuthPage": {
+    "tabSignIn": "Sign In", "tabSignUp": "Sign Up", "tabReset": "Reset Password",
+    "signIn": {
+      "title": "Sign In", "subtitle": "Welcome back",
+      "emailLabel": "Email", "passwordLabel": "Password",
+      "submitButton": "Sign In", "submitting": "Signing in…",
+      "errorInvalidCredentials": "Invalid email or password.",
+      "errorGeneric": "Something went wrong. Please try again.",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account? Sign up",
+      "orDivider": "or", "passkeyButton": "Sign in with passkey",
+      "errorPasskeyFailed": "Passkey authentication failed. Please try again.",
+      "errorEmailRequired": "Please enter your email first.",
+      "rememberEmail": "Remember email"
+    },
+    "signUp": {
+      "title": "Create Account", "subtitle": "Join Cinelog today",
+      "emailLabel": "Email", "firstNameLabel": "First Name", "lastNameLabel": "Last Name",
+      "passwordLabel": "Password", "confirmPasswordLabel": "Confirm Password",
+      "submitButton": "Create Account", "submitting": "Creating account…",
+      "successDetail": "Account created! Please check your email to verify your account.",
+      "errorEmailTaken": "An account with this email already exists.",
+      "errorPasswordMismatch": "Passwords do not match.",
+      "errorGeneric": "Something went wrong. Please try again.",
+      "haveAccount": "Already have an account? Sign in",
+      "forgotPassword": "Forgot your password?"
+    },
+    "resetPassword": {
+      "title": "Reset Password", "subtitle": "Enter your email to receive a reset link",
+      "emailLabel": "Email", "submitButton": "Send Reset Link", "submitting": "Sending…",
+      "successDetail": "If an account with that email exists, a password reset link has been sent.",
+      "errorGeneric": "Something went wrong. Please try again.",
+      "backToSignIn": "Back to Sign In"
+    },
+    "passkey": {
+      "promptTitle": "Set up a passkey?",
+      "promptDescription": "Sign in faster and more securely with a passkey. Use your fingerprint, face, or device PIN.",
+      "registerButton": "Set up passkey", "skipButton": "Skip for now",
+      "successMessage": "Passkey registered successfully!",
+      "errorGeneric": "Failed to register passkey. You can try again later."
+    }
+  },
+  "AccountPage": {
+    "title": "My Account", "subtitle": "Manage your profile and security settings",
+    "profileSection": "Profile", "securitySection": "Security", "passkeySection": "Passkeys",
+    "emailLabel": "Email", "firstNameLabel": "First Name", "lastNameLabel": "Last Name",
+    "changePhoto": "Change Photo", "saveProfile": "Save Profile", "savingProfile": "Saving…",
+    "profileSaved": "Profile saved.", "profileError": "Failed to save profile. Please try again.",
+    "currentPasswordLabel": "Current Password", "newPasswordLabel": "New Password", "confirmPasswordLabel": "Confirm New Password",
+    "savePassword": "Update Password", "savingPassword": "Updating…",
+    "passwordSaved": "Password updated.", "passwordError": "Failed to update password. Please try again.",
+    "passwordMismatch": "Passwords do not match.", "passwordWrong": "Current password is incorrect.",
+    "noPasskeys": "No passkeys registered.", "deletePasskey": "Delete",
+    "confirmDeletePasskeyTitle": "Delete Passkey",
+    "confirmDeletePasskeyText": "Are you sure you want to remove this passkey? You won't be able to use it to sign in.",
+    "passkeyDeleted": "Passkey removed.", "passkeyDeleteError": "Failed to remove passkey. Please try again.",
+    "addPasskey": "Add Passkey", "passkeyAdded": "Passkey added.", "passkeyAddError": "Failed to add passkey. Please try again.",
+    "loading": "Loading…"
+  }
+}

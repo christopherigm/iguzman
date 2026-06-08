@@ -74,15 +74,19 @@ AUDIO_EXTS="mp3|flac|wav|ogg|aac|m4a|opus|wma|ape|mka|alac"
 
 is_audio_file() {
   local ext="${1##*.}"
-  [[ "${ext,,}" =~ ^(${AUDIO_EXTS})$ ]]
+  [[ "$(lc "${ext}")" =~ ^(${AUDIO_EXTS})$ ]]
 }
 
 is_video_file() {
   local ext="${1##*.}"
-  [[ "${ext,,}" =~ ^(${VIDEO_EXTS})$ ]]
+  [[ "$(lc "${ext}")" =~ ^(${VIDEO_EXTS})$ ]]
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+# Portable case helper (macOS bash 3 does not support ${var,,})
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
 usage() {
   grep '^#' "$0" | grep -v '#!/' | sed 's/^# \{0,1\}//'
   exit 0
@@ -197,7 +201,7 @@ play_target() {
   elif [[ -f "${target}" ]]; then
     local ext="${target##*.}"
 
-    if [[ "${ext,,}" =~ ^(m3u|m3u8|pls|txt)$ ]]; then
+    if [[ "$(lc "${ext}")" =~ ^(m3u|m3u8|pls|txt)$ ]]; then
       [[ "${audio_only}" == "auto" ]] && audio_only="no"
       [[ "${audio_only}" == "no" ]] && check_video_group
       local mpv_args; mapfile -t mpv_args < <(build_mpv_args "${audio_only}")

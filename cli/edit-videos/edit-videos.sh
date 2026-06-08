@@ -70,13 +70,16 @@ DEEP3D_GPU_NAME=""
 LOG_FILE=""
 BG_MODE=0
 
+# Portable case helper (macOS bash 3 does not support ${var,,})
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
 # ── main ──────────────────────────────────────────────────────────────────────
 main() {
   # ── Language ────────────────────────────────────────────────────────────
   printf "  Select language / Selecciona idioma [en/es] (en): "
   local raw_lang; read -r raw_lang
   local lang="en"
-  [[ "${raw_lang,,}" == es* ]] && lang="es"
+  [[ "$(lc "${raw_lang}")" == es* ]] && lang="es"
   setup_strings "${lang}"
   trap 'printf "\033[?25h"' EXIT
 
@@ -98,7 +101,7 @@ main() {
     echo ""
     printf "  %s [y/n] (y): " "$(clr_bold "${BTBN_DOWNLOAD_PROMPT}")"
     local dl_ans; read -r dl_ans; dl_ans="${dl_ans:-y}"
-    if [[ "${dl_ans,,}" == y* ]]; then
+    if [[ "$(lc "${dl_ans}")" == y* ]]; then
       bootstrap_ffmpeg
       ffmpeg_ver="$("${FFMPEG_BIN}" -version 2>/dev/null | head -1 | sed 's/ffmpeg version //')"
       printf "  %s %s: %s\n\n" "$(clr_bold_green '✓')" "${FFMPEG_FOUND}" "$(clr_dim "${ffmpeg_ver}")"
@@ -213,7 +216,7 @@ main() {
       while IFS= read -r -d '' _ef; do
         _ef_base="$(basename "${_ef}")"
         _ef_stem="${_ef_base%.*}"
-        _SKIP_STEM_MAP["${_ef_stem,,}"]=1
+        _SKIP_STEM_MAP["$(lc "${_ef_stem}")"]=1
         (( _existing_count++ )) || true
       done < <(find "${out_dir}" -maxdepth 1 -type f -iname "*.${_ev}" -print0 2>/dev/null)
     done
@@ -335,7 +338,7 @@ main() {
       printf "  %s [y/n] (y): " "$(clr_bold "Download rife-ncnn-vulkan automatically?")"
       local rife_dl_ans; read -r rife_dl_ans; rife_dl_ans="${rife_dl_ans:-y}"
       echo ""
-      if [[ "${rife_dl_ans,,}" == y* ]]; then
+      if [[ "$(lc "${rife_dl_ans}")" == y* ]]; then
         if ! bootstrap_rife || ! find_rife_model; then
           printf "  %s RIFE disabled — skipping interpolation.\n\n" "$(clr_yellow '⚠')"
           DO_RIFE=0
@@ -367,7 +370,7 @@ main() {
       printf "  %s [y/n] (y): " "$(clr_bold "Download Real-ESRGAN automatically?")"
       local v2x_dl_ans; read -r v2x_dl_ans; v2x_dl_ans="${v2x_dl_ans:-y}"
       echo ""
-      if [[ "${v2x_dl_ans,,}" == y* ]]; then
+      if [[ "$(lc "${v2x_dl_ans}")" == y* ]]; then
         if ! bootstrap_video2x; then
           printf "  %s video2x disabled — skipping AI upscale.\n\n" "$(clr_yellow '⚠')"
           DO_VIDEO2X=0
@@ -402,7 +405,7 @@ main() {
       printf "  %s [y/n] (y): " "$(clr_bold "Install Deep3D automatically?")"
       local d3d_dl_ans; read -r d3d_dl_ans; d3d_dl_ans="${d3d_dl_ans:-y}"
       echo ""
-      if [[ "${d3d_dl_ans,,}" == y* ]]; then
+      if [[ "$(lc "${d3d_dl_ans}")" == y* ]]; then
         if ! bootstrap_deep3d; then
           printf "  %s Deep3D disabled — skipping AI stabilization.\n\n" "$(clr_yellow '⚠')"
           DO_DEEP3D=0
@@ -641,7 +644,7 @@ main() {
       if [[ "${SKIP_EXISTING}" -eq 1 ]]; then
         _f_base="$(basename "${f}")"
         _f_stem="${_f_base%.*}"
-        if [[ -n "${_SKIP_STEM_MAP["${_f_stem,,}"]:-}" ]]; then
+        if [[ -n "${_SKIP_STEM_MAP["$(lc "${_f_stem}")"]:-}" ]]; then
           (( _skipped_count++ )) || true
           continue
         fi

@@ -141,6 +141,9 @@ get_version() {
   "$@" 2>/dev/null || true
 }
 
+# Portable lowercase helper for older bash (macOS /bin/bash doesn't support ${var,,})
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
 # ── Install functions ─────────────────────────────────────────────────────────
 
 install_git() {
@@ -187,7 +190,10 @@ install_kubectl() {
       return $?
     fi
   fi
-  if is_mac && has_brew; then brew install kubectl; return $?; fi
+  if is_mac && has_brew; then
+    brew install kubectl || brew link --overwrite kubernetes-cli
+    return $?
+  fi
   echo "  $(clr_yellow 'Please install kubectl manually: https://kubernetes.io/docs/tasks/tools/')"
   return 1
 }
@@ -248,7 +254,13 @@ install_django() {
       return 1
     fi
   fi
-  python3 -m pip install Django --break-system-packages
+  # --break-system-packages is required on newer Linux distros (PEP 668 / Ubuntu 23+,
+  # Debian 12+) but is unsupported on older pip (e.g. macOS system Python 3.9).
+  # Try with the flag first; fall back without it if pip doesn't recognise it.
+  if python3 -m pip install Django --break-system-packages 2>/dev/null; then
+    return 0
+  fi
+  python3 -m pip install Django
 }
 
 install_pnpm() {
@@ -327,8 +339,13 @@ build_tools() {
   else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
 
   # bash-git-prompt
-  if [[ -d "${HOME}/.bash-git-prompt" ]]; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("${HOME}/.bash-git-prompt");
-  else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
+  if [[ -d "${HOME}/.bash-git-prompt" ]]; then
+    TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("${HOME}/.bash-git-prompt")
+  elif is_mac && has_brew && brew list bash-git-prompt &>/dev/null; then
+    TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(brew --prefix)/opt/bash-git-prompt")
+  else
+    TOOL_INSTALLED+=(0); TOOL_VERSIONS+=("")
+  fi
 
   # python
   if command -v python3 &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(python3 --version 2>/dev/null)");
@@ -406,13 +423,14 @@ interactive_select() {
   local cursor=0
 
   # Initialize selection: installed tools are locked+selected; uninstalled unselected
-  declare -A selected
+  # (indexed array — no declare -A, for bash 3.x / macOS compatibility)
+  local selected=()
   local i
   for i in "${!TOOL_IDS[@]}"; do
     if [[ "${TOOL_INSTALLED[$i]}" -eq 1 ]]; then
-      selected["${TOOL_IDS[$i]}"]=1
+      selected[$i]=1
     else
-      selected["${TOOL_IDS[$i]}"]=0
+      selected[$i]=0
     fi
   done
 
@@ -427,11 +445,10 @@ interactive_select() {
   render_lines() {
     local j
     for j in "${!TOOL_IDS[@]}"; do
-      local id="${TOOL_IDS[$j]}"
       local lbl
       lbl="$(pad_right "${TOOL_LABELS[$j]}" "${label_w}")"
       local is_locked="${TOOL_INSTALLED[$j]}"
-      local is_selected="${selected[$id]}"
+      local is_selected="${selected[$j]}"
       local is_active=0
       [[ $j -eq $cursor ]] && is_active=1
 
@@ -476,21 +493,19 @@ interactive_select() {
     # Read one char
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
-    # Handle escape sequences (arrow keys)
+    # Handle escape sequences (arrow keys).
+    # Read both remaining bytes in one shot (-n2) with an integer timeout so
+    # this works on macOS bash 3.2, which does not support fractional -t values.
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        # Move up (A) or down (B)
-        if [[ "${key}" == 'A' ]]; then
-          cursor=$(( (cursor - 1 + num_tools) % num_tools ))
-          printf "\033[%dA" "${num_tools}"
-          render_lines
-        elif [[ "${key}" == 'B' ]]; then
-          cursor=$(( (cursor + 1) % num_tools ))
-          printf "\033[%dA" "${num_tools}"
-          render_lines
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        cursor=$(( (cursor - 1 + num_tools) % num_tools ))
+        printf "\033[%dA" "${num_tools}"
+        render_lines
+      elif [[ "${seq}" == '[B' ]]; then
+        cursor=$(( (cursor + 1) % num_tools ))
+        printf "\033[%dA" "${num_tools}"
+        render_lines
       fi
       continue
     fi
@@ -509,12 +524,11 @@ interactive_select() {
 
     # Space — toggle current (skip locked)
     if [[ "${key}" == ' ' ]]; then
-      local id="${TOOL_IDS[$cursor]}"
       if [[ "${TOOL_INSTALLED[$cursor]}" -eq 0 ]]; then
-        if [[ "${selected[$id]}" -eq 1 ]]; then
-          selected["$id"]=0
+        if [[ "${selected[$cursor]}" -eq 1 ]]; then
+          selected[$cursor]=0
         else
-          selected["$id"]=1
+          selected[$cursor]=1
         fi
         printf "\033[%dA" "${num_tools}"
         render_lines
@@ -525,7 +539,7 @@ interactive_select() {
     # 'a' — select all uninstalled
     if [[ "${key}" == 'a' || "${key}" == 'A' ]]; then
       for i in "${!TOOL_IDS[@]}"; do
-        if [[ "${TOOL_INSTALLED[$i]}" -eq 0 ]]; then selected["${TOOL_IDS[$i]}"]=1; fi
+        if [[ "${TOOL_INSTALLED[$i]}" -eq 0 ]]; then selected[$i]=1; fi
       done
       printf "\033[%dA" "${num_tools}"
       render_lines
@@ -535,7 +549,7 @@ interactive_select() {
     # 'n' — deselect all uninstalled
     if [[ "${key}" == 'n' || "${key}" == 'N' ]]; then
       for i in "${!TOOL_IDS[@]}"; do
-        if [[ "${TOOL_INSTALLED[$i]}" -eq 0 ]]; then selected["${TOOL_IDS[$i]}"]=0; fi
+        if [[ "${TOOL_INSTALLED[$i]}" -eq 0 ]]; then selected[$i]=0; fi
       done
       printf "\033[%dA" "${num_tools}"
       render_lines
@@ -550,8 +564,7 @@ interactive_select() {
   # Export result: indices of tools to install (uninstalled + selected)
   TO_INSTALL_INDICES=()
   for i in "${!TOOL_IDS[@]}"; do
-    local id="${TOOL_IDS[$i]}"
-    if [[ "${TOOL_INSTALLED[$i]}" -eq 0 && "${selected[$id]}" -eq 1 ]]; then
+    if [[ "${TOOL_INSTALLED[$i]}" -eq 0 && "${selected[$i]}" -eq 1 ]]; then
       TO_INSTALL_INDICES+=("$i")
     fi
   done
@@ -586,8 +599,9 @@ handle_ssh_key() {
   printf "  %s  %s\n" "$(clr_yellow '⚠')" "${SSH_NOT_FOUND}"
   printf "  %s: " "${SSH_CREATE_PROMPT}"
   local create; read -r create
+  create="${create:-n}"
   local first_char="${create:0:1}"
-  if [[ "${CONFIRM_YES_CHARS}" != *"${first_char,,}"* ]]; then
+  if [[ "${CONFIRM_YES_CHARS}" != *"$(lc "${first_char}")"* ]]; then
     echo ""
     return
   fi
@@ -622,7 +636,9 @@ main() {
   printf "  Select language / Selecciona idioma [en/es] (en): "
   local raw_lang; read -r raw_lang
   local lang="en"
-  [[ "${raw_lang,,}" == es* ]] && lang="es"
+  if [[ "$(lc "${raw_lang}")" == es* ]]; then
+    lang="es"
+  fi
 
   setup_strings "${lang}"
 
@@ -633,7 +649,7 @@ main() {
     local brew_ans; read -r brew_ans
     brew_ans="${brew_ans:-n}"
     local first_brew="${brew_ans:0:1}"
-    if [[ "${CONFIRM_YES_CHARS}" == *"${first_brew,,}"* ]]; then
+    if [[ "${CONFIRM_YES_CHARS}" == *"$(lc "${first_brew}")"* ]]; then
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       # Add brew to PATH for the current session (needed on Apple Silicon)
       if [[ -x "/opt/homebrew/bin/brew" ]]; then
@@ -690,7 +706,7 @@ main() {
       confirm="${confirm:-y}"
       local first_char="${confirm:0:1}"
 
-      if [[ "${CONFIRM_YES_CHARS}" == *"${first_char,,}"* ]]; then
+      if [[ "${CONFIRM_YES_CHARS}" == *"$(lc "${first_char}")"* ]]; then
         for i in "${TO_INSTALL_INDICES[@]}"; do
           printf "\n  %s %s %s...\n\n" \
             "$(clr_bold_yellow '→')" \
@@ -740,7 +756,7 @@ main() {
     local do_login; read -r do_login
     do_login="${do_login:-n}"
     local first_char="${do_login:0:1}"
-    if [[ "${CONFIRM_YES_CHARS}" == *"${first_char,,}"* ]]; then
+    if [[ "${CONFIRM_YES_CHARS}" == *"$(lc "${first_char}")"* ]]; then
       echo ""
       docker login
       echo ""
@@ -753,7 +769,7 @@ main() {
     local do_login; read -r do_login
     do_login="${do_login:-n}"
     local first_char="${do_login:0:1}"
-    if [[ "${CONFIRM_YES_CHARS}" == *"${first_char,,}"* ]]; then
+    if [[ "${CONFIRM_YES_CHARS}" == *"$(lc "${first_char}")"* ]]; then
       echo ""
       claude login
       echo ""

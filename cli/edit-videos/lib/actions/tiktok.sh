@@ -184,7 +184,7 @@ _get_subject_coords() {
 # Returns 0 if the file extension is a supported still image format.
 _is_image_file() {
   local ext="${1##*.}"
-  ext="${ext,,}"
+  ext="$(lc "${ext}")"
   case "${ext}" in
     jpg|jpeg|png|webp|heic|heif) return 0 ;;
     *) return 1 ;;

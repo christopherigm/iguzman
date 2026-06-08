@@ -151,18 +151,23 @@ prompt_visible() {
 # confirm_yn LABEL DEFAULT — returns 0 (yes) or 1 (no)
 confirm_yn() {
   local label="$1" default="${2:-y}"
-  local suffix default_upper="${default^^}"
+  local suffix default_upper
+  default_upper="$(uc "${default}")"
   suffix="[Y/N] (${default_upper})"
   printf "  %s %s: " "$(clr_bold "${label}")" "$(clr_dim "${suffix}")" >/dev/tty
   local val
   IFS= read -r val </dev/tty || true
   val="${val:-${default}}"
   local char="${val:0:1}"
-  char="${char,,}"
+  char="$(lc "${char}")"
   [[ "${char}" == "y" || "${char}" == "s" ]]
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+# Portable case helpers (macOS bash 3 does not support ${var,,} / ${var^^})
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+uc() { printf '%s' "$1" | tr '[:lower:]' '[:upper:]'; }
 
 to_module_name() { echo "${1//-/_}"; }
 
@@ -2681,7 +2686,7 @@ main() {
   local lang="en"
   printf "  Select language / Selecciona idioma [en/es] (en): "
   local raw_lang; read -r raw_lang || true
-  [[ "${raw_lang,,}" == es* ]] && lang="es"
+  [[ "$(lc "${raw_lang}")" == es* ]] && lang="es"
   setup_strings "${lang}"
 
   clear

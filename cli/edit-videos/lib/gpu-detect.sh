@@ -27,7 +27,7 @@ _switch_to_system_ffmpeg_or_redownload() {
       "$(clr_yellow "Cached FFmpeg build lacks GPU encoders.")"
     printf "  %s [y/n] (y): " "$(clr_bold "Re-download a GPU-capable BtbN FFmpeg build?")"
     local _ans; read -r _ans; _ans="${_ans:-y}"
-    if [[ "${_ans,,}" == y* ]]; then
+    if [[ "$(lc "${_ans}")" == y* ]]; then
       bootstrap_ffmpeg
       return 0
     fi

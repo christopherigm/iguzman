@@ -344,7 +344,7 @@ process_video() {
   [[ "${#vf_chain[@]}" -gt 0 ]] && needs_encode=1
   [[ "${do_h264}" -eq 1 ]]      && needs_encode=1
   if [[ "${DO_MPG_TO_MP4}" -eq 1 ]]; then
-    local _mpg_ext="${src##*.}"; _mpg_ext="${_mpg_ext,,}"
+    local _mpg_ext="${src##*.}"; _mpg_ext="$(lc "${_mpg_ext}")"
     if [[ "${_mpg_ext}" == "mpg" || "${_mpg_ext}" == "mpeg" || \
           "${_mpg_ext}" == "m2v" || "${_mpg_ext}" == "vob" ]]; then
       needs_encode=1
@@ -482,7 +482,7 @@ _run_processing() {
     local base; base="$(basename "${vf}")"
     local out="${out_dir}/${base}"
     if [[ "${DO_MPG_TO_MP4}" -eq 1 ]]; then
-      local _out_ext="${base##*.}"; _out_ext="${_out_ext,,}"
+      local _out_ext="${base##*.}"; _out_ext="$(lc "${_out_ext}")"
       if [[ "${_out_ext}" == "mpg" || "${_out_ext}" == "mpeg" || \
             "${_out_ext}" == "m2v" || "${_out_ext}" == "vob" ]]; then
         out="${out_dir}/${base%.*}.mp4"

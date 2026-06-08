@@ -17,6 +17,10 @@ clr_bold_green()  { printf "${BOLD}${GREEN}%s${RESET}" "$*"; }
 clr_bold_yellow() { printf "${BOLD}${YELLOW}%s${RESET}" "$*"; }
 clr_bold_red()    { printf "${BOLD}${RED}%s${RESET}" "$*"; }
 
+# Portable case helpers (macOS bash 3 does not support ${var,,} / ${var^^})
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+uc() { printf '%s' "$1" | tr '[:lower:]' '[:upper:]'; }
+
 # ── i18n ──────────────────────────────────────────────────────────────────────
 
 setup_strings() {
@@ -108,10 +112,10 @@ prompt_visible() {
 
 confirm_yn() {
   local label="$1" default="${2:-y}"
-  local suffix default_upper="${default^^}"; suffix="[Y/N] (${default_upper})"
+  local suffix default_upper; default_upper="$(uc "${default}")"; suffix="[Y/N] (${default_upper})"
   printf "  %s %s: " "$(clr_bold "${label}")" "$(clr_dim "${suffix}")" >/dev/tty
   local val; IFS= read -r val </dev/tty || true
-  val="${val:-${default}}"; local char="${val:0:1}"; char="${char,,}"
+  val="${val:-${default}}"; local char="${val:0:1}"; char="$(lc "${char}")"
   [[ "${char}" == "y" || "${char}" == "s" ]]
 }
 
@@ -143,7 +147,7 @@ palette_to_accent() {
 to_title_case() {
   local str="$1" result="" word
   IFS='-' read -ra words <<< "${str}"
-  for word in "${words[@]}"; do [[ -n "${word}" ]] && result+="${word^} "; done
+  for word in "${words[@]}"; do [[ -n "${word}" ]] && result+="$(echo "${word:0:1}" | tr '[:lower:]' '[:upper:]')${word:1} "; done
   echo "${result% }"
 }
 
@@ -2715,7 +2719,7 @@ spec:
 {{- end }}
 HELMEOF
   # Replace APP_NAME placeholder with actual name
-  sed -i "s/APP_NAME/${name}/g" "${base}/templates/ingress.yaml"
+  sed -i.bak "s/APP_NAME/${name}/g" "${base}/templates/ingress.yaml" && rm -f "${base}/templates/ingress.yaml.bak"
 
   # NOTES.txt
   cat > "${base}/templates/NOTES.txt" << EOF
@@ -2738,7 +2742,7 @@ main() {
   local lang="en"
   printf "  Select language / Selecciona idioma [en/es] (en): "
   local raw_lang; read -r raw_lang || true
-  [[ "${raw_lang,,}" == es* ]] && lang="es"
+  [[ "$(lc "${raw_lang}")" == es* ]] && lang="es"
   setup_strings "${lang}"
 
   clear

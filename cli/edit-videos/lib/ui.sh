@@ -163,20 +163,17 @@ interactive_checkbox() {
   printf '\033[?25l'
 
   while true; do
-    local key esc
+    local key seq
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if [[ "${key}" == 'A' ]]; then
-          _CB_CURSOR=$(( (_CB_CURSOR - 1 + num) % num ))
-          printf "\033[%dA" "${num}"; _cb_render
-        elif [[ "${key}" == 'B' ]]; then
-          _CB_CURSOR=$(( (_CB_CURSOR + 1) % num ))
-          printf "\033[%dA" "${num}"; _cb_render
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        _CB_CURSOR=$(( (_CB_CURSOR - 1 + num) % num ))
+        printf "\033[%dA" "${num}"; _cb_render
+      elif [[ "${seq}" == '[B' ]]; then
+        _CB_CURSOR=$(( (_CB_CURSOR + 1) % num ))
+        printf "\033[%dA" "${num}"; _cb_render
       fi
       continue
     fi
@@ -251,20 +248,17 @@ interactive_radio() {
   printf '\033[?25l'
 
   while true; do
-    local key esc
+    local key seq
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if [[ "${key}" == 'A' ]]; then
-          _CB_CURSOR=$(( (_CB_CURSOR - 1 + num) % num ))
-          printf "\033[%dA" "${num}"; _rb_render
-        elif [[ "${key}" == 'B' ]]; then
-          _CB_CURSOR=$(( (_CB_CURSOR + 1) % num ))
-          printf "\033[%dA" "${num}"; _rb_render
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        _CB_CURSOR=$(( (_CB_CURSOR - 1 + num) % num ))
+        printf "\033[%dA" "${num}"; _rb_render
+      elif [[ "${seq}" == '[B' ]]; then
+        _CB_CURSOR=$(( (_CB_CURSOR + 1) % num ))
+        printf "\033[%dA" "${num}"; _rb_render
       fi
       continue
     fi

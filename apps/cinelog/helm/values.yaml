@@ -1,0 +1,66 @@
+revisionHistoryLimit: 2
+replicaCount: 1
+
+image:
+  repository: christopherguzman/cinelog
+  tag: 'latest'
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ''
+fullnameOverride: ''
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+  hosts:
+    - host: cinelog.iguzman.com.mx
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: cinelog-tls
+      hosts:
+        - cinelog.iguzman.com.mx
+
+env:
+  NODE_ENV: 'production'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+envFromSecret:
+  - name: API_URL
+    secretName: cinelog-secrets
+    secretKey: API_URL
+
+probes:
+  startupProbe:
+    httpGet:
+      path: /
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 30
+  livenessProbe:
+    httpGet:
+      path: /
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    failureThreshold: 3
+
+nodeAffinity:
+  enabled: false
+  nodeNames: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

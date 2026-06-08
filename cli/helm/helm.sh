@@ -201,20 +201,17 @@ interactive_select() {
   printf '\033[?25l'
 
   while true; do
-    local key esc
+    local key seq
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if   [[ "${key}" == 'A' ]]; then
-          cursor=$(( (cursor - 1 + num) % num ))
-          printf "\033[%dA" "${num}"; render_select
-        elif [[ "${key}" == 'B' ]]; then
-          cursor=$(( (cursor + 1) % num ))
-          printf "\033[%dA" "${num}"; render_select
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        cursor=$(( (cursor - 1 + num) % num ))
+        printf "\033[%dA" "${num}"; render_select
+      elif [[ "${seq}" == '[B' ]]; then
+        cursor=$(( (cursor + 1) % num ))
+        printf "\033[%dA" "${num}"; render_select
       fi
       continue
     fi
@@ -265,20 +262,17 @@ interactive_multiselect() {
   printf '\033[?25l'
 
   while true; do
-    local key esc
+    local key seq
     IFS= read -r -s -n1 key 2>/dev/null || key=""
 
     if [[ "${key}" == $'\x1b' ]]; then
-      IFS= read -r -s -n1 -t 0.05 esc 2>/dev/null || esc=""
-      if [[ "${esc}" == '[' ]]; then
-        IFS= read -r -s -n1 -t 0.05 key 2>/dev/null || key=""
-        if   [[ "${key}" == 'A' ]]; then
-          cursor=$(( (cursor - 1 + num) % num ))
-          printf "\033[%dA" $((num * lpi)); render_multiselect
-        elif [[ "${key}" == 'B' ]]; then
-          cursor=$(( (cursor + 1) % num ))
-          printf "\033[%dA" $((num * lpi)); render_multiselect
-        fi
+      IFS= read -r -s -n2 -t 1 seq 2>/dev/null || seq=""
+      if [[ "${seq}" == '[A' ]]; then
+        cursor=$(( (cursor - 1 + num) % num ))
+        printf "\033[%dA" $((num * lpi)); render_multiselect
+      elif [[ "${seq}" == '[B' ]]; then
+        cursor=$(( (cursor + 1) % num ))
+        printf "\033[%dA" $((num * lpi)); render_multiselect
       fi
       continue
     fi
@@ -305,6 +299,9 @@ interactive_multiselect() {
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+# Portable case helper (macOS bash 3 does not support ${var,,})
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
 prompt_visible() {
   local label="$1" default="${2:-}"
   if [[ -n "${default}" ]]; then
@@ -327,8 +324,8 @@ confirm_step() {
   printf "  %s [%s/n]: " "${prompt_text}" "${yes_chars:0:1}"
   local val; IFS= read -r val </dev/tty || true
   val="${val:-${yes_chars:0:1}}"
-  local char="${val:0:1}"; char="${char,,}"
-  [[ "${yes_chars,,}" == *"${char}"* ]]
+  local char="${val:0:1}"; char="$(lc "${char}")"
+  [[ "$(lc "${yes_chars}")" == *"${char}"* ]]
 }
 
 release_exists() {
@@ -556,7 +553,7 @@ main() {
   if [[ "${auto_yes}" -eq 0 ]]; then
     printf "  Select language / Selecciona idioma [en/es] (en): "
     local raw_lang; read -r raw_lang || true
-    [[ "${raw_lang,,}" == es* ]] && lang="es"
+    [[ "$(lc "${raw_lang}")" == es* ]] && lang="es"
   fi
   setup_strings "${lang}"
 

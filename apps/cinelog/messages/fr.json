@@ -1,0 +1,77 @@
+{
+  "Metadata": { "title": "Cinelog", "description": "" },
+  "HomePage": { "title": "Cinelog" },
+  "Navbar": { "home": "Accueil", "account": "Mon Compte", "signOut": "Se déconnecter" },
+  "Footer": {
+    "appHeading": "Application", "legalHeading": "Légal",
+    "home": "Accueil", "account": "Mon Compte",
+    "privacyPolicy": "Politique de Confidentialité", "terms": "Conditions d'Utilisation", "userData": "Données Utilisateur",
+    "copyright": "© {year} Cinelog. Tous droits réservés."
+  },
+  "VerifyEmailPage": {
+    "loading": "Vérification de votre e-mail…",
+    "successTitle": "E-mail vérifié", "successDetail": "Votre e-mail a été vérifié. Vous pouvez maintenant vous connecter.",
+    "redirecting": "Redirection dans {seconds}…", "redirectProgress": "Progression de la redirection",
+    "expiredTitle": "Lien expiré", "expiredDetail": "Ce lien de vérification a expiré. Veuillez vous inscrire à nouveau pour en obtenir un nouveau.",
+    "invalidTitle": "Lien invalide", "invalidDetail": "Ce lien de vérification est invalide. Vérifiez votre e-mail ou inscrivez-vous à nouveau."
+  },
+  "AuthPage": {
+    "tabSignIn": "Se connecter", "tabSignUp": "S'inscrire", "tabReset": "Réinitialiser le mot de passe",
+    "signIn": {
+      "title": "Se connecter", "subtitle": "Bon retour parmi nous",
+      "emailLabel": "E-mail", "passwordLabel": "Mot de passe",
+      "submitButton": "Se connecter", "submitting": "Connexion en cours…",
+      "errorInvalidCredentials": "E-mail ou mot de passe incorrect.",
+      "errorGeneric": "Quelque chose s'est mal passé. Veuillez réessayer.",
+      "forgotPassword": "Mot de passe oublié ?",
+      "noAccount": "Pas encore de compte ? S'inscrire",
+      "orDivider": "ou", "passkeyButton": "Se connecter avec une clé d'accès",
+      "errorPasskeyFailed": "L'authentification par clé d'accès a échoué. Veuillez réessayer.",
+      "errorEmailRequired": "Veuillez d'abord saisir votre e-mail.",
+      "rememberEmail": "Se souvenir de l'e-mail"
+    },
+    "signUp": {
+      "title": "Créer un compte", "subtitle": "Rejoignez Cinelog aujourd'hui",
+      "emailLabel": "E-mail", "firstNameLabel": "Prénom", "lastNameLabel": "Nom de famille",
+      "passwordLabel": "Mot de passe", "confirmPasswordLabel": "Confirmer le mot de passe",
+      "submitButton": "Créer un compte", "submitting": "Création du compte…",
+      "successDetail": "Compte créé ! Vérifiez votre e-mail pour activer votre compte.",
+      "errorEmailTaken": "Un compte avec cet e-mail existe déjà.",
+      "errorPasswordMismatch": "Les mots de passe ne correspondent pas.",
+      "errorGeneric": "Quelque chose s'est mal passé. Veuillez réessayer.",
+      "haveAccount": "Vous avez déjà un compte ? Se connecter",
+      "forgotPassword": "Mot de passe oublié ?"
+    },
+    "resetPassword": {
+      "title": "Réinitialiser le mot de passe", "subtitle": "Saisissez votre e-mail pour recevoir un lien",
+      "emailLabel": "E-mail", "submitButton": "Envoyer le lien", "submitting": "Envoi en cours…",
+      "successDetail": "Si un compte avec cet e-mail existe, un lien de réinitialisation a été envoyé.",
+      "errorGeneric": "Quelque chose s'est mal passé. Veuillez réessayer.",
+      "backToSignIn": "Retour à la connexion"
+    },
+    "passkey": {
+      "promptTitle": "Configurer une clé d'accès ?",
+      "promptDescription": "Connectez-vous plus rapidement et en toute sécurité avec votre empreinte, visage ou code PIN.",
+      "registerButton": "Configurer la clé d'accès", "skipButton": "Ignorer pour l'instant",
+      "successMessage": "Clé d'accès enregistrée avec succès !",
+      "errorGeneric": "Impossible d'enregistrer la clé d'accès. Vous pouvez réessayer plus tard."
+    }
+  },
+  "AccountPage": {
+    "title": "Mon Compte", "subtitle": "Gérez votre profil et vos paramètres de sécurité",
+    "profileSection": "Profil", "securitySection": "Sécurité", "passkeySection": "Clés d'accès",
+    "emailLabel": "E-mail", "firstNameLabel": "Prénom", "lastNameLabel": "Nom de famille",
+    "changePhoto": "Changer la photo", "saveProfile": "Enregistrer le profil", "savingProfile": "Enregistrement…",
+    "profileSaved": "Profil enregistré.", "profileError": "Impossible d'enregistrer le profil. Veuillez réessayer.",
+    "currentPasswordLabel": "Mot de passe actuel", "newPasswordLabel": "Nouveau mot de passe", "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
+    "savePassword": "Mettre à jour le mot de passe", "savingPassword": "Mise à jour…",
+    "passwordSaved": "Mot de passe mis à jour.", "passwordError": "Impossible de mettre à jour le mot de passe. Veuillez réessayer.",
+    "passwordMismatch": "Les mots de passe ne correspondent pas.", "passwordWrong": "Le mot de passe actuel est incorrect.",
+    "noPasskeys": "Aucune clé d'accès enregistrée.", "deletePasskey": "Supprimer",
+    "confirmDeletePasskeyTitle": "Supprimer la clé d'accès",
+    "confirmDeletePasskeyText": "Êtes-vous sûr de vouloir supprimer cette clé d'accès ? Vous ne pourrez plus l'utiliser pour vous connecter.",
+    "passkeyDeleted": "Clé d'accès supprimée.", "passkeyDeleteError": "Impossible de supprimer la clé d'accès. Veuillez réessayer.",
+    "addPasskey": "Ajouter une clé d'accès", "passkeyAdded": "Clé d'accès ajoutée.", "passkeyAddError": "Impossible d'ajouter la clé d'accès. Veuillez réessayer.",
+    "loading": "Chargement…"
+  }
+}
