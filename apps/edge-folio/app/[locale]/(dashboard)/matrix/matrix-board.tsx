@@ -14,6 +14,7 @@ import { Toast } from '@repo/ui/core-elements/toast';
 import { Select } from '@repo/ui/core-elements/select';
 import { Slider } from '@repo/ui/core-elements/slider';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
+import { Grid } from '@repo/ui/core-elements/grid';
 import { useGroqProxy } from '@repo/ui/use-groq';
 import {
   getSkills,
@@ -418,15 +419,7 @@ function CategorySection({
           cancelCallback={() => setPendingDeleteId(null)}
         />
       )}
-      <Box
-        display="flex"
-        flexDirection="column"
-        gap={12}
-        borderRadius={12}
-        padding={12}
-        backgroundColor="var(--surface-1)"
-        border="1px solid var(--border, #e5e7eb)"
-      >
+      <Box display="flex" flexDirection="column" gap={12}>
         <Box display="flex" alignItems="center" gap={8}>
           <CategoryBadge category={category} label={t(`categories.${category}`)} />
           <Typography as="span" variant="label" color="var(--muted-foreground, #6b7280)">
@@ -434,28 +427,30 @@ function CategorySection({
           </Typography>
         </Box>
 
-        {bullets.map((bullet) => (
-          <BulletCard
-            key={bullet.id}
-            bullet={bullet}
-            skills={skills}
-            onEdit={onEdit}
-            onDelete={setPendingDeleteId}
-            onApprove={onBulletApproved}
-          />
-        ))}
-
-        {bullets.length === 0 && (
+        {bullets.length === 0 ? (
           <Typography
             as="p"
             variant="body"
             color="var(--muted-foreground, #6b7280)"
-            textAlign="center"
-            paddingTop={16}
-            paddingBottom={8}
+            paddingTop={4}
+            paddingBottom={4}
           >
             {t('emptyCategory')}
           </Typography>
+        ) : (
+          <Grid container spacing={2}>
+            {bullets.map((bullet) => (
+              <Grid key={bullet.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                <BulletCard
+                  bullet={bullet}
+                  skills={skills}
+                  onEdit={onEdit}
+                  onDelete={setPendingDeleteId}
+                  onApprove={onBulletApproved}
+                />
+              </Grid>
+            ))}
+          </Grid>
         )}
       </Box>
     </>
@@ -781,12 +776,7 @@ export function MatrixBoard() {
         </ConfirmationModal>
       )}
 
-      <Box
-        display="grid"
-        gap={20}
-        marginBottom={40}
-        styles={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}
-      >
+      <Box display="flex" flexDirection="column" gap={32} marginBottom={40}>
         {CATEGORIES.map((cat) => (
           <CategorySection
             key={cat}
