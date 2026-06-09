@@ -40,13 +40,13 @@ function ReadinessHandshake() {
         </svg>
       </Box>
       <Box display="flex" flexDirection="column" gap={4}>
-        <Typography variant="body-sm" fontWeight={700} styles={{ fontSize: 15 }}>
+        <Typography variant="body-sm" fontWeight={700}>
           {t('handshakeTitle')}
         </Typography>
-        <Typography variant="caption" color="var(--foreground)" styles={{ fontSize: 13 }}>
+        <Typography variant="body" color="var(--foreground)">
           {t('handshakeBody')}
         </Typography>
-        <Typography variant="caption" color="var(--success, #22c55e)" styles={{ fontSize: 12 }}>
+        <Typography variant="label" color="var(--success, #22c55e)">
           {t('handshakeDetail')}
         </Typography>
       </Box>
@@ -80,7 +80,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
   const t = useTranslations('OnboardingPage');
   return (
     <Box display="flex" flexDirection="column" gap={8} alignItems="center" width="100%">
-      <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+      <Typography variant="body" color="var(--muted-foreground, #6b7280)">
         {t('stepOf', { current, total })}
       </Typography>
       <Box display="flex" alignItems="center" gap={0} className="onboarding__steps">
@@ -100,9 +100,9 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                   .join(' ')}
               >
                 <Typography
-                  variant="caption"
+                  variant="label"
                   fontWeight={600}
-                  styles={{ fontSize: 12, lineHeight: '1' }}
+                  styles={{ lineHeight: '1' }}
                 >
                   {done ? '✓' : String(num)}
                 </Typography>
@@ -170,10 +170,9 @@ function TechTagInput({
     <Box display="flex" flexDirection="column" gap={12}>
       <Typography
         as="label"
-        variant="caption"
+        variant="body"
         fontWeight={600}
         color="var(--foreground, #1a1a1a)"
-        styles={{ fontSize: 13 }}
       >
         {t('techStackLabel')}
       </Typography>
@@ -182,7 +181,7 @@ function TechTagInput({
         <Box display="flex" flexWrap="wrap" gap={8} className="onboarding__tags">
           {tags.map((tag) => (
             <Box key={tag} className="onboarding__tag">
-              <Typography variant="caption" styles={{ fontSize: 13 }}>
+              <Typography variant="body">
                 {tag}
               </Typography>
               <Button
@@ -213,9 +212,8 @@ function TechTagInput({
 
       <Box display="flex" flexDirection="column" gap={6}>
         <Typography
-          variant="caption"
+          variant="label"
           color="var(--muted-foreground, #6b7280)"
-          styles={{ fontSize: 12 }}
         >
           {t('techStackHint')}
         </Typography>
@@ -413,9 +411,9 @@ export function OnboardingForm() {
                     {t('resumeDropZone')}
                   </Typography>
                   <Typography
-                    variant="caption"
+                    variant="label"
                     color="var(--muted-foreground, #6b7280)"
-                    styles={{ fontSize: 12, pointerEvents: 'none' }}
+                    styles={{ pointerEvents: 'none' }}
                   >
                     {t('resumeDropHint')}
                   </Typography>
@@ -449,9 +447,8 @@ export function OnboardingForm() {
                   })}
                 </Typography>
                 <Typography
-                  variant="caption"
+                  variant="label"
                   color="var(--muted-foreground, #6b7280)"
-                  styles={{ fontSize: 12 }}
                 >
                   {t('resumeSuccessHint')}
                 </Typography>
@@ -460,7 +457,7 @@ export function OnboardingForm() {
 
             {resumeState === 'skipped' && (
               <Box className="onboarding__upload-zone onboarding__upload-zone--skipped">
-                <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+                <Typography variant="body" color="var(--muted-foreground, #6b7280)">
                   {t('resumeSkipped')}
                 </Typography>
               </Box>
@@ -494,25 +491,23 @@ export function OnboardingForm() {
             <Box className="onboarding__review-card">
               <Box className="onboarding__review-row">
                 <Typography
-                  variant="caption"
+                  variant="label"
                   color="var(--muted-foreground, #6b7280)"
-                  styles={{ fontSize: 12 }}
                 >
                   {t('reviewJobTitle')}
                 </Typography>
-                <Typography variant="caption" fontWeight={600} styles={{ fontSize: 14 }}>
+                <Typography variant="body-sm" fontWeight={600}>
                   {jobTitle || '—'}
                 </Typography>
               </Box>
               <Box className="onboarding__review-row">
                 <Typography
-                  variant="caption"
+                  variant="label"
                   color="var(--muted-foreground, #6b7280)"
-                  styles={{ fontSize: 12 }}
                 >
                   {t('reviewYears')}
                 </Typography>
-                <Typography variant="caption" fontWeight={600} styles={{ fontSize: 14 }}>
+                <Typography variant="body-sm" fontWeight={600}>
                   {yearsValue === 0
                     ? t('reviewYearsLess')
                     : t('reviewYearsValue', { years: yearsLabel })}
@@ -520,25 +515,24 @@ export function OnboardingForm() {
               </Box>
               <Box className="onboarding__review-row" alignItems="flex-start">
                 <Typography
-                  variant="caption"
+                  variant="label"
                   color="var(--muted-foreground, #6b7280)"
-                  styles={{ fontSize: 12, flexShrink: 0 }}
+                  styles={{ flexShrink: 0 }}
                 >
                   {t('reviewStack')}
                 </Typography>
                 {techStack.length > 0 ? (
                   <Box display="flex" flexWrap="wrap" gap={4} justifyContent="flex-end">
                     {techStack.map((tech) => (
-                      <Badge key={tech} variant="subtle" size="sm">
+                      <Badge key={tech} variant="subtle" size="lg">
                         {tech}
                       </Badge>
                     ))}
                   </Box>
                 ) : (
                   <Typography
-                    variant="caption"
+                    variant="body-sm"
                     color="var(--muted-foreground, #6b7280)"
-                    styles={{ fontSize: 14 }}
                   >
                     {t('reviewStackEmpty')}
                   </Typography>
@@ -546,13 +540,12 @@ export function OnboardingForm() {
               </Box>
               <Box className="onboarding__review-row">
                 <Typography
-                  variant="caption"
+                  variant="label"
                   color="var(--muted-foreground, #6b7280)"
-                  styles={{ fontSize: 12 }}
                 >
                   {t('reviewResume')}
                 </Typography>
-                <Typography variant="caption" fontWeight={600} styles={{ fontSize: 14 }}>
+                <Typography variant="body-sm" fontWeight={600}>
                   {resumeResult
                     ? t('reviewResumeImported', { bullets: resumeResult.bullets_imported })
                     : t('reviewResumeSkipped')}

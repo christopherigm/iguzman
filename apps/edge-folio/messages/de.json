@@ -75,6 +75,8 @@
     "loading": "Lädt…",
     "errorLoad": "Matrix konnte nicht geladen werden. Bitte erneut versuchen.",
     "addBullet": "Punkt hinzufügen",
+    "addBulletTitle": "Punkt hinzufügen",
+    "editBulletTitle": "Punkt bearbeiten",
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Wird gespeichert…",
@@ -117,7 +119,9 @@
     "enhanceOptionsTitle": "Verbesserungsoptionen",
     "enhanceOptionsText": "Wähle, wie dieser Punkt erweitert werden soll.",
     "enhanceParagraphsLabel": "Absätze",
-    "enhanceLengthLabel": "Länge pro Absatz"
+    "enhanceLengthLabel": "Länge pro Absatz",
+    "approve": "Genehmigen",
+    "approveError": "Fehler beim Genehmigen des Punktes."
   },
   "OnboardingPage": {
     "title": "Profil einrichten",
@@ -269,7 +273,11 @@
     "coverLetterSubtitle": "Aus deinen angepassten Bullets erstellt. Vor dem Senden bearbeiten.",
     "copyToClipboard": "Kopieren",
     "copied": "Kopiert!",
-    "errorCoverLetter": "Anschreiben konnte nicht generiert werden. Bitte erneut versuchen."
+    "errorCoverLetter": "Anschreiben konnte nicht generiert werden. Bitte erneut versuchen.",
+    "jdUrlLabel": "URL der Stellenausschreibung",
+    "fetchFromUrl": "Abrufen",
+    "fetchingUrl": "Wird abgerufen…",
+    "fetchUrlError": "Stellendetails konnten nicht extrahiert werden. Bitte Felder manuell ausfüllen."
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",
@@ -327,5 +335,62 @@
       "successMessage": "Passkey erfolgreich registriert!",
       "errorGeneric": "Passkey konnte nicht registriert werden. Du kannst es später erneut versuchen."
     }
+  },
+  "ApplicationDetailPage": {
+    "metaTitle": "Bewerbung",
+    "backToList": "Zurück zu Bewerbungen",
+    "editTitle": "Bewerbung bearbeiten",
+    "companyLabel": "Unternehmen",
+    "jobTitleLabel": "Stelle",
+    "statusLabel": "Status",
+    "jdLabel": "Stellenbeschreibung",
+    "notesLabel": "Notizen (optional)",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saving": "Speichern…",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleting": "Löschen…",
+    "savedToast": "Bewerbung gespeichert.",
+    "errorUnauthorized": "Sitzung abgelaufen. Bitte erneut anmelden.",
+    "errorSave": "Bewerbung konnte nicht gespeichert werden.",
+    "errorDelete": "Bewerbung konnte nicht gelöscht werden.",
+    "confirmDeleteTitle": "Bewerbung löschen",
+    "confirmDeleteText": "Möchten Sie diese Bewerbung wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+    "statuses": {
+      "draft": "Entwurf",
+      "applied": "Beworben",
+      "interview": "Interview",
+      "offer": "Angebot",
+      "rejected": "Abgelehnt"
+    },
+    "tailorTitle": "Lebenslauf anpassen",
+    "tailor": "Lebenslauf anpassen",
+    "tailoring": "Wird angepasst…",
+    "tailorAgain": "Erneut anpassen",
+    "tailoredSubtitle": "Aus Ihrer Matrix für diese Stelle ausgewählt und umgeschrieben.",
+    "errorTailor": "Anpassung fehlgeschlagen. Stellen Sie sicher, dass Ihre Matrix genehmigte Punkte enthält.",
+    "categories": {
+      "impact": "Wirkung",
+      "technical": "Technisch",
+      "leadership": "Führung",
+      "collaboration": "Zusammenarbeit",
+      "other": "Sonstiges"
+    },
+    "coverLetterTitle": "Anschreiben",
+    "generateCL": "Anschreiben generieren",
+    "generatingCL": "Generieren…",
+    "regenerateCL": "Neu generieren",
+    "errorCoverLetter": "Anschreiben konnte nicht generiert werden.",
+    "copy": "Kopieren",
+    "copied": "Kopiert!",
+    "exportTitle": "Exportieren",
+    "exportSubtitle": "Laden Sie Ihren angepassten Lebenslauf als PDF oder Markdown herunter.",
+    "exportPDF": "PDF exportieren",
+    "exportingPDF": "PDF wird erstellt…",
+    "exportMarkdown": "Markdown exportieren",
+    "errorExport": "PDF konnte nicht erstellt werden.",
+    "jobUrlLabel": "Stellenanzeige",
+    "jobUrlLink": "Anzeige ansehen"
   }
 }

@@ -110,6 +110,8 @@ class TailorApplicationView(APIView):
             Skill.objects.filter(user=request.user).values('name', 'proficiency')
         )
 
+        bullet_category = {b.id: b.category for b in approved_bullets}
+
         try:
             tailored = tailor_resume(
                 job_description=application.job_description,
@@ -128,6 +130,13 @@ class TailorApplicationView(APIView):
                 {'detail': 'Unexpected response from LLM. Please try again.'},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+        for bullet in tailored:
+            bullet['category'] = bullet_category.get(bullet.get('id'), 'other')
+
+        application.tailored_bullets = tailored
+        application.save(update_fields=['tailored_bullets', 'modified'])
+        _invalidate_application(request.user.id, pk)
 
         return Response({'bullets': tailored})
 
@@ -174,5 +183,9 @@ class CoverLetterView(APIView):
                 {'detail': 'Unexpected response from LLM. Please try again.'},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+        application.cover_letter = cover_letter
+        application.save(update_fields=['cover_letter', 'modified'])
+        _invalidate_application(request.user.id, pk)
 
         return Response({'cover_letter': cover_letter})

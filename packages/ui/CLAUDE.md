@@ -37,6 +37,33 @@ Grep the file for each of these patterns and replace every hit with the correspo
 
 A `<span>` used purely as a layout/structural container (not rendering text or acting as a tag) does not need to become `<Typography>` or `<Badge>` — use judgment. The trigger is a `<span>` whose primary content is text or a label.
 
+### Typography Scale — Size Reference
+
+The `Typography` component defines the only approved font-size scale. **Never hardcode a pixel font-size on a `<Typography>` component.** Pick the variant whose native size matches your intent, then drop the `styles={{ fontSize }}` override entirely.
+
+| Variant | Rendered size | Use for |
+|---|---|---|
+| `label` | 0.75 rem (12 px) | Field labels, metadata chips, tag text |
+| `caption` | 0.8125 rem (13 px) | Secondary body copy, hints, timestamps |
+| `body-sm` / `h6` | 0.875 rem (14 px) | Card body text, compact paragraphs |
+| `body` | 1 rem (16 px) | Default prose |
+| `h5` | clamp(13 px → 15 px) | Compact card names |
+| `h4` | clamp(15 px → 18 px) | Secondary headings |
+| `h3` | clamp(17 px → 22 px) | Feature card names |
+| `h2` | clamp(22 px → 32 px) | Section titles |
+| `h1` | clamp(32 px → 56 px) | Hero headings |
+
+**The only valid reason to keep `styles={{ fontSize }}` on a `<Typography>` is when no variant matches and a specific sub-scale size (e.g. 11 px) is required.** In that case, choose the closest variant (`label` for anything ≤ 12 px) and add the override — but leave a brief inline comment so the next reader understands why.
+
+**For native form elements** (`<select>`, `<input>`, `<textarea>`, bare `<button>`) where `<Typography>` cannot be used, font-size is acceptable in CSS but **must use rem values from the scale above** — never raw px values:
+
+| px equivalent | rem to write |
+|---|---|
+| 12 px | `0.75rem` |
+| 13 px | `0.8125rem` |
+| 14 px | `0.875rem` |
+| 16 px | `1rem` |
+
 ### `UIComponentProps` — shared layout props (all core-elements accept these)
 
 Most components extend `UIComponentProps`, which maps common CSS properties directly to props:

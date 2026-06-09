@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import { Container } from '@repo/ui/core-elements/container';
 import { Box } from '@repo/ui/core-elements/box';
 import { Button } from '@repo/ui/core-elements/button';
@@ -11,18 +12,15 @@ import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Toast } from '@repo/ui/core-elements/toast';
+import { Select } from '@repo/ui/core-elements/select';
 import {
   getApplications,
   createApplication,
-  updateApplication,
   deleteApplication,
-  tailorApplication,
-  generateCoverLetter,
   ApplicationError,
   type JobApplication,
   type ApplicationStatus,
   type CreateApplicationPayload,
-  type TailoredBullet,
 } from '@/lib/applications';
 import './applications-page.css';
 
@@ -39,20 +37,52 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
 // ── Application form ──────────────────────────────────────────────────────────
 
 interface ApplicationFormProps {
-  initial?: JobApplication;
   onSave: (app: JobApplication) => void;
   onCancel: () => void;
 }
 
-function ApplicationForm({ initial, onSave, onCancel }: ApplicationFormProps) {
+function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
   const t = useTranslations('ApplicationsPage');
-  const [companyName, setCompanyName] = useState(initial?.company_name ?? '');
-  const [jobTitle, setJobTitle] = useState(initial?.job_title ?? '');
-  const [jobDescription, setJobDescription] = useState(initial?.job_description ?? '');
-  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>(initial?.status ?? 'draft');
-  const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [companyName, setCompanyName] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>('draft');
+  const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [fetchingUrl, setFetchingUrl] = useState(false);
+  const [fetchUrlError, setFetchUrlError] = useState<string | null>(null);
+
+  async function handleFetchUrl() {
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+    setFetchingUrl(true);
+    setFetchUrlError(null);
+    try {
+      const res = await fetch('/api/scraper/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      if (!res.ok) throw new Error('fetch failed');
+      const data = (await res.json()) as {
+        company_name: string;
+        job_title: string;
+        job_description: string;
+        image_url?: string | null;
+      };
+      if (data.company_name) setCompanyName(data.company_name);
+      if (data.job_title) setJobTitle(data.job_title);
+      if (data.job_description) setJobDescription(data.job_description);
+      setImageUrl(data.image_url ?? null);
+    } catch {
+      setFetchUrlError(t('fetchUrlError'));
+    } finally {
+      setFetchingUrl(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,10 +96,10 @@ function ApplicationForm({ initial, onSave, onCancel }: ApplicationFormProps) {
         job_description: jobDescription.trim(),
         status: selectedStatus,
         notes: notes.trim(),
+        job_url: urlInput.trim(),
+        company_image_url: imageUrl,
       };
-      const result = initial
-        ? await updateApplication(initial.id, payload)
-        : await createApplication(payload);
+      const result = await createApplication(payload);
       onSave(result);
     } catch (err) {
       const isAuth = err instanceof ApplicationError && err.status === 401;
@@ -79,13 +109,41 @@ function ApplicationForm({ initial, onSave, onCancel }: ApplicationFormProps) {
     }
   }
 
-  const isValid = companyName.trim() && jobTitle.trim() && jobDescription.trim();
+  const isValid = urlInput.trim() && companyName.trim() && jobTitle.trim() && jobDescription.trim();
 
   return (
     <form onSubmit={handleSubmit} className="applications__form">
       <Typography as="h2" variant="h3" fontWeight={600}>
-        {initial ? t('editTitle') : t('newTitle')}
+        {t('newTitle')}
       </Typography>
+
+      <Box display="flex" gap={8} alignItems="flex-end">
+        <Box flex={1}>
+          <TextInput
+            label={t('jdUrlLabel')}
+            value={urlInput}
+            onChange={setUrlInput}
+            type="url"
+            required
+            width="100%"
+            aria-label={t('jdUrlLabel')}
+          />
+        </Box>
+        <Button
+          text={fetchingUrl ? t('fetchingUrl') : t('fetchFromUrl')}
+          type="button"
+          size="md"
+          disabled={fetchingUrl || !urlInput.trim()}
+          onClick={handleFetchUrl}
+          kind='success'
+        />
+      </Box>
+
+      {fetchUrlError && (
+        <Typography variant="caption" color="var(--error, #ef4444)">
+          {fetchUrlError}
+        </Typography>
+      )}
 
       <Box display="flex" gap={12} flexWrap="wrap">
         <Box flex={1} styles={{ minWidth: 200 }}>
@@ -110,26 +168,16 @@ function ApplicationForm({ initial, onSave, onCancel }: ApplicationFormProps) {
         </Box>
       </Box>
 
-      <Box>
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
-          {t('statusLabel')}
-        </Typography>
-        <select
-          className="applications__select"
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value as ApplicationStatus)}
-          aria-label={t('statusLabel')}
-        >
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {t(`statuses.${s}`)}
-            </option>
-          ))}
-        </select>
-      </Box>
+      <Select
+        label={t('statusLabel')}
+        value={selectedStatus}
+        onChange={(v) => setSelectedStatus(v as ApplicationStatus)}
+        options={STATUSES.map((s) => ({ value: s, label: t(`statuses.${s}`) }))}
+        width="100%"
+      />
 
       <Box>
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
           {t('jdLabel')}
         </Typography>
         <TextInput
@@ -144,7 +192,7 @@ function ApplicationForm({ initial, onSave, onCancel }: ApplicationFormProps) {
       </Box>
 
       <Box>
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
           {t('notesLabel')}
         </Typography>
         <TextInput
@@ -164,11 +212,11 @@ function ApplicationForm({ initial, onSave, onCancel }: ApplicationFormProps) {
       )}
 
       <Box display="flex" gap={8} justifyContent="flex-end">
-        <Button text={t('cancel')} type="button" size="sm" onClick={onCancel} />
+        <Button text={t('cancel')} type="button" size="md" onClick={onCancel} />
         <Button
           text={saving ? t('saving') : t('save')}
           type="submit"
-          size="sm"
+          size="md"
           kind="success"
           disabled={saving || !isValid}
         />
@@ -181,279 +229,61 @@ function ApplicationForm({ initial, onSave, onCancel }: ApplicationFormProps) {
 
 interface ApplicationCardProps {
   app: JobApplication;
-  selected: boolean;
-  onSelect: (app: JobApplication) => void;
-  onEdit: (app: JobApplication) => void;
   onDelete: (id: number) => void;
 }
 
-function ApplicationCard({ app, selected, onSelect, onEdit, onDelete }: ApplicationCardProps) {
+function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
   const t = useTranslations('ApplicationsPage');
+  const locale = useLocale();
   const date = new Date(app.created).toLocaleDateString(undefined, {
     year: 'numeric', month: 'short', day: 'numeric',
   });
 
   return (
-    <Box
-      className={`applications__card${selected ? ' applications__card--selected' : ''}`}
-      display="flex"
-      flexDirection="column"
-      gap={8}
-      padding={14}
-      borderRadius={10}
-      border="1px solid var(--border, #e5e7eb)"
-      backgroundColor="var(--surface-1)"
-      onClick={() => onSelect(app)}
-    >
-      <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={8}>
-        <Box display="flex" flexDirection="column" gap={2}>
-          <Typography as="p" variant="body-sm" fontWeight={600} color="var(--foreground)">
-            {app.job_title}
-          </Typography>
-          <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
-            {app.company_name}
-          </Typography>
-        </Box>
-        <Badge
-          variant="subtle"
-          color={STATUS_COLORS[app.status]}
-          style={{ textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}
-        >
-          {t(`statuses.${app.status}`)}
-        </Badge>
-      </Box>
-
-      <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
-        {date}
-      </Typography>
-
-      <Box display="flex" gap={6} justifyContent="flex-end" marginTop={4}>
-        <Button
-          text={t('edit')}
-          type="button"
-          size="sm"
-          onClick={(e) => { e.stopPropagation(); onEdit(app); }}
-        />
-        <Button
-          text={t('delete')}
-          type="button"
-          size="sm"
-          kind="error"
-          onClick={(e) => { e.stopPropagation(); onDelete(app.id); }}
-        />
-      </Box>
-    </Box>
-  );
-}
-
-// ── Application detail panel ──────────────────────────────────────────────────
-
-interface ApplicationDetailProps {
-  app: JobApplication;
-  onClose: () => void;
-}
-
-function ApplicationDetail({ app, onClose }: ApplicationDetailProps) {
-  const t = useTranslations('ApplicationsPage');
-  const [tailoring, setTailoring] = useState(false);
-  const [tailoredBullets, setTailoredBullets] = useState<TailoredBullet[] | null>(null);
-  const [tailorError, setTailorError] = useState<string | null>(null);
-  const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
-  const [coverLetter, setCoverLetter] = useState<string | null>(null);
-  const [coverLetterError, setCoverLetterError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    setTailoredBullets(null);
-    setTailorError(null);
-    setCoverLetter(null);
-    setCoverLetterError(null);
-    setCopied(false);
-  }, [app.id]);
-
-  async function handleTailor() {
-    setTailoring(true);
-    setTailorError(null);
-    setCoverLetter(null);
-    setCoverLetterError(null);
-    try {
-      const result = await tailorApplication(app.id);
-      setTailoredBullets(result.bullets);
-    } catch {
-      setTailorError(t('errorTailor'));
-    } finally {
-      setTailoring(false);
-    }
-  }
-
-  async function handleGenerateCoverLetter() {
-    if (!tailoredBullets) return;
-    setGeneratingCoverLetter(true);
-    setCoverLetterError(null);
-    try {
-      const result = await generateCoverLetter(app.id, tailoredBullets);
-      setCoverLetter(result.cover_letter);
-      setCopied(false);
-    } catch {
-      setCoverLetterError(t('errorCoverLetter'));
-    } finally {
-      setGeneratingCoverLetter(false);
-    }
-  }
-
-  async function handleCopy() {
-    if (!coverLetter) return;
-    await navigator.clipboard.writeText(coverLetter);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <Box
-      display="flex"
-      flexDirection="column"
-      gap={14}
-      padding={16}
-      borderRadius={12}
-      border="1px solid var(--primary, #06b6d4)"
-      backgroundColor="var(--surface-1)"
-      marginBottom={28}
-    >
-      <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={8} flexWrap="wrap">
-        <Box display="flex" flexDirection="column" gap={4}>
-          <Typography as="h2" variant="h3" fontWeight={600}>
-            {app.job_title}
-          </Typography>
-          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-            {app.company_name}
-          </Typography>
-        </Box>
-        <Box display="flex" alignItems="center" gap={8}>
+    <Link href={`/${locale}/applications/${app.id}`} prefetch className="applications__card-link">
+      <Box
+        className="applications__card"
+        display="flex"
+        flexDirection="column"
+        gap={8}
+        padding={14}
+        borderRadius={10}
+        border="1px solid var(--border, #e5e7eb)"
+        backgroundColor="var(--surface-1)"
+      >
+        <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={8}>
+          <Box display="flex" flexDirection="column" gap={2}>
+            <Typography as="p" variant="body-sm" fontWeight={600} color="var(--foreground)">
+              {app.job_title}
+            </Typography>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+              {app.company_name}
+            </Typography>
+          </Box>
           <Badge
             variant="subtle"
             color={STATUS_COLORS[app.status]}
-            style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}
+            style={{ textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}
           >
             {t(`statuses.${app.status}`)}
           </Badge>
-          <Button text={t('close')} type="button" size="sm" onClick={onClose} />
         </Box>
-      </Box>
 
-      <Box>
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
-          {t('jdLabel')}
+        <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+          {date}
         </Typography>
-        <div className="applications__jd">{app.job_description}</div>
-      </Box>
 
-      {app.notes && (
-        <Box>
-          <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
-            {t('notesLabel')}
-          </Typography>
-          <Typography as="p" variant="body-sm" className="applications__notes">
-            {app.notes}
-          </Typography>
-        </Box>
-      )}
-
-      {/* ── Tailoring section ─────────────────────────────────────────────────── */}
-      <Box display="flex" flexDirection="column" gap={10}>
-        <Box display="flex" alignItems="center" gap={10} flexWrap="wrap">
+        <Box display="flex" gap={6} justifyContent="flex-end" marginTop={4}>
           <Button
-            text={tailoring ? t('tailoring') : tailoredBullets ? t('tailorAgain') : t('tailor')}
+            text={t('delete')}
             type="button"
-            size="sm"
-            kind="success"
-            disabled={tailoring}
-            onClick={handleTailor}
+            size="md"
+            kind="error"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(app.id); }}
           />
-          {tailoring && <ProgressBar label={t('tailoring')} />}
         </Box>
-
-        {tailorError && (
-          <Typography variant="caption" color="var(--error, #ef4444)">
-            {tailorError}
-          </Typography>
-        )}
-
-        {tailoredBullets && tailoredBullets.length > 0 && (
-          <Box display="flex" flexDirection="column" gap={8}>
-            <Box display="flex" flexDirection="column" gap={2}>
-              <Typography variant="caption" fontWeight={600} color="var(--foreground)">
-                {t('tailoredTitle')}
-              </Typography>
-              <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
-                {t('tailoredSubtitle')}
-              </Typography>
-            </Box>
-            {tailoredBullets.map((b) => (
-              <div key={b.id} className="applications__bullet">
-                {b.tailored_text}
-              </div>
-            ))}
-          </Box>
-        )}
       </Box>
-
-      {/* ── Cover letter section ──────────────────────────────────────────────── */}
-      {tailoredBullets && tailoredBullets.length > 0 && (
-        <Box display="flex" flexDirection="column" gap={10} paddingTop={6} styles={{ borderTop: '1px solid var(--border, #e5e7eb)' }}>
-          <Box display="flex" alignItems="center" gap={10} flexWrap="wrap">
-            <Button
-              text={
-                generatingCoverLetter
-                  ? t('generatingCoverLetter')
-                  : coverLetter
-                  ? t('regenerateCoverLetter')
-                  : t('generateCoverLetter')
-              }
-              type="button"
-              size="sm"
-              disabled={generatingCoverLetter}
-              onClick={handleGenerateCoverLetter}
-            />
-            {generatingCoverLetter && <ProgressBar label={t('generatingCoverLetter')} />}
-          </Box>
-
-          {coverLetterError && (
-            <Typography variant="caption" color="var(--error, #ef4444)">
-              {coverLetterError}
-            </Typography>
-          )}
-
-          {coverLetter && (
-            <Box display="flex" flexDirection="column" gap={8}>
-              <Box display="flex" alignItems="center" justifyContent="space-between" gap={8} flexWrap="wrap">
-                <Box display="flex" flexDirection="column" gap={2}>
-                  <Typography variant="caption" fontWeight={600} color="var(--foreground)">
-                    {t('coverLetterTitle')}
-                  </Typography>
-                  <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
-                    {t('coverLetterSubtitle')}
-                  </Typography>
-                </Box>
-                <Button
-                  text={copied ? t('copied') : t('copyToClipboard')}
-                  type="button"
-                  size="sm"
-                  kind={copied ? 'success' : undefined}
-                  onClick={handleCopy}
-                />
-              </Box>
-              <textarea
-                className="applications__cover-letter"
-                value={coverLetter}
-                onChange={(e) => setCoverLetter(e.target.value)}
-                rows={16}
-                aria-label={t('coverLetterTitle')}
-              />
-            </Box>
-          )}
-        </Box>
-      )}
-    </Box>
+    </Link>
   );
 }
 
@@ -465,8 +295,6 @@ export function ApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [editingApp, setEditingApp] = useState<JobApplication | null>(null);
-  const [selectedApp, setSelectedApp] = useState<JobApplication | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
   const [toastKey, setToastKey] = useState(0);
@@ -493,45 +321,16 @@ export function ApplicationsPage() {
     load();
   }, [load]);
 
-  function openNew() {
-    setEditingApp(null);
-    setSelectedApp(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(app: JobApplication) {
-    setEditingApp(app);
-    setSelectedApp(null);
-    setFormOpen(true);
-  }
-
-  function closeForm() {
-    setFormOpen(false);
-    setEditingApp(null);
-  }
-
-  function handleSelect(app: JobApplication) {
-    if (formOpen) return;
-    setSelectedApp((prev) => (prev?.id === app.id ? null : app));
-  }
-
   function handleSaved(app: JobApplication) {
-    setApplications((prev) =>
-      editingApp === null
-        ? [app, ...prev]
-        : prev.map((a) => (a.id === app.id ? app : a)),
-    );
-    if (editingApp === null) {
-      showToast(t('savedNew'), 'success');
-    }
-    closeForm();
+    setApplications((prev) => [app, ...prev]);
+    showToast(t('savedNew'), 'success');
+    setFormOpen(false);
   }
 
   async function handleDelete(id: number) {
     try {
       await deleteApplication(id);
       setApplications((prev) => prev.filter((a) => a.id !== id));
-      if (selectedApp?.id === id) setSelectedApp(null);
       showToast(t('deleted'), 'success');
     } catch {
       showToast(t('errorDelete'), 'error');
@@ -560,7 +359,8 @@ export function ApplicationsPage() {
         <Typography variant="body-sm" color="var(--error, #ef4444)">
           {error}
         </Typography>
-        <Button text={t('retry')} type="button" size="sm" onClick={load} />
+        <Button text={t('retry')} type="button" size="md" onClick={load} 
+          kind='success'/>
       </Container>
     );
   }
@@ -602,22 +402,16 @@ export function ApplicationsPage() {
           </Typography>
         </Box>
         {!formOpen && (
-          <Button text={t('newApplication')} type="button" size="sm" onClick={openNew} />
+          <Button
+          kind='success' 
+          text={t('newApplication')} type="button" size="md" onClick={() => setFormOpen(true)} />
         )}
       </Box>
 
       {formOpen && (
         <ApplicationForm
-          initial={editingApp ?? undefined}
           onSave={handleSaved}
-          onCancel={closeForm}
-        />
-      )}
-
-      {selectedApp && !formOpen && (
-        <ApplicationDetail
-          app={selectedApp}
-          onClose={() => setSelectedApp(null)}
+          onCancel={() => setFormOpen(false)}
         />
       )}
 
@@ -629,7 +423,7 @@ export function ApplicationsPage() {
           <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
             {t('emptyBody')}
           </Typography>
-          <Button text={t('newApplication')} type="button" size="sm" onClick={openNew} />
+          <Button text={t('newApplication')} type="button" size="md" onClick={() => setFormOpen(true)} />
         </div>
       ) : (
         <Box
@@ -641,9 +435,6 @@ export function ApplicationsPage() {
             <ApplicationCard
               key={app.id}
               app={app}
-              selected={selectedApp?.id === app.id}
-              onSelect={handleSelect}
-              onEdit={openEdit}
               onDelete={setPendingDeleteId}
             />
           ))}

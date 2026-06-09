@@ -11,6 +11,7 @@ import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Toast } from '@repo/ui/core-elements/toast';
+import { Select } from '@repo/ui/core-elements/select';
 import { Slider } from '@repo/ui/core-elements/slider';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
 import { useGroqProxy } from '@repo/ui/use-groq';
@@ -86,10 +87,11 @@ interface BulletFormProps {
   skills: Skill[];
   initial?: BulletPoint;
   onSave: (bullet: BulletPoint) => void;
-  onCancel: () => void;
+  formRef?: React.RefObject<HTMLFormElement | null>;
+  onValidityChange?: (canSubmit: boolean) => void;
 }
 
-function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormProps) {
+function BulletForm({ category, skills, initial, onSave, formRef, onValidityChange }: BulletFormProps) {
   const t = useTranslations('MatrixPage');
   const locale = useLocale();
   const [text, setText] = useState(initial?.text ?? '');
@@ -117,6 +119,10 @@ function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormP
   // Abort streaming if form unmounts mid-generation.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (isGenerating) abort(); }, []);
+
+  useEffect(() => {
+    onValidityChange?.(!saving && text.trim().length > 0);
+  }, [saving, text, onValidityChange]);
 
   const handleConfirmEnhanceOptions = async () => {
     setShowEnhanceOptions(false);
@@ -221,10 +227,10 @@ function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormP
           </Box>
         </ConfirmationModal>
       )}
-      <form onSubmit={handleSubmit} className="matrix__add-form">
+      <form ref={formRef} onSubmit={handleSubmit} className="matrix__add-form">
         {/* Label row with voice + enhance buttons */}
         <Box className="matrix__field-label-row">
-          <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t('textLabel')}
           </Typography>
           <Box display="flex" alignItems="center" gap={6}>
@@ -267,31 +273,26 @@ function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormP
             <Typography variant="body-sm">{enhancePreview}</Typography>
             <Box display="flex" gap={8} alignItems="center" marginTop={12}>
               {isGenerating ? (
-                <Button text={t('enhanceStop')} type="button" size="sm" onClick={handleDiscardEnhance} />
+                <Button text={t('enhanceStop')} type="button" size="md" onClick={handleDiscardEnhance} />
               ) : (
                 <>
-                  <Button text={t('enhanceDiscard')} type="button" size="sm" onClick={handleDiscardEnhance} />
-                  <Button text={t('enhanceAccept')} type="button" size="sm" kind="success" onClick={handleAcceptEnhance} />
+                  <Button text={t('enhanceDiscard')} type="button" size="md" onClick={handleDiscardEnhance} />
+                  <Button text={t('enhanceAccept')} type="button" size="md" kind="success" onClick={handleAcceptEnhance} />
                 </>
               )}
             </Box>
           </Box>
         )}
-        <select
-          className="matrix__select"
+        <Select
+          label={t('categoryLabel')}
           value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value as Category)}
-          aria-label={t('categoryLabel')}
-        >
-          {CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {t(`categories.${cat}`)}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setSelectedCategory(v as Category)}
+          options={CATEGORIES.map((cat) => ({ value: cat, label: t(`categories.${cat}`) }))}
+          width="100%"
+        />
         {skills.length > 0 && (
           <Box>
-            <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
               {t('skillsLabel')}
             </Typography>
             <Box display="flex" flexWrap="wrap" gap={6}>
@@ -315,16 +316,6 @@ function BulletForm({ category, skills, initial, onSave, onCancel }: BulletFormP
             {error}
           </Typography>
         )}
-        <Box display="flex" gap={8} justifyContent="flex-end">
-          <Button text={t('cancel')} type="button" size="sm" onClick={onCancel} />
-          <Button
-            text={saving ? t('saving') : t('save')}
-            type="submit"
-            size="sm"
-            kind="success"
-            disabled={saving || !text.trim()}
-          />
-        </Box>
       </form>
     </>
   );
@@ -337,10 +328,12 @@ interface BulletCardProps {
   skills: Skill[];
   onEdit: (bullet: BulletPoint) => void;
   onDelete: (id: number) => void;
+  onApprove: (id: number) => void;
 }
 
-function BulletCard({ bullet, skills, onEdit, onDelete }: BulletCardProps) {
+function BulletCard({ bullet, skills, onEdit, onDelete, onApprove }: BulletCardProps) {
   const t = useTranslations('MatrixPage');
+  const showApprove = bullet.source === 'extracted' && !bullet.is_approved;
 
   return (
     <Box
@@ -350,15 +343,15 @@ function BulletCard({ bullet, skills, onEdit, onDelete }: BulletCardProps) {
       gap={8}
       padding={8}
       borderRadius={8}
-      border="1px solid var(--border, #e5e7eb)"
+      border={showApprove ? '1px solid var(--warning, #f59e0b)' : '1px solid var(--border, #e5e7eb)'}
       backgroundColor="var(--surface-1, #fff)"
     >
-      <Typography as="p" variant="body-sm" color="var(--foreground)" styles={{ fontSize: 13, lineHeight: 1.5 }}>
+      <Typography as="p" variant="body" color="var(--foreground)" styles={{ lineHeight: 1.5 }}>
         {bullet.text}
       </Typography>
       <Box display="flex" alignItems="center" flexWrap="wrap" gap={6}>
         <Badge
-          size="sm"
+          size="lg"
           variant="filled"
           color="var(--muted, #f3f4f6)"
           textColor="var(--muted-foreground, #6b7280)"
@@ -367,20 +360,23 @@ function BulletCard({ bullet, skills, onEdit, onDelete }: BulletCardProps) {
           {bullet.source === 'manual' ? t('sourceManual') : t('sourceExtracted')}
         </Badge>
         {bullet.skills.map((skill) => (
-          <Badge key={skill.id} size="sm" variant="outlined" color="var(--primary, #06b6d4)">
+          <Badge key={skill.id} size="lg" variant="outlined" color="var(--primary, #06b6d4)">
             {skill.name}
           </Badge>
         ))}
       </Box>
       <Box display="flex" alignItems="center" gap={6} justifyContent="flex-end" marginTop={2}>
-        <Button text={t('edit')} type="button" size="sm" onClick={() => onEdit(bullet)} />
         <Button
           text={t('delete')}
           type="button"
-          size="sm"
+          size="md"
           kind="error"
           onClick={() => onDelete(bullet.id)}
         />
+        <Button text={t('edit')} type="button" size="md" onClick={() => onEdit(bullet)} />
+        {showApprove && (
+          <Button text={t('approve')} type="button" size="md" kind="success" onClick={() => onApprove(bullet.id)} />
+        )}
       </Box>
     </Box>
   );
@@ -394,6 +390,7 @@ interface CategorySectionProps {
   skills: Skill[];
   onEdit: (bullet: BulletPoint) => void;
   onBulletDeleted: (id: number) => void;
+  onBulletApproved: (id: number) => void;
 }
 
 function CategorySection({
@@ -402,6 +399,7 @@ function CategorySection({
   skills,
   onEdit,
   onBulletDeleted,
+  onBulletApproved,
 }: CategorySectionProps) {
   const t = useTranslations('MatrixPage');
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
@@ -431,7 +429,7 @@ function CategorySection({
       >
         <Box display="flex" alignItems="center" gap={8}>
           <CategoryBadge category={category} label={t(`categories.${category}`)} />
-          <Typography as="span" variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 12 }}>
+          <Typography as="span" variant="label" color="var(--muted-foreground, #6b7280)">
             {bullets.length}
           </Typography>
         </Box>
@@ -443,13 +441,14 @@ function CategorySection({
             skills={skills}
             onEdit={onEdit}
             onDelete={setPendingDeleteId}
+            onApprove={onBulletApproved}
           />
         ))}
 
         {bullets.length === 0 && (
           <Typography
             as="p"
-            variant="caption"
+            variant="body"
             color="var(--muted-foreground, #6b7280)"
             textAlign="center"
             paddingTop={16}
@@ -554,12 +553,13 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
           <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
             {t('skillsSection')}
           </Typography>
-          <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t('skillsSectionSubtitle')}
           </Typography>
         </Box>
         {!adding && (
-          <Button text={t('addSkill')} type="button" size="sm" onClick={() => setAdding(true)} />
+          <Button text={t('addSkill')} type="button" size="md" onClick={() => setAdding(true)} 
+          kind='success'/>
         )}
       </Box>
 
@@ -568,7 +568,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
           {skills.map((skill) => (
             <span key={skill.id} className="matrix__skill-item">
               {skill.name}
-              <Typography as="span" variant="caption" color="var(--primary, #06b6d4)" fontWeight={600} styles={{ fontSize: 11 }}>
+              <Typography as="span" variant="label" color="var(--primary, #06b6d4)" fontWeight={600} styles={{ fontSize: 11 }}>
                 {skill.proficiency}/5
               </Typography>
               <Button
@@ -578,7 +578,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
                 aria-label={t('delete')}
                 onClick={() => setPendingDeleteId(skill.id)}
               >
-                ×
+                X
               </Button>
             </span>
           ))}
@@ -586,7 +586,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
       )}
 
       {skills.length === 0 && !adding && (
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)" marginBottom={8}>
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={8}>
           {t('noSkills')}
         </Typography>
       )}
@@ -615,11 +615,11 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
               </option>
             ))}
           </select>
-          <Button text={t('cancel')} type="button" size="sm" onClick={() => setAdding(false)} />
+          <Button text={t('cancel')} type="button" size="md" onClick={() => setAdding(false)} />
           <Button
             text={saving ? t('saving') : t('save')}
             type="submit"
-            size="sm"
+            size="md"
             kind="success"
             disabled={saving || !newName.trim()}
           />
@@ -642,6 +642,8 @@ export function MatrixBoard() {
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingBullet, setEditingBullet] = useState<BulletPoint | null>(null);
+  const bulletFormRef = useRef<HTMLFormElement>(null);
+  const [bulletFormCanSubmit, setBulletFormCanSubmit] = useState(false);
 
   function openAdd() {
     setEditingBullet(null);
@@ -694,6 +696,15 @@ export function MatrixBoard() {
     }
   }
 
+  async function handleBulletApproved(id: number) {
+    try {
+      const updated = await updateBullet(id, { is_approved: true });
+      setBullets((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    } catch {
+      setError(t('approveError'));
+    }
+  }
+
   if (loading) {
     return (
       <Container
@@ -716,7 +727,7 @@ export function MatrixBoard() {
         <Typography variant="body-sm" color="var(--error, #ef4444)">
           {error}
         </Typography>
-        <Button text="Retry" type="button" size="sm" onClick={load} />
+        <Button text="Retry" type="button" size="md" onClick={load} />
       </Container>
     );
   }
@@ -752,21 +763,27 @@ export function MatrixBoard() {
             {t('subtitle')}
           </Typography>
         </Box>
-        {!formOpen && (
-          <Button text={t('addBullet')} type="button" size="sm" onClick={openAdd} />
-        )}
+        <Button text={t('addBullet')} type="button" size="md" onClick={openAdd} kind='success'/>
       </Box>
 
       {formOpen && (
-        <Box marginBottom={24}>
+        <ConfirmationModal
+          title={editingBullet ? t('editBulletTitle') : t('addBulletTitle')}
+          text=""
+          okCallback={() => bulletFormRef.current?.requestSubmit()}
+          cancelCallback={closeForm}
+          okDisabled={!bulletFormCanSubmit}
+          panelMaxWidth="90vw"
+        >
           <BulletForm
             category={editingBullet?.category ?? 'impact'}
             skills={skills}
             initial={editingBullet ?? undefined}
             onSave={handleBulletSaved}
-            onCancel={closeForm}
+            formRef={bulletFormRef}
+            onValidityChange={setBulletFormCanSubmit}
           />
-        </Box>
+        </ConfirmationModal>
       )}
 
       <Box
@@ -783,6 +800,7 @@ export function MatrixBoard() {
             skills={skills}
             onEdit={openEdit}
             onBulletDeleted={handleBulletDeleted}
+            onBulletApproved={handleBulletApproved}
           />
         ))}
       </Box>

@@ -65,7 +65,6 @@
   padding: 4px 10px;
   border-radius: 99px;
   border: 1px solid var(--border, #e5e7eb);
-  /* font-size: 12px; */
 }
 
 .matrix__skill-delete-btn {
@@ -74,7 +73,7 @@
   cursor: pointer;
   padding: 0 2px;
   color: var(--muted-foreground, #6b7280);
-  font-size: 18px;
+  font-size: 1.125rem;
   line-height: 1;
   transition: color 0.1s;
 }

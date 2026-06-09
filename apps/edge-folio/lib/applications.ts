@@ -1,5 +1,11 @@
 export type ApplicationStatus = 'draft' | 'applied' | 'interview' | 'offer' | 'rejected';
 
+export interface TailoredBullet {
+  id: number;
+  tailored_text: string;
+  category: string;
+}
+
 export interface JobApplication {
   id: number;
   company_name: string;
@@ -7,6 +13,10 @@ export interface JobApplication {
   job_description: string;
   status: ApplicationStatus;
   notes: string;
+  job_url: string;
+  company_image_url: string | null;
+  tailored_bullets: TailoredBullet[] | null;
+  cover_letter: string;
   created: string;
   modified: string;
 }
@@ -47,6 +57,8 @@ export interface CreateApplicationPayload {
   job_description: string;
   status?: ApplicationStatus;
   notes?: string;
+  job_url: string;
+  company_image_url?: string | null;
 }
 
 export function createApplication(payload: CreateApplicationPayload): Promise<JobApplication> {
@@ -77,9 +89,8 @@ export function deleteApplication(id: number): Promise<void> {
   return request(`/api/applications/${id}`, { method: 'DELETE' });
 }
 
-export interface TailoredBullet {
-  id: number;
-  tailored_text: string;
+export function getApplication(id: number): Promise<JobApplication> {
+  return request(`/api/applications/${id}`);
 }
 
 export interface TailoringResult {

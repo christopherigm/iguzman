@@ -21,7 +21,7 @@
 }
 
 .footer__link {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: color-mix(in srgb, var(--foreground) 65%, transparent);
   text-decoration: none;
   transition: color 0.2s ease;

@@ -81,6 +81,26 @@ import Link from 'next/link';
 <a href="https://example.com" target="_blank" rel="noopener noreferrer">External</a>
 ```
 
+## Typography — Font Size Rule
+
+**Never write `font-size` in a CSS class that is attached to a `<Typography>`, `<Box>`, `<Button>`, or any other `@repo/ui` component.** The Typography `variant` prop owns sizing for all text rendered through those components.
+
+- Pick the variant whose native size matches your intent — see the scale table in `packages/ui/CLAUDE.md` → "Typography Scale — Size Reference".
+- Remove any `styles={{ fontSize: X }}` that duplicates the variant's own size.
+- The **only** valid `styles={{ fontSize }}` override is for sub-scale sizes (e.g. 11 px) that have no matching variant; use `variant="label"` as the base and add a brief inline comment.
+
+For **native form elements** (`<select>`, `<input>`, `<textarea>`) where `<Typography>` cannot be used, `font-size` in CSS is acceptable but must use rem values from the scale:
+
+```css
+/* ✓ correct — rem values aligned to Typography scale */
+.my-select { font-size: 0.875rem; }   /* body-sm / 14 px */
+.my-textarea { font-size: 0.8125rem; } /* caption / 13 px */
+.my-label-btn { font-size: 0.75rem; }  /* label / 12 px */
+
+/* ✗ wrong — raw px fights the Typography system */
+.my-select { font-size: 14px; }
+```
+
 ## Next.js Proxy (i18n + Auth Middleware)
 
 Next.js 16 renamed `middleware.ts` to `proxy.ts`. Use `proxy.ts` at the app root — never `middleware.ts`.

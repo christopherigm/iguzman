@@ -75,6 +75,8 @@
     "loading": "Cargando…",
     "errorLoad": "No se pudo cargar la matriz. Intenta de nuevo.",
     "addBullet": "Agregar punto",
+    "addBulletTitle": "Agregar punto",
+    "editBulletTitle": "Editar punto",
     "cancel": "Cancelar",
     "save": "Guardar",
     "saving": "Guardando…",
@@ -117,7 +119,9 @@
     "enhanceOptionsTitle": "Opciones de mejora",
     "enhanceOptionsText": "Elige cómo expandir este punto.",
     "enhanceParagraphsLabel": "Párrafos",
-    "enhanceLengthLabel": "Longitud por párrafo"
+    "enhanceLengthLabel": "Longitud por párrafo",
+    "approve": "Aprobar",
+    "approveError": "Error al aprobar el punto."
   },
   "OnboardingPage": {
     "title": "Configura tu perfil",
@@ -269,7 +273,11 @@
     "coverLetterSubtitle": "Redactada a partir de tus puntos adaptados. Edítala antes de enviar.",
     "copyToClipboard": "Copiar",
     "copied": "¡Copiado!",
-    "errorCoverLetter": "Error al generar la carta de presentación. Inténtalo de nuevo."
+    "errorCoverLetter": "Error al generar la carta de presentación. Inténtalo de nuevo.",
+    "jdUrlLabel": "URL de la oferta de trabajo",
+    "fetchFromUrl": "Obtener",
+    "fetchingUrl": "Obteniendo…",
+    "fetchUrlError": "No se pudieron extraer los detalles del puesto. Completa los campos manualmente."
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",
@@ -327,5 +335,62 @@
       "successMessage": "¡Llave de acceso registrada con éxito!",
       "errorGeneric": "No se pudo registrar la llave. Puedes intentarlo más tarde."
     }
+  },
+  "ApplicationDetailPage": {
+    "metaTitle": "Solicitud",
+    "backToList": "Volver a Solicitudes",
+    "editTitle": "Editar Solicitud",
+    "companyLabel": "Empresa",
+    "jobTitleLabel": "Puesto",
+    "statusLabel": "Estado",
+    "jdLabel": "Descripción del Puesto",
+    "notesLabel": "Notas (opcional)",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "deleting": "Eliminando…",
+    "savedToast": "Solicitud guardada.",
+    "errorUnauthorized": "Sesión expirada. Por favor, inicia sesión de nuevo.",
+    "errorSave": "Error al guardar la solicitud. Inténtalo de nuevo.",
+    "errorDelete": "Error al eliminar la solicitud. Inténtalo de nuevo.",
+    "confirmDeleteTitle": "Eliminar Solicitud",
+    "confirmDeleteText": "¿Estás seguro de que deseas eliminar esta solicitud? Esta acción no se puede deshacer.",
+    "statuses": {
+      "draft": "Borrador",
+      "applied": "Enviada",
+      "interview": "Entrevista",
+      "offer": "Oferta",
+      "rejected": "Rechazada"
+    },
+    "tailorTitle": "Adaptar Currículum",
+    "tailor": "Adaptar Currículum",
+    "tailoring": "Adaptando…",
+    "tailorAgain": "Readaptar",
+    "tailoredSubtitle": "Seleccionado y reescrito desde tu Matrix para este puesto.",
+    "errorTailor": "La adaptación falló. Asegúrate de tener puntos aprobados en tu Matrix.",
+    "categories": {
+      "impact": "Impacto",
+      "technical": "Técnico",
+      "leadership": "Liderazgo",
+      "collaboration": "Colaboración",
+      "other": "Otro"
+    },
+    "coverLetterTitle": "Carta de Presentación",
+    "generateCL": "Generar Carta",
+    "generatingCL": "Generando…",
+    "regenerateCL": "Regenerar",
+    "errorCoverLetter": "Error al generar la carta. Inténtalo de nuevo.",
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
+    "exportTitle": "Exportar",
+    "exportSubtitle": "Descarga tu currículum como PDF o archivo Markdown.",
+    "exportPDF": "Exportar PDF",
+    "exportingPDF": "Generando PDF…",
+    "exportMarkdown": "Exportar Markdown",
+    "errorExport": "Error al generar el PDF. Inténtalo de nuevo.",
+    "jobUrlLabel": "Oferta de trabajo",
+    "jobUrlLink": "Ver oferta"
   }
 }

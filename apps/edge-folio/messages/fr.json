@@ -75,6 +75,8 @@
     "loading": "Chargement…",
     "errorLoad": "Impossible de charger la matrice. Veuillez réessayer.",
     "addBullet": "Ajouter un point",
+    "addBulletTitle": "Ajouter un point",
+    "editBulletTitle": "Modifier le point",
     "cancel": "Annuler",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
@@ -117,7 +119,9 @@
     "enhanceOptionsTitle": "Options d'amélioration",
     "enhanceOptionsText": "Choisissez comment développer ce point.",
     "enhanceParagraphsLabel": "Paragraphes",
-    "enhanceLengthLabel": "Longueur par paragraphe"
+    "enhanceLengthLabel": "Longueur par paragraphe",
+    "approve": "Approuver",
+    "approveError": "Échec de l'approbation du point."
   },
   "OnboardingPage": {
     "title": "Configurer votre profil",
@@ -269,7 +273,11 @@
     "coverLetterSubtitle": "Rédigée à partir de vos points adaptés. Modifiez avant d'envoyer.",
     "copyToClipboard": "Copier",
     "copied": "Copié !",
-    "errorCoverLetter": "Échec de la génération de la lettre. Veuillez réessayer."
+    "errorCoverLetter": "Échec de la génération de la lettre. Veuillez réessayer.",
+    "jdUrlLabel": "URL de l'offre d'emploi",
+    "fetchFromUrl": "Récupérer",
+    "fetchingUrl": "Récupération…",
+    "fetchUrlError": "Impossible d'extraire les détails du poste. Remplissez les champs manuellement."
   },
   "AuthPage": {
     "tabSignIn": "Se connecter",
@@ -327,5 +335,62 @@
       "successMessage": "Clé d'accès enregistrée avec succès !",
       "errorGeneric": "Impossible d'enregistrer la clé d'accès. Vous pouvez réessayer plus tard."
     }
+  },
+  "ApplicationDetailPage": {
+    "metaTitle": "Candidature",
+    "backToList": "Retour aux candidatures",
+    "editTitle": "Modifier la candidature",
+    "companyLabel": "Entreprise",
+    "jobTitleLabel": "Poste",
+    "statusLabel": "Statut",
+    "jdLabel": "Description du poste",
+    "notesLabel": "Notes (facultatif)",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "deleting": "Suppression…",
+    "savedToast": "Candidature enregistrée.",
+    "errorUnauthorized": "Session expirée. Veuillez vous reconnecter.",
+    "errorSave": "Impossible d'enregistrer la candidature. Veuillez réessayer.",
+    "errorDelete": "Impossible de supprimer la candidature. Veuillez réessayer.",
+    "confirmDeleteTitle": "Supprimer la candidature",
+    "confirmDeleteText": "Êtes-vous sûr de vouloir supprimer cette candidature ? Cette action est irréversible.",
+    "statuses": {
+      "draft": "Brouillon",
+      "applied": "Envoyée",
+      "interview": "Entretien",
+      "offer": "Offre",
+      "rejected": "Refusée"
+    },
+    "tailorTitle": "Adapter le CV",
+    "tailor": "Adapter le CV",
+    "tailoring": "Adaptation…",
+    "tailorAgain": "Ré-adapter",
+    "tailoredSubtitle": "Sélectionné et réécrit depuis votre Matrix pour ce poste.",
+    "errorTailor": "L'adaptation a échoué. Assurez-vous que votre Matrix contient des points approuvés.",
+    "categories": {
+      "impact": "Impact",
+      "technical": "Technique",
+      "leadership": "Leadership",
+      "collaboration": "Collaboration",
+      "other": "Autre"
+    },
+    "coverLetterTitle": "Lettre de motivation",
+    "generateCL": "Générer la lettre",
+    "generatingCL": "Génération…",
+    "regenerateCL": "Regénérer",
+    "errorCoverLetter": "Impossible de générer la lettre de motivation.",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "exportTitle": "Exporter",
+    "exportSubtitle": "Téléchargez votre CV adapté en PDF ou en Markdown.",
+    "exportPDF": "Exporter en PDF",
+    "exportingPDF": "Génération du PDF…",
+    "exportMarkdown": "Exporter en Markdown",
+    "errorExport": "Impossible de générer le PDF.",
+    "jobUrlLabel": "Offre d'emploi",
+    "jobUrlLink": "Voir l'offre"
   }
 }

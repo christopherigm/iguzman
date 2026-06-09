@@ -1,6 +1,10 @@
+import os
+import uuid
+
 from django.contrib.auth.models import User
 from django.db import models
 
+from core.fields import ResizedImageField
 from core.models import Common
 
 STATUS_CHOICES = [
@@ -12,6 +16,11 @@ STATUS_CHOICES = [
 ]
 
 
+def _application_image_upload(instance, filename):
+    ext = os.path.splitext(filename)[1].lstrip('.') or 'jpg'
+    return f'applications/images/{uuid.uuid4().hex}.{ext}'
+
+
 class JobApplication(Common):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='job_applications')
     company_name = models.CharField(max_length=200)
@@ -19,6 +28,15 @@ class JobApplication(Common):
     job_description = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     notes = models.TextField(blank=True)
+    job_url = models.URLField(max_length=2048, blank=True)
+    tailored_bullets = models.JSONField(null=True, blank=True)
+    cover_letter = models.TextField(blank=True)
+    company_image = ResizedImageField(
+        upload_to=_application_image_upload,
+        null=True,
+        blank=True,
+        max_size=[256, None],
+    )
 
     class Meta:
         ordering = ['-created']

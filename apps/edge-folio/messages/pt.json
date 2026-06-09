@@ -75,6 +75,8 @@
     "loading": "Carregando…",
     "errorLoad": "Falha ao carregar a matriz. Tente novamente.",
     "addBullet": "Adicionar ponto",
+    "addBulletTitle": "Adicionar ponto",
+    "editBulletTitle": "Editar ponto",
     "cancel": "Cancelar",
     "save": "Salvar",
     "saving": "Salvando…",
@@ -117,7 +119,9 @@
     "enhanceOptionsTitle": "Opções de aprimoramento",
     "enhanceOptionsText": "Escolha como expandir este ponto.",
     "enhanceParagraphsLabel": "Parágrafos",
-    "enhanceLengthLabel": "Tamanho por parágrafo"
+    "enhanceLengthLabel": "Tamanho por parágrafo",
+    "approve": "Aprovar",
+    "approveError": "Falha ao aprovar o ponto."
   },
   "OnboardingPage": {
     "title": "Configure seu perfil",
@@ -269,7 +273,11 @@
     "coverLetterSubtitle": "Redigida a partir dos seus pontos adaptados. Edite antes de enviar.",
     "copyToClipboard": "Copiar",
     "copied": "Copiado!",
-    "errorCoverLetter": "Falha ao gerar a carta de apresentação. Tente novamente."
+    "errorCoverLetter": "Falha ao gerar a carta de apresentação. Tente novamente.",
+    "jdUrlLabel": "URL da vaga de emprego",
+    "fetchFromUrl": "Buscar",
+    "fetchingUrl": "Buscando…",
+    "fetchUrlError": "Não foi possível extrair os detalhes da vaga. Preencha os campos manualmente."
   },
   "AuthPage": {
     "tabSignIn": "Entrar",
@@ -327,5 +335,62 @@
       "successMessage": "Chave de acesso registrada com sucesso!",
       "errorGeneric": "Falha ao registrar chave de acesso. Você pode tentar novamente mais tarde."
     }
+  },
+  "ApplicationDetailPage": {
+    "metaTitle": "Candidatura",
+    "backToList": "Voltar às candidaturas",
+    "editTitle": "Editar candidatura",
+    "companyLabel": "Empresa",
+    "jobTitleLabel": "Cargo",
+    "statusLabel": "Estado",
+    "jdLabel": "Descrição da vaga",
+    "notesLabel": "Notas (opcional)",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "deleting": "Eliminando…",
+    "savedToast": "Candidatura guardada.",
+    "errorUnauthorized": "Sessão expirada. Inicie sessão novamente.",
+    "errorSave": "Erro ao guardar a candidatura. Tente novamente.",
+    "errorDelete": "Erro ao eliminar a candidatura. Tente novamente.",
+    "confirmDeleteTitle": "Eliminar candidatura",
+    "confirmDeleteText": "Tem a certeza de que pretende eliminar esta candidatura? Esta ação não pode ser desfeita.",
+    "statuses": {
+      "draft": "Rascunho",
+      "applied": "Enviada",
+      "interview": "Entrevista",
+      "offer": "Oferta",
+      "rejected": "Rejeitada"
+    },
+    "tailorTitle": "Adaptar CV",
+    "tailor": "Adaptar CV",
+    "tailoring": "Adaptando…",
+    "tailorAgain": "Readaptar",
+    "tailoredSubtitle": "Selecionado e reescrito a partir da sua Matrix para esta vaga.",
+    "errorTailor": "A adaptação falhou. Certifique-se de que a sua Matrix tem pontos aprovados.",
+    "categories": {
+      "impact": "Impacto",
+      "technical": "Técnico",
+      "leadership": "Liderança",
+      "collaboration": "Colaboração",
+      "other": "Outro"
+    },
+    "coverLetterTitle": "Carta de Apresentação",
+    "generateCL": "Gerar Carta",
+    "generatingCL": "Gerando…",
+    "regenerateCL": "Regenerar",
+    "errorCoverLetter": "Erro ao gerar a carta de apresentação.",
+    "copy": "Copiar",
+    "copied": "Copiado!",
+    "exportTitle": "Exportar",
+    "exportSubtitle": "Descarregue o seu CV adaptado em PDF ou Markdown.",
+    "exportPDF": "Exportar PDF",
+    "exportingPDF": "Gerando PDF…",
+    "exportMarkdown": "Exportar Markdown",
+    "errorExport": "Erro ao gerar o PDF.",
+    "jobUrlLabel": "Vaga de emprego",
+    "jobUrlLink": "Ver vaga"
   }
 }

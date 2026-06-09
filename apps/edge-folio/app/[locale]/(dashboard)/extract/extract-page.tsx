@@ -41,7 +41,7 @@ function PhaseLabel({ phase, t }: { phase: string; t: ReturnType<typeof useTrans
     building: t('phaseBuilding'),
   };
   return (
-    <Typography variant="body-sm" fontWeight={600} styles={{ fontSize: 15 }}>
+    <Typography variant="body-sm" fontWeight={600}>
       {map[phase] ?? t('phaseScanning')}
     </Typography>
   );
@@ -65,17 +65,17 @@ function SkeletonReview({
   return (
     <Box display="flex" flexDirection="column" gap={16}>
       <Box>
-        <Typography variant="body-sm" fontWeight={600} styles={{ fontSize: 15 }}>
+        <Typography variant="body-sm" fontWeight={600}>
           {t('skeletonTitle')}
         </Typography>
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 13, marginTop: 4 }}>
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)" styles={{ marginTop: 4 }}>
           {t('skeletonSubtitle')}
         </Typography>
       </Box>
 
       <Box className="extract__skeleton-card">
         <SkeletonRow label={t('skeletonFiles')}>
-          <Typography variant="caption" styles={{ fontSize: 13 }}>
+          <Typography variant="body">
             {t('skeletonFilesValue', { code: skeleton.fileStats.codeFiles, total: skeleton.fileStats.totalFiles })}
           </Typography>
         </SkeletonRow>
@@ -83,10 +83,10 @@ function SkeletonReview({
         <SkeletonRow label={t('skeletonLanguages')}>
           {skeleton.languages.length > 0 ? (
             <Box display="flex" flexWrap="wrap" gap={4}>
-              {skeleton.languages.map((l) => <Badge key={l} variant="subtle" size="sm">{l}</Badge>)}
+              {skeleton.languages.map((l) => <Badge key={l} variant="subtle" size="md">{l}</Badge>)}
             </Box>
           ) : (
-            <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 13 }}>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t('skeletonNone')}
             </Typography>
           )}
@@ -95,17 +95,17 @@ function SkeletonReview({
         <SkeletonRow label={t('skeletonFrameworks')}>
           {skeleton.frameworks.length > 0 ? (
             <Box display="flex" flexWrap="wrap" gap={4}>
-              {skeleton.frameworks.map((f) => <Badge key={f} variant="outlined" size="sm">{f}</Badge>)}
+              {skeleton.frameworks.map((f) => <Badge key={f} variant="outlined" size="md">{f}</Badge>)}
             </Box>
           ) : (
-            <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 13 }}>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t('skeletonNone')}
             </Typography>
           )}
         </SkeletonRow>
 
         <SkeletonRow label={t('skeletonDeps')}>
-          <Typography variant="caption" styles={{ fontSize: 13 }}>
+          <Typography variant="body">
             {t('skeletonDepsValue', {
               runtime: skeleton.runtimeDeps.length,
               dev: skeleton.devDeps.length,
@@ -116,18 +116,18 @@ function SkeletonReview({
         {(skeleton.infra.hasDocker || skeleton.infra.hasKubernetes || skeleton.kicadFiles.length > 0 || hasInfra) && (
           <SkeletonRow label={t('skeletonInfra')}>
             <Box display="flex" flexWrap="wrap" gap={4}>
-              {skeleton.infra.hasDocker && <Badge variant="subtle" size="sm">Docker</Badge>}
-              {skeleton.infra.hasKubernetes && <Badge variant="subtle" size="sm">Kubernetes</Badge>}
-              {skeleton.infra.ciSystems.map((ci) => <Badge key={ci} variant="subtle" size="sm">{ci}</Badge>)}
-              {skeleton.infra.cloudHints.map((c) => <Badge key={c} variant="subtle" size="sm">{c}</Badge>)}
-              {skeleton.kicadFiles.map((f) => <Badge key={f} variant="outlined" size="sm">KiCad</Badge>)}
+              {skeleton.infra.hasDocker && <Badge variant="subtle" size="md">Docker</Badge>}
+              {skeleton.infra.hasKubernetes && <Badge variant="subtle" size="md">Kubernetes</Badge>}
+              {skeleton.infra.ciSystems.map((ci) => <Badge key={ci} variant="subtle" size="md">{ci}</Badge>)}
+              {skeleton.infra.cloudHints.map((c) => <Badge key={c} variant="subtle" size="md">{c}</Badge>)}
+              {skeleton.kicadFiles.map((f) => <Badge key={f} variant="outlined" size="md">KiCad</Badge>)}
             </Box>
           </SkeletonRow>
         )}
 
         {skeleton.importedModules.length > 0 && (
           <SkeletonRow label={t('skeletonModules')}>
-            <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 12, lineHeight: '1.6' }}>
+            <Typography variant="label" color="var(--muted-foreground, #6b7280)" styles={{ lineHeight: '1.6' }}>
               {skeleton.importedModules.slice(0, 30).join(', ')}
               {skeleton.importedModules.length > 30 && ` +${skeleton.importedModules.length - 30} more`}
             </Typography>
@@ -142,9 +142,9 @@ function SkeletonRow({ label, children }: { label: string; children: React.React
   return (
     <Box className="extract__skeleton-row">
       <Typography
-        variant="caption"
+        variant="label"
         color="var(--muted-foreground, #6b7280)"
-        styles={{ fontSize: 12, flexShrink: 0, minWidth: 100 }}
+        styles={{ flexShrink: 0, minWidth: 100 }}
       >
         {label}
       </Typography>
@@ -178,14 +178,14 @@ function DirCard({
               />
             </svg>
           </Box>
-          <Typography as="span" variant="body-sm" fontWeight={600} styles={{ fontSize: 15, wordBreak: 'break-all' }}>
+          <Typography as="span" variant="body-sm" fontWeight={600} styles={{ wordBreak: 'break-all' }}>
             {dir.name}
           </Typography>
         </Box>
         <Button
           text={t('pickerChange')}
           type="button"
-          size="sm"
+          size="md"
           unstyled
           onClick={onClear}
           className="extract__change-btn"
@@ -193,11 +193,11 @@ function DirCard({
       </Box>
 
       <Box className="extract__dir-stats">
-        <Typography as="span" variant="caption" styles={{ fontSize: 13 }}>
+        <Typography as="span" variant="body">
           {t('pickerCodeFiles', { count: dir.codeFileCount })}
         </Typography>
         <Box className="extract__dir-stats-dot" aria-hidden={true} />
-        <Typography as="span" variant="caption" styles={{ fontSize: 13 }}>
+        <Typography as="span" variant="body">
           {t('pickerTotalFiles', { total: dir.totalFileCount })}
         </Typography>
       </Box>
@@ -205,7 +205,7 @@ function DirCard({
       {dir.topLevelEntries.length > 0 && (
         <Box display="flex" flexDirection="column" gap={8} marginTop={4}>
           <Typography
-            variant="caption"
+            variant="label"
             color="var(--muted-foreground, #6b7280)"
             styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}
           >
@@ -228,8 +228,8 @@ function DirCard({
                 </Box>
                 <Typography
                   as="span"
-                  variant="caption"
-                  styles={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  variant="label"
+                  styles={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 >
                   {entry.name}
                 </Typography>
@@ -292,7 +292,7 @@ function DraftBulletCard({
         <Box display="flex" flexDirection="column" gap={10} flex="1" minWidth={0}>
           <Box display="flex" flexDirection="column" gap={4}>
             <label htmlFor={textId}>
-              <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <Typography variant="label" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {t('synthBulletTextLabel')}
               </Typography>
             </label>
@@ -310,7 +310,7 @@ function DraftBulletCard({
 
           <Box display="flex" alignItems="center" gap={8} flexWrap="wrap">
             <label htmlFor={catId} style={{ display: 'flex', alignItems: 'center' }}>
-              <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <Typography variant="label" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {t('synthCategoryLabel')}
               </Typography>
             </label>
@@ -330,13 +330,13 @@ function DraftBulletCard({
 
           {draft.skills.length > 0 && (
             <Box display="flex" flexDirection="column" gap={6}>
-              <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <Typography variant="label" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {t('synthSkillsLabel')}
               </Typography>
               <Box display="flex" flexWrap="wrap" gap={4}>
                 {draft.skills.map((skill) => (
                   <Box key={skill} className="extract__draft-skill-tag">
-                    <Typography as="span" variant="caption" styles={{ fontSize: 12 }}>{skill}</Typography>
+                    <Typography as="span" variant="label">{skill}</Typography>
                     {draft.included && (
                       <button
                         type="button"
@@ -490,7 +490,7 @@ export function ExtractPage() {
       }}
       paddingX={10}
     >
-      <Box width="100%" maxWidth={600} marginTop={24} marginBottom={32}>
+      <Box width="100%" marginTop={24} marginBottom={32}>
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {t('title')}
         </Typography>
@@ -499,7 +499,7 @@ export function ExtractPage() {
         </Typography>
       </Box>
 
-      <Box width="100%" maxWidth={600} marginBottom={40}>
+      <Box width="100%" marginBottom={40}>
 
         {/* ── Unsupported browser ── */}
         {!isSupported && (
@@ -607,7 +607,7 @@ export function ExtractPage() {
                 {/* Synthesis: loading */}
                 {synthStatus === 'synthesizing' && (
                   <Box className="extract__phase">
-                    <Typography variant="body-sm" fontWeight={600} styles={{ fontSize: 15 }}>
+                    <Typography variant="body-sm" fontWeight={600}>
                       {t('synthesizing')}
                     </Typography>
                     <ProgressBar />
@@ -618,7 +618,7 @@ export function ExtractPage() {
                 {synthStatus === 'synth-error' && (
                   <Box display="flex" flexDirection="column" gap={12}>
                     <Box className="extract__error">
-                      <Typography variant="body-sm" color="var(--error, #ef4444)" fontWeight={600} styles={{ fontSize: 14 }}>
+                      <Typography variant="body-sm" color="var(--error, #ef4444)" fontWeight={600}>
                         {synthError ?? t('synthesizeError')}
                       </Typography>
                     </Box>
@@ -634,10 +634,10 @@ export function ExtractPage() {
                   <Box display="flex" flexDirection="column" gap={16}>
                     <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={8}>
                       <Box display="flex" flexDirection="column" gap={2}>
-                        <Typography variant="body-sm" fontWeight={600} styles={{ fontSize: 15 }}>
+                        <Typography variant="body-sm" fontWeight={600}>
                           {t('synthTitle')}
                         </Typography>
-                        <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 13 }}>
+                        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
                           {t('synthSubtitle')}
                         </Typography>
                       </Box>
@@ -645,7 +645,7 @@ export function ExtractPage() {
                         <Button
                           text={t('synthSelectAll')}
                           type="button"
-                          size="sm"
+                          size="md"
                           unstyled
                           onClick={() => handleSelectAll(true)}
                           className="extract__select-all-btn"
@@ -653,7 +653,7 @@ export function ExtractPage() {
                         <Button
                           text={t('synthDeselectAll')}
                           type="button"
-                          size="sm"
+                          size="md"
                           unstyled
                           onClick={() => handleSelectAll(false)}
                           className="extract__select-all-btn"
@@ -681,7 +681,7 @@ export function ExtractPage() {
 
                     {synthStatus === 'save-error' && (
                       <Box className="extract__error">
-                        <Typography variant="body-sm" color="var(--error, #ef4444)" fontWeight={600} styles={{ fontSize: 14 }}>
+                        <Typography variant="body-sm" color="var(--error, #ef4444)" fontWeight={600}>
                           {synthError ?? t('synthSaveError')}
                         </Typography>
                       </Box>
@@ -711,10 +711,10 @@ export function ExtractPage() {
                 {synthStatus === 'saved' && (
                   <Box display="flex" flexDirection="column" gap={12}>
                     <Box className="extract__done">
-                      <Typography variant="body-sm" fontWeight={600} styles={{ fontSize: 15 }}>
+                      <Typography variant="body-sm" fontWeight={600}>
                         {t('synthSaved', { count: savedCount })}
                       </Typography>
-                      <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 13, marginTop: 4 }}>
+                      <Typography variant="body" color="var(--muted-foreground, #6b7280)" styles={{ marginTop: 4 }}>
                         {t('synthSavedHint')}
                       </Typography>
                     </Box>
@@ -731,7 +731,7 @@ export function ExtractPage() {
             {extractStatus === 'error' && (
               <Box display="flex" flexDirection="column" gap={12}>
                 <Box className="extract__error">
-                  <Typography variant="body-sm" color="var(--error, #ef4444)" fontWeight={600} styles={{ fontSize: 14 }}>
+                  <Typography variant="body-sm" color="var(--error, #ef4444)" fontWeight={600}>
                     {error ?? t('extractError')}
                   </Typography>
                 </Box>
@@ -757,7 +757,7 @@ export function ExtractPage() {
             {/* Dir card shown during extraction */}
             {pickerStatus === 'ready' && dir && isRunning && (
               <Box className="extract__dir-card extract__dir-card--loading">
-                <Typography variant="caption" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 13 }}>
+                <Typography variant="body" color="var(--muted-foreground, #6b7280)">
                   {dir.name}
                 </Typography>
               </Box>
