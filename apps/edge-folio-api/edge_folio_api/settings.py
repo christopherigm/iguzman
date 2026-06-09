@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'users',
     'matrix',
     'applications',
+    'career',
 ]
 
 MIDDLEWARE = [

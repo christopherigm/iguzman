@@ -213,6 +213,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
     border: 'none',
     cursor: 'pointer',
     fontWeight: 600,
+    flexShrink: 0, 
     transition:
       'background 150ms ease, color 150ms ease, box-shadow 450ms ease',
     ...(isDisabled ? { opacity: 0.7, cursor: 'not-allowed' } : {}),

@@ -184,6 +184,9 @@ export default async function LocaleLayout({ children, params }: Props) {
                     matrix: tNav('matrix'),
                     extract: tNav('extract'),
                     applications: tNav('applications'),
+                    workExperience: tNav('workExperience'),
+                    education: tNav('education'),
+                    profile: tNav('profile'),
                     account: tNav('account'),
                     signOut: tNav('signOut'),
                   }}

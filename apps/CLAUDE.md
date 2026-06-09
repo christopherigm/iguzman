@@ -123,6 +123,47 @@ export const config = {
 };
 ```
 
+## API Route Handlers — JWT Token Refresh
+
+Every Route Handler that calls the Django API **must** use `apiFetch` from `@/lib/api-fetch`. Never manually read `access_token` from cookies and call Django directly.
+
+**Why:** `apiFetch` automatically retries the request with a refreshed access token when Django returns 401 (expired token). Manual cookie reads bypass this, causing silent 401 failures in the browser when the access token expires mid-session.
+
+```ts
+// ✓ correct — apiFetch handles refresh-and-retry automatically
+import { apiFetch } from '@/lib/api-fetch';
+
+export async function GET() {
+  const res = await apiFetch('/api/my-resource/', { cache: 'no-store' });
+  return NextResponse.json(await res.json(), { status: res.status });
+}
+
+// ✗ wrong — bypasses refresh logic; Django 401 propagates straight to the browser
+import { cookies } from 'next/headers';
+
+export async function GET() {
+  const token = (await cookies()).get('access_token')?.value;
+  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+  const res = await fetch(`${process.env.API_URL}/api/my-resource/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return NextResponse.json(await res.json(), { status: res.status });
+}
+```
+
+**Exception — routes that verify auth but call external services (not Django):** import and call `refreshAccessToken` from `@/lib/api-fetch` when verification fails before returning 401, so a stale access token triggers a refresh rather than a hard logout.
+
+```ts
+import { refreshAccessToken } from '@/lib/api-fetch';
+
+// inside the handler, after a failed token verification:
+const refreshed = await refreshAccessToken();
+if (!refreshed) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+// proceed
+```
+
+**Exception — login, signup, logout, verify-email, password-reset, passkey authentication:** these don't need a valid access token to begin with, so direct `fetch` to Django is fine.
+
 ## TypeScript — CSS Module Declarations
 
 Each app includes a `css.d.ts` file at its root for ambient module declarations for CSS subpath imports that TypeScript cannot resolve (e.g. `swiper/css`):

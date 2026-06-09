@@ -547,7 +547,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
         justifyContent="space-between"
         gap={12}
         flexWrap="wrap"
-        marginBottom={16}
+        marginBottom={8}
       >
         <Box>
           <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
@@ -562,6 +562,36 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
           kind='success'/>
         )}
       </Box>
+
+      {adding && (
+        <form onSubmit={handleAdd} className="matrix__skill-add-form">
+          <TextInput
+            label={t('skillNameLabel')}
+            value={newName}
+            onChange={setNewName}
+            required
+            maxLength={100}
+            width="100%"
+          />
+          <Box display="flex" alignItems="center" gap={8}>
+            <Select
+              value={String(newProficiency)}
+              onChange={(v) => setNewProficiency(Number(v))}
+              label={t('proficiencyLabel')}
+              options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n}/5` }))}
+              minWidth={110}
+            />
+            <Button text={t('cancel')} type="button" size="lg" onClick={() => setAdding(false)} />
+            <Button
+              text={saving ? t('saving') : t('save')}
+              type="submit"
+              size="lg"
+              kind="success"
+              disabled={saving || !newName.trim()}
+            />
+          </Box>
+        </form>
+      )}
 
       {skills.length > 0 && (
         <Box display="flex" flexWrap="wrap" gap={8} marginBottom={12}>
@@ -589,41 +619,6 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
         <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={8}>
           {t('noSkills')}
         </Typography>
-      )}
-
-      {adding && (
-        <form onSubmit={handleAdd} className="matrix__skill-add-form">
-          <TextInput
-            label={t('skillNameLabel')}
-            value={newName}
-            onChange={setNewName}
-            required
-            maxLength={100}
-            flex={1}
-            minWidth={140}
-          />
-          <select
-            className="matrix__select"
-            value={newProficiency}
-            onChange={(e) => setNewProficiency(Number(e.target.value))}
-            aria-label={t('proficiencyLabel')}
-            style={{ width: 'auto' }}
-          >
-            {[1, 2, 3, 4, 5].map((n) => (
-              <option key={n} value={n}>
-                {n}/5
-              </option>
-            ))}
-          </select>
-          <Button text={t('cancel')} type="button" size="md" onClick={() => setAdding(false)} />
-          <Button
-            text={saving ? t('saving') : t('save')}
-            type="submit"
-            size="md"
-            kind="success"
-            disabled={saving || !newName.trim()}
-          />
-        </form>
       )}
 
       {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} position='top-center' />}
@@ -773,7 +768,7 @@ export function MatrixBoard() {
           okCallback={() => bulletFormRef.current?.requestSubmit()}
           cancelCallback={closeForm}
           okDisabled={!bulletFormCanSubmit}
-          panelMaxWidth="90vw"
+          panelMaxWidth="600px"
         >
           <BulletForm
             category={editingBullet?.category ?? 'impact'}

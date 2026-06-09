@@ -187,6 +187,9 @@ export async function changePassword(
 export interface ResumeImportResult {
   bullets_imported: number;
   skills_imported: number;
+  work_experience_imported: number;
+  education_imported: number;
+  extracted_skills: string[];
 }
 
 export async function uploadResume(file: File): Promise<ResumeImportResult> {

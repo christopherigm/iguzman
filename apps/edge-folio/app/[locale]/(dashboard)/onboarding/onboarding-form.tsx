@@ -446,6 +446,14 @@ export function OnboardingForm() {
                     skills: resumeResult.skills_imported,
                   })}
                 </Typography>
+                {(resumeResult.work_experience_imported > 0 || resumeResult.education_imported > 0) && (
+                  <Typography variant="label" color="var(--foreground)">
+                    {t('resumeCareerSuccess', {
+                      jobs: resumeResult.work_experience_imported,
+                      degrees: resumeResult.education_imported,
+                    })}
+                  </Typography>
+                )}
                 <Typography
                   variant="label"
                   color="var(--muted-foreground, #6b7280)"
@@ -547,7 +555,11 @@ export function OnboardingForm() {
                 </Typography>
                 <Typography variant="body-sm" fontWeight={600}>
                   {resumeResult
-                    ? t('reviewResumeImported', { bullets: resumeResult.bullets_imported })
+                    ? t('reviewResumeImported', {
+                        bullets: resumeResult.bullets_imported,
+                        jobs: resumeResult.work_experience_imported,
+                        degrees: resumeResult.education_imported,
+                      })
                     : t('reviewResumeSkipped')}
                 </Typography>
               </Box>

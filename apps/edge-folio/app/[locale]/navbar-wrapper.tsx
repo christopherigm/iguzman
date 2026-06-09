@@ -14,6 +14,9 @@ interface NavbarWrapperProps {
     matrix: string;
     extract: string;
     applications: string;
+    workExperience: string;
+    education: string;
+    profile: string;
     account: string;
     signOut: string;
   };
@@ -56,6 +59,9 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
         { label: labels.matrix, href: '/matrix' },
         { label: labels.extract, href: '/extract' },
         { label: labels.applications, href: '/applications' },
+        { label: labels.workExperience, href: '/work-experience' },
+        { label: labels.education, href: '/education' },
+        { label: labels.profile, href: '/profile' },
       ]
     : [];
 

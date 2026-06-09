@@ -20,24 +20,6 @@
   background: rgba(6,182,212,0.03);
 }
 
-.matrix__select {
-  width: 100%;
-  padding: 5px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border, #e5e7eb);
-  background: var(--surface-2);
-  color: var(--foreground);
-  color-scheme: light dark;
-  font-family: inherit;
-  box-sizing: border-box;
-  cursor: pointer;
-}
-
-.matrix__select:focus {
-  outline: none;
-  border-color: var(--primary, #06b6d4);
-}
-
 .matrix__skill-checkbox {
   display: inline-flex;
   align-items: center;
@@ -84,9 +66,10 @@
 
 .matrix__skill-add-form {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: flex-end;
-  flex-wrap: wrap;
+  align-items: stretch;
+  margin-bottom: 20px;
 }
 
 /* ── Enhance button ───────────────────────────────────────────────────────── */

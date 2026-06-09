@@ -267,15 +267,30 @@ def _extract_pdf_text(file_obj) -> str:
 
 def _call_groq_for_resume(text: str, api_key: str) -> dict:
     prompt = (
-        'You are a resume parser. Extract professional accomplishments and skills.\n\n'
+        'You are a resume parser. Extract professional accomplishments, skills, work history, and education.\n\n'
         'Return ONLY a valid JSON object:\n'
-        '{"bullets":[{"text":"...","category":"impact|technical|leadership|collaboration|other"}],"skills":["..."]}\n\n'
+        '{\n'
+        '  "bullets":[{"text":"...","category":"impact|technical|leadership|collaboration|other"}],\n'
+        '  "skills":["..."],\n'
+        '  "work_experience":[\n'
+        '    {"company":"...","title":"...","employment_type":"full_time|part_time|contract|freelance|internship",\n'
+        '     "location":"...","start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD or null","is_current":false,\n'
+        '     "description":"..."}\n'
+        '  ],\n'
+        '  "education":[\n'
+        '    {"institution":"...","degree":"bachelor|master|phd|associate|certificate|bootcamp|other",\n'
+        '     "field_of_study":"...","start_year":2018,"end_year":2022,"is_current":false,\n'
+        '     "gpa":null,"honors":"","description":""}\n'
+        '  ]\n'
+        '}\n\n'
         'Rules:\n'
-        '- Each bullet: one factual sentence under 500 chars describing a verifiable achievement\n'
+        '- bullets: one factual sentence under 500 chars describing a verifiable achievement; at most 20\n'
         '- category: impact=business outcome, technical=engineering, leadership=team lead, '
         'collaboration=cross-team, other=else\n'
-        '- skills: programming languages, frameworks, tools, cloud platforms only\n'
-        '- At most 20 bullets and 30 skills\n'
+        '- skills: programming languages, frameworks, tools, cloud platforms only; at most 30\n'
+        '- work_experience: one entry per role; start_date/end_date as YYYY-MM-DD (use YYYY-01-01 if only '
+        'year known); is_current=true means end_date must be null\n'
+        '- education: start_year/end_year as 4-digit integers; is_current=true means end_year must be null\n'
         '- Return valid JSON only — no markdown fences\n\n'
         f'Resume:\n{text[:8000]}'
     )
@@ -313,6 +328,9 @@ class ResumeUploadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        import datetime
+
+        from career.models import Education, WorkExperience
         from matrix.models import BulletPoint, Skill
 
         serializer = ResumeUploadSerializer(data=request.data)
@@ -344,10 +362,16 @@ class ResumeUploadView(APIView):
 
         bullets_data = structured.get('bullets', [])
         skills_data = structured.get('skills', [])
+        work_exp_data = structured.get('work_experience', [])
+        education_data = structured.get('education', [])
         if not isinstance(bullets_data, list):
             bullets_data = []
         if not isinstance(skills_data, list):
             skills_data = []
+        if not isinstance(work_exp_data, list):
+            work_exp_data = []
+        if not isinstance(education_data, list):
+            education_data = []
 
         # Upsert skills
         skill_objs: dict[str, Skill] = {}
@@ -392,14 +416,117 @@ class ResumeUploadView(APIView):
                     bullet.skills.add(skill_obj)
             bullets_created += 1
 
+        # Create work experience entries
+        valid_employment_types = {'full_time', 'part_time', 'contract', 'freelance', 'internship'}
+        work_exp_created = 0
+
+        for item in work_exp_data[:20]:
+            if not isinstance(item, dict):
+                continue
+            company = str(item.get('company', '')).strip()[:200]
+            title = str(item.get('title', '')).strip()[:200]
+            if not company or not title:
+                continue
+            raw_start = str(item.get('start_date', '')).strip()
+            try:
+                start_date = datetime.date.fromisoformat(raw_start)
+            except (ValueError, TypeError):
+                continue
+            is_current = bool(item.get('is_current', False))
+            raw_end = item.get('end_date')
+            end_date = None
+            if not is_current and raw_end:
+                try:
+                    end_date = datetime.date.fromisoformat(str(raw_end).strip())
+                except (ValueError, TypeError):
+                    end_date = None
+            if not is_current and not end_date:
+                continue
+            employment_type = str(item.get('employment_type', 'full_time')).strip()
+            if employment_type not in valid_employment_types:
+                employment_type = 'full_time'
+            WorkExperience.objects.create(
+                user=request.user,
+                company=company,
+                title=title,
+                employment_type=employment_type,
+                location=str(item.get('location', '')).strip()[:200],
+                start_date=start_date,
+                end_date=end_date,
+                is_current=is_current,
+                description=str(item.get('description', '')).strip()[:2000],
+            )
+            work_exp_created += 1
+
+        # Create education entries
+        valid_degrees = {'bachelor', 'master', 'phd', 'associate', 'certificate', 'bootcamp', 'other'}
+        education_created = 0
+
+        for item in education_data[:10]:
+            if not isinstance(item, dict):
+                continue
+            institution = str(item.get('institution', '')).strip()[:200]
+            if not institution:
+                continue
+            try:
+                start_year = int(item.get('start_year', 0))
+            except (ValueError, TypeError):
+                continue
+            if start_year < 1900 or start_year > 2100:
+                continue
+            is_current = bool(item.get('is_current', False))
+            end_year = None
+            if not is_current:
+                try:
+                    end_year = int(item.get('end_year', 0))
+                    if end_year < 1900 or end_year > 2100:
+                        end_year = None
+                except (ValueError, TypeError):
+                    end_year = None
+            if not is_current and not end_year:
+                continue
+            degree = str(item.get('degree', 'bachelor')).strip()
+            if degree not in valid_degrees:
+                degree = 'other'
+            raw_gpa = item.get('gpa')
+            gpa = None
+            if raw_gpa is not None:
+                try:
+                    gpa_val = float(raw_gpa)
+                    if 0.0 <= gpa_val <= 10.0:
+                        gpa = gpa_val
+                except (ValueError, TypeError):
+                    pass
+            Education.objects.create(
+                user=request.user,
+                institution=institution,
+                degree=degree,
+                field_of_study=str(item.get('field_of_study', '')).strip()[:200],
+                start_year=start_year,
+                end_year=end_year,
+                is_current=is_current,
+                gpa=gpa,
+                honors=str(item.get('honors', '')).strip()[:100],
+                description=str(item.get('description', '')).strip()[:2000],
+            )
+            education_created += 1
+
         try:
             cache.delete(f'matrix:bullets:{request.user.id}')
             cache.delete(f'matrix:skills:{request.user.id}')
+            cache.delete(f'career:work_experiences:{request.user.id}')
+            cache.delete(f'career:educations:{request.user.id}')
         except Exception as exc:
             logger.warning('Cache invalidation failed after resume import: %s', exc)
 
         return Response(
-            {'bullets_imported': bullets_created, 'skills_imported': len(skill_objs)},
+            {
+                'bullets_imported': bullets_created,
+                'skills_imported': len(skill_objs),
+                'work_experience_imported': work_exp_created,
+                'education_imported': education_created,
+                'extracted_skills': [obj.name for obj in skill_objs.values()],
+            },
             status=status.HTTP_201_CREATED,
         )
 

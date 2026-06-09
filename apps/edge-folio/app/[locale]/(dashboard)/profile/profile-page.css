@@ -1,0 +1,181 @@
+/* ── Tech tag input ── */
+
+.profile__tags {
+  min-height: 0;
+}
+
+.profile__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--primary-subtle, rgba(6, 182, 212, 0.12));
+  color: var(--primary, #06b6d4);
+  font-weight: 500;
+}
+
+.profile__tag-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0 0 2px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.profile__tag-remove:hover {
+  opacity: 1;
+}
+
+.profile__tech-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-2);
+  color: var(--foreground);
+  color-scheme: light dark;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.profile__tech-input:focus {
+  border-color: var(--primary, #06b6d4);
+}
+
+.profile__suggestion {
+  padding: 4px 10px;
+  border-radius: 16px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-2);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.profile__suggestion:hover {
+  border-color: var(--primary, #06b6d4);
+  color: var(--primary, #06b6d4);
+}
+
+.profile__suggestion--selected {
+  background: var(--primary-subtle, rgba(6, 182, 212, 0.12));
+  border-color: var(--primary, #06b6d4);
+  color: var(--primary, #06b6d4);
+}
+
+/* ── Resume upload ── */
+
+.profile__upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 24px;
+  border-radius: 10px;
+  border: 2px dashed var(--border, #e5e7eb);
+  background: var(--surface-2);
+  color: var(--foreground);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.profile__upload-zone:hover {
+  border-color: var(--primary, #06b6d4);
+  background: rgba(6, 182, 212, 0.04);
+}
+
+.profile__upload-zone--dragging {
+  border-color: var(--primary, #06b6d4);
+  background: rgba(6, 182, 212, 0.08);
+}
+
+.profile__upload-zone--loading {
+  cursor: default;
+  border-style: solid;
+}
+
+.profile__upload-zone--loading:hover {
+  border-color: var(--border, #e5e7eb);
+  background: var(--surface-2);
+}
+
+.profile__file-input {
+  display: none;
+}
+
+/* ── Import banner ── */
+
+.profile__import-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--success, #22c55e);
+  background: rgba(34, 197, 94, 0.06);
+}
+
+/* ── Skills diff panel ── */
+
+.profile__diff-panel {
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-2);
+}
+
+/* ── Upload another ── */
+
+.profile__upload-another {
+  align-self: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted-foreground, #6b7280);
+  font-size: 0.8125rem;
+  padding: 4px 8px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.profile__upload-another:hover {
+  color: var(--foreground);
+}
+
+/* ── Review links ── */
+
+.profile__review-link {
+  color: var(--primary, #06b6d4);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.profile__review-link:hover {
+  opacity: 0.8;
+}
+
+/* ── Status messages ── */
+
+.profile__success {
+  color: var(--success, #22c55e);
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.profile__error {
+  color: var(--error, #ef4444);
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.08);
+}

@@ -1,0 +1,83 @@
+.education__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.education__select {
+  background: var(--surface-2);
+  color: var(--foreground);
+  color-scheme: light dark;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.875rem;
+  width: 100%;
+}
+
+.education__card {
+  transition: border-color 0.15s ease;
+}
+
+.education__card:hover {
+  border-color: var(--primary, #06b6d4);
+}
+
+.education__year-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.education__description {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.education__enhance-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    opacity 150ms ease;
+}
+
+.education__enhance-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground, #171717) 8%, transparent);
+}
+
+.education__enhance-btn--active {
+  background: color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent);
+}
+
+.education__enhance-btn--busy {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.education__enhance-preview {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--primary, #06b6d4) 30%, transparent);
+  background: color-mix(in srgb, var(--primary, #06b6d4) 5%, transparent);
+}
+
+.education__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 24px;
+  border: 2px dashed var(--border, #e5e7eb);
+  border-radius: 16px;
+  text-align: center;
+}

@@ -5,7 +5,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 
 const COOKIE_OPTS = { httpOnly: true, secure: IS_PROD, sameSite: 'strict' as const, path: '/' };
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   const cookieStore = await cookies();
   const refresh = cookieStore.get('refresh_token')?.value;
   if (!refresh) return null;

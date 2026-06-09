@@ -1,21 +1,12 @@
-import { cookies } from 'next/headers';
+import { apiFetch } from '@/lib/api-fetch';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET() {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
-
-  const res = await fetch(`${process.env.API_URL}/api/applications/`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  });
+  const res = await apiFetch('/api/applications/', { cache: 'no-store' });
   return NextResponse.json(await res.json(), { status: res.status });
 }
 
 export async function POST(request: NextRequest) {
-  const token = (await cookies()).get('access_token')?.value;
-  if (!token) return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
-
   const body = await request.json() as Record<string, unknown>;
   const { company_image_url, ...rest } = body as { company_image_url?: string | null } & Record<string, unknown>;
 
@@ -41,21 +32,17 @@ export async function POST(request: NextRequest) {
       }
       formData.append('company_image', imageBlob, imageName);
 
-      const res = await fetch(`${process.env.API_URL}/api/applications/`, {
+      const res = await apiFetch('/api/applications/', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       return NextResponse.json(await res.json(), { status: res.status });
     }
   }
 
-  const res = await fetch(`${process.env.API_URL}/api/applications/`, {
+  const res = await apiFetch('/api/applications/', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(rest),
   });
   return NextResponse.json(await res.json(), { status: res.status });

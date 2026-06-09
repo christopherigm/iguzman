@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { refreshAccessToken } from '@/lib/api-fetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,9 +36,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ detail: 'Authentication required.' }, { status: 401 });
   }
 
-  const valid = await verifyToken(token);
+  let valid = await verifyToken(token);
   if (!valid) {
-    return NextResponse.json({ detail: 'Invalid or expired token.' }, { status: 401 });
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) {
+      return NextResponse.json({ detail: 'Invalid or expired token.' }, { status: 401 });
+    }
+    valid = true;
   }
 
   const parsed = (await req.json()) as GroqProxyBody;

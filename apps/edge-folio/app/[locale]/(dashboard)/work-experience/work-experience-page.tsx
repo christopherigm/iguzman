@@ -1,0 +1,620 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { Container } from '@repo/ui/core-elements/container';
+import { Box } from '@repo/ui/core-elements/box';
+import { Button } from '@repo/ui/core-elements/button';
+import { Typography } from '@repo/ui/core-elements/typography';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import { Badge } from '@repo/ui/core-elements/badge';
+import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Select } from '@repo/ui/core-elements/select';
+import { Switch } from '@repo/ui/core-elements/switch';
+import { Slider } from '@repo/ui/core-elements/slider';
+import { Toast } from '@repo/ui/core-elements/toast';
+import { SpeechButton } from '@repo/ui/core-elements/speech-button';
+import { useGroqProxy } from '@repo/ui/use-groq';
+import {
+  getWorkExperiences,
+  createWorkExperience,
+  updateWorkExperience,
+  deleteWorkExperience,
+  CareerError,
+  type WorkExperience,
+  type WorkExperiencePayload,
+  type EmploymentType,
+} from '@/lib/career';
+import './work-experience-page.css';
+
+const EMPLOYMENT_TYPES: EmploymentType[] = [
+  'full_time', 'part_time', 'contract', 'freelance', 'internship',
+];
+
+const EMPLOYMENT_TYPE_COLORS: Record<EmploymentType, string> = {
+  full_time:  '#06b6d4',
+  part_time:  '#8b5cf6',
+  contract:   '#f97316',
+  freelance:  '#22c55e',
+  internship: '#f59e0b',
+};
+
+const PARAGRAPH_WORD_COUNTS: Record<string, { min: number; max: number }> = {
+  xs:      { min: 10,  max: 20  },
+  sm:      { min: 25,  max: 40  },
+  md:      { min: 50,  max: 75  },
+  'md-lg': { min: 80,  max: 120 },
+  lg:      { min: 130, max: 180 },
+  xl:      { min: 200, max: 270 },
+};
+
+const PARAGRAPH_LENGTH_STEPS = [
+  { value: 'xs',    label: 'XS'  },
+  { value: 'sm',    label: 'S'   },
+  { value: 'md',    label: 'M'   },
+  { value: 'md-lg', label: 'M-L' },
+  { value: 'lg',    label: 'L'   },
+  { value: 'xl',    label: 'XL'  },
+];
+
+const PARAGRAPH_COUNT_STEPS = [1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) }));
+
+// ── Form ──────────────────────────────────────────────────────────────────────
+
+interface FormProps {
+  initial?: WorkExperience;
+  onSave: (entry: WorkExperience) => void;
+  formRef: React.RefObject<HTMLFormElement | null>;
+  onValidityChange: (valid: boolean) => void;
+}
+
+function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: FormProps) {
+  const t = useTranslations('WorkExperiencePage');
+  const locale = useLocale();
+  const [company, setCompany] = useState(initial?.company ?? '');
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [employmentType, setEmploymentType] = useState<EmploymentType>(
+    initial?.employment_type ?? 'full_time',
+  );
+  const [location, setLocation] = useState(initial?.location ?? '');
+  const [startDate, setStartDate] = useState(initial?.start_date ?? '');
+  const [endDate, setEndDate] = useState(initial?.end_date ?? '');
+  const [isCurrent, setIsCurrent] = useState(initial?.is_current ?? false);
+  const [description, setDescription] = useState(initial?.description ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // ── AI Enhance ──────────────────────────────────────────────────────────────
+  const { streamingText, isGenerating, generate, abort, reset: resetLlm } =
+    useGroqProxy({ temperature: 0.7 });
+  const [enhancePreview, setEnhancePreview] = useState('');
+  const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
+  const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
+  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState('sm');
+
+  useEffect(() => {
+    if (streamingText) setEnhancePreview(streamingText);
+  }, [streamingText]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (isGenerating) abort(); }, []);
+
+  const isValid = !saving && company.trim().length > 0 && title.trim().length > 0 &&
+    startDate.length > 0 && (isCurrent || endDate.length > 0);
+
+  useEffect(() => {
+    onValidityChange(isValid);
+  }, [isValid, onValidityChange]);
+
+  const handleConfirmEnhanceOptions = async () => {
+    setShowEnhanceOptions(false);
+    const currentText = description.trim();
+    if (!currentText) return;
+    setEnhancePreview('');
+    resetLlm();
+    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
+    const isEs = locale === 'es';
+    const messages = isEs
+      ? [
+          {
+            role: 'system' as const,
+            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de experiencia laboral en prosa impactante para un portafolio. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? 's' : ''}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado — sin explicaciones, etiquetas ni marcas de formato.`,
+          },
+          { role: 'user' as const, content: currentText },
+        ]
+      : [
+          {
+            role: 'system' as const,
+            content: `You are a professional career coach and resume expert. Rewrite and expand the following work experience description into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? 'paragraph' : 'paragraphs'}. Each paragraph must be between ${min} and ${max} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text — no explanations, labels, or formatting marks.`,
+          },
+          { role: 'user' as const, content: currentText },
+        ];
+    await generate(messages);
+  };
+
+  const handleAcceptEnhance = () => {
+    if (enhancePreview) setDescription(enhancePreview);
+    setEnhancePreview('');
+    resetLlm();
+  };
+
+  const handleDiscardEnhance = () => {
+    if (isGenerating) abort();
+    setEnhancePreview('');
+    resetLlm();
+  };
+
+  // ── Voice input ──────────────────────────────────────────────────────────────
+  const descriptionRef = useRef(description);
+  descriptionRef.current = description;
+  const handleTranscript = useCallback((transcript: string) => {
+    const current = descriptionRef.current;
+    setDescription(current ? `${current} ${transcript}` : transcript);
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isValid) return;
+    setSaving(true);
+    setError(null);
+    const payload: WorkExperiencePayload = {
+      company: company.trim(),
+      title: title.trim(),
+      employment_type: employmentType,
+      location: location.trim(),
+      start_date: startDate,
+      end_date: isCurrent ? null : endDate || null,
+      is_current: isCurrent,
+      description: description.trim(),
+    };
+    try {
+      const result = initial
+        ? await updateWorkExperience(initial.id, payload)
+        : await createWorkExperience(payload);
+      onSave(result);
+    } catch (err) {
+      if (err instanceof CareerError && err.data.detail) {
+        setError(String(err.data.detail));
+      } else {
+        setError(t('saveError'));
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const llmBusy = isGenerating;
+  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
+
+  return (
+    <>
+      {showEnhanceOptions && (
+        <ConfirmationModal
+          title={t('enhanceOptionsTitle')}
+          text={t('enhanceOptionsText')}
+          okCallback={handleConfirmEnhanceOptions}
+          cancelCallback={() => setShowEnhanceOptions(false)}
+        >
+          <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
+            <Slider
+              steps={PARAGRAPH_COUNT_STEPS}
+              value={enhanceParagraphs}
+              onChange={(v) => setEnhanceParagraphs(Number(v))}
+              label={t('enhanceParagraphsLabel')}
+            />
+            <Slider
+              steps={PARAGRAPH_LENGTH_STEPS}
+              value={enhanceParagraphLength}
+              onChange={(v) => setEnhanceParagraphLength(String(v))}
+              label={`${t('enhanceLengthLabel')} (${currentLengthWordRange.min}–${currentLengthWordRange.max} words/para)`}
+            />
+          </Box>
+        </ConfirmationModal>
+      )}
+      <form ref={formRef} onSubmit={handleSubmit} className="work-exp__form">
+        <TextInput
+          label={t('companyLabel')}
+          value={company}
+          onChange={setCompany}
+          required
+          maxLength={200}
+        />
+        <TextInput
+          label={t('titleLabel')}
+          value={title}
+          onChange={setTitle}
+          required
+          maxLength={200}
+        />
+
+        <Select
+          label={t('employmentTypeLabel')}
+          value={employmentType}
+          onChange={(v) => setEmploymentType(v as EmploymentType)}
+          options={EMPLOYMENT_TYPES.map((et) => ({ value: et, label: t(`employmentTypes.${et}`) }))}
+          width="100%"
+        />
+
+        <TextInput
+          label={t('locationLabel')}
+          value={location}
+          onChange={setLocation}
+          maxLength={200}
+          placeholder={t('locationPlaceholder')}
+        />
+
+        <Box className="work-exp__date-row">
+          <Box display="flex" flexDirection="column" gap={4}>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+              {t('startDateLabel')}
+            </Typography>
+            <input
+              type="date"
+              className="work-exp__date-input"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required
+              aria-label={t('startDateLabel')}
+            />
+          </Box>
+          <Box display="flex" flexDirection="column" gap={4}>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+              {t('endDateLabel')}
+            </Typography>
+            <input
+              type="date"
+              className="work-exp__date-input"
+              value={isCurrent ? '' : endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              disabled={isCurrent}
+              aria-label={t('endDateLabel')}
+            />
+          </Box>
+        </Box>
+
+        <Box display="flex" alignItems="center" gap={10}>
+          <Switch
+            checked={isCurrent}
+            onChange={(checked) => {
+              setIsCurrent(checked);
+              if (checked) setEndDate('');
+            }}
+            aria-label={t('isCurrentLabel')}
+          />
+          <Typography variant="body">
+            {t('isCurrentLabel')}
+          </Typography>
+        </Box>
+
+        {/* Description label row with voice + enhance buttons */}
+        <Box className="work-exp__field-label-row">
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+            {t('descriptionLabel')}
+          </Typography>
+          <Box display="flex" alignItems="center" gap={6}>
+            <SpeechButton
+              language={locale === 'es' ? 'es' : 'en'}
+              onTranscript={handleTranscript}
+              micIcon="/icons/mic.svg"
+            />
+            <Button
+              unstyled
+              type="button"
+              icon="/icons/enhance.svg"
+              iconSize="16px"
+              iconColor={enhancePreview ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+              disabled={llmBusy || !description.trim()}
+              onClick={() => setShowEnhanceOptions(true)}
+              aria-label={t('enhanceLabel')}
+              title={t('enhanceLabel')}
+              className={[
+                'work-exp__enhance-btn',
+                llmBusy || !description.trim() ? 'work-exp__enhance-btn--busy' : '',
+                enhancePreview ? 'work-exp__enhance-btn--active' : '',
+              ].filter(Boolean).join(' ')}
+            />
+          </Box>
+        </Box>
+        <TextInput
+          multirow
+          rows={4}
+          value={description}
+          onChange={setDescription}
+          maxLength={2000}
+          placeholder={t('descriptionPlaceholder')}
+          width="100%"
+          aria-label={t('descriptionLabel')}
+        />
+
+        {/* Enhance preview panel */}
+        {enhancePreview && (
+          <Box
+            className="work-exp__enhance-preview"
+            display="flex"
+            flexDirection="column"
+            gap={10}
+          >
+            <Typography variant="body-sm">{enhancePreview}</Typography>
+            <Box display="flex" gap={8} alignItems="center" marginTop={12}>
+              {isGenerating ? (
+                <Button text={t('enhanceStop')} type="button" size="md" onClick={handleDiscardEnhance} />
+              ) : (
+                <>
+                  <Button text={t('enhanceDiscard')} type="button" size="md" onClick={handleDiscardEnhance} />
+                  <Button text={t('enhanceAccept')} type="button" size="md" kind="success" onClick={handleAcceptEnhance} />
+                </>
+              )}
+            </Box>
+          </Box>
+        )}
+
+        {error && (
+          <Typography variant="caption" color="var(--error, #ef4444)">
+            {error}
+          </Typography>
+        )}
+      </form>
+    </>
+  );
+}
+
+// ── Card ──────────────────────────────────────────────────────────────────────
+
+interface CardProps {
+  entry: WorkExperience;
+  onEdit: (e: WorkExperience) => void;
+  onDelete: (id: number) => void;
+}
+
+function WorkExperienceCard({ entry, onEdit, onDelete }: CardProps) {
+  const t = useTranslations('WorkExperiencePage');
+
+  const dateRange = (() => {
+    const start = new Date(entry.start_date + 'T12:00:00').toLocaleDateString(undefined, {
+      year: 'numeric', month: 'short',
+    });
+    if (entry.is_current) return `${start} — ${t('present')}`;
+    if (entry.end_date) {
+      const end = new Date(entry.end_date + 'T12:00:00').toLocaleDateString(undefined, {
+        year: 'numeric', month: 'short',
+      });
+      return `${start} — ${end}`;
+    }
+    return start;
+  })();
+
+  return (
+    <Box
+      className="work-exp__card"
+      display="flex"
+      flexDirection="column"
+      gap={10}
+      padding={16}
+      borderRadius={12}
+      border="1px solid var(--border, #e5e7eb)"
+      backgroundColor="var(--surface-1)"
+    >
+      <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={12} flexWrap="wrap">
+        <Box display="flex" flexDirection="column" gap={2}>
+          <Typography as="h3" variant="body" fontWeight={700}>
+            {entry.title}
+          </Typography>
+          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+            {entry.company}
+            {entry.location ? ` · ${entry.location}` : ''}
+          </Typography>
+        </Box>
+        <Badge
+          variant="subtle"
+          color={EMPLOYMENT_TYPE_COLORS[entry.employment_type]}
+          style={{ textTransform: 'capitalize', letterSpacing: '0.02em', flexShrink: 0 }}
+        >
+          {t(`employmentTypes.${entry.employment_type}`)}
+        </Badge>
+      </Box>
+
+      <Typography variant="label" color="var(--muted-foreground, #6b7280)">
+        {dateRange}
+      </Typography>
+
+      {entry.description && (
+        <Typography
+          as="p"
+          variant="body-sm"
+          color="var(--foreground)"
+          className="work-exp__description"
+          styles={{ lineHeight: 1.6 }}
+        >
+          {entry.description}
+        </Typography>
+      )}
+
+      <Box display="flex" gap={8} justifyContent="flex-end" marginTop={4}>
+        <Button text={t('delete')} type="button" size="md" kind="error" onClick={() => onDelete(entry.id)} />
+        <Button text={t('edit')} type="button" size="md" onClick={() => onEdit(entry)} />
+      </Box>
+    </Box>
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
+export function WorkExperiencePage() {
+  const t = useTranslations('WorkExperiencePage');
+  const [entries, setEntries] = useState<WorkExperience[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<WorkExperience | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
+  const [toastKey, setToastKey] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [formCanSubmit, setFormCanSubmit] = useState(false);
+
+  function showToast(text: string, kind: 'success' | 'error') {
+    setToast({ text, kind });
+    setToastKey((k) => k + 1);
+  }
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getWorkExperiences();
+      setEntries(res.results);
+    } catch {
+      setError(t('errorLoad'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function openAdd() {
+    setEditing(null);
+    setFormOpen(true);
+  }
+
+  function openEdit(entry: WorkExperience) {
+    setEditing(entry);
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    setEditing(null);
+  }
+
+  function handleSaved(entry: WorkExperience) {
+    setEntries((prev) =>
+      editing === null
+        ? [entry, ...prev]
+        : prev.map((e) => (e.id === entry.id ? entry : e)),
+    );
+    closeForm();
+    showToast(editing === null ? t('savedSuccess') : t('updatedSuccess'), 'success');
+  }
+
+  async function handleDelete(id: number) {
+    try {
+      await deleteWorkExperience(id);
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+      showToast(t('deletedSuccess'), 'success');
+    } catch {
+      showToast(t('deleteError'), 'error');
+    }
+  }
+
+  if (loading) {
+    return (
+      <Container
+        display="flex"
+        alignItems="center"
+        styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center' }}
+      >
+        <ProgressBar label={t('loading')} />
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container
+        display="flex"
+        alignItems="center"
+        styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center', gap: '16px' }}
+      >
+        <Typography variant="body-sm" color="var(--error, #ef4444)">
+          {error}
+        </Typography>
+        <Button text={t('retry')} type="button" size="md" onClick={load} />
+      </Container>
+    );
+  }
+
+  return (
+    <Container
+      paddingX={10}
+      styles={{ paddingTop: 'var(--ui-navbar-height)', paddingBottom: '60px' }}
+    >
+      {pendingDeleteId !== null && (
+        <ConfirmationModal
+          title={t('confirmDeleteTitle')}
+          text={t('confirmDeleteText')}
+          okCallback={() => {
+            const id = pendingDeleteId;
+            setPendingDeleteId(null);
+            void handleDelete(id);
+          }}
+          cancelCallback={() => setPendingDeleteId(null)}
+        />
+      )}
+
+      {formOpen && (
+        <ConfirmationModal
+          title={editing ? t('editTitle') : t('addTitle')}
+          text=""
+          okCallback={() => formRef.current?.requestSubmit()}
+          cancelCallback={closeForm}
+          okDisabled={!formCanSubmit}
+          panelMaxWidth="600px"
+        >
+          <WorkExperienceForm
+            initial={editing ?? undefined}
+            onSave={handleSaved}
+            formRef={formRef}
+            onValidityChange={setFormCanSubmit}
+          />
+        </ConfirmationModal>
+      )}
+
+      <Box
+        width="100%"
+        marginTop={24}
+        marginBottom={24}
+        display="flex"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={16}
+        flexWrap="wrap"
+      >
+        <Box display="flex" flexDirection="column" gap={4}>
+          <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
+            {t('title')}
+          </Typography>
+          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+            {t('subtitle')}
+          </Typography>
+        </Box>
+        <Button text={t('addEntry')} type="button" size="md" kind="success" onClick={openAdd} />
+      </Box>
+
+      {entries.length === 0 ? (
+        <Box className="work-exp__empty">
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+            {t('empty')}
+          </Typography>
+          <Button text={t('addEntry')} type="button" size="md" kind="success" onClick={openAdd} />
+        </Box>
+      ) : (
+        <Box display="flex" flexDirection="column" gap={16} marginBottom={40}>
+          {entries.map((entry) => (
+            <WorkExperienceCard
+              key={entry.id}
+              entry={entry}
+              onEdit={openEdit}
+              onDelete={setPendingDeleteId}
+            />
+          ))}
+        </Box>
+      )}
+
+      {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} position="top-center" />}
+    </Container>
+  );
+}

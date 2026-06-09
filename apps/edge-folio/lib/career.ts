@@ -1,0 +1,129 @@
+export type EmploymentType = 'full_time' | 'part_time' | 'contract' | 'freelance' | 'internship';
+export type DegreeType = 'bachelor' | 'master' | 'phd' | 'associate' | 'certificate' | 'bootcamp' | 'other';
+
+export interface WorkExperience {
+  id: number;
+  company: string;
+  title: string;
+  employment_type: EmploymentType;
+  location: string;
+  start_date: string;
+  end_date: string | null;
+  is_current: boolean;
+  description: string;
+  created: string;
+  modified: string;
+}
+
+export interface Education {
+  id: number;
+  institution: string;
+  degree: DegreeType;
+  field_of_study: string;
+  start_year: number;
+  end_year: number | null;
+  is_current: boolean;
+  gpa: number | null;
+  honors: string;
+  description: string;
+  created: string;
+  modified: string;
+}
+
+export interface WorkExperiencePayload {
+  company: string;
+  title: string;
+  employment_type: EmploymentType;
+  location: string;
+  start_date: string;
+  end_date: string | null;
+  is_current: boolean;
+  description: string;
+}
+
+export interface EducationPayload {
+  institution: string;
+  degree: DegreeType;
+  field_of_study: string;
+  start_year: number;
+  end_year: number | null;
+  is_current: boolean;
+  gpa: number | null;
+  honors: string;
+  description: string;
+}
+
+interface ListResponse<T> {
+  count: number;
+  results: T[];
+}
+
+export class CareerError extends Error {
+  constructor(
+    public status: number,
+    public data: Record<string, unknown>,
+  ) {
+    super(`Career API error ${status}`);
+  }
+}
+
+async function careerFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new CareerError(res.status, data);
+  }
+  return res.json() as Promise<T>;
+}
+
+// ── Work Experience ───────────────────────────────────────────────────────────
+
+export function getWorkExperiences(): Promise<ListResponse<WorkExperience>> {
+  return careerFetch('/api/career/work-experience');
+}
+
+export function createWorkExperience(payload: WorkExperiencePayload): Promise<WorkExperience> {
+  return careerFetch('/api/career/work-experience', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateWorkExperience(id: number, payload: Partial<WorkExperiencePayload>): Promise<WorkExperience> {
+  return careerFetch(`/api/career/work-experience/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteWorkExperience(id: number): Promise<void> {
+  return careerFetch(`/api/career/work-experience/${id}`, { method: 'DELETE' });
+}
+
+// ── Education ─────────────────────────────────────────────────────────────────
+
+export function getEducations(): Promise<ListResponse<Education>> {
+  return careerFetch('/api/career/education');
+}
+
+export function createEducation(payload: EducationPayload): Promise<Education> {
+  return careerFetch('/api/career/education', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateEducation(id: number, payload: Partial<EducationPayload>): Promise<Education> {
+  return careerFetch(`/api/career/education/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteEducation(id: number): Promise<void> {
+  return careerFetch(`/api/career/education/${id}`, { method: 'DELETE' });
+}
