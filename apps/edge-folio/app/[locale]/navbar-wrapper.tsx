@@ -13,6 +13,7 @@ interface NavbarWrapperProps {
     home: string;
     matrix: string;
     extract: string;
+    applications: string;
     account: string;
     signOut: string;
   };
@@ -54,6 +55,7 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
     ? [
         { label: labels.matrix, href: '/matrix' },
         { label: labels.extract, href: '/extract' },
+        { label: labels.applications, href: '/applications' },
       ]
     : [];
 

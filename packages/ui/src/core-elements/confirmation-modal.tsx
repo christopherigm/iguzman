@@ -73,15 +73,23 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     };
   }, []);
 
-  // Close on Escape key when cancelCallback is available
+  // Keyboard shortcuts: Enter → OK (unless disabled or an interactive child is focused), Escape → Cancel
   useEffect(() => {
-    if (!cancelCallback) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') cancelCallback();
+      if (e.key === 'Escape' && cancelCallback) {
+        cancelCallback();
+        return;
+      }
+      if (e.key === 'Enter' && !okDisabled) {
+        const active = document.activeElement as HTMLElement | null;
+        const interactiveTags = ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'];
+        if (active && interactiveTags.includes(active.tagName)) return;
+        okCallback();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cancelCallback]);
+  }, [cancelCallback, okCallback, okDisabled]);
 
   // Close when clicking the overlay directly (not the panel)
   const handleOverlayClick = (e: React.MouseEvent) => {
