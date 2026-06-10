@@ -3,10 +3,10 @@ import logging
 import re
 from pathlib import Path
 
-import groq as _groq_module
 from django.conf import settings
-from groq import Groq
-from openai import OpenAI as _OllamaClient
+from pydantic import BaseModel, Field
+
+from edge_folio_api.llm import chat_structured, chat_text
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,35 @@ with _TN_PROFESSIONS_PATH.open() as _f:
     _tn_raw = json.load(_f)
     _TN_PROFESSION_LOOKUP: dict[str, dict] = {p['name']: p for p in _tn_raw}
     _TN_PROFESSIONS_LIST: list[dict] = _tn_raw
+
+# ---------------------------------------------------------------------------
+# Pydantic response models
+# ---------------------------------------------------------------------------
+
+
+class _TNSuggestion(BaseModel):
+    category: str
+    likelihood: int = Field(ge=0, le=100)
+    explanation: str
+
+
+class _TNSuggestionsResponse(BaseModel):
+    suggestions: list[_TNSuggestion]
+
+
+class _TailoredBullet(BaseModel):
+    id: int
+    tailored_text: str
+
+
+class _TailoredBulletsResponse(BaseModel):
+    bullets: list[_TailoredBullet]
+
+
+class _ScoreResult(BaseModel):
+    score: int = Field(ge=1, le=100)
+    explanation: str
+
 
 # ---------------------------------------------------------------------------
 # Resume tailoring
@@ -52,31 +81,6 @@ _STOPWORDS = frozenset({
 })
 
 _MAX_BULLETS_TO_LLM = 40
-
-
-def _chat_completion(
-    messages: list[dict],
-    temperature: float = 0.3,
-    response_format: dict | None = None,
-) -> str:
-    """Call Groq, fall back to Ollama on rate-limit (429)."""
-    kwargs: dict = dict(model=settings.GROQ_MODEL, messages=messages, temperature=temperature)
-    if response_format:
-        kwargs['response_format'] = response_format
-
-    try:
-        response = Groq(api_key=settings.GROQ_API_KEY).chat.completions.create(**kwargs)
-        return response.choices[0].message.content
-    except _groq_module.RateLimitError:
-        logger.warning('Groq rate limit reached; falling back to Ollama at %s', settings.OLLAMA_URL)
-
-    ollama = _OllamaClient(base_url=f"{settings.OLLAMA_URL}/v1/", api_key="ollama")
-    ollama_kwargs: dict = dict(model=settings.OLLAMA_MODEL, messages=messages, temperature=temperature,
-                               extra_body={"options": {"num_ctx": 8192}})
-    if response_format:
-        ollama_kwargs['response_format'] = response_format
-    response = ollama.chat.completions.create(**ollama_kwargs)
-    return response.choices[0].message.content
 
 
 # ---------------------------------------------------------------------------
@@ -125,26 +129,26 @@ def suggest_tn_categories(
         "You are a NAFTA/USMCA TN visa expert. Analyze the candidate's education and work "
         "experience to identify which TN visa profession categories they qualify for.\n\n"
         f"TN Profession Categories:\n{profession_lines}\n\n"
-        "Respond ONLY with a valid JSON array — no markdown, no explanation, no extra text. "
-        'Each item must have: "category" (exact profession name), '
-        '"likelihood" (integer 0–100), '
-        '"explanation" (1–2 sentences). '
+        "Return a JSON object with a 'suggestions' array. "
+        "Each item must have: 'category' (exact profession name from the list above), "
+        "'likelihood' (integer 0–100), "
+        "'explanation' (1–2 sentences). "
         "Only include categories with likelihood >= 30. Sort by likelihood descending."
     )
 
-    raw = _chat_completion(
+    result = chat_structured(
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"WORK EXPERIENCE:\n{work_section}\n\nEDUCATION:\n{edu_section}"},
         ],
+        response_model=_TNSuggestionsResponse,
         temperature=0.1,
     )
-
-    cleaned = raw.strip()
-    if cleaned.startswith('```'):
-        cleaned = cleaned.split('\n', 1)[1].rsplit('```', 1)[0].strip()
-
-    return json.loads(cleaned)
+    return [
+        s.model_dump()
+        for s in result.suggestions
+        if s.likelihood >= 30
+    ]
 
 
 def _tokenize(text: str) -> set[str]:
@@ -190,16 +194,15 @@ def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict])
         "Return the tailored bullet selection as JSON."
     )
 
-    content = _chat_completion(
+    result = chat_structured(
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
+        response_model=_TailoredBulletsResponse,
         temperature=0.3,
-        response_format={"type": "json_object"},
     )
-    data = json.loads(content)
-    return data.get("bullets", [])
+    return [b.model_dump() for b in result.bullets]
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +248,7 @@ def generate_cover_letter(
         "Write the cover letter body now."
     )
 
-    return _chat_completion(
+    return chat_text(
         messages=[
             {"role": "system", "content": _COVER_LETTER_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
@@ -324,18 +327,15 @@ Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>
 
 
 def _call_score(system_prompt: str, user_message: str) -> tuple[int, str]:
-    content = _chat_completion(
+    result = chat_structured(
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ],
+        response_model=_ScoreResult,
         temperature=0.1,
-        response_format={"type": "json_object"},
     )
-    data = json.loads(content)
-    score = int(data.get("score", 50))
-    explanation = str(data.get("explanation", ""))
-    return max(1, min(100, score)), explanation
+    return result.score, result.explanation
 
 
 def calculate_overall_match(
@@ -598,7 +598,7 @@ def generate_nafta_letter(
         "Write the complete TN Visa Support Letter now."
     )
 
-    return _chat_completion(
+    return chat_text(
         messages=[
             {"role": "system", "content": _NAFTA_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},

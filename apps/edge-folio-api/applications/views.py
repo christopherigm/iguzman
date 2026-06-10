@@ -1,17 +1,17 @@
-import json
 import logging
 
 import requests
 from django.conf import settings
 from django.core.cache import cache
 from django.core.files.base import ContentFile
-from groq import Groq, GroqError
+from pydantic import BaseModel
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from career.models import Education, WorkExperience
+from edge_folio_api.llm import chat_structured
 from matrix.models import BulletPoint, Skill
 
 from .models import JobApplication
@@ -25,6 +25,14 @@ from .tailoring import (
     suggest_tn_categories,
     tailor_resume,
 )
+
+
+class _PickURLResult(BaseModel):
+    url: str
+
+
+class _AboutResult(BaseModel):
+    about: str
 
 logger = logging.getLogger(__name__)
 
@@ -131,17 +139,11 @@ class TailorApplicationView(APIView):
                 bullets=bullets_payload,
                 skills=skills_payload,
             )
-        except GroqError as exc:
-            logger.error('Groq API error during tailoring: %s', exc)
+        except Exception as exc:
+            logger.error('LLM error during tailoring: %s', exc)
             return Response(
                 {'detail': 'LLM service unavailable. Please try again later.'},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-        except (ValueError, KeyError) as exc:
-            logger.error('Unexpected LLM response during tailoring: %s', exc)
-            return Response(
-                {'detail': 'Unexpected response from LLM. Please try again.'},
-                status=status.HTTP_502_BAD_GATEWAY,
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         for bullet in tailored:
@@ -184,17 +186,11 @@ class CoverLetterView(APIView):
                 job_description=application.job_description,
                 tailored_bullets=bullets,
             )
-        except GroqError as exc:
-            logger.error('Groq API error during cover letter generation: %s', exc)
+        except Exception as exc:
+            logger.error('LLM error during cover letter generation: %s', exc)
             return Response(
                 {'detail': 'LLM service unavailable. Please try again later.'},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-        except (ValueError, KeyError) as exc:
-            logger.error('Unexpected LLM response during cover letter generation: %s', exc)
-            return Response(
-                {'detail': 'Unexpected response from LLM. Please try again.'},
-                status=status.HTTP_502_BAD_GATEWAY,
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         application.cover_letter = cover_letter
@@ -256,17 +252,11 @@ class NaftaLetterView(APIView):
                 citizenship=data.get('citizenship', ''),
                 work_experiences=work_experiences,
             )
-        except GroqError as exc:
-            logger.error('Groq API error during NAFTA letter generation: %s', exc)
+        except Exception as exc:
+            logger.error('LLM error during NAFTA letter generation: %s', exc)
             return Response(
                 {'detail': 'LLM service unavailable. Please try again later.'},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-        except (ValueError, KeyError) as exc:
-            logger.error('Unexpected LLM response during NAFTA letter generation: %s', exc)
-            return Response(
-                {'detail': 'Unexpected response from LLM. Please try again.'},
-                status=status.HTTP_502_BAD_GATEWAY,
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         application.nafta_letter = nafta_letter
@@ -332,17 +322,11 @@ class RefreshMetricsView(APIView):
                 work_experiences=work_experiences,
                 educations=educations,
             )
-        except GroqError as exc:
-            logger.error('Groq API error during metrics refresh: %s', exc)
+        except Exception as exc:
+            logger.error('LLM error during metrics refresh: %s', exc)
             return Response(
                 {'detail': 'LLM service unavailable. Please try again later.'},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-        except (ValueError, KeyError) as exc:
-            logger.error('Unexpected LLM response during metrics refresh: %s', exc)
-            return Response(
-                {'detail': 'Unexpected response from LLM. Please try again.'},
-                status=status.HTTP_502_BAD_GATEWAY,
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         application.overall_match = overall
@@ -397,7 +381,7 @@ class TnSuggestView(APIView):
             logger.error('TN suggest parse error: %s', exc)
             return Response(
                 {'detail': 'Unexpected response from LLM. Please try again.'},
-                status=status.HTTP_502_BAD_GATEWAY,
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         return Response({'suggestions': suggestions})
@@ -452,7 +436,7 @@ class SearchCompanyView(APIView):
             logger.error('Scraper /search failed: %s', exc)
             return Response(
                 {'detail': 'Search service unavailable. Please try again later.'},
-                status=status.HTTP_502_BAD_GATEWAY,
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         results = search_results.get('results', [])
@@ -467,27 +451,24 @@ class SearchCompanyView(APIView):
             f"- {r.get('title', '')} | {r.get('url', '')} | {r.get('snippet', '')}"
             for r in results
         )
-        groq_client = Groq(api_key=settings.GROQ_API_KEY)
         try:
-            pick_response = groq_client.chat.completions.create(
-                model=settings.GROQ_MODEL,
+            pick_result = chat_structured(
                 messages=[
                     {"role": "system", "content": _PICK_URL_SYSTEM_PROMPT},
                     {"role": "user", "content": f"COMPANY: {company_name}\n\nSEARCH RESULTS:\n{results_text}\n\nPick the best URL."},
                 ],
+                response_model=_PickURLResult,
                 temperature=0.1,
-                response_format={"type": "json_object"},
             )
-            chosen_url = json.loads(pick_response.choices[0].message.content).get('url', '')
+            chosen_url = pick_result.url
         except Exception as exc:
             logger.error('LLM URL pick failed: %s', exc)
-            # Fall back to first result
             chosen_url = results[0].get('url', '')
 
         if not chosen_url:
             return Response(
                 {'detail': 'Could not determine a company URL from search results.'},
-                status=status.HTTP_502_BAD_GATEWAY,
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         # 3. Extract content from the chosen URL
@@ -497,7 +478,7 @@ class SearchCompanyView(APIView):
             logger.error('Scraper /extract failed for %s: %s', chosen_url, exc)
             return Response(
                 {'detail': 'Failed to extract company page. Please try again.'},
-                status=status.HTTP_502_BAD_GATEWAY,
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         content = extract_result.get('content', '')
@@ -505,16 +486,15 @@ class SearchCompanyView(APIView):
 
         # 4. Use LLM to extract company about text
         try:
-            about_response = groq_client.chat.completions.create(
-                model=settings.GROQ_MODEL,
+            about_result = chat_structured(
                 messages=[
                     {"role": "system", "content": _EXTRACT_ABOUT_SYSTEM_PROMPT},
                     {"role": "user", "content": f"COMPANY: {company_name}\n\nPAGE CONTENT:\n{content[:4000]}"},
                 ],
+                response_model=_AboutResult,
                 temperature=0.2,
-                response_format={"type": "json_object"},
             )
-            about_text = json.loads(about_response.choices[0].message.content).get('about', '')
+            about_text = about_result.about
         except Exception as exc:
             logger.error('LLM about extraction failed: %s', exc)
             about_text = ''

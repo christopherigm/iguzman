@@ -265,8 +265,8 @@ PASSWORD_RESET_TOKEN_EXPIRY_HOURS = int(
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
 
-OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://192.168.0.24:11434')
-OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'gemma4:latest')
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct')
 
 SCRAPER_URL = os.environ.get('SCRAPER_URL', 'http://localhost:4000')
 SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')

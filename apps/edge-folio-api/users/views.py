@@ -1,13 +1,12 @@
 import json
 import logging
-import urllib.error
-import urllib.request
 import uuid
 
 import pdfplumber
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 from django.core.mail import send_mail
@@ -284,27 +283,53 @@ def _extract_pdf_text(file_obj) -> str:
     return '\n'.join(text_parts)
 
 
-def _call_groq_for_resume(text: str, api_key: str) -> dict:
+class _ResumeBullet(BaseModel):
+    text: str
+    category: str
+
+
+class _ResumeWorkExperience(BaseModel):
+    company: str
+    title: str
+    employment_type: str = 'full_time'
+    location: str = ''
+    start_date: str = ''
+    end_date: str | None = None
+    is_current: bool = False
+    description: str = ''
+
+
+class _ResumeEducation(BaseModel):
+    institution: str
+    degree: str
+    field_of_study: str = ''
+    start_year: int | None = None
+    end_year: int | None = None
+    is_current: bool = False
+    gpa: float | None = None
+    honors: str = ''
+    description: str = ''
+
+
+class _ResumeProject(BaseModel):
+    name: str
+    url: str = ''
+    description: str = ''
+
+
+class _ResumeParseResult(BaseModel):
+    bullets: list[_ResumeBullet] = []
+    skills: list[str] = []
+    work_experience: list[_ResumeWorkExperience] = []
+    education: list[_ResumeEducation] = []
+    projects: list[_ResumeProject] = []
+
+
+def _parse_resume_with_llm(text: str) -> dict:
+    from edge_folio_api.llm import chat_structured
+
     prompt = (
         'You are a resume parser. Extract professional accomplishments, skills, work history, education, and projects.\n\n'
-        'Return ONLY a valid JSON object:\n'
-        '{\n'
-        '  "bullets":[{"text":"...","category":"impact|technical|leadership|collaboration|other"}],\n'
-        '  "skills":["..."],\n'
-        '  "work_experience":[\n'
-        '    {"company":"...","title":"...","employment_type":"full_time|part_time|contract|freelance|internship",\n'
-        '     "location":"...","start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD or null","is_current":false,\n'
-        '     "description":"..."}\n'
-        '  ],\n'
-        '  "education":[\n'
-        '    {"institution":"...","degree":"bachelor|master|phd|associate|certificate|bootcamp|other",\n'
-        '     "field_of_study":"...","start_year":2018,"end_year":2022,"is_current":false,\n'
-        '     "gpa":null,"honors":"","description":""}\n'
-        '  ],\n'
-        '  "projects":[\n'
-        '    {"name":"...","url":"...","description":"..."}\n'
-        '  ]\n'
-        '}\n\n'
         'Rules:\n'
         '- bullets: one factual sentence under 500 chars describing a verifiable achievement; at most 20\n'
         '- category: impact=business outcome, technical=engineering, leadership=team lead, '
@@ -314,38 +339,15 @@ def _call_groq_for_resume(text: str, api_key: str) -> dict:
         'year known); is_current=true means end_date must be null\n'
         '- education: start_year/end_year as 4-digit integers; is_current=true means end_year must be null\n'
         '- projects: personal or professional projects listed in the resume; name required, url and '
-        'description optional (empty string if missing); at most 10\n'
-        '- Return valid JSON only — no markdown fences\n\n'
+        'description optional (empty string if missing); at most 10\n\n'
         f'Resume:\n{text[:8000]}'
     )
-    model = getattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b')
-    payload = json.dumps({
-        'model': model,
-        'messages': [{'role': 'user', 'content': prompt}],
-        'temperature': 0.1,
-    }).encode('utf-8')
-    req = urllib.request.Request(
-        'https://api.groq.com/openai/v1/chat/completions',
-        data=payload,
-        headers={
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {api_key}',
-            'User-Agent': 'groq-python/0.11.0',
-        },
-        method='POST',
+    result = chat_structured(
+        messages=[{'role': 'user', 'content': prompt}],
+        response_model=_ResumeParseResult,
+        temperature=0.1,
     )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            body = json.loads(resp.read().decode('utf-8'))
-    except urllib.error.HTTPError as exc:
-        error_body = exc.read().decode('utf-8', errors='replace')
-        logger.warning('Groq HTTP %s: %s', exc.code, error_body)
-        raise
-    raw = body['choices'][0]['message']['content'].strip()
-    if raw.startswith('```'):
-        raw = raw.split('\n', 1)[1] if '\n' in raw else raw[3:]
-        raw = raw.rstrip('`').strip()
-    return json.loads(raw)
+    return result.model_dump()
 
 
 class ResumeUploadView(APIView):
@@ -368,17 +370,16 @@ class ResumeUploadView(APIView):
                 status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             )
 
-        groq_api_key = settings.GROQ_API_KEY
-        if not groq_api_key:
+        if not settings.GROQ_API_KEY:
             return Response(
                 {'detail': 'Resume analysis is not configured on this server.'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         try:
-            structured = _call_groq_for_resume(raw_text, groq_api_key)
-        except (urllib.error.URLError, json.JSONDecodeError, KeyError) as exc:
-            logger.warning('Groq resume analysis failed: %s', exc)
+            structured = _parse_resume_with_llm(raw_text)
+        except Exception as exc:
+            logger.warning('Resume analysis failed: %s', exc)
             return Response(
                 {'detail': 'Resume analysis failed. Please try again.'},
                 status=status.HTTP_502_BAD_GATEWAY,
@@ -389,16 +390,6 @@ class ResumeUploadView(APIView):
         work_exp_data = structured.get('work_experience', [])
         education_data = structured.get('education', [])
         projects_data = structured.get('projects', [])
-        if not isinstance(bullets_data, list):
-            bullets_data = []
-        if not isinstance(skills_data, list):
-            skills_data = []
-        if not isinstance(work_exp_data, list):
-            work_exp_data = []
-        if not isinstance(education_data, list):
-            education_data = []
-        if not isinstance(projects_data, list):
-            projects_data = []
 
         # Upsert skills
         skill_objs: dict[str, Skill] = {}

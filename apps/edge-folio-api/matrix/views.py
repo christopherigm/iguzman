@@ -1,9 +1,7 @@
-import json
 import logging
-import urllib.error
-import urllib.request
 
 from django.conf import settings
+from pydantic import BaseModel
 from django.core.cache import cache
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -205,7 +203,19 @@ class BulletReorderView(APIView):
 
 # ── Skeleton synthesis ────────────────────────────────────────────────────────
 
-def _call_groq_for_skeleton(skeleton: dict, api_key: str) -> dict:
+class _SkeletonDraft(BaseModel):
+    text: str
+    category: str
+    skills: list[str] = []
+
+
+class _SkeletonSynthesisResult(BaseModel):
+    drafts: list[_SkeletonDraft]
+
+
+def _synthesize_skeleton_with_llm(skeleton: dict) -> dict:
+    from edge_folio_api.llm import chat_structured
+
     languages = ', '.join(skeleton.get('languages', [])[:20]) or 'none detected'
     frameworks = ', '.join(skeleton.get('frameworks', [])[:20]) or 'none detected'
     runtime_deps = ', '.join(skeleton.get('runtimeDeps', [])[:30]) or 'none'
@@ -234,16 +244,13 @@ def _call_groq_for_skeleton(skeleton: dict, api_key: str) -> dict:
         'You are a senior technical resume writer. Given a codebase structure summary '
         '(no source code, no proprietary data), generate professional resume bullet points '
         'a software engineer could use on their CV.\n\n'
-        'Return ONLY a valid JSON object:\n'
-        '{"drafts":[{"text":"...","category":"impact|technical|leadership|collaboration|other","skills":["skill1","skill2"]}]}\n\n'
         'Rules:\n'
         '- Each bullet: one factual, achievement-oriented sentence under 500 chars. Use STAR format where possible.\n'
         '- Infer plausible achievements from the tech stack without inventing metrics or team sizes.\n'
         '- category: impact=business/product outcome, technical=engineering depth, '
         'leadership=ownership/architecture, collaboration=cross-team, other=else\n'
         '- skills: only languages, frameworks, and tools clearly visible in this project\n'
-        '- Generate 5-12 bullets depending on the richness of the structure\n'
-        '- Return valid JSON only — no markdown fences, no explanation\n\n'
+        '- Generate 5-12 bullets depending on the richness of the structure\n\n'
         f'Project: "{project_name}"\n'
         f'Files: {code_files} code / {total_files} total\n'
         f'Languages: {languages}\n'
@@ -255,34 +262,12 @@ def _call_groq_for_skeleton(skeleton: dict, api_key: str) -> dict:
         f'Hardware design: {kicad_str}\n'
     )
 
-    model = getattr(settings, 'GROQ_MODEL', 'openai/gpt-oss-120b')
-    payload = json.dumps({
-        'model': model,
-        'messages': [{'role': 'user', 'content': prompt}],
-        'temperature': 0.2,
-        'seed': 42,
-    }).encode('utf-8')
-    req = urllib.request.Request(
-        'https://api.groq.com/openai/v1/chat/completions',
-        data=payload,
-        headers={
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {api_key}',
-            'User-Agent': 'groq-python/0.11.0',
-        },
-        method='POST',
+    result = chat_structured(
+        messages=[{'role': 'user', 'content': prompt}],
+        response_model=_SkeletonSynthesisResult,
+        temperature=0.2,
     )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            body = json.loads(resp.read().decode('utf-8'))
-    except urllib.error.HTTPError as exc:
-        logger.warning('Groq skeleton synthesis HTTP %s: %s', exc.code, exc.read().decode('utf-8', errors='replace'))
-        raise
-    raw = body['choices'][0]['message']['content'].strip()
-    if raw.startswith('```'):
-        raw = raw.split('\n', 1)[1] if '\n' in raw else raw[3:]
-        raw = raw.rstrip('`').strip()
-    return json.loads(raw)
+    return result.model_dump()
 
 
 class SkeletonSynthesisView(APIView):
@@ -296,17 +281,16 @@ class SkeletonSynthesisView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        groq_api_key = settings.GROQ_API_KEY
-        if not groq_api_key:
+        if not settings.GROQ_API_KEY:
             return Response(
                 {'detail': 'AI synthesis is not configured on this server.'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         try:
-            result = _call_groq_for_skeleton(skeleton, groq_api_key)
-        except (urllib.error.URLError, json.JSONDecodeError, KeyError) as exc:
-            logger.warning('Groq skeleton synthesis failed: %s', exc)
+            result = _synthesize_skeleton_with_llm(skeleton)
+        except Exception as exc:
+            logger.warning('Skeleton synthesis failed: %s', exc)
             return Response(
                 {'detail': 'AI analysis failed. Please try again.'},
                 status=status.HTTP_502_BAD_GATEWAY,

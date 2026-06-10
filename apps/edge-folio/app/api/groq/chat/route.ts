@@ -5,10 +5,8 @@ import { refreshAccessToken } from '@/lib/api-fetch';
 export const dynamic = 'force-dynamic';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-
-const OLLAMA_BASE = (process.env.OLLAMA_URL ?? 'http://192.168.0.24:11434').replace(/\/$/, '');
-const OLLAMA_API_URL = `${OLLAMA_BASE}/v1/chat/completions`;
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'gemma4:latest';
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? 'meta-llama/llama-3.3-70b-instruct';
 
 async function verifyToken(token: string): Promise<boolean> {
   try {
@@ -74,16 +72,23 @@ export async function POST(req: NextRequest): Promise<Response> {
   let upstream = groqRes;
 
   if (groqRes.status === 429) {
-    console.warn('[groq/chat] Groq rate limit hit; falling back to Ollama');
-    const ollamaBody = { ...parsed, model: OLLAMA_MODEL };
+    const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+    if (!openrouterApiKey) {
+      return NextResponse.json({ detail: 'Groq rate limit reached and OpenRouter API key not configured.' }, { status: 429 });
+    }
+    console.warn('[groq/chat] Groq rate limit hit; falling back to OpenRouter');
+    const openrouterBody = { ...parsed, model: OPENROUTER_MODEL };
     try {
-      upstream = await fetch(OLLAMA_API_URL, {
+      upstream = await fetch(OPENROUTER_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ollamaBody),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${openrouterApiKey}`,
+        },
+        body: JSON.stringify(openrouterBody),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to reach Ollama fallback';
+      const message = err instanceof Error ? err.message : 'Failed to reach OpenRouter fallback';
       return NextResponse.json({ detail: message }, { status: 502 });
     }
   }

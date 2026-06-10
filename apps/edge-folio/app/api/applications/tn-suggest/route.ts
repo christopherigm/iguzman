@@ -6,5 +6,9 @@ export async function POST() {
     method: 'POST',
     cache: 'no-store',
   });
-  return NextResponse.json(await res.json(), { status: res.status });
+  const isJson = res.headers.get('content-type')?.includes('application/json');
+  const body = isJson
+    ? await res.json()
+    : { detail: 'LLM service unavailable. Please try again.' };
+  return NextResponse.json(body, { status: res.status });
 }

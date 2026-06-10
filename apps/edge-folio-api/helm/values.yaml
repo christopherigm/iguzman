@@ -29,6 +29,8 @@ ingress:
   className: 'nginx'
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '300'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '300'
   hosts:
     - host: api-edge-folio.iguzman.com.mx
       paths:
@@ -44,6 +46,7 @@ ingress:
 env:
   EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
   GUNICORN_WORKERS: '3'
+  GUNICORN_TIMEOUT: '300'
 
 # Load all env.example variables from the pre-existing secret.
 # Keys in the secret match env.example names exactly.
