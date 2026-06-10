@@ -33,7 +33,11 @@ export async function refreshAccessToken(): Promise<string | null> {
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const cookieStore = await cookies();
   let token = cookieStore.get('access_token')?.value;
-  if (!token) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
+  if (!token) {
+    const newToken = await refreshAccessToken();
+    if (!newToken) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
+    token = newToken;
+  }
 
   const withAuth = (t: string): RequestInit => ({
     ...init,

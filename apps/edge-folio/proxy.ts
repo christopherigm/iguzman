@@ -13,8 +13,9 @@ function isProtectedPath(pathname: string): boolean {
 
 export default function proxy(request: NextRequest) {
   if (isProtectedPath(request.nextUrl.pathname)) {
-    const token = request.cookies.get('access_token')?.value;
-    if (!token) {
+    const hasAccess = !!request.cookies.get('access_token')?.value;
+    const hasRefresh = !!request.cookies.get('refresh_token')?.value;
+    if (!hasAccess && !hasRefresh) {
       const locale = request.nextUrl.pathname.split('/')[1] ?? 'en';
       return NextResponse.redirect(new URL(`/${locale}/auth`, request.url));
     }

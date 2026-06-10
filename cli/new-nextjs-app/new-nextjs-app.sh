@@ -482,8 +482,9 @@ function isProtectedPath(pathname: string): boolean {
 
 export default function proxy(request: NextRequest) {
   if (isProtectedPath(request.nextUrl.pathname)) {
-    const token = request.cookies.get('access_token')?.value;
-    if (!token) {
+    const hasAccess = !!request.cookies.get('access_token')?.value;
+    const hasRefresh = !!request.cookies.get('refresh_token')?.value;
+    if (!hasAccess && !hasRefresh) {
       const locale = request.nextUrl.pathname.split('/')[1] ?? 'en';
       return NextResponse.redirect(new URL(`/${locale}/auth`, request.url));
     }
@@ -609,7 +610,11 @@ export async function refreshAccessToken(): Promise<string | null> {
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const cookieStore = await cookies();
   let token = cookieStore.get('access_token')?.value;
-  if (!token) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
+  if (!token) {
+    const newToken = await refreshAccessToken();
+    if (!newToken) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
+    token = newToken;
+  }
 
   const withAuth = (t: string): RequestInit => ({
     ...init,
