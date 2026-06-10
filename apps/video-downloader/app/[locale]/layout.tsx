@@ -106,23 +106,25 @@ export default async function LocaleLayout({ children, params }: Props) {
         <link rel="apple-touch-startup-image" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-1668x2388.jpg" />
         <link rel="apple-touch-startup-image" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/splash/splash-2048x2732.jpg" />
       </head>
-      <NextIntlClientProvider messages={messages}>
-        <ThemeProvider
-          initialMode={initialMode}
-          initialResolved={initialResolved}
-        >
-          <PaletteProvider palette="cyan" accent="#68c3f7">
-            <NavbarWithSearch
-              logo="/logo.png"
-              version={`v${packageJson.version}`}
-              translucent
-              searchHiddenPaths={['/credits', '/terms']}
-              creditsHiddenPaths={['/terms']}
-            />
-            {children}
-          </PaletteProvider>
-        </ThemeProvider>
-      </NextIntlClientProvider>
+      <body>
+        <NextIntlClientProvider messages={messages}>
+          <ThemeProvider
+            initialMode={initialMode}
+            initialResolved={initialResolved}
+          >
+            <PaletteProvider palette="cyan" accent="#68c3f7">
+              <NavbarWithSearch
+                logo="/logo.png"
+                version={`v${packageJson.version}`}
+                translucent
+                searchHiddenPaths={['/credits', '/terms']}
+                creditsHiddenPaths={['/terms']}
+              />
+              {children}
+            </PaletteProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
+      </body>
     </html>
   );
 }

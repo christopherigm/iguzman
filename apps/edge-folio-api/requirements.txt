@@ -13,3 +13,4 @@ django-storages[s3]==1.14.4
 pdfplumber==0.11.4
 python-dotenv==1.1.1
 groq==1.4.0
+requests==2.32.3

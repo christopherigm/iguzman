@@ -31,23 +31,6 @@
   opacity: 1;
 }
 
-.profile__tech-input {
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border, #e5e7eb);
-  background: var(--surface-2);
-  color: var(--foreground);
-  color-scheme: light dark;
-  font-size: 0.875rem;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.profile__tech-input:focus {
-  border-color: var(--primary, #06b6d4);
-}
-
 .profile__suggestion {
   padding: 4px 10px;
   border-radius: 16px;

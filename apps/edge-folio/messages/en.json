@@ -281,7 +281,10 @@
     "jdUrlLabel": "Job posting URL",
     "fetchFromUrl": "Fetch",
     "fetchingUrl": "Fetching…",
-    "fetchUrlError": "Could not extract job details. Fill in the fields manually."
+    "fetchUrlError": "Could not extract job details. Fill in the fields manually.",
+    "overallMatch": "Overall Match",
+    "technicalMatch": "Technical Match",
+    "naftaLikelihood": "NAFTA TN Likelihood"
   },
   "ApplicationDetailPage": {
     "metaTitle": "Application",
@@ -368,7 +371,18 @@
     "exportEducationTitle": "Education",
     "exportLanguagesTitle": "Languages",
     "exportProjectsTitle": "Projects",
-    "exportLoadingData": "Loading resume sections…"
+    "exportLoadingData": "Loading resume sections…",
+    "overallMatch": "Overall Match",
+    "technicalMatch": "Technical Match",
+    "naftaLikelihood": "NAFTA TN Likelihood",
+    "metricExplain": "Score explanation",
+    "refreshMetrics": "Refresh Metrics",
+    "refreshingMetrics": "Refreshing…",
+    "errorRefreshMetrics": "Failed to refresh metrics. Please try again.",
+    "searchCompany": "Search Company Data",
+    "searchingCompany": "Searching…",
+    "errorSearchCompany": "Failed to search company data. Please try again.",
+    "companyInfoFound": "Company info updated."
   },
   "AuthPage": {
     "tabSignIn": "Sign In",

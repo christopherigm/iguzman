@@ -281,7 +281,10 @@
     "jdUrlLabel": "URL de la oferta de trabajo",
     "fetchFromUrl": "Obtener",
     "fetchingUrl": "Obteniendo…",
-    "fetchUrlError": "No se pudieron extraer los detalles del puesto. Completa los campos manualmente."
+    "fetchUrlError": "No se pudieron extraer los detalles del puesto. Completa los campos manualmente.",
+    "overallMatch": "Compatibilidad General",
+    "technicalMatch": "Compatibilidad Técnica",
+    "naftaLikelihood": "Probabilidad TN NAFTA"
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",
@@ -425,7 +428,18 @@
     "exportEducationTitle": "Educación",
     "exportLanguagesTitle": "Idiomas",
     "exportProjectsTitle": "Proyectos",
-    "exportLoadingData": "Cargando secciones del currículum…"
+    "exportLoadingData": "Cargando secciones del currículum…",
+    "overallMatch": "Compatibilidad General",
+    "technicalMatch": "Compatibilidad Técnica",
+    "naftaLikelihood": "Probabilidad TN NAFTA",
+    "metricExplain": "Explicación de puntuación",
+    "refreshMetrics": "Actualizar métricas",
+    "refreshingMetrics": "Actualizando…",
+    "errorRefreshMetrics": "Error al actualizar las métricas. Inténtalo de nuevo.",
+    "searchCompany": "Buscar datos de la empresa",
+    "searchingCompany": "Buscando…",
+    "errorSearchCompany": "Error al buscar datos de la empresa. Inténtalo de nuevo.",
+    "companyInfoFound": "Información de la empresa actualizada."
   },
   "WorkExperiencePage": {
     "title": "Experiencia Laboral",

@@ -127,16 +127,15 @@ function TechTagInput({
         </Box>
       </Box>
 
-      <input
+      <TextInput
         ref={inputRef}
-        type="text"
-        className="profile__tech-input"
         placeholder={t('techStackPlaceholder')}
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={setInput}
         onKeyDown={handleKeyDown}
         onBlur={() => { if (input.trim()) addTag(input); }}
         aria-label={t('techStackLabel')}
+        width="100%"
       />
 
       {tags.length > 0 && (

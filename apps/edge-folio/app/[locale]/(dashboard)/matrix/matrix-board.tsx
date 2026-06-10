@@ -591,7 +591,16 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
       {skills.length > 0 && (
         <Box display="flex" flexWrap="wrap" gap={8} marginBottom={12}>
           {skills.map((skill) => (
-            <span key={skill.id} className="matrix__skill-item">
+            <Box
+              key={skill.id}
+              display="inline-flex"
+              alignItems="center"
+              gap={6}
+              paddingY={4}
+              paddingX={10}
+              borderRadius={99}
+              border="1px solid var(--border, #e5e7eb)"
+            >
               {skill.name}
               <Typography as="span" variant="label" color="var(--primary, #06b6d4)" fontWeight={600} styles={{ fontSize: 11 }}>
                 {skill.proficiency}/5
@@ -605,7 +614,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
               >
                 X
               </Button>
-            </span>
+            </Box>
           ))}
         </Box>
       )}

@@ -227,6 +227,23 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
 
 // ── Application card ──────────────────────────────────────────────────────────
 
+function CardMetricBar({ label, value }: { label: string; value: number }) {
+  const color = value >= 70 ? '#22c55e' : value >= 45 ? '#f59e0b' : '#ef4444';
+  return (
+    <Box display="flex" flexDirection="column" gap={2}>
+      <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Typography variant="label" color="var(--muted-foreground, #6b7280)">
+          {label}
+        </Typography>
+        <Typography variant="label" fontWeight={600} color={color}>
+          {value}%
+        </Typography>
+      </Box>
+      <ProgressBar value={value} size={4} label={label} />
+    </Box>
+  );
+}
+
 interface ApplicationCardProps {
   app: JobApplication;
   onDelete: (id: number) => void;
@@ -238,6 +255,8 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
   const date = new Date(app.created).toLocaleDateString(undefined, {
     year: 'numeric', month: 'short', day: 'numeric',
   });
+
+  const hasMetrics = app.overall_match != null || app.technical_match != null || app.nafta_tn_likelihood != null;
 
   return (
     <Link href={`/${locale}/applications/${app.id}`} prefetch className="applications__card-link">
@@ -268,6 +287,20 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
             {t(`statuses.${app.status}`)}
           </Badge>
         </Box>
+
+        {hasMetrics && (
+          <Box display="flex" flexDirection="column" gap={6}>
+            {app.overall_match != null && (
+              <CardMetricBar label={t('overallMatch')} value={app.overall_match} />
+            )}
+            {app.technical_match != null && (
+              <CardMetricBar label={t('technicalMatch')} value={app.technical_match} />
+            )}
+            {app.nafta_tn_likelihood != null && (
+              <CardMetricBar label={t('naftaLikelihood')} value={app.nafta_tn_likelihood} />
+            )}
+          </Box>
+        )}
 
         <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
           {date}
@@ -416,7 +449,18 @@ export function ApplicationsPage() {
       )}
 
       {applications.length === 0 && !formOpen ? (
-        <div className="applications__empty">
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          gap={12}
+          paddingY={60}
+          paddingX={24}
+          border="2px dashed var(--border, #e5e7eb)"
+          borderRadius={16}
+          styles={{ textAlign: 'center' }}
+        >
           <Typography variant="h3" fontWeight={600} color="var(--muted-foreground, #6b7280)">
             {t('emptyTitle')}
           </Typography>
@@ -424,7 +468,7 @@ export function ApplicationsPage() {
             {t('emptyBody')}
           </Typography>
           <Button text={t('newApplication')} type="button" size="md" onClick={() => setFormOpen(true)} />
-        </div>
+        </Box>
       ) : (
         <Box
           display="grid"

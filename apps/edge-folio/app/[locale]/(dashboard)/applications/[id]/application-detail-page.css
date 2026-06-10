@@ -12,10 +12,6 @@
   color: var(--foreground);
 }
 
-.detail__section {
-  margin-bottom: 28px;
-}
-
 .detail__select {
   background: var(--surface-2);
   color: var(--foreground);
@@ -26,11 +22,6 @@
   width: 100%;
 }
 
-.detail__jd {
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.6;
-}
 
 .detail__cover-letter .ui-text-input-multirow {
   line-height: 1.8;
@@ -53,4 +44,26 @@
   border: none;
   border-top: 1px solid var(--border, #e5e7eb);
   margin: 4px 0 12px;
+}
+
+.detail__metric-explain-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--border, #e5e7eb);
+  color: var(--muted-foreground, #6b7280);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.detail__metric-explain-btn:hover {
+  background: var(--accent, #06b6d4);
+  color: #ffffff;
 }

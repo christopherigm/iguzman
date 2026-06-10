@@ -263,33 +263,21 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
           placeholder={t('locationPlaceholder')}
         />
 
-        <Box className="work-exp__date-row">
-          <Box display="flex" flexDirection="column" gap={4}>
-            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-              {t('startDateLabel')}
-            </Typography>
-            <input
-              type="date"
-              className="work-exp__date-input"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-              aria-label={t('startDateLabel')}
-            />
-          </Box>
-          <Box display="flex" flexDirection="column" gap={4}>
-            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-              {t('endDateLabel')}
-            </Typography>
-            <input
-              type="date"
-              className="work-exp__date-input"
-              value={isCurrent ? '' : endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              disabled={isCurrent}
-              aria-label={t('endDateLabel')}
-            />
-          </Box>
+        <Box display="grid" gap={12} styles={{ gridTemplateColumns: '1fr 1fr' }}>
+          <TextInput
+            type="date"
+            label={t('startDateLabel')}
+            value={startDate}
+            onChange={setStartDate}
+            required
+          />
+          <TextInput
+            type="date"
+            label={t('endDateLabel')}
+            value={isCurrent ? '' : endDate}
+            onChange={setEndDate}
+            disabled={isCurrent}
+          />
         </Box>
 
         <Box display="flex" alignItems="center" gap={10}>
@@ -697,36 +685,6 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t('projectTechStackLabel')}
           </Typography>
-          {techStack.length > 0 && (
-            <Box display="flex" flexWrap="wrap" gap={6}>
-              {techStack.map((ts) => (
-                <Box
-                  key={ts.id}
-                  display="inline-flex"
-                  alignItems="center"
-                  gap={4}
-                  paddingY={3}
-                  paddingX={10}
-                  borderRadius={999}
-                  border="1px solid var(--primary, #06b6d4)"
-                  backgroundColor="color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent)"
-                >
-                  <Typography variant="label" color="var(--primary, #06b6d4)">
-                    {ts.name}
-                  </Typography>
-                  <Button
-                    unstyled
-                    type="button"
-                    className="work-exp__tech-tag-remove"
-                    onClick={() => removeTechStack(ts.id)}
-                    aria-label={t('projectTechStackRemove', { name: ts.name })}
-                  >
-                    ×
-                  </Button>
-                </Box>
-              ))}
-            </Box>
-          )}
           <TextInput
             value={techSearch}
             onChange={setTechSearch}
@@ -760,6 +718,38 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
               </Box>
             </Box>
           )}
+          
+          {techStack.length > 0 && (
+            <Box display="flex" flexWrap="wrap" gap={6} marginTop={8}>
+              {techStack.map((ts) => (
+                <Box
+                  key={ts.id}
+                  display="inline-flex"
+                  alignItems="center"
+                  gap={4}
+                  paddingY={3}
+                  paddingX={10}
+                  borderRadius={999}
+                  border="1px solid var(--primary, #06b6d4)"
+                  backgroundColor="color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent)"
+                >
+                  <Typography variant="label" color="var(--primary, #06b6d4)">
+                    {ts.name}
+                  </Typography>
+                  <Button
+                    unstyled
+                    type="button"
+                    className="work-exp__tech-tag-remove"
+                    onClick={() => removeTechStack(ts.id)}
+                    aria-label={t('projectTechStackRemove', { name: ts.name })}
+                  >
+                    ×
+                  </Button>
+                </Box>
+              ))}
+            </Box>
+          )}
+
           {(filteredSuggestions.length > 0 || canAddNew) && (
             <Box display="flex" flexWrap="wrap" gap={6}>
               {filteredSuggestions.map((ts) => (

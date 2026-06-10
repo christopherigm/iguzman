@@ -32,6 +32,13 @@ class JobApplication(Common):
     tailored_bullets = models.JSONField(null=True, blank=True)
     cover_letter = models.TextField(blank=True)
     nafta_letter = models.TextField(blank=True)
+    overall_match = models.PositiveSmallIntegerField(null=True, blank=True)
+    overall_match_explanation = models.TextField(blank=True)
+    technical_match = models.PositiveSmallIntegerField(null=True, blank=True)
+    technical_match_explanation = models.TextField(blank=True)
+    nafta_tn_likelihood = models.PositiveSmallIntegerField(null=True, blank=True)
+    nafta_tn_likelihood_explanation = models.TextField(blank=True)
+    company_description = models.TextField(blank=True)
     company_image = ResizedImageField(
         upload_to=_application_image_upload,
         null=True,

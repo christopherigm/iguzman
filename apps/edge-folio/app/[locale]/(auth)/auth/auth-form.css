@@ -24,7 +24,7 @@
   margin-bottom: -1px;
 }
 
-.auth-form__tab-btn[data-active='true'] {
+.auth-form__tab-btn[aria-pressed='true'] {
   font-weight: 600;
   color: var(--foreground);
   border-bottom-color: var(--foreground);

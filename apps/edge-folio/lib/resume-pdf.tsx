@@ -108,6 +108,7 @@ const styles = StyleSheet.create({
     color: '#111827',
     lineHeight: 1.5,
     marginBottom: 4,
+    textAlign: 'justify',
   },
   categoryTitle: {
     fontSize: 10,
@@ -132,6 +133,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#111827',
     lineHeight: 1.5,
+    textAlign: 'justify',
   },
   skillsLine: {
     fontSize: 10,
@@ -180,6 +182,7 @@ const naftaStyles = StyleSheet.create({
     color: '#111827',
     lineHeight: 1.6,
     marginBottom: 10,
+    textAlign: 'justify',
   },
   sectionHeading: {
     fontSize: 10,

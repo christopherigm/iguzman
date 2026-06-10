@@ -15,9 +15,16 @@ export interface JobApplication {
   notes: string;
   job_url: string;
   company_image_url: string | null;
+  company_description: string;
   tailored_bullets: TailoredBullet[] | null;
   cover_letter: string;
   nafta_letter: string;
+  overall_match: number | null;
+  overall_match_explanation: string;
+  technical_match: number | null;
+  technical_match_explanation: string;
+  nafta_tn_likelihood: number | null;
+  nafta_tn_likelihood_explanation: string;
   created: string;
   modified: string;
 }
@@ -135,4 +142,26 @@ export function generateNaftaLetter(id: number, payload: NaftaLetterPayload = {}
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+}
+
+export interface MetricsResult {
+  overall_match: number;
+  overall_match_explanation: string;
+  technical_match: number;
+  technical_match_explanation: string;
+  nafta_tn_likelihood: number;
+  nafta_tn_likelihood_explanation: string;
+}
+
+export function refreshMetrics(id: number): Promise<MetricsResult> {
+  return request(`/api/applications/${id}/metrics`, { method: 'POST' });
+}
+
+export interface SearchCompanyResult {
+  company_description: string;
+  company_image_url: string | null;
+}
+
+export function searchCompany(id: number): Promise<SearchCompanyResult> {
+  return request(`/api/applications/${id}/search-company`, { method: 'POST' });
 }

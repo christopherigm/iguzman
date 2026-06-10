@@ -5,29 +5,12 @@
   padding: 4px 0;
 }
 
-.work-exp__date-input {
-  background: var(--surface-2);
-  color: var(--foreground);
-  color-scheme: light dark;
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.875rem;
-  width: 100%;
-}
-
 .work-exp__card {
   transition: border-color 0.15s ease;
 }
 
 .work-exp__card:hover {
   border-color: var(--primary, #06b6d4);
-}
-
-.work-exp__date-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
 }
 
 .work-exp__description {

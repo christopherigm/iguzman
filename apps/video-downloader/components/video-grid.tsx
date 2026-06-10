@@ -67,13 +67,14 @@ export function VideoGrid({
   const filtered = useMemo(() => {
     let list = completed;
 
-    /* Text search by name / uploader / URL */
+    /* Text search by name / uploader / uploader handle / URL */
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
         (v) =>
           v.name?.toLowerCase().includes(q) ||
           v.uploader?.toLowerCase().includes(q) ||
+          v.uploader_id?.toLowerCase().includes(q) ||
           v.description?.toLowerCase().includes(q) ||
           v.originalURL?.toLowerCase().includes(q),
       );

@@ -201,16 +201,15 @@ function TechTagInput({
         </Box>
       )}
 
-      <input
+      <TextInput
         ref={inputRef}
-        type="text"
-        className="onboarding__tech-input"
         placeholder={t('techStackPlaceholder')}
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={setInput}
         onKeyDown={handleKeyDown}
         onBlur={() => { if (input.trim()) addTag(input); }}
         aria-label={t('techStackLabel')}
+        width="100%"
       />
 
       <Box display="flex" flexDirection="column" gap={6}>

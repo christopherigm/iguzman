@@ -177,37 +177,25 @@ function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps
         placeholder={t('fieldOfStudyPlaceholder')}
       />
 
-      <Box className="education__year-row">
-        <Box display="flex" flexDirection="column" gap={4}>
-          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('startYearLabel')}
-          </Typography>
-          <input
-            type="number"
-            className="education__select"
-            value={startYear}
-            onChange={(e) => setStartYear(e.target.value)}
-            min={1950}
-            max={CURRENT_YEAR}
-            required
-            aria-label={t('startYearLabel')}
-          />
-        </Box>
-        <Box display="flex" flexDirection="column" gap={4}>
-          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('endYearLabel')}
-          </Typography>
-          <input
-            type="number"
-            className="education__select"
-            value={isCurrent ? '' : endYear}
-            onChange={(e) => setEndYear(e.target.value)}
-            min={1950}
-            max={CURRENT_YEAR + 10}
-            disabled={isCurrent}
-            aria-label={t('endYearLabel')}
-          />
-        </Box>
+      <Box display="grid" gap={12} styles={{ gridTemplateColumns: '1fr 1fr' }}>
+        <TextInput
+          type="number"
+          label={t('startYearLabel')}
+          value={startYear}
+          onChange={setStartYear}
+          min={1950}
+          max={CURRENT_YEAR}
+          required
+        />
+        <TextInput
+          type="number"
+          label={t('endYearLabel')}
+          value={isCurrent ? '' : endYear}
+          onChange={setEndYear}
+          min={1950}
+          max={CURRENT_YEAR + 10}
+          disabled={isCurrent}
+        />
       </Box>
 
       <Box display="flex" alignItems="center" gap={8}>

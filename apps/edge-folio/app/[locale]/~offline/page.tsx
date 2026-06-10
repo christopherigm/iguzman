@@ -1,3 +1,5 @@
+import { Typography } from '@repo/ui/core-elements/typography';
+
 export default function OfflinePage() {
   return (
     <body>
@@ -13,13 +15,13 @@ export default function OfflinePage() {
           padding: '2rem',
         }}
       >
-        <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>
+        <Typography as="h1" variant="h2" styles={{ fontSize: '2rem', marginBottom: '1rem' }}>
           You are offline
-        </h1>
-        <p style={{ fontSize: '1.125rem', opacity: 0.7, maxWidth: '28rem' }}>
+        </Typography>
+        <Typography as="p" variant="body" styles={{ fontSize: '1.125rem', opacity: 0.7, maxWidth: '28rem' }}>
           It looks like you lost your internet connection. Please check your
           network and try again.
-        </p>
+        </Typography>
       </main>
     </body>
   );

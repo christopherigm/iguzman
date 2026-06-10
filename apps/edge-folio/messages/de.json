@@ -281,7 +281,10 @@
     "jdUrlLabel": "URL der Stellenausschreibung",
     "fetchFromUrl": "Abrufen",
     "fetchingUrl": "Wird abgerufen…",
-    "fetchUrlError": "Stellendetails konnten nicht extrahiert werden. Bitte Felder manuell ausfüllen."
+    "fetchUrlError": "Stellendetails konnten nicht extrahiert werden. Bitte Felder manuell ausfüllen.",
+    "overallMatch": "Gesamtübereinstimmung",
+    "technicalMatch": "Technische Übereinstimmung",
+    "naftaLikelihood": "NAFTA-TN-Wahrscheinlichkeit"
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",
@@ -425,7 +428,18 @@
     "exportEducationTitle": "Ausbildung",
     "exportLanguagesTitle": "Sprachen",
     "exportProjectsTitle": "Projekte",
-    "exportLoadingData": "Lebenslaufabschnitte werden geladen…"
+    "exportLoadingData": "Lebenslaufabschnitte werden geladen…",
+    "overallMatch": "Gesamtübereinstimmung",
+    "technicalMatch": "Technische Übereinstimmung",
+    "naftaLikelihood": "NAFTA-TN-Wahrscheinlichkeit",
+    "metricExplain": "Bewertungserklärung",
+    "refreshMetrics": "Metriken aktualisieren",
+    "refreshingMetrics": "Wird aktualisiert…",
+    "errorRefreshMetrics": "Metriken konnten nicht aktualisiert werden. Bitte erneut versuchen.",
+    "searchCompany": "Unternehmensdaten suchen",
+    "searchingCompany": "Suche…",
+    "errorSearchCompany": "Suche nach Unternehmensdaten fehlgeschlagen. Bitte erneut versuchen.",
+    "companyInfoFound": "Unternehmensinformationen aktualisiert."
   },
   "WorkExperiencePage": {
     "title": "Berufserfahrung",

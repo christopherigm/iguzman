@@ -16,12 +16,15 @@ import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Select } from '@repo/ui/core-elements/select';
 import { Switch } from '@repo/ui/core-elements/switch';
 import { Toast } from '@repo/ui/core-elements/toast';
+import Image from 'next/image';
 import {
   updateApplication,
   deleteApplication,
   tailorApplication,
   generateCoverLetter,
   generateNaftaLetter,
+  refreshMetrics,
+  searchCompany,
   ApplicationError,
   type JobApplication,
   type ApplicationStatus,
@@ -164,6 +167,46 @@ interface ExportData {
   projects: Project[];
 }
 
+function MetricBar({
+  label,
+  value,
+  explainAriaLabel,
+  onExplain,
+}: {
+  label: string;
+  value: number;
+  explainAriaLabel: string;
+  onExplain?: () => void;
+}) {
+  const color = value >= 70 ? '#22c55e' : value >= 45 ? '#f59e0b' : '#ef4444';
+  return (
+    <Box display="flex" flexDirection="column" gap={4}>
+      <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Box display="flex" alignItems="center" gap={6}>
+          <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+            {label}
+          </Typography>
+          {onExplain && (
+            <Button
+              unstyled
+              type="button"
+              onClick={onExplain}
+              aria-label={explainAriaLabel}
+              className="detail__metric-explain-btn"
+            >
+              ?
+            </Button>
+          )}
+        </Box>
+        <Typography variant="caption" fontWeight={600} color={color}>
+          {value}%
+        </Typography>
+      </Box>
+      <ProgressBar value={value} size={6} label={label} />
+    </Box>
+  );
+}
+
 function SwitchRow({
   label,
   checked,
@@ -229,7 +272,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   const [naftaPassport, setNaftaPassport] = useState('');
   const [naftaHoursPerWeek, setNaftaHoursPerWeek] = useState('40');
   const [naftaDuration, setNaftaDuration] = useState('3 years');
-  const [naftaCompanyDescription, setNaftaCompanyDescription] = useState('');
+  const [naftaCompanyDescription, setNaftaCompanyDescription] = useState(initialApp.company_description ?? '');
 
   // Export section data (lazily loaded when section first appears)
   const exportDataFetchRef = useRef(false);
@@ -249,12 +292,21 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
+  // Refresh metrics
+  const [refreshingMetrics, setRefreshingMetrics] = useState(false);
+
+  // Search company
+  const [searchingCompany, setSearchingCompany] = useState(false);
+
   // Delete
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
   const [toastKey, setToastKey] = useState(0);
+
+  // Metric explanation modal
+  const [explainModal, setExplainModal] = useState<{ title: string; text: string } | null>(null);
 
   // Load export section data lazily when tailored bullets are first available
   useEffect(() => {
@@ -329,6 +381,45 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
     } catch {
       showToast(t('errorDelete'), 'error');
       setDeleting(false);
+    }
+  }
+
+  async function handleRefreshMetrics() {
+    setRefreshingMetrics(true);
+    try {
+      const result = await refreshMetrics(app.id);
+      setApp((prev) => ({
+        ...prev,
+        overall_match: result.overall_match,
+        overall_match_explanation: result.overall_match_explanation,
+        technical_match: result.technical_match,
+        technical_match_explanation: result.technical_match_explanation,
+        nafta_tn_likelihood: result.nafta_tn_likelihood,
+        nafta_tn_likelihood_explanation: result.nafta_tn_likelihood_explanation,
+      }));
+      showToast(t('refreshMetrics'), 'success');
+    } catch {
+      showToast(t('errorRefreshMetrics'), 'error');
+    } finally {
+      setRefreshingMetrics(false);
+    }
+  }
+
+  async function handleSearchCompany() {
+    setSearchingCompany(true);
+    try {
+      const result = await searchCompany(app.id);
+      if (result.company_description) {
+        setNaftaCompanyDescription(result.company_description);
+      }
+      if (result.company_image_url) {
+        setApp((prev) => ({ ...prev, company_image_url: result.company_image_url }));
+      }
+      showToast(t('companyInfoFound'), 'success');
+    } catch {
+      showToast(t('errorSearchCompany'), 'error');
+    } finally {
+      setSearchingCompany(false);
     }
   }
 
@@ -548,19 +639,32 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
         flexWrap="wrap"
         marginBottom={20}
       >
-        <div>
-          <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
-            {app.job_title}
-          </Typography>
-          <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
-            {app.company_name}
-          </Typography>
-          {app.job_url && (
-            <a href={app.job_url} target="_blank" rel="noopener noreferrer" className="detail__url">
-              {t('jobUrlLink')} ↗
-            </a>
+        <Box display="flex" alignItems="flex-start" gap={14}>
+          {app.company_image_url && (
+            <Box styles={{ position: 'relative', width: 48, height: 48, flexShrink: 0, borderRadius: 8, overflow: 'hidden' }}>
+              <Image
+                src={app.company_image_url}
+                alt={app.company_name}
+                fill
+                sizes="48px"
+                style={{ objectFit: 'cover' }}
+              />
+            </Box>
           )}
-        </div>
+          <Box>
+            <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
+              {app.job_title}
+            </Typography>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
+              {app.company_name}
+            </Typography>
+            {app.job_url && (
+              <a href={app.job_url} target="_blank" rel="noopener noreferrer" className="detail__url">
+                {t('jobUrlLink')} ↗
+              </a>
+            )}
+          </Box>
+        </Box>
         <Box display="flex" alignItems="center" gap={10} flexWrap="wrap">
           <Badge
             variant="subtle"
@@ -572,6 +676,13 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
           </Badge>
           {!editing && (
             <>
+              <Button
+                text={refreshingMetrics ? t('refreshingMetrics') : t('refreshMetrics')}
+                type="button"
+                size="md"
+                disabled={refreshingMetrics}
+                onClick={handleRefreshMetrics}
+              />
               <Button text={t('edit')} type="button" size="md" onClick={openEdit} />
               <Button
                 text={deleting ? t('deleting') : t('delete')}
@@ -588,7 +699,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
 
       {/* ── Edit form ─────────────────────────────────────────────────── */}
       {editing && (
-        <div className="detail__section">
+        <Box marginBottom={28}>
           <form onSubmit={handleSave}>
             <Box display="flex" flexDirection="column" gap={14}>
               <Typography as="h2" variant="h3" fontWeight={600}>
@@ -671,16 +782,54 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
               </Box>
             </Box>
           </form>
-        </div>
+        </Box>
+      )}
+
+      {/* ── Match metrics ────────────────────────────────────────────── */}
+      {!editing && (app.overall_match != null || app.technical_match != null || app.nafta_tn_likelihood != null) && (
+        <Box display="flex" flexDirection="column" gap={10} marginBottom={24}>
+          {app.overall_match != null && (
+            <MetricBar
+              label={t('overallMatch')}
+              value={app.overall_match}
+              explainAriaLabel={t('metricExplain')}
+              onExplain={app.overall_match_explanation ? () => setExplainModal({ title: t('overallMatch'), text: app.overall_match_explanation }) : undefined}
+            />
+          )}
+          {app.technical_match != null && (
+            <MetricBar
+              label={t('technicalMatch')}
+              value={app.technical_match}
+              explainAriaLabel={t('metricExplain')}
+              onExplain={app.technical_match_explanation ? () => setExplainModal({ title: t('technicalMatch'), text: app.technical_match_explanation }) : undefined}
+            />
+          )}
+          {app.nafta_tn_likelihood != null && (
+            <MetricBar
+              label={t('naftaLikelihood')}
+              value={app.nafta_tn_likelihood}
+              explainAriaLabel={t('metricExplain')}
+              onExplain={app.nafta_tn_likelihood_explanation ? () => setExplainModal({ title: t('naftaLikelihood'), text: app.nafta_tn_likelihood_explanation }) : undefined}
+            />
+          )}
+        </Box>
+      )}
+
+      {explainModal && (
+        <ConfirmationModal
+          title={explainModal.title}
+          text={explainModal.text}
+          okCallback={() => setExplainModal(null)}
+        />
       )}
 
       {/* ── Job description (read-only) ───────────────────────────────── */}
       {!editing && (
-        <div className="detail__section">
+        <Box marginBottom={28}>
           <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6} as="p">
             {t('jdLabel')}
           </Typography>
-          <div className="detail__jd">{app.job_description}</div>
+          <Typography as="p" variant="body" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>{app.job_description}</Typography>
           {app.job_url && (
             <Typography variant="body" color="var(--muted-foreground, #6b7280)" as="p" styles={{ marginTop: '12px', marginBottom: '4px' }}>
               {t('jobUrlLabel')}
@@ -701,11 +850,11 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
               {app.notes}
             </Typography>
           )}
-        </div>
+        </Box>
       )}
 
       {/* ── Tailor resume ─────────────────────────────────────────────── */}
-      <div className="detail__section">
+      <Box marginBottom={28}>
         <Typography as="h2" variant="h3" fontWeight={600} marginBottom={12}>
           {t('tailorTitle')}
         </Typography>
@@ -744,11 +893,11 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
             ))}
           </Box>
         )}
-      </div>
+      </Box>
 
       {/* ── Cover letter ──────────────────────────────────────────────── */}
       {tailoredBullets && tailoredBullets.length > 0 && (
-        <div className="detail__section">
+        <Box marginBottom={28}>
           <Typography as="h2" variant="h3" fontWeight={600} marginBottom={12}>
             {t('coverLetterTitle')}
           </Typography>
@@ -790,12 +939,12 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
               />
             </Box>
           )}
-        </div>
+        </Box>
       )}
 
       {/* ── Export ────────────────────────────────────────────────────── */}
       {tailoredBullets && tailoredBullets.length > 0 && (
-        <div className="detail__section">
+        <Box marginBottom={28}>
           <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
             {t('exportTitle')}
           </Typography>
@@ -943,11 +1092,11 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
               {exportError}
             </Typography>
           )}
-        </div>
+        </Box>
       )}
 
       {/* ── NAFTA TN Visa Letter ──────────────────────────────────────── */}
-      <div className="detail__section">
+      <Box marginBottom={28}>
         <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
           {t('naftaLetterTitle')}
         </Typography>
@@ -1026,9 +1175,19 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
           />
 
           <Box>
-            <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6} as="p">
-              {t('naftaCompanyDescLabel')}
-            </Typography>
+            <Box display="flex" alignItems="center" justifyContent="space-between" gap={10} marginBottom={6} marginTop={8}>
+              <Typography variant="body" color="var(--muted-foreground, #6b7280)" as="p">
+                {t('naftaCompanyDescLabel')}
+              </Typography>
+              <Button
+                text={searchingCompany ? t('searchingCompany') : t('searchCompany')}
+                type="button"
+                size="md"
+                disabled={searchingCompany}
+                onClick={handleSearchCompany}
+                kind='success'
+              />
+            </Box>
             <TextInput
               multirow
               rows={10}
@@ -1088,7 +1247,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
             )}
           </Box>
         )}
-      </div>
+      </Box>
 
       {toast && (
         <Toast key={toastKey} message={toast.text} variant={toast.kind} position="top-center" />

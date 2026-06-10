@@ -5,16 +5,6 @@
   padding: 4px 0;
 }
 
-.education__select {
-  background: var(--surface-2);
-  color: var(--foreground);
-  color-scheme: light dark;
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.875rem;
-  width: 100%;
-}
 
 .education__card {
   transition: border-color 0.15s ease;
@@ -22,12 +12,6 @@
 
 .education__card:hover {
   border-color: var(--primary, #06b6d4);
-}
-
-.education__year-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
 }
 
 .education__description {

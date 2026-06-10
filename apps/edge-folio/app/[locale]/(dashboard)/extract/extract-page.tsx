@@ -9,6 +9,8 @@ import { Button } from '@repo/ui/core-elements/button';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { Badge } from '@repo/ui/core-elements/badge';
+import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Select } from '@repo/ui/core-elements/select';
 import { useDirectoryPicker } from '@/lib/use-directory-picker';
 import { useAstExtractor } from '@/lib/use-ast-extractor';
 import type { SkeletonJson } from '@/lib/skeleton-json';
@@ -258,7 +260,6 @@ function DraftBulletCard({
   t: ReturnType<typeof useTranslations<'ExtractPage'>>;
 }) {
   const textId = `draft-text-${draft.id}`;
-  const catId = `draft-cat-${draft.id}`;
 
   const categoryLabels: Record<Category, string> = {
     impact: t('synthCategoryImpact'),
@@ -276,7 +277,8 @@ function DraftBulletCard({
       ].filter(Boolean).join(' ')}
     >
       <Box display="flex" alignItems="flex-start" gap={12}>
-        <button
+        <Button
+          unstyled
           type="button"
           className={['extract__check-btn', draft.included ? 'extract__check-btn--checked' : ''].filter(Boolean).join(' ')}
           onClick={() => onChange(draft.id, { included: !draft.included })}
@@ -287,45 +289,28 @@ function DraftBulletCard({
               <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
-        </button>
+        </Button>
 
         <Box display="flex" flexDirection="column" gap={10} flex="1" minWidth={0}>
-          <Box display="flex" flexDirection="column" gap={4}>
-            <label htmlFor={textId}>
-              <Typography variant="label" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                {t('synthBulletTextLabel')}
-              </Typography>
-            </label>
-            <textarea
-              id={textId}
-              className="extract__draft-textarea"
-              value={draft.text}
-              onChange={(e) => onChange(draft.id, { text: e.target.value })}
-              rows={3}
-              maxLength={500}
-              disabled={!draft.included}
-              aria-label={t('synthBulletTextLabel')}
-            />
-          </Box>
+          <TextInput
+            multirow
+            label={t('synthBulletTextLabel')}
+            id={textId}
+            value={draft.text}
+            onChange={(v) => onChange(draft.id, { text: v })}
+            rows={3}
+            maxLength={500}
+            disabled={!draft.included}
+          />
 
           <Box display="flex" alignItems="center" gap={8} flexWrap="wrap">
-            <label htmlFor={catId} style={{ display: 'flex', alignItems: 'center' }}>
-              <Typography variant="label" color="var(--muted-foreground, #6b7280)" styles={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                {t('synthCategoryLabel')}
-              </Typography>
-            </label>
-            <select
-              id={catId}
-              className="extract__draft-select"
+            <Select
+              label={t('synthCategoryLabel')}
               value={draft.category}
-              onChange={(e) => onChange(draft.id, { category: e.target.value as Category })}
-              aria-label={t('synthCategoryLabel')}
+              onChange={(v) => onChange(draft.id, { category: v as Category })}
+              options={CATEGORY_CHOICES.map((cat) => ({ value: cat, label: categoryLabels[cat] }))}
               disabled={!draft.included}
-            >
-              {CATEGORY_CHOICES.map((cat) => (
-                <option key={cat} value={cat}>{categoryLabels[cat]}</option>
-              ))}
-            </select>
+            />
           </Box>
 
           {draft.skills.length > 0 && (
@@ -338,14 +323,15 @@ function DraftBulletCard({
                   <Box key={skill} className="extract__draft-skill-tag">
                     <Typography as="span" variant="label">{skill}</Typography>
                     {draft.included && (
-                      <button
+                      <Button
+                        unstyled
                         type="button"
                         className="extract__draft-skill-remove"
                         onClick={() => onChange(draft.id, { skills: draft.skills.filter((s) => s !== skill) })}
                         aria-label={t('synthRemoveSkill', { skill })}
                       >
                         ×
-                      </button>
+                      </Button>
                     )}
                   </Box>
                 ))}

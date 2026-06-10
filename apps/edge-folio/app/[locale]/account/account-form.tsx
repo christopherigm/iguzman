@@ -104,7 +104,7 @@ function ProfileSection({ profile }: { profile: UserProfile }) {
         {t('profileSection')}
       </Typography>
       <form onSubmit={handleSubmit} className="account__form">
-        <div className="account__picture-area">
+        <Box display="flex" alignItems="center" gap={16}>
           {pendingPicture ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={pendingPicture} alt="" className="account__avatar" />
@@ -117,9 +117,20 @@ function ProfileSection({ profile }: { profile: UserProfile }) {
               className="account__avatar"
             />
           ) : (
-            <div className="account__avatar-initials" aria-hidden="true">
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              width={72}
+              height={72}
+              borderRadius="50%"
+              backgroundColor="var(--primary, #06b6d4)"
+              color="#fff"
+              styles={{ fontSize: '1.75rem', fontWeight: 600, flexShrink: 0, userSelect: 'none' }}
+              aria-hidden={true}
+            >
               {initials}
-            </div>
+            </Box>
           )}
           <input
             ref={fileInputRef}
@@ -135,7 +146,7 @@ function ProfileSection({ profile }: { profile: UserProfile }) {
             size="sm"
             onClick={() => fileInputRef.current?.click()}
           />
-        </div>
+        </Box>
         <TextInput
           label={t('emailLabel')}
           type="email"
@@ -377,9 +388,9 @@ function PasskeySection() {
                   <Typography variant="caption" fontWeight={600}>
                     {cred.name}
                   </Typography>
-                  <span className="account__passkey-date">
+                  <Typography as="span" variant="label" color="var(--muted-foreground, #6b7280)">
                     {new Date(cred.created_at).toLocaleDateString()}
-                  </span>
+                  </Typography>
                 </Box>
               </Box>
               <Button

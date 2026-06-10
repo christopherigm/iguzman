@@ -532,14 +532,16 @@ export function AuthForm() {
       >
         <Box className="auth-form__tabs">
           {(['sign-in', 'sign-up', 'reset-password'] as Tab[]).map((id) => (
-            <button
+            <Button
               key={id}
+              unstyled
+              type="button"
               onClick={() => switchTab(id)}
-              data-active={String(tab === id)}
+              aria-pressed={tab === id}
               className="auth-form__tab-btn"
             >
               {tabLabels[id]}
-            </button>
+            </Button>
           ))}
         </Box>
 

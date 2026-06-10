@@ -5,6 +5,8 @@ from .views import (
     JobApplicationDetailView,
     JobApplicationListCreateView,
     NaftaLetterView,
+    RefreshMetricsView,
+    SearchCompanyView,
     TailorApplicationView,
 )
 
@@ -14,4 +16,6 @@ urlpatterns = [
     path('<int:pk>/tailor/', TailorApplicationView.as_view(), name='application-tailor'),
     path('<int:pk>/cover-letter/', CoverLetterView.as_view(), name='application-cover-letter'),
     path('<int:pk>/nafta-letter/', NaftaLetterView.as_view(), name='application-nafta-letter'),
+    path('<int:pk>/metrics/', RefreshMetricsView.as_view(), name='application-metrics'),
+    path('<int:pk>/search-company/', SearchCompanyView.as_view(), name='application-search-company'),
 ]

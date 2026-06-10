@@ -1,17 +1,29 @@
+import json
 import logging
 
+import requests
+from django.conf import settings
 from django.core.cache import cache
-from groq import GroqError
+from django.core.files.base import ContentFile
+from groq import Groq, GroqError
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from career.models import Education, WorkExperience
 from matrix.models import BulletPoint, Skill
 
 from .models import JobApplication
 from .serializers import JobApplicationSerializer
-from .tailoring import generate_cover_letter, generate_nafta_letter, tailor_resume
+from .tailoring import (
+    calculate_nafta_likelihood,
+    calculate_overall_match,
+    calculate_technical_match,
+    generate_cover_letter,
+    generate_nafta_letter,
+    tailor_resume,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -261,3 +273,252 @@ class NaftaLetterView(APIView):
         _invalidate_application(request.user.id, pk)
 
         return Response({'nafta_letter': nafta_letter})
+
+
+class RefreshMetricsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            application = JobApplication.objects.get(pk=pk, user=request.user)
+        except JobApplication.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        bullets_qs = list(
+            BulletPoint.objects.filter(user=user, is_approved=True).prefetch_related('skills')
+        )
+        bullets_payload = [
+            {
+                'id': b.id,
+                'text': b.text,
+                'category': b.category,
+                'skills': [s.name for s in b.skills.all()],
+            }
+            for b in bullets_qs
+        ]
+        skills = list(Skill.objects.filter(user=user).values('name', 'proficiency'))
+        work_experiences = list(
+            WorkExperience.objects.filter(user=user)
+            .order_by('-start_date')
+            .values('company', 'title', 'start_date', 'end_date', 'is_current', 'location')
+        )
+        educations = list(
+            Education.objects.filter(user=user)
+            .order_by('-start_year')
+            .values('institution', 'degree', 'field_of_study', 'start_year', 'end_year')
+        )
+
+        try:
+            overall, overall_explanation = calculate_overall_match(
+                job_description=application.job_description,
+                job_title=application.job_title,
+                company_name=application.company_name,
+                bullets=bullets_payload,
+                skills=skills,
+            )
+            technical, technical_explanation = calculate_technical_match(
+                job_description=application.job_description,
+                job_title=application.job_title,
+                company_name=application.company_name,
+                bullets=bullets_payload,
+                skills=skills,
+            )
+            nafta, nafta_explanation = calculate_nafta_likelihood(
+                job_description=application.job_description,
+                job_title=application.job_title,
+                skills=skills,
+                work_experiences=work_experiences,
+                educations=educations,
+            )
+        except GroqError as exc:
+            logger.error('Groq API error during metrics refresh: %s', exc)
+            return Response(
+                {'detail': 'LLM service unavailable. Please try again later.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except (ValueError, KeyError) as exc:
+            logger.error('Unexpected LLM response during metrics refresh: %s', exc)
+            return Response(
+                {'detail': 'Unexpected response from LLM. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        application.overall_match = overall
+        application.overall_match_explanation = overall_explanation
+        application.technical_match = technical
+        application.technical_match_explanation = technical_explanation
+        application.nafta_tn_likelihood = nafta
+        application.nafta_tn_likelihood_explanation = nafta_explanation
+        application.save(update_fields=[
+            'overall_match', 'overall_match_explanation',
+            'technical_match', 'technical_match_explanation',
+            'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
+            'modified',
+        ])
+        _invalidate_application(user.id, pk)
+
+        return Response({
+            'overall_match': overall,
+            'overall_match_explanation': overall_explanation,
+            'technical_match': technical,
+            'technical_match_explanation': technical_explanation,
+            'nafta_tn_likelihood': nafta,
+            'nafta_tn_likelihood_explanation': nafta_explanation,
+        })
+
+
+_PICK_URL_SYSTEM_PROMPT = """\
+You are a research assistant. Given web search results for a company, pick the single best URL \
+that is the company's official website homepage or about page. Prefer the company's own domain \
+over third-party sources (LinkedIn, Crunchbase, news articles, etc.).
+
+Return ONLY valid JSON — no markdown, no explanation: {"url": "<chosen url>"}
+"""
+
+_EXTRACT_ABOUT_SYSTEM_PROMPT = """\
+You are a research assistant. From the provided webpage content, extract a concise company \
+description (2–4 sentences). Focus on what the company does, their mission, products/services, \
+and industry. Write in third-person present tense suitable for a formal letter.
+
+Return ONLY valid JSON — no markdown, no explanation: {"about": "<extracted description>"}
+"""
+
+
+def _scraper_post(endpoint: str, payload: dict) -> dict:
+    """POST to the scraper service and return parsed JSON."""
+    url = f"{settings.SCRAPER_URL.rstrip('/')}/{endpoint.lstrip('/')}"
+    headers = {'Content-Type': 'application/json'}
+    if settings.SCRAPER_API_KEY:
+        headers['X-API-Key'] = settings.SCRAPER_API_KEY
+    resp = requests.post(url, json=payload, headers=headers, timeout=60)
+    resp.raise_for_status()
+    return resp.json()
+
+
+class SearchCompanyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            application = JobApplication.objects.get(pk=pk, user=request.user)
+        except JobApplication.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        company_name = application.company_name
+
+        # 1. Search for the company
+        try:
+            search_results = _scraper_post('/search', {
+                'query': f'{company_name} official website about company',
+                'maxResults': 5,
+            })
+        except Exception as exc:
+            logger.error('Scraper /search failed: %s', exc)
+            return Response(
+                {'detail': 'Search service unavailable. Please try again later.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        results = search_results.get('results', [])
+        if not results:
+            return Response(
+                {'detail': 'No search results found for this company.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # 2. Use LLM to pick the best URL
+        results_text = "\n".join(
+            f"- {r.get('title', '')} | {r.get('url', '')} | {r.get('snippet', '')}"
+            for r in results
+        )
+        groq_client = Groq(api_key=settings.GROQ_API_KEY)
+        try:
+            pick_response = groq_client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": _PICK_URL_SYSTEM_PROMPT},
+                    {"role": "user", "content": f"COMPANY: {company_name}\n\nSEARCH RESULTS:\n{results_text}\n\nPick the best URL."},
+                ],
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            )
+            chosen_url = json.loads(pick_response.choices[0].message.content).get('url', '')
+        except Exception as exc:
+            logger.error('LLM URL pick failed: %s', exc)
+            # Fall back to first result
+            chosen_url = results[0].get('url', '')
+
+        if not chosen_url:
+            return Response(
+                {'detail': 'Could not determine a company URL from search results.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        # 3. Extract content from the chosen URL
+        try:
+            extract_result = _scraper_post('/extract', {'url': chosen_url})
+        except Exception as exc:
+            logger.error('Scraper /extract failed for %s: %s', chosen_url, exc)
+            return Response(
+                {'detail': 'Failed to extract company page. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        content = extract_result.get('content', '')
+        og_image = extract_result.get('og_image')
+
+        # 4. Use LLM to extract company about text
+        try:
+            about_response = groq_client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": _EXTRACT_ABOUT_SYSTEM_PROMPT},
+                    {"role": "user", "content": f"COMPANY: {company_name}\n\nPAGE CONTENT:\n{content[:4000]}"},
+                ],
+                temperature=0.2,
+                response_format={"type": "json_object"},
+            )
+            about_text = json.loads(about_response.choices[0].message.content).get('about', '')
+        except Exception as exc:
+            logger.error('LLM about extraction failed: %s', exc)
+            about_text = ''
+
+        # 5. Download og_image if present and save as company_image
+        company_image_url = None
+        if og_image:
+            try:
+                img_resp = requests.get(og_image, timeout=15)
+                img_resp.raise_for_status()
+                content_type = img_resp.headers.get('Content-Type', 'image/jpeg')
+                ext = 'jpg'
+                if 'png' in content_type:
+                    ext = 'png'
+                elif 'webp' in content_type:
+                    ext = 'webp'
+                elif 'gif' in content_type:
+                    ext = 'gif'
+                filename = f'company.{ext}'
+                application.company_image.save(
+                    filename,
+                    ContentFile(img_resp.content),
+                    save=False,
+                )
+            except Exception as exc:
+                logger.warning('Failed to download og_image %s: %s', og_image, exc)
+
+        # 6. Save and return
+        update_fields = ['company_description', 'modified']
+        application.company_description = about_text
+        if og_image and application.company_image:
+            update_fields.append('company_image')
+        application.save(update_fields=update_fields)
+        _invalidate_application(request.user.id, pk)
+
+        serializer = JobApplicationSerializer(application, context={'request': request})
+        company_image_url = serializer.data.get('company_image_url')
+
+        return Response({
+            'company_description': about_text,
+            'company_image_url': company_image_url,
+        })

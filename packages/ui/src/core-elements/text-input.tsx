@@ -75,6 +75,11 @@ export const TextInput = ({
   disabled,
   required,
   maxLength,
+  onKeyDown,
+  min,
+  max,
+  step,
+  'aria-label': ariaLabel,
   ...rest
 }: TextInputProps) => {
   // ── Controlled / uncontrolled ──────────────────────────────────
@@ -86,8 +91,12 @@ export const TextInput = ({
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
-  // Label floats when focused OR when the field has content.
-  const isActive = isFocused || (currentValue ?? '').length > 0;
+  // Some input types always show browser-native UI (date picker, color swatch)
+  // and must keep the label floated to avoid overlap with the native control.
+  const alwaysActive = ['date', 'time', 'datetime-local', 'week', 'month', 'color'].includes(type);
+
+  // Label floats when focused OR when the field has content OR type always shows UI.
+  const isActive = alwaysActive || isFocused || (currentValue ?? '').length > 0;
 
   // ── Layout style from UIComponentProps ────────────────────────
   const uiProps = rest as UIComponentProps;
@@ -144,10 +153,14 @@ export const TextInput = ({
     disabled,
     required,
     maxLength,
+    onKeyDown,
+    min,
+    max,
+    step,
     // If a placeholder is explicitly provided, use it. Otherwise the label
     // visually replaces the placeholder via CSS, so we keep it empty.
     placeholder: placeholder ?? (isFocused && label ? label : undefined),
-    'aria-label': label ?? undefined,
+    'aria-label': label ?? ariaLabel ?? undefined,
   };
 
   // ── Wrapper class name ────────────────────────────────────────

@@ -278,55 +278,6 @@
   border-color: var(--primary, #06b6d4);
 }
 
-.extract__draft-textarea {
-  width: 100%;
-  resize: vertical;
-  border-radius: 8px;
-  border: 1px solid var(--border, #e5e7eb);
-  padding: 8px 10px;
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  font-family: inherit;
-  background: var(--surface-2);
-  color: var(--foreground);
-  color-scheme: light dark;
-  transition: border-color 0.15s ease;
-}
-
-.extract__draft-textarea:focus {
-  outline: none;
-  border-color: var(--primary, #06b6d4);
-}
-
-.extract__draft-textarea:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  resize: none;
-}
-
-.extract__draft-select {
-  border-radius: 6px;
-  border: 1px solid var(--border, #e5e7eb);
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  font-family: inherit;
-  background: var(--surface-2);
-  color: var(--foreground);
-  color-scheme: light dark;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-
-.extract__draft-select:focus {
-  outline: none;
-  border-color: var(--primary, #06b6d4);
-}
-
-.extract__draft-select:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* ── Draft skill tag ── */
 
 .extract__draft-skill-tag {

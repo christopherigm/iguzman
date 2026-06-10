@@ -196,7 +196,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': False,
@@ -264,3 +264,6 @@ PASSWORD_RESET_TOKEN_EXPIRY_HOURS = int(
 
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
+
+SCRAPER_URL = os.environ.get('SCRAPER_URL', 'http://localhost:4000')
+SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')

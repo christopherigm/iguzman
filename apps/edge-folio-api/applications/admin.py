@@ -12,11 +12,16 @@ def _invalidate_application(user_id, pk=None):
 
 @admin.register(JobApplication)
 class JobApplicationAdmin(admin.ModelAdmin):
-    list_display = ('job_title', 'company_name', 'status', 'user', 'job_url', 'created')
+    list_display = ('job_title', 'company_name', 'status', 'overall_match', 'technical_match', 'nafta_tn_likelihood', 'user', 'created')
     list_filter = ('status',)
     search_fields = ('job_title', 'company_name', 'user__email')
     raw_id_fields = ('user',)
-    readonly_fields = ('tailored_bullets', 'cover_letter', 'nafta_letter', 'created', 'modified')
+    readonly_fields = (
+        'tailored_bullets', 'cover_letter', 'nafta_letter',
+        'overall_match', 'technical_match', 'nafta_tn_likelihood',
+        'company_description',
+        'created', 'modified',
+    )
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)

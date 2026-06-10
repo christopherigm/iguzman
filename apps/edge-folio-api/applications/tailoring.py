@@ -166,6 +166,174 @@ def generate_cover_letter(
 
 
 # ---------------------------------------------------------------------------
+# Match metrics
+# ---------------------------------------------------------------------------
+
+_OVERALL_MATCH_SYSTEM_PROMPT = """\
+You are an expert technical recruiter evaluating a candidate's fit for a specific role.
+
+Analyze the candidate's skills, work experience bullet points, and the job description.
+Provide an overall match score from 1 to 100 representing how well the candidate's complete \
+profile fits the role — considering technical alignment, soft skill signals, seniority level \
+match, and domain experience.
+
+Scoring guide:
+- 80–100: Exceptional fit; meets or exceeds nearly all requirements
+- 60–79: Strong fit; meets most key requirements with minor gaps
+- 40–59: Moderate fit; meets some requirements but has notable gaps
+- 20–39: Weak fit; meets few requirements; significant development needed
+- 1–19: Poor fit; profile does not align with the role
+
+Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2–3 sentence plain-text explanation of the score, citing specific strengths or gaps>"}
+"""
+
+_TECHNICAL_MATCH_SYSTEM_PROMPT = """\
+You are an expert software engineering hiring manager evaluating a candidate's technical \
+skills against a job's technical requirements.
+
+Analyze the job description's technical requirements (languages, frameworks, tools, cloud \
+platforms, methodologies) against the candidate's declared skills (with proficiency levels 1–5) \
+and technical bullet points from their work history.
+
+Scoring guide:
+- 80–100: Covers nearly all required technical skills at appropriate proficiency
+- 60–79: Covers most core technical requirements; minor gaps in secondary skills
+- 40–59: Covers fundamental technologies but lacks key specialized requirements
+- 20–39: Has foundational skills but missing most required technologies
+- 1–19: Technical profile does not align with job requirements
+
+Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2–3 sentence plain-text explanation of the score, citing specific skills matched or missing>"}
+"""
+
+_NAFTA_LIKELIHOOD_SYSTEM_PROMPT = """\
+You are an expert U.S. immigration attorney specializing in TN NAFTA/USMCA visas.
+
+Evaluate the likelihood of TN visa approval for a candidate applying for this position.
+TN eligibility requires:
+1. The position must fall within a NAFTA/USMCA approved profession (e.g. Engineer, \
+Computer Systems Analyst, Scientist, Accountant, etc.)
+2. The candidate must hold the required educational degree or equivalent professional \
+credentials for that TN profession category
+3. The position must be employer-sponsored (not self-employment)
+4. The role duties must primarily match the TN profession description
+
+Consider:
+- Whether the job title and duties align with a recognized TN profession category
+- Whether the candidate's highest degree and field of study qualify for that TN category
+- Years of relevant work experience as a credential supplement where degree is missing
+- Technical depth and specificity of the role (stronger technical match = stronger TN case)
+
+Scoring guide:
+- 80–100: Strong TN case; role clearly maps to TN category; candidate credentials meet requirements
+- 60–79: Good TN case; minor concerns (e.g., title mismatch) but overall approvable
+- 40–59: Moderate; eligibility risk present; role partially maps to TN category
+- 20–39: Weak; significant concerns about profession mapping or credential gaps
+- 1–19: Poor TN eligibility; role likely does not qualify under NAFTA/USMCA
+
+Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2–3 sentence plain-text explanation of the score, citing specific profession mapping or credential factors>"}
+"""
+
+
+def _call_score(system_prompt: str, user_message: str) -> tuple[int, str]:
+    client = Groq(api_key=settings.GROQ_API_KEY)
+    response = client.chat.completions.create(
+        model=settings.GROQ_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        temperature=0.1,
+        response_format={"type": "json_object"},
+    )
+    data = json.loads(response.choices[0].message.content)
+    score = int(data.get("score", 50))
+    explanation = str(data.get("explanation", ""))
+    return max(1, min(100, score)), explanation
+
+
+def calculate_overall_match(
+    job_description: str,
+    job_title: str,
+    company_name: str,
+    bullets: list[dict],
+    skills: list[dict],
+) -> tuple[int, str]:
+    """Return (score, explanation) for overall candidate–job fit."""
+    skill_summary = ", ".join(f"{s['name']} ({s['proficiency']}/5)" for s in skills)
+    bullet_lines = "\n".join(
+        f"[{b['category']}] {b['text']}" + (f" | skills: {', '.join(b['skills'])}" if b.get('skills') else "")
+        for b in bullets[:30]
+    )
+    user_message = (
+        f"ROLE: {job_title} at {company_name}\n\n"
+        f"JOB DESCRIPTION:\n{job_description[:3000]}\n\n"
+        f"CANDIDATE SKILLS: {skill_summary or 'None listed'}\n\n"
+        f"CANDIDATE EXPERIENCE BULLETS:\n{bullet_lines or 'None listed'}\n\n"
+        "Return the overall match score and explanation as JSON."
+    )
+    return _call_score(_OVERALL_MATCH_SYSTEM_PROMPT, user_message)
+
+
+def calculate_technical_match(
+    job_description: str,
+    job_title: str,
+    company_name: str,
+    bullets: list[dict],
+    skills: list[dict],
+) -> tuple[int, str]:
+    """Return (score, explanation) for technical skills match."""
+    skill_summary = ", ".join(f"{s['name']} ({s['proficiency']}/5)" for s in skills)
+    technical_bullets = [b for b in bullets if b.get('category') in ('technical', 'impact')]
+    bullet_lines = "\n".join(
+        f"{b['text']}" + (f" | technologies: {', '.join(b['skills'])}" if b.get('skills') else "")
+        for b in technical_bullets[:20]
+    )
+    user_message = (
+        f"ROLE: {job_title} at {company_name}\n\n"
+        f"JOB DESCRIPTION:\n{job_description[:3000]}\n\n"
+        f"CANDIDATE TECHNICAL SKILLS: {skill_summary or 'None listed'}\n\n"
+        f"CANDIDATE TECHNICAL BULLETS:\n{bullet_lines or 'None listed'}\n\n"
+        "Return the technical match score and explanation as JSON."
+    )
+    return _call_score(_TECHNICAL_MATCH_SYSTEM_PROMPT, user_message)
+
+
+def calculate_nafta_likelihood(
+    job_description: str,
+    job_title: str,
+    skills: list[dict],
+    work_experiences: list[dict],
+    educations: list[dict],
+) -> tuple[int, str]:
+    """Return (score, explanation) for TN NAFTA approval likelihood."""
+    skill_summary = ", ".join(s['name'] for s in skills)
+
+    edu_lines = "\n".join(
+        f"- {e.get('degree', '')} in {e.get('field_of_study', '') or 'N/A'} "
+        f"from {e.get('institution', '')} "
+        f"({e.get('start_year', '')}–{e.get('end_year', '') or 'present'})"
+        for e in educations
+    ) or "None listed"
+
+    we_lines = "\n".join(
+        f"- {e.get('title', '')} at {e.get('company', '')} "
+        f"({str(e.get('start_date', ''))[:7]}–"
+        f"{'present' if e.get('is_current') else str(e.get('end_date', ''))[:7]})"
+        for e in work_experiences
+    ) or "None listed"
+
+    user_message = (
+        f"POSITION TITLE: {job_title}\n\n"
+        f"JOB DESCRIPTION:\n{job_description[:3000]}\n\n"
+        f"CANDIDATE EDUCATION:\n{edu_lines}\n\n"
+        f"CANDIDATE WORK EXPERIENCE:\n{we_lines}\n\n"
+        f"CANDIDATE SKILLS: {skill_summary or 'None listed'}\n\n"
+        "Return the TN visa approval likelihood score and explanation as JSON."
+    )
+    return _call_score(_NAFTA_LIKELIHOOD_SYSTEM_PROMPT, user_message)
+
+
+# ---------------------------------------------------------------------------
 # NAFTA TN Visa Letter
 # ---------------------------------------------------------------------------
 
