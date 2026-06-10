@@ -8,7 +8,7 @@
 | `.section-subtitle` | Supporting paragraph beneath a section title |
 | `.zoom-on-hover` | Card container with `overflow: hidden` — scales inner `<img>` to 1.1× on hover |
 | `.card-content` | Inner content wrapper of any card — standard padding (`16px` vertical, `10px` horizontal) |
-| `.elevation-<1–24>` | Box shadow matching `Box elevation={n}` — use on any element (Link, div, etc.) to apply the same shadow scale |
+| `.elevation-<1-24>` | Box shadow matching `Box elevation={n}` — use on any element (Link, div, etc.) to apply the same shadow scale |
 | `.item-price` | Large, bold price display for product/service detail pages |
 | `.item-compare-price` | Muted, line-through compare price for detail pages |
 | `.item-discount-badge` | Small red inline badge showing percentage off (e.g., `-20%`) |

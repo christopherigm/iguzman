@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# Edge Folio Application – Helm Values
+# Edge Folio Application - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
@@ -49,7 +49,7 @@ env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
 
-# Sensitive values – reference existing Kubernetes Secrets.
+# Sensitive values - reference existing Kubernetes Secrets.
 envFromSecret:
   - name: API_URL
     secretName: edge-folio-secrets

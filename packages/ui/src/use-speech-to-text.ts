@@ -34,7 +34,7 @@ export interface UseSpeechToTextReturn {
   isListening: boolean;
   /** `true` while the Whisper model is being downloaded / initialized. */
   isModelLoading: boolean;
-  /** Model download progress percentage (0–100). */
+  /** Model download progress percentage (0-100). */
   modelLoadProgress: number;
   /** `true` while audio data is being processed by the Whisper model. */
   isTranscribing: boolean;

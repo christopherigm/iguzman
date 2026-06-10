@@ -113,7 +113,7 @@ _score_frame() {
 }
 
 # _get_subject_coords <image_path> <model>
-# Prints "<x> <y>" as 0–1 fractions (defaults to "0.5 0.5" on any failure).
+# Prints "<x> <y>" as 0-1 fractions (defaults to "0.5 0.5" on any failure).
 _get_subject_coords() {
   local image_path="$1"
   local model="$2"
@@ -220,7 +220,7 @@ _image_dhash() {
 }
 
 # _sharpness_score <image_path>
-# Returns a focus/sharpness value (0–100, higher = sharper).
+# Returns a focus/sharpness value (0-100, higher = sharper).
 # Method: compare original vs heavily-blurred copy with SSIM.
 # Sharp images lose more detail when blurred → lower SSIM → higher score.
 _sharpness_score() {
@@ -243,7 +243,7 @@ _sharpness_score() {
 # _images_are_similar <img1> <img2> <threshold>
 # Returns 0 (similar) if dHash Hamming distance ≤ 12 (catches burst shots /
 # same-scene variants faster than SSIM), or if SSIM ≥ threshold for borderline
-# dHash distances (13–20).  Distances > 20 skip SSIM entirely.
+# dHash distances (13-20).  Distances > 20 skip SSIM entirely.
 _images_are_similar() {
   local img1="$1"
   local img2="$2"

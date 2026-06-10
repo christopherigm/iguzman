@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
     const key = `${randomUUID()}.${ext.toLowerCase()}`;
     try {
       const uploadId = await createMultipartUpload(key);
-      log.info({ key }, 'POST /api/media/multipart – upload initiated');
+      log.info({ key }, 'POST /api/media/multipart - upload initiated');
       return NextResponse.json({ key, uploadId });
     } catch (err) {
-      log.error({ err }, 'POST /api/media/multipart – initiate failed');
+      log.error({ err }, 'POST /api/media/multipart - initiate failed');
       return NextResponse.json({ error: 'Failed to initiate upload' }, { status: 500 });
     }
   }
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       const etag = await uploadMultipartPart(key, uploadId, partNumber, body, contentLength);
       return NextResponse.json({ etag });
     } catch (err) {
-      log.error({ err, key, partNumber }, 'POST /api/media/multipart – part upload failed');
+      log.error({ err, key, partNumber }, 'POST /api/media/multipart - part upload failed');
       return NextResponse.json({ error: 'Failed to upload part' }, { status: 500 });
     }
   }
@@ -103,10 +103,10 @@ export async function POST(request: NextRequest) {
         uploadId,
         parts.map(p => ({ PartNumber: p.partNumber, ETag: p.etag })),
       );
-      log.info({ key }, 'POST /api/media/multipart – upload completed');
+      log.info({ key }, 'POST /api/media/multipart - upload completed');
       return NextResponse.json({ file: key });
     } catch (err) {
-      log.error({ err, key }, 'POST /api/media/multipart – complete failed');
+      log.error({ err, key }, 'POST /api/media/multipart - complete failed');
       return NextResponse.json({ error: 'Failed to complete upload' }, { status: 500 });
     }
   }

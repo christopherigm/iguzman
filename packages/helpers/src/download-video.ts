@@ -1136,7 +1136,7 @@ const TITLE_NOISE_RE =
  * clean track name.
  *
  * Stripping order:
- * 1. Remove "Artist - " / "Artist — " / "Artist – " prefix.
+ * 1. Remove "Artist - " / "Artist — " / "Artist - " prefix.
  * 2. Remove bracketed noise like "(Official Audio)", "[Lyrics]", etc.
  */
 const cleanTitle = (raw: string, artist: string): string => {
@@ -1145,7 +1145,7 @@ const cleanTitle = (raw: string, artist: string): string => {
   let title = raw;
 
   // 1. Strip leading "Artist - Title" prefix
-  const separators = [' - ', ' — ', ' – '];
+  const separators = [' - ', ' — ', ' - '];
   for (const sep of separators) {
     const idx = title.indexOf(sep);
     if (idx !== -1) {
@@ -1549,8 +1549,8 @@ const isIosUnsupportedCodec = async (
  * Transcodes a video file to an iOS-compatible format in-place, optimised
  * for **speed** over compression efficiency.
  *
- * - Uses the `ultrafast` libx264 preset — typically 3–5× faster than a
- *   quality-oriented encode at the cost of ~15–30 % larger output files.
+ * - Uses the `ultrafast` libx264 preset — typically 3-5× faster than a
+ *   quality-oriented encode at the cost of ~15-30 % larger output files.
  * - Always re-encodes audio to AAC 128 kbps so that Opus / Vorbis / other
  *   non-iOS-safe codecs (common in VP9/WebM streams from YouTube) are
  *   converted in the same pass. Copying Opus audio into an MP4 container

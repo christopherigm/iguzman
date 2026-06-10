@@ -2,7 +2,7 @@
 /*  Constants                                                         */
 /* ------------------------------------------------------------------ */
 
-/** Full English month names, indexed 0–11. */
+/** Full English month names, indexed 0-11. */
 export const MONTHS = [
   'January',
   'February',
@@ -18,7 +18,7 @@ export const MONTHS = [
   'December',
 ] as const;
 
-/** Full Spanish month names, indexed 0–11. */
+/** Full Spanish month names, indexed 0-11. */
 export const SPANISH_MONTHS = [
   'Enero',
   'Febrero',
@@ -34,7 +34,7 @@ export const SPANISH_MONTHS = [
   'Diciembre',
 ] as const;
 
-/** Abbreviated English month names, indexed 0–11. */
+/** Abbreviated English month names, indexed 0-11. */
 export const SHORT_MONTHS = [
   'Jan',
   'Feb',
@@ -50,7 +50,7 @@ export const SHORT_MONTHS = [
   'Dec',
 ] as const;
 
-/** Abbreviated Spanish month names, indexed 0–11. */
+/** Abbreviated Spanish month names, indexed 0-11. */
 export const SPANISH_SHORT_MONTHS = [
   'Ene',
   'Feb',
@@ -174,7 +174,7 @@ export const hourParser12Format = (date: DateLike): string => {
   const hours = d.getHours();
   const period = hours >= 12 ? 'pm' : 'am';
 
-  /** Convert 0 → 12 (midnight) and 13–23 → 1–11 (afternoon/evening). */
+  /** Convert 0 → 12 (midnight) and 13-23 → 1-11 (afternoon/evening). */
   const h12 = hours % 12 || 12;
 
   return `${pad(h12)}:${pad(d.getMinutes())} ${period}`;

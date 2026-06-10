@@ -4,7 +4,7 @@ interface DatesDifference {
   text: string;
   /** Number of full years in the difference. */
   years: number;
-  /** Remaining full months after subtracting full years (0–11). */
+  /** Remaining full months after subtracting full years (0-11). */
   months: number;
 }
 

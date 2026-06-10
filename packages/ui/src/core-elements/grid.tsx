@@ -4,7 +4,7 @@ import type { Breakpoint } from './utils';
 import './grid.css';
 
 /**
- * Responsive column sizes per breakpoint (1–12).
+ * Responsive column sizes per breakpoint (1-12).
  * Mobile-first: xs is the base; larger breakpoints override at their min-width.
  */
 export type GridSize = Partial<Record<Breakpoint, number>>;
@@ -17,7 +17,7 @@ export interface GridProps extends UIComponentProps {
   container?: boolean;
   /** When true, renders as a grid item. Implicit if `size` is provided. */
   item?: boolean;
-  /** Responsive column span per breakpoint (1–12). */
+  /** Responsive column span per breakpoint (1-12). */
   size?: GridSize;
   /** Uniform gap between items in base-unit multiples (8px * n). Applies to container. */
   spacing?: number;

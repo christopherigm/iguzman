@@ -165,7 +165,7 @@
     "scraperHealthSection": "GET /health",
     "scraperHealthDescription": "Health check. Returns '{ status: \"ok\" }'. No authentication required.",
     "scraperSearchSection": "POST /search",
-    "scraperSearchDescription": "Run a web search and return structured results. Supports DuckDuckGo (default) and Bing engines, with 1–20 results per request.",
+    "scraperSearchDescription": "Run a web search and return structured results. Supports DuckDuckGo (default) and Bing engines, with 1-20 results per request.",
     "scraperExtractSection": "POST /extract",
     "scraperExtractDescription": "Navigate to a URL and return its readable text content. Strips nav, footer, ads, and other boilerplate.",
     "scraperApiKeyLabel": "X-API-Key",

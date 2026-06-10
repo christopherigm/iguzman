@@ -6,14 +6,14 @@ Service URL:
 {{- end }}
 
 Endpoints:
-  GET  /health      – liveness check (no auth)
-  POST /diarize     – speaker diarization only
-  POST /transcribe  – speaker-attributed transcription
+  GET  /health      - liveness check (no auth)
+  POST /diarize     - speaker diarization only
+  POST /transcribe  - speaker-attributed transcription
 
 Authentication: pass your API key in the X-API-Key header.
 
 First-boot note: On the initial pod start, pyannote and Whisper models are
-downloaded from HuggingFace (~2–4 GB total). The startup probe allows up to
+downloaded from HuggingFace (~2-4 GB total). The startup probe allows up to
 15 minutes for this. Subsequent restarts are instant if modelCache is enabled.
 
 To enable the model cache PVC (avoids re-downloading on every restart):

@@ -279,12 +279,32 @@
     "copied": "Copiado!",
     "errorCoverLetter": "Falha ao gerar a carta de apresentação. Tente novamente.",
     "jdUrlLabel": "URL da vaga de emprego",
-    "fetchFromUrl": "Buscar",
+    "fetchFromUrl": "Buscar da URL",
     "fetchingUrl": "Buscando…",
+    "clearUrl": "Limpar URL",
     "fetchUrlError": "Não foi possível extrair os detalhes da vaga. Preencha os campos manualmente.",
     "overallMatch": "Compatibilidade Geral",
     "technicalMatch": "Compatibilidade Técnica",
-    "naftaLikelihood": "Probabilidade TN NAFTA"
+    "naftaLikelihood": "Probabilidade TN NAFTA",
+    "duplicateUrlTitle": "Candidatura já salva",
+    "duplicateUrlText": "Você já salvou uma candidatura para esta URL. Encontre-a nas suas candidaturas existentes.",
+    "locationLabel": "Localização",
+    "salaryMinLabel": "Salário mínimo",
+    "salaryMaxLabel": "Salário máximo",
+    "salaryCurrencyLabel": "Moeda",
+    "salaryCurrencyPlaceholder": "Selecionar moeda",
+    "workTypeLabel": "Modalidade de trabalho",
+    "workTypes": {
+      "remote": "Remoto",
+      "onsite": "Presencial",
+      "hybrid": "Híbrido"
+    },
+    "usCitizenOrPrLabel": "Cidadania / PR americana obrigatória",
+    "usCitizenOrPr": {
+      "null": "Não especificado",
+      "true": "Obrigatória",
+      "false": "Não obrigatória"
+    }
   },
   "AuthPage": {
     "tabSignIn": "Entrar",
@@ -439,7 +459,31 @@
     "searchCompany": "Buscar dados da empresa",
     "searchingCompany": "Buscando…",
     "errorSearchCompany": "Falha ao buscar dados da empresa. Tente novamente.",
-    "companyInfoFound": "Informações da empresa atualizadas."
+    "companyInfoFound": "Informações da empresa atualizadas.",
+    "tnSuggestLabel": "Sugerir categoria TN",
+    "tnSuggestGenerating": "Analisando seu perfil…",
+    "tnSuggestNoData": "Adicione educação ou experiência profissional primeiro para usar este recurso.",
+    "tnSuggestError": "Falha ao analisar as categorias TN. Tente novamente.",
+    "tnSuggestModalTitle": "Sugestões de categoria de visto TN",
+    "tnSuggestModalSubtitle": "Baseado na sua educação e experiência profissional. Apenas para fins informativos — não é aconselhamento jurídico.",
+    "tnSuggestNoMatches": "Nenhuma categoria TN correspondente encontrada para o seu perfil.",
+    "locationLabel": "Localização",
+    "salaryMinLabel": "Salário mínimo",
+    "salaryMaxLabel": "Salário máximo",
+    "salaryCurrencyLabel": "Moeda",
+    "salaryCurrencyPlaceholder": "Selecionar moeda",
+    "workTypeLabel": "Modalidade de trabalho",
+    "workTypes": {
+      "remote": "Remoto",
+      "onsite": "Presencial",
+      "hybrid": "Híbrido"
+    },
+    "usCitizenOrPrLabel": "Cidadania / PR americana obrigatória",
+    "usCitizenOrPr": {
+      "null": "Não especificado",
+      "true": "Obrigatória",
+      "false": "Não obrigatória"
+    }
   },
   "WorkExperiencePage": {
     "title": "Experiência Profissional",
@@ -629,6 +673,10 @@
     "savingContact": "Salvando…",
     "contactSaved": "Informações de contato salvas",
     "contactError": "Falha ao salvar informações de contato",
+    "tnProfessionLabel": "Categoria de profissão TN",
+    "tnProfessionPlaceholder": "Selecionar profissão TN…",
+    "citizenshipLabel": "Cidadania",
+    "citizenshipPlaceholder": "Selecionar cidadania…",
     "summaryEnhanceLabel": "Melhorar com IA",
     "summaryEnhanceStop": "Parar",
     "summaryEnhanceDiscard": "Descartar",
@@ -658,6 +706,14 @@
       "fluent": "Fluente",
       "professional": "Profissional",
       "basic": "Básico"
-    }
+    },
+    "tnSuggestLabel": "Sugerir categoria TN",
+    "tnSuggestGenerating": "Analisando seu perfil…",
+    "tnSuggestNoData": "Adicione educação ou experiência profissional primeiro para usar este recurso.",
+    "tnSuggestError": "Falha ao analisar categorias TN. Tente novamente.",
+    "tnSuggestParseError": "Não foi possível processar os resultados. Tente novamente.",
+    "tnSuggestModalTitle": "Sugestões de categoria TN",
+    "tnSuggestModalSubtitle": "Com base na sua educação e experiência profissional. Apenas para fins informativos — não é aconselhamento jurídico.",
+    "tnSuggestNoMatches": "Nenhuma categoria TN compatível encontrada para o seu perfil."
   }
 }

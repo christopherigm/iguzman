@@ -64,7 +64,7 @@ Run a web search and return structured results.
 | ------------ | ------------------------ | -------------- | ------------------------ |
 | `query`      | `string`                 | —              | Search query (required)  |
 | `engine`     | `"duckduckgo" \| "bing"` | `"duckduckgo"` | Search engine            |
-| `maxResults` | `number`                 | `5`            | Number of results (1–20) |
+| `maxResults` | `number`                 | `5`            | Number of results (1-20) |
 
 **Response**
 

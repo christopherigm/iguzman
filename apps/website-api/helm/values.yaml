@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# Website API (Django) – Helm Values
+# Website API (Django) - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
@@ -68,7 +68,7 @@ env:
   CORS_ALLOWED_ORIGINS: 'https://bdrone.com.mx,https://website.iguzman.com.mx'
   EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: '24'
 
-# Sensitive values – reference existing Kubernetes Secrets.
+# Sensitive values - reference existing Kubernetes Secrets.
 envFromSecret:
   - name: DB_PASSWORD
     secretName: website-api-secrets

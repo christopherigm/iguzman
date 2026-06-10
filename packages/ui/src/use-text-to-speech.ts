@@ -20,7 +20,7 @@ export interface UseTextToSpeechReturn {
   isSpeaking: boolean;
   /** Neural engine only: `true` while the model is downloading / initializing. */
   isModelLoading: boolean;
-  /** Neural engine only: model download progress percentage (0–100). */
+  /** Neural engine only: model download progress percentage (0-100). */
   modelLoadProgress: number;
   /** Last error message, or `null` if none. */
   error: string | null;
@@ -44,7 +44,7 @@ export interface UseTextToSpeechReturn {
  *
  * Supports two engines:
  *  - `'browser'`  Web Speech API — instant, zero-download, OS voices.
- *  - `'neural'`   SpeechT5 via a Web Worker — high quality, ~100–300 MB first load.
+ *  - `'neural'`   SpeechT5 via a Web Worker — high quality, ~100-300 MB first load.
  *
  * @example
  * const { speak, isSpeaking, stop } = useTextToSpeech({ engine: 'browser', language: 'en' });

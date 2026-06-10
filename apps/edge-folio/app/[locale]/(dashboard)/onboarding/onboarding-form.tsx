@@ -59,10 +59,10 @@ function ReadinessHandshake() {
 
 const YEARS_STEPS: SliderStep[] = [
   { value: 0, label: '< 1' },
-  { value: 1, label: '1–2' },
-  { value: 3, label: '3–5' },
-  { value: 6, label: '6–9' },
-  { value: 10, label: '10–14' },
+  { value: 1, label: '1-2' },
+  { value: 3, label: '3-5' },
+  { value: 6, label: '6-9' },
+  { value: 10, label: '10-14' },
   { value: 15, label: '15+' },
 ];
 

@@ -62,7 +62,7 @@ def picture_mixin(max_width: int, quality: int = 85):
 
     Args:
         max_width: Maximum image width in pixels. Height scales proportionally.
-        quality:   JPEG/WebP compression quality (1–95).
+        quality:   JPEG/WebP compression quality (1-95).
 
     Usage::
 

@@ -27,12 +27,12 @@ export async function POST(request: NextRequest) {
   const ext = request.nextUrl.searchParams.get('ext') ?? 'mp4';
 
   if (!/^[a-z0-9]{1,10}$/i.test(ext)) {
-    log.warn({ ext }, 'POST /api/media – invalid file extension');
+    log.warn({ ext }, 'POST /api/media - invalid file extension');
     return NextResponse.json({ error: 'Invalid extension' }, { status: 400 });
   }
 
   if (!request.body) {
-    log.warn({ ext }, 'POST /api/media – empty request body');
+    log.warn({ ext }, 'POST /api/media - empty request body');
     return NextResponse.json({ error: 'Empty body' }, { status: 400 });
   }
 
@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
       const cl = request.headers.get('content-length');
       const contentLength = cl ? parseInt(cl, 10) : undefined;
       await uploadFromWebStream(fileName, request.body, contentLength);
-      log.info({ fileName }, 'POST /api/media – file saved to R2');
+      log.info({ fileName }, 'POST /api/media - file saved to R2');
       return NextResponse.json({ file: fileName }, { status: 201 });
     } catch (err) {
-      log.error({ err, fileName }, 'POST /api/media – R2 upload failed');
+      log.error({ err, fileName }, 'POST /api/media - R2 upload failed');
       return NextResponse.json({ error: 'Failed to save file' }, { status: 500 });
     }
   }
@@ -59,10 +59,10 @@ export async function POST(request: NextRequest) {
       Readable.fromWeb(request.body as Parameters<typeof Readable.fromWeb>[0]),
       writeStream,
     );
-    log.info({ fileName }, 'POST /api/media – file saved');
+    log.info({ fileName }, 'POST /api/media - file saved');
     return NextResponse.json({ file: fileName }, { status: 201 });
   } catch (err) {
-    log.error({ err, fileName }, 'POST /api/media – write failed');
+    log.error({ err, fileName }, 'POST /api/media - write failed');
     unlink(filePath).catch(() => {});
     return NextResponse.json({ error: 'Failed to save file' }, { status: 500 });
   }

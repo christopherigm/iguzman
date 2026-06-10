@@ -33,7 +33,7 @@ export async function Footer({ logo }: { logo: string }) {
     <footer className="footer">
       <Container paddingX={10}>
         <Grid container spacing={4}>
-          {/* Column 1 – Brand */}
+          {/* Column 1 - Brand */}
           <Grid size={{ xs: 12, sm: 4 }}>
             <Box display="flex" flexDirection="column" gap="20px">
               <Image
@@ -61,7 +61,7 @@ export async function Footer({ logo }: { logo: string }) {
             </Box>
           </Grid>
 
-          {/* Column 2 – App */}
+          {/* Column 2 - App */}
           <Grid size={{ xs: 12, sm: 4 }}>
             <Typography
               as="h3"
@@ -82,7 +82,7 @@ export async function Footer({ logo }: { logo: string }) {
             </Grid>
           </Grid>
 
-          {/* Column 3 – Legal */}
+          {/* Column 3 - Legal */}
           <Grid size={{ xs: 12, sm: 4 }}>
             <Typography
               as="h3"

@@ -3,8 +3,10 @@ import logging
 import re
 from pathlib import Path
 
+import groq as _groq_module
 from django.conf import settings
 from groq import Groq
+from openai import OpenAI as _OllamaClient
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,9 @@ logger = logging.getLogger(__name__)
 _TN_PROFESSIONS_PATH = Path(__file__).parent / 'tn_professions.json'
 
 with _TN_PROFESSIONS_PATH.open() as _f:
-    _TN_PROFESSION_LOOKUP: dict[str, dict] = {p['name']: p for p in json.load(_f)}
+    _tn_raw = json.load(_f)
+    _TN_PROFESSION_LOOKUP: dict[str, dict] = {p['name']: p for p in _tn_raw}
+    _TN_PROFESSIONS_LIST: list[dict] = _tn_raw
 
 # ---------------------------------------------------------------------------
 # Resume tailoring
@@ -48,6 +52,99 @@ _STOPWORDS = frozenset({
 })
 
 _MAX_BULLETS_TO_LLM = 40
+
+
+def _chat_completion(
+    messages: list[dict],
+    temperature: float = 0.3,
+    response_format: dict | None = None,
+) -> str:
+    """Call Groq, fall back to Ollama on rate-limit (429)."""
+    kwargs: dict = dict(model=settings.GROQ_MODEL, messages=messages, temperature=temperature)
+    if response_format:
+        kwargs['response_format'] = response_format
+
+    try:
+        response = Groq(api_key=settings.GROQ_API_KEY).chat.completions.create(**kwargs)
+        return response.choices[0].message.content
+    except _groq_module.RateLimitError:
+        logger.warning('Groq rate limit reached; falling back to Ollama at %s', settings.OLLAMA_URL)
+
+    ollama = _OllamaClient(base_url=f"{settings.OLLAMA_URL}/v1/", api_key="ollama")
+    ollama_kwargs: dict = dict(model=settings.OLLAMA_MODEL, messages=messages, temperature=temperature,
+                               extra_body={"options": {"num_ctx": 8192}})
+    if response_format:
+        ollama_kwargs['response_format'] = response_format
+    response = ollama.chat.completions.create(**ollama_kwargs)
+    return response.choices[0].message.content
+
+
+# ---------------------------------------------------------------------------
+# TN category suggestion
+# ---------------------------------------------------------------------------
+
+def suggest_tn_categories(
+    work_experiences: list[dict],
+    educations: list[dict],
+) -> list[dict]:
+    """
+    Suggest NAFTA/USMCA TN visa categories based on the user's career profile.
+
+    Returns a list of dicts: [{"category": str, "likelihood": int, "explanation": str}]
+    sorted by likelihood descending (only categories >= 30 included).
+    """
+    profession_lines = '\n'.join(
+        f"- {p['name']}: {p['description']} Requirements: {p['requirements']}"
+        for p in _TN_PROFESSIONS_LIST
+    )
+
+    work_section = '\n'.join(
+        "{title} at {company} ({start}–{end}){desc}".format(
+            title=w.get('title', ''),
+            company=w.get('company', ''),
+            start=str(w.get('start_date', ''))[:7],
+            end='present' if w.get('is_current') else str(w.get('end_date', ''))[:7],
+            desc=f": {w['description']}" if w.get('description') else '',
+        )
+        for w in work_experiences
+    ) or 'None provided'
+
+    edu_section = '\n'.join(
+        "{degree} in {field} at {institution} ({start}–{end}){desc}".format(
+            degree=e.get('degree', ''),
+            field=e.get('field_of_study', 'N/A'),
+            institution=e.get('institution', ''),
+            start=e.get('start_year', ''),
+            end=e.get('end_year', 'present'),
+            desc=f": {e['description']}" if e.get('description') else '',
+        )
+        for e in educations
+    ) or 'None provided'
+
+    system_prompt = (
+        "You are a NAFTA/USMCA TN visa expert. Analyze the candidate's education and work "
+        "experience to identify which TN visa profession categories they qualify for.\n\n"
+        f"TN Profession Categories:\n{profession_lines}\n\n"
+        "Respond ONLY with a valid JSON array — no markdown, no explanation, no extra text. "
+        'Each item must have: "category" (exact profession name), '
+        '"likelihood" (integer 0–100), '
+        '"explanation" (1–2 sentences). '
+        "Only include categories with likelihood >= 30. Sort by likelihood descending."
+    )
+
+    raw = _chat_completion(
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"WORK EXPERIENCE:\n{work_section}\n\nEDUCATION:\n{edu_section}"},
+        ],
+        temperature=0.1,
+    )
+
+    cleaned = raw.strip()
+    if cleaned.startswith('```'):
+        cleaned = cleaned.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+
+    return json.loads(cleaned)
 
 
 def _tokenize(text: str) -> set[str]:
@@ -87,15 +184,13 @@ def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict])
     skill_summary = ", ".join(f"{s['name']} ({s['proficiency']}/5)" for s in skills)
 
     user_message = (
-        f"JOB DESCRIPTION:\n{job_description}\n\n"
+        f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
         f"CANDIDATE SKILLS: {skill_summary}\n\n"
         f"CANDIDATE BULLET POINTS:\n{bullet_lines}\n\n"
         "Return the tailored bullet selection as JSON."
     )
 
-    client = Groq(api_key=settings.GROQ_API_KEY)
-    response = client.chat.completions.create(
-        model=settings.GROQ_MODEL,
+    content = _chat_completion(
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
@@ -103,8 +198,6 @@ def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict])
         temperature=0.3,
         response_format={"type": "json_object"},
     )
-
-    content = response.choices[0].message.content
     data = json.loads(content)
     return data.get("bullets", [])
 
@@ -116,7 +209,7 @@ def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict])
 _COVER_LETTER_SYSTEM_PROMPT = """\
 You are an expert technical cover letter writer for software engineers.
 
-Write a concise, professional cover letter (3–4 paragraphs, plain text, no markdown) \
+Write a concise, professional cover letter (3-4 paragraphs, plain text, no markdown) \
 for the candidate applying to the role described below.
 
 Critical rules:
@@ -147,22 +240,18 @@ def generate_cover_letter(
 
     user_message = (
         f"ROLE: {job_title} at {company_name}\n\n"
-        f"JOB DESCRIPTION EXCERPT:\n{job_description[:2000]}\n\n"
+        f"JOB DESCRIPTION EXCERPT:\n{job_description[:5000]}\n\n"
         f"SELECTED BULLETS (the ONLY facts you may reference):\n{bullet_lines}\n\n"
         "Write the cover letter body now."
     )
 
-    client = Groq(api_key=settings.GROQ_API_KEY)
-    response = client.chat.completions.create(
-        model=settings.GROQ_MODEL,
+    return _chat_completion(
         messages=[
             {"role": "system", "content": _COVER_LETTER_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
         temperature=0.5,
-    )
-
-    return response.choices[0].message.content.strip()
+    ).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -178,13 +267,13 @@ profile fits the role — considering technical alignment, soft skill signals, s
 match, and domain experience.
 
 Scoring guide:
-- 80–100: Exceptional fit; meets or exceeds nearly all requirements
-- 60–79: Strong fit; meets most key requirements with minor gaps
-- 40–59: Moderate fit; meets some requirements but has notable gaps
-- 20–39: Weak fit; meets few requirements; significant development needed
-- 1–19: Poor fit; profile does not align with the role
+- 80-100: Exceptional fit; meets or exceeds nearly all requirements
+- 60-79: Strong fit; meets most key requirements with minor gaps
+- 40-59: Moderate fit; meets some requirements but has notable gaps
+- 20-39: Weak fit; meets few requirements; significant development needed
+- 1-19: Poor fit; profile does not align with the role
 
-Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2–3 sentence plain-text explanation of the score, citing specific strengths or gaps>"}
+Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2-3 sentence plain-text explanation of the score, citing specific strengths or gaps>"}
 """
 
 _TECHNICAL_MATCH_SYSTEM_PROMPT = """\
@@ -192,17 +281,17 @@ You are an expert software engineering hiring manager evaluating a candidate's t
 skills against a job's technical requirements.
 
 Analyze the job description's technical requirements (languages, frameworks, tools, cloud \
-platforms, methodologies) against the candidate's declared skills (with proficiency levels 1–5) \
+platforms, methodologies) against the candidate's declared skills (with proficiency levels 1-5) \
 and technical bullet points from their work history.
 
 Scoring guide:
-- 80–100: Covers nearly all required technical skills at appropriate proficiency
-- 60–79: Covers most core technical requirements; minor gaps in secondary skills
-- 40–59: Covers fundamental technologies but lacks key specialized requirements
-- 20–39: Has foundational skills but missing most required technologies
-- 1–19: Technical profile does not align with job requirements
+- 80-100: Covers nearly all required technical skills at appropriate proficiency
+- 60-79: Covers most core technical requirements; minor gaps in secondary skills
+- 40-59: Covers fundamental technologies but lacks key specialized requirements
+- 20-39: Has foundational skills but missing most required technologies
+- 1-19: Technical profile does not align with job requirements
 
-Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2–3 sentence plain-text explanation of the score, citing specific skills matched or missing>"}
+Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2-3 sentence plain-text explanation of the score, citing specific skills matched or missing>"}
 """
 
 _NAFTA_LIKELIHOOD_SYSTEM_PROMPT = """\
@@ -224,20 +313,18 @@ Consider:
 - Technical depth and specificity of the role (stronger technical match = stronger TN case)
 
 Scoring guide:
-- 80–100: Strong TN case; role clearly maps to TN category; candidate credentials meet requirements
-- 60–79: Good TN case; minor concerns (e.g., title mismatch) but overall approvable
-- 40–59: Moderate; eligibility risk present; role partially maps to TN category
-- 20–39: Weak; significant concerns about profession mapping or credential gaps
-- 1–19: Poor TN eligibility; role likely does not qualify under NAFTA/USMCA
+- 80-100: Strong TN case; role clearly maps to TN category; candidate credentials meet requirements
+- 60-79: Good TN case; minor concerns (e.g., title mismatch) but overall approvable
+- 40-59: Moderate; eligibility risk present; role partially maps to TN category
+- 20-39: Weak; significant concerns about profession mapping or credential gaps
+- 1-19: Poor TN eligibility; role likely does not qualify under NAFTA/USMCA
 
-Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2–3 sentence plain-text explanation of the score, citing specific profession mapping or credential factors>"}
+Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2-3 sentence plain-text explanation of the score, citing specific profession mapping or credential factors>"}
 """
 
 
 def _call_score(system_prompt: str, user_message: str) -> tuple[int, str]:
-    client = Groq(api_key=settings.GROQ_API_KEY)
-    response = client.chat.completions.create(
-        model=settings.GROQ_MODEL,
+    content = _chat_completion(
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
@@ -245,7 +332,7 @@ def _call_score(system_prompt: str, user_message: str) -> tuple[int, str]:
         temperature=0.1,
         response_format={"type": "json_object"},
     )
-    data = json.loads(response.choices[0].message.content)
+    data = json.loads(content)
     score = int(data.get("score", 50))
     explanation = str(data.get("explanation", ""))
     return max(1, min(100, score)), explanation
@@ -258,7 +345,7 @@ def calculate_overall_match(
     bullets: list[dict],
     skills: list[dict],
 ) -> tuple[int, str]:
-    """Return (score, explanation) for overall candidate–job fit."""
+    """Return (score, explanation) for overall candidate-job fit."""
     skill_summary = ", ".join(f"{s['name']} ({s['proficiency']}/5)" for s in skills)
     bullet_lines = "\n".join(
         f"[{b['category']}] {b['text']}" + (f" | skills: {', '.join(b['skills'])}" if b.get('skills') else "")
@@ -266,7 +353,7 @@ def calculate_overall_match(
     )
     user_message = (
         f"ROLE: {job_title} at {company_name}\n\n"
-        f"JOB DESCRIPTION:\n{job_description[:3000]}\n\n"
+        f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
         f"CANDIDATE SKILLS: {skill_summary or 'None listed'}\n\n"
         f"CANDIDATE EXPERIENCE BULLETS:\n{bullet_lines or 'None listed'}\n\n"
         "Return the overall match score and explanation as JSON."
@@ -290,7 +377,7 @@ def calculate_technical_match(
     )
     user_message = (
         f"ROLE: {job_title} at {company_name}\n\n"
-        f"JOB DESCRIPTION:\n{job_description[:3000]}\n\n"
+        f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
         f"CANDIDATE TECHNICAL SKILLS: {skill_summary or 'None listed'}\n\n"
         f"CANDIDATE TECHNICAL BULLETS:\n{bullet_lines or 'None listed'}\n\n"
         "Return the technical match score and explanation as JSON."
@@ -311,20 +398,20 @@ def calculate_nafta_likelihood(
     edu_lines = "\n".join(
         f"- {e.get('degree', '')} in {e.get('field_of_study', '') or 'N/A'} "
         f"from {e.get('institution', '')} "
-        f"({e.get('start_year', '')}–{e.get('end_year', '') or 'present'})"
+        f"({e.get('start_year', '')}-{e.get('end_year', '') or 'present'})"
         for e in educations
     ) or "None listed"
 
     we_lines = "\n".join(
         f"- {e.get('title', '')} at {e.get('company', '')} "
-        f"({str(e.get('start_date', ''))[:7]}–"
+        f"({str(e.get('start_date', ''))[:7]}-"
         f"{'present' if e.get('is_current') else str(e.get('end_date', ''))[:7]})"
         for e in work_experiences
     ) or "None listed"
 
     user_message = (
         f"POSITION TITLE: {job_title}\n\n"
-        f"JOB DESCRIPTION:\n{job_description[:3000]}\n\n"
+        f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
         f"CANDIDATE EDUCATION:\n{edu_lines}\n\n"
         f"CANDIDATE WORK EXPERIENCE:\n{we_lines}\n\n"
         f"CANDIDATE SKILLS: {skill_summary or 'None listed'}\n\n"
@@ -389,13 +476,13 @@ letter supports [his/her/their] continued TN nonimmigrant status for an addition
 position title, hours per week, annual compensation ([To be provided] if absent), and direct \
 supervisor ([To be provided] if absent). For CONTINUATION, explicitly note this extends existing \
 TN status.
-8. About the Company — write this text exactly as the heading on its own line, then 2–3 sentences \
+8. About the Company — write this text exactly as the heading on its own line, then 2-3 sentences \
 about the company. Use ADDITIONAL COMPANY INFO if provided.
 9. Offered Position: ([TN NAFTA OFFICIAL CATEGORY]) — write this text exactly as the heading on \
 its own line using the TN NAFTA OFFICIAL CATEGORY (not the internal job title). Then an \
-introductory sentence followed by 6–10 specific duty bullet points (• character) derived \
+introductory sentence followed by 6-10 specific duty bullet points (• character) derived \
 strictly from the JOB DESCRIPTION.
-10. Qualifications — write as the heading on its own line. Then 1–2 sentences stating the \
+10. Qualifications — write as the heading on its own line. Then 1-2 sentences stating the \
 employee's academic credentials from EDUCATION HISTORY and why they qualify for the \
 TN NAFTA OFFICIAL CATEGORY. Use TN PROFESSION REQUIREMENTS as reference for what qualifies.
 11. Employment Terms — write as the heading on its own line. Confirm: full-time or part-time, \
@@ -428,7 +515,7 @@ def _format_work_experiences(work_experiences: list[dict] | None) -> str:
         start = str(we.get('start_date', ''))[:7]
         end_date = we.get('end_date')
         end = 'Present' if we.get('is_current') else (str(end_date)[:7] if end_date else '')
-        date_range = f"{start}–{end}" if end else start
+        date_range = f"{start}-{end}" if end else start
         line = f"- {we.get('title', '')} at {we.get('company', '')}"
         if date_range:
             line += f" ({date_range})"
@@ -477,9 +564,9 @@ def generate_nafta_letter(
 
     # RE line and application type
     re_line = (
-        f"RE: TN Visa Entry – {full_name or '[To be provided]'}"
+        f"RE: TN Visa Entry - {full_name or '[To be provided]'}"
         if is_continuation
-        else f"RE: TN Visa Application – {full_name or '[To be provided]'}"
+        else f"RE: TN Visa Application - {full_name or '[To be provided]'}"
     )
     application_type = (
         'CONTINUATION / EXTENSION of existing TN status'
@@ -507,18 +594,14 @@ def generate_nafta_letter(
         f"EMPLOYEE EDUCATION: {edu_line}\n"
         f"WORK EXPERIENCE HISTORY:\n{work_exp_str}\n"
         + (f"ADDITIONAL COMPANY INFO: {company_description}\n" if company_description else '')
-        + f"\nJOB DESCRIPTION (extract duties from this):\n{job_description[:3000]}\n\n"
+        + f"\nJOB DESCRIPTION (extract duties from this):\n{job_description[:5000]}\n\n"
         "Write the complete TN Visa Support Letter now."
     )
 
-    client = Groq(api_key=settings.GROQ_API_KEY)
-    response = client.chat.completions.create(
-        model=settings.GROQ_MODEL,
+    return _chat_completion(
         messages=[
             {"role": "system", "content": _NAFTA_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
         temperature=0.3,
-    )
-
-    return response.choices[0].message.content.strip()
+    ).strip()

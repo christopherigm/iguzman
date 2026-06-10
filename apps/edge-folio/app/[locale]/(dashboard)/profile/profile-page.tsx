@@ -15,16 +15,18 @@ import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
 import { useGroqProxy } from '@repo/ui/use-groq';
 import { getProfile, saveOnboarding, uploadResume, updateContactInfo, type ResumeImportResult } from '@/lib/auth';
+import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from '@/lib/nafta-constants';
 import { Select } from '@repo/ui/core-elements/select';
 import { getLanguages, createLanguage, updateLanguage, deleteLanguage, getPopularTechStacks, type Language, type LanguageProficiency } from '@/lib/career';
+import { suggestTnCategory, ApplicationError, type TnCategorySuggestion } from '@/lib/applications';
 import './profile-page.css';
 
 const YEARS_STEPS: SliderStep[] = [
   { value: 0, label: '< 1' },
-  { value: 1, label: '1–2' },
-  { value: 3, label: '3–5' },
-  { value: 6, label: '6–9' },
-  { value: 10, label: '10–14' },
+  { value: 1, label: '1-2' },
+  { value: 3, label: '3-5' },
+  { value: 6, label: '6-9' },
+  { value: 10, label: '10-14' },
   { value: 15, label: '15+' },
 ];
 
@@ -252,7 +254,7 @@ function SkillsDiffPanel({
       <Button
         text={saving ? t('skillsDiffAdding') : t('skillsDiffAdd', { count: selected.size })}
         type="button"
-        size="md"
+        size="lg"
         kind="success"
         disabled={saving || selected.size === 0}
         onClick={onAdd}
@@ -301,6 +303,8 @@ export function ProfilePage() {
   const [contactLocation, setContactLocation] = useState('');
   const [contactGithub, setContactGithub] = useState('');
   const [contactLinkedin, setContactLinkedin] = useState('');
+  const [contactTnProfession, setContactTnProfession] = useState('');
+  const [contactCitizenship, setContactCitizenship] = useState('');
   const [savingContact, setSavingContact] = useState(false);
   const [contactSuccess, setContactSuccess] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
@@ -316,6 +320,12 @@ export function ProfilePage() {
   const [editLangProficiency, setEditLangProficiency] = useState<LanguageProficiency>('professional');
   const [savingLangId, setSavingLangId] = useState<number | null>(null);
   const [deletingLangId, setDeletingLangId] = useState<number | null>(null);
+
+  // TN suggest state
+  const [tnSuggestModal, setTnSuggestModal] = useState(false);
+  const [tnSuggestResults, setTnSuggestResults] = useState<TnCategorySuggestion[]>([]);
+  const [tnSuggestLoading, setTnSuggestLoading] = useState(false);
+  const [tnSuggestError, setTnSuggestError] = useState<string | null>(null);
 
   // Summary enhance state
   const [summaryEnhancePreview, setSummaryEnhancePreview] = useState('');
@@ -355,6 +365,8 @@ export function ProfilePage() {
         setContactLocation(p.location ?? '');
         setContactGithub(p.github_url ?? '');
         setContactLinkedin(p.linkedin_url ?? '');
+        setContactTnProfession(p.tn_profession ?? '');
+        setContactCitizenship(p.citizenship ?? '');
         setLanguages(langs.results);
         const lower = new Set(FALLBACK_TECH_SUGGESTIONS.map((s) => s.toLowerCase()));
         const apiOnly = popular.results
@@ -460,6 +472,21 @@ export function ProfilePage() {
     });
   }
 
+  const handleSuggestTnCategory = useCallback(async () => {
+    setTnSuggestError(null);
+    setTnSuggestLoading(true);
+    try {
+      const result = await suggestTnCategory();
+      setTnSuggestResults(result.suggestions);
+      setTnSuggestModal(true);
+    } catch (err) {
+      const is400 = err instanceof ApplicationError && err.status === 400;
+      setTnSuggestError(t(is400 ? 'tnSuggestNoData' : 'tnSuggestError'));
+    } finally {
+      setTnSuggestLoading(false);
+    }
+  }, [t]);
+
   const handleSaveContact = useCallback(async () => {
     setContactError(null);
     setContactSuccess(false);
@@ -471,6 +498,8 @@ export function ProfilePage() {
         location: contactLocation.trim(),
         github_url: contactGithub.trim(),
         linkedin_url: contactLinkedin.trim(),
+        tn_profession: contactTnProfession,
+        citizenship: contactCitizenship,
       });
       setContactSuccess(true);
     } catch {
@@ -478,7 +507,7 @@ export function ProfilePage() {
     } finally {
       setSavingContact(false);
     }
-  }, [contactSummary, contactPhone, contactLocation, contactGithub, contactLinkedin, t]);
+  }, [contactSummary, contactPhone, contactLocation, contactGithub, contactLinkedin, contactTnProfession, contactCitizenship, t]);
 
   const handleSummaryConfirmEnhanceOptions = useCallback(async () => {
     setSummaryShowEnhanceOptions(false);
@@ -633,6 +662,40 @@ export function ProfilePage() {
         marginBottom={40}
       >
         {/* ── Contact Info ── */}
+        {tnSuggestModal && (
+          <ConfirmationModal
+            title={t('tnSuggestModalTitle')}
+            text={t('tnSuggestModalSubtitle')}
+            okCallback={() => setTnSuggestModal(false)}
+            panelMaxWidth="540px"
+          >
+            <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
+              {tnSuggestResults.length === 0 ? (
+                <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+                  {t('tnSuggestNoMatches')}
+                </Typography>
+              ) : (
+                tnSuggestResults.map((r) => {
+                  const color = r.likelihood >= 70 ? 'var(--success, #22c55e)' : r.likelihood >= 45 ? '#f59e0b' : 'var(--error, #ef4444)';
+                  return (
+                    <Box key={r.category} display="flex" flexDirection="column" gap={6}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Typography variant="body" fontWeight={600}>{r.category}</Typography>
+                        <Typography variant="caption" fontWeight={600} color={color}>
+                          {r.likelihood}%
+                        </Typography>
+                      </Box>
+                      <ProgressBar value={r.likelihood} size={6} label={r.category} />
+                      <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)" styles={{ lineHeight: 1.5 }}>
+                        {r.explanation}
+                      </Typography>
+                    </Box>
+                  );
+                })
+              )}
+            </Box>
+          </ConfirmationModal>
+        )}
         {summaryShowEnhanceOptions && (
           <ConfirmationModal
             title={t('summaryEnhanceOptionsTitle')}
@@ -651,7 +714,7 @@ export function ProfilePage() {
                 steps={SUMMARY_LENGTH_STEPS}
                 value={summaryEnhanceParagraphLength}
                 onChange={(v) => setSummaryEnhanceParagraphLength(String(v))}
-                label={`${t('summaryEnhanceLengthLabel')} (${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).min}–${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).max} words/para)`}
+                label={`${t('summaryEnhanceLengthLabel')} (${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).min}-${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).max} words/para)`}
               />
             </Box>
           </ConfirmationModal>
@@ -679,9 +742,9 @@ export function ProfilePage() {
                   aria-label={t('summaryEnhanceLabel')}
                   title={t('summaryEnhanceLabel')}
                   className={[
-                    'profile__enhance-btn',
-                    summaryIsGenerating || !contactSummary.trim() ? 'profile__enhance-btn--busy' : '',
-                    summaryEnhancePreview ? 'profile__enhance-btn--active' : '',
+                    'ai-enhance-btn',
+                    summaryIsGenerating || !contactSummary.trim() ? 'ai-enhance-btn--busy' : '',
+                    summaryEnhancePreview ? 'ai-enhance-btn--active' : '',
                   ].filter(Boolean).join(' ')}
                 />
               </Box>
@@ -710,38 +773,80 @@ export function ProfilePage() {
               </Box>
             )}
           </Box>
-          <TextInput
-            label={t('phoneLabel')}
-            type="text"
-            value={contactPhone}
-            onChange={(v) => { setContactPhone(v); setContactSuccess(false); }}
-            placeholder={t('phonePlaceholder')}
-            aria-label={t('phoneLabel')}
-          />
-          <TextInput
-            label={t('locationLabel')}
-            type="text"
-            value={contactLocation}
-            onChange={(v) => { setContactLocation(v); setContactSuccess(false); }}
-            placeholder={t('locationPlaceholder')}
-            aria-label={t('locationLabel')}
-          />
-          <TextInput
-            label={t('githubLabel')}
-            type="url"
-            value={contactGithub}
-            onChange={(v) => { setContactGithub(v); setContactSuccess(false); }}
-            placeholder={t('githubPlaceholder')}
-            aria-label={t('githubLabel')}
-          />
-          <TextInput
-            label={t('linkedinLabel')}
-            type="url"
-            value={contactLinkedin}
-            onChange={(v) => { setContactLinkedin(v); setContactSuccess(false); }}
-            placeholder={t('linkedinPlaceholder')}
-            aria-label={t('linkedinLabel')}
-          />
+          <Box display="flex" flexDirection="column" gap={12} marginBottom={12}>
+            <TextInput
+              label={t('phoneLabel')}
+              type="text"
+              value={contactPhone}
+              onChange={(v) => { setContactPhone(v); setContactSuccess(false); }}
+              placeholder={t('phonePlaceholder')}
+              aria-label={t('phoneLabel')}
+            />
+            <TextInput
+              label={t('locationLabel')}
+              type="text"
+              value={contactLocation}
+              onChange={(v) => { setContactLocation(v); setContactSuccess(false); }}
+              placeholder={t('locationPlaceholder')}
+              aria-label={t('locationLabel')}
+            />
+            <TextInput
+              label={t('githubLabel')}
+              type="url"
+              value={contactGithub}
+              onChange={(v) => { setContactGithub(v); setContactSuccess(false); }}
+              placeholder={t('githubPlaceholder')}
+              aria-label={t('githubLabel')}
+            />
+            <TextInput
+              label={t('linkedinLabel')}
+              type="url"
+              value={contactLinkedin}
+              onChange={(v) => { setContactLinkedin(v); setContactSuccess(false); }}
+              placeholder={t('linkedinPlaceholder')}
+              aria-label={t('linkedinLabel')}
+            />
+            <Box display="flex" alignItems="center" gap={8}>
+              <Box styles={{ flex: 1 }}>
+                <Select
+                  label={t('tnProfessionLabel')}
+                  value={contactTnProfession}
+                  onChange={(v) => { setContactTnProfession(v); setContactSuccess(false); }}
+                  options={[{ value: '', label: t('tnProfessionPlaceholder') }, ...TN_PROFESSIONS]}
+                  aria-label={t('tnProfessionLabel')}
+                  disabled={tnSuggestLoading}
+                />
+              </Box>
+              <Button
+                unstyled
+                type="button"
+                icon="/icons/enhance.svg"
+                iconSize="16px"
+                iconColor={tnSuggestLoading ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+                disabled={tnSuggestLoading}
+                onClick={() => void handleSuggestTnCategory()}
+                aria-label={t('tnSuggestLabel')}
+                title={t('tnSuggestLabel')}
+                className={[
+                  'ai-enhance-btn',
+                  tnSuggestLoading ? 'ai-enhance-btn--busy' : '',
+                ].filter(Boolean).join(' ')}
+              />
+            </Box>
+            {tnSuggestLoading && <ProgressBar label={t('tnSuggestGenerating')} />}
+            {tnSuggestError && (
+              <Typography variant="caption" role="alert" className="profile__error">
+                {tnSuggestError}
+              </Typography>
+            )}
+            <Select
+              label={t('citizenshipLabel')}
+              value={contactCitizenship}
+              onChange={(v) => { setContactCitizenship(v); setContactSuccess(false); }}
+              options={[{ value: '', label: t('citizenshipPlaceholder') }, ...CITIZENSHIP_OPTIONS]}
+              aria-label={t('citizenshipLabel')}
+            />
+          </Box>
           {contactSuccess && (
             <Typography variant="caption" className="profile__success">
               {t('contactSaved')}
@@ -757,7 +862,7 @@ export function ProfilePage() {
             <Button
               text={savingContact ? t('savingContact') : t('saveContact')}
               type="button"
-              size="md"
+              size="lg"
               kind="success"
               disabled={savingContact}
               onClick={() => void handleSaveContact()}
@@ -796,7 +901,7 @@ export function ProfilePage() {
             <Button
               text={savingInfo ? t('savingInfo') : t('saveInfo')}
               type="button"
-              size="md"
+              size="lg"
               kind="success"
               disabled={savingInfo || !jobTitle.trim()}
               onClick={() => void handleSaveInfo()}
@@ -826,7 +931,7 @@ export function ProfilePage() {
             <Button
               text={savingStack ? t('savingStack') : t('saveStack')}
               type="button"
-              size="md"
+              size="lg"
               kind="success"
               disabled={savingStack}
               onClick={() => void handleSaveStack()}

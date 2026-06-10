@@ -59,10 +59,10 @@ The Helm chart lives in `apps/web/helm/web/`.
    > NFS-based storage class or OpenEBS:
    >
    > ```bash
-   > # Option A – NFS CSI driver (recommended for multi-node RWX)
+   > # Option A - NFS CSI driver (recommended for multi-node RWX)
    > microk8s enable nfs
    >
-   > # Option B – Community NFS provisioner
+   > # Option B - Community NFS provisioner
    > microk8s helm3 repo add nfs-subdir https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
    > microk8s helm3 install nfs-provisioner nfs-subdir/nfs-subdir-external-provisioner \
    >   --set nfs.server=<NFS_SERVER_IP> \

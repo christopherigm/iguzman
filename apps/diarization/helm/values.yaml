@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Diarization Microservice – Helm Values
+# Diarization Microservice - Helm Values
 # ─────────────────────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks
@@ -53,7 +53,7 @@ env:
   LOG_LEVEL: 'info'
   WHISPER_MODEL_SIZE: 'base'
 
-# Sensitive values – reference existing Kubernetes Secrets.
+# Sensitive values - reference existing Kubernetes Secrets.
 # Create the secret first (see README), then these are injected at runtime.
 envFromSecret:
   - name: API_KEY
@@ -65,7 +65,7 @@ envFromSecret:
 
 # ─── Health probes ────────────────────────────────────────────────────────────
 # On first boot, pyannote and whisper models must be downloaded from HuggingFace.
-# This can take 5–10 minutes depending on network speed.
+# This can take 5-10 minutes depending on network speed.
 # The startupProbe allows up to 15 min (90 × 10 s) before giving up.
 probes:
   startupProbe:

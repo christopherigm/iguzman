@@ -51,21 +51,21 @@ def _compute_metrics(application_id: int, user_id: int) -> None:
     )
 
     try:
-        overall, _ = calculate_overall_match(
+        overall, overall_explanation = calculate_overall_match(
             job_description=app.job_description,
             job_title=app.job_title,
             company_name=app.company_name,
             bullets=bullets_payload,
             skills=skills,
         )
-        technical, _ = calculate_technical_match(
+        technical, technical_explanation = calculate_technical_match(
             job_description=app.job_description,
             job_title=app.job_title,
             company_name=app.company_name,
             bullets=bullets_payload,
             skills=skills,
         )
-        nafta, _ = calculate_nafta_likelihood(
+        nafta, nafta_explanation = calculate_nafta_likelihood(
             job_description=app.job_description,
             job_title=app.job_title,
             skills=skills,
@@ -78,8 +78,11 @@ def _compute_metrics(application_id: int, user_id: int) -> None:
 
     JobApplication.objects.filter(pk=application_id).update(
         overall_match=overall,
+        overall_match_explanation=overall_explanation,
         technical_match=technical,
+        technical_match_explanation=technical_explanation,
         nafta_tn_likelihood=nafta,
+        nafta_tn_likelihood_explanation=nafta_explanation,
     )
     cache.delete(f'applications:applications:{user_id}')
     cache.delete(f'applications:application:{user_id}:{application_id}')

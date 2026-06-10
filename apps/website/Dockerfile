@@ -3,7 +3,7 @@
 FROM node:20-alpine AS base
 
 # ---------------------------------------------------------------------------
-# Stage 1 – Prune the monorepo so only packages needed by "website" are kept.
+# Stage 1 - Prune the monorepo so only packages needed by "website" are kept.
 # This avoids installing unnecessary workspace dependencies.
 # ---------------------------------------------------------------------------
 FROM base AS pruner
@@ -13,7 +13,7 @@ COPY . .
 RUN turbo prune website --docker
 
 # ---------------------------------------------------------------------------
-# Stage 2 – Install production + build dependencies (cached layer).
+# Stage 2 - Install production + build dependencies (cached layer).
 # Only the pruned package.json files and lockfile are copied so that
 # source-code changes do not invalidate this layer.
 # ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ COPY --from=pruner /app/out/json/ ./
 RUN corepack enable pnpm && pnpm i --no-frozen-lockfile
 
 # ---------------------------------------------------------------------------
-# Stage 3 – Build the Next.js application.
+# Stage 3 - Build the Next.js application.
 # ---------------------------------------------------------------------------
 FROM base AS builder
 WORKDIR /app
@@ -53,7 +53,7 @@ RUN find -L /app/node_modules/.pnpm -maxdepth 5 \
       done
 
 # ---------------------------------------------------------------------------
-# Stage 4 – Minimal production image.
+# Stage 4 - Minimal production image.
 # Uses the standalone output so node_modules are NOT copied.
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS runner

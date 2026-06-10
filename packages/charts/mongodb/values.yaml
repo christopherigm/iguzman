@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# MongoDB – Helm Values
+# MongoDB - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
@@ -40,7 +40,7 @@ auth:
 env: {}
   # MONGO_INITDB_DATABASE: mydb
 
-# Sensitive values – reference existing Kubernetes Secrets.
+# Sensitive values - reference existing Kubernetes Secrets.
 # envFromSecret:
 #   - name: MONGO_INITDB_ROOT_PASSWORD
 #     secretName: mongodb-secrets

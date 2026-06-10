@@ -33,7 +33,7 @@ clr_bold_red()    { printf "${BOLD}${RED}%s${RESET}" "$*"; }
 setup_strings() {
   local lang="$1"
   if [[ "${lang}" == "es" ]]; then
-    WELCOME="Redis – Despliegue con Helm"
+    WELCOME="Redis - Despliegue con Helm"
     SUBTITLE="Instala o actualiza Redis en tu clúster de Kubernetes."
     HELM_MISSING="helm no está instalado o no está en PATH."
     HELM_MISSING_HINT="Instálalo en: https://helm.sh/docs/intro/install/"
@@ -73,7 +73,7 @@ setup_strings() {
     SUCCEEDED="Redis desplegado exitosamente en el namespace"
     FAILED="El despliegue con Helm falló."
   else
-    WELCOME="Redis – Helm Deployment"
+    WELCOME="Redis - Helm Deployment"
     SUBTITLE="Installs or upgrades Redis in your Kubernetes cluster."
     HELM_MISSING="helm is not installed or not in PATH."
     HELM_MISSING_HINT="Install it at: https://helm.sh/docs/intro/install/"

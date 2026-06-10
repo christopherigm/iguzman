@@ -853,7 +853,7 @@ export function AdminForm({
               steps={PARAGRAPH_LENGTH_STEPS}
               value={enhanceParagraphLength}
               onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t('enhanceLengthLabel')} (${currentLengthWordRange.min}–${currentLengthWordRange.max} words/para)`}
+              label={`${t('enhanceLengthLabel')} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
             />
           </div>
         </ConfirmationModal>

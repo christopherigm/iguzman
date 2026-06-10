@@ -1,8 +1,8 @@
 FROM python:3.11-slim
 
 # ── System dependencies ────────────────────────────────────────────────────────
-# ffmpeg  – audio decoding (mp3, m4a, webm, etc.)
-# libsndfile1 – required by soundfile / pyannote
+# ffmpeg  - audio decoding (mp3, m4a, webm, etc.)
+# libsndfile1 - required by soundfile / pyannote
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \

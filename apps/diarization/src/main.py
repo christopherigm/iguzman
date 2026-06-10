@@ -14,7 +14,7 @@ from transcribe import run_transcription_with_diarization
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info").upper()
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format="%(asctime)s %(levelname)s %(name)s – %(message)s",
+    format="%(asctime)s %(levelname)s %(name)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ SUPPORTED_EXTENSIONS = {".wav", ".mp3", ".mp4", ".m4a", ".flac", ".ogg", ".webm"
 # ── Lifespan (load models once at startup) ────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Loading models – this may take several minutes on first run…")
+    logger.info("Loading models - this may take several minutes on first run…")
     models.load_models()
     logger.info("All models ready.")
     yield

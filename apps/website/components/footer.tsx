@@ -49,7 +49,7 @@ export async function Footer({ logo, system }: Props) {
     <footer className="footer">
       <Container paddingX={10}>
         <Grid container spacing={4}>
-          {/* Column 1 – Brand */}
+          {/* Column 1 - Brand */}
           <Grid size={{ xs: 12, sm: 4 }}>
             <Box display="flex" flexDirection="column" gap="20px">
               <Image
@@ -93,7 +93,7 @@ export async function Footer({ logo, system }: Props) {
             </Box>
           </Grid>
 
-          {/* Column 2 – Navigation */}
+          {/* Column 2 - Navigation */}
           <Grid size={{ xs: 12, sm: 4, md: 4 }}>
             <Typography
               as="h3"
@@ -114,7 +114,7 @@ export async function Footer({ logo, system }: Props) {
             </Grid>
           </Grid>
 
-          {/* Column 3 – Company */}
+          {/* Column 3 - Company */}
           <Grid size={{ xs: 12, sm: 4, md: 4 }}>
             <Typography
               as="h3"

@@ -226,7 +226,7 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
               steps={PARAGRAPH_LENGTH_STEPS}
               value={enhanceParagraphLength}
               onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t('enhanceLengthLabel')} (${currentLengthWordRange.min}–${currentLengthWordRange.max} words/para)`}
+              label={`${t('enhanceLengthLabel')} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
             />
           </Box>
         </ConfirmationModal>
@@ -659,7 +659,7 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
               steps={PARAGRAPH_LENGTH_STEPS}
               value={enhanceParagraphLength}
               onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t('projectEnhanceLengthLabel')} (${currentLengthWordRange.min}–${currentLengthWordRange.max} words/para)`}
+              label={`${t('projectEnhanceLengthLabel')} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
             />
           </Box>
         </ConfirmationModal>

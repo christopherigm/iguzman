@@ -125,7 +125,7 @@ function buildFieldLengthRulesText(
       };
       const paraLabel = cfg.paragraphs === 1 ? 'paragraph' : 'paragraphs';
       lines.push(
-        `- ${fieldRef}: exactly ${cfg.paragraphs} ${paraLabel}, ${min}–${max} words each`,
+        `- ${fieldRef}: exactly ${cfg.paragraphs} ${paraLabel}, ${min}-${max} words each`,
       );
     }
   }
@@ -1132,7 +1132,7 @@ export function AiInterviewer({
                         [key]: { ...current, length: String(v) },
                       }))
                     }
-                    label={`${t('aiInterviewLengthWordsLabel')} (${wordRange.min}–${wordRange.max} ${t('aiInterviewLengthWordsPerPara')})`}
+                    label={`${t('aiInterviewLengthWordsLabel')} (${wordRange.min}-${wordRange.max} ${t('aiInterviewLengthWordsPerPara')})`}
                   />
                 </div>
               );

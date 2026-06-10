@@ -43,9 +43,9 @@ function formatDateRange(startDate: string, endDate: string | null, isCurrent: b
     return `${month}/${year}`;
   };
   const start = fmt(startDate);
-  if (isCurrent) return `${start} – Present`;
+  if (isCurrent) return `${start} - Present`;
   if (!endDate) return start;
-  return `${start} – ${fmt(endDate)}`;
+  return `${start} - ${fmt(endDate)}`;
 }
 
 export interface ResumeMarkdownOptions {
@@ -167,7 +167,7 @@ export function buildResumeMarkdown({
       const degree = edu.field_of_study ? `${degreeLabel} in ${edu.field_of_study}` : degreeLabel;
       lines.push(`### ${degree}`);
       const endYear = edu.is_current ? 'Present' : (edu.end_year ?? '');
-      lines.push(`*${edu.institution}  ·  ${edu.start_year} – ${endYear}*`);
+      lines.push(`*${edu.institution}  ·  ${edu.start_year} - ${endYear}*`);
       lines.push('');
     }
   }

@@ -12,7 +12,7 @@ class ImageProcessingSerializer(serializers.Serializer):
 
     Parameters (set as class attributes or pass via __init__):
       max_size (int, int) — thumbnail bounding box, default (512, 512)
-      quality  int        — JPEG quality 1–95, default 90
+      quality  int        — JPEG quality 1-95, default 90
     """
 
     max_size = (512, 512)

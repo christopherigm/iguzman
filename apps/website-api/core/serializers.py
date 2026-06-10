@@ -17,7 +17,7 @@ class ImageProcessingSerializer(serializers.Serializer):
 
     Parameters (set as class attributes or pass via __init__):
       max_size    (int, int) — thumbnail bounding box, default (512, 512)
-      quality     int        — quality 1–95, default 90
+      quality     int        — quality 1-95, default 90
       force_format str       — Pillow format string ('JPEG', 'PNG', …), default 'JPEG'
     """
 

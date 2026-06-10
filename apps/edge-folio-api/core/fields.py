@@ -13,7 +13,7 @@ class ResizedImageField(models.ImageField):
         max_size: [max_width, max_height] — use None for unconstrained axis.
                   e.g. [512, None] constrains width to 512 px, height scales
                   proportionally; [None, 300] constrains only height.
-        quality:  JPEG/WebP compression quality (1–95). Default 85.
+        quality:  JPEG/WebP compression quality (1-95). Default 85.
     """
 
     def __init__(self, *args, max_size=None, quality=85, **kwargs):

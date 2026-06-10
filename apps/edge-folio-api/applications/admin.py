@@ -12,8 +12,8 @@ def _invalidate_application(user_id, pk=None):
 
 @admin.register(JobApplication)
 class JobApplicationAdmin(admin.ModelAdmin):
-    list_display = ('job_title', 'company_name', 'status', 'overall_match', 'technical_match', 'nafta_tn_likelihood', 'user', 'created')
-    list_filter = ('status',)
+    list_display = ('job_title', 'company_name', 'status', 'location', 'salary_min', 'salary_max', 'salary_currency', 'overall_match', 'technical_match', 'nafta_tn_likelihood', 'user', 'created')
+    list_filter = ('status', 'salary_currency', 'us_citizen_or_pr_required')
     search_fields = ('job_title', 'company_name', 'user__email')
     raw_id_fields = ('user',)
     readonly_fields = (

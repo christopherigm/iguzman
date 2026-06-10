@@ -1,11 +1,11 @@
 # ─────────────────────────────────────────────────────────────
-# Scraper Microservice – Helm Values
+# Scraper Microservice - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
 revisionHistoryLimit: 2
 
-# -- Number of pod replicas (keep at 1 – shared Playwright browser instance)
+# -- Number of pod replicas (keep at 1 - shared Playwright browser instance)
 replicaCount: 1
 
 # ─── Container image ────────────────────────────────────────

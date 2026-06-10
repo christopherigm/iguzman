@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# Website Application – Helm Values
+# Website Application - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
@@ -57,7 +57,7 @@ env:
   # Add your own env vars here, for example:
   # API_URL: "https://api.example.com"
 
-# Sensitive values – reference existing Kubernetes Secrets.
+# Sensitive values - reference existing Kubernetes Secrets.
 # envFromSecret:
 #   - name: DATABASE_URL
 #     secretName: website-secrets

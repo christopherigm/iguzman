@@ -25,11 +25,15 @@ import {
   generateNaftaLetter,
   refreshMetrics,
   searchCompany,
+  suggestTnCategory,
   ApplicationError,
   type JobApplication,
   type ApplicationStatus,
   type TailoredBullet,
   type NaftaLetterPayload,
+  type TnCategorySuggestion,
+  type WorkType,
+  type SalaryCurrency,
 } from '@/lib/applications';
 import type { UserProfile } from '@/lib/auth';
 import { buildResumeMarkdown, downloadMarkdown } from '@/lib/resume-markdown';
@@ -44,98 +48,10 @@ import {
   type Language,
   type Project,
 } from '@/lib/career';
+import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from '@/lib/nafta-constants';
 import './application-detail-page.css';
 
 const STATUSES: ApplicationStatus[] = ['draft', 'applied', 'interview', 'offer', 'rejected'];
-
-const TN_PROFESSIONS = [
-  // General Professions
-  'Accountant',
-  'Architect',
-  'Computer Systems Analyst',
-  'Disaster Relief Insurance Claims Adjuster',
-  'Economist',
-  'Engineer — Aerospace',
-  'Engineer — Agricultural',
-  'Engineer — Biomedical',
-  'Engineer — Chemical',
-  'Engineer — Civil',
-  'Engineer — Computer',
-  'Engineer — Electrical',
-  'Engineer — Electronic',
-  'Engineer — Environmental',
-  'Engineer — Industrial',
-  'Engineer — Mechanical',
-  'Engineer — Nuclear',
-  'Engineer — Petroleum',
-  'Engineer — Software',
-  'Engineer — Structural',
-  'Forester / Sylviculturist',
-  'Graphic Designer',
-  'Hotel Manager',
-  'Industrial Designer',
-  'Interior Designer',
-  'Land Surveyor',
-  'Landscape Architect',
-  'Lawyer / Attorney',
-  'Librarian',
-  'Management Consultant',
-  'Mathematician',
-  'Research Assistant (Post-Secondary)',
-  'Scientific Technician / Technologist',
-  'Social Worker',
-  'Statistician',
-  'Technical Publications Writer',
-  'Urban Planner / Geographer',
-  'Vocational Counselor',
-  // Medical / Health Care
-  'Dentist',
-  'Dietitian',
-  'Medical Laboratory Technologist',
-  'Nutritionist',
-  'Occupational Therapist',
-  'Pharmacist',
-  'Physical Therapist / Physiotherapist',
-  'Physician (Teaching or Research Only)',
-  'Psychologist',
-  'Recreational Therapist',
-  'Registered Nurse',
-  'Veterinarian',
-  // Scientists
-  'Agriculturist / Agronomist',
-  'Animal Breeder',
-  'Animal Scientist',
-  'Apiculturist',
-  'Astronomer',
-  'Biochemist / Biophysicist',
-  'Biologist',
-  'Chemist',
-  'Dairy Scientist',
-  'Entomologist',
-  'Epidemiologist',
-  'Geneticist',
-  'Geochemist',
-  'Geologist',
-  'Geophysicist',
-  'Horticulturist',
-  'Meteorologist',
-  'Pharmacologist',
-  'Physicist',
-  'Plant Breeder',
-  'Poultry Scientist',
-  'Range Manager / Conservationist',
-  'Soil Scientist',
-  'Zoologist / Wildlife Biologist',
-  // Teachers
-  'College Teacher',
-  'Seminary Teacher',
-  'University Teacher',
-].map((p) => ({ value: p, label: p }));
-
-const CITIZENSHIP_OPTIONS = [
-  { value: 'Canadian', label: 'Canadian' },
-  { value: 'Mexican', label: 'Mexican' },
-];
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   draft:     '#6b7280',
@@ -243,6 +159,14 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   const [jobDescription, setJobDescription] = useState(app.job_description);
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>(app.status);
   const [notes, setNotes] = useState(app.notes);
+  const [location, setLocation] = useState(app.location);
+  const [salaryMin, setSalaryMin] = useState(app.salary_min ?? '');
+  const [salaryMax, setSalaryMax] = useState(app.salary_max ?? '');
+  const [salaryCurrency, setSalaryCurrency] = useState<SalaryCurrency | ''>(app.salary_currency ?? '');
+  const [workType, setWorkType] = useState<WorkType[]>(app.work_type ?? []);
+  const [usCitizenOrPr, setUsCitizenOrPr] = useState<'null' | 'true' | 'false'>(
+    app.us_citizen_or_pr_required == null ? 'null' : app.us_citizen_or_pr_required ? 'true' : 'false',
+  );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -265,9 +189,9 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   const [naftaPDFError, setNaftaPDFError] = useState<string | null>(null);
 
   // NAFTA letter parameters
-  const [naftaTnProfession, setNaftaTnProfession] = useState('');
+  const [naftaTnProfession, setNaftaTnProfession] = useState(profile?.tn_profession ?? '');
   const [naftaIsContinuation, setNaftaIsContinuation] = useState(false);
-  const [naftaCitizenship, setNaftaCitizenship] = useState('');
+  const [naftaCitizenship, setNaftaCitizenship] = useState(profile?.citizenship ?? '');
   const [naftaDob, setNaftaDob] = useState('');
   const [naftaPassport, setNaftaPassport] = useState('');
   const [naftaHoursPerWeek, setNaftaHoursPerWeek] = useState('40');
@@ -308,6 +232,12 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   // Metric explanation modal
   const [explainModal, setExplainModal] = useState<{ title: string; text: string } | null>(null);
 
+  // TN suggest
+  const [tnSuggestModal, setTnSuggestModal] = useState(false);
+  const [tnSuggestResults, setTnSuggestResults] = useState<TnCategorySuggestion[]>([]);
+  const [tnSuggestLoading, setTnSuggestLoading] = useState(false);
+  const [tnSuggestError, setTnSuggestError] = useState<string | null>(null);
+
   // Load export section data lazily when tailored bullets are first available
   useEffect(() => {
     if (!tailoredBullets || tailoredBullets.length === 0 || exportDataFetchRef.current) return;
@@ -345,6 +275,12 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
     setJobDescription(app.job_description);
     setSelectedStatus(app.status);
     setNotes(app.notes);
+    setLocation(app.location);
+    setSalaryMin(app.salary_min ?? '');
+    setSalaryMax(app.salary_max ?? '');
+    setSalaryCurrency(app.salary_currency ?? '');
+    setWorkType(app.work_type ?? []);
+    setUsCitizenOrPr(app.us_citizen_or_pr_required == null ? 'null' : app.us_citizen_or_pr_required ? 'true' : 'false');
     setSaveError(null);
     setEditing(true);
   }
@@ -361,6 +297,12 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
         job_description: jobDescription.trim(),
         status: selectedStatus,
         notes: notes.trim(),
+        location: location.trim(),
+        salary_min: salaryMin ? parseFloat(salaryMin) : null,
+        salary_max: salaryMax ? parseFloat(salaryMax) : null,
+        salary_currency: salaryCurrency || '',
+        work_type: workType.length ? workType : null,
+        us_citizen_or_pr_required: usCitizenOrPr === 'null' ? null : usCitizenOrPr === 'true',
       });
       setApp(updated);
       setEditing(false);
@@ -508,6 +450,21 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
       setNaftaPDFError(t('errorNaftaPDF'));
     } finally {
       setExportingNaftaPDF(false);
+    }
+  }
+
+  async function handleSuggestTnCategory() {
+    setTnSuggestError(null);
+    setTnSuggestLoading(true);
+    try {
+      const result = await suggestTnCategory();
+      setTnSuggestResults(result.suggestions);
+      setTnSuggestModal(true);
+    } catch (err) {
+      const is400 = err instanceof ApplicationError && err.status === 400;
+      setTnSuggestError(t(is400 ? 'tnSuggestNoData' : 'tnSuggestError'));
+    } finally {
+      setTnSuggestLoading(false);
     }
   }
 
@@ -733,6 +690,83 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
                 onChange={(v) => setSelectedStatus(v as ApplicationStatus)}
                 options={statusOptions}
               />
+              <TextInput
+                label={t('locationLabel')}
+                value={location}
+                onChange={setLocation}
+                maxLength={200}
+                width="100%"
+              />
+              <Box display="flex" gap={8} flexWrap="wrap" alignItems="flex-end">
+                <Box flex={1} styles={{ minWidth: 140 }}>
+                  <TextInput
+                    label={t('salaryMinLabel')}
+                    value={salaryMin}
+                    onChange={setSalaryMin}
+                    type="number"
+                    min="0"
+                    width="100%"
+                  />
+                </Box>
+                <Box flex={1} styles={{ minWidth: 140 }}>
+                  <TextInput
+                    label={t('salaryMaxLabel')}
+                    value={salaryMax}
+                    onChange={setSalaryMax}
+                    type="number"
+                    min="0"
+                    width="100%"
+                  />
+                </Box>
+                <Box flex={1} styles={{ minWidth: 120 }}>
+                  <Select
+                    label={t('salaryCurrencyLabel')}
+                    value={salaryCurrency}
+                    onChange={(v) => setSalaryCurrency(v as SalaryCurrency | '')}
+                    options={[
+                      { value: '', label: t('salaryCurrencyPlaceholder') },
+                      { value: 'USD', label: 'USD' },
+                      { value: 'CAD', label: 'CAD' },
+                      { value: 'EUR', label: 'EUR' },
+                      { value: 'MXN', label: 'MXN' },
+                      { value: 'GBP', label: 'GBP' },
+                    ]}
+                    width="100%"
+                  />
+                </Box>
+              </Box>
+              <Box display="flex" flexDirection="column" gap={6}>
+                <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+                  {t('workTypeLabel')}
+                </Typography>
+                <Box display="flex" flexDirection="column" gap={8} role="group" aria-label={t('workTypeLabel')}>
+                  {(['remote', 'onsite', 'hybrid'] as WorkType[]).map((wt) => (
+                    <Box key={wt} display="flex" alignItems="center" justifyContent="space-between" gap={12}>
+                      <Typography variant="body">{t(`workTypes.${wt}`)}</Typography>
+                      <Switch
+                        checked={workType.includes(wt)}
+                        onChange={(checked) =>
+                          setWorkType((prev) =>
+                            checked ? [...prev, wt] : prev.filter((x) => x !== wt),
+                          )
+                        }
+                        aria-label={t(`workTypes.${wt}`)}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+              <Select
+                label={t('usCitizenOrPrLabel')}
+                value={usCitizenOrPr}
+                onChange={(v) => setUsCitizenOrPr(v as 'null' | 'true' | 'false')}
+                options={[
+                  { value: 'null', label: t('usCitizenOrPr.null') },
+                  { value: 'true', label: t('usCitizenOrPr.true') },
+                  { value: 'false', label: t('usCitizenOrPr.false') },
+                ]}
+                width="100%"
+              />
               <Box>
                 <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
                   {t('jdLabel')}
@@ -823,6 +857,41 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
         />
       )}
 
+      {tnSuggestModal && (
+        <ConfirmationModal
+          title={t('tnSuggestModalTitle')}
+          text={t('tnSuggestModalSubtitle')}
+          okCallback={() => setTnSuggestModal(false)}
+          panelMaxWidth="540px"
+        >
+          <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
+            {tnSuggestResults.length === 0 ? (
+              <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+                {t('tnSuggestNoMatches')}
+              </Typography>
+            ) : (
+              tnSuggestResults.map((r) => {
+                const color = r.likelihood >= 70 ? 'var(--success, #22c55e)' : r.likelihood >= 45 ? '#f59e0b' : 'var(--error, #ef4444)';
+                return (
+                  <Box key={r.category} display="flex" flexDirection="column" gap={6}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Typography variant="body" fontWeight={600}>{r.category}</Typography>
+                      <Typography variant="caption" fontWeight={600} color={color}>
+                        {r.likelihood}%
+                      </Typography>
+                    </Box>
+                    <ProgressBar value={r.likelihood} size={6} label={r.category} />
+                    <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)" styles={{ lineHeight: 1.5 }}>
+                      {r.explanation}
+                    </Typography>
+                  </Box>
+                );
+              })
+            )}
+          </Box>
+        </ConfirmationModal>
+      )}
+
       {/* ── Job description (read-only) ───────────────────────────────── */}
       {!editing && (
         <Box marginBottom={28}>
@@ -886,7 +955,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
                 </Typography>
                 {bullets.map((b) => (
                   <Typography key={b.id} as="p" variant="body" styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}>
-                    – {b.tailored_text}
+                    - {b.tailored_text}
                   </Typography>
                 ))}
               </Box>
@@ -1108,13 +1177,39 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
         <Box display="flex" flexDirection="column" gap={14} marginBottom={20}>
           <Box display="flex" gap={12} flexWrap="wrap">
             <Box flex={2} styles={{ minWidth: 220 }}>
-              <Select
-                label={t('naftaProfessionLabel')}
-                value={naftaTnProfession}
-                onChange={setNaftaTnProfession}
-                options={[{ value: '', label: t('naftaProfessionPlaceholder') }, ...TN_PROFESSIONS]}
-                width="100%"
-              />
+              <Box display="flex" alignItems="center" gap={8}>
+                <Box styles={{ flex: 1 }}>
+                  <Select
+                    label={t('naftaProfessionLabel')}
+                    value={naftaTnProfession}
+                    onChange={setNaftaTnProfession}
+                    options={[{ value: '', label: t('naftaProfessionPlaceholder') }, ...TN_PROFESSIONS]}
+                    disabled={tnSuggestLoading}
+                    width="100%"
+                  />
+                </Box>
+                <Button
+                  unstyled
+                  type="button"
+                  icon="/icons/enhance.svg"
+                  iconSize="16px"
+                  iconColor={tnSuggestLoading ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+                  disabled={tnSuggestLoading}
+                  onClick={() => void handleSuggestTnCategory()}
+                  aria-label={t('tnSuggestLabel')}
+                  title={t('tnSuggestLabel')}
+                  className={[
+                    'ai-enhance-btn',
+                    tnSuggestLoading ? 'ai-enhance-btn--busy' : '',
+                  ].filter(Boolean).join(' ')}
+                />
+              </Box>
+              {tnSuggestLoading && <ProgressBar label={t('tnSuggestGenerating')} marginTop={8} />}
+              {tnSuggestError && (
+                <Typography variant="caption" role="alert" color="var(--error, #ef4444)">
+                  {tnSuggestError}
+                </Typography>
+              )}
             </Box>
             <Box flex={1} styles={{ minWidth: 140 }}>
               <Select

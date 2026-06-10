@@ -22,6 +22,7 @@ from .tailoring import (
     calculate_technical_match,
     generate_cover_letter,
     generate_nafta_letter,
+    suggest_tn_categories,
     tailor_resume,
 )
 
@@ -368,6 +369,40 @@ class RefreshMetricsView(APIView):
         })
 
 
+class TnSuggestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        work_experiences = list(
+            WorkExperience.objects.filter(user=user)
+            .order_by('-start_date')
+            .values('company', 'title', 'start_date', 'end_date', 'is_current', 'description')
+        )
+        educations = list(
+            Education.objects.filter(user=user)
+            .order_by('-start_year')
+            .values('institution', 'degree', 'field_of_study', 'start_year', 'end_year', 'description')
+        )
+
+        if not work_experiences and not educations:
+            return Response(
+                {'detail': 'No education or work experience found. Please add some to your profile first.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            suggestions = suggest_tn_categories(work_experiences, educations)
+        except (ValueError, KeyError) as exc:
+            logger.error('TN suggest parse error: %s', exc)
+            return Response(
+                {'detail': 'Unexpected response from LLM. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        return Response({'suggestions': suggestions})
+
+
 _PICK_URL_SYSTEM_PROMPT = """\
 You are a research assistant. Given web search results for a company, pick the single best URL \
 that is the company's official website homepage or about page. Prefer the company's own domain \
@@ -378,7 +413,7 @@ Return ONLY valid JSON — no markdown, no explanation: {"url": "<chosen url>"}
 
 _EXTRACT_ABOUT_SYSTEM_PROMPT = """\
 You are a research assistant. From the provided webpage content, extract a concise company \
-description (2–4 sentences). Focus on what the company does, their mission, products/services, \
+description (2-4 sentences). Focus on what the company does, their mission, products/services, \
 and industry. Write in third-person present tense suitable for a formal letter.
 
 Return ONLY valid JSON — no markdown, no explanation: {"about": "<extracted description>"}

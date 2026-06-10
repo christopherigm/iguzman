@@ -1,4 +1,6 @@
 export type ApplicationStatus = 'draft' | 'applied' | 'interview' | 'offer' | 'rejected';
+export type WorkType = 'remote' | 'onsite' | 'hybrid';
+export type SalaryCurrency = 'USD' | 'CAD' | 'EUR' | 'MXN' | 'GBP';
 
 export interface TailoredBullet {
   id: number;
@@ -25,6 +27,12 @@ export interface JobApplication {
   technical_match_explanation: string;
   nafta_tn_likelihood: number | null;
   nafta_tn_likelihood_explanation: string;
+  salary_min: string | null;
+  salary_max: string | null;
+  salary_currency: SalaryCurrency | '';
+  work_type: WorkType[] | null;
+  location: string;
+  us_citizen_or_pr_required: boolean | null;
   created: string;
   modified: string;
 }
@@ -67,6 +75,12 @@ export interface CreateApplicationPayload {
   notes?: string;
   job_url: string;
   company_image_url?: string | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  salary_currency?: SalaryCurrency | '';
+  work_type?: WorkType[] | null;
+  location?: string;
+  us_citizen_or_pr_required?: boolean | null;
 }
 
 export function createApplication(payload: CreateApplicationPayload): Promise<JobApplication> {
@@ -83,6 +97,12 @@ export interface UpdateApplicationPayload {
   job_description?: string;
   status?: ApplicationStatus;
   notes?: string;
+  location?: string;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  salary_currency?: SalaryCurrency | '';
+  work_type?: WorkType[] | null;
+  us_citizen_or_pr_required?: boolean | null;
 }
 
 export function updateApplication(id: number, payload: UpdateApplicationPayload): Promise<JobApplication> {
@@ -164,4 +184,18 @@ export interface SearchCompanyResult {
 
 export function searchCompany(id: number): Promise<SearchCompanyResult> {
   return request(`/api/applications/${id}/search-company`, { method: 'POST' });
+}
+
+export interface TnCategorySuggestion {
+  category: string;
+  likelihood: number;
+  explanation: string;
+}
+
+export interface TnSuggestResult {
+  suggestions: TnCategorySuggestion[];
+}
+
+export function suggestTnCategory(): Promise<TnSuggestResult> {
+  return request('/api/applications/tn-suggest', { method: 'POST' });
 }

@@ -32,7 +32,7 @@ interface ChangeVideoLengthOptions {
 
 /**
  * Build a chain of `atempo` filters that stays within ffmpeg's accepted range
- * (0.5–100). For extreme speed changes a single `atempo` value would be
+ * (0.5-100). For extreme speed changes a single `atempo` value would be
  * out-of-range, so multiple filters are chained.
  *
  * @example

@@ -151,7 +151,7 @@ uvicorn main:app --reload --port 8000
 
 The interactive API docs are available at http://localhost:8000/docs.
 
-> **First run:** pyannote and Whisper models (~2–4 GB) are downloaded from HuggingFace and cached in `~/.cache/huggingface`. Subsequent starts are instant.
+> **First run:** pyannote and Whisper models (~2-4 GB) are downloaded from HuggingFace and cached in `~/.cache/huggingface`. Subsequent starts are instant.
 
 ---
 
@@ -206,7 +206,7 @@ helm upgrade diarization apps/diarization/helm/ -n diarization
 
 ### 3. Enable model cache (recommended for production)
 
-Avoids re-downloading models (~2–4 GB) on every pod restart:
+Avoids re-downloading models (~2-4 GB) on every pod restart:
 
 ```bash
 helm upgrade diarization apps/diarization/helm/ -n diarization \
@@ -230,6 +230,6 @@ kubectl describe pod -n diarization -l app.kubernetes.io/name=diarization
 ### Notes
 
 - **Cold-start time:** On the first deployment, models are downloaded from HuggingFace. The startup probe allows up to **15 minutes** for this. Subsequent pod starts with `modelCache.enabled=true` are nearly instant.
-- **CPU performance:** Processing time scales roughly linearly with audio duration. Expect ~1–3× real-time on a Core i9 (e.g. a 10-minute recording takes 10–30 minutes to fully process). Providing `num_speakers` when known significantly speeds up diarization.
+- **CPU performance:** Processing time scales roughly linearly with audio duration. Expect ~1-3× real-time on a Core i9 (e.g. a 10-minute recording takes 10-30 minutes to fully process). Providing `num_speakers` when known significantly speeds up diarization.
 - **Timeouts:** The ingress is configured with a 600-second proxy timeout. For very long files, consider splitting audio client-side before uploading.
 - **Single replica:** Keep `replicaCount: 1`. Models are held in-process memory and the service is not designed to scale horizontally.

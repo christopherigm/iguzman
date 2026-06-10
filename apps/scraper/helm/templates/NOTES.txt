@@ -20,9 +20,9 @@ Replicas : {{ .Values.replicaCount }}
 Image    : {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
 
 Available endpoints:
-  POST /search   – run a web search (DuckDuckGo or Bing)
-  POST /extract  – extract readable text from a URL
-  GET  /health   – health check (no auth required)
+  POST /search   - run a web search (DuckDuckGo or Bing)
+  POST /extract  - extract readable text from a URL
+  GET  /health   - health check (no auth required)
 
 All requests (except /health) require the header:
   X-API-Key: <your-api-key>

@@ -242,7 +242,7 @@ def _call_groq_for_skeleton(skeleton: dict, api_key: str) -> dict:
         '- category: impact=business/product outcome, technical=engineering depth, '
         'leadership=ownership/architecture, collaboration=cross-team, other=else\n'
         '- skills: only languages, frameworks, and tools clearly visible in this project\n'
-        '- Generate 5–12 bullets depending on the richness of the structure\n'
+        '- Generate 5-12 bullets depending on the richness of the structure\n'
         '- Return valid JSON only — no markdown fences, no explanation\n\n'
         f'Project: "{project_name}"\n'
         f'Files: {code_files} code / {total_files} total\n'

@@ -27,9 +27,9 @@ const nextId = () => `ffmpeg-${++msgCounter}`;
 /**
  * Lazy-loaded FFmpeg WASM hook.
  *
- * – Runs all FFmpeg operations in a dedicated Web Worker via ffmpeg-worker.ts,
+ * - Runs all FFmpeg operations in a dedicated Web Worker via ffmpeg-worker.ts,
  *   keeping the main thread fully responsive during heavy video processing.
- * – Loads the multi-threaded core on first use.
+ * - Loads the multi-threaded core on first use.
  */
 export function useFFmpeg() {
   const workerRef = useRef<Worker | null>(null);
@@ -196,7 +196,7 @@ export function useFFmpeg() {
    *
    * @param videoUrl   URL (or object-URL) of the source video
    * @param targetFps  Target frame-rate (e.g. 60, 90, 120)
-   * @returns          `{ objectUrl, blob }` – object-URL for immediate use
+   * @returns          `{ objectUrl, blob }` - object-URL for immediate use
    *                   and the raw Blob for uploading back to the server.
    */
   const interpolateFps = useCallback(
@@ -221,7 +221,7 @@ export function useFFmpeg() {
    * Convert an H.265 (HEVC) video to H.264 (AVC) using FFmpeg WASM.
    *
    * @param videoUrl   URL (or object-URL) of the source H.265 video
-   * @returns          `{ objectUrl, blob }` – object-URL for immediate use
+   * @returns          `{ objectUrl, blob }` - object-URL for immediate use
    *                   and the raw Blob for uploading back to the server.
    */
   const convertToH264 = useCallback(
@@ -240,11 +240,11 @@ export function useFFmpeg() {
    * Detect and remove horizontal black bars (letterboxing) from a video.
    *
    * @param videoUrl    URL (or object-URL) of the source video.
-   * @param limit       Black-pixel intensity threshold (0–255). @default 24
+   * @param limit       Black-pixel intensity threshold (0-255). @default 24
    * @param round       Crop dimension rounding. @default 16
    * @param cropString  Pre-computed crop string (`W:H:X:Y`) to skip the
    *                    cropdetect pass when bars were already detected.
-   * @returns           `{ objectUrl, blob }` – object-URL for immediate use
+   * @returns           `{ objectUrl, blob }` - object-URL for immediate use
    *                    and the raw Blob for uploading back to the server.
    */
   const removeBlackBars = useCallback(
@@ -279,7 +279,7 @@ export function useFFmpeg() {
    * @param videoUrl  URL (or object-URL) of the source video.
    * @param format    Output container: `'wav'` (default, 16 kHz mono PCM) or
    *                  `'aac'` / `'mp3'` etc. (copy codec when non-wav).
-   * @returns         `{ objectUrl, blob }` – object-URL for immediate use
+   * @returns         `{ objectUrl, blob }` - object-URL for immediate use
    *                  and the raw Blob for downstream processing.
    */
   const extractAudio = useCallback(
@@ -312,7 +312,7 @@ export function useFFmpeg() {
    *
    * @param videoUrl  URL (or object-URL) of the source video.
    * @param opts      Subtitle style options.
-   * @returns         `{ objectUrl, blob }` – object-URL for immediate use
+   * @returns         `{ objectUrl, blob }` - object-URL for immediate use
    *                  and the raw Blob for uploading back to the server.
    */
   const burnSubtitles = useCallback(
@@ -352,7 +352,7 @@ export function useFFmpeg() {
    * @param targetHeight Target short-side pixels (e.g. 720 for HD).
    *                     For landscape videos this becomes the output height;
    *                     for portrait videos it becomes the output width.
-   * @returns            `{ objectUrl, blob }` – object-URL for immediate use
+   * @returns            `{ objectUrl, blob }` - object-URL for immediate use
    *                     and the raw Blob for uploading back to the server.
    */
   const scaleDown = useCallback(

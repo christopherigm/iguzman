@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { JobApplication } from '@/lib/applications';
 import type { UserProfile } from '@/lib/auth';
@@ -21,7 +21,7 @@ export default async function ApplicationDetailRoute({ params }: Props) {
 
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value;
-  if (!token) notFound();
+  if (!token) redirect(`/${locale}/auth`);
 
   const [appRes, profileRes] = await Promise.all([
     fetch(`${process.env.API_URL}/api/applications/${id}/`, {
@@ -33,6 +33,8 @@ export default async function ApplicationDetailRoute({ params }: Props) {
       cache: 'no-store',
     }),
   ]);
+
+  if (appRes.status === 401) redirect(`/${locale}/auth`);
 
   if (!appRes.ok) notFound();
 

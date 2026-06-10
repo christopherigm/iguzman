@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# Edge Folio Api Application – Helm Values
+# Edge Folio Api Application - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 revisionHistoryLimit: 2

@@ -16,10 +16,10 @@
  *   { id, type: 'synthesize', payload: { text: string, model?: string, speakerEmbeddings?: string } }
  *
  * Outgoing (worker → main):
- *   { type: 'model-progress', payload: { progress: number } }   – model download progress (no id)
- *   { id, type: 'loaded',     payload: {} }                     – model ready
+ *   { type: 'model-progress', payload: { progress: number } }   - model download progress (no id)
+ *   { id, type: 'loaded',     payload: {} }                     - model ready
  *   { id, type: 'result',     payload: { audio: Float32Array, samplingRate: number } }
- *   { id, type: 'error',      payload: { message: string } }    – any failure
+ *   { id, type: 'error',      payload: { message: string } }    - any failure
  */
 
 import { pipeline, env } from '@huggingface/transformers';

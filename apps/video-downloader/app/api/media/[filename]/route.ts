@@ -54,7 +54,7 @@ export async function GET(
   const { filename } = await params;
 
   if (!filename || filename.includes('..') || filename.includes('/')) {
-    log.warn({ filename }, 'GET /api/media/[filename] – invalid filename');
+    log.warn({ filename }, 'GET /api/media/[filename] - invalid filename');
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
@@ -74,7 +74,7 @@ export async function GET(
       if (!r2Res.ok) {
         log.warn(
           { filename, status: r2Res.status },
-          'GET /api/media/[filename] – R2 returned non-OK status',
+          'GET /api/media/[filename] - R2 returned non-OK status',
         );
         return NextResponse.json({ error: 'Media not found' }, { status: 404 });
       }
@@ -87,7 +87,7 @@ export async function GET(
     } catch (err) {
       log.error(
         { err, filename },
-        'GET /api/media/[filename] – R2 fetch failed',
+        'GET /api/media/[filename] - R2 fetch failed',
       );
       return NextResponse.json(
         { error: 'Failed to fetch media' },
@@ -116,20 +116,20 @@ export async function PUT(
   const oldFileName = (await params).filename;
 
   if (!oldFileName) {
-    log.warn('PUT /api/media/[filename] – missing filename param');
+    log.warn('PUT /api/media/[filename] - missing filename param');
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
   if (oldFileName.includes('..') || oldFileName.includes('/')) {
     log.warn(
       { oldFileName },
-      'PUT /api/media/[filename] – path traversal attempt',
+      'PUT /api/media/[filename] - path traversal attempt',
     );
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
   if (!request.body) {
-    log.warn({ oldFileName }, 'PUT /api/media/[filename] – empty request body');
+    log.warn({ oldFileName }, 'PUT /api/media/[filename] - empty request body');
     return NextResponse.json({ error: 'Empty body' }, { status: 400 });
   }
 
@@ -141,7 +141,7 @@ export async function PUT(
     if (!VALID_FILENAME_RE.test(oldFileName)) {
       log.warn(
         { oldFileName },
-        'PUT /api/media/[filename] – invalid filename format',
+        'PUT /api/media/[filename] - invalid filename format',
       );
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -151,7 +151,7 @@ export async function PUT(
       const contentLength = cl ? parseInt(cl, 10) : undefined;
       await uploadFromWebStream(newFileName, request.body, contentLength);
     } catch (err) {
-      log.error({ err, oldFileName }, 'PUT /api/media – R2 upload failed');
+      log.error({ err, oldFileName }, 'PUT /api/media - R2 upload failed');
       return NextResponse.json(
         { error: 'Failed to write file' },
         { status: 500 },
@@ -169,14 +169,14 @@ export async function PUT(
       } catch (dbErr) {
         log.warn(
           { err: dbErr, oldFileName, newFileName },
-          'PUT /api/media/[filename] – MongoDB sync failed (best-effort)',
+          'PUT /api/media/[filename] - MongoDB sync failed (best-effort)',
         );
       }
     }
 
     log.info(
       { oldFileName, newFileName },
-      'PUT /api/media/[filename] – file replaced in R2',
+      'PUT /api/media/[filename] - file replaced in R2',
     );
     return NextResponse.json(
       { ok: true, file: newFileName, oldFile: oldFileName },
@@ -193,14 +193,14 @@ export async function PUT(
     if (!info.isFile()) {
       log.warn(
         { oldFileName },
-        'PUT /api/media/[filename] – path exists but is not a file',
+        'PUT /api/media/[filename] - path exists but is not a file',
       );
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
   } catch {
     log.warn(
       { oldFileName },
-      'PUT /api/media/[filename] – original file not found',
+      'PUT /api/media/[filename] - original file not found',
     );
     return NextResponse.json(
       { error: 'Original file not found — nothing to replace' },
@@ -235,21 +235,21 @@ export async function PUT(
       } catch (dbErr) {
         log.warn(
           { err: dbErr, oldFileName, newFileName },
-          'PUT /api/media/[filename] – MongoDB sync failed (best-effort)',
+          'PUT /api/media/[filename] - MongoDB sync failed (best-effort)',
         );
       }
     }
 
     log.info(
       { oldFileName, newFileName },
-      'PUT /api/media/[filename] – file replaced',
+      'PUT /api/media/[filename] - file replaced',
     );
     return NextResponse.json(
       { ok: true, file: newFileName, oldFile: oldFileName },
       { status: 200 },
     );
   } catch (err) {
-    log.error({ err, oldFileName }, 'PUT /api/media – write failed');
+    log.error({ err, oldFileName }, 'PUT /api/media - write failed');
     return NextResponse.json(
       { error: 'Failed to write file' },
       { status: 500 },
@@ -272,7 +272,7 @@ export async function DELETE(
   if (!filename || filename.includes('..') || filename.includes('/')) {
     log.warn(
       { filename },
-      'DELETE /api/media/[filename] – invalid or traversal filename',
+      'DELETE /api/media/[filename] - invalid or traversal filename',
     );
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
@@ -281,7 +281,7 @@ export async function DELETE(
     await deleteObject(filename);
     log.info(
       { filename },
-      'DELETE /api/media/[filename] – object removed from R2',
+      'DELETE /api/media/[filename] - object removed from R2',
     );
     return NextResponse.json({ ok: true });
   }
@@ -293,6 +293,6 @@ export async function DELETE(
     // File may already be gone — not an error
   }
 
-  log.info({ filename }, 'DELETE /api/media/[filename] – file removed');
+  log.info({ filename }, 'DELETE /api/media/[filename] - file removed');
   return NextResponse.json({ ok: true });
 }

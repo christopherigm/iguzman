@@ -19,7 +19,7 @@ export interface ProgressBarProps extends UIComponentProps {
 /**
  * ProgressBar — a minimal, animated progress indicator.
  *
- * - Pass a `value` (0–100) for determinate progress.
+ * - Pass a `value` (0-100) for determinate progress.
  * - Omit `value` for an indeterminate loading animation.
  *
  * @example

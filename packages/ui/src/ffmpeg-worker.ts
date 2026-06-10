@@ -15,7 +15,7 @@
  *   { id, type: 'extractAudio',    payload: { videoData: Uint8Array, format?: string } }
  *   { id, type: 'burnSubtitles',   payload: {
  *       videoData: Uint8Array, srtContent: string,
- *       alignment?: number (numpad 1–9, default 2),
+ *       alignment?: number (numpad 1-9, default 2),
  *       marginV?: number, fontSize?: number,
  *       primaryColour?: string, backColour?: string,
  *       borderStyle?: number, outline?: number,
@@ -32,7 +32,7 @@
  *
  * Outgoing (worker → main):
  *   { id, type: 'progress',  payload: { progress: number } }
- *   { id, type: 'result',    payload: { data: Uint8Array } }          – transfer
+ *   { id, type: 'result',    payload: { data: Uint8Array } }          - transfer
  *   { id, type: 'error',     payload: { message: string } }
  */
 
@@ -143,7 +143,7 @@ function parseSrt(srt: string): SrtEvent[] {
 
 /**
  * Compute the default ASS anchor point for a given alignment + margins.
- * ASS [V4+ Styles] numpad alignment (1–9):
+ * ASS [V4+ Styles] numpad alignment (1-9):
  *   7 8 9  (top)
  *   4 5 6  (middle)
  *   1 2 3  (bottom)
@@ -258,7 +258,7 @@ function applyKaraokeToText(
  *
  * This replaces the old `force_style` approach: styles are written directly
  * into the ASS [V4+ Styles] section, so no `force_style=` FFmpeg option is
- * needed.  The Alignment field uses ASS v4+ numpad values (1–9) directly —
+ * needed.  The Alignment field uses ASS v4+ numpad values (1-9) directly —
  * no SSA v4 bit-flag conversion required.
  */
 function generateAssContent(params: {
@@ -545,7 +545,7 @@ self.onmessage = async (
           await ff.writeFile(input, videoData);
 
           // Probe input resolution. FFmpeg exits 1 with no output specified
-          // but still logs stream info – ignore the exit code.
+          // but still logs stream info - ignore the exit code.
           let probeLog = '';
           const probeHandler = ({ message }: { message: string }) => {
             probeLog += message + '\n';
@@ -953,7 +953,7 @@ self.onmessage = async (
           /* Generate ASS content from SRT — embeds all style + animation tags.
              This replaces the old SRT + force_style approach: styles live in
              the ASS [V4+ Styles] section, so no force_style= option is needed.
-             Alignment is in ASS v4+ numpad format (1–9) directly — no SSA
+             Alignment is in ASS v4+ numpad format (1-9) directly — no SSA
              bit-flag conversion required. */
           const assContent = generateAssContent({
             srtContent,

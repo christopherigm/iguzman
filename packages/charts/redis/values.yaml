@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# Redis – Helm Values
+# Redis - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
@@ -37,7 +37,7 @@ auth:
 # Plain environment variables injected into the container.
 env: {}
 
-# Sensitive values – reference existing Kubernetes Secrets.
+# Sensitive values - reference existing Kubernetes Secrets.
 # envFromSecret:
 #   - name: REDIS_PASSWORD
 #     secretName: redis-secrets

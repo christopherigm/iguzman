@@ -33,7 +33,7 @@ export interface SpeakButtonProps extends UIComponentProps, UseTextToSpeechOptio
  * Press once to start speaking; press again to stop.
  * Supports two engines:
  *  - `engine="browser"` — Web Speech API, instant, no download.
- *  - `engine="neural"`  — SpeechT5 via Web Worker, high quality, ~100–300 MB
+ *  - `engine="neural"`  — SpeechT5 via Web Worker, high quality, ~100-300 MB
  *                         model download on first use.
  *
  * @example

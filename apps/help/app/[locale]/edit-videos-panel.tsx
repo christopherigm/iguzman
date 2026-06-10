@@ -20,23 +20,23 @@ const EV_STAB_PARAMS =
   '# 2) Concert   — shakiness=5  smoothing=50  maxAngle=0.05  maxShift=30\n' +
   '\n' +
   '# Custom parameters (Standard preset, example values):\n' +
-  'Shakiness   [1–10]   default: 7    # detected motion intensity\n' +
-  'Accuracy    [1–15]   default: 15   # analysis accuracy (15 = max)\n' +
-  'Smoothing   [0–100]  default: 30   # stabilization window in frames';
+  'Shakiness   [1-10]   default: 7    # detected motion intensity\n' +
+  'Accuracy    [1-15]   default: 15   # analysis accuracy (15 = max)\n' +
+  'Smoothing   [0-100]  default: 30   # stabilization window in frames';
 
 const EV_DENOISE_PARAMS =
-  'Luma spatial    [0–10]  default: 4   # spatial noise reduction (luminance)\n' +
-  'Chroma spatial  [0–10]  default: 4   # spatial noise reduction (color)\n' +
-  'Luma temporal   [0–10]  default: 3   # frame-to-frame noise reduction (luma)\n' +
-  'Chroma temporal [0–10]  default: 3   # frame-to-frame noise reduction (chroma)\n' +
+  'Luma spatial    [0-10]  default: 4   # spatial noise reduction (luminance)\n' +
+  'Chroma spatial  [0-10]  default: 4   # spatial noise reduction (color)\n' +
+  'Luma temporal   [0-10]  default: 3   # frame-to-frame noise reduction (luma)\n' +
+  'Chroma temporal [0-10]  default: 3   # frame-to-frame noise reduction (chroma)\n' +
   '\n' +
   '# Example — moderate denoise:\n' +
   'luma_s=5  chroma_s=5  luma_t=3  chroma_t=3';
 
 const EV_SHARPEN_PARAMS =
-  'Matrix size    [3–23, odd]  default: 5    # kernel size (larger = wider effect)\n' +
-  'Luma amount    [-2.0–5.0]   default: 1.0  # luminance sharpening strength\n' +
-  'Chroma amount  [-2.0–5.0]   default: 0.0  # color sharpening (0 = off)\n' +
+  'Matrix size    [3-23, odd]  default: 5    # kernel size (larger = wider effect)\n' +
+  'Luma amount    [-2.0-5.0]   default: 1.0  # luminance sharpening strength\n' +
+  'Chroma amount  [-2.0-5.0]   default: 0.0  # color sharpening (0 = off)\n' +
   '\n' +
   '# Example — gentle sharpen:\n' +
   'matrix=5  luma_amount=0.8  chroma_amount=0.0';
@@ -58,10 +58,10 @@ const EV_DOWNSIZE_PARAMS =
   'Target: 1080   # → fits inside 1920×1080, aspect ratio preserved';
 
 const EV_COLOR_PARAMS =
-  'Contrast    [0.0–2.0]    default: 1.1   # 1.0 = no change\n' +
-  'Brightness  [-1.0–1.0]   default: 0.0   # 0.0 = no change\n' +
-  'Saturation  [0.0–2.0]    default: 1.1   # 1.0 = no change\n' +
-  'Gamma       [0.1–10.0]   default: 1.0   # 1.0 = no change\n' +
+  'Contrast    [0.0-2.0]    default: 1.1   # 1.0 = no change\n' +
+  'Brightness  [-1.0-1.0]   default: 0.0   # 0.0 = no change\n' +
+  'Saturation  [0.0-2.0]    default: 1.1   # 1.0 = no change\n' +
+  'Gamma       [0.1-10.0]   default: 1.0   # 1.0 = no change\n' +
   '\n' +
   '# Example — subtle punch:\n' +
   'contrast=1.1  brightness=0.0  saturation=1.2  gamma=1.0';
@@ -84,7 +84,7 @@ const EV_VIDEO2X_PARAMS =
   'Model: realesr-animevideov3';
 
 const EV_DEEP3D_PARAMS =
-  'Stability  [1–50]  default: 12  # optical-flow smoothing window (frames)\n' +
+  'Stability  [1-50]  default: 12  # optical-flow smoothing window (frames)\n' +
   '\n' +
   '# Example — stronger stabilization:\n' +
   'Stability: 20';
@@ -93,10 +93,10 @@ const EV_TIKTOK_PARAMS =
   '# LLM model served by Ollama  (default: gemma4:latest)\n' +
   'Model: gemma4:latest\n' +
   '\n' +
-  'Min score       [1–10]   default: 7   # frames below this score are dropped\n' +
-  'Clip min        [1–10s]  default: 3   # shortest allowed clip\n' +
-  'Clip max        [1–30s]  default: 7   # longest allowed clip\n' +
-  'Frame interval  [1–30s]  default: 5   # seconds between sampled frames\n' +
+  'Min score       [1-10]   default: 7   # frames below this score are dropped\n' +
+  'Clip min        [1-10s]  default: 3   # shortest allowed clip\n' +
+  'Clip max        [1-30s]  default: 7   # longest allowed clip\n' +
+  'Frame interval  [1-30s]  default: 5   # seconds between sampled frames\n' +
   '\n' +
   '# Optional background music:\n' +
   'Music file:       /path/to/music.mp3   # leave blank to skip\n' +

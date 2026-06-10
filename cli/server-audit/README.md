@@ -73,9 +73,9 @@ Compares every TCP and UDP listener against a built-in allowlist of ports expect
 | HTTP / HTTPS | 80, 443 |
 | Samba | 139, 445 |
 | Plex | 32400, 3005, 8324, 32469 |
-| MicroK8s / Kubernetes | 16443, 10248–10259, 2379, 2380 |
+| MicroK8s / Kubernetes | 16443, 10248-10259, 2379, 2380 |
 | CoreDNS | 53 |
-| k8s NodePort range | 30000–32767 |
+| k8s NodePort range | 30000-32767 |
 | NTP | 123 |
 
 Any port outside this list is flagged as **unexpected** with a targeted mitigation command.  

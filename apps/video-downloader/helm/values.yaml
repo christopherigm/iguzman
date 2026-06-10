@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# Media 2 Go Application – Helm Values
+# Media 2 Go Application - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
@@ -57,7 +57,7 @@ env:
   NEXT_TELEMETRY_DISABLED: '1'
   NEXT_PUBLIC_BASE_URL: 'https://media2go.app'
 
-# Sensitive values – reference existing Kubernetes Secrets.
+# Sensitive values - reference existing Kubernetes Secrets.
 # Create the secret first:
 #   kubectl create secret generic vd2-secrets \
 #     --from-literal=groq-api-key=<YOUR_KEY> \

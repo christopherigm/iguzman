@@ -3,6 +3,7 @@ import uuid
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Q
 
 from core.fields import ResizedImageField
 from core.models import Common
@@ -13,6 +14,14 @@ STATUS_CHOICES = [
     ('interview', 'Interview'),
     ('offer', 'Offer'),
     ('rejected', 'Rejected'),
+]
+
+CURRENCY_CHOICES = [
+    ('USD', 'USD'),
+    ('CAD', 'CAD'),
+    ('EUR', 'EUR'),
+    ('MXN', 'MXN'),
+    ('GBP', 'GBP'),
 ]
 
 
@@ -39,6 +48,12 @@ class JobApplication(Common):
     nafta_tn_likelihood = models.PositiveSmallIntegerField(null=True, blank=True)
     nafta_tn_likelihood_explanation = models.TextField(blank=True)
     company_description = models.TextField(blank=True)
+    salary_min = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    salary_max = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    salary_currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, blank=True)
+    work_type = models.JSONField(null=True, blank=True)
+    location = models.CharField(max_length=200, blank=True)
+    us_citizen_or_pr_required = models.BooleanField(null=True, blank=True)
     company_image = ResizedImageField(
         upload_to=_application_image_upload,
         null=True,
@@ -48,6 +63,13 @@ class JobApplication(Common):
 
     class Meta:
         ordering = ['-created']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'job_url'],
+                condition=~Q(job_url=''),
+                name='unique_job_application_url_per_user',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.job_title} at {self.company_name} ({self.user.email})'

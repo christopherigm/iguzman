@@ -6,6 +6,10 @@ export const dynamic = 'force-dynamic';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
+const OLLAMA_BASE = (process.env.OLLAMA_URL ?? 'http://192.168.0.24:11434').replace(/\/$/, '');
+const OLLAMA_API_URL = `${OLLAMA_BASE}/v1/chat/completions`;
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'gemma4:latest';
+
 async function verifyToken(token: string): Promise<boolean> {
   try {
     const res = await fetch(`${process.env.API_URL}/api/auth/token/verify/`, {
@@ -67,24 +71,41 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ detail: message }, { status: 502 });
   }
 
-  if (!groqRes.ok) {
-    const body = await groqRes.text();
+  let upstream = groqRes;
+
+  if (groqRes.status === 429) {
+    console.warn('[groq/chat] Groq rate limit hit; falling back to Ollama');
+    const ollamaBody = { ...parsed, model: OLLAMA_MODEL };
+    try {
+      upstream = await fetch(OLLAMA_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ollamaBody),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to reach Ollama fallback';
+      return NextResponse.json({ detail: message }, { status: 502 });
+    }
+  }
+
+  if (!upstream.ok) {
+    const body = await upstream.text();
     return new Response(body, {
-      status: groqRes.status,
+      status: upstream.status,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
   const responseHeaders = new Headers();
   const STRIP_HEADERS = new Set(['transfer-encoding', 'content-encoding', 'content-length']);
-  groqRes.headers.forEach((value, key) => {
+  upstream.headers.forEach((value, key) => {
     if (!STRIP_HEADERS.has(key.toLowerCase())) {
       responseHeaders.set(key, value);
     }
   });
 
-  return new Response(groqRes.body, {
-    status: groqRes.status,
+  return new Response(upstream.body, {
+    status: upstream.status,
     headers: responseHeaders,
   });
 }

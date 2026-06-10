@@ -155,34 +155,6 @@
   justify-content: space-between;
 }
 
-/* ── Enhance button ── */
-
-.profile__enhance-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  transition: background 150ms ease, opacity 150ms ease;
-}
-
-.profile__enhance-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--foreground, #171717) 8%, transparent);
-}
-
-.profile__enhance-btn--active {
-  background: color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent);
-}
-
-.profile__enhance-btn--busy {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 /* ── Enhance preview panel ── */
 
 .profile__enhance-preview {

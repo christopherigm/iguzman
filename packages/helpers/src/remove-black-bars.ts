@@ -13,7 +13,7 @@ const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const DEFAULT_OUTPUT_FOLDER =
   NODE_ENV === 'production' ? '/app/media' : 'public/media';
 
-/** Default black-pixel intensity threshold for cropdetect (0–255). */
+/** Default black-pixel intensity threshold for cropdetect (0-255). */
 const DEFAULT_LIMIT = 24;
 
 /**
@@ -43,7 +43,7 @@ export interface DetectBlackBarsOptions {
   /** Source video path (a leading `media/` prefix is stripped automatically). */
   readonly src: string;
   /**
-   * Black-pixel intensity threshold (0–255). Pixels with an intensity
+   * Black-pixel intensity threshold (0-255). Pixels with an intensity
    * **above** this value are considered non-black. Lower values make the
    * detector stricter (only very dark pixels count as black bars).
    * @default 24
@@ -66,7 +66,7 @@ export interface RemoveBlackBarsOptions {
   /** Destination video path (a leading `media/` prefix is stripped automatically). */
   readonly dest: string;
   /**
-   * Black-pixel intensity threshold (0–255) forwarded to cropdetect.
+   * Black-pixel intensity threshold (0-255) forwarded to cropdetect.
    * @default 24
    */
   readonly limit?: number;

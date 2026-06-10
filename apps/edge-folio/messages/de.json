@@ -279,12 +279,32 @@
     "copied": "Kopiert!",
     "errorCoverLetter": "Anschreiben konnte nicht generiert werden. Bitte erneut versuchen.",
     "jdUrlLabel": "URL der Stellenausschreibung",
-    "fetchFromUrl": "Abrufen",
+    "fetchFromUrl": "Von URL laden",
     "fetchingUrl": "Wird abgerufen…",
+    "clearUrl": "URL löschen",
     "fetchUrlError": "Stellendetails konnten nicht extrahiert werden. Bitte Felder manuell ausfüllen.",
     "overallMatch": "Gesamtübereinstimmung",
     "technicalMatch": "Technische Übereinstimmung",
-    "naftaLikelihood": "NAFTA-TN-Wahrscheinlichkeit"
+    "naftaLikelihood": "NAFTA-TN-Wahrscheinlichkeit",
+    "duplicateUrlTitle": "Bewerbung bereits gespeichert",
+    "duplicateUrlText": "Du hast bereits eine Bewerbung für diese URL gespeichert. Suche sie in deinen vorhandenen Bewerbungen.",
+    "locationLabel": "Standort",
+    "salaryMinLabel": "Mindestgehalt",
+    "salaryMaxLabel": "Höchstgehalt",
+    "salaryCurrencyLabel": "Währung",
+    "salaryCurrencyPlaceholder": "Währung wählen",
+    "workTypeLabel": "Arbeitsmodell",
+    "workTypes": {
+      "remote": "Remote",
+      "onsite": "Vor Ort",
+      "hybrid": "Hybrid"
+    },
+    "usCitizenOrPrLabel": "US-Staatsbürgerschaft / PR erforderlich",
+    "usCitizenOrPr": {
+      "null": "Nicht angegeben",
+      "true": "Erforderlich",
+      "false": "Nicht erforderlich"
+    }
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",
@@ -439,7 +459,31 @@
     "searchCompany": "Unternehmensdaten suchen",
     "searchingCompany": "Suche…",
     "errorSearchCompany": "Suche nach Unternehmensdaten fehlgeschlagen. Bitte erneut versuchen.",
-    "companyInfoFound": "Unternehmensinformationen aktualisiert."
+    "companyInfoFound": "Unternehmensinformationen aktualisiert.",
+    "tnSuggestLabel": "TN-Kategorie vorschlagen",
+    "tnSuggestGenerating": "Profil wird analysiert…",
+    "tnSuggestNoData": "Füge zuerst Ausbildung oder Berufserfahrung hinzu, um diese Funktion zu nutzen.",
+    "tnSuggestError": "Analyse der TN-Kategorien fehlgeschlagen. Bitte erneut versuchen.",
+    "tnSuggestModalTitle": "TN-Visum Kategorievorschläge",
+    "tnSuggestModalSubtitle": "Basierend auf deiner Ausbildung und Berufserfahrung. Nur zu Informationszwecken — keine Rechtsberatung.",
+    "tnSuggestNoMatches": "Keine passenden TN-Kategorien für dein Profil gefunden.",
+    "locationLabel": "Standort",
+    "salaryMinLabel": "Mindestgehalt",
+    "salaryMaxLabel": "Höchstgehalt",
+    "salaryCurrencyLabel": "Währung",
+    "salaryCurrencyPlaceholder": "Währung wählen",
+    "workTypeLabel": "Arbeitsmodell",
+    "workTypes": {
+      "remote": "Remote",
+      "onsite": "Vor Ort",
+      "hybrid": "Hybrid"
+    },
+    "usCitizenOrPrLabel": "US-Staatsbürgerschaft / PR erforderlich",
+    "usCitizenOrPr": {
+      "null": "Nicht angegeben",
+      "true": "Erforderlich",
+      "false": "Nicht erforderlich"
+    }
   },
   "WorkExperiencePage": {
     "title": "Berufserfahrung",
@@ -629,6 +673,10 @@
     "savingContact": "Speichern…",
     "contactSaved": "Kontaktinformationen gespeichert",
     "contactError": "Kontaktinformationen konnten nicht gespeichert werden",
+    "tnProfessionLabel": "TN-Berufsbezeichnung",
+    "tnProfessionPlaceholder": "TN-Beruf auswählen…",
+    "citizenshipLabel": "Staatsbürgerschaft",
+    "citizenshipPlaceholder": "Staatsbürgerschaft auswählen…",
     "summaryEnhanceLabel": "Mit KI verbessern",
     "summaryEnhanceStop": "Stoppen",
     "summaryEnhanceDiscard": "Verwerfen",
@@ -658,6 +706,14 @@
       "fluent": "Fließend",
       "professional": "Beruflich",
       "basic": "Grundkenntnisse"
-    }
+    },
+    "tnSuggestLabel": "TN-Kategorie vorschlagen",
+    "tnSuggestGenerating": "Profil wird analysiert…",
+    "tnSuggestNoData": "Füge zuerst Ausbildung oder Berufserfahrung hinzu, um diese Funktion zu nutzen.",
+    "tnSuggestError": "Fehler bei der Analyse der TN-Kategorien. Bitte erneut versuchen.",
+    "tnSuggestParseError": "Ergebnisse konnten nicht verarbeitet werden. Bitte erneut versuchen.",
+    "tnSuggestModalTitle": "TN-Visa-Kategorie-Vorschläge",
+    "tnSuggestModalSubtitle": "Basierend auf Ihrer Ausbildung und Berufserfahrung. Nur zu Informationszwecken — keine Rechtsberatung.",
+    "tnSuggestNoMatches": "Keine passenden TN-Kategorien für Ihr Profil gefunden."
   }
 }

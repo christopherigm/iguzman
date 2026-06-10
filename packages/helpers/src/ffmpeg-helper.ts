@@ -193,7 +193,7 @@ function parseSrt(srt: string): SrtEvent[] {
 
 /**
  * Compute the default ASS anchor point for a given alignment + margins.
- * ASS [V4+ Styles] numpad alignment (1–9):
+ * ASS [V4+ Styles] numpad alignment (1-9):
  *   7 8 9  (top)
  *   4 5 6  (middle)
  *   1 2 3  (bottom)
@@ -515,7 +515,7 @@ export interface InterpolateFpsOptions {
    * Motion-search radius for `minterpolate` (pixels). Default 16.
    * Lower = faster ME, more CPU headroom for the encoder; higher = more
    * accurate motion vectors at the cost of sequential search time.
-   * Valid range: 4–64.
+   * Valid range: 4-64.
    */
   searchParam?: number;
   /**
@@ -530,7 +530,7 @@ export interface InterpolateFpsOptions {
   mcMode?: 'obmc' | 'aobmc' | 'no';
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
-  /** Called with a value 0–100 as encoding progresses. */
+  /** Called with a value 0-100 as encoding progresses. */
   onProgress?: (pct: number) => void;
 }
 
@@ -541,7 +541,7 @@ export interface ConvertToH264Options {
   outputPath: string;
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
-  /** Called with a value 0–100 as encoding progresses. */
+  /** Called with a value 0-100 as encoding progresses. */
   onProgress?: (pct: number) => void;
 }
 
@@ -550,7 +550,7 @@ export interface RemoveBlackBarsOptions {
   inputPath: string;
   /** Absolute path where the output file will be written. */
   outputPath: string;
-  /** Cropdetect luminance threshold (0–255). Default 24. */
+  /** Cropdetect luminance threshold (0-255). Default 24. */
   limit?: number;
   /** Round crop dimensions to the nearest multiple. Default 16. */
   round?: number;
@@ -561,7 +561,7 @@ export interface RemoveBlackBarsOptions {
   cropString?: string;
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
-  /** Called with a value 0–100 as processing progresses. */
+  /** Called with a value 0-100 as processing progresses. */
   onProgress?: (pct: number) => void;
 }
 
@@ -578,7 +578,7 @@ export interface ExtractAudioOptions {
   format?: string;
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
-  /** Called with a value 0–100 as processing progresses. */
+  /** Called with a value 0-100 as processing progresses. */
   onProgress?: (pct: number) => void;
 }
 
@@ -589,7 +589,7 @@ export interface ConvertToH265Options {
   outputPath: string;
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
-  /** Called with a value 0–100 as encoding progresses. */
+  /** Called with a value 0-100 as encoding progresses. */
   onProgress?: (pct: number) => void;
 }
 
@@ -605,7 +605,7 @@ export interface ScaleDownOptions {
   targetHeight: number;
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
-  /** Called with a value 0–100 as encoding progresses. */
+  /** Called with a value 0-100 as encoding progresses. */
   onProgress?: (pct: number) => void;
 }
 
@@ -617,7 +617,7 @@ export interface BurnSubtitlesOptions {
   /** SRT subtitle content to burn into the video. */
   srtContent: string;
   /**
-   * ASS numpad alignment (1–9).
+   * ASS numpad alignment (1-9).
    * 7 8 9 = top-left/center/right · 4 5 6 = mid · 1 2 3 = bottom. Default 2.
    */
   alignment?: number;
@@ -646,7 +646,7 @@ export interface BurnSubtitlesOptions {
   animation?: AnimationOptions;
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
-  /** Called with a value 0–100 as encoding progresses. */
+  /** Called with a value 0-100 as encoding progresses. */
   onProgress?: (pct: number) => void;
 }
 
@@ -779,7 +779,7 @@ export async function removeBlackBars(
   let crop = cropString;
 
   if (!crop) {
-    /* Step 1 (0–49 %): cropdetect pass — no output file, so no encoding
+    /* Step 1 (0-49 %): cropdetect pass — no output file, so no encoding
        frames; we parse frame numbers from the null-muxer log. */
     /* Limit to a 60 s window; enough for any stable bar pattern and avoids
        scanning the entire file on long videos. */
@@ -866,7 +866,7 @@ export async function removeBlackBars(
     });
   }
 
-  /* Step 2 (50–100 %): apply crop */
+  /* Step 2 (50-100 %): apply crop */
   const cropEstFrames = estimatedFrames;
   await new Promise<void>((resolve, reject) => {
     const proc = spawn(ffmpegBinary, [

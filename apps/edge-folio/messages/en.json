@@ -279,12 +279,32 @@
     "copied": "Copied!",
     "errorCoverLetter": "Failed to generate cover letter. Please try again.",
     "jdUrlLabel": "Job posting URL",
-    "fetchFromUrl": "Fetch",
+    "fetchFromUrl": "Fetch from URL",
     "fetchingUrl": "Fetching…",
+    "clearUrl": "Clear URL",
     "fetchUrlError": "Could not extract job details. Fill in the fields manually.",
     "overallMatch": "Overall Match",
     "technicalMatch": "Technical Match",
-    "naftaLikelihood": "NAFTA TN Likelihood"
+    "naftaLikelihood": "NAFTA TN Likelihood",
+    "duplicateUrlTitle": "Application Already Saved",
+    "duplicateUrlText": "You've already saved an application for this job URL. Find it in your existing applications.",
+    "locationLabel": "Location",
+    "salaryMinLabel": "Min salary",
+    "salaryMaxLabel": "Max salary",
+    "salaryCurrencyLabel": "Currency",
+    "salaryCurrencyPlaceholder": "Select currency",
+    "workTypeLabel": "Work arrangement",
+    "workTypes": {
+      "remote": "Remote",
+      "onsite": "On-site",
+      "hybrid": "Hybrid"
+    },
+    "usCitizenOrPrLabel": "U.S. citizenship / PR required",
+    "usCitizenOrPr": {
+      "null": "Not specified",
+      "true": "Required",
+      "false": "Not required"
+    }
   },
   "ApplicationDetailPage": {
     "metaTitle": "Application",
@@ -382,7 +402,31 @@
     "searchCompany": "Search Company Data",
     "searchingCompany": "Searching…",
     "errorSearchCompany": "Failed to search company data. Please try again.",
-    "companyInfoFound": "Company info updated."
+    "companyInfoFound": "Company info updated.",
+    "tnSuggestLabel": "Suggest TN Category",
+    "tnSuggestGenerating": "Analyzing your profile…",
+    "tnSuggestNoData": "Add education or work experience first to use this feature.",
+    "tnSuggestError": "Failed to analyze TN categories. Please try again.",
+    "tnSuggestModalTitle": "TN Visa Category Suggestions",
+    "tnSuggestModalSubtitle": "Based on your education and work experience. For informational purposes only — not legal advice.",
+    "tnSuggestNoMatches": "No matching TN categories found based on your profile.",
+    "locationLabel": "Location",
+    "salaryMinLabel": "Min salary",
+    "salaryMaxLabel": "Max salary",
+    "salaryCurrencyLabel": "Currency",
+    "salaryCurrencyPlaceholder": "Select currency",
+    "workTypeLabel": "Work arrangement",
+    "workTypes": {
+      "remote": "Remote",
+      "onsite": "On-site",
+      "hybrid": "Hybrid"
+    },
+    "usCitizenOrPrLabel": "U.S. citizenship / PR required",
+    "usCitizenOrPr": {
+      "null": "Not specified",
+      "true": "Required",
+      "false": "Not required"
+    }
   },
   "AuthPage": {
     "tabSignIn": "Sign In",
@@ -629,6 +673,10 @@
     "savingContact": "Saving…",
     "contactSaved": "Contact info saved",
     "contactError": "Failed to save contact info",
+    "tnProfessionLabel": "TN Profession Category",
+    "tnProfessionPlaceholder": "Select TN profession…",
+    "citizenshipLabel": "Citizenship",
+    "citizenshipPlaceholder": "Select citizenship…",
     "summaryEnhanceLabel": "Enhance with AI",
     "summaryEnhanceStop": "Stop",
     "summaryEnhanceDiscard": "Discard",
@@ -658,6 +706,14 @@
       "fluent": "Fluent",
       "professional": "Professional",
       "basic": "Basic"
-    }
+    },
+    "tnSuggestLabel": "Suggest TN Category",
+    "tnSuggestGenerating": "Analyzing your profile…",
+    "tnSuggestNoData": "Add education or work experience first to use this feature.",
+    "tnSuggestError": "Failed to analyze TN categories. Please try again.",
+    "tnSuggestParseError": "Could not parse results. Please try again.",
+    "tnSuggestModalTitle": "TN Visa Category Suggestions",
+    "tnSuggestModalSubtitle": "Based on your education and work experience. For informational purposes only — not legal advice.",
+    "tnSuggestNoMatches": "No matching TN categories found based on your profile."
   }
 }

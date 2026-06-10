@@ -4,7 +4,7 @@ A privacy-first career application platform for software engineers. Analyzes pro
 
 ## How it works
 
-- **Immutable Matrix** — A user-curated database of 50–100 factual, pre-approved bullet points stored in Postgres. No hallucination: the LLM routes and ranks, never invents.
+- **Immutable Matrix** — A user-curated database of 50-100 factual, pre-approved bullet points stored in Postgres. No hallucination: the LLM routes and ranks, never invents.
 - **Zero-trust codebase extraction** — A quantized model (Gemma 4b) runs entirely in the browser via WebGPU + OPFS. Proprietary code never leaves the device; only sanitized metadata (stack names, metrics, patterns) is sent to the server.
 - **PWA background download** — The service worker silently fetches and caches model weights into the Origin Private File System during onboarding, so the extraction feature is ready when the user needs it.
 - **Dynamic assembly** — When applying to a role, the cloud LLM scores and reorders Immutable Matrix bullets to match the job description.

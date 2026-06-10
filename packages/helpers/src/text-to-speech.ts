@@ -17,7 +17,7 @@ export interface TtsOptions {
    *                 Instant, zero-download, quality varies by OS/browser.
    * `'neural'`   — runs SpeechT5 neural TTS in-browser via a Web Worker
    *                 backed by `@huggingface/transformers`. High quality but
-   *                 requires ~100–300 MB model download on first use.
+   *                 requires ~100-300 MB model download on first use.
    * @default 'browser'
    */
   engine?: TtsEngine;
@@ -39,17 +39,17 @@ export interface TtsOptions {
    */
   speakerEmbeddings?: string;
   /**
-   * Browser engine only: speech rate (0.1–10).
+   * Browser engine only: speech rate (0.1-10).
    * @default 1
    */
   rate?: number;
   /**
-   * Browser engine only: speech pitch (0–2).
+   * Browser engine only: speech pitch (0-2).
    * @default 1
    */
   pitch?: number;
   /**
-   * Browser engine only: volume (0–1).
+   * Browser engine only: volume (0-1).
    * @default 1
    */
   volume?: number;

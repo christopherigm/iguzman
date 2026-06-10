@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# MySQL – Helm Values
+# MySQL - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
@@ -41,7 +41,7 @@ auth:
 env: {}
   # MYSQL_ROOT_HOST: '%'
 
-# Sensitive values – reference existing Kubernetes Secrets.
+# Sensitive values - reference existing Kubernetes Secrets.
 # envFromSecret:
 #   - name: MYSQL_ROOT_PASSWORD
 #     secretName: mysql-secrets

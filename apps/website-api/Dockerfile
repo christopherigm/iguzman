@@ -1,7 +1,7 @@
 # syntax=docker.io/docker/dockerfile:1
 
 # ─────────────────────────────────────────────────────────────
-# Stage 1 – Install Python dependencies
+# Stage 1 - Install Python dependencies
 # Only requirements.txt is copied so source changes don't bust this layer.
 # ─────────────────────────────────────────────────────────────
 FROM python:3.12-slim AS deps
@@ -18,7 +18,7 @@ RUN pip install --upgrade pip \
     && pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 # ─────────────────────────────────────────────────────────────
-# Stage 2 – Collect and compress static assets
+# Stage 2 - Collect and compress static assets
 # WhiteNoise's CompressedManifestStaticFilesStorage bakes hashed,
 # gzip-compressed copies into staticfiles/ at build time.
 # ─────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ RUN DJANGO_SETTINGS_MODULE=website_api.settings \
     python manage.py collectstatic --noinput
 
 # ─────────────────────────────────────────────────────────────
-# Stage 3 – Minimal production image
+# Stage 3 - Minimal production image
 # ─────────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runner
 

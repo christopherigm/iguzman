@@ -14,6 +14,8 @@ export interface UserProfile {
   github_url: string;
   linkedin_url: string;
   summary: string;
+  tn_profession: string;
+  citizenship: string;
 }
 
 const USER_PROFILE_KEY = 'ef_user';
@@ -305,7 +307,9 @@ export async function updateContactInfo(payload: {
   github_url?: string;
   linkedin_url?: string;
   summary?: string;
-}): Promise<{ phone: string; location: string; github_url: string; linkedin_url: string; summary: string }> {
+  tn_profession?: string;
+  citizenship?: string;
+}): Promise<{ phone: string; location: string; github_url: string; linkedin_url: string; summary: string; tn_profession: string; citizenship: string }> {
   const res = await fetch('/api/auth/contact', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -315,5 +319,5 @@ export async function updateContactInfo(payload: {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
   }
-  return res.json() as Promise<{ phone: string; location: string; github_url: string; linkedin_url: string; summary: string }>;
+  return res.json() as Promise<{ phone: string; location: string; github_url: string; linkedin_url: string; summary: string; tn_profession: string; citizenship: string }>;
 }

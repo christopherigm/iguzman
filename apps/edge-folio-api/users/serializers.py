@@ -138,12 +138,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
     github_url = serializers.SerializerMethodField()
     linkedin_url = serializers.SerializerMethodField()
     summary = serializers.SerializerMethodField()
+    tn_profession = serializers.SerializerMethodField()
+    citizenship = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ('id', 'email', 'first_name', 'last_name', 'profile_picture',
                   'job_title', 'years_of_experience', 'preferred_stack',
-                  'phone', 'location', 'github_url', 'linkedin_url', 'summary')
+                  'phone', 'location', 'github_url', 'linkedin_url', 'summary',
+                  'tn_profession', 'citizenship')
 
     def get_profile_picture(self, obj):
         try:
@@ -205,11 +208,23 @@ class UserProfileSerializer(serializers.ModelSerializer):
         except UserProfile.DoesNotExist:
             return ''
 
+    def get_tn_profession(self, obj):
+        try:
+            return obj.profile.tn_profession
+        except UserProfile.DoesNotExist:
+            return ''
+
+    def get_citizenship(self, obj):
+        try:
+            return obj.profile.citizenship
+        except UserProfile.DoesNotExist:
+            return ''
+
 
 class ContactInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ('phone', 'location', 'github_url', 'linkedin_url', 'summary')
+        fields = ('phone', 'location', 'github_url', 'linkedin_url', 'summary', 'tn_profession', 'citizenship')
 
 
 class OnboardingSerializer(serializers.ModelSerializer):

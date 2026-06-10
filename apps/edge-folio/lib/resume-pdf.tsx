@@ -340,7 +340,7 @@ function formatDateRange(startDate: string, endDate: string | null, isCurrent: b
   };
   const start = fmt(startDate);
   const end = isCurrent ? 'Present' : endDate ? fmt(endDate) : '';
-  return end ? `${start} – ${end}` : start;
+  return end ? `${start} - ${end}` : start;
 }
 
 export function ResumeDocument({
@@ -490,7 +490,7 @@ export function ResumeDocument({
                   {edu.institution}
                   {'  ·  '}
                   {edu.start_year}
-                  {' – '}
+                  {' - '}
                   {edu.is_current ? 'Present' : (edu.end_year ?? '')}
                 </Text>
               </View>

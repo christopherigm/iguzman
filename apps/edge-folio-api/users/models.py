@@ -28,6 +28,8 @@ class UserProfile(models.Model):
     github_url = models.URLField(max_length=200, blank=True, default='')
     linkedin_url = models.URLField(max_length=200, blank=True, default='')
     summary = models.TextField(blank=True, default='')
+    tn_profession = models.CharField(max_length=200, blank=True, default='')
+    citizenship = models.CharField(max_length=50, blank=True, default='')
 
     def __str__(self):
         return f'Profile of {self.user.username}'

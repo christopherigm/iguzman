@@ -86,3 +86,42 @@
   outline: 2px solid var(--primary, #06b6d4);
   outline-offset: 2px;
 }
+
+.applications__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  transition:
+    background 180ms ease,
+    opacity 180ms ease,
+    transform 120ms ease;
+}
+
+.applications__icon-btn:hover:not(:disabled) {
+  background: var(--surface-2, #f0f0f0);
+}
+
+.applications__icon-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.applications__icon-btn--fetch {
+  background: var(--accent, #06b6d4);
+  border-radius: 10px;
+}
+
+.applications__icon-btn--fetch:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent, #06b6d4) 85%, black);
+}
+
+.applications__icon-btn--fetch:disabled {
+  opacity: 0.35;
+}

@@ -21,10 +21,10 @@
  *   { id, type: 'transcribe', payload: { audioData: Float32Array, language?: string, model?: string } }
  *
  * Outgoing (worker → main):
- *   { type: 'model-progress', payload: { progress: number } }   – model download progress (no id)
- *   { id, type: 'loaded',     payload: {} }                     – model ready
- *   { id, type: 'result',     payload: { text: string } }       – transcription done
- *   { id, type: 'error',      payload: { message: string } }    – any failure
+ *   { type: 'model-progress', payload: { progress: number } }   - model download progress (no id)
+ *   { id, type: 'loaded',     payload: {} }                     - model ready
+ *   { id, type: 'result',     payload: { text: string } }       - transcription done
+ *   { id, type: 'error',      payload: { message: string } }    - any failure
  */
 
 import { pipeline, env } from '@huggingface/transformers';

@@ -11,6 +11,12 @@ interface ExtractedJob {
   company_name: string;
   job_title: string;
   job_description: string;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_currency: string;
+  work_type: string[];
+  location: string;
+  us_citizen_or_pr_required: boolean | null;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -55,7 +61,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const content = scraped.content.slice(0, MAX_CONTENT_CHARS);
-  const prompt = `You are parsing a job posting. Extract the following three fields from the page title and content provided.
+  const prompt = `You are parsing a job posting. Extract the following fields from the page title and content provided.
 
 Page title: ${scraped.title}
 
@@ -66,8 +72,14 @@ Return a JSON object with exactly these keys:
 - "company_name": name of the hiring company (string)
 - "job_title": the job position title (string)
 - "job_description": the full job description including responsibilities and requirements (string)
+- "salary_min": minimum annual salary as a plain number with no symbols or commas (number or null if not mentioned)
+- "salary_max": maximum annual salary as a plain number with no symbols or commas (number or null if not mentioned)
+- "salary_currency": currency code, one of "USD", "CAD", "EUR", "MXN", "GBP" (empty string if not mentioned or cannot be determined)
+- "work_type": array of applicable work arrangements from ["remote", "onsite", "hybrid"] (empty array if not mentioned)
+- "location": city, state, country, or "Remote" as stated in the posting (empty string if not mentioned)
+- "us_citizen_or_pr_required": true if the posting explicitly requires U.S. citizenship or permanent residence, false if it explicitly states no such requirement, null if not mentioned
 
-If a field cannot be determined, use an empty string. Do not include any other keys.`;
+Use null for salary fields when no salary information is present. Do not include any other keys.`;
 
   let extracted: ExtractedJob;
   try {
@@ -102,5 +114,13 @@ If a field cannot be determined, use an empty string. Do not include any other k
     job_title: String(extracted.job_title ?? ''),
     job_description: String(extracted.job_description ?? ''),
     image_url: scraped.image ?? null,
+    salary_min: typeof extracted.salary_min === 'number' ? extracted.salary_min : null,
+    salary_max: typeof extracted.salary_max === 'number' ? extracted.salary_max : null,
+    salary_currency: String(extracted.salary_currency ?? ''),
+    work_type: Array.isArray(extracted.work_type) ? extracted.work_type : [],
+    location: String(extracted.location ?? ''),
+    us_citizen_or_pr_required: typeof extracted.us_citizen_or_pr_required === 'boolean'
+      ? extracted.us_citizen_or_pr_required
+      : null,
   });
 }

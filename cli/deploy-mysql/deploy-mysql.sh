@@ -33,7 +33,7 @@ clr_bold_red()    { printf "${BOLD}${RED}%s${RESET}" "$*"; }
 setup_strings() {
   local lang="$1"
   if [[ "${lang}" == "es" ]]; then
-    WELCOME="MySQL – Despliegue con Helm"
+    WELCOME="MySQL - Despliegue con Helm"
     SUBTITLE="Instala o actualiza MySQL en tu clúster de Kubernetes."
     HELM_MISSING="helm no está instalado o no está en PATH."
     HELM_MISSING_HINT="Instálalo en: https://helm.sh/docs/intro/install/"
@@ -82,7 +82,7 @@ setup_strings() {
     SUCCEEDED="MySQL desplegado exitosamente en el namespace"
     FAILED="El despliegue con Helm falló."
   else
-    WELCOME="MySQL – Helm Deployment"
+    WELCOME="MySQL - Helm Deployment"
     SUBTITLE="Installs or upgrades MySQL in your Kubernetes cluster."
     HELM_MISSING="helm is not installed or not in PATH."
     HELM_MISSING_HINT="Install it at: https://helm.sh/docs/intro/install/"

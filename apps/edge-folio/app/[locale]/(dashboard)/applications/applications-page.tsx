@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Container } from '@repo/ui/core-elements/container';
 import { Box } from '@repo/ui/core-elements/box';
 import { Button } from '@repo/ui/core-elements/button';
+import { Icon } from '@repo/ui/core-elements/icon';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
@@ -13,6 +14,7 @@ import { Badge } from '@repo/ui/core-elements/badge';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Toast } from '@repo/ui/core-elements/toast';
 import { Select } from '@repo/ui/core-elements/select';
+import { Switch } from '@repo/ui/core-elements/switch';
 import {
   getApplications,
   createApplication,
@@ -20,6 +22,8 @@ import {
   ApplicationError,
   type JobApplication,
   type ApplicationStatus,
+  type WorkType,
+  type SalaryCurrency,
   type CreateApplicationPayload,
 } from '@/lib/applications';
 import './applications-page.css';
@@ -48,15 +52,22 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
   const [jobDescription, setJobDescription] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>('draft');
   const [notes, setNotes] = useState('');
+  const [salaryMin, setSalaryMin] = useState('');
+  const [salaryMax, setSalaryMax] = useState('');
+  const [salaryCurrency, setSalaryCurrency] = useState<SalaryCurrency | ''>('');
+  const [workType, setWorkType] = useState<WorkType[]>([]);
+  const [location, setLocation] = useState('');
+  const [usCitizenOrPr, setUsCitizenOrPr] = useState<'null' | 'true' | 'false'>('null');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateUrlModal, setDuplicateUrlModal] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fetchingUrl, setFetchingUrl] = useState(false);
   const [fetchUrlError, setFetchUrlError] = useState<string | null>(null);
 
-  async function handleFetchUrl() {
-    const trimmed = urlInput.trim();
+  const handleFetchUrl = useCallback(async (urlOverride?: string) => {
+    const trimmed = (urlOverride ?? urlInput).trim();
     if (!trimmed) return;
     setFetchingUrl(true);
     setFetchUrlError(null);
@@ -72,17 +83,52 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
         job_title: string;
         job_description: string;
         image_url?: string | null;
+        salary_min?: number | null;
+        salary_max?: number | null;
+        salary_currency?: string;
+        work_type?: string[];
+        location?: string;
+        us_citizen_or_pr_required?: boolean | null;
       };
       if (data.company_name) setCompanyName(data.company_name);
       if (data.job_title) setJobTitle(data.job_title);
       if (data.job_description) setJobDescription(data.job_description);
       setImageUrl(data.image_url ?? null);
+      if (data.salary_min != null) setSalaryMin(String(data.salary_min));
+      if (data.salary_max != null) setSalaryMax(String(data.salary_max));
+      if (data.salary_currency) setSalaryCurrency(data.salary_currency as SalaryCurrency);
+      if (data.work_type?.length) setWorkType(data.work_type as WorkType[]);
+      if (data.location) setLocation(data.location);
+      if (data.us_citizen_or_pr_required != null) {
+        setUsCitizenOrPr(data.us_citizen_or_pr_required ? 'true' : 'false');
+      }
     } catch {
       setFetchUrlError(t('fetchUrlError'));
     } finally {
       setFetchingUrl(false);
     }
-  }
+  }, [urlInput, t]);
+
+  const handleUrlFocus = useCallback(async () => {
+    if (urlInput) return;
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text.startsWith('http://') || text.startsWith('https://')) {
+        setUrlInput(text);
+        void handleFetchUrl(text);
+      }
+    } catch {
+      // Clipboard permission denied — silently ignore
+    }
+  }, [urlInput, handleFetchUrl]);
+
+  const handleUrlPaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text').trim();
+    if (pasted.startsWith('http://') || pasted.startsWith('https://')) {
+      // Use a microtask so the input value is updated before fetching
+      setTimeout(() => void handleFetchUrl(pasted), 0);
+    }
+  }, [handleFetchUrl]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -98,10 +144,23 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
         notes: notes.trim(),
         job_url: urlInput.trim(),
         company_image_url: imageUrl,
+        salary_min: salaryMin ? parseFloat(salaryMin) : null,
+        salary_max: salaryMax ? parseFloat(salaryMax) : null,
+        salary_currency: salaryCurrency || '',
+        work_type: workType.length ? workType : null,
+        location: location.trim(),
+        us_citizen_or_pr_required: usCitizenOrPr === 'null' ? null : usCitizenOrPr === 'true',
       };
       const result = await createApplication(payload);
       onSave(result);
     } catch (err) {
+      if (err instanceof ApplicationError && err.status === 400) {
+        const jobUrlErrors = err.data.job_url;
+        if (Array.isArray(jobUrlErrors) && (jobUrlErrors as string[]).includes('duplicate')) {
+          setDuplicateUrlModal(true);
+          return;
+        }
+      }
       const isAuth = err instanceof ApplicationError && err.status === 401;
       setError(isAuth ? t('errorUnauthorized') : t('errorSave'));
     } finally {
@@ -123,21 +182,39 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
             label={t('jdUrlLabel')}
             value={urlInput}
             onChange={setUrlInput}
+            onFocus={handleUrlFocus}
+            onPaste={handleUrlPaste}
             type="url"
             required
             width="100%"
             aria-label={t('jdUrlLabel')}
+            disabled={fetchingUrl}
           />
         </Box>
-        <Button
-          text={fetchingUrl ? t('fetchingUrl') : t('fetchFromUrl')}
-          type="button"
-          size="md"
-          disabled={fetchingUrl || !urlInput.trim()}
-          onClick={handleFetchUrl}
-          kind='success'
-        />
+        <Box display="flex" marginTop={12} gap={8}>
+          {urlInput && (
+            <button
+              type="button"
+              className="applications__icon-btn"
+              onClick={() => setUrlInput('')}
+              aria-label={t('clearUrl')}
+            >
+              <Icon icon="/icons/delete.svg" size={18} color="var(--foreground, #171717)" />
+            </button>
+          )}
+          <button
+            type="button"
+            className="applications__icon-btn applications__icon-btn--fetch"
+            disabled={fetchingUrl || !urlInput.trim()}
+            onClick={() => void handleFetchUrl()}
+            aria-label={fetchingUrl ? t('fetchingUrl') : t('fetchFromUrl')}
+          >
+            <Icon icon="/icons/download.svg" size={18} color="var(--accent-foreground, white)" />
+          </button>
+        </Box>
       </Box>
+
+      {fetchingUrl && <ProgressBar label={t('fetchingUrl')} />}
 
       {fetchUrlError && (
         <Typography variant="caption" color="var(--error, #ef4444)">
@@ -154,6 +231,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
             required
             maxLength={200}
             width="100%"
+            disabled={fetchingUrl}
           />
         </Box>
         <Box flex={1} styles={{ minWidth: 200 }}>
@@ -164,6 +242,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
             required
             maxLength={200}
             width="100%"
+            disabled={fetchingUrl}
           />
         </Box>
       </Box>
@@ -174,6 +253,94 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
         onChange={(v) => setSelectedStatus(v as ApplicationStatus)}
         options={STATUSES.map((s) => ({ value: s, label: t(`statuses.${s}`) }))}
         width="100%"
+        disabled={fetchingUrl}
+      />
+
+      <TextInput
+        label={t('locationLabel')}
+        value={location}
+        onChange={setLocation}
+        maxLength={200}
+        width="100%"
+        disabled={fetchingUrl}
+      />
+
+      <Box display="flex" gap={8} flexWrap="wrap" alignItems="flex-end">
+        <Box flex={1} styles={{ minWidth: 140 }}>
+          <TextInput
+            label={t('salaryMinLabel')}
+            value={salaryMin}
+            onChange={setSalaryMin}
+            type="number"
+            min="0"
+            width="100%"
+            disabled={fetchingUrl}
+          />
+        </Box>
+        <Box flex={1} styles={{ minWidth: 140 }}>
+          <TextInput
+            label={t('salaryMaxLabel')}
+            value={salaryMax}
+            onChange={setSalaryMax}
+            type="number"
+            min="0"
+            width="100%"
+            disabled={fetchingUrl}
+          />
+        </Box>
+        <Box flex={1} styles={{ minWidth: 120 }}>
+          <Select
+            label={t('salaryCurrencyLabel')}
+            value={salaryCurrency}
+            onChange={(v) => setSalaryCurrency(v as SalaryCurrency | '')}
+            options={[
+              { value: '', label: t('salaryCurrencyPlaceholder') },
+              { value: 'USD', label: 'USD' },
+              { value: 'CAD', label: 'CAD' },
+              { value: 'EUR', label: 'EUR' },
+              { value: 'MXN', label: 'MXN' },
+              { value: 'GBP', label: 'GBP' },
+            ]}
+            width="100%"
+            disabled={fetchingUrl}
+          />
+        </Box>
+      </Box>
+
+      <Box display="flex" flexDirection="column" gap={6}>
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+          {t('workTypeLabel')}
+        </Typography>
+        <Box display="flex" flexDirection="column" gap={8} role="group" aria-label={t('workTypeLabel')}>
+          {(['remote', 'onsite', 'hybrid'] as WorkType[]).map((wt) => (
+            <Box key={wt} display="flex" alignItems="center" justifyContent="space-between" gap={12}>
+              <Typography variant="body">{t(`workTypes.${wt}`)}</Typography>
+              <Switch
+                checked={workType.includes(wt)}
+                onChange={(checked) =>
+                  setWorkType((prev) =>
+                    checked ? [...prev, wt] : prev.filter((x) => x !== wt),
+                  )
+                }
+                disabled={fetchingUrl}
+                aria-label={t(`workTypes.${wt}`)}
+              />
+            </Box>
+          ))}
+        </Box>
+      </Box>
+
+      <Select
+        label={t('usCitizenOrPrLabel')}
+        value={usCitizenOrPr}
+        onChange={(v) => setUsCitizenOrPr(v as 'null' | 'true' | 'false')}
+        options={[
+          { value: 'null', label: t('usCitizenOrPr.null') },
+          { value: 'true', label: t('usCitizenOrPr.true') },
+          { value: 'false', label: t('usCitizenOrPr.false') },
+        ]}
+        width="100%"
+        disabled={fetchingUrl}
       />
 
       <Box>
@@ -188,6 +355,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
           required
           width="100%"
           aria-label={t('jdLabel')}
+          disabled={fetchingUrl}
         />
       </Box>
 
@@ -202,8 +370,17 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
           onChange={setNotes}
           width="100%"
           aria-label={t('notesLabel')}
+          disabled={fetchingUrl}
         />
       </Box>
+
+      {duplicateUrlModal && (
+        <ConfirmationModal
+          title={t('duplicateUrlTitle')}
+          text={t('duplicateUrlText')}
+          okCallback={() => setDuplicateUrlModal(false)}
+        />
+      )}
 
       {error && (
         <Typography variant="caption" color="var(--error, #ef4444)">

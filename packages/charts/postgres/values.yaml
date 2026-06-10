@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────
-# PostgreSQL – Helm Values
+# PostgreSQL - Helm Values
 # ─────────────────────────────────────────────────────────────
 
 # -- Number of old ReplicaSets to keep for rollbacks (default: 2)
@@ -40,7 +40,7 @@ auth:
 env: {}
   # POSTGRES_HOST_AUTH_METHOD: scram-sha-256
 
-# Sensitive values – reference existing Kubernetes Secrets.
+# Sensitive values - reference existing Kubernetes Secrets.
 # envFromSecret:
 #   - name: POSTGRES_PASSWORD
 #     secretName: postgres-secrets
