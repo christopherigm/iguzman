@@ -14,6 +14,7 @@ import { Slider } from '@repo/ui/core-elements/slider';
 import type { SliderStep } from '@repo/ui/core-elements/slider';
 import { saveOnboarding, getProfile, uploadResume } from '@/lib/auth';
 import type { ResumeImportResult } from '@/lib/auth';
+import { getPopularTechStacks } from '@/lib/career';
 import './onboarding-form.css';
 
 // ── Readiness handshake ──────────────────────────────────────────────────────
@@ -65,7 +66,7 @@ const YEARS_STEPS: SliderStep[] = [
   { value: 15, label: '15+' },
 ];
 
-const TECH_SUGGESTIONS = [
+const FALLBACK_TECH_SUGGESTIONS = [
   'TypeScript', 'JavaScript', 'Python', 'Go', 'Rust', 'Java', 'C#', 'Ruby', 'PHP',
   'React', 'Next.js', 'Vue', 'Angular', 'Svelte',
   'Node.js', 'Django', 'FastAPI', 'Spring Boot', '.NET',
@@ -130,9 +131,11 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 function TechTagInput({
   tags,
   onChange,
+  suggestions,
 }: {
   tags: string[];
   onChange: (tags: string[]) => void;
+  suggestions?: string[];
 }) {
   const t = useTranslations('OnboardingPage');
   const [input, setInput] = useState('');
@@ -218,7 +221,7 @@ function TechTagInput({
           {t('techStackHint')}
         </Typography>
         <Box display="flex" flexWrap="wrap" gap={6}>
-          {TECH_SUGGESTIONS.map((tech) => (
+          {(suggestions ?? FALLBACK_TECH_SUGGESTIONS).map((tech) => (
             <Button
               key={tech}
               unstyled
@@ -252,6 +255,7 @@ export function OnboardingForm() {
   const [techStack, setTechStack] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [popularTechSuggestions, setPopularTechSuggestions] = useState<string[]>(FALLBACK_TECH_SUGGESTIONS);
 
   type ResumeState = 'idle' | 'uploading' | 'done' | 'error' | 'skipped';
   const [resumeState, setResumeState] = useState<ResumeState>('idle');
@@ -260,7 +264,7 @@ export function OnboardingForm() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Redirect if onboarding already complete
+  // Redirect if onboarding already complete; load popular tech suggestions
   useEffect(() => {
     getProfile()
       .then((profile) => {
@@ -271,6 +275,15 @@ export function OnboardingForm() {
       .catch(() => {
         // not logged in — proxy will redirect to /auth
       });
+    getPopularTechStacks()
+      .then((res) => {
+        const lower = new Set(FALLBACK_TECH_SUGGESTIONS.map((s) => s.toLowerCase()));
+        const apiOnly = res.results
+          .map((ts) => ts.name)
+          .filter((n) => !lower.has(n.toLowerCase()));
+        setPopularTechSuggestions([...FALLBACK_TECH_SUGGESTIONS, ...apiOnly]);
+      })
+      .catch(() => {});
   }, [router]);
 
   const handleFinish = useCallback(async () => {
@@ -378,7 +391,11 @@ export function OnboardingForm() {
 
         {/* ── Step 2: Tech stack ── */}
         {step === 2 && (
-          <TechTagInput tags={techStack} onChange={setTechStack} />
+          <TechTagInput
+            tags={techStack}
+            onChange={setTechStack}
+            suggestions={popularTechSuggestions}
+          />
         )}
 
         {/* ── Step 3: Resume upload ── */}
@@ -446,11 +463,12 @@ export function OnboardingForm() {
                     skills: resumeResult.skills_imported,
                   })}
                 </Typography>
-                {(resumeResult.work_experience_imported > 0 || resumeResult.education_imported > 0) && (
+                {(resumeResult.work_experience_imported > 0 || resumeResult.education_imported > 0 || resumeResult.projects_imported > 0) && (
                   <Typography variant="label" color="var(--foreground)">
                     {t('resumeCareerSuccess', {
                       jobs: resumeResult.work_experience_imported,
                       degrees: resumeResult.education_imported,
+                      projects: resumeResult.projects_imported,
                     })}
                   </Typography>
                 )}
@@ -559,6 +577,7 @@ export function OnboardingForm() {
                         bullets: resumeResult.bullets_imported,
                         jobs: resumeResult.work_experience_imported,
                         degrees: resumeResult.education_imported,
+                        projects: resumeResult.projects_imported,
                       })
                     : t('reviewResumeSkipped')}
                 </Typography>

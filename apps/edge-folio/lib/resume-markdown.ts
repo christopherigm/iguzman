@@ -1,4 +1,6 @@
 import type { TailoredBullet } from './applications';
+import type { WorkExperience, Education, Language, Project } from './career';
+import type { Skill } from './matrix';
 
 const CATEGORY_LABELS: Record<string, string> = {
   impact: 'Impact',
@@ -6,6 +8,23 @@ const CATEGORY_LABELS: Record<string, string> = {
   leadership: 'Leadership',
   collaboration: 'Collaboration',
   other: 'Other',
+};
+
+const DEGREE_LABELS: Record<string, string> = {
+  bachelor: "Bachelor's",
+  master: "Master's",
+  phd: 'PhD / Doctorate',
+  associate: 'Associate',
+  certificate: 'Certificate',
+  bootcamp: 'Bootcamp',
+  other: 'Other',
+};
+
+const PROFICIENCY_LABELS: Record<string, string> = {
+  native: 'Native',
+  fluent: 'Fluent',
+  professional: 'Professional proficiency',
+  basic: 'Basic',
 };
 
 function groupByCategory(bullets: TailoredBullet[]): Map<string, TailoredBullet[]> {
@@ -18,30 +37,64 @@ function groupByCategory(bullets: TailoredBullet[]): Map<string, TailoredBullet[
   return map;
 }
 
+function formatDateRange(startDate: string, endDate: string | null, isCurrent: boolean): string {
+  const fmt = (d: string) => {
+    const [year, month] = d.split('-');
+    return `${month}/${year}`;
+  };
+  const start = fmt(startDate);
+  if (isCurrent) return `${start} – Present`;
+  if (!endDate) return start;
+  return `${start} – ${fmt(endDate)}`;
+}
+
 export interface ResumeMarkdownOptions {
   fullName: string;
   email: string;
   jobTitle: string;
+  phone?: string;
+  location?: string;
+  githubUrl?: string;
+  linkedinUrl?: string;
   targetRole: string;
   targetCompany: string;
   tailoredBullets: TailoredBullet[];
   coverLetter?: string;
+  skills?: Pick<Skill, 'name' | 'proficiency'>[];
+  workExperiences?: WorkExperience[];
+  educations?: Education[];
+  languages?: Language[];
+  projects?: Project[];
 }
 
 export function buildResumeMarkdown({
   fullName,
   email,
   jobTitle,
+  phone,
+  location,
+  githubUrl,
+  linkedinUrl,
   targetRole,
   targetCompany,
   tailoredBullets,
   coverLetter,
+  skills,
+  workExperiences,
+  educations,
+  languages,
+  projects,
 }: ResumeMarkdownOptions): string {
   const lines: string[] = [];
 
   lines.push(`# ${fullName}`);
-  const meta = [jobTitle, email].filter(Boolean).join(' · ');
-  if (meta) lines.push(meta);
+
+  const contactParts = [jobTitle, email, phone, location].filter(Boolean);
+  if (contactParts.length) lines.push(contactParts.join(' · '));
+
+  const linkParts = [githubUrl, linkedinUrl].filter(Boolean);
+  if (linkParts.length) lines.push(linkParts.join(' · '));
+
   lines.push('');
   lines.push('---');
   lines.push('');
@@ -64,6 +117,66 @@ export function buildResumeMarkdown({
     lines.push('');
     for (const b of bullets) {
       lines.push(`- ${b.tailored_text}`);
+    }
+    lines.push('');
+  }
+
+  if (skills && skills.length > 0) {
+    const sorted = [...skills].sort((a, b) => b.proficiency - a.proficiency);
+    lines.push('## Technical Skills');
+    lines.push('');
+    lines.push(sorted.map((s) => s.name).join(', '));
+    lines.push('');
+  }
+
+  if (workExperiences && workExperiences.length > 0) {
+    lines.push('## Professional Experience');
+    lines.push('');
+    for (const exp of workExperiences) {
+      lines.push(`### ${exp.title} — ${exp.company}`);
+      lines.push(`*${formatDateRange(exp.start_date, exp.end_date, exp.is_current)}${exp.location ? `  ·  ${exp.location}` : ''}*`);
+      if (exp.description) {
+        lines.push('');
+        lines.push(exp.description);
+      }
+      lines.push('');
+    }
+  }
+
+  if (projects && projects.length > 0) {
+    lines.push('## Personal Projects');
+    lines.push('');
+    for (const proj of projects) {
+      lines.push(`### ${proj.name}${proj.url ? ` — ${proj.url}` : ''}`);
+      if (proj.tech_stack && proj.tech_stack.length > 0) {
+        lines.push(`**Tech:** ${proj.tech_stack.map((ts) => ts.name).join(', ')}`);
+      }
+      if (proj.description) {
+        lines.push('');
+        lines.push(proj.description);
+      }
+      lines.push('');
+    }
+  }
+
+  if (educations && educations.length > 0) {
+    lines.push('## Education');
+    lines.push('');
+    for (const edu of educations) {
+      const degreeLabel = DEGREE_LABELS[edu.degree] ?? edu.degree;
+      const degree = edu.field_of_study ? `${degreeLabel} in ${edu.field_of_study}` : degreeLabel;
+      lines.push(`### ${degree}`);
+      const endYear = edu.is_current ? 'Present' : (edu.end_year ?? '');
+      lines.push(`*${edu.institution}  ·  ${edu.start_year} – ${endYear}*`);
+      lines.push('');
+    }
+  }
+
+  if (languages && languages.length > 0) {
+    lines.push('## Languages');
+    lines.push('');
+    for (const lang of languages) {
+      lines.push(`- ${lang.name} (${PROFICIENCY_LABELS[lang.proficiency] ?? lang.proficiency})`);
     }
     lines.push('');
   }

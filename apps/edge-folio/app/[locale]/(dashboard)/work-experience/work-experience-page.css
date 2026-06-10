@@ -85,6 +85,20 @@
   cursor: not-allowed;
 }
 
+/* ── Project URL link ─────────────────────────────────────────────────────── */
+
+.work-exp__project-link {
+  text-decoration: none;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.work-exp__project-link:hover {
+  text-decoration: underline;
+}
+
 /* ── Enhance preview panel ────────────────────────────────────────────────── */
 
 .work-exp__enhance-preview {
@@ -92,4 +106,64 @@
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--primary, #06b6d4) 30%, transparent);
   background: color-mix(in srgb, var(--primary, #06b6d4) 5%, transparent);
+}
+
+/* ── Tech Stack picker ────────────────────────────────────────────────────── */
+
+.work-exp__tech-tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  color: var(--primary, #06b6d4);
+  font-size: 0.875rem;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.1s ease;
+}
+
+.work-exp__tech-tag-remove:hover {
+  opacity: 1;
+}
+
+.work-exp__tech-suggestion {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.work-exp__tech-suggestion:hover {
+  border-color: var(--primary, #06b6d4);
+  background: color-mix(in srgb, var(--primary, #06b6d4) 8%, transparent);
+}
+
+.work-exp__tech-add {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--primary, #06b6d4);
+  background: transparent;
+  cursor: pointer;
+  color: var(--primary, #06b6d4);
+  font-size: 0.8125rem;
+  transition: background 0.12s ease;
+}
+
+.work-exp__tech-add:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary, #06b6d4) 8%, transparent);
+}
+
+.work-exp__tech-add:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

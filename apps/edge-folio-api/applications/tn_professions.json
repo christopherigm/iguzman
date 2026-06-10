@@ -1,0 +1,489 @@
+[
+  {
+    "name": "Accountant",
+    "tn_category": "General",
+    "description": "Financial record management, accounting analysis, and business financial services.",
+    "requirements": "Baccalaureate or Licenciatura degree; or C.P.A., C.A., C.G.A., or C.M.A. credential."
+  },
+  {
+    "name": "Architect",
+    "tn_category": "General",
+    "description": "Architectural design, project planning, and construction oversight.",
+    "requirements": "Baccalaureate or Licenciatura degree; or state/provincial license."
+  },
+  {
+    "name": "Computer Systems Analyst",
+    "tn_category": "General",
+    "description": "Analysis and design of IT systems, software, and technical computing infrastructure.",
+    "requirements": "Baccalaureate or Licenciatura degree; or post-secondary diploma or certificate and three years experience."
+  },
+  {
+    "name": "Disaster Relief Insurance Claims Adjuster",
+    "tn_category": "General",
+    "description": "Evaluation and processing of insurance claims arising from disaster or catastrophic events.",
+    "requirements": "Baccalaureate or Licenciatura degree and disaster relief training; or three years claims adjustment experience plus disaster relief training. Must be employed by a Canadian or Mexican employer."
+  },
+  {
+    "name": "Economist",
+    "tn_category": "General",
+    "description": "Economic data analysis, modeling, forecasting, and policy research.",
+    "requirements": "Baccalaureate or Licenciatura degree in Economics or a closely related field."
+  },
+  {
+    "name": "Engineer — Aerospace",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design, development, and testing of aircraft, spacecraft, missiles, and related systems and equipment.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Agricultural",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Application of engineering principles to agricultural production, processing, and storage systems.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Biomedical",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Application of engineering principles to biology and medicine for healthcare technologies and devices.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Chemical",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design and optimization of processes and equipment for large-scale chemical manufacturing and production.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Civil",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design, planning, and supervision of construction of infrastructure such as roads, bridges, buildings, and water systems.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Computer",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design and development of computer hardware, embedded systems, and the hardware-software interface.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Electrical",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design, development, and testing of electrical equipment, power systems, and components.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Electronic",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design and development of electronic components, circuits, and communication systems.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Environmental",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Development of engineering solutions to environmental problems including pollution control, remediation, and sustainable systems.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Industrial",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Optimization of complex processes, systems, and organizations for efficiency and productivity.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Mechanical",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design, development, and manufacturing of mechanical devices, machines, and thermal systems.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Nuclear",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design and operation of nuclear equipment, reactors, and processes for energy production or research.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Petroleum",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design of methods for extracting oil and gas from underground deposits safely and efficiently.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Software",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Design, development, and maintenance of software systems and applications using engineering principles.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Engineer — Structural",
+    "tn_category": "General",
+    "tn_official_name": "Engineer",
+    "description": "Analysis and design of structures to safely withstand loads, stresses, and environmental forces.",
+    "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
+  },
+  {
+    "name": "Forester / Sylviculturist",
+    "tn_category": "General",
+    "tn_official_name": "Forester",
+    "description": "Forest management, conservation, timber production, and cultivation of forest resources.",
+    "requirements": "Baccalaureate or Licenciatura degree; or state/provincial license."
+  },
+  {
+    "name": "Graphic Designer",
+    "tn_category": "General",
+    "description": "Visual communication, branding, layout, and graphic design for print and digital media.",
+    "requirements": "Baccalaureate or Licenciatura degree; or post-secondary diploma or certificate and three years experience."
+  },
+  {
+    "name": "Hotel Manager",
+    "tn_category": "General",
+    "description": "Operations management of a hotel or restaurant facility, including staffing, finance, and guest services.",
+    "requirements": "Baccalaureate or Licenciatura degree in hotel/restaurant management; or post-secondary diploma or certificate and three years experience. Must be supervised by a professional."
+  },
+  {
+    "name": "Industrial Designer",
+    "tn_category": "General",
+    "description": "Product design and development integrating aesthetic, functional, and manufacturing considerations.",
+    "requirements": "Baccalaureate or Licenciatura degree; or post-secondary diploma or certificate and three years experience."
+  },
+  {
+    "name": "Interior Designer",
+    "tn_category": "General",
+    "description": "Planning and design of indoor spaces for aesthetics, function, and code compliance.",
+    "requirements": "Baccalaureate or Licenciatura degree; or post-secondary diploma or certificate and three years experience."
+  },
+  {
+    "name": "Land Surveyor",
+    "tn_category": "General",
+    "description": "Measurement and mapping of land boundaries, topography, and property lines.",
+    "requirements": "Baccalaureate or Licenciatura degree; or state/provincial/federal license."
+  },
+  {
+    "name": "Landscape Architect",
+    "tn_category": "General",
+    "description": "Outdoor and environmental space planning, site design, and landscape development.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Lawyer / Attorney",
+    "tn_category": "General",
+    "tn_official_name": "Lawyer",
+    "description": "Legal representation, counsel, and advisory services. Includes Notaries in Quebec.",
+    "requirements": "LL.B., J.D., LL.L., B.C.L., or Licenciatura degree (five years); or membership in a state/provincial bar."
+  },
+  {
+    "name": "Librarian",
+    "tn_category": "General",
+    "description": "Library administration, information resource management, and research support services.",
+    "requirements": "M.L.S. or B.L.S., for which another Baccalaureate or Licenciatura degree was a prerequisite."
+  },
+  {
+    "name": "Management Consultant",
+    "tn_category": "General",
+    "description": "Organizational strategy, process improvement, and business advisory services.",
+    "requirements": "Baccalaureate or Licenciatura degree; or five years experience as a management consultant, or five years experience in a specialty related to the consulting agreement."
+  },
+  {
+    "name": "Mathematician",
+    "tn_category": "General",
+    "description": "Mathematical research, theoretical analysis, and applied problem solving.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Research Assistant (Post-Secondary)",
+    "tn_category": "General",
+    "tn_official_name": "Research Assistant",
+    "description": "Support for academic or applied research at a university or post-secondary institution.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Scientific Technician / Technologist",
+    "tn_category": "General",
+    "description": "Technical laboratory and field support in scientific disciplines including agriculture, astronomy, biology, chemistry, engineering, forestry, geology, geophysics, meteorology, or physics.",
+    "requirements": "Theoretical knowledge in one of the following fields: agriculture, astronomy, biology, chemistry, engineering, forestry, geology, geophysics, meteorology, or physics; and must be able to solve practical problems in that discipline. Post-secondary diploma or certificate with relevant experience typically required."
+  },
+  {
+    "name": "Social Worker",
+    "tn_category": "General",
+    "description": "Client support, case management, counseling, and community social services.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Statistician",
+    "tn_category": "General",
+    "description": "Statistical data analysis, modeling, interpretation, and research design.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Technical Publications Writer",
+    "tn_category": "General",
+    "description": "Creation of technical documentation, manuals, guides, and written communications for technical products or services.",
+    "requirements": "Baccalaureate or Licenciatura degree; or post-secondary diploma or certificate and three years experience."
+  },
+  {
+    "name": "Urban Planner / Geographer",
+    "tn_category": "General",
+    "tn_official_name": "Urban Planner/Geographer",
+    "description": "City and regional planning, land use policy, spatial analysis, and geographic research.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Vocational Counselor",
+    "tn_category": "General",
+    "description": "Career guidance, job placement assistance, and vocational training support.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Dentist",
+    "tn_category": "Medical",
+    "description": "Oral health care, dental treatment, preventive dentistry, and oral surgery.",
+    "requirements": "D.D.S., D.M.D., Doctor en Odontologia, or Doctor en Cirugia Dental; or state/provincial license."
+  },
+  {
+    "name": "Dietitian",
+    "tn_category": "Medical",
+    "description": "Nutritional assessment, clinical diet planning, and dietary counseling for individuals and groups.",
+    "requirements": "Baccalaureate or Licenciatura degree; or state/provincial license."
+  },
+  {
+    "name": "Medical Laboratory Technologist",
+    "tn_category": "Medical",
+    "description": "Laboratory specimen analysis, diagnostic testing, and clinical lab procedures.",
+    "requirements": "Baccalaureate or Licenciatura degree; or post-secondary diploma or certificate and three years experience. VisaScreen certificate required for Mexicans entering the United States."
+  },
+  {
+    "name": "Nutritionist",
+    "tn_category": "Medical",
+    "description": "Food and dietary guidance, nutrition education, and counseling for health promotion.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Occupational Therapist",
+    "tn_category": "Medical",
+    "description": "Rehabilitation through therapeutic activities to improve patients' ability to perform daily living and work tasks.",
+    "requirements": "Baccalaureate or Licenciatura degree; or state/provincial license."
+  },
+  {
+    "name": "Pharmacist",
+    "tn_category": "Medical",
+    "description": "Medication dispensing, pharmaceutical counseling, drug interaction review, and pharmacy management.",
+    "requirements": "Baccalaureate or Licenciatura degree; or state/provincial license."
+  },
+  {
+    "name": "Physical Therapist / Physiotherapist",
+    "tn_category": "Medical",
+    "tn_official_name": "Physical Therapist/Physiotherapist",
+    "description": "Physical rehabilitation, movement therapy, pain management, and injury recovery.",
+    "requirements": "Baccalaureate or Licenciatura degree; or state/provincial license."
+  },
+  {
+    "name": "Physician (Teaching or Research Only)",
+    "tn_category": "Medical",
+    "tn_official_name": "Physician",
+    "description": "Medical instruction at a university or research institution. Clinical patient care is not permitted under this TN category.",
+    "requirements": "M.D. or Doctor en Medicina; or state/provincial license. Strictly limited to teaching or research roles — no clinical practice."
+  },
+  {
+    "name": "Psychologist",
+    "tn_category": "Medical",
+    "description": "Psychological assessment, diagnosis, treatment, and mental health counseling.",
+    "requirements": "State/provincial license; or Licenciatura degree."
+  },
+  {
+    "name": "Recreational Therapist",
+    "tn_category": "Medical",
+    "description": "Therapeutic recreation programming and activity facilitation to improve patient health and well-being.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Registered Nurse",
+    "tn_category": "Medical",
+    "description": "Patient care, clinical nursing, health monitoring, and coordination of medical treatment.",
+    "requirements": "State/provincial license; or Licenciatura degree in nursing. VisaScreen certificate required for Mexicans entering the United States."
+  },
+  {
+    "name": "Veterinarian",
+    "tn_category": "Medical",
+    "description": "Veterinary medicine, animal surgery, diagnostics, and animal health care.",
+    "requirements": "D.V.M., D.M.V., or Doctor en Veterinaria; or state/provincial license."
+  },
+  {
+    "name": "Agriculturist / Agronomist",
+    "tn_category": "Scientist",
+    "tn_official_name": "Agriculturist",
+    "description": "Agricultural research, crop management, soil science application, and farm systems optimization.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Animal Breeder",
+    "tn_category": "Scientist",
+    "description": "Genetic selection and structured breeding programs to improve livestock and animal traits.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Animal Scientist",
+    "tn_category": "Scientist",
+    "description": "Research on animal biology, nutrition, reproduction, and production systems.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Apiculturist",
+    "tn_category": "Scientist",
+    "description": "Honeybee colony management, apiary science, pollination research, and honey production.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Astronomer",
+    "tn_category": "Scientist",
+    "description": "Celestial observation, space science research, astrophysics, and cosmological study.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Biochemist / Biophysicist",
+    "tn_category": "Scientist",
+    "tn_official_name": "Biochemist",
+    "description": "Research on the chemical and physical processes within and related to living organisms.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Biologist",
+    "tn_category": "Scientist",
+    "description": "Study of living organisms, ecosystems, cellular processes, and biological phenomena.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Chemist",
+    "tn_category": "Scientist",
+    "description": "Research and analysis of chemical compounds, reactions, properties, and materials.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Dairy Scientist",
+    "tn_category": "Scientist",
+    "description": "Research on dairy production systems, milk quality, herd management, and dairy processing.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Entomologist",
+    "tn_category": "Scientist",
+    "description": "Study of insects, their behavior, ecology, physiology, and management strategies.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Epidemiologist",
+    "tn_category": "Scientist",
+    "description": "Investigation and analysis of disease patterns, public health outbreaks, and population health risks.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Geneticist",
+    "tn_category": "Scientist",
+    "description": "Research on heredity, gene expression, genetic variation, and genomic science.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Geochemist",
+    "tn_category": "Scientist",
+    "description": "Study of the chemical composition and processes of the Earth, including rocks, soils, and water systems.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Geologist",
+    "tn_category": "Scientist",
+    "description": "Earth science research including study of rock formations, geological history, and subsurface structures.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Geophysicist",
+    "tn_category": "Scientist",
+    "description": "Application of physics to Earth systems including seismology, geomagnetism, and gravity. Includes Oceanographer in the Mexico/US context.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Horticulturist",
+    "tn_category": "Scientist",
+    "description": "Plant cultivation science, garden and orchard management, and landscape botany research.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Meteorologist",
+    "tn_category": "Scientist",
+    "description": "Atmospheric science research, weather forecasting, and climate analysis.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Pharmacologist",
+    "tn_category": "Scientist",
+    "description": "Research on drug effects, mechanisms of action, pharmacokinetics, and drug-biological interactions.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Physicist",
+    "tn_category": "Scientist",
+    "description": "Research on matter, energy, and fundamental physical laws. Includes Oceanographer in the Canada context.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Plant Breeder",
+    "tn_category": "Scientist",
+    "description": "Crop genetic improvement, plant variety development, and applied plant genetics.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Poultry Scientist",
+    "tn_category": "Scientist",
+    "description": "Research on poultry production systems, avian nutrition, genetics, and flock management.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Range Manager / Conservationist",
+    "tn_category": "Scientist",
+    "tn_official_name": "Range Manager/Range Conservationist",
+    "description": "Management and conservation of grassland, rangeland, and natural range resources.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Soil Scientist",
+    "tn_category": "Scientist",
+    "description": "Research on soil composition, physical and chemical properties, and land management.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Zoologist / Wildlife Biologist",
+    "tn_category": "Scientist",
+    "tn_official_name": "Zoologist",
+    "description": "Study of animal species, wildlife ecology, behavior, and conservation biology.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "College Teacher",
+    "tn_category": "Teacher",
+    "description": "Instruction and academic teaching at a college or post-secondary institution.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "Seminary Teacher",
+    "tn_category": "Teacher",
+    "description": "Religious and theological instruction at a seminary or divinity school.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  },
+  {
+    "name": "University Teacher",
+    "tn_category": "Teacher",
+    "description": "Instruction and/or research at a university or higher education institution.",
+    "requirements": "Baccalaureate or Licenciatura degree."
+  }
+]

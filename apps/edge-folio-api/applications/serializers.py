@@ -11,10 +11,10 @@ class JobApplicationSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'company_name', 'job_title', 'job_description',
             'status', 'notes', 'job_url', 'company_image', 'company_image_url',
-            'tailored_bullets', 'cover_letter',
+            'tailored_bullets', 'cover_letter', 'nafta_letter',
             'created', 'modified',
         )
-        read_only_fields = ('id', 'created', 'modified', 'company_image_url', 'tailored_bullets', 'cover_letter')
+        read_only_fields = ('id', 'created', 'modified', 'company_image_url', 'tailored_bullets', 'cover_letter', 'nafta_letter')
         extra_kwargs = {'company_image': {'write_only': True}}
 
     def get_company_image_url(self, obj):

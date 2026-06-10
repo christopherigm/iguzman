@@ -16,7 +16,7 @@ class JobApplicationAdmin(admin.ModelAdmin):
     list_filter = ('status',)
     search_fields = ('job_title', 'company_name', 'user__email')
     raw_id_fields = ('user',)
-    readonly_fields = ('tailored_bullets', 'cover_letter', 'created', 'modified')
+    readonly_fields = ('tailored_bullets', 'cover_letter', 'nafta_letter', 'created', 'modified')
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)

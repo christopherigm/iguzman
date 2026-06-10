@@ -1,7 +1,8 @@
 from django.contrib import admin
+from django.core.cache import cache
 
-from .models import Education, WorkExperience
-from .views import _invalidate_education, _invalidate_work_experience
+from .models import Education, Language, Project, TechStack, WorkExperience
+from .views import _invalidate_education, _invalidate_language, _invalidate_project, _invalidate_work_experience
 
 
 @admin.register(WorkExperience)
@@ -43,4 +44,54 @@ class EducationAdmin(admin.ModelAdmin):
 
     def delete_model(self, request, obj):
         _invalidate_education(obj.user_id, obj.pk)
+        super().delete_model(request, obj)
+
+
+@admin.register(Language)
+class LanguageAdmin(admin.ModelAdmin):
+    list_display = ['user', 'name', 'proficiency', 'order']
+    list_filter = ['proficiency']
+    search_fields = ['user__email', 'name']
+    readonly_fields = ['created', 'modified']
+    fields = ['user', 'name', 'proficiency', 'order', 'enabled', 'created', 'modified']
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        _invalidate_language(obj.user_id, obj.pk)
+
+    def delete_model(self, request, obj):
+        _invalidate_language(obj.user_id, obj.pk)
+        super().delete_model(request, obj)
+
+
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    list_display = ['user', 'name', 'url', 'order']
+    search_fields = ['user__email', 'name']
+    readonly_fields = ['created', 'modified']
+    fields = ['user', 'name', 'url', 'description', 'tech_stack', 'order', 'enabled', 'created', 'modified']
+    filter_horizontal = ['tech_stack']
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        _invalidate_project(obj.user_id, obj.pk)
+
+    def delete_model(self, request, obj):
+        _invalidate_project(obj.user_id, obj.pk)
+        super().delete_model(request, obj)
+
+
+@admin.register(TechStack)
+class TechStackAdmin(admin.ModelAdmin):
+    list_display = ['name']
+    search_fields = ['name']
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        cache.delete('career:tech_stacks')
+        cache.delete('career:tech_stacks_popular')
+
+    def delete_model(self, request, obj):
+        cache.delete('career:tech_stacks')
+        cache.delete('career:tech_stacks_popular')
         super().delete_model(request, obj)

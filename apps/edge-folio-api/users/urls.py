@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from .views import (
+    ContactInfoView,
     LoginView,
     OnboardingView,
     PasskeyAuthenticationOptionsView,
@@ -27,6 +28,7 @@ urlpatterns = [
     path('token/verify/', TokenVerifyView.as_view(), name='auth-token-verify'),
     path('profile/', ProfileView.as_view(), name='auth-profile'),
     path('onboarding/', OnboardingView.as_view(), name='auth-onboarding'),
+    path('contact/', ContactInfoView.as_view(), name='contact-info'),
     path('resume/', ResumeUploadView.as_view(), name='auth-resume'),
     path('profile/picture/', ProfilePictureView.as_view(), name='auth-profile-picture'),
     path('verify-email/<uuid:token>/', VerifyEmailView.as_view(), name='auth-verify-email'),

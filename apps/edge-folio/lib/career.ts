@@ -73,6 +73,7 @@ async function careerFetch<T>(url: string, init?: RequestInit): Promise<T> {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new CareerError(res.status, data);
   }
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
@@ -126,4 +127,115 @@ export function updateEducation(id: number, payload: Partial<EducationPayload>):
 
 export function deleteEducation(id: number): Promise<void> {
   return careerFetch(`/api/career/education/${id}`, { method: 'DELETE' });
+}
+
+// ── Languages ─────────────────────────────────────────────────────────────────
+
+export type LanguageProficiency = 'native' | 'fluent' | 'professional' | 'basic';
+
+export interface Language {
+  id: number;
+  name: string;
+  proficiency: LanguageProficiency;
+  order: number;
+  created: string;
+  modified: string;
+}
+
+export interface LanguagePayload {
+  name: string;
+  proficiency: LanguageProficiency;
+  order?: number;
+}
+
+export function getLanguages(): Promise<ListResponse<Language>> {
+  return careerFetch('/api/career/languages');
+}
+
+export function createLanguage(payload: LanguagePayload): Promise<Language> {
+  return careerFetch('/api/career/languages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateLanguage(id: number, payload: Partial<LanguagePayload>): Promise<Language> {
+  return careerFetch(`/api/career/languages/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteLanguage(id: number): Promise<void> {
+  return careerFetch(`/api/career/languages/${id}`, { method: 'DELETE' });
+}
+
+// ── Tech Stack ────────────────────────────────────────────────────────────────
+
+export interface TechStack {
+  id: number;
+  name: string;
+}
+
+export function getTechStacks(): Promise<ListResponse<TechStack>> {
+  return careerFetch('/api/career/tech-stack');
+}
+
+export function getPopularTechStacks(): Promise<ListResponse<TechStack>> {
+  return careerFetch('/api/career/tech-stack/popular');
+}
+
+export function createTechStack(name: string): Promise<TechStack> {
+  return careerFetch('/api/career/tech-stack', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+}
+
+// ── Projects ──────────────────────────────────────────────────────────────────
+
+export interface Project {
+  id: number;
+  name: string;
+  url: string;
+  description: string;
+  tech_stack: TechStack[];
+  order: number;
+  created: string;
+  modified: string;
+}
+
+export interface ProjectPayload {
+  name: string;
+  url?: string;
+  description?: string;
+  tech_stack?: number[];
+  order?: number;
+}
+
+export function getProjects(): Promise<ListResponse<Project>> {
+  return careerFetch('/api/career/projects');
+}
+
+export function createProject(payload: ProjectPayload): Promise<Project> {
+  return careerFetch('/api/career/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateProject(id: number, payload: Partial<ProjectPayload>): Promise<Project> {
+  return careerFetch(`/api/career/projects/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteProject(id: number): Promise<void> {
+  return careerFetch(`/api/career/projects/${id}`, { method: 'DELETE' });
 }

@@ -59,3 +59,50 @@ class Education(Common):
 
     def __str__(self):
         return f'{self.degree} at {self.institution} ({self.user.email})'
+
+
+LANGUAGE_PROFICIENCY_CHOICES = [
+    ('native', 'Native'),
+    ('fluent', 'Fluent'),
+    ('professional', 'Professional proficiency'),
+    ('basic', 'Basic'),
+]
+
+
+class Language(Common):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='languages')
+    name = models.CharField(max_length=100)
+    proficiency = models.CharField(max_length=20, choices=LANGUAGE_PROFICIENCY_CHOICES, default='professional')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'name']
+        unique_together = [('user', 'name')]
+
+    def __str__(self):
+        return f'{self.name} ({self.proficiency}) — {self.user.email}'
+
+
+class TechStack(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Project(Common):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
+    name = models.CharField(max_length=200)
+    url = models.URLField(max_length=300, blank=True, default='')
+    description = models.TextField(blank=True, default='')
+    order = models.PositiveIntegerField(default=0)
+    tech_stack = models.ManyToManyField(TechStack, blank=True, related_name='projects')
+
+    class Meta:
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return f'{self.name} ({self.user.email})'

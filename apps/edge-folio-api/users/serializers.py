@@ -133,11 +133,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
     job_title = serializers.SerializerMethodField()
     years_of_experience = serializers.SerializerMethodField()
     preferred_stack = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
+    location = serializers.SerializerMethodField()
+    github_url = serializers.SerializerMethodField()
+    linkedin_url = serializers.SerializerMethodField()
+    summary = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ('id', 'email', 'first_name', 'last_name', 'profile_picture',
-                  'job_title', 'years_of_experience', 'preferred_stack')
+                  'job_title', 'years_of_experience', 'preferred_stack',
+                  'phone', 'location', 'github_url', 'linkedin_url', 'summary')
 
     def get_profile_picture(self, obj):
         try:
@@ -165,12 +171,54 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_preferred_stack(self, obj):
         try:
-            return obj.profile.preferred_stack or []
+            return [{'id': ts.id, 'name': ts.name} for ts in obj.profile.preferred_stack.all()]
         except UserProfile.DoesNotExist:
             return []
 
+    def get_phone(self, obj):
+        try:
+            return obj.profile.phone
+        except UserProfile.DoesNotExist:
+            return ''
+
+    def get_location(self, obj):
+        try:
+            return obj.profile.location
+        except UserProfile.DoesNotExist:
+            return ''
+
+    def get_github_url(self, obj):
+        try:
+            return obj.profile.github_url
+        except UserProfile.DoesNotExist:
+            return ''
+
+    def get_linkedin_url(self, obj):
+        try:
+            return obj.profile.linkedin_url
+        except UserProfile.DoesNotExist:
+            return ''
+
+    def get_summary(self, obj):
+        try:
+            return obj.profile.summary
+        except UserProfile.DoesNotExist:
+            return ''
+
+
+class ContactInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ('phone', 'location', 'github_url', 'linkedin_url', 'summary')
+
 
 class OnboardingSerializer(serializers.ModelSerializer):
+    preferred_stack = serializers.ListField(
+        child=serializers.CharField(max_length=100),
+        required=False,
+        default=list,
+    )
+
     class Meta:
         model = UserProfile
         fields = ('job_title', 'years_of_experience', 'preferred_stack')
@@ -179,6 +227,21 @@ class OnboardingSerializer(serializers.ModelSerializer):
         if not isinstance(value, list):
             raise serializers.ValidationError('Must be a list of strings.')
         return [str(item).strip() for item in value if str(item).strip()]
+
+    def update(self, instance, validated_data):
+        stack_names = validated_data.pop('preferred_stack', None)
+        instance = super().update(instance, validated_data)
+        if stack_names is not None:
+            from career.models import TechStack as TechStackModel
+            tech_objs = []
+            for name in stack_names:
+                obj, _ = TechStackModel.objects.get_or_create(name=name)
+                tech_objs.append(obj)
+            instance.preferred_stack.set(tech_objs)
+            from django.core.cache import cache
+            cache.delete('career:tech_stacks')
+            cache.delete('career:tech_stacks_popular')
+        return instance
 
 
 class ProfilePictureSerializer(ImageProcessingSerializer):

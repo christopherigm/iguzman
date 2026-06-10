@@ -1,3 +1,5 @@
+import type { TechStack } from './career';
+
 export interface UserProfile {
   id: number;
   email: string;
@@ -6,7 +8,12 @@ export interface UserProfile {
   profile_picture: string | null;
   job_title: string;
   years_of_experience: number | null;
-  preferred_stack: string[];
+  preferred_stack: TechStack[];
+  phone: string;
+  location: string;
+  github_url: string;
+  linkedin_url: string;
+  summary: string;
 }
 
 const USER_PROFILE_KEY = 'ef_user';
@@ -189,6 +196,7 @@ export interface ResumeImportResult {
   skills_imported: number;
   work_experience_imported: number;
   education_imported: number;
+  projects_imported: number;
   extracted_skills: string[];
 }
 
@@ -289,4 +297,23 @@ export async function loginWithPasskey(email: string): Promise<void> {
     const data: Record<string, unknown> = await verifyRes.json().catch(() => ({}));
     throw new LoginError(verifyRes.status, data);
   }
+}
+
+export async function updateContactInfo(payload: {
+  phone?: string;
+  location?: string;
+  github_url?: string;
+  linkedin_url?: string;
+  summary?: string;
+}): Promise<{ phone: string; location: string; github_url: string; linkedin_url: string; summary: string }> {
+  const res = await fetch('/api/auth/contact', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<{ phone: string; location: string; github_url: string; linkedin_url: string; summary: string }>;
 }

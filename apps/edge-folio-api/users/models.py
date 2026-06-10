@@ -18,7 +18,16 @@ class UserProfile(models.Model):
     )
     job_title = models.CharField(max_length=150, blank=True, default='')
     years_of_experience = models.PositiveSmallIntegerField(null=True, blank=True)
-    preferred_stack = models.JSONField(default=list, blank=True)
+    preferred_stack = models.ManyToManyField(
+        'career.TechStack',
+        blank=True,
+        related_name='user_profiles',
+    )
+    phone = models.CharField(max_length=30, blank=True, default='')
+    location = models.CharField(max_length=200, blank=True, default='')
+    github_url = models.URLField(max_length=200, blank=True, default='')
+    linkedin_url = models.URLField(max_length=200, blank=True, default='')
+    summary = models.TextField(blank=True, default='')
 
     def __str__(self):
         return f'Profile of {self.user.username}'

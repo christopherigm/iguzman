@@ -11,7 +11,7 @@ from matrix.models import BulletPoint, Skill
 
 from .models import JobApplication
 from .serializers import JobApplicationSerializer
-from .tailoring import generate_cover_letter, tailor_resume
+from .tailoring import generate_cover_letter, generate_nafta_letter, tailor_resume
 
 logger = logging.getLogger(__name__)
 
@@ -189,3 +189,75 @@ class CoverLetterView(APIView):
         _invalidate_application(request.user.id, pk)
 
         return Response({'cover_letter': cover_letter})
+
+
+class NaftaLetterView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            application = JobApplication.objects.get(pk=pk, user=request.user)
+        except JobApplication.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        full_name = f'{user.first_name} {user.last_name}'.strip() or user.email
+
+        try:
+            current_job_title = user.profile.job_title
+        except Exception:
+            current_job_title = ''
+
+        from career.models import Education, WorkExperience
+        education = Education.objects.filter(user=user).order_by('-start_year').first()
+        work_experiences = list(
+            WorkExperience.objects.filter(user=user)
+            .order_by('-start_date')
+            .values('company', 'title', 'start_date', 'end_date', 'is_current', 'location')
+        )
+
+        data = request.data
+        try:
+            hours_raw = data.get('hours_per_week', 40)
+            try:
+                hours_per_week = int(hours_raw)
+            except (TypeError, ValueError):
+                hours_per_week = 40
+
+            nafta_letter = generate_nafta_letter(
+                job_title=application.job_title,
+                company_name=application.company_name,
+                job_description=application.job_description,
+                full_name=full_name,
+                current_job_title=current_job_title,
+                degree=education.degree if education else '',
+                institution=education.institution if education else '',
+                field_of_study=education.field_of_study if education else '',
+                tn_profession=data.get('tn_profession', ''),
+                is_continuation=bool(data.get('is_continuation', False)),
+                company_description=data.get('company_description', ''),
+                hours_per_week=hours_per_week,
+                duration=data.get('duration', '3 years'),
+                passport_number=data.get('passport_number', ''),
+                date_of_birth=data.get('date_of_birth', ''),
+                citizenship=data.get('citizenship', ''),
+                work_experiences=work_experiences,
+            )
+        except GroqError as exc:
+            logger.error('Groq API error during NAFTA letter generation: %s', exc)
+            return Response(
+                {'detail': 'LLM service unavailable. Please try again later.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except (ValueError, KeyError) as exc:
+            logger.error('Unexpected LLM response during NAFTA letter generation: %s', exc)
+            return Response(
+                {'detail': 'Unexpected response from LLM. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        application.nafta_letter = nafta_letter
+        application.save(update_fields=['nafta_letter', 'modified'])
+        _invalidate_application(request.user.id, pk)
+
+        return Response({'nafta_letter': nafta_letter})

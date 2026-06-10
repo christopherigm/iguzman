@@ -21,15 +21,34 @@ import {
   createWorkExperience,
   updateWorkExperience,
   deleteWorkExperience,
+  getProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+  getTechStacks,
+  getPopularTechStacks,
+  createTechStack,
   CareerError,
   type WorkExperience,
   type WorkExperiencePayload,
   type EmploymentType,
+  type Project,
+  type ProjectPayload,
+  type TechStack,
 } from '@/lib/career';
 import './work-experience-page.css';
 
 const EMPLOYMENT_TYPES: EmploymentType[] = [
   'full_time', 'part_time', 'contract', 'freelance', 'internship',
+];
+
+const TECH_SUGGESTIONS = [
+  'TypeScript', 'JavaScript', 'Python', 'Go', 'Rust', 'Java', 'C#', 'Ruby', 'PHP',
+  'React', 'Next.js', 'Vue', 'Angular', 'Svelte',
+  'Node.js', 'Django', 'FastAPI', 'Spring Boot', '.NET',
+  'PostgreSQL', 'MySQL', 'MongoDB', 'Redis',
+  'Docker', 'Kubernetes', 'AWS', 'GCP', 'Azure',
+  'GraphQL', 'REST', 'gRPC', 'Terraform', 'Linux',
 ];
 
 const EMPLOYMENT_TYPE_COLORS: Record<EmploymentType, string> = {
@@ -438,20 +457,502 @@ function WorkExperienceCard({ entry, onEdit, onDelete }: CardProps) {
   );
 }
 
+// ── Project Form ──────────────────────────────────────────────────────────────
+
+interface ProjectFormProps {
+  initial?: Project;
+  onSave: (entry: Project) => void;
+  formRef: React.RefObject<HTMLFormElement | null>;
+  onValidityChange: (valid: boolean) => void;
+}
+
+function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectFormProps) {
+  const t = useTranslations('WorkExperiencePage');
+  const locale = useLocale();
+  const [name, setName] = useState(initial?.name ?? '');
+  const [url, setUrl] = useState(initial?.url ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // ── Tech Stack ───────────────────────────────────────────────────────────────
+  const [techStack, setTechStack] = useState<TechStack[]>(initial?.tech_stack ?? []);
+  const [availableTechStacks, setAvailableTechStacks] = useState<TechStack[]>([]);
+  const [mergedSuggestionNames, setMergedSuggestionNames] = useState<string[]>(TECH_SUGGESTIONS);
+  const [techSearch, setTechSearch] = useState('');
+  const [techCreating, setTechCreating] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      getTechStacks().catch(() => ({ results: [] as TechStack[] })),
+      getPopularTechStacks().catch(() => ({ results: [] as TechStack[] })),
+    ]).then(([all, popular]) => {
+      setAvailableTechStacks(all.results);
+      const lower = new Set(TECH_SUGGESTIONS.map((s) => s.toLowerCase()));
+      const apiOnly = popular.results
+        .filter((ts) => !lower.has(ts.name.toLowerCase()))
+        .map((ts) => ts.name);
+      setMergedSuggestionNames([...TECH_SUGGESTIONS, ...apiOnly]);
+    });
+  }, []);
+
+  const selectedIds = new Set(techStack.map((ts) => ts.id));
+  const filteredSuggestions = techSearch.trim()
+    ? availableTechStacks.filter(
+        (ts) =>
+          !selectedIds.has(ts.id) &&
+          ts.name.toLowerCase().includes(techSearch.trim().toLowerCase()),
+      )
+    : [];
+  const exactMatch = availableTechStacks.some(
+    (ts) => ts.name.toLowerCase() === techSearch.trim().toLowerCase(),
+  );
+  const canAddNew = techSearch.trim().length > 0 && !exactMatch;
+
+  function addTechStack(ts: TechStack) {
+    setTechStack((prev) => [...prev, ts]);
+    setTechSearch('');
+  }
+
+  function removeTechStack(id: number) {
+    setTechStack((prev) => prev.filter((ts) => ts.id !== id));
+  }
+
+  async function handleCreateTechStack() {
+    const trimmed = techSearch.trim();
+    if (!trimmed || techCreating) return;
+    setTechCreating(true);
+    try {
+      const created = await createTechStack(trimmed);
+      setAvailableTechStacks((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      addTechStack(created);
+    } catch {
+      // silently fail; user can retry
+    } finally {
+      setTechCreating(false);
+    }
+  }
+
+  async function handleAddSuggestion(name: string) {
+    if (techCreating) return;
+    const existing = availableTechStacks.find(
+      (ts) => ts.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) {
+      addTechStack(existing);
+      return;
+    }
+    setTechCreating(true);
+    try {
+      const created = await createTechStack(name);
+      setAvailableTechStacks((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      addTechStack(created);
+    } catch {
+      // silently fail
+    } finally {
+      setTechCreating(false);
+    }
+  }
+
+  // ── AI Enhance ──────────────────────────────────────────────────────────────
+  const { streamingText, isGenerating, generate, abort, reset: resetLlm } =
+    useGroqProxy({ temperature: 0.7 });
+  const [enhancePreview, setEnhancePreview] = useState('');
+  const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
+  const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
+  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState('sm');
+
+  useEffect(() => {
+    if (streamingText) setEnhancePreview(streamingText);
+  }, [streamingText]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (isGenerating) abort(); }, []);
+
+  const isValid = !saving && name.trim().length > 0;
+
+  useEffect(() => {
+    onValidityChange(isValid);
+  }, [isValid, onValidityChange]);
+
+  const handleConfirmEnhanceOptions = async () => {
+    setShowEnhanceOptions(false);
+    const currentText = description.trim();
+    if (!currentText) return;
+    setEnhancePreview('');
+    resetLlm();
+    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
+    const isEs = locale === 'es';
+    const messages = isEs
+      ? [
+          {
+            role: 'system' as const,
+            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de proyecto en prosa impactante para un portafolio profesional. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? 's' : ''}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en el problema resuelto, tecnologías usadas, y el impacto logrado. Devuelve únicamente el texto mejorado — sin explicaciones, etiquetas ni marcas de formato.`,
+          },
+          { role: 'user' as const, content: currentText },
+        ]
+      : [
+          {
+            role: 'system' as const,
+            content: `You are a professional career coach and resume expert. Rewrite and expand the following project description into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? 'paragraph' : 'paragraphs'}. Each paragraph must be between ${min} and ${max} words. Focus on the problem solved, technologies used, and measurable impact. Return only the improved text — no explanations, labels, or formatting marks.`,
+          },
+          { role: 'user' as const, content: currentText },
+        ];
+    await generate(messages);
+  };
+
+  const handleAcceptEnhance = () => {
+    if (enhancePreview) setDescription(enhancePreview);
+    setEnhancePreview('');
+    resetLlm();
+  };
+
+  const handleDiscardEnhance = () => {
+    if (isGenerating) abort();
+    setEnhancePreview('');
+    resetLlm();
+  };
+
+  // ── Voice input ──────────────────────────────────────────────────────────────
+  const descriptionRef = useRef(description);
+  descriptionRef.current = description;
+  const handleTranscript = useCallback((transcript: string) => {
+    const current = descriptionRef.current;
+    setDescription(current ? `${current} ${transcript}` : transcript);
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isValid) return;
+    setSaving(true);
+    setError(null);
+    const payload: ProjectPayload = {
+      name: name.trim(),
+      url: url.trim(),
+      description: description.trim(),
+      tech_stack: techStack.map((ts) => ts.id),
+    };
+    try {
+      const result = initial
+        ? await updateProject(initial.id, payload)
+        : await createProject(payload);
+      onSave(result);
+    } catch (err) {
+      if (err instanceof CareerError && err.data.detail) {
+        setError(String(err.data.detail));
+      } else {
+        setError(t('projectSaveError'));
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const llmBusy = isGenerating;
+  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
+
+  return (
+    <>
+      {showEnhanceOptions && (
+        <ConfirmationModal
+          title={t('projectEnhanceOptionsTitle')}
+          text={t('projectEnhanceOptionsText')}
+          okCallback={handleConfirmEnhanceOptions}
+          cancelCallback={() => setShowEnhanceOptions(false)}
+        >
+          <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
+            <Slider
+              steps={PARAGRAPH_COUNT_STEPS}
+              value={enhanceParagraphs}
+              onChange={(v) => setEnhanceParagraphs(Number(v))}
+              label={t('projectEnhanceParagraphsLabel')}
+            />
+            <Slider
+              steps={PARAGRAPH_LENGTH_STEPS}
+              value={enhanceParagraphLength}
+              onChange={(v) => setEnhanceParagraphLength(String(v))}
+              label={`${t('projectEnhanceLengthLabel')} (${currentLengthWordRange.min}–${currentLengthWordRange.max} words/para)`}
+            />
+          </Box>
+        </ConfirmationModal>
+      )}
+      <form ref={formRef} onSubmit={handleSubmit} className="work-exp__form">
+        <TextInput
+          label={t('projectNameLabel')}
+          value={name}
+          onChange={setName}
+          required
+          maxLength={200}
+        />
+        <TextInput
+          label={t('projectUrlLabel')}
+          value={url}
+          onChange={setUrl}
+          maxLength={300}
+          placeholder={t('projectUrlPlaceholder')}
+        />
+
+        {/* Tech Stack picker */}
+        <Box display="flex" flexDirection="column" gap={8}>
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+            {t('projectTechStackLabel')}
+          </Typography>
+          {techStack.length > 0 && (
+            <Box display="flex" flexWrap="wrap" gap={6}>
+              {techStack.map((ts) => (
+                <Box
+                  key={ts.id}
+                  display="inline-flex"
+                  alignItems="center"
+                  gap={4}
+                  paddingY={3}
+                  paddingX={10}
+                  borderRadius={999}
+                  border="1px solid var(--primary, #06b6d4)"
+                  backgroundColor="color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent)"
+                >
+                  <Typography variant="label" color="var(--primary, #06b6d4)">
+                    {ts.name}
+                  </Typography>
+                  <Button
+                    unstyled
+                    type="button"
+                    className="work-exp__tech-tag-remove"
+                    onClick={() => removeTechStack(ts.id)}
+                    aria-label={t('projectTechStackRemove', { name: ts.name })}
+                  >
+                    ×
+                  </Button>
+                </Box>
+              ))}
+            </Box>
+          )}
+          <TextInput
+            value={techSearch}
+            onChange={setTechSearch}
+            placeholder={t('projectTechStackPlaceholder')}
+            maxLength={100}
+            aria-label={t('projectTechStackLabel')}
+          />
+          {!techSearch.trim() && (
+            <Box display="flex" flexDirection="column" gap={6}>
+              <Typography variant="label" color="var(--muted-foreground, #6b7280)">
+                {t('projectTechStackHint')}
+              </Typography>
+              <Box display="flex" flexWrap="wrap" gap={6}>
+                {mergedSuggestionNames
+                  .filter(
+                    (name) =>
+                      !techStack.some((ts) => ts.name.toLowerCase() === name.toLowerCase()),
+                  )
+                  .map((name) => (
+                    <Button
+                      key={name}
+                      unstyled
+                      type="button"
+                      className="work-exp__tech-suggestion"
+                      disabled={techCreating}
+                      onClick={() => void handleAddSuggestion(name)}
+                    >
+                      {name}
+                    </Button>
+                  ))}
+              </Box>
+            </Box>
+          )}
+          {(filteredSuggestions.length > 0 || canAddNew) && (
+            <Box display="flex" flexWrap="wrap" gap={6}>
+              {filteredSuggestions.map((ts) => (
+                <Button
+                  key={ts.id}
+                  unstyled
+                  type="button"
+                  className="work-exp__tech-suggestion"
+                  onClick={() => addTechStack(ts)}
+                >
+                  {ts.name}
+                </Button>
+              ))}
+              {canAddNew && (
+                <Button
+                  unstyled
+                  type="button"
+                  className="work-exp__tech-add"
+                  disabled={techCreating}
+                  onClick={handleCreateTechStack}
+                >
+                  + {t('projectTechStackAdd', { name: techSearch.trim() })}
+                </Button>
+              )}
+            </Box>
+          )}
+        </Box>
+
+        {/* Description label row with voice + enhance buttons */}
+        <Box className="work-exp__field-label-row">
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+            {t('projectDescriptionLabel')}
+          </Typography>
+          <Box display="flex" alignItems="center" gap={6}>
+            <SpeechButton
+              language={locale === 'es' ? 'es' : 'en'}
+              onTranscript={handleTranscript}
+              micIcon="/icons/mic.svg"
+            />
+            <Button
+              unstyled
+              type="button"
+              icon="/icons/enhance.svg"
+              iconSize="16px"
+              iconColor={enhancePreview ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+              disabled={llmBusy || !description.trim()}
+              onClick={() => setShowEnhanceOptions(true)}
+              aria-label={t('projectEnhanceLabel')}
+              title={t('projectEnhanceLabel')}
+              className={[
+                'work-exp__enhance-btn',
+                llmBusy || !description.trim() ? 'work-exp__enhance-btn--busy' : '',
+                enhancePreview ? 'work-exp__enhance-btn--active' : '',
+              ].filter(Boolean).join(' ')}
+            />
+          </Box>
+        </Box>
+        <TextInput
+          multirow
+          rows={4}
+          value={description}
+          onChange={setDescription}
+          maxLength={2000}
+          placeholder={t('projectDescriptionPlaceholder')}
+          width="100%"
+          aria-label={t('projectDescriptionLabel')}
+        />
+
+        {/* Enhance preview panel */}
+        {enhancePreview && (
+          <Box
+            className="work-exp__enhance-preview"
+            display="flex"
+            flexDirection="column"
+            gap={10}
+          >
+            <Typography variant="body-sm">{enhancePreview}</Typography>
+            <Box display="flex" gap={8} alignItems="center" marginTop={12}>
+              {isGenerating ? (
+                <Button text={t('projectEnhanceStop')} type="button" size="md" onClick={handleDiscardEnhance} />
+              ) : (
+                <>
+                  <Button text={t('projectEnhanceDiscard')} type="button" size="md" onClick={handleDiscardEnhance} />
+                  <Button text={t('projectEnhanceAccept')} type="button" size="md" kind="success" onClick={handleAcceptEnhance} />
+                </>
+              )}
+            </Box>
+          </Box>
+        )}
+
+        {error && (
+          <Typography variant="caption" color="var(--error, #ef4444)">
+            {error}
+          </Typography>
+        )}
+      </form>
+    </>
+  );
+}
+
+// ── Project Card ──────────────────────────────────────────────────────────────
+
+interface ProjectCardProps {
+  entry: Project;
+  onEdit: (e: Project) => void;
+  onDelete: (id: number) => void;
+}
+
+function ProjectCard({ entry, onEdit, onDelete }: ProjectCardProps) {
+  const t = useTranslations('WorkExperiencePage');
+
+  return (
+    <Box
+      className="work-exp__card"
+      display="flex"
+      flexDirection="column"
+      gap={8}
+      padding={16}
+      borderRadius={12}
+      border="1px solid var(--border, #e5e7eb)"
+      backgroundColor="var(--surface-1)"
+    >
+      <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={12} flexWrap="wrap">
+        <Typography as="h3" variant="body" fontWeight={700}>
+          {entry.name}
+        </Typography>
+        {entry.url && (
+          <a
+            href={entry.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="work-exp__project-link"
+          >
+            <Typography variant="label" color="var(--primary, #06b6d4)">
+              {entry.url}
+            </Typography>
+          </a>
+        )}
+      </Box>
+      {entry.tech_stack && entry.tech_stack.length > 0 && (
+        <Box display="flex" flexWrap="wrap" gap={6}>
+          {entry.tech_stack.map((ts) => (
+            <Badge key={ts.id} variant="subtle" color="var(--muted-foreground, #6b7280)">
+              {ts.name}
+            </Badge>
+          ))}
+        </Box>
+      )}
+      {entry.description && (
+        <Typography
+          as="p"
+          variant="body-sm"
+          color="var(--foreground)"
+          className="work-exp__description"
+          styles={{ lineHeight: 1.6 }}
+        >
+          {entry.description}
+        </Typography>
+      )}
+      <Box display="flex" gap={8} justifyContent="flex-end" marginTop={4}>
+        <Button text={t('delete')} type="button" size="md" kind="error" onClick={() => onDelete(entry.id)} />
+        <Button text={t('edit')} type="button" size="md" onClick={() => onEdit(entry)} />
+      </Box>
+    </Box>
+  );
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function WorkExperiencePage() {
   const t = useTranslations('WorkExperiencePage');
+
+  // ── Work experience state ────────────────────────────────────────────────────
   const [entries, setEntries] = useState<WorkExperience[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<WorkExperience | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
-  const [toastKey, setToastKey] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
   const [formCanSubmit, setFormCanSubmit] = useState(false);
+
+  // ── Projects state ───────────────────────────────────────────────────────────
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectFormOpen, setProjectFormOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [pendingDeleteProjectId, setPendingDeleteProjectId] = useState<number | null>(null);
+  const projectFormRef = useRef<HTMLFormElement>(null);
+  const [projectFormCanSubmit, setProjectFormCanSubmit] = useState(false);
+
+  // ── Toast ────────────────────────────────────────────────────────────────────
+  const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
+  const [toastKey, setToastKey] = useState(0);
 
   function showToast(text: string, kind: 'success' | 'error') {
     setToast({ text, kind });
@@ -462,8 +963,9 @@ export function WorkExperiencePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getWorkExperiences();
-      setEntries(res.results);
+      const [weRes, projRes] = await Promise.all([getWorkExperiences(), getProjects()]);
+      setEntries(weRes.results);
+      setProjects(projRes.results);
     } catch {
       setError(t('errorLoad'));
     } finally {
@@ -474,6 +976,8 @@ export function WorkExperiencePage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // ── Work experience handlers ─────────────────────────────────────────────────
 
   function openAdd() {
     setEditing(null);
@@ -510,6 +1014,43 @@ export function WorkExperiencePage() {
     }
   }
 
+  // ── Project handlers ─────────────────────────────────────────────────────────
+
+  function openAddProject() {
+    setEditingProject(null);
+    setProjectFormOpen(true);
+  }
+
+  function openEditProject(entry: Project) {
+    setEditingProject(entry);
+    setProjectFormOpen(true);
+  }
+
+  function closeProjectForm() {
+    setProjectFormOpen(false);
+    setEditingProject(null);
+  }
+
+  function handleProjectSaved(entry: Project) {
+    setProjects((prev) =>
+      editingProject === null
+        ? [entry, ...prev]
+        : prev.map((p) => (p.id === entry.id ? entry : p)),
+    );
+    closeProjectForm();
+    showToast(editingProject === null ? t('projectSavedSuccess') : t('projectUpdatedSuccess'), 'success');
+  }
+
+  async function handleProjectDelete(id: number) {
+    try {
+      await deleteProject(id);
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+      showToast(t('projectDeletedSuccess'), 'success');
+    } catch {
+      showToast(t('projectDeleteError'), 'error');
+    }
+  }
+
   if (loading) {
     return (
       <Container
@@ -542,6 +1083,7 @@ export function WorkExperiencePage() {
       paddingX={10}
       styles={{ paddingTop: 'var(--ui-navbar-height)', paddingBottom: '60px' }}
     >
+      {/* Work experience delete confirmation */}
       {pendingDeleteId !== null && (
         <ConfirmationModal
           title={t('confirmDeleteTitle')}
@@ -555,6 +1097,7 @@ export function WorkExperiencePage() {
         />
       )}
 
+      {/* Work experience form modal */}
       {formOpen && (
         <ConfirmationModal
           title={editing ? t('editTitle') : t('addTitle')}
@@ -573,6 +1116,40 @@ export function WorkExperiencePage() {
         </ConfirmationModal>
       )}
 
+      {/* Project delete confirmation */}
+      {pendingDeleteProjectId !== null && (
+        <ConfirmationModal
+          title={t('projectConfirmDeleteTitle')}
+          text={t('projectConfirmDeleteText')}
+          okCallback={() => {
+            const id = pendingDeleteProjectId;
+            setPendingDeleteProjectId(null);
+            void handleProjectDelete(id);
+          }}
+          cancelCallback={() => setPendingDeleteProjectId(null)}
+        />
+      )}
+
+      {/* Project form modal */}
+      {projectFormOpen && (
+        <ConfirmationModal
+          title={editingProject ? t('editProjectTitle') : t('addProjectTitle')}
+          text=""
+          okCallback={() => projectFormRef.current?.requestSubmit()}
+          cancelCallback={closeProjectForm}
+          okDisabled={!projectFormCanSubmit}
+          panelMaxWidth="540px"
+        >
+          <ProjectForm
+            initial={editingProject ?? undefined}
+            onSave={handleProjectSaved}
+            formRef={projectFormRef}
+            onValidityChange={setProjectFormCanSubmit}
+          />
+        </ConfirmationModal>
+      )}
+
+      {/* ── Work Experience section ── */}
       <Box
         width="100%"
         marginTop={24}
@@ -595,20 +1172,61 @@ export function WorkExperiencePage() {
       </Box>
 
       {entries.length === 0 ? (
-        <Box className="work-exp__empty">
+        <Box className="work-exp__empty" marginBottom={48}>
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t('empty')}
           </Typography>
           <Button text={t('addEntry')} type="button" size="md" kind="success" onClick={openAdd} />
         </Box>
       ) : (
-        <Box display="flex" flexDirection="column" gap={16} marginBottom={40}>
+        <Box display="flex" flexDirection="column" gap={16} marginBottom={48}>
           {entries.map((entry) => (
             <WorkExperienceCard
               key={entry.id}
               entry={entry}
               onEdit={openEdit}
               onDelete={setPendingDeleteId}
+            />
+          ))}
+        </Box>
+      )}
+
+      {/* ── Projects section ── */}
+      <Box
+        width="100%"
+        marginBottom={24}
+        display="flex"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={16}
+        flexWrap="wrap"
+      >
+        <Box display="flex" flexDirection="column" gap={4}>
+          <Typography as="h2" variant="h2" fontWeight={600} marginBottom={4}>
+            {t('projectsTitle')}
+          </Typography>
+          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+            {t('projectsSubtitle')}
+          </Typography>
+        </Box>
+        <Button text={t('addProject')} type="button" size="md" kind="success" onClick={openAddProject} />
+      </Box>
+
+      {projects.length === 0 ? (
+        <Box className="work-exp__empty">
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+            {t('projectEmpty')}
+          </Typography>
+          <Button text={t('addProject')} type="button" size="md" kind="success" onClick={openAddProject} />
+        </Box>
+      ) : (
+        <Box display="flex" flexDirection="column" gap={16} marginBottom={40}>
+          {projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              entry={project}
+              onEdit={openEditProject}
+              onDelete={setPendingDeleteProjectId}
             />
           ))}
         </Box>

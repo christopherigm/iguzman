@@ -17,6 +17,7 @@ export interface JobApplication {
   company_image_url: string | null;
   tailored_bullets: TailoredBullet[] | null;
   cover_letter: string;
+  nafta_letter: string;
   created: string;
   modified: string;
 }
@@ -110,5 +111,28 @@ export function generateCoverLetter(id: number, bullets: TailoredBullet[]): Prom
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ bullets }),
+  });
+}
+
+export interface NaftaLetterResult {
+  nafta_letter: string;
+}
+
+export interface NaftaLetterPayload {
+  tn_profession?: string;
+  is_continuation?: boolean;
+  company_description?: string;
+  hours_per_week?: number;
+  duration?: string;
+  passport_number?: string;
+  date_of_birth?: string;
+  citizenship?: string;
+}
+
+export function generateNaftaLetter(id: number, payload: NaftaLetterPayload = {}): Promise<NaftaLetterResult> {
+  return request(`/api/applications/${id}/nafta-letter`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   });
 }

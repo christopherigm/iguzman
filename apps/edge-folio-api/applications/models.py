@@ -31,6 +31,7 @@ class JobApplication(Common):
     job_url = models.URLField(max_length=2048, blank=True)
     tailored_bullets = models.JSONField(null=True, blank=True)
     cover_letter = models.TextField(blank=True)
+    nafta_letter = models.TextField(blank=True)
     company_image = ResizedImageField(
         upload_to=_application_image_upload,
         null=True,

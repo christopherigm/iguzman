@@ -34,6 +34,7 @@ from webauthn.helpers.structs import (
 
 from .models import EmailVerificationToken, PasskeyCredential, PasswordResetToken
 from .serializers import (
+    ContactInfoSerializer,
     CustomTokenObtainPairSerializer,
     OnboardingSerializer,
     PasskeyAuthenticationOptionsSerializer,
@@ -252,6 +253,24 @@ class OnboardingView(APIView):
         return Response(UserProfileSerializer(request.user, context={'request': request}).data)
 
 
+class ContactInfoView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ContactInfoSerializer
+
+    def get_object(self):
+        from .models import UserProfile as UserProfileModel
+        profile, _ = UserProfileModel.objects.get_or_create(user=self.request.user)
+        return profile
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, *args, **kwargs)
+        try:
+            cache.delete(f'users:profile:{request.user.id}')
+        except Exception:
+            pass
+        return response
+
+
 def _extract_pdf_text(file_obj) -> str:
     text_parts = []
     try:
@@ -267,7 +286,7 @@ def _extract_pdf_text(file_obj) -> str:
 
 def _call_groq_for_resume(text: str, api_key: str) -> dict:
     prompt = (
-        'You are a resume parser. Extract professional accomplishments, skills, work history, and education.\n\n'
+        'You are a resume parser. Extract professional accomplishments, skills, work history, education, and projects.\n\n'
         'Return ONLY a valid JSON object:\n'
         '{\n'
         '  "bullets":[{"text":"...","category":"impact|technical|leadership|collaboration|other"}],\n'
@@ -281,6 +300,9 @@ def _call_groq_for_resume(text: str, api_key: str) -> dict:
         '    {"institution":"...","degree":"bachelor|master|phd|associate|certificate|bootcamp|other",\n'
         '     "field_of_study":"...","start_year":2018,"end_year":2022,"is_current":false,\n'
         '     "gpa":null,"honors":"","description":""}\n'
+        '  ],\n'
+        '  "projects":[\n'
+        '    {"name":"...","url":"...","description":"..."}\n'
         '  ]\n'
         '}\n\n'
         'Rules:\n'
@@ -291,6 +313,8 @@ def _call_groq_for_resume(text: str, api_key: str) -> dict:
         '- work_experience: one entry per role; start_date/end_date as YYYY-MM-DD (use YYYY-01-01 if only '
         'year known); is_current=true means end_date must be null\n'
         '- education: start_year/end_year as 4-digit integers; is_current=true means end_year must be null\n'
+        '- projects: personal or professional projects listed in the resume; name required, url and '
+        'description optional (empty string if missing); at most 10\n'
         '- Return valid JSON only — no markdown fences\n\n'
         f'Resume:\n{text[:8000]}'
     )
@@ -330,7 +354,7 @@ class ResumeUploadView(APIView):
     def post(self, request):
         import datetime
 
-        from career.models import Education, WorkExperience
+        from career.models import Education, Project, WorkExperience
         from matrix.models import BulletPoint, Skill
 
         serializer = ResumeUploadSerializer(data=request.data)
@@ -364,6 +388,7 @@ class ResumeUploadView(APIView):
         skills_data = structured.get('skills', [])
         work_exp_data = structured.get('work_experience', [])
         education_data = structured.get('education', [])
+        projects_data = structured.get('projects', [])
         if not isinstance(bullets_data, list):
             bullets_data = []
         if not isinstance(skills_data, list):
@@ -372,6 +397,8 @@ class ResumeUploadView(APIView):
             work_exp_data = []
         if not isinstance(education_data, list):
             education_data = []
+        if not isinstance(projects_data, list):
+            projects_data = []
 
         # Upsert skills
         skill_objs: dict[str, Skill] = {}
@@ -511,11 +538,33 @@ class ResumeUploadView(APIView):
             )
             education_created += 1
 
+        # Create projects
+        projects_created = 0
+        base_project_order = Project.objects.filter(user=request.user).count()
+
+        for i, item in enumerate(projects_data[:10]):
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get('name', '')).strip()[:200]
+            if not name:
+                continue
+            url = str(item.get('url', '')).strip()[:300]
+            description = str(item.get('description', '')).strip()[:2000]
+            Project.objects.create(
+                user=request.user,
+                name=name,
+                url=url,
+                description=description,
+                order=base_project_order + i,
+            )
+            projects_created += 1
+
         try:
             cache.delete(f'matrix:bullets:{request.user.id}')
             cache.delete(f'matrix:skills:{request.user.id}')
             cache.delete(f'career:work_experiences:{request.user.id}')
             cache.delete(f'career:educations:{request.user.id}')
+            cache.delete(f'career:projects:{request.user.id}')
         except Exception as exc:
             logger.warning('Cache invalidation failed after resume import: %s', exc)
 
@@ -525,6 +574,7 @@ class ResumeUploadView(APIView):
                 'skills_imported': len(skill_objs),
                 'work_experience_imported': work_exp_created,
                 'education_imported': education_created,
+                'projects_imported': projects_created,
                 'extracted_skills': [obj.name for obj in skill_objs.values()],
             },
             status=status.HTTP_201_CREATED,

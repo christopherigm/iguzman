@@ -31,11 +31,32 @@ Grep the file for each of these patterns and replace every hit with the correspo
 | `<button`                     | `<Button>` (or `<Button unstyled>` for custom-styled)   |
 | `<input`                      | `<TextInput>`                                           |
 | `<textarea`                   | `<TextInput multirow>`                                  |
-| `<select`                     | `<Select>`                                              |
+| `<select`                     | `<Select>` — see usage pattern below                   |
 | one-off pill/tag `<span>`     | `<Badge>`                                               |
 | inline success/error `<span>` | `<Typography>` (inline) or `<Toast>` (transient banner) |
 
 A `<span>` used purely as a layout/structural container (not rendering text or acting as a tag) does not need to become `<Typography>` or `<Badge>` — use judgment. The trigger is a `<span>` whose primary content is text or a label.
+
+### `<Select>` usage pattern
+
+**Never use a bare `<select>` element.** Always use `<Select>` from `@repo/ui/core-elements/select`. It handles dark-mode theming, floating label, focus ring, and `color-scheme` — no companion CSS needed.
+
+```tsx
+import { Select } from '@repo/ui/core-elements/select';
+
+// Build options from a static enum + translation function:
+const options = MY_VALUES.map((v) => ({ value: v, label: t(`namespace.${v}`) }));
+
+// Render — the label prop replaces any manual <Typography> label above the field:
+<Select
+  label={t('myFieldLabel')}
+  value={currentValue}
+  onChange={(v) => setCurrentValue(v as MyType)}
+  options={options}
+/>
+```
+
+**Never** wrap it in a custom `Box`+`Typography` label pair — pass `label` directly to `<Select>` instead. **Never** write a `.my-select { background: ... }` CSS class — the component already applies `--surface-2`, `--foreground`, and `color-scheme: light dark`.
 
 ### Typography Scale — Size Reference
 

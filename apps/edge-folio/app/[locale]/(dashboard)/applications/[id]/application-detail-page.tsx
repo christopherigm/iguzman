@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -9,25 +9,130 @@ import { Box } from '@repo/ui/core-elements/box';
 import { Button } from '@repo/ui/core-elements/button';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Spinner } from '@repo/ui/core-elements/spinner';
 import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import { Badge } from '@repo/ui/core-elements/badge';
 import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Select } from '@repo/ui/core-elements/select';
+import { Switch } from '@repo/ui/core-elements/switch';
 import { Toast } from '@repo/ui/core-elements/toast';
 import {
   updateApplication,
   deleteApplication,
   tailorApplication,
   generateCoverLetter,
+  generateNaftaLetter,
   ApplicationError,
   type JobApplication,
   type ApplicationStatus,
   type TailoredBullet,
+  type NaftaLetterPayload,
 } from '@/lib/applications';
 import type { UserProfile } from '@/lib/auth';
 import { buildResumeMarkdown, downloadMarkdown } from '@/lib/resume-markdown';
+import { getSkills, type Skill } from '@/lib/matrix';
+import {
+  getWorkExperiences,
+  getEducations,
+  getLanguages,
+  getProjects,
+  type WorkExperience,
+  type Education,
+  type Language,
+  type Project,
+} from '@/lib/career';
 import './application-detail-page.css';
 
 const STATUSES: ApplicationStatus[] = ['draft', 'applied', 'interview', 'offer', 'rejected'];
+
+const TN_PROFESSIONS = [
+  // General Professions
+  'Accountant',
+  'Architect',
+  'Computer Systems Analyst',
+  'Disaster Relief Insurance Claims Adjuster',
+  'Economist',
+  'Engineer — Aerospace',
+  'Engineer — Agricultural',
+  'Engineer — Biomedical',
+  'Engineer — Chemical',
+  'Engineer — Civil',
+  'Engineer — Computer',
+  'Engineer — Electrical',
+  'Engineer — Electronic',
+  'Engineer — Environmental',
+  'Engineer — Industrial',
+  'Engineer — Mechanical',
+  'Engineer — Nuclear',
+  'Engineer — Petroleum',
+  'Engineer — Software',
+  'Engineer — Structural',
+  'Forester / Sylviculturist',
+  'Graphic Designer',
+  'Hotel Manager',
+  'Industrial Designer',
+  'Interior Designer',
+  'Land Surveyor',
+  'Landscape Architect',
+  'Lawyer / Attorney',
+  'Librarian',
+  'Management Consultant',
+  'Mathematician',
+  'Research Assistant (Post-Secondary)',
+  'Scientific Technician / Technologist',
+  'Social Worker',
+  'Statistician',
+  'Technical Publications Writer',
+  'Urban Planner / Geographer',
+  'Vocational Counselor',
+  // Medical / Health Care
+  'Dentist',
+  'Dietitian',
+  'Medical Laboratory Technologist',
+  'Nutritionist',
+  'Occupational Therapist',
+  'Pharmacist',
+  'Physical Therapist / Physiotherapist',
+  'Physician (Teaching or Research Only)',
+  'Psychologist',
+  'Recreational Therapist',
+  'Registered Nurse',
+  'Veterinarian',
+  // Scientists
+  'Agriculturist / Agronomist',
+  'Animal Breeder',
+  'Animal Scientist',
+  'Apiculturist',
+  'Astronomer',
+  'Biochemist / Biophysicist',
+  'Biologist',
+  'Chemist',
+  'Dairy Scientist',
+  'Entomologist',
+  'Epidemiologist',
+  'Geneticist',
+  'Geochemist',
+  'Geologist',
+  'Geophysicist',
+  'Horticulturist',
+  'Meteorologist',
+  'Pharmacologist',
+  'Physicist',
+  'Plant Breeder',
+  'Poultry Scientist',
+  'Range Manager / Conservationist',
+  'Soil Scientist',
+  'Zoologist / Wildlife Biologist',
+  // Teachers
+  'College Teacher',
+  'Seminary Teacher',
+  'University Teacher',
+].map((p) => ({ value: p, label: p }));
+
+const CITIZENSHIP_OPTIONS = [
+  { value: 'Canadian', label: 'Canadian' },
+  { value: 'Mexican', label: 'Mexican' },
+];
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
   draft:     '#6b7280',
@@ -49,6 +154,31 @@ function groupByCategory(bullets: TailoredBullet[]): Array<{ cat: string; bullet
   return CATEGORY_ORDER
     .filter((c) => map.has(c))
     .map((c) => ({ cat: c, bullets: map.get(c)! }));
+}
+
+interface ExportData {
+  skills: Pick<Skill, 'name' | 'proficiency'>[];
+  workExps: WorkExperience[];
+  educations: Education[];
+  languages: Language[];
+  projects: Project[];
+}
+
+function SwitchRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <Box display="flex" alignItems="center" justifyContent="space-between" gap={12}>
+      <Typography variant="body">{label}</Typography>
+      <Switch checked={checked} onChange={onChange} aria-label={label} />
+    </Box>
+  );
 }
 
 interface Props {
@@ -84,6 +214,37 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   const [clError, setClError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // NAFTA letter
+  const [generatingNafta, setGeneratingNafta] = useState(false);
+  const [naftaLetter, setNaftaLetter] = useState<string | null>(initialApp.nafta_letter || null);
+  const [naftaError, setNaftaError] = useState<string | null>(null);
+  const [exportingNaftaPDF, setExportingNaftaPDF] = useState(false);
+  const [naftaPDFError, setNaftaPDFError] = useState<string | null>(null);
+
+  // NAFTA letter parameters
+  const [naftaTnProfession, setNaftaTnProfession] = useState('');
+  const [naftaIsContinuation, setNaftaIsContinuation] = useState(false);
+  const [naftaCitizenship, setNaftaCitizenship] = useState('');
+  const [naftaDob, setNaftaDob] = useState('');
+  const [naftaPassport, setNaftaPassport] = useState('');
+  const [naftaHoursPerWeek, setNaftaHoursPerWeek] = useState('40');
+  const [naftaDuration, setNaftaDuration] = useState('3 years');
+  const [naftaCompanyDescription, setNaftaCompanyDescription] = useState('');
+
+  // Export section data (lazily loaded when section first appears)
+  const exportDataFetchRef = useRef(false);
+  const [exportData, setExportData] = useState<ExportData | null>(null);
+  const [exportDataLoading, setExportDataLoading] = useState(false);
+
+  // Export customization switches
+  const [includeContact, setIncludeContact] = useState(true);
+  const [includeLinks, setIncludeLinks] = useState(true);
+  const [includeSkills, setIncludeSkills] = useState(true);
+  const [includedWorkExpIds, setIncludedWorkExpIds] = useState<Set<number>>(new Set());
+  const [includedEducationIds, setIncludedEducationIds] = useState<Set<number>>(new Set());
+  const [includedLanguageIds, setIncludedLanguageIds] = useState<Set<number>>(new Set());
+  const [includedProjectIds, setIncludedProjectIds] = useState<Set<number>>(new Set());
+
   // Export
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -94,6 +255,32 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
 
   const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
   const [toastKey, setToastKey] = useState(0);
+
+  // Load export section data lazily when tailored bullets are first available
+  useEffect(() => {
+    if (!tailoredBullets || tailoredBullets.length === 0 || exportDataFetchRef.current) return;
+    exportDataFetchRef.current = true;
+    setExportDataLoading(true);
+    Promise.allSettled([
+      getSkills(),
+      getWorkExperiences(),
+      getEducations(),
+      getLanguages(),
+      getProjects(),
+    ]).then(([skillsRes, workExpsRes, educationsRes, languagesRes, projectsRes]) => {
+      const skills = skillsRes.status === 'fulfilled' ? skillsRes.value.results : [];
+      const workExps = workExpsRes.status === 'fulfilled' ? workExpsRes.value.results : [];
+      const educations = educationsRes.status === 'fulfilled' ? educationsRes.value.results : [];
+      const languages = languagesRes.status === 'fulfilled' ? languagesRes.value.results : [];
+      const projects = projectsRes.status === 'fulfilled' ? projectsRes.value.results : [];
+      setExportData({ skills, workExps, educations, languages, projects });
+      setIncludedWorkExpIds(new Set(workExps.map((e) => e.id)));
+      setIncludedEducationIds(new Set(educations.map((e) => e.id)));
+      setIncludedLanguageIds(new Set(languages.map((l) => l.id)));
+      setIncludedProjectIds(new Set(projects.map((p) => p.id)));
+      setExportDataLoading(false);
+    });
+  }, [tailoredBullets]);
 
   function showToast(text: string, kind: 'success' | 'error') {
     setToast({ text, kind });
@@ -181,8 +368,71 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
     setTimeout(() => setCopied(false), 2000);
   }
 
+  async function handleGenerateNafta() {
+    setGeneratingNafta(true);
+    setNaftaError(null);
+    const payload: NaftaLetterPayload = {
+      tn_profession: naftaTnProfession || undefined,
+      is_continuation: naftaIsContinuation,
+      citizenship: naftaCitizenship || undefined,
+      date_of_birth: naftaDob || undefined,
+      passport_number: naftaPassport || undefined,
+      hours_per_week: naftaHoursPerWeek ? Number(naftaHoursPerWeek) : 40,
+      duration: naftaDuration || '3 years',
+      company_description: naftaCompanyDescription || undefined,
+    };
+    try {
+      const result = await generateNaftaLetter(app.id, payload);
+      setNaftaLetter(result.nafta_letter);
+    } catch {
+      setNaftaError(t('errorNaftaLetter'));
+    } finally {
+      setGeneratingNafta(false);
+    }
+  }
+
+  async function handleDownloadNaftaPDF() {
+    if (!naftaLetter) return;
+    setExportingNaftaPDF(true);
+    setNaftaPDFError(null);
+    try {
+      const { pdf } = await import('@react-pdf/renderer');
+      const { NaftaLetterDocument } = await import('@/lib/resume-pdf');
+      const blob = await pdf(
+        <NaftaLetterDocument
+          companyName={app.company_name}
+          letterText={naftaLetter}
+        />,
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${app.company_name}-${app.job_title}-tn-nafta-letter.pdf`
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-');
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setNaftaPDFError(t('errorNaftaPDF'));
+    } finally {
+      setExportingNaftaPDF(false);
+    }
+  }
+
+  function getFilteredExportData() {
+    if (!exportData) return null;
+    return {
+      skills: includeSkills ? exportData.skills : [],
+      workExps: exportData.workExps.filter((e) => includedWorkExpIds.has(e.id)),
+      educations: exportData.educations.filter((e) => includedEducationIds.has(e.id)),
+      languages: exportData.languages.filter((l) => includedLanguageIds.has(l.id)),
+      projects: exportData.projects.filter((p) => includedProjectIds.has(p.id)),
+    };
+  }
+
   async function handleExportPDF() {
-    if (!tailoredBullets) return;
+    if (!tailoredBullets || !exportData) return;
     setExportingPDF(true);
     setExportError(null);
     try {
@@ -191,14 +441,27 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
       const fullName = profile
         ? [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.email
         : 'Candidate';
+
+      const filtered = getFilteredExportData()!;
+
       const blob = await pdf(
         <ResumeDocument
           fullName={fullName}
-          email={profile?.email ?? ''}
+          email={includeContact ? (profile?.email ?? '') : ''}
           jobTitle={profile?.job_title ?? ''}
+          phone={includeContact ? (profile?.phone ?? '') : ''}
+          location={includeContact ? (profile?.location ?? '') : ''}
+          githubUrl={includeLinks ? (profile?.github_url ?? '') : ''}
+          linkedinUrl={includeLinks ? (profile?.linkedin_url ?? '') : ''}
+          summary={profile?.summary ?? ''}
+          skills={filtered.skills}
+          workExperiences={filtered.workExps}
           targetRole={app.job_title}
           targetCompany={app.company_name}
           tailoredBullets={tailoredBullets}
+          projects={filtered.projects}
+          educations={filtered.educations}
+          languages={filtered.languages}
         />,
       ).toBlob();
       const url = URL.createObjectURL(blob);
@@ -218,18 +481,30 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   }
 
   function handleExportMarkdown() {
-    if (!tailoredBullets) return;
+    if (!tailoredBullets || !exportData) return;
     const fullName = profile
       ? [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.email
       : 'Candidate';
+
+    const filtered = getFilteredExportData()!;
+
     const md = buildResumeMarkdown({
       fullName,
-      email: profile?.email ?? '',
+      email: includeContact ? (profile?.email ?? '') : '',
       jobTitle: profile?.job_title ?? '',
+      phone: includeContact ? profile?.phone : undefined,
+      location: includeContact ? profile?.location : undefined,
+      githubUrl: includeLinks ? profile?.github_url : undefined,
+      linkedinUrl: includeLinks ? profile?.linkedin_url : undefined,
       targetRole: app.job_title,
       targetCompany: app.company_name,
       tailoredBullets,
       coverLetter: coverLetter ?? undefined,
+      skills: filtered.skills.length > 0 ? filtered.skills : undefined,
+      workExperiences: filtered.workExps,
+      educations: filtered.educations,
+      languages: filtered.languages,
+      projects: filtered.projects,
     });
     const filename = `${app.company_name}-${app.job_title}`
       .toLowerCase()
@@ -239,6 +514,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   }
 
   const grouped = tailoredBullets ? groupByCategory(tailoredBullets) : [];
+  const statusOptions = STATUSES.map((s) => ({ value: s, label: t(`statuses.${s}`) }));
 
   return (
     <Container
@@ -276,7 +552,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
             {app.job_title}
           </Typography>
-          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
             {app.company_name}
           </Typography>
           {app.job_url && (
@@ -340,23 +616,12 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
                   />
                 </Box>
               </Box>
-              <Box>
-                <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
-                  {t('statusLabel')}
-                </Typography>
-                <select
-                  className="detail__select"
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value as ApplicationStatus)}
-                  aria-label={t('statusLabel')}
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {t(`statuses.${s}`)}
-                    </option>
-                  ))}
-                </select>
-              </Box>
+              <Select
+                label={t('statusLabel')}
+                value={selectedStatus}
+                onChange={(v) => setSelectedStatus(v as ApplicationStatus)}
+                options={statusOptions}
+              />
               <Box>
                 <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
                   {t('jdLabel')}
@@ -432,7 +697,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
             </Typography>
           )}
           {app.notes && (
-            <Typography as="p" variant="body-sm" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            <Typography as="p" variant="body" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {app.notes}
             </Typography>
           )}
@@ -537,19 +802,139 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
           <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={14} as="p">
             {t('exportSubtitle')}
           </Typography>
+
+          {/* ── Customization ── */}
+          <Typography as="h3" variant="body" fontWeight={600} marginBottom={10}>
+            {t('exportCustomizeTitle')}
+          </Typography>
+
+          {exportDataLoading && (
+            <Box display="flex" alignItems="center" gap={8} marginBottom={14}>
+              <Spinner size={16} />
+              <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+                {t('exportLoadingData')}
+              </Typography>
+            </Box>
+          )}
+
+          {exportData && (
+            <Box display="flex" flexDirection="column" gap={16} marginBottom={20}>
+              {/* Global toggles */}
+              <Box display="flex" flexDirection="column" gap={10}>
+                <SwitchRow label={t('exportIncludeContact')} checked={includeContact} onChange={setIncludeContact} />
+                <SwitchRow label={t('exportIncludeLinks')} checked={includeLinks} onChange={setIncludeLinks} />
+                <SwitchRow label={t('exportIncludeSkills')} checked={includeSkills} onChange={setIncludeSkills} />
+              </Box>
+
+              {/* Work experience */}
+              {exportData.workExps.length > 0 && (
+                <Box display="flex" flexDirection="column" gap={8}>
+                  <Typography variant="body" fontWeight={600}>
+                    {t('exportJobsTitle')}
+                  </Typography>
+                  {exportData.workExps.map((exp) => (
+                    <SwitchRow
+                      key={exp.id}
+                      label={`${exp.title} — ${exp.company}`}
+                      checked={includedWorkExpIds.has(exp.id)}
+                      onChange={(checked) =>
+                        setIncludedWorkExpIds((prev) => {
+                          const next = new Set(prev);
+                          if (checked) next.add(exp.id); else next.delete(exp.id);
+                          return next;
+                        })
+                      }
+                    />
+                  ))}
+                </Box>
+              )}
+
+              {/* Education */}
+              {exportData.educations.length > 0 && (
+                <Box display="flex" flexDirection="column" gap={8}>
+                  <Typography variant="body" fontWeight={600}>
+                    {t('exportEducationTitle')}
+                  </Typography>
+                  {exportData.educations.map((edu) => (
+                    <SwitchRow
+                      key={edu.id}
+                      label={`${edu.institution}${edu.field_of_study ? ` · ${edu.field_of_study}` : ''}`}
+                      checked={includedEducationIds.has(edu.id)}
+                      onChange={(checked) =>
+                        setIncludedEducationIds((prev) => {
+                          const next = new Set(prev);
+                          if (checked) next.add(edu.id); else next.delete(edu.id);
+                          return next;
+                        })
+                      }
+                    />
+                  ))}
+                </Box>
+              )}
+
+              {/* Languages */}
+              {exportData.languages.length > 0 && (
+                <Box display="flex" flexDirection="column" gap={8}>
+                  <Typography variant="body" fontWeight={600}>
+                    {t('exportLanguagesTitle')}
+                  </Typography>
+                  {exportData.languages.map((lang) => (
+                    <SwitchRow
+                      key={lang.id}
+                      label={lang.name}
+                      checked={includedLanguageIds.has(lang.id)}
+                      onChange={(checked) =>
+                        setIncludedLanguageIds((prev) => {
+                          const next = new Set(prev);
+                          if (checked) next.add(lang.id); else next.delete(lang.id);
+                          return next;
+                        })
+                      }
+                    />
+                  ))}
+                </Box>
+              )}
+
+              {/* Projects */}
+              {exportData.projects.length > 0 && (
+                <Box display="flex" flexDirection="column" gap={8}>
+                  <Typography variant="body" fontWeight={600}>
+                    {t('exportProjectsTitle')}
+                  </Typography>
+                  {exportData.projects.map((proj) => (
+                    <SwitchRow
+                      key={proj.id}
+                      label={proj.name}
+                      checked={includedProjectIds.has(proj.id)}
+                      onChange={(checked) =>
+                        setIncludedProjectIds((prev) => {
+                          const next = new Set(prev);
+                          if (checked) next.add(proj.id); else next.delete(proj.id);
+                          return next;
+                        })
+                      }
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {/* ── Export buttons ── */}
           <Box display="flex" gap={10} flexWrap="wrap">
             <Button
               text={exportingPDF ? t('exportingPDF') : t('exportPDF')}
               type="button"
               size="md"
               kind="success"
-              disabled={exportingPDF}
+              disabled={exportingPDF || exportDataLoading || !exportData}
               onClick={handleExportPDF}
             />
             <Button
               text={t('exportMarkdown')}
               type="button"
               size="md"
+              disabled={exportDataLoading || !exportData}
               onClick={handleExportMarkdown}
             />
           </Box>
@@ -560,6 +945,150 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
           )}
         </div>
       )}
+
+      {/* ── NAFTA TN Visa Letter ──────────────────────────────────────── */}
+      <div className="detail__section">
+        <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
+          {t('naftaLetterTitle')}
+        </Typography>
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={16} as="p">
+          {t('naftaLetterSubtitle')}
+        </Typography>
+
+        {/* ── NAFTA parameters ── */}
+        <Box display="flex" flexDirection="column" gap={14} marginBottom={20}>
+          <Box display="flex" gap={12} flexWrap="wrap">
+            <Box flex={2} styles={{ minWidth: 220 }}>
+              <Select
+                label={t('naftaProfessionLabel')}
+                value={naftaTnProfession}
+                onChange={setNaftaTnProfession}
+                options={[{ value: '', label: t('naftaProfessionPlaceholder') }, ...TN_PROFESSIONS]}
+                width="100%"
+              />
+            </Box>
+            <Box flex={1} styles={{ minWidth: 140 }}>
+              <Select
+                label={t('naftaCitizenshipLabel')}
+                value={naftaCitizenship}
+                onChange={setNaftaCitizenship}
+                options={[{ value: '', label: t('naftaCitizenshipPlaceholder') }, ...CITIZENSHIP_OPTIONS]}
+                width="100%"
+              />
+            </Box>
+          </Box>
+
+          <Box display="flex" gap={12} flexWrap="wrap">
+            <Box flex={1} styles={{ minWidth: 160 }}>
+              <TextInput
+                label={t('naftaDobLabel')}
+                value={naftaDob}
+                onChange={setNaftaDob}
+                placeholder="e.g. January 1, 1990"
+                width="100%"
+              />
+            </Box>
+            <Box flex={1} styles={{ minWidth: 160 }}>
+              <TextInput
+                label={t('naftaPassportLabel')}
+                value={naftaPassport}
+                onChange={setNaftaPassport}
+                width="100%"
+              />
+            </Box>
+          </Box>
+
+          <Box display="flex" gap={12} flexWrap="wrap">
+            <Box flex={1} styles={{ minWidth: 120 }}>
+              <TextInput
+                label={t('naftaHoursLabel')}
+                value={naftaHoursPerWeek}
+                onChange={setNaftaHoursPerWeek}
+                type="number"
+                width="100%"
+              />
+            </Box>
+            <Box flex={1} styles={{ minWidth: 160 }}>
+              <TextInput
+                label={t('naftaDurationLabel')}
+                value={naftaDuration}
+                onChange={setNaftaDuration}
+                placeholder="e.g. 3 years"
+                width="100%"
+              />
+            </Box>
+          </Box>
+
+          <SwitchRow
+            label={t('naftaContinuationLabel')}
+            checked={naftaIsContinuation}
+            onChange={setNaftaIsContinuation}
+          />
+
+          <Box>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6} as="p">
+              {t('naftaCompanyDescLabel')}
+            </Typography>
+            <TextInput
+              multirow
+              rows={10}
+              value={naftaCompanyDescription}
+              onChange={setNaftaCompanyDescription}
+              placeholder={t('naftaCompanyDescPlaceholder')}
+              width="100%"
+              aria-label={t('naftaCompanyDescLabel')}
+            />
+          </Box>
+        </Box>
+
+        <Box display="flex" alignItems="center" gap={10} flexWrap="wrap" marginBottom={10}>
+          <Button
+            text={generatingNafta ? t('generatingNafta') : naftaLetter ? t('regenerateNafta') : t('generateNafta')}
+            type="button"
+            size="md"
+            kind="success"
+            disabled={generatingNafta}
+            onClick={handleGenerateNafta}
+          />
+          {generatingNafta && <ProgressBar label={t('generatingNafta')} />}
+        </Box>
+        {naftaError && (
+          <Typography variant="caption" color="var(--error, #ef4444)">
+            {naftaError}
+          </Typography>
+        )}
+        {naftaLetter && (
+          <Box display="flex" flexDirection="column" gap={8}>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)" as="p">
+              {t('naftaEditHint')}
+            </Typography>
+            <TextInput
+              multirow
+              className="detail__cover-letter"
+              value={naftaLetter}
+              onChange={setNaftaLetter}
+              rows={24}
+              width="100%"
+              aria-label={t('naftaLetterTitle')}
+            />
+            <Box display="flex" gap={8} alignItems="center" flexWrap="wrap">
+              <Button
+                text={exportingNaftaPDF ? t('downloadingNaftaPDF') : t('downloadNaftaPDF')}
+                type="button"
+                size="md"
+                kind="success"
+                disabled={exportingNaftaPDF}
+                onClick={handleDownloadNaftaPDF}
+              />
+            </Box>
+            {naftaPDFError && (
+              <Typography variant="caption" color="var(--error, #ef4444)" as="p">
+                {naftaPDFError}
+              </Typography>
+            )}
+          </Box>
+        )}
+      </div>
 
       {toast && (
         <Toast key={toastKey} message={toast.text} variant={toast.kind} position="top-center" />
