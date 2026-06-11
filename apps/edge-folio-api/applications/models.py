@@ -39,6 +39,7 @@ class JobApplication(Common):
     notes = models.TextField(blank=True)
     job_url = models.URLField(max_length=2048, blank=True)
     tailored_bullets = models.JSONField(null=True, blank=True)
+    professional_summary = models.TextField(blank=True)
     cover_letter = models.TextField(blank=True)
     nafta_letter = models.TextField(blank=True)
     overall_match = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -59,6 +60,11 @@ class JobApplication(Common):
         null=True,
         blank=True,
         max_size=[256, None],
+    )
+    tailored_skills = models.ManyToManyField(
+        'matrix.Skill',
+        blank=True,
+        related_name='job_applications',
     )
 
     class Meta:

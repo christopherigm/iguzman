@@ -4,6 +4,7 @@ import {
   Text,
   View,
   StyleSheet,
+  Image,
 } from '@react-pdf/renderer';
 import type { TailoredBullet } from './applications';
 import type { WorkExperience, Education, Language, Project } from './career';
@@ -49,6 +50,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     paddingBottom: 12,
+  },
+  headerInner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  photoContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 4,
+    overflow: 'hidden',
+    flexShrink: 0,
+    marginTop: 4,
+  },
+  photoImage: {
+    width: 72,
+    height: 72,
+  },
+  photoSpacer: {
+    width: 72,
+    flexShrink: 0,
+  },
+  headerTextArea: {
+    flex: 1,
   },
   name: {
     fontSize: 20,
@@ -306,6 +330,8 @@ export interface ResumePDFProps {
   location?: string;
   githubUrl?: string;
   linkedinUrl?: string;
+  // Profile photo (base64 data URI or absolute URL)
+  photoUrl?: string;
   // Summary
   summary?: string;
   // Skills (flat list, sorted by proficiency desc)
@@ -351,6 +377,7 @@ export function ResumeDocument({
   location,
   githubUrl,
   linkedinUrl,
+  photoUrl,
   summary,
   skills,
   workExperiences,
@@ -359,10 +386,20 @@ export function ResumeDocument({
   educations,
   languages,
 }: ResumePDFProps) {
-  const grouped = groupByCategory(tailoredBullets);
-  const categories = Array.from(grouped.keys());
+  // Bullets whose source bullet has a work_experience link render inside that WE entry
+  const bulletsByWE = new Map<number, TailoredBullet[]>();
+  const orphanBullets: TailoredBullet[] = [];
+  for (const b of tailoredBullets) {
+    if (b.work_experience_id) {
+      if (!bulletsByWE.has(b.work_experience_id)) bulletsByWE.set(b.work_experience_id, []);
+      bulletsByWE.get(b.work_experience_id)!.push(b);
+    } else {
+      orphanBullets.push(b);
+    }
+  }
+  const orphanGrouped = groupByCategory(orphanBullets);
+  const orphanCategories = Array.from(orphanGrouped.keys());
 
-  // Build contact meta items with separators
   const contactParts: string[] = [];
   if (email) contactParts.push(email);
   if (phone) contactParts.push(phone);
@@ -379,36 +416,46 @@ export function ResumeDocument({
       <Page size="LETTER" style={styles.page}>
         {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.name}>{fullName}</Text>
-          {jobTitle ? <Text style={styles.jobTitle}>{jobTitle}</Text> : null}
-          <View style={styles.headerRow}>
-            {contactParts.map((part, i) => (
-              <View key={i} style={{ flexDirection: 'row', gap: 6 }}>
-                {i > 0 ? <Text style={styles.metaSep}>·</Text> : null}
-                <Text>{part}</Text>
+          <View style={photoUrl ? styles.headerInner : undefined}>
+            {photoUrl ? (
+              <View style={styles.photoContainer}>
+                <Image src={photoUrl} style={styles.photoImage} />
               </View>
-            ))}
+            ) : null}
+            <View style={photoUrl ? styles.headerTextArea : undefined}>
+              <Text style={styles.name}>{fullName}</Text>
+              {jobTitle ? <Text style={styles.jobTitle}>{jobTitle}</Text> : null}
+              <View style={styles.headerRow}>
+                {contactParts.map((part, i) => (
+                  <View key={i} style={{ flexDirection: 'row', gap: 6 }}>
+                    {i > 0 ? <Text style={styles.metaSep}>·</Text> : null}
+                    <Text>{part}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+            {photoUrl ? <View style={styles.photoSpacer} /> : null}
           </View>
         </View>
 
-        {/* ── Summary ── */}
+        {/* ── Professional Summary ── */}
         {summary ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Summary</Text>
+            <Text style={styles.sectionTitle}>Professional Summary</Text>
             <Text style={styles.paragraph}>{summary}</Text>
           </View>
         ) : null}
 
-        {/* ── Highlights ── */}
-        {tailoredBullets.length > 0 ? (
+        {/* ── Key Achievements (bullets not linked to a specific WE) ── */}
+        {orphanBullets.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Highlights</Text>
-            {categories.map((cat) => (
+            <Text style={styles.sectionTitle}>Key Achievements</Text>
+            {orphanCategories.map((cat) => (
               <View key={cat}>
                 <Text style={styles.categoryTitle}>
                   {CATEGORY_LABELS[cat] ?? cat}
                 </Text>
-                {grouped.get(cat)!.map((b) => (
+                {orphanGrouped.get(cat)!.map((b) => (
                   <View key={b.id} style={styles.bullet}>
                     <Text style={styles.bulletDot}>•</Text>
                     <Text style={styles.bulletText}>{b.tailored_text}</Text>
@@ -429,24 +476,36 @@ export function ResumeDocument({
           </View>
         ) : null}
 
-        {/* ── Professional Experience ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Professional Experience</Text>
-          {(workExperiences ?? []).map((exp) => (
-            <View key={exp.id} style={{ marginBottom: 10 }}>
-              <View style={styles.entryHeader}>
-                <Text style={styles.entryTitle}>{exp.title} — {exp.company}</Text>
-              </View>
-              <Text style={styles.entryMeta}>
-                {formatDateRange(exp.start_date, exp.end_date, exp.is_current)}
-                {exp.location ? `  ·  ${exp.location}` : ''}
-              </Text>
-              {exp.description ? (
-                <Text style={styles.paragraph}>{exp.description}</Text>
-              ) : null}
-            </View>
-          ))}
-        </View>
+        {/* ── Professional Experience (tailored bullets embedded per role) ── */}
+        {(workExperiences ?? []).length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Professional Experience</Text>
+            {(workExperiences ?? []).map((exp) => {
+              const expBullets = bulletsByWE.get(exp.id) ?? [];
+              return (
+                <View key={exp.id} style={{ marginBottom: 10 }}>
+                  <View style={styles.entryHeader}>
+                    <Text style={styles.entryTitle}>{exp.title} — {exp.company}</Text>
+                  </View>
+                  <Text style={styles.entryMeta}>
+                    {formatDateRange(exp.start_date, exp.end_date, exp.is_current)}
+                    {exp.location ? `  ·  ${exp.location}` : ''}
+                  </Text>
+                  {expBullets.length > 0
+                    ? expBullets.map((b) => (
+                        <View key={b.id} style={styles.bullet}>
+                          <Text style={styles.bulletDot}>•</Text>
+                          <Text style={styles.bulletText}>{b.tailored_text}</Text>
+                        </View>
+                      ))
+                    : exp.description
+                      ? <Text style={styles.paragraph}>{exp.description}</Text>
+                      : null}
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
 
         {/* ── Personal Projects ── */}
         {(projects ?? []).length > 0 ? (

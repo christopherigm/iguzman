@@ -396,6 +396,7 @@
     "tailoring": "Adaptation…",
     "tailorAgain": "Ré-adapter",
     "tailoredSubtitle": "Sélectionné et réécrit depuis votre Matrix pour ce poste.",
+    "professionalSummaryLabel": "Résumé Professionnel",
     "errorTailor": "L'adaptation a échoué. Assurez-vous que votre Matrix contient des points approuvés.",
     "categories": {
       "impact": "Impact",
@@ -444,6 +445,8 @@
     "exportIncludeContact": "Informations de contact",
     "exportIncludeLinks": "Liens (GitHub et LinkedIn)",
     "exportIncludeSkills": "Compétences techniques",
+    "exportIncludePhoto": "Photo de profil",
+    "exportIncludePhotoHint": "Déconseillé pour les ATS aux États-Unis/Canada — adapté aux CV européens/internationaux.",
     "exportJobsTitle": "Expérience professionnelle",
     "exportEducationTitle": "Formation",
     "exportLanguagesTitle": "Langues",

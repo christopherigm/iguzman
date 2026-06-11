@@ -1,10 +1,18 @@
 from rest_framework import serializers
 
+from matrix.models import Skill
 from .models import JobApplication
+
+
+class _TailoredSkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Skill
+        fields = ('id', 'name', 'proficiency')
 
 
 class JobApplicationSerializer(serializers.ModelSerializer):
     company_image_url = serializers.SerializerMethodField()
+    tailored_skills = _TailoredSkillSerializer(many=True, read_only=True)
 
     class Meta:
         model = JobApplication
@@ -14,7 +22,8 @@ class JobApplicationSerializer(serializers.ModelSerializer):
             'company_description',
             'salary_min', 'salary_max', 'salary_currency',
             'work_type', 'location', 'us_citizen_or_pr_required',
-            'tailored_bullets', 'cover_letter', 'nafta_letter',
+            'professional_summary', 'tailored_bullets', 'tailored_skills',
+            'cover_letter', 'nafta_letter',
             'overall_match', 'overall_match_explanation',
             'technical_match', 'technical_match_explanation',
             'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
@@ -22,7 +31,8 @@ class JobApplicationSerializer(serializers.ModelSerializer):
         )
         read_only_fields = (
             'id', 'created', 'modified', 'company_image_url',
-            'tailored_bullets', 'cover_letter', 'nafta_letter',
+            'professional_summary', 'tailored_bullets', 'tailored_skills',
+            'cover_letter', 'nafta_letter',
             'overall_match', 'overall_match_explanation',
             'technical_match', 'technical_match_explanation',
             'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',

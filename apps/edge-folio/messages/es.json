@@ -396,6 +396,7 @@
     "tailoring": "Adaptando…",
     "tailorAgain": "Readaptar",
     "tailoredSubtitle": "Seleccionado y reescrito desde tu Matrix para este puesto.",
+    "professionalSummaryLabel": "Resumen Profesional",
     "errorTailor": "La adaptación falló. Asegúrate de tener puntos aprobados en tu Matrix.",
     "categories": {
       "impact": "Impacto",
@@ -444,6 +445,8 @@
     "exportIncludeContact": "Información de contacto",
     "exportIncludeLinks": "Enlaces (GitHub y LinkedIn)",
     "exportIncludeSkills": "Habilidades técnicas",
+    "exportIncludePhoto": "Foto de perfil",
+    "exportIncludePhotoHint": "No recomendado para ATS en EE.UU./Canadá — apto para currículums europeos e internacionales.",
     "exportJobsTitle": "Experiencia laboral",
     "exportEducationTitle": "Educación",
     "exportLanguagesTitle": "Idiomas",

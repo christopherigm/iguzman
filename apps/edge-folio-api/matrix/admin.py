@@ -35,10 +35,10 @@ class SkillAdmin(admin.ModelAdmin):
 
 @admin.register(BulletPoint)
 class BulletPointAdmin(admin.ModelAdmin):
-    list_display = ('text_preview', 'category', 'source', 'is_approved', 'order', 'user', 'created')
+    list_display = ('text_preview', 'category', 'source', 'is_approved', 'order', 'work_experience', 'user', 'created')
     list_filter = ('category', 'source', 'is_approved')
     search_fields = ('text', 'user__email')
-    raw_id_fields = ('user',)
+    raw_id_fields = ('user', 'work_experience')
     filter_horizontal = ('skills',)
 
     @admin.display(description='Text')

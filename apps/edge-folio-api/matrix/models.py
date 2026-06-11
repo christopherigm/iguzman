@@ -38,6 +38,13 @@ class BulletPoint(Common):
     is_approved = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0)
     skills = models.ManyToManyField(Skill, blank=True, related_name='bullet_points')
+    work_experience = models.ForeignKey(
+        'career.WorkExperience',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='bullet_points',
+    )
 
     class Meta:
         ordering = ['order', 'created']

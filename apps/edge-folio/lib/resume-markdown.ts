@@ -56,6 +56,7 @@ export interface ResumeMarkdownOptions {
   location?: string;
   githubUrl?: string;
   linkedinUrl?: string;
+  summary?: string;
   targetRole: string;
   targetCompany: string;
   tailoredBullets: TailoredBullet[];
@@ -75,6 +76,7 @@ export function buildResumeMarkdown({
   location,
   githubUrl,
   linkedinUrl,
+  summary,
   targetRole,
   targetCompany,
   tailoredBullets,
@@ -99,6 +101,13 @@ export function buildResumeMarkdown({
   lines.push('---');
   lines.push('');
 
+  if (summary) {
+    lines.push('## Professional Summary');
+    lines.push('');
+    lines.push(summary.trim());
+    lines.push('');
+  }
+
   if (coverLetter) {
     lines.push('## Cover Letter');
     lines.push('');
@@ -108,17 +117,30 @@ export function buildResumeMarkdown({
     lines.push('');
   }
 
-  lines.push(`## Experience — ${targetRole} at ${targetCompany}`);
-  lines.push('');
-
-  const grouped = groupByCategory(tailoredBullets);
-  for (const [cat, bullets] of grouped) {
-    lines.push(`### ${CATEGORY_LABELS[cat] ?? cat}`);
-    lines.push('');
-    for (const b of bullets) {
-      lines.push(`- ${b.tailored_text}`);
+  // Bullets linked to a specific WE embed under that role; orphans go in Key Achievements
+  const bulletsByWE = new Map<number, TailoredBullet[]>();
+  const orphanBullets: TailoredBullet[] = [];
+  for (const b of tailoredBullets) {
+    if (b.work_experience_id) {
+      if (!bulletsByWE.has(b.work_experience_id)) bulletsByWE.set(b.work_experience_id, []);
+      bulletsByWE.get(b.work_experience_id)!.push(b);
+    } else {
+      orphanBullets.push(b);
     }
+  }
+
+  if (orphanBullets.length > 0) {
+    lines.push(`## Key Achievements — ${targetRole} at ${targetCompany}`);
     lines.push('');
+    const grouped = groupByCategory(orphanBullets);
+    for (const [cat, bullets] of grouped) {
+      lines.push(`### ${CATEGORY_LABELS[cat] ?? cat}`);
+      lines.push('');
+      for (const b of bullets) {
+        lines.push(`- ${b.tailored_text}`);
+      }
+      lines.push('');
+    }
   }
 
   if (skills && skills.length > 0) {
@@ -135,7 +157,13 @@ export function buildResumeMarkdown({
     for (const exp of workExperiences) {
       lines.push(`### ${exp.title} — ${exp.company}`);
       lines.push(`*${formatDateRange(exp.start_date, exp.end_date, exp.is_current)}${exp.location ? `  ·  ${exp.location}` : ''}*`);
-      if (exp.description) {
+      const expBullets = bulletsByWE.get(exp.id) ?? [];
+      if (expBullets.length > 0) {
+        lines.push('');
+        for (const b of expBullets) {
+          lines.push(`- ${b.tailored_text}`);
+        }
+      } else if (exp.description) {
         lines.push('');
         lines.push(exp.description);
       }

@@ -74,20 +74,20 @@
 }
 
 .ui-toast--top-left {
-  top: 24px;
+  top: 64px;
   left: 24px;
   --_ty: -16px;
 }
 
 .ui-toast--top-center {
-  top: 24px;
+  top: 64px;
   left: 50%;
   --_tx: -50%;
   --_ty: -16px;
 }
 
 .ui-toast--top-right {
-  top: 24px;
+  top: 64px;
   right: 24px;
   --_ty: -16px;
 }

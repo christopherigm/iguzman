@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from career.models import WorkExperience
+
 from .models import BulletPoint, Skill
 
 
@@ -32,7 +34,7 @@ class BulletPointReadSerializer(serializers.ModelSerializer):
         model = BulletPoint
         fields = (
             'id', 'text', 'category', 'source', 'is_approved',
-            'order', 'skills', 'created', 'modified',
+            'order', 'skills', 'work_experience_id', 'created', 'modified',
         )
         read_only_fields = ('id', 'created', 'modified')
 
@@ -44,16 +46,24 @@ class BulletPointWriteSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True,
     )
+    work_experience = serializers.PrimaryKeyRelatedField(
+        queryset=WorkExperience.objects.none(),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = BulletPoint
-        fields = ('text', 'category', 'source', 'is_approved', 'order', 'skill_ids')
+        fields = ('text', 'category', 'source', 'is_approved', 'order', 'skill_ids', 'work_experience')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             self.fields['skill_ids'].child_relation.queryset = Skill.objects.filter(
+                user=request.user
+            )
+            self.fields['work_experience'].queryset = WorkExperience.objects.filter(
                 user=request.user
             )
 

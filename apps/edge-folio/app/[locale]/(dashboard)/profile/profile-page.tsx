@@ -19,6 +19,7 @@ import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from '@/lib/nafta-constants';
 import { Select } from '@repo/ui/core-elements/select';
 import { getLanguages, createLanguage, updateLanguage, deleteLanguage, getPopularTechStacks, type Language, type LanguageProficiency } from '@/lib/career';
 import { suggestTnCategory, ApplicationError, type TnCategorySuggestion } from '@/lib/applications';
+import { Toast } from '@repo/ui/core-elements/toast';
 import './profile-page.css';
 
 const YEARS_STEPS: SliderStep[] = [
@@ -386,18 +387,29 @@ export function ProfilePage() {
     setInfoSuccess(false);
     setSavingInfo(true);
     try {
-      await saveOnboarding({
-        job_title: jobTitle.trim(),
-        years_of_experience: typeof yearsValue === 'number' ? yearsValue : null,
-        preferred_stack: techStack,
-      });
+      await Promise.all([
+        saveOnboarding({
+          job_title: jobTitle.trim(),
+          years_of_experience: typeof yearsValue === 'number' ? yearsValue : null,
+          preferred_stack: techStack,
+        }),
+        updateContactInfo({
+          summary: contactSummary.trim(),
+          phone: contactPhone.trim(),
+          location: contactLocation.trim(),
+          github_url: contactGithub.trim(),
+          linkedin_url: contactLinkedin.trim(),
+          tn_profession: contactTnProfession,
+          citizenship: contactCitizenship,
+        }),
+      ]);
       setInfoSuccess(true);
     } catch {
       setInfoError(t('infoError'));
     } finally {
       setSavingInfo(false);
     }
-  }, [jobTitle, yearsValue, techStack, t]);
+  }, [jobTitle, yearsValue, techStack, contactSummary, contactPhone, contactLocation, contactGithub, contactLinkedin, contactTnProfession, contactCitizenship, t]);
 
   const handleSaveStack = useCallback(async () => {
     setStackError(null);
@@ -516,24 +528,29 @@ export function ProfilePage() {
     setSummaryEnhancePreview('');
     summaryResetLlm();
     const { min, max } = PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 };
+    const yearsLabel = YEARS_STEPS.find((s) => s.value === yearsValue)?.label ?? String(yearsValue);
+    const profileCtx = [
+      jobTitle.trim() ? `Job title: ${jobTitle.trim()}` : '',
+      yearsValue !== null ? `Years of experience: ${yearsLabel}` : '',
+    ].filter(Boolean).join('. ');
     const isEs = locale === 'es';
     const messages = isEs
       ? [
           {
             role: 'system' as const,
-            content: `Eres un coach profesional de carrera. Reescribe y mejora el siguiente resumen profesional en prosa convincente para un CV o portafolio. Escribe exactamente ${summaryEnhanceParagraphs} párrafo${summaryEnhanceParagraphs !== 1 ? 's' : ''}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros de carrera, habilidades clave y propuesta de valor profesional. Devuelve únicamente el texto mejorado — sin explicaciones, etiquetas ni marcas de formato.`,
+            content: `Eres un coach profesional de carrera. Reescribe y mejora el siguiente resumen profesional en prosa convincente para un CV o portafolio. Escribe exactamente ${summaryEnhanceParagraphs} párrafo${summaryEnhanceParagraphs !== 1 ? 's' : ''}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros de carrera, habilidades clave y propuesta de valor profesional. Devuelve únicamente el texto mejorado — sin explicaciones, etiquetas ni marcas de formato.${profileCtx ? ` Contexto del perfil: ${profileCtx}.` : ''}`,
           },
           { role: 'user' as const, content: currentText },
         ]
       : [
           {
             role: 'system' as const,
-            content: `You are a professional career coach and resume expert. Rewrite and enhance the following professional summary into polished, compelling prose for a resume or portfolio. Write exactly ${summaryEnhanceParagraphs} ${summaryEnhanceParagraphs === 1 ? 'paragraph' : 'paragraphs'}. Each paragraph must be between ${min} and ${max} words. Focus on career achievements, key skills, and professional value proposition. Return only the improved text — no explanations, labels, or formatting marks.`,
+            content: `You are a professional career coach and resume expert. Rewrite and enhance the following professional summary into polished, compelling prose for a resume or portfolio. Write exactly ${summaryEnhanceParagraphs} ${summaryEnhanceParagraphs === 1 ? 'paragraph' : 'paragraphs'}. Each paragraph must be between ${min} and ${max} words. Focus on career achievements, key skills, and professional value proposition. Return only the improved text — no explanations, labels, or formatting marks.${profileCtx ? ` Profile context: ${profileCtx}.` : ''}`,
           },
           { role: 'user' as const, content: currentText },
         ];
     await summaryGenerate(messages);
-  }, [contactSummary, summaryEnhanceParagraphLength, summaryEnhanceParagraphs, summaryGenerate, summaryResetLlm, locale]);
+  }, [contactSummary, summaryEnhanceParagraphLength, summaryEnhanceParagraphs, summaryGenerate, summaryResetLlm, locale, jobTitle, yearsValue]);
 
   const handleSummaryAcceptEnhance = useCallback(() => {
     if (summaryEnhancePreview) {
@@ -644,6 +661,16 @@ export function ProfilePage() {
       }}
       paddingX={10}
     >
+      {infoSuccess && <Toast message={t('infoSaved')} variant="success" position='top-center'/>}
+      {infoError && <Toast message={infoError} variant="error"  position='top-center'/>}
+      {stackSuccess && <Toast message={t('stackSaved')} variant="success"  position='top-center'/>}
+      {stackError && <Toast message={stackError} variant="error"  position='top-center'/>}
+      {contactSuccess && <Toast message={t('contactSaved')} variant="success"  position='top-center' />}
+      {contactError && <Toast message={contactError} variant="error"  position='top-center'/>}
+      {langError && <Toast message={langError} variant="error"  position='top-center'/>}
+      {tnSuggestError && <Toast message={tnSuggestError} variant="error"  position='top-center'/>}
+      {resumeError && <Toast message={resumeError} variant="error"  position='top-center'/>}
+
       <Box width="100%" maxWidth={640} marginTop={24} marginBottom={16}>
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {t('title')}
@@ -723,6 +750,7 @@ export function ProfilePage() {
 
         {/* ── Professional Info ── */}
         <Section title={t('professionalSection')} subtitle={t('professionalSubtitle')}>
+          <Box display="flex" flexDirection="column" gap={12} marginBottom={12}>
           <TextInput
             label={t('jobTitleLabel')}
             type="text"
@@ -737,30 +765,6 @@ export function ProfilePage() {
             value={yearsValue}
             onChange={(v) => { setYearsValue(v); setInfoSuccess(false); }}
           />
-          {infoSuccess && (
-            <Typography variant="caption" className="profile__success">
-              {t('infoSaved')}
-            </Typography>
-          )}
-          {infoError && (
-            <Typography variant="caption" role="alert" className="profile__error">
-              {infoError}
-            </Typography>
-          )}
-          {savingInfo && <ProgressBar label={t('savingInfo')} />}
-          <Box display="flex" justifyContent="flex-end">
-            <Button
-              text={savingInfo ? t('savingInfo') : t('saveInfo')}
-              type="button"
-              size="lg"
-              kind="success"
-              disabled={savingInfo || !jobTitle.trim()}
-              onClick={() => void handleSaveInfo()}
-            />
-          </Box>
-        </Section>
-        
-        <Section title={t('contactSection')} subtitle={t('contactSubtitle')}>
           <Box display="flex" flexDirection="column" gap={8}>
             <Box className="profile__field-label-row">
               <Typography variant="body" color="var(--muted-foreground, #6b7280)">
@@ -794,7 +798,7 @@ export function ProfilePage() {
               multirow
               rows={7}
               value={contactSummary}
-              onChange={(v) => { setContactSummary(v); setContactSuccess(false); }}
+              onChange={(v) => { setContactSummary(v); setInfoSuccess(false); }}
               placeholder={t('summaryPlaceholder')}
               aria-label={t('summaryLabel')}
             />
@@ -814,129 +818,44 @@ export function ProfilePage() {
               </Box>
             )}
           </Box>
-          <Box display="flex" flexDirection="column" gap={12} marginBottom={12}>
-            <TextInput
-              label={t('phoneLabel')}
-              type="text"
-              value={contactPhone}
-              onChange={(v) => { setContactPhone(v); setContactSuccess(false); }}
-              placeholder={t('phonePlaceholder')}
-              aria-label={t('phoneLabel')}
-            />
-            <TextInput
-              label={t('locationLabel')}
-              type="text"
-              value={contactLocation}
-              onChange={(v) => { setContactLocation(v); setContactSuccess(false); }}
-              placeholder={t('locationPlaceholder')}
-              aria-label={t('locationLabel')}
-            />
-            <TextInput
-              label={t('githubLabel')}
-              type="url"
-              value={contactGithub}
-              onChange={(v) => { setContactGithub(v); setContactSuccess(false); }}
-              placeholder={t('githubPlaceholder')}
-              aria-label={t('githubLabel')}
-            />
-            <TextInput
-              label={t('linkedinLabel')}
-              type="url"
-              value={contactLinkedin}
-              onChange={(v) => { setContactLinkedin(v); setContactSuccess(false); }}
-              placeholder={t('linkedinPlaceholder')}
-              aria-label={t('linkedinLabel')}
-            />
-            <Box display="flex" alignItems="center" gap={8}>
-              <Box styles={{ flex: 1 }}>
-                <Select
-                  label={t('tnProfessionLabel')}
-                  value={contactTnProfession}
-                  onChange={(v) => { setContactTnProfession(v); setContactSuccess(false); }}
-                  options={[{ value: '', label: t('tnProfessionPlaceholder') }, ...TN_PROFESSIONS]}
-                  aria-label={t('tnProfessionLabel')}
-                  disabled={tnSuggestLoading}
-                />
-              </Box>
-              <Button
-                unstyled
-                type="button"
-                icon="/icons/enhance.svg"
-                iconSize="16px"
-                iconColor={tnSuggestLoading ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+          <Box display="flex" alignItems="center" gap={8}>
+            <Box styles={{ flex: 1 }}>
+              <Select
+                label={t('tnProfessionLabel')}
+                value={contactTnProfession}
+                onChange={(v) => { setContactTnProfession(v); setInfoSuccess(false); }}
+                options={[{ value: '', label: t('tnProfessionPlaceholder') }, ...TN_PROFESSIONS]}
+                aria-label={t('tnProfessionLabel')}
                 disabled={tnSuggestLoading}
-                onClick={() => void handleSuggestTnCategory()}
-                aria-label={t('tnSuggestLabel')}
-                title={t('tnSuggestLabel')}
-                className={[
-                  'ai-enhance-btn',
-                  tnSuggestLoading ? 'ai-enhance-btn--busy' : '',
-                ].filter(Boolean).join(' ')}
               />
             </Box>
-            {tnSuggestLoading && <ProgressBar label={t('tnSuggestGenerating')} />}
-            {tnSuggestError && (
-              <Typography variant="caption" role="alert" className="profile__error">
-                {tnSuggestError}
-              </Typography>
-            )}
-            <Select
-              label={t('citizenshipLabel')}
-              value={contactCitizenship}
-              onChange={(v) => { setContactCitizenship(v); setContactSuccess(false); }}
-              options={[{ value: '', label: t('citizenshipPlaceholder') }, ...CITIZENSHIP_OPTIONS]}
-              aria-label={t('citizenshipLabel')}
+            <Button
+              unstyled
+              type="button"
+              icon="/icons/enhance.svg"
+              iconSize="16px"
+              iconColor={tnSuggestLoading ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+              disabled={tnSuggestLoading}
+              onClick={() => void handleSuggestTnCategory()}
+              aria-label={t('tnSuggestLabel')}
+              title={t('tnSuggestLabel')}
+              className={[
+                'ai-enhance-btn',
+                tnSuggestLoading ? 'ai-enhance-btn--busy' : '',
+              ].filter(Boolean).join(' ')}
             />
           </Box>
-          {contactSuccess && (
-            <Typography variant="caption" className="profile__success">
-              {t('contactSaved')}
-            </Typography>
-          )}
-          {contactError && (
-            <Typography variant="caption" role="alert" className="profile__error">
-              {contactError}
-            </Typography>
-          )}
-          {savingContact && <ProgressBar label={t('savingContact')} />}
+          {tnSuggestLoading && <ProgressBar label={t('tnSuggestGenerating')} />}
+          </Box>
+          {savingInfo && <ProgressBar label={t('savingInfo')} />}
           <Box display="flex" justifyContent="flex-end">
             <Button
-              text={savingContact ? t('savingContact') : t('saveContact')}
+              text={savingInfo ? t('savingInfo') : t('saveInfo')}
               type="button"
               size="lg"
               kind="success"
-              disabled={savingContact}
-              onClick={() => void handleSaveContact()}
-            />
-          </Box>
-        </Section>
-
-        {/* ── Tech Stack ── */}
-        <Section title={t('techSection')} subtitle={t('techSubtitle')}>
-          <TechTagInput
-            tags={techStack}
-            onChange={(tags) => { setTechStack(tags); setStackSuccess(false); }}
-            suggestions={popularTechSuggestions}
-          />
-          {stackSuccess && (
-            <Typography variant="caption" className="profile__success">
-              {t('stackSaved')}
-            </Typography>
-          )}
-          {stackError && (
-            <Typography variant="caption" role="alert" className="profile__error">
-              {stackError}
-            </Typography>
-          )}
-          {savingStack && <ProgressBar label={t('savingStack')} />}
-          <Box display="flex" justifyContent="flex-end" marginTop={20}>
-            <Button
-              text={savingStack ? t('savingStack') : t('saveStack')}
-              type="button"
-              size="lg"
-              kind="success"
-              disabled={savingStack}
-              onClick={() => void handleSaveStack()}
+              disabled={savingInfo || !jobTitle.trim()}
+              onClick={() => void handleSaveInfo()}
             />
           </Box>
         </Section>
@@ -1064,11 +983,81 @@ export function ProfilePage() {
             </Box>
           )}
 
-          {langError && (
-            <Typography variant="caption" role="alert" className="profile__error">
-              {langError}
-            </Typography>
-          )}
+        </Section>
+
+        {/* ── Tech Stack ── */}
+        <Section title={t('techSection')} subtitle={t('techSubtitle')}>
+          <TechTagInput
+            tags={techStack}
+            onChange={(tags) => { setTechStack(tags); setStackSuccess(false); }}
+            suggestions={popularTechSuggestions}
+          />
+          {savingStack && <ProgressBar label={t('savingStack')} />}
+          <Box display="flex" justifyContent="flex-end" marginTop={20}>
+            <Button
+              text={savingStack ? t('savingStack') : t('saveStack')}
+              type="button"
+              size="lg"
+              kind="success"
+              disabled={savingStack}
+              onClick={() => void handleSaveStack()}
+            />
+          </Box>
+        </Section>
+        
+        <Section title={t('contactSection')} subtitle={t('contactSubtitle')}>
+          <Box display="flex" flexDirection="column" gap={12} marginBottom={12}>
+            <TextInput
+              label={t('phoneLabel')}
+              type="text"
+              value={contactPhone}
+              onChange={(v) => { setContactPhone(v); setContactSuccess(false); }}
+              placeholder={t('phonePlaceholder')}
+              aria-label={t('phoneLabel')}
+            />
+            <TextInput
+              label={t('locationLabel')}
+              type="text"
+              value={contactLocation}
+              onChange={(v) => { setContactLocation(v); setContactSuccess(false); }}
+              placeholder={t('locationPlaceholder')}
+              aria-label={t('locationLabel')}
+            />
+            <TextInput
+              label={t('githubLabel')}
+              type="url"
+              value={contactGithub}
+              onChange={(v) => { setContactGithub(v); setContactSuccess(false); }}
+              placeholder={t('githubPlaceholder')}
+              aria-label={t('githubLabel')}
+            />
+            <TextInput
+              label={t('linkedinLabel')}
+              type="url"
+              value={contactLinkedin}
+              onChange={(v) => { setContactLinkedin(v); setContactSuccess(false); }}
+              placeholder={t('linkedinPlaceholder')}
+              aria-label={t('linkedinLabel')}
+            />
+            <Select
+              label={t('citizenshipLabel')}
+              value={contactCitizenship}
+              onChange={(v) => { setContactCitizenship(v); setContactSuccess(false); }}
+              options={[{ value: '', label: t('citizenshipPlaceholder') }, ...CITIZENSHIP_OPTIONS]}
+              aria-label={t('citizenshipLabel')}
+            />
+          </Box>
+          {savingContact && <ProgressBar label={t('savingContact')} />}
+          <Box display="flex" justifyContent="flex-end">
+            <Button
+              text={savingContact ? t('savingContact') : t('saveContact')}
+              type="button"
+              size="lg"
+              kind="success"
+              disabled={savingContact}
+              onClick={() => void handleSaveContact()}
+            />
+          </Box>
         </Section>
 
         {/* ── Resume ── */}
@@ -1182,11 +1171,6 @@ export function ProfilePage() {
             </Box>
           )}
 
-          {uploadState === 'error' && resumeError && (
-            <Typography variant="caption" role="alert" className="profile__error">
-              {resumeError}
-            </Typography>
-          )}
         </Section>
       </Box>
     </Container>

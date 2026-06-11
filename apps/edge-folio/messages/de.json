@@ -396,6 +396,7 @@
     "tailoring": "Wird angepasst…",
     "tailorAgain": "Erneut anpassen",
     "tailoredSubtitle": "Aus Ihrer Matrix für diese Stelle ausgewählt und umgeschrieben.",
+    "professionalSummaryLabel": "Berufliches Profil",
     "errorTailor": "Anpassung fehlgeschlagen. Stellen Sie sicher, dass Ihre Matrix genehmigte Punkte enthält.",
     "categories": {
       "impact": "Wirkung",
@@ -444,6 +445,8 @@
     "exportIncludeContact": "Kontaktinformationen",
     "exportIncludeLinks": "Links (GitHub & LinkedIn)",
     "exportIncludeSkills": "Technische Fähigkeiten",
+    "exportIncludePhoto": "Profilfoto",
+    "exportIncludePhotoHint": "Für US/Kanada-ATS nicht empfohlen — für europäische/internationale Lebensläufe geeignet.",
     "exportJobsTitle": "Berufserfahrung",
     "exportEducationTitle": "Ausbildung",
     "exportLanguagesTitle": "Sprachen",

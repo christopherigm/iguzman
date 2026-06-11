@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import re
@@ -45,6 +46,14 @@ class _TailoredBulletsResponse(BaseModel):
     bullets: list[_TailoredBullet]
 
 
+class _TailoredSkillsResponse(BaseModel):
+    skill_ids: list[int]
+
+
+class _ProfessionalSummaryResponse(BaseModel):
+    summary: str
+
+
 class _ScoreResult(BaseModel):
     score: int = Field(ge=1, le=100)
     explanation: str
@@ -64,6 +73,18 @@ Rules:
 - Use ONLY bullets from the provided list. Never invent new experiences.
 - Rewrite each selected bullet to highlight keywords from the job description.
 - Select between 4 and 8 of the most relevant bullets.
+- Each bullet must start with a strong, specific action verb such as: Designed, Architected, \
+  Shipped, Deployed, Migrated, Optimized, Reduced, Led, Mentored, Established, Refactored, \
+  Launched, Eliminated, Accelerated, Automated, Negotiated. Never start with: Utilized, \
+  Leveraged, Facilitated, Spearheaded, Showcased, Executed, Managed (as a generic opener).
+- Target 15–25 words per bullet. Do not exceed two lines.
+- If the original bullet contains a precise metric (e.g. "71%", "$183K", "3 of 7 teams"), \
+  preserve it exactly as written. If no metric exists, omit the quantity entirely — never \
+  invent round numbers like "50%" or "$100K".
+- Forbidden words and phrases — do not use any of these: leverage, leveraged, utilize, \
+  utilized, spearhead, spearheaded, pivotal, realm, synergize, proven track record, \
+  results-driven, dynamic professional, passionate team player, cross-functional stakeholders, \
+  facilitating knowledge transfer, intricate, delve, showcase, showcasing.
 - Return ONLY valid JSON — no markdown, no explanation, no extra text.
 
 Response schema:
@@ -203,6 +224,149 @@ def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict])
         temperature=0.3,
     )
     return [b.model_dump() for b in result.bullets]
+
+
+_SKILLS_SYSTEM_PROMPT = """\
+You are a resume tailoring assistant.
+
+Given a job description and a candidate's skill list, select the skills most relevant to the role.
+
+Rules:
+- Select between 5 and 15 of the most relevant skills.
+- Prioritize skills explicitly mentioned or strongly implied in the job description.
+- Include both technical and soft skills if they are relevant to this specific role.
+- Return ONLY valid JSON — no markdown, no explanation, no extra text.
+
+Response schema:
+{"skill_ids": [<integer>, ...]}
+"""
+
+
+def tailor_skills(job_description: str, skills: list[dict]) -> list[int]:
+    """
+    Select the most relevant skill IDs from the user's matrix for the given job.
+
+    skills: [{"id": int, "name": str, "proficiency": int}]
+    Returns: list of skill IDs (subset of the input IDs)
+    """
+    if not skills:
+        return []
+
+    skill_lines = "\n".join(
+        f"[{s['id']}] {s['name']} ({s['proficiency']}/5)" for s in skills
+    )
+    user_message = (
+        f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
+        f"CANDIDATE SKILLS:\n{skill_lines}\n\n"
+        "Select the most relevant skill IDs as JSON."
+    )
+
+    result = chat_structured(
+        messages=[
+            {"role": "system", "content": _SKILLS_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        response_model=_TailoredSkillsResponse,
+        temperature=0.1,
+    )
+    valid_ids = {s['id'] for s in skills}
+    return [sid for sid in result.skill_ids if sid in valid_ids]
+
+
+# ---------------------------------------------------------------------------
+# Professional summary
+# ---------------------------------------------------------------------------
+
+_PROFESSIONAL_SUMMARY_SYSTEM_PROMPT = """\
+You are a professional resume writer specializing in the tech industry.
+
+Write a professional summary (3–5 sentences, 50–100 words total) for a candidate \
+applying to a specific role. The summary is the first thing a recruiter reads.
+
+Rules:
+- Open with: [Most recent job title] with [X] years of experience [core domain / stack].
+- Include at least one concrete achievement drawn from the provided bullet points. \
+  Use the exact metric — never invent or round numbers.
+- Close with what the candidate brings to this specific company or type of role.
+- Naturally mirror 2–3 keywords from the job description.
+- Total length: 50–100 words. Maximum 5 sentences.
+- No first-person pronouns (I, my, me, we).
+- Forbidden words and phrases — do not use any: leverage, leveraged, utilize, utilized, \
+  spearhead, spearheaded, pivotal, realm, synergize, proven track record, results-driven, \
+  dynamic professional, passionate team player, passionate about, cross-functional, \
+  intricate, delve, showcase, showcasing, facilitating.
+- Write in confident, direct, third-person professional prose.
+- Return the summary paragraph as plain text only. No labels, no JSON, no markdown.
+"""
+
+
+def _compute_years_experience(work_experiences: list[dict]) -> str:
+    """Return a human-readable years-of-experience string from WE start dates."""
+    if not work_experiences:
+        return 'several'
+    earliest: datetime.date | None = None
+    for we in work_experiences:
+        start = we.get('start_date')
+        if not start:
+            continue
+        try:
+            start_date = (
+                start if isinstance(start, datetime.date)
+                else datetime.date.fromisoformat(str(start)[:10])
+            )
+            if earliest is None or start_date < earliest:
+                earliest = start_date
+        except (ValueError, TypeError):
+            pass
+    if not earliest:
+        return 'several'
+    years = (datetime.date.today() - earliest).days // 365
+    return str(max(years, 1))
+
+
+def generate_professional_summary(
+    job_title: str,
+    company_name: str,
+    job_description: str,
+    tailored_bullets: list[dict],
+    skills: list[dict],
+    work_experiences: list[dict],
+    profile_job_title: str = '',
+) -> str:
+    """
+    Generate a 50-100 word professional summary grounded in tailored bullets.
+
+    work_experiences: [{"title", "company", "start_date", "end_date", "is_current"}]
+    tailored_bullets: [{"id", "tailored_text"}]
+    skills: [{"name", "proficiency"}]
+    """
+    years_str = _compute_years_experience(work_experiences)
+    current_title = (
+        profile_job_title
+        or (work_experiences[0].get('title', '') if work_experiences else job_title)
+    )
+    bullet_lines = "\n".join(f"- {b['tailored_text']}" for b in tailored_bullets)
+    top_skills = ", ".join(
+        s['name'] for s in sorted(skills, key=lambda x: -x.get('proficiency', 0))[:10]
+    )
+
+    user_message = (
+        f"TARGET ROLE: {job_title} at {company_name}\n\n"
+        f"JOB DESCRIPTION (extract 2-3 keywords from this):\n{job_description[:2000]}\n\n"
+        f"CANDIDATE'S MOST RECENT TITLE: {current_title}\n"
+        f"YEARS OF PROFESSIONAL EXPERIENCE: {years_str}\n"
+        f"TOP SKILLS: {top_skills or 'Not provided'}\n\n"
+        f"TAILORED ACHIEVEMENTS (use the best metric from these):\n{bullet_lines}\n\n"
+        "Write the professional summary now."
+    )
+
+    return chat_text(
+        messages=[
+            {"role": "system", "content": _PROFESSIONAL_SUMMARY_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        temperature=0.4,
+    ).strip()
 
 
 # ---------------------------------------------------------------------------

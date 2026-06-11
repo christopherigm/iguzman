@@ -30,6 +30,7 @@ import {
   type JobApplication,
   type ApplicationStatus,
   type TailoredBullet,
+  type TailoredSkill,
   type NaftaLetterPayload,
   type TnCategorySuggestion,
   type WorkType,
@@ -37,7 +38,6 @@ import {
 } from '@/lib/applications';
 import type { UserProfile } from '@/lib/auth';
 import { buildResumeMarkdown, downloadMarkdown } from '@/lib/resume-markdown';
-import { getSkills, type Skill } from '@/lib/matrix';
 import {
   getWorkExperiences,
   getEducations,
@@ -77,7 +77,6 @@ function groupByCategory(bullets: TailoredBullet[]): Array<{ cat: string; bullet
 }
 
 interface ExportData {
-  skills: Pick<Skill, 'name' | 'proficiency'>[];
   workExps: WorkExperience[];
   educations: Education[];
   languages: Language[];
@@ -174,6 +173,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   // Tailor
   const [tailoring, setTailoring] = useState(false);
   const [tailoredBullets, setTailoredBullets] = useState<TailoredBullet[] | null>(initialApp.tailored_bullets ?? null);
+  const [professionalSummary, setProfessionalSummary] = useState(initialApp.professional_summary || '');
   const [tailorError, setTailorError] = useState<string | null>(null);
 
   // Cover letter
@@ -208,6 +208,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   const [includeContact, setIncludeContact] = useState(true);
   const [includeLinks, setIncludeLinks] = useState(true);
   const [includeSkills, setIncludeSkills] = useState(true);
+  const [includePhoto, setIncludePhoto] = useState(false);
   const [includedWorkExpIds, setIncludedWorkExpIds] = useState<Set<number>>(new Set());
   const [includedEducationIds, setIncludedEducationIds] = useState<Set<number>>(new Set());
   const [includedLanguageIds, setIncludedLanguageIds] = useState<Set<number>>(new Set());
@@ -245,18 +246,16 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
     exportDataFetchRef.current = true;
     setExportDataLoading(true);
     Promise.allSettled([
-      getSkills(),
       getWorkExperiences(),
       getEducations(),
       getLanguages(),
       getProjects(),
-    ]).then(([skillsRes, workExpsRes, educationsRes, languagesRes, projectsRes]) => {
-      const skills = skillsRes.status === 'fulfilled' ? skillsRes.value.results : [];
+    ]).then(([workExpsRes, educationsRes, languagesRes, projectsRes]) => {
       const workExps = workExpsRes.status === 'fulfilled' ? workExpsRes.value.results : [];
       const educations = educationsRes.status === 'fulfilled' ? educationsRes.value.results : [];
       const languages = languagesRes.status === 'fulfilled' ? languagesRes.value.results : [];
       const projects = projectsRes.status === 'fulfilled' ? projectsRes.value.results : [];
-      setExportData({ skills, workExps, educations, languages, projects });
+      setExportData({ workExps, educations, languages, projects });
       setIncludedWorkExpIds(new Set(workExps.map((e) => e.id)));
       setIncludedEducationIds(new Set(educations.map((e) => e.id)));
       setIncludedLanguageIds(new Set(languages.map((l) => l.id)));
@@ -373,6 +372,8 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
     try {
       const result = await tailorApplication(app.id);
       setTailoredBullets(result.bullets);
+      setProfessionalSummary(result.professional_summary || '');
+      setApp((prev) => ({ ...prev, tailored_skills: result.tailored_skills }));
     } catch {
       setTailorError(t('errorTailor'));
     } finally {
@@ -472,7 +473,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   function getFilteredExportData() {
     if (!exportData) return null;
     return {
-      skills: includeSkills ? exportData.skills : [],
+      skills: includeSkills ? (app.tailored_skills ?? []) : [],
       workExps: exportData.workExps.filter((e) => includedWorkExpIds.has(e.id)),
       educations: exportData.educations.filter((e) => includedEducationIds.has(e.id)),
       languages: exportData.languages.filter((l) => includedLanguageIds.has(l.id)),
@@ -493,6 +494,22 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
 
       const filtered = getFilteredExportData()!;
 
+      let photoUrl: string | undefined;
+      if (includePhoto && profile?.profile_picture) {
+        try {
+          const imgRes = await fetch(profile.profile_picture);
+          const imgBlob = await imgRes.blob();
+          photoUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(imgBlob);
+          });
+        } catch {
+          // proceed without photo if fetch fails
+        }
+      }
+
       const blob = await pdf(
         <ResumeDocument
           fullName={fullName}
@@ -502,7 +519,8 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
           location={includeContact ? (profile?.location ?? '') : ''}
           githubUrl={includeLinks ? (profile?.github_url ?? '') : ''}
           linkedinUrl={includeLinks ? (profile?.linkedin_url ?? '') : ''}
-          summary={profile?.summary ?? ''}
+          photoUrl={photoUrl}
+          summary={professionalSummary || (profile?.summary ?? '') || undefined}
           skills={filtered.skills}
           workExperiences={filtered.workExps}
           targetRole={app.job_title}
@@ -545,6 +563,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
       location: includeContact ? profile?.location : undefined,
       githubUrl: includeLinks ? profile?.github_url : undefined,
       linkedinUrl: includeLinks ? profile?.linkedin_url : undefined,
+      summary: professionalSummary || undefined,
       targetRole: app.job_title,
       targetCompany: app.company_name,
       tailoredBullets,
@@ -955,10 +974,20 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
           </Typography>
         )}
         {tailoredBullets && tailoredBullets.length > 0 && (
-          <Box display="flex" flexDirection="column" gap={8}>
+          <Box display="flex" flexDirection="column" gap={16}>
             <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t('tailoredSubtitle')}
             </Typography>
+            {professionalSummary && (
+              <Box display="flex" flexDirection="column" gap={6}>
+                <Typography variant="body" fontWeight={600} color="var(--foreground)">
+                  {t('professionalSummaryLabel')}
+                </Typography>
+                <Typography as="p" variant="body" styles={{ lineHeight: 1.7, wordBreak: 'break-word', fontStyle: 'italic' }}>
+                  {professionalSummary}
+                </Typography>
+              </Box>
+            )}
             {grouped.map(({ cat, bullets }) => (
               <Box key={cat} display="flex" flexDirection="column" gap={6}>
                 <Typography variant="body" fontWeight={600} color="var(--foreground)" styles={{ textTransform: 'capitalize' }}>
@@ -1007,6 +1036,14 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
                 <SwitchRow label={t('exportIncludeContact')} checked={includeContact} onChange={setIncludeContact} />
                 <SwitchRow label={t('exportIncludeLinks')} checked={includeLinks} onChange={setIncludeLinks} />
                 <SwitchRow label={t('exportIncludeSkills')} checked={includeSkills} onChange={setIncludeSkills} />
+                {profile?.profile_picture && (
+                  <Box display="flex" flexDirection="column" gap={4}>
+                    <SwitchRow label={t('exportIncludePhoto')} checked={includePhoto} onChange={setIncludePhoto} />
+                    <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+                      {t('exportIncludePhotoHint')}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
 
               {/* Work experience */}

@@ -6,6 +6,13 @@ export interface TailoredBullet {
   id: number;
   tailored_text: string;
   category: string;
+  work_experience_id?: number | null;
+}
+
+export interface TailoredSkill {
+  id: number;
+  name: string;
+  proficiency: number;
 }
 
 export interface JobApplication {
@@ -18,7 +25,9 @@ export interface JobApplication {
   job_url: string;
   company_image_url: string | null;
   company_description: string;
+  professional_summary: string;
   tailored_bullets: TailoredBullet[] | null;
+  tailored_skills: TailoredSkill[] | null;
   cover_letter: string;
   nafta_letter: string;
   overall_match: number | null;
@@ -123,6 +132,8 @@ export function getApplication(id: number): Promise<JobApplication> {
 
 export interface TailoringResult {
   bullets: TailoredBullet[];
+  professional_summary: string;
+  tailored_skills: TailoredSkill[];
 }
 
 export function tailorApplication(id: number): Promise<TailoringResult> {

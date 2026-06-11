@@ -339,6 +339,7 @@
     "tailoring": "Tailoring…",
     "tailorAgain": "Re-tailor",
     "tailoredSubtitle": "Selected and rewritten from your Matrix for this role.",
+    "professionalSummaryLabel": "Professional Summary",
     "errorTailor": "Tailoring failed. Make sure your Matrix has approved bullets and try again.",
     "categories": {
       "impact": "Impact",
@@ -387,6 +388,8 @@
     "exportIncludeContact": "Contact Information",
     "exportIncludeLinks": "Links (GitHub & LinkedIn)",
     "exportIncludeSkills": "Technical Skills",
+    "exportIncludePhoto": "Profile Photo",
+    "exportIncludePhotoHint": "Not recommended for US/Canada ATS — safe for European/international résumés.",
     "exportJobsTitle": "Work Experience",
     "exportEducationTitle": "Education",
     "exportLanguagesTitle": "Languages",

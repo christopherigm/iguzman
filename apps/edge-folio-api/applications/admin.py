@@ -17,7 +17,8 @@ class JobApplicationAdmin(admin.ModelAdmin):
     search_fields = ('job_title', 'company_name', 'user__email')
     raw_id_fields = ('user',)
     readonly_fields = (
-        'tailored_bullets', 'cover_letter', 'nafta_letter',
+        'professional_summary', 'tailored_bullets', 'tailored_skills',
+        'cover_letter', 'nafta_letter',
         'overall_match', 'technical_match', 'nafta_tn_likelihood',
         'company_description',
         'created', 'modified',

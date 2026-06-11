@@ -22,8 +22,10 @@ from .tailoring import (
     calculate_technical_match,
     generate_cover_letter,
     generate_nafta_letter,
+    generate_professional_summary,
     suggest_tn_categories,
     tailor_resume,
+    tailor_skills,
 )
 
 
@@ -128,10 +130,11 @@ class TailorApplicationView(APIView):
             for b in approved_bullets
         ]
         skills_payload = list(
-            Skill.objects.filter(user=request.user).values('name', 'proficiency')
+            Skill.objects.filter(user=request.user).values('id', 'name', 'proficiency')
         )
 
         bullet_category = {b.id: b.category for b in approved_bullets}
+        bullet_we_id = {b.id: b.work_experience_id for b in approved_bullets}
 
         try:
             tailored = tailor_resume(
@@ -148,12 +151,59 @@ class TailorApplicationView(APIView):
 
         for bullet in tailored:
             bullet['category'] = bullet_category.get(bullet.get('id'), 'other')
+            bullet['work_experience_id'] = bullet_we_id.get(bullet.get('id'))
+
+        try:
+            selected_skill_ids = tailor_skills(
+                job_description=application.job_description,
+                skills=skills_payload,
+            )
+        except Exception as exc:
+            logger.error('LLM error during skill tailoring: %s', exc)
+            selected_skill_ids = []
+
+        work_experiences = list(
+            WorkExperience.objects.filter(user=request.user)
+            .order_by('-start_date')
+            .values('id', 'title', 'company', 'start_date', 'end_date', 'is_current')
+        )
+
+        profile_job_title = ''
+        try:
+            profile_job_title = request.user.profile.job_title or ''
+        except Exception:
+            pass
+
+        try:
+            professional_summary = generate_professional_summary(
+                job_title=application.job_title,
+                company_name=application.company_name,
+                job_description=application.job_description,
+                tailored_bullets=tailored,
+                skills=skills_payload,
+                work_experiences=work_experiences,
+                profile_job_title=profile_job_title,
+            )
+        except Exception as exc:
+            logger.error('LLM error during summary generation: %s', exc)
+            professional_summary = ''
 
         application.tailored_bullets = tailored
-        application.save(update_fields=['tailored_bullets', 'modified'])
+        application.professional_summary = professional_summary
+        application.save(update_fields=['tailored_bullets', 'professional_summary', 'modified'])
+        application.tailored_skills.set(
+            Skill.objects.filter(id__in=selected_skill_ids, user=request.user)
+        )
         _invalidate_application(request.user.id, pk)
 
-        return Response({'bullets': tailored})
+        tailored_skills_data = list(
+            application.tailored_skills.order_by('name').values('id', 'name', 'proficiency')
+        )
+        return Response({
+            'bullets': tailored,
+            'professional_summary': professional_summary,
+            'tailored_skills': tailored_skills_data,
+        })
 
 
 class CoverLetterView(APIView):
