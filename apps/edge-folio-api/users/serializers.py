@@ -248,14 +248,27 @@ class OnboardingSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         if stack_names is not None:
             from career.models import TechStack as TechStackModel
+            from matrix.models import Skill
+            from django.core.cache import cache
             tech_objs = []
             for name in stack_names:
                 obj, _ = TechStackModel.objects.get_or_create(name=name)
                 tech_objs.append(obj)
             instance.preferred_stack.set(tech_objs)
-            from django.core.cache import cache
             cache.delete('career:tech_stacks')
             cache.delete('career:tech_stacks_popular')
+            any_created = False
+            for name in stack_names:
+                _, created = Skill.objects.get_or_create(
+                    user=instance.user,
+                    name=name,
+                    defaults={'proficiency': 4},
+                )
+                if created:
+                    any_created = True
+            if any_created:
+                cache.delete(f'matrix:skills:{instance.user_id}')
+                cache.delete(f'matrix:bullets:{instance.user_id}')
         return instance
 
 

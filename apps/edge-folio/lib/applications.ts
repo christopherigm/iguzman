@@ -15,6 +15,16 @@ export interface TailoredSkill {
   proficiency: number;
 }
 
+export interface TailoredWorkExperience {
+  id: number;
+  tailored_description: string;
+}
+
+export interface TailoredProject {
+  id: number;
+  tailored_description: string;
+}
+
 export interface JobApplication {
   id: number;
   company_name: string;
@@ -27,6 +37,8 @@ export interface JobApplication {
   company_description: string;
   professional_summary: string;
   tailored_bullets: TailoredBullet[] | null;
+  tailored_work_experiences: TailoredWorkExperience[] | null;
+  tailored_projects: TailoredProject[] | null;
   tailored_skills: TailoredSkill[] | null;
   cover_letter: string;
   nafta_letter: string;
@@ -132,6 +144,8 @@ export function getApplication(id: number): Promise<JobApplication> {
 
 export interface TailoringResult {
   bullets: TailoredBullet[];
+  tailored_work_experiences: TailoredWorkExperience[];
+  tailored_projects: TailoredProject[];
   professional_summary: string;
   tailored_skills: TailoredSkill[];
 }

@@ -41,5 +41,19 @@ export default async function ApplicationDetailRoute({ params }: Props) {
   const application = (await appRes.json()) as JobApplication;
   const profile = profileRes.ok ? ((await profileRes.json()) as UserProfile) : null;
 
-  return <ApplicationDetailPage application={application} profile={profile} />;
+  let profilePictureBase64: string | undefined;
+  if (profile?.profile_picture) {
+    try {
+      const picRes = await fetch(profile.profile_picture);
+      if (picRes.ok) {
+        const picBuffer = await picRes.arrayBuffer();
+        const mimeType = picRes.headers.get('content-type') || 'image/jpeg';
+        profilePictureBase64 = `data:${mimeType};base64,${Buffer.from(picBuffer).toString('base64')}`;
+      }
+    } catch {
+      // no photo available — proceed without it
+    }
+  }
+
+  return <ApplicationDetailPage application={application} profile={profile} profilePictureBase64={profilePictureBase64} />;
 }

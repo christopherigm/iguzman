@@ -39,6 +39,8 @@ class JobApplication(Common):
     notes = models.TextField(blank=True)
     job_url = models.URLField(max_length=2048, blank=True)
     tailored_bullets = models.JSONField(null=True, blank=True)
+    tailored_work_experiences = models.JSONField(null=True, blank=True)
+    tailored_projects = models.JSONField(null=True, blank=True)
     professional_summary = models.TextField(blank=True)
     cover_letter = models.TextField(blank=True)
     nafta_letter = models.TextField(blank=True)

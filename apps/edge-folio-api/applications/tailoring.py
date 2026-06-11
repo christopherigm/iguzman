@@ -50,6 +50,24 @@ class _TailoredSkillsResponse(BaseModel):
     skill_ids: list[int]
 
 
+class _TailoredWorkExperience(BaseModel):
+    id: int
+    tailored_description: str
+
+
+class _TailoredWorkExperiencesResponse(BaseModel):
+    work_experiences: list[_TailoredWorkExperience]
+
+
+class _TailoredProject(BaseModel):
+    id: int
+    tailored_description: str
+
+
+class _TailoredProjectsResponse(BaseModel):
+    projects: list[_TailoredProject]
+
+
 class _ProfessionalSummaryResponse(BaseModel):
     summary: str
 
@@ -77,7 +95,7 @@ Rules:
   Shipped, Deployed, Migrated, Optimized, Reduced, Led, Mentored, Established, Refactored, \
   Launched, Eliminated, Accelerated, Automated, Negotiated. Never start with: Utilized, \
   Leveraged, Facilitated, Spearheaded, Showcased, Executed, Managed (as a generic opener).
-- Target 15–25 words per bullet. Do not exceed two lines.
+- Target 15-25 words per bullet. Do not exceed two lines.
 - If the original bullet contains a precise metric (e.g. "71%", "$183K", "3 of 7 teams"), \
   preserve it exactly as written. If no metric exists, omit the quantity entirely — never \
   invent round numbers like "50%" or "$100K".
@@ -124,7 +142,7 @@ def suggest_tn_categories(
     )
 
     work_section = '\n'.join(
-        "{title} at {company} ({start}–{end}){desc}".format(
+        "{title} at {company} ({start}-{end}){desc}".format(
             title=w.get('title', ''),
             company=w.get('company', ''),
             start=str(w.get('start_date', ''))[:7],
@@ -135,7 +153,7 @@ def suggest_tn_categories(
     ) or 'None provided'
 
     edu_section = '\n'.join(
-        "{degree} in {field} at {institution} ({start}–{end}){desc}".format(
+        "{degree} in {field} at {institution} ({start}-{end}){desc}".format(
             degree=e.get('degree', ''),
             field=e.get('field_of_study', 'N/A'),
             institution=e.get('institution', ''),
@@ -152,8 +170,8 @@ def suggest_tn_categories(
         f"TN Profession Categories:\n{profession_lines}\n\n"
         "Return a JSON object with a 'suggestions' array. "
         "Each item must have: 'category' (exact profession name from the list above), "
-        "'likelihood' (integer 0–100), "
-        "'explanation' (1–2 sentences). "
+        "'likelihood' (integer 0-100), "
+        "'explanation' (1-2 sentences). "
         "Only include categories with likelihood >= 30. Sort by likelihood descending."
     )
 
@@ -203,7 +221,12 @@ def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict])
 
     bullet_lines = "\n".join(
         f"[{b['id']}] ({b['category']}) {b['text']}"
-        + (f" | skills: {', '.join(b['skills'])}" if b['skills'] else "")
+        + (f" | skills: {', '.join(b['skills'])}" if b.get('skills') else "")
+        + (
+            f" | role: {b['work_experience_title']} at {b['work_experience_company']}"
+            if b.get('work_experience_title')
+            else ""
+        )
         for b in ranked
     )
     skill_summary = ", ".join(f"{s['name']} ({s['proficiency']}/5)" for s in skills)
@@ -270,7 +293,195 @@ def tailor_skills(job_description: str, skills: list[dict]) -> list[int]:
         temperature=0.1,
     )
     valid_ids = {s['id'] for s in skills}
-    return [sid for sid in result.skill_ids if sid in valid_ids]
+    matched = [sid for sid in result.skill_ids if sid in valid_ids]
+    if not matched:
+        # LLM returned no recognised IDs — fall back to top-15 by proficiency
+        sorted_by_prof = sorted(skills, key=lambda s: -s.get('proficiency', 0))
+        matched = [s['id'] for s in sorted_by_prof[:15]]
+    return matched
+
+
+# ---------------------------------------------------------------------------
+# Work experience tailoring
+# ---------------------------------------------------------------------------
+
+_WE_TAILORING_SYSTEM_PROMPT = """\
+You are a resume tailoring assistant.
+
+Given a job description and a candidate's work experience entries, rewrite every entry's \
+description to highlight alignment with the target role.
+
+Rules:
+- Include ALL provided work experience entries in your response — do not omit any.
+- Rewrite each description to mirror 2-3 keywords from the job description.
+- Preserve any concrete metrics exactly as written — never invent or round numbers.
+- Keep each rewritten description concise: 2-4 sentences.
+- Do not invent duties or achievements not implied by the original description.
+- Forbidden words: leverage, leveraged, utilize, utilized, spearhead, spearheaded, pivotal, \
+  synergize, proven track record, results-driven, dynamic professional, passionate team player.
+- Return ONLY valid JSON — no markdown, no explanation, no extra text.
+
+Response schema:
+{"work_experiences": [{"id": <integer>, "tailored_description": "<string>"}]}
+"""
+
+
+def tailor_work_experiences(job_description: str, work_experiences: list[dict]) -> list[dict]:
+    """
+    Select and rewrite the most relevant work experience descriptions for a job.
+
+    work_experiences: [{"id": int, "title": str, "company": str, "start_date", "end_date",
+                        "is_current": bool, "description": str}]
+    Returns: [{"id": int, "tailored_description": str}]
+    """
+    if not work_experiences:
+        return []
+
+    we_lines = "\n".join(
+        "[{id}] {title} at {company} ({start}-{end}): {desc}".format(
+            id=we['id'],
+            title=we.get('title', ''),
+            company=we.get('company', ''),
+            start=str(we.get('start_date', ''))[:7],
+            end='present' if we.get('is_current') else str(we.get('end_date', ''))[:7],
+            desc=we.get('description', '') or 'No description provided',
+        )
+        for we in work_experiences
+    )
+    user_message = (
+        f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
+        f"CANDIDATE WORK EXPERIENCES:\n{we_lines}\n\n"
+        "Select and rewrite the most relevant work experiences as JSON."
+    )
+
+    result = chat_structured(
+        messages=[
+            {"role": "system", "content": _WE_TAILORING_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        response_model=_TailoredWorkExperiencesResponse,
+        temperature=0.3,
+    )
+    valid_ids = {we['id'] for we in work_experiences}
+    return [we.model_dump() for we in result.work_experiences if we.id in valid_ids]
+
+
+# ---------------------------------------------------------------------------
+# Project tailoring
+# ---------------------------------------------------------------------------
+
+_PROJECTS_TAILORING_SYSTEM_PROMPT = """\
+You are a resume tailoring assistant.
+
+Given a job description and a candidate's project list, select the most relevant projects \
+and rewrite each description to highlight alignment with the target role.
+
+Rules:
+- Select between 1 and 4 of the most relevant projects.
+- Rewrite each description to mirror keywords from the job description.
+- Emphasize technologies from the tech stack that appear in the job description.
+- Keep each rewritten description to 1-3 sentences.
+- Do not invent features or outcomes not implied by the original description.
+- Forbidden words: leverage, leveraged, utilize, utilized, spearhead, spearheaded, pivotal, \
+  synergize, proven track record, results-driven, dynamic professional, passionate team player.
+- Return ONLY valid JSON — no markdown, no explanation, no extra text.
+
+Response schema:
+{"projects": [{"id": <integer>, "tailored_description": "<string>"}]}
+"""
+
+
+def tailor_projects(job_description: str, projects: list[dict]) -> list[dict]:
+    """
+    Select and rewrite the most relevant project descriptions for a job.
+
+    projects: [{"id": int, "name": str, "description": str, "tech_stack": [str]}]
+    Returns: [{"id": int, "tailored_description": str}]
+    """
+    if not projects:
+        return []
+
+    project_lines = "\n".join(
+        "[{id}] {name}{tech}: {desc}".format(
+            id=p['id'],
+            name=p.get('name', ''),
+            tech=f" | stack: {', '.join(p['tech_stack'])}" if p.get('tech_stack') else '',
+            desc=p.get('description', '') or 'No description provided',
+        )
+        for p in projects
+    )
+    user_message = (
+        f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
+        f"CANDIDATE PROJECTS:\n{project_lines}\n\n"
+        "Select and rewrite the most relevant projects as JSON."
+    )
+
+    result = chat_structured(
+        messages=[
+            {"role": "system", "content": _PROJECTS_TAILORING_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        response_model=_TailoredProjectsResponse,
+        temperature=0.3,
+    )
+    valid_ids = {p['id'] for p in projects}
+    return [p.model_dump() for p in result.projects if p.id in valid_ids]
+
+
+# ---------------------------------------------------------------------------
+# Full resume tailoring orchestrator
+# ---------------------------------------------------------------------------
+
+
+def tailor_full_resume(
+    job_title: str,
+    company_name: str,
+    job_description: str,
+    bullets: list[dict],
+    skills: list[dict],
+    work_experiences: list[dict],
+    projects: list[dict],
+    profile_job_title: str = '',
+) -> dict:
+    """
+    Orchestrate complete resume tailoring across all sections.
+
+    bullets: [{"id": int, "text": str, "category": str, "skills": [str],
+               "work_experience_title"?: str, "work_experience_company"?: str}]
+    skills:  [{"id": int, "name": str, "proficiency": int}]
+    work_experiences: [{"id": int, "title": str, "company": str, "start_date", "end_date",
+                        "is_current": bool, "description": str}]
+    projects: [{"id": int, "name": str, "description": str, "tech_stack": [str]}]
+
+    Returns:
+    {
+        "bullets": [{"id": int, "tailored_text": str}],
+        "skill_ids": [int],
+        "work_experiences": [{"id": int, "tailored_description": str}],
+        "projects": [{"id": int, "tailored_description": str}],
+        "summary": str,
+    }
+    """
+    tailored_bullets = tailor_resume(job_description, bullets, skills)
+    tailored_skill_ids = tailor_skills(job_description, skills)
+    tailored_work_experiences = tailor_work_experiences(job_description, work_experiences)
+    tailored_projects = tailor_projects(job_description, projects)
+    summary = generate_professional_summary(
+        job_title=job_title,
+        company_name=company_name,
+        job_description=job_description,
+        tailored_bullets=tailored_bullets,
+        skills=skills,
+        work_experiences=work_experiences,
+        profile_job_title=profile_job_title,
+    )
+    return {
+        "bullets": tailored_bullets,
+        "skill_ids": tailored_skill_ids,
+        "work_experiences": tailored_work_experiences,
+        "projects": tailored_projects,
+        "summary": summary,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -280,7 +491,7 @@ def tailor_skills(job_description: str, skills: list[dict]) -> list[int]:
 _PROFESSIONAL_SUMMARY_SYSTEM_PROMPT = """\
 You are a professional resume writer specializing in the tech industry.
 
-Write a professional summary (3–5 sentences, 50–100 words total) for a candidate \
+Write a professional summary (3-5 sentences, 50-100 words total) for a candidate \
 applying to a specific role. The summary is the first thing a recruiter reads.
 
 Rules:
@@ -288,8 +499,8 @@ Rules:
 - Include at least one concrete achievement drawn from the provided bullet points. \
   Use the exact metric — never invent or round numbers.
 - Close with what the candidate brings to this specific company or type of role.
-- Naturally mirror 2–3 keywords from the job description.
-- Total length: 50–100 words. Maximum 5 sentences.
+- Naturally mirror 2-3 keywords from the job description.
+- Total length: 50-100 words. Maximum 5 sentences.
 - No first-person pronouns (I, my, me, we).
 - Forbidden words and phrases — do not use any: leverage, leveraged, utilize, utilized, \
   spearhead, spearheaded, pivotal, realm, synergize, proven track record, results-driven, \

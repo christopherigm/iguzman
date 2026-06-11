@@ -31,6 +31,8 @@ import {
   type ApplicationStatus,
   type TailoredBullet,
   type TailoredSkill,
+  type TailoredWorkExperience,
+  type TailoredProject,
   type NaftaLetterPayload,
   type TnCategorySuggestion,
   type WorkType,
@@ -49,6 +51,7 @@ import {
   type Project,
 } from '@/lib/career';
 import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from '@/lib/nafta-constants';
+import { Grid } from '@repo/ui/core-elements/grid';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
 import './application-detail-page.css';
 
@@ -143,9 +146,10 @@ function SwitchRow({
 interface Props {
   application: JobApplication;
   profile: UserProfile | null;
+  profilePictureBase64?: string;
 }
 
-export function ApplicationDetailPage({ application: initialApp, profile }: Props) {
+export function ApplicationDetailPage({ application: initialApp, profile, profilePictureBase64 }: Props) {
   const t = useTranslations('ApplicationDetailPage');
   const locale = useLocale();
   const router = useRouter();
@@ -173,6 +177,8 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   // Tailor
   const [tailoring, setTailoring] = useState(false);
   const [tailoredBullets, setTailoredBullets] = useState<TailoredBullet[] | null>(initialApp.tailored_bullets ?? null);
+  const [tailoredWorkExperiences, setTailoredWorkExperiences] = useState<TailoredWorkExperience[] | null>(initialApp.tailored_work_experiences ?? null);
+  const [tailoredProjects, setTailoredProjects] = useState<TailoredProject[] | null>(initialApp.tailored_projects ?? null);
   const [professionalSummary, setProfessionalSummary] = useState(initialApp.professional_summary || '');
   const [tailorError, setTailorError] = useState<string | null>(null);
 
@@ -213,6 +219,12 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
   const [includedEducationIds, setIncludedEducationIds] = useState<Set<number>>(new Set());
   const [includedLanguageIds, setIncludedLanguageIds] = useState<Set<number>>(new Set());
   const [includedProjectIds, setIncludedProjectIds] = useState<Set<number>>(new Set());
+  const [useTailoredWeIds, setUseTailoredWeIds] = useState<Set<number>>(
+    new Set((initialApp.tailored_work_experiences ?? []).map((e) => e.id)),
+  );
+  const [useTailoredProjectIds, setUseTailoredProjectIds] = useState<Set<number>>(
+    new Set((initialApp.tailored_projects ?? []).map((p) => p.id)),
+  );
 
   // Export
   const [exportingPDF, setExportingPDF] = useState(false);
@@ -372,8 +384,12 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
     try {
       const result = await tailorApplication(app.id);
       setTailoredBullets(result.bullets);
+      setTailoredWorkExperiences(result.tailored_work_experiences);
+      setTailoredProjects(result.tailored_projects);
       setProfessionalSummary(result.professional_summary || '');
       setApp((prev) => ({ ...prev, tailored_skills: result.tailored_skills }));
+      setUseTailoredWeIds(new Set((result.tailored_work_experiences ?? []).map((e) => e.id)));
+      setUseTailoredProjectIds(new Set((result.tailored_projects ?? []).map((p) => p.id)));
     } catch {
       setTailorError(t('errorTailor'));
     } finally {
@@ -472,12 +488,24 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
 
   function getFilteredExportData() {
     if (!exportData) return null;
+    const tailoredWeMap = new Map((tailoredWorkExperiences ?? []).map((t) => [t.id, t.tailored_description]));
+    const tailoredProjectMap = new Map((tailoredProjects ?? []).map((t) => [t.id, t.tailored_description]));
     return {
       skills: includeSkills ? (app.tailored_skills ?? []) : [],
-      workExps: exportData.workExps.filter((e) => includedWorkExpIds.has(e.id)),
+      workExps: exportData.workExps
+        .filter((e) => includedWorkExpIds.has(e.id))
+        .map((e) => ({
+          ...e,
+          description: useTailoredWeIds.has(e.id) ? (tailoredWeMap.get(e.id) ?? e.description) : e.description,
+        })),
       educations: exportData.educations.filter((e) => includedEducationIds.has(e.id)),
       languages: exportData.languages.filter((l) => includedLanguageIds.has(l.id)),
-      projects: exportData.projects.filter((p) => includedProjectIds.has(p.id)),
+      projects: exportData.projects
+        .filter((p) => includedProjectIds.has(p.id))
+        .map((p) => ({
+          ...p,
+          description: useTailoredProjectIds.has(p.id) ? (tailoredProjectMap.get(p.id) ?? p.description) : p.description,
+        })),
     };
   }
 
@@ -494,21 +522,7 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
 
       const filtered = getFilteredExportData()!;
 
-      let photoUrl: string | undefined;
-      if (includePhoto && profile?.profile_picture) {
-        try {
-          const imgRes = await fetch(profile.profile_picture);
-          const imgBlob = await imgRes.blob();
-          photoUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(imgBlob);
-          });
-        } catch {
-          // proceed without photo if fetch fails
-        }
-      }
+      const photoUrl = includePhoto ? profilePictureBase64 : undefined;
 
       const blob = await pdf(
         <ResumeDocument
@@ -988,6 +1002,25 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
                 </Typography>
               </Box>
             )}
+            {app.tailored_skills && app.tailored_skills.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={6}>
+                <Typography variant="body" fontWeight={600} color="var(--foreground)">
+                  {t('tailoredSkillsTitle')}
+                </Typography>
+                <Box display="flex" flexWrap="wrap" gap={8}>
+                  {app.tailored_skills.map((skill) => (
+                    <Typography
+                      key={skill.id}
+                      variant="body-sm"
+                      styles={{ padding: '2px 10px', borderRadius: 999, border: '1px solid var(--border, #e5e7eb)' }}
+                    >
+                      {skill.name}
+                    </Typography>
+                  ))}
+                </Box>
+              </Box>
+            )}
+
             {grouped.map(({ cat, bullets }) => (
               <Box key={cat} display="flex" flexDirection="column" gap={6}>
                 <Typography variant="body" fontWeight={600} color="var(--foreground)" styles={{ textTransform: 'capitalize' }}>
@@ -1000,6 +1033,54 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
                 ))}
               </Box>
             ))}
+
+            {/* Tailored work experiences */}
+            {tailoredWorkExperiences && tailoredWorkExperiences.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={6}>
+                <Typography variant="body" fontWeight={600} color="var(--foreground)">
+                  {t('tailoredWorkExpTitle')}
+                </Typography>
+                {tailoredWorkExperiences.map((twe) => {
+                  const we = exportData?.workExps.find((e) => e.id === twe.id);
+                  return (
+                    <Box key={twe.id} display="flex" flexDirection="column" gap={4}>
+                      {we && (
+                        <Typography variant="body-sm" fontWeight={600} color="var(--muted-foreground, #6b7280)">
+                          {we.title} — {we.company}
+                        </Typography>
+                      )}
+                      <Typography as="p" variant="body" styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}>
+                        {twe.tailored_description}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+
+            {/* Tailored projects */}
+            {tailoredProjects && tailoredProjects.length > 0 && (
+              <Box display="flex" flexDirection="column" gap={6}>
+                <Typography variant="body" fontWeight={600} color="var(--foreground)">
+                  {t('tailoredProjectsTitle')}
+                </Typography>
+                {tailoredProjects.map((tp) => {
+                  const proj = exportData?.projects.find((p) => p.id === tp.id);
+                  return (
+                    <Box key={tp.id} display="flex" flexDirection="column" gap={4}>
+                      {proj && (
+                        <Typography variant="body-sm" fontWeight={600} color="var(--muted-foreground, #6b7280)">
+                          {proj.name}
+                        </Typography>
+                      )}
+                      <Typography as="p" variant="body" styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}>
+                        {tp.tailored_description}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
           </Box>
         )}
       </Box>
@@ -1052,20 +1133,132 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
                   <Typography variant="body" fontWeight={600}>
                     {t('exportJobsTitle')}
                   </Typography>
-                  {exportData.workExps.map((exp) => (
-                    <SwitchRow
-                      key={exp.id}
-                      label={`${exp.title} — ${exp.company}`}
-                      checked={includedWorkExpIds.has(exp.id)}
-                      onChange={(checked) =>
-                        setIncludedWorkExpIds((prev) => {
-                          const next = new Set(prev);
-                          if (checked) next.add(exp.id); else next.delete(exp.id);
-                          return next;
-                        })
-                      }
-                    />
-                  ))}
+                  <Grid container spacing={2}>
+                    {exportData.workExps.map((exp) => {
+                      const isTailored = (tailoredWorkExperiences ?? []).some((tw) => tw.id === exp.id);
+                      const isIncluded = includedWorkExpIds.has(exp.id);
+                      return (
+                        <Grid key={exp.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                          <Box
+                            display="flex"
+                            flexDirection="column"
+                            gap={12}
+                            padding={14}
+                            border="1px solid var(--border, #e5e7eb)"
+                            borderRadius={10}
+                            styles={{ opacity: isIncluded ? 1 : 0.5, transition: 'opacity 0.2s ease', height: '100%' }}
+                          >
+                            <Box display="flex" flexDirection="column" gap={4}>
+                              <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={8}>
+                                <Typography variant="body" fontWeight={600} styles={{ lineHeight: 1.3 }}>
+                                  {exp.title}
+                                </Typography>
+                                {isTailored && (
+                                  <Badge variant="subtle" size="sm" color="var(--primary, #06b6d4)">
+                                    {t('aiTailored')}
+                                  </Badge>
+                                )}
+                              </Box>
+                              <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+                                {exp.company}
+                              </Typography>
+                            </Box>
+                            <Box display="flex" flexDirection="column" gap={8}>
+                              <SwitchRow
+                                label={t('exportIncludeItem')}
+                                checked={isIncluded}
+                                onChange={(checked) =>
+                                  setIncludedWorkExpIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (checked) next.add(exp.id); else next.delete(exp.id);
+                                    return next;
+                                  })
+                                }
+                              />
+                              {isTailored && isIncluded && (
+                                <SwitchRow
+                                  label={t('useTailoredVersion')}
+                                  checked={useTailoredWeIds.has(exp.id)}
+                                  onChange={(checked) =>
+                                    setUseTailoredWeIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (checked) next.add(exp.id); else next.delete(exp.id);
+                                      return next;
+                                    })
+                                  }
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
+              )}
+
+              {/* Projects */}
+              {exportData.projects.length > 0 && (
+                <Box display="flex" flexDirection="column" gap={8}>
+                  <Typography variant="body" fontWeight={600}>
+                    {t('exportProjectsTitle')}
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {exportData.projects.map((proj) => {
+                      const isTailored = (tailoredProjects ?? []).some((tp) => tp.id === proj.id);
+                      const isIncluded = includedProjectIds.has(proj.id);
+                      return (
+                        <Grid key={proj.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                          <Box
+                            display="flex"
+                            flexDirection="column"
+                            gap={12}
+                            padding={14}
+                            border="1px solid var(--border, #e5e7eb)"
+                            borderRadius={10}
+                            styles={{ opacity: isIncluded ? 1 : 0.5, transition: 'opacity 0.2s ease', height: '100%' }}
+                          >
+                            <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={8}>
+                              <Typography variant="body" fontWeight={600} styles={{ lineHeight: 1.3 }}>
+                                {proj.name}
+                              </Typography>
+                              {isTailored && (
+                                <Badge variant="subtle" size="sm" color="var(--primary, #06b6d4)">
+                                  {t('aiTailored')}
+                                </Badge>
+                              )}
+                            </Box>
+                            <Box display="flex" flexDirection="column" gap={8}>
+                              <SwitchRow
+                                label={t('exportIncludeItem')}
+                                checked={isIncluded}
+                                onChange={(checked) =>
+                                  setIncludedProjectIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (checked) next.add(proj.id); else next.delete(proj.id);
+                                    return next;
+                                  })
+                                }
+                              />
+                              {isTailored && isIncluded && (
+                                <SwitchRow
+                                  label={t('useTailoredVersion')}
+                                  checked={useTailoredProjectIds.has(proj.id)}
+                                  onChange={(checked) =>
+                                    setUseTailoredProjectIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (checked) next.add(proj.id); else next.delete(proj.id);
+                                      return next;
+                                    })
+                                  }
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
                 </Box>
               )}
 
@@ -1107,29 +1300,6 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
                         setIncludedLanguageIds((prev) => {
                           const next = new Set(prev);
                           if (checked) next.add(lang.id); else next.delete(lang.id);
-                          return next;
-                        })
-                      }
-                    />
-                  ))}
-                </Box>
-              )}
-
-              {/* Projects */}
-              {exportData.projects.length > 0 && (
-                <Box display="flex" flexDirection="column" gap={8}>
-                  <Typography variant="body" fontWeight={600}>
-                    {t('exportProjectsTitle')}
-                  </Typography>
-                  {exportData.projects.map((proj) => (
-                    <SwitchRow
-                      key={proj.id}
-                      label={proj.name}
-                      checked={includedProjectIds.has(proj.id)}
-                      onChange={(checked) =>
-                        setIncludedProjectIds((prev) => {
-                          const next = new Set(prev);
-                          if (checked) next.add(proj.id); else next.delete(proj.id);
                           return next;
                         })
                       }

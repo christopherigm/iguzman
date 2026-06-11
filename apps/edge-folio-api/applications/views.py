@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from career.models import Education, WorkExperience
+from career.models import Education, Project, WorkExperience
 from edge_folio_api.llm import chat_structured
 from matrix.models import BulletPoint, Skill
 
@@ -22,10 +22,8 @@ from .tailoring import (
     calculate_technical_match,
     generate_cover_letter,
     generate_nafta_letter,
-    generate_professional_summary,
     suggest_tn_categories,
-    tailor_resume,
-    tailor_skills,
+    tailor_full_resume,
 )
 
 
@@ -120,53 +118,42 @@ class TailorApplicationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        skills_payload = list(
+            Skill.objects.filter(user=request.user).values('id', 'name', 'proficiency')
+        )
+
+        work_experiences = list(
+            WorkExperience.objects.filter(user=request.user)
+            .order_by('-start_date')
+            .values('id', 'title', 'company', 'start_date', 'end_date', 'is_current', 'description')
+        )
+        we_map = {we['id']: we for we in work_experiences}
+
+        projects_qs = Project.objects.filter(user=request.user).prefetch_related('tech_stack')
+        projects_payload = [
+            {
+                'id': p.id,
+                'name': p.name,
+                'description': p.description,
+                'tech_stack': [t.name for t in p.tech_stack.all()],
+            }
+            for p in projects_qs
+        ]
+
+        bullet_category = {b.id: b.category for b in approved_bullets}
+        bullet_we_id = {b.id: b.work_experience_id for b in approved_bullets}
+
         bullets_payload = [
             {
                 'id': b.id,
                 'text': b.text,
                 'category': b.category,
                 'skills': [s.name for s in b.skills.all()],
+                'work_experience_title': we_map[b.work_experience_id]['title'] if b.work_experience_id and b.work_experience_id in we_map else None,
+                'work_experience_company': we_map[b.work_experience_id]['company'] if b.work_experience_id and b.work_experience_id in we_map else None,
             }
             for b in approved_bullets
         ]
-        skills_payload = list(
-            Skill.objects.filter(user=request.user).values('id', 'name', 'proficiency')
-        )
-
-        bullet_category = {b.id: b.category for b in approved_bullets}
-        bullet_we_id = {b.id: b.work_experience_id for b in approved_bullets}
-
-        try:
-            tailored = tailor_resume(
-                job_description=application.job_description,
-                bullets=bullets_payload,
-                skills=skills_payload,
-            )
-        except Exception as exc:
-            logger.error('LLM error during tailoring: %s', exc)
-            return Response(
-                {'detail': 'LLM service unavailable. Please try again later.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-
-        for bullet in tailored:
-            bullet['category'] = bullet_category.get(bullet.get('id'), 'other')
-            bullet['work_experience_id'] = bullet_we_id.get(bullet.get('id'))
-
-        try:
-            selected_skill_ids = tailor_skills(
-                job_description=application.job_description,
-                skills=skills_payload,
-            )
-        except Exception as exc:
-            logger.error('LLM error during skill tailoring: %s', exc)
-            selected_skill_ids = []
-
-        work_experiences = list(
-            WorkExperience.objects.filter(user=request.user)
-            .order_by('-start_date')
-            .values('id', 'title', 'company', 'start_date', 'end_date', 'is_current')
-        )
 
         profile_job_title = ''
         try:
@@ -175,24 +162,38 @@ class TailorApplicationView(APIView):
             pass
 
         try:
-            professional_summary = generate_professional_summary(
+            result = tailor_full_resume(
                 job_title=application.job_title,
                 company_name=application.company_name,
                 job_description=application.job_description,
-                tailored_bullets=tailored,
+                bullets=bullets_payload,
                 skills=skills_payload,
                 work_experiences=work_experiences,
+                projects=projects_payload,
                 profile_job_title=profile_job_title,
             )
         except Exception as exc:
-            logger.error('LLM error during summary generation: %s', exc)
-            professional_summary = ''
+            logger.error('LLM error during full resume tailoring: %s', exc)
+            return Response(
+                {'detail': 'LLM service unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        tailored = result['bullets']
+        for bullet in tailored:
+            bullet['category'] = bullet_category.get(bullet.get('id'), 'other')
+            bullet['work_experience_id'] = bullet_we_id.get(bullet.get('id'))
 
         application.tailored_bullets = tailored
-        application.professional_summary = professional_summary
-        application.save(update_fields=['tailored_bullets', 'professional_summary', 'modified'])
+        application.tailored_work_experiences = result['work_experiences']
+        application.tailored_projects = result['projects']
+        application.professional_summary = result['summary']
+        application.save(update_fields=[
+            'tailored_bullets', 'tailored_work_experiences', 'tailored_projects',
+            'professional_summary', 'modified',
+        ])
         application.tailored_skills.set(
-            Skill.objects.filter(id__in=selected_skill_ids, user=request.user)
+            Skill.objects.filter(id__in=result['skill_ids'], user=request.user)
         )
         _invalidate_application(request.user.id, pk)
 
@@ -201,7 +202,9 @@ class TailorApplicationView(APIView):
         )
         return Response({
             'bullets': tailored,
-            'professional_summary': professional_summary,
+            'tailored_work_experiences': result['work_experiences'],
+            'tailored_projects': result['projects'],
+            'professional_summary': result['summary'],
             'tailored_skills': tailored_skills_data,
         })
 
