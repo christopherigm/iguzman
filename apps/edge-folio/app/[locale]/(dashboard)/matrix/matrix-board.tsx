@@ -15,6 +15,7 @@ import { Select } from '@repo/ui/core-elements/select';
 import { Slider } from '@repo/ui/core-elements/slider';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
 import { Grid } from '@repo/ui/core-elements/grid';
+import { Card } from '@repo/ui/core-elements/card';
 import { useGroqProxy } from '@repo/ui/use-groq';
 import {
   getSkills,
@@ -337,15 +338,11 @@ function BulletCard({ bullet, skills, onEdit, onDelete, onApprove }: BulletCardP
   const showApprove = bullet.source === 'extracted' && !bullet.is_approved;
 
   return (
-    <Box
+    <Card
       className="matrix__bullet"
-      display="flex"
-      flexDirection="column"
       gap={8}
       padding={8}
-      borderRadius={8}
-      border={showApprove ? '1px solid var(--warning, #f59e0b)' : '1px solid var(--border, #e5e7eb)'}
-      backgroundColor="var(--surface-1, #fff)"
+      border={showApprove ? '1px solid var(--warning, #f59e0b)' : undefined}
     >
       <Typography as="p" variant="body" color="var(--foreground)" styles={{ lineHeight: 1.5 }}>
         {bullet.text}
@@ -379,7 +376,7 @@ function BulletCard({ bullet, skills, onEdit, onDelete, onApprove }: BulletCardP
           <Button text={t('approve')} type="button" size="md" kind="success" onClick={() => onApprove(bullet.id)} />
         )}
       </Box>
-    </Box>
+    </Card>
   );
 }
 
@@ -530,12 +527,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
           cancelCallback={() => setPendingDeleteId(null)}
         />
       )}
-    <Box
-      borderRadius={12}
-      padding={12}
-      backgroundColor="var(--surface-1)"
-      border="1px solid var(--border, #e5e7eb)"
-    >
+    <Card padding={12}>
       <Box
         display="flex"
         alignItems="flex-start"
@@ -626,7 +618,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
       )}
 
       {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} position='top-center' />}
-    </Box>
+    </Card>
     </>
   );
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { Container } from '@repo/ui/core-elements/container';
 import { Box } from '@repo/ui/core-elements/box';
+import { Card } from '@repo/ui/core-elements/card';
 import { Button } from '@repo/ui/core-elements/button';
 import { Icon } from '@repo/ui/core-elements/icon';
 import { Typography } from '@repo/ui/core-elements/typography';
@@ -446,16 +447,7 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
 
   return (
     <Link href={`/${locale}/applications/${app.id}`} prefetch className="applications__card-link">
-      <Box
-        className="applications__card"
-        display="flex"
-        flexDirection="column"
-        gap={8}
-        padding={14}
-        borderRadius={10}
-        border="1px solid var(--border, #e5e7eb)"
-        backgroundColor="var(--surface-1)"
-      >
+      <Card gap={8}>
         <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={8}>
           <Box display="flex" flexDirection="column" gap={2}>
             <Typography as="p" variant="body-sm" fontWeight={600} color="var(--foreground)">
@@ -501,7 +493,7 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(app.id); }}
           />
         </Box>
-      </Box>
+      </Card>
     </Link>
   );
 }

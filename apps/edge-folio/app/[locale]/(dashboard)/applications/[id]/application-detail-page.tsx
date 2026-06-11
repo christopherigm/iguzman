@@ -52,6 +52,7 @@ import {
 } from '@/lib/career';
 import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from '@/lib/nafta-constants';
 import { Grid } from '@repo/ui/core-elements/grid';
+import { Card } from '@repo/ui/core-elements/card';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
 import './application-detail-page.css';
 
@@ -1139,13 +1140,8 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
                       const isIncluded = includedWorkExpIds.has(exp.id);
                       return (
                         <Grid key={exp.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                          <Box
-                            display="flex"
-                            flexDirection="column"
+                          <Card
                             gap={12}
-                            padding={14}
-                            border="1px solid var(--border, #e5e7eb)"
-                            borderRadius={10}
                             styles={{ opacity: isIncluded ? 1 : 0.5, transition: 'opacity 0.2s ease', height: '100%' }}
                           >
                             <Box display="flex" flexDirection="column" gap={4}>
@@ -1189,7 +1185,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
                                 />
                               )}
                             </Box>
-                          </Box>
+                          </Card>
                         </Grid>
                       );
                     })}
@@ -1209,13 +1205,8 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
                       const isIncluded = includedProjectIds.has(proj.id);
                       return (
                         <Grid key={proj.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-                          <Box
-                            display="flex"
-                            flexDirection="column"
+                          <Card
                             gap={12}
-                            padding={14}
-                            border="1px solid var(--border, #e5e7eb)"
-                            borderRadius={10}
                             styles={{ opacity: isIncluded ? 1 : 0.5, transition: 'opacity 0.2s ease', height: '100%' }}
                           >
                             <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={8}>
@@ -1254,7 +1245,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
                                 />
                               )}
                             </Box>
-                          </Box>
+                          </Card>
                         </Grid>
                       );
                     })}
@@ -1268,20 +1259,38 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
                   <Typography variant="body" fontWeight={600}>
                     {t('exportEducationTitle')}
                   </Typography>
-                  {exportData.educations.map((edu) => (
-                    <SwitchRow
-                      key={edu.id}
-                      label={`${edu.institution}${edu.field_of_study ? ` · ${edu.field_of_study}` : ''}`}
-                      checked={includedEducationIds.has(edu.id)}
-                      onChange={(checked) =>
-                        setIncludedEducationIds((prev) => {
-                          const next = new Set(prev);
-                          if (checked) next.add(edu.id); else next.delete(edu.id);
-                          return next;
-                        })
-                      }
-                    />
-                  ))}
+                  <Grid container spacing={2}>
+                    {exportData.educations.map((edu) => {
+                      const isIncluded = includedEducationIds.has(edu.id);
+                      return (
+                        <Grid key={edu.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                          <Card gap={12}>
+                            <Box display="flex" flexDirection="column" gap={4}>
+                              <Typography variant="body" fontWeight={600} styles={{ lineHeight: 1.3 }}>
+                                {edu.institution}
+                              </Typography>
+                              {edu.field_of_study && (
+                                <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+                                  {edu.field_of_study}
+                                </Typography>
+                              )}
+                            </Box>
+                            <SwitchRow
+                              label={t('exportIncludeItem')}
+                              checked={isIncluded}
+                              onChange={(checked) =>
+                                setIncludedEducationIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (checked) next.add(edu.id); else next.delete(edu.id);
+                                  return next;
+                                })
+                              }
+                            />
+                          </Card>
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
                 </Box>
               )}
 
