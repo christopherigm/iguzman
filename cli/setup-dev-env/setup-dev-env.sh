@@ -3,9 +3,12 @@
 #
 # Interactive development environment setup script.
 # Checks and installs: git, Node.js, pnpm, Docker, kubectl, Helm,
-# bash-git-prompt, Python, Django, and Claude Code CLI.
+# bash-git-prompt, Python, Django, Claude Code CLI, VSCodium, and Ghostty.
 #
 # Run: bash cli/setup-dev-env/setup-dev-env.sh
+#
+# NOTE: Any new tool added here MUST support both Linux (apt / snap) and
+#       macOS (Homebrew). Do not add Linux-only tools.
 
 set -euo pipefail
 
@@ -73,6 +76,8 @@ setup_strings() {
     TOOL_CLAUDE="Asistente de código con IA"
     TOOL_OPENCODE="Agente de código con IA para terminal"
     TOOL_FFMPEG="Procesamiento de audio y video"
+    TOOL_VSCODIUM="Editor de código de fuente abierta (sin telemetría)"
+    TOOL_GHOSTTY="Emulador de terminal con aceleración GPU"
     NOTE_BASH_GIT_PROMPT="Snippet de activación agregado automáticamente a tu archivo de configuración de shell (~/.zshrc, ~/.bash_profile o ~/.bashrc).\n  Reinicia tu shell o ejecuta: source ~/.zshrc"
     BREW_MISSING="Homebrew no está instalado. La mayoría de las herramientas en macOS lo requieren."
     BREW_INSTALL_PROMPT="¿Instalar Homebrew ahora? [s/n]"
@@ -117,6 +122,8 @@ setup_strings() {
     TOOL_CLAUDE="AI coding assistant CLI"
     TOOL_OPENCODE="Terminal-based AI coding agent"
     TOOL_FFMPEG="Audio and video processing"
+    TOOL_VSCODIUM="Open-source VS Code build (no telemetry)"
+    TOOL_GHOSTTY="GPU-accelerated terminal emulator"
     NOTE_BASH_GIT_PROMPT="Source snippet automatically added to your shell config (~/.zshrc, ~/.bash_profile, or ~/.bashrc).\n  Restart your shell or run: source ~/.zshrc"
     BREW_MISSING="Homebrew is not installed. Most macOS tools require it."
     BREW_INSTALL_PROMPT="Install Homebrew now? [y/n]"
@@ -303,12 +310,37 @@ install_ffmpeg() {
   return 1
 }
 
+install_vscodium() {
+  if is_mac && has_brew; then brew install --cask vscodium; return $?; fi
+  if has_apt; then
+    wget -qO - https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/raw/master/pub.gpg \
+      | gpg --dearmor \
+      | sudo dd of=/usr/share/keyrings/vscodium-archive-keyring.gpg 2>/dev/null
+    echo 'deb [ signed-by=/usr/share/keyrings/vscodium-archive-keyring.gpg ] https://download.vscodium.com/debs vscodium main' \
+      | sudo tee /etc/apt/sources.list.d/vscodium.list >/dev/null
+    sudo apt-get update -qq && sudo apt-get install -y codium
+    return $?
+  fi
+  echo "  $(clr_yellow 'Please install VSCodium manually: https://vscodium.com')"
+  return 1
+}
+
+install_ghostty() {
+  if is_mac && has_brew; then brew install ghostty; return $?; fi
+  if has_apt; then
+    sudo apt-get install -y ghostty 2>/dev/null && return 0
+  fi
+  if command -v snap &>/dev/null; then sudo snap install ghostty --classic; return $?; fi
+  echo "  $(clr_yellow 'Please install Ghostty manually: https://ghostty.org/download')"
+  return 1
+}
+
 # ── Tool definitions ──────────────────────────────────────────────────────────
 # Each entry: ID|LABEL|DESCRIPTION|CHECK_CMD|VERSION_CMD|INSTALL_FN
 
 build_tools() {
-  TOOL_IDS=(git nodejs pnpm docker kubectl helm bash-git-prompt python django claude opencode ffmpeg)
-  TOOL_LABELS=(Git Node.js pnpm Docker kubectl Helm bash-git-prompt Python Django "Claude Code" OpenCode FFmpeg)
+  TOOL_IDS=(git nodejs pnpm docker kubectl helm bash-git-prompt python django claude opencode ffmpeg vscodium ghostty)
+  TOOL_LABELS=(Git Node.js pnpm Docker kubectl Helm bash-git-prompt Python Django "Claude Code" OpenCode FFmpeg VSCodium Ghostty)
   TOOL_DESCS=(
     "${TOOL_GIT}"
     "${TOOL_NODEJS}"
@@ -322,6 +354,8 @@ build_tools() {
     "${TOOL_CLAUDE}"
     "${TOOL_OPENCODE}"
     "${TOOL_FFMPEG}"
+    "${TOOL_VSCODIUM}"
+    "${TOOL_GHOSTTY}"
   )
   TOOL_INSTALLED=()
   TOOL_VERSIONS=()
@@ -377,6 +411,14 @@ build_tools() {
 
   # ffmpeg
   if command -v ffmpeg &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(ffmpeg -version 2>/dev/null | head -1)");
+  else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
+
+  # vscodium
+  if command -v codium &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(codium --version 2>/dev/null | head -1)");
+  else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
+
+  # ghostty
+  if command -v ghostty &>/dev/null; then TOOL_INSTALLED+=(1); TOOL_VERSIONS+=("$(ghostty --version 2>/dev/null)");
   else TOOL_INSTALLED+=(0); TOOL_VERSIONS+=(""); fi
 }
 
@@ -743,6 +785,8 @@ main() {
             claude)          install_claude          && ok=1 || true ;;
             opencode)        install_opencode        && ok=1 || true ;;
             ffmpeg)          install_ffmpeg          && ok=1 || true ;;
+            vscodium)        install_vscodium        && ok=1 || true ;;
+            ghostty)         install_ghostty         && ok=1 || true ;;
           esac
 
           if [[ "${ok}" -eq 1 ]]; then
