@@ -469,6 +469,14 @@
     "searchingCompany": "Suche…",
     "errorSearchCompany": "Suche nach Unternehmensdaten fehlgeschlagen. Bitte erneut versuchen.",
     "companyInfoFound": "Unternehmensinformationen aktualisiert.",
+    "companyInfoTitle": "Unternehmensinformationen",
+    "companyInfoEmpty": "Noch keine Unternehmensdaten. Nutze 'Unternehmensdaten suchen', um Informationen zu diesem Unternehmen zu sammeln.",
+    "companyAboutTitle": "Über das Unternehmen",
+    "companyNewsTitle": "Aktuelle Neuigkeiten",
+    "companyHiringTitle": "Einstellungsaktivitäten",
+    "companyLayoffsTitle": "Entlassungen & Personalveränderungen",
+    "companyReputationTitle": "Reputation & Bewertungen",
+    "companyIntelNoData": "Keine aktuellen Daten gefunden.",
     "tnSuggestLabel": "TN-Kategorie vorschlagen",
     "tnSuggestGenerating": "Profil wird analysiert…",
     "tnSuggestNoData": "Füge zuerst Ausbildung oder Berufserfahrung hinzu, um diese Funktion zu nutzen.",
@@ -487,6 +495,8 @@
       "onsite": "Vor Ort",
       "hybrid": "Hybrid"
     },
+    "notSpecified": "Nicht angegeben",
+    "salaryLabel": "Gehalt",
     "usCitizenOrPrLabel": "US-Staatsbürgerschaft / PR erforderlich",
     "usCitizenOrPr": {
       "null": "Nicht angegeben",

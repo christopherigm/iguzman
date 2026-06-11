@@ -2,6 +2,20 @@ export type ApplicationStatus = 'draft' | 'applied' | 'interview' | 'offer' | 'r
 export type WorkType = 'remote' | 'onsite' | 'hybrid';
 export type SalaryCurrency = 'USD' | 'CAD' | 'EUR' | 'MXN' | 'GBP';
 
+export interface CompanyIntelItem {
+  title: string;
+  summary: string;
+  url: string;
+  source: string;
+}
+
+export interface CompanyIntel {
+  company_news: CompanyIntelItem[];
+  hiring_news: CompanyIntelItem[];
+  layoff_news: CompanyIntelItem[];
+  reputation: CompanyIntelItem[];
+}
+
 export interface TailoredBullet {
   id: number;
   tailored_text: string;
@@ -35,6 +49,7 @@ export interface JobApplication {
   job_url: string;
   company_image_url: string | null;
   company_description: string;
+  company_intel: CompanyIntel | null;
   professional_summary: string;
   tailored_bullets: TailoredBullet[] | null;
   tailored_work_experiences: TailoredWorkExperience[] | null;
@@ -205,6 +220,7 @@ export function refreshMetrics(id: number): Promise<MetricsResult> {
 export interface SearchCompanyResult {
   company_description: string;
   company_image_url: string | null;
+  company_intel: CompanyIntel | null;
 }
 
 export function searchCompany(id: number): Promise<SearchCompanyResult> {

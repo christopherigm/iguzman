@@ -469,6 +469,14 @@
     "searchingCompany": "Recherche…",
     "errorSearchCompany": "Échec de la recherche des données entreprise. Veuillez réessayer.",
     "companyInfoFound": "Informations sur l’entreprise mises à jour.",
+    "companyInfoTitle": "Informations sur l’entreprise",
+    "companyInfoEmpty": "Aucune donnée entreprise pour l’instant. Utilisez ‘Rechercher des données entreprise’ pour collecter des informations sur cette entreprise.",
+    "companyAboutTitle": "À propos",
+    "companyNewsTitle": "Actualités récentes",
+    "companyHiringTitle": "Activité de recrutement",
+    "companyLayoffsTitle": "Licenciements & changements d’effectifs",
+    "companyReputationTitle": "Réputation & avis",
+    "companyIntelNoData": "Aucune donnée récente trouvée.",
     "tnSuggestLabel": "Suggérer une catégorie TN",
     "tnSuggestGenerating": "Analyse de votre profil…",
     "tnSuggestNoData": "Ajoutez d’abord une formation ou une expérience professionnelle pour utiliser cette fonctionnalité.",
@@ -487,6 +495,8 @@
       "onsite": "Présentiel",
       "hybrid": "Hybride"
     },
+    "notSpecified": "Non précisé",
+    "salaryLabel": "Salaire",
     "usCitizenOrPrLabel": "Citoyenneté / PR américaine requise",
     "usCitizenOrPr": {
       "null": "Non précisé",

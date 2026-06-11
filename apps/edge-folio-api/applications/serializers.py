@@ -28,6 +28,7 @@ class JobApplicationSerializer(serializers.ModelSerializer):
             'overall_match', 'overall_match_explanation',
             'technical_match', 'technical_match_explanation',
             'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
+            'company_intel',
             'created', 'modified',
         )
         read_only_fields = (
@@ -38,6 +39,7 @@ class JobApplicationSerializer(serializers.ModelSerializer):
             'overall_match', 'overall_match_explanation',
             'technical_match', 'technical_match_explanation',
             'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
+            'company_intel',
         )
         extra_kwargs = {'company_image': {'write_only': True}}
 

@@ -34,6 +34,17 @@ class _PickURLResult(BaseModel):
 class _AboutResult(BaseModel):
     about: str
 
+
+class _CompanyIntelItem(BaseModel):
+    title: str
+    summary: str
+    url: str
+    source: str
+
+
+class _CompanyIntelResult(BaseModel):
+    items: list[_CompanyIntelItem]
+
 logger = logging.getLogger(__name__)
 
 CACHE_TTL = 300
@@ -456,6 +467,18 @@ and industry. Write in third-person present tense suitable for a formal letter.
 Return ONLY valid JSON — no markdown, no explanation: {"about": "<extracted description>"}
 """
 
+_INTEL_SYSTEM_PROMPT = """\
+You are a research assistant. Given web search results about a company, extract up to 3 of the \
+most relevant and informative items. For each item provide: a concise title, a 1-2 sentence \
+summary of the content, the exact URL, and the source domain (e.g. "techcrunch.com").
+
+Only include items that are clearly relevant and informative. Return fewer than 3 if quality \
+results are limited. Return an empty list if nothing is relevant.
+
+Return ONLY valid JSON — no markdown, no explanation:
+{"items": [{"title": "...", "summary": "...", "url": "...", "source": "..."}]}
+"""
+
 
 def _scraper_post(endpoint: str, payload: dict) -> dict:
     """POST to the scraper service and return parsed JSON."""
@@ -575,9 +598,49 @@ class SearchCompanyView(APIView):
             except Exception as exc:
                 logger.warning('Failed to download og_image %s: %s', og_image, exc)
 
-        # 6. Save and return
-        update_fields = ['company_description', 'modified']
+        # 6. Gather company intel (news, hiring, layoffs, reputation)
+        from datetime import date
+        _today = date.today()
+        _month_year = _today.strftime('%B %Y')
+        _this_year = _today.year
+        _last_year = _this_year - 1
+
+        intel_queries = [
+            ('company_news', f'{company_name} news latest {_month_year}, {_this_year}, {_last_year}'),
+            ('hiring_news', f'{company_name} hiring jobs {_month_year}, {_this_year}, {_last_year}'),
+            ('layoff_news', f'{company_name} layoffs workforce reduction {_month_year}, {_this_year}, {_last_year}'),
+            ('reputation', f'{company_name} employee reviews reputation glassdoor {_this_year}'),
+        ]
+
+        company_intel = {}
+        for key, query in intel_queries:
+            try:
+                intel_search = _scraper_post('/search', {'query': query, 'maxResults': 5})
+                intel_results = intel_search.get('results', [])
+                if intel_results:
+                    results_text = "\n".join(
+                        f"- Title: {r.get('title', '')} | URL: {r.get('url', '')} | Snippet: {r.get('snippet', '')}"
+                        for r in intel_results[:5]
+                    )
+                    intel_result = chat_structured(
+                        messages=[
+                            {"role": "system", "content": _INTEL_SYSTEM_PROMPT},
+                            {"role": "user", "content": f"COMPANY: {company_name}\n\nSEARCH RESULTS:\n{results_text}"},
+                        ],
+                        response_model=_CompanyIntelResult,
+                        temperature=0.1,
+                    )
+                    company_intel[key] = [item.model_dump() for item in intel_result.items]
+                else:
+                    company_intel[key] = []
+            except Exception as exc:
+                logger.warning('Intel search failed for %s (%s): %s', key, company_name, exc)
+                company_intel[key] = []
+
+        # 7. Save and return
+        update_fields = ['company_description', 'company_intel', 'modified']
         application.company_description = about_text
+        application.company_intel = company_intel
         if og_image and application.company_image:
             update_fields.append('company_image')
         application.save(update_fields=update_fields)
@@ -589,4 +652,5 @@ class SearchCompanyView(APIView):
         return Response({
             'company_description': about_text,
             'company_image_url': company_image_url,
+            'company_intel': company_intel,
         })

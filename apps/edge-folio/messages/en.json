@@ -412,6 +412,14 @@
     "searchingCompany": "Searching…",
     "errorSearchCompany": "Failed to search company data. Please try again.",
     "companyInfoFound": "Company info updated.",
+    "companyInfoTitle": "Company Information",
+    "companyInfoEmpty": "No company data yet. Use 'Search Company Data' to gather information about this company.",
+    "companyAboutTitle": "About",
+    "companyNewsTitle": "Recent News",
+    "companyHiringTitle": "Hiring Activity",
+    "companyLayoffsTitle": "Layoffs & Workforce Changes",
+    "companyReputationTitle": "Reputation & Reviews",
+    "companyIntelNoData": "No recent data found.",
     "tnSuggestLabel": "Suggest TN Category",
     "tnSuggestGenerating": "Analyzing your profile…",
     "tnSuggestNoData": "Add education or work experience first to use this feature.",
@@ -430,6 +438,8 @@
       "onsite": "On-site",
       "hybrid": "Hybrid"
     },
+    "notSpecified": "Not specified",
+    "salaryLabel": "Salary",
     "usCitizenOrPrLabel": "U.S. citizenship / PR required",
     "usCitizenOrPr": {
       "null": "Not specified",

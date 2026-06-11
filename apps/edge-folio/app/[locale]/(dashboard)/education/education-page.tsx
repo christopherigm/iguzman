@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Container } from '@repo/ui/core-elements/container';
 import { Box } from '@repo/ui/core-elements/box';
+import { Card } from '@repo/ui/core-elements/card';
+import { Grid } from '@repo/ui/core-elements/grid';
 import { Button } from '@repo/ui/core-elements/button';
 import { Typography } from '@repo/ui/core-elements/typography';
 import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
@@ -317,15 +319,10 @@ function EducationCard({ entry, onEdit, onDelete }: CardProps) {
   })();
 
   return (
-    <Box
+    <Card
       className="education__card"
-      display="flex"
-      flexDirection="column"
       gap={10}
       padding={16}
-      borderRadius={12}
-      border="1px solid var(--border, #e5e7eb)"
-      backgroundColor="var(--surface-1)"
     >
       <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={12} flexWrap="wrap">
         <Box display="flex" flexDirection="column" gap={2}>
@@ -379,7 +376,7 @@ function EducationCard({ entry, onEdit, onDelete }: CardProps) {
         <Button text={t('delete')} type="button" size="md" kind="error" onClick={() => onDelete(entry.id)} />
         <Button text={t('edit')} type="button" size="md" onClick={() => onEdit(entry)} />
       </Box>
-    </Box>
+    </Card>
   );
 }
 
@@ -547,16 +544,17 @@ export function EducationPage() {
           <Button text={t('addEntry')} type="button" size="md" kind="success" onClick={openAdd} />
         </Box>
       ) : (
-        <Box display="flex" flexDirection="column" gap={16} marginBottom={40}>
+        <Grid container spacing={2} marginBottom={40}>
           {entries.map((entry) => (
-            <EducationCard
-              key={entry.id}
-              entry={entry}
-              onEdit={openEdit}
-              onDelete={setPendingDeleteId}
-            />
+            <Grid key={entry.id} size={{ xs: 12, sm: 6, md: 4 }}>
+              <EducationCard
+                entry={entry}
+                onEdit={openEdit}
+                onDelete={setPendingDeleteId}
+              />
+            </Grid>
           ))}
-        </Box>
+        </Grid>
       )}
 
       {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} position="top-center" />}

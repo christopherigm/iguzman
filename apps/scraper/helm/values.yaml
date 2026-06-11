@@ -82,6 +82,42 @@ nodeAffinity:
   nodeNames:
     - node6
 
+# ─── WireGuard VPN sidecar ───────────────────────────────────
+# Routes all public-IP egress through a Surfshark WireGuard server
+# so Playwright/scraper calls leave the cluster behind a VPN IP.
+#
+# See apps/video-downloader/helm/values.yaml → wireguard section
+# for the full wg0.conf rules (AllowedIPs public-only list, PostUp
+# endpoint host route, no DNS line).
+#
+# Initial setup (create the secret with your wg0.conf):
+#   kubectl create secret generic scraper-secrets \
+#     --from-literal=WG_CONFIG="$(cat ./apps/scraper/wg0.conf)" \
+#     -n scraper
+#   # or append to an existing scraper-secrets secret
+#
+# Verifying the tunnel:
+#   kubectl exec -n scraper deploy/scraper -c wireguard -- wg show wg0
+#   kubectl exec -n scraper deploy/scraper -c scraper -- curl -s --max-time 15 https://ipinfo.io/ip
+#
+# Set wireguard.enabled: true to activate.
+wireguard:
+  enabled: true
+  image:
+    repository: lscr.io/linuxserver/wireguard
+    tag: latest
+    pullPolicy: IfNotPresent
+  # Name of the Kubernetes Secret that holds the WireGuard config (WG_CONFIG key).
+  secretName: "scraper-secrets"
+  secretKey: WG_CONFIG
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 800m
+      memory: 512Mi
+
 # ─── Resources ──────────────────────────────────────────────
 # Playwright + Chromium is memory-hungry; 1 Gi is a safe floor.
 resources:

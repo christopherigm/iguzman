@@ -63,6 +63,7 @@ class JobApplication(Common):
         blank=True,
         max_size=[256, None],
     )
+    company_intel = models.JSONField(null=True, blank=True)
     tailored_skills = models.ManyToManyField(
         'matrix.Skill',
         blank=True,

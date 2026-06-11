@@ -46,6 +46,16 @@
   margin: 4px 0 12px;
 }
 
+.detail__header-actions {
+  margin-top: 0;
+}
+
+@media (min-width: 600px) { /* sm — buttons sit beside the title column */
+  .detail__header-actions {
+    margin-top: 30px;
+  }
+}
+
 .detail__metric-explain-btn {
   display: inline-flex;
   align-items: center;

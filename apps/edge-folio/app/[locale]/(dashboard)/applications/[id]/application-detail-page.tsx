@@ -37,6 +37,8 @@ import {
   type TnCategorySuggestion,
   type WorkType,
   type SalaryCurrency,
+  type CompanyIntel,
+  type CompanyIntelItem,
 } from '@/lib/applications';
 import type { UserProfile } from '@/lib/auth';
 import { buildResumeMarkdown, downloadMarkdown } from '@/lib/resume-markdown';
@@ -144,6 +146,80 @@ function SwitchRow({
   );
 }
 
+function InfoField({ label, value }: { label: string; value: string }) {
+  return (
+    <Box display="flex" flexDirection="column" gap={4}>
+      <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+        {label}
+      </Typography>
+      <Typography variant="body" fontWeight={600}>
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
+function InfoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <Card gap={4}>
+      <InfoField label={label} value={value} />
+    </Card>
+  );
+}
+
+function IntelItemCard({ item }: { item: CompanyIntelItem }) {
+  return (
+    <Box display="flex" flexDirection="column" gap={4}>
+      <Typography variant="body" fontWeight={600} styles={{ lineHeight: 1.4 }}>
+        {item.title}
+      </Typography>
+      <Typography as="p" variant="body-sm" styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}>
+        {item.summary}
+      </Typography>
+      <a href={item.url} target="_blank" rel="noopener noreferrer" className="detail__url">
+        {item.source} ↗
+      </a>
+    </Box>
+  );
+}
+
+function IntelSection({ title, items, noDataLabel }: { title: string; items: CompanyIntelItem[]; noDataLabel: string }) {
+  return (
+    <Box display="flex" flexDirection="column" gap={10}>
+      <Typography variant="body" fontWeight={600} color="var(--foreground)">
+        {title}
+      </Typography>
+      {items.length === 0 ? (
+        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+          {noDataLabel}
+        </Typography>
+      ) : (
+        <Box display="flex" flexDirection="column" gap={16}>
+          {items.map((item, i) => (
+            <IntelItemCard key={i} item={item} />
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+function formatSalary(
+  min: number | string | null | undefined,
+  max: number | string | null | undefined,
+  currency: string | null | undefined,
+  notSpecifiedLabel: string,
+): string {
+  const hasMin = min != null && min !== '';
+  const hasMax = max != null && max !== '';
+  if (!hasMin && !hasMax) return notSpecifiedLabel;
+  const curr = currency ? ` ${currency}` : '';
+  const fmt = (v: number | string) => Number(v).toLocaleString();
+  if (hasMin && hasMax) return `${fmt(min!)} – ${fmt(max!)}${curr}`;
+  if (hasMin) return `${fmt(min!)}+${curr}`;
+  return `≤ ${fmt(max!)}${curr}`;
+}
+
 interface Props {
   application: JobApplication;
   profile: UserProfile | null;
@@ -196,6 +272,10 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   const [exportingNaftaPDF, setExportingNaftaPDF] = useState(false);
   const [naftaPDFError, setNaftaPDFError] = useState<string | null>(null);
 
+  // Company info (from Search Company Data)
+  const [companyDescription, setCompanyDescription] = useState(initialApp.company_description ?? '');
+  const [companyIntel, setCompanyIntel] = useState<CompanyIntel | null>(initialApp.company_intel ?? null);
+
   // NAFTA letter parameters
   const [naftaTnProfession, setNaftaTnProfession] = useState(profile?.tn_profession ?? '');
   const [naftaIsContinuation, setNaftaIsContinuation] = useState(false);
@@ -204,7 +284,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   const [naftaPassport, setNaftaPassport] = useState('');
   const [naftaHoursPerWeek, setNaftaHoursPerWeek] = useState('40');
   const [naftaDuration, setNaftaDuration] = useState('3 years');
-  const [naftaCompanyDescription, setNaftaCompanyDescription] = useState(initialApp.company_description ?? '');
+  const [naftaCompanyDescription, setNaftaCompanyDescription] = useState('');
 
   // Export section data (lazily loaded when section first appears)
   const exportDataFetchRef = useRef(false);
@@ -365,10 +445,15 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
     try {
       const result = await searchCompany(app.id);
       if (result.company_description) {
-        setNaftaCompanyDescription(result.company_description);
+        setCompanyDescription(result.company_description);
+        setApp((prev) => ({ ...prev, company_description: result.company_description }));
       }
       if (result.company_image_url) {
         setApp((prev) => ({ ...prev, company_image_url: result.company_image_url }));
+      }
+      if (result.company_intel) {
+        setCompanyIntel(result.company_intel);
+        setApp((prev) => ({ ...prev, company_intel: result.company_intel }));
       }
       showToast(t('companyInfoFound'), 'success');
     } catch {
@@ -423,6 +508,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   async function handleGenerateNafta() {
     setGeneratingNafta(true);
     setNaftaError(null);
+    const combinedCompanyDesc = [companyDescription, naftaCompanyDescription].filter(Boolean).join('\n\n');
     const payload: NaftaLetterPayload = {
       tn_profession: naftaTnProfession || undefined,
       is_continuation: naftaIsContinuation,
@@ -431,7 +517,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
       passport_number: naftaPassport || undefined,
       hours_per_week: naftaHoursPerWeek ? Number(naftaHoursPerWeek) : 40,
       duration: naftaDuration || '3 years',
-      company_description: naftaCompanyDescription || undefined,
+      company_description: combinedCompanyDesc || undefined,
     };
     try {
       const result = await generateNaftaLetter(app.id, payload);
@@ -644,7 +730,15 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
             </Box>
           )}
           <Box>
-            <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
+            <Badge
+              variant="subtle"
+              color={STATUS_COLORS[app.status]}
+              style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}
+              size='lg'
+            >
+              {t(`statuses.${app.status}`)}
+            </Badge>
+            <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4} marginTop={6}>
               {app.job_title}
             </Typography>
             <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
@@ -657,15 +751,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
             )}
           </Box>
         </Box>
-        <Box display="flex" alignItems="center" gap={10} flexWrap="wrap">
-          <Badge
-            variant="subtle"
-            color={STATUS_COLORS[app.status]}
-            style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}
-            size='lg'
-          >
-            {t(`statuses.${app.status}`)}
-          </Badge>
+        <Box display="flex" alignItems="center" gap={10} flexWrap="wrap" className="detail__header-actions">
           {!editing && (
             <>
               <Button
@@ -862,33 +948,75 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
         </Box>
       )}
 
-      {/* ── Match metrics ────────────────────────────────────────────── */}
-      {!editing && (app.overall_match != null || app.technical_match != null || app.nafta_tn_likelihood != null) && (
-        <Box display="flex" flexDirection="column" gap={10} marginBottom={24}>
-          {app.overall_match != null && (
-            <MetricBar
-              label={t('overallMatch')}
-              value={app.overall_match}
-              explainAriaLabel={t('metricExplain')}
-              onExplain={app.overall_match_explanation ? () => setExplainModal({ title: t('overallMatch'), text: app.overall_match_explanation }) : undefined}
-            />
-          )}
-          {app.technical_match != null && (
-            <MetricBar
-              label={t('technicalMatch')}
-              value={app.technical_match}
-              explainAriaLabel={t('metricExplain')}
-              onExplain={app.technical_match_explanation ? () => setExplainModal({ title: t('technicalMatch'), text: app.technical_match_explanation }) : undefined}
-            />
-          )}
-          {app.nafta_tn_likelihood != null && (
-            <MetricBar
-              label={t('naftaLikelihood')}
-              value={app.nafta_tn_likelihood}
-              explainAriaLabel={t('metricExplain')}
-              onExplain={app.nafta_tn_likelihood_explanation ? () => setExplainModal({ title: t('naftaLikelihood'), text: app.nafta_tn_likelihood_explanation }) : undefined}
-            />
-          )}
+      {/* ── Info & Match metrics ─────────────────────────────────────── */}
+      {!editing && (
+        <Box marginBottom={24}>
+          <Grid container spacing={2}>
+            {(app.overall_match != null || app.technical_match != null || app.nafta_tn_likelihood != null) && (
+              <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+                <Card gap={10}>
+                  {app.overall_match != null && (
+                    <MetricBar
+                      label={t('overallMatch')}
+                      value={app.overall_match}
+                      explainAriaLabel={t('metricExplain')}
+                      onExplain={app.overall_match_explanation ? () => setExplainModal({ title: t('overallMatch'), text: app.overall_match_explanation }) : undefined}
+                    />
+                  )}
+                  {app.technical_match != null && (
+                    <MetricBar
+                      label={t('technicalMatch')}
+                      value={app.technical_match}
+                      explainAriaLabel={t('metricExplain')}
+                      onExplain={app.technical_match_explanation ? () => setExplainModal({ title: t('technicalMatch'), text: app.technical_match_explanation }) : undefined}
+                    />
+                  )}
+                  {app.nafta_tn_likelihood != null && (
+                    <MetricBar
+                      label={t('naftaLikelihood')}
+                      value={app.nafta_tn_likelihood}
+                      explainAriaLabel={t('metricExplain')}
+                      onExplain={app.nafta_tn_likelihood_explanation ? () => setExplainModal({ title: t('naftaLikelihood'), text: app.nafta_tn_likelihood_explanation }) : undefined}
+                    />
+                  )}
+                </Card>
+              </Grid>
+            )}
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+              <Card gap={10}>
+                <InfoField
+                  label={t('locationLabel')}
+                  value={app.location || t('notSpecified')}
+                />
+                <InfoField
+                  label={t('workTypeLabel')}
+                  value={
+                    app.work_type && app.work_type.length > 0
+                      ? app.work_type.map((wt) => t(`workTypes.${wt}`)).join(', ')
+                      : t('notSpecified')
+                  }
+                />
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+              <InfoCard
+                label={t('salaryLabel')}
+                value={formatSalary(app.salary_min, app.salary_max, app.salary_currency, t('notSpecified'))}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
+              <InfoCard
+                label={t('usCitizenOrPrLabel')}
+                value={t(
+                  app.us_citizen_or_pr_required == null
+                    ? 'usCitizenOrPr.null'
+                    : app.us_citizen_or_pr_required
+                      ? 'usCitizenOrPr.true'
+                      : 'usCitizenOrPr.false',
+                )}
+              />
+            </Grid>
+          </Grid>
         </Box>
       )}
 
@@ -962,6 +1090,53 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
             <Typography as="p" variant="body" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {app.notes}
             </Typography>
+          )}
+        </Box>
+      )}
+
+      {/* ── Company Information ──────────────────────────────────────── */}
+      {!editing && (
+        <Box marginBottom={28} marginTop={40}>
+          <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
+            {t('companyInfoTitle')}
+          </Typography>
+          <Box styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }} marginBottom={16} />
+          <Box display="flex" alignItems="center" gap={10} marginBottom={14}>
+            <Button
+              text={searchingCompany ? t('searchingCompany') : t('searchCompany')}
+              type="button"
+              size="md"
+              disabled={searchingCompany}
+              onClick={handleSearchCompany}
+              kind="success"
+            />
+          </Box>
+          {!companyDescription && !companyIntel && (
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+              {t('companyInfoEmpty')}
+            </Typography>
+          )}
+          {(companyDescription || companyIntel) && (
+            <Box display="flex" flexDirection="column" gap={24}>
+              {companyDescription && (
+                <Box display="flex" flexDirection="column" gap={8}>
+                  <Typography variant="body" fontWeight={600} color="var(--foreground)">
+                    {t('companyAboutTitle')}
+                  </Typography>
+                  <Typography as="p" variant="body" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>
+                    {companyDescription}
+                  </Typography>
+                </Box>
+              )}
+              {companyIntel && (
+                <>
+                  <IntelSection title={t('companyNewsTitle')} items={companyIntel.company_news ?? []} noDataLabel={t('companyIntelNoData')} />
+                  <IntelSection title={t('companyHiringTitle')} items={companyIntel.hiring_news ?? []} noDataLabel={t('companyIntelNoData')} />
+                  <IntelSection title={t('companyLayoffsTitle')} items={companyIntel.layoff_news ?? []} noDataLabel={t('companyIntelNoData')} />
+                  <IntelSection title={t('companyReputationTitle')} items={companyIntel.reputation ?? []} noDataLabel={t('companyIntelNoData')} />
+                </>
+              )}
+            </Box>
           )}
         </Box>
       )}
@@ -1500,19 +1675,9 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
           />
 
           <Box>
-            <Box display="flex" alignItems="center" justifyContent="space-between" gap={10} marginBottom={6} marginTop={8}>
-              <Typography variant="body" color="var(--muted-foreground, #6b7280)" as="p">
-                {t('naftaCompanyDescLabel')}
-              </Typography>
-              <Button
-                text={searchingCompany ? t('searchingCompany') : t('searchCompany')}
-                type="button"
-                size="md"
-                disabled={searchingCompany}
-                onClick={handleSearchCompany}
-                kind='success'
-              />
-            </Box>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)" as="p" marginBottom={6} marginTop={8}>
+              {t('naftaCompanyDescLabel')}
+            </Typography>
             <TextInput
               multirow
               rows={10}
