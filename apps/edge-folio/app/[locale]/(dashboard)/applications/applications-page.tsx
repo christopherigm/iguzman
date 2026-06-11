@@ -26,6 +26,7 @@ import {
   type SalaryCurrency,
   type CreateApplicationPayload,
 } from '@/lib/applications';
+import { SpeechButton } from '@repo/ui/core-elements/speech-button';
 import './applications-page.css';
 
 const STATUSES: ApplicationStatus[] = ['draft', 'applied', 'interview', 'offer', 'rejected'];
@@ -360,9 +361,17 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
       </Box>
 
       <Box>
-        <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
-          {t('notesLabel')}
-        </Typography>
+        <Box display="flex" alignItems="center" justifyContent="space-between" marginBottom={6}>
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+            {t('notesLabel')}
+          </Typography>
+          <SpeechButton
+            mode="batch"
+            language="en"
+            micIcon="/icons/mic.svg"
+            onTranscript={(text) => setNotes((prev) => prev ? `${prev} ${text}` : text)}
+          />
+        </Box>
         <TextInput
           multirow
           rows={3}

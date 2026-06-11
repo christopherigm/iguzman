@@ -719,6 +719,47 @@ export function ProfilePage() {
             </Box>
           </ConfirmationModal>
         )}
+
+
+        {/* ── Professional Info ── */}
+        <Section title={t('professionalSection')} subtitle={t('professionalSubtitle')}>
+          <TextInput
+            label={t('jobTitleLabel')}
+            type="text"
+            value={jobTitle}
+            onChange={(v) => { setJobTitle(v); setInfoSuccess(false); }}
+            placeholder={t('jobTitlePlaceholder')}
+            autoComplete="organization-title"
+          />
+          <Slider
+            label={t('yearsLabel')}
+            steps={YEARS_STEPS}
+            value={yearsValue}
+            onChange={(v) => { setYearsValue(v); setInfoSuccess(false); }}
+          />
+          {infoSuccess && (
+            <Typography variant="caption" className="profile__success">
+              {t('infoSaved')}
+            </Typography>
+          )}
+          {infoError && (
+            <Typography variant="caption" role="alert" className="profile__error">
+              {infoError}
+            </Typography>
+          )}
+          {savingInfo && <ProgressBar label={t('savingInfo')} />}
+          <Box display="flex" justifyContent="flex-end">
+            <Button
+              text={savingInfo ? t('savingInfo') : t('saveInfo')}
+              type="button"
+              size="lg"
+              kind="success"
+              disabled={savingInfo || !jobTitle.trim()}
+              onClick={() => void handleSaveInfo()}
+            />
+          </Box>
+        </Section>
+        
         <Section title={t('contactSection')} subtitle={t('contactSubtitle')}>
           <Box display="flex" flexDirection="column" gap={8}>
             <Box className="profile__field-label-row">
@@ -866,45 +907,6 @@ export function ProfilePage() {
               kind="success"
               disabled={savingContact}
               onClick={() => void handleSaveContact()}
-            />
-          </Box>
-        </Section>
-
-        {/* ── Professional Info ── */}
-        <Section title={t('professionalSection')} subtitle={t('professionalSubtitle')}>
-          <TextInput
-            label={t('jobTitleLabel')}
-            type="text"
-            value={jobTitle}
-            onChange={(v) => { setJobTitle(v); setInfoSuccess(false); }}
-            placeholder={t('jobTitlePlaceholder')}
-            autoComplete="organization-title"
-          />
-          <Slider
-            label={t('yearsLabel')}
-            steps={YEARS_STEPS}
-            value={yearsValue}
-            onChange={(v) => { setYearsValue(v); setInfoSuccess(false); }}
-          />
-          {infoSuccess && (
-            <Typography variant="caption" className="profile__success">
-              {t('infoSaved')}
-            </Typography>
-          )}
-          {infoError && (
-            <Typography variant="caption" role="alert" className="profile__error">
-              {infoError}
-            </Typography>
-          )}
-          {savingInfo && <ProgressBar label={t('savingInfo')} />}
-          <Box display="flex" justifyContent="flex-end">
-            <Button
-              text={savingInfo ? t('savingInfo') : t('saveInfo')}
-              type="button"
-              size="lg"
-              kind="success"
-              disabled={savingInfo || !jobTitle.trim()}
-              onClick={() => void handleSaveInfo()}
             />
           </Box>
         </Section>

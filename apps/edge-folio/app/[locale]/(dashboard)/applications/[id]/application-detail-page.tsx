@@ -49,6 +49,7 @@ import {
   type Project,
 } from '@/lib/career';
 import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from '@/lib/nafta-constants';
+import { SpeechButton } from '@repo/ui/core-elements/speech-button';
 import './application-detail-page.css';
 
 const STATUSES: ApplicationStatus[] = ['draft', 'applied', 'interview', 'offer', 'rejected'];
@@ -782,9 +783,17 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
                 />
               </Box>
               <Box>
-                <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6}>
-                  {t('notesLabel')}
-                </Typography>
+                <Box display="flex" alignItems="center" justifyContent="space-between" marginBottom={6}>
+                  <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+                    {t('notesLabel')}
+                  </Typography>
+                  <SpeechButton
+                    mode="batch"
+                    language="en"
+                    micIcon="/icons/mic.svg"
+                    onTranscript={(text) => setNotes((prev) => prev ? `${prev} ${text}` : text)}
+                  />
+                </Box>
                 <TextInput
                   multirow
                   rows={3}
@@ -894,10 +903,11 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
 
       {/* ── Job description (read-only) ───────────────────────────────── */}
       {!editing && (
-        <Box marginBottom={28}>
-          <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={6} as="p">
+        <Box marginBottom={28} marginTop={40}>
+          <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
             {t('jdLabel')}
           </Typography>
+          <Box styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }} marginBottom={16} />
           <Typography as="p" variant="body" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>{app.job_description}</Typography>
           {app.job_url && (
             <Typography variant="body" color="var(--muted-foreground, #6b7280)" as="p" styles={{ marginTop: '12px', marginBottom: '4px' }}>
@@ -923,10 +933,11 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
       )}
 
       {/* ── Tailor resume ─────────────────────────────────────────────── */}
-      <Box marginBottom={28}>
-        <Typography as="h2" variant="h3" fontWeight={600} marginBottom={12}>
+      <Box marginBottom={28} marginTop={48}>
+        <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
           {t('tailorTitle')}
         </Typography>
+        <Box styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }} marginBottom={16} />
         <Box display="flex" alignItems="center" gap={10} flexWrap="wrap" marginBottom={10}>
           <Button
             text={tailoring ? t('tailoring') : tailoredBullets ? t('tailorAgain') : t('tailor')}
@@ -964,59 +975,13 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
         )}
       </Box>
 
-      {/* ── Cover letter ──────────────────────────────────────────────── */}
-      {tailoredBullets && tailoredBullets.length > 0 && (
-        <Box marginBottom={28}>
-          <Typography as="h2" variant="h3" fontWeight={600} marginBottom={12}>
-            {t('coverLetterTitle')}
-          </Typography>
-          <Box display="flex" alignItems="center" gap={10} flexWrap="wrap" marginBottom={10}>
-            <Button
-              text={generatingCL ? t('generatingCL') : coverLetter ? t('regenerateCL') : t('generateCL')}
-              type="button"
-              size="md"
-              disabled={generatingCL}
-              onClick={handleGenerateCL}
-              kind='success'
-            />
-            {generatingCL && <ProgressBar label={t('generatingCL')} />}
-          </Box>
-          {clError && (
-            <Typography variant="caption" color="var(--error, #ef4444)">
-              {clError}
-            </Typography>
-          )}
-          {coverLetter && (
-            <Box display="flex" flexDirection="column" gap={8}>
-              <Box display="flex" justifyContent="flex-end">
-                <Button
-                  text={copied ? t('copied') : t('copy')}
-                  type="button"
-                  size="md"
-                  kind={copied ? 'success' : undefined}
-                  onClick={handleCopy}
-                />
-              </Box>
-              <TextInput
-                multirow
-                className="detail__cover-letter"
-                value={coverLetter}
-                onChange={setCoverLetter}
-                rows={16}
-                width="100%"
-                aria-label={t('coverLetterTitle')}
-              />
-            </Box>
-          )}
-        </Box>
-      )}
-
       {/* ── Export ────────────────────────────────────────────────────── */}
       {tailoredBullets && tailoredBullets.length > 0 && (
-        <Box marginBottom={28}>
-          <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
+        <Box marginBottom={28} marginTop={48}>
+          <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
             {t('exportTitle')}
           </Typography>
+          <Box styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }} marginBottom={12} />
           <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={14} as="p">
             {t('exportSubtitle')}
           </Typography>
@@ -1164,11 +1129,60 @@ export function ApplicationDetailPage({ application: initialApp, profile }: Prop
         </Box>
       )}
 
+      {/* ── Cover letter ──────────────────────────────────────────────── */}
+      {tailoredBullets && tailoredBullets.length > 0 && (
+        <Box marginBottom={28} marginTop={48}>
+          <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
+            {t('coverLetterTitle')}
+          </Typography>
+          <Box styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }} marginBottom={16} />
+          <Box display="flex" alignItems="center" gap={10} flexWrap="wrap" marginBottom={10}>
+            <Button
+              text={generatingCL ? t('generatingCL') : coverLetter ? t('regenerateCL') : t('generateCL')}
+              type="button"
+              size="md"
+              disabled={generatingCL}
+              onClick={handleGenerateCL}
+              kind='success'
+            />
+            {generatingCL && <ProgressBar label={t('generatingCL')} />}
+          </Box>
+          {clError && (
+            <Typography variant="caption" color="var(--error, #ef4444)">
+              {clError}
+            </Typography>
+          )}
+          {coverLetter && (
+            <Box display="flex" flexDirection="column" gap={8}>
+              <Box display="flex" justifyContent="flex-end">
+                <Button
+                  text={copied ? t('copied') : t('copy')}
+                  type="button"
+                  size="md"
+                  kind={copied ? 'success' : undefined}
+                  onClick={handleCopy}
+                />
+              </Box>
+              <TextInput
+                multirow
+                className="detail__cover-letter"
+                value={coverLetter}
+                onChange={setCoverLetter}
+                rows={16}
+                width="100%"
+                aria-label={t('coverLetterTitle')}
+              />
+            </Box>
+          )}
+        </Box>
+      )}
+
       {/* ── NAFTA TN Visa Letter ──────────────────────────────────────── */}
-      <Box marginBottom={28}>
-        <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
+      <Box marginBottom={28} marginTop={48}>
+        <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
           {t('naftaLetterTitle')}
         </Typography>
+        <Box styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }} marginBottom={12} />
         <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={16} as="p">
           {t('naftaLetterSubtitle')}
         </Typography>
