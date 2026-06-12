@@ -316,7 +316,11 @@
     "duplicateVideo": "Video duplizieren",
     "getMetadata": "Metadaten abrufen",
     "fetchingMetadata": "Metadaten werden geladen…",
-    "errorGetMetadataFailed": "Metadaten konnten nicht abgerufen werden."
+    "errorGetMetadataFailed": "Metadaten konnten nicht abgerufen werden.",
+    "diarize": "Diarisieren",
+    "diarizing": "Audio wird transkribiert…",
+    "status_diarizing": "Diarisierung",
+    "errorDiarizeFailed": "Diarisierung fehlgeschlagen"
   },
   "Offline": {
     "title": "Du bist offline",

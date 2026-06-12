@@ -23,7 +23,7 @@ import {
   PlatformIconBg,
 } from './video-item-shared';
 import { useOPFSUrls } from './opfs-url-context';
-import { readFromOPFS } from '@/lib/opfs';
+import { readFromOPFS, writeToOPFS } from '@/lib/opfs';
 import { saveProcessedToOPFS } from '@/lib/opfs-processing';
 
 // Files larger than this threshold are split into chunks so each request stays
@@ -214,6 +214,7 @@ export function PinnedVideoItemServer({
   const blackBarsResumeChecked = useRef(false);
   const burnResumeChecked = useRef(false);
   const scaleDownResumeChecked = useRef(false);
+  const diarizeResumeChecked = useRef(false);
   // Tracks the server input file so handleServerTaskDone can delete it after
   // the result is saved to OPFS (both the uploaded-from-OPFS case and the
   // still-on-server case use the same cleanup path).
@@ -244,7 +245,8 @@ export function PinnedVideoItemServer({
     video.status === 'processing' ||
     video.status === 'converting' ||
     video.status === 'burning' ||
-    video.status === 'translating';
+    video.status === 'translating' ||
+    video.status === 'diarizing';
 
   const displayName =
     video.fulltitle ??
@@ -605,6 +607,124 @@ export function PinnedVideoItemServer({
     t,
   ]);
 
+  /* ── Diarize video ──────────────────────────────────── */
+  const handleDiarize = useCallback(async () => {
+    if (video.justAudio || !video.duration) return;
+
+    let serverFile = video.file;
+
+    // Upload from OPFS to server if the video is stored on-device
+    if (video.opfsEnabled && video.opfsStored && video.opfsKey) {
+      const staleServerFile =
+        !video.serverFileDeleted && video.file ? video.file : null;
+      setOpfsUploading(true);
+      try {
+        const opfsFile = await readFromOPFS(video.opfsKey);
+        const ext = video.opfsKey.split('.').pop() ?? 'mp4';
+        setOpfsUploadProgress(0);
+        const uploadedFile = await uploadOpfsFile(
+          opfsFile,
+          ext,
+          setOpfsUploadProgress,
+        );
+        if (staleServerFile) {
+          fetch(`/api/media/${staleServerFile}`, { method: 'DELETE' }).catch(
+            () => {},
+          );
+        }
+        serverFile = uploadedFile;
+        opfsInputFileRef.current = uploadedFile;
+        onUpdate(video.uuid, { file: uploadedFile, serverFileDeleted: false });
+      } catch {
+        setOpfsUploading(false);
+        onUpdate(video.uuid, {
+          status: 'error',
+          error: t('errorOpfsUploadFailed'),
+        });
+        return;
+      }
+      setOpfsUploading(false);
+    }
+
+    if (!serverFile) return;
+
+    onUpdate(video.uuid, { status: 'diarizing', error: null });
+
+    try {
+      const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
+      const res = await fetchWithRetry('/api/diarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
+        },
+        body: JSON.stringify({ file: serverFile, duration: video.duration }),
+      });
+
+      if (!res.ok) {
+        const errData = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(errData.error ?? `Server error ${res.status}`);
+      }
+
+      const data = (await res.json()) as {
+        captionsFile: string;
+        creditsRemaining?: number;
+      };
+      if (data.creditsRemaining !== undefined)
+        setCreditsBalance(data.creditsRemaining);
+
+      const captionsUrl = `/api/media/${data.captionsFile}`;
+      let opfsCaptionsKey: string | null = null;
+
+      // Store SRT in OPFS and clean up the temp server upload
+      if (video.opfsEnabled) {
+        setOpfsMigrating(true);
+        try {
+          const srtText = await fetch(captionsUrl).then((r) => r.text());
+          const srtBlob = new Blob([srtText], { type: 'text/plain' });
+          opfsCaptionsKey = `captions_${data.captionsFile}`;
+          await writeToOPFS(opfsCaptionsKey, srtBlob);
+        } catch (err) {
+          console.error('Failed to save captions to OPFS:', err);
+        } finally {
+          setOpfsMigrating(false);
+        }
+        const inputFile = opfsInputFileRef.current;
+        if (inputFile) {
+          fetch(`/api/media/${inputFile}`, { method: 'DELETE' }).catch(() => {});
+          opfsInputFileRef.current = null;
+        }
+      }
+
+      onUpdate(video.uuid, {
+        status: 'done',
+        captionsFile: captionsUrl,
+        ...(opfsCaptionsKey ? { opfsCaptionsKey } : {}),
+      });
+      onComplete(video.uuid);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      onUpdate(video.uuid, {
+        status: 'error',
+        error: `${t('errorDiarizeFailed')}: ${detail}`,
+      });
+    }
+  }, [
+    video.uuid,
+    video.justAudio,
+    video.duration,
+    video.file,
+    video.opfsEnabled,
+    video.opfsStored,
+    video.opfsKey,
+    video.serverFileDeleted,
+    onUpdate,
+    onComplete,
+    t,
+  ]);
+
   /* ── Handle completed server task ────────────────────── */
   const handleServerTaskDone = useCallback(
     async (
@@ -901,6 +1021,26 @@ export function PinnedVideoItemServer({
     handleScaleDown,
   ]);
 
+  /* ── Resume interrupted diarization ─────────────────── */
+  useEffect(() => {
+    if (diarizeResumeChecked.current) return;
+    diarizeResumeChecked.current = true;
+
+    const needsResume =
+      video.file &&
+      !video.justAudio &&
+      video.duration &&
+      video.status === 'diarizing';
+
+    if (needsResume) queueMicrotask(() => handleDiarize());
+  }, [
+    video.file,
+    video.justAudio,
+    video.duration,
+    video.status,
+    handleDiarize,
+  ]);
+
   /* ── Auto-move errored items to completed ─────────────── */
   useEffect(() => {
     if (video.status === 'error') onComplete(video.uuid);
@@ -917,6 +1057,7 @@ export function PinnedVideoItemServer({
     if (jobPhase === 'polling' && jobProgress > 0)
       return t('serverProcessing', { progress: jobProgress });
     if (video.status === 'translating') return t('translatingCaptions');
+    if (video.status === 'diarizing') return t('diarizing');
     return null;
   })();
 

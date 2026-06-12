@@ -316,7 +316,11 @@
     "duplicateVideo": "Duplicar vídeo",
     "getMetadata": "Obter metadados",
     "fetchingMetadata": "Obtendo metadados…",
-    "errorGetMetadataFailed": "Falha ao obter metadados."
+    "errorGetMetadataFailed": "Falha ao obter metadados.",
+    "diarize": "Diarizar",
+    "diarizing": "Transcrevendo áudio…",
+    "status_diarizing": "Diarizando",
+    "errorDiarizeFailed": "Falha ao diarizar"
   },
   "Offline": {
     "title": "Você está offline",

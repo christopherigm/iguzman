@@ -95,7 +95,8 @@ export type VideoStatus =
   | 'processing'
   | 'converting'
   | 'burning'
-  | 'translating';
+  | 'translating'
+  | 'diarizing';
 
 /* ── Burn captions config ──────────────────────────── */
 

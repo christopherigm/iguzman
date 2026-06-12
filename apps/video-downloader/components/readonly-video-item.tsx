@@ -39,7 +39,8 @@ export type ReprocessAction =
   | 'h265'
   | 'bars'
   | 'burnCaptions'
-  | 'scaleDown';
+  | 'scaleDown'
+  | 'diarize';
 
 export interface ReadOnlyVideoItemProps {
   video: StoredVideo;
@@ -453,6 +454,7 @@ export function ReadOnlyVideoItem({
           onMakeOffline={handleMakeOffline}
           onDuplicate={handleDuplicate}
           onGetMetadata={handleGetMetadata}
+          onDiarize={() => onReprocess(video.uuid, 'diarize')}
           useServerProcessing={video.useServerProcessing}
           onServerModeChange={handleServerModeChange}
           t={t}

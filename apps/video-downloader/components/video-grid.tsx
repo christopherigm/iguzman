@@ -206,6 +206,11 @@ export function VideoGrid({
             scaleDownTargetHeight: extra as number,
           });
           break;
+        case 'diarize':
+          onReprocessCompleted(uuid, {
+            status: 'diarizing' as VideoStatus,
+          });
+          break;
       }
     },
     [onReprocessCompleted],

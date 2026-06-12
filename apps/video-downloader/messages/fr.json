@@ -316,7 +316,11 @@
     "duplicateVideo": "Dupliquer la vidéo",
     "getMetadata": "Récupérer les métadonnées",
     "fetchingMetadata": "Récupération des métadonnées…",
-    "errorGetMetadataFailed": "Impossible de récupérer les métadonnées."
+    "errorGetMetadataFailed": "Impossible de récupérer les métadonnées.",
+    "diarize": "Diariser",
+    "diarizing": "Transcription audio en cours…",
+    "status_diarizing": "Diarisation",
+    "errorDiarizeFailed": "Échec de la diarisation"
   },
   "Offline": {
     "title": "Vous êtes hors ligne",

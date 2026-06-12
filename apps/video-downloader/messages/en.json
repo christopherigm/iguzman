@@ -317,7 +317,11 @@
     "duplicateVideo": "Duplicate Video",
     "getMetadata": "Get metadata",
     "fetchingMetadata": "Fetching metadata…",
-    "errorGetMetadataFailed": "Failed to fetch metadata."
+    "errorGetMetadataFailed": "Failed to fetch metadata.",
+    "diarize": "Diarize",
+    "diarizing": "Transcribing audio…",
+    "status_diarizing": "Diarizing",
+    "errorDiarizeFailed": "Diarization failed"
   },
   "Offline": {
     "title": "You are offline",

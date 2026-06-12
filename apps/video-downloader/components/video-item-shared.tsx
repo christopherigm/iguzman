@@ -12,6 +12,7 @@ import { Grid } from '@repo/ui/core-elements/grid';
 import { Switch } from '@repo/ui/core-elements/switch';
 import type { OperationCredits } from '@/lib/types';
 import type { StoredVideo, VideoStatus } from './use-video-store';
+import { diarizeCreditCost } from '@/lib/srt-from-diarization';
 import { useCreditsBalance } from './use-credits-store';
 import Divider from '@repo/ui/core-elements/divider';
 
@@ -38,6 +39,7 @@ export const STATUS_COLORS: Record<VideoStatus, string> = {
   burning: '#ec4899',
   translating: '#a855f7',
   uploading: '#0ea5e9',
+  diarizing: '#f97316',
   done: '#22c55e',
   error: '#ef4444',
 };
@@ -617,6 +619,14 @@ export function VideoStatusHints({
     );
   }
 
+  if (videoStatus === 'diarizing') {
+    return (
+      <Typography variant="caption" className="vi-ffmpeg-hint">
+        {t('diarizing')}
+      </Typography>
+    );
+  }
+
   if (videoStatus === 'uploading') {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
@@ -769,6 +779,7 @@ export function VideoExtraActions({
   onScaleDown,
   onDuplicate,
   onGetMetadata,
+  onDiarize,
   useServerProcessing,
   onServerModeChange,
   t,
@@ -791,6 +802,7 @@ export function VideoExtraActions({
   onScaleDown?: (targetHeight: number) => void;
   onDuplicate?: () => Promise<void>;
   onGetMetadata?: () => Promise<void>;
+  onDiarize?: () => void;
   useServerProcessing?: boolean;
   onServerModeChange?: (enabled: boolean) => void;
   t: TranslationFn;
@@ -1093,6 +1105,37 @@ export function VideoExtraActions({
                   <CreditBadge amount={oc.burnSubtitles} />
                 ) : null}
               </Button>
+            </Grid>
+          ) : null}
+
+          {onDiarize && !video.justAudio ? (
+            <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
+              {(() => {
+                const diarizeCost = diarizeCreditCost(video.duration);
+                return (
+                  <Button
+                    unstyled
+                    className="vi-fps-btn"
+                    onClick={onDiarize}
+                    disabled={
+                      isBusy ||
+                      !video.downloadURL ||
+                      diarizeCost === null ||
+                      creditsBalance < diarizeCost
+                    }
+                    aria-label={t('diarize')}
+                    title={t('diarize')}
+                    icon="/icons/captions.svg"
+                    iconSize="14px"
+                    iconColor="var(--accent, #8b5cf6)"
+                  >
+                    {t('diarize')}
+                    {diarizeCost !== null ? (
+                      <CreditBadge amount={diarizeCost} />
+                    ) : null}
+                  </Button>
+                );
+              })()}
             </Grid>
           ) : null}
 
