@@ -6,7 +6,7 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
 import { CodeBlock } from '@repo/ui/core-elements/code-block';
 import { TabMenu } from './tab-menu';
-import { ScraperPanel } from './scraper-panel';
+import { ServicesPanel } from './services-panel';
 import { ToolsPanel } from './edit-videos-panel';
 import './page.css';
 
@@ -188,7 +188,7 @@ export default async function Home({ params, searchParams }: Props) {
               </>
             )}
 
-            {tab === 'services' && <ScraperPanel />}
+            {tab === 'services' && <ServicesPanel />}
 
             {tab === 'tools' && <ToolsPanel />}
 

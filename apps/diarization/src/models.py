@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 HF_TOKEN = os.getenv("HF_TOKEN", "")
 WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "base")
+# Set by the Dockerfile runtime stage; tells all HF libraries to never make network requests.
+HF_HUB_OFFLINE = os.getenv("HF_HUB_OFFLINE", "0") in ("1", "true", "True")
 
 # Module-level singletons
 _diarization_pipeline = None
@@ -22,7 +24,7 @@ def load_models() -> None:
     """Load all models. Called once during application lifespan startup."""
     global _diarization_pipeline, _whisper_model
 
-    if not HF_TOKEN:
+    if not HF_TOKEN and not HF_HUB_OFFLINE:
         raise RuntimeError(
             "HF_TOKEN environment variable is required to download pyannote models. "
             "Accept the model terms at https://huggingface.co/pyannote/speaker-diarization-3.1 "

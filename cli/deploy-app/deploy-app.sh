@@ -495,10 +495,50 @@ main() {
     docker_registry="$(read_file_value "${env_file}" "DOCKER_REGISTRY")"
   fi
 
-  printf "  %s docker build -f apps/%s/Dockerfile -t %s:latest .\n\n" \
-    "$(clr_bold_yellow '→')" "${app_name}" "${app_name}"
+  # Scan the Dockerfile for two patterns, both resolved from the app's .env:
+  #   ARG FOO                           → --build-arg FOO=value
+  #   RUN --mount=type=secret,id=FOO    → --secret id=FOO,env=FOO  (value exported)
+  local -a build_args=()
+  local -a secret_flags=()
+  local -a build_arg_names=()
+  local -a secret_names=()
+  while IFS= read -r bline; do
+    if [[ "${bline}" =~ ^ARG[[:space:]]+([A-Za-z_][A-Za-z0-9_]*) ]]; then
+      local barg="${BASH_REMATCH[1]}"
+      if [[ -f "${env_file}" ]]; then
+        local bval
+        bval="$(read_file_value "${env_file}" "${barg}")"
+        if [[ -n "${bval}" ]]; then
+          build_args+=(--build-arg "${barg}=${bval}")
+          build_arg_names+=("${barg}")
+        fi
+      fi
+    elif [[ "${bline}" =~ --mount=type=secret,id=([A-Za-z_][A-Za-z0-9_]*) ]]; then
+      local bsecret="${BASH_REMATCH[1]}"
+      if [[ -f "${env_file}" ]]; then
+        local sval
+        sval="$(read_file_value "${env_file}" "${bsecret}")"
+        if [[ -n "${sval}" ]]; then
+          export "${bsecret}=${sval}"
+          secret_flags+=(--secret "id=${bsecret},env=${bsecret}")
+          secret_names+=("${bsecret}")
+        fi
+      fi
+    fi
+  done < "${app_dir}/Dockerfile"
 
-  if ! (cd "${repo_root}" && docker build -f "apps/${app_name}/Dockerfile" -t "${app_name}:latest" .); then
+  local build_args_display=""
+  for bname in "${build_arg_names[@]}"; do
+    build_args_display+=" --build-arg ${bname}=***"
+  done
+  for sname in "${secret_names[@]}"; do
+    build_args_display+=" --secret id=${sname},env=***"
+  done
+
+  printf "  %s docker build%s -f apps/%s/Dockerfile -t %s:latest .\n\n" \
+    "$(clr_bold_yellow '→')" "${build_args_display}" "${app_name}" "${app_name}"
+
+  if ! (cd "${repo_root}" && docker build "${build_args[@]}" "${secret_flags[@]}" -f "apps/${app_name}/Dockerfile" -t "${app_name}:latest" .); then
     printf "\n  %s %s\n\n" "$(clr_bold_red '✗')" "${DOCKER_BUILD_FAILED}"; exit 1
   fi
 

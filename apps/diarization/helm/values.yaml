@@ -51,22 +51,32 @@ ingress:
 env:
   PORT: '8000'
   LOG_LEVEL: 'info'
-  WHISPER_MODEL_SIZE: 'base'
+  WHISPER_MODEL_SIZE: 'medium'
 
 # Sensitive values - reference existing Kubernetes Secrets.
 # Create the secret first (see README), then these are injected at runtime.
 envFromSecret:
   - name: API_KEY
     secretName: diarization-secrets
-    secretKey: api-key
+    secretKey: API_KEY
+  # HF_TOKEN is only needed when modelsBaked is false (models are downloaded at startup).
+  # When modelsBaked is true this entry is ignored and the secret key is not required.
   - name: HF_TOKEN
     secretName: diarization-secrets
-    secretKey: hf-token
+    secretKey: HF_TOKEN
+    onlyWhenNotBaked: true
+
+# ─── Model baking ─────────────────────────────────────────────────────────────
+# Set to true when the Docker image was built with baked-in models (multi-stage
+# Dockerfile with HF_TOKEN build arg). When true:
+#   - HF_TOKEN is not injected at runtime (secret key not required)
+#   - startupProbe window shrinks from 15 min to 2 min (no download needed)
+modelsBaked: false
 
 # ─── Health probes ────────────────────────────────────────────────────────────
-# On first boot, pyannote and whisper models must be downloaded from HuggingFace.
-# This can take 5-10 minutes depending on network speed.
-# The startupProbe allows up to 15 min (90 × 10 s) before giving up.
+# modelsBaked true  → models load from image cache; allow 2 min (12 × 10 s).
+# modelsBaked false → pyannote + whisper downloaded on first boot (5-10 min);
+#                     allow 15 min (90 × 10 s).
 probes:
   startupProbe:
     httpGet:
@@ -74,7 +84,7 @@ probes:
       port: 8000
     initialDelaySeconds: 10
     periodSeconds: 10
-    failureThreshold: 90   # 15 min window for cold-start model download
+    # failureThreshold is computed from modelsBaked in deployment.yaml (12 or 90)
 
   livenessProbe:
     httpGet:
@@ -106,6 +116,6 @@ resources:
 # pod restarts and avoid re-downloading on every deployment.
 # Recommended for production; requires a StorageClass that supports ReadWriteOnce.
 modelCache:
-  enabled: false
+  enabled: true
   size: 5Gi
   storageClass: ''   # leave empty to use the cluster default StorageClass

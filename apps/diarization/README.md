@@ -6,11 +6,14 @@ A lightweight Python microservice that performs **speaker diarization** and **sp
 |---|---|
 | [pyannote.audio 3.x](https://github.com/pyannote/pyannote-audio) | Speaker diarization (who spoke when) |
 | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | Transcription (what was said), ~4× faster than original Whisper on CPU via CTranslate2 |
+| [ffmpeg](https://ffmpeg.org/) | Audio normalization — converts any input to 16 kHz mono WAV before diarization |
 | [FastAPI](https://fastapi.tiangolo.com/) | HTTP API |
 | [uvicorn](https://www.uvicorn.org/) | ASGI server |
 
-Both models are loaded once at startup and reused across requests.
+All models are loaded once at startup and reused across requests.
 This service is CPU-only — no GPU required.
+
+The Docker image uses a **multi-stage build**: models are downloaded into the image at build time (`HF_TOKEN` is a build arg) and the runtime stage runs fully offline (`HF_HUB_OFFLINE=1`). `HF_TOKEN` is **not** required at container runtime.
 
 ---
 
@@ -98,7 +101,7 @@ curl -X POST https://diarization.iguzman.com.mx/transcribe \
 | `PORT` | `8000` | HTTP server port |
 | `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warn`, `error`) |
 | `API_KEY` | *(empty)* | Authentication key. Leave empty to disable auth (dev only). |
-| `HF_TOKEN` | — | **Required.** HuggingFace access token for pyannote gated models. |
+| `HF_TOKEN` | — | HuggingFace access token for pyannote gated models. **Required for local dev** (models downloaded on first run). Not needed at Docker runtime — the image is built with models baked in. |
 | `WHISPER_MODEL_SIZE` | `base` | Whisper model size: `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`. Larger = more accurate but slower. |
 
 ---
@@ -123,7 +126,7 @@ Then generate an access token at https://huggingface.co/settings/tokens.
 
 ```bash
 cd apps/diarization
-cp .env.example .env
+cp env.example .env
 # Fill in HF_TOKEN and API_KEY in .env
 ```
 
@@ -134,7 +137,7 @@ python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
 
 # Install CPU-only PyTorch (avoids pulling ~2 GB CUDA wheels)
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install torch==2.4.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cpu
 
 # Install remaining dependencies
 pip install -r requirements.txt
@@ -157,11 +160,20 @@ The interactive API docs are available at http://localhost:8000/docs.
 
 ## Docker
 
+The Dockerfile uses a **multi-stage build**:
+
+1. **`model-downloader` stage** — installs dependencies and downloads pyannote + Whisper models into the HuggingFace cache. Requires `HF_TOKEN` as a build arg; the token is never written to the final image.
+2. **Runtime stage** — copies the model cache from stage 1 and sets `HF_HUB_OFFLINE=1` / `TRANSFORMERS_OFFLINE=1` so the container never makes network requests to HuggingFace.
+
 ### Build
 
 ```bash
 # From repo root
-docker build -t christopherguzman/diarization:latest apps/diarization/
+docker build \
+  --build-arg HF_TOKEN=hf_your_token \
+  --build-arg WHISPER_MODEL_SIZE=base \
+  -t christopherguzman/diarization:latest \
+  apps/diarization/
 ```
 
 Or with the monorepo deploy script:
@@ -173,13 +185,11 @@ pnpm docker --filter=diarization
 
 ```bash
 docker run --rm -p 8000:8000 \
-  -e HF_TOKEN=hf_your_token \
   -e API_KEY=your-key \
-  -v huggingface-cache:/root/.cache/huggingface \
   christopherguzman/diarization:latest
 ```
 
-The `-v` flag mounts a Docker volume for model caching so models are not re-downloaded on every container start.
+`HF_TOKEN` is not required at runtime — models are already baked into the image.
 
 ---
 
@@ -189,10 +199,11 @@ The `-v` flag mounts a Docker volume for model caching so models are not re-down
 
 ```bash
 kubectl create secret generic diarization-secrets \
-  --from-literal=api-key='your-strong-api-key' \
-  --from-literal=hf-token='hf_your_huggingface_token' \
+  --from-literal=API_KEY='your-strong-api-key' \
   -n diarization
 ```
+
+> `HF_TOKEN` is only required in the secret when `modelsBaked: false` (models downloaded at pod startup). The default (`modelsBaked: true`) does not inject `HF_TOKEN` at runtime.
 
 ### 2. Install the Helm chart
 
@@ -204,12 +215,25 @@ helm install diarization apps/diarization/helm/ -n diarization --create-namespac
 helm upgrade diarization apps/diarization/helm/ -n diarization
 ```
 
-### 3. Enable model cache (recommended for production)
+### 3. Key Helm values
 
-Avoids re-downloading models (~2-4 GB) on every pod restart:
+| Value | Default | Description |
+|---|---|---|
+| `modelsBaked` | `true` | Set to `true` when the image was built with baked-in models (multi-stage Dockerfile). Controls startup probe timeout and whether `HF_TOKEN` is injected. |
+| `modelCache.enabled` | `false` | Mount a PVC at `/root/.cache/huggingface`. Useful when `modelsBaked: false` to avoid re-downloading models on every pod restart. |
+| `modelCache.size` | `5Gi` | PVC size. |
+| `nodeAffinity.nodeNames` | `[node6]` | Pin the pod to a specific node (CPU-intensive workload). |
+
+To deploy **without** baked models (downloads on first boot):
 
 ```bash
+kubectl create secret generic diarization-secrets \
+  --from-literal=API_KEY='your-strong-api-key' \
+  --from-literal=HF_TOKEN='hf_your_token' \
+  -n diarization
+
 helm upgrade diarization apps/diarization/helm/ -n diarization \
+  --set modelsBaked=false \
   --set modelCache.enabled=true \
   --set modelCache.size=5Gi
 ```
@@ -220,7 +244,7 @@ helm upgrade diarization apps/diarization/helm/ -n diarization \
 # Pod status
 kubectl get pods -n diarization
 
-# Tail logs (shows model download progress on first start)
+# Tail logs (shows model load progress on startup)
 kubectl logs -n diarization -l app.kubernetes.io/name=diarization -f
 
 # Describe pod (useful if stuck in CrashLoopBackOff)
@@ -229,7 +253,7 @@ kubectl describe pod -n diarization -l app.kubernetes.io/name=diarization
 
 ### Notes
 
-- **Cold-start time:** On the first deployment, models are downloaded from HuggingFace. The startup probe allows up to **15 minutes** for this. Subsequent pod starts with `modelCache.enabled=true` are nearly instant.
+- **Cold-start time:** With `modelsBaked: true` (default), models load from the image cache — startup probe allows **2 minutes**. With `modelsBaked: false`, pyannote + Whisper are downloaded on first boot (5-10 min); startup probe allows **15 minutes**.
 - **CPU performance:** Processing time scales roughly linearly with audio duration. Expect ~1-3× real-time on a Core i9 (e.g. a 10-minute recording takes 10-30 minutes to fully process). Providing `num_speakers` when known significantly speeds up diarization.
 - **Timeouts:** The ingress is configured with a 600-second proxy timeout. For very long files, consider splitting audio client-side before uploading.
 - **Single replica:** Keep `replicaCount: 1`. Models are held in-process memory and the service is not designed to scale horizontally.

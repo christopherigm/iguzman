@@ -5,9 +5,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 import models
 from diarize import run_diarization
+from preprocess import preprocess_audio
 from transcribe import run_transcription_with_diarization
 
 # ── Logging ──────────────────────────────────────────────────────────────────
@@ -39,6 +41,13 @@ app = FastAPI(
     description="Speaker diarization and transcription via pyannote.audio + faster-whisper",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["X-API-Key", "Content-Type"],
 )
 
 
@@ -92,9 +101,11 @@ async def diarize(
     Optionally constrain the number of speakers for better accuracy.
     """
     audio_path = await save_upload(file)
+    wav_path: str | None = None
     try:
+        wav_path = preprocess_audio(audio_path)
         segments = run_diarization(
-            audio_path,
+            wav_path,
             num_speakers=num_speakers,
             min_speakers=min_speakers,
             max_speakers=max_speakers,
@@ -102,6 +113,8 @@ async def diarize(
         return {"segments": segments}
     finally:
         Path(audio_path).unlink(missing_ok=True)
+        if wav_path:
+            Path(wav_path).unlink(missing_ok=True)
 
 
 @app.post(
@@ -126,9 +139,11 @@ async def transcribe(
     and `text`.
     """
     audio_path = await save_upload(file)
+    wav_path: str | None = None
     try:
+        wav_path = preprocess_audio(audio_path)
         result = run_transcription_with_diarization(
-            audio_path,
+            wav_path,
             language=language,
             num_speakers=num_speakers,
             min_speakers=min_speakers,
@@ -137,3 +152,5 @@ async def transcribe(
         return {"segments": result, "language": result[0].get("language") if result else None}
     finally:
         Path(audio_path).unlink(missing_ok=True)
+        if wav_path:
+            Path(wav_path).unlink(missing_ok=True)

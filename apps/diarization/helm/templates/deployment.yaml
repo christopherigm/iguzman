@@ -50,11 +50,13 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
             {{- range .Values.envFromSecret }}
+            {{- if not (and .onlyWhenNotBaked $.Values.modelsBaked) }}
             - name: {{ .name }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .secretName }}
                   key: {{ .secretKey }}
+            {{- end }}
             {{- end }}
           {{- end }}
 
@@ -66,13 +68,14 @@ spec:
           {{- end }}
 
           {{- /* ── Probes ── */}}
+          {{- /* startupProbe window: 2 min when models are baked in, 15 min for runtime download */}}
           startupProbe:
             httpGet:
               path: {{ .Values.probes.startupProbe.httpGet.path }}
               port: {{ .Values.probes.startupProbe.httpGet.port }}
             initialDelaySeconds: {{ .Values.probes.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.startupProbe.periodSeconds }}
-            failureThreshold: {{ .Values.probes.startupProbe.failureThreshold }}
+            failureThreshold: {{ if .Values.modelsBaked }}12{{ else }}90{{ end }}
 
           livenessProbe:
             httpGet:
