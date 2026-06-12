@@ -97,7 +97,12 @@ export async function GET(
   }
 
   // Dev: files live in public/media/, served by Next.js at /media/
-  return NextResponse.redirect(new URL(`/media/${filename}`, request.url));
+  // Use the Host header to reconstruct the origin so the redirect stays
+  // on the same host:port the browser connected to — avoids a
+  // localhost vs 127.0.0.1 mismatch that COEP: require-corp would block.
+  const host = request.headers.get('host') ?? 'localhost:3000';
+  const proto = request.headers.get('x-forwarded-proto') ?? 'http';
+  return NextResponse.redirect(`${proto}://${host}/media/${filename}`);
 }
 
 /**

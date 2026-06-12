@@ -56,6 +56,16 @@ const nextConfig = {
           { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
         ],
       },
+      // Media files must be loadable by the OPFS migration fetch() even when
+      // the redirect target is technically cross-origin (e.g. localhost vs
+      // 127.0.0.1 mismatch in dev, or R2 CDN redirect in production).
+      // Without this header, COEP: require-corp blocks the fetch entirely.
+      {
+        source: '/media/:path*',
+        headers: [
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
       // Cloudflare must never cache sw.js — a stale file means users keep
       // running the old service worker indefinitely after a deployment.
       {

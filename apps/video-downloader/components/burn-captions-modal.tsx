@@ -162,7 +162,7 @@ const DEFAULT_ANIMATION: BurnCaptionsAnimationConfig = {
   blurStrength: 15,
   blurDurationMs: 300,
   zoomDurationMs: 300,
-  karaokeMode: 'kf',
+  karaokeMode: 'k',
   karaokeHighlightColour: '#00ffff',
 };
 
@@ -175,7 +175,7 @@ const DEFAULT_CONFIG: BurnCaptionsConfig = {
   borderStyle: 1,
   outlineThickness: 8,
   bgColor: '#000000',
-  bgOpacity: 50,
+  bgOpacity: 100,
   translate: false,
   translateTo: 'en',
   animation: { ...DEFAULT_ANIMATION },
