@@ -2,7 +2,8 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import type { Cookie } from 'playwright';
 
-const COOKIES_PATH = join(__dirname, '..', 'netscape-cookies.txt');
+const COOKIES_PATH =
+  process.env['COOKIES_PATH'] ?? join(__dirname, '..', 'netscape-cookies.txt');
 
 /**
  * Parses a Netscape-format cookies file (e.g. exported by yt-dlp or browser extensions)

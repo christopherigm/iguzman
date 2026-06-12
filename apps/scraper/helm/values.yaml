@@ -33,6 +33,8 @@ ingress:
   className: 'nginx'
   annotations:
     cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '120'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '120'
   hosts:
     - host: scraper.iguzman.com.mx
       paths:
@@ -47,9 +49,13 @@ ingress:
 # Plain (non-sensitive) environment variables.
 env:
   NODE_ENV: 'production'
+  PORT: '4000'
+  LOG_LEVEL: 'info'
+  COOKIES_PATH: '/secrets/cookies.txt'
 
 # Load all keys from the Kubernetes secret as environment variables.
 # Run setup-k8s-secrets first to create the secret.
+# Secret keys expected: SCRAPER_API_KEY, BRAVE_API_KEY, COOKIES, WG_CONFIG
 envFrom:
   - secretRef:
       name: scraper-secrets
@@ -117,6 +123,17 @@ wireguard:
     limits:
       cpu: 800m
       memory: 512Mi
+
+# ─── Cookies file (Netscape format, mounted from secret) ────
+# The setup-k8s-secrets script reads the local cookies file and stores its
+# content as the COOKIES key in scraper-secrets. The Helm chart then mounts
+# that secret key as a file at cookies.mountPath, which matches COOKIES_PATH
+# in the env section above.
+cookies:
+  enabled: true
+  secretName: "scraper-secrets"
+  secretKey: COOKIES
+  mountPath: /secrets/cookies.txt
 
 # ─── Resources ──────────────────────────────────────────────
 # Playwright + Chromium is memory-hungry; 1 Gi is a safe floor.

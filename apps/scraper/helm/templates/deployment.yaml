@@ -78,6 +78,15 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
 
+          {{- /* ── Volume mounts ── */}}
+          {{- if .Values.cookies.enabled }}
+          volumeMounts:
+            - name: cookies
+              mountPath: {{ .Values.cookies.mountPath }}
+              subPath: cookies.txt
+              readOnly: true
+          {{- end }}
+
         {{- /* ── WireGuard VPN sidecar ── */}}
         {{- if .Values.wireguard.enabled }}
         - name: wireguard
@@ -115,12 +124,22 @@ spec:
               readOnly: true
         {{- end }}
 
-      {{- if .Values.wireguard.enabled }}
+      {{- if or .Values.wireguard.enabled .Values.cookies.enabled }}
       volumes:
+        {{- if .Values.wireguard.enabled }}
         - name: wireguard-config
           secret:
             secretName: {{ .Values.wireguard.secretName }}
             items:
               - key: {{ .Values.wireguard.secretKey }}
                 path: wg0.conf
+        {{- end }}
+        {{- if .Values.cookies.enabled }}
+        - name: cookies
+          secret:
+            secretName: {{ .Values.cookies.secretName }}
+            items:
+              - key: {{ .Values.cookies.secretKey }}
+                path: cookies.txt
+        {{- end }}
       {{- end }}

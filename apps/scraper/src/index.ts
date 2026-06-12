@@ -24,6 +24,7 @@ app.register(cors, {
 app.addHook('preHandler', async (request, reply) => {
   if (!API_KEY) return; // no key set → open (dev only)
   if (request.url === '/health') return; // health probe is unauthenticated
+  if (request.method === 'OPTIONS') return; // preflight — CORS plugin already responded
   const key = request.headers['x-api-key'];
   if (key !== API_KEY) {
     return reply.code(401).send({ error: 'Unauthorized' });
@@ -33,7 +34,7 @@ app.addHook('preHandler', async (request, reply) => {
 // ── POST /search ──────────────────────────────────────────────────────────────
 //
 // Body: { query: string; engine?: "duckduckgo" | "bing"; maxResults?: number }
-// Response: { results: { title, url, snippet }[] }
+// Response: { title, url, snippet, og_image }[]
 
 app.post('/search', async (request, reply) => {
   const body = request.body as {
@@ -52,8 +53,7 @@ app.post('/search', async (request, reply) => {
   const maxResults = Math.min(Math.max(Number(body.maxResults ?? 5), 1), 20);
 
   try {
-    const results = await searchWeb({ query, engine, maxResults });
-    return { results };
+    return await searchWeb({ query, engine, maxResults });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     request.log.error({ err }, 'search failed');
