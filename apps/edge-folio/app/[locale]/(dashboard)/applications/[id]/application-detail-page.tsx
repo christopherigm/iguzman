@@ -726,6 +726,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
                 fill
                 sizes="48px"
                 style={{ objectFit: 'cover' }}
+                unoptimized
               />
             </Box>
           )}

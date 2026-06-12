@@ -515,7 +515,7 @@ class SearchCompanyView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-        results = search_results.get('results', [])
+        results = search_results if isinstance(search_results, list) else search_results.get('results', [])
         if not results:
             return Response(
                 {'detail': 'No search results found for this company.'},
@@ -582,19 +582,22 @@ class SearchCompanyView(APIView):
                 img_resp = requests.get(og_image, timeout=15)
                 img_resp.raise_for_status()
                 content_type = img_resp.headers.get('Content-Type', 'image/jpeg')
-                ext = 'jpg'
-                if 'png' in content_type:
-                    ext = 'png'
-                elif 'webp' in content_type:
-                    ext = 'webp'
-                elif 'gif' in content_type:
-                    ext = 'gif'
-                filename = f'company.{ext}'
-                application.company_image.save(
-                    filename,
-                    ContentFile(img_resp.content),
-                    save=False,
-                )
+                if 'svg' in content_type:
+                    logger.warning('Skipping SVG og_image from %s', og_image)
+                else:
+                    ext = 'jpg'
+                    if 'png' in content_type:
+                        ext = 'png'
+                    elif 'webp' in content_type:
+                        ext = 'webp'
+                    elif 'gif' in content_type:
+                        ext = 'gif'
+                    filename = f'company.{ext}'
+                    application.company_image.save(
+                        filename,
+                        ContentFile(img_resp.content),
+                        save=False,
+                    )
             except Exception as exc:
                 logger.warning('Failed to download og_image %s: %s', og_image, exc)
 
@@ -616,7 +619,7 @@ class SearchCompanyView(APIView):
         for key, query in intel_queries:
             try:
                 intel_search = _scraper_post('/search', {'query': query, 'maxResults': 5})
-                intel_results = intel_search.get('results', [])
+                intel_results = intel_search if isinstance(intel_search, list) else intel_search.get('results', [])
                 if intel_results:
                     results_text = "\n".join(
                         f"- Title: {r.get('title', '')} | URL: {r.get('url', '')} | Snippet: {r.get('snippet', '')}"
