@@ -997,6 +997,8 @@ self.addEventListener('install', serwist.handleInstall);
 self.addEventListener('activate', serwist.handleActivate);
 self.addEventListener('fetch', (event: FetchEvent) => {
   if (!event.request.url.startsWith('http')) return;
+  // Never intercept Next.js API routes — let them go straight to the network.
+  if (new URL(event.request.url).pathname.startsWith('/api/')) return;
   serwist.handleFetch(event);
 });
 self.addEventListener('message', serwist.handleCache);
