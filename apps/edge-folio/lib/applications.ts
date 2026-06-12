@@ -14,6 +14,26 @@ export interface CompanyIntel {
   hiring_news: CompanyIntelItem[];
   layoff_news: CompanyIntelItem[];
   reputation: CompanyIntelItem[];
+  funding_news: CompanyIntelItem[];
+  leadership_news: CompanyIntelItem[];
+  acquisition_news: CompanyIntelItem[];
+  engineering_culture: CompanyIntelItem[];
+}
+
+export type SignalLevel = 'positive' | 'mixed' | 'concerning';
+
+export interface CompanySignal {
+  level: SignalLevel;
+  explanation: string;
+}
+
+export interface CompanyAnalysis {
+  summary: string;
+  job_security: CompanySignal;
+  financial_health: CompanySignal;
+  leadership_stability: CompanySignal;
+  work_culture: CompanySignal;
+  growth_trajectory: CompanySignal;
 }
 
 export interface TailoredBullet {
@@ -50,6 +70,7 @@ export interface JobApplication {
   company_image_url: string | null;
   company_description: string;
   company_intel: CompanyIntel | null;
+  company_analysis: CompanyAnalysis | null;
   professional_summary: string;
   tailored_bullets: TailoredBullet[] | null;
   tailored_work_experiences: TailoredWorkExperience[] | null;
@@ -227,6 +248,28 @@ export function searchCompany(id: number): Promise<SearchCompanyResult> {
   return request(`/api/applications/${id}/search-company`, { method: 'POST' });
 }
 
+export interface CompanyAboutResult {
+  company_description: string;
+  company_image_url: string | null;
+}
+
+export function fetchCompanyAbout(id: number): Promise<CompanyAboutResult> {
+  return request(`/api/applications/${id}/company-about`, { method: 'POST' });
+}
+
+export type CompanyIntelCategory = 'news' | 'hiring' | 'layoffs' | 'reputation' | 'funding' | 'leadership' | 'acquisitions' | 'engineering_culture';
+
+export interface CompanyIntelCategoryResult {
+  items: CompanyIntelItem[];
+}
+
+export function fetchCompanyIntelCategory(
+  id: number,
+  category: CompanyIntelCategory,
+): Promise<CompanyIntelCategoryResult> {
+  return request(`/api/applications/${id}/company-intel/${category}`, { method: 'POST' });
+}
+
 export interface TnCategorySuggestion {
   category: string;
   likelihood: number;
@@ -239,4 +282,8 @@ export interface TnSuggestResult {
 
 export function suggestTnCategory(): Promise<TnSuggestResult> {
   return request('/api/applications/tn-suggest', { method: 'POST' });
+}
+
+export function analyzeCompany(id: number): Promise<CompanyAnalysis> {
+  return request(`/api/applications/${id}/company-analysis`, { method: 'POST' });
 }

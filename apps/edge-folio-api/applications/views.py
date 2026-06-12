@@ -45,6 +45,20 @@ class _CompanyIntelItem(BaseModel):
 class _CompanyIntelResult(BaseModel):
     items: list[_CompanyIntelItem]
 
+
+class _SignalItem(BaseModel):
+    level: str
+    explanation: str
+
+
+class _CompanyAnalysisResult(BaseModel):
+    summary: str
+    job_security: _SignalItem
+    financial_health: _SignalItem
+    leadership_stability: _SignalItem
+    work_culture: _SignalItem
+    growth_trajectory: _SignalItem
+
 logger = logging.getLogger(__name__)
 
 CACHE_TTL = 300
@@ -657,3 +671,322 @@ class SearchCompanyView(APIView):
             'company_image_url': company_image_url,
             'company_intel': company_intel,
         })
+
+
+_INTEL_CATEGORIES = {
+    'news': {
+        'db_key': 'company_news',
+        'query': '{name} news latest {month_year}, {this_year}, {last_year}',
+    },
+    'hiring': {
+        'db_key': 'hiring_news',
+        'query': '{name} hiring jobs {month_year}, {this_year}, {last_year}',
+    },
+    'layoffs': {
+        'db_key': 'layoff_news',
+        'query': '{name} layoffs workforce reduction {month_year}, {this_year}, {last_year}',
+    },
+    'reputation': {
+        'db_key': 'reputation',
+        'query': '{name} employee reviews reputation glassdoor {this_year}',
+    },
+    'funding': {
+        'db_key': 'funding_news',
+        'query': '{name} funding investment venture capital IPO Series {month_year}, {this_year}, {last_year}',
+    },
+    'leadership': {
+        'db_key': 'leadership_news',
+        'query': '{name} CEO CTO VP Engineering leadership new appointment departure {month_year}, {this_year}, {last_year}',
+    },
+    'acquisitions': {
+        'db_key': 'acquisition_news',
+        'query': '{name} acquisition merger acquired {month_year}, {this_year}, {last_year}',
+    },
+    'engineering_culture': {
+        'db_key': 'engineering_culture',
+        'query': '{name} engineering blog tech stack developer culture engineering team {this_year}',
+    },
+}
+
+
+class CompanyAboutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            application = JobApplication.objects.get(pk=pk, user=request.user)
+        except JobApplication.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        company_name = application.company_name
+
+        try:
+            search_results = _scraper_post('/search', {
+                'query': f'{company_name} official website about company',
+                'maxResults': 5,
+            })
+        except Exception as exc:
+            logger.error('Scraper /search failed (company-about): %s', exc)
+            return Response(
+                {'detail': 'Search service unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        results = search_results if isinstance(search_results, list) else search_results.get('results', [])
+        if not results:
+            return Response(
+                {'detail': 'No search results found for this company.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        results_text = "\n".join(
+            f"- {r.get('title', '')} | {r.get('url', '')} | {r.get('snippet', '')}"
+            for r in results
+        )
+        try:
+            pick_result = chat_structured(
+                messages=[
+                    {"role": "system", "content": _PICK_URL_SYSTEM_PROMPT},
+                    {"role": "user", "content": f"COMPANY: {company_name}\n\nSEARCH RESULTS:\n{results_text}\n\nPick the best URL."},
+                ],
+                response_model=_PickURLResult,
+                temperature=0.1,
+            )
+            chosen_url = pick_result.url
+        except Exception as exc:
+            logger.error('LLM URL pick failed (company-about): %s', exc)
+            chosen_url = results[0].get('url', '')
+
+        if not chosen_url:
+            return Response(
+                {'detail': 'Could not determine a company URL from search results.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            extract_result = _scraper_post('/extract', {'url': chosen_url})
+        except Exception as exc:
+            logger.error('Scraper /extract failed for %s: %s', chosen_url, exc)
+            return Response(
+                {'detail': 'Failed to extract company page. Please try again.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        content = extract_result.get('content', '')
+        og_image = extract_result.get('og_image')
+
+        try:
+            about_result = chat_structured(
+                messages=[
+                    {"role": "system", "content": _EXTRACT_ABOUT_SYSTEM_PROMPT},
+                    {"role": "user", "content": f"COMPANY: {company_name}\n\nPAGE CONTENT:\n{content[:4000]}"},
+                ],
+                response_model=_AboutResult,
+                temperature=0.2,
+            )
+            about_text = about_result.about
+        except Exception as exc:
+            logger.error('LLM about extraction failed: %s', exc)
+            about_text = ''
+
+        if og_image:
+            try:
+                img_resp = requests.get(og_image, timeout=15)
+                img_resp.raise_for_status()
+                content_type = img_resp.headers.get('Content-Type', 'image/jpeg')
+                if 'svg' in content_type:
+                    logger.warning('Skipping SVG og_image from %s', og_image)
+                else:
+                    ext = 'jpg'
+                    if 'png' in content_type:
+                        ext = 'png'
+                    elif 'webp' in content_type:
+                        ext = 'webp'
+                    elif 'gif' in content_type:
+                        ext = 'gif'
+                    application.company_image.save(
+                        f'company.{ext}',
+                        ContentFile(img_resp.content),
+                        save=False,
+                    )
+            except Exception as exc:
+                logger.warning('Failed to download og_image %s: %s', og_image, exc)
+
+        update_fields = ['company_description', 'modified']
+        application.company_description = about_text
+        if og_image and application.company_image:
+            update_fields.append('company_image')
+        application.save(update_fields=update_fields)
+        _invalidate_application(request.user.id, pk)
+
+        serializer = JobApplicationSerializer(application, context={'request': request})
+        company_image_url = serializer.data.get('company_image_url')
+
+        return Response({
+            'company_description': about_text,
+            'company_image_url': company_image_url,
+        })
+
+
+class CompanyIntelCategoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, category):
+        if category not in _INTEL_CATEGORIES:
+            return Response({'detail': 'Invalid category.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            application = JobApplication.objects.get(pk=pk, user=request.user)
+        except JobApplication.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        company_name = application.company_name
+        config = _INTEL_CATEGORIES[category]
+        db_key = config['db_key']
+
+        from datetime import date
+        _today = date.today()
+        _month_year = _today.strftime('%B %Y')
+        _this_year = _today.year
+        _last_year = _this_year - 1
+
+        query = config['query'].format(
+            name=company_name,
+            month_year=_month_year,
+            this_year=_this_year,
+            last_year=_last_year,
+        )
+
+        try:
+            intel_search = _scraper_post('/search', {'query': query, 'maxResults': 5})
+            intel_results = intel_search if isinstance(intel_search, list) else intel_search.get('results', [])
+        except Exception as exc:
+            logger.error('Scraper /search failed for %s intel: %s', category, exc)
+            return Response(
+                {'detail': 'Search service unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        items = []
+        if intel_results:
+            results_text = "\n".join(
+                f"- Title: {r.get('title', '')} | URL: {r.get('url', '')} | Snippet: {r.get('snippet', '')}"
+                for r in intel_results[:5]
+            )
+            try:
+                intel_result = chat_structured(
+                    messages=[
+                        {"role": "system", "content": _INTEL_SYSTEM_PROMPT},
+                        {"role": "user", "content": f"COMPANY: {company_name}\n\nSEARCH RESULTS:\n{results_text}"},
+                    ],
+                    response_model=_CompanyIntelResult,
+                    temperature=0.1,
+                )
+                items = [item.model_dump() for item in intel_result.items]
+            except Exception as exc:
+                logger.warning('Intel LLM failed for %s (%s): %s', category, company_name, exc)
+
+        current_intel = dict(application.company_intel or {})
+        current_intel[db_key] = items
+        application.company_intel = current_intel
+        application.save(update_fields=['company_intel', 'modified'])
+        _invalidate_application(request.user.id, pk)
+
+        return Response({'items': items})
+
+
+_COMPANY_ANALYSIS_SYSTEM_PROMPT = """\
+You are a senior career advisor analyzing company data to help a job seeker make an informed decision.
+
+Given a company description and recent intel across several categories (news, hiring, layoffs, \
+reputation, funding, leadership changes, acquisitions, engineering culture), produce:
+
+1. A concise overall summary (3-5 sentences) capturing the company's current state and whether \
+it's a good time to join. Be honest — if data is limited, say so.
+
+2. Five categorical signals, each rated as one of: "positive", "mixed", or "concerning". \
+Base each rating only on available evidence. If a category has no data, default to "mixed" \
+and note limited data availability in the explanation.
+
+Signals:
+- job_security: Risk of layoffs, workforce stability, recent reductions vs hiring momentum
+- financial_health: Funding runway, investment activity, revenue signals, financial stability
+- leadership_stability: C-suite churn, notable departures or new appointments, org stability
+- work_culture: Employee sentiment from reviews, Glassdoor signals, engineering blog activity
+- growth_trajectory: Hiring pace, expansion signals, market position, M&A as growth vs distress
+
+Return ONLY valid JSON — no markdown, no explanation:
+{"summary": "...", "job_security": {"level": "positive|mixed|concerning", "explanation": "1-2 sentences"}, \
+"financial_health": {"level": "...", "explanation": "..."}, \
+"leadership_stability": {"level": "...", "explanation": "..."}, \
+"work_culture": {"level": "...", "explanation": "..."}, \
+"growth_trajectory": {"level": "...", "explanation": "..."}}
+"""
+
+_INTEL_LABEL_MAP = {
+    'company_news': 'RECENT NEWS',
+    'hiring_news': 'HIRING ACTIVITY',
+    'layoff_news': 'LAYOFFS & WORKFORCE CHANGES',
+    'reputation': 'REPUTATION & REVIEWS',
+    'funding_news': 'FUNDING & INVESTMENT',
+    'leadership_news': 'LEADERSHIP CHANGES',
+    'acquisition_news': 'ACQUISITIONS & M&A',
+    'engineering_culture': 'ENGINEERING CULTURE',
+}
+
+
+class CompanyAnalysisView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            application = JobApplication.objects.get(pk=pk, user=request.user)
+        except JobApplication.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        intel = application.company_intel or {}
+        description = application.company_description or ''
+
+        sections = []
+        if description:
+            sections.append(f'COMPANY DESCRIPTION:\n{description}')
+
+        for key, label in _INTEL_LABEL_MAP.items():
+            items = intel.get(key, [])
+            if items:
+                item_text = '\n'.join(
+                    f"  - {item.get('title', '')}: {item.get('summary', '')}"
+                    for item in items
+                )
+                sections.append(f'{label}:\n{item_text}')
+
+        if not sections:
+            return Response(
+                {'detail': 'No company data available to analyze. Please search for company information first.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        context = '\n\n'.join(sections)
+
+        try:
+            result = chat_structured(
+                messages=[
+                    {'role': 'system', 'content': _COMPANY_ANALYSIS_SYSTEM_PROMPT},
+                    {'role': 'user', 'content': f'COMPANY: {application.company_name}\n\n{context}'},
+                ],
+                response_model=_CompanyAnalysisResult,
+                temperature=0.2,
+            )
+        except Exception as exc:
+            logger.error('LLM error during company analysis: %s', exc)
+            return Response(
+                {'detail': 'LLM service unavailable. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        analysis_data = result.model_dump()
+        application.company_analysis = analysis_data
+        application.save(update_fields=['company_analysis', 'modified'])
+        _invalidate_application(request.user.id, pk)
+
+        return Response(analysis_data)

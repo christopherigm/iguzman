@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
@@ -26,6 +26,10 @@ import {
   refreshMetrics,
   searchCompany,
   suggestTnCategory,
+  fetchCompanyAbout,
+  fetchCompanyIntelCategory,
+  analyzeCompany,
+  getApplication,
   ApplicationError,
   type JobApplication,
   type ApplicationStatus,
@@ -39,6 +43,9 @@ import {
   type SalaryCurrency,
   type CompanyIntel,
   type CompanyIntelItem,
+  type CompanyIntelCategory,
+  type CompanyAnalysis,
+  type SignalLevel,
 } from '@/lib/applications';
 import type { UserProfile } from '@/lib/auth';
 import { buildResumeMarkdown, downloadMarkdown } from '@/lib/resume-markdown';
@@ -56,6 +63,11 @@ import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from '@/lib/nafta-constants';
 import { Grid } from '@repo/ui/core-elements/grid';
 import { Card } from '@repo/ui/core-elements/card';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination } from 'swiper/modules';
+import type { Swiper as SwiperType } from 'swiper';
+import 'swiper/css';
+import 'swiper/css/pagination';
 import './application-detail-page.css';
 
 const STATUSES: ApplicationStatus[] = ['draft', 'applied', 'interview', 'offer', 'rejected'];
@@ -183,23 +195,127 @@ function IntelItemCard({ item }: { item: CompanyIntelItem }) {
   );
 }
 
-function IntelSection({ title, items, noDataLabel }: { title: string; items: CompanyIntelItem[]; noDataLabel: string }) {
+function IntelSwiperCard({ title, items, loading }: { title: string; items: CompanyIntelItem[]; loading?: boolean }) {
+  const t = useTranslations('ApplicationDetailPage');
+  const swiperRef = useRef<SwiperType | null>(null);
+  const id = useId();
+  const pagClass = `detail__intel-pag-${id.replace(/:/g, '')}`;
+
   return (
-    <Box display="flex" flexDirection="column" gap={10}>
-      <Typography variant="body" fontWeight={600} color="var(--foreground)">
-        {title}
-      </Typography>
-      {items.length === 0 ? (
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-          {noDataLabel}
+    <Card padding={0} styles={{ overflow: 'hidden' }}>
+      <Box paddingX={14} paddingTop={14} paddingBottom={10}>
+        <Typography variant="body" fontWeight={600} color="var(--foreground)">
+          {title}
         </Typography>
-      ) : (
-        <Box display="flex" flexDirection="column" gap={16}>
-          {items.map((item, i) => (
-            <IntelItemCard key={i} item={item} />
-          ))}
+      </Box>
+      {loading ? (
+        <Box display="flex" alignItems="center" justifyContent="center" padding={24}>
+          <Spinner size={16} />
         </Box>
+      ) : (
+        <>
+          <Swiper
+            className="detail__intel-swiper"
+            modules={[Pagination]}
+            slidesPerView={1}
+            spaceBetween={0}
+            loop={items.length > 1}
+            onSwiper={(s) => { swiperRef.current = s; }}
+            pagination={items.length > 1 ? { el: `.${pagClass}`, clickable: true } : undefined}
+          >
+            {items.map((item, i) => (
+              <SwiperSlide key={i}>
+                <Box paddingX={14} paddingBottom={14} display="flex" flexDirection="column" gap={4}>
+                  <IntelItemCard item={item} />
+                </Box>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+          {items.length > 1 && (
+            <div className="detail__intel-controls">
+              <button
+                type="button"
+                className="detail__intel-nav-btn"
+                aria-label={t('intelNavPrev')}
+                onClick={() => swiperRef.current?.slidePrev()}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                  <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                </svg>
+              </button>
+              <div className={pagClass} data-intel-pagination />
+              <button
+                type="button"
+                className="detail__intel-nav-btn"
+                aria-label={t('intelNavNext')}
+                onClick={() => swiperRef.current?.slideNext()}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                  <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </>
       )}
+    </Card>
+  );
+}
+
+const SIGNAL_COLORS: Record<SignalLevel, string> = {
+  positive: '#22c55e',
+  mixed: '#f59e0b',
+  concerning: '#ef4444',
+};
+
+const SIGNAL_KEYS: Array<{ key: keyof Omit<CompanyAnalysis, 'summary'>; tKey: string }> = [
+  { key: 'job_security', tKey: 'signals.job_security' },
+  { key: 'financial_health', tKey: 'signals.financial_health' },
+  { key: 'leadership_stability', tKey: 'signals.leadership_stability' },
+  { key: 'work_culture', tKey: 'signals.work_culture' },
+  { key: 'growth_trajectory', tKey: 'signals.growth_trajectory' },
+];
+
+function CompanyAnalysisPanel({ analysis }: { analysis: CompanyAnalysis }) {
+  const t = useTranslations('ApplicationDetailPage');
+  return (
+    <Box display="flex" flexDirection="column" gap={16}>
+      <Box display="flex" flexDirection="column" gap={6}>
+        <Typography variant="body" fontWeight={600} color="var(--foreground)">
+          {t('companyAnalysisSummaryTitle')}
+        </Typography>
+        <Typography as="p" variant="body" styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}>
+          {analysis.summary}
+        </Typography>
+      </Box>
+      <Box display="flex" flexDirection="column" gap={10}>
+        <Typography variant="body" fontWeight={600} color="var(--foreground)">
+          {t('companyAnalysisSignalsTitle')}
+        </Typography>
+        <Grid container spacing={2}>
+          {SIGNAL_KEYS.map(({ key, tKey }) => {
+            const signal = analysis[key];
+            return (
+              <Grid key={key} size={{ xs: 12, sm: 6 }}>
+                <Card gap={8} padding={12}>
+                  <Box display="flex" alignItems="center" gap={8}>
+                    <span className={`detail__signal-dot detail__signal-dot--${signal.level}`} aria-hidden="true" />
+                    <Typography variant="body" fontWeight={600} styles={{ flex: 1 }}>
+                      {t(tKey)}
+                    </Typography>
+                    <Typography variant="caption" fontWeight={600} color={SIGNAL_COLORS[signal.level]}>
+                      {t(`signalLevels.${signal.level}`)}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)" styles={{ lineHeight: 1.5 }}>
+                    {signal.explanation}
+                  </Typography>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Box>
     </Box>
   );
 }
@@ -275,6 +391,9 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   // Company info (from Search Company Data)
   const [companyDescription, setCompanyDescription] = useState(initialApp.company_description ?? '');
   const [companyIntel, setCompanyIntel] = useState<CompanyIntel | null>(initialApp.company_intel ?? null);
+  const [companyAnalysis, setCompanyAnalysis] = useState<CompanyAnalysis | null>(initialApp.company_analysis ?? null);
+  const [analyzingCompany, setAnalyzingCompany] = useState(false);
+  const analysisPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // NAFTA letter parameters
   const [naftaTnProfession, setNaftaTnProfession] = useState(profile?.tn_profession ?? '');
@@ -315,7 +434,8 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   const [refreshingMetrics, setRefreshingMetrics] = useState(false);
 
   // Search company
-  const [searchingCompany, setSearchingCompany] = useState(false);
+  const [searchingAbout, setSearchingAbout] = useState(false);
+  const [loadingIntelCategories, setLoadingIntelCategories] = useState<Set<CompanyIntelCategory>>(new Set());
 
   // Delete
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -332,6 +452,45 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   const [tnSuggestResults, setTnSuggestResults] = useState<TnCategorySuggestion[]>([]);
   const [tnSuggestLoading, setTnSuggestLoading] = useState(false);
   const [tnSuggestError, setTnSuggestError] = useState<string | null>(null);
+
+  function stopAnalysisPolling() {
+    if (analysisPollingRef.current) {
+      clearInterval(analysisPollingRef.current);
+      analysisPollingRef.current = null;
+    }
+  }
+
+  function startAnalysisPolling(appId: number) {
+    if (analysisPollingRef.current) return;
+    analysisPollingRef.current = setInterval(async () => {
+      try {
+        const data = await getApplication(appId);
+        if (data.company_analysis) {
+          setCompanyAnalysis(data.company_analysis);
+          setAnalyzingCompany(false);
+          stopAnalysisPolling();
+        }
+      } catch {
+        // ignore transient poll errors
+      }
+    }, 5000);
+  }
+
+  // Auto-trigger analysis on mount if intel exists but analysis doesn't
+  useEffect(() => {
+    if (!initialApp.company_intel || initialApp.company_analysis) return;
+    setAnalyzingCompany(true);
+    startAnalysisPolling(initialApp.id);
+    analyzeCompany(initialApp.id).then((result) => {
+      setCompanyAnalysis(result);
+      setAnalyzingCompany(false);
+      stopAnalysisPolling();
+    }).catch(() => {
+      setAnalyzingCompany(false);
+      stopAnalysisPolling();
+    });
+    return () => stopAnalysisPolling();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load export section data lazily when tailored bullets are first available
   useEffect(() => {
@@ -440,10 +599,24 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
     }
   }
 
+  const INTEL_DB_KEY_MAP: Record<CompanyIntelCategory, keyof CompanyIntel> = {
+    news: 'company_news',
+    hiring: 'hiring_news',
+    layoffs: 'layoff_news',
+    reputation: 'reputation',
+    funding: 'funding_news',
+    leadership: 'leadership_news',
+    acquisitions: 'acquisition_news',
+    engineering_culture: 'engineering_culture',
+  };
+
   async function handleSearchCompany() {
-    setSearchingCompany(true);
-    try {
-      const result = await searchCompany(app.id);
+    const intelCategories: CompanyIntelCategory[] = ['news', 'hiring', 'layoffs', 'reputation', 'funding', 'leadership', 'acquisitions', 'engineering_culture'];
+    setSearchingAbout(true);
+    setLoadingIntelCategories(new Set(intelCategories));
+    setCompanyAnalysis(null);
+
+    const aboutPromise = fetchCompanyAbout(app.id).then((result) => {
       if (result.company_description) {
         setCompanyDescription(result.company_description);
         setApp((prev) => ({ ...prev, company_description: result.company_description }));
@@ -451,15 +624,78 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
       if (result.company_image_url) {
         setApp((prev) => ({ ...prev, company_image_url: result.company_image_url }));
       }
-      if (result.company_intel) {
-        setCompanyIntel(result.company_intel);
-        setApp((prev) => ({ ...prev, company_intel: result.company_intel }));
-      }
       showToast(t('companyInfoFound'), 'success');
-    } catch {
-      showToast(t('errorSearchCompany'), 'error');
-    } finally {
-      setSearchingCompany(false);
+    }).catch(() => {
+      showToast(t('errorSearchAbout'), 'error');
+    }).finally(() => {
+      setSearchingAbout(false);
+    });
+
+    let firstIntelReceived = false;
+    const currentAppId = app.id;
+
+    const intelPromises = intelCategories.map((category) =>
+      fetchCompanyIntelCategory(currentAppId, category).then((result) => {
+        if (!firstIntelReceived) {
+          firstIntelReceived = true;
+          setAnalyzingCompany(true);
+          startAnalysisPolling(currentAppId);
+        }
+        const dbKey = INTEL_DB_KEY_MAP[category];
+        setCompanyIntel((prev) => {
+          const next: CompanyIntel = {
+            company_news: [],
+            hiring_news: [],
+            layoff_news: [],
+            reputation: [],
+            funding_news: [],
+            leadership_news: [],
+            acquisition_news: [],
+            engineering_culture: [],
+            ...(prev ?? {}),
+          };
+          next[dbKey] = result.items;
+          return next;
+        });
+        setApp((prev) => {
+          const currentIntel: CompanyIntel = {
+            company_news: [],
+            hiring_news: [],
+            layoff_news: [],
+            reputation: [],
+            funding_news: [],
+            leadership_news: [],
+            acquisition_news: [],
+            engineering_culture: [],
+            ...(prev.company_intel ?? {}),
+          };
+          currentIntel[dbKey] = result.items;
+          return { ...prev, company_intel: currentIntel };
+        });
+      }).catch(() => {
+        // intel failures are silent — section stays empty
+      }).finally(() => {
+        setLoadingIntelCategories((prev) => {
+          const next = new Set(prev);
+          next.delete(category);
+          return next;
+        });
+      }),
+    );
+
+    await Promise.allSettled([aboutPromise, ...intelPromises]);
+
+    // Trigger analysis after all intel has been gathered (even if some came back empty)
+    if (firstIntelReceived) {
+      try {
+        const result = await analyzeCompany(currentAppId);
+        setCompanyAnalysis(result);
+      } catch {
+        // analysis failure is silent — user sees no panel rather than an error
+      } finally {
+        setAnalyzingCompany(false);
+        stopAnalysisPolling();
+      }
     }
   }
 
@@ -1103,38 +1339,96 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
           <Box styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }} marginBottom={16} />
           <Box display="flex" alignItems="center" gap={10} marginBottom={14}>
             <Button
-              text={searchingCompany ? t('searchingCompany') : t('searchCompany')}
+              text={(searchingAbout || loadingIntelCategories.size > 0) ? t('searchingCompany') : t('searchCompany')}
               type="button"
               size="md"
-              disabled={searchingCompany}
+              disabled={searchingAbout || loadingIntelCategories.size > 0}
               onClick={handleSearchCompany}
               kind="success"
             />
           </Box>
-          {!companyDescription && !companyIntel && (
+          {!companyDescription && !searchingAbout && !companyIntel && loadingIntelCategories.size === 0 && (
             <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t('companyInfoEmpty')}
             </Typography>
           )}
-          {(companyDescription || companyIntel) && (
+          {(companyDescription || searchingAbout || companyIntel || loadingIntelCategories.size > 0) && (
             <Box display="flex" flexDirection="column" gap={24}>
-              {companyDescription && (
+              {(companyDescription || searchingAbout) && (
                 <Box display="flex" flexDirection="column" gap={8}>
                   <Typography variant="body" fontWeight={600} color="var(--foreground)">
                     {t('companyAboutTitle')}
                   </Typography>
-                  <Typography as="p" variant="body" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>
-                    {companyDescription}
+                  {searchingAbout ? (
+                    <Box display="flex" alignItems="center" gap={8}>
+                      <Spinner size={16} />
+                    </Box>
+                  ) : (
+                    <Typography as="p" variant="body" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>
+                      {companyDescription}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+              {analyzingCompany && (
+                <Box display="flex" alignItems="center" gap={8}>
+                  <Spinner size={16} label={t('companyAnalysisRunning')} />
+                  <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+                    {t('companyAnalysisRunning')}
                   </Typography>
                 </Box>
               )}
-              {companyIntel && (
-                <>
-                  <IntelSection title={t('companyNewsTitle')} items={companyIntel.company_news ?? []} noDataLabel={t('companyIntelNoData')} />
-                  <IntelSection title={t('companyHiringTitle')} items={companyIntel.hiring_news ?? []} noDataLabel={t('companyIntelNoData')} />
-                  <IntelSection title={t('companyLayoffsTitle')} items={companyIntel.layoff_news ?? []} noDataLabel={t('companyIntelNoData')} />
-                  <IntelSection title={t('companyReputationTitle')} items={companyIntel.reputation ?? []} noDataLabel={t('companyIntelNoData')} />
-                </>
+              {companyAnalysis && !analyzingCompany && (
+                <Box display="flex" flexDirection="column" gap={8}>
+                  <Typography variant="body" fontWeight={600} color="var(--foreground)">
+                    {t('companyAnalysisTitle')}
+                  </Typography>
+                  <CompanyAnalysisPanel analysis={companyAnalysis} />
+                </Box>
+              )}
+              {(companyIntel || loadingIntelCategories.size > 0) && (
+                <Grid container spacing={2}>
+                  {(loadingIntelCategories.has('news') || (companyIntel?.company_news?.length ?? 0) > 0) && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <IntelSwiperCard title={t('companyNewsTitle')} items={companyIntel?.company_news ?? []} loading={loadingIntelCategories.has('news')} />
+                    </Grid>
+                  )}
+                  {(loadingIntelCategories.has('hiring') || (companyIntel?.hiring_news?.length ?? 0) > 0) && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <IntelSwiperCard title={t('companyHiringTitle')} items={companyIntel?.hiring_news ?? []} loading={loadingIntelCategories.has('hiring')} />
+                    </Grid>
+                  )}
+                  {(loadingIntelCategories.has('layoffs') || (companyIntel?.layoff_news?.length ?? 0) > 0) && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <IntelSwiperCard title={t('companyLayoffsTitle')} items={companyIntel?.layoff_news ?? []} loading={loadingIntelCategories.has('layoffs')} />
+                    </Grid>
+                  )}
+                  {(loadingIntelCategories.has('reputation') || (companyIntel?.reputation?.length ?? 0) > 0) && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <IntelSwiperCard title={t('companyReputationTitle')} items={companyIntel?.reputation ?? []} loading={loadingIntelCategories.has('reputation')} />
+                    </Grid>
+                  )}
+                  {(loadingIntelCategories.has('funding') || (companyIntel?.funding_news?.length ?? 0) > 0) && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <IntelSwiperCard title={t('companyFundingTitle')} items={companyIntel?.funding_news ?? []} loading={loadingIntelCategories.has('funding')} />
+                    </Grid>
+                  )}
+                  {(loadingIntelCategories.has('leadership') || (companyIntel?.leadership_news?.length ?? 0) > 0) && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <IntelSwiperCard title={t('companyLeadershipTitle')} items={companyIntel?.leadership_news ?? []} loading={loadingIntelCategories.has('leadership')} />
+                    </Grid>
+                  )}
+                  {(loadingIntelCategories.has('acquisitions') || (companyIntel?.acquisition_news?.length ?? 0) > 0) && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <IntelSwiperCard title={t('companyAcquisitionsTitle')} items={companyIntel?.acquisition_news ?? []} loading={loadingIntelCategories.has('acquisitions')} />
+                    </Grid>
+                  )}
+                  {(loadingIntelCategories.has('engineering_culture') || (companyIntel?.engineering_culture?.length ?? 0) > 0) && (
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <IntelSwiperCard title={t('companyEngineeringCultureTitle')} items={companyIntel?.engineering_culture ?? []} loading={loadingIntelCategories.has('engineering_culture')} />
+                    </Grid>
+                  )}
+                </Grid>
               )}
             </Box>
           )}

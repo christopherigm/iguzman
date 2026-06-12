@@ -56,6 +56,61 @@
   }
 }
 
+/* ── Intel Swiper ─────────────────────────────────────────────── */
+
+.detail__intel-swiper {
+  width: 100%;
+  --swiper-pagination-color: var(--primary, #06b6d4);
+  --swiper-pagination-bullet-inactive-color: var(--border, #e5e7eb);
+  --swiper-pagination-bullet-inactive-opacity: 1;
+}
+
+.detail__intel-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--border, #e5e7eb);
+}
+
+/* Override Swiper's absolute positioning so pagination stays in the flex flow */
+[data-intel-pagination] {
+  position: static !important;
+  width: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  flex: 1;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail__intel-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 0;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.detail__intel-nav-btn:hover {
+  background: var(--primary, #06b6d4);
+  color: #ffffff;
+  border-color: var(--primary, #06b6d4);
+}
+
+/* ── Metric explain button ────────────────────────────────────── */
+
 .detail__metric-explain-btn {
   display: inline-flex;
   align-items: center;
@@ -77,3 +132,15 @@
   background: var(--accent, #06b6d4);
   color: #ffffff;
 }
+
+.detail__signal-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.detail__signal-dot--positive { background: #22c55e; }
+.detail__signal-dot--mixed { background: #f59e0b; }
+.detail__signal-dot--concerning { background: #ef4444; }

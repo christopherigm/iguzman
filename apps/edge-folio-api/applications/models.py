@@ -64,6 +64,7 @@ class JobApplication(Common):
         max_size=[256, None],
     )
     company_intel = models.JSONField(null=True, blank=True)
+    company_analysis = models.JSONField(null=True, blank=True)
     tailored_skills = models.ManyToManyField(
         'matrix.Skill',
         blank=True,
