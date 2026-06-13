@@ -12,5 +12,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     body,
     cache: 'no-store',
   });
-  return NextResponse.json(await res.json(), { status: res.status });
+  const isJson = res.headers.get('content-type')?.includes('application/json');
+  const responseBody = isJson ? await res.json() : { detail: 'Service unavailable' };
+  return NextResponse.json(responseBody, { status: res.status });
 }

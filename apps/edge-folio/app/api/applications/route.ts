@@ -1,9 +1,14 @@
 import { apiFetch } from '@/lib/api-fetch';
 import { NextRequest, NextResponse } from 'next/server';
 
+function safeJson(res: Response, fallback: Record<string, unknown> = { detail: 'Service unavailable' }) {
+  const isJson = res.headers.get('content-type')?.includes('application/json');
+  return isJson ? res.json() : Promise.resolve(fallback);
+}
+
 export async function GET() {
   const res = await apiFetch('/api/applications/', { cache: 'no-store' });
-  return NextResponse.json(await res.json(), { status: res.status });
+  return NextResponse.json(await safeJson(res), { status: res.status });
 }
 
 export async function POST(request: NextRequest) {
@@ -36,7 +41,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         body: formData,
       });
-      return NextResponse.json(await res.json(), { status: res.status });
+      return NextResponse.json(await safeJson(res), { status: res.status });
     }
   }
 
@@ -45,5 +50,5 @@ export async function POST(request: NextRequest) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(rest),
   });
-  return NextResponse.json(await res.json(), { status: res.status });
+  return NextResponse.json(await safeJson(res), { status: res.status });
 }

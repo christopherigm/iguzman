@@ -6,7 +6,7 @@
 revisionHistoryLimit: 2 # how many old ReplicaSets to keep for rollbacks
 
 # -- Number of pod replicas
-replicaCount: 1
+replicaCount: 2
 
 # ─── Container image ────────────────────────────────────────
 image:
@@ -92,5 +92,5 @@ resources:
     cpu: 100m
     memory: 128Mi
   limits:
-    cpu: 500m
-    memory: 512Mi
+    cpu: 1000m
+    memory: 1Gi

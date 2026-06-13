@@ -393,7 +393,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   const [companyIntel, setCompanyIntel] = useState<CompanyIntel | null>(initialApp.company_intel ?? null);
   const [companyAnalysis, setCompanyAnalysis] = useState<CompanyAnalysis | null>(initialApp.company_analysis ?? null);
   const [analyzingCompany, setAnalyzingCompany] = useState(false);
-  const analysisPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const analysisPollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // NAFTA letter parameters
   const [naftaTnProfession, setNaftaTnProfession] = useState(profile?.tn_profession ?? '');
@@ -455,25 +455,38 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
 
   function stopAnalysisPolling() {
     if (analysisPollingRef.current) {
-      clearInterval(analysisPollingRef.current);
+      clearTimeout(analysisPollingRef.current);
       analysisPollingRef.current = null;
     }
   }
 
   function startAnalysisPolling(appId: number) {
     if (analysisPollingRef.current) return;
-    analysisPollingRef.current = setInterval(async () => {
-      try {
-        const data = await getApplication(appId);
-        if (data.company_analysis) {
-          setCompanyAnalysis(data.company_analysis);
-          setAnalyzingCompany(false);
-          stopAnalysisPolling();
+    let errorCount = 0;
+
+    const schedule = () => {
+      analysisPollingRef.current = setTimeout(async () => {
+        try {
+          const data = await getApplication(appId);
+          if (data.company_analysis) {
+            setCompanyAnalysis(data.company_analysis);
+            setAnalyzingCompany(false);
+            analysisPollingRef.current = null;
+            return;
+          }
+          errorCount = 0;
+        } catch {
+          errorCount++;
+          if (errorCount >= 3) {
+            stopAnalysisPolling();
+            return;
+          }
         }
-      } catch {
-        // ignore transient poll errors
-      }
-    }, 5000);
+        if (analysisPollingRef.current !== null) schedule();
+      }, 5000);
+    };
+
+    schedule();
   }
 
   // Auto-trigger analysis on mount if intel exists but analysis doesn't
