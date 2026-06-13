@@ -1,5 +1,9 @@
-import { chromium, type Browser, type BrowserContext } from 'playwright';
+import { chromium } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import type { Browser, BrowserContext } from 'playwright';
 import { loadNetscapeCookies } from './cookies';
+
+chromium.use(StealthPlugin());
 
 let browser: Browser | null = null;
 
@@ -33,11 +37,7 @@ export async function getBrowser(): Promise<Browser> {
  */
 export async function newContext(): Promise<BrowserContext> {
   const b = await getBrowser();
-  const context = await b.newContext({
-    userAgent:
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-      '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  });
+  const context = await b.newContext();
 
   const cookies = loadNetscapeCookies();
   if (cookies.length > 0) {

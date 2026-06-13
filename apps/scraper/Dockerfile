@@ -1,5 +1,5 @@
 # ── Build ─────────────────────────────────────────────────────────────────────
-FROM mcr.microsoft.com/playwright:v1.59.1-noble AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /repo
 
@@ -26,7 +26,7 @@ RUN pnpm deploy --filter=scraper --prod /deploy
 RUN cp -r /repo/apps/scraper/dist /deploy/dist
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
-FROM mcr.microsoft.com/playwright:v1.59.1-noble
+FROM node:22-slim
 
 WORKDIR /app
 
@@ -34,8 +34,19 @@ COPY --from=builder /deploy/node_modules ./node_modules
 COPY --from=builder /deploy/dist ./dist
 COPY --from=builder /deploy/package.json ./package.json
 
+# Install OS-level Chromium system dependencies.
+# The browser binary itself is NOT baked into the image — it is downloaded at
+# first boot by entrypoint.sh into the PVC mounted at /browsers.
+RUN node_modules/.bin/playwright install-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY apps/scraper/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+
 EXPOSE 4000
 
 ENV NODE_ENV=production
+# Playwright looks here for browser binaries; the PVC is mounted at this path.
+ENV PLAYWRIGHT_BROWSERS_PATH=/browsers
 
-CMD ["node", "dist/index.js"]
+ENTRYPOINT ["./entrypoint.sh"]

@@ -68,7 +68,10 @@ probes:
       port: 4000
     initialDelaySeconds: 5
     periodSeconds: 5
-    failureThreshold: 12 # allow up to ~60 s for Chromium first launch
+    # Computed in deployment.yaml from browserCache.enabled:
+    #   true  → 36 attempts (3 min) — covers ~170 MB Chromium download on first boot
+    #   false → uses this value (12 = ~60 s) — browser is baked into the image
+    failureThreshold: 12
 
   livenessProbe:
     httpGet:
@@ -108,7 +111,7 @@ nodeAffinity:
 #
 # Set wireguard.enabled: true to activate.
 wireguard:
-  enabled: true
+  enabled: false
   image:
     repository: lscr.io/linuxserver/wireguard
     tag: latest
@@ -134,6 +137,15 @@ cookies:
   secretName: "scraper-secrets"
   secretKey: COOKIES
   mountPath: /secrets/cookies.txt
+
+# ─── Browser cache (PersistentVolume) ───────────────────────
+# Stores the Playwright Chromium binary (~170 MB) on a PVC so the download
+# only happens on first boot rather than every redeploy.
+# Requires a StorageClass with ReadWriteOnce support (cluster default if empty).
+browserCache:
+  enabled: true
+  size: 1Gi
+  storageClass: ''
 
 # ─── Resources ──────────────────────────────────────────────
 # Playwright + Chromium is memory-hungry; 1 Gi is a safe floor.

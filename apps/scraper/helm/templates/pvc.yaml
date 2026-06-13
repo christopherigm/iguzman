@@ -1,0 +1,17 @@
+{{- if .Values.browserCache.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "scraper.fullname" . }}-browser-cache
+  labels:
+    {{- include "scraper.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.browserCache.size }}
+  {{- if .Values.browserCache.storageClass }}
+  storageClassName: {{ .Values.browserCache.storageClass }}
+  {{- end }}
+{{- end }}

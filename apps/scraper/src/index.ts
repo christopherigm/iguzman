@@ -91,7 +91,7 @@ app.post('/extract', async (request, reply) => {
 
 // ── Health ────────────────────────────────────────────────────────────────────
 
-app.get('/health', async () => ({ status: 'ok' }));
+app.get('/health', { logLevel: 'silent' }, async () => ({ status: 'ok' }));
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 

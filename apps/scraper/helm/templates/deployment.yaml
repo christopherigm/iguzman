@@ -62,7 +62,7 @@ spec:
               port: {{ .Values.probes.startupProbe.httpGet.port }}
             initialDelaySeconds: {{ .Values.probes.startupProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.startupProbe.periodSeconds }}
-            failureThreshold: {{ .Values.probes.startupProbe.failureThreshold }}
+            failureThreshold: {{ if .Values.browserCache.enabled }}36{{ else }}{{ .Values.probes.startupProbe.failureThreshold }}{{ end }}
 
           livenessProbe:
             httpGet:
@@ -79,12 +79,18 @@ spec:
           {{- end }}
 
           {{- /* ── Volume mounts ── */}}
-          {{- if .Values.cookies.enabled }}
+          {{- if or .Values.cookies.enabled .Values.browserCache.enabled }}
           volumeMounts:
+            {{- if .Values.cookies.enabled }}
             - name: cookies
               mountPath: {{ .Values.cookies.mountPath }}
               subPath: cookies.txt
               readOnly: true
+            {{- end }}
+            {{- if .Values.browserCache.enabled }}
+            - name: browser-cache
+              mountPath: /browsers
+            {{- end }}
           {{- end }}
 
         {{- /* ── WireGuard VPN sidecar ── */}}
@@ -124,7 +130,7 @@ spec:
               readOnly: true
         {{- end }}
 
-      {{- if or .Values.wireguard.enabled .Values.cookies.enabled }}
+      {{- if or .Values.wireguard.enabled .Values.cookies.enabled .Values.browserCache.enabled }}
       volumes:
         {{- if .Values.wireguard.enabled }}
         - name: wireguard-config
@@ -141,5 +147,10 @@ spec:
             items:
               - key: {{ .Values.cookies.secretKey }}
                 path: cookies.txt
+        {{- end }}
+        {{- if .Values.browserCache.enabled }}
+        - name: browser-cache
+          persistentVolumeClaim:
+            claimName: {{ include "scraper.fullname" . }}-browser-cache
         {{- end }}
       {{- end }}
