@@ -50,10 +50,34 @@ function buildProxy() {
   return { server: `http://${host}:${port}`, username, password };
 }
 
+const PROXY_DOMAINS_DEFAULT = ['indeed.com'];
+
+const PROXY_DOMAINS: string[] = [
+  ...PROXY_DOMAINS_DEFAULT,
+  ...(process.env['PROXY_DOMAINS'] ?? '')
+    .split(',')
+    .map((d) => d.trim())
+    .filter(Boolean),
+];
+
+function getProxyForUrl(url: string) {
+  const proxy = buildProxy();
+  if (!proxy) return undefined;
+  try {
+    const hostname = new URL(url).hostname;
+    if (PROXY_DOMAINS.some((d) => hostname === d || hostname.endsWith(`.${d}`))) {
+      return proxy;
+    }
+  } catch {
+    // invalid URL — skip proxy
+  }
+  return undefined;
+}
+
 const MAX_ATTEMPTS = 5;
 
 export async function extractUrl(url: string): Promise<ExtractResult> {
-  const proxy = buildProxy();
+  const proxy = getProxyForUrl(url);
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const context = await newContext(
@@ -80,7 +104,7 @@ export async function extractUrl(url: string): Promise<ExtractResult> {
 
       await page.goto(url, {
         waitUntil: 'domcontentloaded',
-        timeout: 30_000,
+        timeout: 60_000,
       });
 
       // On retries give the JS challenge extra time to resolve
