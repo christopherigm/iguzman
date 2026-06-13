@@ -1,6 +1,7 @@
 export type ApplicationStatus = 'draft' | 'applied' | 'interview' | 'offer' | 'rejected';
 export type WorkType = 'remote' | 'onsite' | 'hybrid';
 export type SalaryCurrency = 'USD' | 'CAD' | 'EUR' | 'MXN' | 'GBP';
+export type CompanyStatus = 'pending' | 'processing' | 'complete' | 'failed';
 
 export interface CompanyIntelItem {
   title: string;
@@ -36,6 +37,19 @@ export interface CompanyAnalysis {
   growth_trajectory: CompanySignal;
 }
 
+export interface Company {
+  id: number;
+  name: string;
+  normalized_name: string;
+  status: CompanyStatus;
+  is_refreshing: boolean;
+  description: string;
+  intel: CompanyIntel | null;
+  analysis: CompanyAnalysis | null;
+  image_url: string | null;
+  last_refreshed: string | null;
+}
+
 export interface TailoredBullet {
   id: number;
   tailored_text: string;
@@ -67,10 +81,7 @@ export interface JobApplication {
   status: ApplicationStatus;
   notes: string;
   job_url: string;
-  company_image_url: string | null;
-  company_description: string;
-  company_intel: CompanyIntel | null;
-  company_analysis: CompanyAnalysis | null;
+  company: Company | null;
   professional_summary: string;
   tailored_bullets: TailoredBullet[] | null;
   tailored_work_experiences: TailoredWorkExperience[] | null;
@@ -131,7 +142,6 @@ export interface CreateApplicationPayload {
   status?: ApplicationStatus;
   notes?: string;
   job_url: string;
-  company_image_url?: string | null;
   salary_min?: number | null;
   salary_max?: number | null;
   salary_currency?: SalaryCurrency | '';
@@ -238,38 +248,6 @@ export function refreshMetrics(id: number): Promise<MetricsResult> {
   return request(`/api/applications/${id}/metrics`, { method: 'POST' });
 }
 
-export interface SearchCompanyResult {
-  company_description: string;
-  company_image_url: string | null;
-  company_intel: CompanyIntel | null;
-}
-
-export function searchCompany(id: number): Promise<SearchCompanyResult> {
-  return request(`/api/applications/${id}/search-company`, { method: 'POST' });
-}
-
-export interface CompanyAboutResult {
-  company_description: string;
-  company_image_url: string | null;
-}
-
-export function fetchCompanyAbout(id: number): Promise<CompanyAboutResult> {
-  return request(`/api/applications/${id}/company-about`, { method: 'POST' });
-}
-
-export type CompanyIntelCategory = 'news' | 'hiring' | 'layoffs' | 'reputation' | 'funding' | 'leadership' | 'acquisitions' | 'engineering_culture';
-
-export interface CompanyIntelCategoryResult {
-  items: CompanyIntelItem[];
-}
-
-export function fetchCompanyIntelCategory(
-  id: number,
-  category: CompanyIntelCategory,
-): Promise<CompanyIntelCategoryResult> {
-  return request(`/api/applications/${id}/company-intel/${category}`, { method: 'POST' });
-}
-
 export interface TnCategorySuggestion {
   category: string;
   likelihood: number;
@@ -282,8 +260,4 @@ export interface TnSuggestResult {
 
 export function suggestTnCategory(): Promise<TnSuggestResult> {
   return request('/api/applications/tn-suggest', { method: 'POST' });
-}
-
-export function analyzeCompany(id: number): Promise<CompanyAnalysis> {
-  return request(`/api/applications/${id}/company-analysis`, { method: 'POST' });
 }

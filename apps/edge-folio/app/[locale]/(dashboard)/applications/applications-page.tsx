@@ -64,7 +64,6 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [duplicateUrlModal, setDuplicateUrlModal] = useState(false);
   const [urlInput, setUrlInput] = useState('');
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [fetchingUrl, setFetchingUrl] = useState(false);
   const [fetchUrlError, setFetchUrlError] = useState<string | null>(null);
 
@@ -84,7 +83,6 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
         company_name: string;
         job_title: string;
         job_description: string;
-        image_url?: string | null;
         salary_min?: number | null;
         salary_max?: number | null;
         salary_currency?: string;
@@ -95,7 +93,6 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
       if (data.company_name) setCompanyName(data.company_name);
       if (data.job_title) setJobTitle(data.job_title);
       if (data.job_description) setJobDescription(data.job_description);
-      setImageUrl(data.image_url ?? null);
       if (data.salary_min != null) setSalaryMin(String(data.salary_min));
       if (data.salary_max != null) setSalaryMax(String(data.salary_max));
       if (data.salary_currency) setSalaryCurrency(data.salary_currency as SalaryCurrency);
@@ -145,7 +142,6 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
         status: selectedStatus,
         notes: notes.trim(),
         job_url: urlInput.trim(),
-        company_image_url: imageUrl,
         salary_min: salaryMin ? parseFloat(salaryMin) : null,
         salary_max: salaryMax ? parseFloat(salaryMax) : null,
         salary_currency: salaryCurrency || '',
@@ -200,6 +196,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
               className="applications__icon-btn"
               onClick={() => setUrlInput('')}
               aria-label={t('clearUrl')}
+              disabled={fetchingUrl}
             >
               <Icon icon="/icons/delete.svg" size={18} color="var(--foreground, #171717)" />
             </button>

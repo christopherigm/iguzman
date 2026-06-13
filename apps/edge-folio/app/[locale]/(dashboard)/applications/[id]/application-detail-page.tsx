@@ -24,11 +24,7 @@ import {
   generateCoverLetter,
   generateNaftaLetter,
   refreshMetrics,
-  searchCompany,
   suggestTnCategory,
-  fetchCompanyAbout,
-  fetchCompanyIntelCategory,
-  analyzeCompany,
   getApplication,
   ApplicationError,
   type JobApplication,
@@ -43,7 +39,6 @@ import {
   type SalaryCurrency,
   type CompanyIntel,
   type CompanyIntelItem,
-  type CompanyIntelCategory,
   type CompanyAnalysis,
   type SignalLevel,
 } from '@/lib/applications';
@@ -388,12 +383,11 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   const [exportingNaftaPDF, setExportingNaftaPDF] = useState(false);
   const [naftaPDFError, setNaftaPDFError] = useState<string | null>(null);
 
-  // Company info (from Search Company Data)
-  const [companyDescription, setCompanyDescription] = useState(initialApp.company_description ?? '');
-  const [companyIntel, setCompanyIntel] = useState<CompanyIntel | null>(initialApp.company_intel ?? null);
-  const [companyAnalysis, setCompanyAnalysis] = useState<CompanyAnalysis | null>(initialApp.company_analysis ?? null);
-  const [analyzingCompany, setAnalyzingCompany] = useState(false);
-  const analysisPollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Company info (populated by async pipeline, polled until complete)
+  const [companyDescription, setCompanyDescription] = useState(initialApp.company?.description ?? '');
+  const [companyIntel, setCompanyIntel] = useState<CompanyIntel | null>(initialApp.company?.intel ?? null);
+  const [companyAnalysis, setCompanyAnalysis] = useState<CompanyAnalysis | null>(initialApp.company?.analysis ?? null);
+  const companyPollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // NAFTA letter parameters
   const [naftaTnProfession, setNaftaTnProfession] = useState(profile?.tn_profession ?? '');
@@ -433,10 +427,6 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   // Refresh metrics
   const [refreshingMetrics, setRefreshingMetrics] = useState(false);
 
-  // Search company
-  const [searchingAbout, setSearchingAbout] = useState(false);
-  const [loadingIntelCategories, setLoadingIntelCategories] = useState<Set<CompanyIntelCategory>>(new Set());
-
   // Delete
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -453,56 +443,52 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   const [tnSuggestLoading, setTnSuggestLoading] = useState(false);
   const [tnSuggestError, setTnSuggestError] = useState<string | null>(null);
 
-  function stopAnalysisPolling() {
-    if (analysisPollingRef.current) {
-      clearTimeout(analysisPollingRef.current);
-      analysisPollingRef.current = null;
+  function stopCompanyPolling() {
+    if (companyPollingRef.current) {
+      clearTimeout(companyPollingRef.current);
+      companyPollingRef.current = null;
     }
   }
 
-  function startAnalysisPolling(appId: number) {
-    if (analysisPollingRef.current) return;
+  function startCompanyPolling(appId: number) {
+    if (companyPollingRef.current) return;
     let errorCount = 0;
 
     const schedule = () => {
-      analysisPollingRef.current = setTimeout(async () => {
+      companyPollingRef.current = setTimeout(async () => {
         try {
           const data = await getApplication(appId);
-          if (data.company_analysis) {
-            setCompanyAnalysis(data.company_analysis);
-            setAnalyzingCompany(false);
-            analysisPollingRef.current = null;
+          const company = data.company;
+          if (company?.description) setCompanyDescription(company.description);
+          if (company?.intel) setCompanyIntel(company.intel);
+          if (company?.analysis) setCompanyAnalysis(company.analysis);
+          setApp(data);
+          if (!company || company.status === 'complete' || company.status === 'failed') {
+            companyPollingRef.current = null;
             return;
           }
           errorCount = 0;
         } catch {
           errorCount++;
           if (errorCount >= 3) {
-            stopAnalysisPolling();
+            stopCompanyPolling();
             return;
           }
         }
-        if (analysisPollingRef.current !== null) schedule();
+        if (companyPollingRef.current !== null) schedule();
       }, 5000);
     };
 
     schedule();
   }
 
-  // Auto-trigger analysis on mount if intel exists but analysis doesn't
+  // Start polling when company pipeline is in progress
   useEffect(() => {
-    if (!initialApp.company_intel || initialApp.company_analysis) return;
-    setAnalyzingCompany(true);
-    startAnalysisPolling(initialApp.id);
-    analyzeCompany(initialApp.id).then((result) => {
-      setCompanyAnalysis(result);
-      setAnalyzingCompany(false);
-      stopAnalysisPolling();
-    }).catch(() => {
-      setAnalyzingCompany(false);
-      stopAnalysisPolling();
-    });
-    return () => stopAnalysisPolling();
+    const status = initialApp.company?.status;
+    if (status === 'pending' || status === 'processing') {
+      startCompanyPolling(initialApp.id);
+    }
+    return () => stopCompanyPolling();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load export section data lazily when tailored bullets are first available
@@ -612,106 +598,6 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
     }
   }
 
-  const INTEL_DB_KEY_MAP: Record<CompanyIntelCategory, keyof CompanyIntel> = {
-    news: 'company_news',
-    hiring: 'hiring_news',
-    layoffs: 'layoff_news',
-    reputation: 'reputation',
-    funding: 'funding_news',
-    leadership: 'leadership_news',
-    acquisitions: 'acquisition_news',
-    engineering_culture: 'engineering_culture',
-  };
-
-  async function handleSearchCompany() {
-    const intelCategories: CompanyIntelCategory[] = ['news', 'hiring', 'layoffs', 'reputation', 'funding', 'leadership', 'acquisitions', 'engineering_culture'];
-    setSearchingAbout(true);
-    setLoadingIntelCategories(new Set(intelCategories));
-    setCompanyAnalysis(null);
-
-    const aboutPromise = fetchCompanyAbout(app.id).then((result) => {
-      if (result.company_description) {
-        setCompanyDescription(result.company_description);
-        setApp((prev) => ({ ...prev, company_description: result.company_description }));
-      }
-      if (result.company_image_url) {
-        setApp((prev) => ({ ...prev, company_image_url: result.company_image_url }));
-      }
-      showToast(t('companyInfoFound'), 'success');
-    }).catch(() => {
-      showToast(t('errorSearchAbout'), 'error');
-    }).finally(() => {
-      setSearchingAbout(false);
-    });
-
-    let firstIntelReceived = false;
-    const currentAppId = app.id;
-
-    const intelPromises = intelCategories.map((category) =>
-      fetchCompanyIntelCategory(currentAppId, category).then((result) => {
-        if (!firstIntelReceived) {
-          firstIntelReceived = true;
-          setAnalyzingCompany(true);
-          startAnalysisPolling(currentAppId);
-        }
-        const dbKey = INTEL_DB_KEY_MAP[category];
-        setCompanyIntel((prev) => {
-          const next: CompanyIntel = {
-            company_news: [],
-            hiring_news: [],
-            layoff_news: [],
-            reputation: [],
-            funding_news: [],
-            leadership_news: [],
-            acquisition_news: [],
-            engineering_culture: [],
-            ...(prev ?? {}),
-          };
-          next[dbKey] = result.items;
-          return next;
-        });
-        setApp((prev) => {
-          const currentIntel: CompanyIntel = {
-            company_news: [],
-            hiring_news: [],
-            layoff_news: [],
-            reputation: [],
-            funding_news: [],
-            leadership_news: [],
-            acquisition_news: [],
-            engineering_culture: [],
-            ...(prev.company_intel ?? {}),
-          };
-          currentIntel[dbKey] = result.items;
-          return { ...prev, company_intel: currentIntel };
-        });
-      }).catch(() => {
-        // intel failures are silent — section stays empty
-      }).finally(() => {
-        setLoadingIntelCategories((prev) => {
-          const next = new Set(prev);
-          next.delete(category);
-          return next;
-        });
-      }),
-    );
-
-    await Promise.allSettled([aboutPromise, ...intelPromises]);
-
-    // Trigger analysis after all intel has been gathered (even if some came back empty)
-    if (firstIntelReceived) {
-      try {
-        const result = await analyzeCompany(currentAppId);
-        setCompanyAnalysis(result);
-      } catch {
-        // analysis failure is silent — user sees no panel rather than an error
-      } finally {
-        setAnalyzingCompany(false);
-        stopAnalysisPolling();
-      }
-    }
-  }
-
   async function handleTailor() {
     setTailoring(true);
     setTailorError(null);
@@ -757,7 +643,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   async function handleGenerateNafta() {
     setGeneratingNafta(true);
     setNaftaError(null);
-    const combinedCompanyDesc = [companyDescription, naftaCompanyDescription].filter(Boolean).join('\n\n');
+    const combinedCompanyDesc = [app.company?.description ?? companyDescription, naftaCompanyDescription].filter(Boolean).join('\n\n');
     const payload: NaftaLetterPayload = {
       tn_profession: naftaTnProfession || undefined,
       is_continuation: naftaIsContinuation,
@@ -967,10 +853,10 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
         marginBottom={20}
       >
         <Box display="flex" alignItems="flex-start" gap={14}>
-          {app.company_image_url && (
+          {app.company?.image_url && (
             <Box styles={{ position: 'relative', width: 48, height: 48, flexShrink: 0, borderRadius: 8, overflow: 'hidden' }}>
               <Image
-                src={app.company_image_url}
+                src={app.company.image_url}
                 alt={app.company_name}
                 fill
                 sizes="48px"
@@ -1350,48 +1236,41 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
             {t('companyInfoTitle')}
           </Typography>
           <Box styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }} marginBottom={16} />
-          <Box display="flex" alignItems="center" gap={10} marginBottom={14}>
-            <Button
-              text={(searchingAbout || loadingIntelCategories.size > 0) ? t('searchingCompany') : t('searchCompany')}
-              type="button"
-              size="md"
-              disabled={searchingAbout || loadingIntelCategories.size > 0}
-              onClick={handleSearchCompany}
-              kind="success"
-            />
-          </Box>
-          {!companyDescription && !searchingAbout && !companyIntel && loadingIntelCategories.size === 0 && (
+
+          {/* Gathering / failed states */}
+          {(app.company?.status === 'pending' || app.company?.status === 'processing') && (
+            <Box display="flex" alignItems="center" gap={8} marginBottom={14}>
+              <Spinner size={16} label={t('gatheringCompanyData')} />
+              <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+                {t('gatheringCompanyData')}
+              </Typography>
+            </Box>
+          )}
+          {app.company?.status === 'failed' && !companyDescription && !companyIntel && (
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+              {t('companyDataUnavailable')}
+            </Typography>
+          )}
+          {!app.company && (
             <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t('companyInfoEmpty')}
             </Typography>
           )}
-          {(companyDescription || searchingAbout || companyIntel || loadingIntelCategories.size > 0) && (
+
+          {/* Progressive data rendering */}
+          {(companyDescription || companyIntel || companyAnalysis) && (
             <Box display="flex" flexDirection="column" gap={24}>
-              {(companyDescription || searchingAbout) && (
+              {companyDescription && (
                 <Box display="flex" flexDirection="column" gap={8}>
                   <Typography variant="body" fontWeight={600} color="var(--foreground)">
                     {t('companyAboutTitle')}
                   </Typography>
-                  {searchingAbout ? (
-                    <Box display="flex" alignItems="center" gap={8}>
-                      <Spinner size={16} />
-                    </Box>
-                  ) : (
-                    <Typography as="p" variant="body" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>
-                      {companyDescription}
-                    </Typography>
-                  )}
-                </Box>
-              )}
-              {analyzingCompany && (
-                <Box display="flex" alignItems="center" gap={8}>
-                  <Spinner size={16} label={t('companyAnalysisRunning')} />
-                  <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-                    {t('companyAnalysisRunning')}
+                  <Typography as="p" variant="body" styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }}>
+                    {companyDescription}
                   </Typography>
                 </Box>
               )}
-              {companyAnalysis && !analyzingCompany && (
+              {companyAnalysis && (
                 <Box display="flex" flexDirection="column" gap={8}>
                   <Typography variant="body" fontWeight={600} color="var(--foreground)">
                     {t('companyAnalysisTitle')}
@@ -1399,46 +1278,46 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
                   <CompanyAnalysisPanel analysis={companyAnalysis} />
                 </Box>
               )}
-              {(companyIntel || loadingIntelCategories.size > 0) && (
+              {companyIntel && (
                 <Grid container spacing={2}>
-                  {(loadingIntelCategories.has('news') || (companyIntel?.company_news?.length ?? 0) > 0) && (
+                  {(companyIntel.company_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <IntelSwiperCard title={t('companyNewsTitle')} items={companyIntel?.company_news ?? []} loading={loadingIntelCategories.has('news')} />
+                      <IntelSwiperCard title={t('companyNewsTitle')} items={companyIntel.company_news} />
                     </Grid>
                   )}
-                  {(loadingIntelCategories.has('hiring') || (companyIntel?.hiring_news?.length ?? 0) > 0) && (
+                  {(companyIntel.hiring_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <IntelSwiperCard title={t('companyHiringTitle')} items={companyIntel?.hiring_news ?? []} loading={loadingIntelCategories.has('hiring')} />
+                      <IntelSwiperCard title={t('companyHiringTitle')} items={companyIntel.hiring_news} />
                     </Grid>
                   )}
-                  {(loadingIntelCategories.has('layoffs') || (companyIntel?.layoff_news?.length ?? 0) > 0) && (
+                  {(companyIntel.layoff_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <IntelSwiperCard title={t('companyLayoffsTitle')} items={companyIntel?.layoff_news ?? []} loading={loadingIntelCategories.has('layoffs')} />
+                      <IntelSwiperCard title={t('companyLayoffsTitle')} items={companyIntel.layoff_news} />
                     </Grid>
                   )}
-                  {(loadingIntelCategories.has('reputation') || (companyIntel?.reputation?.length ?? 0) > 0) && (
+                  {(companyIntel.reputation?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <IntelSwiperCard title={t('companyReputationTitle')} items={companyIntel?.reputation ?? []} loading={loadingIntelCategories.has('reputation')} />
+                      <IntelSwiperCard title={t('companyReputationTitle')} items={companyIntel.reputation} />
                     </Grid>
                   )}
-                  {(loadingIntelCategories.has('funding') || (companyIntel?.funding_news?.length ?? 0) > 0) && (
+                  {(companyIntel.funding_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <IntelSwiperCard title={t('companyFundingTitle')} items={companyIntel?.funding_news ?? []} loading={loadingIntelCategories.has('funding')} />
+                      <IntelSwiperCard title={t('companyFundingTitle')} items={companyIntel.funding_news} />
                     </Grid>
                   )}
-                  {(loadingIntelCategories.has('leadership') || (companyIntel?.leadership_news?.length ?? 0) > 0) && (
+                  {(companyIntel.leadership_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <IntelSwiperCard title={t('companyLeadershipTitle')} items={companyIntel?.leadership_news ?? []} loading={loadingIntelCategories.has('leadership')} />
+                      <IntelSwiperCard title={t('companyLeadershipTitle')} items={companyIntel.leadership_news} />
                     </Grid>
                   )}
-                  {(loadingIntelCategories.has('acquisitions') || (companyIntel?.acquisition_news?.length ?? 0) > 0) && (
+                  {(companyIntel.acquisition_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <IntelSwiperCard title={t('companyAcquisitionsTitle')} items={companyIntel?.acquisition_news ?? []} loading={loadingIntelCategories.has('acquisitions')} />
+                      <IntelSwiperCard title={t('companyAcquisitionsTitle')} items={companyIntel.acquisition_news} />
                     </Grid>
                   )}
-                  {(loadingIntelCategories.has('engineering_culture') || (companyIntel?.engineering_culture?.length ?? 0) > 0) && (
+                  {(companyIntel.engineering_culture?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <IntelSwiperCard title={t('companyEngineeringCultureTitle')} items={companyIntel?.engineering_culture ?? []} loading={loadingIntelCategories.has('engineering_culture')} />
+                      <IntelSwiperCard title={t('companyEngineeringCultureTitle')} items={companyIntel.engineering_culture} />
                     </Grid>
                   )}
                 </Grid>

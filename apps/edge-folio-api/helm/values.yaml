@@ -87,3 +87,28 @@ resources:
   limits:
     cpu: 1000m
     memory: 1Gi
+
+# ─── Celery worker ──────────────────────────────────────────
+worker:
+  enabled: true
+  replicaCount: 1
+  args: ['celery', '-A', 'edge_folio_api', 'worker', '--loglevel=info', '--concurrency=2']
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ─── Celery beat (scheduler) ────────────────────────────────
+beat:
+  enabled: true
+  args: ['celery', '-A', 'edge_folio_api', 'beat', '--loglevel=info', '--scheduler=celery.beat:PersistentScheduler']
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi

@@ -270,3 +270,29 @@ OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-
 
 SCRAPER_URL = os.environ.get('SCRAPER_URL', 'http://localhost:4000')
 SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
+
+# ── Celery ────────────────────────────────────────────────────────────────────
+# Run tasks synchronously in dev when no broker is configured.
+CELERY_TASK_ALWAYS_EAGER = not bool(_REDIS_URL)
+CELERY_TASK_EAGER_PROPAGATES = True
+
+_CELERY_BROKER = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+_CELERY_REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
+if _CELERY_REDIS_PASSWORD:
+    from urllib.parse import urlparse, urlunparse
+    _parsed = urlparse(_CELERY_BROKER)
+    _CELERY_BROKER = urlunparse(
+        _parsed._replace(netloc=f':{_CELERY_REDIS_PASSWORD}@{_parsed.hostname}:{_parsed.port}')
+    )
+CELERY_BROKER_URL = _CELERY_BROKER
+CELERY_RESULT_BACKEND = _CELERY_BROKER
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_BEAT_SCHEDULE = {
+    'refresh-stale-companies': {
+        'task': 'applications.tasks.refresh_stale_companies',
+        'schedule': 3600.0,
+    },
+}

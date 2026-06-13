@@ -1,15 +1,11 @@
 from django.urls import path
 
 from .views import (
-    CompanyAboutView,
-    CompanyAnalysisView,
-    CompanyIntelCategoryView,
     CoverLetterView,
     JobApplicationDetailView,
     JobApplicationListCreateView,
     NaftaLetterView,
     RefreshMetricsView,
-    SearchCompanyView,
     TailorApplicationView,
     TnSuggestView,
 )
@@ -22,8 +18,4 @@ urlpatterns = [
     path('<int:pk>/cover-letter/', CoverLetterView.as_view(), name='application-cover-letter'),
     path('<int:pk>/nafta-letter/', NaftaLetterView.as_view(), name='application-nafta-letter'),
     path('<int:pk>/metrics/', RefreshMetricsView.as_view(), name='application-metrics'),
-    path('<int:pk>/search-company/', SearchCompanyView.as_view(), name='application-search-company'),
-    path('<int:pk>/company-about/', CompanyAboutView.as_view(), name='application-company-about'),
-    path('<int:pk>/company-intel/<str:category>/', CompanyIntelCategoryView.as_view(), name='application-company-intel'),
-    path('<int:pk>/company-analysis/', CompanyAnalysisView.as_view(), name='application-company-analysis'),
 ]
