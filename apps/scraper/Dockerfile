@@ -34,11 +34,19 @@ COPY --from=builder /deploy/node_modules ./node_modules
 COPY --from=builder /deploy/dist ./dist
 COPY --from=builder /deploy/package.json ./package.json
 
+# Strip runtime-irrelevant artifacts from node_modules to shrink the layer.
+RUN find ./node_modules \( -name "*.map" -o -name "*.d.ts" -o -name "*.md" \) -delete \
+    && find ./node_modules -type d \( -name "__tests__" -o -name "test" -o -name "tests" \) \
+       -exec rm -rf {} + 2>/dev/null; true
+
 # Install OS-level Chromium system dependencies.
+# APT::Install-Recommends "0" prevents apt from pulling in optional packages
+# that playwright install-deps would otherwise include (~50 MB saved).
 # The browser binary itself is NOT baked into the image — it is downloaded at
 # first boot by entrypoint.sh into the PVC mounted at /browsers.
-RUN node_modules/.bin/playwright install-deps chromium \
-    && rm -rf /var/lib/apt/lists/*
+RUN echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/99no-recommends \
+    && node_modules/.bin/playwright install-deps chromium \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY apps/scraper/entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh

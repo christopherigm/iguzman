@@ -1,6 +1,6 @@
 {
   "name": "scraper",
-  "version": "0.0.18",
+  "version": "0.0.20",
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",

@@ -1,6 +1,6 @@
 import { chromium } from 'playwright-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import type { Browser, BrowserContext } from 'playwright';
+import type { Browser, BrowserContext, BrowserContextOptions } from 'playwright';
 import { loadNetscapeCookies } from './cookies';
 
 chromium.use(StealthPlugin());
@@ -35,9 +35,9 @@ export async function getBrowser(): Promise<Browser> {
  * Creates a new isolated BrowserContext with the Netscape cookies
  * pre-loaded. Callers must close the context when done.
  */
-export async function newContext(): Promise<BrowserContext> {
+export async function newContext(options?: BrowserContextOptions): Promise<BrowserContext> {
   const b = await getBrowser();
-  const context = await b.newContext();
+  const context = await b.newContext(options);
 
   const cookies = loadNetscapeCookies();
   if (cookies.length > 0) {

@@ -55,7 +55,7 @@ env:
 
 # Load all keys from the Kubernetes secret as environment variables.
 # Run setup-k8s-secrets first to create the secret.
-# Secret keys expected: SCRAPER_API_KEY, BRAVE_API_KEY, COOKIES, WG_CONFIG
+# Secret keys expected: SCRAPER_API_KEY, BRAVE_API_KEY, COOKIES, WG_CONFIG, PROXY_HOST, PROXY_PORT, PROXY_USER, PROXY_PASS
 envFrom:
   - secretRef:
       name: scraper-secrets
@@ -111,7 +111,7 @@ nodeAffinity:
 #
 # Set wireguard.enabled: true to activate.
 wireguard:
-  enabled: false
+  enabled: true
   image:
     repository: lscr.io/linuxserver/wireguard
     tag: latest
