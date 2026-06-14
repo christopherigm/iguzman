@@ -76,12 +76,12 @@ export default async function LocaleLayout({ children, params }: Props) {
         <ThemeProvider initialMode={initialMode} initialResolved={initialResolved}>
           <PaletteProvider palette="rose" accent="#e11d48">
             <NavbarWrapper
-              logo="/logo-navbar.png"
+              logo="/logo.png"
               version={`v${packageJson.version}`}
-              labels={{ home: tNav('home'), account: tNav('account'), signOut: tNav('signOut') }}
+              labels={{ home: tNav('home'), scan: tNav('scan'), account: tNav('account'), signOut: tNav('signOut') }}
             />
             {children}
-            <Footer logo="/logo-navbar.png" />
+            <Footer logo="/logo.png" />
           </PaletteProvider>
         </ThemeProvider>
       </NextIntlClientProvider>

@@ -1,0 +1,18 @@
+.movie-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 150ms ease;
+}
+
+.movie-card:hover {
+  transform: translateY(-2px);
+}
+
+.movie-card__image {
+  object-fit: cover;
+}
+
+.movie-card__delete:hover {
+  background-color: rgba(0, 0, 0, 0.75);
+}

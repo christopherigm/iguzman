@@ -1,10 +1,11 @@
 from django.db.models import Q
 from rest_framework import status
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Category, Movie, ScanQueue
+from .pagination import CategoryPagination, MoviePagination
 from .serializers import (
     CategorySerializer,
     MovieDetailSerializer,
@@ -15,35 +16,43 @@ from .serializers import (
 from .services.lookup import lookup_barcode
 
 
-class MovieListView(APIView):
-    def get(self, request):
+class MovieListView(ListCreateAPIView):
+    pagination_class = MoviePagination
+
+    def get_queryset(self):
         qs = Movie.objects.filter(enabled=True).prefetch_related('genres')
 
-        search = request.query_params.get('search', '').strip()
+        search = self.request.query_params.get('search', '').strip()
         if search:
             qs = qs.filter(
                 Q(title__icontains=search) | Q(director__icontains=search)
             )
 
-        genre = request.query_params.get('genre', '').strip()
+        genre = self.request.query_params.get('genre', '').strip()
         if genre:
             qs = qs.filter(genres__slug=genre)
 
-        fmt = request.query_params.get('format', '').strip()
-        if fmt:
-            qs = qs.filter(format=fmt)
+        # Named "media_format" (not "format") to avoid colliding with DRF's
+        # `?format=` content-negotiation override.
+        media_format = self.request.query_params.get('media_format', '').strip()
+        if media_format:
+            qs = qs.filter(format=media_format)
 
-        serializer = MovieListSerializer(qs, many=True, context={'request': request})
-        return Response(serializer.data)
+        return qs
 
-    def post(self, request):
-        serializer = MovieWriteSerializer(data=request.data)
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return MovieWriteSerializer
+        return MovieListSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         movie = serializer.save()
         return Response(MovieDetailSerializer(movie, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
-class MovieDetailView(RetrieveAPIView):
+class MovieDetailView(RetrieveDestroyAPIView):
     queryset = Movie.objects.filter(enabled=True).prefetch_related('genres', 'cast')
     serializer_class = MovieDetailSerializer
 
@@ -51,6 +60,7 @@ class MovieDetailView(RetrieveAPIView):
 class CategoryListView(ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    pagination_class = CategoryPagination
 
 
 class ScanView(APIView):

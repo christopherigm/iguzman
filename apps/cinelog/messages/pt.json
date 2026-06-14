@@ -1,9 +1,9 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-"Navbar": { "home": "Início", "account": "Minha Conta", "signOut": "Sair" },
+"Navbar": { "home": "Início", "scan": "Escanear", "account": "Minha Conta", "signOut": "Sair" },
   "Footer": {
     "appHeading": "App", "legalHeading": "Legal",
-    "home": "Início", "account": "Minha Conta",
+    "home": "Início", "scan": "Escanear", "account": "Minha Conta",
     "privacyPolicy": "Política de Privacidade", "terms": "Termos de Serviço", "userData": "Dados do Usuário",
     "copyright": "© {year} Cinelog v{version}. Todos os direitos reservados."
   },
@@ -83,5 +83,35 @@
     "passkeyDeleted": "Chave de acesso removida.", "passkeyDeleteError": "Não foi possível remover a chave. Tente novamente.",
     "addPasskey": "Adicionar chave de acesso", "passkeyAdded": "Chave de acesso adicionada.", "passkeyAddError": "Não foi possível adicionar a chave. Tente novamente.",
     "loading": "Carregando…"
+  },
+  "MovieFormat": {
+    "dvd": "DVD", "bluray": "Blu-ray", "4k": "4K", "other": "Outro"
+  },
+  "CatalogPage": {
+    "title": "Catálogo",
+    "gridView": "Visualização em grade", "listView": "Visualização em lista",
+    "loading": "Carregando filmes…", "error": "Falha ao carregar filmes.",
+    "empty": "Ainda não há filmes no seu catálogo.",
+    "noResults": "Nenhum filme corresponde à sua pesquisa.",
+    "searchLabel": "Pesquisar por título ou diretor",
+    "genreLabel": "Gênero", "formatLabel": "Formato",
+    "allGenres": "Todos os gêneros", "allFormats": "Todos os formatos",
+    "noCover": "Sem capa",
+    "paginationLabel": "Paginação", "previousPage": "Anterior", "nextPage": "Próxima",
+    "delete": "Excluir",
+    "confirmDeleteTitle": "Excluir filme",
+    "confirmDeleteText": "Tem certeza de que deseja excluir \"{title}\"? Esta ação não pode ser desfeita.",
+    "deleted": "Filme excluído.",
+    "deleteError": "Falha ao excluir o filme. Tente novamente."
+  },
+  "MovieDetailPage": {
+    "back": "Voltar ao catálogo",
+    "director": "Diretor", "genres": "Gêneros", "cast": "Elenco",
+    "noCover": "Sem capa",
+    "loading": "Carregando filme…", "error": "Falha ao carregar o filme.", "notFound": "Filme não encontrado.",
+    "delete": "Excluir",
+    "confirmDeleteTitle": "Excluir filme",
+    "confirmDeleteText": "Tem certeza de que deseja excluir \"{title}\"? Esta ação não pode ser desfeita.",
+    "deleteError": "Falha ao excluir o filme. Tente novamente."
   }
 }

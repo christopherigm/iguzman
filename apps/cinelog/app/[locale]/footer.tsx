@@ -16,6 +16,7 @@ export async function Footer({ logo }: { logo: string }) {
 
   const appLinks = [
     { label: t('home'), href: '/' },
+    { label: t('scan'), href: '/scan' },
     { label: t('account'), href: '/account' },
   ];
   const legalLinks = [
@@ -30,7 +31,7 @@ export async function Footer({ logo }: { logo: string }) {
         <Grid container spacing={4}>
           <Grid size={{ xs: 12, sm: 4 }}>
             <Box display="flex" flexDirection="column" gap="20px">
-              <Image src={logo} alt="Cinelog" width={140} height={44} className="footer__logo" />
+              <Image src={logo} alt="Cinelog" width={58} height={44} className="footer__logo" />
               <Typography as="span" variant="h5" fontWeight={700}>Cinelog</Typography>
               <Box display="flex" alignItems="center" gap="12px" flexWrap="wrap">
                 <ThemeSwitch />

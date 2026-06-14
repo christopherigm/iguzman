@@ -30,6 +30,7 @@ const nextConfig = {
       { protocol: 'http', hostname: '127.0.0.1' },
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'https', hostname: 'r2.iguzman.com.mx' },
+      { protocol: 'https', hostname: 'image.tmdb.org' },
     ],
   },
 };
