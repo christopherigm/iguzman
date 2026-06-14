@@ -91,11 +91,15 @@ celery:
   concurrency: 2
   resources:
     requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 500m
+      cpu: 250m
       memory: 256Mi
+    limits:
+      # concurrency:2 long scraper/LLM tasks + the MainProcess that must answer
+      # the liveness `inspect ping` + the probe's own celery client all contend
+      # for CPU. 500m throttled the MainProcess so the ping timed out and k8s
+      # killed a healthy worker mid-task. Give it real headroom.
+      cpu: 2000m
+      memory: 512Mi
 
 # ─── Redis ──────────────────────────────────────────────────
 redis:

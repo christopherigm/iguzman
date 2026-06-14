@@ -1,6 +1,6 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-"Navbar": { "home": "Home", "scan": "Scan", "account": "Account", "signOut": "Sign out" },
+"Navbar": { "home": "Home", "scan": "Scan", "inbox": "Inbox", "account": "Account", "signOut": "Sign out" },
   "Footer": {
     "appHeading": "App", "legalHeading": "Legal",
     "home": "Home", "scan": "Scan", "account": "Account",
@@ -60,7 +60,7 @@
     "subtitle": "Point camera at barcode",
     "statusPending": "Looking up…",
     "statusSaved": "Added to catalog",
-    "statusQueued": "Processing…",
+    "statusQueued": "Queued — review in inbox later",
     "statusExists": "Already in catalog",
     "statusError": "Lookup failed",
     "scanCount": "{count} scanned",
@@ -113,5 +113,27 @@
     "confirmDeleteTitle": "Delete movie",
     "confirmDeleteText": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
     "deleteError": "Failed to delete movie. Please try again."
+  },
+  "InboxPage": {
+    "title": "Inbox",
+    "subtitle": "Review AI-resolved scans before adding them to your catalog.",
+    "loading": "Loading inbox…",
+    "error": "Failed to load the inbox.",
+    "empty": "Nothing to review. Scanned titles awaiting resolution will appear here.",
+    "barcodeLabel": "Barcode",
+    "noCover": "No cover",
+    "titleLabel": "Title",
+    "directorLabel": "Director",
+    "yearLabel": "Year",
+    "formatLabel": "Format",
+    "formatUnset": "Unset",
+    "genresLabel": "Genres (comma separated)",
+    "castLabel": "Cast (comma separated)",
+    "accept": "Approve",
+    "reject": "Reject",
+    "accepted": "\"{title}\" added to catalog.",
+    "acceptError": "Failed to add to catalog. Please try again.",
+    "rejected": "Entry rejected.",
+    "rejectError": "Failed to reject entry. Please try again."
   }
 }

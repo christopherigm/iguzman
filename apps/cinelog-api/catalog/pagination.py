@@ -25,3 +25,8 @@ class MoviePagination(CineLogPagination):
 class CategoryPagination(CineLogPagination):
     page_size = 50
     max_page_size = 500
+
+
+class InboxPagination(CineLogPagination):
+    page_size = 20
+    max_page_size = 100

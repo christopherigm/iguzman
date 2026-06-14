@@ -78,7 +78,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             <NavbarWrapper
               logo="/logo.png"
               version={`v${packageJson.version}`}
-              labels={{ home: tNav('home'), scan: tNav('scan'), account: tNav('account'), signOut: tNav('signOut') }}
+              labels={{ home: tNav('home'), scan: tNav('scan'), inbox: tNav('inbox'), account: tNav('account'), signOut: tNav('signOut') }}
             />
             {children}
             <Footer logo="/logo.png" />

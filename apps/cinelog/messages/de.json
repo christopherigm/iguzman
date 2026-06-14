@@ -1,6 +1,6 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-"Navbar": { "home": "Startseite", "scan": "Scannen", "account": "Konto", "signOut": "Abmelden" },
+"Navbar": { "home": "Startseite", "scan": "Scannen", "inbox": "Posteingang", "account": "Konto", "signOut": "Abmelden" },
   "Footer": {
     "appHeading": "App", "legalHeading": "Rechtliches",
     "home": "Startseite", "scan": "Scannen", "account": "Konto",
@@ -60,7 +60,7 @@
     "subtitle": "Kamera auf Barcode richten",
     "statusPending": "Wird gesucht…",
     "statusSaved": "Zum Katalog hinzugefügt",
-    "statusQueued": "Wird verarbeitet…",
+    "statusQueued": "In Warteschlange — später im Posteingang prüfen",
     "statusExists": "Bereits im Katalog",
     "statusError": "Suche fehlgeschlagen",
     "scanCount": "{count} gescannt",
@@ -113,5 +113,27 @@
     "confirmDeleteTitle": "Film löschen",
     "confirmDeleteText": "Möchtest du \"{title}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
     "deleteError": "Film konnte nicht gelöscht werden. Bitte versuche es erneut."
+  },
+  "InboxPage": {
+    "title": "Posteingang",
+    "subtitle": "Prüfe KI-aufgelöste Scans, bevor du sie zum Katalog hinzufügst.",
+    "loading": "Posteingang wird geladen…",
+    "error": "Posteingang konnte nicht geladen werden.",
+    "empty": "Nichts zu prüfen. Gescannte Titel, die noch aufgelöst werden, erscheinen hier.",
+    "barcodeLabel": "Barcode",
+    "noCover": "Kein Cover",
+    "titleLabel": "Titel",
+    "directorLabel": "Regie",
+    "yearLabel": "Jahr",
+    "formatLabel": "Format",
+    "formatUnset": "Nicht festgelegt",
+    "genresLabel": "Genres (durch Kommas getrennt)",
+    "castLabel": "Besetzung (durch Kommas getrennt)",
+    "accept": "Freigeben",
+    "reject": "Ablehnen",
+    "accepted": "\"{title}\" zum Katalog hinzugefügt.",
+    "acceptError": "Hinzufügen zum Katalog fehlgeschlagen. Bitte versuche es erneut.",
+    "rejected": "Eintrag abgelehnt.",
+    "rejectError": "Eintrag konnte nicht abgelehnt werden. Bitte versuche es erneut."
   }
 }

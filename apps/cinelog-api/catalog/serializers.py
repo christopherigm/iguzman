@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Actor, Category, Movie, ScanQueue
+from .models import FORMAT_CHOICES, Actor, Category, Movie, ScanQueue
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -101,3 +101,30 @@ class ScanQueueSerializer(serializers.ModelSerializer):
             'extracted_cover_url', 'retry_count', 'error_message', 'created', 'modified',
         ]
         read_only_fields = ['status', 'retry_count', 'error_message', 'created', 'modified']
+
+
+class InboxAcceptSerializer(serializers.Serializer):
+    """
+    Editable fields the user can correct in the Inbox before an AI-resolved
+    `ScanQueue` entry is promoted to the main catalog (Phase 5.3). The barcode
+    is taken from the queue entry, never the client.
+    """
+
+    title = serializers.CharField(max_length=500)
+    director = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
+    year = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1870, max_value=2200, default=None
+    )
+    format = serializers.ChoiceField(
+        choices=FORMAT_CHOICES, required=False, allow_blank=True, default=''
+    )
+    cover_url = serializers.URLField(
+        max_length=1000, required=False, allow_blank=True, default=''
+    )
+    tmdb_id = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')
+    genres = serializers.ListField(
+        child=serializers.CharField(max_length=100), required=False, default=list
+    )
+    cast = serializers.ListField(
+        child=serializers.CharField(max_length=255), required=False, default=list
+    )

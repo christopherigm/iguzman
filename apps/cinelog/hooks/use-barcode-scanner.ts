@@ -29,10 +29,14 @@ export function useBarcodeScanner() {
   const lastBarcodeRef = useRef('');
   const cooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onScan = useCallback(async (barcode: string) => {
     if (barcode === lastBarcodeRef.current) return;
     lastBarcodeRef.current = barcode;
+
+    // A new scan supersedes any pending auto-clear of the previous result.
+    if (clearRef.current) clearTimeout(clearRef.current);
 
     if (flashRef.current) clearTimeout(flashRef.current);
     setFlash(true);
@@ -56,6 +60,12 @@ export function useBarcodeScanner() {
         if (data.status === 'saved') vibrate(150);
         else if (data.status === 'exists') vibrate([50, 50, 50]);
         setLastScan({ barcode, status: data.status, title: data.movie?.title });
+        // The slow path is already handed off to the worker; the user can keep
+        // scanning and review it later in the inbox. Auto-clear so the lingering
+        // "queued" card doesn't imply there's something to wait for here.
+        if (data.status === 'queued') {
+          clearRef.current = setTimeout(() => setLastScan(null), 2500);
+        }
       } else {
         setLastScan({ barcode, status: 'error' });
       }

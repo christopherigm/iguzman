@@ -1,6 +1,6 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-"Navbar": { "home": "Accueil", "scan": "Scanner", "account": "Mon Compte", "signOut": "Se déconnecter" },
+"Navbar": { "home": "Accueil", "scan": "Scanner", "inbox": "Boîte de réception", "account": "Mon Compte", "signOut": "Se déconnecter" },
   "Footer": {
     "appHeading": "Application", "legalHeading": "Légal",
     "home": "Accueil", "scan": "Scanner", "account": "Mon Compte",
@@ -60,7 +60,7 @@
     "subtitle": "Pointez la caméra vers le code-barres",
     "statusPending": "Recherche en cours…",
     "statusSaved": "Ajouté au catalogue",
-    "statusQueued": "Traitement en cours…",
+    "statusQueued": "En file — à vérifier plus tard dans la boîte",
     "statusExists": "Déjà dans le catalogue",
     "statusError": "Recherche échouée",
     "scanCount": "{count} scannés",
@@ -113,5 +113,27 @@
     "confirmDeleteTitle": "Supprimer le film",
     "confirmDeleteText": "Voulez-vous vraiment supprimer « {title} » ? Cette action est irréversible.",
     "deleteError": "Échec de la suppression du film. Veuillez réessayer."
+  },
+  "InboxPage": {
+    "title": "Boîte de réception",
+    "subtitle": "Vérifiez les scans résolus par l'IA avant de les ajouter à votre catalogue.",
+    "loading": "Chargement de la boîte de réception…",
+    "error": "Échec du chargement de la boîte de réception.",
+    "empty": "Rien à vérifier. Les titres scannés en attente de résolution apparaîtront ici.",
+    "barcodeLabel": "Code-barres",
+    "noCover": "Pas de jaquette",
+    "titleLabel": "Titre",
+    "directorLabel": "Réalisateur",
+    "yearLabel": "Année",
+    "formatLabel": "Format",
+    "formatUnset": "Non défini",
+    "genresLabel": "Genres (séparés par des virgules)",
+    "castLabel": "Distribution (séparée par des virgules)",
+    "accept": "Approuver",
+    "reject": "Rejeter",
+    "accepted": "« {title} » ajouté au catalogue.",
+    "acceptError": "Échec de l'ajout au catalogue. Veuillez réessayer.",
+    "rejected": "Entrée rejetée.",
+    "rejectError": "Échec du rejet de l'entrée. Veuillez réessayer."
   }
 }

@@ -1,6 +1,7 @@
 import logging
 
 from celery import shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 
 from .models import ScanQueue
 from .services.extract import extract_movie
@@ -55,6 +56,11 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
             _fail(entry, 'No web results found for this barcode.')
             return
         scraped = extract_movie(raw_text)
+    except SoftTimeLimitExceeded:
+        # Don't let the hard limit SIGKILL the child and strand the entry —
+        # surface a terminal failure the Inbox can act on.
+        _fail(entry, 'Resolution timed out while scraping/extracting.')
+        return
     except Exception as exc:
         logger.warning(
             'resolve_scan_queue_entry: scrape/extract failed for %s (attempt %s/%s): %s',
@@ -79,7 +85,13 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
     entry.extracted_director = scraped.director.strip()
 
     # ── TMDB authoritative match ────────────────────────────────────────────────
-    tmdb = search_tmdb(scraped.title)
+    # A TMDB error here must not strand the entry: the LLM extraction is already
+    # persisted above, so fall through to `review` for manual correction.
+    try:
+        tmdb = search_tmdb(scraped.title)
+    except Exception as exc:
+        logger.warning('resolve_scan_queue_entry: TMDB lookup failed for %s: %s', entry.barcode, exc)
+        tmdb = None
     if tmdb:
         entry.extracted_title = tmdb['title']
         entry.extracted_director = tmdb['director']

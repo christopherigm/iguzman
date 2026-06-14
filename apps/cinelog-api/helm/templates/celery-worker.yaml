@@ -61,6 +61,12 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
 
+          # `celery inspect ping` is a broadcast round-trip that can be slow to
+          # answer while the (few) prefork children are busy on long scraper/LLM
+          # tasks. Keep the probe but make it tolerant so a healthy-but-busy
+          # worker is not killed mid-task (which would strand ScanQueue entries).
+          # acks_late + reject_on_worker_lost (see settings.py) make any genuine
+          # restart safe by requeuing the in-flight task rather than losing it.
           livenessProbe:
             exec:
               command:
@@ -72,10 +78,11 @@ spec:
                 - -d
                 - celery@$(HOSTNAME)
                 - --timeout
-                - "10"
+                - "30"
+            initialDelaySeconds: 30
             periodSeconds: 60
-            failureThreshold: 3
-            timeoutSeconds: 15
+            failureThreshold: 5
+            timeoutSeconds: 35
 
           {{- with .Values.celery.resources }}
           resources:

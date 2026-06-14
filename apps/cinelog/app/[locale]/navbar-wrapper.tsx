@@ -9,7 +9,7 @@ import { logout, clearUser, getStoredUser } from '@/lib/auth';
 interface NavbarWrapperProps {
   logo: string;
   version: string;
-  labels: { home: string; scan: string; account: string; signOut: string };
+  labels: { home: string; scan: string; inbox: string; account: string; signOut: string };
 }
 
 export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
@@ -38,7 +38,7 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
   return (
     <Navbar
       logo={logo}
-      items={[{ label: labels.home, href: '/' }, { label: labels.scan, href: '/scan' }, accountItem]}
+      items={[{ label: labels.home, href: '/' }, { label: labels.scan, href: '/scan' }, { label: labels.inbox, href: '/inbox' }, accountItem]}
       fixedItems={[]}
       version={version}
       translucent

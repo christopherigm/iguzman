@@ -1,6 +1,6 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-"Navbar": { "home": "Inicio", "scan": "Escanear", "account": "Cuenta", "signOut": "Cerrar sesión" },
+"Navbar": { "home": "Inicio", "scan": "Escanear", "inbox": "Bandeja", "account": "Cuenta", "signOut": "Cerrar sesión" },
   "Footer": {
     "appHeading": "Aplicación", "legalHeading": "Legal",
     "home": "Inicio", "scan": "Escanear", "account": "Cuenta",
@@ -60,7 +60,7 @@
     "subtitle": "Apunta la cámara al código de barras",
     "statusPending": "Buscando…",
     "statusSaved": "Agregado al catálogo",
-    "statusQueued": "Procesando…",
+    "statusQueued": "En cola — revísalo luego en la bandeja",
     "statusExists": "Ya en el catálogo",
     "statusError": "Error al buscar",
     "scanCount": "{count} escaneados",
@@ -113,5 +113,27 @@
     "confirmDeleteTitle": "Eliminar película",
     "confirmDeleteText": "¿Seguro que quieres eliminar \"{title}\"? Esta acción no se puede deshacer.",
     "deleteError": "No se pudo eliminar la película. Inténtalo de nuevo."
+  },
+  "InboxPage": {
+    "title": "Bandeja",
+    "subtitle": "Revisa los escaneos resueltos por IA antes de añadirlos a tu catálogo.",
+    "loading": "Cargando bandeja…",
+    "error": "No se pudo cargar la bandeja.",
+    "empty": "Nada que revisar. Los títulos escaneados pendientes de resolver aparecerán aquí.",
+    "barcodeLabel": "Código de barras",
+    "noCover": "Sin portada",
+    "titleLabel": "Título",
+    "directorLabel": "Director",
+    "yearLabel": "Año",
+    "formatLabel": "Formato",
+    "formatUnset": "Sin definir",
+    "genresLabel": "Géneros (separados por comas)",
+    "castLabel": "Reparto (separado por comas)",
+    "accept": "Aprobar",
+    "reject": "Rechazar",
+    "accepted": "\"{title}\" añadida al catálogo.",
+    "acceptError": "No se pudo añadir al catálogo. Inténtalo de nuevo.",
+    "rejected": "Entrada rechazada.",
+    "rejectError": "No se pudo rechazar la entrada. Inténtalo de nuevo."
   }
 }

@@ -256,6 +256,21 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 300  # 5 min hard limit per task
+CELERY_TASK_SOFT_TIME_LIMIT = 240  # graceful limit: task catches it and marks the entry failed
+
+# Reliability: the slow-path scan task does long external I/O (scraper + LLM) and
+# the worker can be restarted mid-flight (e.g. a liveness-probe kill or a rollout).
+# Acknowledge a task only AFTER it completes, fetch one message at a time, and
+# requeue any task whose worker was lost — so a restart never strands a ScanQueue
+# entry in `pending`/`processing` forever.
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+# Redis has no native ack/requeue — redelivery of a lost worker's task waits for
+# the visibility timeout (default 1h). Cap it just above the hard time limit so a
+# stranded task comes back in minutes, not an hour, without duplicating a task
+# that is still legitimately running (<= 300s).
+CELERY_BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 600}
 
 # Local dev: run tasks synchronously in-process (no broker/worker needed).
 # Lets the slow-path scan resolution be exercised without Redis + a Celery worker.

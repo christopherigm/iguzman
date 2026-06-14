@@ -1,13 +1,16 @@
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
+from django.utils.text import slugify
 from rest_framework import status
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Category, Movie, ScanQueue
-from .pagination import CategoryPagination, MoviePagination
+from .pagination import CategoryPagination, InboxPagination, MoviePagination
 from .serializers import (
     CategorySerializer,
+    InboxAcceptSerializer,
     MovieDetailSerializer,
     MovieListSerializer,
     MovieWriteSerializer,
@@ -15,6 +18,15 @@ from .serializers import (
 )
 from .services.lookup import lookup_barcode
 from .tasks import resolve_scan_queue_entry
+
+
+def resolve_genre_ids(names):
+    """Map a list of genre names to Category ids, creating any that are missing."""
+    genre_ids = []
+    for name in names:
+        cat, _ = Category.objects.get_or_create(slug=slugify(name), defaults={'name': name})
+        genre_ids.append(cat.id)
+    return genre_ids
 
 
 class MovieListView(ListCreateAPIView):
@@ -105,14 +117,7 @@ class ScanView(APIView):
                 'cast_names': data.cast,
             }
             # Resolve genre names to Category objects (create if missing)
-            genre_ids = []
-            for name in data.genres:
-                from django.utils.text import slugify
-                cat, _ = Category.objects.get_or_create(
-                    slug=slugify(name), defaults={'name': name}
-                )
-                genre_ids.append(cat.id)
-            write_data['genre_ids'] = genre_ids
+            write_data['genre_ids'] = resolve_genre_ids(data.genres)
 
             serializer = MovieWriteSerializer(data=write_data)
             serializer.is_valid(raise_exception=True)
@@ -129,3 +134,75 @@ class ScanView(APIView):
             {'status': 'queued', 'queue_id': entry.id},
             status=status.HTTP_202_ACCEPTED,
         )
+
+
+class InboxListView(ListAPIView):
+    """
+    GET /api/catalog/inbox/
+
+    Lists AI-resolved scan-queue entries awaiting human review (Phase 5.1),
+    newest first. These carry LLM/TMDB-extracted metadata for the user to
+    approve, correct, or reject before the title enters the main catalog.
+    """
+
+    serializer_class = ScanQueueSerializer
+    pagination_class = InboxPagination
+
+    def get_queryset(self):
+        return ScanQueue.objects.filter(status='review')
+
+
+class InboxAcceptView(APIView):
+    """
+    POST /api/catalog/inbox/<id>/accept/
+
+    Promotes a review entry to the main catalog, applying any field
+    corrections from the request body (Phase 5.3). The barcode is taken from
+    the queue entry. On success the entry is marked `accepted` and linked to
+    the new Movie.
+    """
+
+    def post(self, request, pk):
+        entry = get_object_or_404(ScanQueue, pk=pk, status='review')
+
+        serializer = InboxAcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        write_data = {
+            'barcode': entry.barcode,
+            'title': data['title'],
+            'director': data['director'],
+            'year': data['year'],
+            'format': data['format'],
+            'cover_url': data['cover_url'],
+            'tmdb_id': data['tmdb_id'],
+            'genre_ids': resolve_genre_ids(data['genres']),
+            'cast_names': data['cast'],
+        }
+        movie_serializer = MovieWriteSerializer(data=write_data)
+        movie_serializer.is_valid(raise_exception=True)
+        movie = movie_serializer.save()
+
+        entry.status = 'accepted'
+        entry.movie = movie
+        entry.save(update_fields=['status', 'movie', 'modified'])
+
+        return Response(
+            MovieDetailSerializer(movie, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class InboxRejectView(APIView):
+    """
+    POST /api/catalog/inbox/<id>/reject/
+
+    Discards a review entry the user does not want in the catalog (Phase 5.1).
+    The entry is deleted so its barcode is free to be re-scanned later.
+    """
+
+    def post(self, request, pk):
+        entry = get_object_or_404(ScanQueue, pk=pk, status='review')
+        entry.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

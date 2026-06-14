@@ -1,6 +1,6 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-"Navbar": { "home": "Início", "scan": "Escanear", "account": "Minha Conta", "signOut": "Sair" },
+"Navbar": { "home": "Início", "scan": "Escanear", "inbox": "Caixa de entrada", "account": "Minha Conta", "signOut": "Sair" },
   "Footer": {
     "appHeading": "App", "legalHeading": "Legal",
     "home": "Início", "scan": "Escanear", "account": "Minha Conta",
@@ -60,7 +60,7 @@
     "subtitle": "Aponte a câmera para o código de barras",
     "statusPending": "Buscando…",
     "statusSaved": "Adicionado ao catálogo",
-    "statusQueued": "Processando…",
+    "statusQueued": "Na fila — revise depois na caixa de entrada",
     "statusExists": "Já no catálogo",
     "statusError": "Falha na busca",
     "scanCount": "{count} escaneados",
@@ -113,5 +113,27 @@
     "confirmDeleteTitle": "Excluir filme",
     "confirmDeleteText": "Tem certeza de que deseja excluir \"{title}\"? Esta ação não pode ser desfeita.",
     "deleteError": "Falha ao excluir o filme. Tente novamente."
+  },
+  "InboxPage": {
+    "title": "Caixa de entrada",
+    "subtitle": "Revise os scans resolvidos por IA antes de adicioná-los ao seu catálogo.",
+    "loading": "Carregando caixa de entrada…",
+    "error": "Falha ao carregar a caixa de entrada.",
+    "empty": "Nada para revisar. Títulos escaneados aguardando resolução aparecerão aqui.",
+    "barcodeLabel": "Código de barras",
+    "noCover": "Sem capa",
+    "titleLabel": "Título",
+    "directorLabel": "Diretor",
+    "yearLabel": "Ano",
+    "formatLabel": "Formato",
+    "formatUnset": "Não definido",
+    "genresLabel": "Gêneros (separados por vírgulas)",
+    "castLabel": "Elenco (separado por vírgulas)",
+    "accept": "Aprovar",
+    "reject": "Rejeitar",
+    "accepted": "\"{title}\" adicionado ao catálogo.",
+    "acceptError": "Falha ao adicionar ao catálogo. Tente novamente.",
+    "rejected": "Entrada rejeitada.",
+    "rejectError": "Falha ao rejeitar a entrada. Tente novamente."
   }
 }
