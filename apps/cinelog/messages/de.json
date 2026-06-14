@@ -1,9 +1,9 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-"Navbar": { "home": "Startseite", "account": "Konto", "signOut": "Abmelden" },
+"Navbar": { "home": "Startseite", "scan": "Scannen", "account": "Konto", "signOut": "Abmelden" },
   "Footer": {
     "appHeading": "App", "legalHeading": "Rechtliches",
-    "home": "Startseite", "account": "Konto",
+    "home": "Startseite", "scan": "Scannen", "account": "Konto",
     "privacyPolicy": "Datenschutz", "terms": "Nutzungsbedingungen", "userData": "Nutzerdaten",
     "copyright": "© {year} Cinelog v{version}. Alle Rechte vorbehalten."
   },
@@ -83,5 +83,35 @@
     "passkeyDeleted": "Passkey entfernt.", "passkeyDeleteError": "Passkey konnte nicht entfernt werden. Bitte erneut versuchen.",
     "addPasskey": "Passkey hinzufügen", "passkeyAdded": "Passkey hinzugefügt.", "passkeyAddError": "Passkey konnte nicht hinzugefügt werden. Bitte erneut versuchen.",
     "loading": "Lädt…"
+  },
+  "MovieFormat": {
+    "dvd": "DVD", "bluray": "Blu-ray", "4k": "4K", "other": "Andere"
+  },
+  "CatalogPage": {
+    "title": "Katalog",
+    "gridView": "Rasteransicht", "listView": "Listenansicht",
+    "loading": "Filme werden geladen…", "error": "Filme konnten nicht geladen werden.",
+    "empty": "Noch keine Filme in deinem Katalog.",
+    "noResults": "Keine Filme entsprechen deiner Suche.",
+    "searchLabel": "Nach Titel oder Regisseur suchen",
+    "genreLabel": "Genre", "formatLabel": "Format",
+    "allGenres": "Alle Genres", "allFormats": "Alle Formate",
+    "noCover": "Kein Cover",
+    "paginationLabel": "Seitennummerierung", "previousPage": "Zurück", "nextPage": "Weiter",
+    "delete": "Löschen",
+    "confirmDeleteTitle": "Film löschen",
+    "confirmDeleteText": "Möchtest du \"{title}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+    "deleted": "Film gelöscht.",
+    "deleteError": "Film konnte nicht gelöscht werden. Bitte versuche es erneut."
+  },
+  "MovieDetailPage": {
+    "back": "Zurück zum Katalog",
+    "director": "Regie", "genres": "Genres", "cast": "Besetzung",
+    "noCover": "Kein Cover",
+    "loading": "Film wird geladen…", "error": "Film konnte nicht geladen werden.", "notFound": "Film nicht gefunden.",
+    "delete": "Löschen",
+    "confirmDeleteTitle": "Film löschen",
+    "confirmDeleteText": "Möchtest du \"{title}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+    "deleteError": "Film konnte nicht gelöscht werden. Bitte versuche es erneut."
   }
 }

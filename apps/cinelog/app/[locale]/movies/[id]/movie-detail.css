@@ -1,0 +1,10 @@
+@media (min-width: 600px) {
+  /* sm */
+  .movie-detail__layout {
+    flex-direction: row;
+  }
+}
+
+.movie-detail__image {
+  object-fit: cover;
+}

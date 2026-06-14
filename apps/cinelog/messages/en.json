@@ -1,9 +1,9 @@
 {
   "Metadata": { "title": "Cinelog", "description": "" },
-"Navbar": { "home": "Home", "account": "Account", "signOut": "Sign out" },
+"Navbar": { "home": "Home", "scan": "Scan", "account": "Account", "signOut": "Sign out" },
   "Footer": {
     "appHeading": "App", "legalHeading": "Legal",
-    "home": "Home", "account": "Account",
+    "home": "Home", "scan": "Scan", "account": "Account",
     "privacyPolicy": "Privacy Policy", "terms": "Terms of Service", "userData": "User Data",
     "copyright": "© {year} Cinelog v{version}. All rights reserved."
   },
@@ -83,5 +83,35 @@
     "passkeyDeleted": "Passkey removed.", "passkeyDeleteError": "Failed to remove passkey. Please try again.",
     "addPasskey": "Add Passkey", "passkeyAdded": "Passkey added.", "passkeyAddError": "Failed to add passkey. Please try again.",
     "loading": "Loading…"
+  },
+  "MovieFormat": {
+    "dvd": "DVD", "bluray": "Blu-ray", "4k": "4K", "other": "Other"
+  },
+  "CatalogPage": {
+    "title": "Catalog",
+    "gridView": "Grid view", "listView": "List view",
+    "loading": "Loading movies…", "error": "Failed to load movies.",
+    "empty": "No movies in your catalog yet.",
+    "noResults": "No movies match your search.",
+    "searchLabel": "Search by title or director",
+    "genreLabel": "Genre", "formatLabel": "Format",
+    "allGenres": "All genres", "allFormats": "All formats",
+    "noCover": "No cover",
+    "paginationLabel": "Pagination", "previousPage": "Previous", "nextPage": "Next",
+    "delete": "Delete",
+    "confirmDeleteTitle": "Delete movie",
+    "confirmDeleteText": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+    "deleted": "Movie deleted.",
+    "deleteError": "Failed to delete movie. Please try again."
+  },
+  "MovieDetailPage": {
+    "back": "Back to catalog",
+    "director": "Director", "genres": "Genres", "cast": "Cast",
+    "noCover": "No cover",
+    "loading": "Loading movie…", "error": "Failed to load movie.", "notFound": "Movie not found.",
+    "delete": "Delete",
+    "confirmDeleteTitle": "Delete movie",
+    "confirmDeleteText": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+    "deleteError": "Failed to delete movie. Please try again."
   }
 }
