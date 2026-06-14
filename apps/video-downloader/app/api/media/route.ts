@@ -13,6 +13,7 @@ const log = logger.child({ module: 'api/media' });
 const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
 const IS_PRODUCTION = NODE_ENV === 'production';
 const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
+const TEMP_DIR = '/tmp';
 
 /**
  * POST /api/media?ext=mp4
@@ -38,7 +39,12 @@ export async function POST(request: NextRequest) {
 
   const fileName = `${randomUUID()}.${ext.toLowerCase()}`;
 
-  if (USE_R2) {
+  // ?tmp=1: stage the upload to /tmp instead of R2 so the same server can
+  // process it immediately without a wasted R2 round-trip. The output of
+  // processing is still uploaded to R2 after the job completes.
+  const stageTmp = USE_R2 && request.nextUrl.searchParams.get('tmp') === '1';
+
+  if (USE_R2 && !stageTmp) {
     try {
       const cl = request.headers.get('content-length');
       const contentLength = cl ? parseInt(cl, 10) : undefined;
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const filePath = join(MEDIA_DIR, fileName);
+  const filePath = join(stageTmp ? TEMP_DIR : MEDIA_DIR, fileName);
 
   try {
     const writeStream = createWriteStream(filePath);
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
       Readable.fromWeb(request.body as Parameters<typeof Readable.fromWeb>[0]),
       writeStream,
     );
-    log.info({ fileName }, 'POST /api/media - file saved');
+    log.info({ fileName, stageTmp }, 'POST /api/media - file saved');
     return NextResponse.json({ file: fileName }, { status: 201 });
   } catch (err) {
     log.error({ err, fileName }, 'POST /api/media - write failed');

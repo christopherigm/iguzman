@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'node:path';
-import { unlink } from 'node:fs/promises';
+import { access, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { createTask, getTask, updateTask } from '@/lib/video-task-db';
 import type { TaskStatus } from '@/lib/types';
@@ -293,18 +293,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  /* ── Download from R2 to temp (if R2 mode) ──────────────────────────── */
+  /* ── Resolve input path (staged in /tmp or download from R2) ──────────── */
   let tempInputPath: string | undefined;
   if (USE_R2) {
     tempInputPath = join(TEMP_DIR, inputFile);
-    try {
-      await downloadToPath(inputFile, tempInputPath);
-    } catch (err) {
-      log.error({ err, taskId, inputFile }, 'Failed to download input from R2');
-      return NextResponse.json(
-        { error: 'Failed to fetch input file' },
-        { status: 500 },
-      );
+    const alreadyStaged = await access(tempInputPath).then(() => true).catch(() => false);
+    if (!alreadyStaged) {
+      try {
+        await downloadToPath(inputFile, tempInputPath);
+      } catch (err) {
+        log.error({ err, taskId, inputFile }, 'Failed to download input from R2');
+        return NextResponse.json(
+          { error: 'Failed to fetch input file' },
+          { status: 500 },
+        );
+      }
     }
   }
 

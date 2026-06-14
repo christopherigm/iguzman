@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { readFile, unlink, writeFile } from 'node:fs/promises';
+import { access, readFile, unlink, writeFile } from 'node:fs/promises';
 import {
   getCreditsKey,
   requireCredits,
@@ -54,18 +54,21 @@ export async function POST(request: NextRequest) {
   const creditResult = await requireCredits(creditsKey, cost);
   if (!creditResult.ok) return creditsErrorResponse(creditResult.error);
 
-  /* ── Download input from R2 if needed ────────────────────────────── */
+  /* ── Resolve input path (staged in /tmp or download from R2) ─────── */
   let tempInputPath: string | undefined;
   if (USE_R2) {
     tempInputPath = join(TEMP_DIR, inputFile);
-    try {
-      await downloadToPath(inputFile, tempInputPath);
-    } catch (err) {
-      log.error({ err, inputFile }, 'Failed to download input from R2');
-      return NextResponse.json(
-        { error: 'Failed to fetch input file' },
-        { status: 500 },
-      );
+    const alreadyStaged = await access(tempInputPath).then(() => true).catch(() => false);
+    if (!alreadyStaged) {
+      try {
+        await downloadToPath(inputFile, tempInputPath);
+      } catch (err) {
+        log.error({ err, inputFile }, 'Failed to download input from R2');
+        return NextResponse.json(
+          { error: 'Failed to fetch input file' },
+          { status: 500 },
+        );
+      }
     }
   }
 

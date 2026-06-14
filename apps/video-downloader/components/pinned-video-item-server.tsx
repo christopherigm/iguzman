@@ -34,11 +34,15 @@ async function uploadOpfsFile(
   file: File,
   ext: string,
   onProgress: (pct: number) => void,
+  stageTmp = false,
 ): Promise<string> {
   if (file.size <= MULTIPART_THRESHOLD) {
+    const endpoint = stageTmp
+      ? `/api/media?ext=${encodeURIComponent(ext)}&tmp=1`
+      : `/api/media?ext=${encodeURIComponent(ext)}`;
     return new Promise<string>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', `/api/media?ext=${encodeURIComponent(ext)}`);
+      xhr.open('POST', endpoint);
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable)
           onProgress(Math.round((e.loaded / e.total) * 100));
@@ -332,7 +336,7 @@ export function PinnedVideoItemServer({
           const opfsFile = await readFromOPFS(video.opfsKey);
           const ext = video.opfsKey.split('.').pop() ?? 'mp4';
           setOpfsUploadProgress(0);
-          const uploadedFile = await uploadOpfsFile(opfsFile, ext, setOpfsUploadProgress);
+          const uploadedFile = await uploadOpfsFile(opfsFile, ext, setOpfsUploadProgress, true);
           if (staleServerFile) {
             fetch(`/api/media/${staleServerFile}`, { method: 'DELETE' }).catch(() => {});
           }
@@ -626,6 +630,7 @@ export function PinnedVideoItemServer({
           opfsFile,
           ext,
           setOpfsUploadProgress,
+          true,
         );
         if (staleServerFile) {
           fetch(`/api/media/${staleServerFile}`, { method: 'DELETE' }).catch(
