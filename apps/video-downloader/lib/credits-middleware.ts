@@ -1,4 +1,4 @@
-import { deductCredits, getCreditKey } from '@/lib/credits-db';
+import { addCredits, deductCredits, getCreditKey } from '@/lib/credits-db';
 
 export type CreditsError =
   | 'NO_CREDITS_KEY'
@@ -36,6 +36,16 @@ export async function requireCredits(
   }
 
   return { ok: true, remaining };
+}
+
+/**
+ * Refund `amount` credits to a key after an operation that was charged
+ * up-front fails (transient download/processing/diarization errors, timeouts).
+ * Best-effort: a failed refund is logged by the caller but never throws.
+ */
+export async function refundCredits(key: string, amount: number): Promise<void> {
+  if (amount <= 0) return;
+  await addCredits(key, amount);
 }
 
 export async function getBalance(key: string): Promise<number | null> {

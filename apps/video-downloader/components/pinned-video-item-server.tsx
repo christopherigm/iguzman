@@ -655,32 +655,19 @@ export function PinnedVideoItemServer({
 
     onUpdate(video.uuid, { status: 'diarizing', error: null });
 
-    try {
-      const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
-      const res = await fetchWithRetry('/api/diarize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
-        },
-        body: JSON.stringify({ file: serverFile, duration: video.duration }),
-      });
-
-      if (!res.ok) {
-        const errData = (await res.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        throw new Error(errData.error ?? `Server error ${res.status}`);
+    // Persists the diarization SRT (returned via the polled task) into OPFS
+    // and cleans up the temporary server upload.
+    const finishDiarize = async (captionsFileName: string | null) => {
+      if (!captionsFileName) {
+        onUpdate(video.uuid, {
+          status: 'error',
+          error: t('errorDiarizeFailed'),
+          serverTaskId: null,
+        });
+        return;
       }
 
-      const data = (await res.json()) as {
-        captionsFile: string;
-        creditsRemaining?: number;
-      };
-      if (data.creditsRemaining !== undefined)
-        setCreditsBalance(data.creditsRemaining);
-
-      const captionsUrl = `/api/media/${data.captionsFile}`;
+      const captionsUrl = `/api/media/${captionsFileName}`;
       let opfsCaptionsKey: string | null = null;
 
       // Store SRT in OPFS and clean up the temp server upload
@@ -689,7 +676,7 @@ export function PinnedVideoItemServer({
         try {
           const srtText = await fetch(captionsUrl).then((r) => r.text());
           const srtBlob = new Blob([srtText], { type: 'text/plain' });
-          opfsCaptionsKey = `captions_${data.captionsFile}`;
+          opfsCaptionsKey = `captions_${captionsFileName}`;
           await writeToOPFS(opfsCaptionsKey, srtBlob);
         } catch (err) {
           console.error('Failed to save captions to OPFS:', err);
@@ -707,24 +694,81 @@ export function PinnedVideoItemServer({
         status: 'done',
         captionsFile: captionsUrl,
         ...(opfsCaptionsKey ? { opfsCaptionsKey } : {}),
+        serverTaskId: null,
       });
       onComplete(video.uuid);
+    };
+
+    // Kick off the background diarization job and grab the task id to poll.
+    let diarizeTaskId: string;
+    try {
+      const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
+      const res = await fetchWithRetry('/api/diarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
+        },
+        body: JSON.stringify({
+          file: serverFile,
+          duration: video.duration,
+          taskId: video.taskId ?? '',
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(errData.error ?? `Server error ${res.status}`);
+      }
+
+      const data = (await res.json()) as {
+        taskId: string;
+        creditsRemaining?: number;
+      };
+      if (data.creditsRemaining !== undefined)
+        setCreditsBalance(data.creditsRemaining);
+      diarizeTaskId = data.taskId;
+      onUpdate(video.uuid, { serverTaskId: diarizeTaskId });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       onUpdate(video.uuid, {
         status: 'error',
         error: `${t('errorDiarizeFailed')}: ${detail}`,
       });
+      return;
     }
+
+    // Diarization now runs server-side in the background; poll the task until
+    // it resolves instead of holding a single long-lived request open.
+    startPolling({
+      taskId: diarizeTaskId,
+      onUpdate: (task) => {
+        if (task.status === 'diarizing') {
+          onUpdate(video.uuid, { status: 'diarizing', error: null });
+        } else if (task.status === 'done') {
+          void finishDiarize(task.captionsFile ?? null);
+        } else if (task.status === 'error') {
+          onUpdate(video.uuid, {
+            status: 'error',
+            error: `${t('errorDiarizeFailed')}: ${task.error?.message ?? 'Diarization failed'}`,
+            serverTaskId: null,
+          });
+        }
+      },
+    });
   }, [
     video.uuid,
     video.justAudio,
     video.duration,
     video.file,
+    video.taskId,
     video.opfsEnabled,
     video.opfsStored,
     video.opfsKey,
     video.serverFileDeleted,
+    startPolling,
     onUpdate,
     onComplete,
     t,

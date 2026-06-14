@@ -36,6 +36,17 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-body-size: '1g'
     nginx.ingress.kubernetes.io/proxy-read-timeout: '600'
     nginx.ingress.kubernetes.io/proxy-send-timeout: '600'
+    # ── Sticky sessions ──────────────────────────────────────────────
+    # Pin each browser to one pod via a cookie. This makes the ?tmp=1
+    # upload optimisation reliable: a file staged in a pod's /tmp is then
+    # processed (server-processing / diarize) by the *same* pod, so it is
+    # found locally without a wasted R2 round-trip. Without affinity the
+    # follow-up request could land on a different pod whose /tmp is empty.
+    nginx.ingress.kubernetes.io/affinity: 'cookie'
+    nginx.ingress.kubernetes.io/affinity-mode: 'persistent'
+    nginx.ingress.kubernetes.io/session-cookie-name: 'vd-route'
+    nginx.ingress.kubernetes.io/session-cookie-max-age: '86400'
+    nginx.ingress.kubernetes.io/session-cookie-path: '/'
   hosts:
     - host: media2go.app
       paths:
@@ -56,6 +67,12 @@ env:
   NODE_ENV: 'production'
   NEXT_TELEMETRY_DISABLED: '1'
   NEXT_PUBLIC_BASE_URL: 'https://media2go.app'
+  # Reach the diarization service over the cluster-internal Service DNS
+  # instead of the public ingress. The ClusterIP is a private (10.x) address,
+  # which is excluded from the WireGuard sidecar's AllowedIPs, so this traffic
+  # routes via Calico/eth0 and bypasses the VPN tunnel (the public URL fails to
+  # connect through the tunnel). Auth is still enforced via DIARIZATION_API_KEY.
+  DIARIZATION_URL: 'http://diarization.diarization.svc.cluster.local'
 
 # Sensitive values - reference existing Kubernetes Secrets.
 # Create the secret first:
@@ -68,6 +85,9 @@ envFromSecret:
   - name: GROQ_API_KEY
     secretName: video-downloader-secrets
     secretKey: GROQ_API_KEY
+  - name: DIARIZATION_API_KEY
+    secretName: video-downloader-secrets
+    secretKey: DIARIZATION_API_KEY
   - name: SCRAPECREATORS_API_KEY
     secretName: video-downloader-secrets
     secretKey: SCRAPECREATORS_API_KEY

@@ -84,19 +84,13 @@ export type TaskStatus =
   | 'converting'
   | 'burning'
   | 'translating'
+  | 'diarizing'
   | 'uploading'
   | 'done'
   | 'error';
 
 /** Client-side statuses extend task statuses with local processing states. */
-export type VideoStatus =
-  | TaskStatus
-  | 'queued'
-  | 'processing'
-  | 'converting'
-  | 'burning'
-  | 'translating'
-  | 'diarizing';
+export type VideoStatus = TaskStatus | 'queued';
 
 /* ── Burn captions config ──────────────────────────── */
 
