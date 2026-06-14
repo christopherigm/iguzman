@@ -528,17 +528,17 @@ main() {
   done < "${app_dir}/Dockerfile"
 
   local build_args_display=""
-  for bname in "${build_arg_names[@]}"; do
+  for bname in "${build_arg_names[@]+"${build_arg_names[@]}"}"; do
     build_args_display+=" --build-arg ${bname}=***"
   done
-  for sname in "${secret_names[@]}"; do
+  for sname in "${secret_names[@]+"${secret_names[@]}"}"; do
     build_args_display+=" --secret id=${sname},env=***"
   done
 
   printf "  %s docker build%s -f apps/%s/Dockerfile -t %s:latest .\n\n" \
     "$(clr_bold_yellow '→')" "${build_args_display}" "${app_name}" "${app_name}"
 
-  if ! (cd "${repo_root}" && docker build "${build_args[@]}" "${secret_flags[@]}" -f "apps/${app_name}/Dockerfile" -t "${app_name}:latest" .); then
+  if ! (cd "${repo_root}" && docker build "${build_args[@]+"${build_args[@]}"}" "${secret_flags[@]+"${secret_flags[@]}"}" -f "apps/${app_name}/Dockerfile" -t "${app_name}:latest" .); then
     printf "\n  %s %s\n\n" "$(clr_bold_red '✗')" "${DOCKER_BUILD_FAILED}"; exit 1
   fi
 

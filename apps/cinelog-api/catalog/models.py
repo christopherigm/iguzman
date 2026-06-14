@@ -83,6 +83,8 @@ class ScanQueue(Common):
     extracted_director = models.CharField(max_length=255, blank=True)
     extracted_year = models.PositiveSmallIntegerField(null=True, blank=True)
     extracted_cast = models.JSONField(default=list, blank=True)
+    extracted_genres = models.JSONField(default=list, blank=True)
+    extracted_tmdb_id = models.CharField(max_length=20, blank=True)
     extracted_cover_url = models.URLField(max_length=1000, blank=True)
     extracted_cover_image = models.ImageField(upload_to=_scan_cover_path, null=True, blank=True)
     retry_count = models.PositiveSmallIntegerField(default=0)

@@ -14,6 +14,7 @@ from .serializers import (
     ScanQueueSerializer,
 )
 from .services.lookup import lookup_barcode
+from .tasks import resolve_scan_queue_entry
 
 
 class MovieListView(ListCreateAPIView):
@@ -121,8 +122,9 @@ class ScanView(APIView):
                 status=status.HTTP_201_CREATED,
             )
 
-        # Slow path — hand off to queue (Celery task wired in Phase 4)
+        # Slow path — hand off to the async resolution queue.
         entry = ScanQueue.objects.create(barcode=barcode)
+        resolve_scan_queue_entry.delay(entry.id)
         return Response(
             {'status': 'queued', 'queue_id': entry.id},
             status=status.HTTP_202_ACCEPTED,

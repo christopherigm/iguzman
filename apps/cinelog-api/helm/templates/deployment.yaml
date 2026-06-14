@@ -10,10 +10,12 @@ spec:
   selector:
     matchLabels:
       {{- include "cinelog-api.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
   template:
     metadata:
       labels:
         {{- include "cinelog-api.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

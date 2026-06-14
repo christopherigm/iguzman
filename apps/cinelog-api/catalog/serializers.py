@@ -97,7 +97,7 @@ class ScanQueueSerializer(serializers.ModelSerializer):
         model = ScanQueue
         fields = [
             'id', 'barcode', 'status', 'extracted_title', 'extracted_director',
-            'extracted_year', 'extracted_cast', 'extracted_cover_url',
-            'retry_count', 'error_message', 'created', 'modified',
+            'extracted_year', 'extracted_cast', 'extracted_genres', 'extracted_tmdb_id',
+            'extracted_cover_url', 'retry_count', 'error_message', 'created', 'modified',
         ]
         read_only_fields = ['status', 'retry_count', 'error_message', 'created', 'modified']

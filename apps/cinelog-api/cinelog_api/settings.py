@@ -236,6 +236,16 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
 TMDB_API_TOKEN = os.environ.get('TMDB_API_TOKEN', '')
 
+# ── Scraper microservice (Fastify + Playwright) ─────────────────────────────────
+SCRAPER_BASE_URL = os.environ.get('SCRAPER_BASE_URL', 'https://scraper.iguzman.com.mx')
+SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
+
+# ── Hosted LLM (Groq primary → OpenRouter rate-limit fallback) ──────────────────
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'openai/gpt-oss-120b')
+
 # ── Celery ────────────────────────────────────────────────────────────────────
 _celery_broker = os.environ.get('CELERY_BROKER_URL', _REDIS_URL or 'redis://localhost:6379/0')
 CELERY_BROKER_URL = _celery_broker
@@ -246,6 +256,11 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 300  # 5 min hard limit per task
+
+# Local dev: run tasks synchronously in-process (no broker/worker needed).
+# Lets the slow-path scan resolution be exercised without Redis + a Celery worker.
+CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'False') == 'True'
+CELERY_TASK_EAGER_PROPAGATES = True
 
 _EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 
