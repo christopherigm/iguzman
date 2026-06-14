@@ -46,9 +46,13 @@ spec:
           {{- if or .Values.env .Values.envFromSecret }}
           env:
             {{- range $key, $value := .Values.env }}
+            {{- if $value }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- end }}
+            - name: MONGODB_URL
+              value: {{ if .Values.env.MONGODB_URL }}{{ .Values.env.MONGODB_URL | quote }}{{ else }}{{ printf "mongodb://%s-mongodb:27017" (include "diarization.fullname" .) | quote }}{{ end }}
             {{- range .Values.envFromSecret }}
             {{- if not (and .onlyWhenNotBaked $.Values.modelsBaked) }}
             - name: {{ .name }}

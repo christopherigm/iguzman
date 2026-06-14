@@ -190,9 +190,9 @@
     "diarizationHealthSection": "GET /health",
     "diarizationHealthDescription": "Health check. Returns '{ status: \"ok\" }'. No authentication required.",
     "diarizationDiarizeSection": "POST /diarize",
-    "diarizationDiarizeDescription": "Upload an audio or video file and receive a list of speaker segments with start/end timestamps. Optionally constrain the speaker count for better accuracy.",
+    "diarizationDiarizeDescription": "Upload an audio or video file to start a diarization job. Returns a job ID immediately — poll GET /jobs/:job_id to retrieve the result when done.",
     "diarizationTranscribeSection": "POST /transcribe",
-    "diarizationTranscribeDescription": "Upload an audio or video file and receive a speaker-attributed transcript. Runs diarization and transcription in parallel. Each segment contains speaker label, timestamps, and transcribed text.",
+    "diarizationTranscribeDescription": "Upload an audio or video file to start a speaker-attributed transcription job. Returns a job ID immediately — poll GET /jobs/:job_id to retrieve the result when done.",
     "diarizationApiKeyLabel": "X-API-Key",
     "diarizationRunButton": "Run",
     "diarizationChooseFileBtn": "Choose file",
@@ -205,9 +205,13 @@
     "diarizationExampleResponse": "Example response",
     "diarizationResultLabel": "Result (SRT)",
     "diarizationDetectedLanguage": "Detected language: {lang}",
+    "diarizationJobsSection": "GET /jobs/:job_id",
+    "diarizationJobsDescription": "Poll for the result of a previously submitted diarize or transcribe job. Returns the current status (queued, running, done, error), and the result or error message when finished.",
     "diarizationErrorNetwork": "Network error — could not reach the diarization service.",
     "diarizationErrorUnauthorized": "Unauthorized — check your API key.",
-    "diarizationErrorServer": "Request failed with status {status}."
+    "diarizationErrorServer": "Request failed with status {status}.",
+    "diarizationErrorJobFailed": "Job failed: {error}",
+    "diarizationErrorTimeout": "Polling timed out — please try again."
   },
   "Navbar": { "home": "Home", "account": "Account", "signOut": "Sign out" },
   "Footer": {

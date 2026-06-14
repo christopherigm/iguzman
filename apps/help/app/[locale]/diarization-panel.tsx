@@ -23,12 +23,7 @@ const DIARIZE_CURL =
   `  -F "num_speakers=2"`;
 
 const DIARIZE_RESPONSE = JSON.stringify(
-  {
-    segments: [
-      { speaker: 'SPEAKER_00', start: 0.5, end: 3.2 },
-      { speaker: 'SPEAKER_01', start: 3.5, end: 6.8 },
-    ],
-  },
+  { job_id: 'a1b2c3d4-e5f6-...', status: 'queued' },
   null,
   2,
 );
@@ -41,12 +36,26 @@ const TRANSCRIBE_CURL =
   `  -F "num_speakers=2"`;
 
 const TRANSCRIBE_RESPONSE = JSON.stringify(
+  { job_id: 'a1b2c3d4-e5f6-...', status: 'queued' },
+  null,
+  2,
+);
+
+const JOBS_CURL =
+  `curl ${DIARIZATION_BASE}/jobs/JOB_ID \\\n` +
+  `  -H "X-API-Key: YOUR_API_KEY"`;
+
+const JOBS_RESPONSE_DONE = JSON.stringify(
   {
-    segments: [
-      { speaker: 'SPEAKER_00', start: 0.5, end: 3.2, text: 'Hello, how are you?' },
-      { speaker: 'SPEAKER_01', start: 3.5, end: 6.8, text: 'I am doing well, thanks.' },
-    ],
-    language: 'en',
+    job_id: 'a1b2c3d4-e5f6-...',
+    status: 'done',
+    result: {
+      segments: [
+        { speaker: 'SPEAKER_00', start: 0.5, end: 3.2 },
+        { speaker: 'SPEAKER_01', start: 3.5, end: 6.8 },
+      ],
+    },
+    error: null,
   },
   null,
   2,
@@ -160,8 +169,38 @@ export function DiarizationPanel() {
         setDiarizeError({ msg: t('diarizationErrorServer', { status: res.status }), id: Date.now() });
         return;
       }
-      const data = (await res.json()) as { segments: Segment[] };
-      setDiarizeResult(toSrt(data.segments));
+      const { job_id } = (await res.json()) as { job_id: string };
+
+      let segments: Segment[] | null = null;
+      for (let i = 0; i < 200; i++) {
+        await new Promise<void>((r) => setTimeout(r, 3000));
+        const pollRes = await fetch(`${DIARIZATION_BASE}/jobs/${job_id}`, {
+          headers: { 'X-API-Key': apiKey },
+        });
+        if (pollRes.status === 401) {
+          setDiarizeError({ msg: t('diarizationErrorUnauthorized'), id: Date.now() });
+          return;
+        }
+        if (!pollRes.ok) {
+          setDiarizeError({ msg: t('diarizationErrorServer', { status: pollRes.status }), id: Date.now() });
+          return;
+        }
+        const job = (await pollRes.json()) as {
+          status: string;
+          result: { segments: Segment[] } | null;
+          error: string | null;
+        };
+        if (job.status === 'done') { segments = job.result?.segments ?? []; break; }
+        if (job.status === 'error') {
+          setDiarizeError({ msg: t('diarizationErrorJobFailed', { error: job.error ?? '' }), id: Date.now() });
+          return;
+        }
+      }
+      if (segments === null) {
+        setDiarizeError({ msg: t('diarizationErrorTimeout'), id: Date.now() });
+        return;
+      }
+      setDiarizeResult(toSrt(segments));
     } catch {
       setDiarizeError({ msg: t('diarizationErrorNetwork'), id: Date.now() });
     } finally {
@@ -195,9 +234,39 @@ export function DiarizationPanel() {
         setTranscribeError({ msg: t('diarizationErrorServer', { status: res.status }), id: Date.now() });
         return;
       }
-      const data = (await res.json()) as { segments: Segment[]; language: string | null };
-      setTranscribeResult(toSrt(data.segments));
-      setTranscribeLanguageDetected(data.language ?? null);
+      const { job_id } = (await res.json()) as { job_id: string };
+
+      let result: { segments: Segment[]; language: string | null } | null = null;
+      for (let i = 0; i < 200; i++) {
+        await new Promise<void>((r) => setTimeout(r, 3000));
+        const pollRes = await fetch(`${DIARIZATION_BASE}/jobs/${job_id}`, {
+          headers: { 'X-API-Key': apiKey },
+        });
+        if (pollRes.status === 401) {
+          setTranscribeError({ msg: t('diarizationErrorUnauthorized'), id: Date.now() });
+          return;
+        }
+        if (!pollRes.ok) {
+          setTranscribeError({ msg: t('diarizationErrorServer', { status: pollRes.status }), id: Date.now() });
+          return;
+        }
+        const job = (await pollRes.json()) as {
+          status: string;
+          result: { segments: Segment[]; language: string | null } | null;
+          error: string | null;
+        };
+        if (job.status === 'done') { result = job.result; break; }
+        if (job.status === 'error') {
+          setTranscribeError({ msg: t('diarizationErrorJobFailed', { error: job.error ?? '' }), id: Date.now() });
+          return;
+        }
+      }
+      if (result === null) {
+        setTranscribeError({ msg: t('diarizationErrorTimeout'), id: Date.now() });
+        return;
+      }
+      setTranscribeResult(toSrt(result.segments));
+      setTranscribeLanguageDetected(result.language ?? null);
     } catch {
       setTranscribeError({ msg: t('diarizationErrorNetwork'), id: Date.now() });
     } finally {
@@ -350,6 +419,14 @@ export function DiarizationPanel() {
         )}
       </EndpointPanel>
       {transcribeError && <Toast message={transcribeError.msg} variant="error" key={transcribeError.id} />}
+
+      {/* GET /jobs/:job_id */}
+      <EndpointPanel heading={t('diarizationJobsSection')} description={t('diarizationJobsDescription')}>
+        <DocLabel>{t('diarizationExampleRequest')}</DocLabel>
+        <CodeBlock language="bash" code={JOBS_CURL} />
+        <DocLabel>{t('diarizationExampleResponse')}</DocLabel>
+        <CodeBlock language="json" code={JOBS_RESPONSE_DONE} />
+      </EndpointPanel>
     </>
   );
 }

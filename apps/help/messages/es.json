@@ -190,9 +190,9 @@
     "diarizationHealthSection": "GET /health",
     "diarizationHealthDescription": "Verificación de estado. Devuelve '{ status: \"ok\" }'. No requiere autenticación.",
     "diarizationDiarizeSection": "POST /diarize",
-    "diarizationDiarizeDescription": "Sube un archivo de audio o video y recibe una lista de segmentos por hablante con marcas de tiempo de inicio y fin. Opcionalmente limita el número de hablantes para mayor precisión.",
+    "diarizationDiarizeDescription": "Sube un archivo de audio o video para iniciar un trabajo de diarización. Devuelve un ID de trabajo inmediatamente — consulta GET /jobs/:job_id para obtener el resultado.",
     "diarizationTranscribeSection": "POST /transcribe",
-    "diarizationTranscribeDescription": "Sube un archivo de audio o video y recibe una transcripción atribuida por hablante. Ejecuta diarización y transcripción en paralelo. Cada segmento contiene la etiqueta del hablante, marcas de tiempo y texto transcrito.",
+    "diarizationTranscribeDescription": "Sube un archivo de audio o video para iniciar un trabajo de transcripción atribuida por hablante. Devuelve un ID de trabajo inmediatamente — consulta GET /jobs/:job_id para obtener el resultado.",
     "diarizationApiKeyLabel": "X-API-Key",
     "diarizationRunButton": "Ejecutar",
     "diarizationChooseFileBtn": "Elegir archivo",
@@ -205,9 +205,13 @@
     "diarizationExampleResponse": "Ejemplo de respuesta",
     "diarizationResultLabel": "Resultado (SRT)",
     "diarizationDetectedLanguage": "Idioma detectado: {lang}",
+    "diarizationJobsSection": "GET /jobs/:job_id",
+    "diarizationJobsDescription": "Consulta el resultado de un trabajo previamente enviado de diarización o transcripción. Devuelve el estado actual (queued, running, done, error) y el resultado o mensaje de error cuando finaliza.",
     "diarizationErrorNetwork": "Error de red — no se pudo conectar al servicio de diarización.",
     "diarizationErrorUnauthorized": "No autorizado — verifica tu API key.",
-    "diarizationErrorServer": "La solicitud falló con estado {status}."
+    "diarizationErrorServer": "La solicitud falló con estado {status}.",
+    "diarizationErrorJobFailed": "El trabajo falló: {error}",
+    "diarizationErrorTimeout": "Se agotó el tiempo de espera — inténtalo de nuevo."
   },
   "Navbar": { "home": "Inicio", "account": "Cuenta", "signOut": "Cerrar sesión" },
   "Footer": {

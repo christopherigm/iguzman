@@ -63,6 +63,12 @@ setup_strings() {
     ALL_DONE="¡Configuración completada!"
     NS_CREATED="Namespace creado."
     NS_CREATE_FAILED="Error al crear el namespace."
+    RESTART_PROMPT="¿Reiniciar los pods para aplicar los nuevos secretos? [s/N]"
+    RESTART_YES_CHARS="sS"
+    RESTARTING_PODS="Reiniciando pods en el namespace"
+    NO_WORKLOADS="No se encontraron deployments ni statefulsets en el namespace."
+    RESTART_DONE="Reiniciado"
+    RESTART_FAILED="Error al reiniciar"
   else
     WELCOME="Kubernetes Secrets Setup"
     SUBTITLE="Creates or updates k8s secrets from an app's env.example."
@@ -90,6 +96,12 @@ setup_strings() {
     ALL_DONE="Setup complete!"
     NS_CREATED="Namespace created."
     NS_CREATE_FAILED="Failed to create namespace."
+    RESTART_PROMPT="Restart pods to apply the new secrets? [y/N]"
+    RESTART_YES_CHARS="yY"
+    RESTARTING_PODS="Restarting pods in namespace"
+    NO_WORKLOADS="No deployments or statefulsets found in namespace."
+    RESTART_DONE="Restarted"
+    RESTART_FAILED="Failed to restart"
   fi
 }
 
@@ -351,6 +363,40 @@ parse_env_example() {
   done < "${file}"
 }
 
+# ── Restart workloads ─────────────────────────────────────────────────────────
+
+restart_workloads() {
+  local ns="$1"
+  printf "\n  %s \"%s\"...\n" "$(clr_bold_yellow '→')" "${RESTARTING_PODS} ${ns}"
+
+  local deploys statefulsets found=0
+  deploys="$(kubectl get deployments -n "${ns}" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)" || deploys=""
+  statefulsets="$(kubectl get statefulsets -n "${ns}" -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)" || statefulsets=""
+
+  if [[ -z "${deploys}" && -z "${statefulsets}" ]]; then
+    printf "  %s\n" "$(clr_dim "${NO_WORKLOADS}")"
+    return
+  fi
+
+  for name in ${deploys}; do
+    found=1
+    if kubectl rollout restart deployment/"${name}" -n "${ns}" &>/dev/null; then
+      printf "  %s deployment/%s — %s\n" "$(clr_bold_green '✓')" "${name}" "${RESTART_DONE}"
+    else
+      printf "  %s deployment/%s — %s\n" "$(clr_bold_red '✗')" "${name}" "${RESTART_FAILED}"
+    fi
+  done
+
+  for name in ${statefulsets}; do
+    found=1
+    if kubectl rollout restart statefulset/"${name}" -n "${ns}" &>/dev/null; then
+      printf "  %s statefulset/%s — %s\n" "$(clr_bold_green '✓')" "${name}" "${RESTART_DONE}"
+    else
+      printf "  %s statefulset/%s — %s\n" "$(clr_bold_red '✗')" "${name}" "${RESTART_FAILED}"
+    fi
+  done
+}
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 main() {
@@ -503,6 +549,16 @@ main() {
       local val="${item#*=}"
       printf "    %s %-40s %s\n" "$(clr_cyan '•')" "$(clr_bold "${key}")" "${val}"
     done
+  fi
+
+  # ── Restart prompt ──────────────────────────────────────────────────────────
+
+  echo ""
+  printf "  %s (N): " "${RESTART_PROMPT}"
+  local restart_input; read -r restart_input || true
+  local restart_char="${restart_input:0:1}"
+  if [[ "${RESTART_YES_CHARS}" == *"${restart_char}"* && -n "${restart_char}" ]]; then
+    restart_workloads "${NAMESPACE}"
   fi
 
   echo ""

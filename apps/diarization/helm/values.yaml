@@ -52,6 +52,9 @@ env:
   PORT: '8000'
   LOG_LEVEL: 'info'
   WHISPER_MODEL_SIZE: 'medium'
+  # Injected dynamically in deployment.yaml using the release fullname.
+  # Override here only if you point to an external MongoDB instance.
+  MONGODB_URL: ''
 
 # Sensitive values - reference existing Kubernetes Secrets.
 # Create the secret first (see README), then these are injected at runtime.
@@ -110,6 +113,22 @@ resources:
   limits:
     cpu: 4000m
     memory: 8Gi
+
+# ─── MongoDB (job store) ─────────────────────────────────────────────────────
+# Standalone MongoDB deployment in the same namespace. Shared across all
+# diarization replicas. Jobs are TTL-expired after 1 hour via a MongoDB index.
+mongodb:
+  image: mongo:7
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  storage:
+    size: 1Gi
+    storageClass: ''   # leave empty to use the cluster default StorageClass
 
 # ─── Model cache (PersistentVolume) ──────────────────────────────────────────
 # When enabled, HuggingFace model files are stored on a PVC so they survive

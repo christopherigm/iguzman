@@ -190,9 +190,9 @@
     "diarizationHealthSection": "GET /health",
     "diarizationHealthDescription": "Statusprüfung. Gibt '{ status: \"ok\" }' zurück. Keine Authentifizierung erforderlich.",
     "diarizationDiarizeSection": "POST /diarize",
-    "diarizationDiarizeDescription": "Lade eine Audio- oder Videodatei hoch und erhalte eine Liste von Sprecher­segmenten mit Start- und End­zeitstempeln. Optional kann die Sprecher­anzahl eingeschränkt werden.",
+    "diarizationDiarizeDescription": "Lade eine Audio- oder Videodatei hoch, um einen Diarisierungsauftrag zu starten. Gibt sofort eine Job-ID zurück — frage GET /jobs/:job_id ab, um das Ergebnis abzurufen.",
     "diarizationTranscribeSection": "POST /transcribe",
-    "diarizationTranscribeDescription": "Lade eine Audio- oder Videodatei hoch und erhalte eine sprecher­zugeordnete Transkription. Diarisierung und Transkription laufen parallel. Jedes Segment enthält Sprecher­label, Zeitstempel und transkribierten Text.",
+    "diarizationTranscribeDescription": "Lade eine Audio- oder Videodatei hoch, um einen sprecher­zugeordneten Transkriptionsauftrag zu starten. Gibt sofort eine Job-ID zurück — frage GET /jobs/:job_id ab, um das Ergebnis abzurufen.",
     "diarizationApiKeyLabel": "X-API-Key",
     "diarizationRunButton": "Ausführen",
     "diarizationChooseFileBtn": "Datei wählen",
@@ -205,9 +205,13 @@
     "diarizationExampleResponse": "Beispielantwort",
     "diarizationResultLabel": "Ergebnis (SRT)",
     "diarizationDetectedLanguage": "Erkannte Sprache: {lang}",
+    "diarizationJobsSection": "GET /jobs/:job_id",
+    "diarizationJobsDescription": "Frage das Ergebnis eines zuvor eingereichten Diarisierungs- oder Transkriptionsauftrags ab. Gibt den aktuellen Status (queued, running, done, error) sowie das Ergebnis oder die Fehlermeldung zurück.",
     "diarizationErrorNetwork": "Netzwerkfehler — der Diarisierungs­dienst ist nicht erreichbar.",
     "diarizationErrorUnauthorized": "Nicht autorisiert — überprüfe deinen API-Schlüssel.",
-    "diarizationErrorServer": "Anfrage fehlgeschlagen mit Status {status}."
+    "diarizationErrorServer": "Anfrage fehlgeschlagen mit Status {status}.",
+    "diarizationErrorJobFailed": "Auftrag fehlgeschlagen: {error}",
+    "diarizationErrorTimeout": "Zeitüberschreitung beim Abfragen — bitte erneut versuchen."
   },
   "Navbar": { "home": "Startseite", "account": "Konto", "signOut": "Abmelden" },
   "Footer": {

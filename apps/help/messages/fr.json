@@ -190,9 +190,9 @@
     "diarizationHealthSection": "GET /health",
     "diarizationHealthDescription": "Vérification d'état. Renvoie '{ status: \"ok\" }'. Aucune authentification requise.",
     "diarizationDiarizeSection": "POST /diarize",
-    "diarizationDiarizeDescription": "Téléversez un fichier audio ou vidéo et recevez une liste de segments par locuteur avec horodatages de début et de fin. Limitez optionnellement le nombre de locuteurs pour plus de précision.",
+    "diarizationDiarizeDescription": "Téléversez un fichier audio ou vidéo pour démarrer un travail de diarisation. Renvoie immédiatement un identifiant de travail — interrogez GET /jobs/:job_id pour récupérer le résultat.",
     "diarizationTranscribeSection": "POST /transcribe",
-    "diarizationTranscribeDescription": "Téléversez un fichier audio ou vidéo et recevez une transcription attribuée par locuteur. La diarisation et la transcription s'exécutent en parallèle. Chaque segment contient le label du locuteur, les horodatages et le texte transcrit.",
+    "diarizationTranscribeDescription": "Téléversez un fichier audio ou vidéo pour démarrer un travail de transcription attribuée par locuteur. Renvoie immédiatement un identifiant de travail — interrogez GET /jobs/:job_id pour récupérer le résultat.",
     "diarizationApiKeyLabel": "X-API-Key",
     "diarizationRunButton": "Exécuter",
     "diarizationChooseFileBtn": "Choisir un fichier",
@@ -205,9 +205,13 @@
     "diarizationExampleResponse": "Exemple de réponse",
     "diarizationResultLabel": "Résultat (SRT)",
     "diarizationDetectedLanguage": "Langue détectée : {lang}",
+    "diarizationJobsSection": "GET /jobs/:job_id",
+    "diarizationJobsDescription": "Interrogez le résultat d'un travail de diarisation ou transcription précédemment soumis. Renvoie l'état actuel (queued, running, done, error) et le résultat ou message d'erreur à la fin.",
     "diarizationErrorNetwork": "Erreur réseau — impossible de joindre le service de diarisation.",
     "diarizationErrorUnauthorized": "Non autorisé — vérifiez votre clé API.",
-    "diarizationErrorServer": "La requête a échoué avec le statut {status}."
+    "diarizationErrorServer": "La requête a échoué avec le statut {status}.",
+    "diarizationErrorJobFailed": "Le travail a échoué : {error}",
+    "diarizationErrorTimeout": "Délai d'interrogation dépassé — veuillez réessayer."
   },
   "Navbar": { "home": "Accueil", "account": "Mon Compte", "signOut": "Se déconnecter" },
   "Footer": {

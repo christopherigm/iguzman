@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import tempfile
@@ -8,9 +9,8 @@ from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadF
 from fastapi.middleware.cors import CORSMiddleware
 
 import models
-from diarize import run_diarization
-from preprocess import preprocess_audio
-from transcribe import run_transcription_with_diarization
+from jobs import create_job, ensure_indexes, get_job
+from worker import enqueue, run_worker
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info").upper()
@@ -20,26 +20,41 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+class _NoHealthFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "GET /health" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(_NoHealthFilter())
+
 # ── Config ────────────────────────────────────────────────────────────────────
 API_KEY = os.getenv("API_KEY", "")
 MAX_FILE_BYTES = 100 * 1024 * 1024  # 100 MB
 SUPPORTED_EXTENSIONS = {".wav", ".mp3", ".mp4", ".m4a", ".flac", ".ogg", ".webm"}
 
 
-# ── Lifespan (load models once at startup) ────────────────────────────────────
+# ── Lifespan ──────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await ensure_indexes()
     logger.info("Loading models - this may take several minutes on first run…")
     models.load_models()
     logger.info("All models ready.")
+    worker_task = asyncio.create_task(run_worker())
     yield
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Diarization Service",
     description="Speaker diarization and transcription via pyannote.audio + faster-whisper",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -75,18 +90,52 @@ async def save_upload(file: UploadFile) -> str:
     return tmp.name
 
 
+def _job_response(job: dict) -> dict:
+    """Strip internal payload before returning job state to the client."""
+    return {
+        "job_id": job["id"],
+        "status": job["status"],
+        "result": job.get("result"),
+        "error": job.get("error"),
+        "created_at": job.get("created_at"),
+    }
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok"}
 
 
+@app.get(
+    "/jobs/{job_id}",
+    tags=["jobs"],
+    dependencies=[Depends(verify_api_key)],
+    summary="Poll job status",
+    response_description="Current job status, and result/error when finished",
+)
+async def get_job_status(job_id: str):
+    """
+    Poll for the result of a previously submitted `/diarize` or `/transcribe` job.
+
+    - **queued** — waiting to be picked up
+    - **running** — currently processing
+    - **done** — `result` field contains the output
+    - **error** — `error` field contains the failure message
+    """
+    job = await get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found (may have expired)")
+    return _job_response(job)
+
+
 @app.post(
     "/diarize",
     tags=["diarization"],
     dependencies=[Depends(verify_api_key)],
-    summary="Speaker diarization (no transcription)",
-    response_description="List of speaker segments with start/end timestamps",
+    summary="Submit speaker diarization job",
+    response_description="Job ID to poll via GET /jobs/{job_id}",
+    status_code=202,
 )
 async def diarize(
     file: UploadFile = File(..., description="Audio file (wav, mp3, mp4, m4a, flac, ogg, webm)"),
@@ -95,34 +144,29 @@ async def diarize(
     max_speakers: int | None = Form(default=None, description="Maximum expected number of speakers"),
 ):
     """
-    Upload an audio file and receive a list of speaker segments.
+    Upload an audio file to start diarization. Returns a job ID immediately.
 
-    Each segment contains `speaker` (e.g. `SPEAKER_00`), `start`, and `end` (seconds).
-    Optionally constrain the number of speakers for better accuracy.
+    Poll `GET /jobs/{job_id}` to retrieve the result. When done, `result.segments`
+    contains a list of `{speaker, start, end}` dicts.
     """
     audio_path = await save_upload(file)
-    wav_path: str | None = None
-    try:
-        wav_path = preprocess_audio(audio_path)
-        segments = run_diarization(
-            wav_path,
-            num_speakers=num_speakers,
-            min_speakers=min_speakers,
-            max_speakers=max_speakers,
-        )
-        return {"segments": segments}
-    finally:
-        Path(audio_path).unlink(missing_ok=True)
-        if wav_path:
-            Path(wav_path).unlink(missing_ok=True)
+    job_id = await create_job("diarize", {
+        "audio_path": audio_path,
+        "num_speakers": num_speakers,
+        "min_speakers": min_speakers,
+        "max_speakers": max_speakers,
+    })
+    await enqueue(job_id)
+    return {"job_id": job_id, "status": "queued"}
 
 
 @app.post(
     "/transcribe",
     tags=["transcription"],
     dependencies=[Depends(verify_api_key)],
-    summary="Speaker-attributed transcription",
-    response_description="List of segments with speaker, timestamps, and transcribed text",
+    summary="Submit speaker-attributed transcription job",
+    response_description="Job ID to poll via GET /jobs/{job_id}",
+    status_code=202,
 )
 async def transcribe(
     file: UploadFile = File(..., description="Audio file (wav, mp3, mp4, m4a, flac, ogg, webm)"),
@@ -132,25 +176,19 @@ async def transcribe(
     max_speakers: int | None = Form(default=None, description="Maximum expected number of speakers"),
 ):
     """
-    Upload an audio file and receive a speaker-attributed transcript.
+    Upload an audio file to start speaker-attributed transcription. Returns a job ID immediately.
 
-    Runs pyannote diarization and faster-whisper transcription in parallel, then merges
-    the results by temporal overlap.  Each segment contains `speaker`, `start`, `end`,
-    and `text`.
+    Poll `GET /jobs/{job_id}` to retrieve the result. When done, `result.segments`
+    contains a list of `{speaker, start, end, text}` dicts, and `result.language`
+    contains the detected language code.
     """
     audio_path = await save_upload(file)
-    wav_path: str | None = None
-    try:
-        wav_path = preprocess_audio(audio_path)
-        result = run_transcription_with_diarization(
-            wav_path,
-            language=language,
-            num_speakers=num_speakers,
-            min_speakers=min_speakers,
-            max_speakers=max_speakers,
-        )
-        return {"segments": result, "language": result[0].get("language") if result else None}
-    finally:
-        Path(audio_path).unlink(missing_ok=True)
-        if wav_path:
-            Path(wav_path).unlink(missing_ok=True)
+    job_id = await create_job("transcribe", {
+        "audio_path": audio_path,
+        "language": language,
+        "num_speakers": num_speakers,
+        "min_speakers": min_speakers,
+        "max_speakers": max_speakers,
+    })
+    await enqueue(job_id)
+    return {"job_id": job_id, "status": "queued"}

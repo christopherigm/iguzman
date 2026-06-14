@@ -113,12 +113,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = (await diarizeRes.json()) as {
-      segments: DiarizationSegment[];
-      language: string | null;
-    };
+    const { job_id } = (await diarizeRes.json()) as { job_id: string };
+    log.info({ inputFile, job_id }, 'Diarization job queued, polling for result');
 
-    const srtContent = diarizationToSrt(data.segments);
+    const POLL_MS = 3000;
+    const MAX_POLLS = 200; // ~10 min ceiling
+    let pollResult: { segments: DiarizationSegment[] } | null = null;
+
+    for (let attempt = 0; attempt < MAX_POLLS; attempt++) {
+      await new Promise<void>((resolve) => setTimeout(resolve, POLL_MS));
+
+      const pollRes = await fetch(`${DIARIZATION_URL}/jobs/${job_id}`, {
+        headers: DIARIZATION_API_KEY
+          ? { 'X-API-Key': DIARIZATION_API_KEY }
+          : {},
+      });
+      if (!pollRes.ok) throw new Error(`Job poll failed: ${pollRes.status}`);
+
+      const job = (await pollRes.json()) as {
+        status: 'queued' | 'running' | 'done' | 'error';
+        result: { segments: DiarizationSegment[] } | null;
+        error: string | null;
+      };
+
+      if (job.status === 'done') { pollResult = job.result; break; }
+      if (job.status === 'error') throw new Error(job.error ?? 'Diarization job failed');
+    }
+
+    if (!pollResult) throw new Error('Diarization timed out');
+
+    const srtContent = diarizationToSrt(pollResult.segments);
 
     /* ── Save SRT and upload to R2 ──────────────────────────────────── */
     await writeFile(srtPath, srtContent, 'utf-8');
@@ -129,7 +153,7 @@ export async function POST(request: NextRequest) {
     }
 
     log.info(
-      { inputFile, srtFileName, segments: data.segments.length },
+      { inputFile, srtFileName, segments: pollResult.segments.length },
       'Diarization complete',
     );
 
