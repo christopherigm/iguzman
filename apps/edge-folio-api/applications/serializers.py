@@ -16,7 +16,7 @@ class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = (
-            'id', 'name', 'normalized_name', 'status', 'is_refreshing',
+            'id', 'name', 'normalized_name', 'status', 'intel_score', 'is_refreshing',
             'description', 'intel', 'analysis', 'image_url', 'last_refreshed',
         )
         read_only_fields = fields

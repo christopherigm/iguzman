@@ -853,17 +853,44 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
         marginBottom={20}
       >
         <Box display="flex" alignItems="flex-start" gap={14}>
-          {app.company?.image_url && (
-            <Box styles={{ position: 'relative', width: 48, height: 48, flexShrink: 0, borderRadius: 8, overflow: 'hidden' }}>
-              <Image
-                src={app.company.image_url}
-                alt={app.company_name}
-                fill
-                sizes="48px"
-                style={{ objectFit: 'cover' }}
+          <Box styles={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
+            {app.company?.image_url ? (
+              <Box styles={{ position: 'relative', width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden' }}>
+                <Image
+                  src={app.company.image_url}
+                  alt={app.company_name}
+                  fill
+                  sizes="96px"
+                  style={{ objectFit: 'cover' }}
+                />
+              </Box>
+            ) : (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                styles={{ width: '100%', height: '100%', borderRadius: 8, background: 'var(--surface-2)' }}
+              >
+                <Typography as="span" variant="h2" fontWeight={700} color="var(--muted-foreground, #6b7280)">
+                  {app.company_name.charAt(0).toUpperCase()}
+                </Typography>
+              </Box>
+            )}
+            {app.company?.intel_score && (
+              <Box
+                styles={{
+                  position: 'absolute',
+                  top: -4,
+                  right: -4,
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  background: SIGNAL_COLORS[app.company.intel_score as SignalLevel],
+                  border: '2px solid var(--background)',
+                }}
               />
-            </Box>
-          )}
+            )}
+          </Box>
           <Box>
             <Badge
               variant="subtle"

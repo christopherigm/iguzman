@@ -70,7 +70,7 @@
     "privacyPolicy": "Privacy Policy",
     "terms": "Terms of Service",
     "userData": "User Data",
-    "copyright": "© {year} Edge Folio. All rights reserved."
+    "copyright": "© {year} Edge Folio v{version}. All rights reserved."
   },
   "MatrixPage": {
     "title": "Immutable Matrix",

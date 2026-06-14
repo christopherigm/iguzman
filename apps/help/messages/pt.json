@@ -214,7 +214,7 @@
     "appHeading": "App", "legalHeading": "Legal",
     "home": "Início", "account": "Minha Conta",
     "privacyPolicy": "Política de Privacidade", "terms": "Termos de Serviço", "userData": "Dados do Usuário",
-    "copyright": "© {year} Help. Todos os direitos reservados."
+    "copyright": "© {year} Help v{version}. Todos os direitos reservados."
   },
   "VerifyEmailPage": {
     "loading": "Verificando seu e-mail…",

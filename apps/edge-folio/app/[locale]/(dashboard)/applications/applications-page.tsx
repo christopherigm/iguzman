@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useLocale, useTranslations } from 'next-intl';
 import { Container } from '@repo/ui/core-elements/container';
 import { Box } from '@repo/ui/core-elements/box';
@@ -26,6 +27,7 @@ import {
   type WorkType,
   type SalaryCurrency,
   type CreateApplicationPayload,
+  type SignalLevel,
 } from '@/lib/applications';
 import { SpeechButton } from '@repo/ui/core-elements/speech-button';
 import './applications-page.css';
@@ -38,6 +40,12 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
   interview: '#f59e0b',
   offer:     '#22c55e',
   rejected:  '#ef4444',
+};
+
+const SIGNAL_COLORS: Record<SignalLevel, string> = {
+  positive: '#22c55e',
+  mixed:    '#f59e0b',
+  concerning: '#ef4444',
 };
 
 // ── Application form ──────────────────────────────────────────────────────────
@@ -441,26 +449,65 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
   });
 
   const hasMetrics = app.overall_match != null || app.technical_match != null || app.nafta_tn_likelihood != null;
+  const intelScore: SignalLevel | null = app.company?.intel_score || null;
 
   return (
     <Link href={`/${locale}/applications/${app.id}`} prefetch className="applications__card-link">
       <Card gap={8}>
-        <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={8}>
-          <Box display="flex" flexDirection="column" gap={2}>
-            <Typography as="p" variant="body-sm" fontWeight={600} color="var(--foreground)">
+        <Box display="flex" alignItems="flex-start" gap={10}>
+          <Box styles={{ position: 'relative', width: 62, height: 62, flexShrink: 0 }}>
+            {app.company?.image_url ? (
+              <Box styles={{ position: 'relative', width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden' }}>
+                <Image
+                  src={app.company.image_url}
+                  alt={app.company_name}
+                  fill
+                  sizes="62px"
+                  style={{ objectFit: 'cover' }}
+                />
+              </Box>
+            ) : (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                styles={{ width: '100%', height: '100%', borderRadius: 8, background: 'var(--surface-2)' }}
+              >
+                <Typography as="span" variant="h3" fontWeight={700} color="var(--muted-foreground, #6b7280)">
+                  {app.company_name.charAt(0).toUpperCase()}
+                </Typography>
+              </Box>
+            )}
+            {intelScore && (
+              <Box
+                styles={{
+                  position: 'absolute',
+                  top: -3,
+                  right: -3,
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  background: SIGNAL_COLORS[intelScore],
+                  border: '2px solid var(--background)',
+                }}
+              />
+            )}
+          </Box>
+          <Box display="flex" flexDirection="column" gap={2} flex={1} styles={{ minWidth: 0 }}>
+            <Badge
+              variant="subtle"
+              color={STATUS_COLORS[app.status]}
+              style={{ textTransform: 'uppercase', letterSpacing: '0.04em', alignSelf: 'flex-start' }}
+            >
+              {t(`statuses.${app.status}`)}
+            </Badge>
+            <Typography as="p" variant="body-sm" fontWeight={600} color="var(--foreground)" marginTop={2}>
               {app.job_title}
             </Typography>
-            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+            <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
               {app.company_name}
             </Typography>
           </Box>
-          <Badge
-            variant="subtle"
-            color={STATUS_COLORS[app.status]}
-            style={{ textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}
-          >
-            {t(`statuses.${app.status}`)}
-          </Badge>
         </Box>
 
         {hasMetrics && (

@@ -5,7 +5,7 @@
     "appHeading": "App", "legalHeading": "Rechtliches",
     "home": "Startseite", "account": "Konto",
     "privacyPolicy": "Datenschutz", "terms": "Nutzungsbedingungen", "userData": "Nutzerdaten",
-    "copyright": "© {year} Cinelog. Alle Rechte vorbehalten."
+    "copyright": "© {year} Cinelog v{version}. Alle Rechte vorbehalten."
   },
   "VerifyEmailPage": {
     "loading": "E-Mail wird verifiziert…",

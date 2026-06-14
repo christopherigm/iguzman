@@ -36,7 +36,7 @@ class _CompanyIntelItem(BaseModel):
     title: str
     summary: str
     url: str
-    source: str
+    source: str = ""
 
 
 class _CompanyIntelResult(BaseModel):
@@ -165,6 +165,23 @@ _INTEL_CATEGORIES = {
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _compute_intel_score(analysis: _CompanyAnalysisResult) -> str:
+    signals = [
+        analysis.job_security.level,
+        analysis.financial_health.level,
+        analysis.leadership_stability.level,
+        analysis.work_culture.level,
+        analysis.growth_trajectory.level,
+    ]
+    counts: dict[str, int] = {'positive': 0, 'mixed': 0, 'concerning': 0}
+    for s in signals:
+        if s in counts:
+            counts[s] += 1
+    # Majority vote; ties favour positive > mixed > concerning
+    order = ['positive', 'mixed', 'concerning']
+    return sorted(order, key=lambda k: (-counts[k], order.index(k)))[0]
+
 
 def _scraper_post(endpoint: str, payload: dict) -> dict:
     url = f"{settings.SCRAPER_URL.rstrip('/')}/{endpoint.lstrip('/')}"
@@ -379,7 +396,10 @@ def _execute_pipeline(company_id: int, company_name: str, failed_categories: lis
                 response_model=_CompanyAnalysisResult,
                 temperature=0.2,
             )
-            Company.objects.filter(pk=company_id).update(analysis=analysis_result.model_dump())
+            Company.objects.filter(pk=company_id).update(
+                analysis=analysis_result.model_dump(),
+                intel_score=_compute_intel_score(analysis_result),
+            )
         except Exception as exc:
             logger.error('Company analysis LLM failed for %s: %s', company_name, exc)
             failed_categories.append('analysis')

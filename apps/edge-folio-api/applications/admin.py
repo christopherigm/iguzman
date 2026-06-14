@@ -18,7 +18,7 @@ def _invalidate_applications_for_company(company_id):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'normalized_name', 'status', 'is_refreshing', 'retry_count', 'last_refreshed', 'created')
+    list_display = ('name', 'normalized_name', 'status', 'intel_score', 'is_refreshing', 'retry_count', 'last_refreshed', 'created')
     list_filter = ('status', 'is_refreshing')
     search_fields = ('name', 'normalized_name')
     readonly_fields = ('normalized_name', 'processing_started_at', 'last_refreshed', 'retry_count', 'created', 'modified')

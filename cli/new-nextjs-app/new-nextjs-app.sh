@@ -863,6 +863,7 @@ import { Typography } from '@repo/ui/core-elements/typography';
 import { ThemeSwitch } from '@repo/ui/theme-switch';
 import { LocaleSwitcher } from '@repo/ui/core-elements/locale-switcher';
 import { routing } from '@repo/i18n/routing';
+import { version } from '../../package.json';
 import './footer.css';
 
 export async function Footer({ logo }: { logo: string }) {
@@ -915,7 +916,7 @@ export async function Footer({ logo }: { logo: string }) {
         </Grid>
         <Box className="footer__bottom">
           <Typography as="p" variant="body-sm" textAlign="center" className="footer__description">
-            {t('copyright', { year: new Date().getFullYear() })}
+            {t('copyright', { year: new Date().getFullYear(), version })}
           </Typography>
         </Box>
       </Container>
@@ -1998,7 +1999,7 @@ gen_messages_json() {
   local out="$1" locale="${2:-en}"; mkdir -p "$(dirname "$out")"
 
   if [[ "${locale}" == "es" ]]; then
-    local copyright_val="© {year} ${title}. Todos los derechos reservados."
+    local copyright_val="© {year} ${title} v{version}. Todos los derechos reservados."
     if [[ "${include_auth}" == "y" ]]; then
       cat > "$out" << EOF
 {
@@ -2089,7 +2090,7 @@ EOF
     fi
 
   elif [[ "${locale}" == "de" ]]; then
-    local copyright_val="© {year} ${title}. Alle Rechte vorbehalten."
+    local copyright_val="© {year} ${title} v{version}. Alle Rechte vorbehalten."
     if [[ "${include_auth}" == "y" ]]; then
       cat > "$out" << EOF
 {
@@ -2180,7 +2181,7 @@ EOF
     fi
 
   elif [[ "${locale}" == "fr" ]]; then
-    local copyright_val="© {year} ${title}. Tous droits réservés."
+    local copyright_val="© {year} ${title} v{version}. Tous droits réservés."
     if [[ "${include_auth}" == "y" ]]; then
       cat > "$out" << EOF
 {
@@ -2271,7 +2272,7 @@ EOF
     fi
 
   elif [[ "${locale}" == "pt" ]]; then
-    local copyright_val="© {year} ${title}. Todos os direitos reservados."
+    local copyright_val="© {year} ${title} v{version}. Todos os direitos reservados."
     if [[ "${include_auth}" == "y" ]]; then
       cat > "$out" << EOF
 {
@@ -2363,7 +2364,7 @@ EOF
 
   else
     # English (default)
-    local copyright_val="© {year} ${title}. All rights reserved."
+    local copyright_val="© {year} ${title} v{version}. All rights reserved."
     if [[ "${include_auth}" == "y" ]]; then
       cat > "$out" << EOF
 {

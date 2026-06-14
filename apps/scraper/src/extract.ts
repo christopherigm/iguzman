@@ -102,10 +102,18 @@ export async function extractUrl(url: string): Promise<ExtractResult> {
         return route.continue();
       });
 
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60_000,
-      });
+      try {
+        await page.goto(url, {
+          waitUntil: 'domcontentloaded',
+          timeout: 60_000,
+        });
+      } catch (navErr) {
+        if (attempt < MAX_ATTEMPTS) {
+          await sleep(attempt * 1_500);
+          continue;
+        }
+        throw navErr;
+      }
 
       // On retries give the JS challenge extra time to resolve
       if (attempt > 1) {

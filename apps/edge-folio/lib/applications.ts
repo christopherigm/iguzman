@@ -42,6 +42,7 @@ export interface Company {
   name: string;
   normalized_name: string;
   status: CompanyStatus;
+  intel_score: SignalLevel | '';
   is_refreshing: boolean;
   description: string;
   intel: CompanyIntel | null;

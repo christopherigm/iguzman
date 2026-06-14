@@ -214,7 +214,7 @@
     "appHeading": "App", "legalHeading": "Rechtliches",
     "home": "Startseite", "account": "Konto",
     "privacyPolicy": "Datenschutz", "terms": "Nutzungsbedingungen", "userData": "Nutzerdaten",
-    "copyright": "© {year} Help. Alle Rechte vorbehalten."
+    "copyright": "© {year} Help v{version}. Alle Rechte vorbehalten."
   },
   "VerifyEmailPage": {
     "loading": "E-Mail wird verifiziert…",

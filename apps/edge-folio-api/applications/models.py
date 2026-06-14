@@ -32,6 +32,12 @@ COMPANY_STATUS_CHOICES = [
     ('failed', 'Failed'),
 ]
 
+INTEL_SCORE_CHOICES = [
+    ('positive', 'Positive'),
+    ('mixed', 'Mixed'),
+    ('concerning', 'Concerning'),
+]
+
 _LEGAL_SUFFIXES_RE = re.compile(
     r'\b(incorporated|corporation|limited|inc|llc|ltd|corp|co|gmbh|plc|ag|nv|bv|sa|sas|sarl'
     r'|group|holdings|international|enterprises|solutions|technologies|services|systems)\.?\b',
@@ -61,6 +67,7 @@ class Company(Common):
     name = models.CharField(max_length=200)
     normalized_name = models.CharField(max_length=200, unique=True, db_index=True)
     status = models.CharField(max_length=20, choices=COMPANY_STATUS_CHOICES, default='pending')
+    intel_score = models.CharField(max_length=20, choices=INTEL_SCORE_CHOICES, blank=True)
     is_refreshing = models.BooleanField(default=False)
     processing_started_at = models.DateTimeField(null=True, blank=True)
     last_refreshed = models.DateTimeField(null=True, blank=True)

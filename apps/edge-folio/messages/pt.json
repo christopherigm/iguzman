@@ -70,7 +70,7 @@
     "privacyPolicy": "Política de Privacidade",
     "terms": "Termos de Serviço",
     "userData": "Dados do Usuário",
-    "copyright": "© {year} Edge Folio. Todos os direitos reservados."
+    "copyright": "© {year} Edge Folio v{version}. Todos os direitos reservados."
   },
   "MatrixPage": {
     "title": "Matriz Imutável",

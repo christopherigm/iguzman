@@ -71,7 +71,7 @@ ${content}
 Return a JSON object with exactly these keys:
 - "company_name": name of the hiring company (string)
 - "job_title": the job position title (string)
-- "job_description": the full job description including responsibilities and requirements (string)
+- "job_description": the complete job description copied verbatim from the content — include the position summary, responsibilities ("Work you'll do" or equivalent), required and preferred qualifications, and any other role-specific details. Do NOT write "See the provided job posting content" or any other placeholder. If the description spans multiple sections, concatenate them in order (string)
 - "salary_min": minimum annual salary as a plain number with no symbols or commas (number or null if not mentioned)
 - "salary_max": maximum annual salary as a plain number with no symbols or commas (number or null if not mentioned)
 - "salary_currency": currency code, one of "USD", "CAD", "EUR", "MXN", "GBP" (empty string if not mentioned or cannot be determined)

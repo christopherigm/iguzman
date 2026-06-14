@@ -70,7 +70,7 @@
     "privacyPolicy": "Datenschutz",
     "terms": "Nutzungsbedingungen",
     "userData": "Nutzerdaten",
-    "copyright": "© {year} Edge Folio. Alle Rechte vorbehalten."
+    "copyright": "© {year} Edge Folio v{version}. Alle Rechte vorbehalten."
   },
   "MatrixPage": {
     "title": "Unveränderliche Matrix",
