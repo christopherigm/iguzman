@@ -5,7 +5,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 
 const COOKIE_OPTS = { httpOnly: true, secure: IS_PROD, sameSite: 'strict' as const, path: '/' };
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   const cookieStore = await cookies();
   const refresh = cookieStore.get('refresh_token')?.value;
   if (!refresh) return null;
@@ -23,7 +23,9 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 
   const data = (await res.json()) as { access: string; refresh?: string };
-  cookieStore.set('access_token', data.access, { ...COOKIE_OPTS, maxAge: 60 * 60 });
+  // Cookie outlives the 1h JWT so an expired access token gets refreshed
+  // (proxy.ts / apiFetch) instead of looking like a logout.
+  cookieStore.set('access_token', data.access, { ...COOKIE_OPTS, maxAge: 60 * 60 * 24 * 7 });
   if (data.refresh) {
     cookieStore.set('refresh_token', data.refresh, { ...COOKIE_OPTS, maxAge: 60 * 60 * 24 * 7 });
   }
@@ -33,7 +35,11 @@ async function refreshAccessToken(): Promise<string | null> {
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const cookieStore = await cookies();
   let token = cookieStore.get('access_token')?.value;
-  if (!token) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
+  if (!token) {
+    const newToken = await refreshAccessToken();
+    if (!newToken) return Response.json({ detail: 'Unauthorized' }, { status: 401 });
+    token = newToken;
+  }
 
   const withAuth = (t: string): RequestInit => ({
     ...init,
