@@ -23,7 +23,9 @@ export async function refreshAccessToken(): Promise<string | null> {
   }
 
   const data = (await res.json()) as { access: string; refresh?: string };
-  cookieStore.set('access_token', data.access, { ...COOKIE_OPTS, maxAge: 60 * 60 });
+  // Cookie outlives the 1h JWT so an expired access token gets refreshed
+  // (proxy.ts / apiFetch) instead of looking like a logout.
+  cookieStore.set('access_token', data.access, { ...COOKIE_OPTS, maxAge: 60 * 60 * 24 * 7 });
   if (data.refresh) {
     cookieStore.set('refresh_token', data.refresh, { ...COOKIE_OPTS, maxAge: 60 * 60 * 24 * 7 });
   }

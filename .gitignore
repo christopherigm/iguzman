@@ -53,11 +53,6 @@ celerybeat-schedule
 celerybeat.pid
 venv/
 
-skills
-skills/**
-.github/skills/
-.github/skills/**
-
 # Helm
 packages/charts/*/charts/*.tgz
 

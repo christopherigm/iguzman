@@ -22,7 +22,9 @@ export async function POST(request: NextRequest) {
     secure: isProduction,
     sameSite: 'strict',
     path: '/',
-    maxAge: 60 * 60,
+    // Cookie outlives the 1h JWT so an expired access token gets refreshed
+    // (proxy.ts / apiFetch) instead of looking like a logout.
+    maxAge: 60 * 60 * 24 * 7,
   });
   cookieStore.set('refresh_token', data.refresh as string, {
     httpOnly: true,
