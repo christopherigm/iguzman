@@ -20,6 +20,7 @@ import {
 import {
   getCreditsKey,
   requireCredits,
+  refundCredits,
   creditsErrorResponse,
 } from '@/lib/credits-middleware';
 import {
@@ -136,17 +137,25 @@ export async function POST(request: Request) {
     return creditsErrorResponse(baseResult.error);
   }
   let creditsRemaining = baseResult.remaining;
+  // Total credits charged up-front; refunded in full if the download fails.
+  let totalCharged = 1;
 
   if (commentsEnabled && isScrapeCreatorsPlatform(url)) {
     const creditResult = await requireCredits(creditsKey, CREDITS_PER_COMMENTS);
     if (!creditResult.ok) commentsEnabled = false;
-    else creditsRemaining = creditResult.remaining;
+    else {
+      creditsRemaining = creditResult.remaining;
+      totalCharged += CREDITS_PER_COMMENTS;
+    }
   }
 
   if (metadataEnabled && isScrapeCreatorsPlatform(url)) {
     const creditResult = await requireCredits(creditsKey, CREDITS_PER_METADATA);
     if (!creditResult.ok) metadataEnabled = false;
-    else creditsRemaining = creditResult.remaining;
+    else {
+      creditsRemaining = creditResult.remaining;
+      totalCharged += CREDITS_PER_METADATA;
+    }
   }
 
   /* 2. Create the task document immediately */
@@ -237,6 +246,9 @@ export async function POST(request: Request) {
             error: result.error.message,
           },
           'Download failed',
+        );
+        await refundCredits(creditsKey, totalCharged).catch((refundErr: unknown) =>
+          log.error({ err: refundErr, taskId }, 'Failed to refund credits after download failure'),
         );
         await updateTask(taskId, {
           status: 'error',
@@ -416,6 +428,9 @@ export async function POST(request: Request) {
       }
     } catch (err) {
       log.error({ err, taskId, url }, 'Unexpected error during download');
+      await refundCredits(creditsKey, totalCharged).catch((refundErr: unknown) =>
+        log.error({ err: refundErr, taskId }, 'Failed to refund credits after download error'),
+      );
       await updateTask(taskId, {
         status: 'error',
         progress: 0,

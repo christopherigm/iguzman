@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { unlink } from 'node:fs/promises';
 import logger from '@/lib/logger';
 import { USE_R2, uploadFromWebStream } from '@/lib/r2';
+import { sweepTmpFiles } from '@/lib/tmp-cleanup';
 
 const log = logger.child({ module: 'api/media' });
 
@@ -40,9 +41,15 @@ export async function POST(request: NextRequest) {
   const fileName = `${randomUUID()}.${ext.toLowerCase()}`;
 
   // ?tmp=1: stage the upload to /tmp instead of R2 so the same server can
-  // process it immediately without a wasted R2 round-trip. The output of
-  // processing is still uploaded to R2 after the job completes.
+  // process it immediately without a wasted R2 round-trip. Ingress sticky
+  // sessions (see helm/values.yaml) guarantee the follow-up processing
+  // request lands on this same pod, so the staged file is found locally.
+  // The output of processing is still uploaded to R2 after the job completes.
   const stageTmp = USE_R2 && request.nextUrl.searchParams.get('tmp') === '1';
+
+  // Opportunistically remove orphaned staged files left in /tmp by uploads
+  // that were never processed (throttled to run at most once per 30 min).
+  if (stageTmp) sweepTmpFiles();
 
   if (USE_R2 && !stageTmp) {
     try {

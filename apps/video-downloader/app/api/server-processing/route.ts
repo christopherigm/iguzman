@@ -7,6 +7,7 @@ import type { TaskStatus } from '@/lib/types';
 import {
   getCreditsKey,
   requireCredits,
+  refundCredits,
   creditsErrorResponse,
 } from '@/lib/credits-middleware';
 import {
@@ -24,6 +25,7 @@ import {
   interpolateFpsCost,
 } from '@/lib/operation-credits';
 import { USE_R2, uploadFromPath, downloadToPath } from '@/lib/r2';
+import { sweepTmpFiles } from '@/lib/tmp-cleanup';
 import logger from '@/lib/logger';
 
 const log = logger.child({ module: 'api/server-processing' });
@@ -59,8 +61,15 @@ async function runFfmpegJob(
   op: ProcessingOp,
   inputFileName: string,
   params: Record<string, unknown>,
+  creditsKey: string,
+  opCost: number,
   preDownloadedInput?: string,
 ): Promise<void> {
+  const refundOnFailure = () =>
+    refundCredits(creditsKey, opCost).catch((err: unknown) =>
+      log.error({ err, taskId }, 'Failed to refund credits after job failure'),
+    );
+
   // In R2 mode the input was pre-downloaded to TEMP_DIR; otherwise read from MEDIA_DIR.
   const inputPath = preDownloadedInput ?? join(MEDIA_DIR, inputFileName);
   const ext = inputFileName.split('.').pop() ?? 'mp4';
@@ -169,6 +178,7 @@ async function runFfmpegJob(
           { err: uploadErr, taskId, outputFileName },
           'R2 upload of FFmpeg output failed',
         );
+        await refundOnFailure();
         await updateTask(taskId, {
           status: 'error',
           error: {
@@ -204,6 +214,7 @@ async function runFfmpegJob(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     log.error({ err, taskId, op }, 'FFmpeg job failed');
+    await refundOnFailure();
     await updateTask(taskId, {
       status: 'error',
       error: { code: 'DOWNLOAD_FAILED', message },
@@ -233,6 +244,8 @@ export async function POST(request: NextRequest) {
 
   const creditsKey = getCreditsKey(request);
   if (!creditsKey) return creditsErrorResponse('NO_CREDITS_KEY');
+
+  sweepTmpFiles();
 
   if (!op || !params) {
     log.warn({ op, hasParams: !!params }, 'Missing op or params');
@@ -358,6 +371,8 @@ export async function POST(request: NextRequest) {
     op as ProcessingOp,
     inputFile,
     jobParams,
+    creditsKey,
+    opCost,
     tempInputPath,
   );
 
