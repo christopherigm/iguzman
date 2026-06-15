@@ -1,44 +1,44 @@
-'use client';
+"use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
-import './ai-interviewer.css';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Button } from '@repo/ui/core-elements/button';
-import { Icon } from '@repo/ui/core-elements/icon';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Switch } from '@repo/ui/core-elements/switch';
-import { Spinner } from '@repo/ui/core-elements/spinner';
-import { SpeechButton } from '@repo/ui/core-elements/speech-button';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Slider } from '@repo/ui/core-elements/slider';
-import { getAccessToken } from '@/lib/auth';
-import { useGroqProxy, type LlmMessage } from '@repo/ui/use-groq';
-import type { FieldDef } from '../admin-form';
-import type { AiEntityType, FieldLengthConfig } from './entity-config';
-import { ENTITY_CONFIGS } from './entities';
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import "./ai-interviewer.css";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Button } from "@repo/ui/core-elements/button";
+import { Icon } from "@repo/ui/core-elements/icon";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Switch } from "@repo/ui/core-elements/switch";
+import { Spinner } from "@repo/ui/core-elements/spinner";
+import { SpeechButton } from "@repo/ui/core-elements/speech-button";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Slider } from "@repo/ui/core-elements/slider";
+import { getAccessToken } from "@/lib/auth";
+import { useGroqProxy, type LlmMessage } from "@repo/ui/use-groq";
+import type { FieldDef } from "../admin-form";
+import type { AiEntityType, FieldLengthConfig } from "./entity-config";
+import { ENTITY_CONFIGS } from "./entities";
 import {
   PARAGRAPH_WORD_COUNTS,
   PARAGRAPH_LENGTH_STEPS,
   PARAGRAPH_COUNT_STEPS,
-} from '../paragraph-options';
+} from "../paragraph-options";
 
-export type { AiEntityType } from './entity-config';
+export type { AiEntityType } from "./entity-config";
 
 type InterviewStage =
-  | 'idle'
-  | 'scoping'
-  | 'researching'
-  | 'proposal'
-  | 'negotiating'
-  | 'confirmed';
+  | "idle"
+  | "scoping"
+  | "researching"
+  | "proposal"
+  | "negotiating"
+  | "confirmed";
 
 interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
-  variant?: 'research' | 'warning' | 'proposal';
+  variant?: "research" | "warning" | "proposal";
 }
 
 interface BrandPersona {
@@ -86,21 +86,21 @@ export interface AiInterviewerProps {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const GROQ_MODEL = 'openai/gpt-oss-120b';
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const GROQ_MODEL = "openai/gpt-oss-120b";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const MIN_SCOPING_ROUNDS = 3;
 const VISIBLE_STAGES: InterviewStage[] = [
-  'scoping',
-  'researching',
-  'proposal',
-  'confirmed',
+  "scoping",
+  "researching",
+  "proposal",
+  "confirmed",
 ];
 
 function fieldGroupDisplayName(key: string): string {
   return key
-    .split('_')
+    .split("_")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+    .join(" ");
 }
 
 function buildFieldLengthRulesText(
@@ -123,21 +123,21 @@ function buildFieldLengthRulesText(
         min: 80,
         max: 120,
       };
-      const paraLabel = cfg.paragraphs === 1 ? 'paragraph' : 'paragraphs';
+      const paraLabel = cfg.paragraphs === 1 ? "paragraph" : "paragraphs";
       lines.push(
         `- ${fieldRef}: exactly ${cfg.paragraphs} ${paraLabel}, ${min}-${max} words each`,
       );
     }
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 const LOCALE_LANGUAGE_MAP: Record<string, string> = {
-  en: 'English',
-  es: 'Spanish',
-  fr: 'French',
-  de: 'German',
-  pt: 'Portuguese',
+  en: "English",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  pt: "Portuguese",
 };
 
 // ── Prompt builders ───────────────────────────────────────────────────────────
@@ -152,11 +152,11 @@ function buildScopingSystemPrompt(
 ): string {
   const brandBlock = persona
     ? `Brand DNA:
-- Company: ${persona.site_name ?? ''}
-- Mission: ${persona.mission || persona.en_mission || ''}
-- Vision: ${persona.vision || persona.en_vision || ''}
-- Slogan: ${persona.slogan ?? ''}`
-    : 'Brand context: not available.';
+- Company: ${persona.site_name ?? ""}
+- Mission: ${persona.mission || persona.en_mission || ""}
+- Vision: ${persona.vision || persona.en_vision || ""}
+- Slogan: ${persona.slogan ?? ""}`
+    : "Brand context: not available.";
 
   const extras: string[] = [];
   if (imageAnalysis)
@@ -165,10 +165,10 @@ function buildScopingSystemPrompt(
 
   return `You are an AI Marketing Strategist conducting a business interview.
 
-${brandBlock}${extras.length ? `\n\n${extras.join('\n\n')}` : ''}
+${brandBlock}${extras.length ? `\n\n${extras.join("\n\n")}` : ""}
 
 Your task: Gather information to create a ${entityType} record.
-Fields to populate: ${targetFields.join(', ')}
+Fields to populate: ${targetFields.join(", ")}
 
 LANGUAGE: Conduct the entire interview in ${language}. All your questions and responses must be in ${language}.
 
@@ -177,8 +177,8 @@ RULES:
 - Keep questions brief and business-relevant
 - Reference the brand context naturally when relevant
 - After ${MIN_SCOPING_ROUNDS} questions have been answered, tell the user you have what you need
-- Do NOT ask the user for translations into any other language — the proposal phase will auto-translate all fields
-- Do NOT generate the proposal in this phase — just gather information`;
+- Do NOT ask the user for translations into any other language - the proposal phase will auto-translate all fields
+- Do NOT generate the proposal in this phase - just gather information`;
 }
 
 function buildProposalMessages(
@@ -192,29 +192,29 @@ function buildProposalMessages(
   fieldLengthRulesText: string,
 ): LlmMessage[] {
   const brandBlock = persona
-    ? `Brand: ${persona.site_name ?? ''}. Mission: ${persona.mission || persona.en_mission || ''}. Vision: ${persona.vision || persona.en_vision || ''}.`
-    : '';
+    ? `Brand: ${persona.site_name ?? ""}. Mission: ${persona.mission || persona.en_mission || ""}. Vision: ${persona.vision || persona.en_vision || ""}.`
+    : "";
 
   const contextLines: string[] = [];
   if (imageAnalysis) contextLines.push(`Visual context: ${imageAnalysis}`);
   if (researchData) contextLines.push(`Market research: ${researchData}`);
-  const contextBlock = contextLines.join('\n');
+  const contextBlock = contextLines.join("\n");
 
   const systemContent = `You are a professional copywriter and business strategist.
 ${brandBlock}
 
-The interview was conducted in ${language}. Based on the interview conversation${contextBlock ? ' and additional context' : ''}, generate a complete ${entityType} record.
+The interview was conducted in ${language}. Based on the interview conversation${contextBlock ? " and additional context" : ""}, generate a complete ${entityType} record.
 ${contextBlock}
 
-TRANSLATION RULE: All bilingual fields have a Spanish version (base field, e.g. "name") and an English version ("en_" prefix, e.g. "en_name"). Use the interview content for the ${language} version and TRANSLATE it for the other language. Never ask for translations — produce both versions yourself.
-${fieldLengthRulesText ? `\nFIELD LENGTH RULES (follow exactly — do not shorten or pad):\n${fieldLengthRulesText}\n` : ''}
+TRANSLATION RULE: All bilingual fields have a Spanish version (base field, e.g. "name") and an English version ("en_" prefix, e.g. "en_name"). Use the interview content for the ${language} version and TRANSLATE it for the other language. Never ask for translations - produce both versions yourself.
+${fieldLengthRulesText ? `\nFIELD LENGTH RULES (follow exactly - do not shorten or pad):\n${fieldLengthRulesText}\n` : ""}
 Respond ONLY with a valid JSON object. No markdown, no explanation outside the JSON. Use this exact structure:
 ${proposalSchema}`;
 
   return [
-    { role: 'system', content: systemContent },
-    { role: 'user', content: conversationText },
-    { role: 'user', content: 'Generate the structured record now.' },
+    { role: "system", content: systemContent },
+    { role: "user", content: conversationText },
+    { role: "user", content: "Generate the structured record now." },
   ];
 }
 
@@ -227,15 +227,15 @@ export function AiInterviewer({
   values,
   onChange,
 }: AiInterviewerProps) {
-  const t = useTranslations('Admin');
+  const t = useTranslations("Admin");
   const locale = useLocale();
-  const language = LOCALE_LANGUAGE_MAP[locale] ?? 'English';
+  const language = LOCALE_LANGUAGE_MAP[locale] ?? "English";
   const config = ENTITY_CONFIGS[entityType];
 
   // ── Modal / stage state ──────────────────────────────────────────────────────
   const [isOpen, setIsOpen] = useState(false);
-  const [stage, setStage] = useState<InterviewStage>('idle');
-  const stageRef = useRef<InterviewStage>('idle');
+  const [stage, setStage] = useState<InterviewStage>("idle");
+  const stageRef = useRef<InterviewStage>("idle");
   useEffect(() => {
     stageRef.current = stage;
   }, [stage]);
@@ -254,17 +254,17 @@ export function AiInterviewer({
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // ── User input ───────────────────────────────────────────────────────────────
-  const [userInput, setUserInput] = useState('');
+  const [userInput, setUserInput] = useState("");
 
   // ── LLM conversation history (sent to Groq on each turn) ────────────────────
   const llmHistoryRef = useRef<LlmMessage[]>([]);
-  const systemPromptRef = useRef('');
+  const systemPromptRef = useRef("");
 
   // ── Image analysis ───────────────────────────────────────────────────────────
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [imageAnalysis, setImageAnalysis] = useState('');
+  const [imageAnalysis, setImageAnalysis] = useState("");
   const [analyzingImage, setAnalyzingImage] = useState(false);
-  const imageAnalysisRef = useRef('');
+  const imageAnalysisRef = useRef("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     imageAnalysisRef.current = imageAnalysis;
@@ -272,10 +272,10 @@ export function AiInterviewer({
 
   // ── Market research ──────────────────────────────────────────────────────────
   const [marketResearchEnabled, setMarketResearchEnabled] = useState(false);
-  const [researchData, setResearchData] = useState('');
+  const [researchData, setResearchData] = useState("");
   const [researching, setResearching] = useState(false);
   const [researchError, setResearchError] = useState(false);
-  const researchDataRef = useRef('');
+  const researchDataRef = useRef("");
   useEffect(() => {
     researchDataRef.current = researchData;
   }, [researchData]);
@@ -316,7 +316,7 @@ export function AiInterviewer({
 
   // Track generation completion to commit streaming text into chat history
   const prevIsGeneratingRef = useRef(false);
-  const streamingTextRef = useRef('');
+  const streamingTextRef = useRef("");
   useEffect(() => {
     streamingTextRef.current = streamingText;
   }, [streamingText]);
@@ -327,13 +327,13 @@ export function AiInterviewer({
       if (text) {
         setChatMessages((prev) => [
           ...prev,
-          { id: crypto.randomUUID(), role: 'assistant', content: text },
+          { id: crypto.randomUUID(), role: "assistant", content: text },
         ]);
         llmHistoryRef.current = [
           ...llmHistoryRef.current,
-          { role: 'assistant', content: text },
+          { role: "assistant", content: text },
         ];
-        if (stageRef.current === 'scoping') setScopingRound((r) => r + 1);
+        if (stageRef.current === "scoping") setScopingRound((r) => r + 1);
       }
       resetGroq();
     }
@@ -342,18 +342,18 @@ export function AiInterviewer({
 
   // Auto-scroll chat
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, streamingText]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
   const addAssistantMessage = (
     content: string,
-    variant?: ChatMessage['variant'],
+    variant?: ChatMessage["variant"],
   ) => {
     setChatMessages((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), role: 'assistant', content, variant },
+      { id: crypto.randomUUID(), role: "assistant", content, variant },
     ]);
   };
 
@@ -377,14 +377,14 @@ export function AiInterviewer({
 
   const handleOpen = useCallback(async () => {
     setIsOpen(true);
-    setStage('idle');
+    setStage("idle");
     setChatMessages([]);
     llmHistoryRef.current = [];
     setScopingRound(0);
-    setUserInput('');
+    setUserInput("");
     setUploadedFile(null);
-    setImageAnalysis('');
-    setResearchData('');
+    setImageAnalysis("");
+    setResearchData("");
     setResearchError(false);
     setProposedRecord(null);
     setProposalError(false);
@@ -410,17 +410,17 @@ export function AiInterviewer({
     }
     setLoadingPersona(false);
 
-    const sysPrompt = rebuildSystemPrompt(persona, '', '');
-    setStage('scoping');
+    const sysPrompt = rebuildSystemPrompt(persona, "", "");
+    setStage("scoping");
 
-    const welcome = t('aiInterviewWelcome', { entityLabel });
-    setChatMessages([{ id: 'welcome', role: 'assistant', content: welcome }]);
+    const welcome = t("aiInterviewWelcome", { entityLabel });
+    setChatMessages([{ id: "welcome", role: "assistant", content: welcome }]);
 
     const firstUserMsg = `Start the interview. Ask your first question about the ${config.entityType}.`;
-    llmHistoryRef.current = [{ role: 'user', content: firstUserMsg }];
+    llmHistoryRef.current = [{ role: "user", content: firstUserMsg }];
     await generate([
-      { role: 'system', content: sysPrompt },
-      { role: 'user', content: firstUserMsg },
+      { role: "system", content: sysPrompt },
+      { role: "user", content: firstUserMsg },
     ]);
   }, [config, entityLabel, t, rebuildSystemPrompt, generate, resetGroq]);
 
@@ -438,26 +438,26 @@ export function AiInterviewer({
     const text = userInput.trim();
     if (!text || isGenerating || generatingProposal) return;
 
-    setUserInput('');
+    setUserInput("");
     setChatMessages((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), role: 'user', content: text },
+      { id: crypto.randomUUID(), role: "user", content: text },
     ]);
     llmHistoryRef.current = [
       ...llmHistoryRef.current,
-      { role: 'user', content: text },
+      { role: "user", content: text },
     ];
 
-    if (stageRef.current === 'scoping' || stageRef.current === 'negotiating') {
+    if (stageRef.current === "scoping" || stageRef.current === "negotiating") {
       await generate([
-        { role: 'system', content: systemPromptRef.current },
+        { role: "system", content: systemPromptRef.current },
         ...llmHistoryRef.current,
       ]);
     }
   }, [userInput, isGenerating, generatingProposal, generate]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -473,20 +473,20 @@ export function AiInterviewer({
       try {
         const buffer = await file.arrayBuffer();
         const bytes = new Uint8Array(buffer);
-        let binary = '';
+        let binary = "";
         for (let i = 0; i < bytes.byteLength; i++)
           binary += String.fromCharCode(bytes[i] as number);
         const base64 = btoa(binary);
 
         const token = getAccessToken();
-        const res = await fetch('/api/ollama/api/generate', {
-          method: 'POST',
+        const res = await fetch("/api/ollama/api/generate", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            model: 'gemma3:4b',
+            model: "gemma3:4b",
             prompt: `Analyze this ${config.entityType} image for a business catalog. Extract: name, key features, visible text, specifications, materials, and suggested catalog metadata. Be specific and concise.`,
             images: [base64],
             stream: false,
@@ -495,7 +495,7 @@ export function AiInterviewer({
 
         if (res.ok) {
           const data = (await res.json()) as { response?: string };
-          const analysis = data.response ?? '';
+          const analysis = data.response ?? "";
           setImageAnalysis(analysis);
           rebuildSystemPrompt(
             brandPersonaRef.current,
@@ -503,14 +503,14 @@ export function AiInterviewer({
             researchDataRef.current,
           );
           addAssistantMessage(
-            `${t('aiInterviewImageAnalysis')}\n\n${analysis}`,
-            'research',
+            `${t("aiInterviewImageAnalysis")}\n\n${analysis}`,
+            "research",
           );
         } else {
-          addAssistantMessage(t('aiInterviewImageAnalysisError'));
+          addAssistantMessage(t("aiInterviewImageAnalysisError"));
         }
       } catch {
-        addAssistantMessage(t('aiInterviewImageAnalysisError'));
+        addAssistantMessage(t("aiInterviewImageAnalysisError"));
       }
 
       setAnalyzingImage(false);
@@ -533,10 +533,10 @@ export function AiInterviewer({
 
     try {
       const token = getAccessToken();
-      const res = await fetch('/api/scraper', {
-        method: 'POST',
+      const res = await fetch("/api/scraper", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ query, maxResults: 5 }),
@@ -550,7 +550,7 @@ export function AiInterviewer({
         if (results.length) {
           const summary = results
             .map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}`)
-            .join('\n\n');
+            .join("\n\n");
           setResearchData(summary);
           rebuildSystemPrompt(
             brandPersonaRef.current,
@@ -558,19 +558,19 @@ export function AiInterviewer({
             summary,
           );
           addAssistantMessage(
-            `${t('aiInterviewResearchResults')}\n\n${summary}`,
-            'research',
+            `${t("aiInterviewResearchResults")}\n\n${summary}`,
+            "research",
           );
         } else {
-          addAssistantMessage(t('aiInterviewResearchNoResults'), 'research');
+          addAssistantMessage(t("aiInterviewResearchNoResults"), "research");
         }
       } else {
         setResearchError(true);
-        addAssistantMessage(t('aiInterviewErrorResearch'));
+        addAssistantMessage(t("aiInterviewErrorResearch"));
       }
     } catch {
       setResearchError(true);
-      addAssistantMessage(t('aiInterviewErrorResearch'));
+      addAssistantMessage(t("aiInterviewErrorResearch"));
     }
 
     setResearching(false);
@@ -582,19 +582,19 @@ export function AiInterviewer({
     if (isGenerating || generatingProposal) return;
 
     if (marketResearchEnabled && !researchDataRef.current) {
-      setStage('researching');
+      setStage("researching");
       await handleResearch();
     }
 
-    setStage('proposal');
+    setStage("proposal");
     setGeneratingProposal(true);
     setProposalError(false);
 
     try {
       const conversationText = llmHistoryRef.current
-        .filter((m) => m.role !== 'system')
-        .map((m) => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`)
-        .join('\n');
+        .filter((m) => m.role !== "system")
+        .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.content}`)
+        .join("\n");
 
       const fieldLengthRulesText = buildFieldLengthRulesText(
         config.fieldLengths,
@@ -614,10 +614,10 @@ export function AiInterviewer({
       );
 
       const token = getAccessToken();
-      const res = await fetch('/api/groq/chat', {
-        method: 'POST',
+      const res = await fetch("/api/groq/chat", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
@@ -628,12 +628,12 @@ export function AiInterviewer({
         }),
       });
 
-      if (!res.ok) throw new Error('Proposal request failed');
+      if (!res.ok) throw new Error("Proposal request failed");
 
       const data = (await res.json()) as {
         choices?: { message?: { content?: string } }[];
       };
-      const rawContent = data.choices?.[0]?.message?.content ?? '';
+      const rawContent = data.choices?.[0]?.message?.content ?? "";
 
       let parsed: ProposedRecord | null = null;
       try {
@@ -643,21 +643,21 @@ export function AiInterviewer({
         if (match) parsed = JSON.parse(match[0]) as ProposedRecord;
       }
 
-      if (!parsed) throw new Error('Could not parse proposal JSON');
+      if (!parsed) throw new Error("Could not parse proposal JSON");
 
       setProposedRecord(parsed);
 
       if (parsed.brand_alignment_notes) {
         addAssistantMessage(
-          `${t('aiInterviewBrandWarning')}: ${parsed.brand_alignment_notes}`,
-          'warning',
+          `${t("aiInterviewBrandWarning")}: ${parsed.brand_alignment_notes}`,
+          "warning",
         );
       }
 
-      addAssistantMessage(t('aiInterviewProposalNote'), 'proposal');
+      addAssistantMessage(t("aiInterviewProposalNote"), "proposal");
     } catch {
       setProposalError(true);
-      addAssistantMessage(t('aiInterviewErrorProposal'));
+      addAssistantMessage(t("aiInterviewErrorProposal"));
     }
 
     setGeneratingProposal(false);
@@ -677,7 +677,7 @@ export function AiInterviewer({
     if (!proposedRecord) return;
 
     const formFieldKeys = new Set(fields.map((f) => f.key));
-    const skipKeys = new Set(['justification', 'brand_alignment_notes']);
+    const skipKeys = new Set(["justification", "brand_alignment_notes"]);
 
     for (const [key, value] of Object.entries(proposedRecord)) {
       if (skipKeys.has(key)) continue;
@@ -686,19 +686,19 @@ export function AiInterviewer({
       }
     }
 
-    if (formFieldKeys.has('is_ai_generated')) onChange('is_ai_generated', true);
+    if (formFieldKeys.has("is_ai_generated")) onChange("is_ai_generated", true);
 
-    setStage('confirmed');
-    addAssistantMessage(t('aiInterviewApplied'));
+    setStage("confirmed");
+    addAssistantMessage(t("aiInterviewApplied"));
   }, [proposedRecord, fields, onChange, t]);
 
   // ── Negotiate ─────────────────────────────────────────────────────────────────
 
   const handleNegotiate = useCallback(() => {
-    setStage('negotiating');
+    setStage("negotiating");
     const negotiationAddendum = `\n\nThe proposal has been generated. The user now wants to negotiate. Help them refine the proposal based on feedback. After agreeing on changes, remind them to click "Generate Proposal" to regenerate.`;
     systemPromptRef.current = systemPromptRef.current + negotiationAddendum;
-    addAssistantMessage(t('aiInterviewNegotiatePrompt'));
+    addAssistantMessage(t("aiInterviewNegotiatePrompt"));
   }, [t]);
 
   // ── Length options modal ───────────────────────────────────────────────────────
@@ -731,19 +731,19 @@ export function AiInterviewer({
     !analyzingImage &&
     !researching &&
     userInput.trim().length > 0 &&
-    (stage === 'scoping' || stage === 'negotiating');
+    (stage === "scoping" || stage === "negotiating");
 
   const canGenerateProposal =
-    stage === 'scoping' &&
+    stage === "scoping" &&
     scopingRound >= MIN_SCOPING_ROUNDS &&
     !isGenerating &&
     !generatingProposal;
 
   const stageLabelMap: Partial<Record<InterviewStage, string>> = {
-    scoping: t('aiInterviewStageScoping'),
-    researching: t('aiInterviewStageResearching'),
-    proposal: t('aiInterviewStageProposal'),
-    confirmed: t('aiInterviewStageDone'),
+    scoping: t("aiInterviewStageScoping"),
+    researching: t("aiInterviewStageResearching"),
+    proposal: t("aiInterviewStageProposal"),
+    confirmed: t("aiInterviewStageDone"),
   };
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -754,12 +754,12 @@ export function AiInterviewer({
       <Button
         icon="/icons/enhance.svg"
         onClick={handleOpen}
-        aria-label={t('aiInterviewLabel')}
-        title={t('aiInterviewLabel')}
+        aria-label={t("aiInterviewLabel")}
+        title={t("aiInterviewLabel")}
         size="md"
         kind="success"
       >
-        {t('aiInterviewLabel')}
+        {t("aiInterviewLabel")}
       </Button>
 
       {/* ── Modal ── */}
@@ -768,7 +768,7 @@ export function AiInterviewer({
           className="aii__overlay"
           role="dialog"
           aria-modal="true"
-          aria-label={t('aiInterviewTitle', { entityLabel })}
+          aria-label={t("aiInterviewTitle", { entityLabel })}
         >
           <div className="aii__panel">
             {/* Header */}
@@ -790,7 +790,7 @@ export function AiInterviewer({
                   color="var(--accent, #06b6d4)"
                 />
                 <Typography as="h2" variant="h5" className="aii__title">
-                  {t('aiInterviewTitle', { entityLabel })}
+                  {t("aiInterviewTitle", { entityLabel })}
                 </Typography>
               </Box>
               <Button
@@ -800,7 +800,7 @@ export function AiInterviewer({
                 iconColor="var(--foreground)"
                 className="aii__close-btn"
                 onClick={handleClose}
-                aria-label={t('aiInterviewClose')}
+                aria-label={t("aiInterviewClose")}
               />
             </Box>
 
@@ -810,14 +810,14 @@ export function AiInterviewer({
                 <Fragment key={s}>
                   <div
                     className={[
-                      'aii__stage',
+                      "aii__stage",
                       currentIndex === stageIndex(s)
-                        ? 'aii__stage--active'
-                        : '',
-                      currentIndex > stageIndex(s) ? 'aii__stage--done' : '',
+                        ? "aii__stage--active"
+                        : "",
+                      currentIndex > stageIndex(s) ? "aii__stage--done" : "",
                     ]
                       .filter(Boolean)
-                      .join(' ')}
+                      .join(" ")}
                   >
                     {stageLabelMap[s]}
                   </div>
@@ -839,23 +839,23 @@ export function AiInterviewer({
                 >
                   <Spinner size={14} />
                   <Typography variant="body-sm">
-                    {t('aiInterviewLoadingBrand')}
+                    {t("aiInterviewLoadingBrand")}
                   </Typography>
                 </Box>
               )}
               {personaError && (
                 <Typography variant="body-sm" className="aii__error-note">
-                  {t('aiInterviewErrorPersona')}
+                  {t("aiInterviewErrorPersona")}
                 </Typography>
               )}
               {researchError && (
                 <Typography variant="body-sm" className="aii__error-note">
-                  {t('aiInterviewErrorResearch')}
+                  {t("aiInterviewErrorResearch")}
                 </Typography>
               )}
               {proposalError && (
                 <Typography variant="body-sm" className="aii__error-note">
-                  {t('aiInterviewErrorProposal')}
+                  {t("aiInterviewErrorProposal")}
                 </Typography>
               )}
 
@@ -863,12 +863,12 @@ export function AiInterviewer({
                 <div
                   key={msg.id}
                   className={[
-                    'aii__msg',
+                    "aii__msg",
                     `aii__msg--${msg.role}`,
-                    msg.variant ? `aii__msg--${msg.variant}` : '',
+                    msg.variant ? `aii__msg--${msg.variant}` : "",
                   ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                 >
                   <Typography variant="body-sm" className="aii__msg-text">
                     {msg.content}
@@ -878,28 +878,28 @@ export function AiInterviewer({
 
               {/* Proposal card (shown in proposal / negotiating / confirmed stages) */}
               {proposedRecord &&
-                (stage === 'proposal' ||
-                  stage === 'negotiating' ||
-                  stage === 'confirmed') && (
+                (stage === "proposal" ||
+                  stage === "negotiating" ||
+                  stage === "confirmed") && (
                   <div className="aii__proposal-card">
                     <Typography
                       as="p"
                       variant="none"
                       className="aii__proposal-heading"
                     >
-                      {t('aiInterviewProposalTitle')}
+                      {t("aiInterviewProposalTitle")}
                     </Typography>
                     <div className="aii__proposal-grid">
                       {Object.entries(proposedRecord)
                         .filter(
                           ([k, v]) =>
                             ![
-                              'justification',
-                              'brand_alignment_notes',
+                              "justification",
+                              "brand_alignment_notes",
                             ].includes(k) &&
                             v !== null &&
                             v !== undefined &&
-                            v !== '',
+                            v !== "",
                         )
                         .map(([key, value]) => (
                           <div key={key} className="aii__proposal-field">
@@ -917,21 +917,21 @@ export function AiInterviewer({
                         {proposedRecord.justification as string}
                       </p>
                     )}
-                    {(stage === 'proposal' || stage === 'negotiating') && (
+                    {(stage === "proposal" || stage === "negotiating") && (
                       <Box display="flex" gap={8} marginTop={8}>
                         <Button
-                          text={t('aiInterviewAccept')}
+                          text={t("aiInterviewAccept")}
                           onClick={handleApply}
                         />
-                        {stage === 'proposal' && (
+                        {stage === "proposal" && (
                           <Button
-                            text={t('aiInterviewNegotiate')}
+                            text={t("aiInterviewNegotiate")}
                             onClick={handleNegotiate}
                           />
                         )}
-                        {stage === 'negotiating' && (
+                        {stage === "negotiating" && (
                           <Button
-                            text={t('aiInterviewContinue')}
+                            text={t("aiInterviewContinue")}
                             kind="success"
                             onClick={handleOpenLengthModal}
                           />
@@ -957,10 +957,10 @@ export function AiInterviewer({
                     <Spinner size={14} />
                     <Typography variant="body-sm">
                       {analyzingImage
-                        ? t('aiInterviewAnalyzing')
+                        ? t("aiInterviewAnalyzing")
                         : researching
-                          ? t('aiInterviewResearching')
-                          : t('aiInterviewGenerating')}
+                          ? t("aiInterviewResearching")
+                          : t("aiInterviewGenerating")}
                     </Typography>
                   </Box>
                 </div>
@@ -983,11 +983,11 @@ export function AiInterviewer({
                 type="file"
                 accept="image/*"
                 className="aii__file-input"
-                aria-label={t('aiInterviewUpload')}
+                aria-label={t("aiInterviewUpload")}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleFileSelect(file);
-                  e.target.value = '';
+                  e.target.value = "";
                 }}
               />
               <Button
@@ -997,10 +997,10 @@ export function AiInterviewer({
                 className="aii__upload-btn"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={analyzingImage}
-                title={t('aiInterviewUpload')}
-                aria-label={t('aiInterviewUpload')}
+                title={t("aiInterviewUpload")}
+                aria-label={t("aiInterviewUpload")}
               >
-                {uploadedFile ? uploadedFile.name : t('aiInterviewUpload')}
+                {uploadedFile ? uploadedFile.name : t("aiInterviewUpload")}
               </Button>
 
               {/* Market research toggle */}
@@ -1010,14 +1010,14 @@ export function AiInterviewer({
                   onChange={setMarketResearchEnabled}
                 />
                 <Typography as="span" variant="body-sm">
-                  {t('aiInterviewMarketResearch')}
+                  {t("aiInterviewMarketResearch")}
                 </Typography>
               </Box>
 
               {/* Generate proposal CTA */}
               {canGenerateProposal && (
                 <Button
-                  text={t('aiInterviewContinue')}
+                  text={t("aiInterviewContinue")}
                   onClick={handleOpenLengthModal}
                   marginLeft="auto"
                 />
@@ -1025,7 +1025,7 @@ export function AiInterviewer({
             </Box>
 
             {/* Input row */}
-            {stage !== 'confirmed' && (
+            {stage !== "confirmed" && (
               <Box
                 className="aii__input-row"
                 display="flex"
@@ -1043,13 +1043,13 @@ export function AiInterviewer({
                   <TextInput
                     value={userInput}
                     onChange={setUserInput}
-                    placeholder={t('aiInterviewPlaceholder')}
+                    placeholder={t("aiInterviewPlaceholder")}
                     disabled={
                       isGenerating ||
                       generatingProposal ||
                       analyzingImage ||
                       researching ||
-                      stage === 'proposal'
+                      stage === "proposal"
                     }
                     multirow
                     rows={3}
@@ -1059,14 +1059,14 @@ export function AiInterviewer({
                 <Button
                   unstyled
                   className={[
-                    'aii__send-btn',
-                    canSend ? 'aii__send-btn--active' : '',
+                    "aii__send-btn",
+                    canSend ? "aii__send-btn--active" : "",
                   ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                   onClick={handleSend}
                   disabled={!canSend}
-                  aria-label={t('aiInterviewSend')}
+                  aria-label={t("aiInterviewSend")}
                 >
                   →
                 </Button>
@@ -1074,14 +1074,14 @@ export function AiInterviewer({
             )}
 
             {/* Confirmed footer */}
-            {stage === 'confirmed' && (
+            {stage === "confirmed" && (
               <Box
                 className="aii__footer"
                 display="flex"
                 justifyContent="flex-end"
                 padding="12px 20px"
               >
-                <Button text={t('aiInterviewClose')} onClick={handleClose} />
+                <Button text={t("aiInterviewClose")} onClick={handleClose} />
               </Box>
             )}
           </div>
@@ -1091,8 +1091,8 @@ export function AiInterviewer({
       {/* ── Length options modal ── */}
       {showLengthModal && (
         <ConfirmationModal
-          title={t('aiInterviewLengthOptionsTitle')}
-          text={t('aiInterviewLengthOptionsText')}
+          title={t("aiInterviewLengthOptionsTitle")}
+          text={t("aiInterviewLengthOptionsText")}
           okCallback={handleConfirmLengthOptions}
           cancelCallback={() => setShowLengthModal(false)}
           panelMaxWidth="520px"
@@ -1121,7 +1121,7 @@ export function AiInterviewer({
                         [key]: { ...current, paragraphs: Number(v) },
                       }))
                     }
-                    label={t('aiInterviewLengthParagraphsLabel')}
+                    label={t("aiInterviewLengthParagraphsLabel")}
                   />
                   <Slider
                     steps={PARAGRAPH_LENGTH_STEPS}
@@ -1132,7 +1132,7 @@ export function AiInterviewer({
                         [key]: { ...current, length: String(v) },
                       }))
                     }
-                    label={`${t('aiInterviewLengthWordsLabel')} (${wordRange.min}-${wordRange.max} ${t('aiInterviewLengthWordsPerPara')})`}
+                    label={`${t("aiInterviewLengthWordsLabel")} (${wordRange.min}-${wordRange.max} ${t("aiInterviewLengthWordsPerPara")})`}
                   />
                 </div>
               );

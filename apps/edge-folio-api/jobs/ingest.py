@@ -30,7 +30,7 @@ def upsert_postings(
     """Insert or refresh postings; returns counts for logging.
 
     For the shared catalog, a posting whose ``dedup_hash`` already exists from a
-    *different* provider is treated as a duplicate — first-seen wins and we only
+    *different* provider is treated as a duplicate - first-seen wins and we only
     refresh the original's freshness (``fetched_at`` / ``expires_at``).
     """
     now = timezone.now()

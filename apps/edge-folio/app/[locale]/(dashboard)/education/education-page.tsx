@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
-import { Container } from '@repo/ui/core-elements/container';
-import { Box } from '@repo/ui/core-elements/box';
-import { Card } from '@repo/ui/core-elements/card';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Button } from '@repo/ui/core-elements/button';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Badge } from '@repo/ui/core-elements/badge';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Select } from '@repo/ui/core-elements/select';
-import { Switch } from '@repo/ui/core-elements/switch';
-import { SpeechButton } from '@repo/ui/core-elements/speech-button';
-import { Toast } from '@repo/ui/core-elements/toast';
-import { useGroqProxy } from '@repo/ui/use-groq';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { Container } from "@repo/ui/core-elements/container";
+import { Box } from "@repo/ui/core-elements/box";
+import { Card } from "@repo/ui/core-elements/card";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Button } from "@repo/ui/core-elements/button";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Select } from "@repo/ui/core-elements/select";
+import { Switch } from "@repo/ui/core-elements/switch";
+import { SpeechButton } from "@repo/ui/core-elements/speech-button";
+import { Toast } from "@repo/ui/core-elements/toast";
+import { useGroqProxy } from "@repo/ui/use-groq";
 import {
   getEducations,
   createEducation,
@@ -26,21 +26,27 @@ import {
   type Education,
   type EducationPayload,
   type DegreeType,
-} from '@/lib/career';
-import './education-page.css';
+} from "@/lib/career";
+import "./education-page.css";
 
 const DEGREE_TYPES: DegreeType[] = [
-  'bachelor', 'master', 'phd', 'associate', 'certificate', 'bootcamp', 'other',
+  "bachelor",
+  "master",
+  "phd",
+  "associate",
+  "certificate",
+  "bootcamp",
+  "other",
 ];
 
 const DEGREE_COLORS: Record<DegreeType, string> = {
-  bachelor:    '#06b6d4',
-  master:      '#8b5cf6',
-  phd:         '#f97316',
-  associate:   '#22c55e',
-  certificate: '#f59e0b',
-  bootcamp:    '#ec4899',
-  other:       '#6b7280',
+  bachelor: "#06b6d4",
+  master: "#8b5cf6",
+  phd: "#f97316",
+  associate: "#22c55e",
+  certificate: "#f59e0b",
+  bootcamp: "#ec4899",
+  other: "#6b7280",
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -54,59 +60,92 @@ interface FormProps {
   onValidityChange: (valid: boolean) => void;
 }
 
-function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps) {
-  const t = useTranslations('EducationPage');
+function EducationForm({
+  initial,
+  onSave,
+  formRef,
+  onValidityChange,
+}: FormProps) {
+  const t = useTranslations("EducationPage");
   const locale = useLocale();
-  const [institution, setInstitution] = useState(initial?.institution ?? '');
-  const [degree, setDegree] = useState<DegreeType>(initial?.degree ?? 'bachelor');
-  const [fieldOfStudy, setFieldOfStudy] = useState(initial?.field_of_study ?? '');
-  const [startYear, setStartYear] = useState(initial?.start_year ? String(initial.start_year) : '');
-  const [endYear, setEndYear] = useState(initial?.end_year ? String(initial.end_year) : '');
+  const [institution, setInstitution] = useState(initial?.institution ?? "");
+  const [degree, setDegree] = useState<DegreeType>(
+    initial?.degree ?? "bachelor",
+  );
+  const [fieldOfStudy, setFieldOfStudy] = useState(
+    initial?.field_of_study ?? "",
+  );
+  const [startYear, setStartYear] = useState(
+    initial?.start_year ? String(initial.start_year) : "",
+  );
+  const [endYear, setEndYear] = useState(
+    initial?.end_year ? String(initial.end_year) : "",
+  );
   const [isCurrent, setIsCurrent] = useState(initial?.is_current ?? false);
-  const [gpa, setGpa] = useState(initial?.gpa != null ? String(initial.gpa) : '');
-  const [honors, setHonors] = useState(initial?.honors ?? '');
-  const [description, setDescription] = useState(initial?.description ?? '');
+  const [gpa, setGpa] = useState(
+    initial?.gpa != null ? String(initial.gpa) : "",
+  );
+  const [honors, setHonors] = useState(initial?.honors ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { streamingText, isGenerating, generate, abort, reset: resetLlm } =
-    useGroqProxy({ temperature: 0.7 });
-  const [enhancePreview, setEnhancePreview] = useState('');
+  const {
+    streamingText,
+    isGenerating,
+    generate,
+    abort,
+    reset: resetLlm,
+  } = useGroqProxy({ temperature: 0.7 });
+  const [enhancePreview, setEnhancePreview] = useState("");
 
   useEffect(() => {
     if (streamingText) setEnhancePreview(streamingText);
   }, [streamingText]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => () => { if (isGenerating) abort(); }, []);
+  useEffect(
+    () => () => {
+      if (isGenerating) abort();
+    },
+    [],
+  );
 
   async function handleEnhance() {
     const current = description.trim();
     if (!current) return;
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
-    const isEs = locale === 'es';
+    const isEs = locale === "es";
     const messages = isEs
       ? [
-          { role: 'system' as const, content: 'Eres un coach profesional de carrera. Reescribe la siguiente descripción académica en prosa clara e impactante para un portafolio profesional. Mantén 2-4 oraciones. Enfócate en logros académicos, habilidades y actividades relevantes. Devuelve únicamente el texto mejorado — sin explicaciones ni marcas de formato.' },
-          { role: 'user' as const, content: current },
+          {
+            role: "system" as const,
+            content:
+              "Eres un coach profesional de carrera. Reescribe la siguiente descripción académica en prosa clara e impactante para un portafolio profesional. Mantén 2-4 oraciones. Enfócate en logros académicos, habilidades y actividades relevantes. Devuelve únicamente el texto mejorado - sin explicaciones ni marcas de formato.",
+          },
+          { role: "user" as const, content: current },
         ]
       : [
-          { role: 'system' as const, content: 'You are a professional career coach. Rewrite the following education description into polished, impactful prose for a professional portfolio. Keep it to 2-4 sentences. Focus on academic achievements, relevant coursework, and transferable skills. Return only the improved text — no explanations or formatting marks.' },
-          { role: 'user' as const, content: current },
+          {
+            role: "system" as const,
+            content:
+              "You are a professional career coach. Rewrite the following education description into polished, impactful prose for a professional portfolio. Keep it to 2-4 sentences. Focus on academic achievements, relevant coursework, and transferable skills. Return only the improved text - no explanations or formatting marks.",
+          },
+          { role: "user" as const, content: current },
         ];
     await generate(messages);
   }
 
   function handleAcceptEnhance() {
     if (enhancePreview) setDescription(enhancePreview);
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
   }
 
   function handleDiscardEnhance() {
     if (isGenerating) abort();
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
   }
 
@@ -146,7 +185,7 @@ function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps
       if (err instanceof CareerError && err.data.detail) {
         setError(String(err.data.detail));
       } else {
-        setError(t('saveError'));
+        setError(t("saveError"));
       }
     } finally {
       setSaving(false);
@@ -156,7 +195,7 @@ function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="education__form">
       <TextInput
-        label={t('institutionLabel')}
+        label={t("institutionLabel")}
         value={institution}
         onChange={setInstitution}
         required
@@ -165,24 +204,27 @@ function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps
 
       <Select
         id="edu-degree"
-        label={t('degreeLabel')}
+        label={t("degreeLabel")}
         value={degree}
         onChange={(v) => setDegree(v as DegreeType)}
-        options={DEGREE_TYPES.map((d) => ({ value: d, label: t(`degrees.${d}`) }))}
+        options={DEGREE_TYPES.map((d) => ({
+          value: d,
+          label: t(`degrees.${d}`),
+        }))}
       />
 
       <TextInput
-        label={t('fieldOfStudyLabel')}
+        label={t("fieldOfStudyLabel")}
         value={fieldOfStudy}
         onChange={setFieldOfStudy}
         maxLength={200}
-        placeholder={t('fieldOfStudyPlaceholder')}
+        placeholder={t("fieldOfStudyPlaceholder")}
       />
 
-      <Box display="grid" gap={12} styles={{ gridTemplateColumns: '1fr 1fr' }}>
+      <Box display="grid" gap={12} styles={{ gridTemplateColumns: "1fr 1fr" }}>
         <TextInput
           type="number"
-          label={t('startYearLabel')}
+          label={t("startYearLabel")}
           value={startYear}
           onChange={setStartYear}
           min={1950}
@@ -191,8 +233,8 @@ function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps
         />
         <TextInput
           type="number"
-          label={t('endYearLabel')}
-          value={isCurrent ? '' : endYear}
+          label={t("endYearLabel")}
+          value={isCurrent ? "" : endYear}
           onChange={setEndYear}
           min={1950}
           max={CURRENT_YEAR + 10}
@@ -205,19 +247,17 @@ function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps
           checked={isCurrent}
           onChange={(checked) => {
             setIsCurrent(checked);
-            if (checked) setEndYear('');
+            if (checked) setEndYear("");
           }}
-          aria-label={t('isCurrentLabel')}
+          aria-label={t("isCurrentLabel")}
         />
-        <Typography variant="body">
-          {t('isCurrentLabel')}
-        </Typography>
+        <Typography variant="body">{t("isCurrentLabel")}</Typography>
       </Box>
 
       <Box display="flex" gap={12} flexWrap="wrap">
         <Box flex={1} styles={{ minWidth: 120 }}>
           <TextInput
-            label={t('gpaLabel')}
+            label={t("gpaLabel")}
             value={gpa}
             onChange={setGpa}
             type="number"
@@ -226,25 +266,33 @@ function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps
         </Box>
         <Box flex={2} styles={{ minWidth: 160 }}>
           <TextInput
-            label={t('honorsLabel')}
+            label={t("honorsLabel")}
             value={honors}
             onChange={setHonors}
             maxLength={100}
-            placeholder={t('honorsPlaceholder')}
+            placeholder={t("honorsPlaceholder")}
           />
         </Box>
       </Box>
 
       <Box display="flex" flexDirection="column" gap={6}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" gap={8} flexWrap="wrap">
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          gap={8}
+          flexWrap="wrap"
+        >
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('descriptionLabel')}
+            {t("descriptionLabel")}
           </Typography>
           <Box display="flex" alignItems="center" gap={6}>
             <SpeechButton
               mode="batch"
               language="en"
-              onTranscript={(text) => setDescription((prev) => prev ? `${prev} ${text}` : text)}
+              onTranscript={(text) =>
+                setDescription((prev) => (prev ? `${prev} ${text}` : text))
+              }
               micIcon="/icons/mic.svg"
             />
             <Button
@@ -252,16 +300,24 @@ function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps
               type="button"
               icon="/icons/enhance.svg"
               iconSize="16px"
-              iconColor={enhancePreview ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+              iconColor={
+                enhancePreview
+                  ? "var(--primary, #06b6d4)"
+                  : "var(--foreground, #171717)"
+              }
               disabled={isGenerating || !description.trim()}
               onClick={handleEnhance}
-              aria-label={t('enhance')}
-              title={t('enhance')}
+              aria-label={t("enhance")}
+              title={t("enhance")}
               className={[
-                'education__enhance-btn',
-                isGenerating || !description.trim() ? 'education__enhance-btn--busy' : '',
-                enhancePreview ? 'education__enhance-btn--active' : '',
-              ].filter(Boolean).join(' ')}
+                "education__enhance-btn",
+                isGenerating || !description.trim()
+                  ? "education__enhance-btn--busy"
+                  : "",
+                enhancePreview ? "education__enhance-btn--active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             />
           </Box>
         </Box>
@@ -271,20 +327,44 @@ function EducationForm({ initial, onSave, formRef, onValidityChange }: FormProps
           multirow
           rows={4}
           maxLength={2000}
-          placeholder={t('descriptionPlaceholder')}
+          placeholder={t("descriptionPlaceholder")}
         />
         {enhancePreview && (
-          <Box className="education__enhance-preview" display="flex" flexDirection="column" gap={10}>
-            <Typography variant="body-sm" styles={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+          <Box
+            className="education__enhance-preview"
+            display="flex"
+            flexDirection="column"
+            gap={10}
+          >
+            <Typography
+              variant="body-sm"
+              styles={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
+            >
               {enhancePreview}
             </Typography>
             <Box display="flex" gap={8} alignItems="center" marginTop={4}>
               {isGenerating ? (
-                <Button text={t('enhanceDiscard')} type="button" size="sm" onClick={handleDiscardEnhance} />
+                <Button
+                  text={t("enhanceDiscard")}
+                  type="button"
+                  size="sm"
+                  onClick={handleDiscardEnhance}
+                />
               ) : (
                 <>
-                  <Button text={t('enhanceDiscard')} type="button" size="sm" onClick={handleDiscardEnhance} />
-                  <Button text={t('enhanceAccept')} type="button" size="sm" kind="success" onClick={handleAcceptEnhance} />
+                  <Button
+                    text={t("enhanceDiscard")}
+                    type="button"
+                    size="sm"
+                    onClick={handleDiscardEnhance}
+                  />
+                  <Button
+                    text={t("enhanceAccept")}
+                    type="button"
+                    size="sm"
+                    kind="success"
+                    onClick={handleAcceptEnhance}
+                  />
                 </>
               )}
             </Box>
@@ -310,35 +390,40 @@ interface CardProps {
 }
 
 function EducationCard({ entry, onEdit, onDelete }: CardProps) {
-  const t = useTranslations('EducationPage');
+  const t = useTranslations("EducationPage");
 
   const yearRange = (() => {
-    if (entry.is_current) return `${entry.start_year} — ${t('present')}`;
-    if (entry.end_year) return `${entry.start_year} — ${entry.end_year}`;
+    if (entry.is_current) return `${entry.start_year} - ${t("present")}`;
+    if (entry.end_year) return `${entry.start_year} - ${entry.end_year}`;
     return String(entry.start_year);
   })();
 
   return (
-    <Card
-      className="education__card"
-      gap={10}
-      padding={16}
-    >
-      <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={12} flexWrap="wrap">
+    <Card className="education__card" gap={10} padding={16}>
+      <Box
+        display="flex"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={12}
+        flexWrap="wrap"
+      >
         <Box display="flex" flexDirection="column" gap={2}>
           <Typography as="h3" variant="body" fontWeight={700}>
             {entry.field_of_study
               ? `${t(`degrees.${entry.degree}`)} in ${entry.field_of_study}`
               : t(`degrees.${entry.degree}`)}
           </Typography>
-          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+          <Typography
+            variant="body-sm"
+            color="var(--muted-foreground, #6b7280)"
+          >
             {entry.institution}
           </Typography>
         </Box>
         <Badge
           variant="subtle"
           color={DEGREE_COLORS[entry.degree]}
-          style={{ letterSpacing: '0.02em', flexShrink: 0 }}
+          style={{ letterSpacing: "0.02em", flexShrink: 0 }}
         >
           {t(`degrees.${entry.degree}`)}
         </Badge>
@@ -373,8 +458,19 @@ function EducationCard({ entry, onEdit, onDelete }: CardProps) {
       )}
 
       <Box display="flex" gap={8} justifyContent="flex-end" marginTop={4}>
-        <Button text={t('delete')} type="button" size="md" kind="error" onClick={() => onDelete(entry.id)} />
-        <Button text={t('edit')} type="button" size="md" onClick={() => onEdit(entry)} />
+        <Button
+          text={t("delete")}
+          type="button"
+          size="md"
+          kind="error"
+          onClick={() => onDelete(entry.id)}
+        />
+        <Button
+          text={t("edit")}
+          type="button"
+          size="md"
+          onClick={() => onEdit(entry)}
+        />
       </Box>
     </Card>
   );
@@ -383,19 +479,22 @@ function EducationCard({ entry, onEdit, onDelete }: CardProps) {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function EducationPage() {
-  const t = useTranslations('EducationPage');
+  const t = useTranslations("EducationPage");
   const [entries, setEntries] = useState<Education[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Education | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{
+    text: string;
+    kind: "success" | "error";
+  } | null>(null);
   const [toastKey, setToastKey] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
   const [formCanSubmit, setFormCanSubmit] = useState(false);
 
-  function showToast(text: string, kind: 'success' | 'error') {
+  function showToast(text: string, kind: "success" | "error") {
     setToast({ text, kind });
     setToastKey((k) => k + 1);
   }
@@ -407,7 +506,7 @@ export function EducationPage() {
       const res = await getEducations();
       setEntries(res.results);
     } catch {
-      setError(t('errorLoad'));
+      setError(t("errorLoad"));
     } finally {
       setLoading(false);
     }
@@ -439,16 +538,19 @@ export function EducationPage() {
         : prev.map((e) => (e.id === entry.id ? entry : e)),
     );
     closeForm();
-    showToast(editing === null ? t('savedSuccess') : t('updatedSuccess'), 'success');
+    showToast(
+      editing === null ? t("savedSuccess") : t("updatedSuccess"),
+      "success",
+    );
   }
 
   async function handleDelete(id: number) {
     try {
       await deleteEducation(id);
       setEntries((prev) => prev.filter((e) => e.id !== id));
-      showToast(t('deletedSuccess'), 'success');
+      showToast(t("deletedSuccess"), "success");
     } catch {
-      showToast(t('deleteError'), 'error');
+      showToast(t("deleteError"), "error");
     }
   }
 
@@ -457,9 +559,13 @@ export function EducationPage() {
       <Container
         display="flex"
         alignItems="center"
-        styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center' }}
+        styles={{
+          minHeight: "100vh",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
       >
-        <ProgressBar label={t('loading')} />
+        <ProgressBar label={t("loading")} />
       </Container>
     );
   }
@@ -469,12 +575,17 @@ export function EducationPage() {
       <Container
         display="flex"
         alignItems="center"
-        styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center', gap: '16px' }}
+        styles={{
+          minHeight: "100vh",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: "16px",
+        }}
       >
         <Typography variant="body-sm" color="var(--error, #ef4444)">
           {error}
         </Typography>
-        <Button text={t('retry')} type="button" size="md" onClick={load} />
+        <Button text={t("retry")} type="button" size="md" onClick={load} />
       </Container>
     );
   }
@@ -482,12 +593,12 @@ export function EducationPage() {
   return (
     <Container
       paddingX={10}
-      styles={{ paddingTop: 'var(--ui-navbar-height)', paddingBottom: '60px' }}
+      styles={{ paddingTop: "var(--ui-navbar-height)", paddingBottom: "60px" }}
     >
       {pendingDeleteId !== null && (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText')}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText")}
           okCallback={() => {
             const id = pendingDeleteId;
             setPendingDeleteId(null);
@@ -499,7 +610,7 @@ export function EducationPage() {
 
       {formOpen && (
         <ConfirmationModal
-          title={editing ? t('editTitle') : t('addTitle')}
+          title={editing ? t("editTitle") : t("addTitle")}
           text=""
           okCallback={() => formRef.current?.requestSubmit()}
           cancelCallback={closeForm}
@@ -527,21 +638,36 @@ export function EducationPage() {
       >
         <Box display="flex" flexDirection="column" gap={4}>
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
-            {t('title')}
+            {t("title")}
           </Typography>
-          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-            {t('subtitle')}
+          <Typography
+            variant="body-sm"
+            color="var(--muted-foreground, #6b7280)"
+          >
+            {t("subtitle")}
           </Typography>
         </Box>
-        <Button text={t('addEntry')} type="button" size="md" kind="success" onClick={openAdd} />
+        <Button
+          text={t("addEntry")}
+          type="button"
+          size="md"
+          kind="success"
+          onClick={openAdd}
+        />
       </Box>
 
       {entries.length === 0 ? (
         <Box className="education__empty">
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('empty')}
+            {t("empty")}
           </Typography>
-          <Button text={t('addEntry')} type="button" size="md" kind="success" onClick={openAdd} />
+          <Button
+            text={t("addEntry")}
+            type="button"
+            size="md"
+            kind="success"
+            onClick={openAdd}
+          />
         </Box>
       ) : (
         <Grid container spacing={2} marginBottom={40}>
@@ -557,7 +683,14 @@ export function EducationPage() {
         </Grid>
       )}
 
-      {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} position="top-center" />}
+      {toast && (
+        <Toast
+          key={toastKey}
+          message={toast.text}
+          variant={toast.kind}
+          position="top-center"
+        />
+      )}
     </Container>
   );
 }

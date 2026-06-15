@@ -36,8 +36,8 @@
  *   { id, type: 'error',     payload: { message: string } }
  */
 
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { toBlobURL } from '@ffmpeg/util';
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { toBlobURL } from "@ffmpeg/util";
 
 /* ── Worker state ──────────────────────────────────── */
 
@@ -47,7 +47,7 @@ let loadPromise: Promise<void> | null = null;
 /* ── Subtitle font (cached across calls) ─────────── */
 let subtitleFontCache: Uint8Array | null = null;
 const SUBTITLE_FONT_URL =
-  'https://cdn.jsdelivr.net/npm/roboto-font@0.1.0/fonts/Roboto/roboto-regular-webfont.ttf';
+  "https://cdn.jsdelivr.net/npm/roboto-font@0.1.0/fonts/Roboto/roboto-regular-webfont.ttf";
 
 async function getSubtitleFont(): Promise<Uint8Array | null> {
   if (subtitleFontCache) return subtitleFontCache;
@@ -64,13 +64,13 @@ async function getSubtitleFont(): Promise<Uint8Array | null> {
 /* ── Animated subtitle types & helpers ───────────── */
 
 type AnimationType =
-  | 'none'
-  | 'fade'
-  | 'slideUp'
-  | 'slideDown'
-  | 'blur'
-  | 'zoom'
-  | 'karaoke';
+  | "none"
+  | "fade"
+  | "slideUp"
+  | "slideDown"
+  | "blur"
+  | "zoom"
+  | "karaoke";
 
 interface AnimationOptions {
   /** Which animations to apply; combine freely (karaoke is text-level, rest are line-level). Default: ['none']. */
@@ -90,7 +90,7 @@ interface AnimationOptions {
   /** Zoom: duration in ms to scale text from 0 → 100 %. Default 300. */
   zoomDurationMs?: number;
   /** Karaoke: ASS karaoke tag variant. Default 'kf' (sweep). */
-  karaokeMode?: 'k' | 'kf' | 'ko';
+  karaokeMode?: "k" | "kf" | "ko";
   /** Karaoke: highlight (sung) colour in ASS &HAABBGGRR format. Default '&H0000FFFF' (yellow). */
   karaokeHighlightColour?: string;
 }
@@ -103,8 +103,8 @@ interface SrtEvent {
 
 /** '00:01:23,456' → centiseconds */
 function parseSrtTimeToCentiseconds(t: string): number {
-  const [hms = '0:0:0', ms = '0'] = t.trim().split(',');
-  const parts = hms.split(':').map(Number);
+  const [hms = "0:0:0", ms = "0"] = t.trim().split(",");
+  const parts = hms.split(":").map(Number);
   const h = parts[0] ?? 0;
   const m = parts[1] ?? 0;
   const s = parts[2] ?? 0;
@@ -119,22 +119,22 @@ function formatAssTimestamp(cs: number): string {
   const rem2 = rem1 % 6000;
   const s = Math.floor(rem2 / 100);
   const c = rem2 % 100;
-  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(c).padStart(2, '0')}`;
+  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(c).padStart(2, "0")}`;
 }
 
 function parseSrt(srt: string): SrtEvent[] {
   const events: SrtEvent[] = [];
   const blocks = srt.trim().split(/\n[ \t]*\n/);
   for (const block of blocks) {
-    const lines = block.trim().split('\n');
-    const tsIdx = lines.findIndex((l) => l.includes('-->'));
+    const lines = block.trim().split("\n");
+    const tsIdx = lines.findIndex((l) => l.includes("-->"));
     if (tsIdx === -1) continue;
-    const [startRaw = '', endRaw = ''] = lines[tsIdx]!.split('-->');
+    const [startRaw = "", endRaw = ""] = lines[tsIdx]!.split("-->");
     const startCs = parseSrtTimeToCentiseconds(startRaw);
     const endCs = parseSrtTimeToCentiseconds(endRaw);
     const text = lines
       .slice(tsIdx + 1)
-      .join('\\N')
+      .join("\\N")
       .trim();
     if (text) events.push({ startCs, endCs, text });
   }
@@ -187,33 +187,33 @@ function buildOverrideTags(
 
   for (const type of types) {
     switch (type) {
-      case 'fade': {
+      case "fade": {
         const fi = opts.fadeInMs ?? 300;
         const fo = opts.fadeOutMs ?? 200;
         tags.push(`\\fad(${fi},${fo})`);
         break;
       }
-      case 'slideUp':
-      case 'slideDown': {
+      case "slideUp":
+      case "slideDown": {
         const offset = opts.slideOffset ?? 20;
         const dur = opts.slideDurationMs ?? 300;
         const pos = hasExplicitPos
           ? { x: posX!, y: posY! }
           : computeDefaultPosition(alignment, playResX, playResY, marginV);
-        const startY = type === 'slideUp' ? pos.y + offset : pos.y - offset;
+        const startY = type === "slideUp" ? pos.y + offset : pos.y - offset;
         tags.push(
           `\\move(${Math.round(pos.x)},${Math.round(startY)},${Math.round(pos.x)},${Math.round(pos.y)},0,${dur})`,
         );
         hasMove = true;
         break;
       }
-      case 'blur': {
+      case "blur": {
         const strength = opts.blurStrength ?? 15;
         const dur = opts.blurDurationMs ?? 300;
         tags.push(`\\blur${strength}\\t(0,${dur},\\blur0)`);
         break;
       }
-      case 'zoom': {
+      case "zoom": {
         const dur = opts.zoomDurationMs ?? 300;
         tags.push(`\\fscx0\\fscy0\\t(0,${dur},\\fscx100\\fscy100)`);
         break;
@@ -227,7 +227,7 @@ function buildOverrideTags(
     tags.push(`\\pos(${Math.round(posX!)},${Math.round(posY!)})`);
   }
 
-  return tags.length > 0 ? `{${tags.join('')}}` : '';
+  return tags.length > 0 ? `{${tags.join("")}}` : "";
 }
 
 /**
@@ -238,18 +238,18 @@ function buildOverrideTags(
 function applyKaraokeToText(
   text: string,
   durationCs: number,
-  mode: 'k' | 'kf' | 'ko',
+  mode: "k" | "kf" | "ko",
 ): string {
-  const NL_MARKER = '\x00NL\x00';
+  const NL_MARKER = "\x00NL\x00";
   const normalized = text.replace(/\\N/g, ` ${NL_MARKER} `);
   const tokens = normalized.split(/\s+/).filter(Boolean);
   const wordCount = tokens.filter((t) => t !== NL_MARKER).length;
   if (wordCount === 0) return text;
   const csPerWord = Math.max(1, Math.round(durationCs / wordCount));
   return tokens
-    .map((t) => (t === NL_MARKER ? '\\N' : `{\\${mode}${csPerWord}}${t}`))
-    .join(' ')
-    .replace(/\s*\\N\s*/g, '\\N');
+    .map((t) => (t === NL_MARKER ? "\\N" : `{\\${mode}${csPerWord}}${t}`))
+    .join(" ")
+    .replace(/\s*\\N\s*/g, "\\N");
 }
 
 /**
@@ -258,7 +258,7 @@ function applyKaraokeToText(
  *
  * This replaces the old `force_style` approach: styles are written directly
  * into the ASS [V4+ Styles] section, so no `force_style=` FFmpeg option is
- * needed.  The Alignment field uses ASS v4+ numpad values (1-9) directly —
+ * needed.  The Alignment field uses ASS v4+ numpad values (1-9) directly -
  * no SSA v4 bit-flag conversion required.
  */
 function generateAssContent(params: {
@@ -294,21 +294,21 @@ function generateAssContent(params: {
     animation,
   } = params;
 
-  const allTypes = animation.types ?? ['none'];
-  const activeTypes = allTypes.filter((t) => t !== 'none');
-  const hasKaraoke = activeTypes.includes('karaoke');
-  const nonKaraokeTypes = activeTypes.filter((t) => t !== 'karaoke');
-  const karaokeMode = animation.karaokeMode ?? 'kf';
-  const karaokeHighlight = animation.karaokeHighlightColour ?? '&H0000FFFF';
+  const allTypes = animation.types ?? ["none"];
+  const activeTypes = allTypes.filter((t) => t !== "none");
+  const hasKaraoke = activeTypes.includes("karaoke");
+  const nonKaraokeTypes = activeTypes.filter((t) => t !== "karaoke");
+  const karaokeMode = animation.karaokeMode ?? "kf";
+  const karaokeHighlight = animation.karaokeHighlightColour ?? "&H0000FFFF";
 
   /* ASS spec: with BorderStyle=3 the box uses OutlineColour, not BackColour. */
-  const outlineColour = borderStyle === 3 ? backColour : '&H00000000';
+  const outlineColour = borderStyle === 3 ? backColour : "&H00000000";
 
   /* Karaoke remaps colours:
        PrimaryColour   = highlight (sung) colour
        SecondaryColour = normal (unsung) text colour  */
   const stylePrimary = hasKaraoke ? karaokeHighlight : primaryColour;
-  const styleSecondary = hasKaraoke ? primaryColour : '&H000000FF';
+  const styleSecondary = hasKaraoke ? primaryColour : "&H000000FF";
 
   const events = parseSrt(srtContent);
 
@@ -318,7 +318,7 @@ function generateAssContent(params: {
      boxes never touch.  A \be3 tag softens box corners for a rounded look. */
   const dialogues = events
     .flatMap(({ startCs, endCs, text }) => {
-      const rawLines = text.split('\\N');
+      const rawLines = text.split("\\N");
       const splitPerLine = borderStyle === 3 && rawLines.length > 1;
 
       if (!splitPerLine) {
@@ -342,7 +342,7 @@ function generateAssContent(params: {
         if (borderStyle === 3) {
           tagBlock = overrideTags
             ? `{${overrideTags.slice(1, -1)}\\be3}`
-            : '{\\be3}';
+            : "{\\be3}";
         } else {
           tagBlock = overrideTags;
         }
@@ -412,11 +412,11 @@ function generateAssContent(params: {
         return `Dialogue: 0,${formatAssTimestamp(startCs)},${formatAssTimestamp(endCs)},Default,,0,0,0,,${tagBlock}${finalLine}`;
       });
     })
-    .join('\n');
+    .join("\n");
 
   const styleLine = [
-    'Default',
-    fontName ?? 'Arial',
+    "Default",
+    fontName ?? "Arial",
     fontSize,
     stylePrimary,
     styleSecondary,
@@ -438,25 +438,25 @@ function generateAssContent(params: {
     10,
     marginV, // MarginL, MarginR, MarginV
     1, // Encoding
-  ].join(',');
+  ].join(",");
 
   return [
-    '[Script Info]',
-    'ScriptType: v4.00+',
+    "[Script Info]",
+    "ScriptType: v4.00+",
     `PlayResX: ${playResX}`,
     `PlayResY: ${playResY}`,
-    'WrapStyle: 0',
-    'ScaledBorderAndShadow: yes',
-    '',
-    '[V4+ Styles]',
-    'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
+    "WrapStyle: 0",
+    "ScaledBorderAndShadow: yes",
+    "",
+    "[V4+ Styles]",
+    "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
     `Style: ${styleLine}`,
-    '',
-    '[Events]',
-    'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+    "",
+    "[Events]",
+    "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     dialogues,
-    '',
-  ].join('\n');
+    "",
+  ].join("\n");
 }
 
 /* ── Helpers ─────────────────────────────────────── */
@@ -472,10 +472,10 @@ async function ensureLoaded(
     loadPromise = (async () => {
       const instance = new FFmpeg();
       await instance.load({
-        coreURL: await toBlobURL(coreURL, 'text/javascript'),
-        wasmURL: await toBlobURL(wasmURL, 'application/wasm'),
+        coreURL: await toBlobURL(coreURL, "text/javascript"),
+        wasmURL: await toBlobURL(wasmURL, "application/wasm"),
         ...(workerURL && {
-          workerURL: await toBlobURL(workerURL, 'text/javascript'),
+          workerURL: await toBlobURL(workerURL, "text/javascript"),
         }),
       });
       ffmpeg = instance;
@@ -498,26 +498,26 @@ self.onmessage = async (
   const { id, type, payload } = event.data;
 
   const sendProgress = (progress: number) => {
-    self.postMessage({ id, type: 'progress', payload: { progress } });
+    self.postMessage({ id, type: "progress", payload: { progress } });
   };
 
   const sendError = (message: string) => {
-    self.postMessage({ id, type: 'error', payload: { message } });
+    self.postMessage({ id, type: "error", payload: { message } });
   };
 
   const sendWarn = (message: string) => {
-    self.postMessage({ id, type: 'warn', payload: { message } });
+    self.postMessage({ id, type: "warn", payload: { message } });
   };
 
   try {
-    if (type === 'load') {
+    if (type === "load") {
       const { coreURL, wasmURL, workerURL } = payload as {
         coreURL: string;
         wasmURL: string;
         workerURL?: string;
       };
       await ensureLoaded(coreURL, wasmURL, workerURL);
-      self.postMessage({ id, type: 'loaded' });
+      self.postMessage({ id, type: "loaded" });
       return;
     }
 
@@ -531,28 +531,28 @@ self.onmessage = async (
     const progressHandler = ({ progress: p }: { progress: number }) => {
       sendProgress(Math.round(p * 100));
     };
-    ff.on('progress', progressHandler);
+    ff.on("progress", progressHandler);
 
     try {
       switch (type) {
-        case 'interpolateFps': {
+        case "interpolateFps": {
           const { videoData, targetFps } = payload as {
             videoData: Uint8Array;
             targetFps: number;
           };
-          const input = 'input.mp4';
-          const output = 'output.mp4';
+          const input = "input.mp4";
+          const output = "output.mp4";
           await ff.writeFile(input, videoData);
 
           // Probe input resolution. FFmpeg exits 1 with no output specified
           // but still logs stream info - ignore the exit code.
-          let probeLog = '';
+          let probeLog = "";
           const probeHandler = ({ message }: { message: string }) => {
-            probeLog += message + '\n';
+            probeLog += message + "\n";
           };
-          ff.on('log', probeHandler);
-          await ff.exec(['-i', input]);
-          ff.off('log', probeHandler);
+          ff.on("log", probeHandler);
+          await ff.exec(["-i", input]);
+          ff.off("log", probeHandler);
 
           const dimMatch = probeLog.match(/(\d{2,5})x(\d{2,5})/);
           const origW = dimMatch ? Number(dimMatch[1]) : 0;
@@ -591,56 +591,56 @@ self.onmessage = async (
               );
             }
           };
-          ff.on('log', frameLogHandler);
+          ff.on("log", frameLogHandler);
 
           const code = await ff.exec([
-            '-y',
-            '-i',
+            "-y",
+            "-i",
             input,
-            '-filter:v',
+            "-filter:v",
             videoFilter,
-            '-c:v',
-            'libx264',
-            '-preset',
-            'fast',
-            '-crf',
-            '23',
-            '-c:a',
-            'copy',
-            '-movflags',
-            '+faststart',
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            "-movflags",
+            "+faststart",
             output,
           ]);
-          ff.off('log', frameLogHandler);
+          ff.off("log", frameLogHandler);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
           const result = (await ff.readFile(output)) as Uint8Array;
           await ff.deleteFile(input);
           await ff.deleteFile(output);
           self.postMessage(
-            { id, type: 'result', payload: { data: result } },
+            { id, type: "result", payload: { data: result } },
             { transfer: [result.buffer as ArrayBuffer] },
           );
           break;
         }
 
-        case 'convertToH264': {
+        case "convertToH264": {
           const { videoData } = payload as { videoData: Uint8Array };
-          const input = 'input_h265.mp4';
-          const output = 'output_h264.mp4';
+          const input = "input_h265.mp4";
+          const output = "output_h264.mp4";
           await ff.writeFile(input, videoData);
           const code = await ff.exec([
-            '-i',
+            "-i",
             input,
-            '-c:v',
-            'libx264',
-            '-preset',
-            'faster',
-            '-crf',
-            '23',
-            '-c:a',
-            'copy',
-            '-movflags',
-            '+faststart',
+            "-c:v",
+            "libx264",
+            "-preset",
+            "faster",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            "-movflags",
+            "+faststart",
             output,
           ]);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
@@ -648,16 +648,16 @@ self.onmessage = async (
           await ff.deleteFile(input);
           await ff.deleteFile(output);
           self.postMessage(
-            { id, type: 'result', payload: { data: result } },
+            { id, type: "result", payload: { data: result } },
             { transfer: [result.buffer as ArrayBuffer] },
           );
           break;
         }
 
-        case 'removeBlackBars': {
-          /* Unregister the global progress handler — this case uses
+        case "removeBlackBars": {
+          /* Unregister the global progress handler - this case uses
              its own frame-based progress for both detection and crop. */
-          ff.off('progress', progressHandler);
+          ff.off("progress", progressHandler);
 
           const {
             videoData,
@@ -670,18 +670,18 @@ self.onmessage = async (
             round?: number;
             cropString?: string;
           };
-          const input = 'input_bars.mp4';
-          const output = 'output_cropped.mp4';
+          const input = "input_bars.mp4";
+          const output = "output_cropped.mp4";
           await ff.writeFile(input, videoData);
 
           /* Probe input dimensions + duration for progress reporting. */
-          let probeLog = '';
+          let probeLog = "";
           const probeHandler = ({ message }: { message: string }) => {
-            probeLog += message + '\n';
+            probeLog += message + "\n";
           };
-          ff.on('log', probeHandler);
-          await ff.exec(['-i', input]);
-          ff.off('log', probeHandler);
+          ff.on("log", probeHandler);
+          await ff.exec(["-i", input]);
+          ff.off("log", probeHandler);
 
           const dimMatch = probeLog.match(/(\d{2,5})x(\d{2,5})/);
           const origW = dimMatch ? Number(dimMatch[1]) : 0;
@@ -703,14 +703,14 @@ self.onmessage = async (
                -f null produces no encoding output, so FFmpeg's built-in
                progress event does not fire. Use frame-count log parsing
                instead (same approach as interpolateFps). */
-            let cropLogs = '';
+            let cropLogs = "";
             const fpsMatch = probeLog.match(/(\d+(?:\.\d+)?)\s*(?:fps|tbr)/);
             const srcFps = fpsMatch ? Number(fpsMatch[1]) : 30;
             const estimatedFrames = durationSec > 0 ? durationSec * srcFps : 0;
             let lastReportedFrame = 0;
 
             const detectLogHandler = ({ message }: { message: string }) => {
-              cropLogs += message + '\n';
+              cropLogs += message + "\n";
               if (estimatedFrames > 0) {
                 const m = message.match(/frame=\s*(\d+)/);
                 if (m) {
@@ -725,25 +725,25 @@ self.onmessage = async (
                 }
               }
             };
-            ff.on('log', detectLogHandler);
+            ff.on("log", detectLogHandler);
             await ff.exec([
-              ...(durationSec > 60 ? ['-t', '60'] : []),
-              '-i',
+              ...(durationSec > 60 ? ["-t", "60"] : []),
+              "-i",
               input,
-              '-vf',
+              "-vf",
               `cropdetect=limit=${limit}:round=${round}:reset=0`,
-              '-f',
-              'null',
-              '-',
+              "-f",
+              "null",
+              "-",
             ]);
-            ff.off('log', detectLogHandler);
+            ff.off("log", detectLogHandler);
 
             const matches = [
               ...cropLogs.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g),
             ];
             if (matches.length === 0) {
               await ff.deleteFile(input);
-              throw new Error('No black bars detected');
+              throw new Error("No black bars detected");
             }
             const last = matches[matches.length - 1]!;
             const [, w, h, x, y] = last;
@@ -756,14 +756,14 @@ self.onmessage = async (
               Number(h) >= origH
             ) {
               await ff.deleteFile(input);
-              throw new Error('No black bars detected');
+              throw new Error("No black bars detected");
             }
             crop = `${w}:${h}:${x}:${y}`;
           }
 
           sendProgress(50);
 
-          /* Step 2: apply crop — use frame-based progress for 50-100%. */
+          /* Step 2: apply crop - use frame-based progress for 50-100%. */
           const cropEstFrames =
             durationSec > 0
               ? durationSec *
@@ -786,63 +786,63 @@ self.onmessage = async (
               }
             }
           };
-          ff.on('log', cropLogHandler);
+          ff.on("log", cropLogHandler);
           const code = await ff.exec([
-            '-i',
+            "-i",
             input,
-            '-vf',
+            "-vf",
             `crop=${crop}`,
-            '-c:v',
-            'libx264',
-            '-preset',
-            'fast',
-            '-crf',
-            '23',
-            '-c:a',
-            'copy',
-            '-movflags',
-            '+faststart',
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            "-movflags",
+            "+faststart",
             output,
           ]);
-          ff.off('log', cropLogHandler);
+          ff.off("log", cropLogHandler);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
           const result = (await ff.readFile(output)) as Uint8Array;
           await ff.deleteFile(input);
           await ff.deleteFile(output);
           sendProgress(100);
           self.postMessage(
-            { id, type: 'result', payload: { data: result } },
+            { id, type: "result", payload: { data: result } },
             { transfer: [result.buffer as ArrayBuffer] },
           );
           break;
         }
 
-        case 'extractAudio': {
-          const { videoData, format = 'wav' } = payload as {
+        case "extractAudio": {
+          const { videoData, format = "wav" } = payload as {
             videoData: Uint8Array;
             format?: string;
           };
-          const input = 'input_audio_extract.mp4';
+          const input = "input_audio_extract.mp4";
           const output = `output_audio.${format}`;
           await ff.writeFile(input, videoData);
 
           const args =
-            format === 'wav'
+            format === "wav"
               ? [
-                  '-i',
+                  "-i",
                   input,
-                  '-map',
-                  '0:a:0',
-                  '-vn',
-                  '-acodec',
-                  'pcm_s16le',
-                  '-ar',
-                  '16000',
-                  '-ac',
-                  '1',
+                  "-map",
+                  "0:a:0",
+                  "-vn",
+                  "-acodec",
+                  "pcm_s16le",
+                  "-ar",
+                  "16000",
+                  "-ac",
+                  "1",
                   output,
                 ]
-              : ['-i', input, '-map', '0:a:0', '-vn', '-c:a', 'copy', output];
+              : ["-i", input, "-map", "0:a:0", "-vn", "-c:a", "copy", output];
 
           const code = await ff.exec(args);
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
@@ -851,13 +851,13 @@ self.onmessage = async (
           await ff.deleteFile(output);
           sendProgress(100);
           self.postMessage(
-            { id, type: 'result', payload: { data: result } },
+            { id, type: "result", payload: { data: result } },
             { transfer: [result.buffer as ArrayBuffer] },
           );
           break;
         }
 
-        case 'burnSubtitles': {
+        case "burnSubtitles": {
           const {
             videoData,
             srtContent,
@@ -866,8 +866,8 @@ self.onmessage = async (
             fontSize = 16,
             bold = false,
             italic = false,
-            primaryColour = '&H00FFFFFF',
-            backColour = '&H70000000',
+            primaryColour = "&H00FFFFFF",
+            backColour = "&H70000000",
             borderStyle = 3,
             outline = 0,
             animation = {},
@@ -887,37 +887,37 @@ self.onmessage = async (
             animation?: AnimationOptions;
           };
 
-          const input = 'input_subs.mp4';
-          const assFile = 'subs.ass';
-          const output = 'output_subs.mp4';
+          const input = "input_subs.mp4";
+          const assFile = "subs.ass";
+          const output = "output_subs.mp4";
 
           await ff.writeFile(input, videoData);
 
-          /* Provide a font for libass — WASM has no system fonts. */
+          /* Provide a font for libass - WASM has no system fonts. */
           const fontData = await getSubtitleFont();
           if (fontData) {
             try {
-              await ff.createDir('/fonts');
+              await ff.createDir("/fonts");
             } catch {
               /* dir already exists */
             }
-            await ff.writeFile('/fonts/subtitle-font.ttf', fontData);
+            await ff.writeFile("/fonts/subtitle-font.ttf", fontData);
           } else {
             sendWarn(
-              'Failed to load subtitle font from CDN — subtitles may not render.',
+              "Failed to load subtitle font from CDN - subtitles may not render.",
             );
           }
 
           /* Probe duration, fps, rotation, and dimensions.
              Duration + fps feed progress reporting; dimensions + rotation
              are needed for accurate ASS PlayRes and \move coordinates. */
-          let probeLog = '';
+          let probeLog = "";
           const probeHandler = ({ message }: { message: string }) => {
-            probeLog += message + '\n';
+            probeLog += message + "\n";
           };
-          ff.on('log', probeHandler);
-          await ff.exec(['-i', input]);
-          ff.off('log', probeHandler);
+          ff.on("log", probeHandler);
+          await ff.exec(["-i", input]);
+          ff.off("log", probeHandler);
 
           const dimMatch = probeLog.match(/(\d{2,5})x(\d{2,5})/);
           const origW = dimMatch ? Number(dimMatch[1]) : 1280;
@@ -950,10 +950,10 @@ self.onmessage = async (
           const playResX = rotation === 90 || rotation === 270 ? origH : origW;
           const playResY = rotation === 90 || rotation === 270 ? origW : origH;
 
-          /* Generate ASS content from SRT — embeds all style + animation tags.
+          /* Generate ASS content from SRT - embeds all style + animation tags.
              This replaces the old SRT + force_style approach: styles live in
              the ASS [V4+ Styles] section, so no force_style= option is needed.
-             Alignment is in ASS v4+ numpad format (1-9) directly — no SSA
+             Alignment is in ASS v4+ numpad format (1-9) directly - no SSA
              bit-flag conversion required. */
           const assContent = generateAssContent({
             srtContent,
@@ -966,7 +966,7 @@ self.onmessage = async (
             backColour,
             borderStyle,
             outline,
-            fontName: fontData ? 'Roboto' : null,
+            fontName: fontData ? "Roboto" : null,
             playResX,
             playResY,
             animation,
@@ -976,9 +976,9 @@ self.onmessage = async (
           const estimatedFrames = durationSec > 0 ? durationSec * srcFps : 0;
           let lastFrame = 0;
 
-          let burnLog = '';
+          let burnLog = "";
           const burnLogHandler = ({ message }: { message: string }) => {
-            burnLog += message + '\n';
+            burnLog += message + "\n";
             if (estimatedFrames > 0) {
               const m = message.match(/frame=\s*(\d+)/);
               if (m) {
@@ -992,9 +992,9 @@ self.onmessage = async (
               }
             }
           };
-          ff.on('log', burnLogHandler);
+          ff.on("log", burnLogHandler);
 
-          const fontsOption = fontData ? ':fontsdir=/fonts' : '';
+          const fontsOption = fontData ? ":fontsdir=/fonts" : "";
           const subsFilter = `subtitles=${assFile}${fontsOption}`;
 
           /* Build the video filter chain.  When the source has rotation
@@ -1013,25 +1013,25 @@ self.onmessage = async (
           }
 
           const code = await ff.exec([
-            ...(needsRotation ? ['-noautorotate'] : []),
-            '-i',
+            ...(needsRotation ? ["-noautorotate"] : []),
+            "-i",
             input,
-            '-vf',
+            "-vf",
             vf,
-            '-c:v',
-            'libx264',
-            '-preset',
-            'fast',
-            '-crf',
-            '23',
-            '-c:a',
-            'copy',
-            ...(needsRotation ? ['-metadata:s:v:0', 'rotate=0'] : []),
-            '-movflags',
-            '+faststart',
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            ...(needsRotation ? ["-metadata:s:v:0", "rotate=0"] : []),
+            "-movflags",
+            "+faststart",
             output,
           ]);
-          ff.off('log', burnLogHandler);
+          ff.off("log", burnLogHandler);
 
           if (code !== 0) {
             throw new Error(
@@ -1046,7 +1046,7 @@ self.onmessage = async (
             )
           ) {
             sendWarn(
-              'FFmpeg/libass could not find a suitable font — subtitles may not be visible.',
+              "FFmpeg/libass could not find a suitable font - subtitles may not be visible.",
             );
           }
 
@@ -1057,33 +1057,33 @@ self.onmessage = async (
           sendProgress(100);
 
           self.postMessage(
-            { id, type: 'result', payload: { data: result } },
+            { id, type: "result", payload: { data: result } },
             { transfer: [result.buffer as ArrayBuffer] },
           );
           break;
         }
 
-        case 'scaleDown': {
-          /* Unregister the global progress handler — this case uses
+        case "scaleDown": {
+          /* Unregister the global progress handler - this case uses
              frame-based progress parsing from log output. */
-          ff.off('progress', progressHandler);
+          ff.off("progress", progressHandler);
 
           const { videoData, targetHeight } = payload as {
             videoData: Uint8Array;
             targetHeight: number;
           };
-          const input = 'input_scale.mp4';
-          const output = 'output_scaled.mp4';
+          const input = "input_scale.mp4";
+          const output = "output_scaled.mp4";
           await ff.writeFile(input, videoData);
 
           /* Probe input dimensions and duration for progress reporting. */
-          let probeLog = '';
+          let probeLog = "";
           const probeHandler = ({ message }: { message: string }) => {
-            probeLog += message + '\n';
+            probeLog += message + "\n";
           };
-          ff.on('log', probeHandler);
-          await ff.exec(['-i', input]);
-          ff.off('log', probeHandler);
+          ff.on("log", probeHandler);
+          await ff.exec(["-i", input]);
+          ff.off("log", probeHandler);
 
           const dimMatch = probeLog.match(/(\d{2,5})x(\d{2,5})/);
           const origW = dimMatch ? Number(dimMatch[1]) : 0;
@@ -1123,26 +1123,26 @@ self.onmessage = async (
               }
             }
           };
-          ff.on('log', frameLogHandler);
+          ff.on("log", frameLogHandler);
 
           const code = await ff.exec([
-            '-i',
+            "-i",
             input,
-            '-vf',
+            "-vf",
             scaleFilter,
-            '-c:v',
-            'libx264',
-            '-preset',
-            'fast',
-            '-crf',
-            '23',
-            '-c:a',
-            'copy',
-            '-movflags',
-            '+faststart',
+            "-c:v",
+            "libx264",
+            "-preset",
+            "fast",
+            "-crf",
+            "23",
+            "-c:a",
+            "copy",
+            "-movflags",
+            "+faststart",
             output,
           ]);
-          ff.off('log', frameLogHandler);
+          ff.off("log", frameLogHandler);
 
           if (code !== 0) throw new Error(`FFmpeg exited with code ${code}`);
           const result = (await ff.readFile(output)) as Uint8Array;
@@ -1150,7 +1150,7 @@ self.onmessage = async (
           await ff.deleteFile(output);
           sendProgress(100);
           self.postMessage(
-            { id, type: 'result', payload: { data: result } },
+            { id, type: "result", payload: { data: result } },
             { transfer: [result.buffer as ArrayBuffer] },
           );
           break;
@@ -1160,7 +1160,7 @@ self.onmessage = async (
           sendError(`Unknown message type: ${type}`);
       }
     } finally {
-      ff.off('progress', progressHandler);
+      ff.off("progress", progressHandler);
     }
   } catch (err) {
     sendError(err instanceof Error ? err.message : String(err));

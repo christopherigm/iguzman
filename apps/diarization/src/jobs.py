@@ -13,7 +13,7 @@ from pymongo import ASCENDING
 logger = logging.getLogger(__name__)
 
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
-JOB_TTL = 3600  # seconds — MongoDB TTL index auto-deletes after this
+JOB_TTL = 3600  # seconds - MongoDB TTL index auto-deletes after this
 
 _collection: motor.motor_asyncio.AsyncIOMotorCollection | None = None
 

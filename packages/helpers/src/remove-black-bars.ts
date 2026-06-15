@@ -1,4 +1,4 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -7,11 +7,11 @@ import { execFile } from 'child_process';
 /** Maximum buffer size for ffmpeg command execution (2 MB). */
 const MAX_BUFFER = 1024 * 2048;
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default output folder based on the current environment. */
 const DEFAULT_OUTPUT_FOLDER =
-  NODE_ENV === 'production' ? '/app/media' : 'public/media';
+  NODE_ENV === "production" ? "/app/media" : "public/media";
 
 /** Default black-pixel intensity threshold for cropdetect (0-255). */
 const DEFAULT_LIMIT = 24;
@@ -90,7 +90,7 @@ export interface RemoveBlackBarsOptions {
  * that nested segments like `some/media/file.mp4` stay intact.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /**
  * Extracts the last `crop=W:H:X:Y` token from ffmpeg's cropdetect stderr.
@@ -124,7 +124,7 @@ const parseCropParams = (output: string): CropParams | null => {
  * tightest crop rectangle that excludes black bars.
  *
  * The entire video is scanned (reset=0) and the last crop value reported
- * by cropdetect — which accumulates the largest detected area — is returned.
+ * by cropdetect - which accumulates the largest detected area - is returned.
  *
  * Uses `execFile` with an explicit args array to prevent shell-injection risks.
  *
@@ -147,18 +147,18 @@ export const detectBlackBars = ({
 
   // cropdetect writes results to stderr; -f null discards encoded output.
   const args = [
-    '-i',
+    "-i",
     srcFile,
-    '-vf',
+    "-vf",
     `cropdetect=limit=${limit}:round=${round}:reset=0`,
-    '-f',
-    'null',
-    '-',
+    "-f",
+    "null",
+    "-",
   ];
 
   return new Promise<CropParams>((resolve, reject) => {
     execFile(
-      'ffmpeg',
+      "ffmpeg",
       args,
       { maxBuffer: MAX_BUFFER },
       (error, _stdout, stderr) => {
@@ -166,7 +166,7 @@ export const detectBlackBars = ({
         if (!params) {
           const reason = error
             ? `ffmpeg exited with an error: ${error.message}`
-            : 'no crop parameters detected — the video may have no black bars';
+            : "no crop parameters detected - the video may have no black bars";
           return reject(new Error(`detectBlackBars "${src}": ${reason}`));
         }
         resolve(params);
@@ -219,20 +219,20 @@ const removeBlackBars = async ({
   });
 
   const args = [
-    '-y',
-    '-i',
+    "-y",
+    "-i",
     srcFile,
-    '-vf',
+    "-vf",
     `crop=${w}:${h}:${x}:${y}`,
-    '-c:a',
-    'copy',
+    "-c:a",
+    "copy",
     destFile,
   ];
 
   return new Promise<string>((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: MAX_BUFFER }, (error) => {
+    execFile("ffmpeg", args, { maxBuffer: MAX_BUFFER }, (error) => {
       if (error) {
-        console.error('removeBlackBars crop error:', error);
+        console.error("removeBlackBars crop error:", error);
         return reject(error);
       }
       resolve(`media/${cleanDest}`);

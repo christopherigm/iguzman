@@ -29,7 +29,7 @@ service:
 
 # ─── PostgreSQL configuration ───────────────────────────────
 auth:
-  password: ''          # set directly (stored in Helm values — avoid in prod)
+  password: ''          # set directly (stored in Helm values - avoid in prod)
   existingSecret: ''    # name of an existing k8s Secret that holds the password
   existingSecretKey: 'postgres-password' # key within that Secret
   user: 'postgres'      # POSTGRES_USER (default superuser)

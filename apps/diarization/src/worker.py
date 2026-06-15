@@ -1,5 +1,5 @@
 """
-Serial job worker — processes one diarization/transcription job at a time
+Serial job worker - processes one diarization/transcription job at a time
 to avoid CPU/GPU contention.
 """
 
@@ -75,7 +75,7 @@ async def run_worker() -> None:
 
         except Exception:
             logger.exception("Job %s failed", job_id)
-            await update_job(job_id, status="error", error="Processing failed — check service logs for details")
+            await update_job(job_id, status="error", error="Processing failed - check service logs for details")
 
         finally:
             if audio_path:

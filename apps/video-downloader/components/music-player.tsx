@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   useState,
@@ -7,46 +7,46 @@ import {
   useCallback,
   useMemo,
   type CSSProperties,
-} from 'react';
-import { useTranslations } from 'next-intl';
-import Image from 'next/image';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Switch } from '@repo/ui/core-elements/switch';
-import { Icon } from '@repo/ui/core-elements/icon';
-import { Spinner } from '@repo/ui/core-elements/spinner';
-import { useVideoStore } from './use-video-store';
-import type { StoredVideo } from './use-video-store';
-import { readFromOPFS } from '@/lib/opfs';
-import './music-player.css';
-import { Button } from '@repo/ui/core-elements/button';
-import { parseBlob } from 'music-metadata-browser';
+} from "react";
+import { useTranslations } from "next-intl";
+import Image from "next/image";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Switch } from "@repo/ui/core-elements/switch";
+import { Icon } from "@repo/ui/core-elements/icon";
+import { Spinner } from "@repo/ui/core-elements/spinner";
+import { useVideoStore } from "./use-video-store";
+import type { StoredVideo } from "./use-video-store";
+import { readFromOPFS } from "@/lib/opfs";
+import "./music-player.css";
+import { Button } from "@repo/ui/core-elements/button";
+import { parseBlob } from "music-metadata-browser";
 
-type RepeatMode = 'none' | 'one' | 'all';
+type RepeatMode = "none" | "one" | "all";
 
 function formatTime(s: number): string {
-  if (!s || isNaN(s) || !isFinite(s)) return '0:00';
+  if (!s || isNaN(s) || !isFinite(s)) return "0:00";
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, '0')}`;
+  return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
 interface PlayerButtonProps {
   icon: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   active?: boolean;
   disabled?: boolean;
   onClick?: () => void;
-  'aria-label': string;
-  'aria-pressed'?: boolean;
+  "aria-label": string;
+  "aria-pressed"?: boolean;
   children?: React.ReactNode;
 }
 
 interface PlaylistButtonProps {
   isActive: boolean;
   onClick: () => void;
-  'aria-label': string;
-  'aria-pressed': boolean;
+  "aria-label": string;
+  "aria-pressed": boolean;
   children: React.ReactNode;
 }
 
@@ -59,11 +59,11 @@ function PlaylistButton({
   return (
     <button
       type="button"
-      className={`mp-playlist-btn${isActive ? ' mp-playlist-btn--active' : ''}`}
+      className={`mp-playlist-btn${isActive ? " mp-playlist-btn--active" : ""}`}
       onClick={onClick}
       {...(aria && {
-        'aria-label': aria['aria-label'],
-        'aria-pressed': aria['aria-pressed'],
+        "aria-label": aria["aria-label"],
+        "aria-pressed": aria["aria-pressed"],
       })}
     >
       {children}
@@ -73,21 +73,21 @@ function PlaylistButton({
 
 function PlayerButton({
   icon,
-  size = 'sm',
+  size = "sm",
   active,
   disabled,
   onClick,
   children,
   ...aria
 }: PlayerButtonProps) {
-  const iconSize = size === 'lg' ? '28px' : size === 'md' ? '28px' : '22px';
+  const iconSize = size === "lg" ? "28px" : size === "md" ? "28px" : "22px";
   const iconColor = active
-    ? 'var(--accent, #68c3f7)'
-    : size === 'lg'
-      ? 'var(--mp-icon-lg)'
-      : size === 'md'
-        ? 'var(--mp-icon-md)'
-        : 'var(--mp-icon-sm)';
+    ? "var(--accent, #68c3f7)"
+    : size === "lg"
+      ? "var(--mp-icon-lg)"
+      : size === "md"
+        ? "var(--mp-icon-md)"
+        : "var(--mp-icon-sm)";
 
   return (
     <button
@@ -95,9 +95,9 @@ function PlayerButton({
       className={`mp-btn mp-btn--${size}`}
       onClick={onClick}
       disabled={disabled}
-      aria-label={aria['aria-label']}
-      {...(aria['aria-pressed'] !== undefined
-        ? { 'aria-pressed': aria['aria-pressed'] }
+      aria-label={aria["aria-label"]}
+      {...(aria["aria-pressed"] !== undefined
+        ? { "aria-pressed": aria["aria-pressed"] }
         : {})}
     >
       <Icon icon={icon} size={iconSize} color={iconColor} />
@@ -137,7 +137,7 @@ function TrackThumbnail({ track }: { track: StoredVideo }) {
       display="flex"
       alignItems="center"
       justifyContent="center"
-      styles={{ position: 'relative', overflow: 'hidden', flexShrink: 0 }}
+      styles={{ position: "relative", overflow: "hidden", flexShrink: 0 }}
     >
       {url ? (
         <Image
@@ -145,7 +145,7 @@ function TrackThumbnail({ track }: { track: StoredVideo }) {
           alt=""
           fill
           sizes="46px"
-          style={{ objectFit: 'cover' }}
+          style={{ objectFit: "cover" }}
           unoptimized
         />
       ) : (
@@ -160,7 +160,7 @@ function TrackThumbnail({ track }: { track: StoredVideo }) {
 }
 
 export function MusicPlayer() {
-  const t = useTranslations('MusicPlayer');
+  const t = useTranslations("MusicPlayer");
   const { completed, storeLoaded } = useVideoStore();
 
   const [includeVideos, setIncludeVideos] = useState(false);
@@ -168,7 +168,7 @@ export function MusicPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
   const [shuffle, setShuffle] = useState(false);
-  const [repeat, setRepeat] = useState<RepeatMode>('none');
+  const [repeat, setRepeat] = useState<RepeatMode>("none");
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [trackUrl, setTrackUrl] = useState<string | null>(null);
@@ -259,7 +259,7 @@ export function MusicPlayer() {
   }, []);
 
   const handleEnded = useCallback(() => {
-    if (repeat === 'one') {
+    if (repeat === "one") {
       const audio = audioRef.current;
       if (audio) {
         audio.currentTime = 0;
@@ -267,7 +267,7 @@ export function MusicPlayer() {
       }
       return;
     }
-    if (repeat === 'all' || playlist.length > 1) {
+    if (repeat === "all" || playlist.length > 1) {
       playTrack(getNextIndex(currentIndex));
     } else {
       setIsPlaying(false);
@@ -275,7 +275,7 @@ export function MusicPlayer() {
   }, [repeat, currentIndex, getNextIndex, playTrack, playlist.length]);
 
   const cycleRepeat = useCallback(() => {
-    setRepeat((r) => (r === 'none' ? 'all' : r === 'all' ? 'one' : 'none'));
+    setRepeat((r) => (r === "none" ? "all" : r === "all" ? "one" : "none"));
   }, []);
 
   /* Keep handler refs fresh so Media Session always calls the latest version */
@@ -344,7 +344,7 @@ export function MusicPlayer() {
             setThumbnailUrl(tu);
           }
         } catch {
-          /* thumbnail unavailable — cover art placeholder will show */
+          /* thumbnail unavailable - cover art placeholder will show */
         }
       }
 
@@ -363,7 +363,7 @@ export function MusicPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
     if (!trackUrl) {
-      audio.src = '';
+      audio.src = "";
       return;
     }
     audio.src = trackUrl;
@@ -374,48 +374,48 @@ export function MusicPlayer() {
     }
   }, [trackUrl]);
 
-  /* Media Session — metadata */
+  /* Media Session - metadata */
   useEffect(() => {
-    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
     if (!currentTrack) return;
     navigator.mediaSession.metadata = new MediaMetadata({
       title:
         fileTitle ??
         currentTrack.fulltitle ??
         currentTrack.name ??
-        t('unknownTitle'),
-      artist: currentTrack.uploader ?? fileArtist ?? t('unknownArtist'),
+        t("unknownTitle"),
+      artist: currentTrack.uploader ?? fileArtist ?? t("unknownArtist"),
       artwork: thumbnailUrl
-        ? [{ src: thumbnailUrl, sizes: '512x512', type: 'image/jpeg' }]
+        ? [{ src: thumbnailUrl, sizes: "512x512", type: "image/jpeg" }]
         : [],
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack?.uuid, thumbnailUrl, fileArtist, fileTitle]);
 
-  /* Media Session — action handlers (stable, uses refs for prev/next) */
+  /* Media Session - action handlers (stable, uses refs for prev/next) */
   useEffect(() => {
-    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
 
-    navigator.mediaSession.setActionHandler('play', () => {
+    navigator.mediaSession.setActionHandler("play", () => {
       audioRef.current?.play().catch(() => {});
     });
-    navigator.mediaSession.setActionHandler('pause', () => {
+    navigator.mediaSession.setActionHandler("pause", () => {
       audioRef.current?.pause();
     });
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
+    navigator.mediaSession.setActionHandler("previoustrack", () => {
       handlePrevRef.current();
     });
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
+    navigator.mediaSession.setActionHandler("nexttrack", () => {
       handleNextRef.current();
     });
-    navigator.mediaSession.setActionHandler('seekto', (details) => {
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
       if (details.seekTime !== undefined) handleSeek(details.seekTime);
     });
 
     return () => {
-      if (!('mediaSession' in navigator)) return;
+      if (!("mediaSession" in navigator)) return;
       (
-        ['play', 'pause', 'previoustrack', 'nexttrack', 'seekto'] as const
+        ["play", "pause", "previoustrack", "nexttrack", "seekto"] as const
       ).forEach((a) => {
         try {
           navigator.mediaSession.setActionHandler(a, null);
@@ -426,10 +426,10 @@ export function MusicPlayer() {
     };
   }, [handleSeek]);
 
-  /* Media Session — playback state */
+  /* Media Session - playback state */
   useEffect(() => {
-    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
-    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
   }, [isPlaying]);
 
   /* Collapse to compact header when cover art scrolls out of view */
@@ -458,27 +458,27 @@ export function MusicPlayer() {
     fileTitle ??
     currentTrack?.fulltitle ??
     currentTrack?.name ??
-    t('unknownTitle');
+    t("unknownTitle");
   const trackArtist =
-    currentTrack?.uploader ?? fileArtist ?? t('unknownArtist');
+    currentTrack?.uploader ?? fileArtist ?? t("unknownArtist");
   const seekPct =
     duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
-  /* Shared playlist rows — rendered in both the normal view and the compact overlay */
+  /* Shared playlist rows - rendered in both the normal view and the compact overlay */
   const playlistRows = playlist.map((track, i) => {
     const isActive = i === currentIndex;
     const title = isActive
       ? trackTitle
-      : (track.fulltitle ?? track.name ?? t('unknownTitle'));
+      : (track.fulltitle ?? track.name ?? t("unknownTitle"));
     const artist = isActive
       ? trackArtist
-      : (track.uploader ?? t('unknownArtist'));
+      : (track.uploader ?? t("unknownArtist"));
     return (
       <PlaylistButton
         key={track.uuid}
         isActive={isActive}
         onClick={() => playTrack(i)}
-        aria-label={`${title}${track.uploader ? ' — ' + track.uploader : ''}`}
+        aria-label={`${title}${track.uploader ? " - " + track.uploader : ""}`}
         aria-pressed={isActive}
       >
         <TrackThumbnail track={track} />
@@ -487,16 +487,16 @@ export function MusicPlayer() {
             as="p"
             variant="none"
             color={
-              isActive ? 'var(--accent, #68c3f7)' : 'var(--mp-text-strong)'
+              isActive ? "var(--accent, #68c3f7)" : "var(--mp-text-strong)"
             }
             fontWeight={500}
             margin={0}
             styles={{
               fontSize: 14,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              transition: 'color 150ms',
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              transition: "color 150ms",
             }}
           >
             {title}
@@ -507,10 +507,10 @@ export function MusicPlayer() {
             color="var(--mp-text-muted)"
             styles={{
               fontSize: 12,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              margin: '3px 0 0',
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              margin: "3px 0 0",
             }}
           >
             {artist}
@@ -538,10 +538,10 @@ export function MusicPlayer() {
             styles={{
               fontSize: 12,
               flexShrink: 0,
-              fontVariantNumeric: 'tabular-nums',
+              fontVariantNumeric: "tabular-nums",
             }}
           >
-            {track.duration ? formatTime(track.duration) : '--:--'}
+            {track.duration ? formatTime(track.duration) : "--:--"}
           </Typography>
         )}
       </PlaylistButton>
@@ -558,11 +558,11 @@ export function MusicPlayer() {
       paddingTop={28}
       color="var(--mp-text)"
       styles={{
-        minHeight: '100dvh',
-        background: 'var(--mp-bg)',
+        minHeight: "100dvh",
+        background: "var(--mp-bg)",
       }}
     >
-      {/* Hidden audio element — always rendered so the ref is stable */}
+      {/* Hidden audio element - always rendered so the ref is stable */}
       <audio
         ref={audioRef}
         preload="none"
@@ -585,9 +585,9 @@ export function MusicPlayer() {
           icon="/icons/skip-prev.svg"
           iconSize="20px"
           iconColor="var(--mp-text-label)"
-          text={t('return')}
+          text={t("return")}
           color="var(--mp-text-label)"
-          aria-label={t('return')}
+          aria-label={t("return")}
           styles={{ fontSize: 14 }}
         />
       </Box>
@@ -599,7 +599,7 @@ export function MusicPlayer() {
           justifyContent="center"
           flex="1"
         >
-          <Spinner size={36} label={t('loading')} />
+          <Spinner size={36} label={t("loading")} />
         </Box>
       ) : playlist.length === 0 ? (
         <Box
@@ -612,7 +612,7 @@ export function MusicPlayer() {
           paddingX={24}
           paddingY={40}
           maxWidth={360}
-          styles={{ textAlign: 'center' }}
+          styles={{ textAlign: "center" }}
         >
           <Icon
             icon="/icons/music.svg"
@@ -624,25 +624,25 @@ export function MusicPlayer() {
             color="var(--mp-text-secondary)"
             textAlign="center"
           >
-            {includeVideos ? t('emptyWithVideos') : t('emptyAudioOnly')}
+            {includeVideos ? t("emptyWithVideos") : t("emptyAudioOnly")}
           </Typography>
           <Box display="flex" alignItems="center" gap={10}>
             <Switch
               checked={includeVideos}
               onChange={setIncludeVideos}
-              aria-label={t('includeVideos')}
+              aria-label={t("includeVideos")}
             />
             <Typography variant="body-sm" color="var(--mp-text-label)">
-              {t('includeVideos')}
+              {t("includeVideos")}
             </Typography>
           </Box>
         </Box>
       ) : (
         <>
-          {/* Full-screen compact overlay — slides in when cover art scrolls off screen.
+          {/* Full-screen compact overlay - slides in when cover art scrolls off screen.
               Contains the mini controls at the top and the full scrollable playlist below. */}
           <div
-            className={`mp-compact-header${isCompact ? ' mp-compact-header--visible' : ''}`}
+            className={`mp-compact-header${isCompact ? " mp-compact-header--visible" : ""}`}
           >
             <div className="mp-compact-header__inner">
               <div className="mp-compact-header__top">
@@ -653,7 +653,7 @@ export function MusicPlayer() {
                       alt={trackTitle}
                       fill
                       sizes="46px"
-                      style={{ objectFit: 'cover' }}
+                      style={{ objectFit: "cover" }}
                       unoptimized
                     />
                   ) : (
@@ -673,7 +673,7 @@ export function MusicPlayer() {
               </div>
               <input
                 type="range"
-                aria-label={t('seekLabel')}
+                aria-label={t("seekLabel")}
                 className="music-player__seek"
                 min={0}
                 max={duration || 1}
@@ -696,44 +696,44 @@ export function MusicPlayer() {
                   size="sm"
                   active={shuffle}
                   onClick={() => setShuffle((s) => !s)}
-                  aria-label={t('shuffle')}
+                  aria-label={t("shuffle")}
                   aria-pressed={shuffle}
                 />
                 <PlayerButton
                   icon="/icons/skip-prev.svg"
                   size="md"
                   onClick={handlePrev}
-                  aria-label={t('previous')}
+                  aria-label={t("previous")}
                 />
                 <PlayerButton
-                  icon={isPlaying ? '/icons/pause.svg' : '/icons/play.svg'}
+                  icon={isPlaying ? "/icons/pause.svg" : "/icons/play.svg"}
                   size="lg"
                   disabled={!trackUrl}
                   onClick={handlePlayPause}
-                  aria-label={isPlaying ? t('pause') : t('play')}
+                  aria-label={isPlaying ? t("pause") : t("play")}
                 />
                 <PlayerButton
                   icon="/icons/skip-next.svg"
                   size="md"
                   onClick={handleNext}
-                  aria-label={t('next')}
+                  aria-label={t("next")}
                 />
                 <PlayerButton
                   icon="/icons/repeat.svg"
                   size="sm"
-                  active={repeat !== 'none'}
+                  active={repeat !== "none"}
                   onClick={cycleRepeat}
-                  aria-label={t('repeat')}
-                  aria-pressed={repeat !== 'none'}
+                  aria-label={t("repeat")}
+                  aria-pressed={repeat !== "none"}
                 >
-                  {repeat === 'one' && (
+                  {repeat === "one" && (
                     <Typography
                       as="span"
                       variant="none"
                       color="var(--accent, #68c3f7)"
                       fontWeight={700}
                       styles={{
-                        position: 'absolute',
+                        position: "absolute",
                         bottom: 4,
                         right: 4,
                         fontSize: 9,
@@ -747,7 +747,7 @@ export function MusicPlayer() {
               </div>
             </div>
 
-            {/* Playlist section inside the overlay — header pinned, items scroll */}
+            {/* Playlist section inside the overlay - header pinned, items scroll */}
             <div className="mp-compact-playlist">
               <Typography
                 as="div"
@@ -759,12 +759,12 @@ export function MusicPlayer() {
                 paddingX={16}
                 styles={{
                   fontSize: 11,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
                   flexShrink: 0,
                 }}
               >
-                {t('playlist')} · {playlist.length}
+                {t("playlist")} · {playlist.length}
               </Typography>
               <div className="mp-compact-playlist__items">{playlistRows}</div>
             </div>
@@ -780,9 +780,9 @@ export function MusicPlayer() {
               alignItems="center"
               justifyContent="center"
               styles={{
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: '0 24px 64px rgba(0,0,0,0.65)',
+                position: "relative",
+                overflow: "hidden",
+                boxShadow: "0 24px 64px rgba(0,0,0,0.65)",
                 flexShrink: 0,
               }}
             >
@@ -792,7 +792,7 @@ export function MusicPlayer() {
                   alignItems="center"
                   justifyContent="center"
                   backgroundColor="rgba(0,0,0,0.5)"
-                  styles={{ position: 'absolute', inset: 0, zIndex: 1 }}
+                  styles={{ position: "absolute", inset: 0, zIndex: 1 }}
                 >
                   <Spinner size={32} />
                 </Box>
@@ -803,7 +803,7 @@ export function MusicPlayer() {
                   alt={trackTitle}
                   fill
                   sizes="(max-width: 600px) 240px, 300px"
-                  style={{ objectFit: 'contain' }}
+                  style={{ objectFit: "contain" }}
                   unoptimized
                 />
               ) : !loading ? (
@@ -830,7 +830,7 @@ export function MusicPlayer() {
             width="100%"
             maxWidth={320}
             paddingX={8}
-            styles={{ textAlign: 'center' }}
+            styles={{ textAlign: "center" }}
           >
             <Typography
               as="p"
@@ -839,11 +839,11 @@ export function MusicPlayer() {
               styles={{
                 fontSize: 20,
                 fontWeight: 700,
-                color: 'var(--mp-text)',
+                color: "var(--mp-text)",
                 marginBottom: 5,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               {trackTitle}
@@ -851,7 +851,7 @@ export function MusicPlayer() {
             <Typography
               as="p"
               variant="none"
-              styles={{ fontSize: 14, color: 'var(--mp-text-secondary)' }}
+              styles={{ fontSize: 14, color: "var(--mp-text-secondary)" }}
             >
               {trackArtist}
             </Typography>
@@ -861,7 +861,7 @@ export function MusicPlayer() {
           <Box width="100%" maxWidth={360} marginTop={22} paddingX={4}>
             <input
               type="range"
-              aria-label={t('seekLabel')}
+              aria-label={t("seekLabel")}
               className="music-player__seek"
               min={0}
               max={duration || 1}
@@ -879,7 +879,7 @@ export function MusicPlayer() {
               justifyContent="space-between"
               marginTop={6}
               color="var(--mp-text-muted)"
-              styles={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}
+              styles={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}
             >
               <span>{formatTime(currentTime)}</span>
               <span>{formatTime(duration)}</span>
@@ -902,7 +902,7 @@ export function MusicPlayer() {
               size="sm"
               active={shuffle}
               onClick={() => setShuffle((s) => !s)}
-              aria-label={t('shuffle')}
+              aria-label={t("shuffle")}
               aria-pressed={shuffle}
             />
 
@@ -910,40 +910,40 @@ export function MusicPlayer() {
               icon="/icons/skip-prev.svg"
               size="md"
               onClick={handlePrev}
-              aria-label={t('previous')}
+              aria-label={t("previous")}
             />
 
             <PlayerButton
-              icon={isPlaying ? '/icons/pause.svg' : '/icons/play.svg'}
+              icon={isPlaying ? "/icons/pause.svg" : "/icons/play.svg"}
               size="lg"
               disabled={!trackUrl}
               onClick={handlePlayPause}
-              aria-label={isPlaying ? t('pause') : t('play')}
+              aria-label={isPlaying ? t("pause") : t("play")}
             />
 
             <PlayerButton
               icon="/icons/skip-next.svg"
               size="md"
               onClick={handleNext}
-              aria-label={t('next')}
+              aria-label={t("next")}
             />
 
             <PlayerButton
               icon="/icons/repeat.svg"
               size="sm"
-              active={repeat !== 'none'}
+              active={repeat !== "none"}
               onClick={cycleRepeat}
-              aria-label={t('repeat')}
-              aria-pressed={repeat !== 'none'}
+              aria-label={t("repeat")}
+              aria-pressed={repeat !== "none"}
             >
-              {repeat === 'one' && (
+              {repeat === "one" && (
                 <Typography
                   as="span"
                   variant="none"
                   color="var(--accent, #68c3f7)"
                   fontWeight={700}
                   styles={{
-                    position: 'absolute',
+                    position: "absolute",
                     bottom: 4,
                     right: 4,
                     fontSize: 9,
@@ -961,10 +961,10 @@ export function MusicPlayer() {
             <Switch
               checked={includeVideos}
               onChange={setIncludeVideos}
-              aria-label={t('includeVideos')}
+              aria-label={t("includeVideos")}
             />
             <Typography variant="body-sm" color="var(--mp-text-label)">
-              {t('includeVideos')}
+              {t("includeVideos")}
             </Typography>
           </Box>
 
@@ -973,7 +973,7 @@ export function MusicPlayer() {
             marginTop={28}
             width="100%"
             maxWidth={540}
-            styles={{ borderTop: '1px solid var(--mp-border)' }}
+            styles={{ borderTop: "1px solid var(--mp-border)" }}
           >
             <Typography
               as="div"
@@ -985,11 +985,11 @@ export function MusicPlayer() {
               paddingX={16}
               styles={{
                 fontSize: 11,
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em',
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
               }}
             >
-              {t('playlist')} · {playlist.length}
+              {t("playlist")} · {playlist.length}
             </Typography>
             {playlistRows}
           </Box>

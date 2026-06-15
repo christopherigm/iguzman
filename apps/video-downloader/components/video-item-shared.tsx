@@ -1,47 +1,47 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Icon } from '@repo/ui/core-elements/icon';
-import { Badge } from '@repo/ui/core-elements/badge';
-import { Button } from '@repo/ui/core-elements/button';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Switch } from '@repo/ui/core-elements/switch';
-import type { OperationCredits } from '@/lib/types';
-import type { StoredVideo, VideoStatus } from './use-video-store';
-import { diarizeCreditCost } from '@/lib/srt-from-diarization';
-import { useCreditsBalance } from './use-credits-store';
-import Divider from '@repo/ui/core-elements/divider';
+import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Icon } from "@repo/ui/core-elements/icon";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { Button } from "@repo/ui/core-elements/button";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Switch } from "@repo/ui/core-elements/switch";
+import type { OperationCredits } from "@/lib/types";
+import type { StoredVideo, VideoStatus } from "./use-video-store";
+import { diarizeCreditCost } from "@/lib/srt-from-diarization";
+import { useCreditsBalance } from "./use-credits-store";
+import Divider from "@repo/ui/core-elements/divider";
 
 /* ── Constants ──────────────────────────────────────── */
 
 export const PLATFORM_ICONS: Record<string, string> = {
-  facebook: '/icons/facebook.svg',
-  instagram: '/icons/instagram.svg',
-  pinterest: '/icons/pinterest.svg',
-  rednote: '/icons/url.svg',
-  tidal: '/icons/url.svg',
-  tiktok: '/icons/tiktok.svg',
-  x: '/icons/x.svg',
-  youtube: '/icons/youtube.svg',
-  unknown: '/icons/url.svg',
+  facebook: "/icons/facebook.svg",
+  instagram: "/icons/instagram.svg",
+  pinterest: "/icons/pinterest.svg",
+  rednote: "/icons/url.svg",
+  tidal: "/icons/url.svg",
+  tiktok: "/icons/tiktok.svg",
+  x: "/icons/x.svg",
+  youtube: "/icons/youtube.svg",
+  unknown: "/icons/url.svg",
 };
 
 export const STATUS_COLORS: Record<VideoStatus, string> = {
-  pending: 'var(--foreground-muted, #999)',
-  downloading: 'var(--accent, #06b6d4)',
-  queued: '#6366f1',
-  processing: '#f59e0b',
-  converting: '#8b5cf6',
-  burning: '#ec4899',
-  translating: '#a855f7',
-  uploading: '#0ea5e9',
-  diarizing: '#f97316',
-  done: '#22c55e',
-  error: '#ef4444',
+  pending: "var(--foreground-muted, #999)",
+  downloading: "var(--accent, #06b6d4)",
+  queued: "#6366f1",
+  processing: "#f59e0b",
+  converting: "#8b5cf6",
+  burning: "#ec4899",
+  translating: "#a855f7",
+  uploading: "#0ea5e9",
+  diarizing: "#f97316",
+  done: "#22c55e",
+  error: "#ef4444",
 };
 
 const FPS_MULTIPLIERS = [2, 4, 8] as const;
@@ -72,13 +72,13 @@ function CreditBadge({ amount }: { amount: number }) {
   return (
     <span
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '2px',
-        marginLeft: '4px',
-        fontSize: '1em',
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "2px",
+        marginLeft: "4px",
+        fontSize: "1em",
         opacity: 0.8,
-        verticalAlign: 'middle',
+        verticalAlign: "middle",
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -101,32 +101,32 @@ export function resolveMediaUrl(url: string): string {
 }
 
 export function isIOS(): boolean {
-  if (typeof navigator === 'undefined') return false;
+  if (typeof navigator === "undefined") return false;
   return (
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     // iPadOS 13+ reports as MacIntel with touch support
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
   );
 }
 
 function mimeTypeFromFilename(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
   const map: Record<string, string> = {
-    mp4: 'video/mp4',
-    mov: 'video/quicktime',
-    webm: 'video/webm',
-    mkv: 'video/x-matroska',
-    avi: 'video/x-msvideo',
-    mp3: 'audio/mpeg',
-    m4a: 'audio/mp4',
-    aac: 'audio/aac',
-    wav: 'audio/wav',
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    png: 'image/png',
-    webp: 'image/webp',
+    mp4: "video/mp4",
+    mov: "video/quicktime",
+    webm: "video/webm",
+    mkv: "video/x-matroska",
+    avi: "video/x-msvideo",
+    mp3: "audio/mpeg",
+    m4a: "audio/mp4",
+    aac: "audio/aac",
+    wav: "audio/wav",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
   };
-  return map[ext] ?? '';
+  return map[ext] ?? "";
 }
 
 /**
@@ -147,7 +147,7 @@ export async function triggerBrowserDownload(
 ): Promise<void> {
   if (isIOS()) {
     // Safari 26 / iOS 26+: File System Access API
-    if ('showSaveFilePicker' in window) {
+    if ("showSaveFilePicker" in window) {
       try {
         const blob =
           urlOrBlob instanceof Blob
@@ -155,7 +155,7 @@ export async function triggerBrowserDownload(
             : await fetch(resolveMediaUrl(urlOrBlob)).then((r) => r.blob());
 
         const mimeType = blob.type || mimeTypeFromFilename(filename);
-        const ext = filename.split('.').pop() ?? '';
+        const ext = filename.split(".").pop() ?? "";
 
         const handle = await (
           window as Window & {
@@ -172,7 +172,7 @@ export async function triggerBrowserDownload(
           types: mimeType
             ? [
                 {
-                  description: 'Media file',
+                  description: "Media file",
                   accept: { [mimeType]: ext ? [`.${ext}`] : [] },
                 },
               ]
@@ -184,28 +184,28 @@ export async function triggerBrowserDownload(
         await writable.close();
         return;
       } catch (err) {
-        // AbortError = user cancelled the picker — no fallback needed.
-        if ((err as DOMException)?.name === 'AbortError') return;
+        // AbortError = user cancelled the picker - no fallback needed.
+        if ((err as DOMException)?.name === "AbortError") return;
         // Any other failure: fall through to the window.open path.
-        console.error('showSaveFilePicker failed, falling back:', err);
+        console.error("showSaveFilePicker failed, falling back:", err);
       }
     }
 
     // Fallback for older iOS: open in a new Safari tab.
     if (urlOrBlob instanceof Blob) {
       const objectUrl = URL.createObjectURL(urlOrBlob);
-      window.open(objectUrl, '_blank');
+      window.open(objectUrl, "_blank");
       // Keep the object URL alive long enough for Safari to open the new tab.
       setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
     } else {
-      window.open(resolveMediaUrl(urlOrBlob), '_blank');
+      window.open(resolveMediaUrl(urlOrBlob), "_blank");
     }
     return;
   }
 
   const url =
     urlOrBlob instanceof Blob ? URL.createObjectURL(urlOrBlob) : urlOrBlob;
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   link.click();
@@ -218,15 +218,15 @@ export function downloadThumbnail(url: string, name: string | null) {
   fetch(url)
     .then((res) => res.blob())
     .then((blob) => {
-      const ext = url.match(/\.(jpe?g|png|webp)/i)?.[1] ?? 'jpg';
+      const ext = url.match(/\.(jpe?g|png|webp)/i)?.[1] ?? "jpg";
       // Pass the blob directly so triggerBrowserDownload controls the object
       // URL lifetime (important for the async iOS share path).
       triggerBrowserDownload(
         blob,
-        `${name ?? 'thumbnail'}-${Date.now()}.${ext}`,
+        `${name ?? "thumbnail"}-${Date.now()}.${ext}`,
       );
     })
-    .catch((err) => console.error('Thumbnail download failed:', err));
+    .catch((err) => console.error("Thumbnail download failed:", err));
 }
 
 export function formatProcessingTime(seconds: number): string {
@@ -250,13 +250,13 @@ export async function uploadProcessedVideo(
   setUploading(true);
   try {
     const res = await fetch(`${window.location.origin}/api/media/${file}`, {
-      method: 'PUT',
+      method: "PUT",
       body: blob,
-      headers: { 'X-Task-Update': JSON.stringify(taskUpdate) },
+      headers: { "X-Task-Update": JSON.stringify(taskUpdate) },
     });
 
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
+      const text = await res.text().catch(() => "");
       console.error(`Failed to upload processed video (${res.status}):`, text);
       return null;
     }
@@ -264,7 +264,7 @@ export async function uploadProcessedVideo(
     const data = await res.json();
     return (data.file as string) ?? null;
   } catch (err) {
-    console.error('Failed to upload processed video to server:', err);
+    console.error("Failed to upload processed video to server:", err);
     return null;
   } finally {
     setUploading(false);
@@ -275,16 +275,16 @@ export async function uploadProcessedVideo(
 
 export function useOnlineStatus(): boolean {
   const [isOnline, setIsOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true,
+    typeof navigator !== "undefined" ? navigator.onLine : true,
   );
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
   return isOnline;
@@ -292,7 +292,7 @@ export function useOnlineStatus(): boolean {
 
 /* ── Sub-components ─────────────────────────────────── */
 
-type TranslationFn = ReturnType<typeof useTranslations<'VideoGrid'>>;
+type TranslationFn = ReturnType<typeof useTranslations<"VideoGrid">>;
 
 export function VideoDetailsPanel({
   video,
@@ -314,18 +314,18 @@ export function VideoDetailsPanel({
   ffmpegProcessingTime: number | null;
   ffmpegCores: number | null;
   uploading: boolean;
-  conversionTarget?: 'h264' | 'h265';
+  conversionTarget?: "h264" | "h265";
   t: TranslationFn;
 }) {
   const ffmpegActive =
-    ffmpegStatus === 'loading' || ffmpegStatus === 'processing';
+    ffmpegStatus === "loading" || ffmpegStatus === "processing";
 
   return (
     <Box className="vi-details">
       <dl className="vi-dl">
         {video.description ? (
           <>
-            <dt>{t('detailDescription')}</dt>
+            <dt>{t("detailDescription")}</dt>
             <dd className="vi-description-text">{video.description}</dd>
           </>
         ) : null}
@@ -334,9 +334,9 @@ export function VideoDetailsPanel({
         <dd>{video.uuid}</dd>
         {video.tags?.length ? (
           <>
-            <dt>{t('detailTags')}</dt>
+            <dt>{t("detailTags")}</dt>
             <dd>
-              <Box display="flex" styles={{ flexWrap: 'wrap', gap: '4px' }}>
+              <Box display="flex" styles={{ flexWrap: "wrap", gap: "4px" }}>
                 {video.tags.map((tag) => (
                   <Badge
                     key={tag}
@@ -353,7 +353,7 @@ export function VideoDetailsPanel({
         ) : null}
         {video.uploader_url ? (
           <>
-            <dt>{t('detailUploaderUrl')}</dt>
+            <dt>{t("detailUploaderUrl")}</dt>
             <dd>
               <a
                 href={video.uploader_url}
@@ -367,30 +367,30 @@ export function VideoDetailsPanel({
             </dd>
           </>
         ) : null}
-        <dt>{t('detailStatus')}</dt>
+        <dt>{t("detailStatus")}</dt>
         <dd
           className="vi-status-badge"
           style={{ color: STATUS_COLORS[video.status] }}
         >
-          {video.status === 'converting' && conversionTarget
+          {video.status === "converting" && conversionTarget
             ? t(`status_converting_${conversionTarget}`)
             : t(`status_${video.status}`)}
         </dd>
         {video.h264Converted && !video.isH265 ? (
           <>
-            <dt>{t('detailCodec')}</dt>
-            <dd>H.264 ({t('converted')})</dd>
+            <dt>{t("detailCodec")}</dt>
+            <dd>H.264 ({t("converted")})</dd>
           </>
         ) : null}
         {video.h265Converted && video.isH265 ? (
           <>
-            <dt>{t('detailCodec')}</dt>
-            <dd>H.265 ({t('converted')})</dd>
+            <dt>{t("detailCodec")}</dt>
+            <dd>H.265 ({t("converted")})</dd>
           </>
         ) : null}
         {video.error ? (
           <>
-            <dt>{t('detailError')}</dt>
+            <dt>{t("detailError")}</dt>
             <dd className="vi-error-text">{video.error}</dd>
           </>
         ) : null}
@@ -404,7 +404,7 @@ export function VideoDetailsPanel({
         ) : null}
         {!video.justAudio && video.width && video.height ? (
           <>
-            <dt>{t('detailResolution')}</dt>
+            <dt>{t("detailResolution")}</dt>
             <dd>
               {video.width}×{video.height}
             </dd>
@@ -412,13 +412,13 @@ export function VideoDetailsPanel({
         ) : null}
         {video.duration ? (
           <>
-            <dt>{t('detailDuration')}</dt>
+            <dt>{t("detailDuration")}</dt>
             <dd>{Math.round(video.duration)}s</dd>
           </>
         ) : null}
         {video.fileSize != null ? (
           <>
-            <dt>{t('detailFileSize')}</dt>
+            <dt>{t("detailFileSize")}</dt>
             <dd>{formatFileSize(video.fileSize)}</dd>
           </>
         ) : null}
@@ -426,45 +426,45 @@ export function VideoDetailsPanel({
         {/* ── FFmpeg live state ── */}
         <dt>FFmpeg</dt>
         <dd>
-          {ffmpegStatus === 'loading'
-            ? t('ffmpegLoading')
-            : ffmpegStatus === 'processing'
-              ? video.status === 'converting'
-                ? conversionTarget === 'h265'
-                  ? t('convertingH265', { progress: ffmpegProgress })
-                  : t('convertingH264', { progress: ffmpegProgress })
-                : t('ffmpegProcessing', { progress: ffmpegProgress })
+          {ffmpegStatus === "loading"
+            ? t("ffmpegLoading")
+            : ffmpegStatus === "processing"
+              ? video.status === "converting"
+                ? conversionTarget === "h265"
+                  ? t("convertingH265", { progress: ffmpegProgress })
+                  : t("convertingH264", { progress: ffmpegProgress })
+                : t("ffmpegProcessing", { progress: ffmpegProgress })
               : uploading
-                ? t('uploadingProcessed')
+                ? t("uploadingProcessed")
                 : ffmpegStatus}
         </dd>
         {ffmpegActive && ffmpegProgress !== null ? (
           <>
-            <dt>{t('detailProgress')}</dt>
+            <dt>{t("detailProgress")}</dt>
             <dd>{ffmpegProgress}%</dd>
           </>
         ) : null}
         {ffmpegLastError ? (
           <>
-            <dt>{t('detailFfmpegError')}</dt>
+            <dt>{t("detailFfmpegError")}</dt>
             <dd className="vi-error-text">{ffmpegLastError}</dd>
           </>
         ) : null}
         {ffmpegLastWarning ? (
           <>
-            <dt>{t('detailFfmpegWarning')}</dt>
+            <dt>{t("detailFfmpegWarning")}</dt>
             <dd className="vi-warning-text">{ffmpegLastWarning}</dd>
           </>
         ) : null}
         {ffmpegProcessingTime !== null ? (
           <>
-            <dt>{t('detailProcessingTime')}</dt>
+            <dt>{t("detailProcessingTime")}</dt>
             <dd>{formatProcessingTime(ffmpegProcessingTime)}</dd>
           </>
         ) : null}
         {ffmpegCores !== null ? (
           <>
-            <dt>{t('detailCores')}</dt>
+            <dt>{t("detailCores")}</dt>
             <dd>{ffmpegCores}</dd>
           </>
         ) : null}
@@ -491,8 +491,8 @@ export function VideoMediaPreview({
   opfsThumbnailUrl?: string | null;
 }) {
   const isOnline = useOnlineStatus();
-  const t = useTranslations('VideoGrid');
-  const isOpfs = downloadURL?.startsWith('opfs://') ?? false;
+  const t = useTranslations("VideoGrid");
+  const isOpfs = downloadURL?.startsWith("opfs://") ?? false;
 
   if (!downloadURL) return null;
   if (isOpfs && !opfsVideoUrl) return null;
@@ -509,7 +509,7 @@ export function VideoMediaPreview({
         color="var(--foreground-muted, #999)"
       >
         <Typography variant="caption">
-          {t('videoNotAvailableOffline')}
+          {t("videoNotAvailableOffline")}
         </Typography>
       </Box>
     );
@@ -550,7 +550,7 @@ export function VideoMediaPreview({
   return (
     <Box className="vi-media-wrapper">
       <video
-        className={`vi-video${compact ? ' vi-video--compact' : ''}${withComments ? ' vi-video--with-comments' : ''}`}
+        className={`vi-video${compact ? " vi-video--compact" : ""}${withComments ? " vi-video--with-comments" : ""}`}
         src={src}
         loop
         playsInline
@@ -576,34 +576,34 @@ export function VideoStatusHints({
   videoStatus: VideoStatus;
   uploading: boolean;
   opfsMigrating?: boolean;
-  conversionTarget?: 'h264' | 'h265';
+  conversionTarget?: "h264" | "h265";
   t: TranslationFn;
 }) {
   if (opfsMigrating) {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
-        {t('savingToDevice')}
+        {t("savingToDevice")}
       </Typography>
     );
   }
 
-  if (ffmpegStatus === 'loading') {
+  if (ffmpegStatus === "loading") {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
-        {t('ffmpegLoading')}
+        {t("ffmpegLoading")}
       </Typography>
     );
   }
 
-  if (ffmpegStatus === 'processing') {
+  if (ffmpegStatus === "processing") {
     const message =
-      videoStatus === 'converting' && conversionTarget === 'h265'
-        ? t('convertingH265', { progress: ffmpegProgress })
-        : videoStatus === 'converting'
-          ? t('convertingH264', { progress: ffmpegProgress })
-          : videoStatus === 'burning'
-            ? t('burningCaptions', { progress: ffmpegProgress })
-            : t('ffmpegProcessing', { progress: ffmpegProgress });
+      videoStatus === "converting" && conversionTarget === "h265"
+        ? t("convertingH265", { progress: ffmpegProgress })
+        : videoStatus === "converting"
+          ? t("convertingH264", { progress: ffmpegProgress })
+          : videoStatus === "burning"
+            ? t("burningCaptions", { progress: ffmpegProgress })
+            : t("ffmpegProcessing", { progress: ffmpegProgress });
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
         {message}
@@ -611,34 +611,34 @@ export function VideoStatusHints({
     );
   }
 
-  if (videoStatus === 'translating') {
+  if (videoStatus === "translating") {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
-        {t('translatingCaptions')}
+        {t("translatingCaptions")}
       </Typography>
     );
   }
 
-  if (videoStatus === 'diarizing') {
+  if (videoStatus === "diarizing") {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
-        {t('diarizing')}
+        {t("diarizing")}
       </Typography>
     );
   }
 
-  if (videoStatus === 'uploading') {
+  if (videoStatus === "uploading") {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
-        {t('preparingDownload')}
+        {t("preparingDownload")}
       </Typography>
     );
   }
 
-  if (videoStatus === 'queued') {
+  if (videoStatus === "queued") {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
-        {t('queueWaiting')}
+        {t("queueWaiting")}
       </Typography>
     );
   }
@@ -646,7 +646,7 @@ export function VideoStatusHints({
   if (uploading) {
     return (
       <Typography variant="caption" className="vi-ffmpeg-hint">
-        {t('uploadingProcessed')}
+        {t("uploadingProcessed")}
       </Typography>
     );
   }
@@ -687,8 +687,8 @@ export function VideoActions({
         unstyled
         className="vi-icon-btn"
         onClick={onDelete}
-        aria-label={t('delete')}
-        title={t('delete')}
+        aria-label={t("delete")}
+        title={t("delete")}
         icon="/icons/delete-video.svg"
         iconSize="15px"
         iconColor="var(--foreground, #171717)"
@@ -698,12 +698,12 @@ export function VideoActions({
         unstyled
         className="vi-icon-btn"
         onClick={onCopy}
-        aria-label={t('copyLink')}
-        title={copying ? t('copied') : t('copyLink')}
+        aria-label={t("copyLink")}
+        title={copying ? t("copied") : t("copyLink")}
         icon="/icons/url.svg"
         iconSize="15px"
         iconColor={
-          copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+          copying ? "var(--accent, #06b6d4)" : "var(--foreground, #171717)"
         }
       />
 
@@ -712,14 +712,14 @@ export function VideoActions({
           unstyled
           className="vi-icon-btn"
           onClick={onToggleComments}
-          aria-label={t('toggleComments')}
-          title={t('toggleComments')}
-          icon={commentsOpen ? '/icons/comments-no.svg' : '/icons/comments.svg'}
+          aria-label={t("toggleComments")}
+          title={t("toggleComments")}
+          icon={commentsOpen ? "/icons/comments-no.svg" : "/icons/comments.svg"}
           iconSize="15px"
           iconColor={
             commentsOpen
-              ? 'var(--accent, #06b6d4)'
-              : 'var(--foreground, #171717)'
+              ? "var(--accent, #06b6d4)"
+              : "var(--foreground, #171717)"
           }
         />
       ) : null}
@@ -729,9 +729,9 @@ export function VideoActions({
           unstyled
           className="vi-icon-btn"
           onClick={onRedownload}
-          aria-label={t('redownload')}
-          title={t('redownload')}
-          icon={isIOS() ? '/icons/safari.svg' : '/icons/download.svg'}
+          aria-label={t("redownload")}
+          title={t("redownload")}
+          icon={isIOS() ? "/icons/safari.svg" : "/icons/download.svg"}
           iconSize="15px"
           iconColor="var(--foreground, #171717)"
         />
@@ -741,8 +741,8 @@ export function VideoActions({
         unstyled
         className="vi-icon-btn"
         onClick={onToggleExtra}
-        aria-label={t('toggleExtraActions')}
-        title={t('toggleExtraActions')}
+        aria-label={t("toggleExtraActions")}
+        title={t("toggleExtraActions")}
         disabled={isBusy || !isOnline}
       >
         <Icon
@@ -750,7 +750,7 @@ export function VideoActions({
           size={15}
           color="var(--foreground, #171717)"
           className={
-            extraActionsOpen ? 'vi-chevron--open' : 'vi-chevron--closed'
+            extraActionsOpen ? "vi-chevron--open" : "vi-chevron--closed"
           }
         />
       </Button>
@@ -869,8 +869,8 @@ export function VideoExtraActions({
     <>
       {showServerOffModal ? (
         <ConfirmationModal
-          title={t('serverOffConfirmTitle')}
-          text={t('serverOffConfirmText')}
+          title={t("serverOffConfirmTitle")}
+          text={t("serverOffConfirmText")}
           okCallback={() => {
             setServerMode(false);
             onServerModeChange?.(false);
@@ -881,22 +881,22 @@ export function VideoExtraActions({
       ) : null}
       {fpsDeviceModalFps !== null ? (
         <ConfirmationModal
-          title={t('fpsDeviceOnlyTitle')}
-          text={t('fpsDeviceOnlyText')}
+          title={t("fpsDeviceOnlyTitle")}
+          text={t("fpsDeviceOnlyText")}
           okCallback={() => setFpsDeviceModalFps(null)}
         />
       ) : null}
       {showScaleDownModal ? (
         <ConfirmationModal
-          title={t('scaleDownTitle')}
-          text={t('scaleDownText')}
+          title={t("scaleDownTitle")}
+          text={t("scaleDownText")}
           okCallback={() => setShowScaleDownModal(false)}
           cancelCallback={() => setShowScaleDownModal(false)}
           panelMaxWidth="340px"
         >
           <Box
             display="flex"
-            styles={{ flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}
+            styles={{ flexWrap: "wrap", gap: "6px", marginTop: "10px" }}
           >
             {availableScaleResolutions.map((h) => (
               <Button
@@ -924,7 +924,7 @@ export function VideoExtraActions({
               width="100%"
               gap={8}
             >
-              <Typography variant="caption">{t('useServer')}</Typography>
+              <Typography variant="caption">{t("useServer")}</Typography>
               <Switch
                 checked={serverMode}
                 onChange={(v) => {
@@ -935,7 +935,7 @@ export function VideoExtraActions({
                   setServerMode(true);
                   onServerModeChange(true);
                 }}
-                aria-label={t('useServer')}
+                aria-label={t("useServer")}
               />
             </Box>
           ) : (
@@ -946,9 +946,9 @@ export function VideoExtraActions({
               width="100%"
               gap={8}
             >
-              <Typography variant="caption">{t('serverNoCredits')}</Typography>
+              <Typography variant="caption">{t("serverNoCredits")}</Typography>
               <Button
-                text={t('serverBuyCredits')}
+                text={t("serverBuyCredits")}
                 href="/credits"
                 size="sm"
                 kind="success"
@@ -975,17 +975,17 @@ export function VideoExtraActions({
                 }}
                 disabled={isBusy || offlineMigrating}
                 aria-label={
-                  offlineMigrating ? t('savingToDevice') : t('makeOffline')
+                  offlineMigrating ? t("savingToDevice") : t("makeOffline")
                 }
                 title={
-                  offlineMigrating ? t('savingToDevice') : t('makeOffline')
+                  offlineMigrating ? t("savingToDevice") : t("makeOffline")
                 }
                 icon="/icons/offline.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
                 isLoading={offlineMigrating}
               >
-                {offlineMigrating ? t('savingToDevice') : t('makeOffline')}
+                {offlineMigrating ? t("savingToDevice") : t("makeOffline")}
               </Button>
             </Grid>
           ) : null}
@@ -999,13 +999,13 @@ export function VideoExtraActions({
                 disabled={
                   isBusy || h264Error || !canAffordOp(oc?.convertToH264)
                 }
-                aria-label={t('convertH264')}
-                title={t('convertH264')}
+                aria-label={t("convertH264")}
+                title={t("convertH264")}
                 icon="/icons/convert.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
               >
-                {t('convertH264')}
+                {t("convertH264")}
                 {serverSelected && oc ? (
                   <CreditBadge amount={oc.convertToH264} />
                 ) : null}
@@ -1025,17 +1025,17 @@ export function VideoExtraActions({
                   !serverSelected ||
                   !canAffordOp(oc?.convertToH265)
                 }
-                aria-label={t('convertH265')}
+                aria-label={t("convertH265")}
                 title={
                   !serverSelected
-                    ? t('convertH265ServerOnly')
-                    : t('convertH265')
+                    ? t("convertH265ServerOnly")
+                    : t("convertH265")
                 }
                 icon="/icons/h265.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
               >
-                {t('convertH265')}
+                {t("convertH265")}
                 {serverSelected && oc ? (
                   <CreditBadge amount={oc.convertToH265} />
                 ) : null}
@@ -1054,13 +1054,13 @@ export function VideoExtraActions({
                   blackBarsError ||
                   !canAffordOp(oc?.removeBlackBars)
                 }
-                aria-label={t('removeBlackBars')}
-                title={t('removeBlackBars')}
+                aria-label={t("removeBlackBars")}
+                title={t("removeBlackBars")}
                 icon="/icons/remove-black-bars.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
               >
-                {t('removeBlackBars')}
+                {t("removeBlackBars")}
                 {serverSelected && oc ? (
                   <CreditBadge amount={oc.removeBlackBars} />
                 ) : null}
@@ -1074,13 +1074,13 @@ export function VideoExtraActions({
                 unstyled
                 className="vi-fps-btn"
                 onClick={onDownloadCaptions}
-                aria-label={t('downloadCaptions')}
-                title={t('downloadCaptions')}
+                aria-label={t("downloadCaptions")}
+                title={t("downloadCaptions")}
                 icon="/icons/captions.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
               >
-                {t('downloadCaptions')}
+                {t("downloadCaptions")}
               </Button>
             </Grid>
           ) : null}
@@ -1094,13 +1094,13 @@ export function VideoExtraActions({
                 disabled={
                   !canProcess || isBusy || !canAffordOp(oc?.burnSubtitles)
                 }
-                aria-label={t('burnCaptions')}
-                title={t('burnCaptions')}
+                aria-label={t("burnCaptions")}
+                title={t("burnCaptions")}
                 icon="/icons/write.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
               >
-                {t('burnCaptions')}
+                {t("burnCaptions")}
                 {serverSelected && oc ? (
                   <CreditBadge amount={oc.burnSubtitles} />
                 ) : null}
@@ -1123,13 +1123,13 @@ export function VideoExtraActions({
                       diarizeCost === null ||
                       creditsBalance < diarizeCost
                     }
-                    aria-label={t('diarize')}
-                    title={t('diarize')}
+                    aria-label={t("diarize")}
+                    title={t("diarize")}
                     icon="/icons/captions.svg"
                     iconSize="14px"
                     iconColor="var(--accent, #8b5cf6)"
                   >
-                    {t('diarize')}
+                    {t("diarize")}
                     {diarizeCost !== null ? (
                       <CreditBadge amount={diarizeCost} />
                     ) : null}
@@ -1151,22 +1151,22 @@ export function VideoExtraActions({
                     .finally(() => setDuplicating(false));
                 }}
                 disabled={!video.opfsStored || duplicating}
-                aria-label={t('duplicateVideo')}
-                title={t('duplicateVideo')}
+                aria-label={t("duplicateVideo")}
+                title={t("duplicateVideo")}
                 icon="/icons/copy.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
                 isLoading={duplicating}
               >
-                {t('duplicateVideo')}
+                {t("duplicateVideo")}
               </Button>
             </Grid>
           ) : null}
 
           {onGetMetadata &&
-          (video.platform === 'facebook' ||
-            video.platform === 'instagram' ||
-            video.platform === 'tiktok') ? (
+          (video.platform === "facebook" ||
+            video.platform === "instagram" ||
+            video.platform === "tiktok") ? (
             <Grid size={{ xs: 6 }} display="flex" justifyContent="center">
               <Button
                 unstyled
@@ -1180,14 +1180,14 @@ export function VideoExtraActions({
                 disabled={
                   fetchingMetadata || metadataError || creditsBalance < 1
                 }
-                aria-label={t('getMetadata')}
-                title={t('getMetadata')}
+                aria-label={t("getMetadata")}
+                title={t("getMetadata")}
                 icon="/icons/fields.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
                 isLoading={fetchingMetadata}
               >
-                {t('getMetadata')}
+                {t("getMetadata")}
                 <CreditBadge amount={1} />
               </Button>
             </Grid>
@@ -1204,13 +1204,13 @@ export function VideoExtraActions({
                 disabled={
                   !canProcess || scaleDownError || !canAffordOp(oc?.scaleDown)
                 }
-                aria-label={t('scaleDown')}
-                title={t('scaleDown')}
+                aria-label={t("scaleDown")}
+                title={t("scaleDown")}
                 icon="/icons/scale-down.svg"
                 iconSize="14px"
                 iconColor="var(--accent, #8b5cf6)"
               >
-                {t('scaleDown')}
+                {t("scaleDown")}
                 {serverSelected && oc ? (
                   <CreditBadge amount={oc.scaleDown} />
                 ) : null}
@@ -1266,12 +1266,12 @@ export function resolveResolutionLabel(
 ): string | null {
   if (height == null) return null;
   const px = width != null ? Math.min(height, width) : height;
-  if (px >= 2160) return '4K';
-  if (px >= 1440) return '2K';
-  if (px >= 1080) return 'FHD';
-  if (px >= 720) return 'HD';
-  if (px >= 480) return 'SD';
-  if (px >= 360) return '360p';
+  if (px >= 2160) return "4K";
+  if (px >= 1440) return "2K";
+  if (px >= 1080) return "FHD";
+  if (px >= 720) return "HD";
+  if (px >= 480) return "SD";
+  if (px >= 360) return "360p";
   return null;
 }
 
@@ -1298,21 +1298,21 @@ export function VideoCardHeader({
 }) {
   const uploaderHandle =
     video.uploader_id != null
-      ? video.uploader_id.startsWith('@')
+      ? video.uploader_id.startsWith("@")
         ? video.uploader_id
         : `@${video.uploader_id}`
       : null;
 
   const uploadDateStr =
     video.uploadTimestamp != null
-      ? new Date(video.uploadTimestamp * 1000).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
+      ? new Date(video.uploadTimestamp * 1000).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
         })
       : null;
 
-  const subtitle = [uploaderHandle, uploadDateStr].filter(Boolean).join(' · ');
+  const subtitle = [uploaderHandle, uploadDateStr].filter(Boolean).join(" · ");
 
   return (
     <Box className="vi-header">
@@ -1320,7 +1320,7 @@ export function VideoCardHeader({
         <Typography
           as="span"
           variant="body"
-          className={`vi-name${detailsOpen ? ' vi-name--expanded' : ''}`}
+          className={`vi-name${detailsOpen ? " vi-name--expanded" : ""}`}
         >
           {displayName}
         </Typography>
@@ -1334,7 +1334,7 @@ export function VideoCardHeader({
         unstyled
         className="vi-icon-btn"
         onClick={onToggleDetails}
-        aria-label={t('toggleDetails')}
+        aria-label={t("toggleDetails")}
         icon="/icons/hamburger.svg"
         iconSize="16px"
         iconColor="var(--foreground, #171717)"
@@ -1347,28 +1347,28 @@ export function VideoCardHeader({
 
 export function PlatformIconBg({
   platform,
-  position = 'bottom-left',
+  position = "bottom-left",
   widthPct = 40,
   iconMarginTop,
   iconMarginLeft,
 }: {
   platform: string;
-  position?: 'top-left' | 'bottom-left';
+  position?: "top-left" | "bottom-left";
   widthPct?: number;
   iconMarginTop?: number | string;
   iconMarginLeft?: number | string;
 }) {
   const icon = PLATFORM_ICONS[platform];
-  const isTop = position === 'top-left';
+  const isTop = position === "top-left";
 
-  if (!icon || platform === 'unknown') return null;
+  if (!icon || platform === "unknown") return null;
 
   return (
-    <div className={`pib-root pib-root--${isTop ? 'top' : 'bottom'}`}>
+    <div className={`pib-root pib-root--${isTop ? "top" : "bottom"}`}>
       <div
         className="pib-gradient"
         style={{
-          background: `radial-gradient(ellipse at ${isTop ? 'top' : 'bottom'} left, color-mix(in srgb, var(--accent, #06b6d4) 40%, transparent) 0%, transparent 70%)`,
+          background: `radial-gradient(ellipse at ${isTop ? "top" : "bottom"} left, color-mix(in srgb, var(--accent, #06b6d4) 40%, transparent) 0%, transparent 70%)`,
         }}
       />
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1397,7 +1397,7 @@ export function VideoFooterLink({ video }: { video: StoredVideo }) {
     ? `${video.fps} FPS`
     : video.sourceFps != null
       ? `${video.sourceFps} FPS`
-      : video.fps !== 'original'
+      : video.fps !== "original"
         ? `${video.fps} FPS`
         : null;
 
@@ -1415,14 +1415,14 @@ export function VideoFooterLink({ video }: { video: StoredVideo }) {
       <Box
         display="flex"
         alignItems="center"
-        styles={{ gap: '6px', minWidth: 0 }}
+        styles={{ gap: "6px", minWidth: 0 }}
       >
         <a
           href={video.originalURL}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={video.originalURL}
-          style={{ display: 'flex', alignItems: 'center' }}
+          style={{ display: "flex", alignItems: "center" }}
         >
           <Icon icon={platformIcon} size={24} color="var(--accent, #06b6d4)" />
         </a>
@@ -1439,7 +1439,7 @@ export function VideoFooterLink({ video }: { video: StoredVideo }) {
       <Box
         display="flex"
         alignItems="center"
-        styles={{ gap: '4px', flexShrink: 0 }}
+        styles={{ gap: "4px", flexShrink: 0 }}
       >
         {video.isH265 ? (
           <Badge variant="subtle" size="sm" color="#16dd00">

@@ -6,10 +6,10 @@
 #   coupon list [-redeemed true|false] [-amount <credits>]
 #
 # Required env:
-#   INTERNAL_SECRET   — must match the server's INTERNAL_SECRET env var
+#   INTERNAL_SECRET   - must match the server's INTERNAL_SECRET env var
 #
 # Optional env:
-#   INTERNAL_ENDPOINT — defaults to http://localhost:3000
+#   INTERNAL_ENDPOINT - defaults to http://localhost:3000
 
 set -e
 

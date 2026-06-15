@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 
 export interface WebSearchResult {
   title: string;
@@ -9,7 +9,7 @@ export interface WebSearchResult {
   score?: number;
 }
 
-export type WebSearchDepth = 'basic' | 'advanced';
+export type WebSearchDepth = "basic" | "advanced";
 
 export interface UseWebSearchOptions {
   /** Path to the app's web-search proxy route. Defaults to '/api/web-search'. */
@@ -18,7 +18,7 @@ export interface UseWebSearchOptions {
   getAuthHeaders?: () => Record<string, string>;
   /** Maximum number of results to return. Defaults to 5. */
   maxResults?: number;
-  /** Search depth — 'basic' costs 1 credit, 'advanced' costs 2. Defaults to 'basic'. */
+  /** Search depth - 'basic' costs 1 credit, 'advanced' costs 2. Defaults to 'basic'. */
   searchDepth?: WebSearchDepth;
 }
 
@@ -30,12 +30,14 @@ export interface UseWebSearchReturn {
   reset: () => void;
 }
 
-export function useWebSearch(options: UseWebSearchOptions = {}): UseWebSearchReturn {
+export function useWebSearch(
+  options: UseWebSearchOptions = {},
+): UseWebSearchReturn {
   const {
-    proxyBase = '/api/web-search',
+    proxyBase = "/api/web-search",
     getAuthHeaders,
     maxResults = 5,
-    searchDepth = 'basic',
+    searchDepth = "basic",
   } = options;
 
   const [results, setResults] = useState<WebSearchResult[]>([]);
@@ -54,17 +56,21 @@ export function useWebSearch(options: UseWebSearchOptions = {}): UseWebSearchRet
         const authHeaders = getAuthHeaders?.() ?? {};
 
         const res = await fetch(proxyBase, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             ...authHeaders,
           },
           body: JSON.stringify({ query, maxResults, searchDepth }),
         });
 
         if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as { detail?: string };
-          throw new Error(body.detail ?? `Web search proxy: ${res.status} ${res.statusText}`);
+          const body = (await res.json().catch(() => ({}))) as {
+            detail?: string;
+          };
+          throw new Error(
+            body.detail ?? `Web search proxy: ${res.status} ${res.statusText}`,
+          );
         }
 
         const data = (await res.json()) as { results: WebSearchResult[] };

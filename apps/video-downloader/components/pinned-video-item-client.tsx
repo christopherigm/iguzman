@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Button } from '@repo/ui/core-elements/button';
-import { useFFmpeg } from '@repo/ui/use-ffmpeg';
-import { useGroq } from '@repo/ui/use-groq';
-import type { LlmMessage } from '@repo/ui/use-groq';
-import type { VideoStatus } from '@/lib/types';
-import { TRANSLATE_LANGUAGES } from './burn-captions-modal';
-import type { StoredVideo } from './use-video-store';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Button } from "@repo/ui/core-elements/button";
+import { useFFmpeg } from "@repo/ui/use-ffmpeg";
+import { useGroq } from "@repo/ui/use-groq";
+import type { LlmMessage } from "@repo/ui/use-groq";
+import type { VideoStatus } from "@/lib/types";
+import { TRANSLATE_LANGUAGES } from "./burn-captions-modal";
+import type { StoredVideo } from "./use-video-store";
 import {
   STATUS_COLORS,
   resolveMediaUrl,
@@ -23,12 +23,12 @@ import {
   VideoStatusHints,
   VideoFooterLink,
   PlatformIconBg,
-} from './video-item-shared';
-import { useOPFSUrls } from './opfs-url-context';
-import { readFromOPFS } from '@/lib/opfs';
-import { saveProcessedToOPFS } from '@/lib/opfs-processing';
-import { setCreditsBalance } from './use-credits-store';
-import './video-item.css';
+} from "./video-item-shared";
+import { useOPFSUrls } from "./opfs-url-context";
+import { readFromOPFS } from "@/lib/opfs";
+import { saveProcessedToOPFS } from "@/lib/opfs-processing";
+import { setCreditsBalance } from "./use-credits-store";
+import "./video-item.css";
 
 /* ── Helpers ────────────────────────────────────────── */
 
@@ -46,7 +46,7 @@ STRICT RULES:
 - Translate ONLY the text lines; leave block numbers and timestamps completely untouched
 - Maintain natural speech patterns, tone, and the speaker's intent
 - When translating to Spanish, use Mexican Spanish vocabulary and expressions, not Spain Spanish
-- Return ONLY the translated SRT content — no explanations, no markdown fences, no extra commentary`;
+- Return ONLY the translated SRT content - no explanations, no markdown fences, no extra commentary`;
 }
 
 function hexToSSA(hex: string, opacity: number): string {
@@ -55,7 +55,7 @@ function hexToSSA(hex: string, opacity: number): string {
   const b = hex.slice(5, 7);
   const alpha = Math.round((1 - opacity / 100) * 255)
     .toString(16)
-    .padStart(2, '0');
+    .padStart(2, "0");
   return `&H${alpha}${b}${g}${r}`.toUpperCase();
 }
 
@@ -76,18 +76,18 @@ export function PinnedVideoItemClient({
   onComplete,
   onRemove,
 }: PinnedVideoItemClientProps) {
-  const t = useTranslations('VideoGrid');
+  const t = useTranslations("VideoGrid");
   const { getUrls, registerUrls } = useOPFSUrls();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [copying, setCopying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [localProgress, setLocalProgress] = useState<{
-    status: 'loading' | 'processing';
+    status: "loading" | "processing";
     progress: number;
   } | null>(null);
-  const [conversionTarget, setConversionTarget] = useState<'h264' | 'h265'>(
-    'h264',
+  const [conversionTarget, setConversionTarget] = useState<"h264" | "h265">(
+    "h264",
   );
 
   const fpsResumeChecked = useRef(false);
@@ -97,11 +97,11 @@ export function PinnedVideoItemClient({
   const scaleDownResumeChecked = useRef(false);
 
   const { generate } = useGroq({
-    proxyBase: '/api/groq',
-    model: 'openai/gpt-oss-120b',
+    proxyBase: "/api/groq",
+    model: "openai/gpt-oss-120b",
     getAuthHeaders: (): Record<string, string> => {
-      const key = localStorage.getItem('vd_credits_key');
-      return key ? { 'x-credits-key': key } : {};
+      const key = localStorage.getItem("vd_credits_key");
+      return key ? { "x-credits-key": key } : {};
     },
     onCreditsUpdate: setCreditsBalance,
   });
@@ -124,16 +124,16 @@ export function PinnedVideoItemClient({
   const displayFFmpegProgress = localProgress?.progress ?? ffmpegProgress;
 
   const isProcessing =
-    video.status === 'processing' ||
-    video.status === 'converting' ||
-    video.status === 'burning' ||
-    video.status === 'translating';
+    video.status === "processing" ||
+    video.status === "converting" ||
+    video.status === "burning" ||
+    video.status === "translating";
 
   const displayName =
     video.fulltitle ??
     video.name ??
     video.uploader ??
-    (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
+    (video.justAudio ? t("untitledAudio") : t("untitledVideo"));
 
   /* ── Copy link ──────────────────────────────────────── */
   const handleCopy = useCallback(async () => {
@@ -183,9 +183,9 @@ export function PinnedVideoItemClient({
           sourceUrl = `${window.location.origin}${resolveMediaUrl(`/api/media/${file}`)}`;
         }
 
-        setLocalProgress({ status: 'loading', progress: 0 });
+        setLocalProgress({ status: "loading", progress: 0 });
         const { objectUrl, blob } = await opts.process(sourceUrl, (p) => {
-          setLocalProgress({ status: 'processing', progress: p });
+          setLocalProgress({ status: "processing", progress: p });
         });
 
         if (tempBlobUrl) {
@@ -195,14 +195,14 @@ export function PinnedVideoItemClient({
         setLocalProgress(null);
 
         onUpdate(video.uuid, {
-          status: 'done',
+          status: "done",
           fileSize: blob.size,
           ...opts.donePatch,
         });
 
         if (video.opfsEnabled) {
-          // Save result directly to OPFS — skip server upload
-          const ext = file.split('.').pop() ?? 'mp4';
+          // Save result directly to OPFS - skip server upload
+          const ext = file.split(".").pop() ?? "mp4";
           const newKey = await saveProcessedToOPFS({
             blob,
             fileExt: ext,
@@ -221,7 +221,7 @@ export function PinnedVideoItemClient({
           });
 
           if (video.autoDownload) {
-            const prefix = opts.downloadPrefix ?? 'video';
+            const prefix = opts.downloadPrefix ?? "video";
             triggerBrowserDownload(
               objectUrl,
               `${video.name ?? prefix}-${Date.now()}-${newKey}`,
@@ -237,7 +237,7 @@ export function PinnedVideoItemClient({
           );
 
           if (video.autoDownload) {
-            const prefix = opts.downloadPrefix ?? 'video';
+            const prefix = opts.downloadPrefix ?? "video";
             triggerBrowserDownload(
               objectUrl,
               `${video.name ?? prefix}-${Date.now()}-${file}`,
@@ -259,9 +259,9 @@ export function PinnedVideoItemClient({
         console.error(`${opts.errorKey} failed:`, err);
         setLocalProgress(null);
         const detail = err instanceof Error ? err.message : String(err);
-        const baseMsg = t(opts.errorKey).replace(/[.!?]+$/, '');
+        const baseMsg = t(opts.errorKey).replace(/[.!?]+$/, "");
         onUpdate(video.uuid, {
-          status: 'error',
+          status: "error",
           error: `${baseMsg}: ${detail}`,
         });
       }
@@ -287,12 +287,12 @@ export function PinnedVideoItemClient({
   const handleInterpolateFps = useCallback(
     (completeAfter = true) =>
       runProcessing({
-        activeStatus: 'processing',
+        activeStatus: "processing",
         process: (url, onProgress) =>
           interpolateFps(url, Number(video.fps), onProgress),
         donePatch: { fpsApplied: true },
         taskUpdate: { fpsApplied: true },
-        errorKey: 'errorFfmpegFailed',
+        errorKey: "errorFfmpegFailed",
         completeAfter,
       }),
     [runProcessing, interpolateFps, video.fps],
@@ -300,14 +300,14 @@ export function PinnedVideoItemClient({
 
   /* ── H.265 → H.264 conversion ───────────────────────── */
   const handleConvertH264 = useCallback(() => {
-    setConversionTarget('h264');
+    setConversionTarget("h264");
     return runProcessing({
-      activeStatus: 'converting',
+      activeStatus: "converting",
       process: (url, onProgress) => convertToH264(url, onProgress),
       donePatch: { h264Converted: true, isH265: false },
       taskUpdate: { isH265: false },
-      errorKey: 'errorConvertFailed',
-      downloadPrefix: 'video',
+      errorKey: "errorConvertFailed",
+      downloadPrefix: "video",
       completeAfter: true,
     });
   }, [runProcessing, convertToH264]);
@@ -315,12 +315,12 @@ export function PinnedVideoItemClient({
   const handleRemoveBlackBars = useCallback(
     () =>
       runProcessing({
-        activeStatus: 'processing',
+        activeStatus: "processing",
         process: (url, onProgress) =>
           removeBlackBars(url, undefined, undefined, undefined, onProgress),
         donePatch: { blackBarsRemoved: true },
         taskUpdate: { blackBarsRemoved: true },
-        errorKey: 'errorRemoveBlackBarsFailed',
+        errorKey: "errorRemoveBlackBarsFailed",
         completeAfter: true,
       }),
     [runProcessing, removeBlackBars],
@@ -345,11 +345,11 @@ export function PinnedVideoItemClient({
         }
       }
       return runProcessing({
-        activeStatus: 'processing',
+        activeStatus: "processing",
         process: (url, onProgress) => scaleDown(url, targetHeight, onProgress),
         donePatch,
         taskUpdate: donePatch as Record<string, unknown>,
-        errorKey: 'errorScaleDownFailed',
+        errorKey: "errorScaleDownFailed",
         completeAfter: true,
       });
     },
@@ -364,30 +364,30 @@ export function PinnedVideoItemClient({
     let srtContent: string;
     try {
       const srtRes = await fetch(resolveMediaUrl(video.captionsFile));
-      if (!srtRes.ok) throw new Error('Failed to fetch captions file');
+      if (!srtRes.ok) throw new Error("Failed to fetch captions file");
       const originalSrt = await srtRes.text();
 
       if (config.translate && config.translateTo) {
         onUpdate(video.uuid, {
-          status: 'translating' as VideoStatus,
+          status: "translating" as VideoStatus,
           error: null,
         });
         const langName = LANG_LABEL[config.translateTo] ?? config.translateTo;
         const messages: LlmMessage[] = [
-          { role: 'system', content: buildTranslationPrompt(langName) },
-          { role: 'user', content: originalSrt },
+          { role: "system", content: buildTranslationPrompt(langName) },
+          { role: "user", content: originalSrt },
         ];
         const translated = await generate(messages);
-        if (!translated) throw new Error('Translation returned empty result');
+        if (!translated) throw new Error("Translation returned empty result");
         srtContent = translated;
       } else {
         srtContent = originalSrt;
       }
     } catch (err) {
-      console.error('Caption translation failed:', err);
+      console.error("Caption translation failed:", err);
       onUpdate(video.uuid, {
-        status: 'error',
-        error: t('errorTranslateFailed'),
+        status: "error",
+        error: t("errorTranslateFailed"),
       });
       return;
     }
@@ -395,19 +395,19 @@ export function PinnedVideoItemClient({
     srtContent = srtContent.toUpperCase();
 
     runProcessing({
-      activeStatus: 'burning' as VideoStatus,
+      activeStatus: "burning" as VideoStatus,
       process: async (sourceUrl, onProgress) => {
         const primaryColour = hexToSSA(config.primaryColor, 100);
         const borderStyle = config.borderStyle ?? 3;
         const backColour =
           borderStyle === 3
             ? hexToSSA(config.bgColor, config.bgOpacity)
-            : '&HFF000000';
+            : "&HFF000000";
         const outline = borderStyle === 3 ? 8 : (config.outlineThickness ?? 2);
 
         const animCfg = config.animation;
         const animation =
-          animCfg && animCfg.type !== 'none'
+          animCfg && animCfg.type !== "none"
             ? {
                 types: [animCfg.type] as string[],
                 fadeInMs: animCfg.fadeInMs,
@@ -424,7 +424,7 @@ export function PinnedVideoItemClient({
               }
             : {};
 
-        const fontStyle = config.fontStyle ?? 'normal';
+        const fontStyle = config.fontStyle ?? "normal";
         return burnSubtitles(
           sourceUrl,
           {
@@ -432,8 +432,8 @@ export function PinnedVideoItemClient({
             alignment: config.alignment,
             marginV: config.marginV,
             fontSize: config.fontSize,
-            bold: fontStyle === 'bold' || fontStyle === 'bold-italic',
-            italic: fontStyle === 'italic' || fontStyle === 'bold-italic',
+            bold: fontStyle === "bold" || fontStyle === "bold-italic",
+            italic: fontStyle === "italic" || fontStyle === "bold-italic",
             primaryColour,
             backColour,
             borderStyle,
@@ -445,7 +445,7 @@ export function PinnedVideoItemClient({
       },
       donePatch: { captionsBurned: true, burnCaptionsConfig: null },
       taskUpdate: { captionsBurned: true },
-      errorKey: 'errorBurnCaptionsFailed',
+      errorKey: "errorBurnCaptionsFailed",
       completeAfter: true,
     });
   }, [
@@ -467,10 +467,10 @@ export function PinnedVideoItemClient({
 
     const needsResume =
       video.file &&
-      video.fps !== 'original' &&
+      video.fps !== "original" &&
       !video.justAudio &&
       !video.fpsApplied &&
-      (video.status === 'done' || video.status === 'processing');
+      (video.status === "done" || video.status === "processing");
 
     if (needsResume) queueMicrotask(() => handleInterpolateFps(true));
   }, [
@@ -492,7 +492,7 @@ export function PinnedVideoItemClient({
       video.isH265 &&
       !video.justAudio &&
       !video.h264Converted &&
-      video.status === 'converting';
+      video.status === "converting";
 
     if (needsResume) queueMicrotask(() => handleConvertH264());
   }, [
@@ -514,8 +514,8 @@ export function PinnedVideoItemClient({
       !video.justAudio &&
       !video.blackBarsRemoved &&
       video.scaleDownTargetHeight == null &&
-      video.status === 'processing' &&
-      (video.fps === 'original' || !!video.fpsApplied);
+      video.status === "processing" &&
+      (video.fps === "original" || !!video.fpsApplied);
 
     if (needsResume) queueMicrotask(() => handleRemoveBlackBars());
   }, [
@@ -539,7 +539,7 @@ export function PinnedVideoItemClient({
       !video.justAudio &&
       !video.captionsBurned &&
       video.burnCaptionsConfig !== null &&
-      video.status === 'burning';
+      video.status === "burning";
 
     if (needsResume) queueMicrotask(() => handleBurnCaptions());
   }, [
@@ -560,7 +560,7 @@ export function PinnedVideoItemClient({
       video.file &&
       !video.justAudio &&
       video.scaleDownTargetHeight != null &&
-      video.status === 'processing';
+      video.status === "processing";
 
     if (needsResume)
       queueMicrotask(() => handleScaleDown(video.scaleDownTargetHeight!));
@@ -578,13 +578,13 @@ export function PinnedVideoItemClient({
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [isProcessing]);
 
   /* ── Auto-move errored items to completed ─────────────── */
   useEffect(() => {
-    if (video.status === 'error') onComplete(video.uuid);
+    if (video.status === "error") onComplete(video.uuid);
   }, [video.status, video.uuid, onComplete]);
 
   return (
@@ -593,7 +593,7 @@ export function PinnedVideoItemClient({
       borderRadius={14}
       className="vi-card"
       flexDirection="column"
-      styles={{ overflow: 'hidden' }}
+      styles={{ overflow: "hidden" }}
     >
       <PlatformIconBg
         platform={video.platform}
@@ -641,7 +641,7 @@ export function PinnedVideoItemClient({
         }
       />
       {/* ── Progress bar ────────────────────────────── */}
-      {isProcessing || displayFFmpegStatus !== 'idle' ? (
+      {isProcessing || displayFFmpegStatus !== "idle" ? (
         <ProgressBar
           value={displayFFmpegProgress ? displayFFmpegProgress : undefined}
           margin="0"
@@ -668,8 +668,8 @@ export function PinnedVideoItemClient({
             unstyled
             className="vi-icon-btn"
             onClick={() => setConfirmRemove(true)}
-            aria-label={t('delete')}
-            title={t('delete')}
+            aria-label={t("delete")}
+            title={t("delete")}
             icon="/icons/delete-video.svg"
             iconSize="15px"
             iconColor="var(--foreground, #171717)"
@@ -678,12 +678,12 @@ export function PinnedVideoItemClient({
             unstyled
             className="vi-icon-btn"
             onClick={handleCopy}
-            aria-label={t('copyLink')}
-            title={copying ? t('copied') : t('copyLink')}
+            aria-label={t("copyLink")}
+            title={copying ? t("copied") : t("copyLink")}
             icon="/icons/url.svg"
             iconSize="15px"
             iconColor={
-              copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+              copying ? "var(--accent, #06b6d4)" : "var(--foreground, #171717)"
             }
           />
         </Box>
@@ -691,8 +691,8 @@ export function PinnedVideoItemClient({
       {/* ── Delete confirmation ──────────────────────── */}
       {confirmRemove ? (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText')}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText")}
           okCallback={() => {
             setConfirmRemove(false);
             onRemove(video.uuid);

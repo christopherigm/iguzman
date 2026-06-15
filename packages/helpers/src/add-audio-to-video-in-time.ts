@@ -1,8 +1,8 @@
-import { execFile } from 'child_process';
-import * as path from 'path';
+import { execFile } from "child_process";
+import * as path from "path";
 
 /** Supported audio encoding formats for the output. */
-export type AudioFormat = 'wav' | 'mp3' | 'ogg';
+export type AudioFormat = "wav" | "mp3" | "ogg";
 
 /** Configuration for merging an audio track into a video file. */
 export interface AddAudioToVideoOptions {
@@ -33,16 +33,16 @@ export interface AddAudioToVideoResult {
  * @returns `'/app/media'` in production, `'public/media'` otherwise.
  */
 function getDefaultOutputFolder(): string {
-  const nodeEnv = process.env.NODE_ENV?.trim() ?? 'localhost';
-  return nodeEnv === 'production' ? '/app/media' : 'public/media';
+  const nodeEnv = process.env.NODE_ENV?.trim() ?? "localhost";
+  return nodeEnv === "production" ? "/app/media" : "public/media";
 }
 
 /**
  * Strips a leading `media/` prefix from a path. Only removes the prefix
- * at the start of the string — occurrences elsewhere are left intact.
+ * at the start of the string - occurrences elsewhere are left intact.
  */
 export function stripMediaPrefix(filePath: string): string {
-  return filePath.replace(/^media\//, '');
+  return filePath.replace(/^media\//, "");
 }
 
 /**
@@ -63,30 +63,30 @@ export function buildFfmpegArgs(
   format: AudioFormat,
 ): string[] {
   const args: string[] = [
-    '-y',
-    '-i',
+    "-y",
+    "-i",
     srcVideoFile,
-    '-itsoffset',
+    "-itsoffset",
     String(offset),
-    '-i',
+    "-i",
     srcAudioFile,
     // Always map video from the first input and audio from the second
-    '-map',
-    '0:v',
-    '-map',
-    '1:a',
+    "-map",
+    "0:v",
+    "-map",
+    "1:a",
     // Video stream is always copied without re-encoding
-    '-c:v',
-    'copy',
+    "-c:v",
+    "copy",
   ];
 
   // WAV audio must be re-encoded (AAC) because WAV is not a valid
   // codec inside most video containers. For MP3/OGG the stream can
   // be copied directly since those codecs are container-compatible.
-  if (format === 'wav') {
-    args.push('-c:a', 'aac');
+  if (format === "wav") {
+    args.push("-c:a", "aac");
   } else {
-    args.push('-c:a', 'copy');
+    args.push("-c:a", "copy");
   }
 
   args.push(destFile);
@@ -122,22 +122,22 @@ export function addAudioToVideoInTime({
   srcAudio,
   dest,
   offset = 0,
-  format = 'wav',
+  format = "wav",
   outputFolder = getDefaultOutputFolder(),
 }: AddAudioToVideoOptions): Promise<AddAudioToVideoResult> {
   // --- Input validation ---
   if (!srcVideo) {
-    return Promise.reject(new Error('srcVideo is required'));
+    return Promise.reject(new Error("srcVideo is required"));
   }
   if (!srcAudio) {
-    return Promise.reject(new Error('srcAudio is required'));
+    return Promise.reject(new Error("srcAudio is required"));
   }
   if (!dest) {
-    return Promise.reject(new Error('dest is required'));
+    return Promise.reject(new Error("dest is required"));
   }
-  if (typeof offset !== 'number' || !Number.isFinite(offset) || offset < 0) {
+  if (typeof offset !== "number" || !Number.isFinite(offset) || offset < 0) {
     return Promise.reject(
-      new Error('offset must be a non-negative finite number'),
+      new Error("offset must be a non-negative finite number"),
     );
   }
 
@@ -158,7 +158,7 @@ export function addAudioToVideoInTime({
 
   return new Promise((resolve, reject) => {
     execFile(
-      'ffmpeg',
+      "ffmpeg",
       args,
       { maxBuffer: 1024 * 2048 },
       (error: Error | null) => {

@@ -4,7 +4,69 @@
     "description": ""
   },
   "HomePage": {
-    "title": "Edge Folio"
+    "title": "Edge Folio",
+    "heroEyebrow": "Privacy-first career platform",
+    "heroTitle": "Your career, told truthfully - and tailored to every role",
+    "heroSubtitle": "EdgeFolio keeps one factual source of truth about your work, then uses AI that ranks and rewrites - never invents - to tailor it to each job. Export ATS-ready resumes, cover letters, and TN visa letters.",
+    "heroCtaPrimary": "Get started free",
+    "heroCtaSecondary": "Sign in",
+    "privateJobsTitle": "Your private job postings",
+    "privateJobsViewAll": "View all jobs",
+    "privateJobsBrowse": "Browse jobs",
+    "heroNote": "Your data stays yours - tokens live in HTTP-only cookies and proprietary code never leaves your device.",
+    "pillarsTitle": "Built on one promise",
+    "pillarsSubtitle": "The LLM ranks and rewrites. It never invents.",
+    "pillars": {
+      "matrix": {
+        "title": "Immutable Matrix",
+        "body": "Curate pre-approved, factual STAR bullet points and skills - the master record every resume draws from."
+      },
+      "tailor": {
+        "title": "Honest AI tailoring",
+        "body": "Rank and rewrite your real achievements against any job description, with overall, technical, and TN-likelihood match scores."
+      },
+      "jobs": {
+        "title": "Live job discovery",
+        "body": "Browse a USMCA-focused catalog or bring your own API keys for a private feed, then save a posting straight into an application."
+      },
+      "export": {
+        "title": "ATS & TN-ready export",
+        "body": "Generate cover letters and NAFTA/USMCA TN visa letters, and export polished PDFs that pass applicant tracking systems."
+      }
+    },
+    "featuresTitle": "Everything you need to apply with confidence",
+    "features": {
+      "matrix": {
+        "title": "Immutable Matrix",
+        "body": "Factual, pre-approved bullet points and skills in STAR format - the database the LLM draws from."
+      },
+      "tailor": {
+        "title": "Application tailoring",
+        "body": "Rewrite bullets, skills, work experience, and projects per role, with match scores and explanations."
+      },
+      "company": {
+        "title": "Company intelligence",
+        "body": "Automatic research on the company you're targeting - about, analysis, and an intel score."
+      },
+      "letters": {
+        "title": "Cover & TN letters",
+        "body": "Cover letters and NAFTA/USMCA TN visa support letters, generated from your tailored content."
+      },
+      "jobs": {
+        "title": "Jobs catalog",
+        "body": "Live postings across the US, Canada, and Mexico, with an optional private feed from your own keys."
+      },
+      "passkeys": {
+        "title": "Passkey security",
+        "body": "Sign in with WebAuthn passkeys; JWTs stay in HTTP-only cookies, invisible to JavaScript."
+      }
+    },
+    "privacyTitle": "Privacy by design",
+    "privacyBody": "Proprietary codebases are analyzed locally in your browser. Only sanitized stack metadata - languages, frameworks, and dependencies - is ever sent to the server. Your source code never leaves your machine.",
+    "privacyTech": "Powered by in-browser structural parsing (tree-sitter WASM) - no model download, no GPU required.",
+    "ctaTitle": "Ready to take control of your job search?",
+    "ctaSubtitle": "Build your Immutable Matrix today and tailor your way to the next role.",
+    "ctaButton": "Create your account"
   },
   "VerifyEmailPage": {
     "loading": "Verifying your email…",
@@ -75,7 +137,7 @@
   },
   "MatrixPage": {
     "title": "Immutable Matrix",
-    "subtitle": "Your verified career facts — the source of truth for every resume and job application.",
+    "subtitle": "Your verified career facts - the source of truth for every resume and job application.",
     "loading": "Loading…",
     "errorLoad": "Failed to load matrix. Please try again.",
     "addBullet": "Add Bullet",
@@ -156,7 +218,7 @@
     "resumeAnalyzing": "Analyzing resume…",
     "resumeSuccess": "{bullets} bullet points and {skills} skills imported",
     "resumeSuccessHint": "Review and approve them in the Immutable Matrix",
-    "resumeSkipped": "Resume import skipped — you can add history manually in the Matrix",
+    "resumeSkipped": "Resume import skipped - you can add history manually in the Matrix",
     "resumeSkip": "Skip this step",
     "resumeError": "Resume analysis failed. Please try again or skip.",
     "reviewResume": "Resume",
@@ -167,14 +229,14 @@
     "finish": "Enter Workspace",
     "finishing": "Saving…",
     "errorSave": "Failed to save profile. Please try again.",
-    "handshakeTitle": "Profile Saved — Workspace Ready",
+    "handshakeTitle": "Profile Saved - Workspace Ready",
     "handshakeBody": "Your profile is set up. Codebase extraction runs entirely in your browser.",
     "handshakeDetail": "Codebase extraction is now available in the Extract tab.",
     "resumeCareerSuccess": "{jobs} jobs, {degrees} degrees and {projects} projects imported"
   },
   "ExtractPage": {
     "title": "Extract Experience",
-    "subtitle": "Map a local repository's structure — no source code or secrets ever leave your device.",
+    "subtitle": "Map a local repository's structure - no source code or secrets ever leave your device.",
     "extractCta": "Select Repository",
     "pickerUnsupported": "Your browser doesn't support local directory access. Please use Chrome 86+, Edge, or another Chromium-based browser.",
     "pickerOpening": "Opening…",
@@ -190,7 +252,7 @@
     "phaseScanning": "Scanning files and manifests…",
     "phaseBuilding": "Building structure summary…",
     "skeletonTitle": "Repository Structure Extracted",
-    "skeletonSubtitle": "Only structural metadata was captured — no variable names, logic, or proprietary strings.",
+    "skeletonSubtitle": "Only structural metadata was captured - no variable names, logic, or proprietary strings.",
     "skeletonFiles": "Files",
     "skeletonFilesValue": "{code} code / {total} total",
     "skeletonLanguages": "Languages",
@@ -446,7 +508,7 @@
     "exportIncludeLinks": "Links (GitHub & LinkedIn)",
     "exportIncludeSkills": "Technical Skills (AI-tailored)",
     "exportIncludePhoto": "Profile Photo",
-    "exportIncludePhotoHint": "Not recommended for US/Canada ATS — safe for European/international résumés.",
+    "exportIncludePhotoHint": "Not recommended for US/Canada ATS - safe for European/international résumés.",
     "exportJobsTitle": "Work Experience",
     "exportEducationTitle": "Education",
     "exportLanguagesTitle": "Languages",
@@ -497,7 +559,7 @@
     "tnSuggestNoData": "Add education or work experience first to use this feature.",
     "tnSuggestError": "Failed to analyze TN categories. Please try again.",
     "tnSuggestModalTitle": "TN Visa Category Suggestions",
-    "tnSuggestModalSubtitle": "Based on your education and work experience. For informational purposes only — not legal advice.",
+    "tnSuggestModalSubtitle": "Based on your education and work experience. For informational purposes only - not legal advice.",
     "tnSuggestNoMatches": "No matching TN categories found based on your profile.",
     "locationLabel": "Location",
     "salaryMinLabel": "Min salary",
@@ -804,7 +866,7 @@
     "tnSuggestError": "Failed to analyze TN categories. Please try again.",
     "tnSuggestParseError": "Could not parse results. Please try again.",
     "tnSuggestModalTitle": "TN Visa Category Suggestions",
-    "tnSuggestModalSubtitle": "Based on your education and work experience. For informational purposes only — not legal advice.",
+    "tnSuggestModalSubtitle": "Based on your education and work experience. For informational purposes only - not legal advice.",
     "tnSuggestNoMatches": "No matching TN categories found based on your profile.",
     "jobKeysSection": "Job API keys",
     "jobKeysSubtitle": "Bring your own provider keys to pull a private job feed. Keys are encrypted and never shared.",

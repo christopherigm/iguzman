@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/actions/quality.sh — CPU quality filters: denoise, sharpen, upscale, downsize, color
+# lib/actions/quality.sh - CPU quality filters: denoise, sharpen, upscale, downsize, color
 # Depends on: probe.sh (probe_dimensions), ui.sh
 
 # Each function appends the relevant filter(s) to the vf_chain nameref.
@@ -41,7 +41,7 @@ apply_downsize_filter() {
   vid_h="${dim_out##* }"
 
   if [[ "${vid_w}" -eq 0 || "${vid_h}" -eq 0 ]]; then
-    printf "    %s Could not read video dimensions — skipping downsize.\n" "$(clr_yellow '⚠')"
+    printf "    %s Could not read video dimensions - skipping downsize.\n" "$(clr_yellow '⚠')"
     return
   fi
 
@@ -68,7 +68,7 @@ apply_upscale_filter() {
   vid_h="${dim_out##* }"
 
   if [[ "${vid_w}" -eq 0 || "${vid_h}" -eq 0 ]]; then
-    printf "    %s Could not read video dimensions — skipping upscale.\n" "$(clr_yellow '⚠')"
+    printf "    %s Could not read video dimensions - skipping upscale.\n" "$(clr_yellow '⚠')"
     return
   fi
 

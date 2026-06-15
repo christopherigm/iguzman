@@ -57,7 +57,7 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
             return
         scraped = extract_movie(raw_text)
     except SoftTimeLimitExceeded:
-        # Don't let the hard limit SIGKILL the child and strand the entry —
+        # Don't let the hard limit SIGKILL the child and strand the entry -
         # surface a terminal failure the Inbox can act on.
         _fail(entry, 'Resolution timed out while scraping/extracting.')
         return
@@ -102,8 +102,8 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
         entry.extracted_cover_url = tmdb['cover_url']
         entry.error_message = ''
     else:
-        # No TMDB match — keep the LLM title for manual correction in the Inbox.
-        entry.error_message = 'No TMDB match — LLM-extracted title saved for manual correction.'
+        # No TMDB match - keep the LLM title for manual correction in the Inbox.
+        entry.error_message = 'No TMDB match - LLM-extracted title saved for manual correction.'
 
     entry.status = 'review'
     entry.save()

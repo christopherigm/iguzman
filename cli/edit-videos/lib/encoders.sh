@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# lib/encoders.sh — Shared encoder argument builder (CPU / NVENC / VA-API)
+# lib/encoders.sh - Shared encoder argument builder (CPU / NVENC / VA-API)
 #
 # Provides build_encode_args() which populates two arrays:
-#   ENC_PRE_INPUT_ARGS  — args to prepend before -i (e.g. -vaapi_device, -hwaccel)
-#   ENC_VF_EXTRA        — extra vf filters to append after caller's chain (e.g. hwupload)
-#   ENC_CODEC_ARGS      — codec/quality flags (e.g. -c:v h264_nvenc -cq 23 ...)
+#   ENC_PRE_INPUT_ARGS  - args to prepend before -i (e.g. -vaapi_device, -hwaccel)
+#   ENC_VF_EXTRA        - extra vf filters to append after caller's chain (e.g. hwupload)
+#   ENC_CODEC_ARGS      - codec/quality flags (e.g. -c:v h264_nvenc -cq 23 ...)
 #
 # Usage:
 #   build_encode_args "${use_gpu}" "${gpu_encoder}" "${use_h265}" ["quality"]
 #   Then compose your ffmpeg call with "${ENC_PRE_INPUT_ARGS[@]}" ... "${ENC_CODEC_ARGS[@]}"
 #
 # The optional "quality" argument accepts:
-#   "high"  — fast/lossless intermediate (e.g. pre-transcode before stabilize)
-#   "final" — (default) production quality (crf 23 / cq 23)
+#   "high"  - fast/lossless intermediate (e.g. pre-transcode before stabilize)
+#   "final" - (default) production quality (crf 23 / cq 23)
 
 ENC_PRE_INPUT_ARGS=()
 ENC_VF_EXTRA=()

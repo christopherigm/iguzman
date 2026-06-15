@@ -1,8 +1,8 @@
-import type { Page } from 'playwright';
-import { getBrowser, newContext } from './browser';
+import type { Page } from "playwright";
+import { getBrowser, newContext } from "./browser";
 
-export type SearchEngine = 'duckduckgo' | 'bing';
-type AnyEngine = SearchEngine | 'brave';
+export type SearchEngine = "duckduckgo" | "bing";
+type AnyEngine = SearchEngine | "brave";
 
 type RawResult = {
   title: string;
@@ -21,7 +21,7 @@ export interface SearchOptions {
 }
 
 const BROWSER_UA =
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 // ── DuckDuckGo ────────────────────────────────────────────────────────────────
 // DDG's HTML endpoint detects Playwright's Chromium fingerprint and shows a
@@ -37,9 +37,9 @@ async function searchDuckDuckGo(
     `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
     {
       headers: {
-        'User-Agent': BROWSER_UA,
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.9',
+        "User-Agent": BROWSER_UA,
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
       },
     },
   );
@@ -56,43 +56,47 @@ async function searchDuckDuckGo(
   }
 
   // Load the fetched HTML into the page (no outbound network requests needed)
-  await page.setContent(html, { waitUntil: 'commit' });
+  await page.setContent(html, { waitUntil: "commit" });
 
   const results = await page.evaluate((max: number) => {
-    const items = document.querySelectorAll('.result.results_links_deep');
+    const items = document.querySelectorAll(".result.results_links_deep");
 
     return Array.from(items)
       .slice(0, max)
       .map((item) => {
-        const anchor = item.querySelector<HTMLAnchorElement>('a.result__a');
-        const snippetEl = item.querySelector('.result__snippet');
+        const anchor = item.querySelector<HTMLAnchorElement>("a.result__a");
+        const snippetEl = item.querySelector(".result__snippet");
 
         // DDG redirects: /l/?uddg=<encoded_url>&...
-        const href = anchor?.getAttribute('href') ?? '';
+        const href = anchor?.getAttribute("href") ?? "";
         let url = href;
         try {
-          const qs = href.includes('?') ? href.split('?')[1] : '';
-          const params = new URLSearchParams(qs ?? '');
-          const uddg = params.get('uddg');
+          const qs = href.includes("?") ? href.split("?")[1] : "";
+          const params = new URLSearchParams(qs ?? "");
+          const uddg = params.get("uddg");
           if (uddg) url = decodeURIComponent(uddg);
         } catch {
           // leave url as-is
         }
 
-        const imgEl = item.querySelector<HTMLImageElement>('img.result__image, .result__image img');
+        const imgEl = item.querySelector<HTMLImageElement>(
+          "img.result__image, .result__image img",
+        );
 
         return {
-          title: anchor?.textContent?.trim() ?? '',
+          title: anchor?.textContent?.trim() ?? "",
           url,
-          snippet: snippetEl?.textContent?.trim() ?? '',
-          og_image: imgEl?.src || imgEl?.getAttribute('data-src') || null,
+          snippet: snippetEl?.textContent?.trim() ?? "",
+          og_image: imgEl?.src || imgEl?.getAttribute("data-src") || null,
         };
       })
       .filter((r) => r.title && r.url);
   }, maxResults);
 
   if (results.length === 0) {
-    console.warn(`[DDG] Zero results for query "${query}" — possible bot block`);
+    console.warn(
+      `[DDG] Zero results for query "${query}" - possible bot block`,
+    );
   }
 
   return results;
@@ -103,12 +107,12 @@ async function searchDuckDuckGo(
 // Decode them so callers receive the actual destination URL.
 
 function decodeBingUrl(href: string): string {
-  if (!href.includes('/ck/a?')) return href;
+  if (!href.includes("/ck/a?")) return href;
   try {
-    const qs = href.includes('?') ? href.split('?')[1] : '';
-    const u = new URLSearchParams(qs).get('u');
-    if (u?.startsWith('a1')) {
-      return Buffer.from(u.slice(2), 'base64').toString('utf-8');
+    const qs = href.includes("?") ? href.split("?")[1] : "";
+    const u = new URLSearchParams(qs).get("u");
+    if (u?.startsWith("a1")) {
+      return Buffer.from(u.slice(2), "base64").toString("utf-8");
     }
   } catch {
     // fall through
@@ -123,19 +127,25 @@ async function searchBing(
 ): Promise<RawResult[]> {
   await page.goto(
     `https://www.bing.com/search?q=${encodeURIComponent(query)}&setlang=en&cc=US`,
-    { waitUntil: 'load', timeout: 25_000 },
+    { waitUntil: "load", timeout: 25_000 },
   );
 
   // Detect bot/CAPTCHA pages
   const title = await page.title();
-  const hasCaptchaEl = (await page.$('#captcha, .captcha_container, #inferui')) !== null;
-  if (hasCaptchaEl || /access denied|robot check|are you a human|captcha/i.test(title)) {
-    console.warn(`[Bing] Bot detection triggered for query "${query}" — page title: "${title}"`);
+  const hasCaptchaEl =
+    (await page.$("#captcha, .captcha_container, #inferui")) !== null;
+  if (
+    hasCaptchaEl ||
+    /access denied|robot check|are you a human|captcha/i.test(title)
+  ) {
+    console.warn(
+      `[Bing] Bot detection triggered for query "${query}" - page title: "${title}"`,
+    );
     return [];
   }
 
   // Dismiss cookie/consent overlay if present (EU regions)
-  const consent = await page.$('#bnp_btn_accept');
+  const consent = await page.$("#bnp_btn_accept");
   if (consent) {
     await consent.click();
     await page.waitForTimeout(500);
@@ -143,34 +153,37 @@ async function searchBing(
 
   // Wait for actual result items, not just the (initially hidden) container
   try {
-    await page.waitForSelector('#b_results li.b_algo', { timeout: 15_000 });
+    await page.waitForSelector("#b_results li.b_algo", { timeout: 15_000 });
   } catch {
     const currentTitle = await page.title();
-    console.warn(`[Bing] Results selector timed out for query "${query}" — page title: "${currentTitle}"`);
+    console.warn(
+      `[Bing] Results selector timed out for query "${query}" - page title: "${currentTitle}"`,
+    );
     return [];
   }
 
   const raw = await page.evaluate((max: number) => {
-    const items = document.querySelectorAll('#b_results li.b_algo');
+    const items = document.querySelectorAll("#b_results li.b_algo");
 
     return Array.from(items)
       .slice(0, max)
       .map((item) => {
-        const anchor = item.querySelector<HTMLAnchorElement>('h2 a');
+        const anchor = item.querySelector<HTMLAnchorElement>("h2 a");
         const snippetEl =
-          item.querySelector('.b_caption p') ??
-          item.querySelector('.b_caption .b_algoSlug');
+          item.querySelector(".b_caption p") ??
+          item.querySelector(".b_caption .b_algoSlug");
 
         const thumbEl = item.querySelector<HTMLImageElement>(
-          '.b_thumb img, .b_imageCap img',
+          ".b_thumb img, .b_imageCap img",
         );
 
-        const thumbnail = thumbEl?.src || thumbEl?.getAttribute('data-src') || undefined;
+        const thumbnail =
+          thumbEl?.src || thumbEl?.getAttribute("data-src") || undefined;
 
         return {
-          title: anchor?.textContent?.trim() ?? '',
-          url: anchor?.getAttribute('href') ?? '',
-          snippet: snippetEl?.textContent?.trim() ?? '',
+          title: anchor?.textContent?.trim() ?? "",
+          url: anchor?.getAttribute("href") ?? "",
+          snippet: snippetEl?.textContent?.trim() ?? "",
           thumbnail,
           og_image: thumbnail ?? null,
         };
@@ -179,7 +192,9 @@ async function searchBing(
   }, maxResults);
 
   if (raw.length === 0) {
-    console.warn(`[Bing] Zero results for query "${query}" — possible bot block`);
+    console.warn(
+      `[Bing] Zero results for query "${query}" - possible bot block`,
+    );
   }
 
   return raw.map((r) => ({ ...r, url: decodeBingUrl(r.url) }));
@@ -198,10 +213,13 @@ interface BraveApiResponse {
   web?: { results?: BraveWebResult[] };
 }
 
-async function searchBrave(query: string, maxResults: number): Promise<RawResult[]> {
-  const apiKey = process.env['BRAVE_API_KEY'] ?? '';
+async function searchBrave(
+  query: string,
+  maxResults: number,
+): Promise<RawResult[]> {
+  const apiKey = process.env["BRAVE_API_KEY"] ?? "";
   if (!apiKey) {
-    console.warn('[Brave] BRAVE_API_KEY is not set — skipping');
+    console.warn("[Brave] BRAVE_API_KEY is not set - skipping");
     return [];
   }
 
@@ -209,9 +227,9 @@ async function searchBrave(query: string, maxResults: number): Promise<RawResult
     `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${maxResults}`,
     {
       headers: {
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip',
-        'X-Subscription-Token': apiKey,
+        Accept: "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": apiKey,
       },
     },
   );
@@ -227,9 +245,9 @@ async function searchBrave(query: string, maxResults: number): Promise<RawResult
   const results = items
     .slice(0, maxResults)
     .map((r) => ({
-      title: r.title ?? '',
-      url: r.url ?? '',
-      snippet: r.description ?? '',
+      title: r.title ?? "",
+      url: r.url ?? "",
+      snippet: r.description ?? "",
       og_image: r.thumbnail?.src ?? null,
     }))
     .filter((r) => r.title && r.url);
@@ -248,22 +266,22 @@ async function runEngine(
   query: string,
   maxResults: number,
 ): Promise<RawResult[]> {
-  if (engine === 'duckduckgo') {
+  if (engine === "duckduckgo") {
     const browser = await getBrowser();
     const page = await browser.newPage();
     try {
-      await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
+      await page.setExtraHTTPHeaders({ "Accept-Language": "en-US,en;q=0.9" });
       return await searchDuckDuckGo(page, query, maxResults);
     } finally {
       await page.close();
     }
   }
 
-  if (engine === 'bing') {
+  if (engine === "bing") {
     const context = await newContext();
     const page = await context.newPage();
     try {
-      await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
+      await page.setExtraHTTPHeaders({ "Accept-Language": "en-US,en;q=0.9" });
       return await searchBing(page, query, maxResults);
     } finally {
       await context.close();
@@ -277,12 +295,14 @@ async function runEngine(
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 const FALLBACK_CHAIN: Record<SearchEngine, AnyEngine[]> = {
-  duckduckgo: ['duckduckgo', 'bing', 'brave'],
-  bing: ['bing', 'duckduckgo', 'brave'],
+  duckduckgo: ["duckduckgo", "bing", "brave"],
+  bing: ["bing", "duckduckgo", "brave"],
 };
 
-export async function searchWeb(options: SearchOptions): Promise<SearchResult[]> {
-  const { query, engine = 'duckduckgo', maxResults = 5 } = options;
+export async function searchWeb(
+  options: SearchOptions,
+): Promise<SearchResult[]> {
+  const { query, engine = "duckduckgo", maxResults = 5 } = options;
   const chain = FALLBACK_CHAIN[engine];
   const tried: AnyEngine[] = [];
 
@@ -300,7 +320,9 @@ export async function searchWeb(options: SearchOptions): Promise<SearchResult[]>
 
     if (results.length > 0) {
       if (tried.length > 0) {
-        console.info(`[Search] Succeeded with "${current}" after: ${tried.join(' → ')} returned no results`);
+        console.info(
+          `[Search] Succeeded with "${current}" after: ${tried.join(" → ")} returned no results`,
+        );
       }
       return results.map((r) => ({ ...r, engine: current }));
     }

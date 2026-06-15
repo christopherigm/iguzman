@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import type { Platform } from '@repo/helpers/checkers';
+import { useState, useCallback, useEffect } from "react";
+import type { Platform } from "@repo/helpers/checkers";
 import type {
   BurnCaptionsConfig,
   OperationCredits,
   VideoResultFields,
   VideoStatus,
-} from '@/lib/types';
+} from "@/lib/types";
 
 /* ── Types ──────────────────────────────────────────── */
 
 export type { VideoStatus };
 
-export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
+export interface StoredVideo extends Omit<VideoResultFields, "isH265"> {
   /** Unique identifier (crypto.randomUUID). */
   uuid: string;
   /** Current download / processing status. */
@@ -94,33 +94,33 @@ export interface StoredVideo extends Omit<VideoResultFields, 'isH265'> {
 
 /* ── Constants ──────────────────────────────────────── */
 
-const PINNED_KEY = 'vd_pinned_v2';
-const COMPLETED_KEY = 'vd_completed_v2';
-const LEGACY_KEY = 'vd_videos_v1';
+const PINNED_KEY = "vd_pinned_v2";
+const COMPLETED_KEY = "vd_completed_v2";
+const LEGACY_KEY = "vd_videos_v1";
 
 /** Statuses that represent active client- or server-side work. */
 const BUSY_STATUSES = new Set<VideoStatus>([
-  'pending',
-  'downloading',
-  'queued',
-  'processing',
-  'converting',
-  'burning',
-  'translating',
-  'uploading',
-  'diarizing',
+  "pending",
+  "downloading",
+  "queued",
+  "processing",
+  "converting",
+  "burning",
+  "translating",
+  "uploading",
+  "diarizing",
 ]);
 
 /* ── Helpers ────────────────────────────────────────── */
 
 function generateUUID(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
   // Fallback for non-secure contexts (iOS over HTTP in dev)
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -128,7 +128,7 @@ function generateUUID(): string {
 function applyDefaults(v: StoredVideo): StoredVideo {
   return {
     ...v,
-    fpsApplied: v.fpsApplied ?? v.status === 'done',
+    fpsApplied: v.fpsApplied ?? v.status === "done",
     isH265: v.isH265 ?? false,
     h264Converted: v.h264Converted ?? false,
     h265Converted: v.h265Converted ?? false,
@@ -174,33 +174,33 @@ function applyDefaults(v: StoredVideo): StoredVideo {
 function recoverPinnedState(v: StoredVideo): StoredVideo {
   const video = applyDefaults(v);
 
-  if (video.status === 'queued') {
+  if (video.status === "queued") {
     if (video.isH265 && !video.h264Converted) {
-      return { ...video, status: 'converting' as VideoStatus };
+      return { ...video, status: "converting" as VideoStatus };
     }
-    return { ...video, status: 'done' as VideoStatus };
+    return { ...video, status: "done" as VideoStatus };
   }
-  if (video.status === 'downloading') {
+  if (video.status === "downloading") {
     if (video.taskId) return video;
-    return { ...video, status: 'pending' as VideoStatus, error: null };
+    return { ...video, status: "pending" as VideoStatus, error: null };
   }
-  if (video.status === 'processing' && !video.file) {
-    return { ...video, status: 'pending' as VideoStatus, error: null };
+  if (video.status === "processing" && !video.file) {
+    return { ...video, status: "pending" as VideoStatus, error: null };
   }
-  if (video.status === 'converting' && !video.file) {
-    return { ...video, status: 'done' as VideoStatus, error: null };
+  if (video.status === "converting" && !video.file) {
+    return { ...video, status: "done" as VideoStatus, error: null };
   }
-  if (video.status === 'burning') {
+  if (video.status === "burning") {
     if (video.burnCaptionsConfig && video.file) return video;
-    return { ...video, status: 'done' as VideoStatus };
+    return { ...video, status: "done" as VideoStatus };
   }
-  if (video.status === 'translating') {
+  if (video.status === "translating") {
     /* Resume translation by re-entering the burning flow; handleBurnCaptions
        will re-translate if config.translate is still set. */
     if (video.burnCaptionsConfig && video.file) {
-      return { ...video, status: 'burning' as VideoStatus };
+      return { ...video, status: "burning" as VideoStatus };
     }
-    return { ...video, status: 'done' as VideoStatus };
+    return { ...video, status: "done" as VideoStatus };
   }
   return video;
 }
@@ -256,7 +256,7 @@ function initializeStore(): {
   pinned: StoredVideo[];
   completed: StoredVideo[];
 } {
-  if (typeof window === 'undefined') return { pinned: [], completed: [] };
+  if (typeof window === "undefined") return { pinned: [], completed: [] };
 
   /* Try migration from legacy single-array store. */
   const migrated = migrateFromLegacy();
@@ -272,7 +272,7 @@ function initializeStore(): {
      recovery for those items runs via useOPFSRecovery in download-page.tsx. */
   const pinned: StoredVideo[] = [];
   for (const v of rawPinned) {
-    if (v.status === 'error' || v.status === 'done') {
+    if (v.status === "error" || v.status === "done") {
       completed.unshift(v);
     } else {
       pinned.push(v);
@@ -301,7 +301,7 @@ export function useVideoStore() {
     setStoreLoaded(true);
   }, []);
 
-  /* Persist each array independently — skip until the store has been hydrated.
+  /* Persist each array independently - skip until the store has been hydrated.
      Using storeLoaded (not a ref) ensures the guard value is always in sync
      with the render that triggered the effect, avoiding the race where effects
      from the first render (completed=[]) would overwrite localStorage before
@@ -313,7 +313,7 @@ export function useVideoStore() {
       setStorageError(null);
     } catch {
       setStorageError(
-        'Storage is full — your video list may not be saved across page reloads.',
+        "Storage is full - your video list may not be saved across page reloads.",
       );
     }
   }, [pinned, storeLoaded]);
@@ -324,7 +324,7 @@ export function useVideoStore() {
       writeStorage(COMPLETED_KEY, completed);
     } catch {
       setStorageError(
-        'Storage is full — your video list may not be saved across page reloads.',
+        "Storage is full - your video list may not be saved across page reloads.",
       );
     }
   }, [completed, storeLoaded]);
@@ -334,12 +334,12 @@ export function useVideoStore() {
     (
       partial: Pick<
         StoredVideo,
-        | 'originalURL'
-        | 'platform'
-        | 'fps'
-        | 'justAudio'
-        | 'enhance'
-        | 'autoDownload'
+        | "originalURL"
+        | "platform"
+        | "fps"
+        | "justAudio"
+        | "enhance"
+        | "autoDownload"
       > & {
         maxHeight?: number | null;
         captionsEnabled?: boolean;
@@ -359,7 +359,7 @@ export function useVideoStore() {
       const uuid = generateUUID();
       const entry: StoredVideo = {
         uuid,
-        status: 'pending',
+        status: "pending",
         error: null,
         fps: partial.fps,
         justAudio: partial.justAudio,
@@ -444,7 +444,7 @@ export function useVideoStore() {
       const video = prev.find((v) => v.uuid === uuid);
       if (video) {
         const finalStatus: VideoStatus = BUSY_STATUSES.has(video.status)
-          ? 'done'
+          ? "done"
           : video.status;
         setCompleted((c) => {
           /* Guard against React Strict Mode double-invocation of functional

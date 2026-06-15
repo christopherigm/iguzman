@@ -1,11 +1,11 @@
-import downloadVideo from './download-video-legacy';
-import loopVideoToLength from '@repo/helpers/duplicate-video-time-length';
-import deleteMediaFile from '@repo/helpers/delete-media-file';
-import upscaleVideoFps from '@repo/helpers/video-upscale-fps';
-import copyFile from '@repo/helpers/copy-file';
-import addAudioToVideoInTime from '@repo/helpers/add-audio-to-video-in-time';
-import extractAudioFromVideo from '@repo/helpers/extract-audio-from-video';
-import loopAudioToLength from '@repo/helpers/duplicate-audio-time-length';
+import downloadVideo from "./download-video-legacy";
+import loopVideoToLength from "@repo/helpers/duplicate-video-time-length";
+import deleteMediaFile from "@repo/helpers/delete-media-file";
+import upscaleVideoFps from "@repo/helpers/video-upscale-fps";
+import copyFile from "@repo/helpers/copy-file";
+import addAudioToVideoInTime from "@repo/helpers/add-audio-to-video-in-time";
+import extractAudioFromVideo from "@repo/helpers/extract-audio-from-video";
+import loopAudioToLength from "@repo/helpers/duplicate-audio-time-length";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -45,7 +45,7 @@ export interface DownloadVideoAndLoopOptions {
  * that nested segments like `some/media/file.mp4` stay intact.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /**
  * Extracts the audio from a video, loops it to the target duration,
@@ -75,7 +75,7 @@ const buildLoopedAudio = async (
 
 /**
  * Silently deletes a list of temporary media files.
- * Failures are ignored — this is a best-effort cleanup step.
+ * Failures are ignored - this is a best-effort cleanup step.
  */
 const cleanupTempFiles = async (files: string[]): Promise<void> => {
   await Promise.allSettled(
@@ -126,7 +126,7 @@ const downloadVideoAndLoop = async ({
 
   // Intermediate file names scoped to this pipeline
   const tmpDownloaded = `tmp.${cleanDest}`;
-  const tmpAudio = `tmp.${cleanDest.replace(/\.mp4$/, '.wav')}`;
+  const tmpAudio = `tmp.${cleanDest.replace(/\.mp4$/, ".wav")}`;
   const tmpVideoNoAudio = `no-audio.${cleanDest}`;
   const finalVideo = cleanDest;
 

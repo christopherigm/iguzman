@@ -1,12 +1,12 @@
-import { execFile } from 'child_process';
-import * as path from 'path';
+import { execFile } from "child_process";
+import * as path from "path";
 
 /**
  * Supported ffmpeg overlay position expressions.
  *
  * These correspond to ffmpeg filter expression variables:
- * - `main_w` / `main_h` — dimensions of the base (video) layer.
- * - `overlay_w` / `overlay_h` — dimensions of the overlay (image) layer.
+ * - `main_w` / `main_h` - dimensions of the base (video) layer.
+ * - `overlay_w` / `overlay_h` - dimensions of the overlay (image) layer.
  *
  * You may pass any valid ffmpeg expression string (e.g. `'(main_w-overlay_w)/2'`).
  */
@@ -53,16 +53,16 @@ export interface AddImageToVideoResult {
  * @returns `'/app/media'` in production, `'public/media'` otherwise.
  */
 function getDefaultOutputFolder(): string {
-  const nodeEnv = process.env.NODE_ENV?.trim() ?? 'localhost';
-  return nodeEnv === 'production' ? '/app/media' : 'public/media';
+  const nodeEnv = process.env.NODE_ENV?.trim() ?? "localhost";
+  return nodeEnv === "production" ? "/app/media" : "public/media";
 }
 
 /**
  * Strips a leading `media/` prefix from a path. Only removes the prefix
- * at the start of the string — occurrences elsewhere are left intact.
+ * at the start of the string - occurrences elsewhere are left intact.
  */
 export function stripMediaPrefix(filePath: string): string {
-  return filePath.replace(/^media\//, '');
+  return filePath.replace(/^media\//, "");
 }
 
 /**
@@ -101,12 +101,12 @@ export function buildFfmpegArgs(
     `enable='between(t,${start},${end})'`;
 
   return [
-    '-y',
-    '-i',
+    "-y",
+    "-i",
     srcVideoFile,
-    '-i',
+    "-i",
     srcImageFile,
-    '-filter_complex',
+    "-filter_complex",
     filterComplex,
     destFile,
   ];
@@ -144,36 +144,36 @@ export function addImageToVideoInTime({
   dest,
   start = 0,
   end = 2,
-  x = '(main_w-overlay_w)/2',
-  y = 'main_h-overlay_h',
+  x = "(main_w-overlay_w)/2",
+  y = "main_h-overlay_h",
   width = 200,
   outputFolder = getDefaultOutputFolder(),
 }: AddImageToVideoOptions): Promise<AddImageToVideoResult> {
   // --- Input validation ---
   if (!srcVideo) {
-    return Promise.reject(new Error('srcVideo is required'));
+    return Promise.reject(new Error("srcVideo is required"));
   }
   if (!srcImage) {
-    return Promise.reject(new Error('srcImage is required'));
+    return Promise.reject(new Error("srcImage is required"));
   }
   if (!dest) {
-    return Promise.reject(new Error('dest is required'));
+    return Promise.reject(new Error("dest is required"));
   }
-  if (typeof start !== 'number' || !Number.isFinite(start) || start < 0) {
+  if (typeof start !== "number" || !Number.isFinite(start) || start < 0) {
     return Promise.reject(
-      new Error('start must be a non-negative finite number'),
+      new Error("start must be a non-negative finite number"),
     );
   }
-  if (typeof end !== 'number' || !Number.isFinite(end) || end < 0) {
+  if (typeof end !== "number" || !Number.isFinite(end) || end < 0) {
     return Promise.reject(
-      new Error('end must be a non-negative finite number'),
+      new Error("end must be a non-negative finite number"),
     );
   }
   if (start >= end) {
-    return Promise.reject(new Error('start must be less than end'));
+    return Promise.reject(new Error("start must be less than end"));
   }
-  if (typeof width !== 'number' || !Number.isFinite(width) || width <= 0) {
-    return Promise.reject(new Error('width must be a positive finite number'));
+  if (typeof width !== "number" || !Number.isFinite(width) || width <= 0) {
+    return Promise.reject(new Error("width must be a positive finite number"));
   }
 
   // --- Resolve absolute file paths ---
@@ -196,7 +196,7 @@ export function addImageToVideoInTime({
 
   return new Promise((resolve, reject) => {
     execFile(
-      'ffmpeg',
+      "ffmpeg",
       args,
       { maxBuffer: 1024 * 2048 },
       (error: Error | null) => {

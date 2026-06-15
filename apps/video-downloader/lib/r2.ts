@@ -7,37 +7,37 @@ import {
   UploadPartCommand,
   CompleteMultipartUploadCommand,
   AbortMultipartUploadCommand,
-} from '@aws-sdk/client-s3';
-import { Upload } from '@aws-sdk/lib-storage';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { createReadStream, createWriteStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import { pipeline } from 'node:stream/promises';
-import { Readable } from 'node:stream';
+} from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createReadStream, createWriteStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { pipeline } from "node:stream/promises";
+import { Readable } from "node:stream";
 
 export const USE_R2 = !!process.env.R2_ACCOUNT_ID;
 
-const BUCKET = process.env.R2_BUCKET_NAME ?? '';
+const BUCKET = process.env.R2_BUCKET_NAME ?? "";
 const PRESIGNED_TTL_SECONDS = 3600;
 
 const EXT_CONTENT_TYPES: Record<string, string> = {
-  mp4: 'video/mp4',
-  m4a: 'audio/mp4',
-  webm: 'video/webm',
-  mp3: 'audio/mpeg',
-  wav: 'audio/wav',
-  ogg: 'audio/ogg',
-  mkv: 'video/x-matroska',
-  srt: 'text/plain',
-  txt: 'text/plain',
-  json: 'application/json',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
+  mp4: "video/mp4",
+  m4a: "audio/mp4",
+  webm: "video/webm",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  mkv: "video/x-matroska",
+  srt: "text/plain",
+  txt: "text/plain",
+  json: "application/json",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
 };
 
 function contentTypeFor(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
-  return EXT_CONTENT_TYPES[ext] ?? 'application/octet-stream';
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  return EXT_CONTENT_TYPES[ext] ?? "application/octet-stream";
 }
 
 let _client: S3Client | null = null;
@@ -45,7 +45,7 @@ let _client: S3Client | null = null;
 function r2(): S3Client {
   if (!_client) {
     _client = new S3Client({
-      region: 'auto',
+      region: "auto",
       endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
@@ -57,7 +57,10 @@ function r2(): S3Client {
 }
 
 /** Upload a local file to R2, streaming to avoid buffering large videos. */
-export async function uploadFromPath(key: string, filePath: string): Promise<void> {
+export async function uploadFromPath(
+  key: string,
+  filePath: string,
+): Promise<void> {
   const { size } = await stat(filePath);
   const body = createReadStream(filePath);
   await r2().send(
@@ -81,7 +84,9 @@ export async function uploadFromWebStream(
   stream: ReadableStream,
   _contentLength?: number,
 ): Promise<void> {
-  const body = Readable.fromWeb(stream as Parameters<typeof Readable.fromWeb>[0]);
+  const body = Readable.fromWeb(
+    stream as Parameters<typeof Readable.fromWeb>[0],
+  );
   const upload = new Upload({
     client: r2(),
     params: {
@@ -91,7 +96,7 @@ export async function uploadFromWebStream(
       ContentType: contentTypeFor(key),
     },
     partSize: 10 * 1024 * 1024, // 10 MB parts
-    queueSize: 3,               // 3 concurrent part uploads
+    queueSize: 3, // 3 concurrent part uploads
     leavePartsOnError: false,
   });
   await upload.done();
@@ -109,7 +114,7 @@ export async function createMultipartUpload(key: string): Promise<string> {
       ContentType: contentTypeFor(key),
     }),
   );
-  if (!res.UploadId) throw new Error('R2 did not return an UploadId');
+  if (!res.UploadId) throw new Error("R2 did not return an UploadId");
   return res.UploadId;
 }
 
@@ -130,7 +135,7 @@ export async function uploadMultipartPart(
       ContentLength: contentLength,
     }),
   );
-  if (!res.ETag) throw new Error('R2 did not return an ETag for the part');
+  if (!res.ETag) throw new Error("R2 did not return an ETag for the part");
   return res.ETag;
 }
 
@@ -154,13 +159,19 @@ export async function abortMultipartUpload(
   uploadId: string,
 ): Promise<void> {
   await r2()
-    .send(new AbortMultipartUploadCommand({ Bucket: BUCKET, Key: key, UploadId: uploadId }))
+    .send(
+      new AbortMultipartUploadCommand({
+        Bucket: BUCKET,
+        Key: key,
+        UploadId: uploadId,
+      }),
+    )
     .catch(() => {});
 }
 
 /**
  * Delete an object from R2.
- * Non-throwing — swallows errors (same semantics as fs.unlink on ENOENT).
+ * Non-throwing - swallows errors (same semantics as fs.unlink on ENOENT).
  */
 export async function deleteObject(key: string): Promise<void> {
   try {
@@ -183,8 +194,13 @@ export async function getPresignedGetUrl(
 }
 
 /** Download an R2 object to a local file path. */
-export async function downloadToPath(key: string, destPath: string): Promise<void> {
-  const res = await r2().send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+export async function downloadToPath(
+  key: string,
+  destPath: string,
+): Promise<void> {
+  const res = await r2().send(
+    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+  );
   if (!res.Body) throw new Error(`R2: object not found: ${key}`);
   const write = createWriteStream(destPath);
   await pipeline(res.Body as Readable, write);

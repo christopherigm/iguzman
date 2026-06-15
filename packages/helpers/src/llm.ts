@@ -2,16 +2,16 @@
  * Shared LLM types and utilities.
  *
  * Browser-specific inference (Web Worker, Transformers.js pipeline) lives in
- * @repo/ui — this module is environment-agnostic and has no dependencies.
+ * @repo/ui - this module is environment-agnostic and has no dependencies.
  */
 
 /** Controls whether tokens are delivered incrementally or all at once. */
-export type LlmMode = 'streaming' | 'batch';
+export type LlmMode = "streaming" | "batch";
 
 /** A single message in a chat conversation. */
 export interface LlmMessage {
   /** Conversation role. */
-  role: 'system' | 'user' | 'assistant';
+  role: "system" | "user" | "assistant";
   /** Message text. */
   content: string;
 }
@@ -21,8 +21,8 @@ export interface LlmMessage {
  */
 export interface LlmOptions {
   /**
-   * `'streaming'` — emit tokens one by one as they are generated.
-   * `'batch'`     — return the full response when generation is complete.
+   * `'streaming'` - emit tokens one by one as they are generated.
+   * `'batch'`     - return the full response when generation is complete.
    * @default 'streaming'
    */
   mode?: LlmMode;

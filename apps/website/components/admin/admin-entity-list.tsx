@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import './admin-entity-list.css';
-import Image from 'next/image';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Button } from '@repo/ui/core-elements/button';
-import { Badge } from '@repo/ui/core-elements/badge';
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import "./admin-entity-list.css";
+import Image from "next/image";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Button } from "@repo/ui/core-elements/button";
+import { Badge } from "@repo/ui/core-elements/badge";
 
 export interface Column {
   key: string;
@@ -34,7 +34,7 @@ export function AdminEntityList({
   loading,
   error,
 }: AdminEntityListProps) {
-  const t = useTranslations('Admin');
+  const t = useTranslations("Admin");
 
   return (
     <Box flexDirection="column" gap={20}>
@@ -50,13 +50,13 @@ export function AdminEntityList({
           {title}
         </Typography>
         <Link href={`${basePath}/new`} prefetch>
-          <Button text={`+ ${t('newItem')}`} kind="success" size="md" />
+          <Button text={`+ ${t("newItem")}`} kind="success" size="md" />
         </Link>
       </Box>
 
       {loading && (
         <Box className="ael__state">
-          <Typography variant="body">{t('loading')}</Typography>
+          <Typography variant="body">{t("loading")}</Typography>
         </Box>
       )}
 
@@ -68,7 +68,7 @@ export function AdminEntityList({
 
       {!loading && !error && items.length === 0 && (
         <Box className="ael__state">
-          <Typography variant="body">{t('noItems')}</Typography>
+          <Typography variant="body">{t("noItems")}</Typography>
         </Box>
       )}
 
@@ -82,7 +82,7 @@ export function AdminEntityList({
                     {col.label}
                   </th>
                 ))}
-                <th className="ael__th ael__th--actions">{t('actions')}</th>
+                <th className="ael__th ael__th--actions">{t("actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -98,15 +98,15 @@ export function AdminEntityList({
                   <td className="ael__td ael__td--actions">
                     <Box display="flex" gap={8} justifyContent="center">
                       <Link href={`${basePath}/${item.id}`} prefetch>
-                        <Button text={t('edit')} size="sm" />
+                        <Button text={t("edit")} size="sm" />
                       </Link>
                       {onDelete && (
                         <Button
-                          text={t('delete')}
+                          text={t("delete")}
                           size="sm"
                           kind="error"
                           onClick={() => {
-                            if (window.confirm(t('confirmDelete'))) {
+                            if (window.confirm(t("confirmDelete"))) {
                               onDelete(item.id as number);
                             }
                           }}
@@ -128,19 +128,19 @@ function renderCell(value: unknown): React.ReactNode {
   if (value === null || value === undefined)
     return (
       <Typography as="span" variant="body-sm" className="ael__null">
-        —
+        -
       </Typography>
     );
-  if (typeof value === 'boolean') {
+  if (typeof value === "boolean") {
     return (
-      <Badge variant="subtle" color={value ? 'green' : 'gray'}>
-        {value ? '✓' : '✗'}
+      <Badge variant="subtle" color={value ? "green" : "gray"}>
+        {value ? "✓" : "✗"}
       </Badge>
     );
   }
   if (
-    typeof value === 'string' &&
-    (value.startsWith('http://') || value.startsWith('https://'))
+    typeof value === "string" &&
+    (value.startsWith("http://") || value.startsWith("https://"))
   ) {
     // Detect image URLs
     if (/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i.test(value)) {
@@ -158,7 +158,7 @@ function renderCell(value: unknown): React.ReactNode {
       );
     }
   }
-  if (typeof value === 'string' && value.length > 60) {
+  if (typeof value === "string" && value.length > 60) {
     return (
       <Typography
         as="span"

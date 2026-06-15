@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/gpu-detect.sh — GPU detection for FFmpeg encoding (NVENC/VA-API) and AI tools (Vulkan/CUDA)
+# lib/gpu-detect.sh - GPU detection for FFmpeg encoding (NVENC/VA-API) and AI tools (Vulkan/CUDA)
 
 # ── State globals ─────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ _switch_to_system_ffmpeg_or_redownload() {
     fi
   fi
   printf "  %s  %s\n" "$(clr_bold_yellow '⚠')" \
-    "$(clr_yellow "GPU encoding disabled — BtbN FFmpeg required for hardware acceleration.")"
+    "$(clr_yellow "GPU encoding disabled - BtbN FFmpeg required for hardware acceleration.")"
   GPU_ENCODER=""
   return 1
 }

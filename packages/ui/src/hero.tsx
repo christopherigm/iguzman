@@ -1,6 +1,6 @@
-import React, { CSSProperties } from 'react';
-import { HeroVideo } from './hero-video';
-import './hero.css';
+import React, { CSSProperties } from "react";
+import { HeroVideo } from "./hero-video";
+import "./hero.css";
 
 export type HeroProps = {
   /** YouTube, Vimeo, or direct video file URL. Takes priority over backgroundImage. */
@@ -21,7 +21,7 @@ export type HeroProps = {
 };
 
 /**
- * Hero — full-width hero section with a background video or image, a
+ * Hero - full-width hero section with a background video or image, a
  * bottom-to-mid gradient overlay, and a centred logo.
  *
  * This component is a server component. The video playback is delegated to
@@ -41,8 +41,8 @@ export function Hero({
   videoUrl,
   backgroundImage,
   logoImage,
-  logoAlt = '',
-  backgroundAlt = '',
+  logoAlt = "",
+  backgroundAlt = "",
   slogan,
   style,
   className,
@@ -54,13 +54,17 @@ export function Hero({
 
   return (
     <div
-      className={[!hasVideo ? 'hero--image' : '', className].filter(Boolean).join(' ')}
+      className={[!hasVideo ? "hero--image" : "", className]
+        .filter(Boolean)
+        .join(" ")}
       style={{
-        position: 'relative',
-        width: '100%',
-        height: hasVideo ? 'clamp(350px, 45vw, 600px)' : 'clamp(500px, 65vw, 800px)',
-        overflow: 'hidden',
-        backgroundColor: '#000',
+        position: "relative",
+        width: "100%",
+        height: hasVideo
+          ? "clamp(350px, 45vw, 600px)"
+          : "clamp(500px, 65vw, 800px)",
+        overflow: "hidden",
+        backgroundColor: "#000",
         ...style,
       }}
     >
@@ -72,11 +76,11 @@ export function Hero({
           src={backgroundImage}
           alt={backgroundAlt}
           style={{
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
           }}
         />
       )}
@@ -84,10 +88,10 @@ export function Hero({
       {/* ── Gradient overlay (bottom → mid) ──────────────────── */}
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
           background:
-            'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 55%)',
+            "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 55%)",
           zIndex: 1,
         }}
       />
@@ -96,13 +100,13 @@ export function Hero({
       {(logoImage || slogan) && (
         <div
           style={{
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '1rem',
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "1rem",
             zIndex: 2,
           }}
         >
@@ -112,9 +116,9 @@ export function Hero({
                 src={logoImage}
                 alt={logoAlt}
                 style={{
-                  maxWidth: 'min(320px, 50%)',
-                  maxHeight: '45%',
-                  objectFit: 'contain',
+                  maxWidth: "min(320px, 50%)",
+                  maxHeight: "45%",
+                  objectFit: "contain",
                 }}
               />
             </>
@@ -123,12 +127,12 @@ export function Hero({
             <p
               style={{
                 margin: 0,
-                color: '#fff',
-                textAlign: 'center',
-                fontSize: 'clamp(1.25rem, 3vw, 2rem)',
+                color: "#fff",
+                textAlign: "center",
+                fontSize: "clamp(1.25rem, 3vw, 2rem)",
                 fontWeight: 600,
-                letterSpacing: '0.04em',
-                textShadow: '0 2px 8px rgba(0,0,0,0.7)',
+                letterSpacing: "0.04em",
+                textShadow: "0 2px 8px rgba(0,0,0,0.7)",
               }}
             >
               {slogan}

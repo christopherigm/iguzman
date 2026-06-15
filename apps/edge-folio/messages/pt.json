@@ -4,7 +4,69 @@
     "description": ""
   },
   "HomePage": {
-    "title": "Edge Folio"
+    "title": "Edge Folio",
+    "heroEyebrow": "Plataforma de carreira focada em privacidade",
+    "heroTitle": "Sua carreira, contada com verdade - e adaptada a cada vaga",
+    "heroSubtitle": "O EdgeFolio mantém uma única fonte factual da sua trajetória e usa uma IA que classifica e reescreve - nunca inventa - para adaptá-la a cada vaga. Exporte currículos compatíveis com ATS, cartas de apresentação e cartas de visto TN.",
+    "heroCtaPrimary": "Começar grátis",
+    "heroCtaSecondary": "Entrar",
+    "privateJobsTitle": "Suas vagas de emprego privadas",
+    "privateJobsViewAll": "Ver todas as vagas",
+    "privateJobsBrowse": "Explorar vagas",
+    "heroNote": "Seus dados são seus: os tokens ficam em cookies HTTP-only e seu código proprietário nunca sai do seu dispositivo.",
+    "pillarsTitle": "Construído sobre uma promessa",
+    "pillarsSubtitle": "A IA classifica e reescreve. Ela nunca inventa.",
+    "pillars": {
+      "matrix": {
+        "title": "Matriz Imutável",
+        "body": "Reúna pontos factuais aprovados no formato STAR e suas habilidades - o registro mestre de onde parte cada currículo."
+      },
+      "tailor": {
+        "title": "Adaptação honesta com IA",
+        "body": "Classifique e reescreva suas conquistas reais diante de qualquer descrição de vaga, com pontuações de correspondência geral, técnica e de probabilidade TN."
+      },
+      "jobs": {
+        "title": "Descoberta de vagas ao vivo",
+        "body": "Explore um catálogo focado no USMCA ou use suas próprias chaves de API para um feed privado e salve uma vaga direto em uma candidatura."
+      },
+      "export": {
+        "title": "Exportação pronta para ATS e TN",
+        "body": "Gere cartas de apresentação e cartas de visto TN NAFTA/USMCA e exporte PDFs caprichados que passam pelos sistemas de rastreamento de candidatos."
+      }
+    },
+    "featuresTitle": "Tudo o que você precisa para se candidatar com confiança",
+    "features": {
+      "matrix": {
+        "title": "Matriz Imutável",
+        "body": "Pontos e habilidades factuais e pré-aprovados no formato STAR - a base de dados de onde a IA parte."
+      },
+      "tailor": {
+        "title": "Adaptação de candidaturas",
+        "body": "Reescreva pontos, habilidades, experiência e projetos por vaga, com pontuações de correspondência e explicações."
+      },
+      "company": {
+        "title": "Inteligência sobre a empresa",
+        "body": "Pesquisa automática sobre a empresa-alvo - sobre, análise e uma pontuação de inteligência."
+      },
+      "letters": {
+        "title": "Cartas de apresentação e TN",
+        "body": "Cartas de apresentação e cartas de apoio ao visto TN NAFTA/USMCA, geradas a partir do seu conteúdo adaptado."
+      },
+      "jobs": {
+        "title": "Catálogo de vagas",
+        "body": "Vagas ao vivo nos EUA, Canadá e México, com um feed privado opcional a partir das suas próprias chaves."
+      },
+      "passkeys": {
+        "title": "Segurança com passkeys",
+        "body": "Entre com passkeys WebAuthn; os JWTs permanecem em cookies HTTP-only, invisíveis para o JavaScript."
+      }
+    },
+    "privacyTitle": "Privacidade desde a concepção",
+    "privacyBody": "Bases de código proprietárias são analisadas localmente no seu navegador. Apenas metadados de stack higienizados - linguagens, frameworks e dependências - são enviados ao servidor. Seu código-fonte nunca sai da sua máquina.",
+    "privacyTech": "Movido por análise estrutural no navegador (tree-sitter WASM) - sem download de modelo nem GPU.",
+    "ctaTitle": "Pronto para assumir o controle da sua busca por emprego?",
+    "ctaSubtitle": "Monte sua Matriz Imutável hoje e adapte-se à próxima vaga.",
+    "ctaButton": "Crie sua conta"
   },
   "VerifyEmailPage": {
     "loading": "Verificando seu e-mail…",
@@ -75,7 +137,7 @@
   },
   "MatrixPage": {
     "title": "Matriz Imutável",
-    "subtitle": "Seus fatos de carreira verificados — a fonte da verdade para cada currículo e candidatura.",
+    "subtitle": "Seus fatos de carreira verificados - a fonte da verdade para cada currículo e candidatura.",
     "loading": "Carregando…",
     "errorLoad": "Falha ao carregar a matriz. Tente novamente.",
     "addBullet": "Adicionar ponto",
@@ -156,7 +218,7 @@
     "resumeAnalyzing": "Analisando currículo…",
     "resumeSuccess": "{bullets} pontos e {skills} habilidades importados",
     "resumeSuccessHint": "Revise e aprove-os na Matriz Imutável",
-    "resumeSkipped": "Importação de currículo ignorada — você pode adicionar histórico manualmente na Matriz",
+    "resumeSkipped": "Importação de currículo ignorada - você pode adicionar histórico manualmente na Matriz",
     "resumeSkip": "Pular esta etapa",
     "resumeError": "Falha na análise do currículo. Tente novamente ou pule.",
     "reviewResume": "Currículo",
@@ -167,14 +229,14 @@
     "finish": "Entrar no espaço de trabalho",
     "finishing": "Salvando…",
     "errorSave": "Falha ao salvar o perfil. Por favor, tente novamente.",
-    "handshakeTitle": "Perfil salvo — espaço de trabalho pronto",
+    "handshakeTitle": "Perfil salvo - espaço de trabalho pronto",
     "handshakeBody": "Seu perfil está configurado. A extração de código é executada inteiramente no seu navegador.",
     "handshakeDetail": "A extração de codebase está disponível na aba Extrair.",
     "resumeCareerSuccess": "{jobs} empregos, {degrees} graus e {projects} projetos importados"
   },
   "ExtractPage": {
     "title": "Extrair Experiência",
-    "subtitle": "Mapeie a estrutura de um repositório local — nenhum código-fonte ou segredo sai do seu dispositivo.",
+    "subtitle": "Mapeie a estrutura de um repositório local - nenhum código-fonte ou segredo sai do seu dispositivo.",
     "extractCta": "Selecionar repositório",
     "pickerUnsupported": "Seu navegador não suporta acesso a diretórios locais. Use Chrome 86+, Edge ou outro navegador baseado em Chromium.",
     "pickerOpening": "Abrindo…",
@@ -190,7 +252,7 @@
     "phaseScanning": "Escaneando arquivos e manifests…",
     "phaseBuilding": "Construindo resumo da estrutura…",
     "skeletonTitle": "Estrutura do repositório extraída",
-    "skeletonSubtitle": "Apenas metadados estruturais foram capturados — sem nomes de variáveis, lógica ou strings proprietárias.",
+    "skeletonSubtitle": "Apenas metadados estruturais foram capturados - sem nomes de variáveis, lógica ou strings proprietárias.",
     "skeletonFiles": "Arquivos",
     "skeletonFilesValue": "{code} código / {total} total",
     "skeletonLanguages": "Linguagens",
@@ -503,7 +565,7 @@
     "exportIncludeLinks": "Links (GitHub e LinkedIn)",
     "exportIncludeSkills": "Habilidades técnicas (adaptadas por IA)",
     "exportIncludePhoto": "Foto de perfil",
-    "exportIncludePhotoHint": "Não recomendado para ATS nos EUA/Canadá — adequado para currículos europeus/internacionais.",
+    "exportIncludePhotoHint": "Não recomendado para ATS nos EUA/Canadá - adequado para currículos europeus/internacionais.",
     "exportJobsTitle": "Experiência profissional",
     "exportEducationTitle": "Educação",
     "exportLanguagesTitle": "Idiomas",
@@ -554,7 +616,7 @@
     "tnSuggestNoData": "Adicione educação ou experiência profissional primeiro para usar este recurso.",
     "tnSuggestError": "Falha ao analisar as categorias TN. Tente novamente.",
     "tnSuggestModalTitle": "Sugestões de categoria de visto TN",
-    "tnSuggestModalSubtitle": "Baseado na sua educação e experiência profissional. Apenas para fins informativos — não é aconselhamento jurídico.",
+    "tnSuggestModalSubtitle": "Baseado na sua educação e experiência profissional. Apenas para fins informativos - não é aconselhamento jurídico.",
     "tnSuggestNoMatches": "Nenhuma categoria TN correspondente encontrada para o seu perfil.",
     "locationLabel": "Localização",
     "salaryMinLabel": "Salário mínimo",
@@ -804,7 +866,7 @@
     "tnSuggestError": "Falha ao analisar categorias TN. Tente novamente.",
     "tnSuggestParseError": "Não foi possível processar os resultados. Tente novamente.",
     "tnSuggestModalTitle": "Sugestões de categoria TN",
-    "tnSuggestModalSubtitle": "Com base na sua educação e experiência profissional. Apenas para fins informativos — não é aconselhamento jurídico.",
+    "tnSuggestModalSubtitle": "Com base na sua educação e experiência profissional. Apenas para fins informativos - não é aconselhamento jurídico.",
     "tnSuggestNoMatches": "Nenhuma categoria TN compatível encontrada para o seu perfil.",
     "jobKeysSection": "Chaves de API de vagas",
     "jobKeysSubtitle": "Use suas próprias chaves de provedor para obter um feed de vagas privado. As chaves são criptografadas e nunca compartilhadas.",

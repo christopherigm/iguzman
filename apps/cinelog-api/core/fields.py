@@ -10,7 +10,7 @@ class ResizedImageField(models.ImageField):
     ImageField that automatically resizes images on upload using Pillow.
 
     Args:
-        max_size: [max_width, max_height] — use None for unconstrained axis.
+        max_size: [max_width, max_height] - use None for unconstrained axis.
                   e.g. [512, None] constrains width to 512 px, height scales
                   proportionally; [None, 300] constrains only height.
         quality:  JPEG/WebP compression quality (1-95). Default 85.

@@ -50,7 +50,7 @@ setup_strings() {
     INSTALLING="Instalando"
     INSTALL_DONE="Listo"
     INSTALL_FAIL="Error al instalar"
-    NOTHING_TO_INSTALL="Nada que instalar — todas las herramientas seleccionadas ya están presentes."
+    NOTHING_TO_INSTALL="Nada que instalar - todas las herramientas seleccionadas ya están presentes."
     SKIPPED="Instalación omitida."
     SSH_CHECKING="Verificando llave SSH..."
     SSH_FOUND="Llave SSH encontrada"
@@ -96,7 +96,7 @@ setup_strings() {
     INSTALLING="Installing"
     INSTALL_DONE="Done"
     INSTALL_FAIL="Failed to install"
-    NOTHING_TO_INSTALL="Nothing to install — all selected tools are already present."
+    NOTHING_TO_INSTALL="Nothing to install - all selected tools are already present."
     SKIPPED="Installation skipped."
     SSH_CHECKING="Checking for SSH key..."
     SSH_FOUND="SSH key found"
@@ -251,7 +251,7 @@ install_python() {
 
 install_django() {
   if ! command -v pip3 &>/dev/null; then
-    echo "  $(clr_dim 'pip3 not found — installing...')"
+    echo "  $(clr_dim 'pip3 not found - installing...')"
     local ok=0
     if is_mac && has_brew; then brew install python3 && ok=1
     elif has_apt; then sudo apt-get update && sudo apt-get install -y python3-pip && ok=1
@@ -473,7 +473,7 @@ print_tool_list() {
 
 # ── Interactive Checkbox Selector ─────────────────────────────────────────────
 # Uses terminal raw mode via read -s -n1.
-# SELECTED_IDS — associative array: id -> 1 (selected) or 0
+# SELECTED_IDS - associative array: id -> 1 (selected) or 0
 
 interactive_select() {
   local num_tools=${#TOOL_IDS[@]}
@@ -481,7 +481,7 @@ interactive_select() {
   local cursor=0
 
   # Initialize selection: installed tools are locked+selected; uninstalled unselected
-  # (indexed array — no declare -A, for bash 3.x / macOS compatibility)
+  # (indexed array - no declare -A, for bash 3.x / macOS compatibility)
   local selected=()
   local i
   for i in "${!TOOL_IDS[@]}"; do
@@ -580,7 +580,7 @@ interactive_select() {
       exit 0
     fi
 
-    # Space — toggle current (skip locked)
+    # Space - toggle current (skip locked)
     if [[ "${key}" == ' ' ]]; then
       if [[ "${TOOL_INSTALLED[$cursor]}" -eq 0 ]]; then
         if [[ "${selected[$cursor]}" -eq 1 ]]; then
@@ -594,7 +594,7 @@ interactive_select() {
       continue
     fi
 
-    # 'a' — select all uninstalled
+    # 'a' - select all uninstalled
     if [[ "${key}" == 'a' || "${key}" == 'A' ]]; then
       for i in "${!TOOL_IDS[@]}"; do
         if [[ "${TOOL_INSTALLED[$i]}" -eq 0 ]]; then selected[$i]=1; fi
@@ -604,7 +604,7 @@ interactive_select() {
       continue
     fi
 
-    # 'n' — deselect all uninstalled
+    # 'n' - deselect all uninstalled
     if [[ "${key}" == 'n' || "${key}" == 'N' ]]; then
       for i in "${!TOOL_IDS[@]}"; do
         if [[ "${TOOL_INSTALLED[$i]}" -eq 0 ]]; then selected[$i]=0; fi

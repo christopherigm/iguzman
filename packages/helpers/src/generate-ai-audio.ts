@@ -1,16 +1,16 @@
-import { ttsServerURL } from '@repo/helpers/constants';
+import { ttsServerURL } from "@repo/helpers/constants";
 
 /* ------------------------------------------------------------------ */
 /*  Configuration                                                      */
 /* ------------------------------------------------------------------ */
 
-const isProduction = process.env.NODE_ENV?.trim() === 'production';
+const isProduction = process.env.NODE_ENV?.trim() === "production";
 
 /** Delay in milliseconds before retrying when the TTS server is busy. */
 const RETRY_DELAY_MS = 5_000;
 
 /** Directory where generated audio files are stored on the server. */
-const OUTPUT_DIR = 'media';
+const OUTPUT_DIR = "media";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -24,7 +24,7 @@ export interface GenerateAiAudioOptions {
   text: string;
   /** Speaker voice names used for synthesis. */
   speakers: string[];
-  /** Classifier-free guidance scale — higher values increase speaker similarity. */
+  /** Classifier-free guidance scale - higher values increase speaker similarity. */
   cfgScale?: number;
 }
 
@@ -59,15 +59,15 @@ const delay = (ms: number): Promise<void> =>
  */
 const sendTtsRequest = async (payload: TtsRequestPayload): Promise<string> => {
   const response = await fetch(ttsServerURL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
   const data: TtsResponse = await response.json();
 
-  if (data.status === 'busy') {
-    console.log(`TTS server busy — retrying in ${RETRY_DELAY_MS / 1_000}s`);
+  if (data.status === "busy") {
+    console.log(`TTS server busy - retrying in ${RETRY_DELAY_MS / 1_000}s`);
     await delay(RETRY_DELAY_MS);
     return sendTtsRequest(payload);
   }
@@ -102,14 +102,14 @@ export const generateAiAudio = async ({
   cfgScale = 1.8,
 }: GenerateAiAudioOptions): Promise<string> => {
   /** Strip any leading `media/` prefix so the server receives a clean name. */
-  const cleanDestination = destination.replace(/^media\//, '');
+  const cleanDestination = destination.replace(/^media\//, "");
 
   const payload: TtsRequestPayload = {
     name: cleanDestination,
     output_dir: OUTPUT_DIR,
-    device: 'cuda',
+    device: "cuda",
     text,
-    speaker_names: speakers.join(', '),
+    speaker_names: speakers.join(", "),
     cfg_scale: cfgScale,
     production: isProduction,
   };

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/ui.sh — ANSI colors, print helpers, and interactive widgets
+# lib/ui.sh - ANSI colors, print helpers, and interactive widgets
 # Sourced by edit-videos.sh and other modules; must not be executed directly.
 
 # ── ANSI Colors ───────────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ _cb_render() {
     local checkbox pointer label_str
 
     if [[ "${is_dis}" -eq 1 ]]; then
-      checkbox="$(clr_dim '[—]')"
+      checkbox="$(clr_dim '[-]')"
       if [[ $j -eq $_CB_CURSOR ]]; then
         pointer="$(clr_dim '▶')"
         label_str="$(clr_dim "${lbl} [${GPU_REQUIRED_LABEL}]")"

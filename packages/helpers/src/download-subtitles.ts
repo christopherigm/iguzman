@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec } from "child_process";
 import {
   existsSync,
   mkdirSync,
@@ -6,50 +6,50 @@ import {
   readdirSync,
   rmSync,
   writeFileSync,
-} from 'fs';
-import getRandomNumber from '@repo/helpers/random-number';
-import { isTiktok, isYoutube } from '@repo/helpers/checkers';
-import generateSrt from '@repo/helpers/generate-srt';
-import srtToText from '@repo/helpers/srt-to-text';
-import copyFile from '@repo/helpers/copy-file';
+} from "fs";
+import getRandomNumber from "@repo/helpers/random-number";
+import { isTiktok, isYoutube } from "@repo/helpers/checkers";
+import generateSrt from "@repo/helpers/generate-srt";
+import srtToText from "@repo/helpers/srt-to-text";
+import copyFile from "@repo/helpers/copy-file";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
 /* ------------------------------------------------------------------ */
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
-const IS_PRODUCTION = NODE_ENV === 'production';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
+const IS_PRODUCTION = NODE_ENV === "production";
 
 /** Maximum buffer size for shell command output (2 MB). */
 const EXEC_MAX_BUFFER = 1024 * 2048;
 
 /** Default binary path for yt-dlp based on the current environment. */
-const DEFAULT_BINARY = IS_PRODUCTION ? 'yt-dlp' : './yt-dlp';
+const DEFAULT_BINARY = IS_PRODUCTION ? "yt-dlp" : "./yt-dlp";
 
 /** Default cookies file path based on the current environment. */
 const DEFAULT_COOKIES = IS_PRODUCTION
-  ? '/app/netscape-cookies.txt'
-  : './netscape-cookies.txt';
+  ? "/app/netscape-cookies.txt"
+  : "./netscape-cookies.txt";
 
 /** Default output folder based on the current environment. */
-const DEFAULT_OUTPUT_FOLDER = IS_PRODUCTION ? '/app/media' : 'public/media';
+const DEFAULT_OUTPUT_FOLDER = IS_PRODUCTION ? "/app/media" : "public/media";
 
 /**
  * Language prefixes used to select a preferred SRT file when multiple
- * subtitle files are downloaded. Checked in order — the first match wins.
+ * subtitle files are downloaded. Checked in order - the first match wins.
  */
 const PREFERRED_LANG_PREFIXES = [
-  'en.srt',
-  '.en_us',
-  '.en-us',
-  'en-us',
-  '.eng-us',
-  'es.srt',
-  '.es_es',
-  '.es-es',
-  'es-es',
-  '.spa-es',
-  'en-mx',
+  "en.srt",
+  ".en_us",
+  ".en-us",
+  "en-us",
+  ".eng-us",
+  "es.srt",
+  ".es_es",
+  ".es-es",
+  "es-es",
+  ".spa-es",
+  "en-mx",
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -58,7 +58,7 @@ const PREFERRED_LANG_PREFIXES = [
 
 /** A single caption/subtitle entry from the yt-dlp JSON payload. */
 interface CaptionEntry {
-  ext: 'json3' | 'srt';
+  ext: "json3" | "srt";
   url: string;
 }
 
@@ -160,7 +160,7 @@ const fetchVideoMetadata = async (
   const output = await execAsync(
     `${binary} --dump-json "${url}" | jq --raw-output`,
   );
-  if (!output) throw new Error('yt-dlp returned empty metadata');
+  if (!output) throw new Error("yt-dlp returned empty metadata");
   return JSON.parse(output) as VideoMetadata;
 };
 
@@ -181,7 +181,7 @@ const downloadCaptionByUrl = async (
   await execAsync(
     `wget -c "${captionUrl}" -O "${destFile}" --load-cookies="${cookies}"`,
   );
-  return readFileSync(destFile, 'utf8');
+  return readFileSync(destFile, "utf8");
 };
 
 /**
@@ -205,16 +205,16 @@ const tryDownloadRequestedCaption = async (
 
   if (requestedCaptionsLanguage) {
     caption = metadata.automatic_captions[requestedCaptionsLanguage]?.find(
-      (entry) => entry.ext === 'srt',
+      (entry) => entry.ext === "srt",
     );
   } else if (requestedSubtitlesLanguage) {
     caption = metadata.subtitles[requestedSubtitlesLanguage]?.find(
-      (entry) => entry.ext === 'srt',
+      (entry) => entry.ext === "srt",
     );
   }
 
   if (!caption?.url) {
-    throw new Error('No captions available for the selected language');
+    throw new Error("No captions available for the selected language");
   }
 
   return downloadCaptionByUrl(caption.url, destFile, cookies);
@@ -234,9 +234,9 @@ const buildYtDlpSubtitleCommand = (
 ): string => {
   const parts = [
     binary,
-    '--skip-download',
-    '--write-automatic-subs',
-    '--write-subs',
+    "--skip-download",
+    "--write-automatic-subs",
+    "--write-subs",
   ];
 
   if (isTiktok(url)) {
@@ -245,7 +245,7 @@ const buildYtDlpSubtitleCommand = (
     parts.push(`--sub-langs "${language}"`);
   }
 
-  parts.push('--convert-subs=srt');
+  parts.push("--convert-subs=srt");
 
   if (cookies) {
     parts.push(`--cookies ${cookies}`);
@@ -253,7 +253,7 @@ const buildYtDlpSubtitleCommand = (
 
   parts.push(`"${url}" -o "${outputPath}/"`);
 
-  return parts.join(' ');
+  return parts.join(" ");
 };
 
 /**
@@ -289,7 +289,7 @@ const selectBestSrtFile = (
  * E.g. `"en-US"` → `"en"`, `"es"` → `"es"`.
  */
 const extractBaseLanguage = (language: string): string => {
-  const dashIndex = language.indexOf('-');
+  const dashIndex = language.indexOf("-");
   return dashIndex !== -1 ? language.substring(0, dashIndex) : language;
 };
 
@@ -315,19 +315,19 @@ const downloadSubtitles = async ({
   localLink,
   outputFolder = DEFAULT_OUTPUT_FOLDER,
   videoLanguage,
-  requestedCaptionsLanguage = '',
-  requestedSubtitlesLanguage = '',
+  requestedCaptionsLanguage = "",
+  requestedSubtitlesLanguage = "",
   binary = DEFAULT_BINARY,
   cookies = DEFAULT_COOKIES,
 }: DownloadSubtitlesOptions): Promise<DownloadSubtitlesResult> => {
-  const cleanDest = dest.replaceAll('media/', '');
+  const cleanDest = dest.replaceAll("media/", "");
   const destFile = `${outputFolder}/${cleanDest}`;
 
   /* Step 1: Fetch video metadata */
   const metadata = await fetchVideoMetadata(url, binary);
-  const name = metadata.fulltitle ?? metadata.title ?? '';
-  const thumbnail = metadata.thumbnail ?? '';
-  let language = metadata.language ?? '';
+  const name = metadata.fulltitle ?? metadata.title ?? "";
+  const thumbnail = metadata.thumbnail ?? "";
+  let language = metadata.language ?? "";
 
   /* Step 2: Try to download a specifically-requested caption */
   const requestedSubtitles = await tryDownloadRequestedCaption(
@@ -340,7 +340,7 @@ const downloadSubtitles = async ({
 
   if (requestedSubtitles) {
     const cleanSubtitles = srtToText(requestedSubtitles);
-    writeFileSync(destFile, requestedSubtitles, 'utf-8');
+    writeFileSync(destFile, requestedSubtitles, "utf-8");
     return {
       ...(name && { name }),
       srtFile: `media/${cleanDest}`,
@@ -358,7 +358,7 @@ const downloadSubtitles = async ({
   const folderPath = `${outputFolder}/${folderName}`;
   ensureFolder(folderPath);
 
-  let subtitles = '';
+  let subtitles = "";
   let filesInFolder: string[];
 
   try {
@@ -380,10 +380,10 @@ const downloadSubtitles = async ({
   const selectedSrt = selectBestSrtFile(filesInFolder, folderName);
 
   if (selectedSrt) {
-    subtitles = readFileSync(`${outputFolder}/${selectedSrt}`, 'utf8');
+    subtitles = readFileSync(`${outputFolder}/${selectedSrt}`, "utf8");
   }
 
-  /* Step 4a: Subtitles found — copy to destination and clean up */
+  /* Step 4a: Subtitles found - copy to destination and clean up */
   if (subtitles) {
     const cleanSubtitles = srtToText(subtitles);
     await copyFile({ src: selectedSrt!, dest: cleanDest });
@@ -399,14 +399,14 @@ const downloadSubtitles = async ({
     };
   }
 
-  /* Step 4b: No subtitles — try generating from local media file */
+  /* Step 4b: No subtitles - try generating from local media file */
   removeFolder(folderPath);
 
   if (localLink) {
     const generated = await generateSrt({
       src: localLink,
       dest: cleanDest,
-      language: videoLanguage ?? 'en',
+      language: videoLanguage ?? "en",
       maxWordsPerLine: 3,
     });
 

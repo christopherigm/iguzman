@@ -64,7 +64,7 @@ You are a research assistant. Given web search results for a company, pick the s
 that is the company's official website homepage or about page. Prefer the company's own domain \
 over third-party sources (LinkedIn, Crunchbase, news articles, etc.).
 
-Return ONLY valid JSON — no markdown, no explanation: {"url": "<chosen url>"}
+Return ONLY valid JSON - no markdown, no explanation: {"url": "<chosen url>"}
 """
 
 _EXTRACT_ABOUT_SYSTEM_PROMPT = """\
@@ -73,7 +73,7 @@ You are a research assistant. From the provided webpage content, extract:
 2. A concise company description (2-4 sentences): what the company does, mission, products/services, \
 industry. Write in third-person present tense suitable for a formal letter.
 
-Return ONLY valid JSON — no markdown, no explanation:
+Return ONLY valid JSON - no markdown, no explanation:
 {"canonical_name": "<official company name>", "about": "<extracted description>"}
 """
 
@@ -85,7 +85,7 @@ summary of the content, the exact URL, and the source domain (e.g. "techcrunch.c
 Only include items that are clearly relevant and informative. Return fewer than 3 if quality \
 results are limited. Return an empty list if nothing is relevant.
 
-Return ONLY valid JSON — no markdown, no explanation:
+Return ONLY valid JSON - no markdown, no explanation:
 {"items": [{"title": "...", "summary": "...", "url": "...", "source": "..."}]}
 """
 
@@ -96,7 +96,7 @@ Given a company description and recent intel across several categories (news, hi
 reputation, funding, leadership changes, acquisitions, engineering culture), produce:
 
 1. A concise overall summary (3-5 sentences) capturing the company's current state and whether \
-it's a good time to join. Be honest — if data is limited, say so.
+it's a good time to join. Be honest - if data is limited, say so.
 
 2. Five categorical signals, each rated as one of: "positive", "mixed", or "concerning". \
 Base each rating only on available evidence. If a category has no data, default to "mixed" \
@@ -109,7 +109,7 @@ Signals:
 - work_culture: Employee sentiment from reviews, Glassdoor signals, engineering blog activity
 - growth_trajectory: Hiring pace, expansion signals, market position, M&A as growth vs distress
 
-Return ONLY valid JSON — no markdown, no explanation:
+Return ONLY valid JSON - no markdown, no explanation:
 {"summary": "...", "job_security": {"level": "positive|mixed|concerning", "explanation": "1-2 sentences"}, \
 "financial_health": {"level": "...", "explanation": "..."}, \
 "leadership_stability": {"level": "...", "explanation": "..."}, \

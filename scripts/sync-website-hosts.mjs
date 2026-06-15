@@ -12,17 +12,17 @@
  *   4. Interactive prompt (if not running with -y)
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { APPS_DIR, readEnvFile, createPrompt } from './utils.mjs';
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { APPS_DIR, readEnvFile, createPrompt } from "./utils.mjs";
 
 // ── Paths ───────────────────────────────────────────────────────────────────
 
-const VALUES_YAML = join(APPS_DIR, 'website', 'helm', 'values.yaml');
-const API_VALUES_YAML = join(APPS_DIR, 'website-api', 'helm', 'values.yaml');
+const VALUES_YAML = join(APPS_DIR, "website", "helm", "values.yaml");
+const API_VALUES_YAML = join(APPS_DIR, "website-api", "helm", "values.yaml");
 
-// Fixed API host — always included in ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS
-const API_HOST = 'api.website.iguzman.com.mx';
+// Fixed API host - always included in ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS
+const API_HOST = "api.website.iguzman.com.mx";
 
 // ── YAML helpers ────────────────────────────────────────────────────────────
 
@@ -37,9 +37,9 @@ function buildIngressBlock(hosts) {
       (h) =>
         `    - host: ${h}\n      paths:\n        - path: /\n          pathType: Prefix`,
     )
-    .join('\n');
+    .join("\n");
 
-  const tlsHosts = hosts.map((h) => `        - ${h}`).join('\n');
+  const tlsHosts = hosts.map((h) => `        - ${h}`).join("\n");
 
   return (
     `ingress:\n` +
@@ -69,53 +69,53 @@ function updateValuesYaml(content, hosts) {
     // The ingress block is the one that contains "ingress:" at column 0
     if (/^ingress:/m.test(part)) {
       // Preserve the leading comment line if present
-      const commentLine = part.match(/^(# ─── Ingress[^\n]*\n)/)?.[1] ?? '';
-      return commentLine + buildIngressBlock(hosts) + '\n';
+      const commentLine = part.match(/^(# ─── Ingress[^\n]*\n)/)?.[1] ?? "";
+      return commentLine + buildIngressBlock(hosts) + "\n";
     }
     return part;
   });
 
-  return updated.join('');
+  return updated.join("");
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
 const rawArgs = process.argv.slice(2);
-const yesIndex = rawArgs.indexOf('-y');
+const yesIndex = rawArgs.indexOf("-y");
 const autoYes = yesIndex !== -1;
 
-const apiEnv = readEnvFile(join(APPS_DIR, 'website-api', '.env'));
+const apiEnv = readEnvFile(join(APPS_DIR, "website-api", ".env"));
 
 const { rl, prompt } = createPrompt({ defaultYes: autoYes });
 
 // Resolve API URL
-const defaultApiUrl = 'https://api.website.iguzman.com.mx';
+const defaultApiUrl = "https://api.website.iguzman.com.mx";
 
 const apiUrl = autoYes
   ? defaultApiUrl
-  : await prompt('  API URL (website-api)', defaultApiUrl);
+  : await prompt("  API URL (website-api)", defaultApiUrl);
 
 if (!apiUrl) {
-  console.error('\n  Error: API URL is required\n');
+  console.error("\n  Error: API URL is required\n");
   rl.close();
   process.exit(1);
 }
 
 // Resolve admin credentials
 const defaultUser =
-  process.env.WEBSITE_ADMIN_USER || apiEnv.DJANGO_ADMIN_USER || '';
+  process.env.WEBSITE_ADMIN_USER || apiEnv.DJANGO_ADMIN_USER || "";
 const defaultPass =
-  process.env.WEBSITE_ADMIN_PASSWORD || apiEnv.DJANGO_ADMIN_PASSWORD || '';
+  process.env.WEBSITE_ADMIN_PASSWORD || apiEnv.DJANGO_ADMIN_PASSWORD || "";
 
 const adminUser = autoYes
   ? defaultUser
-  : await prompt('  Admin username', defaultUser);
+  : await prompt("  Admin username", defaultUser);
 const adminPass = autoYes
   ? defaultPass
-  : await prompt('  Admin password', defaultPass);
+  : await prompt("  Admin password", defaultPass);
 
 if (!adminUser || !adminPass) {
-  console.error('\n  Error: Admin credentials are required\n');
+  console.error("\n  Error: Admin credentials are required\n");
   rl.close();
   process.exit(1);
 }
@@ -128,7 +128,9 @@ console.log(`\n  Fetching system hosts from ${apiUrl}/api/systems/ ...\n`);
 
 let systems;
 try {
-  const credentials = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
+  const credentials = Buffer.from(`${adminUser}:${adminPass}`).toString(
+    "base64",
+  );
   const res = await fetch(`${apiUrl}/api/systems/`, {
     headers: { Authorization: `Basic ${credentials}` },
   });
@@ -140,14 +142,14 @@ try {
 
   systems = await res.json();
 } catch (err) {
-  console.error(`\n  Error: Failed to reach API — ${err.message}\n`);
+  console.error(`\n  Error: Failed to reach API - ${err.message}\n`);
   process.exit(1);
 }
 
 const hosts = systems.map((s) => s.host);
 
 if (hosts.length === 0) {
-  console.error('\n  Error: No enabled systems found in the API\n');
+  console.error("\n  Error: No enabled systems found in the API\n");
   process.exit(1);
 }
 
@@ -156,39 +158,48 @@ hosts.forEach((h) => console.log(`    • ${h}`));
 
 // ── Update website values.yaml (ingress) ────────────────────────────────────
 
-const original = readFileSync(VALUES_YAML, 'utf-8');
+const original = readFileSync(VALUES_YAML, "utf-8");
 const updated = updateValuesYaml(original, hosts);
 
 if (original === updated) {
-  console.log('\n  apps/website/helm/values.yaml ingress is already up to date.\n');
+  console.log(
+    "\n  apps/website/helm/values.yaml ingress is already up to date.\n",
+  );
 } else {
-  writeFileSync(VALUES_YAML, updated, 'utf-8');
+  writeFileSync(VALUES_YAML, updated, "utf-8");
   console.log(`\n  Updated ingress hosts in apps/website/helm/values.yaml\n`);
 }
 
 // ── Update website-api values.yaml (CORS / CSRF / ALLOWED_HOSTS) ─────────────
 
-const corsOrigins = hosts.map((h) => `https://${h}`).join(',');
-const csrfOrigins = [`https://${API_HOST}`, ...hosts.map((h) => `https://${h}`)].join(',');
-const allowedHosts = [API_HOST, ...hosts, 'localhost', '127.0.0.1'].join(',');
+const corsOrigins = hosts.map((h) => `https://${h}`).join(",");
+const csrfOrigins = [
+  `https://${API_HOST}`,
+  ...hosts.map((h) => `https://${h}`),
+].join(",");
+const allowedHosts = [API_HOST, ...hosts, "localhost", "127.0.0.1"].join(",");
 
 function updateEnvValue(content, key, value) {
   // Matches lines like:  KEY: 'old-value'  or  KEY: "old-value"
   return content.replace(
-    new RegExp(`^(\\s*${key}:\\s*)(['"]?).*\\2`, 'm'),
+    new RegExp(`^(\\s*${key}:\\s*)(['"]?).*\\2`, "m"),
     `$1'${value}'`,
   );
 }
 
-const apiOriginal = readFileSync(API_VALUES_YAML, 'utf-8');
+const apiOriginal = readFileSync(API_VALUES_YAML, "utf-8");
 let apiUpdated = apiOriginal;
-apiUpdated = updateEnvValue(apiUpdated, 'CORS_ALLOWED_ORIGINS', corsOrigins);
-apiUpdated = updateEnvValue(apiUpdated, 'CSRF_TRUSTED_ORIGINS', csrfOrigins);
-apiUpdated = updateEnvValue(apiUpdated, 'ALLOWED_HOSTS', allowedHosts);
+apiUpdated = updateEnvValue(apiUpdated, "CORS_ALLOWED_ORIGINS", corsOrigins);
+apiUpdated = updateEnvValue(apiUpdated, "CSRF_TRUSTED_ORIGINS", csrfOrigins);
+apiUpdated = updateEnvValue(apiUpdated, "ALLOWED_HOSTS", allowedHosts);
 
 if (apiOriginal === apiUpdated) {
-  console.log('  apps/website-api/helm/values.yaml CORS settings are already up to date.\n');
+  console.log(
+    "  apps/website-api/helm/values.yaml CORS settings are already up to date.\n",
+  );
 } else {
-  writeFileSync(API_VALUES_YAML, apiUpdated, 'utf-8');
-  console.log('  Updated CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS, ALLOWED_HOSTS in apps/website-api/helm/values.yaml\n');
+  writeFileSync(API_VALUES_YAML, apiUpdated, "utf-8");
+  console.log(
+    "  Updated CORS_ALLOWED_ORIGINS, CSRF_TRUSTED_ORIGINS, ALLOWED_HOSTS in apps/website-api/helm/values.yaml\n",
+  );
 }

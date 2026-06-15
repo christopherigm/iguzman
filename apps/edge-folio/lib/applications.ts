@@ -1,8 +1,13 @@
-export type ApplicationStatus = 'draft' | 'applied' | 'interview' | 'offer' | 'rejected';
-export type WorkType = 'remote' | 'onsite' | 'hybrid';
-export type SalaryCurrency = 'USD' | 'CAD' | 'EUR' | 'MXN' | 'GBP';
-export type CompanyStatus = 'pending' | 'processing' | 'complete' | 'failed';
-export type TailorStatus = '' | 'processing' | 'complete' | 'failed';
+export type ApplicationStatus =
+  | "draft"
+  | "applied"
+  | "interview"
+  | "offer"
+  | "rejected";
+export type WorkType = "remote" | "onsite" | "hybrid";
+export type SalaryCurrency = "USD" | "CAD" | "EUR" | "MXN" | "GBP";
+export type CompanyStatus = "pending" | "processing" | "complete" | "failed";
+export type TailorStatus = "" | "processing" | "complete" | "failed";
 
 export interface CompanyIntelItem {
   title: string;
@@ -22,7 +27,7 @@ export interface CompanyIntel {
   engineering_culture: CompanyIntelItem[];
 }
 
-export type SignalLevel = 'positive' | 'mixed' | 'concerning';
+export type SignalLevel = "positive" | "mixed" | "concerning";
 
 export interface CompanySignal {
   level: SignalLevel;
@@ -43,7 +48,7 @@ export interface Company {
   name: string;
   normalized_name: string;
   status: CompanyStatus;
-  intel_score: SignalLevel | '';
+  intel_score: SignalLevel | "";
   is_refreshing: boolean;
   description: string;
   intel: CompanyIntel | null;
@@ -100,7 +105,7 @@ export interface JobApplication {
   nafta_tn_likelihood_explanation: string;
   salary_min: string | null;
   salary_max: string | null;
-  salary_currency: SalaryCurrency | '';
+  salary_currency: SalaryCurrency | "";
   work_type: WorkType[] | null;
   location: string;
   us_citizen_or_pr_required: boolean | null;
@@ -120,7 +125,7 @@ export class ApplicationError extends Error {
     public readonly status: number,
     public readonly data: Record<string, unknown>,
   ) {
-    super('Applications API request failed');
+    super("Applications API request failed");
   }
 }
 
@@ -135,7 +140,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function getApplications(): Promise<PaginatedApplications> {
-  return request('/api/applications');
+  return request("/api/applications");
 }
 
 export interface CreateApplicationPayload {
@@ -147,16 +152,18 @@ export interface CreateApplicationPayload {
   job_url: string;
   salary_min?: number | null;
   salary_max?: number | null;
-  salary_currency?: SalaryCurrency | '';
+  salary_currency?: SalaryCurrency | "";
   work_type?: WorkType[] | null;
   location?: string;
   us_citizen_or_pr_required?: boolean | null;
 }
 
-export function createApplication(payload: CreateApplicationPayload): Promise<JobApplication> {
-  return request('/api/applications', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+export function createApplication(
+  payload: CreateApplicationPayload,
+): Promise<JobApplication> {
+  return request("/api/applications", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
@@ -170,21 +177,24 @@ export interface UpdateApplicationPayload {
   location?: string;
   salary_min?: number | null;
   salary_max?: number | null;
-  salary_currency?: SalaryCurrency | '';
+  salary_currency?: SalaryCurrency | "";
   work_type?: WorkType[] | null;
   us_citizen_or_pr_required?: boolean | null;
 }
 
-export function updateApplication(id: number, payload: UpdateApplicationPayload): Promise<JobApplication> {
+export function updateApplication(
+  id: number,
+  payload: UpdateApplicationPayload,
+): Promise<JobApplication> {
   return request(`/api/applications/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteApplication(id: number): Promise<void> {
-  return request(`/api/applications/${id}`, { method: 'DELETE' });
+  return request(`/api/applications/${id}`, { method: "DELETE" });
 }
 
 export function getApplication(id: number): Promise<JobApplication> {
@@ -197,21 +207,24 @@ export interface TailorStartResult {
 
 /**
  * Kicks off async resume tailoring. Returns immediately with the current
- * tailor status — the heavy LLM work runs in the background and is polled
+ * tailor status - the heavy LLM work runs in the background and is polled
  * via `getApplication` until `tailor_status` reaches `complete`/`failed`.
  */
 export function tailorApplication(id: number): Promise<TailorStartResult> {
-  return request(`/api/applications/${id}/tailor`, { method: 'POST' });
+  return request(`/api/applications/${id}/tailor`, { method: "POST" });
 }
 
 export interface CoverLetterResult {
   cover_letter: string;
 }
 
-export function generateCoverLetter(id: number, bullets: TailoredBullet[]): Promise<CoverLetterResult> {
+export function generateCoverLetter(
+  id: number,
+  bullets: TailoredBullet[],
+): Promise<CoverLetterResult> {
   return request(`/api/applications/${id}/cover-letter`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bullets }),
   });
 }
@@ -231,10 +244,13 @@ export interface NaftaLetterPayload {
   citizenship?: string;
 }
 
-export function generateNaftaLetter(id: number, payload: NaftaLetterPayload = {}): Promise<NaftaLetterResult> {
+export function generateNaftaLetter(
+  id: number,
+  payload: NaftaLetterPayload = {},
+): Promise<NaftaLetterResult> {
   return request(`/api/applications/${id}/nafta-letter`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
@@ -249,7 +265,7 @@ export interface MetricsResult {
 }
 
 export function refreshMetrics(id: number): Promise<MetricsResult> {
-  return request(`/api/applications/${id}/metrics`, { method: 'POST' });
+  return request(`/api/applications/${id}/metrics`, { method: "POST" });
 }
 
 export interface TnCategorySuggestion {
@@ -263,5 +279,5 @@ export interface TnSuggestResult {
 }
 
 export function suggestTnCategory(): Promise<TnSuggestResult> {
-  return request('/api/applications/tn-suggest', { method: 'POST' });
+  return request("/api/applications/tn-suggest", { method: "POST" });
 }

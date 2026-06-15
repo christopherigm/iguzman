@@ -1,7 +1,7 @@
 /**
  * Generates favicon and PWA manifest icons from a logo image.
  *
- * Runs entirely in the browser using the Canvas API — do **not** import this
+ * Runs entirely in the browser using the Canvas API - do **not** import this
  * in a Node.js / server-side context.
  */
 
@@ -25,7 +25,7 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Failed to load logo image'));
+    img.onerror = () => reject(new Error("Failed to load logo image"));
     img.src = src;
   });
 
@@ -34,11 +34,11 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
  * transparent square canvas and returns a PNG data URI.
  */
 const logoToSquarePng = (img: HTMLImageElement, size: number): string => {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas 2D context unavailable');
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D context unavailable");
 
   const scale = Math.min(size / img.naturalWidth, size / img.naturalHeight);
   const w = Math.round(img.naturalWidth * scale);
@@ -47,7 +47,7 @@ const logoToSquarePng = (img: HTMLImageElement, size: number): string => {
   const y = Math.round((size - h) / 2);
   ctx.drawImage(img, x, y, w, h);
 
-  return canvas.toDataURL('image/png');
+  return canvas.toDataURL("image/png");
 };
 
 /**
@@ -57,7 +57,7 @@ const logoToSquarePng = (img: HTMLImageElement, size: number): string => {
  * PNG payload, which avoids lossy BMP conversion.
  */
 const pngDataUrlToIco = (pngDataUrl: string): string => {
-  const base64 = pngDataUrl.replace(/^data:[^;]+;base64,/, '');
+  const base64 = pngDataUrl.replace(/^data:[^;]+;base64,/, "");
   const pngBinary = atob(base64);
   const pngBytes = new Uint8Array(pngBinary.length);
   for (let i = 0; i < pngBinary.length; i++) {
@@ -69,7 +69,7 @@ const pngDataUrlToIco = (pngDataUrl: string): string => {
   const view = new DataView(buffer);
 
   // ICONDIR
-  view.setUint16(0, 0, true); // reserved — must be 0
+  view.setUint16(0, 0, true); // reserved - must be 0
   view.setUint16(2, 1, true); // type: 1 = ICO
   view.setUint16(4, 1, true); // number of images
 
@@ -86,7 +86,7 @@ const pngDataUrlToIco = (pngDataUrl: string): string => {
   new Uint8Array(buffer).set(pngBytes, 22);
 
   const bytes = new Uint8Array(buffer);
-  let binary = '';
+  let binary = "";
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]!);
   }

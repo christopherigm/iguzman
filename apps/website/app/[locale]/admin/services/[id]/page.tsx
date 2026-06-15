@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { use } from 'react';
-import { useRouter } from '@repo/i18n/navigation';
-import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
+import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import { use } from "react";
+import { useRouter } from "@repo/i18n/navigation";
+import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import {
   AdminImageUploader,
   type NewImage,
-} from '@/components/admin-image-uploader/admin-image-uploader';
+} from "@/components/admin-image-uploader/admin-image-uploader";
 import {
   getService,
   createService,
@@ -20,55 +20,55 @@ import {
   listServiceCategories,
   listBrands,
   checkSlug,
-} from '@/lib/admin-api';
-import { buildSlug } from '@/lib/slug-utils';
-import { getUserFromToken } from '@/lib/auth';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
+} from "@/lib/admin-api";
+import { buildSlug } from "@/lib/slug-utils";
+import { getUserFromToken } from "@/lib/auth";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
 const CURRENCY_OPTIONS = [
-  { value: 'USD', label: 'USD' },
-  { value: 'EUR', label: 'EUR' },
-  { value: 'MXN', label: 'MXN' },
-  { value: 'GBP', label: 'GBP' },
-  { value: 'CAD', label: 'CAD' },
-  { value: 'BRL', label: 'BRL' },
+  { value: "USD", label: "USD" },
+  { value: "EUR", label: "EUR" },
+  { value: "MXN", label: "MXN" },
+  { value: "GBP", label: "GBP" },
+  { value: "CAD", label: "CAD" },
+  { value: "BRL", label: "BRL" },
 ];
 const MODALITY_OPTIONS = [
-  { value: 'online', label: 'Online' },
-  { value: 'in_person', label: 'In Person' },
-  { value: 'hybrid', label: 'Hybrid' },
+  { value: "online", label: "Online" },
+  { value: "in_person", label: "In Person" },
+  { value: "hybrid", label: "Hybrid" },
 ];
 
 export default function AdminServiceFormPage({ params }: Props) {
   const { id } = use(params);
-  const isNew = id === 'new';
-  const t = useTranslations('Admin');
+  const isNew = id === "new";
+  const t = useTranslations("Admin");
   const router = useRouter();
 
   const [values, setValues] = useState<Record<string, unknown>>({
-    name: '',
-    en_name: '',
-    slug: '',
-    sku: '',
-    description: '',
-    en_description: '',
-    short_description: '',
-    en_short_description: '',
-    price: '0.00',
-    compare_price: '',
-    cost_price: '',
-    currency: 'USD',
-    category: '',
-    brand: '',
-    duration: '',
-    modality: 'in_person',
+    name: "",
+    en_name: "",
+    slug: "",
+    sku: "",
+    description: "",
+    en_description: "",
+    short_description: "",
+    en_short_description: "",
+    price: "0.00",
+    compare_price: "",
+    cost_price: "",
+    currency: "USD",
+    category: "",
+    brand: "",
+    duration: "",
+    modality: "in_person",
     is_featured: false,
     enabled: true,
-    href: '',
+    href: "",
   });
   const [existingImage, setExistingImage] = useState<
     { id: number; url: string }[]
@@ -99,23 +99,23 @@ export default function AdminServiceFormPage({ params }: Props) {
     if (isNew) {
       setValues((prev) => ({
         ...prev,
-        slug: buildSlug(String(prev.name ?? ''), systemId),
+        slug: buildSlug(String(prev.name ?? ""), systemId),
       }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.name, isNew, systemId]);
 
   const handleNameBlur = useCallback(async () => {
-    const currentSlug = String(values.slug ?? '');
+    const currentSlug = String(values.slug ?? "");
     if (!currentSlug) return;
     setSlugError(null);
     try {
       const result = await checkSlug(
-        'service',
+        "service",
         currentSlug,
         !isNew ? Number(id) : undefined,
       );
-      if (!result.available) setSlugError(t('slugTaken'));
+      if (!result.available) setSlugError(t("slugTaken"));
     } catch {
       /* ignore */
     }
@@ -151,37 +151,37 @@ export default function AdminServiceFormPage({ params }: Props) {
       Promise.all([getService(Number(id)), listServiceImages(Number(id))])
         .then(([data, images]) => {
           setValues({
-            name: data.name ?? '',
-            en_name: data.en_name ?? '',
-            slug: data.slug ?? '',
-            sku: data.sku ?? '',
-            description: data.description ?? '',
-            en_description: data.en_description ?? '',
-            short_description: data.short_description ?? '',
-            en_short_description: data.en_short_description ?? '',
-            price: data.price ?? '0.00',
-            compare_price: data.compare_price ?? '',
-            cost_price: data.cost_price ?? '',
-            currency: data.currency ?? 'USD',
-            category: data.category ?? '',
-            brand: data.brand ?? '',
-            duration: data.duration ?? '',
-            modality: data.modality ?? 'in_person',
+            name: data.name ?? "",
+            en_name: data.en_name ?? "",
+            slug: data.slug ?? "",
+            sku: data.sku ?? "",
+            description: data.description ?? "",
+            en_description: data.en_description ?? "",
+            short_description: data.short_description ?? "",
+            en_short_description: data.en_short_description ?? "",
+            price: data.price ?? "0.00",
+            compare_price: data.compare_price ?? "",
+            cost_price: data.cost_price ?? "",
+            currency: data.currency ?? "USD",
+            category: data.category ?? "",
+            brand: data.brand ?? "",
+            duration: data.duration ?? "",
+            modality: data.modality ?? "in_person",
             is_featured: data.is_featured ?? false,
             enabled: data.enabled ?? true,
-            href: data.href ?? '',
+            href: data.href ?? "",
           });
           if (data.image) {
             setExistingImage([{ id: Number(id), url: String(data.image) }]);
           }
           const imgs = (images as Record<string, unknown>[]).map((i) => ({
             id: i.id as number,
-            url: String(i.image ?? ''),
+            url: String(i.image ?? ""),
             sort_order: i.sort_order as number,
           }));
           setExistingImages(imgs);
         })
-        .catch(() => setError(t('errorLoad')))
+        .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
   }, [id, isNew, loadMeta, t]);
@@ -192,13 +192,13 @@ export default function AdminServiceFormPage({ params }: Props) {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values, system: systemId };
-      ['compare_price', 'cost_price', 'sku', 'href', 'duration'].forEach(
+      ["compare_price", "cost_price", "sku", "href", "duration"].forEach(
         (k) => {
-          if (payload[k] === '' || payload[k] === null) delete payload[k];
+          if (payload[k] === "" || payload[k] === null) delete payload[k];
         },
       );
-      if (payload.category === '') delete payload.category;
-      if (payload.brand === '') delete payload.brand;
+      if (payload.category === "") delete payload.category;
+      if (payload.brand === "") delete payload.brand;
       if (pendingImage.length > 0) {
         payload.image = pendingImage[0]?.base64;
       } else if (existingImage.length === 0) {
@@ -231,93 +231,93 @@ export default function AdminServiceFormPage({ params }: Props) {
         }).catch(() => null);
       }
 
-      setSuccess(t('saved'));
+      setSuccess(t("saved"));
       if (isNew) router.replace(`/admin/services/${serviceId}`);
     } catch {
-      setError(t('errorSave'));
+      setError(t("errorSave"));
     } finally {
       setSaving(false);
     }
   };
 
   const fields: FieldDef[] = [
-    { key: 'name', label: t('name'), required: true, onBlur: handleNameBlur },
-    { key: 'en_name', label: 'Name (EN)' },
+    { key: "name", label: t("name"), required: true, onBlur: handleNameBlur },
+    { key: "en_name", label: "Name (EN)" },
     {
-      key: 'slug',
-      label: 'Slug',
-      type: 'slug',
+      key: "slug",
+      label: "Slug",
+      type: "slug",
       disabled: true,
       fieldError: slugError,
     },
-    { key: 'sku', label: 'SKU' },
+    { key: "sku", label: "SKU" },
     {
-      key: 'category',
-      label: t('category') ?? 'Category',
-      type: 'select',
+      key: "category",
+      label: t("category") ?? "Category",
+      type: "select",
       options: categoryOptions,
-      placeholder: '— None —',
+      placeholder: "- None -",
     },
     {
-      key: 'brand',
-      label: t('brand') ?? 'Brand',
-      type: 'select',
+      key: "brand",
+      label: t("brand") ?? "Brand",
+      type: "select",
       options: brandOptions,
-      placeholder: '— None —',
+      placeholder: "- None -",
     },
-    { key: 'price', label: t('price') ?? 'Price', type: 'number' },
+    { key: "price", label: t("price") ?? "Price", type: "number" },
     {
-      key: 'compare_price',
-      label: t('comparePrice') ?? 'Compare Price',
-      type: 'number',
-    },
-    {
-      key: 'cost_price',
-      label: t('costPrice') ?? 'Cost Price',
-      type: 'number',
+      key: "compare_price",
+      label: t("comparePrice") ?? "Compare Price",
+      type: "number",
     },
     {
-      key: 'currency',
-      label: t('currency') ?? 'Currency',
-      type: 'select',
+      key: "cost_price",
+      label: t("costPrice") ?? "Cost Price",
+      type: "number",
+    },
+    {
+      key: "currency",
+      label: t("currency") ?? "Currency",
+      type: "select",
       options: CURRENCY_OPTIONS,
     },
     {
-      key: 'duration',
-      label: t('duration') ?? 'Duration (min)',
-      type: 'number',
+      key: "duration",
+      label: t("duration") ?? "Duration (min)",
+      type: "number",
     },
     {
-      key: 'modality',
-      label: t('modality') ?? 'Modality',
-      type: 'select',
+      key: "modality",
+      label: t("modality") ?? "Modality",
+      type: "select",
       options: MODALITY_OPTIONS,
     },
-    { key: 'href', label: t('link') ?? 'Link', type: 'url' },
+    { key: "href", label: t("link") ?? "Link", type: "url" },
     {
-      key: 'description',
-      label: t('description') ?? 'Description (ES)',
-      type: 'textarea',
+      key: "description",
+      label: t("description") ?? "Description (ES)",
+      type: "textarea",
     },
-    { key: 'en_description', label: 'Description (EN)', type: 'textarea' },
+    { key: "en_description", label: "Description (EN)", type: "textarea" },
     {
-      key: 'short_description',
-      label: t('shortDescription') ?? 'Short Description (ES)',
-      type: 'textarea',
+      key: "short_description",
+      label: t("shortDescription") ?? "Short Description (ES)",
+      type: "textarea",
     },
     {
-      key: 'en_short_description',
-      label: 'Short Description (EN)',
-      type: 'textarea',
+      key: "en_short_description",
+      label: "Short Description (EN)",
+      type: "textarea",
     },
-    { key: 'is_featured', label: t('featured') ?? 'Featured', type: 'boolean' },
-    { key: 'enabled', label: t('enabled'), type: 'boolean' },
+    { key: "is_featured", label: t("featured") ?? "Featured", type: "boolean" },
+    { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
   if (loading)
     return (
       <Box padding="24px">
-        <Typography variant="body">{t('loading')}</Typography>
+        <Typography variant="body">{t("loading")}</Typography>
       </Box>
     );
 
@@ -325,17 +325,17 @@ export default function AdminServiceFormPage({ params }: Props) {
     <>
       <Breadcrumbs
         items={[
-          { label: t('home'), href: '/' },
-          { label: t('breadcrumbAdmin'), href: '/admin' },
-          { label: t('services'), href: '/admin/services' },
-          { label: isNew ? t('newItem') : t('edit') },
+          { label: t("home"), href: "/" },
+          { label: t("breadcrumbAdmin"), href: "/admin" },
+          { label: t("services"), href: "/admin/services" },
+          { label: isNew ? t("newItem") : t("edit") },
         ]}
       />
       <AdminForm
         title={
           isNew
-            ? `${t('newItem')} — ${t('services')}`
-            : `${t('edit')} — ${t('services')}`
+            ? `${t("newItem")} - ${t("services")}`
+            : `${t("edit")} - ${t("services")}`
         }
         fields={fields}
         values={values}
@@ -346,18 +346,20 @@ export default function AdminServiceFormPage({ params }: Props) {
         success={success}
       >
         <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">{t('image') ?? 'Main Image'}</Typography>
+          <Typography variant="label">{t("image") ?? "Main Image"}</Typography>
           <AdminImageUploader
             existingImages={existingImage}
             onChange={(n, _d, o) => {
               setPendingImage(n);
-              setExistingImage((prev) => prev.filter((img) => o.includes(img.id)));
+              setExistingImage((prev) =>
+                prev.filter((img) => o.includes(img.id)),
+              );
             }}
             maxImages={1}
           />
         </Box>
         <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">{t('images') ?? 'Images'}</Typography>
+          <Typography variant="label">{t("images") ?? "Images"}</Typography>
           <AdminImageUploader
             existingImages={existingImages}
             onChange={(n, d, o) => {

@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
-import { Container } from '@repo/ui/core-elements/container';
-import { Box } from '@repo/ui/core-elements/box';
-import { Button } from '@repo/ui/core-elements/button';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Badge } from '@repo/ui/core-elements/badge';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Toast } from '@repo/ui/core-elements/toast';
-import { Select } from '@repo/ui/core-elements/select';
-import { Slider } from '@repo/ui/core-elements/slider';
-import { SpeechButton } from '@repo/ui/core-elements/speech-button';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Card } from '@repo/ui/core-elements/card';
-import { useGroqProxy } from '@repo/ui/use-groq';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { Container } from "@repo/ui/core-elements/container";
+import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Toast } from "@repo/ui/core-elements/toast";
+import { Select } from "@repo/ui/core-elements/select";
+import { Slider } from "@repo/ui/core-elements/slider";
+import { SpeechButton } from "@repo/ui/core-elements/speech-button";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Card } from "@repo/ui/core-elements/card";
+import { useGroqProxy } from "@repo/ui/use-groq";
 import {
   getSkills,
   createSkill,
@@ -29,53 +29,62 @@ import {
   type Skill,
   type BulletPoint,
   type Category,
-} from '@/lib/matrix';
-import './matrix-board.css';
+} from "@/lib/matrix";
+import "./matrix-board.css";
 
 const PARAGRAPH_WORD_COUNTS: Record<string, { min: number; max: number }> = {
-  xs:      { min: 10,  max: 20  },
-  sm:      { min: 25,  max: 40  },
-  md:      { min: 50,  max: 75 },
-  'md-lg': { min: 80, max: 120 },
-  lg:      { min: 130, max: 180 },
-  xl:      { min: 200, max: 270 },
+  xs: { min: 10, max: 20 },
+  sm: { min: 25, max: 40 },
+  md: { min: 50, max: 75 },
+  "md-lg": { min: 80, max: 120 },
+  lg: { min: 130, max: 180 },
+  xl: { min: 200, max: 270 },
 };
 
 const PARAGRAPH_LENGTH_STEPS = [
-  { value: 'xs',    label: 'XS'  },
-  { value: 'sm',    label: 'S'   },
-  { value: 'md',    label: 'M'   },
-  { value: 'md-lg', label: 'M-L' },
-  { value: 'lg',    label: 'L'   },
-  { value: 'xl',    label: 'XL'  },
+  { value: "xs", label: "XS" },
+  { value: "sm", label: "S" },
+  { value: "md", label: "M" },
+  { value: "md-lg", label: "M-L" },
+  { value: "lg", label: "L" },
+  { value: "xl", label: "XL" },
 ];
 
-const PARAGRAPH_COUNT_STEPS = [1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) }));
+const PARAGRAPH_COUNT_STEPS = [1, 2, 3, 4, 5].map((n) => ({
+  value: n,
+  label: String(n),
+}));
 
 const CATEGORIES: Category[] = [
-  'impact',
-  'technical',
-  'leadership',
-  'collaboration',
-  'other',
+  "impact",
+  "technical",
+  "leadership",
+  "collaboration",
+  "other",
 ];
 
 const CATEGORY_COLORS: Record<Category, string> = {
-  impact:        '#06b6d4',
-  technical:     '#8b5cf6',
-  leadership:    '#f97316',
-  collaboration: '#22c55e',
-  other:         '#6b7280',
+  impact: "#06b6d4",
+  technical: "#8b5cf6",
+  leadership: "#f97316",
+  collaboration: "#22c55e",
+  other: "#6b7280",
 };
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
-function CategoryBadge({ category, label }: { category: Category; label: string }) {
+function CategoryBadge({
+  category,
+  label,
+}: {
+  category: Category;
+  label: string;
+}) {
   return (
     <Badge
       variant="subtle"
       color={CATEGORY_COLORS[category]}
-      style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}
+      style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}
     >
       {label}
     </Badge>
@@ -93,10 +102,17 @@ interface BulletFormProps {
   onValidityChange?: (canSubmit: boolean) => void;
 }
 
-function BulletForm({ category, skills, initial, onSave, formRef, onValidityChange }: BulletFormProps) {
-  const t = useTranslations('MatrixPage');
+function BulletForm({
+  category,
+  skills,
+  initial,
+  onSave,
+  formRef,
+  onValidityChange,
+}: BulletFormProps) {
+  const t = useTranslations("MatrixPage");
   const locale = useLocale();
-  const [text, setText] = useState(initial?.text ?? '');
+  const [text, setText] = useState(initial?.text ?? "");
   const [selectedCategory, setSelectedCategory] = useState<Category>(
     initial?.category ?? category,
   );
@@ -107,12 +123,17 @@ function BulletForm({ category, skills, initial, onSave, formRef, onValidityChan
   const [error, setError] = useState<string | null>(null);
 
   // ── AI Enhance ──────────────────────────────────────────────────────────────
-  const { streamingText, isGenerating, generate, abort, reset: resetLlm } =
-    useGroqProxy({ temperature: 0.7 });
-  const [enhancePreview, setEnhancePreview] = useState('');
+  const {
+    streamingText,
+    isGenerating,
+    generate,
+    abort,
+    reset: resetLlm,
+  } = useGroqProxy({ temperature: 0.7 });
+  const [enhancePreview, setEnhancePreview] = useState("");
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
   const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
-  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState('sm');
+  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("sm");
 
   useEffect(() => {
     if (streamingText) setEnhancePreview(streamingText);
@@ -120,7 +141,12 @@ function BulletForm({ category, skills, initial, onSave, formRef, onValidityChan
 
   // Abort streaming if form unmounts mid-generation.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => () => { if (isGenerating) abort(); }, []);
+  useEffect(
+    () => () => {
+      if (isGenerating) abort();
+    },
+    [],
+  );
 
   useEffect(() => {
     onValidityChange?.(!saving && text.trim().length > 0);
@@ -130,37 +156,40 @@ function BulletForm({ category, skills, initial, onSave, formRef, onValidityChan
     setShowEnhanceOptions(false);
     const currentText = text.trim();
     if (!currentText) return;
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
-    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
-    const isEs = locale === 'es';
+    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? {
+      min: 50,
+      max: 75,
+    };
+    const isEs = locale === "es";
     const messages = isEs
       ? [
           {
-            role: 'system' as const,
-            content: `Eres un coach profesional de carrera. Reescribe y amplía el siguiente logro profesional en prosa impactante para un portafolio. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? 's' : ''}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado — sin explicaciones, etiquetas ni marcas de formato.`,
+            role: "system" as const,
+            content: `Eres un coach profesional de carrera. Reescribe y amplía el siguiente logro profesional en prosa impactante para un portafolio. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
           },
-          { role: 'user' as const, content: currentText },
+          { role: "user" as const, content: currentText },
         ]
       : [
           {
-            role: 'system' as const,
-            content: `You are a professional career coach and resume expert. Rewrite and expand the following career achievement into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? 'paragraph' : 'paragraphs'}. Each paragraph must be between ${min} and ${max} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text — no explanations, labels, or formatting marks.`,
+            role: "system" as const,
+            content: `You are a professional career coach and resume expert. Rewrite and expand the following career achievement into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${min} and ${max} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text - no explanations, labels, or formatting marks.`,
           },
-          { role: 'user' as const, content: currentText },
+          { role: "user" as const, content: currentText },
         ];
     await generate(messages);
   };
 
   const handleAcceptEnhance = () => {
     if (enhancePreview) setText(enhancePreview);
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
   };
 
   const handleDiscardEnhance = () => {
     if (isGenerating) abort();
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
   };
 
@@ -195,21 +224,23 @@ function BulletForm({ category, skills, initial, onSave, formRef, onValidityChan
         : await createBullet(payload);
       onSave(result);
     } catch {
-      setError(t('bulletSaveError'));
+      setError(t("bulletSaveError"));
     } finally {
       setSaving(false);
     }
   }
 
   const llmBusy = isGenerating;
-  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
+  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[
+    enhanceParagraphLength
+  ] ?? { min: 50, max: 75 };
 
   return (
     <>
       {showEnhanceOptions && (
         <ConfirmationModal
-          title={t('enhanceOptionsTitle')}
-          text={t('enhanceOptionsText')}
+          title={t("enhanceOptionsTitle")}
+          text={t("enhanceOptionsText")}
           okCallback={handleConfirmEnhanceOptions}
           cancelCallback={() => setShowEnhanceOptions(false)}
         >
@@ -218,13 +249,13 @@ function BulletForm({ category, skills, initial, onSave, formRef, onValidityChan
               steps={PARAGRAPH_COUNT_STEPS}
               value={enhanceParagraphs}
               onChange={(v) => setEnhanceParagraphs(Number(v))}
-              label={t('enhanceParagraphsLabel')}
+              label={t("enhanceParagraphsLabel")}
             />
             <Slider
               steps={PARAGRAPH_LENGTH_STEPS}
               value={enhanceParagraphLength}
               onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t('enhanceLengthLabel')} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
+              label={`${t("enhanceLengthLabel")} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
             />
           </Box>
         </ConfirmationModal>
@@ -233,11 +264,11 @@ function BulletForm({ category, skills, initial, onSave, formRef, onValidityChan
         {/* Label row with voice + enhance buttons */}
         <Box className="matrix__field-label-row">
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('textLabel')}
+            {t("textLabel")}
           </Typography>
           <Box display="flex" alignItems="center" gap={6}>
             <SpeechButton
-              language={locale === 'es' ? 'es' : 'en'}
+              language={locale === "es" ? "es" : "en"}
               onTranscript={handleTranscript}
               micIcon="/icons/mic.svg"
             />
@@ -246,16 +277,22 @@ function BulletForm({ category, skills, initial, onSave, formRef, onValidityChan
               type="button"
               icon="/icons/enhance.svg"
               iconSize="16px"
-              iconColor={enhancePreview ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+              iconColor={
+                enhancePreview
+                  ? "var(--primary, #06b6d4)"
+                  : "var(--foreground, #171717)"
+              }
               disabled={llmBusy || !text.trim()}
               onClick={() => setShowEnhanceOptions(true)}
-              aria-label={t('enhanceLabel')}
-              title={t('enhanceLabel')}
+              aria-label={t("enhanceLabel")}
+              title={t("enhanceLabel")}
               className={[
-                'matrix__enhance-btn',
-                llmBusy || !text.trim() ? 'matrix__enhance-btn--busy' : '',
-                enhancePreview ? 'matrix__enhance-btn--active' : '',
-              ].filter(Boolean).join(' ')}
+                "matrix__enhance-btn",
+                llmBusy || !text.trim() ? "matrix__enhance-btn--busy" : "",
+                enhancePreview ? "matrix__enhance-btn--active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             />
           </Box>
         </Box>
@@ -267,35 +304,62 @@ function BulletForm({ category, skills, initial, onSave, formRef, onValidityChan
           required
           maxLength={500}
           width="100%"
-          aria-label={t('textLabel')}
+          aria-label={t("textLabel")}
         />
         {/* Enhance preview panel */}
         {enhancePreview && (
-          <Box className="matrix__enhance-preview" flexDirection="column" gap={10}>
+          <Box
+            className="matrix__enhance-preview"
+            flexDirection="column"
+            gap={10}
+          >
             <Typography variant="body-sm">{enhancePreview}</Typography>
             <Box display="flex" gap={8} alignItems="center" marginTop={12}>
               {isGenerating ? (
-                <Button text={t('enhanceStop')} type="button" size="md" onClick={handleDiscardEnhance} />
+                <Button
+                  text={t("enhanceStop")}
+                  type="button"
+                  size="md"
+                  onClick={handleDiscardEnhance}
+                />
               ) : (
                 <>
-                  <Button text={t('enhanceDiscard')} type="button" size="md" onClick={handleDiscardEnhance} />
-                  <Button text={t('enhanceAccept')} type="button" size="md" kind="success" onClick={handleAcceptEnhance} />
+                  <Button
+                    text={t("enhanceDiscard")}
+                    type="button"
+                    size="md"
+                    onClick={handleDiscardEnhance}
+                  />
+                  <Button
+                    text={t("enhanceAccept")}
+                    type="button"
+                    size="md"
+                    kind="success"
+                    onClick={handleAcceptEnhance}
+                  />
                 </>
               )}
             </Box>
           </Box>
         )}
         <Select
-          label={t('categoryLabel')}
+          label={t("categoryLabel")}
           value={selectedCategory}
           onChange={(v) => setSelectedCategory(v as Category)}
-          options={CATEGORIES.map((cat) => ({ value: cat, label: t(`categories.${cat}`) }))}
+          options={CATEGORIES.map((cat) => ({
+            value: cat,
+            label: t(`categories.${cat}`),
+          }))}
           width="100%"
         />
         {skills.length > 0 && (
           <Box>
-            <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={4}>
-              {t('skillsLabel')}
+            <Typography
+              variant="body"
+              color="var(--muted-foreground, #6b7280)"
+              marginBottom={4}
+            >
+              {t("skillsLabel")}
             </Typography>
             <Box display="flex" flexWrap="wrap" gap={6}>
               {skills.map((skill) => (
@@ -303,7 +367,7 @@ function BulletForm({ category, skills, initial, onSave, formRef, onValidityChan
                   key={skill.id}
                   type="button"
                   unstyled
-                  className={`matrix__skill-checkbox${selectedSkillIds.includes(skill.id) ? ' matrix__skill-checkbox--selected' : ''}`}
+                  className={`matrix__skill-checkbox${selectedSkillIds.includes(skill.id) ? " matrix__skill-checkbox--selected" : ""}`}
                   onClick={() => toggleSkill(skill.id)}
                   aria-pressed={selectedSkillIds.includes(skill.id)}
                 >
@@ -333,18 +397,29 @@ interface BulletCardProps {
   onApprove: (id: number) => void;
 }
 
-function BulletCard({ bullet, skills, onEdit, onDelete, onApprove }: BulletCardProps) {
-  const t = useTranslations('MatrixPage');
-  const showApprove = bullet.source === 'extracted' && !bullet.is_approved;
+function BulletCard({
+  bullet,
+  skills,
+  onEdit,
+  onDelete,
+  onApprove,
+}: BulletCardProps) {
+  const t = useTranslations("MatrixPage");
+  const showApprove = bullet.source === "extracted" && !bullet.is_approved;
 
   return (
     <Card
       className="matrix__bullet"
       gap={8}
       padding={8}
-      border={showApprove ? '1px solid var(--warning, #f59e0b)' : undefined}
+      border={showApprove ? "1px solid var(--warning, #f59e0b)" : undefined}
     >
-      <Typography as="p" variant="body" color="var(--foreground)" styles={{ lineHeight: 1.5 }}>
+      <Typography
+        as="p"
+        variant="body"
+        color="var(--foreground)"
+        styles={{ lineHeight: 1.5 }}
+      >
         {bullet.text}
       </Typography>
       <Box display="flex" alignItems="center" flexWrap="wrap" gap={6}>
@@ -353,27 +428,51 @@ function BulletCard({ bullet, skills, onEdit, onDelete, onApprove }: BulletCardP
           variant="filled"
           color="var(--muted, #f3f4f6)"
           textColor="var(--muted-foreground, #6b7280)"
-          style={{ borderRadius: '4px', fontWeight: 500 }}
+          style={{ borderRadius: "4px", fontWeight: 500 }}
         >
-          {bullet.source === 'manual' ? t('sourceManual') : t('sourceExtracted')}
+          {bullet.source === "manual"
+            ? t("sourceManual")
+            : t("sourceExtracted")}
         </Badge>
         {bullet.skills.map((skill) => (
-          <Badge key={skill.id} size="lg" variant="outlined" color="var(--primary, #06b6d4)">
+          <Badge
+            key={skill.id}
+            size="lg"
+            variant="outlined"
+            color="var(--primary, #06b6d4)"
+          >
             {skill.name}
           </Badge>
         ))}
       </Box>
-      <Box display="flex" alignItems="center" gap={6} justifyContent="flex-end" marginTop={2}>
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={6}
+        justifyContent="flex-end"
+        marginTop={2}
+      >
         <Button
-          text={t('delete')}
+          text={t("delete")}
           type="button"
           size="md"
           kind="error"
           onClick={() => onDelete(bullet.id)}
         />
-        <Button text={t('edit')} type="button" size="md" onClick={() => onEdit(bullet)} />
+        <Button
+          text={t("edit")}
+          type="button"
+          size="md"
+          onClick={() => onEdit(bullet)}
+        />
         {showApprove && (
-          <Button text={t('approve')} type="button" size="md" kind="success" onClick={() => onApprove(bullet.id)} />
+          <Button
+            text={t("approve")}
+            type="button"
+            size="md"
+            kind="success"
+            onClick={() => onApprove(bullet.id)}
+          />
         )}
       </Box>
     </Card>
@@ -399,15 +498,15 @@ function CategorySection({
   onBulletDeleted,
   onBulletApproved,
 }: CategorySectionProps) {
-  const t = useTranslations('MatrixPage');
+  const t = useTranslations("MatrixPage");
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   return (
     <>
       {pendingDeleteId !== null && (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText')}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText")}
           okCallback={() => {
             const id = pendingDeleteId;
             setPendingDeleteId(null);
@@ -418,8 +517,15 @@ function CategorySection({
       )}
       <Box display="flex" flexDirection="column" gap={12}>
         <Box display="flex" alignItems="center" gap={8}>
-          <CategoryBadge category={category} label={t(`categories.${category}`)} />
-          <Typography as="span" variant="label" color="var(--muted-foreground, #6b7280)">
+          <CategoryBadge
+            category={category}
+            label={t(`categories.${category}`)}
+          />
+          <Typography
+            as="span"
+            variant="label"
+            color="var(--muted-foreground, #6b7280)"
+          >
             {bullets.length}
           </Typography>
         </Box>
@@ -432,7 +538,7 @@ function CategorySection({
             paddingTop={4}
             paddingBottom={4}
           >
-            {t('emptyCategory')}
+            {t("emptyCategory")}
           </Typography>
         ) : (
           <Grid container spacing={2}>
@@ -462,17 +568,24 @@ interface SkillsPanelProps {
   onSkillDeleted: (id: number) => void;
 }
 
-function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps) {
-  const t = useTranslations('MatrixPage');
-  const [newName, setNewName] = useState('');
+function SkillsPanel({
+  skills,
+  onSkillAdded,
+  onSkillDeleted,
+}: SkillsPanelProps) {
+  const t = useTranslations("MatrixPage");
+  const [newName, setNewName] = useState("");
   const [newProficiency, setNewProficiency] = useState(3);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{
+    text: string;
+    kind: "success" | "error";
+  } | null>(null);
   const [toastKey, setToastKey] = useState(0);
 
-  function showToast(text: string, kind: 'success' | 'error') {
+  function showToast(text: string, kind: "success" | "error") {
     setToast({ text, kind });
     setToastKey((k) => k + 1);
   }
@@ -484,20 +597,28 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
       (s) => s.name.toLowerCase() === newName.trim().toLowerCase(),
     );
     if (isDuplicate) {
-      showToast(t('skillDuplicateError'), 'error');
+      showToast(t("skillDuplicateError"), "error");
       return;
     }
     setSaving(true);
     try {
-      const skill = await createSkill({ name: newName.trim(), proficiency: newProficiency });
+      const skill = await createSkill({
+        name: newName.trim(),
+        proficiency: newProficiency,
+      });
       onSkillAdded(skill);
-      setNewName('');
+      setNewName("");
       setNewProficiency(3);
       setAdding(false);
     } catch (err) {
       const isDuplicate =
-        err instanceof MatrixError && err.status === 400 && Array.isArray(err.data.name);
-      showToast(isDuplicate ? t('skillDuplicateError') : t('skillSaveError'), 'error');
+        err instanceof MatrixError &&
+        err.status === 400 &&
+        Array.isArray(err.data.name);
+      showToast(
+        isDuplicate ? t("skillDuplicateError") : t("skillSaveError"),
+        "error",
+      );
     } finally {
       setSaving(false);
     }
@@ -507,9 +628,9 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
     try {
       await deleteSkill(id);
       onSkillDeleted(id);
-      showToast(t('skillDeleted'), 'success');
+      showToast(t("skillDeleted"), "success");
     } catch {
-      showToast(t('skillDeleteError'), 'error');
+      showToast(t("skillDeleteError"), "error");
     }
   }
 
@@ -517,8 +638,8 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
     <>
       {pendingDeleteId !== null && (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText')}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText")}
           okCallback={() => {
             const id = pendingDeleteId;
             setPendingDeleteId(null);
@@ -527,98 +648,128 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
           cancelCallback={() => setPendingDeleteId(null)}
         />
       )}
-    <Card padding={12}>
-      <Box
-        display="flex"
-        alignItems="flex-start"
-        justifyContent="space-between"
-        gap={12}
-        flexWrap="wrap"
-        marginBottom={8}
-      >
-        <Box>
-          <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
-            {t('skillsSection')}
-          </Typography>
-          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('skillsSectionSubtitle')}
-          </Typography>
-        </Box>
-        {!adding && (
-          <Button text={t('addSkill')} type="button" size="md" onClick={() => setAdding(true)} 
-          kind='success'/>
-        )}
-      </Box>
-
-      {adding && (
-        <form onSubmit={handleAdd} className="matrix__skill-add-form">
-          <TextInput
-            label={t('skillNameLabel')}
-            value={newName}
-            onChange={setNewName}
-            required
-            maxLength={100}
-            width="100%"
-          />
-          <Box display="flex" alignItems="center" gap={8}>
-            <Select
-              value={String(newProficiency)}
-              onChange={(v) => setNewProficiency(Number(v))}
-              label={t('proficiencyLabel')}
-              options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n}/5` }))}
-              minWidth={110}
-            />
-            <Button text={t('cancel')} type="button" size="lg" onClick={() => setAdding(false)} />
-            <Button
-              text={saving ? t('saving') : t('save')}
-              type="submit"
-              size="lg"
-              kind="success"
-              disabled={saving || !newName.trim()}
-            />
+      <Card padding={12}>
+        <Box
+          display="flex"
+          alignItems="flex-start"
+          justifyContent="space-between"
+          gap={12}
+          flexWrap="wrap"
+          marginBottom={8}
+        >
+          <Box>
+            <Typography as="h2" variant="h3" fontWeight={600} marginBottom={4}>
+              {t("skillsSection")}
+            </Typography>
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
+              {t("skillsSectionSubtitle")}
+            </Typography>
           </Box>
-        </form>
-      )}
-
-      {skills.length > 0 && (
-        <Box display="flex" flexWrap="wrap" gap={8} marginBottom={12}>
-          {skills.map((skill) => (
-            <Box
-              key={skill.id}
-              display="inline-flex"
-              alignItems="center"
-              gap={6}
-              paddingY={4}
-              paddingX={10}
-              borderRadius={99}
-              border="1px solid var(--border, #e5e7eb)"
-            >
-              {skill.name}
-              <Typography as="span" variant="label" color="var(--primary, #06b6d4)" fontWeight={600} styles={{ fontSize: 11 }}>
-                {skill.proficiency}/5
-              </Typography>
-              <Button
-                unstyled
-                type="button"
-                className="matrix__skill-delete-btn"
-                aria-label={t('delete')}
-                onClick={() => setPendingDeleteId(skill.id)}
-              >
-                X
-              </Button>
-            </Box>
-          ))}
+          {!adding && (
+            <Button
+              text={t("addSkill")}
+              type="button"
+              size="md"
+              onClick={() => setAdding(true)}
+              kind="success"
+            />
+          )}
         </Box>
-      )}
 
-      {skills.length === 0 && !adding && (
-        <Typography variant="body" color="var(--muted-foreground, #6b7280)" marginBottom={8}>
-          {t('noSkills')}
-        </Typography>
-      )}
+        {adding && (
+          <form onSubmit={handleAdd} className="matrix__skill-add-form">
+            <TextInput
+              label={t("skillNameLabel")}
+              value={newName}
+              onChange={setNewName}
+              required
+              maxLength={100}
+              width="100%"
+            />
+            <Box display="flex" alignItems="center" gap={8}>
+              <Select
+                value={String(newProficiency)}
+                onChange={(v) => setNewProficiency(Number(v))}
+                label={t("proficiencyLabel")}
+                options={[1, 2, 3, 4, 5].map((n) => ({
+                  value: String(n),
+                  label: `${n}/5`,
+                }))}
+                minWidth={110}
+              />
+              <Button
+                text={t("cancel")}
+                type="button"
+                size="lg"
+                onClick={() => setAdding(false)}
+              />
+              <Button
+                text={saving ? t("saving") : t("save")}
+                type="submit"
+                size="lg"
+                kind="success"
+                disabled={saving || !newName.trim()}
+              />
+            </Box>
+          </form>
+        )}
 
-      {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} position='top-center' />}
-    </Card>
+        {skills.length > 0 && (
+          <Box display="flex" flexWrap="wrap" gap={8} marginBottom={12}>
+            {skills.map((skill) => (
+              <Box
+                key={skill.id}
+                display="inline-flex"
+                alignItems="center"
+                gap={6}
+                paddingY={4}
+                paddingX={10}
+                borderRadius={99}
+                border="1px solid var(--border, #e5e7eb)"
+              >
+                {skill.name}
+                <Typography
+                  as="span"
+                  variant="label"
+                  color="var(--primary, #06b6d4)"
+                  fontWeight={600}
+                  styles={{ fontSize: 11 }}
+                >
+                  {skill.proficiency}/5
+                </Typography>
+                <Button
+                  unstyled
+                  type="button"
+                  className="matrix__skill-delete-btn"
+                  aria-label={t("delete")}
+                  onClick={() => setPendingDeleteId(skill.id)}
+                >
+                  X
+                </Button>
+              </Box>
+            ))}
+          </Box>
+        )}
+
+        {skills.length === 0 && !adding && (
+          <Typography
+            variant="body"
+            color="var(--muted-foreground, #6b7280)"
+            marginBottom={8}
+          >
+            {t("noSkills")}
+          </Typography>
+        )}
+
+        {toast && (
+          <Toast
+            key={toastKey}
+            message={toast.text}
+            variant={toast.kind}
+            position="top-center"
+          />
+        )}
+      </Card>
     </>
   );
 }
@@ -626,7 +777,7 @@ function SkillsPanel({ skills, onSkillAdded, onSkillDeleted }: SkillsPanelProps)
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function MatrixBoard() {
-  const t = useTranslations('MatrixPage');
+  const t = useTranslations("MatrixPage");
   const [bullets, setBullets] = useState<BulletPoint[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -655,11 +806,14 @@ export function MatrixBoard() {
     setLoading(true);
     setError(null);
     try {
-      const [bulletRes, skillRes] = await Promise.all([getBullets(), getSkills()]);
+      const [bulletRes, skillRes] = await Promise.all([
+        getBullets(),
+        getSkills(),
+      ]);
       setBullets(bulletRes.results);
       setSkills(skillRes.results);
     } catch {
-      setError(t('errorLoad'));
+      setError(t("errorLoad"));
     } finally {
       setLoading(false);
     }
@@ -692,7 +846,7 @@ export function MatrixBoard() {
       const updated = await updateBullet(id, { is_approved: true });
       setBullets((prev) => prev.map((b) => (b.id === id ? updated : b)));
     } catch {
-      setError(t('approveError'));
+      setError(t("approveError"));
     }
   }
 
@@ -701,9 +855,13 @@ export function MatrixBoard() {
       <Container
         display="flex"
         alignItems="center"
-        styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center' }}
+        styles={{
+          minHeight: "100vh",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
       >
-        <ProgressBar label={t('loading')} />
+        <ProgressBar label={t("loading")} />
       </Container>
     );
   }
@@ -713,7 +871,12 @@ export function MatrixBoard() {
       <Container
         display="flex"
         alignItems="center"
-        styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center', gap: '16px' }}
+        styles={{
+          minHeight: "100vh",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: "16px",
+        }}
       >
         <Typography variant="body-sm" color="var(--error, #ef4444)">
           {error}
@@ -734,7 +897,7 @@ export function MatrixBoard() {
   return (
     <Container
       paddingX={10}
-      styles={{ paddingTop: 'var(--ui-navbar-height)', paddingBottom: '60px' }}
+      styles={{ paddingTop: "var(--ui-navbar-height)", paddingBottom: "60px" }}
     >
       <Box
         width="100%"
@@ -748,18 +911,27 @@ export function MatrixBoard() {
       >
         <Box display="flex" flexDirection="column" gap={4}>
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
-            {t('title')}
+            {t("title")}
           </Typography>
-          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-            {t('subtitle')}
+          <Typography
+            variant="body-sm"
+            color="var(--muted-foreground, #6b7280)"
+          >
+            {t("subtitle")}
           </Typography>
         </Box>
-        <Button text={t('addBullet')} type="button" size="md" onClick={openAdd} kind='success'/>
+        <Button
+          text={t("addBullet")}
+          type="button"
+          size="md"
+          onClick={openAdd}
+          kind="success"
+        />
       </Box>
 
       {formOpen && (
         <ConfirmationModal
-          title={editingBullet ? t('editBulletTitle') : t('addBulletTitle')}
+          title={editingBullet ? t("editBulletTitle") : t("addBulletTitle")}
           text=""
           okCallback={() => bulletFormRef.current?.requestSubmit()}
           cancelCallback={closeForm}
@@ -767,7 +939,7 @@ export function MatrixBoard() {
           panelMaxWidth="600px"
         >
           <BulletForm
-            category={editingBullet?.category ?? 'impact'}
+            category={editingBullet?.category ?? "impact"}
             skills={skills}
             initial={editingBullet ?? undefined}
             onSave={handleBulletSaved}
@@ -794,7 +966,9 @@ export function MatrixBoard() {
       <SkillsPanel
         skills={skills}
         onSkillAdded={(skill) => setSkills((prev) => [...prev, skill])}
-        onSkillDeleted={(id) => setSkills((prev) => prev.filter((s) => s.id !== id))}
+        onSkillDeleted={(id) =>
+          setSkills((prev) => prev.filter((s) => s.id !== id))
+        }
       />
     </Container>
   );

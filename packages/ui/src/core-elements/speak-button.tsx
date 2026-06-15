@@ -1,26 +1,27 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import { Button } from './button';
-import { Icon } from './icon';
-import { Badge } from './badge';
-import { useTextToSpeech, UseTextToSpeechOptions } from '../use-text-to-speech';
-import type { UIComponentProps } from './utils';
-import './speak-button.css';
+import React, { useEffect } from "react";
+import { Button } from "./button";
+import { Icon } from "./icon";
+import { Badge } from "./badge";
+import { useTextToSpeech, UseTextToSpeechOptions } from "../use-text-to-speech";
+import type { UIComponentProps } from "./utils";
+import "./speak-button.css";
 
-export interface SpeakButtonProps extends UIComponentProps, UseTextToSpeechOptions {
+export interface SpeakButtonProps
+  extends UIComponentProps, UseTextToSpeechOptions {
   /** Text to synthesize when the button is pressed. */
   text: string;
   /** SVG path for the idle speaker icon. */
   speakIcon?: string;
   /**
    * SVG path shown while speaking (instead of the speaker icon).
-   * Falls back to `speakIcon` if not provided — the speaking state is
+   * Falls back to `speakIcon` if not provided - the speaking state is
    * communicated via color and the pulse animation instead.
    */
   stopIcon?: string;
   /** Accessible label. Defaults to `'Speak text'` / `'Stop speaking'`. */
-  'aria-label'?: string;
+  "aria-label"?: string;
   /** Called when speech starts. */
   onSpeakStart?: () => void;
   /** Called when speech ends or is stopped. */
@@ -28,12 +29,12 @@ export interface SpeakButtonProps extends UIComponentProps, UseTextToSpeechOptio
 }
 
 /**
- * SpeakButton — a speaker toggle button backed by TTS.
+ * SpeakButton - a speaker toggle button backed by TTS.
  *
  * Press once to start speaking; press again to stop.
  * Supports two engines:
- *  - `engine="browser"` — Web Speech API, instant, no download.
- *  - `engine="neural"`  — SpeechT5 via Web Worker, high quality, ~100-300 MB
+ *  - `engine="browser"` - Web Speech API, instant, no download.
+ *  - `engine="neural"`  - SpeechT5 via Web Worker, high quality, ~100-300 MB
  *                         model download on first use.
  *
  * @example
@@ -54,11 +55,11 @@ export const SpeakButton: React.FC<SpeakButtonProps> = ({
   rate,
   pitch,
   volume,
-  speakIcon = '/icons/speaker.svg',
+  speakIcon = "/icons/speaker.svg",
   stopIcon,
   onSpeakStart,
   onSpeakEnd,
-  'aria-label': ariaLabel,
+  "aria-label": ariaLabel,
   className,
   ...uiProps
 }) => {
@@ -73,7 +74,7 @@ export const SpeakButton: React.FC<SpeakButtonProps> = ({
   });
 
   useEffect(() => {
-    if (error) console.error('[SpeakButton] TTS error:', error);
+    if (error) console.error("[SpeakButton] TTS error:", error);
   }, [error]);
 
   const handleClick = () => {
@@ -96,22 +97,22 @@ export const SpeakButton: React.FC<SpeakButtonProps> = ({
       {...uiProps}
       unstyled
       onClick={handleClick}
-      aria-label={ariaLabel ?? (isSpeaking ? 'Stop speaking' : 'Speak text')}
+      aria-label={ariaLabel ?? (isSpeaking ? "Stop speaking" : "Speak text")}
       aria-pressed={isSpeaking}
       className={[
-        'tts-speak-button',
-        isSpeaking ? 'tts-speak-button--speaking' : '',
-        isBusy ? 'tts-speak-button--busy' : '',
+        "tts-speak-button",
+        isSpeaking ? "tts-speak-button--speaking" : "",
+        isBusy ? "tts-speak-button--busy" : "",
         className,
       ]
         .filter(Boolean)
-        .join(' ')}
+        .join(" ")}
     >
       <Icon
         icon={isSpeaking ? activeIcon : speakIcon}
         size="20px"
         color={
-          isSpeaking ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+          isSpeaking ? "var(--accent, #06b6d4)" : "var(--foreground, #171717)"
         }
       />
       {language && (
@@ -119,7 +120,7 @@ export const SpeakButton: React.FC<SpeakButtonProps> = ({
           variant="subtle"
           size="sm"
           color={
-            isSpeaking ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+            isSpeaking ? "var(--accent, #06b6d4)" : "var(--foreground, #171717)"
           }
           className="tts-speak-button__lang"
         >

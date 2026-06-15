@@ -9,12 +9,12 @@ Merges an audio file into a video at a specified time offset using **ffmpeg**.
 ## Usage
 
 ```ts
-import { addAudioToVideoInTime } from '@iguzman/helpers';
+import { addAudioToVideoInTime } from "@iguzman/helpers";
 
 const result = await addAudioToVideoInTime({
-  srcVideo: 'intro.mp4',
-  srcAudio: 'narration.wav',
-  dest: 'intro-with-narration.mp4',
+  srcVideo: "intro.mp4",
+  srcAudio: "narration.wav",
+  dest: "intro-with-narration.mp4",
   offset: 5, // audio starts at 5 seconds
 });
 
@@ -40,12 +40,12 @@ console.log(result.absolutePath); // '/app/media/intro-with-narration.mp4'
    - Copies the video stream without re-encoding (`-c:v copy`).
    - Re-encodes WAV audio to AAC (`-c:a aac`) for container compatibility, or copies MP3/OGG streams directly (`-c:a copy`).
    - Offsets the audio track by the specified number of seconds (`-itsoffset`).
-3. Executes ffmpeg via `execFile` (argument array — safe from shell injection).
+3. Executes ffmpeg via `execFile` (argument array - safe from shell injection).
 
 ## Improvements over the original
 
 - **Security**: Uses `execFile` with an argument array instead of `exec` with string interpolation, eliminating shell injection risks.
-- **Bug fix**: `replaceAll('media/', '')` replaced with a regex that only strips a leading `media/` prefix — no longer corrupts paths containing `media/` mid-string.
+- **Bug fix**: `replaceAll('media/', '')` replaced with a regex that only strips a leading `media/` prefix - no longer corrupts paths containing `media/` mid-string.
 - **Bug fix**: Non-WAV formats now include explicit stream-mapping flags (`-map 0:v -map 1:a -c:a copy`) instead of omitting them, which caused ffmpeg to fall back to default (potentially incorrect) stream selection.
 - **Typing**: `offset` is strictly `number` (the original accepted `string | number`). Named result type instead of a bare `string`.
 - **Naming**: camelCase parameters and function name per TypeScript conventions.

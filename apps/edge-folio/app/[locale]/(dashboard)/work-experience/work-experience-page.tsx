@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
-import { Container } from '@repo/ui/core-elements/container';
-import { Box } from '@repo/ui/core-elements/box';
-import { Card } from '@repo/ui/core-elements/card';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Button } from '@repo/ui/core-elements/button';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Badge } from '@repo/ui/core-elements/badge';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Select } from '@repo/ui/core-elements/select';
-import { Switch } from '@repo/ui/core-elements/switch';
-import { Slider } from '@repo/ui/core-elements/slider';
-import { Toast } from '@repo/ui/core-elements/toast';
-import { SpeechButton } from '@repo/ui/core-elements/speech-button';
-import { useGroqProxy } from '@repo/ui/use-groq';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { Container } from "@repo/ui/core-elements/container";
+import { Box } from "@repo/ui/core-elements/box";
+import { Card } from "@repo/ui/core-elements/card";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Button } from "@repo/ui/core-elements/button";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Select } from "@repo/ui/core-elements/select";
+import { Switch } from "@repo/ui/core-elements/switch";
+import { Slider } from "@repo/ui/core-elements/slider";
+import { Toast } from "@repo/ui/core-elements/toast";
+import { SpeechButton } from "@repo/ui/core-elements/speech-button";
+import { useGroqProxy } from "@repo/ui/use-groq";
 import {
   getWorkExperiences,
   createWorkExperience,
@@ -37,49 +37,83 @@ import {
   type Project,
   type ProjectPayload,
   type TechStack,
-} from '@/lib/career';
-import './work-experience-page.css';
+} from "@/lib/career";
+import "./work-experience-page.css";
 
 const EMPLOYMENT_TYPES: EmploymentType[] = [
-  'full_time', 'part_time', 'contract', 'freelance', 'internship',
+  "full_time",
+  "part_time",
+  "contract",
+  "freelance",
+  "internship",
 ];
 
 const TECH_SUGGESTIONS = [
-  'TypeScript', 'JavaScript', 'Python', 'Go', 'Rust', 'Java', 'C#', 'Ruby', 'PHP',
-  'React', 'Next.js', 'Vue', 'Angular', 'Svelte',
-  'Node.js', 'Django', 'FastAPI', 'Spring Boot', '.NET',
-  'PostgreSQL', 'MySQL', 'MongoDB', 'Redis',
-  'Docker', 'Kubernetes', 'AWS', 'GCP', 'Azure',
-  'GraphQL', 'REST', 'gRPC', 'Terraform', 'Linux',
+  "TypeScript",
+  "JavaScript",
+  "Python",
+  "Go",
+  "Rust",
+  "Java",
+  "C#",
+  "Ruby",
+  "PHP",
+  "React",
+  "Next.js",
+  "Vue",
+  "Angular",
+  "Svelte",
+  "Node.js",
+  "Django",
+  "FastAPI",
+  "Spring Boot",
+  ".NET",
+  "PostgreSQL",
+  "MySQL",
+  "MongoDB",
+  "Redis",
+  "Docker",
+  "Kubernetes",
+  "AWS",
+  "GCP",
+  "Azure",
+  "GraphQL",
+  "REST",
+  "gRPC",
+  "Terraform",
+  "Linux",
 ];
 
 const EMPLOYMENT_TYPE_COLORS: Record<EmploymentType, string> = {
-  full_time:  '#06b6d4',
-  part_time:  '#8b5cf6',
-  contract:   '#f97316',
-  freelance:  '#22c55e',
-  internship: '#f59e0b',
+  full_time: "#06b6d4",
+  part_time: "#8b5cf6",
+  contract: "#f97316",
+  freelance: "#22c55e",
+  internship: "#f59e0b",
 };
 
 const PARAGRAPH_WORD_COUNTS: Record<string, { min: number; max: number }> = {
-  xs:      { min: 10,  max: 20  },
-  sm:      { min: 25,  max: 40  },
-  md:      { min: 50,  max: 75  },
-  'md-lg': { min: 80,  max: 120 },
-  lg:      { min: 130, max: 180 },
-  xl:      { min: 200, max: 270 },
+  xs: { min: 10, max: 20 },
+  sm: { min: 25, max: 40 },
+  md: { min: 50, max: 75 },
+  "md-lg": { min: 80, max: 120 },
+  lg: { min: 130, max: 180 },
+  xl: { min: 200, max: 270 },
 };
 
 const PARAGRAPH_LENGTH_STEPS = [
-  { value: 'xs',    label: 'XS'  },
-  { value: 'sm',    label: 'S'   },
-  { value: 'md',    label: 'M'   },
-  { value: 'md-lg', label: 'M-L' },
-  { value: 'lg',    label: 'L'   },
-  { value: 'xl',    label: 'XL'  },
+  { value: "xs", label: "XS" },
+  { value: "sm", label: "S" },
+  { value: "md", label: "M" },
+  { value: "md-lg", label: "M-L" },
+  { value: "lg", label: "L" },
+  { value: "xl", label: "XL" },
 ];
 
-const PARAGRAPH_COUNT_STEPS = [1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) }));
+const PARAGRAPH_COUNT_STEPS = [1, 2, 3, 4, 5].map((n) => ({
+  value: n,
+  label: String(n),
+}));
 
 // ── Form ──────────────────────────────────────────────────────────────────────
 
@@ -90,39 +124,58 @@ interface FormProps {
   onValidityChange: (valid: boolean) => void;
 }
 
-function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: FormProps) {
-  const t = useTranslations('WorkExperiencePage');
+function WorkExperienceForm({
+  initial,
+  onSave,
+  formRef,
+  onValidityChange,
+}: FormProps) {
+  const t = useTranslations("WorkExperiencePage");
   const locale = useLocale();
-  const [company, setCompany] = useState(initial?.company ?? '');
-  const [title, setTitle] = useState(initial?.title ?? '');
+  const [company, setCompany] = useState(initial?.company ?? "");
+  const [title, setTitle] = useState(initial?.title ?? "");
   const [employmentType, setEmploymentType] = useState<EmploymentType>(
-    initial?.employment_type ?? 'full_time',
+    initial?.employment_type ?? "full_time",
   );
-  const [location, setLocation] = useState(initial?.location ?? '');
-  const [startDate, setStartDate] = useState(initial?.start_date ?? '');
-  const [endDate, setEndDate] = useState(initial?.end_date ?? '');
+  const [location, setLocation] = useState(initial?.location ?? "");
+  const [startDate, setStartDate] = useState(initial?.start_date ?? "");
+  const [endDate, setEndDate] = useState(initial?.end_date ?? "");
   const [isCurrent, setIsCurrent] = useState(initial?.is_current ?? false);
-  const [description, setDescription] = useState(initial?.description ?? '');
+  const [description, setDescription] = useState(initial?.description ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // ── AI Enhance ──────────────────────────────────────────────────────────────
-  const { streamingText, isGenerating, generate, abort, reset: resetLlm } =
-    useGroqProxy({ temperature: 0.7 });
-  const [enhancePreview, setEnhancePreview] = useState('');
+  const {
+    streamingText,
+    isGenerating,
+    generate,
+    abort,
+    reset: resetLlm,
+  } = useGroqProxy({ temperature: 0.7 });
+  const [enhancePreview, setEnhancePreview] = useState("");
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
   const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
-  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState('sm');
+  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("sm");
 
   useEffect(() => {
     if (streamingText) setEnhancePreview(streamingText);
   }, [streamingText]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => () => { if (isGenerating) abort(); }, []);
+  useEffect(
+    () => () => {
+      if (isGenerating) abort();
+    },
+    [],
+  );
 
-  const isValid = !saving && company.trim().length > 0 && title.trim().length > 0 &&
-    startDate.length > 0 && (isCurrent || endDate.length > 0);
+  const isValid =
+    !saving &&
+    company.trim().length > 0 &&
+    title.trim().length > 0 &&
+    startDate.length > 0 &&
+    (isCurrent || endDate.length > 0);
 
   useEffect(() => {
     onValidityChange(isValid);
@@ -132,37 +185,40 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
     setShowEnhanceOptions(false);
     const currentText = description.trim();
     if (!currentText) return;
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
-    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
-    const isEs = locale === 'es';
+    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? {
+      min: 50,
+      max: 75,
+    };
+    const isEs = locale === "es";
     const messages = isEs
       ? [
           {
-            role: 'system' as const,
-            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de experiencia laboral en prosa impactante para un portafolio. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? 's' : ''}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado — sin explicaciones, etiquetas ni marcas de formato.`,
+            role: "system" as const,
+            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de experiencia laboral en prosa impactante para un portafolio. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en logros cuantificables, verbos de acción y resultados medibles. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
           },
-          { role: 'user' as const, content: currentText },
+          { role: "user" as const, content: currentText },
         ]
       : [
           {
-            role: 'system' as const,
-            content: `You are a professional career coach and resume expert. Rewrite and expand the following work experience description into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? 'paragraph' : 'paragraphs'}. Each paragraph must be between ${min} and ${max} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text — no explanations, labels, or formatting marks.`,
+            role: "system" as const,
+            content: `You are a professional career coach and resume expert. Rewrite and expand the following work experience description into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${min} and ${max} words. Focus on quantifiable achievements, action verbs, and measurable outcomes. Return only the improved text - no explanations, labels, or formatting marks.`,
           },
-          { role: 'user' as const, content: currentText },
+          { role: "user" as const, content: currentText },
         ];
     await generate(messages);
   };
 
   const handleAcceptEnhance = () => {
     if (enhancePreview) setDescription(enhancePreview);
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
   };
 
   const handleDiscardEnhance = () => {
     if (isGenerating) abort();
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
   };
 
@@ -198,7 +254,7 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
       if (err instanceof CareerError && err.data.detail) {
         setError(String(err.data.detail));
       } else {
-        setError(t('saveError'));
+        setError(t("saveError"));
       }
     } finally {
       setSaving(false);
@@ -206,14 +262,16 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
   }
 
   const llmBusy = isGenerating;
-  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
+  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[
+    enhanceParagraphLength
+  ] ?? { min: 50, max: 75 };
 
   return (
     <>
       {showEnhanceOptions && (
         <ConfirmationModal
-          title={t('enhanceOptionsTitle')}
-          text={t('enhanceOptionsText')}
+          title={t("enhanceOptionsTitle")}
+          text={t("enhanceOptionsText")}
           okCallback={handleConfirmEnhanceOptions}
           cancelCallback={() => setShowEnhanceOptions(false)}
         >
@@ -222,27 +280,27 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
               steps={PARAGRAPH_COUNT_STEPS}
               value={enhanceParagraphs}
               onChange={(v) => setEnhanceParagraphs(Number(v))}
-              label={t('enhanceParagraphsLabel')}
+              label={t("enhanceParagraphsLabel")}
             />
             <Slider
               steps={PARAGRAPH_LENGTH_STEPS}
               value={enhanceParagraphLength}
               onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t('enhanceLengthLabel')} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
+              label={`${t("enhanceLengthLabel")} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
             />
           </Box>
         </ConfirmationModal>
       )}
       <form ref={formRef} onSubmit={handleSubmit} className="work-exp__form">
         <TextInput
-          label={t('companyLabel')}
+          label={t("companyLabel")}
           value={company}
           onChange={setCompany}
           required
           maxLength={200}
         />
         <TextInput
-          label={t('titleLabel')}
+          label={t("titleLabel")}
           value={title}
           onChange={setTitle}
           required
@@ -250,33 +308,40 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
         />
 
         <Select
-          label={t('employmentTypeLabel')}
+          label={t("employmentTypeLabel")}
           value={employmentType}
           onChange={(v) => setEmploymentType(v as EmploymentType)}
-          options={EMPLOYMENT_TYPES.map((et) => ({ value: et, label: t(`employmentTypes.${et}`) }))}
+          options={EMPLOYMENT_TYPES.map((et) => ({
+            value: et,
+            label: t(`employmentTypes.${et}`),
+          }))}
           width="100%"
         />
 
         <TextInput
-          label={t('locationLabel')}
+          label={t("locationLabel")}
           value={location}
           onChange={setLocation}
           maxLength={200}
-          placeholder={t('locationPlaceholder')}
+          placeholder={t("locationPlaceholder")}
         />
 
-        <Box display="grid" gap={12} styles={{ gridTemplateColumns: '1fr 1fr' }}>
+        <Box
+          display="grid"
+          gap={12}
+          styles={{ gridTemplateColumns: "1fr 1fr" }}
+        >
           <TextInput
             type="date"
-            label={t('startDateLabel')}
+            label={t("startDateLabel")}
             value={startDate}
             onChange={setStartDate}
             required
           />
           <TextInput
             type="date"
-            label={t('endDateLabel')}
-            value={isCurrent ? '' : endDate}
+            label={t("endDateLabel")}
+            value={isCurrent ? "" : endDate}
             onChange={setEndDate}
             disabled={isCurrent}
           />
@@ -287,23 +352,21 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
             checked={isCurrent}
             onChange={(checked) => {
               setIsCurrent(checked);
-              if (checked) setEndDate('');
+              if (checked) setEndDate("");
             }}
-            aria-label={t('isCurrentLabel')}
+            aria-label={t("isCurrentLabel")}
           />
-          <Typography variant="body">
-            {t('isCurrentLabel')}
-          </Typography>
+          <Typography variant="body">{t("isCurrentLabel")}</Typography>
         </Box>
 
         {/* Description label row with voice + enhance buttons */}
         <Box className="work-exp__field-label-row">
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('descriptionLabel')}
+            {t("descriptionLabel")}
           </Typography>
           <Box display="flex" alignItems="center" gap={6}>
             <SpeechButton
-              language={locale === 'es' ? 'es' : 'en'}
+              language={locale === "es" ? "es" : "en"}
               onTranscript={handleTranscript}
               micIcon="/icons/mic.svg"
             />
@@ -312,16 +375,24 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
               type="button"
               icon="/icons/enhance.svg"
               iconSize="16px"
-              iconColor={enhancePreview ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+              iconColor={
+                enhancePreview
+                  ? "var(--primary, #06b6d4)"
+                  : "var(--foreground, #171717)"
+              }
               disabled={llmBusy || !description.trim()}
               onClick={() => setShowEnhanceOptions(true)}
-              aria-label={t('enhanceLabel')}
-              title={t('enhanceLabel')}
+              aria-label={t("enhanceLabel")}
+              title={t("enhanceLabel")}
               className={[
-                'work-exp__enhance-btn',
-                llmBusy || !description.trim() ? 'work-exp__enhance-btn--busy' : '',
-                enhancePreview ? 'work-exp__enhance-btn--active' : '',
-              ].filter(Boolean).join(' ')}
+                "work-exp__enhance-btn",
+                llmBusy || !description.trim()
+                  ? "work-exp__enhance-btn--busy"
+                  : "",
+                enhancePreview ? "work-exp__enhance-btn--active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             />
           </Box>
         </Box>
@@ -331,9 +402,9 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
           value={description}
           onChange={setDescription}
           maxLength={2000}
-          placeholder={t('descriptionPlaceholder')}
+          placeholder={t("descriptionPlaceholder")}
           width="100%"
-          aria-label={t('descriptionLabel')}
+          aria-label={t("descriptionLabel")}
         />
 
         {/* Enhance preview panel */}
@@ -347,11 +418,27 @@ function WorkExperienceForm({ initial, onSave, formRef, onValidityChange }: Form
             <Typography variant="body-sm">{enhancePreview}</Typography>
             <Box display="flex" gap={8} alignItems="center" marginTop={12}>
               {isGenerating ? (
-                <Button text={t('enhanceStop')} type="button" size="md" onClick={handleDiscardEnhance} />
+                <Button
+                  text={t("enhanceStop")}
+                  type="button"
+                  size="md"
+                  onClick={handleDiscardEnhance}
+                />
               ) : (
                 <>
-                  <Button text={t('enhanceDiscard')} type="button" size="md" onClick={handleDiscardEnhance} />
-                  <Button text={t('enhanceAccept')} type="button" size="md" kind="success" onClick={handleAcceptEnhance} />
+                  <Button
+                    text={t("enhanceDiscard")}
+                    type="button"
+                    size="md"
+                    onClick={handleDiscardEnhance}
+                  />
+                  <Button
+                    text={t("enhanceAccept")}
+                    type="button"
+                    size="md"
+                    kind="success"
+                    onClick={handleAcceptEnhance}
+                  />
                 </>
               )}
             </Box>
@@ -377,42 +464,59 @@ interface CardProps {
 }
 
 function WorkExperienceCard({ entry, onEdit, onDelete }: CardProps) {
-  const t = useTranslations('WorkExperiencePage');
+  const t = useTranslations("WorkExperiencePage");
 
   const dateRange = (() => {
-    const start = new Date(entry.start_date + 'T12:00:00').toLocaleDateString(undefined, {
-      year: 'numeric', month: 'short',
-    });
-    if (entry.is_current) return `${start} — ${t('present')}`;
+    const start = new Date(entry.start_date + "T12:00:00").toLocaleDateString(
+      undefined,
+      {
+        year: "numeric",
+        month: "short",
+      },
+    );
+    if (entry.is_current) return `${start} - ${t("present")}`;
     if (entry.end_date) {
-      const end = new Date(entry.end_date + 'T12:00:00').toLocaleDateString(undefined, {
-        year: 'numeric', month: 'short',
-      });
-      return `${start} — ${end}`;
+      const end = new Date(entry.end_date + "T12:00:00").toLocaleDateString(
+        undefined,
+        {
+          year: "numeric",
+          month: "short",
+        },
+      );
+      return `${start} - ${end}`;
     }
     return start;
   })();
 
   return (
-    <Card
-      className="work-exp__card"
-      gap={10}
-      padding={16}
-    >
-      <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={12} flexWrap="wrap">
+    <Card className="work-exp__card" gap={10} padding={16}>
+      <Box
+        display="flex"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={12}
+        flexWrap="wrap"
+      >
         <Box display="flex" flexDirection="column" gap={2}>
           <Typography as="h3" variant="body" fontWeight={700}>
             {entry.title}
           </Typography>
-          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+          <Typography
+            variant="body-sm"
+            color="var(--muted-foreground, #6b7280)"
+          >
             {entry.company}
-            {entry.location ? ` · ${entry.location}` : ''}
+            {entry.location ? ` · ${entry.location}` : ""}
           </Typography>
         </Box>
         <Badge
           variant="subtle"
           color={EMPLOYMENT_TYPE_COLORS[entry.employment_type]}
-          style={{ textTransform: 'capitalize', letterSpacing: '0.02em', flexShrink: 0 }}
+          style={{
+            textTransform: "capitalize",
+            letterSpacing: "0.02em",
+            flexShrink: 0,
+          }}
         >
           {t(`employmentTypes.${entry.employment_type}`)}
         </Badge>
@@ -435,8 +539,19 @@ function WorkExperienceCard({ entry, onEdit, onDelete }: CardProps) {
       )}
 
       <Box display="flex" gap={8} justifyContent="flex-end" marginTop={4}>
-        <Button text={t('delete')} type="button" size="md" kind="error" onClick={() => onDelete(entry.id)} />
-        <Button text={t('edit')} type="button" size="md" onClick={() => onEdit(entry)} />
+        <Button
+          text={t("delete")}
+          type="button"
+          size="md"
+          kind="error"
+          onClick={() => onDelete(entry.id)}
+        />
+        <Button
+          text={t("edit")}
+          type="button"
+          size="md"
+          onClick={() => onEdit(entry)}
+        />
       </Box>
     </Card>
   );
@@ -451,20 +566,30 @@ interface ProjectFormProps {
   onValidityChange: (valid: boolean) => void;
 }
 
-function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectFormProps) {
-  const t = useTranslations('WorkExperiencePage');
+function ProjectForm({
+  initial,
+  onSave,
+  formRef,
+  onValidityChange,
+}: ProjectFormProps) {
+  const t = useTranslations("WorkExperiencePage");
   const locale = useLocale();
-  const [name, setName] = useState(initial?.name ?? '');
-  const [url, setUrl] = useState(initial?.url ?? '');
-  const [description, setDescription] = useState(initial?.description ?? '');
+  const [name, setName] = useState(initial?.name ?? "");
+  const [url, setUrl] = useState(initial?.url ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // ── Tech Stack ───────────────────────────────────────────────────────────────
-  const [techStack, setTechStack] = useState<TechStack[]>(initial?.tech_stack ?? []);
-  const [availableTechStacks, setAvailableTechStacks] = useState<TechStack[]>([]);
-  const [mergedSuggestionNames, setMergedSuggestionNames] = useState<string[]>(TECH_SUGGESTIONS);
-  const [techSearch, setTechSearch] = useState('');
+  const [techStack, setTechStack] = useState<TechStack[]>(
+    initial?.tech_stack ?? [],
+  );
+  const [availableTechStacks, setAvailableTechStacks] = useState<TechStack[]>(
+    [],
+  );
+  const [mergedSuggestionNames, setMergedSuggestionNames] =
+    useState<string[]>(TECH_SUGGESTIONS);
+  const [techSearch, setTechSearch] = useState("");
   const [techCreating, setTechCreating] = useState(false);
 
   useEffect(() => {
@@ -496,7 +621,7 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
 
   function addTechStack(ts: TechStack) {
     setTechStack((prev) => [...prev, ts]);
-    setTechSearch('');
+    setTechSearch("");
   }
 
   function removeTechStack(id: number) {
@@ -509,7 +634,9 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
     setTechCreating(true);
     try {
       const created = await createTechStack(trimmed);
-      setAvailableTechStacks((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setAvailableTechStacks((prev) =>
+        [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
+      );
       addTechStack(created);
     } catch {
       // silently fail; user can retry
@@ -530,7 +657,9 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
     setTechCreating(true);
     try {
       const created = await createTechStack(name);
-      setAvailableTechStacks((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setAvailableTechStacks((prev) =>
+        [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
+      );
       addTechStack(created);
     } catch {
       // silently fail
@@ -540,19 +669,29 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
   }
 
   // ── AI Enhance ──────────────────────────────────────────────────────────────
-  const { streamingText, isGenerating, generate, abort, reset: resetLlm } =
-    useGroqProxy({ temperature: 0.7 });
-  const [enhancePreview, setEnhancePreview] = useState('');
+  const {
+    streamingText,
+    isGenerating,
+    generate,
+    abort,
+    reset: resetLlm,
+  } = useGroqProxy({ temperature: 0.7 });
+  const [enhancePreview, setEnhancePreview] = useState("");
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
   const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
-  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState('sm');
+  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("sm");
 
   useEffect(() => {
     if (streamingText) setEnhancePreview(streamingText);
   }, [streamingText]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => () => { if (isGenerating) abort(); }, []);
+  useEffect(
+    () => () => {
+      if (isGenerating) abort();
+    },
+    [],
+  );
 
   const isValid = !saving && name.trim().length > 0;
 
@@ -564,37 +703,40 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
     setShowEnhanceOptions(false);
     const currentText = description.trim();
     if (!currentText) return;
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
-    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
-    const isEs = locale === 'es';
+    const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? {
+      min: 50,
+      max: 75,
+    };
+    const isEs = locale === "es";
     const messages = isEs
       ? [
           {
-            role: 'system' as const,
-            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de proyecto en prosa impactante para un portafolio profesional. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? 's' : ''}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en el problema resuelto, tecnologías usadas, y el impacto logrado. Devuelve únicamente el texto mejorado — sin explicaciones, etiquetas ni marcas de formato.`,
+            role: "system" as const,
+            content: `Eres un coach profesional de carrera. Reescribe y amplía la siguiente descripción de proyecto en prosa impactante para un portafolio profesional. Escribe exactamente ${enhanceParagraphs} párrafo${enhanceParagraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${min} y ${max} palabras. Enfócate en el problema resuelto, tecnologías usadas, y el impacto logrado. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
           },
-          { role: 'user' as const, content: currentText },
+          { role: "user" as const, content: currentText },
         ]
       : [
           {
-            role: 'system' as const,
-            content: `You are a professional career coach and resume expert. Rewrite and expand the following project description into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? 'paragraph' : 'paragraphs'}. Each paragraph must be between ${min} and ${max} words. Focus on the problem solved, technologies used, and measurable impact. Return only the improved text — no explanations, labels, or formatting marks.`,
+            role: "system" as const,
+            content: `You are a professional career coach and resume expert. Rewrite and expand the following project description into polished, impactful prose for a professional portfolio. Write exactly ${enhanceParagraphs} ${enhanceParagraphs === 1 ? "paragraph" : "paragraphs"}. Each paragraph must be between ${min} and ${max} words. Focus on the problem solved, technologies used, and measurable impact. Return only the improved text - no explanations, labels, or formatting marks.`,
           },
-          { role: 'user' as const, content: currentText },
+          { role: "user" as const, content: currentText },
         ];
     await generate(messages);
   };
 
   const handleAcceptEnhance = () => {
     if (enhancePreview) setDescription(enhancePreview);
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
   };
 
   const handleDiscardEnhance = () => {
     if (isGenerating) abort();
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
   };
 
@@ -626,7 +768,7 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
       if (err instanceof CareerError && err.data.detail) {
         setError(String(err.data.detail));
       } else {
-        setError(t('projectSaveError'));
+        setError(t("projectSaveError"));
       }
     } finally {
       setSaving(false);
@@ -634,14 +776,16 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
   }
 
   const llmBusy = isGenerating;
-  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? { min: 50, max: 75 };
+  const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[
+    enhanceParagraphLength
+  ] ?? { min: 50, max: 75 };
 
   return (
     <>
       {showEnhanceOptions && (
         <ConfirmationModal
-          title={t('projectEnhanceOptionsTitle')}
-          text={t('projectEnhanceOptionsText')}
+          title={t("projectEnhanceOptionsTitle")}
+          text={t("projectEnhanceOptionsText")}
           okCallback={handleConfirmEnhanceOptions}
           cancelCallback={() => setShowEnhanceOptions(false)}
         >
@@ -650,55 +794,60 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
               steps={PARAGRAPH_COUNT_STEPS}
               value={enhanceParagraphs}
               onChange={(v) => setEnhanceParagraphs(Number(v))}
-              label={t('projectEnhanceParagraphsLabel')}
+              label={t("projectEnhanceParagraphsLabel")}
             />
             <Slider
               steps={PARAGRAPH_LENGTH_STEPS}
               value={enhanceParagraphLength}
               onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t('projectEnhanceLengthLabel')} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
+              label={`${t("projectEnhanceLengthLabel")} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
             />
           </Box>
         </ConfirmationModal>
       )}
       <form ref={formRef} onSubmit={handleSubmit} className="work-exp__form">
         <TextInput
-          label={t('projectNameLabel')}
+          label={t("projectNameLabel")}
           value={name}
           onChange={setName}
           required
           maxLength={200}
         />
         <TextInput
-          label={t('projectUrlLabel')}
+          label={t("projectUrlLabel")}
           value={url}
           onChange={setUrl}
           maxLength={300}
-          placeholder={t('projectUrlPlaceholder')}
+          placeholder={t("projectUrlPlaceholder")}
         />
 
         {/* Tech Stack picker */}
         <Box display="flex" flexDirection="column" gap={8}>
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('projectTechStackLabel')}
+            {t("projectTechStackLabel")}
           </Typography>
           <TextInput
             value={techSearch}
             onChange={setTechSearch}
-            placeholder={t('projectTechStackPlaceholder')}
+            placeholder={t("projectTechStackPlaceholder")}
             maxLength={100}
-            aria-label={t('projectTechStackLabel')}
+            aria-label={t("projectTechStackLabel")}
           />
           {!techSearch.trim() && (
             <Box display="flex" flexDirection="column" gap={6}>
-              <Typography variant="label" color="var(--muted-foreground, #6b7280)">
-                {t('projectTechStackHint')}
+              <Typography
+                variant="label"
+                color="var(--muted-foreground, #6b7280)"
+              >
+                {t("projectTechStackHint")}
               </Typography>
               <Box display="flex" flexWrap="wrap" gap={6}>
                 {mergedSuggestionNames
                   .filter(
                     (name) =>
-                      !techStack.some((ts) => ts.name.toLowerCase() === name.toLowerCase()),
+                      !techStack.some(
+                        (ts) => ts.name.toLowerCase() === name.toLowerCase(),
+                      ),
                   )
                   .map((name) => (
                     <Button
@@ -715,7 +864,7 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
               </Box>
             </Box>
           )}
-          
+
           {techStack.length > 0 && (
             <Box display="flex" flexWrap="wrap" gap={6} marginTop={8}>
               {techStack.map((ts) => (
@@ -738,7 +887,7 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
                     type="button"
                     className="work-exp__tech-tag-remove"
                     onClick={() => removeTechStack(ts.id)}
-                    aria-label={t('projectTechStackRemove', { name: ts.name })}
+                    aria-label={t("projectTechStackRemove", { name: ts.name })}
                   >
                     ×
                   </Button>
@@ -768,7 +917,7 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
                   disabled={techCreating}
                   onClick={handleCreateTechStack}
                 >
-                  + {t('projectTechStackAdd', { name: techSearch.trim() })}
+                  + {t("projectTechStackAdd", { name: techSearch.trim() })}
                 </Button>
               )}
             </Box>
@@ -778,11 +927,11 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
         {/* Description label row with voice + enhance buttons */}
         <Box className="work-exp__field-label-row">
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('projectDescriptionLabel')}
+            {t("projectDescriptionLabel")}
           </Typography>
           <Box display="flex" alignItems="center" gap={6}>
             <SpeechButton
-              language={locale === 'es' ? 'es' : 'en'}
+              language={locale === "es" ? "es" : "en"}
               onTranscript={handleTranscript}
               micIcon="/icons/mic.svg"
             />
@@ -791,16 +940,24 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
               type="button"
               icon="/icons/enhance.svg"
               iconSize="16px"
-              iconColor={enhancePreview ? 'var(--primary, #06b6d4)' : 'var(--foreground, #171717)'}
+              iconColor={
+                enhancePreview
+                  ? "var(--primary, #06b6d4)"
+                  : "var(--foreground, #171717)"
+              }
               disabled={llmBusy || !description.trim()}
               onClick={() => setShowEnhanceOptions(true)}
-              aria-label={t('projectEnhanceLabel')}
-              title={t('projectEnhanceLabel')}
+              aria-label={t("projectEnhanceLabel")}
+              title={t("projectEnhanceLabel")}
               className={[
-                'work-exp__enhance-btn',
-                llmBusy || !description.trim() ? 'work-exp__enhance-btn--busy' : '',
-                enhancePreview ? 'work-exp__enhance-btn--active' : '',
-              ].filter(Boolean).join(' ')}
+                "work-exp__enhance-btn",
+                llmBusy || !description.trim()
+                  ? "work-exp__enhance-btn--busy"
+                  : "",
+                enhancePreview ? "work-exp__enhance-btn--active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             />
           </Box>
         </Box>
@@ -810,9 +967,9 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
           value={description}
           onChange={setDescription}
           maxLength={2000}
-          placeholder={t('projectDescriptionPlaceholder')}
+          placeholder={t("projectDescriptionPlaceholder")}
           width="100%"
-          aria-label={t('projectDescriptionLabel')}
+          aria-label={t("projectDescriptionLabel")}
         />
 
         {/* Enhance preview panel */}
@@ -826,11 +983,27 @@ function ProjectForm({ initial, onSave, formRef, onValidityChange }: ProjectForm
             <Typography variant="body-sm">{enhancePreview}</Typography>
             <Box display="flex" gap={8} alignItems="center" marginTop={12}>
               {isGenerating ? (
-                <Button text={t('projectEnhanceStop')} type="button" size="md" onClick={handleDiscardEnhance} />
+                <Button
+                  text={t("projectEnhanceStop")}
+                  type="button"
+                  size="md"
+                  onClick={handleDiscardEnhance}
+                />
               ) : (
                 <>
-                  <Button text={t('projectEnhanceDiscard')} type="button" size="md" onClick={handleDiscardEnhance} />
-                  <Button text={t('projectEnhanceAccept')} type="button" size="md" kind="success" onClick={handleAcceptEnhance} />
+                  <Button
+                    text={t("projectEnhanceDiscard")}
+                    type="button"
+                    size="md"
+                    onClick={handleDiscardEnhance}
+                  />
+                  <Button
+                    text={t("projectEnhanceAccept")}
+                    type="button"
+                    size="md"
+                    kind="success"
+                    onClick={handleAcceptEnhance}
+                  />
                 </>
               )}
             </Box>
@@ -856,15 +1029,17 @@ interface ProjectCardProps {
 }
 
 function ProjectCard({ entry, onEdit, onDelete }: ProjectCardProps) {
-  const t = useTranslations('WorkExperiencePage');
+  const t = useTranslations("WorkExperiencePage");
 
   return (
-    <Card
-      className="work-exp__card"
-      gap={8}
-      padding={16}
-    >
-      <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={12} flexWrap="wrap">
+    <Card className="work-exp__card" gap={8} padding={16}>
+      <Box
+        display="flex"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={12}
+        flexWrap="wrap"
+      >
         <Typography as="h3" variant="body" fontWeight={700}>
           {entry.name}
         </Typography>
@@ -884,7 +1059,11 @@ function ProjectCard({ entry, onEdit, onDelete }: ProjectCardProps) {
       {entry.tech_stack && entry.tech_stack.length > 0 && (
         <Box display="flex" flexWrap="wrap" gap={6}>
           {entry.tech_stack.map((ts) => (
-            <Badge key={ts.id} variant="subtle" color="var(--muted-foreground, #6b7280)">
+            <Badge
+              key={ts.id}
+              variant="subtle"
+              color="var(--muted-foreground, #6b7280)"
+            >
               {ts.name}
             </Badge>
           ))}
@@ -902,8 +1081,19 @@ function ProjectCard({ entry, onEdit, onDelete }: ProjectCardProps) {
         </Typography>
       )}
       <Box display="flex" gap={8} justifyContent="flex-end" marginTop={4}>
-        <Button text={t('delete')} type="button" size="md" kind="error" onClick={() => onDelete(entry.id)} />
-        <Button text={t('edit')} type="button" size="md" onClick={() => onEdit(entry)} />
+        <Button
+          text={t("delete")}
+          type="button"
+          size="md"
+          kind="error"
+          onClick={() => onDelete(entry.id)}
+        />
+        <Button
+          text={t("edit")}
+          type="button"
+          size="md"
+          onClick={() => onEdit(entry)}
+        />
       </Box>
     </Card>
   );
@@ -912,7 +1102,7 @@ function ProjectCard({ entry, onEdit, onDelete }: ProjectCardProps) {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function WorkExperiencePage() {
-  const t = useTranslations('WorkExperiencePage');
+  const t = useTranslations("WorkExperiencePage");
 
   // ── Work experience state ────────────────────────────────────────────────────
   const [entries, setEntries] = useState<WorkExperience[]>([]);
@@ -928,15 +1118,20 @@ export function WorkExperiencePage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectFormOpen, setProjectFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [pendingDeleteProjectId, setPendingDeleteProjectId] = useState<number | null>(null);
+  const [pendingDeleteProjectId, setPendingDeleteProjectId] = useState<
+    number | null
+  >(null);
   const projectFormRef = useRef<HTMLFormElement>(null);
   const [projectFormCanSubmit, setProjectFormCanSubmit] = useState(false);
 
   // ── Toast ────────────────────────────────────────────────────────────────────
-  const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{
+    text: string;
+    kind: "success" | "error";
+  } | null>(null);
   const [toastKey, setToastKey] = useState(0);
 
-  function showToast(text: string, kind: 'success' | 'error') {
+  function showToast(text: string, kind: "success" | "error") {
     setToast({ text, kind });
     setToastKey((k) => k + 1);
   }
@@ -945,11 +1140,14 @@ export function WorkExperiencePage() {
     setLoading(true);
     setError(null);
     try {
-      const [weRes, projRes] = await Promise.all([getWorkExperiences(), getProjects()]);
+      const [weRes, projRes] = await Promise.all([
+        getWorkExperiences(),
+        getProjects(),
+      ]);
       setEntries(weRes.results);
       setProjects(projRes.results);
     } catch {
-      setError(t('errorLoad'));
+      setError(t("errorLoad"));
     } finally {
       setLoading(false);
     }
@@ -983,16 +1181,19 @@ export function WorkExperiencePage() {
         : prev.map((e) => (e.id === entry.id ? entry : e)),
     );
     closeForm();
-    showToast(editing === null ? t('savedSuccess') : t('updatedSuccess'), 'success');
+    showToast(
+      editing === null ? t("savedSuccess") : t("updatedSuccess"),
+      "success",
+    );
   }
 
   async function handleDelete(id: number) {
     try {
       await deleteWorkExperience(id);
       setEntries((prev) => prev.filter((e) => e.id !== id));
-      showToast(t('deletedSuccess'), 'success');
+      showToast(t("deletedSuccess"), "success");
     } catch {
-      showToast(t('deleteError'), 'error');
+      showToast(t("deleteError"), "error");
     }
   }
 
@@ -1020,16 +1221,21 @@ export function WorkExperiencePage() {
         : prev.map((p) => (p.id === entry.id ? entry : p)),
     );
     closeProjectForm();
-    showToast(editingProject === null ? t('projectSavedSuccess') : t('projectUpdatedSuccess'), 'success');
+    showToast(
+      editingProject === null
+        ? t("projectSavedSuccess")
+        : t("projectUpdatedSuccess"),
+      "success",
+    );
   }
 
   async function handleProjectDelete(id: number) {
     try {
       await deleteProject(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
-      showToast(t('projectDeletedSuccess'), 'success');
+      showToast(t("projectDeletedSuccess"), "success");
     } catch {
-      showToast(t('projectDeleteError'), 'error');
+      showToast(t("projectDeleteError"), "error");
     }
   }
 
@@ -1038,9 +1244,13 @@ export function WorkExperiencePage() {
       <Container
         display="flex"
         alignItems="center"
-        styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center' }}
+        styles={{
+          minHeight: "100vh",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
       >
-        <ProgressBar label={t('loading')} />
+        <ProgressBar label={t("loading")} />
       </Container>
     );
   }
@@ -1050,12 +1260,17 @@ export function WorkExperiencePage() {
       <Container
         display="flex"
         alignItems="center"
-        styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center', gap: '16px' }}
+        styles={{
+          minHeight: "100vh",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: "16px",
+        }}
       >
         <Typography variant="body-sm" color="var(--error, #ef4444)">
           {error}
         </Typography>
-        <Button text={t('retry')} type="button" size="md" onClick={load} />
+        <Button text={t("retry")} type="button" size="md" onClick={load} />
       </Container>
     );
   }
@@ -1063,13 +1278,13 @@ export function WorkExperiencePage() {
   return (
     <Container
       paddingX={10}
-      styles={{ paddingTop: 'var(--ui-navbar-height)', paddingBottom: '60px' }}
+      styles={{ paddingTop: "var(--ui-navbar-height)", paddingBottom: "60px" }}
     >
       {/* Work experience delete confirmation */}
       {pendingDeleteId !== null && (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText')}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText")}
           okCallback={() => {
             const id = pendingDeleteId;
             setPendingDeleteId(null);
@@ -1082,7 +1297,7 @@ export function WorkExperiencePage() {
       {/* Work experience form modal */}
       {formOpen && (
         <ConfirmationModal
-          title={editing ? t('editTitle') : t('addTitle')}
+          title={editing ? t("editTitle") : t("addTitle")}
           text=""
           okCallback={() => formRef.current?.requestSubmit()}
           cancelCallback={closeForm}
@@ -1101,8 +1316,8 @@ export function WorkExperiencePage() {
       {/* Project delete confirmation */}
       {pendingDeleteProjectId !== null && (
         <ConfirmationModal
-          title={t('projectConfirmDeleteTitle')}
-          text={t('projectConfirmDeleteText')}
+          title={t("projectConfirmDeleteTitle")}
+          text={t("projectConfirmDeleteText")}
           okCallback={() => {
             const id = pendingDeleteProjectId;
             setPendingDeleteProjectId(null);
@@ -1115,7 +1330,7 @@ export function WorkExperiencePage() {
       {/* Project form modal */}
       {projectFormOpen && (
         <ConfirmationModal
-          title={editingProject ? t('editProjectTitle') : t('addProjectTitle')}
+          title={editingProject ? t("editProjectTitle") : t("addProjectTitle")}
           text=""
           okCallback={() => projectFormRef.current?.requestSubmit()}
           cancelCallback={closeProjectForm}
@@ -1144,21 +1359,36 @@ export function WorkExperiencePage() {
       >
         <Box display="flex" flexDirection="column" gap={4}>
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
-            {t('title')}
+            {t("title")}
           </Typography>
-          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-            {t('subtitle')}
+          <Typography
+            variant="body-sm"
+            color="var(--muted-foreground, #6b7280)"
+          >
+            {t("subtitle")}
           </Typography>
         </Box>
-        <Button text={t('addEntry')} type="button" size="md" kind="success" onClick={openAdd} />
+        <Button
+          text={t("addEntry")}
+          type="button"
+          size="md"
+          kind="success"
+          onClick={openAdd}
+        />
       </Box>
 
       {entries.length === 0 ? (
         <Box className="work-exp__empty" marginBottom={48}>
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('empty')}
+            {t("empty")}
           </Typography>
-          <Button text={t('addEntry')} type="button" size="md" kind="success" onClick={openAdd} />
+          <Button
+            text={t("addEntry")}
+            type="button"
+            size="md"
+            kind="success"
+            onClick={openAdd}
+          />
         </Box>
       ) : (
         <Grid container spacing={2} marginBottom={48}>
@@ -1186,21 +1416,36 @@ export function WorkExperiencePage() {
       >
         <Box display="flex" flexDirection="column" gap={4}>
           <Typography as="h2" variant="h2" fontWeight={600} marginBottom={4}>
-            {t('projectsTitle')}
+            {t("projectsTitle")}
           </Typography>
-          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-            {t('projectsSubtitle')}
+          <Typography
+            variant="body-sm"
+            color="var(--muted-foreground, #6b7280)"
+          >
+            {t("projectsSubtitle")}
           </Typography>
         </Box>
-        <Button text={t('addProject')} type="button" size="md" kind="success" onClick={openAddProject} />
+        <Button
+          text={t("addProject")}
+          type="button"
+          size="md"
+          kind="success"
+          onClick={openAddProject}
+        />
       </Box>
 
       {projects.length === 0 ? (
         <Box className="work-exp__empty">
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t('projectEmpty')}
+            {t("projectEmpty")}
           </Typography>
-          <Button text={t('addProject')} type="button" size="md" kind="success" onClick={openAddProject} />
+          <Button
+            text={t("addProject")}
+            type="button"
+            size="md"
+            kind="success"
+            onClick={openAddProject}
+          />
         </Box>
       ) : (
         <Grid container spacing={2} marginBottom={40}>
@@ -1216,7 +1461,14 @@ export function WorkExperiencePage() {
         </Grid>
       )}
 
-      {toast && <Toast key={toastKey} message={toast.text} variant={toast.kind} position="top-center" />}
+      {toast && (
+        <Toast
+          key={toastKey}
+          message={toast.text}
+          variant={toast.kind}
+          position="top-center"
+        />
+      )}
     </Container>
   );
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/actions/rife.sh — AI FPS interpolation via rife-ncnn-vulkan
+# lib/actions/rife.sh - AI FPS interpolation via rife-ncnn-vulkan
 # Depends on: probe.sh, progress.sh, encoders.sh, ui.sh
 
 # ── State globals ─────────────────────────────────────────────────────────────
@@ -85,11 +85,11 @@ bootstrap_rife() {
 # Handles MPG pre-conversion automatically.
 #
 # Arguments:
-#   src            — path to the source video (may be an intermediate temp file)
-#   original_input — original input file (for audio remux)
-#   output         — final output path  (or a temp path when chaining into Video2X)
-#   vf_chain[]     — nameref of pending CPU filters to bake in during frame extraction
-#   dur_sec        — probed duration (for run_ffmpeg_step progress bar)
+#   src            - path to the source video (may be an intermediate temp file)
+#   original_input - original input file (for audio remux)
+#   output         - final output path  (or a temp path when chaining into Video2X)
+#   vf_chain[]     - nameref of pending CPU filters to bake in during frame extraction
+#   dur_sec        - probed duration (for run_ffmpeg_step progress bar)
 #   rife_multiplier
 #   use_gpu gpu_encoder use_h265
 #
@@ -189,7 +189,7 @@ run_rife() {
       "${output}"; then
     # VA-API failure path: retry CPU
     if [[ "${use_gpu}" -eq 1 && ("${gpu_encoder}" == *vaapi* || "${gpu_encoder}" == *nvenc*) ]]; then
-      printf "    %s GPU encode failed — retrying with CPU...\n" "$(clr_yellow '⚠')"
+      printf "    %s GPU encode failed - retrying with CPU...\n" "$(clr_yellow '⚠')"
       build_encode_args_cpu_fallback "${use_h265}"
       if ! run_ffmpeg_step "${RIFE_STEP_ENCODE}" "${dur_sec}" \
           -framerate "${out_fps_rational}" -i "${rife_out_dir}/%08d.png" \

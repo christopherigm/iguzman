@@ -61,7 +61,7 @@ setup_strings() {
   if [[ "${lang}" == "es" ]]; then
     WELCOME="Limpieza de Imágenes Docker / MicroK8s"
     SUBTITLE="Escanea y elimina imágenes no utilizadas para liberar espacio."
-    DRY_RUN_NOTE="MODO SIMULACIÓN — no se eliminarán datos"
+    DRY_RUN_NOTE="MODO SIMULACIÓN - no se eliminarán datos"
     RUNTIME_PROMPT="¿Qué motor de contenedores deseas gestionar? [docker/microk8s]"
     RUNTIME_NOT_FOUND="No se encontró Docker ni MicroK8s en el sistema."
     SCANNING_IMAGES="Escaneando imágenes..."
@@ -111,7 +111,7 @@ setup_strings() {
   else
     WELCOME="Docker / MicroK8s Image Cleanup"
     SUBTITLE="Scan and remove unused images to free up disk space."
-    DRY_RUN_NOTE="DRY-RUN MODE — no data will be deleted"
+    DRY_RUN_NOTE="DRY-RUN MODE - no data will be deleted"
     RUNTIME_PROMPT="Which container runtime do you want to manage? [docker/microk8s]"
     RUNTIME_NOT_FOUND="Neither Docker nor MicroK8s was found on this system."
     SCANNING_IMAGES="Scanning images..."

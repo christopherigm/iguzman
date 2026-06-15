@@ -22,7 +22,6 @@
   width: 100%;
 }
 
-
 .detail__cover-letter .ui-text-input-multirow {
   line-height: 1.8;
   resize: none;
@@ -50,7 +49,8 @@
   margin-top: 0;
 }
 
-@media (min-width: 600px) { /* sm — buttons sit beside the title column */
+@media (min-width: 600px) {
+  /* sm - buttons sit beside the title column */
   .detail__header-actions {
     margin-top: 30px;
   }
@@ -100,7 +100,10 @@
   color: var(--foreground);
   cursor: pointer;
   padding: 0;
-  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
 }
 
 .detail__intel-nav-btn:hover {
@@ -125,7 +128,9 @@
   cursor: pointer;
   line-height: 1;
   flex-shrink: 0;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .detail__metric-explain-btn:hover {
@@ -141,6 +146,12 @@
   flex-shrink: 0;
 }
 
-.detail__signal-dot--positive { background: #22c55e; }
-.detail__signal-dot--mixed { background: #f59e0b; }
-.detail__signal-dot--concerning { background: #ef4444; }
+.detail__signal-dot--positive {
+  background: #22c55e;
+}
+.detail__signal-dot--mixed {
+  background: #f59e0b;
+}
+.detail__signal-dot--concerning {
+  background: #ef4444;
+}

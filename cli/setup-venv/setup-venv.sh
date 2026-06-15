@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup-venv.sh — create and populate a Python venv for a Django app
+# setup-venv.sh - create and populate a Python venv for a Django app
 #
 # Discovers Django apps (those with manage.py + requirements.txt) under apps/,
 # lets the user pick one interactively, then:
@@ -46,7 +46,7 @@ setup_strings() {
     PREREQ_CMD="bash cli/setup-dev-env/setup-dev-env.sh"
     STEP_VENV="[1/2] Entorno virtual"
     STEP_DEPS="[2/2] Instalando dependencias"
-    VENV_EXISTS="El venv ya existe — recreando..."
+    VENV_EXISTS="El venv ya existe - recreando..."
     VENV_CREATING="Creando entorno virtual en"
     VENV_DONE="Entorno virtual creado."
     DEPS_INSTALLING="Instalando dependencias desde requirements.txt..."
@@ -67,7 +67,7 @@ setup_strings() {
     PREREQ_CMD="bash cli/setup-dev-env/setup-dev-env.sh"
     STEP_VENV="[1/2] Virtual environment"
     STEP_DEPS="[2/2] Installing dependencies"
-    VENV_EXISTS="venv already exists — recreating..."
+    VENV_EXISTS="venv already exists - recreating..."
     VENV_CREATING="Creating virtual environment at"
     VENV_DONE="Virtual environment created."
     DEPS_INSTALLING="Installing dependencies from requirements.txt..."

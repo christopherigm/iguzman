@@ -9,7 +9,7 @@ export interface Actor {
   name: string;
 }
 
-export type MovieFormat = 'dvd' | 'bluray' | '4k' | 'other' | '';
+export type MovieFormat = "dvd" | "bluray" | "4k" | "other" | "";
 
 export interface Movie {
   id: number;
@@ -31,8 +31,11 @@ export interface MovieDetail extends Movie {
 }
 
 export class ApiError extends Error {
-  constructor(public readonly status: number, public readonly data: Record<string, unknown>) {
-    super('API request failed');
+  constructor(
+    public readonly status: number,
+    public readonly data: Record<string, unknown>,
+  ) {
+    super("API request failed");
   }
 }
 
@@ -57,16 +60,19 @@ export interface MovieFilters {
 // dropdown fetches them in a single page rather than paginating.
 const CATEGORY_PAGE_SIZE = 200;
 
-export async function getMovies(filters: MovieFilters = {}): Promise<Paginated<Movie>> {
+export async function getMovies(
+  filters: MovieFilters = {},
+): Promise<Paginated<Movie>> {
   const params = new URLSearchParams();
-  if (filters.search) params.set('search', filters.search);
-  if (filters.genre) params.set('genre', filters.genre);
-  // Sent as "media_format" — DRF reserves the "format" query param for content negotiation.
-  if (filters.format) params.set('media_format', filters.format);
-  if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+  if (filters.search) params.set("search", filters.search);
+  if (filters.genre) params.set("genre", filters.genre);
+  // Sent as "media_format" - DRF reserves the "format" query param for content negotiation.
+  if (filters.format) params.set("media_format", filters.format);
+  if (filters.page && filters.page > 1)
+    params.set("page", String(filters.page));
   const qs = params.toString();
 
-  const res = await fetch(`/api/catalog/movies${qs ? `?${qs}` : ''}`);
+  const res = await fetch(`/api/catalog/movies${qs ? `?${qs}` : ""}`);
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
@@ -84,7 +90,7 @@ export async function getMovie(id: string | number): Promise<MovieDetail> {
 }
 
 export async function deleteMovie(id: string | number): Promise<void> {
-  const res = await fetch(`/api/catalog/movies/${id}`, { method: 'DELETE' });
+  const res = await fetch(`/api/catalog/movies/${id}`, { method: "DELETE" });
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
@@ -92,7 +98,9 @@ export async function deleteMovie(id: string | number): Promise<void> {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  const res = await fetch(`/api/catalog/categories?page_size=${CATEGORY_PAGE_SIZE}`);
+  const res = await fetch(
+    `/api/catalog/categories?page_size=${CATEGORY_PAGE_SIZE}`,
+  );
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);

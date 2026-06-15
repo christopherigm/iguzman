@@ -1,26 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { useRouter } from '@repo/i18n/navigation';
-import { Container } from '@repo/ui/core-elements/container';
-import { Box } from '@repo/ui/core-elements/box';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Button } from '@repo/ui/core-elements/button';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { Badge } from '@repo/ui/core-elements/badge';
-import { Slider } from '@repo/ui/core-elements/slider';
-import type { SliderStep } from '@repo/ui/core-elements/slider';
-import { saveOnboarding, getProfile, uploadResume } from '@/lib/auth';
-import type { ResumeImportResult } from '@/lib/auth';
-import { getPopularTechStacks } from '@/lib/career';
-import './onboarding-form.css';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@repo/i18n/navigation";
+import { Container } from "@repo/ui/core-elements/container";
+import { Box } from "@repo/ui/core-elements/box";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Button } from "@repo/ui/core-elements/button";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { Slider } from "@repo/ui/core-elements/slider";
+import type { SliderStep } from "@repo/ui/core-elements/slider";
+import { saveOnboarding, getProfile, uploadResume } from "@/lib/auth";
+import type { ResumeImportResult } from "@/lib/auth";
+import { getPopularTechStacks } from "@/lib/career";
+import "./onboarding-form.css";
 
 // ── Readiness handshake ──────────────────────────────────────────────────────
 
 function ReadinessHandshake() {
-  const t = useTranslations('OnboardingPage');
+  const t = useTranslations("OnboardingPage");
   return (
     <Box className="onboarding__handshake">
       <Box className="onboarding__handshake-icon" aria-hidden={true}>
@@ -42,13 +42,13 @@ function ReadinessHandshake() {
       </Box>
       <Box display="flex" flexDirection="column" gap={4}>
         <Typography variant="body-sm" fontWeight={700}>
-          {t('handshakeTitle')}
+          {t("handshakeTitle")}
         </Typography>
         <Typography variant="body" color="var(--foreground)">
-          {t('handshakeBody')}
+          {t("handshakeBody")}
         </Typography>
         <Typography variant="label" color="var(--success, #22c55e)">
-          {t('handshakeDetail')}
+          {t("handshakeDetail")}
         </Typography>
       </Box>
     </Box>
@@ -58,33 +58,71 @@ function ReadinessHandshake() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const YEARS_STEPS: SliderStep[] = [
-  { value: 0, label: '< 1' },
-  { value: 1, label: '1-2' },
-  { value: 3, label: '3-5' },
-  { value: 6, label: '6-9' },
-  { value: 10, label: '10-14' },
-  { value: 15, label: '15+' },
+  { value: 0, label: "< 1" },
+  { value: 1, label: "1-2" },
+  { value: 3, label: "3-5" },
+  { value: 6, label: "6-9" },
+  { value: 10, label: "10-14" },
+  { value: 15, label: "15+" },
 ];
 
 const FALLBACK_TECH_SUGGESTIONS = [
-  'TypeScript', 'JavaScript', 'Python', 'Go', 'Rust', 'Java', 'C#', 'Ruby', 'PHP',
-  'React', 'Next.js', 'Vue', 'Angular', 'Svelte',
-  'Node.js', 'Django', 'FastAPI', 'Spring Boot', '.NET',
-  'PostgreSQL', 'MySQL', 'MongoDB', 'Redis',
-  'Docker', 'Kubernetes', 'AWS', 'GCP', 'Azure',
-  'GraphQL', 'REST', 'gRPC', 'Terraform', 'Linux',
+  "TypeScript",
+  "JavaScript",
+  "Python",
+  "Go",
+  "Rust",
+  "Java",
+  "C#",
+  "Ruby",
+  "PHP",
+  "React",
+  "Next.js",
+  "Vue",
+  "Angular",
+  "Svelte",
+  "Node.js",
+  "Django",
+  "FastAPI",
+  "Spring Boot",
+  ".NET",
+  "PostgreSQL",
+  "MySQL",
+  "MongoDB",
+  "Redis",
+  "Docker",
+  "Kubernetes",
+  "AWS",
+  "GCP",
+  "Azure",
+  "GraphQL",
+  "REST",
+  "gRPC",
+  "Terraform",
+  "Linux",
 ];
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
-  const t = useTranslations('OnboardingPage');
+  const t = useTranslations("OnboardingPage");
   return (
-    <Box display="flex" flexDirection="column" gap={8} alignItems="center" width="100%">
+    <Box
+      display="flex"
+      flexDirection="column"
+      gap={8}
+      alignItems="center"
+      width="100%"
+    >
       <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-        {t('stepOf', { current, total })}
+        {t("stepOf", { current, total })}
       </Typography>
-      <Box display="flex" alignItems="center" gap={0} className="onboarding__steps">
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={0}
+        className="onboarding__steps"
+      >
         {Array.from({ length: total }, (_, i) => {
           const num = i + 1;
           const done = num < current;
@@ -93,29 +131,29 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
             <Box key={num} display="flex" alignItems="center" gap={0}>
               <Box
                 className={[
-                  'onboarding__step-dot',
-                  done ? 'onboarding__step-dot--done' : '',
-                  active ? 'onboarding__step-dot--active' : '',
+                  "onboarding__step-dot",
+                  done ? "onboarding__step-dot--done" : "",
+                  active ? "onboarding__step-dot--active" : "",
                 ]
                   .filter(Boolean)
-                  .join(' ')}
+                  .join(" ")}
               >
                 <Typography
                   variant="label"
                   fontWeight={600}
-                  styles={{ lineHeight: '1' }}
+                  styles={{ lineHeight: "1" }}
                 >
-                  {done ? '✓' : String(num)}
+                  {done ? "✓" : String(num)}
                 </Typography>
               </Box>
               {num < total && (
                 <Box
                   className={[
-                    'onboarding__step-line',
-                    done ? 'onboarding__step-line--done' : '',
+                    "onboarding__step-line",
+                    done ? "onboarding__step-line--done" : "",
                   ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                 />
               )}
             </Box>
@@ -137,15 +175,15 @@ function TechTagInput({
   onChange: (tags: string[]) => void;
   suggestions?: string[];
 }) {
-  const t = useTranslations('OnboardingPage');
-  const [input, setInput] = useState('');
+  const t = useTranslations("OnboardingPage");
+  const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   function addTag(raw: string) {
-    const tag = raw.trim().replace(/,$/, '');
+    const tag = raw.trim().replace(/,$/, "");
     if (!tag || tags.includes(tag)) return;
     onChange([...tags, tag]);
-    setInput('');
+    setInput("");
   }
 
   function removeTag(tag: string) {
@@ -153,10 +191,10 @@ function TechTagInput({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
       addTag(input);
-    } else if (e.key === 'Backspace' && !input && tags.length > 0) {
+    } else if (e.key === "Backspace" && !input && tags.length > 0) {
       onChange(tags.slice(0, -1));
     }
   }
@@ -177,16 +215,19 @@ function TechTagInput({
         fontWeight={600}
         color="var(--foreground, #1a1a1a)"
       >
-        {t('techStackLabel')}
+        {t("techStackLabel")}
       </Typography>
 
       {tags.length > 0 && (
-        <Box display="flex" flexWrap="wrap" gap={8} className="onboarding__tags">
+        <Box
+          display="flex"
+          flexWrap="wrap"
+          gap={8}
+          className="onboarding__tags"
+        >
           {tags.map((tag) => (
             <Box key={tag} className="onboarding__tag">
-              <Typography variant="body">
-                {tag}
-              </Typography>
+              <Typography variant="body">{tag}</Typography>
               <Button
                 unstyled
                 type="button"
@@ -203,21 +244,20 @@ function TechTagInput({
 
       <TextInput
         ref={inputRef}
-        placeholder={t('techStackPlaceholder')}
+        placeholder={t("techStackPlaceholder")}
         value={input}
         onChange={setInput}
         onKeyDown={handleKeyDown}
-        onBlur={() => { if (input.trim()) addTag(input); }}
-        aria-label={t('techStackLabel')}
+        onBlur={() => {
+          if (input.trim()) addTag(input);
+        }}
+        aria-label={t("techStackLabel")}
         width="100%"
       />
 
       <Box display="flex" flexDirection="column" gap={6}>
-        <Typography
-          variant="label"
-          color="var(--muted-foreground, #6b7280)"
-        >
-          {t('techStackHint')}
+        <Typography variant="label" color="var(--muted-foreground, #6b7280)">
+          {t("techStackHint")}
         </Typography>
         <Box display="flex" flexWrap="wrap" gap={6}>
           {(suggestions ?? FALLBACK_TECH_SUGGESTIONS).map((tech) => (
@@ -226,11 +266,11 @@ function TechTagInput({
               unstyled
               type="button"
               className={[
-                'onboarding__suggestion',
-                tags.includes(tech) ? 'onboarding__suggestion--selected' : '',
+                "onboarding__suggestion",
+                tags.includes(tech) ? "onboarding__suggestion--selected" : "",
               ]
                 .filter(Boolean)
-                .join(' ')}
+                .join(" ")}
               onClick={() => toggleSuggestion(tech)}
             >
               {tech}
@@ -245,20 +285,26 @@ function TechTagInput({
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function OnboardingForm() {
-  const t = useTranslations('OnboardingPage');
+  const t = useTranslations("OnboardingPage");
   const router = useRouter();
 
   const [step, setStep] = useState(1);
-  const [jobTitle, setJobTitle] = useState('');
-  const [yearsValue, setYearsValue] = useState<string | number>(YEARS_STEPS[0]!.value);
+  const [jobTitle, setJobTitle] = useState("");
+  const [yearsValue, setYearsValue] = useState<string | number>(
+    YEARS_STEPS[0]!.value,
+  );
   const [techStack, setTechStack] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [popularTechSuggestions, setPopularTechSuggestions] = useState<string[]>(FALLBACK_TECH_SUGGESTIONS);
+  const [popularTechSuggestions, setPopularTechSuggestions] = useState<
+    string[]
+  >(FALLBACK_TECH_SUGGESTIONS);
 
-  type ResumeState = 'idle' | 'uploading' | 'done' | 'error' | 'skipped';
-  const [resumeState, setResumeState] = useState<ResumeState>('idle');
-  const [resumeResult, setResumeResult] = useState<ResumeImportResult | null>(null);
+  type ResumeState = "idle" | "uploading" | "done" | "error" | "skipped";
+  const [resumeState, setResumeState] = useState<ResumeState>("idle");
+  const [resumeResult, setResumeResult] = useState<ResumeImportResult | null>(
+    null,
+  );
   const [resumeError, setResumeError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -268,15 +314,17 @@ export function OnboardingForm() {
     getProfile()
       .then((profile) => {
         if (profile.job_title) {
-          router.replace('/matrix');
+          router.replace("/matrix");
         }
       })
       .catch(() => {
-        // not logged in — proxy will redirect to /auth
+        // not logged in - proxy will redirect to /auth
       });
     getPopularTechStacks()
       .then((res) => {
-        const lower = new Set(FALLBACK_TECH_SUGGESTIONS.map((s) => s.toLowerCase()));
+        const lower = new Set(
+          FALLBACK_TECH_SUGGESTIONS.map((s) => s.toLowerCase()),
+        );
         const apiOnly = res.results
           .map((ts) => ts.name)
           .filter((n) => !lower.has(n.toLowerCase()));
@@ -291,32 +339,45 @@ export function OnboardingForm() {
     try {
       await saveOnboarding({
         job_title: jobTitle.trim(),
-        years_of_experience: typeof yearsValue === 'number' ? yearsValue : null,
+        years_of_experience: typeof yearsValue === "number" ? yearsValue : null,
         preferred_stack: techStack,
       });
-      router.push('/matrix');
+      router.push("/matrix");
     } catch {
-      setError(t('errorSave'));
+      setError(t("errorSave"));
     } finally {
       setSaving(false);
     }
   }, [jobTitle, yearsValue, techStack, router, t]);
 
-  const handleResumeFile = useCallback(async (file: File) => {
-    setResumeError(null);
-    setResumeState('uploading');
-    try {
-      const result = await uploadResume(file);
-      setResumeResult(result);
-      setResumeState('done');
-    } catch {
-      setResumeState('error');
-      setResumeError(t('resumeError'));
-    }
-  }, [t]);
+  const handleResumeFile = useCallback(
+    async (file: File) => {
+      setResumeError(null);
+      setResumeState("uploading");
+      try {
+        const result = await uploadResume(file);
+        setResumeResult(result);
+        setResumeState("done");
+      } catch {
+        setResumeState("error");
+        setResumeError(t("resumeError"));
+      }
+    },
+    [t],
+  );
 
-  const stepTitles = [t('step1Title'), t('step2Title'), t('step3Title'), t('step4Title')];
-  const stepSubtitles = [t('step1Subtitle'), t('step2Subtitle'), t('step3Subtitle'), t('step4Subtitle')];
+  const stepTitles = [
+    t("step1Title"),
+    t("step2Title"),
+    t("step3Title"),
+    t("step4Title"),
+  ];
+  const stepSubtitles = [
+    t("step1Subtitle"),
+    t("step2Subtitle"),
+    t("step3Subtitle"),
+    t("step4Subtitle"),
+  ];
 
   const yearsLabel = (() => {
     const step = YEARS_STEPS.find((s) => s.value === yearsValue);
@@ -328,19 +389,19 @@ export function OnboardingForm() {
       display="flex"
       alignItems="center"
       styles={{
-        minHeight: '100vh',
-        flexDirection: 'column',
-        justifyContent: 'flex-start',
-        paddingTop: 'var(--ui-navbar-height)',
+        minHeight: "100vh",
+        flexDirection: "column",
+        justifyContent: "flex-start",
+        paddingTop: "var(--ui-navbar-height)",
       }}
       paddingX={10}
     >
       <Box width="100%" maxWidth={520} marginTop={24} marginBottom={16}>
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
-          {t('title')}
+          {t("title")}
         </Typography>
         <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-          {t('subtitle')}
+          {t("subtitle")}
         </Typography>
       </Box>
 
@@ -363,7 +424,10 @@ export function OnboardingForm() {
           <Typography as="h2" variant="h3" fontWeight={600}>
             {stepTitles[step - 1]}
           </Typography>
-          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+          <Typography
+            variant="body-sm"
+            color="var(--muted-foreground, #6b7280)"
+          >
             {stepSubtitles[step - 1]}
           </Typography>
         </Box>
@@ -372,15 +436,15 @@ export function OnboardingForm() {
         {step === 1 && (
           <Box display="flex" flexDirection="column" gap={20}>
             <TextInput
-              label={t('jobTitleLabel')}
+              label={t("jobTitleLabel")}
               type="text"
               value={jobTitle}
               onChange={setJobTitle}
-              placeholder={t('jobTitlePlaceholder')}
+              placeholder={t("jobTitlePlaceholder")}
               autoComplete="organization-title"
             />
             <Slider
-              label={t('yearsLabel')}
+              label={t("yearsLabel")}
               steps={YEARS_STEPS}
               value={yearsValue}
               onChange={setYearsValue}
@@ -400,21 +464,27 @@ export function OnboardingForm() {
         {/* ── Step 3: Resume upload ── */}
         {step === 3 && (
           <Box display="flex" flexDirection="column" gap={16}>
-            {(resumeState === 'idle' || resumeState === 'error') && (
+            {(resumeState === "idle" || resumeState === "error") && (
               <>
                 <Box
                   className={[
-                    'onboarding__upload-zone',
-                    isDragging ? 'onboarding__upload-zone--dragging' : '',
+                    "onboarding__upload-zone",
+                    isDragging ? "onboarding__upload-zone--dragging" : "",
                   ]
                     .filter(Boolean)
-                    .join(' ')}
+                    .join(" ")}
                   role="button"
                   tabIndex={0}
-                  aria-label={t('resumeDropZone')}
+                  aria-label={t("resumeDropZone")}
                   onClick={() => fileInputRef.current?.click()}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ")
+                      fileInputRef.current?.click();
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -423,15 +493,18 @@ export function OnboardingForm() {
                     if (file) void handleResumeFile(file);
                   }}
                 >
-                  <Typography variant="body-sm" styles={{ pointerEvents: 'none' }}>
-                    {t('resumeDropZone')}
+                  <Typography
+                    variant="body-sm"
+                    styles={{ pointerEvents: "none" }}
+                  >
+                    {t("resumeDropZone")}
                   </Typography>
                   <Typography
                     variant="label"
                     color="var(--muted-foreground, #6b7280)"
-                    styles={{ pointerEvents: 'none' }}
+                    styles={{ pointerEvents: "none" }}
                   >
-                    {t('resumeDropHint')}
+                    {t("resumeDropHint")}
                   </Typography>
                 </Box>
                 <input
@@ -448,23 +521,26 @@ export function OnboardingForm() {
               </>
             )}
 
-            {resumeState === 'uploading' && (
+            {resumeState === "uploading" && (
               <Box className="onboarding__upload-zone onboarding__upload-zone--loading">
-                <ProgressBar label={t('resumeAnalyzing')} />
+                <ProgressBar label={t("resumeAnalyzing")} />
               </Box>
             )}
 
-            {resumeState === 'done' && resumeResult && (
+            {resumeState === "done" && resumeResult && (
               <Box className="onboarding__upload-zone onboarding__upload-zone--done">
                 <Typography variant="body-sm" fontWeight={600}>
-                  ✓ {t('resumeSuccess', {
+                  ✓{" "}
+                  {t("resumeSuccess", {
                     bullets: resumeResult.bullets_imported,
                     skills: resumeResult.skills_imported,
                   })}
                 </Typography>
-                {(resumeResult.work_experience_imported > 0 || resumeResult.education_imported > 0 || resumeResult.projects_imported > 0) && (
+                {(resumeResult.work_experience_imported > 0 ||
+                  resumeResult.education_imported > 0 ||
+                  resumeResult.projects_imported > 0) && (
                   <Typography variant="label" color="var(--foreground)">
-                    {t('resumeCareerSuccess', {
+                    {t("resumeCareerSuccess", {
                       jobs: resumeResult.work_experience_imported,
                       degrees: resumeResult.education_imported,
                       projects: resumeResult.projects_imported,
@@ -475,36 +551,43 @@ export function OnboardingForm() {
                   variant="label"
                   color="var(--muted-foreground, #6b7280)"
                 >
-                  {t('resumeSuccessHint')}
+                  {t("resumeSuccessHint")}
                 </Typography>
               </Box>
             )}
 
-            {resumeState === 'skipped' && (
+            {resumeState === "skipped" && (
               <Box className="onboarding__upload-zone onboarding__upload-zone--skipped">
-                <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-                  {t('resumeSkipped')}
+                <Typography
+                  variant="body"
+                  color="var(--muted-foreground, #6b7280)"
+                >
+                  {t("resumeSkipped")}
                 </Typography>
               </Box>
             )}
 
-            {resumeState === 'error' && resumeError && (
-              <Typography variant="caption" role="alert" className="onboarding__error">
+            {resumeState === "error" && resumeError && (
+              <Typography
+                variant="caption"
+                role="alert"
+                className="onboarding__error"
+              >
                 {resumeError}
               </Typography>
             )}
 
-            {(resumeState === 'idle' || resumeState === 'error') && (
+            {(resumeState === "idle" || resumeState === "error") && (
               <Button
                 unstyled
                 type="button"
                 className="onboarding__skip-btn"
                 onClick={() => {
-                  setResumeState('skipped');
+                  setResumeState("skipped");
                   setResumeError(null);
                 }}
               >
-                {t('resumeSkip')}
+                {t("resumeSkip")}
               </Button>
             )}
           </Box>
@@ -519,10 +602,10 @@ export function OnboardingForm() {
                   variant="label"
                   color="var(--muted-foreground, #6b7280)"
                 >
-                  {t('reviewJobTitle')}
+                  {t("reviewJobTitle")}
                 </Typography>
                 <Typography variant="body-sm" fontWeight={600}>
-                  {jobTitle || '—'}
+                  {jobTitle || "-"}
                 </Typography>
               </Box>
               <Box className="onboarding__review-row">
@@ -530,12 +613,12 @@ export function OnboardingForm() {
                   variant="label"
                   color="var(--muted-foreground, #6b7280)"
                 >
-                  {t('reviewYears')}
+                  {t("reviewYears")}
                 </Typography>
                 <Typography variant="body-sm" fontWeight={600}>
                   {yearsValue === 0
-                    ? t('reviewYearsLess')
-                    : t('reviewYearsValue', { years: yearsLabel })}
+                    ? t("reviewYearsLess")
+                    : t("reviewYearsValue", { years: yearsLabel })}
                 </Typography>
               </Box>
               <Box className="onboarding__review-row" alignItems="flex-start">
@@ -544,10 +627,15 @@ export function OnboardingForm() {
                   color="var(--muted-foreground, #6b7280)"
                   styles={{ flexShrink: 0 }}
                 >
-                  {t('reviewStack')}
+                  {t("reviewStack")}
                 </Typography>
                 {techStack.length > 0 ? (
-                  <Box display="flex" flexWrap="wrap" gap={4} justifyContent="flex-end">
+                  <Box
+                    display="flex"
+                    flexWrap="wrap"
+                    gap={4}
+                    justifyContent="flex-end"
+                  >
                     {techStack.map((tech) => (
                       <Badge key={tech} variant="subtle" size="lg">
                         {tech}
@@ -559,7 +647,7 @@ export function OnboardingForm() {
                     variant="body-sm"
                     color="var(--muted-foreground, #6b7280)"
                   >
-                    {t('reviewStackEmpty')}
+                    {t("reviewStackEmpty")}
                   </Typography>
                 )}
               </Box>
@@ -568,17 +656,17 @@ export function OnboardingForm() {
                   variant="label"
                   color="var(--muted-foreground, #6b7280)"
                 >
-                  {t('reviewResume')}
+                  {t("reviewResume")}
                 </Typography>
                 <Typography variant="body-sm" fontWeight={600}>
                   {resumeResult
-                    ? t('reviewResumeImported', {
+                    ? t("reviewResumeImported", {
                         bullets: resumeResult.bullets_imported,
                         jobs: resumeResult.work_experience_imported,
                         degrees: resumeResult.education_imported,
                         projects: resumeResult.projects_imported,
                       })
-                    : t('reviewResumeSkipped')}
+                    : t("reviewResumeSkipped")}
                 </Typography>
               </Box>
             </Box>
@@ -594,15 +682,20 @@ export function OnboardingForm() {
                 {error}
               </Typography>
             )}
-            {saving && <ProgressBar label={t('finishing')} />}
+            {saving && <ProgressBar label={t("finishing")} />}
           </Box>
         )}
 
         {/* ── Navigation ── */}
-        <Box display="flex" justifyContent="space-between" gap={12} marginTop={4}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          gap={12}
+          marginTop={4}
+        >
           {step > 1 ? (
             <Button
-              text={t('back')}
+              text={t("back")}
               type="button"
               size="md"
               onClick={() => setStep((s) => s - 1)}
@@ -614,19 +707,19 @@ export function OnboardingForm() {
 
           {step < 4 ? (
             <Button
-              text={t('next')}
+              text={t("next")}
               type="button"
               size="md"
-              kind={step === 1 && jobTitle.trim() ? 'success' : undefined}
+              kind={step === 1 && jobTitle.trim() ? "success" : undefined}
               disabled={
                 (step === 1 && !jobTitle.trim()) ||
-                (step === 3 && resumeState === 'uploading')
+                (step === 3 && resumeState === "uploading")
               }
               onClick={() => setStep((s) => s + 1)}
             />
           ) : (
             <Button
-              text={saving ? t('finishing') : t('finish')}
+              text={saving ? t("finishing") : t("finish")}
               type="button"
               size="md"
               kind="success"

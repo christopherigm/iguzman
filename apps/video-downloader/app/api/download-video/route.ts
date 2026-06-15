@@ -1,56 +1,56 @@
-import { NextResponse } from 'next/server';
-import { join } from 'node:path';
-import { writeFileSync } from 'fs';
-import { unlink } from 'node:fs/promises';
+import { NextResponse } from "next/server";
+import { join } from "node:path";
+import { writeFileSync } from "fs";
+import { unlink } from "node:fs/promises";
 import downloadVideo, {
   listSubtitlesViaYtDlp,
-} from '@repo/helpers/download-video';
+} from "@repo/helpers/download-video";
 import {
   createTask,
   updateTask,
   findActiveTaskByUrl,
-} from '@/lib/video-task-db';
-import logger from '@/lib/logger';
-import type { VideoDownloadInput } from '@/lib/types';
+} from "@/lib/video-task-db";
+import logger from "@/lib/logger";
+import type { VideoDownloadInput } from "@/lib/types";
 import {
   isScrapeCreatorsPlatform,
   fetchAllSocialComments,
   fetchSocialMetadata,
-} from '@/lib/scrapecreators';
+} from "@/lib/scrapecreators";
 import {
   getCreditsKey,
   requireCredits,
   refundCredits,
   creditsErrorResponse,
-} from '@/lib/credits-middleware';
+} from "@/lib/credits-middleware";
 import {
   calculateOperationCredits,
   getVideoMetaFromFile,
-} from '@/lib/operation-credits';
-import { USE_R2, uploadFromPath, deleteObject } from '@/lib/r2';
-import { getWritableCookiesPath } from '@/lib/writable-cookies';
+} from "@/lib/operation-credits";
+import { USE_R2, uploadFromPath, deleteObject } from "@/lib/r2";
+import { getWritableCookiesPath } from "@/lib/writable-cookies";
 
 const CREDITS_PER_COMMENTS = 1;
 const CREDITS_PER_METADATA = 1;
 
-const log = logger.child({ module: 'api/download-video' });
+const log = logger.child({ module: "api/download-video" });
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
 /* ------------------------------------------------------------------ */
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
-const IS_PRODUCTION = NODE_ENV === 'production';
-const MEDIA_DIR = IS_PRODUCTION ? '/app/media' : './public/media';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
+const IS_PRODUCTION = NODE_ENV === "production";
+const MEDIA_DIR = IS_PRODUCTION ? "/app/media" : "./public/media";
 
 // When R2 is active, downloads land in /tmp and are uploaded after completion.
-const DOWNLOAD_DIR = USE_R2 ? '/tmp' : MEDIA_DIR;
+const DOWNLOAD_DIR = USE_R2 ? "/tmp" : MEDIA_DIR;
 
 const MAX_DOWNLOAD_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 5_000;
 
 const isTransientError = (msg: string): boolean =>
-  msg.includes('429') ||
+  msg.includes("429") ||
   /too many requests/i.test(msg) ||
   /sign in to confirm you'?re not a bot/i.test(msg);
 
@@ -62,7 +62,7 @@ function parseUploadDate(date: string): number | null {
 }
 
 type RequestBody = Partial<VideoDownloadInput> &
-  Pick<VideoDownloadInput, 'url'>;
+  Pick<VideoDownloadInput, "url">;
 
 export async function POST(request: Request) {
   let body: RequestBody;
@@ -70,9 +70,9 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    log.warn('Failed to parse request body as JSON');
+    log.warn("Failed to parse request body as JSON");
     return NextResponse.json(
-      { error: { code: 'INVALID_URL' as const, message: 'Invalid JSON body' } },
+      { error: { code: "INVALID_URL" as const, message: "Invalid JSON body" } },
       { status: 400 },
     );
   }
@@ -92,13 +92,13 @@ export async function POST(request: Request) {
   let commentsEnabled = commentsEnabledParam;
   let metadataEnabled = metadataEnabledParam;
 
-  if (!url || typeof url !== 'string') {
-    log.warn({ url }, 'Missing or invalid url parameter');
+  if (!url || typeof url !== "string") {
+    log.warn({ url }, "Missing or invalid url parameter");
     return NextResponse.json(
       {
         error: {
-          code: 'INVALID_URL' as const,
-          message: 'Missing required parameter: url',
+          code: "INVALID_URL" as const,
+          message: "Missing required parameter: url",
         },
       },
       { status: 400 },
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
   if (existing) {
     log.info(
       { taskId: existing._id.toHexString(), url, status: existing.status },
-      'Returning existing active task (dedup)',
+      "Returning existing active task (dedup)",
     );
     return NextResponse.json(
       {
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
         Non-YouTube downloads with comments cost 1 additional credit. */
   const creditsKey = getCreditsKey(request);
   if (!creditsKey) {
-    return creditsErrorResponse('NO_CREDITS_KEY');
+    return creditsErrorResponse("NO_CREDITS_KEY");
   }
   const baseResult = await requireCredits(creditsKey, 1);
   if (!baseResult.ok) {
@@ -177,13 +177,13 @@ export async function POST(request: Request) {
         so a transient DB hiccup on the first updateTask cannot prevent the
         download from starting. */
   void (async () => {
-    /* Best-effort status update — does NOT gate the download. */
-    updateTask(taskId, { status: 'downloading', progress: 0 }).catch(
+    /* Best-effort status update - does NOT gate the download. */
+    updateTask(taskId, { status: "downloading", progress: 0 }).catch(
       (err: unknown) =>
-        log.error({ err, taskId }, 'Failed to set task status to downloading'),
+        log.error({ err, taskId }, "Failed to set task status to downloading"),
     );
 
-    log.info({ taskId, url, justAudio, checkCodec }, 'Download started');
+    log.info({ taskId, url, justAudio, checkCodec }, "Download started");
 
     try {
       let resolvedCaptionUrl = captionUrl;
@@ -198,13 +198,13 @@ export async function POST(request: Request) {
             resolvedCaptionUrl = preferred?.url;
             log.info(
               { url, lang: preferred?.lang, captionUrl: resolvedCaptionUrl },
-              'Resolved caption URL via subtitle listing',
+              "Resolved caption URL via subtitle listing",
             );
           }
         } catch (err) {
           log.warn(
             { err, url },
-            'Subtitle listing failed (captions will be skipped)',
+            "Subtitle listing failed (captions will be skipped)",
           );
         }
       }
@@ -231,7 +231,7 @@ export async function POST(request: Request) {
         const delayMs = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
         log.warn(
           { taskId, url, attempt, delayMs },
-          'Download blocked by platform (transient), retrying',
+          "Download blocked by platform (transient), retrying",
         );
         await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
         result = await downloadVideo(downloadInput);
@@ -245,13 +245,17 @@ export async function POST(request: Request) {
             errorCode: result.error.code,
             error: result.error.message,
           },
-          'Download failed',
+          "Download failed",
         );
-        await refundCredits(creditsKey, totalCharged).catch((refundErr: unknown) =>
-          log.error({ err: refundErr, taskId }, 'Failed to refund credits after download failure'),
+        await refundCredits(creditsKey, totalCharged).catch(
+          (refundErr: unknown) =>
+            log.error(
+              { err: refundErr, taskId },
+              "Failed to refund credits after download failure",
+            ),
         );
         await updateTask(taskId, {
-          status: 'error',
+          status: "error",
           progress: 0,
           error: result.error,
           result,
@@ -264,7 +268,7 @@ export async function POST(request: Request) {
             file: result.file,
             duration: result.metadata?.duration,
           },
-          'Download completed',
+          "Download completed",
         );
 
         /* ── ScrapeCreators fallback for social platforms ──────────────
@@ -286,19 +290,22 @@ export async function POST(request: Request) {
             );
             scrapeCreditsRemaining = creditsRemaining;
             if (comments.length > 0 && result.file) {
-              const fileId = result.file.replace(/\.[^.]+$/, '');
+              const fileId = result.file.replace(/\.[^.]+$/, "");
               const filename = `${fileId}.comments.json`;
-              writeFileSync(join(DOWNLOAD_DIR, filename), JSON.stringify(comments));
+              writeFileSync(
+                join(DOWNLOAD_DIR, filename),
+                JSON.stringify(comments),
+              );
               commentsFile = filename;
               log.info(
                 { taskId, url, count: comments.length },
-                'ScrapeCreators comments saved',
+                "ScrapeCreators comments saved",
               );
             }
           } catch (err) {
             log.warn(
               { err, taskId, url },
-              'ScrapeCreators comment fetch failed (non-fatal)',
+              "ScrapeCreators comment fetch failed (non-fatal)",
             );
           }
         }
@@ -315,7 +322,12 @@ export async function POST(request: Request) {
 
         // Probe duration (and resolution when missing) from the file when yt-dlp metadata doesn't include it
         let resolvedDuration = meta?.duration ?? null;
-        if ((resolvedDuration == null || resolvedWidth == null || resolvedHeight == null) && result.file) {
+        if (
+          (resolvedDuration == null ||
+            resolvedWidth == null ||
+            resolvedHeight == null) &&
+          result.file
+        ) {
           try {
             const probed = await getVideoMetaFromFile(
               join(DOWNLOAD_DIR, result.file),
@@ -330,7 +342,7 @@ export async function POST(request: Request) {
               resolvedHeight = probed.height;
             }
           } catch {
-            // non-fatal — duration/resolution stays null
+            // non-fatal - duration/resolution stays null
           }
         }
 
@@ -342,7 +354,7 @@ export async function POST(request: Request) {
 
         /* ── Upload local files to R2, then clean up temp copies ─────── */
         if (USE_R2) {
-          // Main video file — failure is fatal: let it propagate so the task
+          // Main video file - failure is fatal: let it propagate so the task
           // is marked 'error' instead of 'done' with a file missing from R2.
           if (result.file) {
             const localVideoPath = join(DOWNLOAD_DIR, result.file);
@@ -350,9 +362,12 @@ export async function POST(request: Request) {
             unlink(localVideoPath).catch(() => {});
           }
 
-          // Optional files (thumbnail, captions, comments) — best-effort only.
-          const optionalFiles = [result.thumbnail, result.captionsFile, commentsFile]
-            .filter((f): f is string => !!f);
+          // Optional files (thumbnail, captions, comments) - best-effort only.
+          const optionalFiles = [
+            result.thumbnail,
+            result.captionsFile,
+            commentsFile,
+          ].filter((f): f is string => !!f);
 
           await Promise.all(
             optionalFiles.map(async (f) => {
@@ -361,7 +376,10 @@ export async function POST(request: Request) {
                 await uploadFromPath(f, localPath);
                 unlink(localPath).catch(() => {});
               } catch (err) {
-                log.warn({ err, file: f, taskId }, 'R2 upload failed for optional file');
+                log.warn(
+                  { err, file: f, taskId },
+                  "R2 upload failed for optional file",
+                );
               }
             }),
           );
@@ -372,15 +390,19 @@ export async function POST(request: Request) {
          * post details (title, uploader, description, timestamp) and
          * overwrite the yt-dlp values with the richer ScrapeCreators data. */
         let enrichedName: string | null = result.name ?? null;
-        let enrichedFulltitle: string | null = meta?.fulltitle ?? meta?.title ?? null;
-        let enrichedUploader: string | null = meta?.uploader ?? result.audioMetadata?.artist ?? null;
+        let enrichedFulltitle: string | null =
+          meta?.fulltitle ?? meta?.title ?? null;
+        let enrichedUploader: string | null =
+          meta?.uploader ?? result.audioMetadata?.artist ?? null;
         let enrichedUploaderId: string | null = meta?.uploader_id ?? null;
         let enrichedUploaderUrl: string | null = meta?.uploader_url ?? null;
         let enrichedUploadTimestamp: number | null =
           meta?.timestamp ??
           (meta?.upload_date ? parseUploadDate(meta.upload_date) : null);
         let enrichedDescription: string | null = meta?.description ?? null;
-        let enrichedTags: string[] | null = meta?.tags?.length ? meta.tags : null;
+        let enrichedTags: string[] | null = meta?.tags?.length
+          ? meta.tags
+          : null;
 
         if (metadataEnabled && isScrapeCreatorsPlatform(url)) {
           try {
@@ -388,21 +410,29 @@ export async function POST(request: Request) {
             if (scraped.creditsRemaining !== null)
               scrapeCreditsRemaining = scraped.creditsRemaining;
             if (scraped.name != null) enrichedName = scraped.name;
-            if (scraped.fulltitle != null) enrichedFulltitle = scraped.fulltitle;
+            if (scraped.fulltitle != null)
+              enrichedFulltitle = scraped.fulltitle;
             if (scraped.uploader != null) enrichedUploader = scraped.uploader;
-            if (scraped.uploader_id != null) enrichedUploaderId = scraped.uploader_id;
-            if (scraped.uploader_url != null) enrichedUploaderUrl = scraped.uploader_url;
-            if (scraped.uploadTimestamp != null) enrichedUploadTimestamp = scraped.uploadTimestamp;
-            if (scraped.description != null) enrichedDescription = scraped.description;
+            if (scraped.uploader_id != null)
+              enrichedUploaderId = scraped.uploader_id;
+            if (scraped.uploader_url != null)
+              enrichedUploaderUrl = scraped.uploader_url;
+            if (scraped.uploadTimestamp != null)
+              enrichedUploadTimestamp = scraped.uploadTimestamp;
+            if (scraped.description != null)
+              enrichedDescription = scraped.description;
             if (scraped.tags != null) enrichedTags = scraped.tags;
-            log.info({ taskId, url }, 'ScrapeCreators metadata applied');
+            log.info({ taskId, url }, "ScrapeCreators metadata applied");
           } catch (err) {
-            log.warn({ err, taskId, url }, 'ScrapeCreators metadata fetch failed (non-fatal)');
+            log.warn(
+              { err, taskId, url },
+              "ScrapeCreators metadata fetch failed (non-fatal)",
+            );
           }
         }
 
         await updateTask(taskId, {
-          status: 'done',
+          status: "done",
           progress: 100,
           result,
           file: result.file ?? null,
@@ -427,21 +457,25 @@ export async function POST(request: Request) {
         });
       }
     } catch (err) {
-      log.error({ err, taskId, url }, 'Unexpected error during download');
-      await refundCredits(creditsKey, totalCharged).catch((refundErr: unknown) =>
-        log.error({ err: refundErr, taskId }, 'Failed to refund credits after download error'),
+      log.error({ err, taskId, url }, "Unexpected error during download");
+      await refundCredits(creditsKey, totalCharged).catch(
+        (refundErr: unknown) =>
+          log.error(
+            { err: refundErr, taskId },
+            "Failed to refund credits after download error",
+          ),
       );
       await updateTask(taskId, {
-        status: 'error',
+        status: "error",
         progress: 0,
         error: {
-          code: 'DOWNLOAD_FAILED',
+          code: "DOWNLOAD_FAILED",
           message: err instanceof Error ? err.message : String(err),
         },
       }).catch((dbErr: unknown) =>
         log.error(
           { err: dbErr, taskId },
-          'Failed to update task to error status',
+          "Failed to update task to error status",
         ),
       );
     }
@@ -452,7 +486,7 @@ export async function POST(request: Request) {
     {
       task: {
         _id: taskId,
-        status: 'pending',
+        status: "pending",
         url,
         justAudio,
         checkCodec,

@@ -69,8 +69,8 @@ probes:
     initialDelaySeconds: 5
     periodSeconds: 5
     # Computed in deployment.yaml from browserCache.enabled:
-    #   true  → 36 attempts (3 min) — covers ~170 MB Chromium download on first boot
-    #   false → uses this value (12 = ~60 s) — browser is baked into the image
+    #   true  → 36 attempts (3 min) - covers ~170 MB Chromium download on first boot
+    #   false → uses this value (12 = ~60 s) - browser is baked into the image
     failureThreshold: 12
 
   livenessProbe:

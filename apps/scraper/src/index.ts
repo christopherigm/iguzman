@@ -1,33 +1,33 @@
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import { searchWeb, type SearchEngine } from './search';
-import { extractUrl } from './extract';
-import { closeBrowser } from './browser';
+import Fastify from "fastify";
+import cors from "@fastify/cors";
+import { searchWeb, type SearchEngine } from "./search";
+import { extractUrl } from "./extract";
+import { closeBrowser } from "./browser";
 
-const PORT = parseInt(process.env['PORT'] ?? '4000', 10);
-const API_KEY = process.env['SCRAPER_API_KEY'] ?? '';
+const PORT = parseInt(process.env["PORT"] ?? "4000", 10);
+const API_KEY = process.env["SCRAPER_API_KEY"] ?? "";
 
 const app = Fastify({
   logger: {
-    level: process.env['LOG_LEVEL'] ?? 'info',
+    level: process.env["LOG_LEVEL"] ?? "info",
   },
 });
 
 app.register(cors, {
   origin: true,
-  allowedHeaders: ['Content-Type', 'X-API-Key'],
-  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ["Content-Type", "X-API-Key"],
+  methods: ["GET", "POST", "OPTIONS"],
 });
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-app.addHook('preHandler', async (request, reply) => {
+app.addHook("preHandler", async (request, reply) => {
   if (!API_KEY) return; // no key set → open (dev only)
-  if (request.url === '/health') return; // health probe is unauthenticated
-  if (request.method === 'OPTIONS') return; // preflight — CORS plugin already responded
-  const key = request.headers['x-api-key'];
+  if (request.url === "/health") return; // health probe is unauthenticated
+  if (request.method === "OPTIONS") return; // preflight - CORS plugin already responded
+  const key = request.headers["x-api-key"];
   if (key !== API_KEY) {
-    return reply.code(401).send({ error: 'Unauthorized' });
+    return reply.code(401).send({ error: "Unauthorized" });
   }
 });
 
@@ -36,27 +36,26 @@ app.addHook('preHandler', async (request, reply) => {
 // Body: { query: string; engine?: "duckduckgo" | "bing"; maxResults?: number }
 // Response: { title, url, snippet, og_image }[]
 
-app.post('/search', async (request, reply) => {
+app.post("/search", async (request, reply) => {
   const body = request.body as {
     query?: string;
     engine?: SearchEngine;
     maxResults?: number;
   };
 
-  const query = body?.query?.trim() ?? '';
+  const query = body?.query?.trim() ?? "";
   if (!query) {
-    return reply.code(400).send({ error: 'query is required.' });
+    return reply.code(400).send({ error: "query is required." });
   }
 
-  const engine: SearchEngine =
-    body.engine === 'bing' ? 'bing' : 'duckduckgo';
+  const engine: SearchEngine = body.engine === "bing" ? "bing" : "duckduckgo";
   const maxResults = Math.min(Math.max(Number(body.maxResults ?? 5), 1), 20);
 
   try {
     return await searchWeb({ query, engine, maxResults });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    request.log.error({ err }, 'search failed');
+    request.log.error({ err }, "search failed");
     return reply.code(502).send({ error: message });
   }
 });
@@ -66,17 +65,19 @@ app.post('/search', async (request, reply) => {
 // Body: { url: string }
 // Response: { title, url, content }
 
-app.post('/extract', async (request, reply) => {
+app.post("/extract", async (request, reply) => {
   const body = request.body as { url?: string };
 
-  const url = body?.url?.trim() ?? '';
+  const url = body?.url?.trim() ?? "";
   if (!url) {
-    return reply.code(400).send({ error: 'url is required.' });
+    return reply.code(400).send({ error: "url is required." });
   }
 
-  // Basic sanity check — must be http(s)
+  // Basic sanity check - must be http(s)
   if (!/^https?:\/\//i.test(url)) {
-    return reply.code(400).send({ error: 'url must start with http:// or https://' });
+    return reply
+      .code(400)
+      .send({ error: "url must start with http:// or https://" });
   }
 
   try {
@@ -84,14 +85,14 @@ app.post('/extract', async (request, reply) => {
     return result;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    request.log.error({ err }, 'extract failed');
+    request.log.error({ err }, "extract failed");
     return reply.code(502).send({ error: message });
   }
 });
 
 // ── Health ────────────────────────────────────────────────────────────────────
 
-app.get('/health', { logLevel: 'silent' }, async () => ({ status: 'ok' }));
+app.get("/health", { logLevel: "silent" }, async () => ({ status: "ok" }));
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
@@ -101,10 +102,10 @@ const shutdown = async () => {
   process.exit(0);
 };
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
-app.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
+app.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
   if (err) {
     app.log.error(err);
     process.exit(1);

@@ -35,7 +35,7 @@
   object-fit: cover;
 }
 
-/* Bottom gradient — always visible to keep text readable */
+/* Bottom gradient - always visible to keep text readable */
 .story-card__overlay {
   position: absolute;
   inset: 0;

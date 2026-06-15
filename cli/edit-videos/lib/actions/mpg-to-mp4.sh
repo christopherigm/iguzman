@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# lib/actions/mpg-to-mp4.sh — Detect legacy MPG/MPEG formats and flag for re-encode
-# No FFmpeg calls here — the encode happens in process-video.sh via the main vf_chain path.
+# lib/actions/mpg-to-mp4.sh - Detect legacy MPG/MPEG formats and flag for re-encode
+# No FFmpeg calls here - the encode happens in process-video.sh via the main vf_chain path.
 
 # Sets MPG_NEEDS_ENCODE=1 when the file extension indicates a legacy MPEG container
 # that must be re-wrapped to MP4 even if no other action is requested.

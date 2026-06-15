@@ -329,7 +329,7 @@
   "MigrationBanner": {
     "close": "Schließen",
     "heading": "Wir wechseln zu Media 2 Go!",
-    "body": "Nach dem 31. Mai (noch {days} Tage) wird vd2.iguzman.com.mx nur lesbar — neue Downloads sind dort nicht mehr möglich. Besuche uns auf unserer neuen Seite."
+    "body": "Nach dem 31. Mai (noch {days} Tage) wird vd2.iguzman.com.mx nur lesbar - neue Downloads sind dort nicht mehr möglich. Besuche uns auf unserer neuen Seite."
   },
   "Credits": {
     "balanceLabel": "{credits} Credits",
@@ -337,7 +337,7 @@
     "buyMore": "Mehr kaufen",
     "restoreKey": "Schlüssel wiederherstellen",
     "purchaseTitle": "Credits kaufen",
-    "purchaseText": "Wähle ein Credit-Paket. Credits werden für Untertitelübersetzung, Kommentar-Downloads und Serververarbeitung verwendet. Dein Schlüssel kann mit jedem geteilt werden — Credits werden bei allen Nutzungen gemeinsam genutzt. Verwende ihn auf beliebig vielen Geräten.",
+    "purchaseText": "Wähle ein Credit-Paket. Credits werden für Untertitelübersetzung, Kommentar-Downloads und Serververarbeitung verwendet. Dein Schlüssel kann mit jedem geteilt werden - Credits werden bei allen Nutzungen gemeinsam genutzt. Verwende ihn auf beliebig vielen Geräten.",
     "creditsCount": "{credits} Credits",
     "purchaseNote": "Dein Schlüssel wird in deinem Browser gespeichert. Bewahre ihn sicher auf, falls du das Gerät wechselst.",
     "purchaseError": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
@@ -357,7 +357,7 @@
     "deleteKey": "Schlüssel löschen",
     "keyCopied": "Kopiert!",
     "deleteKeyTitle": "Credits-Schlüssel löschen?",
-    "deleteKeyText": "Dadurch wird dein Credits-Schlüssel dauerhaft von diesem Gerät entfernt. Wir speichern keine Kopie — diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteKeyText": "Dadurch wird dein Credits-Schlüssel dauerhaft von diesem Gerät entfernt. Wir speichern keine Kopie - diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteKeyConfirm": "Löschen",
     "deleteKeyCancel": "Abbrechen",
     "couponTitle": "Gutschein einlösen",

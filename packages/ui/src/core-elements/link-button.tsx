@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { CSSProperties } from 'react';
+import React from "react";
+import Link from "next/link";
+import { CSSProperties } from "react";
 
 export interface LinkButtonProps {
   /** Visible text label (required). */
@@ -20,23 +20,23 @@ export interface LinkButtonProps {
   className?: string;
   id?: string;
   /** Accessible label when the visible text is not descriptive enough. */
-  'aria-label'?: string;
+  "aria-label"?: string;
   /** Marks this link as the current item in a set (e.g. `"page"` for nav links). */
-  'aria-current'?: React.AriaAttributes['aria-current'];
+  "aria-current"?: React.AriaAttributes["aria-current"];
 }
 
 const baseStyle: CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: 'var(--muted-foreground, #6b7280)',
+  background: "none",
+  border: "none",
+  color: "var(--muted-foreground, #6b7280)",
   fontSize: 13,
-  cursor: 'pointer',
-  textDecoration: 'underline',
+  cursor: "pointer",
+  textDecoration: "underline",
   padding: 0,
 };
 
 /**
- * LinkButton — a lightweight text link that adapts to its usage:
+ * LinkButton - a lightweight text link that adapts to its usage:
  *
  * - Pass `href` to get a Next.js `<Link prefetch>` (page pre-fetching included).
  * - Pass `onClick` to get an accessible `<button>` styled as a link.
@@ -49,9 +49,16 @@ const baseStyle: CSSProperties = {
  * // In-page action
  * <LinkButton onClick={() => switchTab('sign-up')} label="Don't have an account? Sign up" />
  */
-export function LinkButton({ label, href, onClick, className, id, ...rest }: LinkButtonProps) {
-  const ariaLabel = rest['aria-label'];
-  const ariaCurrent = rest['aria-current'];
+export function LinkButton({
+  label,
+  href,
+  onClick,
+  className,
+  id,
+  ...rest
+}: LinkButtonProps) {
+  const ariaLabel = rest["aria-label"];
+  const ariaCurrent = rest["aria-current"];
 
   if (href !== undefined) {
     return (

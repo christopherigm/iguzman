@@ -228,7 +228,7 @@ export function JobSearchSection() {
           {
             role: "system" as const,
             content:
-              "Eres un experto en búsqueda de empleo. A partir del perfil y las preferencias del candidato, redacta UNA sola consulta de búsqueda concisa (una frase corta de palabras clave) optimizada para portales de empleo como Adzuna o JSearch. No incluyas la ubicación. Devuelve únicamente la consulta — sin comillas, explicaciones ni etiquetas.",
+              "Eres un experto en búsqueda de empleo. A partir del perfil y las preferencias del candidato, redacta UNA sola consulta de búsqueda concisa (una frase corta de palabras clave) optimizada para portales de empleo como Adzuna o JSearch. No incluyas la ubicación. Devuelve únicamente la consulta - sin comillas, explicaciones ni etiquetas.",
           },
           { role: "user" as const, content: profileCtx },
         ]
@@ -236,7 +236,7 @@ export function JobSearchSection() {
           {
             role: "system" as const,
             content:
-              "You are a job search expert. From the candidate profile and preferences, write ONE concise job-board search query (a short keyword phrase) optimized for job APIs like Adzuna or JSearch. Do not include location. Return only the query — no quotes, explanations, or labels.",
+              "You are a job search expert. From the candidate profile and preferences, write ONE concise job-board search query (a short keyword phrase) optimized for job APIs like Adzuna or JSearch. Do not include location. Return only the query - no quotes, explanations, or labels.",
           },
           { role: "user" as const, content: profileCtx },
         ];
@@ -280,8 +280,7 @@ export function JobSearchSection() {
   const handleAdd = useCallback(async () => {
     const secret = keyValue.trim();
     // Adzuna stores the credential as the "app_id:app_key" pair (split here for UX only).
-    const key =
-      provider === "adzuna" ? `${appId.trim()}:${secret}` : secret;
+    const key = provider === "adzuna" ? `${appId.trim()}:${secret}` : secret;
     if (!secret || (provider === "adzuna" && !appId.trim())) return;
     setSaving(true);
     setError(null);

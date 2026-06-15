@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# new-django-app.sh — interactive Django REST API scaffold
+# new-django-app.sh - interactive Django REST API scaffold
 # Same UI/UX as cli/deploy-app/deploy-app.sh (colors, prompts, section headers)
 #
 # Run: bash cli/new-django-app/new-django-app.sh
@@ -72,7 +72,7 @@ setup_strings() {
     SETUP_DEPS_DONE="Dependencias instaladas."
     SETUP_MIGRATE="Aplicando migraciones de base de datos..."
     SETUP_MIGRATE_DONE="Migraciones aplicadas."
-    SETUP_SUPERUSER="Creando superusuario — sigue las instrucciones:"
+    SETUP_SUPERUSER="Creando superusuario - sigue las instrucciones:"
     SETUP_DONE="Superusuario creado."
   else
     WELCOME="New Django App"
@@ -117,7 +117,7 @@ setup_strings() {
     SETUP_DEPS_DONE="Dependencies installed."
     SETUP_MIGRATE="Applying database migrations..."
     SETUP_MIGRATE_DONE="Migrations applied."
-    SETUP_SUPERUSER="Creating superuser — follow the prompts:"
+    SETUP_SUPERUSER="Creating superuser - follow the prompts:"
     SETUP_DONE="Superuser created."
   fi
 }
@@ -148,7 +148,7 @@ prompt_visible() {
   printf '%s' "${val}"
 }
 
-# confirm_yn LABEL DEFAULT — returns 0 (yes) or 1 (no)
+# confirm_yn LABEL DEFAULT - returns 0 (yes) or 1 (no)
 confirm_yn() {
   local label="$1" default="${2:-y}"
   local suffix default_upper
@@ -799,7 +799,7 @@ class ResizedImageField(models.ImageField):
     ImageField that automatically resizes images on upload using Pillow.
 
     Args:
-        max_size: [max_width, max_height] — use None for unconstrained axis.
+        max_size: [max_width, max_height] - use None for unconstrained axis.
                   e.g. [512, None] constrains width to 512 px, height scales
                   proportionally; [None, 300] constrains only height.
         quality:  JPEG/WebP compression quality (1-95). Default 85.
@@ -974,7 +974,7 @@ def picture_mixin(max_width: int, quality: int = 85):
     return _PictureMixin
 
 
-# Standard size tiers — use these directly or call picture_mixin() for custom sizes.
+# Standard size tiers - use these directly or call picture_mixin() for custom sizes.
 SmallPicture   = picture_mixin(256)          # thumbnails, avatars
 MediumPicture  = picture_mixin(512)          # cards, previews
 RegularPicture = picture_mixin(1200)         # content images, banners
@@ -999,8 +999,8 @@ class ImageProcessingSerializer(serializers.Serializer):
     Accepts a base64-encoded image and processes it to JPEG.
 
     Parameters (set as class attributes or pass via __init__):
-      max_size (int, int) — thumbnail bounding box, default (512, 512)
-      quality  int        — JPEG quality 1-95, default 90
+      max_size (int, int) - thumbnail bounding box, default (512, 512)
+      quality  int        - JPEG quality 1-95, default 90
     """
 
     max_size = (512, 512)
@@ -2223,7 +2223,7 @@ EOF
 gen_env_example() {
   local out="$1"
   local media_comment
-  [[ "${include_r2}" == "y" ]] && media_comment="# Media (local dev — ignored when R2_ACCOUNT_ID is set)" || media_comment="# Media"
+  [[ "${include_r2}" == "y" ]] && media_comment="# Media (local dev - ignored when R2_ACCOUNT_ID is set)" || media_comment="# Media"
   mkdir -p "$(dirname "$out")"
 
   cat > "$out" << EOF

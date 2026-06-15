@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# play-videos.sh — General purpose media player for Ubuntu Server via HDMI (DRM/KMS, no desktop required)
+# play-videos.sh - General purpose media player for Ubuntu Server via HDMI (DRM/KMS, no desktop required)
 #
 # Usage:
 #   ./play-videos.sh [OPTIONS] <file|dir|playlist>

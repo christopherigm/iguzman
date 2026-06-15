@@ -1,4 +1,4 @@
-import { newContext } from './browser';
+import { newContext } from "./browser";
 
 export interface ExtractResult {
   title: string;
@@ -7,21 +7,26 @@ export interface ExtractResult {
   og_image: string | null;
 }
 
-const BLOCKED_RESOURCE_TYPES = new Set(['image', 'media', 'font', 'stylesheet']);
+const BLOCKED_RESOURCE_TYPES = new Set([
+  "image",
+  "media",
+  "font",
+  "stylesheet",
+]);
 
 const CF_SIGNALS = [
-  'ray id',
-  'just a moment',
-  'checking your browser',
-  'enable javascript and cookies',
-  'additional verification required',
-  'cf-browser-verification',
-  'cloudflare to restrict access',
-  'please wait while we verify',
+  "ray id",
+  "just a moment",
+  "checking your browser",
+  "enable javascript and cookies",
+  "additional verification required",
+  "cf-browser-verification",
+  "cloudflare to restrict access",
+  "please wait while we verify",
 ];
 
 function isCloudflareBlock(title: string, content: string): boolean {
-  const haystack = (title + ' ' + content.slice(0, 2000)).toLowerCase();
+  const haystack = (title + " " + content.slice(0, 2000)).toLowerCase();
   return CF_SIGNALS.some((signal) => haystack.includes(signal));
 }
 
@@ -30,32 +35,32 @@ function sleep(ms: number): Promise<void> {
 }
 
 const BLOCKED_HOSTS = [
-  'google-analytics.com',
-  'googletagmanager.com',
-  'facebook.net',
-  'doubleclick.net',
-  'hotjar.com',
-  'mixpanel.com',
-  'segment.io',
-  'clarity.ms',
-  'analytics.tiktok.com',
+  "google-analytics.com",
+  "googletagmanager.com",
+  "facebook.net",
+  "doubleclick.net",
+  "hotjar.com",
+  "mixpanel.com",
+  "segment.io",
+  "clarity.ms",
+  "analytics.tiktok.com",
 ];
 
 function buildProxy() {
-  const host = process.env['PROXY_HOST'];
-  const port = process.env['PROXY_PORT'];
-  const username = process.env['PROXY_USER'];
-  const password = process.env['PROXY_PASS'];
+  const host = process.env["PROXY_HOST"];
+  const port = process.env["PROXY_PORT"];
+  const username = process.env["PROXY_USER"];
+  const password = process.env["PROXY_PASS"];
   if (!host || !port) return undefined;
   return { server: `http://${host}:${port}`, username, password };
 }
 
-const PROXY_DOMAINS_DEFAULT = ['indeed.com'];
+const PROXY_DOMAINS_DEFAULT = ["indeed.com"];
 
 const PROXY_DOMAINS: string[] = [
   ...PROXY_DOMAINS_DEFAULT,
-  ...(process.env['PROXY_DOMAINS'] ?? '')
-    .split(',')
+  ...(process.env["PROXY_DOMAINS"] ?? "")
+    .split(",")
     .map((d) => d.trim())
     .filter(Boolean),
 ];
@@ -65,11 +70,13 @@ function getProxyForUrl(url: string) {
   if (!proxy) return undefined;
   try {
     const hostname = new URL(url).hostname;
-    if (PROXY_DOMAINS.some((d) => hostname === d || hostname.endsWith(`.${d}`))) {
+    if (
+      PROXY_DOMAINS.some((d) => hostname === d || hostname.endsWith(`.${d}`))
+    ) {
       return proxy;
     }
   } catch {
-    // invalid URL — skip proxy
+    // invalid URL - skip proxy
   }
   return undefined;
 }
@@ -86,9 +93,9 @@ export async function extractUrl(url: string): Promise<ExtractResult> {
     const page = await context.newPage();
 
     try {
-      await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
+      await page.setExtraHTTPHeaders({ "Accept-Language": "en-US,en;q=0.9" });
 
-      await page.route('**/*', (route) => {
+      await page.route("**/*", (route) => {
         const type = route.request().resourceType();
         const reqUrl = route.request().url();
 
@@ -104,7 +111,7 @@ export async function extractUrl(url: string): Promise<ExtractResult> {
 
       try {
         await page.goto(url, {
-          waitUntil: 'domcontentloaded',
+          waitUntil: "domcontentloaded",
           timeout: 60_000,
         });
       } catch (navErr) {
@@ -123,32 +130,32 @@ export async function extractUrl(url: string): Promise<ExtractResult> {
       const result = await page.evaluate(
         (): { title: string; content: string; og_image: string | null } => {
           const REMOVE_SELECTORS = [
-            'script',
-            'style',
-            'noscript',
-            'nav',
-            'header',
-            'footer',
-            'aside',
+            "script",
+            "style",
+            "noscript",
+            "nav",
+            "header",
+            "footer",
+            "aside",
             '[role="banner"]',
             '[role="navigation"]',
             '[role="complementary"]',
             '[role="contentinfo"]',
-            '.cookie-banner',
-            '#cookie-banner',
-            '.ad',
-            '.ads',
-            '.advertisement',
-            '.sidebar',
+            ".cookie-banner",
+            "#cookie-banner",
+            ".ad",
+            ".ads",
+            ".advertisement",
+            ".sidebar",
           ];
 
           REMOVE_SELECTORS.forEach((sel) => {
             document.querySelectorAll(sel).forEach((el) => el.remove());
           });
 
-          const content = (document.body?.innerText ?? '')
-            .replace(/[ \t]+/g, ' ')
-            .replace(/\n{3,}/g, '\n\n')
+          const content = (document.body?.innerText ?? "")
+            .replace(/[ \t]+/g, " ")
+            .replace(/\n{3,}/g, "\n\n")
             .trim();
 
           const og_image =
@@ -173,7 +180,7 @@ export async function extractUrl(url: string): Promise<ExtractResult> {
           await sleep(attempt * 1_500);
           continue;
         }
-        throw new Error('Blocked by Cloudflare after multiple attempts');
+        throw new Error("Blocked by Cloudflare after multiple attempts");
       }
 
       return {
@@ -187,5 +194,5 @@ export async function extractUrl(url: string): Promise<ExtractResult> {
     }
   }
 
-  throw new Error('extractUrl: exhausted all retries');
+  throw new Error("extractUrl: exhausted all retries");
 }

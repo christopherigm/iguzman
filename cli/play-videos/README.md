@@ -1,16 +1,16 @@
 # play-videos
 
-A collection of bash scripts for playing media on **Ubuntu Server** (or any headless Linux) via HDMI, using [mpv](https://mpv.io/) with DRM/KMS output — no desktop environment, X11, or Wayland required.
+A collection of bash scripts for playing media on **Ubuntu Server** (or any headless Linux) via HDMI, using [mpv](https://mpv.io/) with DRM/KMS output - no desktop environment, X11, or Wayland required.
 
 ---
 
 ## Scripts
 
-| Script | Description |
-|--------|-------------|
-| [`install.sh`](#installsh) | Install all dependencies and configure user groups |
-| [`play-videos.sh`](#play-videossh) | Play video and audio files via DRM/KMS output |
-| [`fix-audio.sh`](#fix-audiosh) | Inspect and fix common ALSA audio issues |
+| Script                             | Description                                        |
+| ---------------------------------- | -------------------------------------------------- |
+| [`install.sh`](#installsh)         | Install all dependencies and configure user groups |
+| [`play-videos.sh`](#play-videossh) | Play video and audio files via DRM/KMS output      |
+| [`fix-audio.sh`](#fix-audiosh)     | Inspect and fix common ALSA audio issues           |
 
 ---
 
@@ -38,18 +38,18 @@ Installs all packages required by `play-videos.sh` and `fix-audio.sh`, adds the 
 
 ### What it installs
 
-| Package | Why |
-|---------|-----|
-| `mpv` | Media player with DRM/KMS video output |
+| Package      | Why                                                                |
+| ------------ | ------------------------------------------------------------------ |
+| `mpv`        | Media player with DRM/KMS video output                             |
 | `alsa-utils` | Provides `aplay` and `amixer` for audio device listing and control |
-| `libdrm2` | Userspace DRM library required for `--vo=drm` KMS output |
+| `libdrm2`    | Userspace DRM library required for `--vo=drm` KMS output           |
 
 ### Groups configured
 
-| Group | Why |
-|-------|-----|
-| `video` | Read/write access to `/dev/dri/card*` for DRM/KMS video output |
-| `audio` | Access to ALSA sound devices |
+| Group    | Why                                                                       |
+| -------- | ------------------------------------------------------------------------- |
+| `video`  | Read/write access to `/dev/dri/card*` for DRM/KMS video output            |
+| `audio`  | Access to ALSA sound devices                                              |
 | `render` | Access to `/dev/dri/renderD*` GPU render nodes (required on some distros) |
 
 Supported package managers: `apt` (Debian/Ubuntu), `dnf` (Fedora), `yum` (RHEL/CentOS), `brew` (macOS).
@@ -66,15 +66,15 @@ bash cli/play-videos/install.sh
 
 ## play-videos.sh
 
-Plays video and audio files via mpv's `--vo=drm` (Direct Rendering Manager / Kernel Mode Setting) output. Renders directly to the display through the Linux kernel — no X11, Wayland, or compositor needed. Works from a plain TTY or SSH session.
+Plays video and audio files via mpv's `--vo=drm` (Direct Rendering Manager / Kernel Mode Setting) output. Renders directly to the display through the Linux kernel - no X11, Wayland, or compositor needed. Works from a plain TTY or SSH session.
 
 ### Requirements
 
-| Dependency | Provided by |
-|------------|-------------|
-| `mpv` ≥ 0.30.0 | `install.sh` / `sudo apt install mpv` |
-| `bash` ≥ 4.0 | Pre-installed on Ubuntu |
-| DRM-capable GPU | Intel, AMD, or NVIDIA (open drivers) |
+| Dependency             | Provided by                                       |
+| ---------------------- | ------------------------------------------------- |
+| `mpv` ≥ 0.30.0         | `install.sh` / `sudo apt install mpv`             |
+| `bash` ≥ 4.0           | Pre-installed on Ubuntu                           |
+| DRM-capable GPU        | Intel, AMD, or NVIDIA (open drivers)              |
 | HDMI-connected display | Plugged in before boot for reliable KMS detection |
 
 ### Usage
@@ -85,36 +85,36 @@ Plays video and audio files via mpv's `--vo=drm` (Direct Rendering Manager / Ker
 
 #### Positional argument
 
-| Argument | Behaviour |
-|----------|-----------|
-| `file.mp4` (or any video/audio file) | Play a single file |
-| `/path/to/dir/` | Play all media files in the directory (sorted) |
-| `file.m3u` / `.m3u8` / `.pls` / `.txt` | Treated as a playlist file |
+| Argument                               | Behaviour                                      |
+| -------------------------------------- | ---------------------------------------------- |
+| `file.mp4` (or any video/audio file)   | Play a single file                             |
+| `/path/to/dir/`                        | Play all media files in the directory (sorted) |
+| `file.m3u` / `.m3u8` / `.pls` / `.txt` | Treated as a playlist file                     |
 
 #### Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--connector <name>` | `auto` | DRM connector to output on (e.g. `HDMI-A-1`, `DP-1`) |
-| `--mode <WxH[@R]\|preferred\|highest>` | `preferred` | Display resolution and refresh rate (e.g. `1920x1080@60`) |
-| `--device <path>` | auto | Override DRM device (e.g. `/dev/dri/card1`) |
-| `--profile <name>` | `sw-fast` | mpv profile to use |
-| `--loop` | off | Loop the current file infinitely |
-| `--loop=<N>` | off | Loop the current file N times |
-| `--loop-playlist` | off | Loop the entire playlist infinitely |
-| `--loop-playlist=<N>` | off | Loop the entire playlist N times |
-| `--shuffle` | off | Play files in random order |
-| `--volume <0-100>` | `100` | Playback volume |
-| `--mute` | off | Start with audio muted |
-| `--no-fullscreen` | fullscreen on | Disable forced fullscreen |
-| `--audio-only` | auto | Force audio-only mode (skips DRM video output) |
-| `--ao <driver>` | `alsa` | Audio output driver: `alsa`, `pulse`, `pipewire`, `jack`, `auto` |
-| `--audio-device <device>` | auto | ALSA device string (e.g. `alsa/hdmi:CARD=PCH,DEV=3`) |
-| `--playlist <file>` | — | Explicit playlist file |
-| `--list-connectors` | — | Print available DRM connectors and modes, then exit |
-| `--list-audio-devices` | — | Print available ALSA audio devices, then exit |
-| `--` | — | Pass all subsequent arguments directly to mpv |
-| `-h`, `--help` | — | Show usage and exit |
+| Option                                 | Default       | Description                                                      |
+| -------------------------------------- | ------------- | ---------------------------------------------------------------- |
+| `--connector <name>`                   | `auto`        | DRM connector to output on (e.g. `HDMI-A-1`, `DP-1`)             |
+| `--mode <WxH[@R]\|preferred\|highest>` | `preferred`   | Display resolution and refresh rate (e.g. `1920x1080@60`)        |
+| `--device <path>`                      | auto          | Override DRM device (e.g. `/dev/dri/card1`)                      |
+| `--profile <name>`                     | `sw-fast`     | mpv profile to use                                               |
+| `--loop`                               | off           | Loop the current file infinitely                                 |
+| `--loop=<N>`                           | off           | Loop the current file N times                                    |
+| `--loop-playlist`                      | off           | Loop the entire playlist infinitely                              |
+| `--loop-playlist=<N>`                  | off           | Loop the entire playlist N times                                 |
+| `--shuffle`                            | off           | Play files in random order                                       |
+| `--volume <0-100>`                     | `100`         | Playback volume                                                  |
+| `--mute`                               | off           | Start with audio muted                                           |
+| `--no-fullscreen`                      | fullscreen on | Disable forced fullscreen                                        |
+| `--audio-only`                         | auto          | Force audio-only mode (skips DRM video output)                   |
+| `--ao <driver>`                        | `alsa`        | Audio output driver: `alsa`, `pulse`, `pipewire`, `jack`, `auto` |
+| `--audio-device <device>`              | auto          | ALSA device string (e.g. `alsa/hdmi:CARD=PCH,DEV=3`)             |
+| `--playlist <file>`                    | -             | Explicit playlist file                                           |
+| `--list-connectors`                    | -             | Print available DRM connectors and modes, then exit              |
+| `--list-audio-devices`                 | -             | Print available ALSA audio devices, then exit                    |
+| `--`                                   | -             | Pass all subsequent arguments directly to mpv                    |
+| `-h`, `--help`                         | -             | Show usage and exit                                              |
 
 ### Examples
 
@@ -169,18 +169,18 @@ mpv's DRM video output driver renders frames directly to the display via the Lin
 - No X11 / Wayland / compositor needed
 - Works from a plain TTY or SSH session
 - The kernel takes ownership of the display; the terminal that launched the script will be hidden behind the video output
-- Hardware video decoding is **not available** in this mode — the script sets `--profile=sw-fast` to compensate with optimised software decoding
+- Hardware video decoding is **not available** in this mode - the script sets `--profile=sw-fast` to compensate with optimised software decoding
 
 #### Connector selection (`--drm-connector`)
 
 The DRM connector name maps to the physical port. Typical names:
 
-| Name | Port |
-|------|------|
-| `HDMI-A-1` | First HDMI port |
-| `HDMI-A-2` | Second HDMI port |
-| `DP-1` | First DisplayPort |
-| `eDP-1` | Internal laptop display |
+| Name       | Port                    |
+| ---------- | ----------------------- |
+| `HDMI-A-1` | First HDMI port         |
+| `HDMI-A-2` | Second HDMI port        |
+| `DP-1`     | First DisplayPort       |
+| `eDP-1`    | Internal laptop display |
 
 Run `./play-videos.sh --list-connectors` to enumerate what your system exposes. `auto` selects the first active connector.
 
@@ -233,10 +233,10 @@ Inspects all ALSA mixer controls and automatically fixes common issues: muted ch
 
 ### Requirements
 
-| Dependency | Provided by |
-|------------|-------------|
-| `amixer` | `install.sh` / `sudo apt install alsa-utils` |
-| `aplay` | `install.sh` / `sudo apt install alsa-utils` |
+| Dependency | Provided by                                  |
+| ---------- | -------------------------------------------- |
+| `amixer`   | `install.sh` / `sudo apt install alsa-utils` |
+| `aplay`    | `install.sh` / `sudo apt install alsa-utils` |
 
 ### What it checks
 
@@ -249,14 +249,14 @@ Inspects all ALSA mixer controls and automatically fixes common issues: muted ch
 ./fix-audio.sh [OPTIONS]
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `-n`, `--dry-run` | off | Show what would be fixed without applying changes |
-| `-v`, `--volume <0-100>` | `100` | Target volume to set on muted/silent controls |
-| `-c`, `--card <N>` | all | Target a specific card index |
-| `-p`, `--persist` | off | Persist fixes across reboots via `alsactl store` |
-| `-q`, `--quiet` | off | Suppress informational output (errors still shown) |
-| `-h`, `--help` | — | Show usage and exit |
+| Option                   | Default | Description                                        |
+| ------------------------ | ------- | -------------------------------------------------- |
+| `-n`, `--dry-run`        | off     | Show what would be fixed without applying changes  |
+| `-v`, `--volume <0-100>` | `100`   | Target volume to set on muted/silent controls      |
+| `-c`, `--card <N>`       | all     | Target a specific card index                       |
+| `-p`, `--persist`        | off     | Persist fixes across reboots via `alsactl store`   |
+| `-q`, `--quiet`          | off     | Suppress informational output (errors still shown) |
+| `-h`, `--help`           | -       | Show usage and exit                                |
 
 ### Examples
 
@@ -282,12 +282,14 @@ Inspects all ALSA mixer controls and automatically fixes common issues: muted ch
 ## Troubleshooting
 
 **Black screen / no video output**
+
 - Run `--list-connectors` and confirm your HDMI connector is listed as connected.
 - Specify `--connector` explicitly instead of relying on `auto`.
 - Ensure the display is connected before the machine boots (KMS detects at boot time).
 - Run `install.sh` and check that `/dev/dri/` devices exist.
 
 **`ERROR: 'mpv' is not installed`**
+
 ```bash
 bash cli/play-videos/install.sh
 # or manually:
@@ -295,6 +297,7 @@ sudo apt install mpv
 ```
 
 **Permission denied on `/dev/dri/card*`**
+
 ```bash
 sudo usermod -aG video $USER
 # Log out and back in, or:
@@ -302,6 +305,7 @@ newgrp video
 ```
 
 **No audio / muted output**
+
 ```bash
 # Run the audio fixer
 ./fix-audio.sh
@@ -311,21 +315,25 @@ newgrp video
 ```
 
 **Permission denied on ALSA devices**
+
 ```bash
 sudo usermod -aG audio $USER
 # Log out and back in
 ```
 
 **Poor performance / dropped frames**
+
 - The default `sw-fast` profile is already optimised for software decoding.
 - Try a lower resolution: `--mode 1280x720@60`.
 - For hardware-accelerated decoding, investigate `--vo=gpu --gpu-context=drm` with the appropriate Mesa/VAAPI/VDPAU drivers.
 
 **Multiple GPUs / wrong card**
+
 - Use `--list-connectors` to see which connectors belong to which card.
 - Override with `--device /dev/dri/card1` to target a specific GPU.
 
 **ALSA issues not fixed by fix-audio.sh**
+
 ```bash
 # Check group membership
 sudo usermod -aG audio $(id -un)

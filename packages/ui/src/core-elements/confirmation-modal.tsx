@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import ReactDOM from 'react-dom';
-import { Button } from './button';
-import { Box } from './box';
-import { Typography } from './typography';
-import './confirmation-modal.css';
+import React, { useEffect } from "react";
+import ReactDOM from "react-dom";
+import { Button } from "./button";
+import { Box } from "./box";
+import { Typography } from "./typography";
+import "./confirmation-modal.css";
 
-export type ModalPosition = 'top' | 'center' | 'bottom';
+export type ModalPosition = "top" | "center" | "bottom";
 
 const POSITION_MAP: Record<
   ModalPosition,
   { alignItems: string; justifyContent: string }
 > = {
-  top: { alignItems: 'flex-start', justifyContent: 'center' },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  bottom: { alignItems: 'flex-end', justifyContent: 'center' },
+  top: { alignItems: "flex-start", justifyContent: "center" },
+  center: { alignItems: "center", justifyContent: "center" },
+  bottom: { alignItems: "flex-end", justifyContent: "center" },
 };
 
 /**
@@ -43,7 +43,7 @@ export interface ConfirmationModalProps {
 }
 
 /**
- * ConfirmationModal — centered dialog drawn over a semi-transparent overlay.
+ * ConfirmationModal - centered dialog drawn over a semi-transparent overlay.
  *
  * @example
  * <ConfirmationModal
@@ -61,34 +61,34 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   children,
   panelMaxWidth,
   okDisabled,
-  position = 'center',
-  backgroundBlur = 'blur(2px)',
+  position = "center",
+  backgroundBlur = "blur(2px)",
 }) => {
   const { alignItems, justifyContent } = POSITION_MAP[position];
   // Prevent body scroll while modal is open
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, []);
 
   // Keyboard shortcuts: Enter → OK (unless disabled or an interactive child is focused), Escape → Cancel
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && cancelCallback) {
+      if (e.key === "Escape" && cancelCallback) {
         cancelCallback();
         return;
       }
-      if (e.key === 'Enter' && !okDisabled) {
+      if (e.key === "Enter" && !okDisabled) {
         const active = document.activeElement as HTMLElement | null;
-        const interactiveTags = ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'];
+        const interactiveTags = ["INPUT", "SELECT", "TEXTAREA", "BUTTON"];
         if (active && interactiveTags.includes(active.tagName)) return;
         okCallback();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cancelCallback, okCallback, okDisabled]);
 
   // Close when clicking the overlay directly (not the panel)
@@ -105,7 +105,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       backgroundColor="rgba(0, 0, 0, 0.55)"
       paddingY={16}
       styles={{
-        position: 'fixed',
+        position: "fixed",
         top: 0,
         right: 0,
         bottom: 0,
@@ -123,22 +123,22 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         display="flex"
         flexDirection="column"
         width="90%"
-        maxWidth={panelMaxWidth ?? '420px'}
+        maxWidth={panelMaxWidth ?? "420px"}
         maxHeight="calc(90vh - 50px)"
         backgroundColor="var(--background, #ffffff)"
         borderRadius="12px"
         styles={{
-          position: 'relative',
+          position: "relative",
           zIndex: 1101,
-          overflow: 'hidden',
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.18)',
+          overflow: "hidden",
+          boxShadow: "0 8px 30px rgba(0, 0, 0, 0.18)",
         }}
       >
         <Box
           padding={12}
           flex="1 1 auto"
           minHeight={0}
-          styles={{ overflowY: 'auto' }}
+          styles={{ overflowY: "auto" }}
         >
           <Typography
             id="ui-confirmation-modal-title"
@@ -169,7 +169,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           padding="12px 12px 12px"
           styles={{
             flexShrink: 0,
-            borderTop: '1px solid var(--border, rgba(0, 0, 0, 0.08))',
+            borderTop: "1px solid var(--border, rgba(0, 0, 0, 0.08))",
           }}
         >
           {cancelCallback && (
@@ -187,7 +187,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     </Box>
   );
 
-  if (typeof document === 'undefined') return null;
+  if (typeof document === "undefined") return null;
   return ReactDOM.createPortal(modal, document.body);
 };
 

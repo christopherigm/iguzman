@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/actions/fps-interpolate.sh — CPU minterpolate FPS filter (adds to vf_chain)
+# lib/actions/fps-interpolate.sh - CPU minterpolate FPS filter (adds to vf_chain)
 # Depends on: probe.sh (FFPROBE_BIN), ui.sh
 
 # Appends a minterpolate filter to the vf_chain nameref.

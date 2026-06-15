@@ -36,7 +36,7 @@ def _invalidate_pattern(pattern):
 
 
 class SystemListView(APIView):
-    """GET /api/systems/ — list all enabled System records (admin only).
+    """GET /api/systems/ - list all enabled System records (admin only).
 
     Uses BasicAuthentication so deployment scripts can authenticate without
     a per-tenant JWT flow.
@@ -52,8 +52,8 @@ class SystemListView(APIView):
 
 class SystemView(APIView):
     """
-    GET  /api/system/          — returns the System record matching the request host (public).
-    PATCH /api/system/<pk>/   — partial update of a System record (admin only).
+    GET  /api/system/          - returns the System record matching the request host (public).
+    PATCH /api/system/<pk>/   - partial update of a System record (admin only).
     """
 
     def get_permissions(self):
@@ -113,8 +113,8 @@ class SystemView(APIView):
 
 class SuccessStoryListView(APIView):
     """
-    GET  /api/success-stories/   — list stories for the current system (public).
-    POST /api/success-stories/   — create a new story (admin only).
+    GET  /api/success-stories/   - list stories for the current system (public).
+    POST /api/success-stories/   - create a new story (admin only).
     """
 
     def get_permissions(self):
@@ -167,9 +167,9 @@ class SuccessStoryListView(APIView):
 
 class SuccessStoryDetailView(APIView):
     """
-    GET    /api/success-stories/<pk>/   — retrieve a story (public).
-    PATCH  /api/success-stories/<pk>/   — partial update (admin only).
-    DELETE /api/success-stories/<pk>/   — delete (admin only).
+    GET    /api/success-stories/<pk>/   - retrieve a story (public).
+    PATCH  /api/success-stories/<pk>/   - partial update (admin only).
+    DELETE /api/success-stories/<pk>/   - delete (admin only).
     """
 
     def get_permissions(self):
@@ -221,8 +221,8 @@ class SuccessStoryDetailView(APIView):
 
 class SuccessStoryImagesView(APIView):
     """
-    GET  /api/success-stories/<pk>/images/ — list gallery images (public).
-    POST /api/success-stories/<pk>/images/ — add an image (admin only, base64).
+    GET  /api/success-stories/<pk>/images/ - list gallery images (public).
+    POST /api/success-stories/<pk>/images/ - add an image (admin only, base64).
     """
 
     def get_permissions(self):
@@ -269,8 +269,8 @@ class SuccessStoryImagesView(APIView):
 
 class SuccessStoryImageDetailView(APIView):
     """
-    PATCH  /api/success-stories/<pk>/images/<img_pk>/ — update sort_order / name (admin only).
-    DELETE /api/success-stories/<pk>/images/<img_pk>/ — delete an image (admin only).
+    PATCH  /api/success-stories/<pk>/images/<img_pk>/ - update sort_order / name (admin only).
+    DELETE /api/success-stories/<pk>/images/<img_pk>/ - delete an image (admin only).
     """
 
     permission_classes = [IsSystemAdmin]
@@ -311,7 +311,7 @@ class SuccessStoryImageDetailView(APIView):
 
 
 class SuccessStoryBySlugView(APIView):
-    """GET /api/success-stories/slug/<slug>/ — retrieve a story by slug for the current system (public)."""
+    """GET /api/success-stories/slug/<slug>/ - retrieve a story by slug for the current system (public)."""
 
     permission_classes = [AllowAny]
 
@@ -345,8 +345,8 @@ class SuccessStoryBySlugView(APIView):
 
 class CompanyHighlightListView(APIView):
     """
-    GET  /api/highlights/   — list highlights for the current system (public).
-    POST /api/highlights/   — create a new highlight (admin only).
+    GET  /api/highlights/   - list highlights for the current system (public).
+    POST /api/highlights/   - create a new highlight (admin only).
     """
 
     def get_permissions(self):
@@ -399,9 +399,9 @@ class CompanyHighlightListView(APIView):
 
 class CompanyHighlightDetailView(APIView):
     """
-    GET    /api/highlights/<pk>/   — retrieve a highlight (public).
-    PATCH  /api/highlights/<pk>/   — partial update (admin only).
-    DELETE /api/highlights/<pk>/   — delete (admin only).
+    GET    /api/highlights/<pk>/   - retrieve a highlight (public).
+    PATCH  /api/highlights/<pk>/   - partial update (admin only).
+    DELETE /api/highlights/<pk>/   - delete (admin only).
     """
 
     def get_permissions(self):
@@ -450,7 +450,7 @@ class CompanyHighlightDetailView(APIView):
 
 
 class CompanyHighlightBySlugView(APIView):
-    """GET /api/highlights/slug/<slug>/ — retrieve a highlight by slug for the current system (public)."""
+    """GET /api/highlights/slug/<slug>/ - retrieve a highlight by slug for the current system (public)."""
 
     permission_classes = [AllowAny]
 
@@ -484,8 +484,8 @@ class CompanyHighlightBySlugView(APIView):
 
 class CompanyHighlightItemsView(APIView):
     """
-    GET  /api/highlights/<pk>/items/   — list items for a highlight (public).
-    POST /api/highlights/<pk>/items/   — create a new item (admin only).
+    GET  /api/highlights/<pk>/items/   - list items for a highlight (public).
+    POST /api/highlights/<pk>/items/   - create a new item (admin only).
     """
 
     def get_permissions(self):
@@ -533,9 +533,9 @@ class CompanyHighlightItemsView(APIView):
 
 class CompanyHighlightItemDetailView(APIView):
     """
-    GET    /api/highlights/<pk>/items/<item_pk>/   — retrieve an item (public).
-    PATCH  /api/highlights/<pk>/items/<item_pk>/   — partial update (admin only).
-    DELETE /api/highlights/<pk>/items/<item_pk>/   — delete (admin only).
+    GET    /api/highlights/<pk>/items/<item_pk>/   - retrieve an item (public).
+    PATCH  /api/highlights/<pk>/items/<item_pk>/   - partial update (admin only).
+    DELETE /api/highlights/<pk>/items/<item_pk>/   - delete (admin only).
     """
 
     def get_permissions(self):
@@ -596,8 +596,8 @@ def _get_admin_system_id(request):
 
 class BrandListCreateView(APIView):
     """
-    GET  /api/brands/   — list brands for the current system (by ?system= or host).
-    POST /api/brands/   — create a brand (admin only).
+    GET  /api/brands/   - list brands for the current system (by ?system= or host).
+    POST /api/brands/   - create a brand (admin only).
     """
 
     def get_permissions(self):
@@ -647,9 +647,9 @@ class BrandListCreateView(APIView):
 
 class BrandDetailView(APIView):
     """
-    GET    /api/brands/<pk>/   — retrieve a brand (public).
-    PATCH  /api/brands/<pk>/   — partial update (admin only).
-    DELETE /api/brands/<pk>/   — delete (admin only).
+    GET    /api/brands/<pk>/   - retrieve a brand (public).
+    PATCH  /api/brands/<pk>/   - partial update (admin only).
+    DELETE /api/brands/<pk>/   - delete (admin only).
     """
 
     def get_permissions(self):

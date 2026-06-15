@@ -140,7 +140,7 @@
     "s3Title": "3. Direitos autorais e propriedade intelectual",
     "s3Body": "Baixar um vídeo não transfere para você nenhum direito autoral ou de propriedade sobre ele. Você deve respeitar os direitos de propriedade intelectual dos criadores de conteúdo e detentores de direitos. A redistribuição, exibição pública ou uso comercial de conteúdo baixado sem a devida autorização pode constituir violação de direitos autorais nos termos da legislação aplicável.",
     "s4Title": "4. Termos de serviço das plataformas",
-    "s4Body": "A maioria das plataformas — incluindo YouTube, Facebook, Instagram, TikTok e X (Twitter) — proíbe scraping ou download automatizado em seus Termos de Serviço. Violar os termos de uma plataforma é uma questão civil entre você e essa plataforma, não um ato criminoso na maioria das jurisdições. No entanto, você usa esta aplicação por sua conta e risco e assume total responsabilidade por quaisquer violações dos termos.",
+    "s4Body": "A maioria das plataformas - incluindo YouTube, Facebook, Instagram, TikTok e X (Twitter) - proíbe scraping ou download automatizado em seus Termos de Serviço. Violar os termos de uma plataforma é uma questão civil entre você e essa plataforma, não um ato criminoso na maioria das jurisdições. No entanto, você usa esta aplicação por sua conta e risco e assume total responsabilidade por quaisquer violações dos termos.",
     "s5Title": "5. Status legal do yt-dlp",
     "s5Body": "Esta aplicação usa yt-dlp, uma ferramenta de código aberto publicada sob a licença Unlicense. yt-dlp é um software legal. Tribunais em múltiplas jurisdições decidiram que violações dos Termos de Serviço por si só não constituem atividade ilegal. Se um download específico é lícito em sua jurisdição depende da legislação local de direitos autorais e da natureza do conteúdo.",
     "s6Title": "6. Sem contorno de DRM",
@@ -329,7 +329,7 @@
   "MigrationBanner": {
     "close": "Fechar",
     "heading": "Estamos migrando para o Media 2 Go!",
-    "body": "Após 31 de maio (faltam {days} dias), vd2.iguzman.com.mx será somente leitura — não haverá novos downloads disponíveis lá. Visite nosso novo site para continuar baixando."
+    "body": "Após 31 de maio (faltam {days} dias), vd2.iguzman.com.mx será somente leitura - não haverá novos downloads disponíveis lá. Visite nosso novo site para continuar baixando."
   },
   "Credits": {
     "balanceLabel": "{credits} créditos",
@@ -337,7 +337,7 @@
     "buyMore": "Comprar Mais",
     "restoreKey": "Restaurar Chave",
     "purchaseTitle": "Comprar Créditos",
-    "purchaseText": "Selecione um pacote de créditos. Os créditos são usados para tradução de legendas, download de comentários e processamento no servidor. Sua chave pode ser compartilhada com qualquer pessoa — os créditos são compartilhados em todos os usos. Use-a em quantos dispositivos quiser.",
+    "purchaseText": "Selecione um pacote de créditos. Os créditos são usados para tradução de legendas, download de comentários e processamento no servidor. Sua chave pode ser compartilhada com qualquer pessoa - os créditos são compartilhados em todos os usos. Use-a em quantos dispositivos quiser.",
     "creditsCount": "{credits} créditos",
     "purchaseNote": "Sua chave é salva no seu navegador. Guarde-a em local seguro caso troque de dispositivo.",
     "purchaseError": "Algo deu errado. Por favor, tente novamente.",
@@ -357,7 +357,7 @@
     "deleteKey": "Excluir chave",
     "keyCopied": "Copiado!",
     "deleteKeyTitle": "Excluir Chave de Créditos?",
-    "deleteKeyText": "Isso removerá permanentemente sua chave de créditos deste dispositivo. Não guardamos uma cópia — esta ação não pode ser desfeita.",
+    "deleteKeyText": "Isso removerá permanentemente sua chave de créditos deste dispositivo. Não guardamos uma cópia - esta ação não pode ser desfeita.",
     "deleteKeyConfirm": "Excluir",
     "deleteKeyCancel": "Cancelar",
     "couponTitle": "Resgatar um Cupom",
@@ -394,7 +394,7 @@
     "videoEditor": {
       "title": "Editor de vídeo poderoso",
       "body1": "Transforme seus downloads diretamente no navegador: redimensione, aumente o FPS, converta para H.265 e remova as barras pretas.",
-      "body2": "Sem software adicional ou conta necessária — tudo funciona no seu dispositivo."
+      "body2": "Sem software adicional ou conta necessária - tudo funciona no seu dispositivo."
     },
     "prev": "Slide anterior",
     "next": "Próximo slide",

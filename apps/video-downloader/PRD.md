@@ -6,7 +6,7 @@
 education, and scale).
 
 **The Value Proposition (The Elevator Pitch):** "We eliminate language barriers in educational content. We
-take raw, multi-source video—regardless of where it came from—and guarantee that the content is instantly
+take raw, multi-source video-regardless of where it came from-and guarantee that the content is instantly
 transcribable, localized, and formatted for perfect consumption in any major language, allowing institutions
 to scale their educational reach without hiring a global localization team."
 

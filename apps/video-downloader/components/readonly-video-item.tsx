@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import type { BurnCaptionsConfig } from '@/lib/types';
-import type { StoredVideo, VideoStatus } from './use-video-store';
+import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import type { BurnCaptionsConfig } from "@/lib/types";
+import type { StoredVideo, VideoStatus } from "./use-video-store";
 import {
   STATUS_COLORS,
   resolveMediaUrl,
@@ -18,29 +18,29 @@ import {
   VideoCardHeader,
   VideoFooterLink,
   PlatformIconBg,
-} from './video-item-shared';
-import { VideoComments } from './video-comments';
-import { setCreditsBalance } from './use-credits-store';
-import { useOPFSUrls } from './opfs-url-context';
+} from "./video-item-shared";
+import { VideoComments } from "./video-comments";
+import { setCreditsBalance } from "./use-credits-store";
+import { useOPFSUrls } from "./opfs-url-context";
 import {
   deleteFromOPFS,
   writeToOPFS,
   readFromOPFS,
   isOPFSSupported,
-} from '@/lib/opfs';
-import { BurnCaptionsModal } from './burn-captions-modal';
-import './video-item.css';
+} from "@/lib/opfs";
+import { BurnCaptionsModal } from "./burn-captions-modal";
+import "./video-item.css";
 
 /* ── Props ──────────────────────────────────────────── */
 
 export type ReprocessAction =
-  | 'fps'
-  | 'h264'
-  | 'h265'
-  | 'bars'
-  | 'burnCaptions'
-  | 'scaleDown'
-  | 'diarize';
+  | "fps"
+  | "h264"
+  | "h265"
+  | "bars"
+  | "burnCaptions"
+  | "scaleDown"
+  | "diarize";
 
 export interface ReadOnlyVideoItemProps {
   video: StoredVideo;
@@ -64,7 +64,7 @@ export function ReadOnlyVideoItem({
   onUpdate,
   onDuplicate,
 }: ReadOnlyVideoItemProps) {
-  const t = useTranslations('VideoGrid');
+  const t = useTranslations("VideoGrid");
   const { getUrls, registerUrls } = useOPFSUrls();
   const opfsUrls = video.opfsEnabled ? getUrls(video.uuid) : null;
 
@@ -80,7 +80,7 @@ export function ReadOnlyVideoItem({
     video.fulltitle ??
     video.name ??
     video.uploader ??
-    (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
+    (video.justAudio ? t("untitledAudio") : t("untitledVideo"));
 
   /* ── Server mode toggle ──────────────────────────── */
   const handleServerModeChange = useCallback(
@@ -104,15 +104,19 @@ export function ReadOnlyVideoItem({
   /* ── Re-download (trigger browser save) ─────────── */
   const handleRedownload = useCallback(async () => {
     if (!video.downloadURL) return;
-    const filename = `${video.name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}`;
+    const filename = `${video.name ?? (video.justAudio ? "audio" : "video")}-${Date.now()}`;
 
     let urlOrBlob: string | File = opfsUrls?.videoUrl ?? video.downloadURL;
 
-    // 'opfs://' is not a navigable URL — the blob URL from the context should
+    // 'opfs://' is not a navigable URL - the blob URL from the context should
     // normally be used instead, but if it isn't registered yet (e.g. the React
     // state batching didn't commit the registerUrls call before this component
     // mounted), read the file directly from OPFS so the download still works.
-    if (typeof urlOrBlob === 'string' && urlOrBlob.startsWith('opfs://') && video.opfsKey) {
+    if (
+      typeof urlOrBlob === "string" &&
+      urlOrBlob.startsWith("opfs://") &&
+      video.opfsKey
+    ) {
       try {
         urlOrBlob = await readFromOPFS(video.opfsKey);
       } catch {
@@ -171,7 +175,7 @@ export function ReadOnlyVideoItem({
         const captionsRes = await fetch(resolveMediaUrl(video.captionsFile));
         if (captionsRes.ok) {
           const captionsBlob = await captionsRes.blob();
-          const captionsFilename = video.captionsFile.split('/').pop()!;
+          const captionsFilename = video.captionsFile.split("/").pop()!;
           captionsKey = `captions_${captionsFilename}`;
           await writeToOPFS(captionsKey, captionsBlob);
         }
@@ -184,7 +188,7 @@ export function ReadOnlyVideoItem({
         const commentsRes = await fetch(resolveMediaUrl(video.commentsFile));
         if (commentsRes.ok) {
           const commentsBlob = await commentsRes.blob();
-          const commentsFilename = video.commentsFile.split('/').pop()!;
+          const commentsFilename = video.commentsFile.split("/").pop()!;
           commentsKey = `comments_${commentsFilename}`;
           await writeToOPFS(commentsKey, commentsBlob);
         }
@@ -204,7 +208,7 @@ export function ReadOnlyVideoItem({
 
     if (video.taskId && !video.serverFileDeleted) {
       await fetch(`/api/download-video/${video.taskId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       }).catch(() => {});
     }
 
@@ -225,7 +229,7 @@ export function ReadOnlyVideoItem({
     if (!video.opfsStored || !video.opfsKey) return;
 
     const newUuid = crypto.randomUUID();
-    const ext = (key: string) => key.match(/(\.[^.]+)$/)?.[1] ?? '';
+    const ext = (key: string) => key.match(/(\.[^.]+)$/)?.[1] ?? "";
 
     const newOpfsKey = `dup_${newUuid}${ext(video.opfsKey)}`;
     const videoFile = await readFromOPFS(video.opfsKey);
@@ -277,7 +281,7 @@ export function ReadOnlyVideoItem({
       taskId: video.taskId,
       serverTaskId: null,
       serverFileDeleted: true,
-      status: 'done' as VideoStatus,
+      status: "done" as VideoStatus,
       error: null,
     };
 
@@ -286,13 +290,13 @@ export function ReadOnlyVideoItem({
 
   /* ── Download captions file ──────────────────────── */
   const handleDownloadCaptions = useCallback(async () => {
-    const name = video.name ?? 'video';
+    const name = video.name ?? "video";
     if (video.opfsCaptionsKey) {
       try {
         const file = await readFromOPFS(video.opfsCaptionsKey);
         await triggerBrowserDownload(file, `${name}-captions.txt`);
       } catch (err) {
-        console.error('Failed to read captions from OPFS:', err);
+        console.error("Failed to read captions from OPFS:", err);
       }
       return;
     }
@@ -305,7 +309,7 @@ export function ReadOnlyVideoItem({
   const handleBurnCaptions = useCallback(
     (config: BurnCaptionsConfig) => {
       setShowBurnModal(false);
-      onReprocess(video.uuid, 'burnCaptions', undefined, config);
+      onReprocess(video.uuid, "burnCaptions", undefined, config);
     },
     [onReprocess, video.uuid],
   );
@@ -313,13 +317,13 @@ export function ReadOnlyVideoItem({
   /* ── Fetch metadata from ScrapeCreators ─────────────── */
   const handleGetMetadata = useCallback(async () => {
     setMetadataError(false);
-    const creditsKey = localStorage.getItem('vd_credits_key');
+    const creditsKey = localStorage.getItem("vd_credits_key");
     try {
-      const res = await fetch('/api/social-metadata', {
-        method: 'POST',
+      const res = await fetch("/api/social-metadata", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
+          "Content-Type": "application/json",
+          ...(creditsKey ? { "x-credits-key": creditsKey } : {}),
         },
         body: JSON.stringify({ url: video.originalURL }),
       });
@@ -365,7 +369,7 @@ export function ReadOnlyVideoItem({
       borderRadius={14}
       className="vi-card"
       flexDirection="column"
-      styles={{ overflow: 'hidden' }}
+      styles={{ overflow: "hidden" }}
     >
       <PlatformIconBg
         platform={video.platform}
@@ -429,7 +433,9 @@ export function ReadOnlyVideoItem({
           onCopy={handleCopy}
           onRedownload={handleRedownload}
           onToggleExtra={() => setExtraActionsOpen((p) => !p)}
-          onToggleComments={video.commentsFile ? () => setCommentsOpen((p) => !p) : undefined}
+          onToggleComments={
+            video.commentsFile ? () => setCommentsOpen((p) => !p) : undefined
+          }
           onDelete={() => setConfirmRemove(true)}
           t={t}
         />
@@ -444,17 +450,17 @@ export function ReadOnlyVideoItem({
           h265Error={false}
           blackBarsError={false}
           metadataError={metadataError}
-          onRemoveBlackBars={() => onReprocess(video.uuid, 'bars')}
-          onInterpolateFps={(fps) => onReprocess(video.uuid, 'fps', fps)}
-          onConvert={() => onReprocess(video.uuid, 'h264')}
-          onConvertH265={() => onReprocess(video.uuid, 'h265')}
+          onRemoveBlackBars={() => onReprocess(video.uuid, "bars")}
+          onInterpolateFps={(fps) => onReprocess(video.uuid, "fps", fps)}
+          onConvert={() => onReprocess(video.uuid, "h264")}
+          onConvertH265={() => onReprocess(video.uuid, "h265")}
           onDownloadCaptions={handleDownloadCaptions}
           onBurnCaptions={() => setShowBurnModal(true)}
-          onScaleDown={(height) => onReprocess(video.uuid, 'scaleDown', height)}
+          onScaleDown={(height) => onReprocess(video.uuid, "scaleDown", height)}
           onMakeOffline={handleMakeOffline}
           onDuplicate={handleDuplicate}
           onGetMetadata={handleGetMetadata}
-          onDiarize={() => onReprocess(video.uuid, 'diarize')}
+          onDiarize={() => onReprocess(video.uuid, "diarize")}
           useServerProcessing={video.useServerProcessing}
           onServerModeChange={handleServerModeChange}
           t={t}
@@ -472,13 +478,13 @@ export function ReadOnlyVideoItem({
       ) : null}
       {confirmRemove ? (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText')}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText")}
           okCallback={() => {
             setConfirmRemove(false);
             if (video.taskId && !video.serverFileDeleted) {
               fetch(`/api/download-video/${video.taskId}`, {
-                method: 'DELETE',
+                method: "DELETE",
               }).catch(console.error);
             }
             if (video.opfsKey) void deleteFromOPFS(video.opfsKey);

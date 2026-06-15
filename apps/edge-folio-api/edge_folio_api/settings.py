@@ -121,7 +121,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# File upload cap — large enough for PDF resumes processed in memory, never stored.
+# File upload cap - large enough for PDF resumes processed in memory, never stored.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
 
 _R2_ACCOUNT_ID = os.environ.get('R2_ACCOUNT_ID', '')
@@ -309,7 +309,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'ingest-shared-catalog': {
         'task': 'jobs.tasks.ingest_shared_catalog',
-        'schedule': 24 * 3600.0,  # daily — keeps usage within the 250 calls/month free tier
+        'schedule': 24 * 3600.0,  # daily - keeps usage within the 250 calls/month free tier
     },
     'prune-expired-postings': {
         'task': 'jobs.tasks.prune_expired_postings',

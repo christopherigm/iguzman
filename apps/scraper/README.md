@@ -1,6 +1,6 @@
 # scraper
 
-A lightweight headless-browser microservice built with **Fastify** and **Playwright**. It exposes two JSON endpoints — web search and URL content extraction — protected by a shared API key.
+A lightweight headless-browser microservice built with **Fastify** and **Playwright**. It exposes two JSON endpoints - web search and URL content extraction - protected by a shared API key.
 
 ---
 
@@ -26,10 +26,10 @@ A lightweight headless-browser microservice built with **Fastify** and **Playwri
 └─────────────────────────────────────────────┘
 ```
 
-- **`src/index.ts`** — Fastify server setup, auth hook, route handlers, graceful shutdown.
-- **`src/browser.ts`** — Singleton `chromium` instance. Auto-restarts on crash. Passes `--no-sandbox` and `--disable-dev-shm-usage` flags required inside containers.
-- **`src/search.ts`** — `searchWeb()` supports DuckDuckGo (CAPTCHA-safe via `fetch` + `setContent`) and Bing (full navigation).
-- **`src/extract.ts`** — `extractUrl()` navigates to a page, removes boilerplate elements (`nav`, `footer`, ads, etc.), and returns clean text.
+- **`src/index.ts`** - Fastify server setup, auth hook, route handlers, graceful shutdown.
+- **`src/browser.ts`** - Singleton `chromium` instance. Auto-restarts on crash. Passes `--no-sandbox` and `--disable-dev-shm-usage` flags required inside containers.
+- **`src/search.ts`** - `searchWeb()` supports DuckDuckGo (CAPTCHA-safe via `fetch` + `setContent`) and Bing (full navigation).
+- **`src/extract.ts`** - `extractUrl()` navigates to a page, removes boilerplate elements (`nav`, `footer`, ads, etc.), and returns clean text.
 
 ---
 
@@ -62,7 +62,7 @@ Run a web search and return structured results.
 
 | Field        | Type                     | Default        | Description              |
 | ------------ | ------------------------ | -------------- | ------------------------ |
-| `query`      | `string`                 | —              | Search query (required)  |
+| `query`      | `string`                 | -              | Search query (required)  |
 | `engine`     | `"duckduckgo" \| "bing"` | `"duckduckgo"` | Search engine            |
 | `maxResults` | `number`                 | `5`            | Number of results (1-20) |
 
@@ -129,7 +129,7 @@ curl -X POST https://scraper.iguzman.com.mx/extract \
 | `PORT`            | `4000`    | Port the server listens on                                                |
 | `SCRAPER_API_KEY` | _(empty)_ | API key checked on every request. Leave empty to disable auth (dev only). |
 | `LOG_LEVEL`       | `info`    | Fastify log level: `trace`, `debug`, `info`, `warn`, `error`, `fatal`     |
-| `NODE_ENV`        | —         | Set to `production` in the container                                      |
+| `NODE_ENV`        | -         | Set to `production` in the container                                      |
 
 ---
 
@@ -198,7 +198,7 @@ Edit `helm/values.yaml` and set at minimum:
 ```yaml
 image:
   repository: christopherguzman/scraper
-  tag: 'latest'
+  tag: "latest"
 
 ingress:
   hosts:
@@ -239,4 +239,4 @@ helm uninstall scraper --namespace scraper
 
 ### Resource Notes
 
-Playwright launches a Chromium process inside the container. The defaults in `values.yaml` allocate **512 Mi request / 1 Gi limit** of memory. Do not set `replicaCount` above `1` without adding a load-balancer session strategy — the singleton browser instance is not shared across pods.
+Playwright launches a Chromium process inside the container. The defaults in `values.yaml` allocate **512 Mi request / 1 Gi limit** of memory. Do not set `replicaCount` above `1` without adding a load-balancer session strategy - the singleton browser instance is not shared across pods.

@@ -4,7 +4,69 @@
     "description": ""
   },
   "HomePage": {
-    "title": "Edge Folio"
+    "title": "Edge Folio",
+    "heroEyebrow": "Datenschutzorientierte Karriereplattform",
+    "heroTitle": "Deine Karriere, wahrheitsgetreu erzählt - und auf jede Stelle zugeschnitten",
+    "heroSubtitle": "EdgeFolio pflegt eine einzige faktische Quelle deines Werdegangs und nutzt eine KI, die einordnet und umschreibt - aber nie erfindet -, um sie auf jede Stelle zuzuschneiden. Exportiere ATS-taugliche Lebensläufe, Anschreiben und TN-Visum-Schreiben.",
+    "heroCtaPrimary": "Kostenlos starten",
+    "heroCtaSecondary": "Anmelden",
+    "privateJobsTitle": "Deine privaten Stellenanzeigen",
+    "privateJobsViewAll": "Alle Stellen ansehen",
+    "privateJobsBrowse": "Stellen durchsuchen",
+    "heroNote": "Deine Daten bleiben deine - Tokens liegen in HTTP-only-Cookies und dein proprietärer Code verlässt nie dein Gerät.",
+    "pillarsTitle": "Auf einem Versprechen aufgebaut",
+    "pillarsSubtitle": "Die KI ordnet ein und schreibt um. Sie erfindet nie.",
+    "pillars": {
+      "matrix": {
+        "title": "Unveränderliche Matrix",
+        "body": "Pflege vorab genehmigte, faktische STAR-Stichpunkte und Fähigkeiten - die Hauptquelle, aus der jeder Lebenslauf schöpft."
+      },
+      "tailor": {
+        "title": "Ehrliches KI-Zuschneiden",
+        "body": "Ordne deine echten Erfolge ein und schreibe sie für jede Stellenbeschreibung um - mit Gesamt-, Technik- und TN-Wahrscheinlichkeits-Scores."
+      },
+      "jobs": {
+        "title": "Live-Stellensuche",
+        "body": "Durchsuche einen USMCA-fokussierten Katalog oder nutze eigene API-Schlüssel für einen privaten Feed und speichere eine Stelle direkt in eine Bewerbung."
+      },
+      "export": {
+        "title": "ATS- & TN-fertiger Export",
+        "body": "Erstelle Anschreiben und NAFTA/USMCA-TN-Visum-Schreiben und exportiere saubere PDFs, die Bewerber-Tracking-Systeme bestehen."
+      }
+    },
+    "featuresTitle": "Alles, um dich selbstbewusst zu bewerben",
+    "features": {
+      "matrix": {
+        "title": "Unveränderliche Matrix",
+        "body": "Faktische, vorab genehmigte Stichpunkte und Fähigkeiten im STAR-Format - die Datenbank, aus der die KI schöpft."
+      },
+      "tailor": {
+        "title": "Bewerbungs-Zuschnitt",
+        "body": "Schreibe Stichpunkte, Fähigkeiten, Berufserfahrung und Projekte je Stelle um - mit Match-Scores und Erklärungen."
+      },
+      "company": {
+        "title": "Unternehmens-Insights",
+        "body": "Automatische Recherche zum Zielunternehmen - Über uns, Analyse und ein Insight-Score."
+      },
+      "letters": {
+        "title": "Anschreiben & TN-Schreiben",
+        "body": "Anschreiben und NAFTA/USMCA-TN-Visum-Schreiben, erzeugt aus deinen zugeschnittenen Inhalten."
+      },
+      "jobs": {
+        "title": "Stellenkatalog",
+        "body": "Live-Stellen in den USA, Kanada und Mexiko, mit optionalem privatem Feed über eigene Schlüssel."
+      },
+      "passkeys": {
+        "title": "Passkey-Sicherheit",
+        "body": "Melde dich mit WebAuthn-Passkeys an; JWTs bleiben in HTTP-only-Cookies, unsichtbar für JavaScript."
+      }
+    },
+    "privacyTitle": "Datenschutz von Grund auf",
+    "privacyBody": "Proprietäre Codebasen werden lokal in deinem Browser analysiert. Nur bereinigte Stack-Metadaten - Sprachen, Frameworks und Abhängigkeiten - werden je an den Server gesendet. Dein Quellcode verlässt nie deinen Rechner.",
+    "privacyTech": "Angetrieben von struktureller Analyse im Browser (tree-sitter WASM) - kein Modell-Download, keine GPU nötig.",
+    "ctaTitle": "Bereit, deine Jobsuche selbst in die Hand zu nehmen?",
+    "ctaSubtitle": "Erstelle heute deine Unveränderliche Matrix und schneide dich auf die nächste Stelle zu.",
+    "ctaButton": "Konto erstellen"
   },
   "VerifyEmailPage": {
     "loading": "E-Mail wird verifiziert…",
@@ -75,7 +137,7 @@
   },
   "MatrixPage": {
     "title": "Unveränderliche Matrix",
-    "subtitle": "Deine verifizierten Karrierefakten — die Wahrheitsquelle für jeden Lebenslauf und jede Bewerbung.",
+    "subtitle": "Deine verifizierten Karrierefakten - die Wahrheitsquelle für jeden Lebenslauf und jede Bewerbung.",
     "loading": "Lädt…",
     "errorLoad": "Matrix konnte nicht geladen werden. Bitte erneut versuchen.",
     "addBullet": "Punkt hinzufügen",
@@ -156,7 +218,7 @@
     "resumeAnalyzing": "Lebenslauf wird analysiert…",
     "resumeSuccess": "{bullets} Stichpunkte und {skills} Skills importiert",
     "resumeSuccessHint": "Überprüfe und genehmige sie in der Immutable Matrix",
-    "resumeSkipped": "Lebenslauf-Import übersprungen — du kannst deinen Verlauf manuell in der Matrix ergänzen",
+    "resumeSkipped": "Lebenslauf-Import übersprungen - du kannst deinen Verlauf manuell in der Matrix ergänzen",
     "resumeSkip": "Schritt überspringen",
     "resumeError": "Lebenslauf-Analyse fehlgeschlagen. Bitte erneut versuchen oder überspringen.",
     "reviewResume": "Lebenslauf",
@@ -167,14 +229,14 @@
     "finish": "Arbeitsbereich betreten",
     "finishing": "Wird gespeichert…",
     "errorSave": "Profil konnte nicht gespeichert werden. Bitte erneut versuchen.",
-    "handshakeTitle": "Profil gespeichert — Arbeitsbereich bereit",
+    "handshakeTitle": "Profil gespeichert - Arbeitsbereich bereit",
     "handshakeBody": "Dein Profil ist eingerichtet. Die Codebase-Extraktion läuft vollständig in deinem Browser.",
     "handshakeDetail": "Codebase-Extraktion ist jetzt im Tab Extrahieren verfügbar.",
     "resumeCareerSuccess": "{jobs} Jobs, {degrees} Abschlüsse und {projects} Projekte importiert"
   },
   "ExtractPage": {
     "title": "Erfahrung extrahieren",
-    "subtitle": "Kartografiere die Struktur eines lokalen Repositorys — kein Quellcode oder Geheimnis verlässt dein Gerät.",
+    "subtitle": "Kartografiere die Struktur eines lokalen Repositorys - kein Quellcode oder Geheimnis verlässt dein Gerät.",
     "extractCta": "Repository auswählen",
     "pickerUnsupported": "Dein Browser unterstützt den lokalen Verzeichniszugriff nicht. Bitte Chrome 86+, Edge oder einen anderen Chromium-basierten Browser verwenden.",
     "pickerOpening": "Wird geöffnet…",
@@ -190,7 +252,7 @@
     "phaseScanning": "Dateien und Manifeste werden gescannt…",
     "phaseBuilding": "Strukturzusammenfassung wird erstellt…",
     "skeletonTitle": "Repository-Struktur extrahiert",
-    "skeletonSubtitle": "Nur strukturelle Metadaten wurden erfasst — keine Variablennamen, Logik oder proprietäre Strings.",
+    "skeletonSubtitle": "Nur strukturelle Metadaten wurden erfasst - keine Variablennamen, Logik oder proprietäre Strings.",
     "skeletonFiles": "Dateien",
     "skeletonFilesValue": "{code} Code / {total} gesamt",
     "skeletonLanguages": "Sprachen",
@@ -503,7 +565,7 @@
     "exportIncludeLinks": "Links (GitHub & LinkedIn)",
     "exportIncludeSkills": "Technische Fähigkeiten (KI-angepasst)",
     "exportIncludePhoto": "Profilfoto",
-    "exportIncludePhotoHint": "Für US/Kanada-ATS nicht empfohlen — für europäische/internationale Lebensläufe geeignet.",
+    "exportIncludePhotoHint": "Für US/Kanada-ATS nicht empfohlen - für europäische/internationale Lebensläufe geeignet.",
     "exportJobsTitle": "Berufserfahrung",
     "exportEducationTitle": "Ausbildung",
     "exportLanguagesTitle": "Sprachen",
@@ -554,7 +616,7 @@
     "tnSuggestNoData": "Füge zuerst Ausbildung oder Berufserfahrung hinzu, um diese Funktion zu nutzen.",
     "tnSuggestError": "Analyse der TN-Kategorien fehlgeschlagen. Bitte erneut versuchen.",
     "tnSuggestModalTitle": "TN-Visum Kategorievorschläge",
-    "tnSuggestModalSubtitle": "Basierend auf deiner Ausbildung und Berufserfahrung. Nur zu Informationszwecken — keine Rechtsberatung.",
+    "tnSuggestModalSubtitle": "Basierend auf deiner Ausbildung und Berufserfahrung. Nur zu Informationszwecken - keine Rechtsberatung.",
     "tnSuggestNoMatches": "Keine passenden TN-Kategorien für dein Profil gefunden.",
     "locationLabel": "Standort",
     "salaryMinLabel": "Mindestgehalt",
@@ -804,7 +866,7 @@
     "tnSuggestError": "Fehler bei der Analyse der TN-Kategorien. Bitte erneut versuchen.",
     "tnSuggestParseError": "Ergebnisse konnten nicht verarbeitet werden. Bitte erneut versuchen.",
     "tnSuggestModalTitle": "TN-Visa-Kategorie-Vorschläge",
-    "tnSuggestModalSubtitle": "Basierend auf Ihrer Ausbildung und Berufserfahrung. Nur zu Informationszwecken — keine Rechtsberatung.",
+    "tnSuggestModalSubtitle": "Basierend auf Ihrer Ausbildung und Berufserfahrung. Nur zu Informationszwecken - keine Rechtsberatung.",
     "tnSuggestNoMatches": "Keine passenden TN-Kategorien für Ihr Profil gefunden.",
     "jobKeysSection": "Job-API-Schlüssel",
     "jobKeysSubtitle": "Verwende deine eigenen Anbieter-Schlüssel für einen privaten Job-Feed. Schlüssel werden verschlüsselt und niemals geteilt.",

@@ -4,7 +4,7 @@
 # Interactive Helm deployment for the custom MongoDB chart.
 # Auth mode "existing secret" references a k8s secret already in the namespace
 # so the root password is never stored in Helm release values.
-# Root password is optional — leave blank in direct mode to deploy without auth.
+# Root password is optional - leave blank in direct mode to deploy without auth.
 #
 # Run: bash cli/deploy-mongodb/deploy-mongodb.sh
 
@@ -45,7 +45,7 @@ setup_strings() {
     ROOT_USER_PROMPT="auth.rootUsername"
     AUTH_MODE_PROMPT="Modo de autenticación (MONGO_INITDB_ROOT_PASSWORD)"
     AUTH_MODE_SECRET="Secreto existente (recomendado)"
-    AUTH_MODE_DIRECT="Contraseña directa (opcional — dejar vacío = sin auth)"
+    AUTH_MODE_DIRECT="Contraseña directa (opcional - dejar vacío = sin auth)"
     SECRET_NAME_PROMPT="Nombre del secreto"
     SECRET_KEY_PROMPT="Clave en el secreto"
     SECRET_KEY_SELECT="Selecciona la clave de contraseña"
@@ -86,7 +86,7 @@ setup_strings() {
     ROOT_USER_PROMPT="auth.rootUsername"
     AUTH_MODE_PROMPT="Authentication mode (MONGO_INITDB_ROOT_PASSWORD)"
     AUTH_MODE_SECRET="Existing secret (recommended)"
-    AUTH_MODE_DIRECT="Direct password (optional — leave blank for no auth)"
+    AUTH_MODE_DIRECT="Direct password (optional - leave blank for no auth)"
     SECRET_NAME_PROMPT="Secret name"
     SECRET_KEY_PROMPT="Key in the secret"
     SECRET_KEY_SELECT="Select password key"

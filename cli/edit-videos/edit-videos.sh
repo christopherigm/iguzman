@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# edit-videos.sh — Batch FFmpeg video editor (thin entrypoint)
+# edit-videos.sh - Batch FFmpeg video editor (thin entrypoint)
 #
 # Sources all lib/ modules and delegates to main().
 # See CLAUDE.md / README for architecture overview.
@@ -340,11 +340,11 @@ main() {
       echo ""
       if [[ "$(lc "${rife_dl_ans}")" == y* ]]; then
         if ! bootstrap_rife || ! find_rife_model; then
-          printf "  %s RIFE disabled — skipping interpolation.\n\n" "$(clr_yellow '⚠')"
+          printf "  %s RIFE disabled - skipping interpolation.\n\n" "$(clr_yellow '⚠')"
           DO_RIFE=0
         fi
       else
-        printf "  %s RIFE disabled — continuing without AI interpolation.\n\n" "$(clr_yellow '⚠')"
+        printf "  %s RIFE disabled - continuing without AI interpolation.\n\n" "$(clr_yellow '⚠')"
         DO_RIFE=0
       fi
     fi
@@ -372,11 +372,11 @@ main() {
       echo ""
       if [[ "$(lc "${v2x_dl_ans}")" == y* ]]; then
         if ! bootstrap_video2x; then
-          printf "  %s video2x disabled — skipping AI upscale.\n\n" "$(clr_yellow '⚠')"
+          printf "  %s video2x disabled - skipping AI upscale.\n\n" "$(clr_yellow '⚠')"
           DO_VIDEO2X=0
         fi
       else
-        printf "  %s video2x disabled — continuing without AI upscale.\n\n" "$(clr_yellow '⚠')"
+        printf "  %s video2x disabled - continuing without AI upscale.\n\n" "$(clr_yellow '⚠')"
         DO_VIDEO2X=0
       fi
     fi
@@ -407,11 +407,11 @@ main() {
       echo ""
       if [[ "$(lc "${d3d_dl_ans}")" == y* ]]; then
         if ! bootstrap_deep3d; then
-          printf "  %s Deep3D disabled — skipping AI stabilization.\n\n" "$(clr_yellow '⚠')"
+          printf "  %s Deep3D disabled - skipping AI stabilization.\n\n" "$(clr_yellow '⚠')"
           DO_DEEP3D=0
         fi
       else
-        printf "  %s Deep3D disabled — continuing without AI stabilization.\n\n" "$(clr_yellow '⚠')"
+        printf "  %s Deep3D disabled - continuing without AI stabilization.\n\n" "$(clr_yellow '⚠')"
         DO_DEEP3D=0
       fi
     fi
@@ -623,7 +623,7 @@ main() {
     _read_int TIKTOK_FRAME_INTERVAL  "$(clr_dim "${TIKTOK_FRAME_INTERVAL_PROMPT}")"  5 1 30
 
     printf "  %s\n  %s: " \
-      "$(clr_dim 'Audio mixing — press Enter to skip music overlay')" \
+      "$(clr_dim 'Audio mixing - press Enter to skip music overlay')" \
       "$(clr_bold "${TIKTOK_MUSIC_PROMPT}")"
     local music_input; read -r music_input
     if [[ -n "${music_input}" && -f "${music_input}" ]]; then
@@ -631,7 +631,7 @@ main() {
       _read_float TIKTOK_ORIG_AUDIO_VOLUME  "$(clr_dim "${TIKTOK_ORIG_VOL_PROMPT}")"  0.7 0.0 1.0
       _read_float TIKTOK_MUSIC_VOLUME       "$(clr_dim "${TIKTOK_MUSIC_VOL_PROMPT}")" 0.3 0.0 1.0
     elif [[ -n "${music_input}" ]]; then
-      printf "  %s Music file not found — audio overlay disabled.\n\n" "$(clr_yellow '⚠')"
+      printf "  %s Music file not found - audio overlay disabled.\n\n" "$(clr_yellow '⚠')"
     fi
   fi
   echo ""

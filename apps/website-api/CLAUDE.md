@@ -1,4 +1,4 @@
-# website-api — Django Conventions
+# website-api - Django Conventions
 
 ## Caching Rule
 
@@ -66,20 +66,21 @@ def delete_model(self, request, obj):
     super().delete_model(request, obj)
 ```
 
-**Note:** Call `super().save_model(...)` *before* invalidating; call `super().delete_model(...)` *after* invalidating.
+**Note:** Call `super().save_model(...)` _before_ invalidating; call `super().delete_model(...)` _after_ invalidating.
 
-## Models — Full-Stack Coverage Rule
+## Models - Full-Stack Coverage Rule
 
 When adding a **new model** or a **new field to an existing model**, automatically do all of this in the same task:
 
-1. **`admin.py`** — register the model (or add the field to `list_display` / `fields` / `readonly_fields`).
-2. **Serializer** — create or update a DRF serializer for the model/field.
-3. **View** — create or update the corresponding API view.
-4. **URL / endpoint** — wire the view into the router or `urlpatterns`.
+1. **`admin.py`** - register the model (or add the field to `list_display` / `fields` / `readonly_fields`).
+2. **Serializer** - create or update a DRF serializer for the model/field.
+3. **View** - create or update the corresponding API view.
+4. **URL / endpoint** - wire the view into the router or `urlpatterns`.
 
-**Exception — sensitive fields:** If a field is user-sensitive (passwords, raw tokens, emails, PII), **stop and ask the user** before exposing it in `admin.py` or any endpoint.
+**Exception - sensitive fields:** If a field is user-sensitive (passwords, raw tokens, emails, PII), **stop and ask the user** before exposing it in `admin.py` or any endpoint.
 
 Examples requiring confirmation before exposure:
+
 - `password`, `hashed_password`, any password-adjacent field
 - `email`, `phone_number`, `date_of_birth`, or other PII
 - `token`, `secret`, `api_key`, `refresh_token`

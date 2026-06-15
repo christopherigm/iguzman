@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/probe.sh — Video metadata probing (duration, dimensions, framerate, HDR type)
+# lib/probe.sh - Video metadata probing (duration, dimensions, framerate, HDR type)
 # Depends on: FFMPEG_BIN, FFPROBE_BIN (set by ffmpeg-bootstrap.sh)
 
 # Thread flags shared across all ffmpeg calls

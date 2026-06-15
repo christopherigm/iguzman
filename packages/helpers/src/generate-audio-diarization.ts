@@ -1,12 +1,12 @@
-import { readFile } from 'fs/promises';
-import { diarizationServerURL } from '@repo/helpers/constants';
-import type { Diarization } from '@repo/helpers/diarizations';
+import { readFile } from "fs/promises";
+import { diarizationServerURL } from "@repo/helpers/constants";
+import type { Diarization } from "@repo/helpers/diarizations";
 
 /* ------------------------------------------------------------------ */
 /*  Configuration                                                      */
 /* ------------------------------------------------------------------ */
 
-const isProduction = process.env.NODE_ENV?.trim() === 'production';
+const isProduction = process.env.NODE_ENV?.trim() === "production";
 
 /** Maximum number of retry attempts when the diarization server is busy. */
 const MAX_RETRIES = 20;
@@ -15,10 +15,10 @@ const MAX_RETRIES = 20;
 const RETRY_DELAY_MS = 5_000;
 
 /** Root directory where media files are stored, based on the environment. */
-const MEDIA_ROOT = isProduction ? '/app/media' : 'public/media';
+const MEDIA_ROOT = isProduction ? "/app/media" : "public/media";
 
 /** Default output directory used by the diarization server. */
-const OUTPUT_DIR = 'media';
+const OUTPUT_DIR = "media";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -76,19 +76,19 @@ const sendDiarizationRequest = async (
 ): Promise<string> => {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const response = await fetch(diarizationServerURL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     const data: DiarizationServerResponse = await response.json();
 
-    if (data.status !== 'busy') {
+    if (data.status !== "busy") {
       return data.path ?? payload.name;
     }
 
     console.warn(
-      `Diarization server busy — retrying in ${RETRY_DELAY_MS / 1_000}s (attempt ${attempt}/${MAX_RETRIES})`,
+      `Diarization server busy - retrying in ${RETRY_DELAY_MS / 1_000}s (attempt ${attempt}/${MAX_RETRIES})`,
     );
     await delay(RETRY_DELAY_MS);
   }
@@ -128,7 +128,7 @@ const generateAudioDiarization = async ({
 
   const outputFile = await sendDiarizationRequest(payload);
 
-  const rawDiarization = await readFile(`${MEDIA_ROOT}/${outputFile}`, 'utf-8');
+  const rawDiarization = await readFile(`${MEDIA_ROOT}/${outputFile}`, "utf-8");
   const diarization: Diarization[] = JSON.parse(rawDiarization);
 
   return {

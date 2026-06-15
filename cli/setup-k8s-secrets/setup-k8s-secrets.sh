@@ -48,7 +48,7 @@ setup_strings() {
     SELECT_TITLE="Selecciona las variables a configurar:"
     SELECT_PROMPT="Flechas para navegar · Espacio para seleccionar · Enter para confirmar"
     SELECT_HINT="(a = seleccionar todo  ·  n = deseleccionar todo)"
-    NOTHING_SELECTED="Nada seleccionado — saliendo."
+    NOTHING_SELECTED="Nada seleccionado - saliendo."
     CONFIRM_PROMPT="¿Continuar? [s/n]"
     CONFIRM_YES_CHARS="sy"
     CANCELLED="Cancelado."
@@ -57,8 +57,8 @@ setup_strings() {
     APPLYING="Aplicando"
     DONE="Listo"
     FAILED="Error al aplicar"
-    SECRET_EXISTS="El secreto existe — parcheando solo las claves seleccionadas."
-    SECRET_NEW="El secreto no existe — creando."
+    SECRET_EXISTS="El secreto existe - parcheando solo las claves seleccionadas."
+    SECRET_NEW="El secreto no existe - creando."
     SUMMARY_TITLE="Resumen de secretos aplicados:"
     ALL_DONE="¡Configuración completada!"
     NS_CREATED="Namespace creado."
@@ -81,7 +81,7 @@ setup_strings() {
     SELECT_TITLE="Select variables to configure:"
     SELECT_PROMPT="Arrow keys to navigate · Space to toggle · Enter to confirm"
     SELECT_HINT="(a = select all  ·  n = deselect all)"
-    NOTHING_SELECTED="Nothing selected — exiting."
+    NOTHING_SELECTED="Nothing selected - exiting."
     CONFIRM_PROMPT="Proceed? [y/n]"
     CONFIRM_YES_CHARS="y"
     CANCELLED="Cancelled."
@@ -90,8 +90,8 @@ setup_strings() {
     APPLYING="Applying"
     DONE="Done"
     FAILED="Failed to apply"
-    SECRET_EXISTS="Secret exists — patching only the selected keys."
-    SECRET_NEW="Secret does not exist — creating."
+    SECRET_EXISTS="Secret exists - patching only the selected keys."
+    SECRET_NEW="Secret does not exist - creating."
     SUMMARY_TITLE="Applied secrets summary:"
     ALL_DONE="Setup complete!"
     NS_CREATED="Namespace created."
@@ -381,18 +381,18 @@ restart_workloads() {
   for name in ${deploys}; do
     found=1
     if kubectl rollout restart deployment/"${name}" -n "${ns}" &>/dev/null; then
-      printf "  %s deployment/%s — %s\n" "$(clr_bold_green '✓')" "${name}" "${RESTART_DONE}"
+      printf "  %s deployment/%s - %s\n" "$(clr_bold_green '✓')" "${name}" "${RESTART_DONE}"
     else
-      printf "  %s deployment/%s — %s\n" "$(clr_bold_red '✗')" "${name}" "${RESTART_FAILED}"
+      printf "  %s deployment/%s - %s\n" "$(clr_bold_red '✗')" "${name}" "${RESTART_FAILED}"
     fi
   done
 
   for name in ${statefulsets}; do
     found=1
     if kubectl rollout restart statefulset/"${name}" -n "${ns}" &>/dev/null; then
-      printf "  %s statefulset/%s — %s\n" "$(clr_bold_green '✓')" "${name}" "${RESTART_DONE}"
+      printf "  %s statefulset/%s - %s\n" "$(clr_bold_green '✓')" "${name}" "${RESTART_DONE}"
     else
-      printf "  %s statefulset/%s — %s\n" "$(clr_bold_red '✗')" "${name}" "${RESTART_FAILED}"
+      printf "  %s statefulset/%s - %s\n" "$(clr_bold_red '✗')" "${name}" "${RESTART_FAILED}"
     fi
   done
 }
@@ -455,7 +455,7 @@ main() {
     exit 1
   fi
 
-  # Namespace — use NAMESPACE= from env.example as default if present
+  # Namespace - use NAMESPACE= from env.example as default if present
   local ns_default="default"
   local ns_from_file
   ns_from_file="$(grep -m1 '^NAMESPACE=' "${env_file}" 2>/dev/null | cut -d= -f2-)" || true
@@ -519,7 +519,7 @@ main() {
 
     if [[ "${key}" == *_FILE ]]; then
       local file_path
-      file_path="$(prompt_visible "${key} — ${PROMPT_FILE_PATH}" "${default}")"
+      file_path="$(prompt_visible "${key} - ${PROMPT_FILE_PATH}" "${default}")"
       echo ""
       if [[ -z "${file_path}" ]]; then continue; fi
       if [[ ! -f "${file_path}" ]]; then

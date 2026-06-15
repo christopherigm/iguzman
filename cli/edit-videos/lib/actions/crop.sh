@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/actions/crop.sh — Black-bar detection and crop filter building
+# lib/actions/crop.sh - Black-bar detection and crop filter building
 # Depends on: probe.sh (FFMPEG_BIN, THREAD_FLAGS), progress.sh (run_ffmpeg_step), ui.sh
 
 # ── Black-bar detection ───────────────────────────────────────────────────────

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useId } from 'react';
-import type { CSSProperties } from 'react';
-import { Box } from './box';
-import { Typography } from './typography';
-import type { UIComponentProps } from './utils';
-import './slider.css';
+import { useId } from "react";
+import type { CSSProperties } from "react";
+import { Box } from "./box";
+import { Typography } from "./typography";
+import type { UIComponentProps } from "./utils";
+import "./slider.css";
 
 export interface SliderStep {
   value: string | number;
@@ -26,7 +26,7 @@ export interface SliderProps extends UIComponentProps {
 }
 
 /**
- * Slider — discrete range input with labelled tick marks.
+ * Slider - discrete range input with labelled tick marks.
  *
  * @example
  * <Slider
@@ -59,7 +59,7 @@ export function Slider({
       gap={6}
       width="100%"
       {...boxRest}
-      className={['ui-slider', userClassName].filter(Boolean).join(' ')}
+      className={["ui-slider", userClassName].filter(Boolean).join(" ")}
     >
       {label && (
         <Typography
@@ -67,12 +67,12 @@ export function Slider({
           htmlFor={id}
           fontWeight={600}
           color="var(--foreground, #1a1a1a)"
-          styles={{ fontSize: 13, userSelect: 'none' }}
+          styles={{ fontSize: 13, userSelect: "none" }}
         >
           {label}
         </Typography>
       )}
-      <Box width="100%" padding="6px 0" styles={{ position: 'relative' }}>
+      <Box width="100%" padding="6px 0" styles={{ position: "relative" }}>
         <input
           id={id}
           type="range"
@@ -86,7 +86,7 @@ export function Slider({
             const idx = Number(e.target.value);
             if (steps[idx]) onChange(steps[idx].value);
           }}
-          style={{ '--ui-slider-pct': `${pct}%` } as CSSProperties}
+          style={{ "--ui-slider-pct": `${pct}%` } as CSSProperties}
           aria-valuetext={steps[safeIndex]?.label ?? String(safeIndex)}
         />
       </Box>
@@ -94,20 +94,20 @@ export function Slider({
         width="100%"
         marginTop={2}
         aria-hidden={true}
-        styles={{ position: 'relative', height: '20px' }}
+        styles={{ position: "relative", height: "20px" }}
       >
         {steps.map((step, i) => (
           <span
             key={String(step.value)}
             className={[
-              'ui-slider__tick-label',
-              i === safeIndex ? 'ui-slider__tick-label--active' : '',
+              "ui-slider__tick-label",
+              i === safeIndex ? "ui-slider__tick-label--active" : "",
             ]
               .filter(Boolean)
-              .join(' ')}
+              .join(" ")}
             style={
               {
-                '--ui-slider-label-pct': max > 0 ? i / max : 0,
+                "--ui-slider-label-pct": max > 0 ? i / max : 0,
               } as CSSProperties
             }
             onClick={() => {

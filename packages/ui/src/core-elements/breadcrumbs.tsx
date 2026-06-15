@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import { Typography } from '@repo/ui/core-elements/typography';
-import './breadcrumbs.css';
+import Link from "next/link";
+import { Typography } from "@repo/ui/core-elements/typography";
+import "./breadcrumbs.css";
 
 export interface BreadcrumbItem {
   label: string;
@@ -18,7 +18,7 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
         {items.map((item, index) => (
           <li key={index} className="breadcrumbs__item">
             {index > 0 && (
-              /* Decorative separator — aria-hidden, not content text */
+              /* Decorative separator - aria-hidden, not content text */
               <span className="breadcrumbs__separator" aria-hidden="true">
                 ›
               </span>
@@ -28,7 +28,12 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
                 {item.label}
               </Link>
             ) : (
-              <Typography as="span" variant="none" className="breadcrumbs__current" aria-current="page">
+              <Typography
+                as="span"
+                variant="none"
+                className="breadcrumbs__current"
+                aria-current="page"
+              >
                 {item.label}
               </Typography>
             )}

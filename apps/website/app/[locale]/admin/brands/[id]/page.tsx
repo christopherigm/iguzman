@@ -1,32 +1,32 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { use } from 'react';
-import { useRouter } from '@repo/i18n/navigation';
-import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
+import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import { use } from "react";
+import { useRouter } from "@repo/i18n/navigation";
+import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import {
   AdminImageUploader,
   type NewImage,
-} from '@/components/admin-image-uploader/admin-image-uploader';
-import { getBrand, createBrand, updateBrand, checkSlug } from '@/lib/admin-api';
-import { buildSlug } from '@/lib/slug-utils';
-import { getUserFromToken } from '@/lib/auth';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
+} from "@/components/admin-image-uploader/admin-image-uploader";
+import { getBrand, createBrand, updateBrand, checkSlug } from "@/lib/admin-api";
+import { buildSlug } from "@/lib/slug-utils";
+import { getUserFromToken } from "@/lib/auth";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
 export default function AdminBrandFormPage({ params }: Props) {
   const { id } = use(params);
-  const isNew = id === 'new';
-  const t = useTranslations('Admin');
+  const isNew = id === "new";
+  const t = useTranslations("Admin");
   const router = useRouter();
 
   const [values, setValues] = useState<Record<string, unknown>>({
-    name: '',
-    slug: '',
+    name: "",
+    slug: "",
     enabled: true,
   });
   const [existingLogo, setExistingLogo] = useState<
@@ -45,23 +45,23 @@ export default function AdminBrandFormPage({ params }: Props) {
     if (isNew) {
       setValues((prev) => ({
         ...prev,
-        slug: buildSlug(String(prev.name ?? ''), systemId),
+        slug: buildSlug(String(prev.name ?? ""), systemId),
       }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.name, isNew, systemId]);
 
   const handleNameBlur = useCallback(async () => {
-    const currentSlug = String(values.slug ?? '');
+    const currentSlug = String(values.slug ?? "");
     if (!currentSlug) return;
     setSlugError(null);
     try {
       const result = await checkSlug(
-        'brand',
+        "brand",
         currentSlug,
         !isNew ? Number(id) : undefined,
       );
-      if (!result.available) setSlugError(t('slugTaken'));
+      if (!result.available) setSlugError(t("slugTaken"));
     } catch {
       /* ignore */
     }
@@ -73,14 +73,14 @@ export default function AdminBrandFormPage({ params }: Props) {
       getBrand(Number(id))
         .then((data) => {
           setValues({
-            name: data.name ?? '',
-            slug: data.slug ?? '',
+            name: data.name ?? "",
+            slug: data.slug ?? "",
             enabled: data.enabled ?? true,
           });
           if (data.logo)
             setExistingLogo([{ id: Number(id), url: String(data.logo) }]);
         })
-        .catch(() => setError(t('errorLoad')))
+        .catch(() => setError(t("errorLoad")))
         .finally(() => setLoading(false));
     }
   }, [id, isNew, t]);
@@ -98,35 +98,35 @@ export default function AdminBrandFormPage({ params }: Props) {
       }
       if (isNew) {
         const created = await createBrand(payload);
-        setSuccess(t('saved'));
+        setSuccess(t("saved"));
         router.replace(`/admin/brands/${created.id}`);
       } else {
         await updateBrand(Number(id), payload);
-        setSuccess(t('saved'));
+        setSuccess(t("saved"));
       }
     } catch {
-      setError(t('errorSave'));
+      setError(t("errorSave"));
     } finally {
       setSaving(false);
     }
   };
 
   const fields: FieldDef[] = [
-    { key: 'name', label: t('name'), required: true, onBlur: handleNameBlur },
+    { key: "name", label: t("name"), required: true, onBlur: handleNameBlur },
     {
-      key: 'slug',
-      label: 'Slug',
-      type: 'slug',
+      key: "slug",
+      label: "Slug",
+      type: "slug",
       disabled: true,
       fieldError: slugError,
     },
-    { key: 'enabled', label: t('enabled'), type: 'boolean' },
+    { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
   if (loading)
     return (
       <Box padding="24px">
-        <Typography variant="body">{t('loading')}</Typography>
+        <Typography variant="body">{t("loading")}</Typography>
       </Box>
     );
 
@@ -134,17 +134,17 @@ export default function AdminBrandFormPage({ params }: Props) {
     <>
       <Breadcrumbs
         items={[
-          { label: t('home'), href: '/' },
-          { label: t('breadcrumbAdmin'), href: '/admin' },
-          { label: t('brands'), href: '/admin/brands' },
-          { label: isNew ? t('newItem') : t('edit') },
+          { label: t("home"), href: "/" },
+          { label: t("breadcrumbAdmin"), href: "/admin" },
+          { label: t("brands"), href: "/admin/brands" },
+          { label: isNew ? t("newItem") : t("edit") },
         ]}
       />
       <AdminForm
         title={
           isNew
-            ? `${t('newItem')} — ${t('brands')}`
-            : `${t('edit')} — ${t('brands')}`
+            ? `${t("newItem")} - ${t("brands")}`
+            : `${t("edit")} - ${t("brands")}`
         }
         fields={fields}
         values={values}
@@ -155,7 +155,7 @@ export default function AdminBrandFormPage({ params }: Props) {
         success={success}
       >
         <Box display="flex" flexDirection="column" gap="8px">
-          <Typography variant="label">{t('logo') ?? 'Logo'}</Typography>
+          <Typography variant="label">{t("logo") ?? "Logo"}</Typography>
           <AdminImageUploader
             existingImages={existingLogo}
             onChange={(n, _d, o) => {

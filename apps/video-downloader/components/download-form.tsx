@@ -1,32 +1,32 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Switch } from '@repo/ui/core-elements/switch';
-import { Icon } from '@repo/ui/core-elements/icon';
-import { Button } from '@repo/ui/core-elements/button';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { detectPlatform, type Platform } from '@repo/helpers/checkers';
-import { stripQueryParams } from '@repo/helpers/clean-url';
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Switch } from "@repo/ui/core-elements/switch";
+import { Icon } from "@repo/ui/core-elements/icon";
+import { Button } from "@repo/ui/core-elements/button";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { detectPlatform, type Platform } from "@repo/helpers/checkers";
+import { stripQueryParams } from "@repo/helpers/clean-url";
 import {
   isIOS,
   resolveResolutionLabel,
   buildResolutionLabel,
   PlatformIconBg,
-} from './video-item-shared';
-import { isOPFSSupported, getOPFSStorageInfo } from '@/lib/opfs';
-import { ClearStorageModal } from './clear-storage-modal';
-import type { CaptionOption } from '@/app/api/video-metadata/route';
-import { useCreditsBalance, setCreditsBalance } from './use-credits-store';
-import { Divider } from '@repo/ui/core-elements/divider';
-import { Grid } from '@repo/ui/core-elements/grid';
-import './platform-icon-bg.css';
-import './download-form.css';
+} from "./video-item-shared";
+import { isOPFSSupported, getOPFSStorageInfo } from "@/lib/opfs";
+import { ClearStorageModal } from "./clear-storage-modal";
+import type { CaptionOption } from "@/app/api/video-metadata/route";
+import { useCreditsBalance, setCreditsBalance } from "./use-credits-store";
+import { Divider } from "@repo/ui/core-elements/divider";
+import { Grid } from "@repo/ui/core-elements/grid";
+import "./platform-icon-bg.css";
+import "./download-form.css";
 
 /* ── Constants ──────────────────────────────────────── */
 
@@ -41,7 +41,7 @@ interface DuplicateEntry {
 function isValidUrl(input: string): boolean {
   try {
     const url = new URL(input);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
   }
@@ -51,15 +51,15 @@ function cleanUrl(url: string): string {
   try {
     const parsed = new URL(url);
     if (
-      (parsed.hostname === 'www.youtube.com' ||
-        parsed.hostname === 'youtube.com') &&
-      parsed.pathname === '/watch' &&
-      parsed.searchParams.has('v')
+      (parsed.hostname === "www.youtube.com" ||
+        parsed.hostname === "youtube.com") &&
+      parsed.pathname === "/watch" &&
+      parsed.searchParams.has("v")
     ) {
       return url;
     }
   } catch {
-    // not a valid URL — fall through to stripQueryParams
+    // not a valid URL - fall through to stripQueryParams
   }
   return stripQueryParams(url);
 }
@@ -67,7 +67,7 @@ function cleanUrl(url: string): string {
 function isServerPath(url: string | null): url is string {
   if (!url) return false;
   return (
-    !url.startsWith('blob:') && (url.startsWith('/') || url.startsWith('http'))
+    !url.startsWith("blob:") && (url.startsWith("/") || url.startsWith("http"))
   );
 }
 
@@ -80,16 +80,16 @@ function formatStorageUsage(
 
   if (totalBytes >= 1e9) {
     divisor = 1e9;
-    unit = 'GB';
+    unit = "GB";
   } else if (totalBytes >= 1e6) {
     divisor = 1e6;
-    unit = 'MB';
+    unit = "MB";
   } else if (totalBytes >= 1e3) {
     divisor = 1e3;
-    unit = 'KB';
+    unit = "KB";
   } else {
     divisor = 1;
-    unit = 'B';
+    unit = "B";
   }
 
   const usedValue = usedBytes / divisor;
@@ -97,7 +97,7 @@ function formatStorageUsage(
 
   const usedStr =
     usedValue === 0
-      ? '0'
+      ? "0"
       : usedValue >= 1
         ? usedValue.toFixed(1)
         : parseFloat(usedValue.toPrecision(2)).toString();
@@ -122,7 +122,7 @@ function OptionRow({
 }) {
   return (
     <Box
-      className={`df-option-row${disabled ? ' df-option-row--disabled' : ''}`}
+      className={`df-option-row${disabled ? " df-option-row--disabled" : ""}`}
     >
       <Typography variant="body-sm" fontWeight={500}>
         {label}
@@ -147,7 +147,7 @@ function ResolutionSelect({
     <Box className="df-select-wrapper">
       <select
         className="df-select"
-        value={value ?? ''}
+        value={value ?? ""}
         onChange={(e) => onChange(Number(e.target.value))}
         disabled={disabled}
         aria-label="Resolution"
@@ -156,7 +156,7 @@ function ResolutionSelect({
           <option
             key={opt.value}
             value={opt.value}
-            style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+            style={{ backgroundColor: "var(--surface-1, #f4f4f5)" }}
           >
             {opt.label}
           </option>
@@ -188,7 +188,7 @@ function CaptionSelect({
     <Box className="df-select-wrapper df-select-wrapper--caption">
       <select
         className="df-select"
-        value={value ?? ''}
+        value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         aria-label="Subtitles"
@@ -197,7 +197,7 @@ function CaptionSelect({
           <option
             key={`${opt.type}-${opt.lang}`}
             value={opt.url}
-            style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+            style={{ backgroundColor: "var(--surface-1, #f4f4f5)" }}
           >
             {opt.label}
           </option>
@@ -215,10 +215,10 @@ function CaptionSelect({
 }
 
 const COMMENT_COUNT_OPTIONS: { value: 5 | 10 | 20 | 50; label: string }[] = [
-  { value: 5, label: '5' },
-  { value: 10, label: '10' },
-  { value: 20, label: '20' },
-  { value: 50, label: '50' },
+  { value: 5, label: "5" },
+  { value: 10, label: "10" },
+  { value: 20, label: "20" },
+  { value: 50, label: "50" },
 ];
 
 function CommentCountSelect({
@@ -243,7 +243,7 @@ function CommentCountSelect({
           <option
             key={opt.value}
             value={opt.value}
-            style={{ backgroundColor: 'var(--surface-1, #f4f4f5)' }}
+            style={{ backgroundColor: "var(--surface-1, #f4f4f5)" }}
           >
             {opt.label}
           </option>
@@ -272,7 +272,7 @@ const SMART_RESOLUTION_OPTIONS: { value: number; label: string }[] = [
 /* ── Main Component ─────────────────────────────────── */
 
 export interface DownloadFormProps {
-  /** Called when the user submits a URL — creates a pending entry for VideoGrid. */
+  /** Called when the user submits a URL - creates a pending entry for VideoGrid. */
   onVideoAdded?: (entry: {
     originalURL: string;
     platform: Platform;
@@ -309,9 +309,9 @@ export function DownloadForm({
   onMoveToFirst,
   onRemoveVideosByUuids,
 }: DownloadFormProps = {}) {
-  const t = useTranslations('DownloadForm');
+  const t = useTranslations("DownloadForm");
   const router = useRouter();
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState("");
   const [ios, setIos] = useState(false);
   const [autoDownload, setAutoDownload] = useState(false);
   const [opfsSupported, setOpfsSupported] = useState(false);
@@ -326,31 +326,31 @@ export function DownloadForm({
     if (isIOSDevice) {
       setAutoDownload(false);
     } else {
-      const stored = localStorage.getItem('vd_auto_download');
-      setAutoDownload(stored !== null ? stored === 'true' : false);
+      const stored = localStorage.getItem("vd_auto_download");
+      setAutoDownload(stored !== null ? stored === "true" : false);
     }
     const supported = isOPFSSupported();
     setOpfsSupported(supported);
-    const storedSmart = localStorage.getItem('vd_smart_download');
-    setSmartDownload(storedSmart === 'true');
-    const storedSmartCaptions = localStorage.getItem('vd_smart_captions');
-    setSmartCaptions(storedSmartCaptions !== 'false');
-    const storedSmartComments = localStorage.getItem('vd_smart_comments');
-    setSmartComments(storedSmartComments === 'true');
-    const storedSmartHeight = localStorage.getItem('vd_smart_max_height');
+    const storedSmart = localStorage.getItem("vd_smart_download");
+    setSmartDownload(storedSmart === "true");
+    const storedSmartCaptions = localStorage.getItem("vd_smart_captions");
+    setSmartCaptions(storedSmartCaptions !== "false");
+    const storedSmartComments = localStorage.getItem("vd_smart_comments");
+    setSmartComments(storedSmartComments === "true");
+    const storedSmartHeight = localStorage.getItem("vd_smart_max_height");
     setSmartMaxHeight(storedSmartHeight ? Number(storedSmartHeight) : 1080);
-    const storedSmartMetadata = localStorage.getItem('vd_smart_metadata');
-    setSmartMetadata(storedSmartMetadata === 'true');
+    const storedSmartMetadata = localStorage.getItem("vd_smart_metadata");
+    setSmartMetadata(storedSmartMetadata === "true");
   }, []);
 
   const handleAutoDownloadChange = useCallback((value: boolean) => {
     setAutoDownload(value);
-    localStorage.setItem('vd_auto_download', String(value));
+    localStorage.setItem("vd_auto_download", String(value));
   }, []);
 
   const handleSmartDownloadChange = useCallback((value: boolean) => {
     setSmartDownload(value);
-    localStorage.setItem('vd_smart_download', String(value));
+    localStorage.setItem("vd_smart_download", String(value));
     if (value) {
       setMetadataFetched(false);
       setResolutions([]);
@@ -367,22 +367,22 @@ export function DownloadForm({
 
   const handleSmartCaptionsChange = useCallback((value: boolean) => {
     setSmartCaptions(value);
-    localStorage.setItem('vd_smart_captions', String(value));
+    localStorage.setItem("vd_smart_captions", String(value));
   }, []);
 
   const handleSmartCommentsChange = useCallback((value: boolean) => {
     setSmartComments(value);
-    localStorage.setItem('vd_smart_comments', String(value));
+    localStorage.setItem("vd_smart_comments", String(value));
   }, []);
 
   const handleSmartMetadataChange = useCallback((value: boolean) => {
     setSmartMetadata(value);
-    localStorage.setItem('vd_smart_metadata', String(value));
+    localStorage.setItem("vd_smart_metadata", String(value));
   }, []);
 
   const handleSmartMaxHeightChange = useCallback((value: number) => {
     setSmartMaxHeight(value);
-    localStorage.setItem('vd_smart_max_height', String(value));
+    localStorage.setItem("vd_smart_max_height", String(value));
   }, []);
 
   useEffect(() => {
@@ -452,7 +452,7 @@ export function DownloadForm({
         setUrl(cleanUrl(text));
       }
     } catch {
-      // Clipboard permission denied — silently ignore
+      // Clipboard permission denied - silently ignore
     }
   }, [url]);
 
@@ -473,16 +473,16 @@ export function DownloadForm({
   /* Derived state */
   const validUrl = useMemo(() => isValidUrl(url), [url]);
   const platform = useMemo<Platform>(
-    () => (validUrl ? detectPlatform(url) : 'unknown'),
+    () => (validUrl ? detectPlatform(url) : "unknown"),
     [url, validUrl],
   );
-  const knownPlatform = platform !== 'unknown';
+  const knownPlatform = platform !== "unknown";
   const validPlatformUrl = validUrl && knownPlatform;
 
   /* Disabled flags */
   const switchesDisabled = !validPlatformUrl;
   const captionsDisabled = switchesDisabled || justAudio || captionsUnavailable;
-  const noCreditsForPlatform = platform !== 'youtube' && creditsBalance <= 0;
+  const noCreditsForPlatform = platform !== "youtube" && creditsBalance <= 0;
   const commentsDisabled =
     switchesDisabled ||
     justAudio ||
@@ -494,13 +494,13 @@ export function DownloadForm({
     ? smartComments
     : commentsEnabled;
   const isScrapePlatform =
-    platform === 'facebook' ||
-    platform === 'instagram' ||
-    platform === 'tiktok';
+    platform === "facebook" ||
+    platform === "instagram" ||
+    platform === "tiktok";
   const effectiveMetadataEnabled = smartDownload ? smartMetadata : false;
   const creditCost =
     1 +
-    (platform !== 'youtube' && !justAudio && effectiveCommentsEnabled ? 1 : 0) +
+    (platform !== "youtube" && !justAudio && effectiveCommentsEnabled ? 1 : 0) +
     (isScrapePlatform && !justAudio && effectiveMetadataEnabled ? 1 : 0);
   /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
@@ -508,7 +508,7 @@ export function DownloadForm({
   /* Show credits modal when URL first becomes valid and user has no credits/key */
   useEffect(() => {
     if (validPlatformUrl && !prevValidPlatformUrlRef.current) {
-      const key = localStorage.getItem('vd_credits_key');
+      const key = localStorage.getItem("vd_credits_key");
       if (creditsBalance <= 0 || !key) {
         setShowCreditsModal(true);
       }
@@ -522,12 +522,12 @@ export function DownloadForm({
     setMetadataLoading(true);
     setMetadataFetched(false);
     try {
-      const creditsKey = localStorage.getItem('vd_credits_key');
-      const res = await fetch('/api/video-metadata', {
-        method: 'POST',
+      const creditsKey = localStorage.getItem("vd_credits_key");
+      const res = await fetch("/api/video-metadata", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(creditsKey && { 'x-credits-key': creditsKey }),
+          "Content-Type": "application/json",
+          ...(creditsKey && { "x-credits-key": creditsKey }),
         },
         body: JSON.stringify({ url, exhaustive: true }),
       });
@@ -559,9 +559,9 @@ export function DownloadForm({
 
       const count = data.commentCount ?? null;
       const isScrapePlatform =
-        platform === 'facebook' ||
-        platform === 'instagram' ||
-        platform === 'tiktok';
+        platform === "facebook" ||
+        platform === "instagram" ||
+        platform === "tiktok";
       const commentsAvailable = isScrapePlatform || count != null;
       setCommentsUnavailable(!commentsAvailable);
 
@@ -571,9 +571,9 @@ export function DownloadForm({
         data.creditsRemaining !== undefined
           ? data.creditsRemaining
           : creditsBalance;
-      if (platform !== 'youtube' && effectiveBalance <= 0) {
+      if (platform !== "youtube" && effectiveBalance <= 0) {
         setCommentsEnabled(false);
-      } else if (platform === 'youtube' && commentsAvailable) {
+      } else if (platform === "youtube" && commentsAvailable) {
         setCommentsEnabled(true);
       }
 
@@ -586,7 +586,7 @@ export function DownloadForm({
   }, [validPlatformUrl, url, platform, creditsBalance]);
 
   const handleClear = useCallback(() => {
-    setUrl('');
+    setUrl("");
   }, []);
 
   const submitDownload = useCallback(() => {
@@ -606,12 +606,12 @@ export function DownloadForm({
       !justAudio && (smartDownload ? smartComments : commentsEnabled);
     const effectiveMaxComments = smartDownload ? 30 : commentCount;
     const effectiveMetadataEnabled =
-      !justAudio && smartDownload && smartMetadata && platform !== 'youtube';
+      !justAudio && smartDownload && smartMetadata && platform !== "youtube";
 
     onVideoAdded?.({
       originalURL: url,
       platform,
-      fps: 'original',
+      fps: "original",
       justAudio,
       enhance: effectiveEnhance,
       autoDownload,
@@ -625,7 +625,7 @@ export function DownloadForm({
     });
 
     /* Reset the URL field and captions/comments toggles after submission */
-    setUrl('');
+    setUrl("");
     setCaptionsEnabled(false);
     setCommentsEnabled(false);
   }, [
@@ -656,7 +656,7 @@ export function DownloadForm({
     if (dupe) {
       setDuplicateEntry({
         uuid: dupe.uuid,
-        downloadURL: dupe.downloadURL ?? '',
+        downloadURL: dupe.downloadURL ?? "",
         name: dupe.name,
       });
       return;
@@ -671,7 +671,7 @@ export function DownloadForm({
 
   const handleDuplicateDownload = useCallback(() => {
     if (!duplicateEntry) return;
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = duplicateEntry.downloadURL;
     if (duplicateEntry.name) a.download = duplicateEntry.name;
     document.body.appendChild(a);
@@ -702,9 +702,9 @@ export function DownloadForm({
       width="100%"
       backgroundColor="var(--surface-1, #fff)"
       styles={{
-        position: 'relative',
-        overflow: 'hidden',
-        isolation: 'isolate',
+        position: "relative",
+        overflow: "hidden",
+        isolation: "isolate",
       }}
     >
       <PlatformIconBg
@@ -722,7 +722,7 @@ export function DownloadForm({
             value={url}
             onChange={(v: string) => setUrl(cleanUrl(v))}
             onFocus={handleInputFocus}
-            label={t('inputLabel')}
+            label={t("inputLabel")}
           />
         </Box>
 
@@ -732,7 +732,7 @@ export function DownloadForm({
               type="button"
               className="df-icon-btn"
               onClick={handleClear}
-              aria-label={t('clearUrl')}
+              aria-label={t("clearUrl")}
             >
               <Icon
                 icon="/icons/delete.svg"
@@ -745,7 +745,7 @@ export function DownloadForm({
             type="submit"
             className="df-icon-btn df-icon-btn--download"
             disabled={!validPlatformUrl || creditsBalance < creditCost}
-            aria-label={t('download')}
+            aria-label={t("download")}
           >
             <Icon
               icon="/icons/download.svg"
@@ -763,51 +763,51 @@ export function DownloadForm({
         >
           {`🪙 ${creditCost}`}
           {smartDownload &&
-            ` ${t('smartDownloadHintOn', {
+            ` ${t("smartDownloadHintOn", {
               resolution:
                 resolveResolutionLabel(smartMaxHeight) ?? `${smartMaxHeight}p`,
             })}`}
           {smartDownload &&
             smartCaptions &&
-            ` ${t('smartDownloadHintCaptions')}`}
+            ` ${t("smartDownloadHintCaptions")}`}
           {smartDownload &&
             smartComments &&
-            ` ${t('smartDownloadHintComments')}`}
+            ` ${t("smartDownloadHintComments")}`}
           {smartDownload &&
             smartMetadata &&
             isScrapePlatform &&
-            ` ${t('smartDownloadHintMetadata')}`}
+            ` ${t("smartDownloadHintMetadata")}`}
         </Typography>
       )}
 
       {/* ── Options ──────────────────────────────────── */}
       <Box className="df-options" marginTop={8}>
         {!ios && (
-          <OptionRow label={t('autoDownload')} disabled={false}>
+          <OptionRow label={t("autoDownload")} disabled={false}>
             <Switch
               checked={autoDownload}
               onChange={handleAutoDownloadChange}
             />
           </OptionRow>
         )}
-        <OptionRow label={t('justAudio')} disabled={false}>
+        <OptionRow label={t("justAudio")} disabled={false}>
           <Switch checked={justAudio} onChange={setJustAudio} />
         </OptionRow>
         <button
           type="button"
           className="df-advanced-toggle"
           onClick={() => setAdvancedOpen((prev) => !prev)}
-          aria-label={t('toggleAdvanced')}
+          aria-label={t("toggleAdvanced")}
         >
           <Icon
             icon="/icons/chevron-down.svg"
             size={14}
             color="var(--foreground-muted, #999)"
-            className={advancedOpen ? 'df-chevron--open' : 'df-chevron--closed'}
+            className={advancedOpen ? "df-chevron--open" : "df-chevron--closed"}
           />
         </button>
         <Box
-          className={`df-advanced-panel${advancedOpen ? ' df-advanced-panel--open' : ''}`}
+          className={`df-advanced-panel${advancedOpen ? " df-advanced-panel--open" : ""}`}
         >
           <Box className="df-advanced-inner">
             <Divider />
@@ -816,8 +816,8 @@ export function DownloadForm({
                 <Button
                   text={
                     metadataLoading
-                      ? t('checkingSpecs')
-                      : `${t('checkSpecs')} 🪙 1`
+                      ? t("checkingSpecs")
+                      : `${t("checkSpecs")} 🪙 1`
                   }
                   onClick={() => void handleCheckSpecs()}
                   disabled={
@@ -835,7 +835,7 @@ export function DownloadForm({
                 {metadataFetched && (
                   <>
                     <OptionRow
-                      label={t('resolution')}
+                      label={t("resolution")}
                       disabled={
                         switchesDisabled ||
                         justAudio ||
@@ -865,8 +865,8 @@ export function DownloadForm({
                     <OptionRow
                       label={
                         captionsUnavailable
-                          ? t('captionsUnavailable')
-                          : t('downloadCaptions')
+                          ? t("captionsUnavailable")
+                          : t("downloadCaptions")
                       }
                       disabled={captionsDisabled}
                     >
@@ -895,8 +895,8 @@ export function DownloadForm({
                     <OptionRow
                       label={
                         commentsUnavailable
-                          ? t('commentsUnavailable')
-                          : t('downloadComments')
+                          ? t("commentsUnavailable")
+                          : t("downloadComments")
                       }
                       disabled={commentsDisabled}
                     >
@@ -923,11 +923,11 @@ export function DownloadForm({
                     </OptionRow>
                     {noCreditsForPlatform && !commentsUnavailable && (
                       <OptionRow
-                        label={t('commentsNoCredits')}
+                        label={t("commentsNoCredits")}
                         disabled={justAudio}
                       >
                         <Button
-                          text={t('commentsBuyCredits')}
+                          text={t("commentsBuyCredits")}
                           href="/credits"
                           size="sm"
                           kind="success"
@@ -939,14 +939,14 @@ export function DownloadForm({
               </>
             )}
             <Divider />
-            <OptionRow label={t('smartDownload')} disabled={justAudio}>
+            <OptionRow label={t("smartDownload")} disabled={justAudio}>
               <Switch
                 checked={smartDownload}
                 onChange={justAudio ? undefined : handleSmartDownloadChange}
               />
             </OptionRow>
             <Box
-              className={`df-smart-sub-row-wrap${smartDownload ? ' df-smart-sub-row-wrap--open' : ''}`}
+              className={`df-smart-sub-row-wrap${smartDownload ? " df-smart-sub-row-wrap--open" : ""}`}
             >
               <Box className="df-smart-sub-row-inner">
                 <Grid container spacing={1} marginTop={5} marginBottom={5}>
@@ -958,7 +958,7 @@ export function DownloadForm({
                       gap={8}
                     >
                       <Typography variant="body-sm" fontWeight={500}>
-                        {t('smartCaptions')}
+                        {t("smartCaptions")}
                       </Typography>
                       <Switch
                         checked={smartCaptions}
@@ -975,10 +975,10 @@ export function DownloadForm({
                       gap={8}
                     >
                       <Typography variant="body-sm" fontWeight={500}>
-                        {t('comments')}
-                        {platform !== 'youtube' &&
-                          platform !== 'unknown' &&
-                          ' 🪙 1'}
+                        {t("comments")}
+                        {platform !== "youtube" &&
+                          platform !== "unknown" &&
+                          " 🪙 1"}
                       </Typography>
                       <Switch
                         checked={smartComments}
@@ -1007,17 +1007,17 @@ export function DownloadForm({
                       gap={8}
                     >
                       <Typography variant="body-sm" fontWeight={500}>
-                        {t('smartMetadata')}
-                        {isScrapePlatform && ' 🪙 1'}
+                        {t("smartMetadata")}
+                        {isScrapePlatform && " 🪙 1"}
                       </Typography>
                       <Switch
                         checked={smartMetadata}
                         onChange={
-                          justAudio || platform === 'youtube'
+                          justAudio || platform === "youtube"
                             ? undefined
                             : handleSmartMetadataChange
                         }
-                        disabled={justAudio || platform === 'youtube'}
+                        disabled={justAudio || platform === "youtube"}
                       />
                     </Box>
                   </Grid>
@@ -1029,7 +1029,7 @@ export function DownloadForm({
               storageInfo.usedBytes > 0 &&
               storageInfo.totalBytes > 0 && (
                 <>
-                  <OptionRow label={t('opfsStorageLabel')} disabled={false}>
+                  <OptionRow label={t("opfsStorageLabel")} disabled={false}>
                     <Box display="flex" alignItems="center" gap={6}>
                       <Typography
                         variant="body-sm"
@@ -1041,14 +1041,14 @@ export function DownloadForm({
                             storageInfo.usedBytes,
                             storageInfo.totalBytes,
                           );
-                          return t('opfsStorageUsage', { used, total, pct });
+                          return t("opfsStorageUsage", { used, total, pct });
                         })()}
                       </Typography>
                       <button
                         type="button"
                         className="df-icon-btn df-icon-btn--download"
                         onClick={() => setShowClearStorageConfirm(true)}
-                        aria-label={t('clearStorageLabel')}
+                        aria-label={t("clearStorageLabel")}
                       >
                         <Icon
                           icon="/icons/clear.svg"
@@ -1063,7 +1063,7 @@ export function DownloadForm({
                       (storageInfo.usedBytes / storageInfo.totalBytes) * 100,
                     )}
                     size={4}
-                    label={t('opfsStorageLabel')}
+                    label={t("opfsStorageLabel")}
                   />
                 </>
               )}
@@ -1098,9 +1098,9 @@ export function DownloadForm({
       {/* ── No Credits Modal ─────────────────────── */}
       {showCreditsModal && (
         <ConfirmationModal
-          title={t('creditsRequiredTitle')}
-          text={t('creditsRequiredText')}
-          okCallback={() => router.push('/credits')}
+          title={t("creditsRequiredTitle")}
+          text={t("creditsRequiredText")}
+          okCallback={() => router.push("/credits")}
           cancelCallback={() => setShowCreditsModal(false)}
           panelMaxWidth="440px"
         />
@@ -1109,8 +1109,8 @@ export function DownloadForm({
       {/* ── Duplicate Video Modal ─────────────────── */}
       {duplicateEntry ? (
         <ConfirmationModal
-          title={t('duplicateTitle')}
-          text={t('duplicateText')}
+          title={t("duplicateTitle")}
+          text={t("duplicateText")}
           okCallback={handleDuplicateClose}
           cancelCallback={handleDuplicateClose}
           panelMaxWidth="440px"
@@ -1118,14 +1118,14 @@ export function DownloadForm({
           <Box display="flex" flexDirection="column" gap={8}>
             {isServerPath(duplicateEntry.downloadURL) && (
               <Button
-                text={t('duplicateDownloadVideo')}
+                text={t("duplicateDownloadVideo")}
                 onClick={handleDuplicateDownload}
                 width="100%"
                 size="md"
               />
             )}
             <Button
-              text={t('duplicateMoveToFirst')}
+              text={t("duplicateMoveToFirst")}
               onClick={handleDuplicateMoveToFirst}
               width="100%"
               size="md"

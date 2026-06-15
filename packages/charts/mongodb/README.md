@@ -126,7 +126,7 @@ kubectl create secret generic mongodb-secrets \
   --namespace databases
 ```
 
-**Declarative** (YAML — base64-encode the value first):
+**Declarative** (YAML - base64-encode the value first):
 
 ```bash
 echo -n 'my-secure-password' | base64
@@ -150,7 +150,7 @@ kubectl apply -f secret.yaml
 
 ### Updating a Secret
 
-**Option A — patch a single key in-place:**
+**Option A - patch a single key in-place:**
 
 ```bash
 NEW_VALUE=$(echo -n 'new-secure-password' | base64)
@@ -160,7 +160,7 @@ kubectl patch secret mongodb-secrets \
   -p="[{\"op\":\"replace\",\"path\":\"/data/root-password\",\"value\":\"${NEW_VALUE}\"}]"
 ```
 
-**Option B — delete and recreate (simpler):**
+**Option B - delete and recreate (simpler):**
 
 ```bash
 kubectl delete secret mongodb-secrets -n databases

@@ -4,7 +4,69 @@
     "description": ""
   },
   "HomePage": {
-    "title": "Edge Folio"
+    "title": "Edge Folio",
+    "heroEyebrow": "Plateforme de carrière axée sur la confidentialité",
+    "heroTitle": "Votre carrière, racontée avec vérité - et adaptée à chaque poste",
+    "heroSubtitle": "EdgeFolio conserve une source factuelle unique de votre parcours, puis utilise une IA qui classe et réécrit - sans jamais inventer - pour l'adapter à chaque offre. Exportez des CV compatibles ATS, des lettres de motivation et des lettres de visa TN.",
+    "heroCtaPrimary": "Commencer gratuitement",
+    "heroCtaSecondary": "Se connecter",
+    "privateJobsTitle": "Vos offres d'emploi privées",
+    "privateJobsViewAll": "Voir toutes les offres",
+    "privateJobsBrowse": "Parcourir les offres",
+    "heroNote": "Vos données restent les vôtres : les jetons vivent dans des cookies HTTP-only et votre code propriétaire ne quitte jamais votre appareil.",
+    "pillarsTitle": "Bâti sur une promesse",
+    "pillarsSubtitle": "L'IA classe et réécrit. Elle n'invente jamais.",
+    "pillars": {
+      "matrix": {
+        "title": "Matrice Immuable",
+        "body": "Constituez des points factuels approuvés au format STAR et vos compétences - le dossier maître dont part chaque CV."
+      },
+      "tailor": {
+        "title": "Personnalisation honnête par IA",
+        "body": "Classez et réécrivez vos réussites réelles face à n'importe quelle offre, avec des scores de correspondance globaux, techniques et de probabilité TN."
+      },
+      "jobs": {
+        "title": "Découverte d'offres en direct",
+        "body": "Parcourez un catalogue axé sur l'ACEUM ou utilisez vos propres clés d'API pour un flux privé, puis enregistrez une offre directement dans une candidature."
+      },
+      "export": {
+        "title": "Export prêt pour les ATS et le TN",
+        "body": "Générez des lettres de motivation et des lettres de visa TN ALENA/ACEUM, et exportez des PDF soignés qui passent les systèmes de suivi des candidatures."
+      }
+    },
+    "featuresTitle": "Tout ce qu'il faut pour postuler en confiance",
+    "features": {
+      "matrix": {
+        "title": "Matrice Immuable",
+        "body": "Des points et des compétences factuels et préapprouvés au format STAR - la base de données dont part l'IA."
+      },
+      "tailor": {
+        "title": "Personnalisation des candidatures",
+        "body": "Réécrivez points, compétences, expériences et projets pour chaque poste, avec scores de correspondance et explications."
+      },
+      "company": {
+        "title": "Renseignement sur l'entreprise",
+        "body": "Recherche automatique sur l'entreprise visée - présentation, analyse et un score de renseignement."
+      },
+      "letters": {
+        "title": "Lettres de motivation et TN",
+        "body": "Lettres de motivation et lettres de soutien au visa TN ALENA/ACEUM, générées à partir de votre contenu personnalisé."
+      },
+      "jobs": {
+        "title": "Catalogue d'offres",
+        "body": "Offres en direct aux États-Unis, au Canada et au Mexique, avec un flux privé optionnel via vos propres clés."
+      },
+      "passkeys": {
+        "title": "Sécurité par passkey",
+        "body": "Connectez-vous avec des passkeys WebAuthn ; les JWT restent dans des cookies HTTP-only, invisibles pour JavaScript."
+      }
+    },
+    "privacyTitle": "Confidentialité dès la conception",
+    "privacyBody": "Les bases de code propriétaires sont analysées localement dans votre navigateur. Seules des métadonnées de pile assainies - langages, frameworks et dépendances - sont envoyées au serveur. Votre code source ne quitte jamais votre machine.",
+    "privacyTech": "Propulsé par une analyse structurelle dans le navigateur (tree-sitter WASM) - sans téléchargement de modèle ni GPU.",
+    "ctaTitle": "Prêt à reprendre le contrôle de votre recherche d'emploi ?",
+    "ctaSubtitle": "Constituez votre Matrice Immuable dès aujourd'hui et adaptez-vous au prochain poste.",
+    "ctaButton": "Créer votre compte"
   },
   "VerifyEmailPage": {
     "loading": "Vérification de votre e-mail…",
@@ -75,7 +137,7 @@
   },
   "MatrixPage": {
     "title": "Matrice Immuable",
-    "subtitle": "Vos faits de carrière vérifiés — la source de vérité pour chaque CV et candidature.",
+    "subtitle": "Vos faits de carrière vérifiés - la source de vérité pour chaque CV et candidature.",
     "loading": "Chargement…",
     "errorLoad": "Impossible de charger la matrice. Veuillez réessayer.",
     "addBullet": "Ajouter un point",
@@ -156,7 +218,7 @@
     "resumeAnalyzing": "Analyse du CV…",
     "resumeSuccess": "{bullets} points clés et {skills} compétences importés",
     "resumeSuccessHint": "Révisez-les et approuvez-les dans la Matrice Immuable",
-    "resumeSkipped": "Import du CV ignoré — vous pouvez ajouter votre parcours manuellement dans la Matrice",
+    "resumeSkipped": "Import du CV ignoré - vous pouvez ajouter votre parcours manuellement dans la Matrice",
     "resumeSkip": "Passer cette étape",
     "resumeError": "Analyse du CV échouée. Réessayez ou ignorez cette étape.",
     "reviewResume": "CV",
@@ -167,14 +229,14 @@
     "finish": "Accéder à l'espace de travail",
     "finishing": "Enregistrement…",
     "errorSave": "Impossible d'enregistrer le profil. Veuillez réessayer.",
-    "handshakeTitle": "Profil enregistré — espace de travail prêt",
+    "handshakeTitle": "Profil enregistré - espace de travail prêt",
     "handshakeBody": "Votre profil est configuré. L'extraction de code s'exécute entièrement dans votre navigateur.",
     "handshakeDetail": "L'extraction de codebase est maintenant disponible dans l'onglet Extraire.",
     "resumeCareerSuccess": "{jobs} emplois, {degrees} diplômes et {projects} projets importés"
   },
   "ExtractPage": {
     "title": "Extraire l'expérience",
-    "subtitle": "Cartographiez la structure d'un dépôt local — aucun code source ni secret ne quitte votre appareil.",
+    "subtitle": "Cartographiez la structure d'un dépôt local - aucun code source ni secret ne quitte votre appareil.",
     "extractCta": "Sélectionner le dépôt",
     "pickerUnsupported": "Votre navigateur ne prend pas en charge l'accès aux répertoires locaux. Veuillez utiliser Chrome 86+, Edge ou un autre navigateur basé sur Chromium.",
     "pickerOpening": "Ouverture…",
@@ -190,7 +252,7 @@
     "phaseScanning": "Analyse des fichiers et manifestes…",
     "phaseBuilding": "Construction du résumé de structure…",
     "skeletonTitle": "Structure du dépôt extraite",
-    "skeletonSubtitle": "Seules les métadonnées structurelles ont été capturées — aucun nom de variable, logique ou chaîne propriétaire.",
+    "skeletonSubtitle": "Seules les métadonnées structurelles ont été capturées - aucun nom de variable, logique ou chaîne propriétaire.",
     "skeletonFiles": "Fichiers",
     "skeletonFilesValue": "{code} code / {total} total",
     "skeletonLanguages": "Langages",
@@ -503,7 +565,7 @@
     "exportIncludeLinks": "Liens (GitHub et LinkedIn)",
     "exportIncludeSkills": "Compétences techniques (adaptées par IA)",
     "exportIncludePhoto": "Photo de profil",
-    "exportIncludePhotoHint": "Déconseillé pour les ATS aux États-Unis/Canada — adapté aux CV européens/internationaux.",
+    "exportIncludePhotoHint": "Déconseillé pour les ATS aux États-Unis/Canada - adapté aux CV européens/internationaux.",
     "exportJobsTitle": "Expérience professionnelle",
     "exportEducationTitle": "Formation",
     "exportLanguagesTitle": "Langues",
@@ -554,7 +616,7 @@
     "tnSuggestNoData": "Ajoutez d’abord une formation ou une expérience professionnelle pour utiliser cette fonctionnalité.",
     "tnSuggestError": "Échec de l’analyse des catégories TN. Veuillez réessayer.",
     "tnSuggestModalTitle": "Suggestions de catégorie de visa TN",
-    "tnSuggestModalSubtitle": "Basé sur votre formation et expérience professionnelle. À titre informatif uniquement — pas de conseil juridique.",
+    "tnSuggestModalSubtitle": "Basé sur votre formation et expérience professionnelle. À titre informatif uniquement - pas de conseil juridique.",
     "tnSuggestNoMatches": "Aucune catégorie TN correspondante trouvée pour votre profil.",
     "locationLabel": "Lieu",
     "salaryMinLabel": "Salaire minimum",
@@ -804,7 +866,7 @@
     "tnSuggestError": "Échec de l'analyse des catégories TN. Veuillez réessayer.",
     "tnSuggestParseError": "Impossible de traiter les résultats. Veuillez réessayer.",
     "tnSuggestModalTitle": "Suggestions de catégorie TN",
-    "tnSuggestModalSubtitle": "Basé sur votre formation et votre expérience professionnelle. À titre informatif uniquement — ne constitue pas un conseil juridique.",
+    "tnSuggestModalSubtitle": "Basé sur votre formation et votre expérience professionnelle. À titre informatif uniquement - ne constitue pas un conseil juridique.",
     "tnSuggestNoMatches": "Aucune catégorie TN compatible trouvée pour votre profil.",
     "jobKeysSection": "Clés d'API d'emplois",
     "jobKeysSubtitle": "Utilisez vos propres clés de fournisseur pour obtenir un flux d'emplois privé. Les clés sont chiffrées et jamais partagées.",

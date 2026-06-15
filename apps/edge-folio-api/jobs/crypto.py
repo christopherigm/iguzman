@@ -4,7 +4,7 @@ User-supplied API keys are encrypted at rest with Fernet. The key comes from
 ``settings.JOBS_ENCRYPTION_KEY`` (kept separate from ``SECRET_KEY`` so it can be
 rotated independently). For local development, when no key is configured, a
 deterministic key is derived from ``SECRET_KEY`` so the feature works without
-extra setup — production must always set a real ``JOBS_ENCRYPTION_KEY``.
+extra setup - production must always set a real ``JOBS_ENCRYPTION_KEY``.
 """
 
 import base64

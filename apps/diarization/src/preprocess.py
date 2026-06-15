@@ -18,7 +18,7 @@ def preprocess_audio(input_path: str) -> str:
     Convert *input_path* to a 16 kHz mono 16-bit PCM WAV temp file.
 
     Works for any format ffmpeg understands, including video containers
-    (.mp4, .webm) — the video track is discarded via -vn.
+    (.mp4, .webm) - the video track is discarded via -vn.
 
     Returns the path to the new temp WAV file (caller must delete it).
     Raises RuntimeError if ffmpeg exits non-zero.
@@ -31,7 +31,7 @@ def preprocess_audio(input_path: str) -> str:
         "-i", input_path,
         "-vn",              # drop video track; extract audio only
         "-ac", "1",         # mono
-        "-ar", "16000",     # 16 kHz — pyannote's native sample rate
+        "-ar", "16000",     # 16 kHz - pyannote's native sample rate
         "-sample_fmt", "s16",  # 16-bit PCM
         tmp.name,
     ]

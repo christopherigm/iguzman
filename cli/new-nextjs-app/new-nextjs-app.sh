@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# new-nextjs-app.sh — interactive Next.js app scaffold
+# new-nextjs-app.sh - interactive Next.js app scaffold
 # Based on apps/edge-folio architecture (i18n + auth + PWA + Helm)
 # Run: bash cli/new-nextjs-app/new-nextjs-app.sh
 
@@ -456,7 +456,7 @@ NAMESPACE=${name}
 EOF
   [[ "${include_auth}" == "y" ]] && cat >> "$out" << 'TXTEOF'
 
-# Django API base URL — server-side only, never NEXT_PUBLIC_
+# Django API base URL - server-side only, never NEXT_PUBLIC_
 # Local: http://localhost:8000
 API_URL=http://localhost:8000
 TXTEOF
@@ -493,7 +493,7 @@ function localeOf(pathname: string): string {
 
 // The access cookie now outlives the JWT (maxAge 7d), so cookie presence no
 // longer implies a valid token. Decode the unverified `exp` claim to decide
-// whether a refresh is needed — Django still verifies the signature on use.
+// whether a refresh is needed - Django still verifies the signature on use.
 // Treat any undecodable token as expired so we refresh rather than 401.
 function isAccessUsable(token: string | undefined): boolean {
   if (!token) return false;
@@ -1074,7 +1074,7 @@ self.addEventListener('install', serwist.handleInstall);
 self.addEventListener('activate', serwist.handleActivate);
 self.addEventListener('fetch', (event: FetchEvent) => {
   if (!event.request.url.startsWith('http')) return;
-  // Never intercept Next.js API routes — let them go straight to the network.
+  // Never intercept Next.js API routes - let them go straight to the network.
   if (new URL(event.request.url).pathname.startsWith('/api/')) return;
   serwist.handleFetch(event);
 });
@@ -2899,7 +2899,7 @@ main() {
   gen_layout_tsx                     "${app_dir}/app/[locale]/layout.tsx"
   gen_page_tsx                       "${app_dir}/app/[locale]/page.tsx"
 
-  # messages — translated per locale
+  # messages - translated per locale
   for locale in en es de fr pt; do
     gen_messages_json                "${app_dir}/messages/${locale}.json" "${locale}"
   done

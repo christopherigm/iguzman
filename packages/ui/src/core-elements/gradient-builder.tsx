@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import './gradient-builder.css';
-import { Box } from './box';
-import { Typography } from './typography';
-import { TextInput } from './text-input';
+import { useState, useEffect, useRef } from "react";
+import "./gradient-builder.css";
+import { Box } from "./box";
+import { Typography } from "./typography";
+import { TextInput } from "./text-input";
 
-export type GradientType = 'linear' | 'radial' | 'solid';
+export type GradientType = "linear" | "radial" | "solid";
 
 export interface ColorStop {
   color: string;
@@ -32,13 +32,13 @@ export interface GradientBuilderLabels {
 function splitTopLevel(str: string): string[] {
   const parts: string[] = [];
   let depth = 0;
-  let cur = '';
+  let cur = "";
   for (const ch of str) {
-    if (ch === '(') depth++;
-    else if (ch === ')') depth--;
-    else if (ch === ',' && depth === 0) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    else if (ch === "," && depth === 0) {
       parts.push(cur.trim());
-      cur = '';
+      cur = "";
       continue;
     }
     cur += ch;
@@ -54,7 +54,7 @@ function parseColorStop(part: string): ColorStop | null {
   if (withPos?.[1] != null && withPos[2] != null) {
     return { color: withPos[1].trim(), position: parseFloat(withPos[2]) };
   }
-  // bare color (no position — will be auto-assigned)
+  // bare color (no position - will be auto-assigned)
   if (trimmed) return { color: trimmed, position: -1 };
   return null;
 }
@@ -88,7 +88,7 @@ function parseCss(
       .map(parseColorStop)
       .filter((s): s is ColorStop => s !== null);
     if (raw.length >= 2)
-      return { type: 'linear', stops: autoPosition(raw), angle };
+      return { type: "linear", stops: autoPosition(raw), angle };
   }
 
   const radialMatch = v.match(/^radial-gradient\((.+)\)$/s);
@@ -98,9 +98,9 @@ function parseCss(
     // skip shape / position descriptor (doesn't start with a colour)
     if (
       parts[0] &&
-      !parts[0].startsWith('#') &&
-      !parts[0].startsWith('rgb') &&
-      !parts[0].startsWith('hsl')
+      !parts[0].startsWith("#") &&
+      !parts[0].startsWith("rgb") &&
+      !parts[0].startsWith("hsl")
     ) {
       stopParts = parts.slice(1);
     }
@@ -108,12 +108,12 @@ function parseCss(
       .map(parseColorStop)
       .filter((s): s is ColorStop => s !== null);
     if (raw.length >= 2)
-      return { type: 'radial', stops: autoPosition(raw), angle: 135 };
+      return { type: "radial", stops: autoPosition(raw), angle: 135 };
   }
 
   // solid hex / rgb / hsl
   if (/^#[0-9a-fA-F]{3,8}$/.test(v) || /^rgba?\(/.test(v) || /^hsl/.test(v)) {
-    return { type: 'solid', stops: [{ color: v, position: 0 }], angle: 135 };
+    return { type: "solid", stops: [{ color: v, position: 0 }], angle: 135 };
   }
 
   return null;
@@ -124,9 +124,9 @@ function buildCss(
   stops: ColorStop[],
   angle: number,
 ): string {
-  if (type === 'solid') return stops[0]?.color ?? '#000000';
-  const stopsStr = stops.map((s) => `${s.color} ${s.position}%`).join(', ');
-  if (type === 'linear') return `linear-gradient(${angle}deg, ${stopsStr})`;
+  if (type === "solid") return stops[0]?.color ?? "#000000";
+  const stopsStr = stops.map((s) => `${s.color} ${s.position}%`).join(", ");
+  if (type === "linear") return `linear-gradient(${angle}deg, ${stopsStr})`;
   return `radial-gradient(circle at center, ${stopsStr})`;
 }
 
@@ -142,21 +142,21 @@ export interface GradientBuilderProps {
 }
 
 const DEFAULT_STOPS: ColorStop[] = [
-  { color: '#2196f3', position: 0 },
-  { color: '#e040fb', position: 100 },
+  { color: "#2196f3", position: 0 },
+  { color: "#e040fb", position: 100 },
 ];
 
 const DEFAULT_LABELS: Required<GradientBuilderLabels> = {
-  linear: 'Linear',
-  radial: 'Radial',
-  solid: 'Solid',
-  angle: 'Angle',
-  color: 'Color',
-  stops: 'Color Stops',
-  addStop: 'Add stop',
-  removeStop: 'Remove stop',
-  pickColor: 'Pick color',
-  rawCss: 'CSS value',
+  linear: "Linear",
+  radial: "Radial",
+  solid: "Solid",
+  angle: "Angle",
+  color: "Color",
+  stops: "Color Stops",
+  addStop: "Add stop",
+  removeStop: "Remove stop",
+  pickColor: "Pick color",
+  rawCss: "CSS value",
 };
 
 export function GradientBuilder({
@@ -167,10 +167,10 @@ export function GradientBuilder({
 }: GradientBuilderProps) {
   const l: Required<GradientBuilderLabels> = { ...DEFAULT_LABELS, ...labels };
 
-  const [type, setType] = useState<GradientType>('linear');
+  const [type, setType] = useState<GradientType>("linear");
   const [angle, setAngle] = useState(135);
   const [stops, setStops] = useState<ColorStop[]>(DEFAULT_STOPS);
-  const [rawCss, setRawCss] = useState('');
+  const [rawCss, setRawCss] = useState("");
 
   // Track whether a change is coming from inside this component so we don't
   // re-parse what we just emitted.
@@ -206,9 +206,9 @@ export function GradientBuilder({
   const handleTypeChange = (next: GradientType) => {
     setType(next);
     const firstStop: ColorStop = stops[0] ??
-      DEFAULT_STOPS[0] ?? { color: '#000000', position: 0 };
+      DEFAULT_STOPS[0] ?? { color: "#000000", position: 0 };
     const nextStops: ColorStop[] =
-      next === 'solid'
+      next === "solid"
         ? [firstStop]
         : stops.length >= 2
           ? stops
@@ -238,13 +238,13 @@ export function GradientBuilder({
 
   const addStop = () => {
     const last: ColorStop = stops[stops.length - 1] ??
-      DEFAULT_STOPS[1] ?? { color: '#e040fb', position: 100 };
+      DEFAULT_STOPS[1] ?? { color: "#e040fb", position: 100 };
     const prev: ColorStop = stops[stops.length - 2] ??
-      DEFAULT_STOPS[0] ?? { color: '#2196f3', position: 0 };
+      DEFAULT_STOPS[0] ?? { color: "#2196f3", position: 0 };
     const pos = Math.round((prev.position + last.position) / 2);
     const next: ColorStop[] = [
       ...stops.slice(0, -1),
-      { color: '#ffffff', position: pos },
+      { color: "#ffffff", position: pos },
       last,
     ];
     setStops(next);
@@ -274,7 +274,7 @@ export function GradientBuilder({
   };
 
   const canParse = parseCss(rawCss) !== null;
-  const TYPES: GradientType[] = ['linear', 'radial', 'solid'];
+  const TYPES: GradientType[] = ["linear", "radial", "solid"];
 
   return (
     <Box className="gb" flexDirection="column" gap="12px">
@@ -292,7 +292,7 @@ export function GradientBuilder({
           <button
             key={tp}
             type="button"
-            className={`gb__type-btn${type === tp && canParse ? ' gb__type-btn--active' : ''}`}
+            className={`gb__type-btn${type === tp && canParse ? " gb__type-btn--active" : ""}`}
             onClick={() => handleTypeChange(tp)}
           >
             {l[tp]}
@@ -303,7 +303,7 @@ export function GradientBuilder({
       {canParse && (
         <>
           {/* Angle (linear only) */}
-          {type === 'linear' && (
+          {type === "linear" && (
             <Box display="flex" alignItems="center" gap="8px">
               <Typography as="span" variant="body-sm" className="gb__sublabel">
                 {l.angle}
@@ -340,9 +340,9 @@ export function GradientBuilder({
               justifyContent="space-between"
             >
               <Typography as="span" variant="body-sm" className="gb__sublabel">
-                {type === 'solid' ? l.color : l.stops}
+                {type === "solid" ? l.color : l.stops}
               </Typography>
-              {type !== 'solid' && (
+              {type !== "solid" && (
                 <button type="button" className="gb__add-btn" onClick={addStop}>
                   + {l.addStop}
                 </button>
@@ -352,7 +352,7 @@ export function GradientBuilder({
               <Box key={i} display="flex" alignItems="center" gap="8px">
                 <input
                   type="color"
-                  value={stop.color.startsWith('#') ? stop.color : '#000000'}
+                  value={stop.color.startsWith("#") ? stop.color : "#000000"}
                   onChange={(e) => handleStopColor(i, e.target.value)}
                   className="gb__swatch"
                   title={l.pickColor}
@@ -363,7 +363,7 @@ export function GradientBuilder({
                   placeholder="#000000"
                   className="gb__stop-text"
                 />
-                {type !== 'solid' && (
+                {type !== "solid" && (
                   <>
                     <input
                       type="number"
@@ -396,7 +396,7 @@ export function GradientBuilder({
         </>
       )}
 
-      {/* Raw CSS — always visible */}
+      {/* Raw CSS - always visible */}
       <Box flexDirection="column" gap="4px">
         <Typography as="span" variant="body-sm" className="gb__sublabel">
           {l.rawCss}

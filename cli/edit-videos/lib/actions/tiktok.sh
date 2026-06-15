@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# lib/actions/tiktok.sh — TikTok/Reel assembly (folder → 1 vertical reel)
+# lib/actions/tiktok.sh - TikTok/Reel assembly (folder → 1 vertical reel)
 #
 # Pipeline:
-#   Phase 1 — LLM frame scoring via Ollama (Gemma multimodal)
-#   Phase 2 — Vertical 9:16 smart-crop + per-clip normalization (1080x1920, 30fps)
-#   Phase 3 — Concat demuxer + optional background music mix
+#   Phase 1 - LLM frame scoring via Ollama (Gemma multimodal)
+#   Phase 2 - Vertical 9:16 smart-crop + per-clip normalization (1080x1920, 30fps)
+#   Phase 3 - Concat demuxer + optional background music mix
 #
 # Depends on: probe.sh, progress.sh, ui.sh, ffmpeg-bootstrap.sh
 
@@ -396,9 +396,9 @@ run_tiktok_reel() {
     local best_score=0 best_frame="" dur_sec=0
 
     if _is_image_file "${vf_src}"; then
-      # ── Photo: score the image directly — no frame extraction needed ──────
+      # ── Photo: score the image directly - no frame extraction needed ──────
       dur_sec="${TIKTOK_CLIP_MAX}"
-      printf "    %s\n" "$(clr_dim 'photo — scoring directly...')"
+      printf "    %s\n" "$(clr_dim 'photo - scoring directly...')"
       local score
       score="$(_score_frame "${vf_src}" "${TIKTOK_OLLAMA_MODEL}")"
       printf "    %s %s → %s/10\n" \
@@ -413,7 +413,7 @@ run_tiktok_reel() {
       probe_out="$(probe_video "${vf_src}")"
       dur_sec="${probe_out%% *}"
       if [[ "${dur_sec}" -eq 0 ]]; then
-        printf "    %s Could not probe duration — skipping.\n" "$(clr_yellow '⚠')"
+        printf "    %s Could not probe duration - skipping.\n" "$(clr_yellow '⚠')"
         continue
       fi
 
@@ -429,7 +429,7 @@ run_tiktok_reel() {
       local frame_count=0
       frame_count="$(find "${frames_dir}" -maxdepth 1 -name "*.jpg" 2>/dev/null | wc -l)"
       if [[ "${frame_count}" -eq 0 ]]; then
-        printf "    %s No frames extracted — skipping.\n" "$(clr_yellow '⚠')"
+        printf "    %s No frames extracted - skipping.\n" "$(clr_yellow '⚠')"
         continue
       fi
       printf "    %s %s\n" "$(clr_dim '○')" "$(clr_dim "${frame_count} frames extracted")"
@@ -515,7 +515,7 @@ run_tiktok_reel() {
       fi
     done
     if [[ "${_is_dup}" -eq 1 && "${_matched_idx}" -ge 0 ]]; then
-      # Near-duplicate found — compare sharpness and keep the crisper image
+      # Near-duplicate found - compare sharpness and keep the crisper image
       local _prev_frame="${_accepted_frames[${_matched_idx}]}"
       local _cand_sharp _prev_sharp
       _cand_sharp="$(_sharpness_score "${_dup_frame}")"
@@ -573,13 +573,13 @@ run_tiktok_reel() {
     if [[ -n "${best_frame}" && -f "${best_frame}" ]]; then
       printf "    %s\n" "$(clr_dim "${TIKTOK_STEP_ROI}...")"
       if _is_image_file "${src_file}" || [[ "${TIKTOK_ROI_FRAMES}" -le 1 ]]; then
-        # Still image or smoothing disabled — single query
+        # Still image or smoothing disabled - single query
         local coords
         coords="$(_get_subject_coords "${best_frame}" "${TIKTOK_OLLAMA_MODEL}")"
         subj_x="${coords%% *}"
         subj_y="${coords##* }"
       else
-        # Video — build a window of TIKTOK_ROI_FRAMES frames centered on best_frame for SMA
+        # Video - build a window of TIKTOK_ROI_FRAMES frames centered on best_frame for SMA
         local _roi_dir; _roi_dir="$(dirname "${best_frame}")"
         local _best_base; _best_base="$(basename "${best_frame}")"
         local -a _all_roi=()
@@ -752,7 +752,7 @@ run_tiktok_reel() {
         -y "${out_reel}" 2>/dev/null; then
       printf "    %s %s\n" "$(clr_bold_green '✓')" "$(clr_dim "${TIKTOK_STEP_AUDIO} done")"
     else
-      printf "    %s Audio mix failed — using original audio only.\n" "$(clr_yellow '⚠')"
+      printf "    %s Audio mix failed - using original audio only.\n" "$(clr_yellow '⚠')"
       cp "${concat_raw}" "${out_reel}"
     fi
   else

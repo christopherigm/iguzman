@@ -97,13 +97,13 @@ Rules:
   Leveraged, Facilitated, Spearheaded, Showcased, Executed, Managed (as a generic opener).
 - Target 15-25 words per bullet. Do not exceed two lines.
 - If the original bullet contains a precise metric (e.g. "71%", "$183K", "3 of 7 teams"), \
-  preserve it exactly as written. If no metric exists, omit the quantity entirely — never \
+  preserve it exactly as written. If no metric exists, omit the quantity entirely - never \
   invent round numbers like "50%" or "$100K".
-- Forbidden words and phrases — do not use any of these: leverage, leveraged, utilize, \
+- Forbidden words and phrases - do not use any of these: leverage, leveraged, utilize, \
   utilized, spearhead, spearheaded, pivotal, realm, synergize, proven track record, \
   results-driven, dynamic professional, passionate team player, cross-functional stakeholders, \
   facilitating knowledge transfer, intricate, delve, showcase, showcasing.
-- Return ONLY valid JSON — no markdown, no explanation, no extra text.
+- Return ONLY valid JSON - no markdown, no explanation, no extra text.
 
 Response schema:
 {"bullets": [{"id": <integer>, "tailored_text": "<string>"}]}
@@ -258,7 +258,7 @@ Rules:
 - Select between 5 and 15 of the most relevant skills.
 - Prioritize skills explicitly mentioned or strongly implied in the job description.
 - Include both technical and soft skills if they are relevant to this specific role.
-- Return ONLY valid JSON — no markdown, no explanation, no extra text.
+- Return ONLY valid JSON - no markdown, no explanation, no extra text.
 
 Response schema:
 {"skill_ids": [<integer>, ...]}
@@ -295,7 +295,7 @@ def tailor_skills(job_description: str, skills: list[dict]) -> list[int]:
     valid_ids = {s['id'] for s in skills}
     matched = [sid for sid in result.skill_ids if sid in valid_ids]
     if not matched:
-        # LLM returned no recognised IDs — fall back to top-15 by proficiency
+        # LLM returned no recognised IDs - fall back to top-15 by proficiency
         sorted_by_prof = sorted(skills, key=lambda s: -s.get('proficiency', 0))
         matched = [s['id'] for s in sorted_by_prof[:15]]
     return matched
@@ -312,14 +312,14 @@ Given a job description and a candidate's work experience entries, rewrite every
 description to highlight alignment with the target role.
 
 Rules:
-- Include ALL provided work experience entries in your response — do not omit any.
+- Include ALL provided work experience entries in your response - do not omit any.
 - Rewrite each description to mirror 2-3 keywords from the job description.
-- Preserve any concrete metrics exactly as written — never invent or round numbers.
+- Preserve any concrete metrics exactly as written - never invent or round numbers.
 - Keep each rewritten description concise: 2-4 sentences.
 - Do not invent duties or achievements not implied by the original description.
 - Forbidden words: leverage, leveraged, utilize, utilized, spearhead, spearheaded, pivotal, \
   synergize, proven track record, results-driven, dynamic professional, passionate team player.
-- Return ONLY valid JSON — no markdown, no explanation, no extra text.
+- Return ONLY valid JSON - no markdown, no explanation, no extra text.
 
 Response schema:
 {"work_experiences": [{"id": <integer>, "tailored_description": "<string>"}]}
@@ -384,7 +384,7 @@ Rules:
 - Do not invent features or outcomes not implied by the original description.
 - Forbidden words: leverage, leveraged, utilize, utilized, spearhead, spearheaded, pivotal, \
   synergize, proven track record, results-driven, dynamic professional, passionate team player.
-- Return ONLY valid JSON — no markdown, no explanation, no extra text.
+- Return ONLY valid JSON - no markdown, no explanation, no extra text.
 
 Response schema:
 {"projects": [{"id": <integer>, "tailored_description": "<string>"}]}
@@ -497,12 +497,12 @@ applying to a specific role. The summary is the first thing a recruiter reads.
 Rules:
 - Open with: [Most recent job title] with [X] years of experience [core domain / stack].
 - Include at least one concrete achievement drawn from the provided bullet points. \
-  Use the exact metric — never invent or round numbers.
+  Use the exact metric - never invent or round numbers.
 - Close with what the candidate brings to this specific company or type of role.
 - Naturally mirror 2-3 keywords from the job description.
 - Total length: 50-100 words. Maximum 5 sentences.
 - No first-person pronouns (I, my, me, we).
-- Forbidden words and phrases — do not use any: leverage, leveraged, utilize, utilized, \
+- Forbidden words and phrases - do not use any: leverage, leveraged, utilize, utilized, \
   spearhead, spearheaded, pivotal, realm, synergize, proven track record, results-driven, \
   dynamic professional, passionate team player, passionate about, cross-functional, \
   intricate, delve, showcase, showcasing, facilitating.
@@ -593,9 +593,9 @@ for the candidate applying to the role described below.
 Critical rules:
 - Reference ONLY the achievement facts listed in "SELECTED BULLETS". Do not invent or \
   infer any experience not present in those bullets.
-- Do not use bullet-point formatting — write in flowing prose.
+- Do not use bullet-point formatting - write in flowing prose.
 - Keep the tone confident and specific; avoid generic filler phrases.
-- Do not include a salutation header (e.g. "Dear Hiring Manager,") or closing signature — \
+- Do not include a salutation header (e.g. "Dear Hiring Manager,") or closing signature - \
   return only the body paragraphs.
 - Return plain text only. No markdown, no extra commentary.
 """
@@ -641,7 +641,7 @@ You are an expert technical recruiter evaluating a candidate's fit for a specifi
 
 Analyze the candidate's skills, work experience bullet points, and the job description.
 Provide an overall match score from 1 to 100 representing how well the candidate's complete \
-profile fits the role — considering technical alignment, soft skill signals, seniority level \
+profile fits the role - considering technical alignment, soft skill signals, seniority level \
 match, and domain experience.
 
 Scoring guide:
@@ -651,7 +651,7 @@ Scoring guide:
 - 20-39: Weak fit; meets few requirements; significant development needed
 - 1-19: Poor fit; profile does not align with the role
 
-Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2-3 sentence plain-text explanation of the score, citing specific strengths or gaps>"}
+Return ONLY valid JSON - no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2-3 sentence plain-text explanation of the score, citing specific strengths or gaps>"}
 """
 
 _TECHNICAL_MATCH_SYSTEM_PROMPT = """\
@@ -669,7 +669,7 @@ Scoring guide:
 - 20-39: Has foundational skills but missing most required technologies
 - 1-19: Technical profile does not align with job requirements
 
-Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2-3 sentence plain-text explanation of the score, citing specific skills matched or missing>"}
+Return ONLY valid JSON - no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2-3 sentence plain-text explanation of the score, citing specific skills matched or missing>"}
 """
 
 _NAFTA_LIKELIHOOD_SYSTEM_PROMPT = """\
@@ -697,7 +697,7 @@ Scoring guide:
 - 20-39: Weak; significant concerns about profession mapping or credential gaps
 - 1-19: Poor TN eligibility; role likely does not qualify under NAFTA/USMCA
 
-Return ONLY valid JSON — no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2-3 sentence plain-text explanation of the score, citing specific profession mapping or credential factors>"}
+Return ONLY valid JSON - no markdown, no extra text: {"score": <integer 1-100>, "explanation": "<2-3 sentence plain-text explanation of the score, citing specific profession mapping or credential factors>"}
 """
 
 
@@ -822,19 +822,19 @@ USCIS requirements this letter must satisfy (per NAFTA Appendix 1603.D.1):
 4. Employee's educational qualifications or credentials
 5. Confirmation of a prearranged full-time or part-time position (not self-employment)
 
-Required structure — follow exactly:
+Required structure - follow exactly:
 1. Date line (today's date, formatted as Month DD, YYYY)
-2. Addressee block — write these three lines consecutively with NO blank lines between them:
+2. Addressee block - write these three lines consecutively with NO blank lines between them:
      U.S. Department of Homeland Security
      Customs and Border Protection
      United States
-3. RE line — copy exactly from "RE LINE TO USE" in the input. Immediately below the RE line \
+3. RE line - copy exactly from "RE LINE TO USE" in the input. Immediately below the RE line \
 (no blank line), write:
      Employer: [Company Name]
      Applicant: [Employee Full Name]
 4. One blank line
 5. Salutation: Dear Sir or Madam:
-6. Opening paragraph — base on APPLICATION TYPE:
+6. Opening paragraph - base on APPLICATION TYPE:
    - NEW TN APPLICATION: Write as employer formally requesting admission for an employee. \
 Example: "[Company] respectfully submits this letter in support of [full name]'s application \
 for a TN nonimmigrant visa under the United States-Mexico-Canada Agreement (USMCA). [Full name] \
@@ -851,16 +851,16 @@ letter supports [his/her/their] continued TN nonimmigrant status for an addition
 position title, hours per week, annual compensation ([To be provided] if absent), and direct \
 supervisor ([To be provided] if absent). For CONTINUATION, explicitly note this extends existing \
 TN status.
-8. About the Company — write this text exactly as the heading on its own line, then 2-3 sentences \
+8. About the Company - write this text exactly as the heading on its own line, then 2-3 sentences \
 about the company. Use ADDITIONAL COMPANY INFO if provided.
-9. Offered Position: ([TN NAFTA OFFICIAL CATEGORY]) — write this text exactly as the heading on \
+9. Offered Position: ([TN NAFTA OFFICIAL CATEGORY]) - write this text exactly as the heading on \
 its own line using the TN NAFTA OFFICIAL CATEGORY (not the internal job title). Then an \
 introductory sentence followed by 6-10 specific duty bullet points (• character) derived \
 strictly from the JOB DESCRIPTION.
-10. Qualifications — write as the heading on its own line. Then 1-2 sentences stating the \
+10. Qualifications - write as the heading on its own line. Then 1-2 sentences stating the \
 employee's academic credentials from EDUCATION HISTORY and why they qualify for the \
 TN NAFTA OFFICIAL CATEGORY. Use TN PROFESSION REQUIREMENTS as reference for what qualifies.
-11. Employment Terms — write as the heading on its own line. Confirm: full-time or part-time, \
+11. Employment Terms - write as the heading on its own line. Confirm: full-time or part-time, \
 duration per CONTRACT DURATION, U.S. employer is the sole employer with full direction and control.
 12. Closing paragraph: respectfully request approval, provide contact information for questions.
 13. Thank you for your consideration.
@@ -868,15 +868,15 @@ duration per CONTRACT DURATION, U.S. employer is the sole employer with full dir
 15. Signatory block: [Signatory Name] / [Title] / [Company] / [Email]
 
 Critical rules:
-- Copy the RE LINE TO USE verbatim from the input — do not alter it.
+- Copy the RE LINE TO USE verbatim from the input - do not alter it.
 - Use [To be provided] for every data point not explicitly supplied in the input.
 - Do NOT add blank lines between the addressee block lines (DHS / CBP / United States).
 - Do NOT add blank lines between the RE line and the Employer / Applicant sub-lines.
 - Section headings (About the Company, Offered Position, Qualifications, Employment Terms) appear \
 on their own lines without extra blank lines before or after them.
-- Derive job duties ONLY from the JOB DESCRIPTION — never invent duties.
+- Derive job duties ONLY from the JOB DESCRIPTION - never invent duties.
 - Write in formal legal-correspondence prose. No casual language.
-- Return plain text only — absolutely no markdown, no asterisks (*), no bold markers (**), \
+- Return plain text only - absolutely no markdown, no asterisks (*), no bold markers (**), \
 no underscores, no extra formatting characters of any kind.
 - Use the bullet character • exclusively for duty list items in the Offered Position section.
 """

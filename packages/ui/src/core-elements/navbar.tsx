@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, CSSProperties } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import React, { useState, useEffect, useRef, CSSProperties } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   UIComponentProps,
   buildStyleProps,
   MenuItem,
   BREAKPOINTS,
-} from './utils';
-import { Container } from './container';
-import { Icon } from './icon';
-import { TextInput } from './text-input';
-import { Drawer } from './drawer';
-import getImageDimensionsFromBase64 from '@repo/helpers/get-image-dimensions-from-base64';
-import './navbar.css';
-import { Box } from './box';
+} from "./utils";
+import { Container } from "./container";
+import { Icon } from "./icon";
+import { TextInput } from "./text-input";
+import { Drawer } from "./drawer";
+import getImageDimensionsFromBase64 from "@repo/helpers/get-image-dimensions-from-base64";
+import "./navbar.css";
+import { Box } from "./box";
 
 export type { MenuItem };
 
@@ -79,8 +79,8 @@ export interface NavbarProps extends UIComponentProps {
 
 // ── useScrollDirection ───────────────────────────────────────────────
 
-function useScrollDirection(threshold = 5): 'up' | 'down' | null {
-  const [direction, setDirection] = useState<'up' | 'down' | null>(null);
+function useScrollDirection(threshold = 5): "up" | "down" | null {
+  const [direction, setDirection] = useState<"up" | "down" | null>(null);
   const lastScrollY = useRef(0);
   const pathname = usePathname();
 
@@ -106,11 +106,11 @@ function useScrollDirection(threshold = 5): 'up' | 'down' | null {
         return;
       }
       if (Math.abs(currentY - lastScrollY.current) < threshold) return;
-      setDirection(currentY > lastScrollY.current ? 'down' : 'up');
+      setDirection(currentY > lastScrollY.current ? "down" : "up");
       lastScrollY.current = currentY;
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [threshold]);
 
   return direction;
@@ -134,9 +134,9 @@ const NavbarItem: React.FC<{
     }
   };
 
-  const Tag = item.href && !hasChildren ? 'a' : 'button';
+  const Tag = item.href && !hasChildren ? "a" : "button";
   const linkProps =
-    Tag === 'a' ? { href: item.href } : { type: 'button' as const };
+    Tag === "a" ? { href: item.href } : { type: "button" as const };
 
   return (
     <Tag className="ui-navbar-item" onClick={handleClick} {...linkProps}>
@@ -146,14 +146,14 @@ const NavbarItem: React.FC<{
       {item.label}
       {hasChildren && (
         <Icon
-          icon={chevronIcon || '/icons/chevron-down.svg'}
+          icon={chevronIcon || "/icons/chevron-down.svg"}
           size="14px"
           className={[
-            'ui-navbar-item-chevron',
-            isDropdownOpen ? 'ui-navbar-item-chevron--open' : '',
+            "ui-navbar-item-chevron",
+            isDropdownOpen ? "ui-navbar-item-chevron--open" : "",
           ]
             .filter(Boolean)
-            .join(' ')}
+            .join(" ")}
         />
       )}
     </Tag>
@@ -173,9 +173,9 @@ const DropdownPanel: React.FC<{
         onClose();
       };
 
-      const Tag = child.href ? 'a' : 'button';
+      const Tag = child.href ? "a" : "button";
       const linkProps =
-        Tag === 'a' ? { href: child.href } : { type: 'button' as const };
+        Tag === "a" ? { href: child.href } : { type: "button" as const };
 
       return (
         <Tag
@@ -202,7 +202,7 @@ const SearchBox: React.FC<{
   externalValue?: string;
 }> = ({ onSearch, onSearchChange, searchIcon, closeIcon, externalValue }) => {
   const [expanded, setExpanded] = useState(false);
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const prevExternalRef = useRef<string | undefined>(undefined);
 
@@ -220,8 +220,8 @@ const SearchBox: React.FC<{
       setExpanded(true);
       setValue(externalValue);
       onSearchChange?.(externalValue);
-    } else if (externalValue === '' && prevExternalRef.current) {
-      setValue('');
+    } else if (externalValue === "" && prevExternalRef.current) {
+      setValue("");
       setExpanded(false);
     }
     prevExternalRef.current = externalValue;
@@ -233,22 +233,22 @@ const SearchBox: React.FC<{
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && value.trim()) {
+    if (e.key === "Enter" && value.trim()) {
       onSearch?.(value.trim());
     }
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       setExpanded(false);
-      setValue('');
-      onSearchChange?.('');
-      onSearch?.('');
+      setValue("");
+      onSearchChange?.("");
+      onSearch?.("");
     }
   };
 
   const handleClose = () => {
     setExpanded(false);
-    setValue('');
-    onSearchChange?.('');
-    onSearch?.('');
+    setValue("");
+    onSearchChange?.("");
+    onSearch?.("");
   };
 
   return (
@@ -259,17 +259,17 @@ const SearchBox: React.FC<{
           onClick={() => setExpanded(true)}
           aria-label="Search"
         >
-          <Icon icon={searchIcon || '/icons/search.svg'} size="20px" />
+          <Icon icon={searchIcon || "/icons/search.svg"} size="20px" />
         </button>
       )}
       <div
         className={[
-          'ui-navbar-search-input',
-          expanded ? 'ui-navbar-search-input--expanded' : '',
-        ].join(' ')}
+          "ui-navbar-search-input",
+          expanded ? "ui-navbar-search-input--expanded" : "",
+        ].join(" ")}
       >
         {expanded && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <TextInput
               ref={inputRef as React.Ref<HTMLInputElement>}
               value={value}
@@ -283,7 +283,7 @@ const SearchBox: React.FC<{
               onClick={handleClose}
               aria-label="Close search"
             >
-              <Icon icon={closeIcon || '/icons/close.svg'} size="18px" />
+              <Icon icon={closeIcon || "/icons/close.svg"} size="18px" />
             </button>
           </div>
         )}
@@ -295,7 +295,7 @@ const SearchBox: React.FC<{
 // ── Navbar ────────────────────────────────────────────────────────────
 
 /**
- * Navbar — responsive navigation bar with scroll hide/show, menu items,
+ * Navbar - responsive navigation bar with scroll hide/show, menu items,
  * search box, and drawer integration.
  *
  * @example
@@ -308,7 +308,7 @@ const SearchBox: React.FC<{
 export const Navbar: React.FC<NavbarProps> = (props) => {
   const {
     logo,
-    logoAlt = '',
+    logoAlt = "",
     logoWidth = 120,
     logoHeight = 40,
     items = [],
@@ -370,24 +370,27 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         setActiveDropdown(null);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [activeDropdown]);
 
-  const pathnameWithoutLocale = pathname.replace(/^\/[a-z]{2}(-[A-Z]{2})?(\/|$)/, '/');
+  const pathnameWithoutLocale = pathname.replace(
+    /^\/[a-z]{2}(-[A-Z]{2})?(\/|$)/,
+    "/",
+  );
   if (hiddenPaths?.includes(pathnameWithoutLocale)) return null;
 
-  const isHidden = scrollDirection === 'down';
+  const isHidden = scrollDirection === "down";
 
   const navClasses = [
-    'ui-navbar',
-    isHidden ? 'ui-navbar--hidden' : '',
-    fullwidth ? 'ui-navbar--fullwidth' : '',
-    translucent ? 'ui-navbar--translucent' : '',
+    "ui-navbar",
+    isHidden ? "ui-navbar--hidden" : "",
+    fullwidth ? "ui-navbar--fullwidth" : "",
+    translucent ? "ui-navbar--translucent" : "",
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   const navStyle: CSSProperties = {
     ...buildStyleProps(uiProps as UIComponentProps),
@@ -489,7 +492,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
         onClick={() => setDrawerOpen(true)}
         aria-label="Open menu"
       >
-        <Icon icon={hamburgerIcon || '/icons/hamburger.svg'} size="24px" />
+        <Icon icon={hamburgerIcon || "/icons/hamburger.svg"} size="24px" />
       </button>
     </div>
   );
@@ -523,7 +526,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
 };
 
 /**
- * NavbarSpacer — a `div` with `height: var(--ui-navbar-height)` that pushes
+ * NavbarSpacer - a `div` with `height: var(--ui-navbar-height)` that pushes
  * page content below the fixed navbar.  Use it on any page that does not
  * start with a full-width `<Hero>` section.
  */
@@ -532,7 +535,7 @@ export const NavbarSpacer: React.FC = () => (
 );
 
 /**
- * PageBottomSpacer — a `div` with `height: var(--ui-page-bottom-spacing)`
+ * PageBottomSpacer - a `div` with `height: var(--ui-page-bottom-spacing)`
  * (default 64 px) that adds breathing room at the bottom of page content.
  * Place it as the last element inside the page's root fragment.
  */

@@ -1,4 +1,4 @@
-const DIR_NAME = 'vd-videos';
+const DIR_NAME = "vd-videos";
 
 async function getDir(): Promise<FileSystemDirectoryHandle> {
   const root = await navigator.storage.getDirectory();
@@ -7,10 +7,10 @@ async function getDir(): Promise<FileSystemDirectoryHandle> {
 
 export function isOPFSSupported(): boolean {
   return (
-    typeof navigator !== 'undefined' &&
-    'storage' in navigator &&
+    typeof navigator !== "undefined" &&
+    "storage" in navigator &&
     typeof (navigator.storage as unknown as { getDirectory?: unknown })
-      .getDirectory === 'function'
+      .getDirectory === "function"
   );
 }
 
@@ -33,7 +33,7 @@ export async function deleteFromOPFS(key: string): Promise<void> {
     const dir = await getDir();
     await dir.removeEntry(key);
   } catch {
-    // File may already be gone — not an error
+    // File may already be gone - not an error
   }
 }
 
@@ -60,7 +60,7 @@ export async function listOPFSFiles(): Promise<
   try {
     const dir = await getDir();
     for await (const [name, handle] of dir.entries()) {
-      if (handle.kind === 'file') {
+      if (handle.kind === "file") {
         const file = await (handle as FileSystemFileHandle).getFile();
         results.push({ name, size: file.size });
       }
@@ -73,9 +73,9 @@ export async function listOPFSFiles(): Promise<
 
 export async function requestPersistentStorage(): Promise<boolean> {
   if (
-    typeof navigator === 'undefined' ||
-    !('storage' in navigator) ||
-    typeof navigator.storage.persist !== 'function'
+    typeof navigator === "undefined" ||
+    !("storage" in navigator) ||
+    typeof navigator.storage.persist !== "function"
   )
     return false;
   return navigator.storage.persist();
@@ -89,7 +89,7 @@ export async function getOPFSStorageInfo(): Promise<{
   try {
     const dir = await getDir();
     for await (const [, handle] of dir.entries()) {
-      if (handle.kind === 'file') {
+      if (handle.kind === "file") {
         const file = await (handle as FileSystemFileHandle).getFile();
         usedBytes += file.size;
       }
@@ -98,9 +98,9 @@ export async function getOPFSStorageInfo(): Promise<{
     // OPFS unavailable or directory is empty
   }
   const estimate =
-    typeof navigator !== 'undefined' &&
-    'storage' in navigator &&
-    typeof navigator.storage.estimate === 'function'
+    typeof navigator !== "undefined" &&
+    "storage" in navigator &&
+    typeof navigator.storage.estimate === "function"
       ? await navigator.storage.estimate()
       : {};
   return { usedBytes, totalBytes: estimate.quota ?? 0 };

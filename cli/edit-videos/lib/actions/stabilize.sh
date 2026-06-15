@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/actions/stabilize.sh — Video stabilization via vid.stab (two-pass) or deshake fallback
+# lib/actions/stabilize.sh - Video stabilization via vid.stab (two-pass) or deshake fallback
 # Depends on: probe.sh, progress.sh (run_ffmpeg_step), ui.sh
 
 # ── Stabilize: pass 1 (motion analysis) + adds pass 2 filter to vf_chain ─────

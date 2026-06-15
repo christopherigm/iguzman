@@ -30,105 +30,105 @@
     "requirements": "Baccalaureate or Licenciatura degree in Economics or a closely related field."
   },
   {
-    "name": "Engineer — Aerospace",
+    "name": "Engineer - Aerospace",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design, development, and testing of aircraft, spacecraft, missiles, and related systems and equipment.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Agricultural",
+    "name": "Engineer - Agricultural",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Application of engineering principles to agricultural production, processing, and storage systems.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Biomedical",
+    "name": "Engineer - Biomedical",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Application of engineering principles to biology and medicine for healthcare technologies and devices.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Chemical",
+    "name": "Engineer - Chemical",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design and optimization of processes and equipment for large-scale chemical manufacturing and production.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Civil",
+    "name": "Engineer - Civil",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design, planning, and supervision of construction of infrastructure such as roads, bridges, buildings, and water systems.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Computer",
+    "name": "Engineer - Computer",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design and development of computer hardware, embedded systems, and the hardware-software interface.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Electrical",
+    "name": "Engineer - Electrical",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design, development, and testing of electrical equipment, power systems, and components.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Electronic",
+    "name": "Engineer - Electronic",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design and development of electronic components, circuits, and communication systems.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Environmental",
+    "name": "Engineer - Environmental",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Development of engineering solutions to environmental problems including pollution control, remediation, and sustainable systems.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Industrial",
+    "name": "Engineer - Industrial",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Optimization of complex processes, systems, and organizations for efficiency and productivity.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Mechanical",
+    "name": "Engineer - Mechanical",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design, development, and manufacturing of mechanical devices, machines, and thermal systems.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Nuclear",
+    "name": "Engineer - Nuclear",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design and operation of nuclear equipment, reactors, and processes for energy production or research.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Petroleum",
+    "name": "Engineer - Petroleum",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design of methods for extracting oil and gas from underground deposits safely and efficiently.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Software",
+    "name": "Engineer - Software",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Design, development, and maintenance of software systems and applications using engineering principles.",
     "requirements": "Baccalaureate or Licenciatura degree in Engineering; or state/provincial license. Qualifies under the 'Engineer' TN profession category."
   },
   {
-    "name": "Engineer — Structural",
+    "name": "Engineer - Structural",
     "tn_category": "General",
     "tn_official_name": "Engineer",
     "description": "Analysis and design of structures to safely withstand loads, stresses, and environmental forces.",
@@ -294,7 +294,7 @@
     "tn_category": "Medical",
     "tn_official_name": "Physician",
     "description": "Medical instruction at a university or research institution. Clinical patient care is not permitted under this TN category.",
-    "requirements": "M.D. or Doctor en Medicina; or state/provincial license. Strictly limited to teaching or research roles — no clinical practice."
+    "requirements": "M.D. or Doctor en Medicina; or state/provincial license. Strictly limited to teaching or research roles - no clinical practice."
   },
   {
     "name": "Psychologist",

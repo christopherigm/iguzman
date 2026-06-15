@@ -16,9 +16,9 @@ class ImageProcessingSerializer(serializers.Serializer):
     Accepts a base64-encoded image and processes it.
 
     Parameters (set as class attributes or pass via __init__):
-      max_size    (int, int) — thumbnail bounding box, default (512, 512)
-      quality     int        — quality 1-95, default 90
-      force_format str       — Pillow format string ('JPEG', 'PNG', …), default 'JPEG'
+      max_size    (int, int) - thumbnail bounding box, default (512, 512)
+      quality     int        - quality 1-95, default 90
+      force_format str       - Pillow format string ('JPEG', 'PNG', …), default 'JPEG'
     """
 
     max_size = (512, 512)
@@ -140,7 +140,7 @@ _STORY_IMAGE_CFG = {"max_size": (900, 900), "quality": 85, "force_format": "JPEG
 
 
 class SuccessStoryWriteSerializer(serializers.Serializer):
-    """Write serializer for SuccessStory — accepts base64 image, all fields optional (PATCH semantics)."""
+    """Write serializer for SuccessStory - accepts base64 image, all fields optional (PATCH semantics)."""
 
     system      = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
     name        = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -193,7 +193,7 @@ class SuccessStoryWriteSerializer(serializers.Serializer):
 
 
 class SuccessStoryImageWriteSerializer(serializers.Serializer):
-    """Create a gallery image linked to a story — accepts base64 image."""
+    """Create a gallery image linked to a story - accepts base64 image."""
 
     image      = serializers.CharField()
     name       = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -277,7 +277,7 @@ class CompanyHighlightSerializer(serializers.ModelSerializer):
 
 
 class CompanyHighlightWriteSerializer(serializers.Serializer):
-    """Write serializer for CompanyHighlight — all fields optional (PATCH semantics)."""
+    """Write serializer for CompanyHighlight - all fields optional (PATCH semantics)."""
 
     system       = serializers.PrimaryKeyRelatedField(queryset=System.objects.all(), required=False, allow_null=True)
     category     = serializers.CharField(max_length=128, required=False, allow_null=True, allow_blank=True)
@@ -336,7 +336,7 @@ class CompanyHighlightWriteSerializer(serializers.Serializer):
 
 
 class CompanyHighlightItemWriteSerializer(serializers.Serializer):
-    """Write serializer for CompanyHighlightItem — all fields optional (PATCH semantics)."""
+    """Write serializer for CompanyHighlightItem - all fields optional (PATCH semantics)."""
 
     name         = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
     en_name      = serializers.CharField(max_length=255, required=False, allow_null=True, allow_blank=True)
@@ -409,7 +409,7 @@ _EXT = {"JPEG": "jpg", "PNG": "png"}
 # ---------------------------------------------------------------------------
 
 class SystemSerializer(serializers.ModelSerializer):
-    """Read serializer — returns all System fields with absolute image URLs."""
+    """Read serializer - returns all System fields with absolute image URLs."""
 
     img_logo = serializers.SerializerMethodField()
     img_logo_hero = serializers.SerializerMethodField()
@@ -490,7 +490,7 @@ _TEXT_FIELDS = [
 
 
 class SystemWriteSerializer(serializers.Serializer):
-    """Write serializer — accepts base64-encoded images alongside regular fields."""
+    """Write serializer - accepts base64-encoded images alongside regular fields."""
 
     # Regular fields (all optional for PATCH semantics)
     site_name           = serializers.CharField(max_length=32, required=False)
@@ -598,7 +598,7 @@ _BRAND_LOGO_CFG = {"max_size": (512, 512), "quality": 90, "force_format": "PNG"}
 
 
 class BrandWriteSerializer(serializers.Serializer):
-    """Write serializer for Brand — all fields optional (PATCH semantics)."""
+    """Write serializer for Brand - all fields optional (PATCH semantics)."""
 
     name    = serializers.CharField(max_length=255, required=False)
     slug    = serializers.SlugField(max_length=255, required=False)

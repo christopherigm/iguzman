@@ -1,10 +1,10 @@
-import { readdir, stat, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
-import logger from '@/lib/logger';
+import { readdir, stat, unlink } from "node:fs/promises";
+import { join } from "node:path";
+import logger from "@/lib/logger";
 
-const log = logger.child({ module: 'tmp-cleanup' });
+const log = logger.child({ module: "tmp-cleanup" });
 
-const TEMP_DIR = '/tmp';
+const TEMP_DIR = "/tmp";
 
 // Files older than this are considered orphaned. The longest-running job
 // (diarization) is capped at ~10 min, so 2 h leaves a wide safety margin.
@@ -42,7 +42,7 @@ export function sweepTmpFiles(): void {
     try {
       entries = await readdir(TEMP_DIR);
     } catch (err) {
-      log.warn({ err }, 'tmp-cleanup - failed to read /tmp');
+      log.warn({ err }, "tmp-cleanup - failed to read /tmp");
       return;
     }
 
@@ -54,9 +54,12 @@ export function sweepTmpFiles(): void {
           const info = await stat(filePath);
           if (!info.isFile() || now - info.mtimeMs <= MAX_AGE_MS) return;
           await unlink(filePath);
-          log.info({ file: name }, 'tmp-cleanup - removed orphaned staged file');
+          log.info(
+            { file: name },
+            "tmp-cleanup - removed orphaned staged file",
+          );
         } catch {
-          // File may have been removed concurrently — ignore.
+          // File may have been removed concurrently - ignore.
         }
       }),
     );

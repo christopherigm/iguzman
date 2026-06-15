@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   useRef,
@@ -7,35 +7,35 @@ import {
   useEffect,
   useMemo,
   Fragment,
-} from 'react';
-import { useTranslations } from 'next-intl';
-import { useRouter } from '@repo/i18n/navigation';
-import './admin-form.css';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Button } from '@repo/ui/core-elements/button';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Switch } from '@repo/ui/core-elements/switch';
-import { Toast } from '@repo/ui/core-elements/toast';
-import { SpeechButton } from '@repo/ui/core-elements/speech-button';
-import { getAccessToken } from '@/lib/auth';
-import { useOllamaProxy, type LlmMessage } from '@repo/ui/use-ollama';
-import { useGroqProxy } from '@repo/ui/use-groq';
+} from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@repo/i18n/navigation";
+import "./admin-form.css";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Button } from "@repo/ui/core-elements/button";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Switch } from "@repo/ui/core-elements/switch";
+import { Toast } from "@repo/ui/core-elements/toast";
+import { SpeechButton } from "@repo/ui/core-elements/speech-button";
+import { getAccessToken } from "@/lib/auth";
+import { useOllamaProxy, type LlmMessage } from "@repo/ui/use-ollama";
+import { useGroqProxy } from "@repo/ui/use-groq";
 import {
   ADMIN_AI_PROVIDER_KEY,
   type AdminAiProvider,
-} from '@/app/[locale]/admin/admin-sidebar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Slider } from '@repo/ui/core-elements/slider';
+} from "@/app/[locale]/admin/admin-sidebar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Slider } from "@repo/ui/core-elements/slider";
 import {
   AiInterviewer,
   type AiEntityType,
-} from './ai-interviewer/ai-interviewer';
+} from "./ai-interviewer/ai-interviewer";
 import {
   PARAGRAPH_WORD_COUNTS,
   PARAGRAPH_LENGTH_STEPS,
   PARAGRAPH_COUNT_STEPS,
-} from './paragraph-options';
+} from "./paragraph-options";
 
 // ── SpeechFieldButton ──────────────────────────────────────────────────────
 //
@@ -68,7 +68,7 @@ function SpeechFieldButton({
 
   return (
     <SpeechButton
-      language={fieldKey.startsWith('en_') ? 'en' : 'es'}
+      language={fieldKey.startsWith("en_") ? "en" : "es"}
       onTranscript={handleTranscript}
       micIcon="/icons/mic.svg"
     />
@@ -79,52 +79,52 @@ function SpeechFieldButton({
 
 const FIELD_CONTEXT: Record<string, { en: string; es: string }> = {
   about: {
-    en: 'company about/overview section',
+    en: "company about/overview section",
     es: 'sección "Acerca de" de la empresa',
   },
   en_about: {
-    en: 'company about/overview section',
+    en: "company about/overview section",
     es: 'sección "Acerca de" de la empresa',
   },
-  mission: { en: 'company mission statement', es: 'misión de la empresa' },
-  en_mission: { en: 'company mission statement', es: 'misión de la empresa' },
-  vision: { en: 'company vision statement', es: 'visión de la empresa' },
-  en_vision: { en: 'company vision statement', es: 'visión de la empresa' },
-  privacy_policy: { en: 'privacy policy', es: 'política de privacidad' },
-  en_privacy_policy: { en: 'privacy policy', es: 'política de privacidad' },
+  mission: { en: "company mission statement", es: "misión de la empresa" },
+  en_mission: { en: "company mission statement", es: "misión de la empresa" },
+  vision: { en: "company vision statement", es: "visión de la empresa" },
+  en_vision: { en: "company vision statement", es: "visión de la empresa" },
+  privacy_policy: { en: "privacy policy", es: "política de privacidad" },
+  en_privacy_policy: { en: "privacy policy", es: "política de privacidad" },
   terms_and_conditions: {
-    en: 'terms and conditions',
-    es: 'términos y condiciones',
+    en: "terms and conditions",
+    es: "términos y condiciones",
   },
   en_terms_and_conditions: {
-    en: 'terms and conditions',
-    es: 'términos y condiciones',
+    en: "terms and conditions",
+    es: "términos y condiciones",
   },
-  user_data: { en: 'user data policy', es: 'política de datos del usuario' },
-  en_user_data: { en: 'user data policy', es: 'política de datos del usuario' },
+  user_data: { en: "user data policy", es: "política de datos del usuario" },
+  en_user_data: { en: "user data policy", es: "política de datos del usuario" },
   highlights_subtitle: {
-    en: 'highlights section description',
-    es: 'descripción de la sección de destacados',
+    en: "highlights section description",
+    es: "descripción de la sección de destacados",
   },
   en_highlights_subtitle: {
-    en: 'highlights section description',
-    es: 'descripción de la sección de destacados',
+    en: "highlights section description",
+    es: "descripción de la sección de destacados",
   },
   description: {
-    en: 'product/service description',
-    es: 'descripción del producto o servicio',
+    en: "product/service description",
+    es: "descripción del producto o servicio",
   },
   en_description: {
-    en: 'product/service description',
-    es: 'descripción del producto o servicio',
+    en: "product/service description",
+    es: "descripción del producto o servicio",
   },
   short_description: {
-    en: 'short product/service description',
-    es: 'descripción corta del producto o servicio',
+    en: "short product/service description",
+    es: "descripción corta del producto o servicio",
   },
   en_short_description: {
-    en: 'short product/service description',
-    es: 'descripción corta del producto o servicio',
+    en: "short product/service description",
+    es: "descripción corta del producto o servicio",
   },
 };
 
@@ -134,32 +134,32 @@ function buildEnhanceMessages(
   paragraphs: number,
   paragraphLength: string,
 ): LlmMessage[] {
-  const isEnglish = fieldKey.startsWith('en_');
+  const isEnglish = fieldKey.startsWith("en_");
   const ctx = FIELD_CONTEXT[fieldKey] ?? {
-    en: 'website content',
-    es: 'contenido del sitio web',
+    en: "website content",
+    es: "contenido del sitio web",
   };
   const { min, max } = PARAGRAPH_WORD_COUNTS[paragraphLength] ?? {
     min: 80,
     max: 120,
   };
-  const paraLabel = paragraphs === 1 ? 'paragraph' : 'paragraphs';
+  const paraLabel = paragraphs === 1 ? "paragraph" : "paragraphs";
 
   if (isEnglish) {
     return [
       {
-        role: 'system',
-        content: `You are a professional copywriter for a company website. Rewrite and expand the following text into polished, professional prose suitable for the ${ctx.en}. Write exactly ${paragraphs} ${paraLabel}. Each paragraph must be between ${min} and ${max} words. Add relevant detail, context, or supporting ideas — do not pad with filler. Return only the improved text — no explanations, labels, or formatting marks.`,
+        role: "system",
+        content: `You are a professional copywriter for a company website. Rewrite and expand the following text into polished, professional prose suitable for the ${ctx.en}. Write exactly ${paragraphs} ${paraLabel}. Each paragraph must be between ${min} and ${max} words. Add relevant detail, context, or supporting ideas - do not pad with filler. Return only the improved text - no explanations, labels, or formatting marks.`,
       },
-      { role: 'user', content: text },
+      { role: "user", content: text },
     ];
   }
   return [
     {
-      role: 'system',
-      content: `Eres un redactor profesional para un sitio web corporativo. Reescribe y amplía el siguiente texto en prosa profesional, adecuada para la ${ctx.es} de la empresa. Escribe exactamente ${paragraphs} párrafo${paragraphs !== 1 ? 's' : ''}. Cada párrafo debe tener entre ${min} y ${max} palabras. Agrega detalles relevantes, contexto o ideas de apoyo — no uses relleno. Devuelve únicamente el texto mejorado — sin explicaciones, etiquetas ni marcas de formato.`,
+      role: "system",
+      content: `Eres un redactor profesional para un sitio web corporativo. Reescribe y amplía el siguiente texto en prosa profesional, adecuada para la ${ctx.es} de la empresa. Escribe exactamente ${paragraphs} párrafo${paragraphs !== 1 ? "s" : ""}. Cada párrafo debe tener entre ${min} y ${max} palabras. Agrega detalles relevantes, contexto o ideas de apoyo - no uses relleno. Devuelve únicamente el texto mejorado - sin explicaciones, etiquetas ni marcas de formato.`,
     },
-    { role: 'user', content: text },
+    { role: "user", content: text },
   ];
 }
 
@@ -169,24 +169,24 @@ function buildTranslateMessages(
   text: string,
   sourceFieldKey: string,
 ): LlmMessage[] {
-  const isSourceEnglish = sourceFieldKey.startsWith('en_');
+  const isSourceEnglish = sourceFieldKey.startsWith("en_");
   if (isSourceEnglish) {
     return [
       {
-        role: 'system',
+        role: "system",
         content:
-          'You are a professional translator. Translate the following text from English to Spanish. Return only the translated text — no explanations, labels, or formatting marks.',
+          "You are a professional translator. Translate the following text from English to Spanish. Return only the translated text - no explanations, labels, or formatting marks.",
       },
-      { role: 'user', content: text },
+      { role: "user", content: text },
     ];
   }
   return [
     {
-      role: 'system',
+      role: "system",
       content:
-        'Eres un traductor profesional. Traduce el siguiente texto del español al inglés. Devuelve únicamente el texto traducido — sin explicaciones, etiquetas ni marcas de formato.',
+        "Eres un traductor profesional. Traduce el siguiente texto del español al inglés. Devuelve únicamente el texto traducido - sin explicaciones, etiquetas ni marcas de formato.",
     },
-    { role: 'user', content: text },
+    { role: "user", content: text },
   ];
 }
 
@@ -194,8 +194,8 @@ function buildTranslateMessages(
 
 function deriveGroupLabel(label: string): string {
   return label
-    .replace(/\s*\(ES\)\s*$/i, '')
-    .replace(/\s*\(Español\)\s*$/i, '')
+    .replace(/\s*\(ES\)\s*$/i, "")
+    .replace(/\s*\(Español\)\s*$/i, "")
     .trim();
 }
 
@@ -205,14 +205,14 @@ export interface FieldDef {
   key: string;
   label: string;
   type?:
-    | 'text'
-    | 'textarea'
-    | 'boolean'
-    | 'number'
-    | 'url'
-    | 'select'
-    | 'color'
-    | 'slug';
+    | "text"
+    | "textarea"
+    | "boolean"
+    | "number"
+    | "url"
+    | "select"
+    | "color"
+    | "slug";
   options?: { value: string | number; label: string }[];
   required?: boolean;
   placeholder?: string;
@@ -255,25 +255,25 @@ export function AdminForm({
   children,
   aiInterviewEntityType,
 }: AdminFormProps) {
-  const t = useTranslations('Admin');
+  const t = useTranslations("Admin");
   const router = useRouter();
 
   // ── AI provider (read from sidebar localStorage selection) ───────────────
-  const [aiProvider, setAiProvider] = useState<AdminAiProvider>('groq');
+  const [aiProvider, setAiProvider] = useState<AdminAiProvider>("groq");
 
   useEffect(() => {
     const stored = localStorage.getItem(
       ADMIN_AI_PROVIDER_KEY,
     ) as AdminAiProvider | null;
-    if (stored === 'ollama' || stored === 'groq') setAiProvider(stored);
+    if (stored === "ollama" || stored === "groq") setAiProvider(stored);
 
     const handler = (e: Event) => {
       const provider = (e as CustomEvent<AdminAiProvider>).detail;
-      if (provider === 'ollama' || provider === 'groq') setAiProvider(provider);
+      if (provider === "ollama" || provider === "groq") setAiProvider(provider);
     };
-    window.addEventListener('admin-ai-provider-change', handler);
+    window.addEventListener("admin-ai-provider-change", handler);
     return () =>
-      window.removeEventListener('admin-ai-provider-change', handler);
+      window.removeEventListener("admin-ai-provider-change", handler);
   }, []);
 
   // ── LLM hooks (both must be called unconditionally) ───────────────────────
@@ -291,22 +291,22 @@ export function AdminForm({
     generate,
     abort,
     reset: resetLlm,
-  } = aiProvider === 'ollama' ? ollamaHook : groqHook;
+  } = aiProvider === "ollama" ? ollamaHook : groqHook;
 
   // Tracks which operation ('enhance' | 'translate') is currently streaming.
-  const activeOperationRef = useRef<'enhance' | 'translate' | null>(null);
+  const activeOperationRef = useRef<"enhance" | "translate" | null>(null);
 
   // ── Enhance state ─────────────────────────────────────────────────────────
   const [activeEnhanceField, setActiveEnhanceField] = useState<string | null>(
     null,
   );
-  const [enhancePreview, setEnhancePreview] = useState('');
+  const [enhancePreview, setEnhancePreview] = useState("");
 
   // ── Translate state ───────────────────────────────────────────────────────
   const [activeTranslateField, setActiveTranslateField] = useState<
     string | null
   >(null);
-  const [translatePreview, setTranslatePreview] = useState('');
+  const [translatePreview, setTranslatePreview] = useState("");
 
   // ── Enhance options modal state ───────────────────────────────────────────
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
@@ -314,14 +314,14 @@ export function AdminForm({
     null,
   );
   const [enhanceParagraphs, setEnhanceParagraphs] = useState(2);
-  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState('md');
+  const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("md");
 
   // Route streaming tokens to the correct preview.
   useEffect(() => {
     if (!streamingText) return;
-    if (activeOperationRef.current === 'enhance')
+    if (activeOperationRef.current === "enhance")
       setEnhancePreview(streamingText);
-    else if (activeOperationRef.current === 'translate')
+    else if (activeOperationRef.current === "translate")
       setTranslatePreview(streamingText);
   }, [streamingText]);
 
@@ -330,7 +330,7 @@ export function AdminForm({
     const map = new Map<string, string>();
     const fieldKeys = new Set(fields.map((f) => f.key));
     fields.forEach((f) => {
-      if (f.key.startsWith('en_')) {
+      if (f.key.startsWith("en_")) {
         const esKey = f.key.slice(3);
         if (fieldKeys.has(esKey)) {
           map.set(f.key, esKey);
@@ -344,18 +344,18 @@ export function AdminForm({
   // A field gets a translate button when it's in a pair and is a text-like type.
   const isTranslatable = (field: FieldDef) =>
     pairMap.has(field.key) &&
-    field.type !== 'boolean' &&
-    field.type !== 'select' &&
-    field.type !== 'color';
+    field.type !== "boolean" &&
+    field.type !== "select" &&
+    field.type !== "color";
 
   // Show the group header before the ES field of each pair.
   const needsGroupHeader = (field: FieldDef) =>
-    pairMap.has(field.key) && !field.key.startsWith('en_');
+    pairMap.has(field.key) && !field.key.startsWith("en_");
 
   // ── Enhance handlers ──────────────────────────────────────────────────────
 
   const triggerEnhance = (fieldKey: string) => {
-    const currentValue = String(values[fieldKey] ?? '').trim();
+    const currentValue = String(values[fieldKey] ?? "").trim();
     if (!currentValue) return;
     setPendingEnhanceField(fieldKey);
     setShowEnhanceOptions(true);
@@ -367,17 +367,17 @@ export function AdminForm({
     setPendingEnhanceField(null);
     if (!fieldKey) return;
 
-    const currentValue = String(values[fieldKey] ?? '').trim();
+    const currentValue = String(values[fieldKey] ?? "").trim();
     if (!currentValue) return;
 
     // Clear any open translate preview.
     setActiveTranslateField(null);
-    setTranslatePreview('');
+    setTranslatePreview("");
 
     setActiveEnhanceField(fieldKey);
-    setEnhancePreview('');
+    setEnhancePreview("");
     resetLlm();
-    activeOperationRef.current = 'enhance';
+    activeOperationRef.current = "enhance";
 
     const messages = buildEnhanceMessages(
       currentValue,
@@ -398,7 +398,7 @@ export function AdminForm({
       onChange(activeEnhanceField, enhancePreview);
     }
     setActiveEnhanceField(null);
-    setEnhancePreview('');
+    setEnhancePreview("");
     activeOperationRef.current = null;
     resetLlm();
   };
@@ -406,7 +406,7 @@ export function AdminForm({
   const handleDiscardEnhance = () => {
     if (isGenerating) abort();
     setActiveEnhanceField(null);
-    setEnhancePreview('');
+    setEnhancePreview("");
     activeOperationRef.current = null;
     resetLlm();
   };
@@ -414,17 +414,17 @@ export function AdminForm({
   // ── Translate handlers ────────────────────────────────────────────────────
 
   const triggerTranslate = async (fieldKey: string) => {
-    const currentValue = String(values[fieldKey] ?? '').trim();
+    const currentValue = String(values[fieldKey] ?? "").trim();
     if (!currentValue) return;
 
     // Clear any open enhance preview.
     setActiveEnhanceField(null);
-    setEnhancePreview('');
+    setEnhancePreview("");
 
     setActiveTranslateField(fieldKey);
-    setTranslatePreview('');
+    setTranslatePreview("");
     resetLlm();
-    activeOperationRef.current = 'translate';
+    activeOperationRef.current = "translate";
 
     const messages = buildTranslateMessages(currentValue, fieldKey);
     await generate(messages);
@@ -436,7 +436,7 @@ export function AdminForm({
       if (targetKey) onChange(targetKey, translatePreview);
     }
     setActiveTranslateField(null);
-    setTranslatePreview('');
+    setTranslatePreview("");
     activeOperationRef.current = null;
     resetLlm();
   };
@@ -444,7 +444,7 @@ export function AdminForm({
   const handleDiscardTranslate = () => {
     if (isGenerating) abort();
     setActiveTranslateField(null);
-    setTranslatePreview('');
+    setTranslatePreview("");
     activeOperationRef.current = null;
     resetLlm();
   };
@@ -489,7 +489,7 @@ export function AdminForm({
             )}
             {!hideCancel && (
               <Button
-                text={t('cancel')}
+                text={t("cancel")}
                 onClick={onCancel ?? (() => router.back())}
                 size="md"
               />
@@ -518,11 +518,11 @@ export function AdminForm({
                 <Box
                   flexDirection="column"
                   className={
-                    field.type === 'textarea' ? 'af__field--full' : undefined
+                    field.type === "textarea" ? "af__field--full" : undefined
                   }
                   gap={field.fieldError ? 4 : undefined}
                 >
-                  {field.type === 'boolean' ? (
+                  {field.type === "boolean" ? (
                     <Box
                       display="flex"
                       alignItems="center"
@@ -541,7 +541,7 @@ export function AdminForm({
                         {field.label}
                       </Typography>
                     </Box>
-                  ) : field.type === 'select' ? (
+                  ) : field.type === "select" ? (
                     <Box flexDirection="column" gap={6}>
                       <label
                         className="af__label"
@@ -552,11 +552,11 @@ export function AdminForm({
                       <select
                         id={`field-${field.key}`}
                         className="af__select"
-                        value={String(values[field.key] ?? '')}
+                        value={String(values[field.key] ?? "")}
                         onChange={(e) => onChange(field.key, e.target.value)}
                         required={field.required}
                       >
-                        <option value="">{field.placeholder ?? '—'}</option>
+                        <option value="">{field.placeholder ?? "-"}</option>
                         {field.options?.map((opt) => (
                           <option
                             key={String(opt.value)}
@@ -567,7 +567,7 @@ export function AdminForm({
                         ))}
                       </select>
                     </Box>
-                  ) : field.type === 'color' ? (
+                  ) : field.type === "color" ? (
                     <Box flexDirection="column" gap={6}>
                       <label
                         className="af__label"
@@ -580,11 +580,11 @@ export function AdminForm({
                           id={`field-${field.key}`}
                           type="color"
                           className="af__color-input"
-                          value={String(values[field.key] ?? '#000000')}
+                          value={String(values[field.key] ?? "#000000")}
                           onChange={(e) => onChange(field.key, e.target.value)}
                         />
                         <TextInput
-                          value={String(values[field.key] ?? '')}
+                          value={String(values[field.key] ?? "")}
                           onChange={(v) => onChange(field.key, v)}
                           placeholder="#000000"
                           className="af__color-text"
@@ -598,8 +598,8 @@ export function AdminForm({
                         display="flex"
                         alignItems="center"
                         justifyContent={
-                          field.type === 'textarea' || isTranslatable(field)
-                            ? 'space-between'
+                          field.type === "textarea" || isTranslatable(field)
+                            ? "space-between"
                             : undefined
                         }
                         className="af__label-row"
@@ -621,47 +621,47 @@ export function AdminForm({
                         </label>
 
                         {/* ── Action buttons (mic, enhance, translate) ── */}
-                        {(field.type === 'textarea' ||
+                        {(field.type === "textarea" ||
                           isTranslatable(field)) && (
                           <Box display="flex" alignItems="center" gap={12}>
-                            {field.type === 'textarea' && (
+                            {field.type === "textarea" && (
                               <SpeechFieldButton
                                 fieldKey={field.key}
                                 getFieldValue={() =>
-                                  String(values[field.key] ?? '')
+                                  String(values[field.key] ?? "")
                                 }
                                 onChange={onChange}
                               />
                             )}
-                            {field.type === 'textarea' && (
+                            {field.type === "textarea" && (
                               <Button
                                 unstyled
                                 icon="/icons/enhance.svg"
                                 iconSize="16px"
                                 iconColor={
                                   activeEnhanceField === field.key
-                                    ? 'var(--accent, #06b6d4)'
-                                    : 'var(--foreground, #171717)'
+                                    ? "var(--accent, #06b6d4)"
+                                    : "var(--foreground, #171717)"
                                 }
                                 disabled={
                                   llmBusy ||
-                                  !String(values[field.key] ?? '').trim()
+                                  !String(values[field.key] ?? "").trim()
                                 }
                                 onClick={() => triggerEnhance(field.key)}
-                                aria-label={t('enhanceLabel')}
-                                title={t('enhanceLabel')}
+                                aria-label={t("enhanceLabel")}
+                                title={t("enhanceLabel")}
                                 className={[
-                                  'af__enhance-btn',
+                                  "af__enhance-btn",
                                   llmBusy ||
-                                  !String(values[field.key] ?? '').trim()
-                                    ? 'af__enhance-btn--busy'
-                                    : '',
+                                  !String(values[field.key] ?? "").trim()
+                                    ? "af__enhance-btn--busy"
+                                    : "",
                                   activeEnhanceField === field.key
-                                    ? 'af__enhance-btn--active'
-                                    : '',
+                                    ? "af__enhance-btn--active"
+                                    : "",
                                 ]
                                   .filter(Boolean)
-                                  .join(' ')}
+                                  .join(" ")}
                               />
                             )}
                             {isTranslatable(field) && (
@@ -671,28 +671,28 @@ export function AdminForm({
                                 iconSize="16px"
                                 iconColor={
                                   activeTranslateField === field.key
-                                    ? 'var(--accent, #06b6d4)'
-                                    : 'var(--foreground, #171717)'
+                                    ? "var(--accent, #06b6d4)"
+                                    : "var(--foreground, #171717)"
                                 }
                                 disabled={
                                   llmBusy ||
-                                  !String(values[field.key] ?? '').trim()
+                                  !String(values[field.key] ?? "").trim()
                                 }
                                 onClick={() => triggerTranslate(field.key)}
-                                aria-label={t('translateLabel')}
-                                title={t('translateLabel')}
+                                aria-label={t("translateLabel")}
+                                title={t("translateLabel")}
                                 className={[
-                                  'af__enhance-btn',
+                                  "af__enhance-btn",
                                   llmBusy ||
-                                  !String(values[field.key] ?? '').trim()
-                                    ? 'af__enhance-btn--busy'
-                                    : '',
+                                  !String(values[field.key] ?? "").trim()
+                                    ? "af__enhance-btn--busy"
+                                    : "",
                                   activeTranslateField === field.key
-                                    ? 'af__enhance-btn--active'
-                                    : '',
+                                    ? "af__enhance-btn--active"
+                                    : "",
                                 ]
                                   .filter(Boolean)
-                                  .join(' ')}
+                                  .join(" ")}
                               />
                             )}
                           </Box>
@@ -701,27 +701,27 @@ export function AdminForm({
 
                       <TextInput
                         id={`field-${field.key}`}
-                        value={String(values[field.key] ?? '')}
+                        value={String(values[field.key] ?? "")}
                         onChange={(v) => onChange(field.key, v)}
                         type={
-                          field.type === 'number'
-                            ? 'number'
-                            : field.type === 'url'
-                              ? 'url'
-                              : 'text'
+                          field.type === "number"
+                            ? "number"
+                            : field.type === "url"
+                              ? "url"
+                              : "text"
                         }
-                        multirow={field.type === 'textarea'}
-                        rows={field.type === 'textarea' ? 4 : undefined}
+                        multirow={field.type === "textarea"}
+                        rows={field.type === "textarea" ? 4 : undefined}
                         placeholder={field.placeholder}
-                        disabled={field.disabled ?? field.type === 'slug'}
+                        disabled={field.disabled ?? field.type === "slug"}
                         onBlur={field.onBlur}
                         className={
-                          field.fieldError ? 'af__input--error' : undefined
+                          field.fieldError ? "af__input--error" : undefined
                         }
                       />
 
                       {/* ── Enhance preview panel ── */}
-                      {field.type === 'textarea' &&
+                      {field.type === "textarea" &&
                         activeEnhanceField === field.key && (
                           <Box
                             className="af__enhance-preview"
@@ -729,7 +729,7 @@ export function AdminForm({
                             gap={10}
                           >
                             <Typography variant="body-sm">
-                              {enhancePreview || '…'}
+                              {enhancePreview || "…"}
                             </Typography>
                             <Box
                               display="flex"
@@ -739,19 +739,19 @@ export function AdminForm({
                             >
                               {isGenerating ? (
                                 <Button
-                                  text={t('enhanceStop')}
+                                  text={t("enhanceStop")}
                                   onClick={handleDiscardEnhance}
                                   size="md"
                                 />
                               ) : (
                                 <>
                                   <Button
-                                    text={t('enhanceDiscard')}
+                                    text={t("enhanceDiscard")}
                                     onClick={handleDiscardEnhance}
                                     size="md"
                                   />
                                   <Button
-                                    text={t('enhanceAccept')}
+                                    text={t("enhanceAccept")}
                                     onClick={handleAcceptEnhance}
                                     size="md"
                                     kind="success"
@@ -771,7 +771,7 @@ export function AdminForm({
                             gap={10}
                           >
                             <Typography variant="body-sm">
-                              {translatePreview || '…'}
+                              {translatePreview || "…"}
                             </Typography>
                             <Box
                               display="flex"
@@ -781,19 +781,19 @@ export function AdminForm({
                             >
                               {isGenerating ? (
                                 <Button
-                                  text={t('enhanceStop')}
+                                  text={t("enhanceStop")}
                                   onClick={handleDiscardTranslate}
                                   size="md"
                                 />
                               ) : (
                                 <>
                                   <Button
-                                    text={t('enhanceDiscard')}
+                                    text={t("enhanceDiscard")}
                                     onClick={handleDiscardTranslate}
                                     size="md"
                                   />
                                   <Button
-                                    text={t('enhanceAccept')}
+                                    text={t("enhanceAccept")}
                                     onClick={handleAcceptTranslate}
                                     size="md"
                                     kind="success"
@@ -826,7 +826,7 @@ export function AdminForm({
           <Box display="flex" gap={12} className="af__actions">
             <Button
               type="submit"
-              text={saving ? t('saving') : t('save')}
+              text={saving ? t("saving") : t("save")}
               disabled={saving}
               kind="success"
               size="lg"
@@ -837,8 +837,8 @@ export function AdminForm({
 
       {showEnhanceOptions && (
         <ConfirmationModal
-          title={t('enhanceOptionsTitle')}
-          text={t('enhanceOptionsText')}
+          title={t("enhanceOptionsTitle")}
+          text={t("enhanceOptionsText")}
           okCallback={handleConfirmEnhanceOptions}
           cancelCallback={handleCancelEnhanceOptions}
         >
@@ -847,13 +847,13 @@ export function AdminForm({
               steps={PARAGRAPH_COUNT_STEPS}
               value={enhanceParagraphs}
               onChange={(v) => setEnhanceParagraphs(Number(v))}
-              label={t('enhanceParagraphsLabel')}
+              label={t("enhanceParagraphsLabel")}
             />
             <Slider
               steps={PARAGRAPH_LENGTH_STEPS}
               value={enhanceParagraphLength}
               onChange={(v) => setEnhanceParagraphLength(String(v))}
-              label={`${t('enhanceLengthLabel')} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
+              label={`${t("enhanceLengthLabel")} (${currentLengthWordRange.min}-${currentLengthWordRange.max} words/para)`}
             />
           </div>
         </ConfirmationModal>

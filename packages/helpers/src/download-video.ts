@@ -1,4 +1,4 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 import {
   createWriteStream,
   existsSync,
@@ -8,103 +8,103 @@ import {
   renameSync,
   rmSync,
   writeFileSync,
-} from 'fs';
-import { get as httpsGet } from 'https';
-import { get as httpGet } from 'http';
-import { randomUUID } from 'crypto';
-import { cpus } from 'os';
+} from "fs";
+import { get as httpsGet } from "https";
+import { get as httpGet } from "http";
+import { randomUUID } from "crypto";
+import { cpus } from "os";
 import {
   detectPlatform,
   isFacebook,
   isInstagram,
   isTiktok,
   isYoutube,
-} from './checkers';
-import type { Platform } from './checkers';
+} from "./checkers";
+import type { Platform } from "./checkers";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
 /* ------------------------------------------------------------------ */
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
-const IS_PRODUCTION = NODE_ENV === 'production';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
+const IS_PRODUCTION = NODE_ENV === "production";
 
 /** Default output folder based on the current environment. */
-const DEFAULT_OUTPUT_FOLDER = IS_PRODUCTION ? '/app/media' : 'public/media';
+const DEFAULT_OUTPUT_FOLDER = IS_PRODUCTION ? "/app/media" : "public/media";
 
 /** Default Netscape-format cookies file path. */
 const DEFAULT_COOKIES = IS_PRODUCTION
-  ? '/app/netscape-cookies.txt'
-  : './netscape-cookies.txt';
+  ? "/app/netscape-cookies.txt"
+  : "./netscape-cookies.txt";
 
 /** Default yt-dlp binary path. */
-const DEFAULT_BINARY = 'yt-dlp';
+const DEFAULT_BINARY = "yt-dlp";
 
 /** Default ffmpeg binary path. */
-const DEFAULT_FFMPEG = 'ffmpeg';
+const DEFAULT_FFMPEG = "ffmpeg";
 
 const CPU_COUNT = String(cpus().length);
 const THREAD_FLAGS = [
-  '-threads',
+  "-threads",
   CPU_COUNT,
-  '-filter_threads',
+  "-filter_threads",
   CPU_COUNT,
-  '-filter_complex_threads',
+  "-filter_complex_threads",
   CPU_COUNT,
 ];
 
 /** Default gallery-dl binary path. */
-const DEFAULT_GALLERY_DL = 'gallery-dl';
+const DEFAULT_GALLERY_DL = "gallery-dl";
 
 /** Default Node.js binary path for yt-dlp's `--js-runtimes` flag. */
 const DEFAULT_JS_RUNTIMES = IS_PRODUCTION
-  ? '/usr/local/bin/node'
-  : '/usr/bin/node';
+  ? "/usr/local/bin/node"
+  : "/usr/bin/node";
 
 /** Maximum buffer size for command output (2 MB). */
 const EXEC_MAX_BUFFER = 1024 * 2048;
 
 /**
  * Video extensions compatible with web browsers, Android, and iOS.
- * Ordered by preference — the first match wins during format selection.
+ * Ordered by preference - the first match wins during format selection.
  */
-const PREFERRED_VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov'] as const;
+const PREFERRED_VIDEO_EXTENSIONS = ["mp4", "webm", "mov"] as const;
 
 /**
  * Audio extensions compatible with web browsers, Android, and iOS.
- * Ordered by preference — the first match wins during format selection.
+ * Ordered by preference - the first match wins during format selection.
  */
 const PREFERRED_AUDIO_EXTENSIONS = [
-  'm4a',
-  'mp3',
-  'aac',
-  'opus',
-  'webm',
+  "m4a",
+  "mp3",
+  "aac",
+  "opus",
+  "webm",
 ] as const;
 
 /**
  * High-quality / lossless audio output formats supported by yt-dlp's
- * FFmpegExtractAudio post-processor. Ordered by quality preference —
+ * FFmpegExtractAudio post-processor. Ordered by quality preference -
  * FLAC is lossless, the rest are high-bitrate lossy.
  */
-export const LOSSLESS_AUDIO_FORMATS = ['flac', 'wav', 'alac', 'aiff'] as const;
+export const LOSSLESS_AUDIO_FORMATS = ["flac", "wav", "alac", "aiff"] as const;
 
 /**
  * Language prefixes used to select a preferred SRT file when multiple
- * subtitle files are downloaded. Checked in order — the first match wins.
+ * subtitle files are downloaded. Checked in order - the first match wins.
  */
 const PREFERRED_LANG_PREFIXES = [
-  'en.srt',
-  '.en_us',
-  '.en-us',
-  'en-us',
-  '.eng-us',
-  'es.srt',
-  '.es_es',
-  '.es-es',
-  'es-es',
-  '.spa-es',
-  'en-mx',
+  "en.srt",
+  ".en_us",
+  ".en-us",
+  "en-us",
+  ".eng-us",
+  "es.srt",
+  ".es_es",
+  ".es-es",
+  "es-es",
+  ".spa-es",
+  "en-mx",
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -114,47 +114,47 @@ const PREFERRED_LANG_PREFIXES = [
 /**
  * All possible error codes returned by {@link downloadVideo}.
  *
- * - `BINARY_NOT_FOUND` — yt-dlp is not installed or not reachable.
- * - `FFMPEG_NOT_FOUND` — ffmpeg is not installed (required for audio extraction).
- * - `GALLERY_DL_NOT_FOUND` — gallery-dl is not installed (used as fallback for Instagram images).
- * - `INVALID_URL` — The provided string is not a valid URL.
- * - `UNSUPPORTED_PLATFORM` — The URL does not match any supported platform.
- * - `DOWNLOAD_FAILED` — yt-dlp exited with a non-zero code.
- * - `METADATA_FAILED` — Could not retrieve video metadata.
- * - `SUBTITLES_FAILED` — Could not retrieve subtitles / captions.
- * - `FORMAT_DETECTION_FAILED` — Could not list available formats.
+ * - `BINARY_NOT_FOUND` - yt-dlp is not installed or not reachable.
+ * - `FFMPEG_NOT_FOUND` - ffmpeg is not installed (required for audio extraction).
+ * - `GALLERY_DL_NOT_FOUND` - gallery-dl is not installed (used as fallback for Instagram images).
+ * - `INVALID_URL` - The provided string is not a valid URL.
+ * - `UNSUPPORTED_PLATFORM` - The URL does not match any supported platform.
+ * - `DOWNLOAD_FAILED` - yt-dlp exited with a non-zero code.
+ * - `METADATA_FAILED` - Could not retrieve video metadata.
+ * - `SUBTITLES_FAILED` - Could not retrieve subtitles / captions.
+ * - `FORMAT_DETECTION_FAILED` - Could not list available formats.
  */
 
 /**
  * Supported audio output formats for the `justAudio` download mode.
  *
- * - `flac` — Lossless. Highest quality; preserves every sample bit.
- * - `wav`  — Uncompressed PCM. Lossless but very large files.
- * - `alac` — Apple Lossless. Lossless, best for Apple ecosystems.
- * - `aiff` — Uncompressed PCM (Apple). Similar to WAV.
- * - `m4a`  — AAC in an MP4 container. High-quality lossy.
- * - `mp3`  — Ubiquitous lossy format.
- * - `opus` — Modern, efficient lossy codec.
+ * - `flac` - Lossless. Highest quality; preserves every sample bit.
+ * - `wav`  - Uncompressed PCM. Lossless but very large files.
+ * - `alac` - Apple Lossless. Lossless, best for Apple ecosystems.
+ * - `aiff` - Uncompressed PCM (Apple). Similar to WAV.
+ * - `m4a`  - AAC in an MP4 container. High-quality lossy.
+ * - `mp3`  - Ubiquitous lossy format.
+ * - `opus` - Modern, efficient lossy codec.
  */
 export type AudioOutputFormat =
-  | 'flac'
-  | 'wav'
-  | 'alac'
-  | 'aiff'
-  | 'm4a'
-  | 'mp3'
-  | 'opus';
+  | "flac"
+  | "wav"
+  | "alac"
+  | "aiff"
+  | "m4a"
+  | "mp3"
+  | "opus";
 
 export type DownloadVideoErrorCode =
-  | 'BINARY_NOT_FOUND'
-  | 'FFMPEG_NOT_FOUND'
-  | 'GALLERY_DL_NOT_FOUND'
-  | 'INVALID_URL'
-  | 'UNSUPPORTED_PLATFORM'
-  | 'DOWNLOAD_FAILED'
-  | 'METADATA_FAILED'
-  | 'SUBTITLES_FAILED'
-  | 'FORMAT_DETECTION_FAILED';
+  | "BINARY_NOT_FOUND"
+  | "FFMPEG_NOT_FOUND"
+  | "GALLERY_DL_NOT_FOUND"
+  | "INVALID_URL"
+  | "UNSUPPORTED_PLATFORM"
+  | "DOWNLOAD_FAILED"
+  | "METADATA_FAILED"
+  | "SUBTITLES_FAILED"
+  | "FORMAT_DETECTION_FAILED";
 
 /** Structured error object returned by {@link downloadVideo}. */
 export interface DownloadVideoError {
@@ -234,7 +234,7 @@ export interface DownloadVideoOptions {
    * When `true`, the downloaded video is probed for iOS Safari codec
    * compatibility. If the video stream uses a codec not supported by
    * iOS Safari (VP9, AV1, VP8, Theora, etc.) it is transcoded to
-   * H.264 in-place — the original file is replaced so the client
+   * H.264 in-place - the original file is replaced so the client
    * receives a playable file without any URL change.
    * Has no effect when `justAudio` is `true`.
    * @defaultValue false
@@ -244,7 +244,7 @@ export interface DownloadVideoOptions {
    * Maximum video height in pixels. When provided, only formats with
    * `height <= maxHeight` are considered during format selection,
    * capping the download resolution to the nearest available quality.
-   * @example 1080 — download at most 1080p
+   * @example 1080 - download at most 1080p
    */
   maxHeight?: number;
   /**
@@ -490,14 +490,14 @@ export interface DownloadVideoResult {
  */
 const isRateLimited = (err: unknown): boolean => {
   const msg = err instanceof Error ? err.message : String(err);
-  return msg.includes('429') || /too many requests/i.test(msg);
+  return msg.includes("429") || /too many requests/i.test(msg);
 };
 
 const execFileAsync = (bin: string, args: string[]): Promise<string> =>
   new Promise((resolve, reject) => {
     execFile(bin, args, { maxBuffer: EXEC_MAX_BUFFER }, (error, stdout) => {
       if (error) {
-        console.log('execFileAsync error:', error);
+        console.log("execFileAsync error:", error);
         return reject(error);
       }
       resolve(stdout);
@@ -516,7 +516,7 @@ const execFileCaptureBoth = (bin: string, args: string[]): Promise<string> =>
       args,
       { maxBuffer: EXEC_MAX_BUFFER },
       (_error, stdout, stderr) => {
-        resolve((stdout ?? '') + '\n' + (stderr ?? ''));
+        resolve((stdout ?? "") + "\n" + (stderr ?? ""));
       },
     );
   });
@@ -529,7 +529,7 @@ const execFileCaptureBoth = (bin: string, args: string[]): Promise<string> =>
  */
 const isBinaryAvailable = async (
   binary: string,
-  versionArg: string = '--version',
+  versionArg: string = "--version",
 ): Promise<boolean> => {
   try {
     await execFileAsync(binary, [versionArg]);
@@ -553,12 +553,12 @@ const validateUrl = (
   try {
     new URL(url);
   } catch {
-    return { valid: false, reason: 'INVALID_URL' };
+    return { valid: false, reason: "INVALID_URL" };
   }
 
   const platform = detectPlatform(url);
-  if (platform === 'unknown') {
-    return { valid: false, reason: 'UNSUPPORTED_PLATFORM' };
+  if (platform === "unknown") {
+    return { valid: false, reason: "UNSUPPORTED_PLATFORM" };
   }
 
   return { valid: true, platform };
@@ -588,7 +588,7 @@ const removeFolder = (folder: string): void => {
  * Fetches video metadata using `yt-dlp --dump-json`.
  *
  * The `--dump-json` output includes a `formats` array with all
- * available streams — this is reused by {@link fetchAvailableFormats}
+ * available streams - this is reused by {@link fetchAvailableFormats}
  * to avoid a redundant network call.
  *
  * @returns Parsed metadata object from the JSON output.
@@ -599,22 +599,22 @@ const fetchMetadata = async (
   cookies: string,
   jsRuntimes: string,
 ): Promise<VideoMetadata> => {
-  const args = ['--dump-json', '--no-playlist'];
+  const args = ["--dump-json", "--no-playlist"];
 
-  args.push('--js-runtimes', `node:${jsRuntimes}`);
+  args.push("--js-runtimes", `node:${jsRuntimes}`);
 
   if (isFacebook(url)) {
-    args.push('--impersonate', 'chrome');
+    args.push("--impersonate", "chrome");
   }
 
   if (cookies) {
-    args.push('--cookies', cookies);
+    args.push("--cookies", cookies);
   }
 
   args.push(url);
 
   const output = await execFileAsync(binary, args);
-  if (!output) throw new Error('yt-dlp returned empty metadata');
+  if (!output) throw new Error("yt-dlp returned empty metadata");
   return JSON.parse(output) as VideoMetadata;
 };
 
@@ -641,7 +641,7 @@ const isPreferredAudioExt = (ext: string): boolean =>
  * 2. Prefers the highest resolution (height × width), then highest
  *    bitrate, then preferred extension order.
  * 3. For audio, prefers the highest bitrate, then preferred extension.
- * 4. A "combined" format has both video and audio codecs — useful for
+ * 4. A "combined" format has both video and audio codecs - useful for
  *    platforms that serve muxed streams (e.g. Instagram).
  */
 const selectBestFormats = (
@@ -653,8 +653,8 @@ const selectBestFormats = (
   const combined: FormatInfo[] = [];
 
   for (const f of formats) {
-    const hasVideo = f.vcodec !== 'none' && f.vcodec !== undefined;
-    const hasAudio = f.acodec !== 'none' && f.acodec !== undefined;
+    const hasVideo = f.vcodec !== "none" && f.vcodec !== undefined;
+    const hasAudio = f.acodec !== "none" && f.acodec !== undefined;
 
     if (hasVideo && hasAudio) {
       combined.push(f);
@@ -671,7 +671,7 @@ const selectBestFormats = (
 
   if (maxHeight) {
     // Use the short side (min of height/width) so portrait videos are capped
-    // by width rather than height — "1080p" means 1080px on the short side.
+    // by width rather than height - "1080p" means 1080px on the short side.
     const capped = videoPool.filter(
       (f) => Math.min(f.height ?? 0, f.width ?? Infinity) <= maxHeight,
     );
@@ -710,7 +710,7 @@ const selectBestFormats = (
   // --- Best audio-only (original language → max bitrate → preferred ext) ---
   //
   // YouTube (and some other platforms) serve multiple audio tracks for
-  // the same video — e.g. the original language plus dubbed versions.
+  // the same video - e.g. the original language plus dubbed versions.
   // yt-dlp assigns a `language_preference` score to each track: the
   // original / default track gets the highest value (typically `10`),
   // while dubbed tracks get lower values (e.g. `-1`).
@@ -807,11 +807,11 @@ const selectBestFormats = (
  * the downloaded file despite listing an audio codec in yt-dlp's metadata.
  * To fix this, we select the highest-resolution format as the video source
  * and pair it with a reliable, separate audio source so that yt-dlp merges
- * both streams in a single invocation — no post-download repair needed.
+ * both streams in a single invocation - no post-download repair needed.
  *
  * Audio source priority:
  *  1. Dedicated audio-only formats (when TikTok provides them).
- *  2. The best non-H.265 combined format — yt-dlp extracts only its audio
+ *  2. The best non-H.265 combined format - yt-dlp extracts only its audio
  *     track when it is used as the audio half of a `videoId+audioId` selector.
  *
  * Falls back to the best single combined stream when no separate audio
@@ -828,8 +828,8 @@ const selectBestTikTokFormat = (
   const combined: FormatInfo[] = [];
 
   for (const f of formats) {
-    const hasVideo = f.vcodec !== 'none' && f.vcodec !== undefined;
-    const hasAudio = f.acodec !== 'none' && f.acodec !== undefined;
+    const hasVideo = f.vcodec !== "none" && f.vcodec !== undefined;
+    const hasAudio = f.acodec !== "none" && f.acodec !== undefined;
 
     if (hasVideo && hasAudio) {
       combined.push(f);
@@ -892,16 +892,16 @@ const selectBestTikTokFormat = (
         return bAbr - aAbr;
       })[0] ?? null;
   } else {
-    // No audio-only formats — use the best non-H.265 combined stream as the
+    // No audio-only formats - use the best non-H.265 combined stream as the
     // audio source. Its video track is ignored by yt-dlp during merging.
-    const nonH265 = combined.filter((f) => !isH265Vcodec(f.vcodec ?? ''));
+    const nonH265 = combined.filter((f) => !isH265Vcodec(f.vcodec ?? ""));
     if (nonH265.length > 0) {
       bestAudio = [...nonH265].sort(sortByVideoQuality)[0]!;
     }
   }
 
   // When both a video source and a distinct audio source exist, return them
-  // for an explicit merge — yt-dlp handles both downloads and the mux in one pass.
+  // for an explicit merge - yt-dlp handles both downloads and the mux in one pass.
   if (bestVideo && bestAudio && bestVideo.format_id !== bestAudio.format_id) {
     return { bestVideo, bestAudio, bestCombined: null, allFormats: formats };
   }
@@ -934,7 +934,7 @@ const buildFormatSelector = (
     }
     // Fallback: prefer the original / default audio track via
     // yt-dlp's language_preference sort (highest = original).
-    return 'bestaudio/best';
+    return "bestaudio/best";
   }
 
   // Prefer explicit video + audio merge
@@ -947,8 +947,8 @@ const buildFormatSelector = (
     return selection.bestCombined.format_id;
   }
 
-  // Ultimate fallback — let yt-dlp decide
-  return 'bv*+ba/b';
+  // Ultimate fallback - let yt-dlp decide
+  return "bv*+ba/b";
 };
 
 /**
@@ -960,29 +960,29 @@ const buildFormatSelector = (
  * falls back to `bestaudio/best`.
  *
  * Post-processing pipeline:
- * 1. `--extract-audio`        — strip the video stream.
- * 2. `--audio-format <fmt>`   — convert to the target format (default FLAC).
- * 3. `--audio-quality 0`      — highest quality transcoding.
- * 4. `--embed-metadata`       — write ID3/Vorbis tags (title, artist, album…).
- * 5. `--embed-thumbnail`      — embed cover art into the audio file.
- * 6. `--convert-thumbnails jpg` — ensure thumbnail is JPEG for broad compat.
- * 7. `--parse-metadata`       — map uploader → artist when no artist field.
+ * 1. `--extract-audio`        - strip the video stream.
+ * 2. `--audio-format <fmt>`   - convert to the target format (default FLAC).
+ * 3. `--audio-quality 0`      - highest quality transcoding.
+ * 4. `--embed-metadata`       - write ID3/Vorbis tags (title, artist, album…).
+ * 5. `--embed-thumbnail`      - embed cover art into the audio file.
+ * 6. `--convert-thumbnails jpg` - ensure thumbnail is JPEG for broad compat.
+ * 7. `--parse-metadata`       - map uploader → artist when no artist field.
  */
 const buildAudioDownloadArgs = (
   url: string,
   outputPath: string,
   cookies: string,
   jsRuntimes: string,
-  audioFormat: AudioOutputFormat = 'm4a',
+  audioFormat: AudioOutputFormat = "m4a",
   formatSelection?: FormatSelection,
 ): string[] => {
   const formatSelector = formatSelection
     ? buildFormatSelector(formatSelection, true)
-    : 'bestaudio/best';
+    : "bestaudio/best";
 
   const args: string[] = [
     url,
-    '-f',
+    "-f",
     formatSelector,
 
     // ── Prefer original / default audio track ──────────────────────
@@ -991,49 +991,49 @@ const buildAudioDownloadArgs = (
     // the track with the highest `language_preference` (i.e. the
     // original audio) when the format selector matches several
     // candidates.
-    '-S',
-    'lang',
+    "-S",
+    "lang",
 
     // ── Audio extraction & format ──────────────────────────────────
-    '--extract-audio',
-    '--audio-format',
+    "--extract-audio",
+    "--audio-format",
     audioFormat,
-    '--audio-quality',
-    '0',
+    "--audio-quality",
+    "0",
 
     // ── Metadata & cover-art embedding ─────────────────────────────
-    '--embed-metadata',
-    '--embed-thumbnail',
-    '--convert-thumbnails',
-    'jpg',
+    "--embed-metadata",
+    "--embed-thumbnail",
+    "--convert-thumbnails",
+    "jpg",
 
     // Map uploader → artist so the tag is always populated.
     // yt-dlp already exposes `artist` when the extractor provides it;
     // this acts as a fallback for platforms that only set `uploader`.
-    '--parse-metadata',
-    '%(artist,uploader)s:%(meta_artist)s',
+    "--parse-metadata",
+    "%(artist,uploader)s:%(meta_artist)s",
 
     // Map track → title when available (music platforms set `track`).
-    '--parse-metadata',
-    '%(track,title)s:%(meta_title)s',
+    "--parse-metadata",
+    "%(track,title)s:%(meta_title)s",
 
     // Map album if present.
-    '--parse-metadata',
-    '%(album,playlist_title)s:%(meta_album)s',
+    "--parse-metadata",
+    "%(album,playlist_title)s:%(meta_album)s",
 
-    '--no-playlist',
+    "--no-playlist",
   ];
 
   if (!isTiktok(url)) {
-    args.push('--add-header', 'user-agent:Mozilla/5.0');
+    args.push("--add-header", "user-agent:Mozilla/5.0");
   }
-  args.push('--js-runtimes', `node:${jsRuntimes}`);
+  args.push("--js-runtimes", `node:${jsRuntimes}`);
 
   if (cookies) {
-    args.push('--cookies', cookies);
+    args.push("--cookies", cookies);
   }
 
-  args.push('-o', outputPath, '--quiet');
+  args.push("-o", outputPath, "--quiet");
 
   return args;
 };
@@ -1053,7 +1053,7 @@ const extractAudioMetadata = (
     str(meta.artist) ??
     str(meta.creator) ??
     str(meta.uploader) ??
-    'Unknown Artist';
+    "Unknown Artist";
 
   // ── Title (prefer track name over video title) ───────────────────
   const title =
@@ -1094,13 +1094,13 @@ const extractAudioMetadata = (
 
 /** Coerce an unknown value to a non-empty string or `null`. */
 const str = (v: unknown): string | null => {
-  if (typeof v === 'string' && v.trim().length > 0) return v.trim();
+  if (typeof v === "string" && v.trim().length > 0) return v.trim();
   return null;
 };
 
 /** Coerce an unknown value to a number or `null`. */
 const num = (v: unknown): number | null => {
-  if (typeof v === 'number' && !Number.isNaN(v)) return v;
+  if (typeof v === "number" && !Number.isNaN(v)) return v;
   return null;
 };
 
@@ -1136,16 +1136,16 @@ const TITLE_NOISE_RE =
  * clean track name.
  *
  * Stripping order:
- * 1. Remove "Artist - " / "Artist — " / "Artist - " prefix.
+ * 1. Remove "Artist - " / "Artist - " / "Artist - " prefix.
  * 2. Remove bracketed noise like "(Official Audio)", "[Lyrics]", etc.
  */
 const cleanTitle = (raw: string, artist: string): string => {
-  if (!raw) return 'Unknown Title';
+  if (!raw) return "Unknown Title";
 
   let title = raw;
 
   // 1. Strip leading "Artist - Title" prefix
-  const separators = [' - ', ' — ', ' - '];
+  const separators = [" - ", " - ", " - "];
   for (const sep of separators) {
     const idx = title.indexOf(sep);
     if (idx !== -1) {
@@ -1159,9 +1159,9 @@ const cleanTitle = (raw: string, artist: string): string => {
   }
 
   // 2. Strip parenthetical / bracket noise (Official Video, Lyrics, etc.)
-  title = title.replace(TITLE_NOISE_RE, '').trim();
+  title = title.replace(TITLE_NOISE_RE, "").trim();
 
-  return title || 'Unknown Title';
+  return title || "Unknown Title";
 };
 
 /**
@@ -1200,7 +1200,7 @@ const downloadThumbnailFile = (
   new Promise((resolve) => {
     try {
       const parsed = new URL(thumbnailUrl);
-      const getter = parsed.protocol === 'https:' ? httpsGet : httpGet;
+      const getter = parsed.protocol === "https:" ? httpsGet : httpGet;
 
       const doRequest = (url: string, redirects = 0): void => {
         if (redirects > 5) {
@@ -1231,13 +1231,13 @@ const downloadThumbnailFile = (
             .match(/\.(jpe?g|png|webp|avif)/i)?.[1]
             ?.toLowerCase();
           const ctMap: Record<string, string> = {
-            'image/jpeg': 'jpg',
-            'image/png': 'png',
-            'image/webp': 'webp',
-            'image/avif': 'avif',
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/webp": "webp",
+            "image/avif": "avif",
           };
-          const ct = res.headers['content-type']?.split(';')[0]?.trim() ?? '';
-          const ext = urlExt ?? ctMap[ct] ?? 'jpg';
+          const ct = res.headers["content-type"]?.split(";")[0]?.trim() ?? "";
+          const ext = urlExt ?? ctMap[ct] ?? "jpg";
 
           const thumbId = randomUUID();
           const thumbName = `${thumbId}.${ext}`;
@@ -1246,12 +1246,12 @@ const downloadThumbnailFile = (
           const fileStream = createWriteStream(thumbPath);
           res.pipe(fileStream);
 
-          fileStream.on('finish', () => {
+          fileStream.on("finish", () => {
             fileStream.close();
             resolve(thumbName);
           });
 
-          fileStream.on('error', () => {
+          fileStream.on("error", () => {
             fileStream.close();
             try {
               rmSync(thumbPath, { force: true });
@@ -1260,7 +1260,7 @@ const downloadThumbnailFile = (
             }
             resolve(null);
           });
-        }).on('error', () => {
+        }).on("error", () => {
           resolve(null);
         });
       };
@@ -1279,11 +1279,11 @@ const downloadThumbnailFile = (
  * resolution + best audio detected from `--dump-json`.
  *
  * Platform-specific behaviour:
- * - **YouTube** — Falls back to
+ * - **YouTube** - Falls back to
  *   `bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio`,
  *   disables playlists, and tolerates per-fragment errors.
- * - **TikTok** — Appends `-S codec:h264` as a secondary sort.
- * - **Other platforms** — No special handling.
+ * - **TikTok** - Appends `-S codec:h264` as a secondary sort.
+ * - **Other platforms** - No special handling.
  */
 const buildDownloadArgs = (
   url: string,
@@ -1297,13 +1297,13 @@ const buildDownloadArgs = (
   if (formatSelection) {
     // Use the explicitly-detected best format combination
     const selector = buildFormatSelector(formatSelection, false);
-    args.push('-f', selector, '--no-abort-on-error', '--no-playlist');
+    args.push("-f", selector, "--no-abort-on-error", "--no-playlist");
   } else if (isYoutube(url)) {
     args.push(
-      '-f',
-      'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio',
-      '--no-abort-on-error',
-      '--no-playlist',
+      "-f",
+      "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio",
+      "--no-abort-on-error",
+      "--no-playlist",
     );
   } else if (isInstagram(url)) {
     // Instagram can serve both combined (muxed) and separate streams.
@@ -1312,28 +1312,28 @@ const buildDownloadArgs = (
     // -S ensures yt-dlp sub-sorts by resolution → fps → total bitrate when
     // the format selector matches multiple candidates.
     args.push(
-      '-f',
-      'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
-      '-S',
-      'res,fps,tbr',
-      '--no-abort-on-error',
-      '--no-playlist',
+      "-f",
+      "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
+      "-S",
+      "res,fps,tbr",
+      "--no-abort-on-error",
+      "--no-playlist",
     );
   }
 
   if (!isTiktok(url)) {
-    args.push('--add-header', 'user-agent:Mozilla/5.0');
+    args.push("--add-header", "user-agent:Mozilla/5.0");
   }
   if (isFacebook(url)) {
-    args.push('--impersonate', 'chrome');
+    args.push("--impersonate", "chrome");
   }
-  args.push('--js-runtimes', `node:${jsRuntimes}`);
+  args.push("--js-runtimes", `node:${jsRuntimes}`);
 
   if (cookies) {
-    args.push('--cookies', cookies);
+    args.push("--cookies", cookies);
   }
 
-  args.push('--merge-output-format', 'mp4', '-o', outputPath, '--quiet');
+  args.push("--merge-output-format", "mp4", "-o", outputPath, "--quiet");
 
   return args;
 };
@@ -1346,7 +1346,7 @@ const buildDownloadArgs = (
  * automatically.
  */
 const selectBestSrtFile = (files: string[]): string | null => {
-  const srtFiles = files.filter((f) => f.endsWith('.srt'));
+  const srtFiles = files.filter((f) => f.endsWith(".srt"));
   if (srtFiles.length === 0) return null;
   if (srtFiles.length === 1) return srtFiles[0]!;
 
@@ -1376,26 +1376,26 @@ const fetchSrt = async (
   try {
     const args = [
       url,
-      '--skip-download',
-      '--write-subs',
-      '--write-automatic-subs',
-      '--convert-subs=srt',
-      '--no-playlist',
+      "--skip-download",
+      "--write-subs",
+      "--write-automatic-subs",
+      "--convert-subs=srt",
+      "--no-playlist",
     ];
 
     if (isTiktok(url)) {
-      args.push('--sub-langs', 'all');
+      args.push("--sub-langs", "all");
     } else if (isYoutube(url)) {
-      args.push('--sub-langs', 'en,es');
+      args.push("--sub-langs", "en,es");
     }
 
-    args.push('--js-runtimes', `node:${jsRuntimes}`);
+    args.push("--js-runtimes", `node:${jsRuntimes}`);
 
     if (cookies) {
-      args.push('--cookies', cookies);
+      args.push("--cookies", cookies);
     }
 
-    args.push('-o', `${tmpFolder}/%(id)s.%(ext)s`);
+    args.push("-o", `${tmpFolder}/%(id)s.%(ext)s`);
 
     await execFileAsync(binary, args);
 
@@ -1403,7 +1403,7 @@ const fetchSrt = async (
     const best = selectBestSrtFile(files);
 
     if (best) {
-      const content = readFileSync(`${tmpFolder}/${best}`, 'utf8');
+      const content = readFileSync(`${tmpFolder}/${best}`, "utf8");
       removeFolder(tmpFolder);
       return content;
     }
@@ -1425,24 +1425,24 @@ const fetchSrt = async (
  * @returns Captions text, or `null` when none are available.
  */
 const fetchCaptions = (metadata: VideoMetadata): string | null => {
-  // 1. Manual subtitles (any language) — highest quality.
+  // 1. Manual subtitles (any language) - highest quality.
   for (const entries of Object.values(metadata.subtitles ?? {})) {
-    const entry = entries.find((e) => e.ext === 'srt' || e.ext === 'vtt');
+    const entry = entries.find((e) => e.ext === "srt" || e.ext === "vtt");
     if (entry?.url) return entry.url;
   }
 
-  // 2. Automatic captions — preferred languages first.
-  const preferredLangs = ['en', 'en-US', 'es', 'es-ES'];
+  // 2. Automatic captions - preferred languages first.
+  const preferredLangs = ["en", "en-US", "es", "es-ES"];
   for (const lang of preferredLangs) {
     const entries = metadata.automatic_captions[lang];
     if (!entries) continue;
-    const entry = entries.find((e) => e.ext === 'srt' || e.ext === 'vtt');
+    const entry = entries.find((e) => e.ext === "srt" || e.ext === "vtt");
     if (entry?.url) return entry.url;
   }
 
   // 3. Any other automatic caption track.
   for (const entries of Object.values(metadata.automatic_captions)) {
-    const entry = entries.find((e) => e.ext === 'srt' || e.ext === 'vtt');
+    const entry = entries.find((e) => e.ext === "srt" || e.ext === "vtt");
     if (entry?.url) return entry.url;
   }
 
@@ -1489,20 +1489,20 @@ const isH265Codec = async (
 ): Promise<boolean> => {
   try {
     // Derive ffprobe path from ffmpeg path
-    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
+    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, "ffprobe");
     const output = await execFileAsync(ffprobeBinary, [
-      '-v',
-      'error',
-      '-select_streams',
-      'v:0',
-      '-show_entries',
-      'stream=codec_name',
-      '-of',
-      'default=noprint_wrappers=1:nokey=1',
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "stream=codec_name",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
       filePath,
     ]);
     const codec = output.trim().toLowerCase();
-    return codec === 'hevc' || codec === 'h265';
+    return codec === "hevc" || codec === "h265";
   } catch {
     return false;
   }
@@ -1512,7 +1512,7 @@ const isH265Codec = async (
  * iOS Safari-compatible video codecs (H.264 and H.265/HEVC).
  * Any codec not in this set will be transcoded to H.264 when `iosDevice` is true.
  */
-const IOS_SAFE_CODECS = new Set(['h264', 'hevc', 'h265']);
+const IOS_SAFE_CODECS = new Set(["h264", "hevc", "h265"]);
 
 /**
  * Returns `true` when the first video stream of `filePath` uses a codec
@@ -1526,16 +1526,16 @@ const isIosUnsupportedCodec = async (
   ffmpegBinary: string,
 ): Promise<boolean> => {
   try {
-    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
+    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, "ffprobe");
     const output = await execFileAsync(ffprobeBinary, [
-      '-v',
-      'error',
-      '-select_streams',
-      'v:0',
-      '-show_entries',
-      'stream=codec_name',
-      '-of',
-      'default=noprint_wrappers=1:nokey=1',
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "stream=codec_name",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
       filePath,
     ]);
     const codec = output.trim().toLowerCase();
@@ -1549,7 +1549,7 @@ const isIosUnsupportedCodec = async (
  * Transcodes a video file to an iOS-compatible format in-place, optimised
  * for **speed** over compression efficiency.
  *
- * - Uses the `ultrafast` libx264 preset — typically 3-5× faster than a
+ * - Uses the `ultrafast` libx264 preset - typically 3-5× faster than a
  *   quality-oriented encode at the cost of ~15-30 % larger output files.
  * - Always re-encodes audio to AAC 128 kbps so that Opus / Vorbis / other
  *   non-iOS-safe codecs (common in VP9/WebM streams from YouTube) are
@@ -1569,21 +1569,21 @@ const transcodeForIosInPlace = async (
   try {
     await execFileAsync(ffmpegBinary, [
       ...THREAD_FLAGS,
-      '-y',
-      '-i',
+      "-y",
+      "-i",
       filePath,
-      '-c:v',
-      'libx264',
-      '-preset',
-      'ultrafast',
-      '-crf',
-      '23',
-      '-c:a',
-      'aac',
-      '-b:a',
-      '128k',
-      '-movflags',
-      '+faststart',
+      "-c:v",
+      "libx264",
+      "-preset",
+      "ultrafast",
+      "-crf",
+      "23",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-movflags",
+      "+faststart",
       tmpPath,
     ]);
     renameSync(tmpPath, filePath);
@@ -1612,21 +1612,21 @@ const getVideoFps = async (
   ffmpegBinary: string,
 ): Promise<number | undefined> => {
   try {
-    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, 'ffprobe');
+    const ffprobeBinary = ffmpegBinary.replace(/ffmpeg$/, "ffprobe");
     const output = await execFileAsync(ffprobeBinary, [
-      '-v',
-      'error',
-      '-select_streams',
-      'v:0',
-      '-show_entries',
-      'stream=r_frame_rate',
-      '-of',
-      'default=noprint_wrappers=1:nokey=1',
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "stream=r_frame_rate",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
       filePath,
     ]);
     const raw = output.trim();
     if (!raw) return undefined;
-    const [num, den] = raw.split('/').map(Number);
+    const [num, den] = raw.split("/").map(Number);
     if (!den || isNaN(num ?? 0) || isNaN(den)) return undefined;
     return Math.round(((num ?? 0) / den) * 100) / 100;
   } catch {
@@ -1645,7 +1645,7 @@ const getVideoFps = async (
  * (acodec: aac) when they are actually video-only streams (identifiable by
  * `/media-video-hvc1/` in the CDN URL). Because yt-dlp thinks the H.265
  * format already has audio, a `{h265Id}+{h264Id}` merge selector collapses
- * to just the H.265 download — still no audio.
+ * to just the H.265 download - still no audio.
  *
  * Fix: use `--load-info-json` with the already-fetched metadata JSON so that
  * both the H.265 video and a genuine H.264 combined stream are downloaded as
@@ -1661,7 +1661,7 @@ const getVideoFps = async (
  * 5. Merge H.265 video + extracted audio → outputPath.
  * 6. Clean up all temp files.
  *
- * @throws When any step fails — callers should fall back to the regular path.
+ * @throws When any step fails - callers should fall back to the regular path.
  */
 const downloadTikTokH265WithAudio = async (
   videoMetadata: VideoMetadata,
@@ -1692,52 +1692,52 @@ const downloadTikTokH265WithAudio = async (
 
     // Download H.265 video (video-only despite acodec=aac in yt-dlp metadata)
     await execFileAsync(binary, [
-      '--load-info-json',
+      "--load-info-json",
       metaJsonPath,
-      '-f',
+      "-f",
       formatSelection.bestVideo!.format_id,
-      '-o',
+      "-o",
       videoTmpPath,
-      '--quiet',
+      "--quiet",
     ]);
 
-    // Download H.264 combined (genuinely has audio) — no webpage re-scrape
+    // Download H.264 combined (genuinely has audio) - no webpage re-scrape
     await execFileAsync(binary, [
-      '--load-info-json',
+      "--load-info-json",
       metaJsonPath,
-      '-f',
+      "-f",
       formatSelection.bestAudio!.format_id,
-      '-o',
+      "-o",
       audioSrcPath,
-      '--quiet',
+      "--quiet",
     ]);
 
     // Extract audio track from H.264
     await execFileAsync(ffmpegBinary, [
-      '-y',
-      '-i',
+      "-y",
+      "-i",
       audioSrcPath,
-      '-vn',
-      '-acodec',
-      'aac',
-      '-b:a',
-      '192k',
+      "-vn",
+      "-acodec",
+      "aac",
+      "-b:a",
+      "192k",
       audioPath,
     ]);
 
     // Merge H.265 video + extracted audio
     await execFileAsync(ffmpegBinary, [
-      '-y',
-      '-i',
+      "-y",
+      "-i",
       videoTmpPath,
-      '-i',
+      "-i",
       audioPath,
-      '-c:v',
-      'copy',
-      '-c:a',
-      'copy',
-      '-movflags',
-      '+faststart',
+      "-c:v",
+      "copy",
+      "-c:a",
+      "copy",
+      "-movflags",
+      "+faststart",
       outputPath,
     ]);
   } finally {
@@ -1750,17 +1750,17 @@ const downloadTikTokH265WithAudio = async (
 /* ------------------------------------------------------------------ */
 
 /** Image extensions recognised when scanning gallery-dl output. */
-const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif']);
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "avif"]);
 
 /** Audio/video extensions that gallery-dl may download alongside images. */
 const MEDIA_EXTENSIONS = new Set([
-  'mp4',
-  'mp3',
-  'm4a',
-  'aac',
-  'ogg',
-  'wav',
-  'webm',
+  "mp4",
+  "mp3",
+  "m4a",
+  "aac",
+  "ogg",
+  "wav",
+  "webm",
 ]);
 
 /**
@@ -1779,10 +1779,10 @@ const galleryDlDownload = async (
   const tmpFolder = `${outputFolder}/_gallery_dl_${randomUUID()}`;
   ensureFolder(tmpFolder);
 
-  const args: string[] = [url, '-d', tmpFolder, '--no-mtime'];
+  const args: string[] = [url, "-d", tmpFolder, "--no-mtime"];
 
   if (cookies && existsSync(cookies)) {
-    args.push('--cookies', cookies);
+    args.push("--cookies", cookies);
   }
 
   await execFileAsync(DEFAULT_GALLERY_DL, args);
@@ -1808,7 +1808,7 @@ const galleryDlDownload = async (
   const media: string[] = [];
 
   for (const file of allFiles) {
-    const ext = file.split('.').pop()?.toLowerCase() ?? '';
+    const ext = file.split(".").pop()?.toLowerCase() ?? "";
     if (IMAGE_EXTENSIONS.has(ext)) {
       images.push(file);
     } else if (MEDIA_EXTENSIONS.has(ext)) {
@@ -1837,50 +1837,50 @@ const createVideoFromImage = async (
   outputPath: string,
   ffmpegBinary: string,
 ): Promise<void> => {
-  const args: string[] = [...THREAD_FLAGS, '-y'];
+  const args: string[] = [...THREAD_FLAGS, "-y"];
 
   if (audioPath) {
     // Loop image for the duration of the audio
     args.push(
-      '-loop',
-      '1',
-      '-i',
+      "-loop",
+      "1",
+      "-i",
       imagePath,
-      '-i',
+      "-i",
       audioPath,
-      '-c:v',
-      'libx264',
-      '-tune',
-      'stillimage',
-      '-c:a',
-      'aac',
-      '-b:a',
-      '192k',
-      '-pix_fmt',
-      'yuv420p',
-      '-vf',
-      'scale=1080:-2',
-      '-shortest',
+      "-c:v",
+      "libx264",
+      "-tune",
+      "stillimage",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "192k",
+      "-pix_fmt",
+      "yuv420p",
+      "-vf",
+      "scale=1080:-2",
+      "-shortest",
       outputPath,
     );
   } else {
-    // No audio — produce a 5-second silent video
+    // No audio - produce a 5-second silent video
     args.push(
-      '-loop',
-      '1',
-      '-i',
+      "-loop",
+      "1",
+      "-i",
       imagePath,
-      '-t',
-      '5',
-      '-c:v',
-      'libx264',
-      '-tune',
-      'stillimage',
-      '-pix_fmt',
-      'yuv420p',
-      '-vf',
-      'scale=1080:-2',
-      '-an',
+      "-t",
+      "5",
+      "-c:v",
+      "libx264",
+      "-tune",
+      "stillimage",
+      "-pix_fmt",
+      "yuv420p",
+      "-vf",
+      "scale=1080:-2",
+      "-an",
       outputPath,
     );
   }
@@ -1898,7 +1898,7 @@ const downloadUrlToFile = (url: string, destPath: string): Promise<boolean> =>
   new Promise((resolve) => {
     try {
       const parsed = new URL(url);
-      const getter = parsed.protocol === 'https:' ? httpsGet : httpGet;
+      const getter = parsed.protocol === "https:" ? httpsGet : httpGet;
 
       const doRequest = (reqUrl: string, redirects = 0): void => {
         if (redirects > 5) {
@@ -1926,12 +1926,12 @@ const downloadUrlToFile = (url: string, destPath: string): Promise<boolean> =>
           const fileStream = createWriteStream(destPath);
           res.pipe(fileStream);
 
-          fileStream.on('finish', () => {
+          fileStream.on("finish", () => {
             fileStream.close();
             resolve(true);
           });
 
-          fileStream.on('error', () => {
+          fileStream.on("error", () => {
             fileStream.close();
             try {
               rmSync(destPath, { force: true });
@@ -1940,7 +1940,7 @@ const downloadUrlToFile = (url: string, destPath: string): Promise<boolean> =>
             }
             resolve(false);
           });
-        }).on('error', () => {
+        }).on("error", () => {
           resolve(false);
         });
       };
@@ -1958,13 +1958,13 @@ const downloadUrlToFile = (url: string, destPath: string): Promise<boolean> =>
  * standard audio extraction (`-f bestaudio -x`) often fails for these.
  * This function uses multiple strategies in sequence:
  *
- * 1. **Metadata + direct download** — Uses `yt-dlp --dump-json` to
+ * 1. **Metadata + direct download** - Uses `yt-dlp --dump-json` to
  *    discover format URLs that contain audio, downloads the stream
  *    directly via HTTP, and extracts audio with ffmpeg when needed.
- * 2. **Download best available + ffmpeg extract** — Downloads any
+ * 2. **Download best available + ffmpeg extract** - Downloads any
  *    available format (often a combined video+audio stream) and
  *    extracts the audio track from it with ffmpeg.
- * 3. **Classic yt-dlp audio extraction** — Falls back to the standard
+ * 3. **Classic yt-dlp audio extraction** - Falls back to the standard
  *    `-f bestaudio/best -x` pipeline as a last resort.
  *
  * @returns Absolute path to the extracted audio file, or `null` on failure.
@@ -1981,17 +1981,17 @@ const extractInstagramAudio = async (
   const audioFile = `${outputFolder}/${audioId}.m4a`;
 
   const baseBinaryArgs = [
-    '--no-playlist',
-    '--js-runtimes',
+    "--no-playlist",
+    "--js-runtimes",
     `node:${jsRuntimes}`,
   ];
   if (cookies) {
-    baseBinaryArgs.push('--cookies', cookies);
+    baseBinaryArgs.push("--cookies", cookies);
   }
 
   /* ---- Strategy 1: metadata → direct HTTP download → ffmpeg ---- */
   try {
-    const metaArgs = ['--dump-json', ...baseBinaryArgs, url];
+    const metaArgs = ["--dump-json", ...baseBinaryArgs, url];
     const output = await execFileAsync(binary, metaArgs);
 
     if (output) {
@@ -2001,36 +2001,36 @@ const extractInstagramAudio = async (
       // Prefer audio-only format, fall back to any format with audio
       const audioOnly = formats.find(
         (f) =>
-          typeof f.url === 'string' &&
-          f.acodec !== 'none' &&
+          typeof f.url === "string" &&
+          f.acodec !== "none" &&
           f.acodec !== undefined &&
-          (f.vcodec === 'none' || f.vcodec === undefined),
+          (f.vcodec === "none" || f.vcodec === undefined),
       );
       const withAudio = formats.find(
         (f) =>
-          typeof f.url === 'string' &&
-          f.acodec !== 'none' &&
+          typeof f.url === "string" &&
+          f.acodec !== "none" &&
           f.acodec !== undefined,
       );
       const target = audioOnly ?? withAudio;
 
-      if (target?.url && typeof target.url === 'string') {
+      if (target?.url && typeof target.url === "string") {
         const tmpMedia = `${outputFolder}/${randomUUID()}.tmp`;
         const downloaded = await downloadUrlToFile(target.url, tmpMedia);
 
         if (downloaded && existsSync(tmpMedia)) {
           if (audioOnly) {
-            // Already audio-only — extract/convert to m4a with ffmpeg
+            // Already audio-only - extract/convert to m4a with ffmpeg
             try {
               await execFileAsync(ffmpegBinary, [
-                '-y',
-                '-i',
+                "-y",
+                "-i",
                 tmpMedia,
-                '-vn',
-                '-acodec',
-                'aac',
-                '-b:a',
-                '192k',
+                "-vn",
+                "-acodec",
+                "aac",
+                "-b:a",
+                "192k",
                 audioFile,
               ]);
               rmSync(tmpMedia, { force: true });
@@ -2039,17 +2039,17 @@ const extractInstagramAudio = async (
               rmSync(tmpMedia, { force: true });
             }
           } else {
-            // Combined stream — strip video, keep audio
+            // Combined stream - strip video, keep audio
             try {
               await execFileAsync(ffmpegBinary, [
-                '-y',
-                '-i',
+                "-y",
+                "-i",
                 tmpMedia,
-                '-vn',
-                '-acodec',
-                'aac',
-                '-b:a',
-                '192k',
+                "-vn",
+                "-acodec",
+                "aac",
+                "-b:a",
+                "192k",
                 audioFile,
               ]);
               rmSync(tmpMedia, { force: true });
@@ -2068,7 +2068,7 @@ const extractInstagramAudio = async (
       }
     }
   } catch {
-    // dump-json or download failed — continue to next strategy
+    // dump-json or download failed - continue to next strategy
   }
 
   /* ---- Strategy 2: yt-dlp download best → extract audio with ffmpeg ---- */
@@ -2076,12 +2076,12 @@ const extractInstagramAudio = async (
     const tmpVideo = `${outputFolder}/${randomUUID()}.mp4`;
     const dlArgs: string[] = [
       url,
-      '-f',
-      'best',
+      "-f",
+      "best",
       ...baseBinaryArgs,
-      '-o',
+      "-o",
       tmpVideo,
-      '--quiet',
+      "--quiet",
     ];
 
     await execFileAsync(binary, dlArgs);
@@ -2089,14 +2089,14 @@ const extractInstagramAudio = async (
     if (existsSync(tmpVideo)) {
       try {
         await execFileAsync(ffmpegBinary, [
-          '-y',
-          '-i',
+          "-y",
+          "-i",
           tmpVideo,
-          '-vn',
-          '-acodec',
-          'aac',
-          '-b:a',
-          '192k',
+          "-vn",
+          "-acodec",
+          "aac",
+          "-b:a",
+          "192k",
           audioFile,
         ]);
         rmSync(tmpVideo, { force: true });
@@ -2106,22 +2106,22 @@ const extractInstagramAudio = async (
       }
     }
   } catch {
-    // yt-dlp download failed — continue to next strategy
+    // yt-dlp download failed - continue to next strategy
   }
 
   /* ---- Strategy 3: classic yt-dlp audio extraction (last resort) ---- */
   try {
     const args: string[] = [
       url,
-      '-f',
-      'bestaudio/best',
-      '-x',
-      '--audio-format',
-      'm4a',
+      "-f",
+      "bestaudio/best",
+      "-x",
+      "--audio-format",
+      "m4a",
       ...baseBinaryArgs,
-      '-o',
+      "-o",
       audioFile,
-      '--quiet',
+      "--quiet",
     ];
 
     await execFileAsync(binary, args);
@@ -2168,31 +2168,31 @@ const instagramImageFallback = async (
   /* ---- Check gallery-dl availability ---- */
   const galleryDlExists = await isBinaryAvailable(
     DEFAULT_GALLERY_DL,
-    '--version',
+    "--version",
   );
   if (!galleryDlExists) {
     return {
-      code: 'GALLERY_DL_NOT_FOUND',
+      code: "GALLERY_DL_NOT_FOUND",
       message:
-        'gallery-dl binary was not found. It is required to download ' +
-        'Instagram image posts. ' +
-        'Install it via: pip install gallery-dl, ' +
-        'pipx install gallery-dl, ' +
-        'or see https://github.com/mikf/gallery-dl#installation',
+        "gallery-dl binary was not found. It is required to download " +
+        "Instagram image posts. " +
+        "Install it via: pip install gallery-dl, " +
+        "pipx install gallery-dl, " +
+        "or see https://github.com/mikf/gallery-dl#installation",
     };
   }
 
   /* ---- Check ffmpeg availability ---- */
-  const ffmpegExists = await isBinaryAvailable(ffmpegBinary, '-version');
+  const ffmpegExists = await isBinaryAvailable(ffmpegBinary, "-version");
   if (!ffmpegExists) {
     return {
-      code: 'FFMPEG_NOT_FOUND',
+      code: "FFMPEG_NOT_FOUND",
       message:
-        'ffmpeg binary was not found. It is required to create a video ' +
-        'from Instagram image posts. ' +
-        'Install it via: brew install ffmpeg (macOS), ' +
-        'sudo apt install ffmpeg (Debian/Ubuntu), ' +
-        'or download from https://ffmpeg.org/download.html',
+        "ffmpeg binary was not found. It is required to create a video " +
+        "from Instagram image posts. " +
+        "Install it via: brew install ffmpeg (macOS), " +
+        "sudo apt install ffmpeg (Debian/Ubuntu), " +
+        "or download from https://ffmpeg.org/download.html",
     };
   }
 
@@ -2202,11 +2202,11 @@ const instagramImageFallback = async (
   try {
     galleryResult = await galleryDlDownload(url, outputFolder, cookies);
   } catch {
-    return null; // gallery-dl failed — cannot recover
+    return null; // gallery-dl failed - cannot recover
   }
 
   if (galleryResult.images.length === 0) {
-    // No images found — clean up and signal failure
+    // No images found - clean up and signal failure
     for (const f of [...galleryResult.media]) {
       try {
         rmSync(f, { force: true });
@@ -2224,11 +2224,11 @@ const instagramImageFallback = async (
   let thumbnail: string | undefined;
   let imageForVideo: string = imagePath;
   try {
-    const thumbExt = imagePath.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const thumbExt = imagePath.split(".").pop()?.toLowerCase() ?? "jpg";
     const thumbName = `${randomUUID()}.${thumbExt}`;
     const thumbDest = `${outputFolder}/${thumbName}`;
     renameSync(imagePath, thumbDest);
-    // Update tmpCleanup — the original path no longer exists
+    // Update tmpCleanup - the original path no longer exists
     tmpCleanup = tmpCleanup.filter((f) => f !== imagePath);
     thumbnail = thumbName;
     // Use the moved image for video creation
@@ -2290,7 +2290,7 @@ const instagramImageFallback = async (
   // Clean up gallery-dl temp directories
   try {
     const galleryDirs = readdirSync(outputFolder).filter((d) =>
-      d.startsWith('_gallery_dl_'),
+      d.startsWith("_gallery_dl_"),
     );
     for (const dir of galleryDirs) {
       removeFolder(`${outputFolder}/${dir}`);
@@ -2300,7 +2300,7 @@ const instagramImageFallback = async (
   }
 
   const result: { file: string; thumbnail?: string } = {
-    file: outputPath.split('/').pop()!,
+    file: outputPath.split("/").pop()!,
   };
   if (thumbnail) {
     result.thumbnail = thumbnail;
@@ -2373,35 +2373,35 @@ const downloadSeparateStreams = async (
   ): string[] => {
     const args: string[] = [
       url,
-      '-f',
+      "-f",
       formatSelector,
-      '--no-playlist',
-      '--js-runtimes',
+      "--no-playlist",
+      "--js-runtimes",
       `node:${jsRuntimes}`,
     ];
-    if (isFacebook(url)) args.push('--impersonate', 'chrome');
-    if (cookies) args.push('--cookies', cookies);
+    if (isFacebook(url)) args.push("--impersonate", "chrome");
+    if (cookies) args.push("--cookies", cookies);
     if (writeInfoJson) {
-      args.push('--write-info-json', '-o', `infojson:${writeInfoJson}`);
+      args.push("--write-info-json", "-o", `infojson:${writeInfoJson}`);
     }
-    args.push('-o', outputTemplate, '--quiet');
+    args.push("-o", outputTemplate, "--quiet");
     return args;
   };
 
   // Use detected format IDs when available; otherwise let yt-dlp choose.
   const videoSelector = formatSelection?.bestVideo
     ? formatSelection.bestVideo.format_id
-    : 'bestvideo';
+    : "bestvideo";
 
   // Prefer a known combined format for the audio source; fall back to 'best'.
   const combinedSelector = formatSelection?.bestCombined
     ? formatSelection.bestCombined.format_id
-    : 'best';
+    : "best";
 
   /* ---- Step 1: Download video-only stream (high resolution) ---- */
   await execFileAsync(binary, buildStreamArgs(videoSelector, videoTemplate));
   const videoFile = findDownloadedFile(videoId);
-  if (!videoFile) throw new Error('Video stream download produced no output');
+  if (!videoFile) throw new Error("Video stream download produced no output");
 
   let combinedFile: string | null = null;
   const extractedAudioPath = `${outputFolder}/${randomUUID()}.aac`;
@@ -2414,34 +2414,34 @@ const downloadSeparateStreams = async (
     );
     combinedFile = findDownloadedFile(combinedId);
     if (!combinedFile)
-      throw new Error('Combined stream download produced no output');
+      throw new Error("Combined stream download produced no output");
 
     /* ---- Step 3: Extract audio from the combined stream ---- */
     await execFileAsync(ffmpegBinary, [
-      '-y',
-      '-i',
+      "-y",
+      "-i",
       combinedFile,
-      '-vn',
-      '-acodec',
-      'aac',
-      '-b:a',
-      '192k',
+      "-vn",
+      "-acodec",
+      "aac",
+      "-b:a",
+      "192k",
       extractedAudioPath,
     ]);
 
     /* ---- Step 4: Merge high-res video + extracted audio ---- */
     await execFileAsync(ffmpegBinary, [
-      '-y',
-      '-i',
+      "-y",
+      "-i",
       videoFile,
-      '-i',
+      "-i",
       extractedAudioPath,
-      '-c:v',
-      'copy',
-      '-c:a',
-      'copy',
-      '-movflags',
-      '+faststart',
+      "-c:v",
+      "copy",
+      "-c:a",
+      "copy",
+      "-movflags",
+      "+faststart",
       outputPath,
     ]);
   } finally {
@@ -2490,7 +2490,7 @@ const downloadSeparateStreams = async (
  *
  * @param options - Configuration for the download.
  * @returns A result object containing the file path, video title,
- *          and optional metadata / subtitles / captions — or an
+ *          and optional metadata / subtitles / captions - or an
  *          error when the download cannot be performed.
  */
 const downloadVideo = async ({
@@ -2513,7 +2513,7 @@ const downloadVideo = async ({
 }: DownloadVideoOptions): Promise<DownloadVideoResult> => {
   const binary = DEFAULT_BINARY;
   const ffmpegBinary = DEFAULT_FFMPEG;
-  const audioFmt: AudioOutputFormat = audioFormat ?? 'm4a';
+  const audioFmt: AudioOutputFormat = audioFormat ?? "m4a";
 
   /* ---- 1. Check yt-dlp availability ---- */
 
@@ -2522,13 +2522,13 @@ const downloadVideo = async ({
     if (!binaryExists) {
       return {
         error: {
-          code: 'BINARY_NOT_FOUND',
+          code: "BINARY_NOT_FOUND",
           message:
-            'yt-dlp binary was not found. ' +
-            'Install it via: brew install yt-dlp (macOS), ' +
-            'sudo apt install yt-dlp (Debian/Ubuntu), ' +
-            'pip install yt-dlp (pip), ' +
-            'or download from https://github.com/yt-dlp/yt-dlp#installation',
+            "yt-dlp binary was not found. " +
+            "Install it via: brew install yt-dlp (macOS), " +
+            "sudo apt install yt-dlp (Debian/Ubuntu), " +
+            "pip install yt-dlp (pip), " +
+            "or download from https://github.com/yt-dlp/yt-dlp#installation",
         },
       };
     }
@@ -2537,17 +2537,17 @@ const downloadVideo = async ({
   /* ---- 1b. Check ffmpeg availability (required for audio extraction) ---- */
 
   if (!binaryCheckBypass && justAudio) {
-    const ffmpegExists = await isBinaryAvailable(ffmpegBinary, '-version');
+    const ffmpegExists = await isBinaryAvailable(ffmpegBinary, "-version");
     if (!ffmpegExists) {
       return {
         error: {
-          code: 'FFMPEG_NOT_FOUND',
+          code: "FFMPEG_NOT_FOUND",
           message:
-            'ffmpeg binary was not found. It is required for audio extraction ' +
-            'and metadata embedding. ' +
-            'Install it via: brew install ffmpeg (macOS), ' +
-            'sudo apt install ffmpeg (Debian/Ubuntu), ' +
-            'or download from https://ffmpeg.org/download.html',
+            "ffmpeg binary was not found. It is required for audio extraction " +
+            "and metadata embedding. " +
+            "Install it via: brew install ffmpeg (macOS), " +
+            "sudo apt install ffmpeg (Debian/Ubuntu), " +
+            "or download from https://ffmpeg.org/download.html",
         },
       };
     }
@@ -2567,7 +2567,7 @@ const downloadVideo = async ({
     return {
       error: {
         code: validation.reason,
-        message: messages[validation.reason] ?? 'Unknown validation error',
+        message: messages[validation.reason] ?? "Unknown validation error",
       },
     };
   }
@@ -2577,7 +2577,7 @@ const downloadVideo = async ({
   ensureFolder(outputFolder);
 
   const fileId = randomUUID();
-  const fileExt = justAudio ? audioFmt : 'mp4';
+  const fileExt = justAudio ? audioFmt : "mp4";
   const fileName = `${fileId}.${fileExt}`;
   const outputPath = `${outputFolder}/${fileName}`;
 
@@ -2590,10 +2590,10 @@ const downloadVideo = async ({
   // extra cost (yt-dlp fetches this data internally anyway).
   //
   // Pre-flight IS required when:
-  //  • maxHeight — we need the formats list to cap resolution before download.
-  //  • requestMetadata — caller explicitly wants the full VideoMetadata object.
-  //  • justAudio — extractAudioMetadata needs artist/album/cover fields.
-  //  • TikTok — format pre-selection avoids the expensive H.265 audio-repair
+  //  • maxHeight - we need the formats list to cap resolution before download.
+  //  • requestMetadata - caller explicitly wants the full VideoMetadata object.
+  //  • justAudio - extractAudioMetadata needs artist/album/cover fields.
+  //  • TikTok - format pre-selection avoids the expensive H.265 audio-repair
   //    path (downloading the video a second time and re-merging its audio).
   const needsPreflightMetadata =
     !!maxHeight || requestMetadata || justAudio || isTiktok(url);
@@ -2610,12 +2610,12 @@ const downloadVideo = async ({
       if (requestMetadata || justAudio) {
         return {
           error: {
-            code: 'METADATA_FAILED',
+            code: "METADATA_FAILED",
             message: `Failed to retrieve video metadata: ${error instanceof Error ? error.message : String(error)}`,
           },
         };
       }
-      // Metadata failed but wasn't strictly required — continue without it.
+      // Metadata failed but wasn't strictly required - continue without it.
     }
 
     /* ---- 4b. Select best streams from fetched formats ---- */
@@ -2664,12 +2664,12 @@ const downloadVideo = async ({
       if (isRateLimited(err)) {
         return {
           error: {
-            code: 'DOWNLOAD_FAILED',
+            code: "DOWNLOAD_FAILED",
             message: `yt-dlp download failed: ${err instanceof Error ? err.message : String(err)}`,
           },
         };
       }
-      // Separate-streams approach failed — fall through to yt-dlp merge.
+      // Separate-streams approach failed - fall through to yt-dlp merge.
     }
 
     if (!separateStreamsOk) {
@@ -2682,7 +2682,7 @@ const downloadVideo = async ({
         formatSelection,
       );
       if (!needsPreflightMetadata) {
-        mergeArgs.push('--write-info-json', '-o', `infojson:${infoJsonPath}`);
+        mergeArgs.push("--write-info-json", "-o", `infojson:${infoJsonPath}`);
       }
 
       try {
@@ -2691,7 +2691,7 @@ const downloadVideo = async ({
         if (isRateLimited(mergeErr)) {
           return {
             error: {
-              code: 'DOWNLOAD_FAILED',
+              code: "DOWNLOAD_FAILED",
               message: `yt-dlp download failed: ${mergeErr instanceof Error ? mergeErr.message : String(mergeErr)}`,
             },
           };
@@ -2716,14 +2716,14 @@ const downloadVideo = async ({
               jsRuntimes,
             );
 
-            if (igFallback && 'file' in igFallback) {
-              // Image fallback succeeded — continue to step 6.
-            } else if (igFallback && 'code' in igFallback) {
+            if (igFallback && "file" in igFallback) {
+              // Image fallback succeeded - continue to step 6.
+            } else if (igFallback && "code" in igFallback) {
               return { error: igFallback };
             } else {
               return {
                 error: {
-                  code: 'DOWNLOAD_FAILED',
+                  code: "DOWNLOAD_FAILED",
                   message: `Download failed: ${finalError instanceof Error ? finalError.message : String(finalError)}`,
                 },
               };
@@ -2731,7 +2731,7 @@ const downloadVideo = async ({
           } else {
             return {
               error: {
-                code: 'DOWNLOAD_FAILED',
+                code: "DOWNLOAD_FAILED",
                 message: `Download failed: ${finalError instanceof Error ? finalError.message : String(finalError)}`,
               },
             };
@@ -2742,7 +2742,7 @@ const downloadVideo = async ({
   } else {
     /* ---- 5b. All other platforms: standard yt-dlp download ---- */
 
-    // TikTok H.265 special path — yt-dlp misreports H.265 formats as combined
+    // TikTok H.265 special path - yt-dlp misreports H.265 formats as combined
     // (acodec: aac) when they are video-only. Use --load-info-json to fetch
     // H.265 video + H.264 audio as two explicit downloads without re-scraping
     // TikTok's page (which would trigger HTTP 429).
@@ -2753,7 +2753,7 @@ const downloadVideo = async ({
       videoMetadata &&
       formatSelection?.bestVideo &&
       formatSelection?.bestAudio &&
-      /hev[c1]|h265/i.test(formatSelection.bestVideo.vcodec ?? '')
+      /hev[c1]|h265/i.test(formatSelection.bestVideo.vcodec ?? "")
     ) {
       try {
         await downloadTikTokH265WithAudio(
@@ -2790,7 +2790,7 @@ const downloadVideo = async ({
           );
 
       if (!needsPreflightMetadata) {
-        args.push('--write-info-json', '-o', `infojson:${infoJsonPath}`);
+        args.push("--write-info-json", "-o", `infojson:${infoJsonPath}`);
       }
 
       try {
@@ -2800,7 +2800,7 @@ const downloadVideo = async ({
           ytDlpFailed = true;
           return {
             error: {
-              code: 'DOWNLOAD_FAILED',
+              code: "DOWNLOAD_FAILED",
               message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
             },
           };
@@ -2823,7 +2823,7 @@ const downloadVideo = async ({
             ytDlpFailed = true;
             return {
               error: {
-                code: 'DOWNLOAD_FAILED',
+                code: "DOWNLOAD_FAILED",
                 message: `yt-dlp download failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`,
               },
             };
@@ -2832,7 +2832,7 @@ const downloadVideo = async ({
           ytDlpFailed = true;
           return {
             error: {
-              code: 'DOWNLOAD_FAILED',
+              code: "DOWNLOAD_FAILED",
               message: `yt-dlp download failed: ${error instanceof Error ? error.message : String(error)}`,
             },
           };
@@ -2846,11 +2846,11 @@ const downloadVideo = async ({
   // When we skipped the pre-flight --dump-json, yt-dlp wrote a sidecar
   // .info.json during the download. Read it now so subsequent steps
   // (title, thumbnail, captions) have the same metadata they would have
-  // had with the pre-flight call — at zero extra round-trip cost.
+  // had with the pre-flight call - at zero extra round-trip cost.
   if (!needsPreflightMetadata) {
     try {
       if (existsSync(infoJsonPath)) {
-        const raw = readFileSync(infoJsonPath, 'utf8');
+        const raw = readFileSync(infoJsonPath, "utf8");
         videoMetadata = JSON.parse(raw) as VideoMetadata;
       }
     } catch {
@@ -2884,14 +2884,14 @@ const downloadVideo = async ({
       jsRuntimes,
     );
 
-    if (igFallback && 'code' in igFallback) {
+    if (igFallback && "code" in igFallback) {
       return { error: igFallback };
     }
     if (!igFallback) {
       return {
         error: {
-          code: 'DOWNLOAD_FAILED',
-          message: 'yt-dlp produced no output and gallery-dl fallback failed.',
+          code: "DOWNLOAD_FAILED",
+          message: "yt-dlp produced no output and gallery-dl fallback failed.",
         },
       };
     }
@@ -3001,7 +3001,7 @@ const downloadVideo = async ({
   // When the request comes from an iOS device, probe the video codec.
   // If it is not playable in iOS Safari (VP9, AV1, VP8, Theora, …),
   // transcode to H.264 in-place so nginx serves a compatible file.
-  // The filename is unchanged — the client never sees the difference.
+  // The filename is unchanged - the client never sees the difference.
 
   if (iosDevice && !justAudio && fileName) {
     try {
@@ -3048,7 +3048,7 @@ const downloadVideo = async ({
         (videoMetadata ? fetchCaptions(videoMetadata) : null);
 
       // For platforms like TikTok/Facebook, standard metadata has no caption
-      // URLs — they require a yt-dlp --list-subs call to discover them.
+      // URLs - they require a yt-dlp --list-subs call to discover them.
       if (!captionUrlToUse) {
         const subs = await listSubtitlesViaYtDlp(url, {
           binary,
@@ -3063,8 +3063,8 @@ const downloadVideo = async ({
 
       if (captionUrlToUse) {
         let captionsFile: string | null = null;
-        if (captionUrlToUse.startsWith('YTDLP_SUBS://')) {
-          const lang = captionUrlToUse.slice('YTDLP_SUBS://'.length);
+        if (captionUrlToUse.startsWith("YTDLP_SUBS://")) {
+          const lang = captionUrlToUse.slice("YTDLP_SUBS://".length);
           captionsFile = await downloadSubtitleViaYtDlp(
             url,
             lang,
@@ -3105,7 +3105,7 @@ const downloadVideo = async ({
       );
       if (commentsFilename) result.commentsFile = commentsFilename;
     } catch (err) {
-      console.warn('downloadComments threw (non-fatal):', err);
+      console.warn("downloadComments threw (non-fatal):", err);
     }
   }
 
@@ -3135,44 +3135,44 @@ const downloadComments = async (
 
   try {
     const args = [
-      '--write-comments',
-      '--write-info-json',
-      '--skip-download',
-      '--no-playlist',
-      '--extractor-args',
+      "--write-comments",
+      "--write-info-json",
+      "--skip-download",
+      "--no-playlist",
+      "--extractor-args",
       `youtube:comment_sort=top;max_comments=${maxComments},all,5,5`,
-      '--js-runtimes',
+      "--js-runtimes",
       `node:${jsRuntimes}`,
-      '-o',
+      "-o",
       `${tmpFolder}/%(id)s.%(ext)s`,
     ];
 
-    if (cookies) args.push('--cookies', cookies);
+    if (cookies) args.push("--cookies", cookies);
     args.push(url);
 
     await execFileAsync(binary, args);
 
     const files = readdirSync(tmpFolder);
-    const infoFile = files.find((f) => f.endsWith('.info.json'));
+    const infoFile = files.find((f) => f.endsWith(".info.json"));
     if (!infoFile) {
       console.warn(
-        'downloadComments: no .info.json found in tmp folder for',
+        "downloadComments: no .info.json found in tmp folder for",
         url,
-        '— files:',
+        "- files:",
         files,
       );
       return null;
     }
 
-    const raw = readFileSync(`${tmpFolder}/${infoFile}`, 'utf8');
+    const raw = readFileSync(`${tmpFolder}/${infoFile}`, "utf8");
     const info = JSON.parse(raw) as { comments?: unknown[] };
     const comments = info.comments;
 
     if (!Array.isArray(comments) || comments.length === 0) {
       console.warn(
-        'downloadComments: info.json present but comments field is',
-        comments == null ? 'missing' : 'empty',
-        'for',
+        "downloadComments: info.json present but comments field is",
+        comments == null ? "missing" : "empty",
+        "for",
         url,
       );
       return null;
@@ -3186,7 +3186,7 @@ const downloadComments = async (
 
     return commentsFilename;
   } catch (err) {
-    console.warn('downloadComments: unexpected error for', url, err);
+    console.warn("downloadComments: unexpected error for", url, err);
     return null;
   } finally {
     removeFolder(tmpFolder);
@@ -3201,7 +3201,7 @@ const downloadComments = async (
 export interface SubtitleInfo {
   lang: string;
   label: string;
-  type: 'manual' | 'auto';
+  type: "manual" | "auto";
   /**
    * Sentinel URL in the form `YTDLP_SUBS://<lang>`.
    * Pass this as `captionUrl` to {@link downloadVideo} and it will be
@@ -3226,30 +3226,30 @@ export interface SubtitleInfo {
  */
 const parseListSubsOutput = (
   output: string,
-): Array<{ lang: string; type: 'manual' | 'auto' }> => {
-  const results: Array<{ lang: string; type: 'manual' | 'auto' }> = [];
+): Array<{ lang: string; type: "manual" | "auto" }> => {
+  const results: Array<{ lang: string; type: "manual" | "auto" }> = [];
   const seen = new Set<string>();
-  let currentType: 'manual' | 'auto' | null = null;
+  let currentType: "manual" | "auto" | null = null;
 
-  for (const line of output.split('\n')) {
+  for (const line of output.split("\n")) {
     const trimmed = line.trim();
 
     if (
-      trimmed.includes('Available subtitles') &&
-      !trimmed.includes('automatic')
+      trimmed.includes("Available subtitles") &&
+      !trimmed.includes("automatic")
     ) {
-      currentType = 'manual';
+      currentType = "manual";
       continue;
     }
-    if (trimmed.includes('Available automatic captions')) {
-      currentType = 'auto';
+    if (trimmed.includes("Available automatic captions")) {
+      currentType = "auto";
       continue;
     }
     if (currentType === null) continue;
     if (
-      trimmed.startsWith('Language') ||
-      trimmed.startsWith('[') ||
-      trimmed === ''
+      trimmed.startsWith("Language") ||
+      trimmed.startsWith("[") ||
+      trimmed === ""
     )
       continue;
 
@@ -3289,29 +3289,29 @@ const downloadSubtitleViaYtDlp = async (
   try {
     const args = [
       videoUrl,
-      '--skip-download',
-      '--write-subs',
-      '--write-auto-subs',
-      '--convert-subs',
-      'srt',
-      '--sub-langs',
+      "--skip-download",
+      "--write-subs",
+      "--write-auto-subs",
+      "--convert-subs",
+      "srt",
+      "--sub-langs",
       lang,
-      '--no-playlist',
-      '--js-runtimes',
+      "--no-playlist",
+      "--js-runtimes",
       `node:${jsRuntimes}`,
     ];
-    if (cookies) args.push('--cookies', cookies);
-    args.push('-o', `${tmpFolder}/%(id)s.%(ext)s`);
+    if (cookies) args.push("--cookies", cookies);
+    args.push("-o", `${tmpFolder}/%(id)s.%(ext)s`);
 
     await execFileAsync(binary, args);
 
     const files = readdirSync(tmpFolder);
-    const srtFile = files.find((f) => f.endsWith('.srt'));
+    const srtFile = files.find((f) => f.endsWith(".srt"));
 
     if (srtFile) {
-      const content = readFileSync(`${tmpFolder}/${srtFile}`, 'utf8');
+      const content = readFileSync(`${tmpFolder}/${srtFile}`, "utf8");
       const destFile = `${outputFolder}/${fileId}.txt`;
-      writeFileSync(destFile, content, 'utf8');
+      writeFileSync(destFile, content, "utf8");
       removeFolder(tmpFolder);
       return existsSync(destFile) ? `${fileId}.txt` : null;
     }
@@ -3349,7 +3349,7 @@ export const fetchVideoMetadata = (
  *
  * This is a slower, exhaustive fallback for when `fetchVideoMetadata`
  * returns no captions. Each result carries a `YTDLP_SUBS://<lang>`
- * sentinel URL — pass it as `captionUrl` to {@link downloadVideo} and
+ * sentinel URL - pass it as `captionUrl` to {@link downloadVideo} and
  * the subtitle will be fetched via `yt-dlp --write-subs` at download time.
  *
  * @returns Array of available subtitles, or an empty array on failure.
@@ -3368,12 +3368,12 @@ export const listSubtitlesViaYtDlp = async (
 
   try {
     const args = [
-      '--list-subs',
-      '--no-playlist',
-      '--js-runtimes',
+      "--list-subs",
+      "--no-playlist",
+      "--js-runtimes",
       `node:${jsRuntimes}`,
     ];
-    if (cookies) args.push('--cookies', cookies);
+    if (cookies) args.push("--cookies", cookies);
     args.push(url);
 
     const output = await execFileCaptureBoth(binary, args);
@@ -3381,7 +3381,7 @@ export const listSubtitlesViaYtDlp = async (
 
     return entries.map((e) => ({
       lang: e.lang,
-      label: e.type === 'auto' ? `${e.lang} (auto)` : e.lang,
+      label: e.type === "auto" ? `${e.lang} (auto)` : e.lang,
       type: e.type,
       url: `YTDLP_SUBS://${e.lang}`,
     }));

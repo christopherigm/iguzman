@@ -51,7 +51,7 @@ COPY --from=deps /install /usr/local
 # Application source + pre-built staticfiles
 COPY --from=builder /app/ .
 
-# Media directory — will be overridden by the hostPath volume mount at runtime
+# Media directory - will be overridden by the hostPath volume mount at runtime
 # RUN mkdir -p /app/media \
 #     && chown -R django:django /app/media /app/staticfiles
 

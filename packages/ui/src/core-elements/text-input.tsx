@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useRef, CSSProperties, InputHTMLAttributes } from 'react';
-import { UIComponentProps, buildStyleProps } from './utils';
-import './text-input.css';
+import { useState, useRef, CSSProperties, InputHTMLAttributes } from "react";
+import { UIComponentProps, buildStyleProps } from "./utils";
+import "./text-input.css";
 
 /**
  * Native HTML input attributes we forward, minus the keys that overlap with
@@ -10,17 +10,17 @@ import './text-input.css';
  */
 type NativeInputProps = Omit<
   InputHTMLAttributes<HTMLInputElement | HTMLTextAreaElement>,
-  | 'value'
-  | 'onChange'
-  | 'type'
-  | 'placeholder'
-  | 'rows'
-  | 'children'
-  | 'color'
-  | 'className'
-  | 'id'
-  | 'height'
-  | 'width'
+  | "value"
+  | "onChange"
+  | "type"
+  | "placeholder"
+  | "rows"
+  | "children"
+  | "color"
+  | "className"
+  | "id"
+  | "height"
+  | "width"
 >;
 
 /**
@@ -41,12 +41,12 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
   rows?: number;
   /** Standard placeholder. When omitted the `label` fills this role. */
   placeholder?: string;
-  /** React 19 ref — no forwardRef needed. */
+  /** React 19 ref - no forwardRef needed. */
   ref?: React.Ref<HTMLInputElement | HTMLTextAreaElement>;
 }
 
 /**
- * TextInput — Material Design floating-label text field.
+ * TextInput - Material Design floating-label text field.
  *
  * Supports both `<input>` and `<textarea>` (via `multirow`), controlled and
  * uncontrolled usage, and extends `UIComponentProps` for layout integration.
@@ -65,7 +65,7 @@ export const TextInput = ({
   value,
   onChange,
   label,
-  type = 'text',
+  type = "text",
   multirow = false,
   rows = 3,
   placeholder,
@@ -80,12 +80,12 @@ export const TextInput = ({
   min,
   max,
   step,
-  'aria-label': ariaLabel,
+  "aria-label": ariaLabel,
   ...rest
 }: TextInputProps) => {
   // ── Controlled / uncontrolled ──────────────────────────────────
   const isControlled = value !== undefined;
-  const [internalValue, setInternalValue] = useState('');
+  const [internalValue, setInternalValue] = useState("");
   const currentValue = isControlled ? value : internalValue;
 
   // Track focus independently so the label stays floated while typing.
@@ -94,10 +94,17 @@ export const TextInput = ({
 
   // Some input types always show browser-native UI (date picker, color swatch)
   // and must keep the label floated to avoid overlap with the native control.
-  const alwaysActive = ['date', 'time', 'datetime-local', 'week', 'month', 'color'].includes(type);
+  const alwaysActive = [
+    "date",
+    "time",
+    "datetime-local",
+    "week",
+    "month",
+    "color",
+  ].includes(type);
 
   // Label floats when focused OR when the field has content OR type always shows UI.
-  const isActive = alwaysActive || isFocused || (currentValue ?? '').length > 0;
+  const isActive = alwaysActive || isFocused || (currentValue ?? "").length > 0;
 
   // ── Layout style from UIComponentProps ────────────────────────
   const uiProps = rest as UIComponentProps;
@@ -133,8 +140,8 @@ export const TextInput = ({
   // Resolve the ref to assign: merge the external ref with internal one.
   const assignRef = (node: HTMLInputElement | HTMLTextAreaElement | null) => {
     inputRef.current = node;
-    if (typeof ref === 'function') ref(node);
-    else if (ref && typeof ref === 'object') {
+    if (typeof ref === "function") ref(node);
+    else if (ref && typeof ref === "object") {
       (
         ref as React.MutableRefObject<
           HTMLInputElement | HTMLTextAreaElement | null
@@ -147,7 +154,7 @@ export const TextInput = ({
   const sharedProps = {
     id,
     ref: assignRef,
-    value: currentValue ?? '',
+    value: currentValue ?? "",
     onChange: handleChange,
     onFocus: handleFocus,
     onBlur: handleBlur,
@@ -162,18 +169,18 @@ export const TextInput = ({
     // If a placeholder is explicitly provided, use it. Otherwise the label
     // visually replaces the placeholder via CSS, so we keep it empty.
     placeholder: placeholder ?? (isFocused && label ? label : undefined),
-    'aria-label': label ?? ariaLabel ?? undefined,
+    "aria-label": label ?? ariaLabel ?? undefined,
   };
 
   // ── Wrapper class name ────────────────────────────────────────
   const wrapperCls = [
-    'ui-text-input-wrapper',
-    isActive ? 'ui-text-input-wrapper--active' : '',
-    !label ? 'ui-text-input-wrapper--no-label' : '',
+    "ui-text-input-wrapper",
+    isActive ? "ui-text-input-wrapper--active" : "",
+    !label ? "ui-text-input-wrapper--no-label" : "",
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   // ── Render ────────────────────────────────────────────────────
   return (

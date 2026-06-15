@@ -14,7 +14,9 @@ const revision =
 const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",
   swDest: "public/sw.js",
-  disable: process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ENABLE_SW !== 'true',
+  disable:
+    process.env.NODE_ENV === "development" &&
+    process.env.NEXT_PUBLIC_ENABLE_SW !== "true",
   cacheOnNavigation: true,
   additionalPrecacheEntries: [{ url: "/~offline", revision }],
 });
@@ -22,14 +24,14 @@ const withSerwist = withSerwistInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  // Turbopack (dev mode) needs its own alias config — it ignores webpack().
+  // Turbopack (dev mode) needs its own alias config - it ignores webpack().
   // web-tree-sitter has a conditional require('fs'/'path') for its Node.js
   // code path; in the browser that branch is dead but Turbopack still
   // resolves the import at build time. Point both to an empty shim.
   turbopack: {
     resolveAlias: {
-      fs: './lib/browser-empty.js',
-      path: './lib/browser-empty.js',
+      fs: "./lib/browser-empty.js",
+      path: "./lib/browser-empty.js",
     },
   },
   webpack(config, { isServer }) {
@@ -37,12 +39,12 @@ const nextConfig = {
     // parse. Alias it to false so webpack emits an empty module instead.
     config.resolve.alias = {
       ...config.resolve.alias,
-      'onnxruntime-node': false,
+      "onnxruntime-node": false,
     };
     if (!isServer) {
       // web-tree-sitter has a conditional require('fs') for its Node.js code
       // path. resolve.alias:false silently returns an empty module at build
-      // time — resolve.fallback:false does not suppress the "Module not found"
+      // time - resolve.fallback:false does not suppress the "Module not found"
       // error, which is why we use alias here instead.
       config.resolve.alias = {
         ...config.resolve.alias,

@@ -2,16 +2,16 @@
 
 A lightweight Python microservice that performs **speaker diarization** and **speaker-attributed transcription** on uploaded audio files.
 
-| Technology | Role |
-|---|---|
-| [pyannote.audio 3.x](https://github.com/pyannote/pyannote-audio) | Speaker diarization (who spoke when) |
-| [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | Transcription (what was said), ~4× faster than original Whisper on CPU via CTranslate2 |
-| [ffmpeg](https://ffmpeg.org/) | Audio normalization — converts any input to 16 kHz mono WAV before diarization |
-| [FastAPI](https://fastapi.tiangolo.com/) | HTTP API |
-| [uvicorn](https://www.uvicorn.org/) | ASGI server |
+| Technology                                                       | Role                                                                                   |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [pyannote.audio 3.x](https://github.com/pyannote/pyannote-audio) | Speaker diarization (who spoke when)                                                   |
+| [faster-whisper](https://github.com/SYSTRAN/faster-whisper)      | Transcription (what was said), ~4× faster than original Whisper on CPU via CTranslate2 |
+| [ffmpeg](https://ffmpeg.org/)                                    | Audio normalization - converts any input to 16 kHz mono WAV before diarization         |
+| [FastAPI](https://fastapi.tiangolo.com/)                         | HTTP API                                                                               |
+| [uvicorn](https://www.uvicorn.org/)                              | ASGI server                                                                            |
 
 All models are loaded once at startup and reused across requests.
-This service is CPU-only — no GPU required.
+This service is CPU-only - no GPU required.
 
 The Docker image uses a **multi-stage build**: models are downloaded into the image at build time (`HF_TOKEN` is a build arg) and the runtime stage runs fully offline (`HF_HUB_OFFLINE=1`). `HF_TOKEN` is **not** required at container runtime.
 
@@ -22,33 +22,37 @@ The Docker image uses a **multi-stage build**: models are downloaded into the im
 Authentication: every request (except `/health`) must include the `X-API-Key` header.
 
 ### `GET /health`
+
 Returns `{"status": "ok"}`. Used by Kubernetes health probes.
 
 ---
 
 ### `POST /diarize`
+
 Speaker diarization without transcription.
 
-**Request** — `multipart/form-data`
+**Request** - `multipart/form-data`
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `file` | audio file | ✅ | wav, mp3, mp4, m4a, flac, ogg, webm. Max 100 MB. |
-| `num_speakers` | int | | Exact number of speakers (improves accuracy when known) |
-| `min_speakers` | int | | Minimum number of speakers |
-| `max_speakers` | int | | Maximum number of speakers |
+| Field          | Type       | Required | Description                                             |
+| -------------- | ---------- | -------- | ------------------------------------------------------- |
+| `file`         | audio file | ✅       | wav, mp3, mp4, m4a, flac, ogg, webm. Max 100 MB.        |
+| `num_speakers` | int        |          | Exact number of speakers (improves accuracy when known) |
+| `min_speakers` | int        |          | Minimum number of speakers                              |
+| `max_speakers` | int        |          | Maximum number of speakers                              |
 
 **Response**
+
 ```json
 {
   "segments": [
     { "speaker": "SPEAKER_00", "start": 0.531, "end": 4.218 },
-    { "speaker": "SPEAKER_01", "start": 4.780, "end": 9.132 }
+    { "speaker": "SPEAKER_01", "start": 4.78, "end": 9.132 }
   ]
 }
 ```
 
 **Example**
+
 ```bash
 curl -X POST https://diarization.iguzman.com.mx/diarize \
   -H "X-API-Key: $API_KEY" \
@@ -59,31 +63,46 @@ curl -X POST https://diarization.iguzman.com.mx/diarize \
 ---
 
 ### `POST /transcribe`
-Speaker-attributed transcription — runs both diarization and Whisper, then merges results by temporal overlap.
 
-**Request** — `multipart/form-data`
+Speaker-attributed transcription - runs both diarization and Whisper, then merges results by temporal overlap.
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `file` | audio file | ✅ | Same formats as `/diarize` |
-| `language` | string | | BCP-47 code (e.g. `en`, `es`). Auto-detected if omitted. |
-| `num_speakers` | int | | Exact number of speakers |
-| `min_speakers` | int | | Minimum number of speakers |
-| `max_speakers` | int | | Maximum number of speakers |
+**Request** - `multipart/form-data`
+
+| Field          | Type       | Required | Description                                              |
+| -------------- | ---------- | -------- | -------------------------------------------------------- |
+| `file`         | audio file | ✅       | Same formats as `/diarize`                               |
+| `language`     | string     |          | BCP-47 code (e.g. `en`, `es`). Auto-detected if omitted. |
+| `num_speakers` | int        |          | Exact number of speakers                                 |
+| `min_speakers` | int        |          | Minimum number of speakers                               |
+| `max_speakers` | int        |          | Maximum number of speakers                               |
 
 **Response**
+
 ```json
 {
   "language": "en",
   "segments": [
-    { "speaker": "SPEAKER_00", "start": 0.531, "end": 4.218, "text": "Hello, how are you?", "language": "en" },
-    { "speaker": "SPEAKER_01", "start": 4.780, "end": 9.132, "text": "I'm doing great, thanks!" }
+    {
+      "speaker": "SPEAKER_00",
+      "start": 0.531,
+      "end": 4.218,
+      "text": "Hello, how are you?",
+      "language": "en"
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 4.78,
+      "end": 9.132,
+      "text": "I'm doing great, thanks!"
+    }
   ]
 }
 ```
+
 > `language` appears only on the first segment (Whisper's auto-detection result).
 
 **Example**
+
 ```bash
 curl -X POST https://diarization.iguzman.com.mx/transcribe \
   -H "X-API-Key: $API_KEY" \
@@ -96,13 +115,13 @@ curl -X POST https://diarization.iguzman.com.mx/transcribe \
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `PORT` | `8000` | HTTP server port |
-| `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warn`, `error`) |
-| `API_KEY` | *(empty)* | Authentication key. Leave empty to disable auth (dev only). |
-| `HF_TOKEN` | — | HuggingFace access token for pyannote gated models. **Required for local dev** (models downloaded on first run). Not needed at Docker runtime — the image is built with models baked in. |
-| `WHISPER_MODEL_SIZE` | `base` | Whisper model size: `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`. Larger = more accurate but slower. |
+| Variable             | Default   | Description                                                                                                                                                                              |
+| -------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`               | `8000`    | HTTP server port                                                                                                                                                                         |
+| `LOG_LEVEL`          | `info`    | Logging level (`debug`, `info`, `warn`, `error`)                                                                                                                                         |
+| `API_KEY`            | _(empty)_ | Authentication key. Leave empty to disable auth (dev only).                                                                                                                              |
+| `HF_TOKEN`           | -         | HuggingFace access token for pyannote gated models. **Required for local dev** (models downloaded on first run). Not needed at Docker runtime - the image is built with models baked in. |
+| `WHISPER_MODEL_SIZE` | `base`    | Whisper model size: `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3`. Larger = more accurate but slower.                                                                        |
 
 ---
 
@@ -117,6 +136,7 @@ curl -X POST https://diarization.iguzman.com.mx/transcribe \
 ### 1. Accept pyannote model terms
 
 Visit both pages and click **Agree**:
+
 - https://huggingface.co/pyannote/speaker-diarization-3.1
 - https://huggingface.co/pyannote/segmentation-3.0
 
@@ -162,8 +182,8 @@ The interactive API docs are available at http://localhost:8000/docs.
 
 The Dockerfile uses a **multi-stage build**:
 
-1. **`model-downloader` stage** — installs dependencies and downloads pyannote + Whisper models into the HuggingFace cache. Requires `HF_TOKEN` as a build arg; the token is never written to the final image.
-2. **Runtime stage** — copies the model cache from stage 1 and sets `HF_HUB_OFFLINE=1` / `TRANSFORMERS_OFFLINE=1` so the container never makes network requests to HuggingFace.
+1. **`model-downloader` stage** - installs dependencies and downloads pyannote + Whisper models into the HuggingFace cache. Requires `HF_TOKEN` as a build arg; the token is never written to the final image.
+2. **Runtime stage** - copies the model cache from stage 1 and sets `HF_HUB_OFFLINE=1` / `TRANSFORMERS_OFFLINE=1` so the container never makes network requests to HuggingFace.
 
 ### Build
 
@@ -177,6 +197,7 @@ docker build \
 ```
 
 Or with the monorepo deploy script:
+
 ```bash
 pnpm docker --filter=diarization
 ```
@@ -189,7 +210,7 @@ docker run --rm -p 8000:8000 \
   christopherguzman/diarization:latest
 ```
 
-`HF_TOKEN` is not required at runtime — models are already baked into the image.
+`HF_TOKEN` is not required at runtime - models are already baked into the image.
 
 ---
 
@@ -217,12 +238,12 @@ helm upgrade diarization apps/diarization/helm/ -n diarization
 
 ### 3. Key Helm values
 
-| Value | Default | Description |
-|---|---|---|
-| `modelsBaked` | `true` | Set to `true` when the image was built with baked-in models (multi-stage Dockerfile). Controls startup probe timeout and whether `HF_TOKEN` is injected. |
-| `modelCache.enabled` | `false` | Mount a PVC at `/root/.cache/huggingface`. Useful when `modelsBaked: false` to avoid re-downloading models on every pod restart. |
-| `modelCache.size` | `5Gi` | PVC size. |
-| `nodeAffinity.nodeNames` | `[node6]` | Pin the pod to a specific node (CPU-intensive workload). |
+| Value                    | Default   | Description                                                                                                                                              |
+| ------------------------ | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `modelsBaked`            | `true`    | Set to `true` when the image was built with baked-in models (multi-stage Dockerfile). Controls startup probe timeout and whether `HF_TOKEN` is injected. |
+| `modelCache.enabled`     | `false`   | Mount a PVC at `/root/.cache/huggingface`. Useful when `modelsBaked: false` to avoid re-downloading models on every pod restart.                         |
+| `modelCache.size`        | `5Gi`     | PVC size.                                                                                                                                                |
+| `nodeAffinity.nodeNames` | `[node6]` | Pin the pod to a specific node (CPU-intensive workload).                                                                                                 |
 
 To deploy **without** baked models (downloads on first boot):
 
@@ -253,7 +274,7 @@ kubectl describe pod -n diarization -l app.kubernetes.io/name=diarization
 
 ### Notes
 
-- **Cold-start time:** With `modelsBaked: true` (default), models load from the image cache — startup probe allows **2 minutes**. With `modelsBaked: false`, pyannote + Whisper are downloaded on first boot (5-10 min); startup probe allows **15 minutes**.
+- **Cold-start time:** With `modelsBaked: true` (default), models load from the image cache - startup probe allows **2 minutes**. With `modelsBaked: false`, pyannote + Whisper are downloaded on first boot (5-10 min); startup probe allows **15 minutes**.
 - **CPU performance:** Processing time scales roughly linearly with audio duration. Expect ~1-3× real-time on a Core i9 (e.g. a 10-minute recording takes 10-30 minutes to fully process). Providing `num_speakers` when known significantly speeds up diarization.
 - **Timeouts:** The ingress is configured with a 600-second proxy timeout. For very long files, consider splitting audio client-side before uploading.
 - **Single replica:** Keep `replicaCount: 1`. Models are held in-process memory and the service is not designed to scale horizontally.

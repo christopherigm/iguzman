@@ -2,19 +2,19 @@
  * Shared Speech-to-Text types and pure audio utilities.
  *
  * Browser-specific processing (AudioContext, MediaRecorder, Web Worker) lives
- * in @repo/ui — this module is environment-agnostic and has no dependencies.
+ * in @repo/ui - this module is environment-agnostic and has no dependencies.
  */
 
 /** Controls whether transcription happens incrementally or all at once. */
-export type SttMode = 'realtime' | 'batch';
+export type SttMode = "realtime" | "batch";
 
 /**
  * Options shared between the helper utilities and the UI hook / component.
  */
 export interface SttOptions {
   /**
-   * `'batch'`   — record everything, transcribe in one shot when stopped.
-   * `'realtime'` — transcribe in rolling chunks while the mic is active.
+   * `'batch'`   - record everything, transcribe in one shot when stopped.
+   * `'realtime'` - transcribe in rolling chunks while the mic is active.
    * @default 'batch'
    */
   mode?: SttMode;

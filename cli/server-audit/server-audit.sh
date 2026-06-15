@@ -116,7 +116,7 @@ is_loopback_addr() {
 }
 
 # ────────────────────────────────────────────────────────────────────────────
-# Port helper — called from check_open_ports for each protocol
+# Port helper - called from check_open_ports for each protocol
 # ────────────────────────────────────────────────────────────────────────────
 
 _audit_ports_proto() {
@@ -152,7 +152,7 @@ _audit_ports_proto() {
       crit "$(uc "${proto}") ${laddr}  [${process}]  ${BRED}UNEXPECTED${R}"
       add_finding "MEDIUM" "Open Ports" \
         "Unexpected $(uc "${proto}") port ${port} open (process: ${process}, addr: ${laddr})" \
-        "Identify: ss -${ss_flag}lnp | grep :${port} — if unneeded: ufw deny ${port}/${proto} && systemctl stop <service>"
+        "Identify: ss -${ss_flag}lnp | grep :${port} - if unneeded: ufw deny ${port}/${proto} && systemctl stop <service>"
       # Increment caller's counter via nameref (bash 4.3+)
       printf -v "${unknown_ref}" '%d' "$(( ${!unknown_ref} + 1 ))" 2>/dev/null || true
     fi
@@ -183,8 +183,8 @@ check_firewall() {
   step "Firewall (UFW)"
 
   if ! command -v ufw &>/dev/null; then
-    crit "UFW not installed — no host-based firewall"
-    add_finding "HIGH" "Firewall" "UFW is not installed — no host-level firewall detected" \
+    crit "UFW not installed - no host-based firewall"
+    add_finding "HIGH" "Firewall" "UFW is not installed - no host-level firewall detected" \
       "apt install ufw && ufw default deny incoming && ufw default allow outgoing && ufw allow ssh && ufw enable"
     return
   fi
@@ -197,7 +197,7 @@ check_firewall() {
     echo "${ufw_out}" | grep -v "^Status" | grep -v "^To\|^--" | grep -v "^$" | head -20 | indent
   else
     crit "UFW installed but INACTIVE"
-    add_finding "HIGH" "Firewall" "UFW is installed but not enabled — server has no host firewall" \
+    add_finding "HIGH" "Firewall" "UFW is installed but not enabled - server has no host firewall" \
       "ufw default deny incoming && ufw default allow outgoing && ufw allow ssh && ufw allow 445 && ufw allow 32400 && ufw enable"
 
     local ipt_count
@@ -212,8 +212,8 @@ check_open_ports() {
   step "Open / Listening Ports"
 
   if ! command -v ss &>/dev/null; then
-    warn "ss not found — install iproute2"
-    add_finding "LOW" "Open Ports" "ss tool unavailable — port scan skipped" "apt install iproute2"
+    warn "ss not found - install iproute2"
+    add_finding "LOW" "Open Ports" "ss tool unavailable - port scan skipped" "apt install iproute2"
     return
   fi
 
@@ -230,7 +230,7 @@ check_open_ports() {
   if (( unknown == 0 )); then
     ok "No unexpected listening ports"
   else
-    warn "${unknown} unexpected port(s) flagged — see findings"
+    warn "${unknown} unexpected port(s) flagged - see findings"
   fi
 }
 
@@ -245,7 +245,7 @@ check_users() {
   if [[ -n "${uid0_extra}" ]]; then
     crit "Non-root account(s) with UID 0: ${uid0_extra}"
     add_finding "CRITICAL" "Users" "UID-0 (root-equivalent) account(s) found: ${uid0_extra}" \
-      "userdel ${uid0_extra}  — or assign a normal UID: usermod -u <uid> ${uid0_extra}"
+      "userdel ${uid0_extra}  - or assign a normal UID: usermod -u <uid> ${uid0_extra}"
   else
     ok "Only root has UID 0"
   fi
@@ -256,7 +256,7 @@ check_users() {
   if [[ -n "${empty_pw}" ]]; then
     crit "Login account(s) with empty password: ${empty_pw}"
     add_finding "CRITICAL" "Users" "Interactive account(s) with no password set: ${empty_pw}" \
-      "Set a password: passwd <user>  — or lock: passwd -l <user>"
+      "Set a password: passwd <user>  - or lock: passwd -l <user>"
   else
     ok "No interactive accounts with empty passwords"
   fi
@@ -289,7 +289,7 @@ check_ssh() {
 
   local sshd_cfg="/etc/ssh/sshd_config"
   if [[ ! -f "${sshd_cfg}" ]]; then
-    info "sshd_config not found — SSH may not be installed"
+    info "sshd_config not found - SSH may not be installed"
     return
   fi
 
@@ -310,21 +310,21 @@ check_ssh() {
   case "${permit_root}" in
     "no") ok "PermitRootLogin: no" ;;
     "without-password"|"prohibit-password")
-      warn "PermitRootLogin ${permit_root} — root key-based login allowed"
+      warn "PermitRootLogin ${permit_root} - root key-based login allowed"
       add_finding "MEDIUM" "SSH" "PermitRootLogin allows key-based root login (${permit_root})" \
-        "Set PermitRootLogin no in ${sshd_cfg} — use sudo for privilege escalation"
+        "Set PermitRootLogin no in ${sshd_cfg} - use sudo for privilege escalation"
       ;;
     *)
-      crit "PermitRootLogin ${permit_root} — root can log in with a password"
-      add_finding "HIGH" "SSH" "PermitRootLogin is '${permit_root}' — direct root SSH access allowed" \
+      crit "PermitRootLogin ${permit_root} - root can log in with a password"
+      add_finding "HIGH" "SSH" "PermitRootLogin is '${permit_root}' - direct root SSH access allowed" \
         "Set PermitRootLogin no in ${sshd_cfg} then: systemctl restart ssh"
       ;;
   esac
 
   # PasswordAuthentication
   if [[ "${pass_auth}" == "yes" ]]; then
-    warn "PasswordAuthentication yes — brute-force risk"
-    add_finding "MEDIUM" "SSH" "PasswordAuthentication enabled — vulnerable to brute-force" \
+    warn "PasswordAuthentication yes - brute-force risk"
+    add_finding "MEDIUM" "SSH" "PasswordAuthentication enabled - vulnerable to brute-force" \
       "Set PasswordAuthentication no in ${sshd_cfg} (SSH keys only); install fail2ban"
   else
     ok "PasswordAuthentication: ${pass_auth}"
@@ -332,8 +332,8 @@ check_ssh() {
 
   # X11 Forwarding
   if [[ "${x11}" == "yes" ]]; then
-    warn "X11Forwarding yes — unnecessary attack surface on a server"
-    add_finding "LOW" "SSH" "X11Forwarding is enabled — no display server needed on a headless server" \
+    warn "X11Forwarding yes - unnecessary attack surface on a server"
+    add_finding "LOW" "SSH" "X11Forwarding is enabled - no display server needed on a headless server" \
       "Set X11Forwarding no in ${sshd_cfg}"
   else
     ok "X11Forwarding: ${x11:-no}"
@@ -341,7 +341,7 @@ check_ssh() {
 
   # MaxAuthTries
   if (( max_tries > 3 )); then
-    warn "MaxAuthTries ${max_tries} — recommended ≤ 3"
+    warn "MaxAuthTries ${max_tries} - recommended ≤ 3"
     add_finding "LOW" "SSH" "MaxAuthTries ${max_tries} allows more retry attempts than necessary" \
       "Set MaxAuthTries 3 in ${sshd_cfg}"
   else
@@ -350,8 +350,8 @@ check_ssh() {
 
   # Port
   if [[ "${port}" == "22" ]]; then
-    warn "SSH on default port 22 — attracts automated scanners"
-    add_finding "LOW" "SSH" "SSH on port 22 (default) — increases exposure to automated attacks" \
+    warn "SSH on default port 22 - attracts automated scanners"
+    add_finding "LOW" "SSH" "SSH on port 22 (default) - increases exposure to automated attacks" \
       "Optional: change Port in ${sshd_cfg} to non-standard (e.g. 2222), update UFW: ufw allow 2222/tcp && ufw delete allow 22/tcp"
   else
     ok "SSH port: ${port} (non-default)"
@@ -364,7 +364,7 @@ check_ssh() {
     ok "fail2ban installed (sshd banned IPs: ${banned})"
   else
     warn "fail2ban not installed"
-    add_finding "MEDIUM" "SSH" "fail2ban not installed — no automated brute-force protection" \
+    add_finding "MEDIUM" "SSH" "fail2ban not installed - no automated brute-force protection" \
       "apt install fail2ban && systemctl enable --now fail2ban"
   fi
 }
@@ -380,7 +380,7 @@ check_failed_logins() {
   done
 
   if [[ -z "${auth_log}" ]]; then
-    warn "Auth log not found — skipping"
+    warn "Auth log not found - skipping"
     return
   fi
 
@@ -389,8 +389,8 @@ check_failed_logins() {
 
   if (( fail_count > 100 )); then
     crit "${fail_count} failed login events in ${auth_log}"
-    add_finding "HIGH" "Auth" "${fail_count} failed SSH login attempts — likely active brute-force" \
-      "Install fail2ban: apt install fail2ban — audit IPs: grep 'Failed password' ${auth_log} | awk '{print \$11}' | sort | uniq -c | sort -rn | head -20"
+    add_finding "HIGH" "Auth" "${fail_count} failed SSH login attempts - likely active brute-force" \
+      "Install fail2ban: apt install fail2ban - audit IPs: grep 'Failed password' ${auth_log} | awk '{print \$11}' | sort | uniq -c | sort -rn | head -20"
   elif (( fail_count > 10 )); then
     warn "${fail_count} failed login events"
     add_finding "MEDIUM" "Auth" "${fail_count} failed SSH login attempts logged" \
@@ -422,8 +422,8 @@ check_processes() {
     zombie_count="$(echo "${zombies}" | wc -l)"
     crit "${zombie_count} zombie process(es):"
     echo "${zombies}" | indent
-    add_finding "MEDIUM" "Processes" "${zombie_count} zombie process(es) — parent not reaping children" \
-      "Find parent: ps -p <PID> -o ppid= — restart the parent service, or reboot if persistent"
+    add_finding "MEDIUM" "Processes" "${zombie_count} zombie process(es) - parent not reaping children" \
+      "Find parent: ps -p <PID> -o ppid= - restart the parent service, or reboot if persistent"
   else
     ok "No zombie processes"
   fi
@@ -438,7 +438,7 @@ check_processes() {
 
     local cmdline
     cmdline="$(tr '\0' ' ' < "/proc/${pid}/cmdline" 2>/dev/null | cut -c1-100 || true)"
-    [[ -z "${cmdline}" ]] && continue   # kernel thread — skip
+    [[ -z "${cmdline}" ]] && continue   # kernel thread - skip
 
     local exe_link
     exe_link="$(readlink "/proc/${pid}/exe" 2>/dev/null || true)"
@@ -447,8 +447,8 @@ check_processes() {
     if [[ "${exe_link}" == *"(deleted)"* ]]; then
       warn "PID ${pid} running deleted binary: ${cmdline}"
       add_finding "HIGH" "Processes" \
-        "PID ${pid} running a deleted binary — may be malware or a pending upgrade: ${cmdline}" \
-        "Investigate: lsof -p ${pid} — if malware: isolate and review /var/log/auth.log"
+        "PID ${pid} running a deleted binary - may be malware or a pending upgrade: ${cmdline}" \
+        "Investigate: lsof -p ${pid} - if malware: isolate and review /var/log/auth.log"
       (( suspicious++ )) || true
     fi
 
@@ -459,8 +459,8 @@ check_processes() {
           "${exe_path}" == /var/tmp/* || "${exe_path}" == /run/shm/* ]]; then
       crit "PID ${pid} running from temp path: ${exe_path}"
       add_finding "CRITICAL" "Processes" \
-        "PID ${pid} executing from temp directory: ${exe_path} — command: ${cmdline}" \
-        "IMMEDIATE: lsof -p ${pid} && kill -9 ${pid} — scan with: rkhunter --check OR clamscan -r /"
+        "PID ${pid} executing from temp directory: ${exe_path} - command: ${cmdline}" \
+        "IMMEDIATE: lsof -p ${pid} && kill -9 ${pid} - scan with: rkhunter --check OR clamscan -r /"
       (( suspicious++ )) || true
     fi
   done
@@ -501,8 +501,8 @@ check_resources() {
   if [[ "${load_high}" == "1" ]]; then
     warn "1-min load (${load1}) exceeds CPU count (${ncpus})"
     add_finding "MEDIUM" "Resources" \
-      "Load average ${load1} (1m) exceeds ${ncpus} CPUs — system CPU-saturated" \
-      "Identify cause: ps aux --sort=-%cpu | head -10 — check for k8s workload spikes"
+      "Load average ${load1} (1m) exceeds ${ncpus} CPUs - system CPU-saturated" \
+      "Identify cause: ps aux --sort=-%cpu | head -10 - check for k8s workload spikes"
   else
     ok "Load average within CPU capacity"
   fi
@@ -527,13 +527,13 @@ check_resources() {
     if (( mem_pct > 90 )); then
       crit "Memory usage critical: ${mem_pct}%"
       add_finding "HIGH" "Resources" \
-        "Memory at ${mem_pct}% — OOM risk; system may start swapping heavily" \
-        "ps aux --sort=-%mem | head -10 — consider adding RAM or adjusting k8s memory limits"
+        "Memory at ${mem_pct}% - OOM risk; system may start swapping heavily" \
+        "ps aux --sort=-%mem | head -10 - consider adding RAM or adjusting k8s memory limits"
     elif (( mem_pct > 80 )); then
       warn "Memory elevated: ${mem_pct}%"
       add_finding "MEDIUM" "Resources" \
-        "Memory at ${mem_pct}% — monitor for further increase" \
-        "ps aux --sort=-%mem | head -10 — tune k8s resource requests/limits"
+        "Memory at ${mem_pct}% - monitor for further increase" \
+        "ps aux --sort=-%mem | head -10 - tune k8s resource requests/limits"
     else
       ok "Memory OK (${mem_pct}%)"
     fi
@@ -554,12 +554,12 @@ check_resources() {
       if (( swap_pct > 50 )); then
         warn "Swap usage high: ${swap_pct}%"
         add_finding "MEDIUM" "Resources" \
-          "Swap at ${swap_pct}% — indicates memory pressure and degraded performance" \
-          "Add RAM or reduce workload — to flush swap: swapoff -a && swapon -a"
+          "Swap at ${swap_pct}% - indicates memory pressure and degraded performance" \
+          "Add RAM or reduce workload - to flush swap: swapoff -a && swapon -a"
       fi
     else
       warn "No swap configured"
-      add_finding "LOW" "Resources" "No swap space — OOM kills more likely under memory pressure" \
+      add_finding "LOW" "Resources" "No swap space - OOM kills more likely under memory pressure" \
         "fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo '/swapfile none swap sw 0 0' >> /etc/fstab"
     fi
   fi
@@ -580,14 +580,14 @@ check_resources() {
     if (( use_pct >= 95 )); then
       printf "  ${BRED}  %-35s %3d%%  CRITICAL${R}\n" "${mount} (${fs})" "${use_pct}"
       add_finding "CRITICAL" "Resources" \
-        "Disk ${mount} is ${use_pct}% full — may cause service failures" \
-        "du -sh ${mount}/* | sort -rh | head -10 — prune k8s images: microk8s.ctr images prune"
+        "Disk ${mount} is ${use_pct}% full - may cause service failures" \
+        "du -sh ${mount}/* | sort -rh | head -10 - prune k8s images: microk8s.ctr images prune"
       (( disk_issues++ )) || true
     elif (( use_pct >= 85 )); then
       printf "  ${BYEL}  %-35s %3d%%  WARNING${R}\n" "${mount} (${fs})" "${use_pct}"
       add_finding "HIGH" "Resources" \
-        "Disk ${mount} is ${use_pct}% full — approaching capacity" \
-        "du -sh ${mount}/* | sort -rh | head -10 — check k8s logs: microk8s kubectl logs"
+        "Disk ${mount} is ${use_pct}% full - approaching capacity" \
+        "du -sh ${mount}/* | sort -rh | head -10 - check k8s logs: microk8s kubectl logs"
       (( disk_issues++ )) || true
     else
       printf "  ${BGRN}  %-35s %3d%%${R}\n" "${mount} (${fs})" "${use_pct}"
@@ -611,7 +611,7 @@ check_resources() {
       warn "${iface}: RX err=${rx_err} drop=${rx_drop}  TX err=${tx_err} drop=${tx_drop}"
       add_finding "LOW" "Resources" \
         "Interface ${iface} has network errors/drops (total: ${total})" \
-        "Check driver: ethtool ${iface} — review dmesg | grep ${iface} for hardware issues"
+        "Check driver: ethtool ${iface} - review dmesg | grep ${iface} for hardware issues"
       (( net_issues++ )) || true
     fi
   done < <(ls /sys/class/net/ 2>/dev/null | grep -v "^lo$" || true)
@@ -624,7 +624,7 @@ check_updates() {
   step "Pending Updates"
 
   if ! command -v apt &>/dev/null; then
-    info "apt not found — skipping update check"
+    info "apt not found - skipping update check"
     return
   fi
 
@@ -637,11 +637,11 @@ check_updates() {
   if (( security_count > 0 )); then
     crit "${security_count} security update(s) pending (${upgradable} total)"
     add_finding "HIGH" "Updates" "${security_count} security packages need updating" \
-      "apt upgrade -y — or enable automatic security patches: dpkg-reconfigure unattended-upgrades"
+      "apt upgrade -y - or enable automatic security patches: dpkg-reconfigure unattended-upgrades"
   elif (( upgradable > 0 )); then
     warn "${upgradable} update(s) available (no security fixes)"
     add_finding "LOW" "Updates" "${upgradable} package updates available" \
-      "apt upgrade -y — schedule regular maintenance windows"
+      "apt upgrade -y - schedule regular maintenance windows"
   else
     ok "System packages up to date"
   fi
@@ -658,7 +658,7 @@ check_updates() {
   # Reboot required
   if [[ -f /var/run/reboot-required ]]; then
     warn "Reboot required to apply kernel updates"
-    add_finding "MEDIUM" "Updates" "Kernel update pending — reboot needed to activate" \
+    add_finding "MEDIUM" "Updates" "Kernel update pending - reboot needed to activate" \
       "Schedule a maintenance window: systemctl reboot"
   fi
 }
@@ -669,7 +669,7 @@ check_microk8s() {
   step "MicroK8s"
 
   if ! command -v microk8s &>/dev/null; then
-    info "microk8s not found — skipping"
+    info "microk8s not found - skipping"
     return
   fi
 
@@ -682,7 +682,7 @@ check_microk8s() {
   else
     crit "MicroK8s is NOT running"
     add_finding "HIGH" "MicroK8s" "MicroK8s is not running" \
-      "microk8s start — or check snap services: snap services microk8s"
+      "microk8s start - or check snap services: snap services microk8s"
     return
   fi
 
@@ -693,7 +693,7 @@ check_microk8s() {
     warn "Nodes NOT Ready:"
     echo "${not_ready}" | indent
     add_finding "HIGH" "MicroK8s" "One or more Kubernetes nodes are not in Ready state" \
-      "microk8s kubectl describe node <name> — check kubelet: systemctl status snap.microk8s.daemon-kubelet"
+      "microk8s kubectl describe node <name> - check kubelet: systemctl status snap.microk8s.daemon-kubelet"
   else
     ok "All nodes Ready"
     microk8s kubectl get nodes --no-headers 2>/dev/null | indent || true
@@ -709,12 +709,12 @@ check_microk8s() {
     warn "${pod_count} pod(s) not in Running/Completed state:"
     echo "${bad_pods}" | indent
     add_finding "MEDIUM" "MicroK8s" "${pod_count} unhealthy pod(s) detected" \
-      "microk8s kubectl describe pod <name> -n <ns> — check logs: microk8s kubectl logs <pod> -n <ns>"
+      "microk8s kubectl describe pod <name> -n <ns> - check logs: microk8s kubectl logs <pod> -n <ns>"
   else
     ok "All pods Running / Completed"
   fi
 
-  # API server binding — flag if on all interfaces without firewall
+  # API server binding - flag if on all interfaces without firewall
   if ss -tlnp 2>/dev/null | grep ":16443" | grep -q "0\.0\.0\.0\|\*\|:::"; then
     local ufw_active
     ufw_active="$(ufw status 2>/dev/null | grep -c "Status: active" || echo 0)"
@@ -755,7 +755,7 @@ check_plex() {
         "Verify authentication is enabled: Plex Settings → Network → 'Require authentication on local network'"
     fi
   else
-    warn "Port 32400 not listening — Plex may still be starting or using a custom port"
+    warn "Port 32400 not listening - Plex may still be starting or using a custom port"
   fi
 
   # Running as root?
@@ -765,7 +765,7 @@ check_plex() {
     | awk '{print $1}' | head -1 || true)"
   if [[ "${plex_user}" == "root" ]]; then
     crit "Plex running as root"
-    add_finding "HIGH" "Plex" "Plex Media Server running as root — privilege escalation risk" \
+    add_finding "HIGH" "Plex" "Plex Media Server running as root - privilege escalation risk" \
       "Set PLEX_MEDIA_SERVER_USER in /etc/default/plexmediaserver to a dedicated non-root user"
   elif [[ -n "${plex_user}" ]]; then
     ok "Plex running as user: ${plex_user}"
@@ -781,7 +781,7 @@ check_samba() {
   if systemctl is-active --quiet smbd 2>/dev/null || pgrep -x smbd &>/dev/null; then
     ok "smbd is running"
   else
-    warn "smbd not running — file shares unavailable"
+    warn "smbd not running - file shares unavailable"
     add_finding "MEDIUM" "Samba" "smbd is not running" \
       "systemctl start smbd && systemctl enable smbd"
   fi
@@ -806,7 +806,7 @@ check_samba() {
     warn "Guest-accessible shares detected:"
     echo "${guest_shares}" | indent
     add_finding "MEDIUM" "Samba" "smb.conf has guest-accessible shares configured" \
-      "Review ${smb_conf} — remove 'guest ok = yes' unless intentional; restrict: valid users = @sambashare"
+      "Review ${smb_conf} - remove 'guest ok = yes' unless intentional; restrict: valid users = @sambashare"
   else
     ok "No guest shares in smb.conf"
   fi
@@ -815,7 +815,7 @@ check_samba() {
   local bind_line
   bind_line="$(grep -iP "^\s*interfaces\s*=" "${smb_conf}" 2>/dev/null | head -1 | xargs || true)"
   if [[ -z "${bind_line}" ]]; then
-    warn "Samba not bound to specific interfaces — accessible on all NICs"
+    warn "Samba not bound to specific interfaces - accessible on all NICs"
     add_finding "LOW" "Samba" "Samba not restricted to specific interfaces" \
       "Add to smb.conf [global]: interfaces = lo <LAN-NIC>\nbind interfaces only = yes"
   else
@@ -854,7 +854,7 @@ print_summary() {
   printf "${B}${BCYN}╚══════════════════════════════════════════════════════════════╝${R}\n\n"
 
   if (( total == 0 )); then
-    printf "  ${BGRN}✓  No issues found — server looks healthy.${R}\n\n"
+    printf "  ${BGRN}✓  No issues found - server looks healthy.${R}\n\n"
     return
   fi
 

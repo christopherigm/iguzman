@@ -42,7 +42,7 @@ RUN find ./node_modules \( -name "*.map" -o -name "*.d.ts" -o -name "*.md" \) -d
 # Install OS-level Chromium system dependencies.
 # APT::Install-Recommends "0" prevents apt from pulling in optional packages
 # that playwright install-deps would otherwise include (~50 MB saved).
-# The browser binary itself is NOT baked into the image — it is downloaded at
+# The browser binary itself is NOT baked into the image - it is downloaded at
 # first boot by entrypoint.sh into the PVC mounted at /browsers.
 RUN echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/99no-recommends \
     && node_modules/.bin/playwright install-deps chromium \

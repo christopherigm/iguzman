@@ -1,6 +1,6 @@
-import { isFacebook, isInstagram, isTiktok } from '@repo/helpers/checkers';
+import { isFacebook, isInstagram, isTiktok } from "@repo/helpers/checkers";
 
-const BASE_URL = 'https://api.scrapecreators.com';
+const BASE_URL = "https://api.scrapecreators.com";
 
 export interface NormalizedComment {
   id: string;
@@ -37,7 +37,7 @@ interface TikTokResponse {
   cursor: number;
   has_more: number;
   total: number;
-  // Credits field name may vary — update if ScrapeCreators changes it
+  // Credits field name may vary - update if ScrapeCreators changes it
   credits_remaining?: number;
 }
 
@@ -89,14 +89,14 @@ async function apiFetch<T>(
 ): Promise<T> {
   const qs = new URLSearchParams(params).toString();
   const res = await fetch(`${BASE_URL}${path}?${qs}`, {
-    headers: { 'x-api-key': key },
+    headers: { "x-api-key": key },
   });
   if (!res.ok) throw new Error(`ScrapeCreators ${path} → HTTP ${res.status}`);
   return res.json() as Promise<T>;
 }
 
 function toUnix(value: string | number): number {
-  if (typeof value === 'number') return value;
+  if (typeof value === "number") return value;
   return Math.floor(new Date(value).getTime() / 1000);
 }
 
@@ -114,7 +114,7 @@ async function fetchTikTok(
   key: string,
 ): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
   const data = await apiFetch<TikTokResponse>(
-    '/v1/tiktok/video/comments',
+    "/v1/tiktok/video/comments",
     { url },
     key,
   );
@@ -128,7 +128,7 @@ async function fetchTikTok(
       author_id: c.user.uid,
       author_thumbnail: c.user.avatar_thumb?.url_list?.[0],
       like_count: c.digg_count,
-      parent: 'root',
+      parent: "root",
     }));
   return { comments, creditsRemaining: data.credits_remaining ?? null };
 }
@@ -139,11 +139,12 @@ async function fetchInstagram(
   key: string,
 ): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
   const data = await apiFetch<InstagramResponse>(
-    '/v2/instagram/post/comments',
+    "/v2/instagram/post/comments",
     { url },
     key,
   );
-  if (!data.success) return { comments: [], creditsRemaining: data.credits_remaining ?? null };
+  if (!data.success)
+    return { comments: [], creditsRemaining: data.credits_remaining ?? null };
   const comments: NormalizedComment[] = (data.comments ?? [])
     .slice(0, max)
     .map((c) => ({
@@ -154,7 +155,7 @@ async function fetchInstagram(
       author_id: c.user.id,
       author_thumbnail: c.user.profile_pic_url,
       like_count: c.comment_like_count,
-      parent: 'root',
+      parent: "root",
     }));
   return { comments, creditsRemaining: data.credits_remaining ?? null };
 }
@@ -165,11 +166,12 @@ async function fetchFacebook(
   key: string,
 ): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
   const data = await apiFetch<FacebookResponse>(
-    '/v1/facebook/post/comments',
+    "/v1/facebook/post/comments",
     { url },
     key,
   );
-  if (!data.success) return { comments: [], creditsRemaining: data.credits_remaining ?? null };
+  if (!data.success)
+    return { comments: [], creditsRemaining: data.credits_remaining ?? null };
   const comments: NormalizedComment[] = (data.comments ?? [])
     .slice(0, max)
     .map((c) => ({
@@ -179,7 +181,7 @@ async function fetchFacebook(
       author: c.author.name,
       author_id: c.author.id,
       like_count: c.reaction_count,
-      parent: 'root',
+      parent: "root",
     }));
   return { comments, creditsRemaining: data.credits_remaining ?? null };
 }
@@ -200,7 +202,7 @@ export async function fetchSocialCommentCount(
   try {
     if (isTiktok(url)) {
       const data = await apiFetch<TikTokResponse>(
-        '/v1/tiktok/video/comments',
+        "/v1/tiktok/video/comments",
         { url },
         key,
       );
@@ -211,7 +213,7 @@ export async function fetchSocialCommentCount(
     }
     if (isInstagram(url)) {
       const data = await apiFetch<InstagramResponse>(
-        '/v2/instagram/post/comments',
+        "/v2/instagram/post/comments",
         { url },
         key,
       );
@@ -222,7 +224,7 @@ export async function fetchSocialCommentCount(
     }
     if (isFacebook(url)) {
       const data = await apiFetch<FacebookResponse>(
-        '/v1/facebook/post/comments',
+        "/v1/facebook/post/comments",
         { url },
         key,
       );
@@ -290,11 +292,11 @@ export async function fetchSocialMetadata(
   keyOverride?: string,
 ): Promise<SocialMetadataResult> {
   const key = resolveKey(keyOverride);
-  if (!key) throw new Error('No ScrapeCreators API key available');
+  if (!key) throw new Error("No ScrapeCreators API key available");
 
   if (isFacebook(url)) {
     const data = await apiFetch<FacebookPostResponse>(
-      '/v1/facebook/post',
+      "/v1/facebook/post",
       { url },
       key,
     );
@@ -320,12 +322,13 @@ export async function fetchSocialMetadata(
 
   if (isInstagram(url)) {
     const data = await apiFetch<InstagramPostResponse>(
-      '/v1/instagram/post',
+      "/v1/instagram/post",
       { url },
       key,
     );
     const media = data.data?.xdt_shortcode_media;
-    const caption = media?.edge_media_to_caption?.edges?.[0]?.node?.text ?? null;
+    const caption =
+      media?.edge_media_to_caption?.edges?.[0]?.node?.text ?? null;
     const username = media?.owner?.username ?? null;
     const fullName = media?.owner?.full_name ?? null;
     const uploadTimestamp = media?.taken_at_timestamp ?? null;
@@ -334,13 +337,11 @@ export async function fetchSocialMetadata(
       fulltitle: caption,
       uploader: fullName,
       uploader_id: username
-        ? username.startsWith('@')
+        ? username.startsWith("@")
           ? username
           : `@${username}`
         : null,
-      uploader_url: username
-        ? `https://www.instagram.com/${username}/`
-        : null,
+      uploader_url: username ? `https://www.instagram.com/${username}/` : null,
       description: caption,
       uploadTimestamp,
       tags: null,
@@ -350,7 +351,7 @@ export async function fetchSocialMetadata(
 
   if (isTiktok(url)) {
     const data = await apiFetch<TikTokVideoDetailResponse>(
-      '/v2/tiktok/video',
+      "/v2/tiktok/video",
       { url },
       key,
     );
@@ -363,12 +364,12 @@ export async function fetchSocialMetadata(
       fulltitle: desc,
       uploader: nickname,
       uploader_id: uniqueId
-        ? uniqueId.startsWith('@')
+        ? uniqueId.startsWith("@")
           ? uniqueId
           : `@${uniqueId}`
         : null,
       uploader_url: uniqueId
-        ? `https://www.tiktok.com/@${uniqueId.replace(/^@/, '')}`
+        ? `https://www.tiktok.com/@${uniqueId.replace(/^@/, "")}`
         : null,
       description: desc,
       uploadTimestamp: detail?.create_time ?? null,
@@ -377,7 +378,7 @@ export async function fetchSocialMetadata(
     };
   }
 
-  throw new Error('fetchSocialMetadata: unsupported platform');
+  throw new Error("fetchSocialMetadata: unsupported platform");
 }
 
 /**
@@ -391,9 +392,9 @@ export async function fetchAllSocialComments(
   keyOverride?: string,
 ): Promise<{ comments: NormalizedComment[]; creditsRemaining: number | null }> {
   const key = resolveKey(keyOverride);
-  if (!key) throw new Error('No ScrapeCreators API key available');
+  if (!key) throw new Error("No ScrapeCreators API key available");
   if (isTiktok(url)) return fetchTikTok(url, maxComments, key);
   if (isInstagram(url)) return fetchInstagram(url, maxComments, key);
   if (isFacebook(url)) return fetchFacebook(url, maxComments, key);
-  throw new Error('fetchAllSocialComments: unsupported platform');
+  throw new Error("fetchAllSocialComments: unsupported platform");
 }

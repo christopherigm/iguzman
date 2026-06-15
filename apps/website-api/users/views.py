@@ -281,7 +281,7 @@ class ChangePasswordView(APIView):
 
 
 class AdminUserListView(APIView):
-    """GET /api/auth/admin/users/ — list users belonging to the admin's system."""
+    """GET /api/auth/admin/users/ - list users belonging to the admin's system."""
 
     permission_classes = (IsSystemAdmin,)
 
@@ -298,7 +298,7 @@ class AdminUserListView(APIView):
 
 
 class AdminUserDetailView(APIView):
-    """PATCH /api/auth/admin/users/<pk>/ — toggle is_admin / is_active for a user in the admin's system."""
+    """PATCH /api/auth/admin/users/<pk>/ - toggle is_admin / is_active for a user in the admin's system."""
 
     permission_classes = (IsSystemAdmin,)
 

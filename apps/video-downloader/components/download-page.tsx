@@ -1,32 +1,32 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect } from 'react';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { DownloadForm } from './download-form';
-import { VideoGrid } from './video-grid';
-import { useVideoStore } from './use-video-store';
-import type { StoredVideo } from './use-video-store';
-import type { Platform } from '@repo/helpers/checkers';
-import { OPFSUrlProvider, useOPFSUrls } from './opfs-url-context';
+import { useCallback, useEffect } from "react";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { DownloadForm } from "./download-form";
+import { VideoGrid } from "./video-grid";
+import { useVideoStore } from "./use-video-store";
+import type { StoredVideo } from "./use-video-store";
+import type { Platform } from "@repo/helpers/checkers";
+import { OPFSUrlProvider, useOPFSUrls } from "./opfs-url-context";
 import {
   isOPFSSupported,
   writeToOPFS,
   readFromOPFS,
   deleteFromOPFS,
   requestPersistentStorage,
-} from '@/lib/opfs';
-import { MigrationBanner } from './migration-banner';
-import { FeatureSlider } from './feature-slider';
-import { setCreditsBalance } from './use-credits-store';
-import './download-page.css';
+} from "@/lib/opfs";
+import { MigrationBanner } from "./migration-banner";
+import { FeatureSlider } from "./feature-slider";
+import { setCreditsBalance } from "./use-credits-store";
+import "./download-page.css";
 
 /* ── Credits initializer ────────────────────────────── */
 
 function CreditsInitializer() {
   useEffect(() => {
-    const creditsKey = localStorage.getItem('vd_credits_key');
+    const creditsKey = localStorage.getItem("vd_credits_key");
     if (!creditsKey) return;
-    fetch('/api/credits/balance', { headers: { 'x-credits-key': creditsKey } })
+    fetch("/api/credits/balance", { headers: { "x-credits-key": creditsKey } })
       .then((res) =>
         res.ok ? (res.json() as Promise<{ credits: number }>) : null,
       )
@@ -82,7 +82,7 @@ function useOPFSRecovery({
     void (async () => {
       for (const video of opfsVideos) {
         if (video.opfsStored && video.opfsKey) {
-          // Normal case: OPFS has the file — re-establish blob URLs for this session.
+          // Normal case: OPFS has the file - re-establish blob URLs for this session.
           try {
             const videoFile = await readFromOPFS(video.opfsKey);
             const videoUrl = URL.createObjectURL(videoFile);
@@ -95,11 +95,11 @@ function useOPFSRecovery({
             }
             registerUrls(video.uuid, { videoUrl, thumbnailUrl });
 
-            // Server not yet told to delete — do it now.
+            // Server not yet told to delete - do it now.
             if (!video.serverFileDeleted && video.taskId) {
               try {
                 const res = await fetch(`/api/download-video/${video.taskId}`, {
-                  method: 'DELETE',
+                  method: "DELETE",
                 });
                 // Only mark deleted when the server confirms (404 = already gone).
                 if (res.ok || res.status === 404) {
@@ -108,7 +108,7 @@ function useOPFSRecovery({
               } catch {}
             }
           } catch {
-            // OPFS file evicted by browser — nothing to recover.
+            // OPFS file evicted by browser - nothing to recover.
           }
         } else if (
           !video.opfsStored &&
@@ -116,10 +116,10 @@ function useOPFSRecovery({
           video.file &&
           video.taskId
         ) {
-          // Browser closed before OPFS write completed — try to recover from server.
+          // Browser closed before OPFS write completed - try to recover from server.
           try {
             const videoRes = await fetch(`/api/media/${video.file}`);
-            if (!videoRes.ok) throw new Error('not found');
+            if (!videoRes.ok) throw new Error("not found");
             const videoBlob = await videoRes.blob();
             await writeToOPFS(video.file, videoBlob);
 
@@ -141,7 +141,7 @@ function useOPFSRecovery({
                 const captionsRes = await fetch(video.captionsFile);
                 if (captionsRes.ok) {
                   const captionsBlob = await captionsRes.blob();
-                  const captionsFilename = video.captionsFile.split('/').pop()!;
+                  const captionsFilename = video.captionsFile.split("/").pop()!;
                   captionsKey = `captions_${captionsFilename}`;
                   await writeToOPFS(captionsKey, captionsBlob);
                 }
@@ -154,7 +154,7 @@ function useOPFSRecovery({
                 const commentsRes = await fetch(video.commentsFile);
                 if (commentsRes.ok) {
                   const commentsBlob = await commentsRes.blob();
-                  const commentsFilename = video.commentsFile.split('/').pop()!;
+                  const commentsFilename = video.commentsFile.split("/").pop()!;
                   commentsKey = `comments_${commentsFilename}`;
                   await writeToOPFS(commentsKey, commentsBlob);
                 }
@@ -164,7 +164,7 @@ function useOPFSRecovery({
             let serverFileDeleted = false;
             try {
               const res = await fetch(`/api/download-video/${video.taskId}`, {
-                method: 'DELETE',
+                method: "DELETE",
               });
               serverFileDeleted = res.ok || res.status === 404;
             } catch {}
@@ -190,7 +190,7 @@ function useOPFSRecovery({
               downloadURL: `opfs://${video.file}`,
             });
           } catch {
-            // Server file already gone — leave as-is.
+            // Server file already gone - leave as-is.
           }
         }
       }
@@ -299,7 +299,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
             requestAnimationFrame(() => {
               document
                 .querySelector(`[data-video-uuid="${newVideo.uuid}"]`)
-                ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
             });
           });
         }}

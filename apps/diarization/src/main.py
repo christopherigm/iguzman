@@ -118,10 +118,10 @@ async def get_job_status(job_id: str):
     """
     Poll for the result of a previously submitted `/diarize` or `/transcribe` job.
 
-    - **queued** — waiting to be picked up
-    - **running** — currently processing
-    - **done** — `result` field contains the output
-    - **error** — `error` field contains the failure message
+    - **queued** - waiting to be picked up
+    - **running** - currently processing
+    - **done** - `result` field contains the output
+    - **error** - `error` field contains the failure message
     """
     job = await get_job(job_id)
     if job is None:

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { CSSProperties } from 'react';
-import { UIComponentProps, buildStyleProps } from './utils';
-import './progress-bar.css';
+import { CSSProperties } from "react";
+import { UIComponentProps, buildStyleProps } from "./utils";
+import "./progress-bar.css";
 
 export interface ProgressBarProps extends UIComponentProps {
   /**
@@ -17,7 +17,7 @@ export interface ProgressBarProps extends UIComponentProps {
 }
 
 /**
- * ProgressBar — a minimal, animated progress indicator.
+ * ProgressBar - a minimal, animated progress indicator.
  *
  * - Pass a `value` (0-100) for determinate progress.
  * - Omit `value` for an indeterminate loading animation.
@@ -31,7 +31,7 @@ export interface ProgressBarProps extends UIComponentProps {
 export const ProgressBar = ({
   value,
   size = 4,
-  label = 'Loading',
+  label = "Loading",
   className,
   id,
   ...rest
@@ -42,12 +42,12 @@ export const ProgressBar = ({
   const uiStyle: CSSProperties = buildStyleProps(rest as UIComponentProps);
 
   const rootClasses = [
-    'progress-bar',
-    indeterminate && 'progress-bar--indeterminate',
+    "progress-bar",
+    indeterminate && "progress-bar--indeterminate",
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <div
@@ -56,9 +56,9 @@ export const ProgressBar = ({
       role="progressbar"
       aria-label={label}
       {...(!indeterminate && {
-        'aria-valuenow': clamped,
-        'aria-valuemin': 0,
-        'aria-valuemax': 100,
+        "aria-valuenow": clamped,
+        "aria-valuemin": 0,
+        "aria-valuemax": 100,
       })}
       style={{ height: size, ...uiStyle }}
     >

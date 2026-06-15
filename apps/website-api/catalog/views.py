@@ -72,8 +72,8 @@ from .serializers import (
 
 class ProductCategoryListCreateView(APIView):
     """
-    GET  /api/catalog/product-categories/   — list product categories (public).
-    POST /api/catalog/product-categories/   — create a product category (admin only).
+    GET  /api/catalog/product-categories/   - list product categories (public).
+    POST /api/catalog/product-categories/   - create a product category (admin only).
     """
 
     def get_permissions(self):
@@ -119,9 +119,9 @@ class ProductCategoryListCreateView(APIView):
 
 class ProductCategoryDetailView(APIView):
     """
-    GET    /api/catalog/product-categories/<pk>/  — retrieve (public).
-    PATCH  /api/catalog/product-categories/<pk>/  — partial update (admin only).
-    DELETE /api/catalog/product-categories/<pk>/  — delete (admin only).
+    GET    /api/catalog/product-categories/<pk>/  - retrieve (public).
+    PATCH  /api/catalog/product-categories/<pk>/  - partial update (admin only).
+    DELETE /api/catalog/product-categories/<pk>/  - delete (admin only).
     """
 
     def get_permissions(self):
@@ -170,16 +170,16 @@ class ProductCategoryDetailView(APIView):
 
 class ProductListCreateView(APIView):
     """
-    GET  /api/catalog/products/   — list products (public).
-    POST /api/catalog/products/   — create a product (admin only).
+    GET  /api/catalog/products/   - list products (public).
+    POST /api/catalog/products/   - create a product (admin only).
 
     Query params (GET):
-      system    — filter by system pk
-      category  — filter by category pk
-      brand     — filter by brand pk
-      featured  — 'true' to show only featured products
-      in_stock  — 'true' to show only in-stock products
-      search    — text search on name
+      system    - filter by system pk
+      category  - filter by category pk
+      brand     - filter by brand pk
+      featured  - 'true' to show only featured products
+      in_stock  - 'true' to show only in-stock products
+      search    - text search on name
     """
 
     def get_permissions(self):
@@ -241,9 +241,9 @@ class ProductListCreateView(APIView):
 
 class ProductDetailView(APIView):
     """
-    GET    /api/catalog/products/<pk>/  — retrieve (public).
-    PATCH  /api/catalog/products/<pk>/  — partial update (admin only).
-    DELETE /api/catalog/products/<pk>/  — delete (admin only).
+    GET    /api/catalog/products/<pk>/  - retrieve (public).
+    PATCH  /api/catalog/products/<pk>/  - partial update (admin only).
+    DELETE /api/catalog/products/<pk>/  - delete (admin only).
     """
 
     def get_permissions(self):
@@ -293,8 +293,8 @@ class ProductDetailView(APIView):
 
 class ProductImageListCreateView(APIView):
     """
-    GET  /api/catalog/products/<pk>/images/  — list product images (public).
-    POST /api/catalog/products/<pk>/images/  — add an image (admin only, base64).
+    GET  /api/catalog/products/<pk>/images/  - list product images (public).
+    POST /api/catalog/products/<pk>/images/  - add an image (admin only, base64).
     """
 
     def get_permissions(self):
@@ -329,8 +329,8 @@ class ProductImageListCreateView(APIView):
 
 class ProductImageDetailView(APIView):
     """
-    DELETE /api/catalog/products/<pk>/images/<img_pk>/  — remove an image (admin only).
-    PATCH  /api/catalog/products/<pk>/images/<img_pk>/  — update sort_order / name (admin only).
+    DELETE /api/catalog/products/<pk>/images/<img_pk>/  - remove an image (admin only).
+    PATCH  /api/catalog/products/<pk>/images/<img_pk>/  - update sort_order / name (admin only).
     """
 
     permission_classes = [IsSystemAdmin]
@@ -368,8 +368,8 @@ class ProductImageDetailView(APIView):
 
 class ServiceCategoryListCreateView(APIView):
     """
-    GET  /api/catalog/service-categories/   — list service categories (public).
-    POST /api/catalog/service-categories/   — create a service category (admin only).
+    GET  /api/catalog/service-categories/   - list service categories (public).
+    POST /api/catalog/service-categories/   - create a service category (admin only).
     """
 
     def get_permissions(self):
@@ -415,9 +415,9 @@ class ServiceCategoryListCreateView(APIView):
 
 class ServiceCategoryDetailView(APIView):
     """
-    GET    /api/catalog/service-categories/<pk>/  — retrieve (public).
-    PATCH  /api/catalog/service-categories/<pk>/  — partial update (admin only).
-    DELETE /api/catalog/service-categories/<pk>/  — delete (admin only).
+    GET    /api/catalog/service-categories/<pk>/  - retrieve (public).
+    PATCH  /api/catalog/service-categories/<pk>/  - partial update (admin only).
+    DELETE /api/catalog/service-categories/<pk>/  - delete (admin only).
     """
 
     def get_permissions(self):
@@ -466,16 +466,16 @@ class ServiceCategoryDetailView(APIView):
 
 class ServiceListCreateView(APIView):
     """
-    GET  /api/catalog/services/   — list services (public).
-    POST /api/catalog/services/   — create a service (admin only).
+    GET  /api/catalog/services/   - list services (public).
+    POST /api/catalog/services/   - create a service (admin only).
 
     Query params (GET):
-      system    — filter by system pk
-      category  — filter by service category pk
-      brand     — filter by brand pk
-      featured  — 'true' to show only featured services
-      modality  — filter by modality (online/in_person/hybrid)
-      search    — text search on name
+      system    - filter by system pk
+      category  - filter by service category pk
+      brand     - filter by brand pk
+      featured  - 'true' to show only featured services
+      modality  - filter by modality (online/in_person/hybrid)
+      search    - text search on name
     """
 
     def get_permissions(self):
@@ -538,9 +538,9 @@ class ServiceListCreateView(APIView):
 
 class ServiceDetailView(APIView):
     """
-    GET    /api/catalog/services/<pk>/  — retrieve (public).
-    PATCH  /api/catalog/services/<pk>/  — partial update (admin only).
-    DELETE /api/catalog/services/<pk>/  — delete (admin only).
+    GET    /api/catalog/services/<pk>/  - retrieve (public).
+    PATCH  /api/catalog/services/<pk>/  - partial update (admin only).
+    DELETE /api/catalog/services/<pk>/  - delete (admin only).
     """
 
     def get_permissions(self):
@@ -594,11 +594,11 @@ class ServiceDetailView(APIView):
 
 class VariantOptionListCreateView(APIView):
     """
-    GET  /api/catalog/variant-options/   — list variant options (public).
-    POST /api/catalog/variant-options/   — create a variant option (admin only).
+    GET  /api/catalog/variant-options/   - list variant options (public).
+    POST /api/catalog/variant-options/   - create a variant option (admin only).
 
     Query params (GET):
-      system — filter by system pk
+      system - filter by system pk
     """
 
     def get_permissions(self):
@@ -636,9 +636,9 @@ class VariantOptionListCreateView(APIView):
 
 class VariantOptionDetailView(APIView):
     """
-    GET    /api/catalog/variant-options/<pk>/  — retrieve (public).
-    PATCH  /api/catalog/variant-options/<pk>/  — partial update (admin only).
-    DELETE /api/catalog/variant-options/<pk>/  — delete (admin only).
+    GET    /api/catalog/variant-options/<pk>/  - retrieve (public).
+    PATCH  /api/catalog/variant-options/<pk>/  - partial update (admin only).
+    DELETE /api/catalog/variant-options/<pk>/  - delete (admin only).
     """
 
     def get_permissions(self):
@@ -688,8 +688,8 @@ class VariantOptionDetailView(APIView):
 
 class VariantOptionValueListCreateView(APIView):
     """
-    GET  /api/catalog/variant-options/<pk>/values/   — list values (public).
-    POST /api/catalog/variant-options/<pk>/values/   — create a value (admin only).
+    GET  /api/catalog/variant-options/<pk>/values/   - list values (public).
+    POST /api/catalog/variant-options/<pk>/values/   - create a value (admin only).
     """
 
     def get_permissions(self):
@@ -732,9 +732,9 @@ class VariantOptionValueListCreateView(APIView):
 
 class VariantOptionValueDetailView(APIView):
     """
-    GET    /api/catalog/variant-options/<pk>/values/<val_pk>/  — retrieve (public).
-    PATCH  /api/catalog/variant-options/<pk>/values/<val_pk>/  — partial update (admin only).
-    DELETE /api/catalog/variant-options/<pk>/values/<val_pk>/  — delete (admin only).
+    GET    /api/catalog/variant-options/<pk>/values/<val_pk>/  - retrieve (public).
+    PATCH  /api/catalog/variant-options/<pk>/values/<val_pk>/  - partial update (admin only).
+    DELETE /api/catalog/variant-options/<pk>/values/<val_pk>/  - delete (admin only).
     """
 
     def get_permissions(self):
@@ -783,8 +783,8 @@ class VariantOptionValueDetailView(APIView):
 
 class ProductVariantListCreateView(APIView):
     """
-    GET  /api/catalog/products/<pk>/variants/  — list product variants (public).
-    POST /api/catalog/products/<pk>/variants/  — create a variant (admin only).
+    GET  /api/catalog/products/<pk>/variants/  - list product variants (public).
+    POST /api/catalog/products/<pk>/variants/  - create a variant (admin only).
     """
 
     def get_permissions(self):
@@ -826,9 +826,9 @@ class ProductVariantListCreateView(APIView):
 
 class ProductVariantDetailView(APIView):
     """
-    GET    /api/catalog/products/<pk>/variants/<var_pk>/  — retrieve (public).
-    PATCH  /api/catalog/products/<pk>/variants/<var_pk>/  — partial update (admin only).
-    DELETE /api/catalog/products/<pk>/variants/<var_pk>/  — delete (admin only).
+    GET    /api/catalog/products/<pk>/variants/<var_pk>/  - retrieve (public).
+    PATCH  /api/catalog/products/<pk>/variants/<var_pk>/  - partial update (admin only).
+    DELETE /api/catalog/products/<pk>/variants/<var_pk>/  - delete (admin only).
     """
 
     def get_permissions(self):
@@ -873,8 +873,8 @@ class ProductVariantDetailView(APIView):
 
 class ProductVariantImageListCreateView(APIView):
     """
-    GET  /api/catalog/products/<pk>/variants/<var_pk>/images/  — list variant images (public).
-    POST /api/catalog/products/<pk>/variants/<var_pk>/images/  — add an image (admin only, base64).
+    GET  /api/catalog/products/<pk>/variants/<var_pk>/images/  - list variant images (public).
+    POST /api/catalog/products/<pk>/variants/<var_pk>/images/  - add an image (admin only, base64).
     """
 
     def get_permissions(self):
@@ -909,8 +909,8 @@ class ProductVariantImageListCreateView(APIView):
 
 class ProductVariantImageDetailView(APIView):
     """
-    PATCH  /api/catalog/products/<pk>/variants/<var_pk>/images/<img_pk>/  — update (admin only).
-    DELETE /api/catalog/products/<pk>/variants/<var_pk>/images/<img_pk>/  — delete (admin only).
+    PATCH  /api/catalog/products/<pk>/variants/<var_pk>/images/<img_pk>/  - update (admin only).
+    DELETE /api/catalog/products/<pk>/variants/<var_pk>/images/<img_pk>/  - delete (admin only).
     """
 
     permission_classes = [IsSystemAdmin]
@@ -952,8 +952,8 @@ class ProductVariantImageDetailView(APIView):
 
 class ServiceVariantListCreateView(APIView):
     """
-    GET  /api/catalog/services/<pk>/variants/  — list service variants (public).
-    POST /api/catalog/services/<pk>/variants/  — create a variant (admin only).
+    GET  /api/catalog/services/<pk>/variants/  - list service variants (public).
+    POST /api/catalog/services/<pk>/variants/  - create a variant (admin only).
     """
 
     def get_permissions(self):
@@ -994,9 +994,9 @@ class ServiceVariantListCreateView(APIView):
 
 class ServiceVariantDetailView(APIView):
     """
-    GET    /api/catalog/services/<pk>/variants/<var_pk>/  — retrieve (public).
-    PATCH  /api/catalog/services/<pk>/variants/<var_pk>/  — partial update (admin only).
-    DELETE /api/catalog/services/<pk>/variants/<var_pk>/  — delete (admin only).
+    GET    /api/catalog/services/<pk>/variants/<var_pk>/  - retrieve (public).
+    PATCH  /api/catalog/services/<pk>/variants/<var_pk>/  - partial update (admin only).
+    DELETE /api/catalog/services/<pk>/variants/<var_pk>/  - delete (admin only).
     """
 
     def get_permissions(self):
@@ -1041,8 +1041,8 @@ class ServiceVariantDetailView(APIView):
 
 class ServiceImageListCreateView(APIView):
     """
-    GET  /api/catalog/services/<pk>/images/  — list service images (public).
-    POST /api/catalog/services/<pk>/images/  — add an image (admin only, base64).
+    GET  /api/catalog/services/<pk>/images/  - list service images (public).
+    POST /api/catalog/services/<pk>/images/  - add an image (admin only, base64).
     """
 
     def get_permissions(self):
@@ -1077,8 +1077,8 @@ class ServiceImageListCreateView(APIView):
 
 class ServiceImageDetailView(APIView):
     """
-    DELETE /api/catalog/services/<pk>/images/<img_pk>/  — remove an image (admin only).
-    PATCH  /api/catalog/services/<pk>/images/<img_pk>/  — update sort_order / name (admin only).
+    DELETE /api/catalog/services/<pk>/images/<img_pk>/  - remove an image (admin only).
+    PATCH  /api/catalog/services/<pk>/images/<img_pk>/  - update sort_order / name (admin only).
     """
 
     permission_classes = [IsSystemAdmin]

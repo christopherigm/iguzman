@@ -1,5 +1,5 @@
-import React, { CSSProperties } from 'react';
-import { Box } from './box';
+import React, { CSSProperties } from "react";
+import { Box } from "./box";
 
 export interface DividerProps {
   /**
@@ -19,25 +19,25 @@ export interface DividerProps {
   /** Extra CSS class names. */
   className?: string;
   /** Margin on all sides. */
-  margin?: CSSProperties['margin'];
+  margin?: CSSProperties["margin"];
   /** Margin top. */
-  marginTop?: CSSProperties['marginTop'];
+  marginTop?: CSSProperties["marginTop"];
   /** Margin bottom. */
-  marginBottom?: CSSProperties['marginBottom'];
+  marginBottom?: CSSProperties["marginBottom"];
   /** Margin left. */
-  marginLeft?: CSSProperties['marginLeft'];
+  marginLeft?: CSSProperties["marginLeft"];
   /** Margin right. */
-  marginRight?: CSSProperties['marginRight'];
+  marginRight?: CSSProperties["marginRight"];
   /** Margin on the horizontal axis (left and right). */
-  marginX?: CSSProperties['margin'];
+  marginX?: CSSProperties["margin"];
   /** Margin on the vertical axis (top and bottom). */
-  marginY?: CSSProperties['margin'];
+  marginY?: CSSProperties["margin"];
   /** Opacity of the divider. */
-  opacity?: CSSProperties['opacity'];
+  opacity?: CSSProperties["opacity"];
 }
 
 /**
- * Divider — a thin line used to visually separate content sections.
+ * Divider - a thin line used to visually separate content sections.
  *
  * Renders as a `Box` (`<div>`) with no semantic `<hr>` quirks.
  * All visual properties are applied via inline styles.
@@ -56,7 +56,7 @@ export interface DividerProps {
  */
 export const Divider: React.FC<DividerProps> = ({
   thickness = 1,
-  color = 'var(--surface-2, #e5e7eb)',
+  color = "var(--surface-2, #e5e7eb)",
   height,
   className,
   margin,
@@ -84,7 +84,7 @@ export const Divider: React.FC<DividerProps> = ({
         marginRight: marginRight ?? marginX,
       }
     : {
-        width: '100%',
+        width: "100%",
         height: thickness,
         backgroundColor: color,
         flexShrink: 0,
@@ -101,7 +101,7 @@ export const Divider: React.FC<DividerProps> = ({
       className={className}
       styles={style}
       role="separator"
-      aria-orientation={isVertical ? 'vertical' : 'horizontal'}
+      aria-orientation={isVertical ? "vertical" : "horizontal"}
     />
   );
 };

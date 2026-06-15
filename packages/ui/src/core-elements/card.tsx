@@ -1,11 +1,11 @@
-import React from 'react';
-import { Box, type BoxProps } from './box';
-import './card.css';
+import React from "react";
+import { Box, type BoxProps } from "./box";
+import "./card.css";
 
 export type CardProps = BoxProps;
 
 /**
- * Card — a bordered, flex-column container with sensible defaults.
+ * Card - a bordered, flex-column container with sensible defaults.
  * All UIComponentProps are accepted and override the defaults.
  *
  * @example
@@ -21,11 +21,11 @@ export type CardProps = BoxProps;
  * </Card>
  */
 export const Card: React.FC<CardProps> = ({
-  display = 'flex',
-  flexDirection = 'column',
+  display = "flex",
+  flexDirection = "column",
   padding = 14,
   borderRadius = 6,
-  border = '1px solid var(--border, #e5e7eb)',
+  border = "1px solid var(--border, #e5e7eb)",
   elevation = 0,
   ...rest
 }) => (

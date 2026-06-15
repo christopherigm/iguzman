@@ -283,7 +283,7 @@ class DeleteJobView(APIView):
 class UserApiCredentialListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserApiCredentialSerializer
-    # At most one credential per provider — return a plain list, not a paginated page.
+    # At most one credential per provider - return a plain list, not a paginated page.
     pagination_class = None
 
     def get_queryset(self):

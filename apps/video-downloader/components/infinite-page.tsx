@@ -1,31 +1,31 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Mousewheel, Virtual } from 'swiper/modules';
-import type { Swiper as SwiperType } from 'swiper';
-import 'swiper/css';
-import { useTranslations } from 'next-intl';
-import Image from 'next/image';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Button } from '@repo/ui/core-elements/button';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { useVideoStore } from './use-video-store';
-import type { StoredVideo } from './use-video-store';
-import { resolveMediaUrl, PLATFORM_ICONS } from './video-item-shared';
-import { OPFSUrlProvider, useOPFSUrls } from './opfs-url-context';
+import { useEffect, useRef, useState } from "react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Mousewheel, Virtual } from "swiper/modules";
+import type { Swiper as SwiperType } from "swiper";
+import "swiper/css";
+import { useTranslations } from "next-intl";
+import Image from "next/image";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Button } from "@repo/ui/core-elements/button";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { useVideoStore } from "./use-video-store";
+import type { StoredVideo } from "./use-video-store";
+import { resolveMediaUrl, PLATFORM_ICONS } from "./video-item-shared";
+import { OPFSUrlProvider, useOPFSUrls } from "./opfs-url-context";
 import {
   isOPFSSupported,
   writeToOPFS,
   readFromOPFS,
   deleteFromOPFS,
-} from '@/lib/opfs';
-import './infinite-page.css';
+} from "@/lib/opfs";
+import "./infinite-page.css";
 
 function InfinitePageInner() {
-  const t = useTranslations('InfinitePage');
+  const t = useTranslations("InfinitePage");
   const { completed, removeCompleted, updateCompleted, storeLoaded } =
     useVideoStore();
   const { getUrls, registerUrls, revokeUrls } = useOPFSUrls();
@@ -39,7 +39,7 @@ function InfinitePageInner() {
         if (!video.opfsEnabled && video.serverFileDeleted) {
           if (video.taskId) {
             await fetch(`/api/download-video/${video.taskId}`, {
-              method: 'DELETE',
+              method: "DELETE",
             }).catch(() => {});
           }
           removeCompleted(video.uuid);
@@ -63,12 +63,12 @@ function InfinitePageInner() {
             registerUrls(video.uuid, { videoUrl, thumbnailUrl });
             if (!video.serverFileDeleted && video.taskId) {
               await fetch(`/api/download-video/${video.taskId}`, {
-                method: 'DELETE',
+                method: "DELETE",
               }).catch(() => {});
               updateCompleted(video.uuid, { serverFileDeleted: true });
             }
           } catch {
-            /* OPFS file evicted by browser — server already deleted, remove from store */
+            /* OPFS file evicted by browser - server already deleted, remove from store */
             removeCompleted(video.uuid);
           }
         } else if (
@@ -79,7 +79,7 @@ function InfinitePageInner() {
         ) {
           try {
             const videoRes = await fetch(`/api/media/${video.file}`);
-            if (!videoRes.ok) throw new Error('not found');
+            if (!videoRes.ok) throw new Error("not found");
             const videoBlob = await videoRes.blob();
             await writeToOPFS(video.file, videoBlob);
             let thumbKey: string | null = null;
@@ -100,7 +100,7 @@ function InfinitePageInner() {
                 const captionsRes = await fetch(video.captionsFile);
                 if (captionsRes.ok) {
                   const captionsBlob = await captionsRes.blob();
-                  const captionsFilename = video.captionsFile.split('/').pop()!;
+                  const captionsFilename = video.captionsFile.split("/").pop()!;
                   captionsKey = `captions_${captionsFilename}`;
                   await writeToOPFS(captionsKey, captionsBlob);
                 }
@@ -108,7 +108,7 @@ function InfinitePageInner() {
             }
 
             await fetch(`/api/download-video/${video.taskId}`, {
-              method: 'DELETE',
+              method: "DELETE",
             }).catch(() => {});
             const videoFile = await readFromOPFS(video.file);
             const videoUrl = URL.createObjectURL(videoFile);
@@ -129,14 +129,14 @@ function InfinitePageInner() {
               downloadURL: null,
             });
           } catch {
-            /* Server file not found — delete MongoDB record and remove from store */
+            /* Server file not found - delete MongoDB record and remove from store */
             await fetch(`/api/download-video/${video.taskId}`, {
-              method: 'DELETE',
+              method: "DELETE",
             }).catch(() => {});
             removeCompleted(video.uuid);
           }
         } else if (!video.opfsStored && video.serverFileDeleted) {
-          /* No OPFS data and server already deleted — remove from store */
+          /* No OPFS data and server already deleted - remove from store */
           removeCompleted(video.uuid);
         }
       }
@@ -154,7 +154,7 @@ function InfinitePageInner() {
   const [duration, setDuration] = useState(0);
   const [showPlayPrompt, setShowPlayPrompt] = useState(false);
   const [activeVideoLoading, setActiveVideoLoading] = useState(true);
-  const [objectFit, setObjectFit] = useState<'cover' | 'contain'>('cover');
+  const [objectFit, setObjectFit] = useState<"cover" | "contain">("cover");
   const [autoSwipe, setAutoSwipe] = useState(true);
   const [deletedCountdown, setDeletedCountdown] = useState<number | null>(null);
   const [capturedFrames, setCapturedFrames] = useState<Map<string, string>>(
@@ -225,10 +225,10 @@ function InfinitePageInner() {
     const video = videos[index];
     if (!el || !video || el.videoWidth === 0) return;
     if (capturedFrames.has(video.uuid)) return;
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = el.videoWidth;
     canvas.height = el.videoHeight;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(el, 0, 0);
     canvas.toBlob(
@@ -237,7 +237,7 @@ function InfinitePageInner() {
         const url = URL.createObjectURL(blob);
         setCapturedFrames((prev) => new Map(prev).set(video.uuid, url));
       },
-      'image/jpeg',
+      "image/jpeg",
       0.7,
     );
   }
@@ -255,19 +255,19 @@ function InfinitePageInner() {
       }
     };
 
-    el.addEventListener('timeupdate', onTimeUpdate);
-    el.addEventListener('loadedmetadata', onMetadata);
-    el.addEventListener('durationchange', onMetadata);
-    el.addEventListener('ended', onEnded);
+    el.addEventListener("timeupdate", onTimeUpdate);
+    el.addEventListener("loadedmetadata", onMetadata);
+    el.addEventListener("durationchange", onMetadata);
+    el.addEventListener("ended", onEnded);
 
     if (isFinite(el.duration)) setDuration(el.duration);
     setCurrentTime(el.currentTime);
 
     return () => {
-      el.removeEventListener('timeupdate', onTimeUpdate);
-      el.removeEventListener('loadedmetadata', onMetadata);
-      el.removeEventListener('durationchange', onMetadata);
-      el.removeEventListener('ended', onEnded);
+      el.removeEventListener("timeupdate", onTimeUpdate);
+      el.removeEventListener("loadedmetadata", onMetadata);
+      el.removeEventListener("durationchange", onMetadata);
+      el.removeEventListener("ended", onEnded);
     };
   }, [activeIndex, videos, autoSwipe]);
 
@@ -347,9 +347,9 @@ function InfinitePageInner() {
           ? resolveMediaUrl(video.downloadURL)
           : null);
     if (!href) return;
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = href;
-    a.download = video.name ?? 'video';
+    a.download = video.name ?? "video";
     a.click();
   }
 
@@ -375,14 +375,14 @@ function InfinitePageInner() {
     setDuration(0);
     const el = videoRefs.current.get(swiper.activeIndex);
     if (el) {
-      // Element already in the DOM (virtual module pre-rendered it) — play directly.
+      // Element already in the DOM (virtual module pre-rendered it) - play directly.
       // Update the ref so the ref callback skips the duplicate play call.
       activeVideoElRef.current = el;
       setActiveVideoLoading(el.readyState < 3);
       el.currentTime = 0;
       el.play().catch(() => setShowPlayPrompt(true));
     } else {
-      // Not yet rendered — ref callback will trigger play once it mounts.
+      // Not yet rendered - ref callback will trigger play once it mounts.
       setActiveVideoLoading(true);
     }
   }
@@ -395,15 +395,15 @@ function InfinitePageInner() {
         alignItems="center"
         justifyContent="center"
         gap="8px"
-        styles={{ height: '100dvh' }}
+        styles={{ height: "100dvh" }}
       >
         {!loaded ? (
-          <Typography variant="h3">{t('loading')}</Typography>
+          <Typography variant="h3">{t("loading")}</Typography>
         ) : (
           <>
-            <Typography variant="h3">{t('emptyState')}</Typography>
+            <Typography variant="h3">{t("emptyState")}</Typography>
             <Typography variant="body" color="var(--foreground-muted)">
-              {t('emptyStateHint')}
+              {t("emptyStateHint")}
             </Typography>
           </>
         )}
@@ -487,7 +487,7 @@ function InfinitePageInner() {
               ) : thumbSrc ? (
                 <Image
                   src={thumbSrc}
-                  alt={video.name ?? ''}
+                  alt={video.name ?? ""}
                   fill
                   unoptimized
                   className="infinite-thumbnail"
@@ -502,16 +502,16 @@ function InfinitePageInner() {
       </Swiper>
       {activeVideoLoading && videos[activeIndex] && (
         <Box className="infinite-loading-bar">
-          <ProgressBar label={t('loading')} />
+          <ProgressBar label={t("loading")} />
         </Box>
       )}
       {deletedCountdown !== null && (
         <Box className="infinite-deleted-overlay">
           <Typography variant="h3" className="infinite-deleted-text">
-            {t('videoDeletedFromServer')}
+            {t("videoDeletedFromServer")}
           </Typography>
           <Typography variant="body" className="infinite-deleted-countdown">
-            {t('nextVideoIn', { seconds: deletedCountdown })}
+            {t("nextVideoIn", { seconds: deletedCountdown })}
           </Typography>
         </Box>
       )}
@@ -542,14 +542,14 @@ function InfinitePageInner() {
               href={videos[activeIndex].originalURL}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={t('originalLabel')}
+              aria-label={t("originalLabel")}
               className="infinite-platform-link"
             >
               <Image
                 src={
                   PLATFORM_ICONS[videos[activeIndex].platform] ??
                   PLATFORM_ICONS.unknown ??
-                  ''
+                  ""
                 }
                 alt={videos[activeIndex].platform}
                 width={32}
@@ -564,7 +564,7 @@ function InfinitePageInner() {
         <Button
           unstyled
           onClick={handleManualPlay}
-          aria-label={t('playLabel')}
+          aria-label={t("playLabel")}
           className="infinite-play-prompt"
         >
           <Image src="/icons/play.svg" alt="" width={64} height={64} />
@@ -575,7 +575,7 @@ function InfinitePageInner() {
           className="infinite-progress-container"
           styles={
             {
-              '--progress': `${(currentTime / duration) * 100}%`,
+              "--progress": `${(currentTime / duration) * 100}%`,
             } as React.CSSProperties
           }
         >
@@ -587,7 +587,7 @@ function InfinitePageInner() {
             value={currentTime}
             step={0.1}
             onChange={handleSeek}
-            aria-label={t('seekLabel')}
+            aria-label={t("seekLabel")}
           />
         </Box>
       )}
@@ -595,7 +595,7 @@ function InfinitePageInner() {
         <Button
           unstyled
           href="/"
-          aria-label={t('homeLabel')}
+          aria-label={t("homeLabel")}
           className="infinite-action-btn"
         >
           <Image src="/icons/home.svg" alt="" width={24} height={24} />
@@ -603,7 +603,7 @@ function InfinitePageInner() {
         <Button
           unstyled
           onClick={handleDelete}
-          aria-label={t('deleteLabel')}
+          aria-label={t("deleteLabel")}
           className="infinite-action-btn"
         >
           <Image src="/icons/delete-video.svg" alt="" width={24} height={24} />
@@ -611,7 +611,7 @@ function InfinitePageInner() {
         <Button
           unstyled
           onClick={handleDownload}
-          aria-label={t('downloadLabel')}
+          aria-label={t("downloadLabel")}
           className="infinite-action-btn"
         >
           <Image src="/icons/download.svg" alt="" width={24} height={24} />
@@ -619,16 +619,16 @@ function InfinitePageInner() {
         <Button
           unstyled
           onClick={() =>
-            setObjectFit((prev) => (prev === 'cover' ? 'contain' : 'cover'))
+            setObjectFit((prev) => (prev === "cover" ? "contain" : "cover"))
           }
-          aria-label={t('objectFitLabel')}
+          aria-label={t("objectFitLabel")}
           className="infinite-action-btn"
         >
           <Image
             src={
-              objectFit === 'contain'
-                ? '/icons/maximize.svg'
-                : '/icons/minimize.svg'
+              objectFit === "contain"
+                ? "/icons/maximize.svg"
+                : "/icons/minimize.svg"
             }
             alt=""
             width={24}
@@ -638,16 +638,16 @@ function InfinitePageInner() {
         <Button
           unstyled
           onClick={() => setAutoSwipe((prev) => !prev)}
-          aria-label={t('autoSwipeLabel')}
+          aria-label={t("autoSwipeLabel")}
           aria-pressed={autoSwipe}
-          className={`infinite-action-btn${autoSwipe ? '' : ' infinite-action-btn--off'}`}
+          className={`infinite-action-btn${autoSwipe ? "" : " infinite-action-btn--off"}`}
         >
           <Image src="/icons/up-arrow.svg" alt="" width={24} height={24} />
         </Button>
         <Button
           unstyled
           onClick={handleReshuffle}
-          aria-label={t('reshuffleLabel')}
+          aria-label={t("reshuffleLabel")}
           className="infinite-action-btn"
         >
           <Image src="/icons/random.svg" alt="" width={24} height={24} />
@@ -655,8 +655,8 @@ function InfinitePageInner() {
       </Box>
       {confirmDelete && (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText')}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText")}
           okCallback={confirmAndDelete}
           cancelCallback={() => setConfirmDelete(false)}
         />

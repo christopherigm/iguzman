@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, CSSProperties } from 'react';
-import Image from 'next/image';
-import { UIComponentProps, buildStyleProps, type MenuItem } from './utils';
-import { Icon } from './icon';
-import { TextInput } from './text-input';
-import './drawer.css';
-import getImageDimensionsFromBase64 from '@repo/helpers/get-image-dimensions-from-base64';
-import { ThemeSwitch } from '../theme-switch';
-import { Box } from './box';
+import React, { useState, useEffect, useRef, CSSProperties } from "react";
+import Image from "next/image";
+import { UIComponentProps, buildStyleProps, type MenuItem } from "./utils";
+import { Icon } from "./icon";
+import { TextInput } from "./text-input";
+import "./drawer.css";
+import getImageDimensionsFromBase64 from "@repo/helpers/get-image-dimensions-from-base64";
+import { ThemeSwitch } from "../theme-switch";
+import { Box } from "./box";
 
 /**
  * Props for the `Drawer` component.
@@ -68,9 +68,9 @@ const DrawerItem: React.FC<{
     }
   };
 
-  const Tag = item.href && !hasChildren ? 'a' : 'button';
+  const Tag = item.href && !hasChildren ? "a" : "button";
   const linkProps =
-    Tag === 'a' ? { href: item.href } : { type: 'button' as const };
+    Tag === "a" ? { href: item.href } : { type: "button" as const };
 
   return (
     <>
@@ -86,15 +86,15 @@ const DrawerItem: React.FC<{
         <span className="ui-drawer-item-label">{item.label}</span>
         {hasChildren && (
           <Icon
-            icon={chevronIcon || '/icons/chevron-down.svg'}
+            icon={chevronIcon || "/icons/chevron-down.svg"}
             size="16px"
             color="var(--foreground)"
             className={[
-              'ui-drawer-chevron',
-              expanded ? 'ui-drawer-chevron--open' : '',
+              "ui-drawer-chevron",
+              expanded ? "ui-drawer-chevron--open" : "",
             ]
               .filter(Boolean)
-              .join(' ')}
+              .join(" ")}
           />
         )}
       </Tag>
@@ -123,7 +123,7 @@ const DrawerSearch: React.FC<{
   searchIcon?: string;
   externalValue?: string;
 }> = ({ onSearch, onSearchChange, externalValue }) => {
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState("");
   const prevExternalRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -131,8 +131,8 @@ const DrawerSearch: React.FC<{
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setValue(externalValue);
       onSearchChange?.(externalValue);
-    } else if (externalValue === '' && prevExternalRef.current) {
-      setValue('');
+    } else if (externalValue === "" && prevExternalRef.current) {
+      setValue("");
     }
     prevExternalRef.current = externalValue;
   }, [externalValue, onSearchChange]);
@@ -143,7 +143,7 @@ const DrawerSearch: React.FC<{
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && value.trim()) {
+    if (e.key === "Enter" && value.trim()) {
       onSearch?.(value.trim());
     }
   };
@@ -165,7 +165,7 @@ const DrawerSearch: React.FC<{
 // ── Drawer ───────────────────────────────────────────────────────────
 
 /**
- * Drawer — full-height slide-in panel for mobile navigation.
+ * Drawer - full-height slide-in panel for mobile navigation.
  *
  * @example
  * <Drawer
@@ -181,7 +181,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   onClose,
   items,
   logo,
-  logoAlt = '',
+  logoAlt = "",
   logoWidth = 120,
   logoHeight = 40,
   version,
@@ -221,12 +221,12 @@ export const Drawer: React.FC<DrawerProps> = ({
   // Prevent body scroll when drawer is open
   useEffect(() => {
     if (open) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [open]);
 
@@ -249,7 +249,7 @@ export const Drawer: React.FC<DrawerProps> = ({
       <aside
         ref={panelRef}
         id={id}
-        className={['ui-drawer-panel', className].filter(Boolean).join(' ')}
+        className={["ui-drawer-panel", className].filter(Boolean).join(" ")}
         style={safeStyle}
       >
         {/* Header: logo + close button */}
@@ -268,7 +268,7 @@ export const Drawer: React.FC<DrawerProps> = ({
             aria-label="Close menu"
           >
             <Icon
-              icon={closeIcon || '/icons/close.svg'}
+              icon={closeIcon || "/icons/close.svg"}
               color="var(--foreground)"
               size="20px"
             />

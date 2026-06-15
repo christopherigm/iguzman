@@ -1,19 +1,19 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { existsSync, readdirSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 
 /** Maps common base64 image MIME types to file extensions. */
 const MIME_TO_EXTENSION: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/gif': '.gif',
-  'image/webp': '.webp',
-  'image/svg+xml': '.svg',
-  'image/bmp': '.bmp',
-  'image/avif': '.avif',
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+  "image/svg+xml": ".svg",
+  "image/bmp": ".bmp",
+  "image/avif": ".avif",
 };
 
 /** Default file extension when the MIME type cannot be determined. */
-const DEFAULT_EXTENSION = '.jpg';
+const DEFAULT_EXTENSION = ".jpg";
 
 /**
  * Extracts the MIME type and raw base64 data from a data-URI string.
@@ -21,15 +21,17 @@ const DEFAULT_EXTENSION = '.jpg';
  * @param dataUri - A string such as `"data:image/png;base64,iVBOR..."`.
  * @returns A tuple of `[extension, base64Data]`.
  */
-function parseDataUri(dataUri: string): [extension: string, base64Data: string] {
-  const [header, data] = dataUri.split(';base64,');
+function parseDataUri(
+  dataUri: string,
+): [extension: string, base64Data: string] {
+  const [header, data] = dataUri.split(";base64,");
 
   if (!data) {
-    // Plain base64 string without a data-URI prefix — assume JPEG.
+    // Plain base64 string without a data-URI prefix - assume JPEG.
     return [DEFAULT_EXTENSION, dataUri];
   }
 
-  const mime = header?.replace('data:', '') ?? '';
+  const mime = header?.replace("data:", "") ?? "";
   const extension = MIME_TO_EXTENSION[mime] ?? DEFAULT_EXTENSION;
 
   return [extension, data];
@@ -71,7 +73,7 @@ const saveBase64Images = async (
       const [extension, base64Data] = parseDataUri(image);
       const filePath = `${destinationFolder}/${startIndex + index}${extension}`;
 
-      await writeFile(filePath, base64Data, { encoding: 'base64' });
+      await writeFile(filePath, base64Data, { encoding: "base64" });
     }),
   );
 };

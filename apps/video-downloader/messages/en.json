@@ -140,7 +140,7 @@
     "s3Title": "3. Copyright and Intellectual Property",
     "s3Body": "Downloading a video does not transfer any copyright or ownership rights to you. You must respect the intellectual property rights of content creators and rights holders. Redistribution, public performance, or commercial use of downloaded content without proper authorization may constitute copyright infringement under applicable law.",
     "s4Title": "4. Platform Terms of Service",
-    "s4Body": "Most platforms — including YouTube, Facebook, Instagram, TikTok, and X (Twitter) — prohibit scraping or automated downloading in their Terms of Service. Violating a platform's ToS is a civil matter between you and that platform, not a criminal act in most jurisdictions. However, you use this application at your own risk and assume full responsibility for any ToS violations.",
+    "s4Body": "Most platforms - including YouTube, Facebook, Instagram, TikTok, and X (Twitter) - prohibit scraping or automated downloading in their Terms of Service. Violating a platform's ToS is a civil matter between you and that platform, not a criminal act in most jurisdictions. However, you use this application at your own risk and assume full responsibility for any ToS violations.",
     "s5Title": "5. Legal Status of yt-dlp",
     "s5Body": "This application uses yt-dlp, an open-source tool published under the Unlicense. yt-dlp is legal software. Courts in multiple jurisdictions have held that Terms of Service violations alone do not constitute illegal activity. Whether a specific download is lawful in your jurisdiction depends on local copyright law and the nature of the content.",
     "s6Title": "6. No DRM Circumvention",
@@ -330,7 +330,7 @@
   "MigrationBanner": {
     "close": "Close",
     "heading": "We're moving to Media 2 Go!",
-    "body": "After May 31 ({days} days left), vd2.iguzman.com.mx will become read-only — no new downloads will be available there. Head over to our new home to keep downloading."
+    "body": "After May 31 ({days} days left), vd2.iguzman.com.mx will become read-only - no new downloads will be available there. Head over to our new home to keep downloading."
   },
   "Credits": {
     "balanceLabel": "{credits} credits",
@@ -338,7 +338,7 @@
     "buyMore": "Buy More",
     "restoreKey": "Restore Key",
     "purchaseTitle": "Buy Credits",
-    "purchaseText": "Select a credit pack. Credits are used for subtitle translation, comment downloads, and server processing. Your key can be shared with anyone — credits are shared across all uses. Use it on as many devices as you like.",
+    "purchaseText": "Select a credit pack. Credits are used for subtitle translation, comment downloads, and server processing. Your key can be shared with anyone - credits are shared across all uses. Use it on as many devices as you like.",
     "creditsCount": "{credits} credits",
     "purchaseNote": "Your key is saved in your browser. Save it somewhere safe in case you switch devices.",
     "purchaseError": "Something went wrong. Please try again.",
@@ -358,7 +358,7 @@
     "deleteKey": "Delete key",
     "keyCopied": "Copied!",
     "deleteKeyTitle": "Delete Credits Key?",
-    "deleteKeyText": "This will permanently remove your credits key from this device. We do not store a copy — this action cannot be undone.",
+    "deleteKeyText": "This will permanently remove your credits key from this device. We do not store a copy - this action cannot be undone.",
     "deleteKeyConfirm": "Delete",
     "deleteKeyCancel": "Cancel",
     "couponTitle": "Redeem a Coupon",
@@ -375,12 +375,12 @@
     "offline": {
       "title": "Watch Anywhere, Even Offline",
       "body1": "Download your favorite videos and take them with you on planes, trains, or anywhere with no internet connection.",
-      "body2": "Once saved to your device, content plays anytime — no Wi-Fi required."
+      "body2": "Once saved to your device, content plays anytime - no Wi-Fi required."
     },
     "reelMode": {
       "title": "Your Reels, All in One Place",
       "body1": "Collect your favorite short videos from TikTok, Instagram, YouTube, and more into a single personal library.",
-      "body2": "Discover, save, and replay what matters to you — no algorithm needed."
+      "body2": "Discover, save, and replay what matters to you - no algorithm needed."
     },
     "subtitles": {
       "title": "Subtitles & Translations",
@@ -395,7 +395,7 @@
     "videoEditor": {
       "title": "Powerful Video Editor",
       "body1": "Transform your downloads right in the browser: resize video, boost frame rate, convert to H.265, and remove black bars.",
-      "body2": "No extra software or account needed — everything runs on your device."
+      "body2": "No extra software or account needed - everything runs on your device."
     },
     "prev": "Previous slide",
     "next": "Next slide",

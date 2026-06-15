@@ -181,12 +181,12 @@ nodeAffinity:
 #   wg-quick's DNS management redirects port-53 traffic through the
 #   VPN for all containers. Kubernetes CoreDNS already handles DNS
 #   via a 10.x.x.x ClusterIP that is excluded from AllowedIPs and
-#   always routes via eth0 — no VPN involvement needed.
+#   always routes via eth0 - no VPN involvement needed.
 #
 # ② No "AllowedIPs = 0.0.0.0/0" in [Peer]
 #   0.0.0.0/0 triggers wg-quick's policy-routing mode (kernel ip rule
-#   entries) which captures ALL traffic — including internal cluster
-#   traffic — before the tunnel is established, breaking the pod.
+#   entries) which captures ALL traffic - including internal cluster
+#   traffic - before the tunnel is established, breaking the pod.
 #   Use the public-only CIDR list below instead. It is the complement
 #   of 10/8 + 169.254/16 + 172.16/12 + 192.168/16, so private ranges
 #   route via eth0 (Calico) automatically with no PostUp tricks.
@@ -207,7 +207,7 @@ nodeAffinity:
 #   # ① Prevent the VPN endpoint's own UDP traffic from looping through wg0
 #   PostUp  = ip route add $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1
 #   PreDown = ip route del $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1 2>/dev/null || true
-#   # ② Bypass VPN for Groq API — Surfshark IPs are blocked by Groq
+#   # ② Bypass VPN for Groq API - Surfshark IPs are blocked by Groq
 #   PostUp  = for IP in $(nslookup api.groq.com 2>/dev/null | awk '/^Address: /{print $2}' || getent hosts api.groq.com 2>/dev/null | awk '{print $1}'); do ip route add ${IP}/32 via 169.254.1.1 dev eth0 2>/dev/null || true; done
 #   PreDown = for IP in $(nslookup api.groq.com 2>/dev/null | awk '/^Address: /{print $2}' || getent hosts api.groq.com 2>/dev/null | awk '{print $1}'); do ip route del ${IP}/32 via 169.254.1.1 dev eth0 2>/dev/null || true; done
 #

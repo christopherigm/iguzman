@@ -325,7 +325,7 @@ class BaseVariant(Common):
         raise NotImplementedError("Subclasses must implement _parent")
 
     # ------------------------------------------------------------------
-    # Effective-value helpers — always use these in serializers / views
+    # Effective-value helpers - always use these in serializers / views
     # ------------------------------------------------------------------
 
     @property

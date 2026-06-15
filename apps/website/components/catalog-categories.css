@@ -29,7 +29,7 @@
   object-fit: cover;
 }
 
-/* Gradient overlay for image cards — covers only the bottom text area */
+/* Gradient overlay for image cards - covers only the bottom text area */
 .category-card__overlay {
   position: absolute;
   inset: 0;

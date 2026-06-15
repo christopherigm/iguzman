@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OpenCV Farneback dense optical flow — replaces Deep3D's PWC-Net preprocessing.
+"""OpenCV Farneback dense optical flow - replaces Deep3D's PWC-Net preprocessing.
 
 Reads frames from {output_dir}/images/ and writes flow pairs to
 {output_dir}/flows/{interval}/{j:05d}.npy  (shape [2, H, W, 2]).

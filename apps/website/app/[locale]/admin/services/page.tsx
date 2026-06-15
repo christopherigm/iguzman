@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { AdminEntityList } from '@/components/admin/admin-entity-list';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
-import { listServices, deleteService } from '@/lib/admin-api';
-import { getUserFromToken } from '@/lib/auth';
+import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import { AdminEntityList } from "@/components/admin/admin-entity-list";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { listServices, deleteService } from "@/lib/admin-api";
+import { getUserFromToken } from "@/lib/auth";
 
 export default function AdminServicesPage() {
-  const t = useTranslations('Admin');
+  const t = useTranslations("Admin");
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function AdminServicesPage() {
     try {
       setItems(await listServices(systemId));
     } catch {
-      setError(t('errorLoad'));
+      setError(t("errorLoad"));
     } finally {
       setLoading(false);
     }
@@ -35,34 +35,34 @@ export default function AdminServicesPage() {
       await deleteService(id);
       setItems((prev) => prev.filter((i) => i.id !== id));
     } catch {
-      setError(t('errorDelete'));
+      setError(t("errorDelete"));
     }
   };
 
   const columns = [
-    { key: 'image', label: 'Image' },
-    { key: 'name', label: t('name') },
-    { key: 'sku', label: 'SKU' },
+    { key: "image", label: "Image" },
+    { key: "name", label: t("name") },
+    { key: "sku", label: "SKU" },
     {
-      key: 'price',
-      label: t('price') ?? 'Price',
+      key: "price",
+      label: t("price") ?? "Price",
       render: (v: unknown, r: Record<string, unknown>) =>
-        v != null ? `${v} ${r.currency ?? ''}` : '—',
+        v != null ? `${v} ${r.currency ?? ""}` : "-",
     },
-    { key: 'enabled', label: t('enabled') },
+    { key: "enabled", label: t("enabled") },
   ];
 
   return (
     <>
       <Breadcrumbs
         items={[
-          { label: t('home'), href: '/' },
-          { label: t('breadcrumbAdmin'), href: '/admin' },
-          { label: t('services') },
+          { label: t("home"), href: "/" },
+          { label: t("breadcrumbAdmin"), href: "/admin" },
+          { label: t("services") },
         ]}
       />
       <AdminEntityList
-        title={t('services')}
+        title={t("services")}
         items={items}
         columns={columns}
         basePath="/admin/services"

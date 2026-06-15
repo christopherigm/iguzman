@@ -1,7 +1,11 @@
-'use client';
+"use client";
 
-import { useRef, useState, useCallback, useEffect } from 'react';
-import type { TtsEngine, TtsOptions, TtsVoice } from '@repo/helpers/text-to-speech';
+import { useRef, useState, useCallback, useEffect } from "react";
+import type {
+  TtsEngine,
+  TtsOptions,
+  TtsVoice,
+} from "@repo/helpers/text-to-speech";
 
 export type { TtsEngine, TtsOptions, TtsVoice };
 
@@ -40,11 +44,11 @@ export interface UseTextToSpeechReturn {
 }
 
 /**
- * useTextToSpeech — text → audio playback hook.
+ * useTextToSpeech - text → audio playback hook.
  *
  * Supports two engines:
- *  - `'browser'`  Web Speech API — instant, zero-download, OS voices.
- *  - `'neural'`   SpeechT5 via a Web Worker — high quality, ~100-300 MB first load.
+ *  - `'browser'`  Web Speech API - instant, zero-download, OS voices.
+ *  - `'neural'`   SpeechT5 via a Web Worker - high quality, ~100-300 MB first load.
  *
  * @example
  * const { speak, isSpeaking, stop } = useTextToSpeech({ engine: 'browser', language: 'en' });
@@ -54,8 +58,8 @@ export function useTextToSpeech(
   options: UseTextToSpeechOptions = {},
 ): UseTextToSpeechReturn {
   const {
-    engine = 'browser',
-    language = 'en',
+    engine = "browser",
+    language = "en",
     model,
     speakerEmbeddings,
     rate = 1,
@@ -81,7 +85,7 @@ export function useTextToSpeech(
 
   // ── Browser engine: enumerate voices ──────────────────────
   useEffect(() => {
-    if (engine !== 'browser' || typeof window === 'undefined') return;
+    if (engine !== "browser" || typeof window === "undefined") return;
 
     const loadVoices = () => {
       setVoices(
@@ -95,8 +99,9 @@ export function useTextToSpeech(
     };
 
     loadVoices();
-    speechSynthesis.addEventListener('voiceschanged', loadVoices);
-    return () => speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+    speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () =>
+      speechSynthesis.removeEventListener("voiceschanged", loadVoices);
   }, [engine]);
 
   // ── Neural engine: worker lifecycle ───────────────────────
@@ -104,7 +109,7 @@ export function useTextToSpeech(
   const getWorker = useCallback((): Worker => {
     if (workerRef.current) return workerRef.current;
 
-    const worker = new Worker(new URL('./tts-worker.ts', import.meta.url));
+    const worker = new Worker(new URL("./tts-worker.ts", import.meta.url));
 
     worker.onmessage = ({
       data,
@@ -116,7 +121,7 @@ export function useTextToSpeech(
       const { id, type, payload } = data;
 
       // Model download progress broadcast (no id)
-      if (type === 'model-progress') {
+      if (type === "model-progress") {
         setModelLoadProgress((payload as { progress: number }).progress);
         return;
       }
@@ -126,12 +131,12 @@ export function useTextToSpeech(
       if (!pending) return;
       pendingRef.current.delete(id);
 
-      if (type === 'loaded') {
+      if (type === "loaded") {
         pending.resolve(undefined);
-      } else if (type === 'result') {
+      } else if (type === "result") {
         // Resolve with the raw payload; speak() unpacks and plays it.
         pending.resolve(payload);
-      } else if (type === 'error') {
+      } else if (type === "error") {
         const msg = (payload as { message: string }).message;
         setError(msg);
         pending.reject(new Error(msg));
@@ -139,7 +144,7 @@ export function useTextToSpeech(
     };
 
     worker.onerror = (event) => {
-      const msg = event.message ?? 'TTS worker crashed';
+      const msg = event.message ?? "TTS worker crashed";
       setError(msg);
       for (const [, p] of pendingRef.current) p.reject(new Error(msg));
       pendingRef.current.clear();
@@ -162,7 +167,7 @@ export function useTextToSpeech(
       const id = nextId();
       const worker = getWorker();
       pendingRef.current.set(id, { resolve: () => resolve(), reject });
-      worker.postMessage({ id, type: 'load', payload: { model } });
+      worker.postMessage({ id, type: "load", payload: { model } });
     });
 
     loadPromiseRef.current = promise
@@ -213,7 +218,7 @@ export function useTextToSpeech(
       if (!text.trim()) return;
       setError(null);
 
-      if (engine === 'browser') {
+      if (engine === "browser") {
         // Cancel any ongoing utterance before starting a new one.
         speechSynthesis.cancel();
 
@@ -230,7 +235,7 @@ export function useTextToSpeech(
           };
           utterance.onerror = (e) => {
             setIsSpeaking(false);
-            const msg = e.error ?? 'Speech synthesis error';
+            const msg = e.error ?? "Speech synthesis error";
             setError(msg);
             reject(new Error(msg));
           };
@@ -248,12 +253,13 @@ export function useTextToSpeech(
         const id = nextId();
         const worker = getWorker();
         pendingRef.current.set(id, {
-          resolve: (v) => resolve(v as { audio: Float32Array; samplingRate: number }),
+          resolve: (v) =>
+            resolve(v as { audio: Float32Array; samplingRate: number }),
           reject,
         });
         worker.postMessage({
           id,
-          type: 'synthesize',
+          type: "synthesize",
           payload: { text, model, speakerEmbeddings },
         });
       });
@@ -275,7 +281,7 @@ export function useTextToSpeech(
   );
 
   const stop = useCallback((): void => {
-    if (engine === 'browser') {
+    if (engine === "browser") {
       speechSynthesis.cancel();
       setIsSpeaking(false);
     } else {
@@ -286,11 +292,11 @@ export function useTextToSpeech(
   }, [engine]);
 
   const pause = useCallback((): void => {
-    if (engine === 'browser') speechSynthesis.pause();
+    if (engine === "browser") speechSynthesis.pause();
   }, [engine]);
 
   const resume = useCallback((): void => {
-    if (engine === 'browser') speechSynthesis.resume();
+    if (engine === "browser") speechSynthesis.resume();
   }, [engine]);
 
   return {

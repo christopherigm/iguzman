@@ -1,14 +1,14 @@
 import type {
   DownloadVideoOptions,
   DownloadVideoError,
-} from '@repo/helpers/download-video';
+} from "@repo/helpers/download-video";
 
 /* ── Input ─────────────────────────────────────────── */
 
-/** Fields sent to the server to start a download — picked from DownloadVideoOptions. */
+/** Fields sent to the server to start a download - picked from DownloadVideoOptions. */
 export type VideoDownloadInput = Pick<
   DownloadVideoOptions,
-  'url' | 'justAudio' | 'checkCodec' | 'iosDevice' | 'maxHeight'
+  "url" | "justAudio" | "checkCodec" | "iosDevice" | "maxHeight"
 > & {
   /** When true, captions/subtitles are downloaded along with the video. */
   captionsEnabled?: boolean;
@@ -78,30 +78,30 @@ export interface VideoResultFields {
 
 /** Server-side task statuses (DB + polling). */
 export type TaskStatus =
-  | 'pending'
-  | 'downloading'
-  | 'processing'
-  | 'converting'
-  | 'burning'
-  | 'translating'
-  | 'diarizing'
-  | 'uploading'
-  | 'done'
-  | 'error';
+  | "pending"
+  | "downloading"
+  | "processing"
+  | "converting"
+  | "burning"
+  | "translating"
+  | "diarizing"
+  | "uploading"
+  | "done"
+  | "error";
 
 /** Client-side statuses extend task statuses with local processing states. */
-export type VideoStatus = TaskStatus | 'queued';
+export type VideoStatus = TaskStatus | "queued";
 
 /* ── Burn captions config ──────────────────────────── */
 
 export type BurnCaptionsAnimationType =
-  | 'none'
-  | 'fade'
-  | 'slideUp'
-  | 'slideDown'
-  | 'blur'
-  | 'zoom'
-  | 'karaoke';
+  | "none"
+  | "fade"
+  | "slideUp"
+  | "slideDown"
+  | "blur"
+  | "zoom"
+  | "karaoke";
 
 export interface BurnCaptionsAnimationConfig {
   type: BurnCaptionsAnimationType;
@@ -120,16 +120,16 @@ export interface BurnCaptionsAnimationConfig {
   /** Zoom: duration in ms to scale text from 0→100%. Default 300. */
   zoomDurationMs?: number;
   /** Karaoke: ASS tag variant. Default 'kf' (sweep). */
-  karaokeMode?: 'k' | 'kf' | 'ko';
+  karaokeMode?: "k" | "kf" | "ko";
   /** Karaoke: highlight colour in ASS &HAABBGGRR format. Default yellow. */
   karaokeHighlightColour?: string;
 }
 
 export type BurnCaptionsFontStyle =
-  | 'normal'
-  | 'bold'
-  | 'italic'
-  | 'bold-italic';
+  | "normal"
+  | "bold"
+  | "italic"
+  | "bold-italic";
 
 export interface BurnCaptionsConfig {
   alignment: number;

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/actions/deep3d.sh — AI video stabilization via Deep3D (optical flow, PyTorch/CUDA)
+# lib/actions/deep3d.sh - AI video stabilization via Deep3D (optical flow, PyTorch/CUDA)
 # Depends on: probe.sh, progress.sh, encoders.sh, ui.sh
 
 # ── State globals ─────────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ check_deep3d() {
 
 bootstrap_deep3d() {
   if ! command -v python3 &>/dev/null; then
-    printf "  %s Python 3 not found — cannot install Deep3D.\n" "$(clr_bold_red '✗')"
+    printf "  %s Python 3 not found - cannot install Deep3D.\n" "$(clr_bold_red '✗')"
     return 1
   fi
 
@@ -45,9 +45,9 @@ bootstrap_deep3d() {
 # Shows an optical-flow-line progress bar.
 #
 # Arguments:
-#   src       — input video path
-#   output    — output video path
-#   dur_sec   — probed duration (for ETA display only)
+#   src       - input video path
+#   output    - output video path
+#   dur_sec   - probed duration (for ETA display only)
 
 run_deep3d() {
   local src="$1"

@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Button } from '@repo/ui/core-elements/button';
-import { Spinner } from '@repo/ui/core-elements/spinner';
-import { Icon } from '@repo/ui/core-elements/icon';
-import { listOPFSFiles, deleteFromOPFS } from '@/lib/opfs';
-import './clear-storage-modal.css';
+import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Button } from "@repo/ui/core-elements/button";
+import { Spinner } from "@repo/ui/core-elements/spinner";
+import { Icon } from "@repo/ui/core-elements/icon";
+import { listOPFSFiles, deleteFromOPFS } from "@/lib/opfs";
+import "./clear-storage-modal.css";
 
 /* ── Constants ──────────────────────────────────────── */
 
-const COMPLETED_KEY = 'vd_completed_v2';
+const COMPLETED_KEY = "vd_completed_v2";
 const MB_30 = 30 * 1024 * 1024;
 const MB_100 = 100 * 1024 * 1024;
 
@@ -37,7 +37,7 @@ interface OPFSFile {
   size: number;
 }
 
-type CategoryKey = 'orphan' | 'audio' | 'large' | 'medium' | 'other';
+type CategoryKey = "orphan" | "audio" | "large" | "medium" | "other";
 
 interface CategoryData {
   records: StoredEntry[];
@@ -85,7 +85,7 @@ function buildCategories(
 
   const orphanFiles = opfsFiles.filter((f) => !referencedKeys.has(f.name));
 
-  /* Mutually exclusive categories — priority: audio > large > medium > other */
+  /* Mutually exclusive categories - priority: audio > large > medium > other */
   const audio: StoredEntry[] = [];
   const large: StoredEntry[] = [];
   const medium: StoredEntry[] = [];
@@ -128,11 +128,11 @@ function buildCategories(
 /* ── Category metadata ──────────────────────────────── */
 
 const CATEGORY_KEYS: CategoryKey[] = [
-  'orphan',
-  'audio',
-  'large',
-  'medium',
-  'other',
+  "orphan",
+  "audio",
+  "large",
+  "medium",
+  "other",
 ];
 
 /* ── Component ──────────────────────────────────────── */
@@ -141,7 +141,7 @@ export function ClearStorageModal({
   onClose,
   onRemoveVideosByUuids,
 }: ClearStorageModalProps) {
-  const t = useTranslations('ClearStorageModal');
+  const t = useTranslations("ClearStorageModal");
 
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Record<
@@ -186,8 +186,8 @@ export function ClearStorageModal({
       const cat = categories[key];
       setClearing(key);
 
-      if (key === 'orphan') {
-        /* Orphan files have no localStorage records — just delete the OPFS files */
+      if (key === "orphan") {
+        /* Orphan files have no localStorage records - just delete the OPFS files */
         for (const file of cat.orphanFiles) {
           await deleteFromOPFS(file.name);
         }
@@ -212,7 +212,7 @@ export function ClearStorageModal({
             );
           }
         } catch {
-          /* Malformed storage — leave it */
+          /* Malformed storage - leave it */
         }
 
         /* Remove records from the React grid */
@@ -240,7 +240,7 @@ export function ClearStorageModal({
 
   const body = loading ? (
     <div className="csm-loading">
-      <Spinner size={32} thickness={3} label={t('title')} />
+      <Spinner size={32} thickness={3} label={t("title")} />
     </div>
   ) : isEmpty ? (
     <Typography
@@ -248,19 +248,19 @@ export function ClearStorageModal({
       color="var(--foreground-muted, #888)"
       className="csm-empty"
     >
-      {t('emptyMessage')}
+      {t("emptyMessage")}
     </Typography>
   ) : (
     <div className="csm-categories">
       {CATEGORY_KEYS.map((key) => {
         const cat = categories![key];
         const count =
-          key === 'orphan' ? cat.orphanFiles.length : cat.records.length;
+          key === "orphan" ? cat.orphanFiles.length : cat.records.length;
         if (count === 0) return null;
 
         const isOpen = openCategories.has(key);
         const files =
-          key === 'orphan'
+          key === "orphan"
             ? cat.orphanFiles.map((f) => ({
                 id: f.name,
                 displayName: f.name,
@@ -270,7 +270,7 @@ export function ClearStorageModal({
                 id: r.uuid,
                 displayName: r.name ?? r.opfsKey ?? r.uuid,
                 displaySize:
-                  r.fileSize !== null ? formatBytes(r.fileSize) : '—',
+                  r.fileSize !== null ? formatBytes(r.fileSize) : "-",
               }));
 
         return (
@@ -288,7 +288,7 @@ export function ClearStorageModal({
                 </Typography>
                 <Box display="flex" alignItems="center" gap={6} marginTop={2}>
                   <Typography variant="caption" fontWeight={500}>
-                    {t('fileCount', { count })}
+                    {t("fileCount", { count })}
                   </Typography>
                   {cat.totalSize > 0 && (
                     <>
@@ -301,7 +301,7 @@ export function ClearStorageModal({
                 </Box>
               </div>
               <Button
-                text={clearing === key ? t('clearing') : t('clearCategory')}
+                text={clearing === key ? t("clearing") : t("clearCategory")}
                 onClick={() => void handleClearCategory(key)}
                 disabled={clearing !== null}
                 size="md"
@@ -312,18 +312,18 @@ export function ClearStorageModal({
               type="button"
               className="csm-toggle"
               onClick={() => toggleCategory(key)}
-              aria-label={t('toggleFileList')}
+              aria-label={t("toggleFileList")}
             >
               <Icon
                 icon="/icons/chevron-down.svg"
                 size={14}
                 color="var(--foreground-muted, #999)"
-                className={isOpen ? 'csm-chevron--open' : 'csm-chevron--closed'}
+                className={isOpen ? "csm-chevron--open" : "csm-chevron--closed"}
               />
             </button>
             <div
               className={`csm-file-panel${
-                isOpen ? ' csm-file-panel--open' : ''
+                isOpen ? " csm-file-panel--open" : ""
               }`}
             >
               <div className="csm-file-inner">
@@ -354,7 +354,7 @@ export function ClearStorageModal({
 
   return (
     <ConfirmationModal
-      title={t('title')}
+      title={t("title")}
       text=""
       okCallback={onClose}
       cancelCallback={onClose}

@@ -6,7 +6,7 @@
 export interface SaveCookieOptions {
   /** Cookie name. */
   key: string;
-  /** Value to store — will be JSON-stringified. */
+  /** Value to store - will be JSON-stringified. */
   value: string;
   /** Number of days until the cookie expires (default: 30). */
   expirationDays?: number;
@@ -47,14 +47,14 @@ export const saveCookie = ({
   key,
   value,
   expirationDays = 30,
-  paths = ['/'],
+  paths = ["/"],
 }: SaveCookieOptions): void => {
   const date = new Date();
   date.setTime(date.getTime() + expirationDays * 24 * 60 * 60 * 1000);
   const expires = date.toUTCString();
   const encoded = JSON.stringify(value);
 
-  const targetPaths = paths.length > 0 ? paths : ['/'];
+  const targetPaths = paths.length > 0 ? paths : ["/"];
 
   targetPaths.forEach((path) => {
     document.cookie = buildCookieString(key, encoded, expires, path);
@@ -73,7 +73,7 @@ export const saveCookie = ({
 export const getCookieValue = (name: string): string | boolean | null => {
   const prefix = `${name}=`;
   const decodedCookie = decodeURIComponent(document.cookie);
-  const entries = decodedCookie.split(';');
+  const entries = decodedCookie.split(";");
 
   for (const entry of entries) {
     const trimmed = entry.trimStart();
@@ -89,8 +89,8 @@ export const getCookieValue = (name: string): string | boolean | null => {
         parsed = raw;
       }
 
-      if (parsed === 'true') return true;
-      if (parsed === 'false') return false;
+      if (parsed === "true") return true;
+      if (parsed === "false") return false;
       return parsed;
     }
   }
@@ -105,7 +105,7 @@ export const getCookieValue = (name: string): string | boolean | null => {
  * @param paths - Paths the cookie was created on. Defaults to `["/"]`.
  *                A cookie can only be deleted from the same path it was set on.
  */
-export const deleteCookie = (key: string, paths: string[] = ['/']): void => {
+export const deleteCookie = (key: string, paths: string[] = ["/"]): void => {
   const pastDate = new Date(0).toUTCString();
 
   paths.forEach((path) => {

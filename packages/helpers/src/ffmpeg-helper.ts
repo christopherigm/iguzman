@@ -1,19 +1,19 @@
-import { spawn } from 'child_process';
-import { writeFileSync, mkdirSync, rmSync, existsSync } from 'fs';
-import { tmpdir, cpus } from 'os';
-import { randomUUID } from 'crypto';
-import { join } from 'path';
+import { spawn } from "child_process";
+import { writeFileSync, mkdirSync, rmSync, existsSync } from "fs";
+import { tmpdir, cpus } from "os";
+import { randomUUID } from "crypto";
+import { join } from "path";
 
 /* ── Constants ───────────────────────────────────────────────────────── */
 
-const DEFAULT_FFMPEG = 'ffmpeg';
+const DEFAULT_FFMPEG = "ffmpeg";
 const CPU_COUNT = String(cpus().length);
 const THREAD_FLAGS = [
-  '-threads',
+  "-threads",
   CPU_COUNT,
-  '-filter_threads',
+  "-filter_threads",
   CPU_COUNT,
-  '-filter_complex_threads',
+  "-filter_complex_threads",
   CPU_COUNT,
 ];
 
@@ -31,10 +31,10 @@ const runFFmpeg = (
 ): Promise<void> =>
   new Promise((resolve, reject) => {
     const proc = spawn(binary, [...THREAD_FLAGS, ...args]);
-    let stderr = '';
+    let stderr = "";
     let lastFrame = 0;
 
-    proc.stderr.on('data', (chunk: Buffer) => {
+    proc.stderr.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
       stderr += text;
 
@@ -52,7 +52,7 @@ const runFFmpeg = (
       }
     });
 
-    proc.on('close', (code) => {
+    proc.on("close", (code) => {
       if (code !== 0) {
         reject(
           new Error(`FFmpeg exited with code ${code}\n${stderr.slice(-500)}`),
@@ -63,7 +63,7 @@ const runFFmpeg = (
       }
     });
 
-    proc.on('error', reject);
+    proc.on("error", reject);
   });
 
 interface ProbeResult {
@@ -76,18 +76,18 @@ interface ProbeResult {
 
 /**
  * Probes a media file by parsing ffmpeg's stderr info output.
- * ffmpeg always exits non-zero when no output is given — that is expected.
+ * ffmpeg always exits non-zero when no output is given - that is expected.
  */
 const probeVideo = (filePath: string, binary: string): Promise<ProbeResult> =>
   new Promise((resolve) => {
-    const proc = spawn(binary, ['-i', filePath]);
-    let log = '';
+    const proc = spawn(binary, ["-i", filePath]);
+    let log = "";
 
-    proc.stderr.on('data', (chunk: Buffer) => {
+    proc.stderr.on("data", (chunk: Buffer) => {
       log += chunk.toString();
     });
 
-    proc.on('close', () => {
+    proc.on("close", () => {
       const dimMatch = log.match(/(\d{2,5})x(\d{2,5})/);
       const width = dimMatch ? Number(dimMatch[1]) : 1280;
       const height = dimMatch ? Number(dimMatch[2]) : 720;
@@ -114,13 +114,13 @@ const probeVideo = (filePath: string, binary: string): Promise<ProbeResult> =>
 /* ── ASS subtitle types & helpers (ported from ffmpeg-worker.ts) ─────── */
 
 type AnimationType =
-  | 'none'
-  | 'fade'
-  | 'slideUp'
-  | 'slideDown'
-  | 'blur'
-  | 'zoom'
-  | 'karaoke';
+  | "none"
+  | "fade"
+  | "slideUp"
+  | "slideDown"
+  | "blur"
+  | "zoom"
+  | "karaoke";
 
 export interface AnimationOptions {
   /** Which animations to apply; combine freely (karaoke is text-level, rest are line-level). Default: ['none']. */
@@ -140,7 +140,7 @@ export interface AnimationOptions {
   /** Zoom: duration in ms to scale text from 0 → 100 %. Default 300. */
   zoomDurationMs?: number;
   /** Karaoke: ASS karaoke tag variant. Default 'kf' (sweep). */
-  karaokeMode?: 'k' | 'kf' | 'ko';
+  karaokeMode?: "k" | "kf" | "ko";
   /** Karaoke: highlight (sung) colour in ASS &HAABBGGRR format. Default '&H0000FFFF' (yellow). */
   karaokeHighlightColour?: string;
 }
@@ -153,8 +153,8 @@ interface SrtEvent {
 
 /** '00:01:23,456' → centiseconds */
 function parseSrtTimeToCentiseconds(t: string): number {
-  const [hms = '0:0:0', ms = '0'] = t.trim().split(',');
-  const parts = hms.split(':').map(Number);
+  const [hms = "0:0:0", ms = "0"] = t.trim().split(",");
+  const parts = hms.split(":").map(Number);
   const h = parts[0] ?? 0;
   const m = parts[1] ?? 0;
   const s = parts[2] ?? 0;
@@ -169,22 +169,22 @@ function formatAssTimestamp(cs: number): string {
   const rem2 = rem1 % 6000;
   const s = Math.floor(rem2 / 100);
   const c = rem2 % 100;
-  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(c).padStart(2, '0')}`;
+  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(c).padStart(2, "0")}`;
 }
 
 function parseSrt(srt: string): SrtEvent[] {
   const events: SrtEvent[] = [];
   const blocks = srt.trim().split(/\n[ \t]*\n/);
   for (const block of blocks) {
-    const lines = block.trim().split('\n');
-    const tsIdx = lines.findIndex((l) => l.includes('-->'));
+    const lines = block.trim().split("\n");
+    const tsIdx = lines.findIndex((l) => l.includes("-->"));
     if (tsIdx === -1) continue;
-    const [startRaw = '', endRaw = ''] = lines[tsIdx]!.split('-->');
+    const [startRaw = "", endRaw = ""] = lines[tsIdx]!.split("-->");
     const startCs = parseSrtTimeToCentiseconds(startRaw);
     const endCs = parseSrtTimeToCentiseconds(endRaw);
     const text = lines
       .slice(tsIdx + 1)
-      .join('\\N')
+      .join("\\N")
       .trim();
     if (text) events.push({ startCs, endCs, text });
   }
@@ -236,33 +236,33 @@ function buildOverrideTags(
 
   for (const type of types) {
     switch (type) {
-      case 'fade': {
+      case "fade": {
         const fi = opts.fadeInMs ?? 300;
         const fo = opts.fadeOutMs ?? 200;
         tags.push(`\\fad(${fi},${fo})`);
         break;
       }
-      case 'slideUp':
-      case 'slideDown': {
+      case "slideUp":
+      case "slideDown": {
         const offset = opts.slideOffset ?? 20;
         const dur = opts.slideDurationMs ?? 300;
         const pos = hasExplicitPos
           ? { x: posX!, y: posY! }
           : computeDefaultPosition(alignment, playResX, playResY, marginV);
-        const startY = type === 'slideUp' ? pos.y + offset : pos.y - offset;
+        const startY = type === "slideUp" ? pos.y + offset : pos.y - offset;
         tags.push(
           `\\move(${Math.round(pos.x)},${Math.round(startY)},${Math.round(pos.x)},${Math.round(pos.y)},0,${dur})`,
         );
         hasMove = true;
         break;
       }
-      case 'blur': {
+      case "blur": {
         const strength = opts.blurStrength ?? 15;
         const dur = opts.blurDurationMs ?? 300;
         tags.push(`\\blur${strength}\\t(0,${dur},\\blur0)`);
         break;
       }
-      case 'zoom': {
+      case "zoom": {
         const dur = opts.zoomDurationMs ?? 300;
         tags.push(`\\fscx0\\fscy0\\t(0,${dur},\\fscx100\\fscy100)`);
         break;
@@ -276,7 +276,7 @@ function buildOverrideTags(
     tags.push(`\\pos(${Math.round(posX!)},${Math.round(posY!)})`);
   }
 
-  return tags.length > 0 ? `{${tags.join('')}}` : '';
+  return tags.length > 0 ? `{${tags.join("")}}` : "";
 }
 
 /**
@@ -286,18 +286,18 @@ function buildOverrideTags(
 function applyKaraokeToText(
   text: string,
   durationCs: number,
-  mode: 'k' | 'kf' | 'ko',
+  mode: "k" | "kf" | "ko",
 ): string {
-  const NL_MARKER = '\x00NL\x00';
+  const NL_MARKER = "\x00NL\x00";
   const normalized = text.replace(/\\N/g, ` ${NL_MARKER} `);
   const tokens = normalized.split(/\s+/).filter(Boolean);
   const wordCount = tokens.filter((t) => t !== NL_MARKER).length;
   if (wordCount === 0) return text;
   const csPerWord = Math.max(1, Math.round(durationCs / wordCount));
   return tokens
-    .map((t) => (t === NL_MARKER ? '\\N' : `{\\${mode}${csPerWord}}${t}`))
-    .join(' ')
-    .replace(/\s*\\N\s*/g, '\\N');
+    .map((t) => (t === NL_MARKER ? "\\N" : `{\\${mode}${csPerWord}}${t}`))
+    .join(" ")
+    .replace(/\s*\\N\s*/g, "\\N");
 }
 
 /**
@@ -337,21 +337,21 @@ function generateAssContent(params: {
     animation,
   } = params;
 
-  const allTypes = animation.types ?? ['none'];
-  const activeTypes = allTypes.filter((t) => t !== 'none');
-  const hasKaraoke = activeTypes.includes('karaoke');
-  const nonKaraokeTypes = activeTypes.filter((t) => t !== 'karaoke');
-  const karaokeMode = animation.karaokeMode ?? 'kf';
-  const karaokeHighlight = animation.karaokeHighlightColour ?? '&H0000FFFF';
+  const allTypes = animation.types ?? ["none"];
+  const activeTypes = allTypes.filter((t) => t !== "none");
+  const hasKaraoke = activeTypes.includes("karaoke");
+  const nonKaraokeTypes = activeTypes.filter((t) => t !== "karaoke");
+  const karaokeMode = animation.karaokeMode ?? "kf";
+  const karaokeHighlight = animation.karaokeHighlightColour ?? "&H0000FFFF";
 
   /* ASS spec: with BorderStyle=3 the box uses OutlineColour, not BackColour. */
-  const outlineColour = borderStyle === 3 ? backColour : '&H00000000';
+  const outlineColour = borderStyle === 3 ? backColour : "&H00000000";
 
   /* Karaoke remaps colours:
        PrimaryColour   = highlight (sung) colour
        SecondaryColour = normal (unsung) text colour  */
   const stylePrimary = hasKaraoke ? karaokeHighlight : primaryColour;
-  const styleSecondary = hasKaraoke ? primaryColour : '&H000000FF';
+  const styleSecondary = hasKaraoke ? primaryColour : "&H000000FF";
 
   const events = parseSrt(srtContent);
 
@@ -361,7 +361,7 @@ function generateAssContent(params: {
      boxes never touch.  A \be3 tag softens box corners for a rounded look. */
   const dialogues = events
     .flatMap(({ startCs, endCs, text }) => {
-      const rawLines = text.split('\\N');
+      const rawLines = text.split("\\N");
       const splitPerLine = borderStyle === 3 && rawLines.length > 1;
 
       if (!splitPerLine) {
@@ -385,7 +385,7 @@ function generateAssContent(params: {
         if (borderStyle === 3) {
           tagBlock = overrideTags
             ? `{${overrideTags.slice(1, -1)}\\be3}`
-            : '{\\be3}';
+            : "{\\be3}";
         } else {
           tagBlock = overrideTags;
         }
@@ -455,11 +455,11 @@ function generateAssContent(params: {
         return `Dialogue: 0,${formatAssTimestamp(startCs)},${formatAssTimestamp(endCs)},Default,,0,0,0,,${tagBlock}${finalLine}`;
       });
     })
-    .join('\n');
+    .join("\n");
 
   const styleLine = [
-    'Default',
-    fontName ?? 'Arial',
+    "Default",
+    fontName ?? "Arial",
     fontSize,
     stylePrimary,
     styleSecondary,
@@ -481,25 +481,25 @@ function generateAssContent(params: {
     10,
     marginV, // MarginL, MarginR, MarginV
     1, // Encoding
-  ].join(',');
+  ].join(",");
 
   return [
-    '[Script Info]',
-    'ScriptType: v4.00+',
+    "[Script Info]",
+    "ScriptType: v4.00+",
     `PlayResX: ${playResX}`,
     `PlayResY: ${playResY}`,
-    'WrapStyle: 0',
-    'ScaledBorderAndShadow: yes',
-    '',
-    '[V4+ Styles]',
-    'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
+    "WrapStyle: 0",
+    "ScaledBorderAndShadow: yes",
+    "",
+    "[V4+ Styles]",
+    "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
     `Style: ${styleLine}`,
-    '',
-    '[Events]',
-    'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+    "",
+    "[Events]",
+    "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     dialogues,
-    '',
-  ].join('\n');
+    "",
+  ].join("\n");
 }
 
 /* ── Public option & result types ────────────────────────────────────── */
@@ -522,12 +522,12 @@ export interface InterpolateFpsOptions {
    * Motion interpolation mode. Default `'mci'` (motion-compensated).
    * `'blend'` is significantly faster at the cost of quality.
    */
-  miMode?: 'mci' | 'blend' | 'dup';
+  miMode?: "mci" | "blend" | "dup";
   /**
    * Motion compensation mode (only applies when `miMode='mci'`). Default `'obmc'`.
    * `'aobmc'` = highest quality but slowest; `'obmc'` = faster, similar results.
    */
-  mcMode?: 'obmc' | 'aobmc' | 'no';
+  mcMode?: "obmc" | "aobmc" | "no";
   /** Path to the ffmpeg binary. Defaults to `'ffmpeg'`. */
   ffmpegBinary?: string;
   /** Called with a value 0-100 as encoding progresses. */
@@ -666,8 +666,8 @@ export async function interpolateFps(
     outputPath,
     targetFps,
     searchParam = 16,
-    miMode = 'mci',
-    mcMode = 'obmc',
+    miMode = "mci",
+    mcMode = "obmc",
     ffmpegBinary = DEFAULT_FFMPEG,
     onProgress,
   } = options;
@@ -679,20 +679,20 @@ export async function interpolateFps(
 
   await runFFmpeg(
     [
-      '-i',
+      "-i",
       inputPath,
-      '-filter:v',
+      "-filter:v",
       videoFilter,
-      '-c:v',
-      'libx264',
-      '-preset',
-      'faster',
-      '-crf',
-      '23',
-      '-c:a',
-      'copy',
-      '-movflags',
-      '+faststart',
+      "-c:v",
+      "libx264",
+      "-preset",
+      "faster",
+      "-crf",
+      "23",
+      "-c:a",
+      "copy",
+      "-movflags",
+      "+faststart",
       outputPath,
     ],
     ffmpegBinary,
@@ -724,18 +724,18 @@ export async function convertToH264(
 
   await runFFmpeg(
     [
-      '-i',
+      "-i",
       inputPath,
-      '-c:v',
-      'libx264',
-      '-preset',
-      'faster',
-      '-crf',
-      '23',
-      '-c:a',
-      'copy',
-      '-movflags',
-      '+faststart',
+      "-c:v",
+      "libx264",
+      "-preset",
+      "faster",
+      "-crf",
+      "23",
+      "-c:a",
+      "copy",
+      "-movflags",
+      "+faststart",
       outputPath,
     ],
     ffmpegBinary,
@@ -779,30 +779,30 @@ export async function removeBlackBars(
   let crop = cropString;
 
   if (!crop) {
-    /* Step 1 (0-49 %): cropdetect pass — no output file, so no encoding
+    /* Step 1 (0-49 %): cropdetect pass - no output file, so no encoding
        frames; we parse frame numbers from the null-muxer log. */
     /* Limit to a 60 s window; enough for any stable bar pattern and avoids
        scanning the entire file on long videos. */
     const detectSec = durationSec > 0 ? Math.min(durationSec, 60) : 60;
-    const detectArgs: string[] = durationSec > 60 ? ['-t', '60'] : [];
+    const detectArgs: string[] = durationSec > 60 ? ["-t", "60"] : [];
     const detectFrames = Math.round(detectSec * fps);
     await new Promise<void>((resolve, reject) => {
       const proc = spawn(ffmpegBinary, [
         ...THREAD_FLAGS,
         ...detectArgs,
-        '-i',
+        "-i",
         inputPath,
-        '-vf',
+        "-vf",
         `cropdetect=limit=${limit}:round=${round}:reset=0`,
-        '-f',
-        'null',
-        '-',
+        "-f",
+        "null",
+        "-",
       ]);
 
-      let log = '';
+      let log = "";
       let lastFrame = 0;
 
-      proc.stderr.on('data', (chunk: Buffer) => {
+      proc.stderr.on("data", (chunk: Buffer) => {
         const text = chunk.toString();
         log += text;
 
@@ -828,19 +828,19 @@ export async function removeBlackBars(
             Number(w) >= origW &&
             Number(h) >= origH
           ) {
-            // Detected crop equals source — no bars
+            // Detected crop equals source - no bars
             return;
           }
           crop = `${w}:${h}:${x}:${y}`;
         }
       });
 
-      proc.on('close', (code) => {
+      proc.on("close", (code) => {
         if (!crop) {
           // Re-parse full log for the last crop= entry
           const matches = [...log.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)];
           if (matches.length === 0) {
-            return reject(new Error('No black bars detected'));
+            return reject(new Error("No black bars detected"));
           }
           const last = matches[matches.length - 1]!;
           const [, w, h, x, y] = last;
@@ -850,7 +850,7 @@ export async function removeBlackBars(
             Number(w) >= origW &&
             Number(h) >= origH
           ) {
-            return reject(new Error('No black bars detected'));
+            return reject(new Error("No black bars detected"));
           }
           crop = `${w}:${h}:${x}:${y}`;
         }
@@ -862,7 +862,7 @@ export async function removeBlackBars(
         }
       });
 
-      proc.on('error', reject);
+      proc.on("error", reject);
     });
   }
 
@@ -871,27 +871,27 @@ export async function removeBlackBars(
   await new Promise<void>((resolve, reject) => {
     const proc = spawn(ffmpegBinary, [
       ...THREAD_FLAGS,
-      '-i',
+      "-i",
       inputPath,
-      '-vf',
+      "-vf",
       `crop=${crop}`,
-      '-c:v',
-      'libx264',
-      '-preset',
-      'fast',
-      '-crf',
-      '23',
-      '-c:a',
-      'copy',
-      '-movflags',
-      '+faststart',
+      "-c:v",
+      "libx264",
+      "-preset",
+      "fast",
+      "-crf",
+      "23",
+      "-c:a",
+      "copy",
+      "-movflags",
+      "+faststart",
       outputPath,
     ]);
 
-    let stderr = '';
+    let stderr = "";
     let lastFrame = 0;
 
-    proc.stderr.on('data', (chunk: Buffer) => {
+    proc.stderr.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
       stderr += text;
 
@@ -909,7 +909,7 @@ export async function removeBlackBars(
       }
     });
 
-    proc.on('close', (code) => {
+    proc.on("close", (code) => {
       if (code !== 0) {
         reject(
           new Error(
@@ -922,7 +922,7 @@ export async function removeBlackBars(
       }
     });
 
-    proc.on('error', reject);
+    proc.on("error", reject);
   });
 
   return outputPath;
@@ -944,7 +944,7 @@ export async function extractAudio(
   const {
     inputPath,
     outputPath,
-    format = 'wav',
+    format = "wav",
     ffmpegBinary = DEFAULT_FFMPEG,
     onProgress,
   } = options;
@@ -954,20 +954,20 @@ export async function extractAudio(
   const estimatedFrames = durationSec > 0 ? durationSec * 30 : 0;
 
   const args =
-    format === 'wav'
+    format === "wav"
       ? [
-          '-i',
+          "-i",
           inputPath,
-          '-vn',
-          '-acodec',
-          'pcm_s16le',
-          '-ar',
-          '16000',
-          '-ac',
-          '1',
+          "-vn",
+          "-acodec",
+          "pcm_s16le",
+          "-ar",
+          "16000",
+          "-ac",
+          "1",
           outputPath,
         ]
-      : ['-i', inputPath, '-vn', '-c:a', 'copy', outputPath];
+      : ["-i", inputPath, "-vn", "-c:a", "copy", outputPath];
 
   await runFFmpeg(args, ffmpegBinary, onProgress, estimatedFrames);
 
@@ -999,8 +999,8 @@ export async function burnSubtitles(
     fontSize = 16,
     bold = false,
     italic = false,
-    primaryColour = '&H00FFFFFF',
-    backColour = '&H70000000',
+    primaryColour = "&H00FFFFFF",
+    backColour = "&H70000000",
     borderStyle = 3,
     outline = 0,
     fontPath,
@@ -1022,7 +1022,7 @@ export async function burnSubtitles(
   const playResX = rotation === 90 || rotation === 270 ? origH : origW;
   const playResY = rotation === 90 || rotation === 270 ? origW : origH;
 
-  const fontName = fontPath ? 'CustomFont' : null;
+  const fontName = fontPath ? "CustomFont" : null;
 
   const assContent = generateAssContent({
     srtContent,
@@ -1043,7 +1043,7 @@ export async function burnSubtitles(
 
   /* Write ASS to a temp file next to the output, cleaned up afterwards. */
   const assFile = join(tmpdir(), `${randomUUID()}.ass`);
-  writeFileSync(assFile, assContent, 'utf8');
+  writeFileSync(assFile, assContent, "utf8");
 
   /* When a custom font is provided, copy it into a temp fonts directory
      so libass can find it via fontsdir=. */
@@ -1052,12 +1052,12 @@ export async function burnSubtitles(
     fontsDir = join(tmpdir(), `fonts_${randomUUID()}`);
     mkdirSync(fontsDir, { recursive: true });
     // Copy the font file into the temp fonts directory
-    const { copyFileSync } = await import('fs');
-    const fontFilename = fontPath.split('/').pop() ?? 'font.ttf';
+    const { copyFileSync } = await import("fs");
+    const fontFilename = fontPath.split("/").pop() ?? "font.ttf";
     copyFileSync(fontPath, join(fontsDir, fontFilename));
   }
 
-  const fontsOption = fontsDir ? `:fontsdir=${fontsDir}` : '';
+  const fontsOption = fontsDir ? `:fontsdir=${fontsDir}` : "";
   const subsFilter = `subtitles=${assFile}${fontsOption}`;
 
   const needsRotation = rotation !== 0;
@@ -1077,22 +1077,22 @@ export async function burnSubtitles(
   try {
     await runFFmpeg(
       [
-        ...(needsRotation ? ['-noautorotate'] : []),
-        '-i',
+        ...(needsRotation ? ["-noautorotate"] : []),
+        "-i",
         inputPath,
-        '-vf',
+        "-vf",
         vf,
-        '-c:v',
-        'libx264',
-        '-preset',
-        'fast',
-        '-crf',
-        '23',
-        '-c:a',
-        'copy',
-        ...(needsRotation ? ['-metadata:s:v:0', 'rotate=0'] : []),
-        '-movflags',
-        '+faststart',
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-crf",
+        "23",
+        "-c:a",
+        "copy",
+        ...(needsRotation ? ["-metadata:s:v:0", "rotate=0"] : []),
+        "-movflags",
+        "+faststart",
         outputPath,
       ],
       ffmpegBinary,
@@ -1138,22 +1138,22 @@ export async function convertToH265(
 
   await runFFmpeg(
     [
-      '-i',
+      "-i",
       inputPath,
-      '-c:v',
-      'libx265',
-      '-preset',
-      'fast',
-      '-crf',
-      '28',
-      '-x265-params',
+      "-c:v",
+      "libx265",
+      "-preset",
+      "fast",
+      "-crf",
+      "28",
+      "-x265-params",
       `pools=${CPU_COUNT}`,
-      '-tag:v',
-      'hvc1',
-      '-c:a',
-      'copy',
-      '-movflags',
-      '+faststart',
+      "-tag:v",
+      "hvc1",
+      "-c:a",
+      "copy",
+      "-movflags",
+      "+faststart",
       outputPath,
     ],
     ffmpegBinary,
@@ -1198,20 +1198,20 @@ export async function scaleDown(options: ScaleDownOptions): Promise<string> {
 
   await runFFmpeg(
     [
-      '-i',
+      "-i",
       inputPath,
-      '-vf',
+      "-vf",
       scaleFilter,
-      '-c:v',
-      'libx264',
-      '-preset',
-      'fast',
-      '-crf',
-      '23',
-      '-c:a',
-      'copy',
-      '-movflags',
-      '+faststart',
+      "-c:v",
+      "libx264",
+      "-preset",
+      "fast",
+      "-crf",
+      "23",
+      "-c:a",
+      "copy",
+      "-movflags",
+      "+faststart",
       outputPath,
     ],
     ffmpegBinary,

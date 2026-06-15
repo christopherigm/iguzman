@@ -7,7 +7,7 @@ from .llm import chat_structured
 logger = logging.getLogger(__name__)
 
 # Cap the raw text handed to the LLM so a fat /extract page can't blow the
-# context window or the token bill — the title usually surfaces in the first
+# context window or the token bill - the title usually surfaces in the first
 # few snippets anyway.
 _MAX_INPUT_CHARS = 6000
 
@@ -17,7 +17,7 @@ class ScrapedMovie(BaseModel):
     Schema the LLM must return when cleaning raw web text into a movie record.
 
     Instructor enforces this shape, so the Celery task never parses JSON by
-    hand — it receives a validated `ScrapedMovie` or a raised exception.
+    hand - it receives a validated `ScrapedMovie` or a raised exception.
     """
 
     title: str = Field(
@@ -48,7 +48,7 @@ Rules:
   Never guess a director.
 - If the text describes a TV series or box set, or you cannot pin down a single \
   film, return an empty title.
-- Return ONLY valid JSON — no markdown, no explanation, no extra text.
+- Return ONLY valid JSON - no markdown, no explanation, no extra text.
 
 Response schema:
 {"title": "<string>", "year": <integer or null>, "director": "<string>"}

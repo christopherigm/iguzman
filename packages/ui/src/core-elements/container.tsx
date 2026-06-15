@@ -1,10 +1,10 @@
-import React, { CSSProperties } from 'react';
+import React, { CSSProperties } from "react";
 import {
   UIComponentProps,
   buildStyleProps,
   Breakpoint,
   BREAKPOINTS,
-} from './utils';
+} from "./utils";
 
 export interface ContainerProps extends UIComponentProps {
   size?: Breakpoint;
@@ -12,7 +12,7 @@ export interface ContainerProps extends UIComponentProps {
 }
 
 /**
- * Container — centers content horizontally with a fixed max-width based on the `size` breakpoint.
+ * Container - centers content horizontally with a fixed max-width based on the `size` breakpoint.
  *
  * @example
  * <Container>Hello World!</Container>
@@ -24,14 +24,14 @@ export interface ContainerProps extends UIComponentProps {
  * <Container size="lg" paddingX={5}>Hello World!</Container>
  */
 export const Container: React.FC<ContainerProps> = (props) => {
-  const { size = 'lg', paddingX, styles, children, className, id } = props;
+  const { size = "lg", paddingX, styles, children, className, id } = props;
 
   const containerStyle: CSSProperties = {
     ...buildStyleProps(props),
-    width: '100%',
+    width: "100%",
     maxWidth: BREAKPOINTS[size],
-    marginLeft: 'auto',
-    marginRight: 'auto',
+    marginLeft: "auto",
+    marginRight: "auto",
     ...(paddingX !== undefined && {
       paddingLeft: paddingX,
       paddingRight: paddingX,

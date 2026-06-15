@@ -101,4 +101,4 @@ class ScanQueue(Common):
         ordering = ['-created']
 
     def __str__(self):
-        return f'ScanQueue({self.barcode}) — {self.get_status_display()}'
+        return f'ScanQueue({self.barcode}) - {self.get_status_display()}'

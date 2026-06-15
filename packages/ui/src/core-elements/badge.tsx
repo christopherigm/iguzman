@@ -1,18 +1,18 @@
-import React, { CSSProperties } from 'react';
-import './badge.css';
+import React, { CSSProperties } from "react";
+import "./badge.css";
 
 /**
  * Visual variant of the badge.
- * - `filled`   — solid background (default)
- * - `outlined` — transparent background with border
- * - `subtle`   — translucent tinted background
+ * - `filled`   - solid background (default)
+ * - `outlined` - transparent background with border
+ * - `subtle`   - translucent tinted background
  */
-export type BadgeVariant = 'filled' | 'outlined' | 'subtle';
+export type BadgeVariant = "filled" | "outlined" | "subtle";
 
 /**
  * Size preset for the badge.
  */
-export type BadgeSize = 'sm' | 'md' | 'lg';
+export type BadgeSize = "sm" | "md" | "lg";
 
 /**
  * Props for the `Badge` component.
@@ -35,7 +35,7 @@ export interface BadgeProps {
 }
 
 /**
- * Badge — a small labelling component for statuses, tags, and metadata.
+ * Badge - a small labelling component for statuses, tags, and metadata.
  *
  * @example
  * <Badge>New</Badge>
@@ -46,25 +46,25 @@ export interface BadgeProps {
  */
 export const Badge: React.FC<BadgeProps> = ({
   children,
-  variant = 'filled',
-  size = 'md',
+  variant = "filled",
+  size = "md",
   color,
   textColor,
   className,
   style,
 }) => {
   const cssVars: Record<string, string> = {};
-  if (color) cssVars['--badge-bg'] = color;
-  if (textColor) cssVars['--badge-fg'] = textColor;
+  if (color) cssVars["--badge-bg"] = color;
+  if (textColor) cssVars["--badge-fg"] = textColor;
 
   const classes = [
-    'ui-badge',
+    "ui-badge",
     `ui-badge--${variant}`,
     `ui-badge--${size}`,
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <span className={classes} style={{ ...cssVars, ...style }}>

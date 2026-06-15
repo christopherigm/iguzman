@@ -1,19 +1,19 @@
-import React, { CSSProperties } from 'react';
-import { UIComponentProps, buildStyleProps } from './utils';
+import React, { CSSProperties } from "react";
+import { UIComponentProps, buildStyleProps } from "./utils";
 
 export interface BoxProps extends UIComponentProps {
   /** ARIA role for semantic meaning (e.g. `"nav"`, `"main"`, `"article"`). */
   role?: string;
   /** Accessible label for the element when visible text is absent. */
-  'aria-label'?: string;
+  "aria-label"?: string;
   /** Hides element from assistive technology when `true`. */
-  'aria-hidden'?: boolean;
+  "aria-hidden"?: boolean;
   /** ID of another element that labels this one. */
-  'aria-labelledby'?: string;
+  "aria-labelledby"?: string;
   /** ID of another element that describes this one. */
-  'aria-describedby'?: string;
+  "aria-describedby"?: string;
   /** Whether this element is a modal dialog. */
-  'aria-modal'?: boolean;
+  "aria-modal"?: boolean;
   /** Tab order for keyboard navigation. */
   tabIndex?: number;
   /** Click handler. */
@@ -37,7 +37,7 @@ export interface BoxProps extends UIComponentProps {
 }
 
 /**
- * Box — a small, flexible div wrapper that accepts inline layout props.
+ * Box - a small, flexible div wrapper that accepts inline layout props.
  *
  * @example
  * <Box
@@ -54,9 +54,20 @@ export interface BoxProps extends UIComponentProps {
  */
 export const Box: React.FC<BoxProps> = (props) => {
   const {
-    styles, children, className, id, role,
-    onClick, onKeyDown, onAnimationEnd,
-    onDragOver, onDragEnter, onDragLeave, onDrop, onDragStart, onDragEnd,
+    styles,
+    children,
+    className,
+    id,
+    role,
+    onClick,
+    onKeyDown,
+    onAnimationEnd,
+    onDragOver,
+    onDragEnter,
+    onDragLeave,
+    onDrop,
+    onDragStart,
+    onDragEnd,
     tabIndex,
   } = props;
 
@@ -68,9 +79,9 @@ export const Box: React.FC<BoxProps> = (props) => {
       className={className}
       style={style}
       tabIndex={tabIndex}
-      aria-label={props['aria-label']}
-      aria-labelledby={props['aria-labelledby']}
-      aria-describedby={props['aria-describedby']}
+      aria-label={props["aria-label"]}
+      aria-labelledby={props["aria-labelledby"]}
+      aria-describedby={props["aria-describedby"]}
       onClick={onClick}
       onKeyDown={onKeyDown}
       onAnimationEnd={onAnimationEnd}
@@ -81,11 +92,11 @@ export const Box: React.FC<BoxProps> = (props) => {
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       {...(role !== undefined ? { role } : {})}
-      {...(props['aria-hidden'] !== undefined
-        ? { 'aria-hidden': props['aria-hidden'] }
+      {...(props["aria-hidden"] !== undefined
+        ? { "aria-hidden": props["aria-hidden"] }
         : {})}
-      {...(props['aria-modal'] !== undefined
-        ? { 'aria-modal': props['aria-modal'] }
+      {...(props["aria-modal"] !== undefined
+        ? { "aria-modal": props["aria-modal"] }
         : {})}
     >
       {children}

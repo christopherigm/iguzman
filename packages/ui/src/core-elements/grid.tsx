@@ -1,7 +1,7 @@
-import React, { CSSProperties } from 'react';
-import { UIComponentProps, buildStyleProps } from './utils';
-import type { Breakpoint } from './utils';
-import './grid.css';
+import React, { CSSProperties } from "react";
+import { UIComponentProps, buildStyleProps } from "./utils";
+import type { Breakpoint } from "./utils";
+import "./grid.css";
 
 /**
  * Responsive column sizes per breakpoint (1-12).
@@ -42,11 +42,11 @@ function buildGridClasses(
   const classes: string[] = [];
 
   if (container) {
-    classes.push('ui-grid-container');
+    classes.push("ui-grid-container");
   }
 
   if (isItem) {
-    classes.push('ui-grid-item');
+    classes.push("ui-grid-item");
   }
 
   if (size) {
@@ -63,11 +63,11 @@ function buildGridClasses(
     classes.push(className);
   }
 
-  return classes.join(' ');
+  return classes.join(" ");
 }
 
 /**
- * Grid — a responsive 12-column CSS Grid layout component.
+ * Grid - a responsive 12-column CSS Grid layout component.
  *
  * Can act as a **container** (sets up the 12-column grid with optional gap)
  * or as an **item** (spans a number of columns, responsive per breakpoint).
@@ -103,17 +103,17 @@ export const Grid: React.FC<GridProps> = (props) => {
     const resolvedX = spacingX ?? spacing;
     const resolvedY = spacingY ?? spacing;
     if (resolvedX !== undefined) {
-      style['--ui-grid-spacing-x'] = `${resolvedX * SPACING_UNIT}px`;
+      style["--ui-grid-spacing-x"] = `${resolvedX * SPACING_UNIT}px`;
     }
     if (resolvedY !== undefined) {
-      style['--ui-grid-spacing-y'] = `${resolvedY * SPACING_UNIT}px`;
+      style["--ui-grid-spacing-y"] = `${resolvedY * SPACING_UNIT}px`;
     }
   }
 
   const finalStyle = { ...style, ...styles } as CSSProperties;
 
   const dataProps = Object.fromEntries(
-    Object.entries(props).filter(([key]) => key.startsWith('data-')),
+    Object.entries(props).filter(([key]) => key.startsWith("data-")),
   );
 
   return (

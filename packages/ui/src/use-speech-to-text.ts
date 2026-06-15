@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useRef, useState, useCallback } from 'react';
-import type { SttMode, SttOptions } from '@repo/helpers/speech-to-text';
+import { useRef, useState, useCallback } from "react";
+import type { SttMode, SttOptions } from "@repo/helpers/speech-to-text";
 
 export type { SttMode, SttOptions };
 
@@ -52,10 +52,10 @@ export interface UseSpeechToTextReturn {
 }
 
 /**
- * useSpeechToText — browser microphone → Whisper transcription hook.
+ * useSpeechToText - browser microphone → Whisper transcription hook.
  *
  * Runs Whisper ASR entirely in-browser via a dedicated Web Worker backed
- * by `@huggingface/transformers`.  Requires SharedArrayBuffer — the host
+ * by `@huggingface/transformers`.  Requires SharedArrayBuffer - the host
  * page must set `Cross-Origin-Opener-Policy: same-origin` and
  * `Cross-Origin-Embedder-Policy: require-corp` headers.
  *
@@ -67,8 +67,8 @@ export function useSpeechToText(
   options: UseSpeechToTextOptions = {},
 ): UseSpeechToTextReturn {
   const {
-    mode = 'batch',
-    language = 'en',
+    mode = "batch",
+    language = "en",
     model, // undefined → worker auto-selects tiny(.en) with GPU when available
     realtimeInterval = DEFAULT_REALTIME_INTERVAL,
   } = options;
@@ -85,8 +85,8 @@ export function useSpeechToText(
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   // ── State ──────────────────────────────────────────────────────
-  const [transcript, setTranscript] = useState('');
-  const [interimTranscript, setInterimTranscript] = useState('');
+  const [transcript, setTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
   const [modelLoadProgress, setModelLoadProgress] = useState(0);
@@ -98,7 +98,7 @@ export function useSpeechToText(
   const getWorker = useCallback((): Worker => {
     if (workerRef.current) return workerRef.current;
 
-    const worker = new Worker(new URL('./stt-worker.ts', import.meta.url));
+    const worker = new Worker(new URL("./stt-worker.ts", import.meta.url));
 
     worker.onmessage = ({
       data,
@@ -110,7 +110,7 @@ export function useSpeechToText(
       const { id, type, payload } = data;
 
       // Model download progress broadcast (no id)
-      if (type === 'model-progress') {
+      if (type === "model-progress") {
         setModelLoadProgress((payload as { progress: number }).progress);
         return;
       }
@@ -119,13 +119,13 @@ export function useSpeechToText(
       const pending = pendingRef.current.get(id);
       if (!pending) return;
 
-      if (type === 'result') {
+      if (type === "result") {
         pendingRef.current.delete(id);
         pending.resolve((payload as { text: string }).text);
-      } else if (type === 'loaded') {
+      } else if (type === "loaded") {
         pendingRef.current.delete(id);
-        pending.resolve('');
-      } else if (type === 'error') {
+        pending.resolve("");
+      } else if (type === "error") {
         const msg = (payload as { message: string }).message;
         pendingRef.current.delete(id);
         setError(msg);
@@ -134,7 +134,7 @@ export function useSpeechToText(
     };
 
     worker.onerror = (event) => {
-      const msg = event.message ?? 'STT worker crashed';
+      const msg = event.message ?? "STT worker crashed";
       setError(msg);
       for (const [, p] of pendingRef.current) p.reject(new Error(msg));
       pendingRef.current.clear();
@@ -157,7 +157,7 @@ export function useSpeechToText(
       const id = nextId();
       const worker = getWorker();
       pendingRef.current.set(id, { resolve: () => resolve(), reject });
-      worker.postMessage({ id, type: 'load', payload: { language, model } });
+      worker.postMessage({ id, type: "load", payload: { language, model } });
     });
 
     loadPromiseRef.current = promise
@@ -225,7 +225,7 @@ export function useSpeechToText(
         pendingRef.current.set(id, { resolve, reject });
         worker.postMessage({
           id,
-          type: 'transcribe',
+          type: "transcribe",
           payload: { audioData: audio, language, model },
         });
       });
@@ -243,7 +243,7 @@ export function useSpeechToText(
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Microphone access denied');
+      setError(err instanceof Error ? err.message : "Microphone access denied");
       return;
     }
 
@@ -255,7 +255,7 @@ export function useSpeechToText(
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
 
-    if (mode === 'realtime') {
+    if (mode === "realtime") {
       // Fire ondataavailable on each interval so chunks accumulate gradually.
       recorder.start(realtimeInterval);
 
@@ -270,7 +270,7 @@ export function useSpeechToText(
           const text = await transcribeFloat32(audio);
           setInterimTranscript(text);
         } catch {
-          // Non-fatal in real-time mode — skip this interval
+          // Non-fatal in real-time mode - skip this interval
         } finally {
           setIsTranscribing(false);
         }
@@ -308,10 +308,10 @@ export function useSpeechToText(
           // Both modes: do a final full transcription when stopped.
           const text = await transcribeFloat32(audio);
           setTranscript(text);
-          setInterimTranscript('');
+          setInterimTranscript("");
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Transcription failed');
+        setError(err instanceof Error ? err.message : "Transcription failed");
       } finally {
         setIsTranscribing(false);
       }
@@ -321,8 +321,8 @@ export function useSpeechToText(
   }, [isListening, decodeChunks, transcribeFloat32]);
 
   const resetTranscript = useCallback((): void => {
-    setTranscript('');
-    setInterimTranscript('');
+    setTranscript("");
+    setInterimTranscript("");
   }, []);
 
   return {

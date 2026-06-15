@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/actions/video2x.sh — AI video upscaling via Real-ESRGAN (realesrgan-ncnn-vulkan)
+# lib/actions/video2x.sh - AI video upscaling via Real-ESRGAN (realesrgan-ncnn-vulkan)
 # Depends on: probe.sh, progress.sh, encoders.sh, ui.sh
 
 # ── State globals ─────────────────────────────────────────────────────────────
@@ -70,13 +70,13 @@ bootstrap_video2x() {
 # ── Processing ────────────────────────────────────────────────────────────────
 #
 # Arguments:
-#   src            — source video path (may come from run_rife output)
-#   original_input — original input file (for audio)
-#   output         — final output path
-#   vf_chain[]     — nameref (still-pending CPU filters applied before extraction)
-#   dur_sec        — duration
-#   scale          — upscale factor (2 or 4)
-#   model          — e.g. "realesr-animevideov3"
+#   src            - source video path (may come from run_rife output)
+#   original_input - original input file (for audio)
+#   output         - final output path
+#   vf_chain[]     - nameref (still-pending CPU filters applied before extraction)
+#   dur_sec        - duration
+#   scale          - upscale factor (2 or 4)
+#   model          - e.g. "realesr-animevideov3"
 #   use_gpu gpu_encoder use_h265
 
 run_video2x() {
@@ -153,7 +153,7 @@ run_video2x() {
       "${ENC_CODEC_ARGS[@]}" \
       "${output}"; then
     if [[ "${use_gpu}" -eq 1 && ("${gpu_encoder}" == *vaapi* || "${gpu_encoder}" == *nvenc*) ]]; then
-      printf "    %s GPU encode failed — retrying with CPU...\n" "$(clr_yellow '⚠')"
+      printf "    %s GPU encode failed - retrying with CPU...\n" "$(clr_yellow '⚠')"
       build_encode_args_cpu_fallback "${use_h265}"
       if ! run_ffmpeg_step "${V2X_STEP_ENCODE}" "${dur_sec}" \
           -framerate "${out_fps}" -i "${v2x_out_dir}/%08d.png" \

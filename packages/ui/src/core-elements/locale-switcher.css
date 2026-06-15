@@ -20,7 +20,11 @@
 }
 
 .locale-switcher__trigger:hover {
-  background: color-mix(in srgb, var(--foreground) 8%, var(--surface-1, #f5f5f5));
+  background: color-mix(
+    in srgb,
+    var(--foreground) 8%,
+    var(--surface-1, #f5f5f5)
+  );
 }
 
 .locale-switcher__flag {
@@ -40,7 +44,7 @@
   margin-left: 2px;
 }
 
-/* Opens upward — suited for footer placement */
+/* Opens upward - suited for footer placement */
 .locale-switcher__dropdown {
   position: absolute;
   bottom: calc(100% + 6px);

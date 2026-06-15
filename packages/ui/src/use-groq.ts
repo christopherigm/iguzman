@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useRef, useState, useCallback } from 'react';
-import type { LlmMessage } from '@repo/helpers/llm';
+import { useRef, useState, useCallback } from "react";
+import type { LlmMessage } from "@repo/helpers/llm";
 
 export type { LlmMessage };
 
 export const GROQ_MODELS = [
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
 ] as const;
 
 export type GroqModel = (typeof GROQ_MODELS)[number];
 
 export interface UseGroqOptions {
-  /** Required — path to your app's Groq proxy route, e.g. '/api/groq' */
+  /** Required - path to your app's Groq proxy route, e.g. '/api/groq' */
   proxyBase: string;
   /** Groq model to use. Defaults to 'openai/gpt-oss-120b'. */
   model?: string;
@@ -41,15 +41,15 @@ export interface UseGroqReturn {
 }
 
 export function useGroqProxy(
-  options: Omit<UseGroqOptions, 'proxyBase'> & { proxyBase?: string } = {},
+  options: Omit<UseGroqOptions, "proxyBase"> & { proxyBase?: string } = {},
 ): UseGroqReturn {
-  return useGroq({ proxyBase: '/api/groq', ...options });
+  return useGroq({ proxyBase: "/api/groq", ...options });
 }
 
 export function useGroq(options: UseGroqOptions): UseGroqReturn {
   const {
     proxyBase,
-    model = 'openai/gpt-oss-120b',
+    model = "openai/gpt-oss-120b",
     temperature,
     seed: seedOption,
     webSearch = false,
@@ -57,7 +57,7 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
     onCreditsUpdate,
   } = options;
 
-  const [streamingText, setStreamingText] = useState('');
+  const [streamingText, setStreamingText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,10 +65,11 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
 
   const generate = useCallback(
     async (messages: LlmMessage[]): Promise<string> => {
-      if (isGenerating) throw new Error('Already generating — call abort() first');
+      if (isGenerating)
+        throw new Error("Already generating - call abort() first");
 
       setError(null);
-      setStreamingText('');
+      setStreamingText("");
       setIsGenerating(true);
 
       const controller = new AbortController();
@@ -79,9 +80,9 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
         const authHeaders = getAuthHeaders?.() ?? {};
 
         const res = await fetch(`${proxyBase}/chat`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             ...authHeaders,
           },
           body: JSON.stringify({
@@ -95,10 +96,11 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
           signal: controller.signal,
         });
 
-        if (!res.ok) throw new Error(`Groq proxy: ${res.status} ${res.statusText}`);
-        if (!res.body) throw new Error('Groq proxy: empty response body');
+        if (!res.ok)
+          throw new Error(`Groq proxy: ${res.status} ${res.statusText}`);
+        if (!res.body) throw new Error("Groq proxy: empty response body");
 
-        const creditsHeader = res.headers.get('x-credits-remaining');
+        const creditsHeader = res.headers.get("x-credits-remaining");
         if (creditsHeader !== null && onCreditsUpdate) {
           const parsed = parseInt(creditsHeader, 10);
           if (!isNaN(parsed)) onCreditsUpdate(parsed);
@@ -106,22 +108,22 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let fullText = '';
-        let buffer = '';
+        let fullText = "";
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
 
           for (const line of lines) {
             const trimmed = line.trim();
-            if (!trimmed || trimmed === 'data: [DONE]') continue;
+            if (!trimmed || trimmed === "data: [DONE]") continue;
 
-            const jsonStr = trimmed.startsWith('data: ')
+            const jsonStr = trimmed.startsWith("data: ")
               ? trimmed.slice(6)
               : trimmed;
 
@@ -129,7 +131,7 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
               const json = JSON.parse(jsonStr) as {
                 choices?: { delta?: { content?: string } }[];
               };
-              const token = json.choices?.[0]?.delta?.content ?? '';
+              const token = json.choices?.[0]?.delta?.content ?? "";
               if (token) {
                 fullText += token;
                 setStreamingText((prev) => prev + token);
@@ -144,9 +146,9 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
       } catch (err) {
         if (
           err instanceof Error &&
-          (err.name === 'AbortError' || err.message === 'AbortError')
+          (err.name === "AbortError" || err.message === "AbortError")
         ) {
-          return '';
+          return "";
         }
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);
@@ -156,18 +158,27 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
         abortControllerRef.current = null;
       }
     },
-    [isGenerating, proxyBase, model, temperature, seedOption, webSearch, getAuthHeaders, onCreditsUpdate],
+    [
+      isGenerating,
+      proxyBase,
+      model,
+      temperature,
+      seedOption,
+      webSearch,
+      getAuthHeaders,
+      onCreditsUpdate,
+    ],
   );
 
   const abort = useCallback((): void => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setIsGenerating(false);
-    setStreamingText('');
+    setStreamingText("");
   }, []);
 
   const reset = useCallback((): void => {
-    setStreamingText('');
+    setStreamingText("");
   }, []);
 
   return {

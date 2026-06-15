@@ -26,10 +26,10 @@ const MIN_SEGMENT_DURATION = 1;
 /**
  * Normalizes a list of diarization segments:
  *
- * 1. **Re-indexes speakers** — If the first segment's speaker is `1`
+ * 1. **Re-indexes speakers** - If the first segment's speaker is `1`
  *    (instead of the expected `0`), all speaker indices are swapped
  *    (`0 ↔ 1`) so the primary speaker is always `0`.
- * 2. **Filters short segments** — Segments shorter than
+ * 2. **Filters short segments** - Segments shorter than
  *    {@link MIN_SEGMENT_DURATION} second are dropped, as they
  *    typically represent noise or mis-detections.
  *

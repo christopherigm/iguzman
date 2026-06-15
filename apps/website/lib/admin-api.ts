@@ -1,19 +1,25 @@
-import { clearTokens, getAccessToken, refreshTokens } from './auth';
-import { API_URL } from './config';
+import { clearTokens, getAccessToken, refreshTokens } from "./auth";
+import { API_URL } from "./config";
 
-function buildHeaders(token: string | null, extra: HeadersInit = {}): HeadersInit {
+function buildHeaders(
+  token: string | null,
+  extra: HeadersInit = {},
+): HeadersInit {
   return {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extra,
   };
 }
 
-// Deduplicate concurrent refresh attempts — all 401s share one refresh call
+// Deduplicate concurrent refresh attempts - all 401s share one refresh call
 let _adminRefreshPromise: Promise<string | null> | null = null;
 
 // Helper: authenticated fetch with automatic token refresh on 401
-async function adminFetch(path: string, options: RequestInit = {}): Promise<Response> {
+async function adminFetch(
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
   const token = getAccessToken();
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -29,8 +35,8 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<Resp
     const newToken = await _adminRefreshPromise;
     if (!newToken) {
       clearTokens();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/auth';
+      if (typeof window !== "undefined") {
+        window.location.href = "/auth";
       }
       return res;
     }
@@ -44,8 +50,11 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<Resp
 }
 
 export class AdminApiError extends Error {
-  constructor(public readonly status: number, public readonly data: Record<string, unknown>) {
-    super('Admin API request failed');
+  constructor(
+    public readonly status: number,
+    public readonly data: Record<string, unknown>,
+  ) {
+    super("Admin API request failed");
   }
 }
 
@@ -64,7 +73,10 @@ export async function getSystem(pk: number) {
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function updateSystem(pk: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/system/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/system/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 
@@ -78,15 +90,23 @@ export async function getProduct(pk: number) {
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function createProduct(data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/products/`, { method: 'POST', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/catalog/products/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function updateProduct(pk: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/products/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/catalog/products/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteProduct(pk: number) {
-  const res = await adminFetch(`/api/catalog/products/${pk}/`, { method: 'DELETE' });
+  const res = await adminFetch(`/api/catalog/products/${pk}/`, {
+    method: "DELETE",
+  });
   return parseResponse<void>(res);
 }
 
@@ -95,22 +115,40 @@ export async function listProductImages(productId: number) {
   const res = await adminFetch(`/api/catalog/products/${productId}/images/`);
   return parseResponse<Record<string, unknown>[]>(res);
 }
-export async function createProductImage(productId: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/products/${productId}/images/`, { method: 'POST', body: JSON.stringify(data) });
+export async function createProductImage(
+  productId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/catalog/products/${productId}/images/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteProductImage(productId: number, imgId: number) {
-  const res = await adminFetch(`/api/catalog/products/${productId}/images/${imgId}/`, { method: 'DELETE' });
+  const res = await adminFetch(
+    `/api/catalog/products/${productId}/images/${imgId}/`,
+    { method: "DELETE" },
+  );
   return parseResponse<void>(res);
 }
-export async function updateProductImage(productId: number, imgId: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/products/${productId}/images/${imgId}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateProductImage(
+  productId: number,
+  imgId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(
+    `/api/catalog/products/${productId}/images/${imgId}/`,
+    { method: "PATCH", body: JSON.stringify(data) },
+  );
   return parseResponse<Record<string, unknown>>(res);
 }
 
 // ---- Product Categories ----
 export async function listProductCategories(systemId: number) {
-  const res = await adminFetch(`/api/catalog/product-categories/?system=${systemId}`);
+  const res = await adminFetch(
+    `/api/catalog/product-categories/?system=${systemId}`,
+  );
   return parseResponse<Record<string, unknown>[]>(res);
 }
 export async function getProductCategory(pk: number) {
@@ -118,15 +156,26 @@ export async function getProductCategory(pk: number) {
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function createProductCategory(data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/product-categories/`, { method: 'POST', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/catalog/product-categories/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
-export async function updateProductCategory(pk: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/product-categories/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateProductCategory(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/catalog/product-categories/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteProductCategory(pk: number) {
-  const res = await adminFetch(`/api/catalog/product-categories/${pk}/`, { method: 'DELETE' });
+  const res = await adminFetch(`/api/catalog/product-categories/${pk}/`, {
+    method: "DELETE",
+  });
   return parseResponse<void>(res);
 }
 
@@ -140,15 +189,23 @@ export async function getService(pk: number) {
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function createService(data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/services/`, { method: 'POST', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/catalog/services/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function updateService(pk: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/services/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/catalog/services/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteService(pk: number) {
-  const res = await adminFetch(`/api/catalog/services/${pk}/`, { method: 'DELETE' });
+  const res = await adminFetch(`/api/catalog/services/${pk}/`, {
+    method: "DELETE",
+  });
   return parseResponse<void>(res);
 }
 
@@ -157,22 +214,40 @@ export async function listServiceImages(serviceId: number) {
   const res = await adminFetch(`/api/catalog/services/${serviceId}/images/`);
   return parseResponse<Record<string, unknown>[]>(res);
 }
-export async function createServiceImage(serviceId: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/services/${serviceId}/images/`, { method: 'POST', body: JSON.stringify(data) });
+export async function createServiceImage(
+  serviceId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/catalog/services/${serviceId}/images/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteServiceImage(serviceId: number, imgId: number) {
-  const res = await adminFetch(`/api/catalog/services/${serviceId}/images/${imgId}/`, { method: 'DELETE' });
+  const res = await adminFetch(
+    `/api/catalog/services/${serviceId}/images/${imgId}/`,
+    { method: "DELETE" },
+  );
   return parseResponse<void>(res);
 }
-export async function updateServiceImage(serviceId: number, imgId: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/services/${serviceId}/images/${imgId}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateServiceImage(
+  serviceId: number,
+  imgId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(
+    `/api/catalog/services/${serviceId}/images/${imgId}/`,
+    { method: "PATCH", body: JSON.stringify(data) },
+  );
   return parseResponse<Record<string, unknown>>(res);
 }
 
 // ---- Service Categories ----
 export async function listServiceCategories(systemId: number) {
-  const res = await adminFetch(`/api/catalog/service-categories/?system=${systemId}`);
+  const res = await adminFetch(
+    `/api/catalog/service-categories/?system=${systemId}`,
+  );
   return parseResponse<Record<string, unknown>[]>(res);
 }
 export async function getServiceCategory(pk: number) {
@@ -180,15 +255,26 @@ export async function getServiceCategory(pk: number) {
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function createServiceCategory(data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/service-categories/`, { method: 'POST', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/catalog/service-categories/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
-export async function updateServiceCategory(pk: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/service-categories/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateServiceCategory(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/catalog/service-categories/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteServiceCategory(pk: number) {
-  const res = await adminFetch(`/api/catalog/service-categories/${pk}/`, { method: 'DELETE' });
+  const res = await adminFetch(`/api/catalog/service-categories/${pk}/`, {
+    method: "DELETE",
+  });
   return parseResponse<void>(res);
 }
 
@@ -202,21 +288,29 @@ export async function getBrand(pk: number) {
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function createBrand(data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/brands/`, { method: 'POST', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/brands/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function updateBrand(pk: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/brands/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/brands/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteBrand(pk: number) {
-  const res = await adminFetch(`/api/brands/${pk}/`, { method: 'DELETE' });
+  const res = await adminFetch(`/api/brands/${pk}/`, { method: "DELETE" });
   return parseResponse<void>(res);
 }
 
 // ---- Variant Options ----
 export async function listVariantOptions(systemId: number) {
-  const res = await adminFetch(`/api/catalog/variant-options/?system=${systemId}`);
+  const res = await adminFetch(
+    `/api/catalog/variant-options/?system=${systemId}`,
+  );
   return parseResponse<Record<string, unknown>[]>(res);
 }
 export async function getVariantOption(pk: number) {
@@ -224,15 +318,26 @@ export async function getVariantOption(pk: number) {
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function createVariantOption(data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/variant-options/`, { method: 'POST', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/catalog/variant-options/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
-export async function updateVariantOption(pk: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/catalog/variant-options/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateVariantOption(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/catalog/variant-options/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteVariantOption(pk: number) {
-  const res = await adminFetch(`/api/catalog/variant-options/${pk}/`, { method: 'DELETE' });
+  const res = await adminFetch(`/api/catalog/variant-options/${pk}/`, {
+    method: "DELETE",
+  });
   return parseResponse<void>(res);
 }
 
@@ -246,15 +351,26 @@ export async function getSuccessStory(pk: number) {
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function createSuccessStory(data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/success-stories/`, { method: 'POST', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/success-stories/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
-export async function updateSuccessStory(pk: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/success-stories/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateSuccessStory(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/success-stories/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteSuccessStory(pk: number) {
-  const res = await adminFetch(`/api/success-stories/${pk}/`, { method: 'DELETE' });
+  const res = await adminFetch(`/api/success-stories/${pk}/`, {
+    method: "DELETE",
+  });
   return parseResponse<void>(res);
 }
 
@@ -263,16 +379,32 @@ export async function listSuccessStoryImages(storyId: number) {
   const res = await adminFetch(`/api/success-stories/${storyId}/images/`);
   return parseResponse<Record<string, unknown>[]>(res);
 }
-export async function createSuccessStoryImage(storyId: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/success-stories/${storyId}/images/`, { method: 'POST', body: JSON.stringify(data) });
+export async function createSuccessStoryImage(
+  storyId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/success-stories/${storyId}/images/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
-export async function updateSuccessStoryImage(storyId: number, imgId: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/success-stories/${storyId}/images/${imgId}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateSuccessStoryImage(
+  storyId: number,
+  imgId: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(
+    `/api/success-stories/${storyId}/images/${imgId}/`,
+    { method: "PATCH", body: JSON.stringify(data) },
+  );
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteSuccessStoryImage(storyId: number, imgId: number) {
-  const res = await adminFetch(`/api/success-stories/${storyId}/images/${imgId}/`, { method: 'DELETE' });
+  const res = await adminFetch(
+    `/api/success-stories/${storyId}/images/${imgId}/`,
+    { method: "DELETE" },
+  );
   return parseResponse<void>(res);
 }
 
@@ -286,22 +418,35 @@ export async function getHighlight(pk: number) {
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function createHighlight(data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/highlights/`, { method: 'POST', body: JSON.stringify(data) });
+  const res = await adminFetch(`/api/highlights/`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
-export async function updateHighlight(pk: number, data: Record<string, unknown>) {
-  const res = await adminFetch(`/api/highlights/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateHighlight(
+  pk: number,
+  data: Record<string, unknown>,
+) {
+  const res = await adminFetch(`/api/highlights/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }
 export async function deleteHighlight(pk: number) {
-  const res = await adminFetch(`/api/highlights/${pk}/`, { method: 'DELETE' });
+  const res = await adminFetch(`/api/highlights/${pk}/`, { method: "DELETE" });
   return parseResponse<void>(res);
 }
 
 // ---- Slug check ----
-export async function checkSlug(model: string, slug: string, excludeId?: number) {
+export async function checkSlug(
+  model: string,
+  slug: string,
+  excludeId?: number,
+) {
   const params = new URLSearchParams({ model, slug });
-  if (excludeId !== undefined) params.set('exclude_id', String(excludeId));
+  if (excludeId !== undefined) params.set("exclude_id", String(excludeId));
   const res = await adminFetch(`/api/check-slug/?${params.toString()}`);
   return parseResponse<{ available: boolean }>(res);
 }
@@ -311,7 +456,13 @@ export async function listAdminUsers() {
   const res = await adminFetch(`/api/auth/admin/users/`);
   return parseResponse<Record<string, unknown>[]>(res);
 }
-export async function updateAdminUser(pk: number, data: { is_admin?: boolean; is_active?: boolean }) {
-  const res = await adminFetch(`/api/auth/admin/users/${pk}/`, { method: 'PATCH', body: JSON.stringify(data) });
+export async function updateAdminUser(
+  pk: number,
+  data: { is_admin?: boolean; is_active?: boolean },
+) {
+  const res = await adminFetch(`/api/auth/admin/users/${pk}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
   return parseResponse<Record<string, unknown>>(res);
 }

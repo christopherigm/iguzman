@@ -1,31 +1,31 @@
-import React, { CSSProperties } from 'react';
-import { UIComponentProps, buildStyleProps } from './utils';
-import './typography.css';
+import React, { CSSProperties } from "react";
+import { UIComponentProps, buildStyleProps } from "./utils";
+import "./typography.css";
 
 export type TypographyVariant =
-  | 'none'
-  | 'h1'
-  | 'h2'
-  | 'h3'
-  | 'h4'
-  | 'h5'
-  | 'h6'
-  | 'body'
-  | 'body-sm'
-  | 'caption'
-  | 'label';
+  | "none"
+  | "h1"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "h6"
+  | "body"
+  | "body-sm"
+  | "caption"
+  | "label";
 
 type TypographyElement =
-  | 'h1'
-  | 'h2'
-  | 'h3'
-  | 'h4'
-  | 'h5'
-  | 'h6'
-  | 'p'
-  | 'span'
-  | 'label'
-  | 'div';
+  | "h1"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "h6"
+  | "p"
+  | "span"
+  | "label"
+  | "div";
 
 /**
  * Props for the `Typography` component.
@@ -40,17 +40,17 @@ export interface TypographyProps extends UIComponentProps {
   /** Override the rendered HTML element while keeping the variant's visual style. */
   as?: TypographyElement;
   /** Horizontal text alignment. */
-  textAlign?: CSSProperties['textAlign'];
+  textAlign?: CSSProperties["textAlign"];
   /** Font-weight override (takes precedence over variant's default weight). */
-  fontWeight?: CSSProperties['fontWeight'];
+  fontWeight?: CSSProperties["fontWeight"];
   /** ARIA role, e.g. `"alert"` for error messages. */
   role?: string;
   /** Marks the element as the current item in a set (e.g. `"page"` for breadcrumbs). */
-  'aria-current'?: React.AriaAttributes['aria-current'];
+  "aria-current"?: React.AriaAttributes["aria-current"];
   /** Hides element from assistive technology when `true` or `"true"`. */
-  'aria-hidden'?: React.AriaAttributes['aria-hidden'];
+  "aria-hidden"?: React.AriaAttributes["aria-hidden"];
   /** Accessible label when visible text is absent or insufficient. */
-  'aria-label'?: string;
+  "aria-label"?: string;
   /** Tooltip text shown on hover (native HTML title attribute). */
   title?: string;
   /** For `as="label"`: associates the label with a form control by its id. */
@@ -58,25 +58,25 @@ export interface TypographyProps extends UIComponentProps {
 }
 
 const VARIANT_ELEMENT: Record<TypographyVariant, TypographyElement> = {
-  none: 'p',
-  h1: 'h1',
-  h2: 'h2',
-  h3: 'h3',
-  h4: 'h4',
-  h5: 'h5',
-  h6: 'h6',
-  body: 'p',
-  'body-sm': 'p',
-  caption: 'p',
-  label: 'span',
+  none: "p",
+  h1: "h1",
+  h2: "h2",
+  h3: "h3",
+  h4: "h4",
+  h5: "h5",
+  h6: "h6",
+  body: "p",
+  "body-sm": "p",
+  caption: "p",
+  label: "span",
 };
 
 /**
- * Typography — semantic text component covering headings, body, captions, and labels.
+ * Typography - semantic text component covering headings, body, captions, and labels.
  *
  * - `variant` controls the visual scale and defaults the rendered HTML element.
  * - `as` overrides the HTML element while keeping the variant's styles.
- * - `variant="none"` skips variant CSS — useful when a CSS class already handles
+ * - `variant="none"` skips variant CSS - useful when a CSS class already handles
  *   all typography for an element (avoids cascade conflicts).
  * - Accepts all `UIComponentProps` for layout integration (margin, color, width, …).
  *
@@ -90,7 +90,7 @@ const VARIANT_ELEMENT: Record<TypographyVariant, TypographyElement> = {
  * <Typography as="h3" variant="none" className="story-card__name" color="#fff">Card</Typography>
  */
 export const Typography: React.FC<TypographyProps> = ({
-  variant = 'body',
+  variant = "body",
   as,
   textAlign,
   fontWeight,
@@ -99,16 +99,15 @@ export const Typography: React.FC<TypographyProps> = ({
   className,
   id,
   styles,
-  'aria-current': ariaCurrent,
-  'aria-hidden': ariaHidden,
-  'aria-label': ariaLabel,
+  "aria-current": ariaCurrent,
+  "aria-hidden": ariaHidden,
+  "aria-label": ariaLabel,
   title,
   htmlFor,
   ...rest
 }) => {
   type TagProps = React.HTMLAttributes<HTMLElement> & { htmlFor?: string };
-  const Tag = (as ??
-    VARIANT_ELEMENT[variant]) as React.ElementType<TagProps>;
+  const Tag = (as ?? VARIANT_ELEMENT[variant]) as React.ElementType<TagProps>;
 
   const uiStyle = buildStyleProps(rest as UIComponentProps);
 
@@ -120,12 +119,12 @@ export const Typography: React.FC<TypographyProps> = ({
   };
 
   const classes = [
-    'ui-typography',
-    variant !== 'none' && `ui-typography--${variant}`,
+    "ui-typography",
+    variant !== "none" && `ui-typography--${variant}`,
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <Tag

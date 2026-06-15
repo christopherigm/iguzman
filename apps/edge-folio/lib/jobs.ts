@@ -1,8 +1,8 @@
-import type { JobApplication } from '@/lib/applications';
+import type { JobApplication } from "@/lib/applications";
 
-export type JobProvider = 'adzuna' | 'jsearch';
-export type JobCountry = 'us' | 'ca' | 'mx';
-export type JobWorkType = 'remote' | 'onsite' | 'hybrid';
+export type JobProvider = "adzuna" | "jsearch";
+export type JobCountry = "us" | "ca" | "mx";
+export type JobWorkType = "remote" | "onsite" | "hybrid";
 
 export interface JobPosting {
   id: number;
@@ -16,7 +16,7 @@ export interface JobPosting {
   salary_currency: string;
   work_type: JobWorkType[] | null;
   location: string;
-  country: JobCountry | '';
+  country: JobCountry | "";
   category: string;
   tags: string[] | null;
   is_private: boolean;
@@ -40,7 +40,7 @@ export interface JobApiCredential {
   label: string;
   is_active: boolean;
   has_key: boolean;
-  // Usage tracking — counted locally since providers report no quota.
+  // Usage tracking - counted locally since providers report no quota.
   call_limit: number;
   calls_used_today: number;
   calls_remaining: number;
@@ -54,7 +54,7 @@ export class JobsError extends Error {
     public readonly status: number,
     public readonly data: Record<string, unknown>,
   ) {
-    super('Jobs API request failed');
+    super("Jobs API request failed");
   }
 }
 
@@ -68,11 +68,11 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export type JobScope = 'private' | 'shared';
+export type JobScope = "private" | "shared";
 
 export interface JobFeedFilters {
-  country?: JobCountry | '';
-  work_type?: JobWorkType | '';
+  country?: JobCountry | "";
+  work_type?: JobWorkType | "";
   scope?: JobScope;
   q?: string;
   per?: number;
@@ -81,28 +81,28 @@ export interface JobFeedFilters {
 
 export function getJobFeed(filters: JobFeedFilters = {}): Promise<JobFeed> {
   const params = new URLSearchParams();
-  if (filters.country) params.set('country', filters.country);
-  if (filters.work_type) params.set('work_type', filters.work_type);
-  if (filters.scope) params.set('scope', filters.scope);
-  if (filters.q) params.set('q', filters.q);
-  if (filters.per) params.set('per', String(filters.per));
-  if (filters.page) params.set('page', String(filters.page));
+  if (filters.country) params.set("country", filters.country);
+  if (filters.work_type) params.set("work_type", filters.work_type);
+  if (filters.scope) params.set("scope", filters.scope);
+  if (filters.q) params.set("q", filters.q);
+  if (filters.per) params.set("per", String(filters.per));
+  if (filters.page) params.set("page", String(filters.page));
   const qs = params.toString();
-  return request(`/api/jobs/feed${qs ? `?${qs}` : ''}`);
+  return request(`/api/jobs/feed${qs ? `?${qs}` : ""}`);
 }
 
 export function saveJob(id: number): Promise<JobApplication> {
-  return request(`/api/jobs/${id}/save`, { method: 'POST' });
+  return request(`/api/jobs/${id}/save`, { method: "POST" });
 }
 
 // Staff-only: enqueue a shared-catalog fetch on the API. Returns once the task
-// is queued — new postings appear in the feed after a worker processes it.
+// is queued - new postings appear in the feed after a worker processes it.
 export function triggerJobFetch(): Promise<{ detail: string }> {
-  return request('/api/jobs/fetch', { method: 'POST' });
+  return request("/api/jobs/fetch", { method: "POST" });
 }
 
 export function getJobCredentials(): Promise<JobApiCredential[]> {
-  return request('/api/jobs/credentials');
+  return request("/api/jobs/credentials");
 }
 
 export interface CreateCredentialPayload {
@@ -112,18 +112,20 @@ export interface CreateCredentialPayload {
   is_active?: boolean;
 }
 
-export function createJobCredential(payload: CreateCredentialPayload): Promise<JobApiCredential> {
-  return request('/api/jobs/credentials', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+export function createJobCredential(
+  payload: CreateCredentialPayload,
+): Promise<JobApiCredential> {
+  return request("/api/jobs/credentials", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteJobCredential(id: number): Promise<void> {
-  return request(`/api/jobs/credentials/${id}`, { method: 'DELETE' });
+  return request(`/api/jobs/credentials/${id}`, { method: "DELETE" });
 }
 
 export function deleteJob(id: number): Promise<void> {
-  return request(`/api/jobs/${id}`, { method: 'DELETE' });
+  return request(`/api/jobs/${id}`, { method: "DELETE" });
 }

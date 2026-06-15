@@ -1,14 +1,14 @@
-import { rm } from 'fs/promises';
-import path from 'path';
+import { rm } from "fs/promises";
+import path from "path";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
 /* ------------------------------------------------------------------ */
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Root folder that contains the media directory. */
-const ROOT_FOLDER = NODE_ENV === 'production' ? '/app' : 'public';
+const ROOT_FOLDER = NODE_ENV === "production" ? "/app" : "public";
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -17,7 +17,7 @@ const ROOT_FOLDER = NODE_ENV === 'production' ? '/app' : 'public';
 /**
  * Deletes a media file located under the environment-specific root folder.
  *
- * The operation is idempotent — if the file does not exist the call
+ * The operation is idempotent - if the file does not exist the call
  * resolves silently instead of throwing.
  *
  * @param filePath - Relative path to the file inside the root folder

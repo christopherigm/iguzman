@@ -90,7 +90,7 @@ def picture_mixin(max_width: int, quality: int = 85):
     return _PictureMixin
 
 
-# Standard size tiers — use these directly or call picture_mixin() for custom sizes.
+# Standard size tiers - use these directly or call picture_mixin() for custom sizes.
 SmallPicture   = picture_mixin(256)          # thumbnails, avatars
 MediumPicture  = picture_mixin(512)          # cards, previews
 RegularPicture = picture_mixin(1200)         # content images, banners

@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import { useRef, useState, useCallback } from 'react';
-import { fetchFile } from '@ffmpeg/util';
+import { useRef, useState, useCallback } from "react";
+import { fetchFile } from "@ffmpeg/util";
 
-const CORE_VERSION = '0.12.10';
+const CORE_VERSION = "0.12.10";
 // Single-threaded core avoids Chromium 148+ pthread initialization deadlock on Linux desktop.
 // @ffmpeg/core-mt (multi-threaded) hangs on Linux Chromium 148 when the Emscripten pthread
 // proxy workers are created but never signal ready. All FFmpeg operations work on a single
-// thread — processing is slower but reliable across all browsers and platforms.
+// thread - processing is slower but reliable across all browsers and platforms.
 const BASE_URL = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 
 const CORE_URL = `${BASE_URL}/ffmpeg-core.js`;
 const WASM_URL = `${BASE_URL}/ffmpeg-core.wasm`;
 
-export type FFmpegStatus = 'idle' | 'loading' | 'processing' | 'ready';
+export type FFmpegStatus = "idle" | "loading" | "processing" | "ready";
 
 type PendingOp = {
   resolve: (data: unknown) => void;
@@ -36,7 +36,7 @@ export function useFFmpeg() {
   const loadPromiseRef = useRef<Promise<void> | null>(null);
   const pendingRef = useRef(new Map<string, PendingOp>());
   const processingStartRef = useRef<number | null>(null);
-  const [status, setStatus] = useState<FFmpegStatus>('idle');
+  const [status, setStatus] = useState<FFmpegStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastWarning, setLastWarning] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function useFFmpeg() {
     null,
   );
   const cores =
-    typeof navigator !== 'undefined'
+    typeof navigator !== "undefined"
       ? (navigator.hardwareConcurrency ?? 1)
       : null;
 
@@ -52,7 +52,7 @@ export function useFFmpeg() {
   const getWorker = useCallback((): Worker => {
     if (workerRef.current) return workerRef.current;
 
-    const worker = new Worker(new URL('./ffmpeg-worker.ts', import.meta.url));
+    const worker = new Worker(new URL("./ffmpeg-worker.ts", import.meta.url));
 
     worker.onmessage = ({
       data,
@@ -65,35 +65,35 @@ export function useFFmpeg() {
       const pending = pendingRef.current.get(id);
       if (!pending) return;
 
-      if (type === 'progress') {
+      if (type === "progress") {
         pending.onProgress?.((payload as { progress: number }).progress);
-      } else if (type === 'result') {
+      } else if (type === "result") {
         pendingRef.current.delete(id);
         pending.resolve((payload as { data: Uint8Array }).data);
-      } else if (type === 'loaded') {
+      } else if (type === "loaded") {
         pendingRef.current.delete(id);
         pending.resolve(undefined);
-      } else if (type === 'error') {
+      } else if (type === "error") {
         const msg = (payload as { message: string }).message;
         pendingRef.current.delete(id);
         setLastError(msg);
         pending.reject(new Error(msg));
-      } else if (type === 'warn') {
+      } else if (type === "warn") {
         const msg = (payload as { message: string }).message;
         setLastWarning(msg);
-        console.warn('[ffmpeg-worker]', msg);
+        console.warn("[ffmpeg-worker]", msg);
       }
     };
 
     worker.onerror = (event) => {
-      const msg = event.message ?? 'FFmpeg worker crashed';
+      const msg = event.message ?? "FFmpeg worker crashed";
       setLastError(msg);
       // Reject every in-flight operation so callers don't hang.
       for (const [, pending] of pendingRef.current) {
         pending.reject(new Error(msg));
       }
       pendingRef.current.clear();
-      setStatus('ready');
+      setStatus("ready");
       // Discard the crashed worker; next op will create a fresh one.
       workerRef.current = null;
       loadPromiseRef.current = null;
@@ -113,7 +113,7 @@ export function useFFmpeg() {
       pendingRef.current.set(id, { resolve: () => resolve(), reject });
       worker.postMessage({
         id,
-        type: 'load',
+        type: "load",
         payload: {
           coreURL: CORE_URL,
           wasmURL: WASM_URL,
@@ -123,7 +123,7 @@ export function useFFmpeg() {
 
     loadPromiseRef.current = promise.then(
       () => {
-        setStatus('ready');
+        setStatus("ready");
       },
       (err: Error) => {
         loadPromiseRef.current = null;
@@ -131,7 +131,7 @@ export function useFFmpeg() {
       },
     );
 
-    setStatus('loading');
+    setStatus("loading");
     return loadPromiseRef.current;
   }, [getWorker]);
 
@@ -147,7 +147,7 @@ export function useFFmpeg() {
       externalOnProgress?: (p: number) => void,
     ): Promise<Uint8Array> => {
       await ensureLoaded();
-      setStatus('processing');
+      setStatus("processing");
       setProgress(0);
       setLastWarning(null);
       processingStartRef.current = Date.now();
@@ -179,7 +179,7 @@ export function useFFmpeg() {
           [videoData.buffer as ArrayBuffer],
         );
       }).finally(() => {
-        setStatus('ready');
+        setStatus("ready");
         if (processingStartRef.current !== null) {
           setLastProcessingTime(
             (Date.now() - processingStartRef.current) / 1000,
@@ -206,12 +206,12 @@ export function useFFmpeg() {
       onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {
       const data = await sendVideoOp(
-        'interpolateFps',
+        "interpolateFps",
         videoUrl,
         { targetFps },
         onProgress,
       );
-      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      const blob = new Blob([new Uint8Array(data)], { type: "video/mp4" });
       return { objectUrl: URL.createObjectURL(blob), blob };
     },
     [sendVideoOp],
@@ -229,8 +229,8 @@ export function useFFmpeg() {
       videoUrl: string,
       onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {
-      const data = await sendVideoOp('convertToH264', videoUrl, {}, onProgress);
-      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      const data = await sendVideoOp("convertToH264", videoUrl, {}, onProgress);
+      const blob = new Blob([new Uint8Array(data)], { type: "video/mp4" });
       return { objectUrl: URL.createObjectURL(blob), blob };
     },
     [sendVideoOp],
@@ -256,7 +256,7 @@ export function useFFmpeg() {
       onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {
       const data = await sendVideoOp(
-        'removeBlackBars',
+        "removeBlackBars",
         videoUrl,
         {
           limit,
@@ -265,7 +265,7 @@ export function useFFmpeg() {
         },
         onProgress,
       );
-      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      const blob = new Blob([new Uint8Array(data)], { type: "video/mp4" });
       return { objectUrl: URL.createObjectURL(blob), blob };
     },
     [sendVideoOp],
@@ -285,22 +285,22 @@ export function useFFmpeg() {
   const extractAudio = useCallback(
     async (
       videoUrl: string,
-      format: string = 'wav',
+      format: string = "wav",
       onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {
       const mimeMap: Record<string, string> = {
-        wav: 'audio/wav',
-        mp3: 'audio/mpeg',
-        aac: 'audio/aac',
-        ogg: 'audio/ogg',
+        wav: "audio/wav",
+        mp3: "audio/mpeg",
+        aac: "audio/aac",
+        ogg: "audio/ogg",
       };
       const data = await sendVideoOp(
-        'extractAudio',
+        "extractAudio",
         videoUrl,
         { format },
         onProgress,
       );
-      const mime = mimeMap[format] ?? 'audio/wav';
+      const mime = mimeMap[format] ?? "audio/wav";
       const blob = new Blob([new Uint8Array(data)], { type: mime });
       return { objectUrl: URL.createObjectURL(blob), blob };
     },
@@ -334,12 +334,12 @@ export function useFFmpeg() {
       onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {
       const data = await sendVideoOp(
-        'burnSubtitles',
+        "burnSubtitles",
         videoUrl,
         { ...opts },
         onProgress,
       );
-      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      const blob = new Blob([new Uint8Array(data)], { type: "video/mp4" });
       return { objectUrl: URL.createObjectURL(blob), blob };
     },
     [sendVideoOp],
@@ -362,12 +362,12 @@ export function useFFmpeg() {
       onProgress?: (p: number) => void,
     ): Promise<{ objectUrl: string; blob: Blob }> => {
       const data = await sendVideoOp(
-        'scaleDown',
+        "scaleDown",
         videoUrl,
         { targetHeight },
         onProgress,
       );
-      const blob = new Blob([new Uint8Array(data)], { type: 'video/mp4' });
+      const blob = new Blob([new Uint8Array(data)], { type: "video/mp4" });
       return { objectUrl: URL.createObjectURL(blob), blob };
     },
     [sendVideoOp],

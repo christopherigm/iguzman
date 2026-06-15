@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/ffmpeg-bootstrap.sh — Download and cache a GPU-capable BtbN static FFmpeg build
+# lib/ffmpeg-bootstrap.sh - Download and cache a GPU-capable BtbN static FFmpeg build
 
 FFMPEG_BIN="ffmpeg"
 FFPROBE_BIN="ffprobe"
@@ -32,7 +32,7 @@ _download_file() {
   elif command -v curl &>/dev/null; then
     curl -L --progress-bar -o "${dest}" "${url}"
   else
-    printf "  %s Neither wget nor curl found — cannot download.\n" "$(clr_bold_red '✗')"
+    printf "  %s Neither wget nor curl found - cannot download.\n" "$(clr_bold_red '✗')"
     return 1
   fi
 }
@@ -42,7 +42,7 @@ _download_file() {
 bootstrap_ffmpeg() {
   local arch; arch="$(_arch_tag)"
   if [[ -z "${arch}" ]]; then
-    printf "  %s Unknown CPU architecture — cannot auto-download FFmpeg.\n" "$(clr_bold_red '✗')"
+    printf "  %s Unknown CPU architecture - cannot auto-download FFmpeg.\n" "$(clr_bold_red '✗')"
     exit 1
   fi
 

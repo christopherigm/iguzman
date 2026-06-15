@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# fix-audio.sh — Inspect, detect, and fix common ALSA audio issues on Ubuntu Server
+# fix-audio.sh - Inspect, detect, and fix common ALSA audio issues on Ubuntu Server
 #
 # Usage:
 #   ./fix-audio.sh [OPTIONS]

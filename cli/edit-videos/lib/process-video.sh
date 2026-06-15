@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/process-video.sh — Per-file processing orchestrator; final encode loop
+# lib/process-video.sh - Per-file processing orchestrator; final encode loop
 #
 # Depends on: all lib/*.sh modules sourced by the entrypoint.
 # Uses globals: USE_H265, GPU_ENCODER, DO_DEEP3D, DO_RIFE, DO_VIDEO2X, DO_MPG_TO_MP4,
@@ -119,7 +119,7 @@ process_video() {
     ds_vid_w="${ds_dim_out%% *}"
     ds_vid_h="${ds_dim_out##* }"
     if [[ "${ds_vid_w}" -eq 0 || "${ds_vid_h}" -eq 0 ]]; then
-      printf "    %s Could not read video dimensions — skipping downsize.\n" "$(clr_yellow '⚠')"
+      printf "    %s Could not read video dimensions - skipping downsize.\n" "$(clr_yellow '⚠')"
     elif [[ "${ds_vid_w}" -le "${DOWNSIZE_TARGET_W}" && "${ds_vid_h}" -le "${DOWNSIZE_TARGET_H}" ]]; then
       printf "    %s %s (%sx%s ≤ %sx%s)\n" \
         "$(clr_dim '○')" "${DOWNSIZE_SKIP_MSG}" \
@@ -142,14 +142,14 @@ process_video() {
     vf_chain+=("unsharp=${SHARPEN_MATRIX}:${SHARPEN_MATRIX}:${SHARPEN_LUMA_AMOUNT}:${SHARPEN_MATRIX}:${SHARPEN_MATRIX}:${SHARPEN_CHROMA_AMOUNT}")
   fi
 
-  # Lanczos upscale — skipped when Video2X AI upscale handles it
+  # Lanczos upscale - skipped when Video2X AI upscale handles it
   if [[ "${DO_UPSCALE}" -eq 1 && "${DO_VIDEO2X}" -eq 0 ]]; then
     local dim_out vid_w vid_h
     dim_out="$(probe_dimensions "${input}")"
     vid_w="${dim_out%% *}"
     vid_h="${dim_out##* }"
     if [[ "${vid_w}" -eq 0 || "${vid_h}" -eq 0 ]]; then
-      printf "    %s Could not read video dimensions — skipping upscale.\n" "$(clr_yellow '⚠')"
+      printf "    %s Could not read video dimensions - skipping upscale.\n" "$(clr_yellow '⚠')"
     elif [[ "${vid_w}" -ge "${UPSCALE_TARGET_W}" || "${vid_h}" -ge "${UPSCALE_TARGET_H}" ]]; then
       printf "    %s %s (%sx%s ≥ %sx%s)\n" \
         "$(clr_dim '○')" "${UPSCALE_SKIP_MSG}" \
@@ -180,7 +180,7 @@ process_video() {
     pre_args+=("${pre_codec_args[@]}" "${intermediate}")
     if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" "${pre_args[@]}"; then
       if [[ "${_is_vaapi_pre}" -eq 1 ]]; then
-        printf "    %s VA-API pre-conversion failed — retrying with CPU (libx264)...\n" "$(clr_yellow '⚠')"
+        printf "    %s VA-API pre-conversion failed - retrying with CPU (libx264)...\n" "$(clr_yellow '⚠')"
         local cpu_pre_vf=""
         [[ "${#vf_chain[@]}" -gt 0 ]] && cpu_pre_vf="$(IFS=','; echo "${vf_chain[*]}")"
         local cpu_pre_args=(-i "${src}")
@@ -246,7 +246,7 @@ process_video() {
       if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" \
           "${d3d_pre_input_args[@]}" -i "${src}" -vf "${d3d_pre_vf}" "${d3d_pre_codec_args[@]}" "${d3d_pre_intermediate}"; then
         if [[ "${_d3d_is_vaapi_pre}" -eq 1 ]]; then
-          printf "    %s VA-API pre-conversion failed — retrying with CPU (libx264)...\n" "$(clr_yellow '⚠')"
+          printf "    %s VA-API pre-conversion failed - retrying with CPU (libx264)...\n" "$(clr_yellow '⚠')"
           if ! run_ffmpeg_step "${STEP_PREPROCESS}" "${dur_sec}" \
               -i "${src}" -vf "${d3d_pre_vf_cpu}" -c:v libx264 -preset ultrafast -crf 18 -c:a copy "${d3d_pre_intermediate}"; then
             rm -f "${d3d_pre_intermediate}"
@@ -407,7 +407,7 @@ process_video() {
       if [[ "${do_stab}" -eq 1 && "${stab_mode}" == "vidstab" && \
             "${use_gpu}" -eq 1 && \
             ("${gpu_encoder}" == "hevc_nvenc" || "${gpu_encoder}" == "h264_nvenc") ]]; then
-        printf "    %s NVENC encode failed — retrying with CPU encoder...\n" "$(clr_yellow '⚠')"
+        printf "    %s NVENC encode failed - retrying with CPU encoder...\n" "$(clr_yellow '⚠')"
         local cpu_encode_args=()
         [[ "${USE_H265}" -eq 1 ]] \
           && cpu_encode_args=(-c:v libx265 -preset faster -crf 28 -c:a copy) \

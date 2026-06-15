@@ -55,7 +55,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### Authentication Endpoints — `/api/auth/`
+### Authentication Endpoints - `/api/auth/`
 
 All authentication endpoints are **public** (no token required).
 
@@ -80,7 +80,7 @@ Register a new user account. The `username` is set automatically to `{system_id}
 
 > `first_name` and `last_name` are optional. `system_id` and `email` are required.
 
-**Successful response — `201 Created`:**
+**Successful response - `201 Created`:**
 
 ```json
 {
@@ -94,7 +94,7 @@ Register a new user account. The `username` is set automatically to `{system_id}
 }
 ```
 
-**Validation error example — `400 Bad Request`:**
+**Validation error example - `400 Bad Request`:**
 
 ```json
 {
@@ -133,7 +133,7 @@ The access token payload includes custom claims: `username` (the internal `{syst
 }
 ```
 
-**Successful response — `200 OK`:**
+**Successful response - `200 OK`:**
 
 ```json
 {
@@ -142,7 +142,7 @@ The access token payload includes custom claims: `username` (the internal `{syst
 }
 ```
 
-**Invalid credentials — `401 Unauthorized`:**
+**Invalid credentials - `401 Unauthorized`:**
 
 ```json
 {
@@ -176,7 +176,7 @@ Get a new access token using a valid refresh token. The refresh token is rotated
 }
 ```
 
-**Successful response — `200 OK`:**
+**Successful response - `200 OK`:**
 
 ```json
 {
@@ -185,7 +185,7 @@ Get a new access token using a valid refresh token. The refresh token is rotated
 }
 ```
 
-**Expired or invalid token — `401 Unauthorized`:**
+**Expired or invalid token - `401 Unauthorized`:**
 
 ```json
 {
@@ -216,13 +216,13 @@ Check whether a given token (access or refresh) is still valid.
 }
 ```
 
-**Token is valid — `200 OK`:**
+**Token is valid - `200 OK`:**
 
 ```json
 {}
 ```
 
-**Token is invalid or expired — `401 Unauthorized`:**
+**Token is invalid or expired - `401 Unauthorized`:**
 
 ```json
 {
@@ -247,7 +247,7 @@ Return the authenticated user's profile data, including their profile picture UR
 
 **Requires:** `Authorization: Bearer <access_token>`
 
-**Successful response — `200 OK`:**
+**Successful response - `200 OK`:**
 
 ```json
 {
@@ -274,7 +274,7 @@ curl http://localhost:8000/api/auth/profile/ \
 
 #### `PUT /api/auth/profile/`
 
-Update the authenticated user's profile fields. All fields are optional — only send the ones you want to change.
+Update the authenticated user's profile fields. All fields are optional - only send the ones you want to change.
 
 **Requires:** `Authorization: Bearer <access_token>`
 
@@ -290,7 +290,7 @@ Update the authenticated user's profile fields. All fields are optional — only
 
 > `username` is system-managed and cannot be set directly. Changing `email` automatically updates the internal username to `{system_id}_{new_email}`.
 
-**Successful response — `200 OK`:** *(same shape as `GET /api/auth/profile/`)*
+**Successful response - `200 OK`:** _(same shape as `GET /api/auth/profile/`)_
 
 ```json
 {
@@ -304,7 +304,7 @@ Update the authenticated user's profile fields. All fields are optional — only
 }
 ```
 
-**Validation error — `400 Bad Request`:**
+**Validation error - `400 Bad Request`:**
 
 ```json
 {
@@ -336,7 +336,7 @@ Resend the verification email to an unverified account. Always returns a generic
 }
 ```
 
-**Response — `200 OK`:**
+**Response - `200 OK`:**
 
 ```json
 {
@@ -367,7 +367,7 @@ Request a password-reset email. Always returns a generic `200` response regardle
 }
 ```
 
-**Response — `200 OK`:**
+**Response - `200 OK`:**
 
 ```json
 {
@@ -401,7 +401,7 @@ Set a new password using the token received by email. The token is one-time use 
 }
 ```
 
-**Successful response — `200 OK`:**
+**Successful response - `200 OK`:**
 
 ```json
 {
@@ -409,7 +409,7 @@ Set a new password using the token received by email. The token is one-time use 
 }
 ```
 
-**Invalid or expired token — `400 Bad Request`:**
+**Invalid or expired token - `400 Bad Request`:**
 
 ```json
 {
@@ -417,7 +417,7 @@ Set a new password using the token received by email. The token is one-time use 
 }
 ```
 
-**Passwords don't match — `400 Bad Request`:**
+**Passwords don't match - `400 Bad Request`:**
 
 ```json
 {
@@ -453,9 +453,9 @@ Upload a profile picture as a **base64-encoded image**. The image is automatical
 }
 ```
 
-> The `data:image/...;base64,` prefix is optional — a raw base64 string is also accepted.
+> The `data:image/...;base64,` prefix is optional - a raw base64 string is also accepted.
 
-**Successful response — `200 OK`:**
+**Successful response - `200 OK`:**
 
 ```json
 {
@@ -463,7 +463,7 @@ Upload a profile picture as a **base64-encoded image**. The image is automatical
 }
 ```
 
-**Validation error — `400 Bad Request`:**
+**Validation error - `400 Bad Request`:**
 
 ```json
 {
@@ -532,27 +532,27 @@ The app is containerized with Docker and deployed to MicroK8s via a Helm chart l
 
 Configure production values as a Kubernetes Secret and reference them in `helm/values.yaml` via `envFromSecret`:
 
-| Variable                 | Source          | Description                                                                      |
-| ------------------------ | --------------- | -------------------------------------------------------------------------------- |
-| `DB_HOST`                | `env`           | PostgreSQL host (set by Helm chart)                                              |
-| `DB_PORT`                | `env`           | PostgreSQL port (default: `5432`)                                                |
-| `DB_NAME`                | `env`           | Database name (default: `website`)                                               |
-| `DB_USER`                | `env`           | Database user (default: `website`)                                               |
-| `DB_PASSWORD`            | `envFromSecret` | Database password — stored in K8s Secret                                         |
-| `REDIS_URL`              | `env`           | Redis connection URL (default: `redis://redis.website.svc.cluster.local:6379/0`) |
-| `REDIS_PASSWORD`         | `envFromSecret` | Redis password — required only when Redis auth is enabled                        |
-| `MEDIA_ROOT`             | `env`           | Override media path (default: `/app/media`)                                      |
-| `SECRET_KEY`             | `envFromSecret` | Django secret key (required in production)                                       |
-| `DEBUG`                  | `env`           | Set to `False` in production                                                     |
-| `ALLOWED_HOSTS`          | `env`           | Comma-separated list of allowed hostnames                                        |
-| `CSRF_TRUSTED_ORIGINS`   | `env`           | Comma-separated list of allowed origins                                          |
+| Variable                 | Source          | Description                                                                                                                                                      |
+| ------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DB_HOST`                | `env`           | PostgreSQL host (set by Helm chart)                                                                                                                              |
+| `DB_PORT`                | `env`           | PostgreSQL port (default: `5432`)                                                                                                                                |
+| `DB_NAME`                | `env`           | Database name (default: `website`)                                                                                                                               |
+| `DB_USER`                | `env`           | Database user (default: `website`)                                                                                                                               |
+| `DB_PASSWORD`            | `envFromSecret` | Database password - stored in K8s Secret                                                                                                                         |
+| `REDIS_URL`              | `env`           | Redis connection URL (default: `redis://redis.website.svc.cluster.local:6379/0`)                                                                                 |
+| `REDIS_PASSWORD`         | `envFromSecret` | Redis password - required only when Redis auth is enabled                                                                                                        |
+| `MEDIA_ROOT`             | `env`           | Override media path (default: `/app/media`)                                                                                                                      |
+| `SECRET_KEY`             | `envFromSecret` | Django secret key (required in production)                                                                                                                       |
+| `DEBUG`                  | `env`           | Set to `False` in production                                                                                                                                     |
+| `ALLOWED_HOSTS`          | `env`           | Comma-separated list of allowed hostnames                                                                                                                        |
+| `CSRF_TRUSTED_ORIGINS`   | `env`           | Comma-separated list of allowed origins                                                                                                                          |
 | `CORS_ALLOWED_ORIGINS`   | `env`           | Comma-separated list of origins allowed for cross-origin requests (e.g. `https://website.iguzman.com.mx`). When unset and `DEBUG=True`, all origins are allowed. |
-| `DJANGO_SETTINGS_MODULE` | `env`           | Set automatically by the Helm chart                                              |
-| `EMAIL_HOST`             | `env`           | SMTP host (default: `smtp.ionos.com`)                                            |
-| `EMAIL_PORT`             | `env`           | SMTP port (default: `587`)                                                       |
-| `EMAIL_USE_TLS`          | `env`           | Enable STARTTLS (default: `True`)                                                |
-| `EMAIL_HOST_USER`        | `envFromSecret` | SMTP username — stored in K8s Secret; enables SMTP when set                     |
-| `EMAIL_HOST_PASSWORD`    | `envFromSecret` | SMTP password — stored in K8s Secret                                             |
+| `DJANGO_SETTINGS_MODULE` | `env`           | Set automatically by the Helm chart                                                                                                                              |
+| `EMAIL_HOST`             | `env`           | SMTP host (default: `smtp.ionos.com`)                                                                                                                            |
+| `EMAIL_PORT`             | `env`           | SMTP port (default: `587`)                                                                                                                                       |
+| `EMAIL_USE_TLS`          | `env`           | Enable STARTTLS (default: `True`)                                                                                                                                |
+| `EMAIL_HOST_USER`        | `envFromSecret` | SMTP username - stored in K8s Secret; enables SMTP when set                                                                                                      |
+| `EMAIL_HOST_PASSWORD`    | `envFromSecret` | SMTP password - stored in K8s Secret                                                                                                                             |
 
 ### Redis
 
@@ -637,9 +637,9 @@ NAMESPACE=website
 
 The image is built in three stages:
 
-1. **deps** — installs Python packages (including `psycopg2-binary`)
-2. **builder** — runs `collectstatic` (WhiteNoise gzip-compresses assets)
-3. **runner** — minimal production image with non-root user, gunicorn on port `8000`
+1. **deps** - installs Python packages (including `psycopg2-binary`)
+2. **builder** - runs `collectstatic` (WhiteNoise gzip-compresses assets)
+3. **runner** - minimal production image with non-root user, gunicorn on port `8000`
 
 ### 2. Run database migrations
 
@@ -667,21 +667,21 @@ You will be prompted for the target namespace and image tag.
 
 Key values to override in `helm/values.yaml` or via `--set`:
 
-| Key                        | Default                                          | Description                       |
-| -------------------------- | ------------------------------------------------ | --------------------------------- |
-| `image.tag`                | `latest`                                         | Docker image tag to deploy        |
-| `replicaCount`             | `1`                                              | Number of pod replicas            |
-| `ingress.hosts[0].host`    | `website-api.iguzman.com.mx`                     | Public hostname                   |
-| `env.REDIS_URL`            | `redis://redis.website.svc.cluster.local:6379/0` | Redis connection URL              |
-| `hostPathVolume.enabled`   | `true`                                           | Mount shared media volume         |
-| `hostPathVolume.mountPath` | `/app/media`                                     | Container path for media files    |
-| `nginx.enabled`            | `true`                                           | Nginx sidecar for `/media/`       |
-| `resources.limits.cpu`     | `500m`                                           | CPU limit for Django container    |
-| `resources.limits.memory`  | `512Mi`                                          | Memory limit for Django container |
+| Key                        | Default                                          | Description                          |
+| -------------------------- | ------------------------------------------------ | ------------------------------------ |
+| `image.tag`                | `latest`                                         | Docker image tag to deploy           |
+| `replicaCount`             | `1`                                              | Number of pod replicas               |
+| `ingress.hosts[0].host`    | `website-api.iguzman.com.mx`                     | Public hostname                      |
+| `env.REDIS_URL`            | `redis://redis.website.svc.cluster.local:6379/0` | Redis connection URL                 |
+| `hostPathVolume.enabled`   | `true`                                           | Mount shared media volume            |
+| `hostPathVolume.mountPath` | `/app/media`                                     | Container path for media files       |
+| `nginx.enabled`            | `true`                                           | Nginx sidecar for `/media/`          |
+| `resources.limits.cpu`     | `500m`                                           | CPU limit for Django container       |
+| `resources.limits.memory`  | `512Mi`                                          | Memory limit for Django container    |
 | `env.CORS_ALLOWED_ORIGINS` | `https://website.iguzman.com.mx`                 | Allowed cross-origin request origins |
-| `env.EMAIL_HOST`           | `smtp.ionos.com`                                 | SMTP server hostname              |
-| `env.EMAIL_PORT`           | `587`                                            | SMTP port                         |
-| `env.EMAIL_USE_TLS`        | `True`                                           | Enable STARTTLS                   |
+| `env.EMAIL_HOST`           | `smtp.ionos.com`                                 | SMTP server hostname                 |
+| `env.EMAIL_PORT`           | `587`                                            | SMTP port                            |
+| `env.EMAIL_USE_TLS`        | `True`                                           | Enable STARTTLS                      |
 
 ### Checking deployment status
 

@@ -1,12 +1,12 @@
-import { execFile } from 'child_process';
-import * as path from 'path';
+import { execFile } from "child_process";
+import * as path from "path";
 
 /**
  * Supported ffmpeg overlay position expressions.
  *
  * These correspond to ffmpeg filter expression variables:
- * - `main_w` / `main_h` — dimensions of the base (video) layer.
- * - `overlay_w` / `overlay_h` — dimensions of the overlay (image) layer.
+ * - `main_w` / `main_h` - dimensions of the base (video) layer.
+ * - `overlay_w` / `overlay_h` - dimensions of the overlay (image) layer.
  *
  * You may pass any valid ffmpeg expression string (e.g. `'(main_w-overlay_w)/2'`).
  */
@@ -59,16 +59,16 @@ export interface AddImagesToVideoResult {
  * @returns `'/app/media'` in production, `'public/media'` otherwise.
  */
 function getDefaultOutputFolder(): string {
-  const nodeEnv = process.env.NODE_ENV?.trim() ?? 'localhost';
-  return nodeEnv === 'production' ? '/app/media' : 'public/media';
+  const nodeEnv = process.env.NODE_ENV?.trim() ?? "localhost";
+  return nodeEnv === "production" ? "/app/media" : "public/media";
 }
 
 /**
  * Strips a leading `media/` prefix from a path. Only removes the prefix
- * at the start of the string — occurrences elsewhere are left intact.
+ * at the start of the string - occurrences elsewhere are left intact.
  */
 export function stripMediaPrefix(filePath: string): string {
-  return filePath.replace(/^media\//, '');
+  return filePath.replace(/^media\//, "");
 }
 
 /** Image overlay with all defaults resolved (no optional fields). */
@@ -89,8 +89,8 @@ function resolveImageDefaults(image: ImageOverlay): ResolvedImageOverlay {
     srcImage: image.srcImage,
     start: image.start ?? 0,
     end: image.end ?? 2,
-    x: image.x ?? '(main_w-overlay_w)/2',
-    y: image.y ?? 'main_h-overlay_h',
+    x: image.x ?? "(main_w-overlay_w)/2",
+    y: image.y ?? "main_h-overlay_h",
     width: image.width ?? 200,
   };
 }
@@ -110,14 +110,14 @@ function validateImage(
     return `images[${index}].srcImage is required`;
   }
   if (
-    typeof image.start !== 'number' ||
+    typeof image.start !== "number" ||
     !Number.isFinite(image.start) ||
     image.start < 0
   ) {
     return `images[${index}].start must be a non-negative finite number`;
   }
   if (
-    typeof image.end !== 'number' ||
+    typeof image.end !== "number" ||
     !Number.isFinite(image.end) ||
     image.end < 0
   ) {
@@ -127,7 +127,7 @@ function validateImage(
     return `images[${index}].start must be less than end`;
   }
   if (
-    typeof image.width !== 'number' ||
+    typeof image.width !== "number" ||
     !Number.isFinite(image.width) ||
     image.width <= 0
   ) {
@@ -158,11 +158,11 @@ export function buildMultiImageFfmpegArgs(
   destFile: string,
   images: ResolvedImageOverlay[],
 ): string[] {
-  const args: string[] = ['-y', '-i', srcVideoFile];
+  const args: string[] = ["-y", "-i", srcVideoFile];
 
   // Add each overlay image as an input
   for (const imageFile of srcImageFiles) {
-    args.push('-i', imageFile);
+    args.push("-i", imageFile);
   }
 
   // Build the filter_complex string:
@@ -170,7 +170,7 @@ export function buildMultiImageFfmpegArgs(
   //   [1:v]scale=<width>:-1[img1]; ...
   //   [base][img1]overlay=<x>:<y>:enable='between(t,<start>,<end>)'[v1]; ...
   //   ... last overlay outputs [outv]
-  let filterComplex = '[0:v]setsar=1[base];';
+  let filterComplex = "[0:v]setsar=1[base];";
 
   // Scale each overlay image
   for (let i = 0; i < images.length; i++) {
@@ -180,14 +180,14 @@ export function buildMultiImageFfmpegArgs(
   // Chain overlay filters
   for (let i = 0; i < images.length; i++) {
     const { x, y, start, end } = images[i]!;
-    const inputLabel = i === 0 ? '[base]' : `[v${i}]`;
-    const outputLabel = i === images.length - 1 ? '[outv]' : `[v${i + 1}];`;
+    const inputLabel = i === 0 ? "[base]" : `[v${i}]`;
+    const outputLabel = i === images.length - 1 ? "[outv]" : `[v${i + 1}];`;
 
     filterComplex += `${inputLabel}[img${i + 1}]overlay=${x}:${y}:enable='between(t,${start},${end})'${outputLabel}`;
   }
 
-  args.push('-filter_complex', filterComplex);
-  args.push('-map', '[outv]', '-map', '0:a?', '-c:a', 'copy');
+  args.push("-filter_complex", filterComplex);
+  args.push("-map", "[outv]", "-map", "0:a?", "-c:a", "copy");
   args.push(destFile);
 
   return args;
@@ -229,13 +229,13 @@ export function addImagesToVideo({
 }: AddImagesToVideoOptions): Promise<AddImagesToVideoResult> {
   // --- Input validation ---
   if (!srcVideo) {
-    return Promise.reject(new Error('srcVideo is required'));
+    return Promise.reject(new Error("srcVideo is required"));
   }
   if (!dest) {
-    return Promise.reject(new Error('dest is required'));
+    return Promise.reject(new Error("dest is required"));
   }
   if (images.length === 0) {
-    return Promise.reject(new Error('images must contain at least one entry'));
+    return Promise.reject(new Error("images must contain at least one entry"));
   }
 
   // Resolve defaults and validate each image
@@ -250,7 +250,7 @@ export function addImagesToVideo({
   // --- Resolve absolute file paths ---
   const srcVideoFile = path.join(outputFolder, stripMediaPrefix(srcVideo));
   const srcImageFiles = resolvedImages.map((img) =>
-    path.join(outputFolder, 'people', stripMediaPrefix(img.srcImage)),
+    path.join(outputFolder, "people", stripMediaPrefix(img.srcImage)),
   );
   const destClean = stripMediaPrefix(dest);
   const destFile = path.join(outputFolder, destClean);
@@ -265,7 +265,7 @@ export function addImagesToVideo({
 
   return new Promise((resolve, reject) => {
     execFile(
-      'ffmpeg',
+      "ffmpeg",
       args,
       { maxBuffer: 1024 * 2048 },
       (error: Error | null) => {

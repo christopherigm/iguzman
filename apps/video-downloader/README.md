@@ -1,6 +1,6 @@
 # video-downloader
 
-A Next.js PWA for downloading videos from major social and streaming platforms, with full offline support via the browser's Origin Private File System (OPFS). Videos are stored directly on the device so they remain accessible without a network connection. All video processing runs client-side through FFmpeg compiled to WebAssembly — no server-side video processing required.
+A Next.js PWA for downloading videos from major social and streaming platforms, with full offline support via the browser's Origin Private File System (OPFS). Videos are stored directly on the device so they remain accessible without a network connection. All video processing runs client-side through FFmpeg compiled to WebAssembly - no server-side video processing required.
 
 ## Features
 
@@ -87,7 +87,7 @@ helm upgrade --install video-downloader ./apps/video-downloader/helm \
   --reuse-values
 ```
 
-`--reuse-values` keeps the existing `image.tag` and other overrides — only the chart templates are re-applied.
+`--reuse-values` keeps the existing `image.tag` and other overrides - only the chart templates are re-applied.
 
 ### Check deployment status
 
@@ -124,13 +124,13 @@ All containers in a Kubernetes pod share a single network namespace. wg-quick in
 
 #### wg0.conf requirements
 
-Three rules that must be followed — each one has a specific reason:
+Three rules that must be followed - each one has a specific reason:
 
 | Rule                                               | Why                                                                                                                                                                                                                                                                                                                                    |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Use public-only `AllowedIPs` — **not** `0.0.0.0/0` | `0.0.0.0/0` triggers wg-quick's policy-routing mode, which installs kernel `ip rule` entries before the tunnel is established and breaks pod networking during startup. Split AllowedIPs uses simple per-prefix route injection instead.                                                                                               |
+| Use public-only `AllowedIPs` - **not** `0.0.0.0/0` | `0.0.0.0/0` triggers wg-quick's policy-routing mode, which installs kernel `ip rule` entries before the tunnel is established and breaks pod networking during startup. Split AllowedIPs uses simple per-prefix route injection instead.                                                                                               |
 | Add `PostUp`/`PreDown` endpoint host routes        | The Surfshark server IP (e.g. `212.102.44.115`) falls inside the `208.0.0.0/4` AllowedIPs range. Without a `/32` host route via `eth0`, WireGuard's own handshake UDP packets loop back through `wg0` and the tunnel never connects (`0 B received`).                                                                                  |
-| Omit `DNS =`                                       | All containers in the pod share the network namespace. wg-quick's DNS management redirects port-53 traffic through the VPN, breaking DNS for every container including `video-downloader`. Let Kubernetes CoreDNS handle DNS — it resolves via a `10.x.x.x` ClusterIP that is excluded from `AllowedIPs` and always routes via `eth0`. |
+| Omit `DNS =`                                       | All containers in the pod share the network namespace. wg-quick's DNS management redirects port-53 traffic through the VPN, breaking DNS for every container including `video-downloader`. Let Kubernetes CoreDNS handle DNS - it resolves via a `10.x.x.x` ClusterIP that is excluded from `AllowedIPs` and always routes via `eth0`. |
 
 Minimal working `wg0.conf` (`apps/video-downloader/us-den.conf`):
 
@@ -141,7 +141,7 @@ PrivateKey = <your-private-key>
 # ① Prevent the VPN endpoint's own UDP traffic from looping through wg0
 PostUp  = ip route add $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1
 PreDown = ip route del $(wg show wg0 endpoints | awk '{print $2}' | sed 's/:[0-9]*$//')/32 via 169.254.1.1 2>/dev/null || true
-# ② Bypass VPN for Groq API — Surfshark IPs are blocked by Groq (returns 403)
+# ② Bypass VPN for Groq API - Surfshark IPs are blocked by Groq (returns 403)
 PostUp  = GROQ_IP=$(getent hosts api.groq.com | awk '{print $1; exit}'); ip route add ${GROQ_IP}/32 via 169.254.1.1 dev eth0
 PreDown = GROQ_IP=$(getent hosts api.groq.com | awk '{print $1; exit}'); ip route del ${GROQ_IP}/32 2>/dev/null || true
 
@@ -151,7 +151,7 @@ AllowedIPs = 0.0.0.0/5, 8.0.0.0/7, 11.0.0.0/8, 12.0.0.0/6, 16.0.0.0/4, 32.0.0.0/
 Endpoint   = us-den.prod.surfshark.com:51820
 ```
 
-The `AllowedIPs` list is the mathematical complement of `10.0.0.0/8 + 169.254.0.0/16 + 172.16.0.0/12 + 192.168.0.0/16` — all public unicast IPv4 space. Private ranges route via `eth0` (Calico) and are never sent to the VPN. The `PostUp` dynamically reads the resolved endpoint IP from the live WireGuard config at startup, so it works correctly even if Surfshark changes the server IP.
+The `AllowedIPs` list is the mathematical complement of `10.0.0.0/8 + 169.254.0.0/16 + 172.16.0.0/12 + 192.168.0.0/16` - all public unicast IPv4 space. Private ranges route via `eth0` (Calico) and are never sent to the VPN. The `PostUp` dynamically reads the resolved endpoint IP from the live WireGuard config at startup, so it works correctly even if Surfshark changes the server IP.
 
 #### Enabling the sidecar
 
@@ -205,7 +205,7 @@ kubectl rollout restart deployment/video-downloader -n video-downloader-2
 
 ## Coupon management
 
-Coupons are managed via the `scripts/coupon` CLI using `kubectl exec`. Pass `INTERNAL_SECRET` inline — it must match the value in your Kubernetes secret.
+Coupons are managed via the `scripts/coupon` CLI using `kubectl exec`. Pass `INTERNAL_SECRET` inline - it must match the value in your Kubernetes secret.
 
 ### Create coupons
 
@@ -220,7 +220,7 @@ kubectl exec -n video-downloader-2 deploy/video-downloader -c video-downloader -
 | `-value <credits>`     | Yes             | Credit amount each coupon grants            |
 | `-max-redemptions <n>` | No (default: 1) | How many times each code can be redeemed    |
 
-Example — generate 5 single-use coupons worth 1500 credits each:
+Example - generate 5 single-use coupons worth 1500 credits each:
 
 ```bash
 kubectl exec -n video-downloader-2 deploy/video-downloader -c video-downloader -- \
@@ -270,7 +270,7 @@ cp env.example .env
 | Variable                 | How to set                                                      | Description                                                                                                                   |
 | ------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `MONGO_URI`              | `helm/values.yaml` → `env`                                      | MongoDB connection string (defaults to in-cluster service)                                                                    |
-| `GROQ_API_KEY`           | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | Groq API key for subtitle translation. **Note:** route via `eth0` (not VPN) in `wg0.conf` — Surfshark IPs are blocked by Groq |
+| `GROQ_API_KEY`           | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | Groq API key for subtitle translation. **Note:** route via `eth0` (not VPN) in `wg0.conf` - Surfshark IPs are blocked by Groq |
 | `SCRAPECREATORS_API_KEY` | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | ScrapeCreators API key for comment scraping (TikTok, Instagram, Facebook)                                                     |
 | `LOG_LEVEL`              | `helm/values.yaml` → `env`                                      | Override default log level (`debug` in dev, `info` in prod)                                                                   |
 
@@ -283,7 +283,7 @@ kubectl create secret generic vd2-secrets \
   -n video-downloader-2 \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Then redeploy (Helm only — no new image needed)
+# Then redeploy (Helm only - no new image needed)
 helm upgrade --install video-downloader ./apps/video-downloader/helm \
   --namespace video-downloader-2 \
   --reuse-values
@@ -312,8 +312,8 @@ Valid server-processing ops: `interpolateFps`, `removeBlackBars`, `convertToH264
 
 Shared media is stored on the host at `/shared-master` and mounted into every pod at `/app/media`. The nginx sidecar serves:
 
-- `/api/media/**` — downloaded and processed video files
-- `/media/binaries/**` — `server-video-editor` installer binaries (`.deb`, `.exe`)
+- `/api/media/**` - downloaded and processed video files
+- `/media/binaries/**` - `server-video-editor` installer binaries (`.deb`, `.exe`)
 
 Place installer binaries at `/shared-master/binaries/` on the host node.
 
@@ -327,13 +327,13 @@ Pod health is checked via a file probe at `/app/media/.healthy` (startup: 30 att
 
 **Component split:**
 
-- `PinnedVideoItem` — active downloads, embeds `useFFmpeg` directly, handles all client-side processing
-- `ReadOnlyVideoItem` — completed videos, supports re-processing
-- `VideoExtraActions` — FPS, H.264 convert, black bar removal panel
-- `BurnCaptionsModal` — caption styling (font, color, alignment, border, animation)
-- `VideoComments` — renders downloaded comments inline in the video card (supports nested replies, avatars, likes)
-- `WsClientPanel` — device selector (This Device vs. connected servers)
-- `InfinitePage` — infinite-scroll gallery view
+- `PinnedVideoItem` - active downloads, embeds `useFFmpeg` directly, handles all client-side processing
+- `ReadOnlyVideoItem` - completed videos, supports re-processing
+- `VideoExtraActions` - FPS, H.264 convert, black bar removal panel
+- `BurnCaptionsModal` - caption styling (font, color, alignment, border, animation)
+- `VideoComments` - renders downloaded comments inline in the video card (supports nested replies, avatars, likes)
+- `WsClientPanel` - device selector (This Device vs. connected servers)
+- `InfinitePage` - infinite-scroll gallery view
 
 **OPFS storage:** When enabled for a video, the downloaded file, thumbnail, captions, and comments JSON are all written to the browser's Origin Private File System (`lib/opfs.ts`). Stored videos are served from `blob:` URLs derived from OPFS reads, making them available offline. `OPFSUrlProvider` (`opfs-url-context.tsx`) manages the blob URL lifecycle (registration and revocation) for the whole page. `lib/opfs-processing.ts` handles migrating a processed output back into OPFS and cleaning up the old key.
 

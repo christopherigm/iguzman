@@ -1,4 +1,4 @@
-import { apiReplaceImageBaseUrl } from '@repo/helpers/api-replace-image-base-url';
+import { apiReplaceImageBaseUrl } from "@repo/helpers/api-replace-image-base-url";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -10,7 +10,7 @@ export interface JsonApiResourceIdentifier {
   type: string;
 }
 
-/** Attributes dictionary — values may be any JSON-serialisable type. */
+/** Attributes dictionary - values may be any JSON-serialisable type. */
 export type JsonApiAttributes = Record<string, unknown>;
 
 /** A relationship value: either a single reference or an array of references. */
@@ -39,7 +39,7 @@ export interface JsonApiResponse {
 }
 
 /**
- * A relationship item as it appears before resolution — it may carry the
+ * A relationship item as it appears before resolution - it may carry the
  * reference inside a nested `data` wrapper **or** directly at the top level.
  */
 interface RelationshipItem {
@@ -64,7 +64,7 @@ const cloneAttributes = (attributes: JsonApiAttributes): JsonApiAttributes => ({
 
 /**
  * Replaces internal K8s image URLs with public URLs in every **string** value
- * of the given attributes object.  Returns a new object — the original is
+ * of the given attributes object.  Returns a new object - the original is
  * never mutated.
  *
  * @param attributes - The attributes dictionary to process.
@@ -76,7 +76,7 @@ const replaceImageUrlsInAttributes = (
   const result = cloneAttributes(attributes);
 
   for (const [key, value] of Object.entries(result)) {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       result[key] = apiReplaceImageBaseUrl(value);
     }
   }
@@ -86,13 +86,13 @@ const replaceImageUrlsInAttributes = (
 
 /**
  * Walks a resource (or relationship wrapper) and replaces internal image URLs
- * in all `attributes` dictionaries it finds.  Returns a **new** object — the
+ * in all `attributes` dictionaries it finds.  Returns a **new** object - the
  * original is never mutated.
  *
  * Handles three shapes:
- * 1. `{ attributes }` — top-level resource
- * 2. `{ data: { attributes } }` — relationship wrapper with a single resource
- * 3. `{ data: [{ attributes }, …] }` — relationship wrapper with an array
+ * 1. `{ attributes }` - top-level resource
+ * 2. `{ data: { attributes } }` - relationship wrapper with a single resource
+ * 3. `{ data: [{ attributes }, …] }` - relationship wrapper with an array
  *
  * @param rawItem - The resource or relationship wrapper to process.
  * @returns A shallow copy of `rawItem` with all image URLs replaced.
@@ -104,7 +104,7 @@ export const replaceImageUrls = <T extends RelationshipItem>(rawItem: T): T => {
     item.attributes = replaceImageUrlsInAttributes(item.attributes);
   }
 
-  if (item.data && typeof item.data === 'object' && !Array.isArray(item.data)) {
+  if (item.data && typeof item.data === "object" && !Array.isArray(item.data)) {
     const resource = item.data as JsonApiResource;
     if (resource.attributes) {
       item.data = {
@@ -157,7 +157,7 @@ const extractIdentifier = (
  * `.data` is replaced) with the full resource.  Nested relationships on the
  * resolved resource are recursively denormalized as well.
  *
- * The original `item` is **never** mutated — all work is done on copies.
+ * The original `item` is **never** mutated - all work is done on copies.
  *
  * @param item     - The relationship item to resolve.
  * @param included - The pool of side-loaded resources.
@@ -205,7 +205,7 @@ const resolveIncludedResource = (
  * Denormalizes a single JSON:API resource by resolving all of its
  * `relationships` against the `included` pool.
  *
- * Returns a **new** resource — the original is never mutated.
+ * Returns a **new** resource - the original is never mutated.
  *
  * @param rawResource - The resource whose relationships should be resolved.
  * @param included    - The pool of side-loaded resources.

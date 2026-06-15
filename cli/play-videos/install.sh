@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# install.sh — Install dependencies required by play-videos.sh
+# install.sh - Install dependencies required by play-videos.sh
 #
 # Installs:
 #   - mpv          (media player, DRM/KMS output)
-#   - alsa-utils   (aplay, amixer — ALSA audio device listing and control)
+#   - alsa-utils   (aplay, amixer - ALSA audio device listing and control)
 #   - libdrm2      (DRM userspace library for KMS video output)
 #
 # Adds current user to:
 #   - video  (access /dev/dri/* DRM devices for KMS output)
 #   - audio  (access ALSA sound devices)
-#   - render (access /dev/dri/renderD* — required on some distros)
+#   - render (access /dev/dri/renderD* - required on some distros)
 #
 # Supported distros: Debian/Ubuntu (apt), Fedora (dnf), RHEL/CentOS (yum), macOS (brew)
 #
@@ -95,7 +95,7 @@ install_alsa_utils() {
   fi
   info "Installing alsa-utils..."
   if is_mac; then
-    warn "alsa-utils is Linux-only. On macOS, mpv uses CoreAudio natively — no action needed."
+    warn "alsa-utils is Linux-only. On macOS, mpv uses CoreAudio natively - no action needed."
     return
   fi
   if has_apt; then
@@ -112,7 +112,7 @@ install_alsa_utils() {
 
 install_libdrm() {
   if is_mac; then
-    warn "libdrm is Linux-only — skipping on macOS."
+    warn "libdrm is Linux-only - skipping on macOS."
     return
   fi
   # Check if DRM devices exist (kernel support)
@@ -154,7 +154,7 @@ install_libdrm() {
 add_to_group() {
   local group="$1" reason="$2"
   if ! getent group "${group}" &>/dev/null; then
-    warn "Group '${group}' does not exist on this system — skipping."
+    warn "Group '${group}' does not exist on this system - skipping."
     return
   fi
   if id -nG 2>/dev/null | grep -qw "${group}"; then
@@ -171,7 +171,7 @@ add_to_group() {
 
 main() {
   printf "\n  ${BOLD}${CYAN}┌──────────────────────────────────────────────────────┐${RESET}\n"
-  printf   "  ${BOLD}${CYAN}│${RESET}  ${BOLD}%-52s${RESET}${BOLD}${CYAN}│${RESET}\n" "play-videos.sh — Dependency Installer"
+  printf   "  ${BOLD}${CYAN}│${RESET}  ${BOLD}%-52s${RESET}${BOLD}${CYAN}│${RESET}\n" "play-videos.sh - Dependency Installer"
   printf   "  ${BOLD}${CYAN}└──────────────────────────────────────────────────────┘${RESET}\n\n"
 
   is_linux || { warn "This script is designed for Linux. Some steps may not apply on macOS."; }
@@ -201,7 +201,7 @@ main() {
     add_to_group audio  "access ALSA sound devices"
     add_to_group render "access /dev/dri/renderD* GPU render nodes"
   else
-    warn "Group configuration is Linux-only — skipping on macOS."
+    warn "Group configuration is Linux-only - skipping on macOS."
   fi
 
   # ── DRM device check ───────────────────────────────────────────────────────

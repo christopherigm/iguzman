@@ -127,7 +127,7 @@ class ScanView(APIView):
                 status=status.HTTP_201_CREATED,
             )
 
-        # Slow path — hand off to the async resolution queue.
+        # Slow path - hand off to the async resolution queue.
         entry = ScanQueue.objects.create(barcode=barcode)
         resolve_scan_queue_entry.delay(entry.id)
         return Response(

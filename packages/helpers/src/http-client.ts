@@ -2,13 +2,13 @@
 import {
   rebuildJsonApiResponse,
   type JsonApiResponse,
-} from '@repo/helpers/json-api-rebuild';
+} from "@repo/helpers/json-api-rebuild";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
 /* ------------------------------------------------------------------ */
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export type QueryParamValue = string | number | boolean | undefined;
 
@@ -54,8 +54,8 @@ export class HttpClientError extends Error {
   readonly data: unknown;
 
   constructor(status: number, statusText: string, url: string, data: unknown) {
-    super(`HTTP ${status} ${statusText} — ${url}`);
-    this.name = 'HttpClientError';
+    super(`HTTP ${status} ${statusText} - ${url}`);
+    this.name = "HttpClientError";
     this.status = status;
     this.statusText = statusText;
     this.url = url;
@@ -71,7 +71,7 @@ const resolveBaseUrl = (baseUrl?: string): string => {
   const resolved = baseUrl ?? process.env.BASE_URL;
   if (!resolved) {
     throw new Error(
-      'http-client: no baseUrl provided and process.env.BASE_URL is not set.',
+      "http-client: no baseUrl provided and process.env.BASE_URL is not set.",
     );
   }
   return resolved;
@@ -82,8 +82,8 @@ const buildUrl = (
   path: string,
   query?: QueryParams,
 ): string => {
-  const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = new URL(`${base}${normalizedPath}`);
 
   if (query) {
@@ -102,17 +102,17 @@ const buildHeaders = (
   jsonapi: boolean,
   hasBody: boolean,
 ): Record<string, string> => {
-  const mediaType = jsonapi ? 'application/vnd.api+json' : 'application/json';
+  const mediaType = jsonapi ? "application/vnd.api+json" : "application/json";
   const headers: Record<string, string> = {
     Accept: mediaType,
   };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   if (hasBody) {
-    headers['Content-Type'] = mediaType;
+    headers["Content-Type"] = mediaType;
   }
 
   return headers;
@@ -134,7 +134,7 @@ const executeRequest = async <T>(
 ): Promise<HttpClientResult<T>> => {
   const { url: path, token, jsonapi = false, baseUrl, timeoutMs } = options;
 
-  if (!path) throw new Error('http-client: url is required.');
+  if (!path) throw new Error("http-client: url is required.");
 
   const resolvedBase = resolveBaseUrl(baseUrl);
   const fullUrl = buildUrl(resolvedBase, path, query);
@@ -165,7 +165,7 @@ const executeRequest = async <T>(
     try {
       errorData = await response.json();
     } catch {
-      // response body is not JSON — leave as null
+      // response body is not JSON - leave as null
     }
     throw new HttpClientError(
       response.status,
@@ -215,7 +215,7 @@ export function httpGet<T = unknown>(
 export function httpGet<T = unknown>(
   options: HttpGetOptions,
 ): Promise<HttpClientResult<T>> {
-  return executeRequest<T>('GET', options, undefined, options.query);
+  return executeRequest<T>("GET", options, undefined, options.query);
 }
 
 // --- httpPost ---
@@ -229,7 +229,7 @@ export function httpPost<T = unknown>(
 export function httpPost<T = unknown>(
   options: HttpPostOptions,
 ): Promise<HttpClientResult<T>> {
-  return executeRequest<T>('POST', options, options.body);
+  return executeRequest<T>("POST", options, options.body);
 }
 
 // --- httpPut ---
@@ -243,7 +243,7 @@ export function httpPut<T = unknown>(
 export function httpPut<T = unknown>(
   options: HttpPutOptions,
 ): Promise<HttpClientResult<T>> {
-  return executeRequest<T>('PUT', options, options.body);
+  return executeRequest<T>("PUT", options, options.body);
 }
 
 // --- httpPatch ---
@@ -257,7 +257,7 @@ export function httpPatch<T = unknown>(
 export function httpPatch<T = unknown>(
   options: HttpPatchOptions,
 ): Promise<HttpClientResult<T>> {
-  return executeRequest<T>('PATCH', options, options.body);
+  return executeRequest<T>("PATCH", options, options.body);
 }
 
 // --- httpDelete ---
@@ -271,5 +271,5 @@ export function httpDelete<T = unknown>(
 export function httpDelete<T = unknown>(
   options: HttpDeleteOptions,
 ): Promise<HttpClientResult<T>> {
-  return executeRequest<T>('DELETE', options, undefined, options.query);
+  return executeRequest<T>("DELETE", options, undefined, options.query);
 }

@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Button } from '@repo/ui/core-elements/button';
-import type { DownloadVideoError } from '@repo/helpers/download-video';
-import { usePollTask, type TaskData } from './use-poll-task';
-import type { StoredVideo } from './use-video-store';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Button } from "@repo/ui/core-elements/button";
+import type { DownloadVideoError } from "@repo/helpers/download-video";
+import { usePollTask, type TaskData } from "./use-poll-task";
+import type { StoredVideo } from "./use-video-store";
 import {
   STATUS_COLORS,
   resolveMediaUrl,
@@ -20,11 +20,11 @@ import {
   VideoFooterLink,
   isIOS,
   PlatformIconBg,
-} from './video-item-shared';
-import { useOPFSUrls } from './opfs-url-context';
-import { writeToOPFS, readFromOPFS, deleteFromOPFS } from '@/lib/opfs';
-import { setCreditsBalance } from './use-credits-store';
-import './video-item.css';
+} from "./video-item-shared";
+import { useOPFSUrls } from "./opfs-url-context";
+import { writeToOPFS, readFromOPFS, deleteFromOPFS } from "@/lib/opfs";
+import { setCreditsBalance } from "./use-credits-store";
+import "./video-item.css";
 
 /* ── API types ──────────────────────────────────────── */
 
@@ -53,9 +53,9 @@ function extractMigrationParams(video: StoredVideo): MigrationParams | null {
     file: video.file,
     name: video.name,
     thumbnail: video.thumbnail,
-    // Stored as /api/media/<filename> — extract the raw filename
-    captionsFile: video.captionsFile?.split('/').pop() ?? null,
-    commentsFile: video.commentsFile?.split('/').pop() ?? null,
+    // Stored as /api/media/<filename> - extract the raw filename
+    captionsFile: video.captionsFile?.split("/").pop() ?? null,
+    commentsFile: video.commentsFile?.split("/").pop() ?? null,
     taskId: video.taskId,
   };
 }
@@ -77,12 +77,14 @@ export function PinnedVideoItemDownloading({
   onComplete,
   onRemove,
 }: PinnedVideoItemDownloadingProps) {
-  const t = useTranslations('VideoGrid');
+  const t = useTranslations("VideoGrid");
   const { registerUrls } = useOPFSUrls();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [opfsMigrating, setOpfsMigrating] = useState(false);
-  const [opfsProgress, setOpfsProgress] = useState<number | undefined>(undefined);
+  const [opfsProgress, setOpfsProgress] = useState<number | undefined>(
+    undefined,
+  );
   const [copying, setCopying] = useState(false);
 
   const downloadTriggered = useRef(false);
@@ -109,15 +111,15 @@ export function PinnedVideoItemDownloading({
   }, [video.originalURL]);
 
   const isActive =
-    video.status === 'pending' ||
-    video.status === 'downloading' ||
-    video.status === 'queued';
+    video.status === "pending" ||
+    video.status === "downloading" ||
+    video.status === "queued";
 
   const displayName =
     video.fulltitle ??
     video.name ??
     video.uploader ??
-    (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
+    (video.justAudio ? t("untitledAudio") : t("untitledVideo"));
 
   /* ── OPFS migration ─────────────────────────────────── */
   const runOpfsMigration = useCallback(
@@ -133,7 +135,8 @@ export function PinnedVideoItemDownloading({
       setOpfsMigrating(true);
       setOpfsProgress(undefined);
 
-      const { file, name, thumbnail, captionsFile, commentsFile, taskId } = params;
+      const { file, name, thumbnail, captionsFile, commentsFile, taskId } =
+        params;
       let thumbKey: string | null = null;
       let captionsKey: string | null = null;
       let commentsKey: string | null = null;
@@ -143,12 +146,15 @@ export function PinnedVideoItemDownloading({
         // Stream video bytes and track download progress
         const videoRes = await fetch(resolveMediaUrl(`/api/media/${file}`));
         if (!videoRes.ok) {
-          throw Object.assign(new Error(`video fetch failed: ${videoRes.status}`), {
-            httpStatus: videoRes.status,
-          });
+          throw Object.assign(
+            new Error(`video fetch failed: ${videoRes.status}`),
+            {
+              httpStatus: videoRes.status,
+            },
+          );
         }
 
-        const cl = videoRes.headers.get('content-length');
+        const cl = videoRes.headers.get("content-length");
         const totalSize = cl ? parseInt(cl, 10) : null;
         let received = 0;
         const reader = videoRes.body!.getReader();
@@ -165,9 +171,9 @@ export function PinnedVideoItemDownloading({
         }
 
         // Cast needed: stream reader returns Uint8Array<ArrayBufferLike> but
-        // Blob only accepts ArrayBufferView<ArrayBuffer> — safe in practice.
+        // Blob only accepts ArrayBufferView<ArrayBuffer> - safe in practice.
         const videoBlob = new Blob(chunks as unknown as BlobPart[], {
-          type: videoRes.headers.get('content-type') ?? 'video/mp4',
+          type: videoRes.headers.get("content-type") ?? "video/mp4",
         });
         await writeToOPFS(file, videoBlob);
         if (mountedRef.current) setOpfsProgress(100);
@@ -184,7 +190,9 @@ export function PinnedVideoItemDownloading({
 
         if (captionsFile) {
           try {
-            const r = await fetch(resolveMediaUrl(`/api/media/${captionsFile}`));
+            const r = await fetch(
+              resolveMediaUrl(`/api/media/${captionsFile}`),
+            );
             if (r.ok) {
               captionsKey = `captions_${captionsFile}`;
               await writeToOPFS(captionsKey, await r.blob());
@@ -194,7 +202,9 @@ export function PinnedVideoItemDownloading({
 
         if (commentsFile) {
           try {
-            const r = await fetch(resolveMediaUrl(`/api/media/${commentsFile}`));
+            const r = await fetch(
+              resolveMediaUrl(`/api/media/${commentsFile}`),
+            );
             if (r.ok) {
               commentsKey = `comments_${commentsFile}`;
               await writeToOPFS(commentsKey, await r.blob());
@@ -215,7 +225,7 @@ export function PinnedVideoItemDownloading({
         // Mark opfsStored: true BEFORE deleting the server file so a reload
         // mid-delete can still re-fetch the video on next visit.
         onUpdate(video.uuid, {
-          status: 'done',
+          status: "done",
           opfsKey: file,
           opfsThumbnailKey: thumbKey,
           opfsCaptionsKey: captionsKey,
@@ -226,7 +236,7 @@ export function PinnedVideoItemDownloading({
         });
 
         if (taskId) {
-          fetch(`/api/download-video/${taskId}`, { method: 'DELETE' })
+          fetch(`/api/download-video/${taskId}`, { method: "DELETE" })
             .then((r) => {
               if ((r.ok || r.status === 404) && mountedRef.current) {
                 onUpdate(video.uuid, { serverFileDeleted: true });
@@ -238,21 +248,25 @@ export function PinnedVideoItemDownloading({
         if (video.autoDownload) {
           triggerBrowserDownload(
             videoUrl,
-            `${name ?? 'video'}-${Date.now()}-${file}`,
+            `${name ?? "video"}-${Date.now()}-${file}`,
           );
         }
 
         onComplete(video.uuid);
       } catch (err) {
-        console.error('OPFS migration failed:', err);
+        console.error("OPFS migration failed:", err);
         const isQuotaError =
-          err instanceof DOMException && err.name === 'QuotaExceededError';
+          err instanceof DOMException && err.name === "QuotaExceededError";
         // 4xx means the file is gone from the server (e.g. R2 upload never
-        // completed). Retrying will never succeed — treat as terminal.
+        // completed). Retrying will never succeed - treat as terminal.
         const httpStatus = (err as { httpStatus?: number }).httpStatus;
-        const isClientError = httpStatus !== undefined && httpStatus >= 400 && httpStatus < 500;
+        const isClientError =
+          httpStatus !== undefined && httpStatus >= 400 && httpStatus < 500;
         const MAX_MIGRATION_RETRIES = 3;
-        const isTerminal = isQuotaError || isClientError || migrationRetryCount.current >= MAX_MIGRATION_RETRIES;
+        const isTerminal =
+          isQuotaError ||
+          isClientError ||
+          migrationRetryCount.current >= MAX_MIGRATION_RETRIES;
 
         if (isTerminal) {
           await deleteFromOPFS(file).catch(() => {});
@@ -260,19 +274,23 @@ export function PinnedVideoItemDownloading({
           if (captionsKey) await deleteFromOPFS(captionsKey).catch(() => {});
           if (isQuotaError || isClientError) {
             if (taskId) {
-              fetch(`/api/download-video/${taskId}`, { method: 'DELETE' }).catch(() => {});
+              fetch(`/api/download-video/${taskId}`, {
+                method: "DELETE",
+              }).catch(() => {});
             }
           }
           if (mountedRef.current) {
             onUpdate(video.uuid, {
-              status: 'error',
-              error: isQuotaError ? t('errorStorageQuota') : t('errorGeneric'),
+              status: "error",
+              error: isQuotaError ? t("errorStorageQuota") : t("errorGeneric"),
               opfsKey: null,
               opfsThumbnailKey: null,
               opfsCaptionsKey: null,
               opfsStored: false,
               downloadURL: null,
-              ...(isQuotaError || isClientError ? { serverFileDeleted: true } : {}),
+              ...(isQuotaError || isClientError
+                ? { serverFileDeleted: true }
+                : {}),
             });
           }
           onComplete(video.uuid);
@@ -289,12 +307,12 @@ export function PinnedVideoItemDownloading({
           setOpfsMigrating(false);
         }
         if (scheduleRetry) {
-          // Retry after a delay; skip if tab is backgrounded — the
+          // Retry after a delay; skip if tab is backgrounded - the
           // visibilitychange handler will pick it up when the user returns.
           retryTimerRef.current = setTimeout(() => {
             retryTimerRef.current = null;
             migrationInFlight.current = false;
-            if (mountedRef.current && document.visibilityState === 'visible') {
+            if (mountedRef.current && document.visibilityState === "visible") {
               runMigrationRef.current?.(params);
             }
           }, 5000);
@@ -364,16 +382,16 @@ export function PinnedVideoItemDownloading({
         if (file) {
           try {
             const headRes = await fetch(resolveMediaUrl(`/api/media/${file}`), {
-              method: 'HEAD',
+              method: "HEAD",
             });
-            const cl = headRes.headers.get('content-length');
+            const cl = headRes.headers.get("content-length");
             if (cl) onUpdate(video.uuid, { fileSize: parseInt(cl, 10) });
           } catch {}
         }
         if (video.autoDownload && downloadURL && file) {
           triggerBrowserDownload(
             downloadURL,
-            `${name ?? (video.justAudio ? 'audio' : 'video')}-${Date.now()}-${file}`,
+            `${name ?? (video.justAudio ? "audio" : "video")}-${Date.now()}-${file}`,
           );
           if (video.justAudio) {
             const thumbSrc = task.thumbnail
@@ -382,7 +400,7 @@ export function PinnedVideoItemDownloading({
             if (thumbSrc) downloadThumbnail(thumbSrc, name);
           }
         }
-        onUpdate(video.uuid, { status: 'done' });
+        onUpdate(video.uuid, { status: "done" });
         onComplete(video.uuid);
       })();
     },
@@ -403,12 +421,12 @@ export function PinnedVideoItemDownloading({
       startPolling({
         taskId,
         onUpdate: (task) => {
-          if (task.status === 'done') {
+          if (task.status === "done") {
             handleTaskDone(task);
-          } else if (task.status === 'error') {
+          } else if (task.status === "error") {
             onUpdate(video.uuid, {
-              status: 'error',
-              error: task.error?.message ?? 'Download failed',
+              status: "error",
+              error: task.error?.message ?? "Download failed",
             });
           }
         },
@@ -421,18 +439,18 @@ export function PinnedVideoItemDownloading({
   const handleDownload = useCallback(async () => {
     onUpdate(video.uuid, { error: null });
     try {
-      const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
+      const creditsKey = localStorage.getItem("vd_credits_key") ?? "";
       const downloadHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       };
-      if (creditsKey) downloadHeaders['x-credits-key'] = creditsKey;
-      const res = await fetch('/api/download-video', {
-        method: 'POST',
+      if (creditsKey) downloadHeaders["x-credits-key"] = creditsKey;
+      const res = await fetch("/api/download-video", {
+        method: "POST",
         headers: downloadHeaders,
         body: JSON.stringify({
           url: video.originalURL,
           justAudio: video.justAudio,
-          checkCodec: video.platform === 'tiktok',
+          checkCodec: video.platform === "tiktok",
           iosDevice: isIOS(),
           ...(video.maxHeight != null && { maxHeight: video.maxHeight }),
           ...(video.captionsEnabled && { captionsEnabled: true }),
@@ -446,8 +464,8 @@ export function PinnedVideoItemDownloading({
       const data: TaskCreateResponse = await res.json();
       if (!res.ok || data.error) {
         onUpdate(video.uuid, {
-          status: 'error',
-          error: data.error?.message ?? 'Failed to start download',
+          status: "error",
+          error: data.error?.message ?? "Failed to start download",
         });
         return;
       }
@@ -455,10 +473,10 @@ export function PinnedVideoItemDownloading({
         setCreditsBalance(data.creditsRemaining);
       }
       const taskId = data.task._id;
-      onUpdate(video.uuid, { status: 'downloading', taskId, error: null });
+      onUpdate(video.uuid, { status: "downloading", taskId, error: null });
       pollForTask(taskId);
     } catch {
-      onUpdate(video.uuid, { status: 'error', error: t('errorGeneric') });
+      onUpdate(video.uuid, { status: "error", error: t("errorGeneric") });
     }
   }, [
     onUpdate,
@@ -478,7 +496,7 @@ export function PinnedVideoItemDownloading({
 
   /* ── Auto-trigger download for newly added items ─────── */
   useEffect(() => {
-    if (video.status === 'pending' && !downloadTriggered.current) {
+    if (video.status === "pending" && !downloadTriggered.current) {
       downloadTriggered.current = true;
       queueMicrotask(() => handleDownload());
     }
@@ -488,7 +506,7 @@ export function PinnedVideoItemDownloading({
   useEffect(() => {
     if (pollResumeChecked.current) return;
     pollResumeChecked.current = true;
-    if (video.status === 'downloading' && video.taskId) {
+    if (video.status === "downloading" && video.taskId) {
       pollForTask(video.taskId);
     }
   }, [video.status, video.taskId, pollForTask]);
@@ -503,17 +521,17 @@ export function PinnedVideoItemDownloading({
 
   /* ── Warn before closing before task ID is established ── */
   useEffect(() => {
-    if (video.status !== 'pending' && video.status !== 'queued') return;
+    if (video.status !== "pending" && video.status !== "queued") return;
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
     };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [video.status]);
 
   /* ── Auto-move errored items to completed ─────────────── */
   useEffect(() => {
-    if (video.status === 'error') onComplete(video.uuid);
+    if (video.status === "error") onComplete(video.uuid);
   }, [video.status, video.uuid, onComplete]);
 
   /* ── Restart migration when tab becomes visible ─────── */
@@ -521,7 +539,7 @@ export function PinnedVideoItemDownloading({
     const handleVisibility = () => {
       const v = videoRef.current;
       if (
-        document.visibilityState === 'visible' &&
+        document.visibilityState === "visible" &&
         v.opfsEnabled &&
         !v.opfsStored &&
         v.file &&
@@ -531,8 +549,9 @@ export function PinnedVideoItemDownloading({
         if (params) runMigrationRef.current?.(params);
       }
     };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
   /* ── Cleanup on unmount ─────────────────────────────── */
@@ -552,7 +571,7 @@ export function PinnedVideoItemDownloading({
       borderRadius={14}
       className="vi-card"
       flexDirection="column"
-      styles={{ overflow: 'hidden' }}
+      styles={{ overflow: "hidden" }}
     >
       <PlatformIconBg
         platform={video.platform}
@@ -598,16 +617,16 @@ export function PinnedVideoItemDownloading({
       {opfsMigrating ? (
         <Typography variant="caption" className="vi-ffmpeg-hint">
           {opfsProgress !== undefined
-            ? t('savingToDeviceWithPct', { pct: opfsProgress })
-            : t('savingToDevice')}
+            ? t("savingToDeviceWithPct", { pct: opfsProgress })
+            : t("savingToDevice")}
         </Typography>
-      ) : video.status === 'pending' ? (
+      ) : video.status === "pending" ? (
         <Typography variant="caption" className="vi-ffmpeg-hint">
-          {t('downloadPending')}
+          {t("downloadPending")}
         </Typography>
-      ) : video.status === 'downloading' ? (
+      ) : video.status === "downloading" ? (
         <Typography variant="caption" className="vi-ffmpeg-hint">
-          {t('downloadActive')}
+          {t("downloadActive")}
         </Typography>
       ) : null}
       {/* ── Footer ──────────────────────────────────── */}
@@ -622,8 +641,8 @@ export function PinnedVideoItemDownloading({
             unstyled
             className="vi-icon-btn"
             onClick={() => setConfirmRemove(true)}
-            aria-label={t('delete')}
-            title={t('delete')}
+            aria-label={t("delete")}
+            title={t("delete")}
             icon="/icons/delete-video.svg"
             iconSize="15px"
             iconColor="var(--foreground, #171717)"
@@ -632,12 +651,12 @@ export function PinnedVideoItemDownloading({
             unstyled
             className="vi-icon-btn"
             onClick={handleCopy}
-            aria-label={t('copyLink')}
-            title={copying ? t('copied') : t('copyLink')}
+            aria-label={t("copyLink")}
+            title={copying ? t("copied") : t("copyLink")}
             icon="/icons/url.svg"
             iconSize="15px"
             iconColor={
-              copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+              copying ? "var(--accent, #06b6d4)" : "var(--foreground, #171717)"
             }
           />
         </Box>
@@ -645,14 +664,14 @@ export function PinnedVideoItemDownloading({
       {/* ── Delete confirmation ──────────────────────── */}
       {confirmRemove ? (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText')}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText")}
           okCallback={() => {
             setConfirmRemove(false);
             if (video.taskId) {
               stopPolling(video.taskId);
               fetch(`/api/download-video/${video.taskId}`, {
-                method: 'DELETE',
+                method: "DELETE",
               }).catch(console.error);
             }
             onRemove(video.uuid);

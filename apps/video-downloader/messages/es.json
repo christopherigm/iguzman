@@ -140,7 +140,7 @@
     "s3Title": "3. Derechos de autor y propiedad intelectual",
     "s3Body": "Descargar un video no te transfiere ningún derecho de autor ni de propiedad sobre él. Debes respetar los derechos de propiedad intelectual de los creadores de contenido y los titulares de derechos. La redistribución, ejecución pública o uso comercial del contenido descargado sin la autorización adecuada puede constituir una infracción de los derechos de autor según la legislación aplicable.",
     "s4Title": "4. Términos de servicio de plataformas",
-    "s4Body": "La mayoría de las plataformas —incluidas YouTube, Facebook, Instagram, TikTok y X (Twitter)— prohíben la extracción o descarga automatizada en sus Términos de Servicio. Infringir los términos de una plataforma es un asunto civil entre tú y dicha plataforma, no un acto delictivo en la mayoría de jurisdicciones. Sin embargo, usas esta aplicación bajo tu propio riesgo y asumes toda la responsabilidad por cualquier infracción de los términos.",
+    "s4Body": "La mayoría de las plataformas -incluidas YouTube, Facebook, Instagram, TikTok y X (Twitter)- prohíben la extracción o descarga automatizada en sus Términos de Servicio. Infringir los términos de una plataforma es un asunto civil entre tú y dicha plataforma, no un acto delictivo en la mayoría de jurisdicciones. Sin embargo, usas esta aplicación bajo tu propio riesgo y asumes toda la responsabilidad por cualquier infracción de los términos.",
     "s5Title": "5. Estado legal de yt-dlp",
     "s5Body": "Esta aplicación utiliza yt-dlp, una herramienta de código abierto publicada bajo la licencia Unlicense. yt-dlp es un software legal. Tribunales de múltiples jurisdicciones han determinado que las infracciones de los Términos de Servicio por sí solas no constituyen una actividad ilegal. Si una descarga concreta es legal en tu jurisdicción depende de la legislación local sobre derechos de autor y la naturaleza del contenido.",
     "s6Title": "6. Sin elusión de DRM",
@@ -331,7 +331,7 @@
   "MigrationBanner": {
     "close": "Cerrar",
     "heading": "¡Nos mudamos a Media 2 Go!",
-    "body": "Después del 31 de mayo (quedan {days} días), vd2.iguzman.com.mx será solo de lectura — no se podrán hacer nuevas descargas ahí. Visítanos en nuestro nuevo sitio para seguir descargando."
+    "body": "Después del 31 de mayo (quedan {days} días), vd2.iguzman.com.mx será solo de lectura - no se podrán hacer nuevas descargas ahí. Visítanos en nuestro nuevo sitio para seguir descargando."
   },
   "Credits": {
     "balanceLabel": "{credits} créditos",
@@ -339,7 +339,7 @@
     "buyMore": "Comprar Más",
     "restoreKey": "Restaurar Clave",
     "purchaseTitle": "Comprar Créditos",
-    "purchaseText": "Selecciona un paquete de créditos. Los créditos se usan para traducción de subtítulos, descarga de comentarios y procesamiento en servidor. Tu clave se puede compartir con cualquiera — los créditos se comparten en todos los usos. Úsala en todos los dispositivos que quieras.",
+    "purchaseText": "Selecciona un paquete de créditos. Los créditos se usan para traducción de subtítulos, descarga de comentarios y procesamiento en servidor. Tu clave se puede compartir con cualquiera - los créditos se comparten en todos los usos. Úsala en todos los dispositivos que quieras.",
     "creditsCount": "{credits} créditos",
     "purchaseNote": "Tu clave se guarda en tu navegador. Guárdala en un lugar seguro por si cambias de dispositivo.",
     "purchaseError": "Algo salió mal. Inténtalo de nuevo.",
@@ -359,7 +359,7 @@
     "deleteKey": "Eliminar clave",
     "keyCopied": "¡Copiado!",
     "deleteKeyTitle": "¿Eliminar Clave de Créditos?",
-    "deleteKeyText": "Esto eliminará permanentemente tu clave de créditos de este dispositivo. No guardamos una copia — esta acción no se puede deshacer.",
+    "deleteKeyText": "Esto eliminará permanentemente tu clave de créditos de este dispositivo. No guardamos una copia - esta acción no se puede deshacer.",
     "deleteKeyConfirm": "Eliminar",
     "deleteKeyCancel": "Cancelar",
     "couponTitle": "Canjear un Cupón",
@@ -396,7 +396,7 @@
     "videoEditor": {
       "title": "Editor de vídeo potente",
       "body1": "Transforma tus descargas directamente en el navegador: cambia resolución, aumenta FPS, convierte a H.265 y elimina las barras negras.",
-      "body2": "Sin software adicional ni cuenta necesaria — todo se ejecuta en tu dispositivo."
+      "body2": "Sin software adicional ni cuenta necesaria - todo se ejecuta en tu dispositivo."
     },
     "prev": "Diapositiva anterior",
     "next": "Diapositiva siguiente",

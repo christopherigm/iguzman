@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib/progress.sh — Progress bar / spinner display for long-running child processes
+# lib/progress.sh - Progress bar / spinner display for long-running child processes
 #
 # Provides:
 #   run_ffmpeg_step  label dur_sec [ffmpeg args...]
