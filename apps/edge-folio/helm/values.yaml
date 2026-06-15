@@ -57,6 +57,12 @@ envFromSecret:
   - name: GROQ_API_KEY
     secretName: edge-folio-secrets
     secretKey: GROQ_API_KEY
+  - name: OPENROUTER_API_KEY
+    secretName: edge-folio-secrets
+    secretKey: OPENROUTER_API_KEY
+  - name: OPENROUTER_MODEL
+    secretName: edge-folio-secrets
+    secretKey: OPENROUTER_MODEL
   - name: SCRAPER_API_KEY
     secretName: edge-folio-secrets
     secretKey: SCRAPER_API_KEY
