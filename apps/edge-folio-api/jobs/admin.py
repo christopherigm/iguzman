@@ -43,11 +43,14 @@ class JobPostingAdmin(admin.ModelAdmin):
 
 @admin.register(UserApiCredential)
 class UserApiCredentialAdmin(admin.ModelAdmin):
-    list_display = ('provider', 'user', 'label', 'is_active', 'created')
+    list_display = (
+        'provider', 'user', 'label', 'is_active',
+        'call_limit', 'calls_used', 'usage_date', 'created',
+    )
     list_filter = ('provider', 'is_active')
     search_fields = ('user__email', 'label')
     raw_id_fields = ('user',)
-    readonly_fields = ('encrypted_key', 'created', 'modified')
+    readonly_fields = ('encrypted_key', 'calls_used', 'usage_date', 'created', 'modified')
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)

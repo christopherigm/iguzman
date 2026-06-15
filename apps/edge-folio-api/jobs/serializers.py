@@ -35,11 +35,21 @@ class UserApiCredentialSerializer(serializers.ModelSerializer):
     # Write-only: the plaintext key is encrypted on save and never returned.
     key = serializers.CharField(write_only=True, trim_whitespace=True)
     has_key = serializers.SerializerMethodField()
+    # Usage tracking. Adzuna et al. report no quota, so these are counted locally.
+    calls_used_today = serializers.IntegerField(read_only=True)
+    calls_remaining = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = UserApiCredential
-        fields = ('id', 'provider', 'label', 'is_active', 'key', 'has_key', 'created', 'modified')
-        read_only_fields = ('id', 'has_key', 'created', 'modified')
+        fields = (
+            'id', 'provider', 'label', 'is_active', 'key', 'has_key',
+            'call_limit', 'calls_used_today', 'calls_remaining', 'usage_date',
+            'created', 'modified',
+        )
+        read_only_fields = (
+            'id', 'has_key', 'call_limit', 'calls_used_today', 'calls_remaining',
+            'usage_date', 'created', 'modified',
+        )
 
     def get_has_key(self, obj) -> bool:
         return bool(obj.encrypted_key)

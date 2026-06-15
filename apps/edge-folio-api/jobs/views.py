@@ -161,20 +161,36 @@ class JobFeedView(APIView):
 
 
 class FetchJobsView(APIView):
-    """Staff-only trigger to populate the shared catalog on demand.
+    """On-demand job fetch.
 
-    Enqueues ``ingest_shared_catalog`` on Celery and returns immediately; the
-    postings appear in the feed once a worker processes the task.
+    Staff trigger the shared catalog ingest. Any user with an active BYOK
+    credential triggers a private feed fetch billed to their own key (Adzuna
+    first, JSearch as fallback). Either way the task runs on Celery and returns
+    immediately; postings appear in the feed once a worker processes it.
     """
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        from .tasks import ingest_shared_catalog
+        from .tasks import ingest_shared_catalog, ingest_user_feed, select_user_credential
 
-        ingest_shared_catalog.delay()
+        if request.user.is_staff:
+            ingest_shared_catalog.delay()
+            return Response(
+                {'detail': 'Shared catalog fetch started.'},
+                status=status.HTTP_202_ACCEPTED,
+            )
+
+        credential = select_user_credential(request.user.id)
+        if credential is None:
+            return Response(
+                {'detail': 'No API key with remaining quota. Add a key or wait for the daily limit to reset.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        ingest_user_feed.delay(request.user.id)
         return Response(
-            {'detail': 'Shared catalog fetch started.'},
+            {'detail': 'Job fetch started.'},
             status=status.HTTP_202_ACCEPTED,
         )
 

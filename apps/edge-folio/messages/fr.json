@@ -324,6 +324,7 @@
     "fetching": "Récupération…",
     "fetchStarted": "Récupération lancée. De nouveaux postes apparaîtront sous peu.",
     "fetchError": "Impossible de lancer la récupération. Veuillez réessayer.",
+    "fetchLimitReached": "Votre clé API n'a plus d'appels disponibles aujourd'hui. Elle se réinitialise demain, ou ajoutez une autre clé de fournisseur.",
     "privateBadge": "Privé",
     "matchBadge": "Correspondance",
     "emptyTitle": "Aucun emploi pour l'instant",
@@ -825,6 +826,8 @@
     "jobKeysDelete": "Supprimer",
     "jobKeysNoLabel": "Clé sans nom",
     "jobKeysStored": "Chiffrée",
+    "jobKeysUsageLabel": "Utilisation quotidienne",
+    "jobKeysUsageCount": "{used} / {limit} appels aujourd'hui",
     "jobSearchSection": "Recherche d'emploi",
     "jobSearchSubtitle": "Personnalisez les données de profil utilisées dans votre recherche et connectez vos propres clés API.",
     "jobSearchPrefsTitle": "Requête de recherche",
@@ -843,6 +846,14 @@
     "jobSearchPrefsSaved": "Préférences enregistrées",
     "jobSearchPrefsError": "Impossible d'enregistrer les préférences",
     "jobSearchPrefsLoadError": "Impossible de charger les préférences",
+    "jobSearchQueryTitle": "Requête utilisée pour rechercher des emplois",
+    "jobSearchQuerySubtitle": "Générez une requête de recherche optimisée par IA à partir de vos préférences. Elle est utilisée par le flux d'emplois pour trouver des correspondances plus précises.",
+    "jobSearchQueryGenerate": "Générer la requête",
+    "jobSearchQueryGenerating": "Génération…",
+    "jobSearchQueryEmpty": "Aucune requête générée. Cliquez sur Générer pour en créer une à partir de vos préférences.",
+    "jobSearchQuerySaved": "Requête enregistrée",
+    "jobSearchQueryError": "Impossible de générer la requête",
+    "jobSearchQueryNoData": "Activez au moins une préférence pour générer une requête.",
     "jobSearchApiTitle": "Clés API personnelles (BYOK)"
   }
 }

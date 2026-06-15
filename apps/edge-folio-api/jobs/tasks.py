@@ -2,6 +2,7 @@ import logging
 
 from celery import shared_task
 from django.conf import settings
+from django.core.cache import cache
 from django.utils import timezone
 
 from .ingest import upsert_postings
@@ -69,6 +70,18 @@ def _build_query_parts(profile) -> list[str]:
     return parts or [profile.job_title.strip()]
 
 
+def _resolve_query(profile) -> str:
+    """The search query for a profile.
+
+    Prefers the LLM-generated single-sentence query when the user has one;
+    otherwise falls back to joining the individual preference-derived parts.
+    """
+    generated = (profile.job_search_generated_query or '').strip()
+    if generated:
+        return generated
+    return ' '.join(_build_query_parts(profile))
+
+
 def _build_queries(budget: int) -> list[dict]:
     """Deduplicated search queries derived from active users' profiles.
 
@@ -90,7 +103,7 @@ def _build_queries(budget: int) -> list[dict]:
         if not profile.job_title.strip():
             continue
 
-        query = ' '.join(_build_query_parts(profile))
+        query = _resolve_query(profile)
 
         if profile.job_search_include_location:
             location = profile.location.strip()
@@ -170,18 +183,38 @@ def prune_expired_postings() -> None:
     logger.info('prune_expired_postings: deleted=%d', deleted)
 
 
+def select_user_credential(user_id: int):
+    """Pick the BYOK credential to spend on a single on-demand fetch.
+
+    Tries providers in :data:`PROVIDER_PRIORITY` order (Adzuna, then JSearch) and
+    returns the first active credential that still has daily quota left, so the
+    fallback provider is only used once the primary's limit is reached. Returns
+    ``None`` when the user has no active credential with calls remaining.
+    """
+    from .models import PROVIDER_PRIORITY, UserApiCredential
+
+    by_provider = {
+        cred.provider: cred
+        for cred in UserApiCredential.objects.filter(user_id=user_id, is_active=True).select_related('user')
+    }
+    for provider in PROVIDER_PRIORITY:
+        cred = by_provider.get(provider)
+        if cred is not None and cred.calls_remaining > 0:
+            return cred
+    return None
+
+
 @shared_task
 def ingest_user_feed(user_id: int) -> None:
-    """Fetch a private feed for a BYOK user using their own decrypted keys.
+    """Fetch a private feed for a BYOK user using their own decrypted key.
 
-    Results are stored as private, owner-scoped postings (option A) and never
-    enter the shared catalog.
+    Spends exactly one provider call per run — Adzuna first, falling back to
+    JSearch once Adzuna's daily limit is reached. Results are stored as private,
+    owner-scoped postings (option A) and never enter the shared catalog.
     """
-    from .models import UserApiCredential
-
-    credentials = UserApiCredential.objects.filter(user_id=user_id, is_active=True).select_related('user')
-    if not credentials:
-        logger.info('ingest_user_feed: no active credentials for user=%s', user_id)
+    credential = select_user_credential(user_id)
+    if credential is None:
+        logger.info('ingest_user_feed: no active credential with remaining quota for user=%s', user_id)
         return
 
     from users.models import UserProfile
@@ -191,7 +224,7 @@ def ingest_user_feed(user_id: int) -> None:
         logger.info('ingest_user_feed: user=%s has no job title to search with', user_id)
         return
 
-    query = ' '.join(_build_query_parts(profile))
+    query = _resolve_query(profile)
 
     if profile.job_search_include_location:
         location = profile.location.strip()
@@ -200,19 +233,24 @@ def ingest_user_feed(user_id: int) -> None:
         location = ''
         country = 'us'
 
-    for credential in credentials:
-        try:
-            client = get_client(credential.provider, api_key=credential.get_key())
-            postings = client.search(query=query, location=location, country=country)
-        except ProviderError as exc:
-            logger.warning('ingest_user_feed: %s search failed for user=%s: %s',
-                           credential.provider, user_id, exc)
-            continue
-        result = upsert_postings(
-            credential.provider, postings,
-            owner=credential.user, is_private=True,
-        )
-        logger.info(
-            'ingest_user_feed: user=%s provider=%s created=%d refreshed=%d',
-            user_id, credential.provider, result['created'], result['refreshed'],
-        )
+    try:
+        client = get_client(credential.provider, api_key=credential.get_key())
+        postings = client.search(query=query, location=location, country=country)
+    except ProviderError as exc:
+        logger.warning('ingest_user_feed: %s search failed for user=%s: %s',
+                       credential.provider, user_id, exc)
+        return
+
+    # The provider exposes no usage data, so deduct the call we just made.
+    credential.record_call()
+    cache.delete(f'jobs:credentials:{user_id}')
+    result = upsert_postings(
+        credential.provider, postings,
+        owner=credential.user, is_private=True,
+    )
+    # New private postings must appear in this user's ranked feed immediately.
+    cache.delete(f'jobs:feed:{user_id}')
+    logger.info(
+        'ingest_user_feed: user=%s provider=%s created=%d refreshed=%d',
+        user_id, credential.provider, result['created'], result['refreshed'],
+    )

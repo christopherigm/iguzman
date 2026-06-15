@@ -14,6 +14,7 @@ class UserProfileInline(admin.StackedInline):
         'job_search_include_title', 'job_search_extra_text', 'job_search_bilingual',
         'job_search_include_tn_profession', 'job_search_include_education',
         'job_search_include_years', 'job_search_include_stack', 'job_search_include_location',
+        'job_search_generated_query',
     )
 
 

@@ -324,6 +324,7 @@
     "fetching": "Buscando…",
     "fetchStarted": "Busca iniciada. Novas vagas aparecerão em breve.",
     "fetchError": "Não foi possível iniciar a busca. Tente novamente.",
+    "fetchLimitReached": "Sua chave de API não tem chamadas disponíveis hoje. Ela é redefinida amanhã, ou adicione outra chave de provedor.",
     "privateBadge": "Privada",
     "matchBadge": "Compatível",
     "emptyTitle": "Ainda não há vagas",
@@ -825,6 +826,8 @@
     "jobKeysDelete": "Remover",
     "jobKeysNoLabel": "Chave sem nome",
     "jobKeysStored": "Criptografada",
+    "jobKeysUsageLabel": "Uso diário",
+    "jobKeysUsageCount": "{used} / {limit} chamadas hoje",
     "jobSearchSection": "Busca de emprego",
     "jobSearchSubtitle": "Personalize quais dados do perfil alimentam sua busca de emprego e conecte suas próprias chaves de API.",
     "jobSearchPrefsTitle": "Consulta de busca",
@@ -843,6 +846,14 @@
     "jobSearchPrefsSaved": "Preferências salvas",
     "jobSearchPrefsError": "Não foi possível salvar as preferências",
     "jobSearchPrefsLoadError": "Não foi possível carregar as preferências",
+    "jobSearchQueryTitle": "Consulta usada para buscar vagas",
+    "jobSearchQuerySubtitle": "Gere uma consulta de busca otimizada por IA a partir das suas preferências. É usada pelo feed de vagas para encontrar correspondências mais precisas.",
+    "jobSearchQueryGenerate": "Gerar consulta",
+    "jobSearchQueryGenerating": "Gerando…",
+    "jobSearchQueryEmpty": "Nenhuma consulta gerada ainda. Clique em Gerar para criar uma a partir das suas preferências.",
+    "jobSearchQuerySaved": "Consulta salva",
+    "jobSearchQueryError": "Não foi possível gerar a consulta",
+    "jobSearchQueryNoData": "Ative ao menos uma preferência para gerar uma consulta.",
     "jobSearchApiTitle": "Chaves de API próprias (BYOK)"
   }
 }

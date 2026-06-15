@@ -240,6 +240,7 @@ class JobSearchPrefsSerializer(serializers.ModelSerializer):
             'job_search_include_years',
             'job_search_include_stack',
             'job_search_include_location',
+            'job_search_generated_query',
         )
 
 

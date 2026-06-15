@@ -311,6 +311,7 @@ export interface JobSearchPrefs {
   job_search_include_years: boolean;
   job_search_include_stack: boolean;
   job_search_include_location: boolean;
+  job_search_generated_query: string;
 }
 
 export async function getJobSearchPrefs(): Promise<JobSearchPrefs> {

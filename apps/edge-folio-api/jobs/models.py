@@ -4,6 +4,7 @@ import re
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from applications.models import _normalize_company_name
 from core.models import Common
@@ -14,6 +15,19 @@ PROVIDER_CHOICES = [
     ('adzuna', 'Adzuna'),
     ('jsearch', 'JSearch'),
 ]
+
+# Order BYOK providers are spent in: Adzuna is the primary, JSearch the fallback.
+# A user's on-demand fetch tries each in turn, using the first one that still has
+# daily quota left, so JSearch is only touched once Adzuna's limit is reached.
+PROVIDER_PRIORITY = ['adzuna', 'jsearch']
+
+# Adzuna's free tier allows ~250 calls/day; it returns no usage data in its
+# responses, so we count BYOK calls ourselves and reset the tally each day.
+# Used as the default ``call_limit`` for a new credential per provider.
+DEFAULT_DAILY_LIMITS = {
+    'adzuna': 250,
+    'jsearch': 200,
+}
 
 CURRENCY_CHOICES = [
     ('USD', 'USD'),
@@ -118,6 +132,13 @@ class UserApiCredential(Common):
     label = models.CharField(max_length=120, blank=True)
     is_active = models.BooleanField(default=True)
 
+    # Usage tracking. Providers like Adzuna do not report consumed/remaining
+    # quota, so we count each search() call against a daily limit ourselves.
+    # ``calls_used`` applies to ``usage_date``; it auto-resets on a new day.
+    call_limit = models.PositiveIntegerField(default=0)
+    calls_used = models.PositiveIntegerField(default=0)
+    usage_date = models.DateField(null=True, blank=True)
+
     class Meta:
         ordering = ['provider']
         constraints = [
@@ -126,6 +147,32 @@ class UserApiCredential(Common):
                 name='unique_credential_per_user_provider',
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        # Seed the per-provider default limit on first save; admins may edit it.
+        if not self.pk and not self.call_limit:
+            self.call_limit = DEFAULT_DAILY_LIMITS.get(self.provider, 250)
+        super().save(*args, **kwargs)
+
+    @property
+    def calls_used_today(self) -> int:
+        """Calls consumed today, treating a stale ``usage_date`` as a fresh day."""
+        if self.usage_date != timezone.localdate():
+            return 0
+        return self.calls_used
+
+    @property
+    def calls_remaining(self) -> int:
+        return max(0, self.call_limit - self.calls_used_today)
+
+    def record_call(self, count: int = 1) -> None:
+        """Deduct ``count`` API calls from today's allowance, resetting on a new day."""
+        today = timezone.localdate()
+        if self.usage_date != today:
+            self.usage_date = today
+            self.calls_used = 0
+        self.calls_used += count
+        self.save(update_fields=['usage_date', 'calls_used', 'modified'])
 
     def set_key(self, plaintext: str) -> None:
         self.encrypted_key = encrypt_key(plaintext)

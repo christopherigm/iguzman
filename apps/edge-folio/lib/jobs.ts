@@ -38,6 +38,11 @@ export interface JobApiCredential {
   label: string;
   is_active: boolean;
   has_key: boolean;
+  // Usage tracking — counted locally since providers report no quota.
+  call_limit: number;
+  calls_used_today: number;
+  calls_remaining: number;
+  usage_date: string | null;
   created: string;
   modified: string;
 }

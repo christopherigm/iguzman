@@ -324,6 +324,7 @@
     "fetching": "Wird abgerufen…",
     "fetchStarted": "Abruf gestartet. Neue Stellen erscheinen in Kürze.",
     "fetchError": "Abruf konnte nicht gestartet werden. Bitte versuche es erneut.",
+    "fetchLimitReached": "Dein API-Schlüssel hat heute keine Aufrufe mehr. Er wird morgen zurückgesetzt, oder füge einen weiteren Anbieterschlüssel hinzu.",
     "privateBadge": "Privat",
     "matchBadge": "Treffer",
     "emptyTitle": "Noch keine Jobs",
@@ -825,6 +826,8 @@
     "jobKeysDelete": "Entfernen",
     "jobKeysNoLabel": "Unbenannter Schlüssel",
     "jobKeysStored": "Verschlüsselt",
+    "jobKeysUsageLabel": "Tägliche Nutzung",
+    "jobKeysUsageCount": "{used} / {limit} Aufrufe heute",
     "jobSearchSection": "Jobsuche",
     "jobSearchSubtitle": "Passe an, welche Profildaten deine Jobsuche steuern, und verbinde eigene API-Schlüssel.",
     "jobSearchPrefsTitle": "Suchanfrage",
@@ -843,6 +846,14 @@
     "jobSearchPrefsSaved": "Einstellungen gespeichert",
     "jobSearchPrefsError": "Einstellungen konnten nicht gespeichert werden",
     "jobSearchPrefsLoadError": "Einstellungen konnten nicht geladen werden",
+    "jobSearchQueryTitle": "Für die Jobsuche verwendete Suchanfrage",
+    "jobSearchQuerySubtitle": "Erzeuge aus deinen Einstellungen eine KI-optimierte Suchanfrage. Sie wird vom Job-Feed verwendet, um genauere Treffer zu finden.",
+    "jobSearchQueryGenerate": "Anfrage erzeugen",
+    "jobSearchQueryGenerating": "Wird erzeugt…",
+    "jobSearchQueryEmpty": "Noch keine Anfrage erzeugt. Klicke auf Erzeugen, um eine aus deinen Einstellungen zu erstellen.",
+    "jobSearchQuerySaved": "Anfrage gespeichert",
+    "jobSearchQueryError": "Anfrage konnte nicht erzeugt werden",
+    "jobSearchQueryNoData": "Aktiviere mindestens eine Einstellung, um eine Anfrage zu erzeugen.",
     "jobSearchApiTitle": "Eigene API-Schlüssel (BYOK)"
   }
 }

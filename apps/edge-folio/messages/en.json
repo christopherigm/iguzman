@@ -324,6 +324,7 @@
     "fetching": "Fetching…",
     "fetchStarted": "Job fetch started. New roles will appear shortly.",
     "fetchError": "Couldn't start the fetch. Please try again.",
+    "fetchLimitReached": "Your API key has no calls left today. It resets tomorrow, or add another provider key.",
     "privateBadge": "Private",
     "matchBadge": "Match",
     "emptyTitle": "No jobs yet",
@@ -825,6 +826,8 @@
     "jobKeysDelete": "Remove",
     "jobKeysNoLabel": "Unnamed key",
     "jobKeysStored": "Encrypted",
+    "jobKeysUsageLabel": "Daily usage",
+    "jobKeysUsageCount": "{used} / {limit} calls today",
     "jobSearchSection": "Job Search",
     "jobSearchSubtitle": "Customize what profile data powers your job feed and connect your own API keys.",
     "jobSearchPrefsTitle": "Search Query",
@@ -843,6 +846,14 @@
     "jobSearchPrefsSaved": "Preferences saved",
     "jobSearchPrefsError": "Couldn't save preferences",
     "jobSearchPrefsLoadError": "Couldn't load preferences",
+    "jobSearchQueryTitle": "Query used to search for jobs",
+    "jobSearchQuerySubtitle": "Generate an AI-optimized search query from your preferences above. Used by the job feed to find more accurate matches.",
+    "jobSearchQueryGenerate": "Generate query",
+    "jobSearchQueryGenerating": "Generating…",
+    "jobSearchQueryEmpty": "No query generated yet. Click Generate to create one from your preferences.",
+    "jobSearchQuerySaved": "Query saved",
+    "jobSearchQueryError": "Couldn't generate the query",
+    "jobSearchQueryNoData": "Enable at least one preference above to generate a query.",
     "jobSearchApiTitle": "BYOK API Keys"
   }
 }

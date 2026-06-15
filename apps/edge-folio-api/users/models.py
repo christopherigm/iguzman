@@ -40,6 +40,10 @@ class UserProfile(models.Model):
     job_search_include_years = models.BooleanField(default=False)
     job_search_include_stack = models.BooleanField(default=False)
     job_search_include_location = models.BooleanField(default=False)
+    # LLM-generated single-sentence search query, composed from the preferences
+    # above. When set, the jobs worker uses it verbatim instead of joining the
+    # individual query parts.
+    job_search_generated_query = models.CharField(max_length=300, blank=True, default='')
 
     def __str__(self):
         return f'Profile of {self.user.username}'
