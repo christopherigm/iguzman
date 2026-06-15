@@ -1,0 +1,29 @@
+.jobs__external-link,
+.jobs__saved-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.jobs__external-link {
+  color: var(--muted-foreground, #6b7280);
+}
+
+.jobs__external-link:hover {
+  color: var(--foreground);
+  background: var(--surface-2);
+}
+
+.jobs__saved-link {
+  color: var(--primary, #06b6d4);
+  border: 1px solid var(--primary, #06b6d4);
+}
+
+.jobs__saved-link:hover {
+  background: color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent);
+}

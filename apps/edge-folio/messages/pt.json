@@ -22,6 +22,7 @@
     "matrix": "Minha Matriz",
     "extract": "Extrair",
     "applications": "Candidaturas",
+    "jobs": "Vagas",
     "account": "Minha Conta",
     "signOut": "Sair",
     "workExperience": "Experiência",
@@ -304,6 +305,43 @@
       "null": "Não especificado",
       "true": "Obrigatória",
       "false": "Não obrigatória"
+    }
+  },
+  "JobsPage": {
+    "title": "Vagas",
+    "subtitle": "Descubra vagas compatíveis com o seu perfil e guarde-as para começar a personalizar.",
+    "loading": "Carregando vagas…",
+    "retry": "Tentar novamente",
+    "errorLoad": "Não foi possível carregar as vagas. Tente novamente.",
+    "errorSave": "Não foi possível guardar esta vaga. Tente novamente.",
+    "errorUnauthorized": "Sua sessão expirou. Faça login novamente.",
+    "saved": "Guardado nas suas candidaturas",
+    "saving": "Guardando…",
+    "save": "Guardar",
+    "tailor": "Personalizar",
+    "viewPosting": "Ver vaga",
+    "privateBadge": "Privada",
+    "matchBadge": "Compatível",
+    "emptyTitle": "Ainda não há vagas",
+    "emptyBody": "Defina o seu cargo e a sua stack no perfil para encontrarmos vagas para você.",
+    "searchLabel": "Pesquisar",
+    "searchPlaceholder": "Cargo ou empresa",
+    "countryLabel": "País",
+    "countryAll": "Todos os países",
+    "workTypeLabel": "Modelo de trabalho",
+    "workTypeAll": "Todos",
+    "prev": "Anterior",
+    "next": "Próxima",
+    "pageOf": "Página {page} de {total}",
+    "countries": {
+      "us": "Estados Unidos",
+      "ca": "Canadá",
+      "mx": "México"
+    },
+    "workTypes": {
+      "remote": "Remoto",
+      "onsite": "Presencial",
+      "hybrid": "Híbrido"
     }
   },
   "AuthPage": {
@@ -753,6 +791,28 @@
     "tnSuggestParseError": "Não foi possível processar os resultados. Tente novamente.",
     "tnSuggestModalTitle": "Sugestões de categoria TN",
     "tnSuggestModalSubtitle": "Com base na sua educação e experiência profissional. Apenas para fins informativos — não é aconselhamento jurídico.",
-    "tnSuggestNoMatches": "Nenhuma categoria TN compatível encontrada para o seu perfil."
+    "tnSuggestNoMatches": "Nenhuma categoria TN compatível encontrada para o seu perfil.",
+    "jobKeysSection": "Chaves de API de vagas",
+    "jobKeysSubtitle": "Use suas próprias chaves de provedor para obter um feed de vagas privado. As chaves são criptografadas e nunca compartilhadas.",
+    "jobKeysLoadError": "Não foi possível carregar suas chaves de API.",
+    "jobKeysSaveError": "Não foi possível guardar a chave de API.",
+    "jobKeysDeleteError": "Não foi possível remover a chave de API.",
+    "jobKeysProviderLabel": "Provedor",
+    "jobKeysProviders": {
+      "adzuna": "Adzuna",
+      "jsearch": "JSearch"
+    },
+    "jobKeysKeyLabel": "Chave de API",
+    "jobKeysKeyPlaceholder": {
+      "adzuna": "app_id:app_key",
+      "jsearch": "Chave do RapidAPI"
+    },
+    "jobKeysLabelLabel": "Rótulo (opcional)",
+    "jobKeysLabelPlaceholder": "ex. Conta pessoal do Adzuna",
+    "jobKeysSave": "Guardar chave",
+    "jobKeysSaving": "Guardando…",
+    "jobKeysDelete": "Remover",
+    "jobKeysNoLabel": "Chave sem nome",
+    "jobKeysStored": "Criptografada"
   }
 }

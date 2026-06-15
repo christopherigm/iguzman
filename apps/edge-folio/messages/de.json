@@ -22,6 +22,7 @@
     "matrix": "Meine Matrix",
     "extract": "Extrahieren",
     "applications": "Bewerbungen",
+    "jobs": "Jobs",
     "account": "Konto",
     "signOut": "Abmelden",
     "workExperience": "Berufserfahrung",
@@ -304,6 +305,43 @@
       "null": "Nicht angegeben",
       "true": "Erforderlich",
       "false": "Nicht erforderlich"
+    }
+  },
+  "JobsPage": {
+    "title": "Jobs",
+    "subtitle": "Entdecke Stellen, die zu deinem Profil passen, und speichere sie, um mit dem Anpassen zu beginnen.",
+    "loading": "Jobs werden geladen…",
+    "retry": "Erneut versuchen",
+    "errorLoad": "Jobs konnten nicht geladen werden. Bitte versuche es erneut.",
+    "errorSave": "Dieser Job konnte nicht gespeichert werden. Bitte versuche es erneut.",
+    "errorUnauthorized": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+    "saved": "In deinen Bewerbungen gespeichert",
+    "saving": "Wird gespeichert…",
+    "save": "Speichern",
+    "tailor": "Anpassen",
+    "viewPosting": "Stelle ansehen",
+    "privateBadge": "Privat",
+    "matchBadge": "Treffer",
+    "emptyTitle": "Noch keine Jobs",
+    "emptyBody": "Lege deine Jobbezeichnung und deinen Tech-Stack im Profil fest, damit wir Stellen für dich finden können.",
+    "searchLabel": "Suche",
+    "searchPlaceholder": "Titel oder Unternehmen",
+    "countryLabel": "Land",
+    "countryAll": "Alle Länder",
+    "workTypeLabel": "Arbeitsmodell",
+    "workTypeAll": "Alle",
+    "prev": "Zurück",
+    "next": "Weiter",
+    "pageOf": "Seite {page} von {total}",
+    "countries": {
+      "us": "Vereinigte Staaten",
+      "ca": "Kanada",
+      "mx": "Mexiko"
+    },
+    "workTypes": {
+      "remote": "Remote",
+      "onsite": "Vor Ort",
+      "hybrid": "Hybrid"
     }
   },
   "AuthPage": {
@@ -753,6 +791,28 @@
     "tnSuggestParseError": "Ergebnisse konnten nicht verarbeitet werden. Bitte erneut versuchen.",
     "tnSuggestModalTitle": "TN-Visa-Kategorie-Vorschläge",
     "tnSuggestModalSubtitle": "Basierend auf Ihrer Ausbildung und Berufserfahrung. Nur zu Informationszwecken — keine Rechtsberatung.",
-    "tnSuggestNoMatches": "Keine passenden TN-Kategorien für Ihr Profil gefunden."
+    "tnSuggestNoMatches": "Keine passenden TN-Kategorien für Ihr Profil gefunden.",
+    "jobKeysSection": "Job-API-Schlüssel",
+    "jobKeysSubtitle": "Verwende deine eigenen Anbieter-Schlüssel für einen privaten Job-Feed. Schlüssel werden verschlüsselt und niemals geteilt.",
+    "jobKeysLoadError": "Deine API-Schlüssel konnten nicht geladen werden.",
+    "jobKeysSaveError": "Der API-Schlüssel konnte nicht gespeichert werden.",
+    "jobKeysDeleteError": "Der API-Schlüssel konnte nicht entfernt werden.",
+    "jobKeysProviderLabel": "Anbieter",
+    "jobKeysProviders": {
+      "adzuna": "Adzuna",
+      "jsearch": "JSearch"
+    },
+    "jobKeysKeyLabel": "API-Schlüssel",
+    "jobKeysKeyPlaceholder": {
+      "adzuna": "app_id:app_key",
+      "jsearch": "RapidAPI-Schlüssel"
+    },
+    "jobKeysLabelLabel": "Bezeichnung (optional)",
+    "jobKeysLabelPlaceholder": "z. B. Persönliches Adzuna-Konto",
+    "jobKeysSave": "Schlüssel speichern",
+    "jobKeysSaving": "Wird gespeichert…",
+    "jobKeysDelete": "Entfernen",
+    "jobKeysNoLabel": "Unbenannter Schlüssel",
+    "jobKeysStored": "Verschlüsselt"
   }
 }

@@ -22,6 +22,7 @@
     "matrix": "My Matrix",
     "extract": "Extract",
     "applications": "Applications",
+    "jobs": "Jobs",
     "account": "Account",
     "signOut": "Sign out",
     "workExperience": "Work Experience",
@@ -304,6 +305,43 @@
       "null": "Not specified",
       "true": "Required",
       "false": "Not required"
+    }
+  },
+  "JobsPage": {
+    "title": "Jobs",
+    "subtitle": "Discover roles matched to your profile and save them to start tailoring.",
+    "loading": "Loading jobs…",
+    "retry": "Retry",
+    "errorLoad": "Couldn't load jobs. Please try again.",
+    "errorSave": "Couldn't save this job. Please try again.",
+    "errorUnauthorized": "Your session expired. Please sign in again.",
+    "saved": "Saved to your applications",
+    "saving": "Saving…",
+    "save": "Save",
+    "tailor": "Tailor",
+    "viewPosting": "View posting",
+    "privateBadge": "Private",
+    "matchBadge": "Match",
+    "emptyTitle": "No jobs yet",
+    "emptyBody": "Set your job title and tech stack in your profile so we can find roles for you.",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Title or company",
+    "countryLabel": "Country",
+    "countryAll": "All countries",
+    "workTypeLabel": "Work type",
+    "workTypeAll": "All types",
+    "prev": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {total}",
+    "countries": {
+      "us": "United States",
+      "ca": "Canada",
+      "mx": "Mexico"
+    },
+    "workTypes": {
+      "remote": "Remote",
+      "onsite": "On-site",
+      "hybrid": "Hybrid"
     }
   },
   "ApplicationDetailPage": {
@@ -753,6 +791,28 @@
     "tnSuggestParseError": "Could not parse results. Please try again.",
     "tnSuggestModalTitle": "TN Visa Category Suggestions",
     "tnSuggestModalSubtitle": "Based on your education and work experience. For informational purposes only — not legal advice.",
-    "tnSuggestNoMatches": "No matching TN categories found based on your profile."
+    "tnSuggestNoMatches": "No matching TN categories found based on your profile.",
+    "jobKeysSection": "Job API keys",
+    "jobKeysSubtitle": "Bring your own provider keys to pull a private job feed. Keys are encrypted and never shared.",
+    "jobKeysLoadError": "Couldn't load your API keys.",
+    "jobKeysSaveError": "Couldn't save the API key.",
+    "jobKeysDeleteError": "Couldn't remove the API key.",
+    "jobKeysProviderLabel": "Provider",
+    "jobKeysProviders": {
+      "adzuna": "Adzuna",
+      "jsearch": "JSearch"
+    },
+    "jobKeysKeyLabel": "API key",
+    "jobKeysKeyPlaceholder": {
+      "adzuna": "app_id:app_key",
+      "jsearch": "RapidAPI key"
+    },
+    "jobKeysLabelLabel": "Label (optional)",
+    "jobKeysLabelPlaceholder": "e.g. Personal Adzuna account",
+    "jobKeysSave": "Save key",
+    "jobKeysSaving": "Saving…",
+    "jobKeysDelete": "Remove",
+    "jobKeysNoLabel": "Unnamed key",
+    "jobKeysStored": "Encrypted"
   }
 }

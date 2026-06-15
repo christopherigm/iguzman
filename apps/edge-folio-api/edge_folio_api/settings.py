@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'matrix',
     'applications',
     'career',
+    'jobs',
 ]
 
 MIDDLEWARE = [
@@ -271,6 +272,16 @@ OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-
 SCRAPER_URL = os.environ.get('SCRAPER_URL', 'http://localhost:4000')
 SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 
+# ── Jobs catalog ────────────────────────────────────────────────────────────────
+ADZUNA_APP_ID = os.environ.get('ADZUNA_APP_ID', '')
+ADZUNA_APP_KEY = os.environ.get('ADZUNA_APP_KEY', '')
+JSEARCH_API_KEY = os.environ.get('JSEARCH_API_KEY', '')
+# Fernet key for encrypting BYOK provider credentials. Falls back to a key derived
+# from SECRET_KEY for local dev so the feature works without extra configuration.
+JOBS_ENCRYPTION_KEY = os.environ.get('JOBS_ENCRYPTION_KEY', '')
+# Per-day ceiling on platform Adzuna queries (free tier is ~250/day).
+JOBS_ADZUNA_DAILY_BUDGET = int(os.environ.get('JOBS_ADZUNA_DAILY_BUDGET', '200'))
+
 # ── Celery ────────────────────────────────────────────────────────────────────
 # Run tasks synchronously in dev when no broker is configured.
 CELERY_TASK_ALWAYS_EAGER = not bool(_REDIS_URL)
@@ -294,5 +305,13 @@ CELERY_BEAT_SCHEDULE = {
     'refresh-stale-companies': {
         'task': 'applications.tasks.refresh_stale_companies',
         'schedule': 3600.0,
+    },
+    'ingest-shared-catalog': {
+        'task': 'jobs.tasks.ingest_shared_catalog',
+        'schedule': 6 * 3600.0,  # every 6 hours
+    },
+    'prune-expired-postings': {
+        'task': 'jobs.tasks.prune_expired_postings',
+        'schedule': 24 * 3600.0,  # daily
     },
 }

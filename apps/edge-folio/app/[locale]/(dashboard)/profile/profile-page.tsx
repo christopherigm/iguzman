@@ -20,6 +20,7 @@ import { Select } from '@repo/ui/core-elements/select';
 import { getLanguages, createLanguage, updateLanguage, deleteLanguage, getPopularTechStacks, type Language, type LanguageProficiency } from '@/lib/career';
 import { suggestTnCategory, ApplicationError, type TnCategorySuggestion } from '@/lib/applications';
 import { Toast } from '@repo/ui/core-elements/toast';
+import { JobApiKeysSection } from './job-api-keys-section';
 import './profile-page.css';
 
 const YEARS_STEPS: SliderStep[] = [
@@ -1004,7 +1005,10 @@ export function ProfilePage() {
             />
           </Box>
         </Section>
-        
+
+        {/* ── Job API keys (BYOK) ── */}
+        <JobApiKeysSection />
+
         <Section title={t('contactSection')} subtitle={t('contactSubtitle')}>
           <Box display="flex" flexDirection="column" gap={12} marginBottom={12}>
             <TextInput

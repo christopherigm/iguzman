@@ -22,6 +22,7 @@
     "matrix": "Ma Matrice",
     "extract": "Extraire",
     "applications": "Candidatures",
+    "jobs": "Emplois",
     "account": "Mon Compte",
     "signOut": "Se déconnecter",
     "workExperience": "Expérience",
@@ -304,6 +305,43 @@
       "null": "Non précisé",
       "true": "Requise",
       "false": "Non requise"
+    }
+  },
+  "JobsPage": {
+    "title": "Emplois",
+    "subtitle": "Découvrez des postes adaptés à votre profil et enregistrez-les pour commencer à les personnaliser.",
+    "loading": "Chargement des emplois…",
+    "retry": "Réessayer",
+    "errorLoad": "Impossible de charger les emplois. Veuillez réessayer.",
+    "errorSave": "Impossible d'enregistrer cet emploi. Veuillez réessayer.",
+    "errorUnauthorized": "Votre session a expiré. Veuillez vous reconnecter.",
+    "saved": "Enregistré dans vos candidatures",
+    "saving": "Enregistrement…",
+    "save": "Enregistrer",
+    "tailor": "Personnaliser",
+    "viewPosting": "Voir l'offre",
+    "privateBadge": "Privé",
+    "matchBadge": "Correspondance",
+    "emptyTitle": "Aucun emploi pour l'instant",
+    "emptyBody": "Renseignez votre intitulé de poste et votre stack technique dans votre profil pour que nous trouvions des postes pour vous.",
+    "searchLabel": "Rechercher",
+    "searchPlaceholder": "Titre ou entreprise",
+    "countryLabel": "Pays",
+    "countryAll": "Tous les pays",
+    "workTypeLabel": "Type de travail",
+    "workTypeAll": "Tous",
+    "prev": "Précédent",
+    "next": "Suivant",
+    "pageOf": "Page {page} sur {total}",
+    "countries": {
+      "us": "États-Unis",
+      "ca": "Canada",
+      "mx": "Mexique"
+    },
+    "workTypes": {
+      "remote": "À distance",
+      "onsite": "Sur site",
+      "hybrid": "Hybride"
     }
   },
   "AuthPage": {
@@ -753,6 +791,28 @@
     "tnSuggestParseError": "Impossible de traiter les résultats. Veuillez réessayer.",
     "tnSuggestModalTitle": "Suggestions de catégorie TN",
     "tnSuggestModalSubtitle": "Basé sur votre formation et votre expérience professionnelle. À titre informatif uniquement — ne constitue pas un conseil juridique.",
-    "tnSuggestNoMatches": "Aucune catégorie TN compatible trouvée pour votre profil."
+    "tnSuggestNoMatches": "Aucune catégorie TN compatible trouvée pour votre profil.",
+    "jobKeysSection": "Clés d'API d'emplois",
+    "jobKeysSubtitle": "Utilisez vos propres clés de fournisseur pour obtenir un flux d'emplois privé. Les clés sont chiffrées et jamais partagées.",
+    "jobKeysLoadError": "Impossible de charger vos clés d'API.",
+    "jobKeysSaveError": "Impossible d'enregistrer la clé d'API.",
+    "jobKeysDeleteError": "Impossible de supprimer la clé d'API.",
+    "jobKeysProviderLabel": "Fournisseur",
+    "jobKeysProviders": {
+      "adzuna": "Adzuna",
+      "jsearch": "JSearch"
+    },
+    "jobKeysKeyLabel": "Clé d'API",
+    "jobKeysKeyPlaceholder": {
+      "adzuna": "app_id:app_key",
+      "jsearch": "Clé RapidAPI"
+    },
+    "jobKeysLabelLabel": "Libellé (facultatif)",
+    "jobKeysLabelPlaceholder": "ex. Compte Adzuna personnel",
+    "jobKeysSave": "Enregistrer la clé",
+    "jobKeysSaving": "Enregistrement…",
+    "jobKeysDelete": "Supprimer",
+    "jobKeysNoLabel": "Clé sans nom",
+    "jobKeysStored": "Chiffrée"
   }
 }
