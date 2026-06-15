@@ -5,7 +5,7 @@ from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -158,6 +158,25 @@ class JobFeedView(APIView):
                 if q in (p['job_title'] or '').lower() or q in (p['company_name'] or '').lower()
             ]
         return items
+
+
+class FetchJobsView(APIView):
+    """Staff-only trigger to populate the shared catalog on demand.
+
+    Enqueues ``ingest_shared_catalog`` on Celery and returns immediately; the
+    postings appear in the feed once a worker processes the task.
+    """
+
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        from .tasks import ingest_shared_catalog
+
+        ingest_shared_catalog.delay()
+        return Response(
+            {'detail': 'Shared catalog fetch started.'},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class SaveJobView(APIView):

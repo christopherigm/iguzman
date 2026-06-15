@@ -84,6 +84,12 @@ export function saveJob(id: number): Promise<JobApplication> {
   return request(`/api/jobs/${id}/save`, { method: 'POST' });
 }
 
+// Staff-only: enqueue a shared-catalog fetch on the API. Returns once the task
+// is queued — new postings appear in the feed after a worker processes it.
+export function triggerJobFetch(): Promise<{ detail: string }> {
+  return request('/api/jobs/fetch', { method: 'POST' });
+}
+
 export function getJobCredentials(): Promise<JobApiCredential[]> {
   return request('/api/jobs/credentials');
 }

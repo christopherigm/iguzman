@@ -16,6 +16,7 @@ export interface UserProfile {
   summary: string;
   tn_profession: string;
   citizenship: string;
+  is_staff: boolean;
 }
 
 const USER_PROFILE_KEY = 'ef_user';

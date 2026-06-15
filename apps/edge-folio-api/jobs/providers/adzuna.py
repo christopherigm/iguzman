@@ -67,8 +67,13 @@ class AdzunaClient(ProviderClient):
         if not resp.ok:
             raise ProviderError(f'Adzuna returned {resp.status_code}: {resp.text[:200]}')
 
-        results = resp.json().get('results', [])
+        payload = resp.json()
+        results = payload.get('results', [])
         currency = _COUNTRY_CURRENCY.get(country, '')
+        logger.info(
+            'Adzuna search: country=%s what=%r where=%r page=%d results=%d total_available=%s',
+            country, query, location, max(1, page), len(results), payload.get('count'),
+        )
         return [self._normalize(item, country, currency) for item in results]
 
     def _normalize(self, item: dict, country: str, currency: str) -> NormalizedPosting:

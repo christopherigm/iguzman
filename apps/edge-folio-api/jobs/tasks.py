@@ -77,13 +77,19 @@ def ingest_shared_catalog() -> None:
         logger.info('ingest_shared_catalog: no active-user queries to run.')
         return
 
+    logger.info(
+        'ingest_shared_catalog: running %d queries: %s',
+        len(queries),
+        [f"{spec['query']!r}@{spec['country']}/{spec['location']!r}" for spec in queries],
+    )
+
     try:
         client = get_client('adzuna')
     except ProviderError as exc:
         logger.warning('ingest_shared_catalog: %s', exc)
         return
 
-    totals = {'created': 0, 'refreshed': 0, 'skipped_dup': 0}
+    totals = {'created': 0, 'refreshed': 0, 'skipped_dup': 0, 'total': 0}
     for spec in queries:
         try:
             postings = client.search(
@@ -95,12 +101,18 @@ def ingest_shared_catalog() -> None:
             logger.warning('Adzuna search failed for %r: %s', spec['query'], exc)
             continue
         result = upsert_postings('adzuna', postings)
+        logger.info(
+            'ingest_shared_catalog query=%r country=%s location=%r '
+            'fetched=%d created=%d refreshed=%d skipped_dup=%d',
+            spec['query'], spec['country'], spec['location'],
+            result['total'], result['created'], result['refreshed'], result['skipped_dup'],
+        )
         for key in totals:
             totals[key] += result[key]
 
     logger.info(
-        'ingest_shared_catalog: queries=%d created=%d refreshed=%d skipped_dup=%d',
-        len(queries), totals['created'], totals['refreshed'], totals['skipped_dup'],
+        'ingest_shared_catalog: queries=%d fetched=%d created=%d refreshed=%d skipped_dup=%d',
+        len(queries), totals['total'], totals['created'], totals['refreshed'], totals['skipped_dup'],
     )
 
 

@@ -17,11 +17,13 @@ import { Toast } from '@repo/ui/core-elements/toast';
 import {
   getJobFeed,
   saveJob,
+  triggerJobFetch,
   JobsError,
   type JobPosting,
   type JobCountry,
   type JobWorkType,
 } from '@/lib/jobs';
+import { getProfile } from '@/lib/auth';
 import './jobs-page.css';
 
 const COUNTRIES: JobCountry[] = ['us', 'ca', 'mx'];
@@ -168,6 +170,8 @@ export function JobsPage() {
   const [searchInput, setSearchInput] = useState(q);
   const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
   const [toastKey, setToastKey] = useState(0);
+  const [isStaff, setIsStaff] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
   function showToast(text: string, kind: 'success' | 'error') {
     setToast({ text, kind });
@@ -205,6 +209,32 @@ export function JobsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Surface the staff-only "Fetch Jobs" control. Non-staff/anonymous users
+  // silently keep isStaff=false.
+  useEffect(() => {
+    let active = true;
+    getProfile()
+      .then((profile) => {
+        if (active) setIsStaff(Boolean(profile.is_staff));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleFetch = useCallback(async () => {
+    setFetching(true);
+    try {
+      await triggerJobFetch();
+      showToast(t('fetchStarted'), 'success');
+    } catch {
+      showToast(t('fetchError'), 'error');
+    } finally {
+      setFetching(false);
+    }
+  }, [t]);
 
   // Debounce the search box into the URL query param.
   useEffect(() => {
@@ -279,13 +309,34 @@ export function JobsPage() {
       paddingX={10}
       styles={{ paddingTop: 'var(--ui-navbar-height)', paddingBottom: '60px' }}
     >
-      <Box width="100%" marginTop={24} marginBottom={24} display="flex" flexDirection="column" gap={4}>
-        <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
-          {t('title')}
-        </Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-          {t('subtitle')}
-        </Typography>
+      <Box
+        width="100%"
+        marginTop={24}
+        marginBottom={24}
+        display="flex"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={16}
+        flexWrap="wrap"
+      >
+        <Box display="flex" flexDirection="column" gap={4}>
+          <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
+            {t('title')}
+          </Typography>
+          <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+            {t('subtitle')}
+          </Typography>
+        </Box>
+        {isStaff && (
+          <Button
+            text={fetching ? t('fetching') : t('fetchJobs')}
+            type="button"
+            size="md"
+            kind="success"
+            disabled={fetching}
+            onClick={handleFetch}
+          />
+        )}
       </Box>
 
       {filterChips}

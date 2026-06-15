@@ -146,7 +146,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'first_name', 'last_name', 'profile_picture',
                   'job_title', 'years_of_experience', 'preferred_stack',
                   'phone', 'location', 'github_url', 'linkedin_url', 'summary',
-                  'tn_profession', 'citizenship')
+                  'tn_profession', 'citizenship', 'is_staff')
+        read_only_fields = ('is_staff',)
 
     def get_profile_picture(self, obj):
         try:
