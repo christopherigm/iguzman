@@ -1,213 +1,285 @@
-/* ===== Container ===== */
+/* ===== Container =====
+ * Flexbox model (not a 12-track CSS grid): a real CSS `gap` on a 12-track grid
+ * inserts 11 fixed gutters, whose total can exceed a narrow container's width
+ * and force horizontal overflow. With flex-wrap, the gap only ever sits between
+ * actual items, and each item's flex-basis subtracts its share of the gutter so
+ * every row sums to exactly 100%.
+ */
 .ui-grid-container {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--ui-grid-spacing-y, 0px) var(--ui-grid-spacing-x, 0px);
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
 }
 
-/* ===== Item ===== */
+/* ===== Item =====
+ * Default span is 12 (full width). Size classes override `flex-basis`/`max-width`.
+ * flex-basis = 100% * span / 12 - columnGap * (12 - span) / 12
+ */
 .ui-grid-item {
-  grid-column: span 12;
+  box-sizing: border-box;
   min-width: 0;
+  flex-grow: 0;
+  flex-basis: 100%;
+  max-width: 100%;
 }
 
 /* ===== xs (base - no media query, mobile-first) ===== */
 .ui-grid-xs-1 {
-  grid-column: span 1;
+  flex-basis: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
+  max-width: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
 }
 .ui-grid-xs-2 {
-  grid-column: span 2;
+  flex-basis: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
+  max-width: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
 }
 .ui-grid-xs-3 {
-  grid-column: span 3;
+  flex-basis: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
+  max-width: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
 }
 .ui-grid-xs-4 {
-  grid-column: span 4;
+  flex-basis: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
+  max-width: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
 }
 .ui-grid-xs-5 {
-  grid-column: span 5;
+  flex-basis: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
+  max-width: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
 }
 .ui-grid-xs-6 {
-  grid-column: span 6;
+  flex-basis: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
+  max-width: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
 }
 .ui-grid-xs-7 {
-  grid-column: span 7;
+  flex-basis: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
+  max-width: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
 }
 .ui-grid-xs-8 {
-  grid-column: span 8;
+  flex-basis: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
+  max-width: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
 }
 .ui-grid-xs-9 {
-  grid-column: span 9;
+  flex-basis: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
+  max-width: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
 }
 .ui-grid-xs-10 {
-  grid-column: span 10;
+  flex-basis: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
+  max-width: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
 }
 .ui-grid-xs-11 {
-  grid-column: span 11;
+  flex-basis: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
+  max-width: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
 }
 .ui-grid-xs-12 {
-  grid-column: span 12;
+  flex-basis: 100%;
+  max-width: 100%;
 }
 
 /* ===== sm (min-width: 600px) ===== */
 @media (min-width: 600px) {
   .ui-grid-sm-1 {
-    grid-column: span 1;
+    flex-basis: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
+    max-width: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
   }
   .ui-grid-sm-2 {
-    grid-column: span 2;
+    flex-basis: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
+    max-width: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
   }
   .ui-grid-sm-3 {
-    grid-column: span 3;
+    flex-basis: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
+    max-width: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
   }
   .ui-grid-sm-4 {
-    grid-column: span 4;
+    flex-basis: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
+    max-width: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
   }
   .ui-grid-sm-5 {
-    grid-column: span 5;
+    flex-basis: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
+    max-width: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
   }
   .ui-grid-sm-6 {
-    grid-column: span 6;
+    flex-basis: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
+    max-width: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
   }
   .ui-grid-sm-7 {
-    grid-column: span 7;
+    flex-basis: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
+    max-width: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
   }
   .ui-grid-sm-8 {
-    grid-column: span 8;
+    flex-basis: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
+    max-width: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
   }
   .ui-grid-sm-9 {
-    grid-column: span 9;
+    flex-basis: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
+    max-width: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
   }
   .ui-grid-sm-10 {
-    grid-column: span 10;
+    flex-basis: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
+    max-width: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
   }
   .ui-grid-sm-11 {
-    grid-column: span 11;
+    flex-basis: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
+    max-width: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
   }
   .ui-grid-sm-12 {
-    grid-column: span 12;
+    flex-basis: 100%;
+    max-width: 100%;
   }
 }
 
 /* ===== md (min-width: 900px) ===== */
 @media (min-width: 900px) {
   .ui-grid-md-1 {
-    grid-column: span 1;
+    flex-basis: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
+    max-width: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
   }
   .ui-grid-md-2 {
-    grid-column: span 2;
+    flex-basis: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
+    max-width: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
   }
   .ui-grid-md-3 {
-    grid-column: span 3;
+    flex-basis: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
+    max-width: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
   }
   .ui-grid-md-4 {
-    grid-column: span 4;
+    flex-basis: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
+    max-width: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
   }
   .ui-grid-md-5 {
-    grid-column: span 5;
+    flex-basis: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
+    max-width: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
   }
   .ui-grid-md-6 {
-    grid-column: span 6;
+    flex-basis: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
+    max-width: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
   }
   .ui-grid-md-7 {
-    grid-column: span 7;
+    flex-basis: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
+    max-width: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
   }
   .ui-grid-md-8 {
-    grid-column: span 8;
+    flex-basis: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
+    max-width: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
   }
   .ui-grid-md-9 {
-    grid-column: span 9;
+    flex-basis: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
+    max-width: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
   }
   .ui-grid-md-10 {
-    grid-column: span 10;
+    flex-basis: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
+    max-width: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
   }
   .ui-grid-md-11 {
-    grid-column: span 11;
+    flex-basis: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
+    max-width: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
   }
   .ui-grid-md-12 {
-    grid-column: span 12;
+    flex-basis: 100%;
+    max-width: 100%;
   }
 }
 
 /* ===== lg (min-width: 1200px) ===== */
 @media (min-width: 1200px) {
   .ui-grid-lg-1 {
-    grid-column: span 1;
+    flex-basis: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
+    max-width: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
   }
   .ui-grid-lg-2 {
-    grid-column: span 2;
+    flex-basis: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
+    max-width: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
   }
   .ui-grid-lg-3 {
-    grid-column: span 3;
+    flex-basis: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
+    max-width: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
   }
   .ui-grid-lg-4 {
-    grid-column: span 4;
+    flex-basis: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
+    max-width: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
   }
   .ui-grid-lg-5 {
-    grid-column: span 5;
+    flex-basis: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
+    max-width: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
   }
   .ui-grid-lg-6 {
-    grid-column: span 6;
+    flex-basis: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
+    max-width: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
   }
   .ui-grid-lg-7 {
-    grid-column: span 7;
+    flex-basis: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
+    max-width: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
   }
   .ui-grid-lg-8 {
-    grid-column: span 8;
+    flex-basis: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
+    max-width: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
   }
   .ui-grid-lg-9 {
-    grid-column: span 9;
+    flex-basis: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
+    max-width: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
   }
   .ui-grid-lg-10 {
-    grid-column: span 10;
+    flex-basis: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
+    max-width: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
   }
   .ui-grid-lg-11 {
-    grid-column: span 11;
+    flex-basis: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
+    max-width: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
   }
   .ui-grid-lg-12 {
-    grid-column: span 12;
+    flex-basis: 100%;
+    max-width: 100%;
   }
 }
 
 /* ===== xl (min-width: 1536px) ===== */
 @media (min-width: 1536px) {
   .ui-grid-xl-1 {
-    grid-column: span 1;
+    flex-basis: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
+    max-width: calc(100% * 1 / 12 - var(--ui-grid-spacing-x, 0px) * 11 / 12);
   }
   .ui-grid-xl-2 {
-    grid-column: span 2;
+    flex-basis: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
+    max-width: calc(100% * 2 / 12 - var(--ui-grid-spacing-x, 0px) * 10 / 12);
   }
   .ui-grid-xl-3 {
-    grid-column: span 3;
+    flex-basis: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
+    max-width: calc(100% * 3 / 12 - var(--ui-grid-spacing-x, 0px) * 9 / 12);
   }
   .ui-grid-xl-4 {
-    grid-column: span 4;
+    flex-basis: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
+    max-width: calc(100% * 4 / 12 - var(--ui-grid-spacing-x, 0px) * 8 / 12);
   }
   .ui-grid-xl-5 {
-    grid-column: span 5;
+    flex-basis: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
+    max-width: calc(100% * 5 / 12 - var(--ui-grid-spacing-x, 0px) * 7 / 12);
   }
   .ui-grid-xl-6 {
-    grid-column: span 6;
+    flex-basis: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
+    max-width: calc(100% * 6 / 12 - var(--ui-grid-spacing-x, 0px) * 6 / 12);
   }
   .ui-grid-xl-7 {
-    grid-column: span 7;
+    flex-basis: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
+    max-width: calc(100% * 7 / 12 - var(--ui-grid-spacing-x, 0px) * 5 / 12);
   }
   .ui-grid-xl-8 {
-    grid-column: span 8;
+    flex-basis: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
+    max-width: calc(100% * 8 / 12 - var(--ui-grid-spacing-x, 0px) * 4 / 12);
   }
   .ui-grid-xl-9 {
-    grid-column: span 9;
+    flex-basis: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
+    max-width: calc(100% * 9 / 12 - var(--ui-grid-spacing-x, 0px) * 3 / 12);
   }
   .ui-grid-xl-10 {
-    grid-column: span 10;
+    flex-basis: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
+    max-width: calc(100% * 10 / 12 - var(--ui-grid-spacing-x, 0px) * 2 / 12);
   }
   .ui-grid-xl-11 {
-    grid-column: span 11;
+    flex-basis: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
+    max-width: calc(100% * 11 / 12 - var(--ui-grid-spacing-x, 0px) * 1 / 12);
   }
   .ui-grid-xl-12 {
-    grid-column: span 12;
+    flex-basis: 100%;
+    max-width: 100%;
   }
 }

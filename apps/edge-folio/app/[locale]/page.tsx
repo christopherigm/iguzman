@@ -62,7 +62,7 @@ export default async function Home({ params }: Props) {
   const isLoggedIn = (await cookies()).has("access_token");
 
   return (
-    <Box display="flex" flexDirection="column">
+    <Box display="flex" flexDirection="column" paddingBottom={60}>
       {/* ── Hero ───────────────────────────────────────────── */}
       <Box
         styles={{
@@ -105,8 +105,6 @@ export default async function Home({ params }: Props) {
                   display="flex"
                   flexDirection="column"
                   gap={16}
-                  // width="100%"
-                  // maxWidth={820}
                   marginTop={8}
                 >
                   <Typography
@@ -155,7 +153,7 @@ export default async function Home({ params }: Props) {
               alignItems="center"
               justifyContent="center"
             >
-              <Icon icon="/icons/fingerprint.svg" size="16px" />
+              <Icon icon="/icons/fingerprint.svg" size="2em" />
               <Typography
                 variant="caption"
                 color="var(--muted-foreground, #6b7280)"
@@ -193,10 +191,10 @@ export default async function Home({ params }: Props) {
         <Grid container spacing={4}>
           {PILLARS.map(({ key, icon }) => (
             <Grid key={key} size={{ xs: 12, sm: 6, md: 3 }}>
-              <Card gap={12} height="100%" backgroundColor="var(--surface-1)">
+              <Card gap={12} height="100%">
                 <Icon
                   icon={icon}
-                  size="22px"
+                  size="2.5em"
                   padding={10}
                   backgroundShape="circle"
                   backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 14%, transparent)"
@@ -235,7 +233,7 @@ export default async function Home({ params }: Props) {
             <Grid key={key} size={{ xs: 12, sm: 6, md: 4 }}>
               <Card gap={10} height="100%">
                 <Box display="flex" alignItems="center" gap={10}>
-                  <Icon icon={icon} size="20px" />
+                  <Icon icon={icon} size="1.2em" />
                   <Typography as="h3" variant="h5" fontWeight={700}>
                     {t(`features.${key}.title`)}
                   </Typography>
@@ -265,7 +263,7 @@ export default async function Home({ params }: Props) {
         >
           <Icon
             icon="/icons/fingerprint.svg"
-            size="28px"
+            size="5em"
             padding={14}
             backgroundShape="circle"
             backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 14%, transparent)"
