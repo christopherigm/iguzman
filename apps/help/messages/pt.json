@@ -18,6 +18,8 @@
     "helmDescription": "Gerencie uma release Helm de forma interativa: verificar status, revelar secrets, implantar, forçar reimplantação, reiniciar rollout, rollback ou desinstalar.",
     "deployServicesSection": "deploy-* (serviços)",
     "deployServicesDescription": "Implanta um banco de dados ou cache no Kubernetes via Helm. Cada comando guia pelo namespace, credenciais e tamanho do armazenamento persistente.",
+    "devServicesSection": "dev-services (Docker local)",
+    "devServicesDescription": "Sobe contêineres Docker semelhantes à produção (Redis, worker do Celery, beat do Celery) para uma app no seu ambiente de desenvolvimento local. Detecta automaticamente os serviços de cada app, aponta o .env dela para o Redis local e oferece ações de criar/iniciar/parar/reiniciar/logs/remover/purgar.",
     "djangoSuperuserSection": "django-superuser",
     "djangoSuperuserDescription": "Cria um superusuário Django em um pod de produção via kubectl exec. Descobre pods automaticamente e solicita usuário, email e senha.",
     "logsSection": "logs",

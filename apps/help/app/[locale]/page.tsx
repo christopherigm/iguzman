@@ -63,6 +63,10 @@ const DEPLOY_SERVICES_COMMANDS =
   'pnpm deploy-mongodb\n' +
   'pnpm deploy-mysql\n' +
   'pnpm deploy-redis';
+const DEV_SERVICES_COMMANDS =
+  'pnpm dev-services                # pick app, then an action\n' +
+  'pnpm dev-services my-api         # skip app selection\n' +
+  'pnpm dev-services my-api -y      # skip confirmations';
 const DJANGO_SUPERUSER_COMMANDS =
   'pnpm django-superuser            # pick app interactively\n' +
   'pnpm django-superuser my-api     # target a specific app';
@@ -167,6 +171,7 @@ export default async function Home({ params, searchParams }: Props) {
                 <Section heading={t('deployAppSection')} description={t('deployAppDescription')} code={DEPLOY_APP_COMMANDS} />
                 <Section heading={t('helmSection')} description={t('helmDescription')} code={HELM_COMMANDS} />
                 <Section heading={t('deployServicesSection')} description={t('deployServicesDescription')} code={DEPLOY_SERVICES_COMMANDS} />
+                <Section heading={t('devServicesSection')} description={t('devServicesDescription')} code={DEV_SERVICES_COMMANDS} />
                 <Section heading={t('djangoSuperuserSection')} description={t('djangoSuperuserDescription')} code={DJANGO_SUPERUSER_COMMANDS} />
                 <Section heading={t('logsSection')} description={t('logsDescription')} code={LOGS_COMMAND} />
 

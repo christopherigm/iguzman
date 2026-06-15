@@ -18,6 +18,8 @@
     "helmDescription": "Helm-Release interaktiv verwalten: Status prüfen, Secrets anzeigen, deployen, neu deployen, Rollout neu starten, Rollback oder deinstallieren.",
     "deployServicesSection": "deploy-* (Dienste)",
     "deployServicesDescription": "Datenbank oder Cache via Helm auf Kubernetes deployen. Jeder Befehl führt durch Namespace, Credentials und persistente Speichergröße.",
+    "devServicesSection": "dev-services (lokales Docker)",
+    "devServicesDescription": "Startet produktionsnahe Docker-Container (Redis, Celery-Worker, Celery-Beat) für eine App in der lokalen Entwicklungsumgebung. Erkennt die Dienste jeder App automatisch, verweist deren .env auf das lokale Redis und bietet Aktionen für Erstellen/Starten/Stoppen/Neustarten/Logs/Entfernen/Bereinigen.",
     "djangoSuperuserSection": "django-superuser",
     "djangoSuperuserDescription": "Erstellt einen Django-Superuser in einem laufenden Produktions-Pod via kubectl exec. Erkennt Pods automatisch und fragt nach Benutzername, E-Mail und Passwort.",
     "logsSection": "logs",

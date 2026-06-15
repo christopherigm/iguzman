@@ -19,6 +19,7 @@
     "deploy-mongodb": "bash cli/deploy-mongodb/deploy-mongodb.sh",
     "deploy-mysql": "bash cli/deploy-mysql/deploy-mysql.sh",
     "deploy-redis": "bash cli/deploy-redis/deploy-redis.sh",
+    "dev-services": "bash cli/dev-services/dev-services.sh",
     "generate-icons": "bash cli/generate-icons/generate-icons.sh"
   },
   "devDependencies": {

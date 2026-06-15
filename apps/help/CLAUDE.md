@@ -24,6 +24,7 @@
 | `DEPLOY_APP_COMMANDS` | `cli/deploy-app/deploy-app.sh` |
 | `HELM_COMMANDS` | `cli/helm/helm.sh` |
 | `DEPLOY_SERVICES_COMMANDS` | `cli/deploy-postgres/deploy-postgres.sh`, `cli/deploy-mongodb/deploy-mongodb.sh`, `cli/deploy-mysql/deploy-mysql.sh`, `cli/deploy-redis/deploy-redis.sh` |
+| `DEV_SERVICES_COMMANDS` | `cli/dev-services/dev-services.sh` |
 | `DJANGO_SUPERUSER_COMMANDS` | `cli/django-superuser/django-superuser.sh` |
 | `LOGS_COMMAND` | `cli/logs/logs.sh` |
 | `DEV_COMMANDS` | `pnpm dev` (Turborepo) |
