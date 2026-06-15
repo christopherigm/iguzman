@@ -1,7 +1,7 @@
-import { cache } from 'react';
-import { headers } from 'next/headers';
-import { API_URL } from './config';
-import logger from './logger';
+import { cache } from "react";
+import { headers } from "next/headers";
+import { API_URL } from "./config";
+import logger from "./logger";
 
 export interface System {
   id: number;
@@ -56,28 +56,28 @@ export interface System {
  */
 export const getSystem = cache(async (): Promise<System | null> => {
   const headersList = await headers();
-  const host = headersList.get('host') ?? '';
+  const host = headersList.get("host") ?? "";
 
   try {
     const res = await fetch(`${API_URL}/api/system/`, {
       headers: {
         // Forward the original request host so Django can match the correct
         // System record (the Django view reads HTTP_X_WEBSITE_HOST first).
-        'X-Website-Host': host,
+        "X-Website-Host": host,
       },
     });
 
     if (!res.ok) {
       logger.warn(
         { host, status: res.status },
-        'System API returned non-OK status',
+        "System API returned non-OK status",
       );
       return null;
     }
 
     return res.json() as Promise<System>;
   } catch (err) {
-    logger.error({ host, err }, 'Failed to fetch system configuration');
+    logger.error({ host, err }, "Failed to fetch system configuration");
     return null;
   }
 });

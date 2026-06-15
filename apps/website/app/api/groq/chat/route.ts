@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // ── Tavily web-search helpers ─────────────────────────────────────────────────
 
@@ -21,22 +21,22 @@ async function fetchTavilyResults(
   query: string,
   apiKey: string,
 ): Promise<string> {
-  const res = await fetch('https://api.tavily.com/search', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       api_key: apiKey,
       query,
-      search_depth: 'basic',
+      search_depth: "basic",
       max_results: 5,
     }),
   });
-  if (!res.ok) return '';
+  if (!res.ok) return "";
   const data: TavilyResponse = await res.json();
-  if (!data.results?.length) return '';
+  if (!data.results?.length) return "";
   return data.results
     .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content}`)
-    .join('\n\n');
+    .join("\n\n");
 }
 
 function buildSearchSystemMessage(results: string): string {
@@ -46,8 +46,8 @@ function buildSearchSystemMessage(results: string): string {
 async function verifyToken(token: string): Promise<boolean> {
   try {
     const res = await fetch(`${API_URL}/api/auth/token/verify/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
     });
     return res.ok;
@@ -70,12 +70,12 @@ interface GroqProxyBody {
 
 export async function POST(req: NextRequest): Promise<Response> {
   // ── Auth ──────────────────────────────────────────────────────────────────
-  const authHeader = req.headers.get('authorization');
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
     return NextResponse.json(
-      { detail: 'Authentication required.' },
+      { detail: "Authentication required." },
       { status: 401 },
     );
   }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const valid = await verifyToken(token);
   if (!valid) {
     return NextResponse.json(
-      { detail: 'Invalid or expired token.' },
+      { detail: "Invalid or expired token." },
       { status: 401 },
     );
   }
@@ -95,20 +95,22 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   // ── Optional Tavily injection ─────────────────────────────────────────────
   if (doWebSearch) {
-    const tavilyKey = process.env.TAVILY_API_KEY ?? '';
-    const lastUser = [...parsed.messages].reverse().find((m) => m.role === 'user');
+    const tavilyKey = process.env.TAVILY_API_KEY ?? "";
+    const lastUser = [...parsed.messages]
+      .reverse()
+      .find((m) => m.role === "user");
     if (lastUser && tavilyKey) {
       const results = await fetchTavilyResults(lastUser.content, tavilyKey);
       if (results) {
         const systemContent = buildSearchSystemMessage(results);
-        const hasSystem = parsed.messages.some((m) => m.role === 'system');
+        const hasSystem = parsed.messages.some((m) => m.role === "system");
         parsed.messages = hasSystem
           ? parsed.messages.map((m) =>
-              m.role === 'system'
+              m.role === "system"
                 ? { ...m, content: `${systemContent}\n\n${m.content}` }
                 : m,
             )
-          : [{ role: 'system', content: systemContent }, ...parsed.messages];
+          : [{ role: "system", content: systemContent }, ...parsed.messages];
       }
     }
   }
@@ -117,7 +119,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const groqApiKey = process.env.GROQ_API_KEY;
   if (!groqApiKey) {
     return NextResponse.json(
-      { detail: 'Groq API key not configured.' },
+      { detail: "Groq API key not configured." },
       { status: 500 },
     );
   }
@@ -125,16 +127,16 @@ export async function POST(req: NextRequest): Promise<Response> {
   let groqRes: globalThis.Response;
   try {
     groqRes = await fetch(GROQ_API_URL, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify(parsed),
     });
   } catch (err) {
     const message =
-      err instanceof Error ? err.message : 'Failed to reach Groq API';
+      err instanceof Error ? err.message : "Failed to reach Groq API";
     return NextResponse.json({ detail: message }, { status: 502 });
   }
 
@@ -142,13 +144,17 @@ export async function POST(req: NextRequest): Promise<Response> {
     const body = await groqRes.text();
     return new Response(body, {
       status: groqRes.status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 
   // ── Stream response back ──────────────────────────────────────────────────
   const responseHeaders = new Headers();
-  const STRIP_HEADERS = new Set(['transfer-encoding', 'content-encoding', 'content-length']);
+  const STRIP_HEADERS = new Set([
+    "transfer-encoding",
+    "content-encoding",
+    "content-length",
+  ]);
   groqRes.headers.forEach((value, key) => {
     if (!STRIP_HEADERS.has(key.toLowerCase())) {
       responseHeaders.set(key, value);

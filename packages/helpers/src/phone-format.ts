@@ -37,7 +37,7 @@ export interface PhoneNumberFormatOptions {
 const isValidPhoneNumber = (phone: string): boolean => {
   if (!phone) return false;
   // Remove all non-digit characters
-  const digitsOnly = phone.replace(/\D/g, '');
+  const digitsOnly = phone.replace(/\D/g, "");
   return digitsOnly.length >= 10;
 };
 
@@ -57,7 +57,7 @@ export const formatPhoneNumber = (
   countryPhoneCode: number = DEFAULT_COUNTRY_CODE,
 ): string => {
   // Return original phone if it's invalid
-  if (!isValidPhoneNumber(phone)) return phone || '';
+  if (!isValidPhoneNumber(phone)) return phone || "";
 
   // Get the appropriate format or default to US format
   const format =
@@ -67,14 +67,14 @@ export const formatPhoneNumber = (
   if (!format || !Array.isArray(format)) return phone;
 
   // Convert phone to array for easier manipulation
-  const phoneArray = phone.replace(/\D/g, '').split('');
-  let formattedPhone = '';
+  const phoneArray = phone.replace(/\D/g, "").split("");
+  let formattedPhone = "";
   let currentIndex = 0;
 
   // Apply the format pattern
   for (const segmentLength of format) {
     // Validate segment length
-    if (typeof segmentLength !== 'number' || segmentLength <= 0) {
+    if (typeof segmentLength !== "number" || segmentLength <= 0) {
       continue;
     }
 
@@ -87,7 +87,7 @@ export const formatPhoneNumber = (
 
     // Add space separator (except after the last segment)
     if (segmentLength > 0 && currentIndex + segmentLength < phoneArray.length) {
-      formattedPhone += ' ';
+      formattedPhone += " ";
     }
 
     currentIndex += segmentLength;
@@ -112,7 +112,7 @@ export const formatPhoneNumberWithCountryCode = (
   countryPhoneCode: number = DEFAULT_COUNTRY_CODE,
 ): string => {
   // Handle invalid inputs
-  if (!phone) return '';
+  if (!phone) return "";
 
   const formattedPhone = formatPhoneNumber(phone, countryPhoneCode);
 

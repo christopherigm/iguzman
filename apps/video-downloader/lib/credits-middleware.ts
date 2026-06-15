@@ -1,9 +1,9 @@
-import { addCredits, deductCredits, getCreditKey } from '@/lib/credits-db';
+import { addCredits, deductCredits, getCreditKey } from "@/lib/credits-db";
 
 export type CreditsError =
-  | 'NO_CREDITS_KEY'
-  | 'INVALID_CREDITS_KEY'
-  | 'INSUFFICIENT_CREDITS';
+  | "NO_CREDITS_KEY"
+  | "INVALID_CREDITS_KEY"
+  | "INSUFFICIENT_CREDITS";
 
 export interface CreditsResult {
   ok: true;
@@ -16,7 +16,7 @@ export interface CreditsFailure {
 }
 
 export function getCreditsKey(request: Request): string | null {
-  const header = request.headers.get('x-credits-key');
+  const header = request.headers.get("x-credits-key");
   if (!header?.trim()) return null;
   return header.trim();
 }
@@ -26,13 +26,13 @@ export async function requireCredits(
   amount: number,
 ): Promise<CreditsResult | CreditsFailure> {
   const doc = await getCreditKey(key);
-  if (!doc) return { ok: false, error: 'INVALID_CREDITS_KEY' };
-  if (doc.credits < amount) return { ok: false, error: 'INSUFFICIENT_CREDITS' };
+  if (!doc) return { ok: false, error: "INVALID_CREDITS_KEY" };
+  if (doc.credits < amount) return { ok: false, error: "INSUFFICIENT_CREDITS" };
 
   const remaining = await deductCredits(key, amount);
   if (remaining === null) {
     // Concurrent request may have consumed the credits between check and deduct
-    return { ok: false, error: 'INSUFFICIENT_CREDITS' };
+    return { ok: false, error: "INSUFFICIENT_CREDITS" };
   }
 
   return { ok: true, remaining };
@@ -43,7 +43,10 @@ export async function requireCredits(
  * up-front fails (transient download/processing/diarization errors, timeouts).
  * Best-effort: a failed refund is logged by the caller but never throws.
  */
-export async function refundCredits(key: string, amount: number): Promise<void> {
+export async function refundCredits(
+  key: string,
+  amount: number,
+): Promise<void> {
   if (amount <= 0) return;
   await addCredits(key, amount);
 }
@@ -54,9 +57,9 @@ export async function getBalance(key: string): Promise<number | null> {
 }
 
 export function creditsErrorResponse(error: CreditsError): Response {
-  const status = error === 'NO_CREDITS_KEY' ? 401 : 402;
+  const status = error === "NO_CREDITS_KEY" ? 401 : 402;
   return new Response(JSON.stringify({ error }), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { "Content-Type": "application/json" },
   });
 }

@@ -1,4 +1,4 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -23,16 +23,11 @@ import { execFile } from 'child_process';
  */
 const getFinalURL = (url: string): Promise<string> =>
   new Promise((resolve) => {
-    const args = [
-      '-Ls',
-      '-o', '/dev/null',
-      '-w', '%{url_effective}',
-      url,
-    ];
+    const args = ["-Ls", "-o", "/dev/null", "-w", "%{url_effective}", url];
 
-    execFile('curl', args, (error, stdout) => {
+    execFile("curl", args, (error, stdout) => {
       if (error) {
-        console.error('getFinalURL error:', error);
+        console.error("getFinalURL error:", error);
         resolve(url);
         return;
       }

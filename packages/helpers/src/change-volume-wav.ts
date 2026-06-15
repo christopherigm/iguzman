@@ -1,10 +1,10 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default output folder based on the current environment. */
 const DEFAULT_OUTPUT_FOLDER =
-  NODE_ENV === 'production' ? '/app/media' : 'public/media';
+  NODE_ENV === "production" ? "/app/media" : "public/media";
 
 interface ChangeVolumeWavOptions {
   /** Source audio file path (a leading `media/` prefix is stripped automatically). */
@@ -53,7 +53,7 @@ const changeVolumeWav = ({
 
   /** Strip a leading `media/` prefix so paths are relative to outputFolder. */
   const stripMediaPrefix = (path: string): string =>
-    path.startsWith('media/') ? path.slice('media/'.length) : path;
+    path.startsWith("media/") ? path.slice("media/".length) : path;
 
   const srcClean = stripMediaPrefix(src);
   const destClean = stripMediaPrefix(dest);
@@ -62,12 +62,12 @@ const changeVolumeWav = ({
   const destFile = `${outputFolder}/${destClean}`;
 
   // @see https://trac.ffmpeg.org/wiki/AudioVolume
-  const args = ['-y', '-i', srcFile, '-af', `volume=${volume}`, destFile];
+  const args = ["-y", "-i", srcFile, "-af", `volume=${volume}`, destFile];
 
   return new Promise<string>((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error) => {
+    execFile("ffmpeg", args, { maxBuffer: 1024 * 2048 }, (error) => {
       if (error) {
-        console.error('Error changing WAV volume:', error);
+        console.error("Error changing WAV volume:", error);
         return reject(error);
       }
       resolve(`media/${destClean}`);

@@ -1,17 +1,17 @@
-import { getTranslations } from 'next-intl/server';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import type { ServiceDetail, ServiceVariantFull } from '@/lib/catalog';
-import { VariantSelectorClient } from './variant-selector-client';
-import { FavoriteButtonClient } from './favorite-button-client';
-import { ActionButtonsClient } from './action-buttons-client';
-import './service-detail.css';
+import { getTranslations } from "next-intl/server";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import type { ServiceDetail, ServiceVariantFull } from "@/lib/catalog";
+import { VariantSelectorClient } from "./variant-selector-client";
+import { FavoriteButtonClient } from "./favorite-button-client";
+import { ActionButtonsClient } from "./action-buttons-client";
+import "./service-detail.css";
 
 function formatPrice(amount: string, currency: string): string {
   const num = parseFloat(amount);
   try {
     return new Intl.NumberFormat(undefined, {
-      style: 'currency',
+      style: "currency",
       currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
@@ -46,19 +46,19 @@ export async function ServiceDetailPanel({
   selectedVariant,
   locale,
 }: ServiceDetailProps) {
-  const t = await getTranslations('ItemDetail');
+  const t = await getTranslations("ItemDetail");
 
   const name =
-    (locale === 'en' ? service.en_name : service.name) ??
+    (locale === "en" ? service.en_name : service.name) ??
     service.name ??
     service.en_name ??
-    '';
+    "";
 
   const description =
-    (locale === 'en' ? service.en_description : service.description) ??
+    (locale === "en" ? service.en_description : service.description) ??
     service.description ??
     service.en_description ??
-    '';
+    "";
 
   const effectivePrice = selectedVariant?.effective_price ?? service.price;
   const effectiveCompare =
@@ -74,9 +74,9 @@ export async function ServiceDetailPanel({
     selectedVariant?.effective_modality ?? service.modality;
 
   const modalityLabels: Record<string, string> = {
-    online: t('modalityOnline'),
-    in_person: t('modalityInPerson'),
-    hybrid: t('modalityHybrid'),
+    online: t("modalityOnline"),
+    in_person: t("modalityInPerson"),
+    hybrid: t("modalityHybrid"),
   };
 
   return (
@@ -97,7 +97,7 @@ export async function ServiceDetailPanel({
               variant="none"
               className="service-detail__meta-item"
             >
-              {t('brand')}: <strong>{service.brand_name}</strong>
+              {t("brand")}: <strong>{service.brand_name}</strong>
             </Typography>
           )}
           {service.category_name && (
@@ -106,7 +106,7 @@ export async function ServiceDetailPanel({
               variant="none"
               className="service-detail__meta-item"
             >
-              {t('category')}: <strong>{service.category_name}</strong>
+              {t("category")}: <strong>{service.category_name}</strong>
             </Typography>
           )}
         </Box>
@@ -157,7 +157,7 @@ export async function ServiceDetailPanel({
       {/* SKU */}
       {(selectedVariant?.sku ?? service.sku) && (
         <Typography as="span" variant="none" className="service-detail__sku">
-          {t('sku')}: {selectedVariant?.sku ?? service.sku}
+          {t("sku")}: {selectedVariant?.sku ?? service.sku}
         </Typography>
       )}
 
@@ -173,17 +173,17 @@ export async function ServiceDetailPanel({
       {/* Actions */}
       <Box className="service-detail__actions">
         <ActionButtonsClient
-          addToCartLabel={t('addToCart')}
-          buyNowLabel={t('buyNow')}
+          addToCartLabel={t("addToCart")}
+          buyNowLabel={t("buyNow")}
         />
-        <FavoriteButtonClient label={t('addToFavorites')} />
+        <FavoriteButtonClient label={t("addToFavorites")} />
       </Box>
 
       {/* Description */}
       {description && (
         <Box className="service-detail__section">
           <Typography as="h2" variant="none" className="item-section-heading">
-            {t('description')}
+            {t("description")}
           </Typography>
           <Typography variant="none" className="service-detail__description">
             {description}
@@ -194,25 +194,25 @@ export async function ServiceDetailPanel({
       {/* Service details */}
       <Box className="service-detail__section">
         <Typography as="h2" variant="none" className="item-section-heading">
-          {t('serviceDetails')}
+          {t("serviceDetails")}
         </Typography>
         <table className="item-specs-table">
           <tbody>
             {service.brand_name && (
               <tr>
-                <td>{t('brand')}</td>
+                <td>{t("brand")}</td>
                 <td>{service.brand_name}</td>
               </tr>
             )}
             {service.category_name && (
               <tr>
-                <td>{t('category')}</td>
+                <td>{t("category")}</td>
                 <td>{service.category_name}</td>
               </tr>
             )}
             {effectiveModality && (
               <tr>
-                <td>{t('modality')}</td>
+                <td>{t("modality")}</td>
                 <td>
                   {modalityLabels[effectiveModality] ?? effectiveModality}
                 </td>
@@ -220,19 +220,19 @@ export async function ServiceDetailPanel({
             )}
             {effectiveDuration && (
               <tr>
-                <td>{t('duration')}</td>
+                <td>{t("duration")}</td>
                 <td>{formatDuration(effectiveDuration)}</td>
               </tr>
             )}
             {(selectedVariant?.sku ?? service.sku) && (
               <tr>
-                <td>{t('sku')}</td>
+                <td>{t("sku")}</td>
                 <td>{selectedVariant?.sku ?? service.sku}</td>
               </tr>
             )}
             {service.currency && (
               <tr>
-                <td>{t('currency')}</td>
+                <td>{t("currency")}</td>
                 <td>{service.currency}</td>
               </tr>
             )}

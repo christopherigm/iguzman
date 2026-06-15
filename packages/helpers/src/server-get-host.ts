@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+import { headers } from "next/headers";
 
 /**
  * Retrieves the host name from server-side headers
@@ -13,14 +13,14 @@ found
 const getHostFromServer = async (): Promise<string> => {
   try {
     const headerList = await headers();
-    const host = headerList.get('x-forwarded-host');
+    const host = headerList.get("x-forwarded-host");
 
     // Return the host if it exists, otherwise return empty string
-    return host ?? '';
+    return host ?? "";
   } catch (error) {
     // In case of any error during header retrieval, return empty string
-    console.warn('Failed to retrieve host from headers:', error);
-    return '';
+    console.warn("Failed to retrieve host from headers:", error);
+    return "";
   }
 };
 

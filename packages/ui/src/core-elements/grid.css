@@ -14,6 +14,143 @@
   box-sizing: border-box;
 }
 
+/* ===== Masonry container =====
+ * CSS multi-column model: children flow top-to-bottom and balance across
+ * columns, so unequal item heights never leave the vertical gaps a flex grid
+ * does. Horizontal gutter is `column-gap`; vertical gutter is each child's
+ * `margin-bottom` (multi-column layout ignores `gap` for the block axis).
+ * Column count defaults to 1 and is raised per breakpoint by the count classes.
+ */
+.ui-grid-masonry {
+  display: block;
+  column-count: 1;
+  column-gap: var(--ui-grid-spacing-x, 0px);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Direct children become column blocks. Override any flex-grid item sizing so
+ * each child spans its full column, and keep cards from splitting across a
+ * column break. */
+.ui-grid-masonry > * {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: var(--ui-grid-spacing-y, 0px);
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+}
+
+/* ===== Masonry column counts ===== */
+/* xs (base - no media query, mobile-first) */
+.ui-grid-masonry-xs-1 {
+  column-count: 1;
+}
+.ui-grid-masonry-xs-2 {
+  column-count: 2;
+}
+.ui-grid-masonry-xs-3 {
+  column-count: 3;
+}
+.ui-grid-masonry-xs-4 {
+  column-count: 4;
+}
+.ui-grid-masonry-xs-5 {
+  column-count: 5;
+}
+.ui-grid-masonry-xs-6 {
+  column-count: 6;
+}
+
+@media (min-width: 600px) {
+  /* sm */
+  .ui-grid-masonry-sm-1 {
+    column-count: 1;
+  }
+  .ui-grid-masonry-sm-2 {
+    column-count: 2;
+  }
+  .ui-grid-masonry-sm-3 {
+    column-count: 3;
+  }
+  .ui-grid-masonry-sm-4 {
+    column-count: 4;
+  }
+  .ui-grid-masonry-sm-5 {
+    column-count: 5;
+  }
+  .ui-grid-masonry-sm-6 {
+    column-count: 6;
+  }
+}
+
+@media (min-width: 900px) {
+  /* md */
+  .ui-grid-masonry-md-1 {
+    column-count: 1;
+  }
+  .ui-grid-masonry-md-2 {
+    column-count: 2;
+  }
+  .ui-grid-masonry-md-3 {
+    column-count: 3;
+  }
+  .ui-grid-masonry-md-4 {
+    column-count: 4;
+  }
+  .ui-grid-masonry-md-5 {
+    column-count: 5;
+  }
+  .ui-grid-masonry-md-6 {
+    column-count: 6;
+  }
+}
+
+@media (min-width: 1200px) {
+  /* lg */
+  .ui-grid-masonry-lg-1 {
+    column-count: 1;
+  }
+  .ui-grid-masonry-lg-2 {
+    column-count: 2;
+  }
+  .ui-grid-masonry-lg-3 {
+    column-count: 3;
+  }
+  .ui-grid-masonry-lg-4 {
+    column-count: 4;
+  }
+  .ui-grid-masonry-lg-5 {
+    column-count: 5;
+  }
+  .ui-grid-masonry-lg-6 {
+    column-count: 6;
+  }
+}
+
+@media (min-width: 1536px) {
+  /* xl */
+  .ui-grid-masonry-xl-1 {
+    column-count: 1;
+  }
+  .ui-grid-masonry-xl-2 {
+    column-count: 2;
+  }
+  .ui-grid-masonry-xl-3 {
+    column-count: 3;
+  }
+  .ui-grid-masonry-xl-4 {
+    column-count: 4;
+  }
+  .ui-grid-masonry-xl-5 {
+    column-count: 5;
+  }
+  .ui-grid-masonry-xl-6 {
+    column-count: 6;
+  }
+}
+
 /* ===== Item =====
  * Default span is 12 (full width). Size classes override `flex-basis`/`max-width`.
  * flex-basis = 100% * span / 12 - columnGap * (12 - span) / 12

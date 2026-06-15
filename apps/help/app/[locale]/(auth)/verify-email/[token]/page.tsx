@@ -1,5 +1,5 @@
-import { setRequestLocale } from 'next-intl/server';
-import { VerifyEmailClient } from './verify-email-client';
+import { setRequestLocale } from "next-intl/server";
+import { VerifyEmailClient } from "./verify-email-client";
 
 type Props = { params: Promise<{ locale: string; token: string }> };
 

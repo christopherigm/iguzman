@@ -13,8 +13,8 @@ export const extractUrl = (text: string): string => {
   if (!match) return text;
 
   /** Strip trailing full-width comma (U+FF0C) and anything after it. */
-  const url = match[0].split('，')[0];
-  return url ?? '';
+  const url = match[0].split("，")[0];
+  return url ?? "";
 };
 
 /**
@@ -26,7 +26,7 @@ export const extractUrl = (text: string): string => {
  * @param url - The string to validate
  */
 export const isCleanUrl = (url: string): boolean =>
-  !url.includes(' ') && url.startsWith('http');
+  !url.includes(" ") && url.startsWith("http");
 
 /**
  * Removes all query parameters (and the fragment) from a URL, returning only

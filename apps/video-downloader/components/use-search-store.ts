@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from "react";
 
 /* ── Simple reactive store for the search query ─────── */
 
-let searchQuery = '';
+let searchQuery = "";
 const listeners = new Set<() => void>();
 
 function subscribe(listener: () => void) {

@@ -1,14 +1,14 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
 /* ------------------------------------------------------------------ */
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default output folder based on the current environment. */
 const DEFAULT_OUTPUT_FOLDER =
-  NODE_ENV === 'production' ? '/app/media' : 'public/media';
+  NODE_ENV === "production" ? "/app/media" : "public/media";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -41,7 +41,7 @@ export interface CutVideoLengthOptions {
  * that nested segments like `some/media/file.mp4` stay intact.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -75,18 +75,21 @@ const cutVideoLength = ({
   const destPath = `${outputFolder}/${cleanDest}`;
 
   const args = [
-    '-y',
-    '-ss', String(ss),
-    '-to', String(to),
-    '-i', srcPath,
-    ...(justAudio ? ['-c:a', 'copy'] : ['-c:v', 'libx264', '-c:a', 'copy']),
+    "-y",
+    "-ss",
+    String(ss),
+    "-to",
+    String(to),
+    "-i",
+    srcPath,
+    ...(justAudio ? ["-c:a", "copy"] : ["-c:v", "libx264", "-c:a", "copy"]),
     destPath,
   ];
 
   return new Promise<string>((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error) => {
+    execFile("ffmpeg", args, { maxBuffer: 1024 * 2048 }, (error) => {
       if (error) {
-        console.error('ffmpeg cut-video error:', error);
+        console.error("ffmpeg cut-video error:", error);
         return reject(error);
       }
       return resolve(`media/${cleanDest}`);

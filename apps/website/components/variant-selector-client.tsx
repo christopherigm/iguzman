@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Box } from '@repo/ui/core-elements/box';
-import { Button } from '@repo/ui/core-elements/button';
-import { Typography } from '@repo/ui/core-elements/typography';
-import type { BuyableVariantOptionValue } from '@/lib/catalog';
-import './variant-selector-client.css';
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
+import { Typography } from "@repo/ui/core-elements/typography";
+import type { BuyableVariantOptionValue } from "@/lib/catalog";
+import "./variant-selector-client.css";
 
 interface VariantForSelector {
   id: number;
@@ -28,7 +28,9 @@ export function VariantSelectorClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const variantsWithOptions = variants.filter((v) => v.option_values.length > 0);
+  const variantsWithOptions = variants.filter(
+    (v) => v.option_values.length > 0,
+  );
   if (variantsWithOptions.length === 0) return null;
 
   // Build a map of option_name → unique option values (ordered)
@@ -72,7 +74,7 @@ export function VariantSelectorClient({
 
     if (match) {
       const params = new URLSearchParams(searchParams.toString());
-      params.set('variant', String(match.id));
+      params.set("variant", String(match.id));
       router.push(`${pathname}?${params.toString()}`);
     }
   }
@@ -85,14 +87,18 @@ export function VariantSelectorClient({
         );
         return (
           <Box key={optionName} className="variant-selector__group">
-            <Typography as="span" variant="none" className="variant-selector__label">
+            <Typography
+              as="span"
+              variant="none"
+              className="variant-selector__label"
+            >
               {optionName}
             </Typography>
             <Box className="variant-selector__values">
               {sortedValues.map((ov) => {
                 const isSelected = selectedValueIds.has(ov.id);
                 const displayName =
-                  (locale === 'en' ? ov.en_name : ov.name) ??
+                  (locale === "en" ? ov.en_name : ov.name) ??
                   ov.name ??
                   ov.en_name ??
                   ov.slug;
@@ -103,7 +109,7 @@ export function VariantSelectorClient({
                       key={ov.id}
                       unstyled
                       title={displayName}
-                      className={`variant-selector__swatch${isSelected ? ' variant-selector__swatch--selected' : ''}`}
+                      className={`variant-selector__swatch${isSelected ? " variant-selector__swatch--selected" : ""}`}
                       styles={{ backgroundColor: ov.color }}
                       onClick={() => handleSelect(optionName, ov.id)}
                       aria-pressed={isSelected}
@@ -117,7 +123,7 @@ export function VariantSelectorClient({
                     key={ov.id}
                     unstyled
                     text={displayName}
-                    className={`variant-selector__chip${isSelected ? ' variant-selector__chip--selected' : ''}`}
+                    className={`variant-selector__chip${isSelected ? " variant-selector__chip--selected" : ""}`}
                     onClick={() => handleSelect(optionName, ov.id)}
                     aria-pressed={isSelected}
                   />

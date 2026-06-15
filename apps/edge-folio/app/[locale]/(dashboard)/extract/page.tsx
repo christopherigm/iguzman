@@ -1,12 +1,14 @@
-import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { ExtractPage } from './extract-page';
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { ExtractPage } from "./extract-page";
 
 type Props = { params: Promise<{ locale: string }> };
 
 export async function generateMetadata({ params }: Props) {
   const { locale } = await params;
-  const t = (await getTranslations({ locale, namespace: 'ExtractPage' })) as (key: string) => string;
-  return { title: t('title') };
+  const t = (await getTranslations({ locale, namespace: "ExtractPage" })) as (
+    key: string,
+  ) => string;
+  return { title: t("title") };
 }
 
 export default async function Extract({ params }: Props) {

@@ -1,35 +1,39 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { Container } from '@repo/ui/core-elements/container';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { getProduct } from '@/lib/catalog';
-import type { ProductDetail, ProductVariantFull } from '@/lib/catalog';
-import type { GalleryImage } from '@/components/item-gallery-client';
-import { ItemGalleryClient } from '@/components/item-gallery-client';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
-import type { BreadcrumbItem } from '@repo/ui/core-elements/breadcrumbs';
-import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
-import { ProductDetailPanel } from '@/components/product-detail';
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Container } from "@repo/ui/core-elements/container";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { getProduct } from "@/lib/catalog";
+import type { ProductDetail, ProductVariantFull } from "@/lib/catalog";
+import type { GalleryImage } from "@/components/item-gallery-client";
+import { ItemGalleryClient } from "@/components/item-gallery-client";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
+import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import { ProductDetailPanel } from "@/components/product-detail";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
   searchParams: Promise<{ variant?: string }>;
 };
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
   const { locale, slug } = await params;
   const product = await getProduct(slug);
   if (!product) return {};
 
   const name =
-    (locale === 'en' ? product.en_name : product.name) ??
+    (locale === "en" ? product.en_name : product.name) ??
     product.name ??
     product.en_name ??
     slug;
 
   const description =
-    (locale === 'en' ? product.en_description : product.description) ??
+    (locale === "en" ? product.en_description : product.description) ??
     product.description ??
     product.en_description ??
     undefined;
@@ -85,8 +89,8 @@ export default async function ProductPage({ params, searchParams }: Props) {
 
   const [product, t, tNav] = await Promise.all([
     getProduct(slug),
-    getTranslations('ItemDetail'),
-    getTranslations('CategoryDetail'),
+    getTranslations("ItemDetail"),
+    getTranslations("CategoryDetail"),
   ]);
 
   if (!product) notFound();
@@ -101,14 +105,14 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const galleryImages = buildGalleryImages(product, selectedVariant);
 
   const displayName =
-    (locale === 'en' ? product.en_name : product.name) ??
+    (locale === "en" ? product.en_name : product.name) ??
     product.name ??
     product.en_name ??
     slug;
 
   const breadcrumbs: BreadcrumbItem[] = [
-    { label: t('home'), href: '/' },
-    { label: tNav('products'), href: '/categories/products' },
+    { label: t("home"), href: "/" },
+    { label: tNav("products"), href: "/categories/products" },
     ...(product.category_name && product.category_slug
       ? [
           {

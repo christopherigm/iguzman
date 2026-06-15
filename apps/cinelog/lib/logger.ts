@@ -1,8 +1,10 @@
-import pino from 'pino';
+import pino from "pino";
 
 const logger = pino({
-  level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
-  base: { app: 'cinelog' },
+  level:
+    process.env.LOG_LEVEL ??
+    (process.env.NODE_ENV === "production" ? "info" : "debug"),
+  base: { app: "cinelog" },
 });
 
 export default logger;

@@ -1,11 +1,11 @@
-import { execFile } from 'child_process';
-import * as fs from 'fs';
+import { execFile } from "child_process";
+import * as fs from "fs";
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default output folder based on the current environment. */
 const DEFAULT_OUTPUT_FOLDER =
-  NODE_ENV === 'production' ? '/app/media' : 'public/media';
+  NODE_ENV === "production" ? "/app/media" : "public/media";
 
 /**
  * SSA/ASS subtitle alignment values.
@@ -67,15 +67,15 @@ const burnSRTIntoVideo = ({
   destVideo,
   alignment = 6,
   marginV = 40,
-  font = 'Roboto Bold',
+  font = "Roboto Bold",
   fontSize = 20,
   borderStyle = 0,
-  backColour = 'H70000000',
+  backColour = "H70000000",
   outputFolder = DEFAULT_OUTPUT_FOLDER,
 }: BurnSRTOptions): Promise<string> => {
   /** Strip a leading `media/` prefix so paths are relative to outputFolder. */
   const stripMediaPrefix = (path: string): string =>
-    path.startsWith('media/') ? path.slice('media/'.length) : path;
+    path.startsWith("media/") ? path.slice("media/".length) : path;
 
   const srcClean = stripMediaPrefix(srcVideo);
   const destClean = stripMediaPrefix(destVideo);
@@ -97,7 +97,7 @@ const burnSRTIntoVideo = ({
 
   return new Promise<string>((resolve, reject) => {
     try {
-      fs.writeFileSync(srtFilePath, srtContent, 'utf-8');
+      fs.writeFileSync(srtFilePath, srtContent, "utf-8");
     } catch (err) {
       return reject(
         new Error(`Failed to write temp SRT file "${srtFilePath}": ${err}`),
@@ -109,16 +109,16 @@ const burnSRTIntoVideo = ({
        videos (stored as landscape + rotation flag) get subtitles
        positioned in the wrong place. */
     execFile(
-      'ffprobe',
+      "ffprobe",
       [
-        '-v',
-        'error',
-        '-select_streams',
-        'v:0',
-        '-show_entries',
-        'stream_tags=rotate:side_data=rotation',
-        '-of',
-        'default=nw=1',
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream_tags=rotate:side_data=rotation",
+        "-of",
+        "default=nw=1",
         srcFile,
       ],
       { maxBuffer: 1024 * 512 },
@@ -153,7 +153,7 @@ const burnSRTIntoVideo = ({
           `BackColour=&${backColour}`,
           `Alignment=${ssaAlignment}`,
           `MarginV=${marginV}`,
-        ].join(',');
+        ].join(",");
 
         const subtitleFilter = `subtitles=${srtFilePath}:force_style='${forceStyle}'`;
 
@@ -175,19 +175,19 @@ const burnSRTIntoVideo = ({
         // Use execFile with explicit args to avoid shell-injection risks.
         // @see https://stackoverflow.com/questions/8672809/use-ffmpeg-to-add-text-subtitles
         const args = [
-          '-y',
-          ...(needsRotation ? ['-noautorotate'] : []),
-          '-i',
+          "-y",
+          ...(needsRotation ? ["-noautorotate"] : []),
+          "-i",
           srcFile,
-          '-vf',
+          "-vf",
           vf,
-          ...(needsRotation ? ['-metadata:s:v:0', 'rotate=0'] : []),
+          ...(needsRotation ? ["-metadata:s:v:0", "rotate=0"] : []),
           destFile,
         ];
 
-        execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error) => {
+        execFile("ffmpeg", args, { maxBuffer: 1024 * 2048 }, (error) => {
           if (error) {
-            console.error('Error burning SRT into video:', error);
+            console.error("Error burning SRT into video:", error);
             cleanupSrtFile();
             return reject(error);
           }

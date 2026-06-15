@@ -1,4 +1,4 @@
-import base64ToImage from '@repo/helpers/base64-to-image';
+import base64ToImage from "@repo/helpers/base64-to-image";
 
 /** The intrinsic dimensions of a decoded image. */
 export interface ImageDimensions {

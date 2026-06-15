@@ -1,5 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
@@ -10,7 +10,7 @@ const AUDIO_CONFIG = {
   /** Maximum buffer size for ffmpeg command execution (2MB) */
   MAX_BUFFER: 1024 * 2048,
   /** Audio channel layout for silence generation */
-  CHANNEL_LAYOUT: 'stereo',
+  CHANNEL_LAYOUT: "stereo",
   /** Sample rate in Hz for silence generation */
   SAMPLE_RATE: 44100,
 } as const;
@@ -19,7 +19,7 @@ const AUDIO_CONFIG = {
  * Determines the current environment and returns appropriate media folder path
  */
 const getNodeEnv = (): string => {
-  return process.env.NODE_ENV?.trim() ?? 'localhost';
+  return process.env.NODE_ENV?.trim() ?? "localhost";
 };
 
 /**
@@ -45,7 +45,7 @@ export interface AddSilenceOptions {
  * @returns The sanitized path without 'media/' prefix
  */
 const sanitizePath = (path: string): string => {
-  return path.replace(/^media\//, '');
+  return path.replace(/^media\//, "");
 };
 
 /**
@@ -57,20 +57,20 @@ const sanitizePath = (path: string): string => {
 const validateOptions = (options: AddSilenceOptions): void => {
   const { src, dest, time } = options;
 
-  if (!src || typeof src !== 'string') {
-    throw new Error('Source file path must be a non-empty string');
+  if (!src || typeof src !== "string") {
+    throw new Error("Source file path must be a non-empty string");
   }
 
-  if (!dest || typeof dest !== 'string') {
-    throw new Error('Destination file path must be a non-empty string');
+  if (!dest || typeof dest !== "string") {
+    throw new Error("Destination file path must be a non-empty string");
   }
 
-  if (typeof time !== 'number' || time <= 0) {
-    throw new Error('Time must be a positive number');
+  if (typeof time !== "number" || time <= 0) {
+    throw new Error("Time must be a positive number");
   }
 
   if (isNaN(time) || !isFinite(time)) {
-    throw new Error('Time must be a valid finite number');
+    throw new Error("Time must be a valid finite number");
   }
 };
 
@@ -87,7 +87,7 @@ const buildFfmpegCommand = (
   srcFile: string,
   destFile: string,
   time: number,
-  beginning: boolean
+  beginning: boolean,
 ): string => {
   const { CHANNEL_LAYOUT, SAMPLE_RATE } = AUDIO_CONFIG;
 
@@ -135,7 +135,9 @@ const buildFfmpegCommand = (
  * });
  * ```
  */
-export const addSilenceToWav = async (options: AddSilenceOptions): Promise<string> => {
+export const addSilenceToWav = async (
+  options: AddSilenceOptions,
+): Promise<string> => {
   // Validate input parameters
   validateOptions(options);
 
@@ -144,7 +146,9 @@ export const addSilenceToWav = async (options: AddSilenceOptions): Promise<strin
     dest,
     time,
     beginning = true,
-    outputFolder = getNodeEnv() === 'production' ? '/app/media' : 'public/media',
+    outputFolder = getNodeEnv() === "production"
+      ? "/app/media"
+      : "public/media",
   } = options;
 
   // Sanitize paths to remove 'media/' prefix if present
@@ -165,7 +169,7 @@ export const addSilenceToWav = async (options: AddSilenceOptions): Promise<strin
     return `media/${destClean}`;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[addSilenceToWav] Command failed:', {
+    console.error("[addSilenceToWav] Command failed:", {
       src: srcFile,
       dest: destFile,
       time,

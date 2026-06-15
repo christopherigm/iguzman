@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import ReactPlayer from 'react-player';
+import { useState, useEffect } from "react";
+import ReactPlayer from "react-player";
 
 type Props = {
   url: string;
@@ -23,7 +23,14 @@ export function HeroVideo({ url }: Props) {
   if (!mounted) return null;
 
   return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        pointerEvents: "none",
+      }}
+    >
       {/*
        * Center the player and ensure it always covers the container.
        *   - minWidth/minHeight: 100% → always fills the hero box
@@ -32,15 +39,15 @@ export function HeroVideo({ url }: Props) {
        */}
       <div
         style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          minWidth: '100%',
-          minHeight: '100%',
-          width: 'auto',
-          height: 'auto',
-          aspectRatio: '16 / 9',
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          minWidth: "100%",
+          minHeight: "100%",
+          width: "auto",
+          height: "auto",
+          aspectRatio: "16 / 9",
         }}
       >
         <ReactPlayer

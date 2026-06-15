@@ -1,20 +1,20 @@
-import { mkdir, rm } from 'fs/promises';
-import { joinAudiosWithCrossfade } from '@repo/helpers/join-2-audios-with-transition';
-import copyFile from '@repo/helpers/copy-file';
-import getRandomNumber from '@repo/helpers/random-number';
+import { mkdir, rm } from "fs/promises";
+import { joinAudiosWithCrossfade } from "@repo/helpers/join-2-audios-with-transition";
+import copyFile from "@repo/helpers/copy-file";
+import getRandomNumber from "@repo/helpers/random-number";
 
 /**
  * Resolves the current Node environment, defaulting to `"localhost"`
  * when `NODE_ENV` is not set.
  */
-const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? 'localhost';
+const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? "localhost";
 
 /**
  * Removes a leading `media/` prefix from a file path so it can be
  * joined with the output folder without duplicating the segment.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -58,7 +58,7 @@ const mergeAudios = async (
   outputFolder: string,
 ): Promise<string> => {
   if (audios.length < 2) {
-    throw new Error('At least two audio files are required to merge');
+    throw new Error("At least two audio files are required to merge");
   }
 
   const queue = [...audios];
@@ -78,7 +78,7 @@ const mergeAudios = async (
     queue.push(dest);
   }
 
-  return queue[0] ?? '';
+  return queue[0] ?? "";
 };
 
 /**
@@ -110,18 +110,18 @@ export const duplicateAudio = async ({
   src,
   dest,
   times = 2,
-  outputFolder = getNodeEnv() === 'production' ? '/app/media' : 'public/media',
+  outputFolder = getNodeEnv() === "production" ? "/app/media" : "public/media",
 }: DuplicateAudioOptions): Promise<string> => {
-  if (!src || typeof src !== 'string') {
-    throw new Error('Source file path must be a non-empty string');
+  if (!src || typeof src !== "string") {
+    throw new Error("Source file path must be a non-empty string");
   }
 
-  if (!dest || typeof dest !== 'string') {
-    throw new Error('Destination file path must be a non-empty string');
+  if (!dest || typeof dest !== "string") {
+    throw new Error("Destination file path must be a non-empty string");
   }
 
   if (!Number.isInteger(times) || times < 1) {
-    throw new Error('Times must be a positive integer (at least 1)');
+    throw new Error("Times must be a positive integer (at least 1)");
   }
 
   const cleanSrc = stripMediaPrefix(src);

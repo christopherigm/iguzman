@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useTheme } from './theme-provider';
-import type { ThemeMode } from './theme-provider';
-import Button from './core-elements/button';
-import './theme-switch.css';
+import { useTheme } from "./theme-provider";
+import type { ThemeMode } from "./theme-provider";
+import Button from "./core-elements/button";
+import "./theme-switch.css";
 
 const modes: { value: ThemeMode; label: string }[] = [
-  { value: 'light', label: 'Light' },
-  { value: 'system', label: 'System' },
-  { value: 'dark', label: 'Dark' },
+  { value: "light", label: "Light" },
+  { value: "system", label: "System" },
+  { value: "dark", label: "Dark" },
 ];
 
 interface ThemeSwitchProps {
@@ -20,12 +20,12 @@ export function ThemeSwitch({ hideOnMobile = false }: ThemeSwitchProps) {
 
   return (
     <div
-      className={hideOnMobile ? 'theme-switch-desktop-only' : undefined}
+      className={hideOnMobile ? "theme-switch-desktop-only" : undefined}
       style={{
-        display: 'inline-flex',
+        display: "inline-flex",
         borderRadius: 8,
-        border: '1px solid var(--border, #e5e7eb)',
-        background: 'var(--surface-1, #f5f5f5)',
+        border: "1px solid var(--border, #e5e7eb)",
+        background: "var(--surface-1, #f5f5f5)",
         padding: 3,
         gap: 2,
       }}
@@ -38,7 +38,7 @@ export function ThemeSwitch({ hideOnMobile = false }: ThemeSwitchProps) {
             type="button"
             text={label}
             onClick={() => actions.setMode(value)}
-            kind={active ? 'success' : undefined}
+            kind={active ? "success" : undefined}
             size="md"
           />
         );

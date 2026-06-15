@@ -1,8 +1,8 @@
-'use server';
+"use server";
 
-import { headers, cookies } from 'next/headers';
-import type { Language } from '@repo/helpers/types';
-import { AccessStorageKeys } from '@repo/helpers/constants';
+import { headers, cookies } from "next/headers";
+import type { Language } from "@repo/helpers/types";
+import { AccessStorageKeys } from "@repo/helpers/constants";
 
 /**
  * Detects the browser language on the server side
@@ -16,16 +16,16 @@ import { AccessStorageKeys } from '@repo/helpers/constants';
 const getBrowserLanguage = async (): Promise<Language> => {
   try {
     const headerList = await headers();
-    const acceptLanguage = headerList.get('accept-language');
+    const acceptLanguage = headerList.get("accept-language");
 
     // Default to English
-    let language: Language = 'en';
+    let language: Language = "en";
 
     // Check for Spanish language in accept-language header
-    if (acceptLanguage?.includes('es-MX')) {
-      language = 'es';
-    } else if (acceptLanguage?.includes('es')) {
-      language = 'es';
+    if (acceptLanguage?.includes("es-MX")) {
+      language = "es";
+    } else if (acceptLanguage?.includes("es")) {
+      language = "es";
     }
 
     // Check for language cookie
@@ -34,8 +34,8 @@ const getBrowserLanguage = async (): Promise<Language> => {
 
     // If cookie exists and is valid, override the detected language
     if (languageCookie) {
-      const cookieValue = languageCookie.replaceAll('"', '').trim();
-      if (cookieValue === 'es' || cookieValue === 'en') {
+      const cookieValue = languageCookie.replaceAll('"', "").trim();
+      if (cookieValue === "es" || cookieValue === "en") {
         language = cookieValue as Language;
       }
     }
@@ -44,10 +44,10 @@ const getBrowserLanguage = async (): Promise<Language> => {
   } catch (error) {
     // If any error occurs during detection, default to English
     console.warn(
-      'Error detecting browser language, defaulting to English',
+      "Error detecting browser language, defaulting to English",
       error,
     );
-    return 'en';
+    return "en";
   }
 };
 

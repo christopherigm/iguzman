@@ -1,5 +1,17 @@
-export type EmploymentType = 'full_time' | 'part_time' | 'contract' | 'freelance' | 'internship';
-export type DegreeType = 'bachelor' | 'master' | 'phd' | 'associate' | 'certificate' | 'bootcamp' | 'other';
+export type EmploymentType =
+  | "full_time"
+  | "part_time"
+  | "contract"
+  | "freelance"
+  | "internship";
+export type DegreeType =
+  | "bachelor"
+  | "master"
+  | "phd"
+  | "associate"
+  | "certificate"
+  | "bootcamp"
+  | "other";
 
 export interface WorkExperience {
   id: number;
@@ -80,58 +92,70 @@ async function careerFetch<T>(url: string, init?: RequestInit): Promise<T> {
 // ── Work Experience ───────────────────────────────────────────────────────────
 
 export function getWorkExperiences(): Promise<ListResponse<WorkExperience>> {
-  return careerFetch('/api/career/work-experience');
+  return careerFetch("/api/career/work-experience");
 }
 
-export function createWorkExperience(payload: WorkExperiencePayload): Promise<WorkExperience> {
-  return careerFetch('/api/career/work-experience', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+export function createWorkExperience(
+  payload: WorkExperiencePayload,
+): Promise<WorkExperience> {
+  return careerFetch("/api/career/work-experience", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
-export function updateWorkExperience(id: number, payload: Partial<WorkExperiencePayload>): Promise<WorkExperience> {
+export function updateWorkExperience(
+  id: number,
+  payload: Partial<WorkExperiencePayload>,
+): Promise<WorkExperience> {
   return careerFetch(`/api/career/work-experience/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteWorkExperience(id: number): Promise<void> {
-  return careerFetch(`/api/career/work-experience/${id}`, { method: 'DELETE' });
+  return careerFetch(`/api/career/work-experience/${id}`, { method: "DELETE" });
 }
 
 // ── Education ─────────────────────────────────────────────────────────────────
 
 export function getEducations(): Promise<ListResponse<Education>> {
-  return careerFetch('/api/career/education');
+  return careerFetch("/api/career/education");
 }
 
 export function createEducation(payload: EducationPayload): Promise<Education> {
-  return careerFetch('/api/career/education', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return careerFetch("/api/career/education", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
-export function updateEducation(id: number, payload: Partial<EducationPayload>): Promise<Education> {
+export function updateEducation(
+  id: number,
+  payload: Partial<EducationPayload>,
+): Promise<Education> {
   return careerFetch(`/api/career/education/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteEducation(id: number): Promise<void> {
-  return careerFetch(`/api/career/education/${id}`, { method: 'DELETE' });
+  return careerFetch(`/api/career/education/${id}`, { method: "DELETE" });
 }
 
 // ── Languages ─────────────────────────────────────────────────────────────────
 
-export type LanguageProficiency = 'native' | 'fluent' | 'professional' | 'basic';
+export type LanguageProficiency =
+  | "native"
+  | "fluent"
+  | "professional"
+  | "basic";
 
 export interface Language {
   id: number;
@@ -149,27 +173,30 @@ export interface LanguagePayload {
 }
 
 export function getLanguages(): Promise<ListResponse<Language>> {
-  return careerFetch('/api/career/languages');
+  return careerFetch("/api/career/languages");
 }
 
 export function createLanguage(payload: LanguagePayload): Promise<Language> {
-  return careerFetch('/api/career/languages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return careerFetch("/api/career/languages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
-export function updateLanguage(id: number, payload: Partial<LanguagePayload>): Promise<Language> {
+export function updateLanguage(
+  id: number,
+  payload: Partial<LanguagePayload>,
+): Promise<Language> {
   return careerFetch(`/api/career/languages/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteLanguage(id: number): Promise<void> {
-  return careerFetch(`/api/career/languages/${id}`, { method: 'DELETE' });
+  return careerFetch(`/api/career/languages/${id}`, { method: "DELETE" });
 }
 
 // ── Tech Stack ────────────────────────────────────────────────────────────────
@@ -180,17 +207,17 @@ export interface TechStack {
 }
 
 export function getTechStacks(): Promise<ListResponse<TechStack>> {
-  return careerFetch('/api/career/tech-stack');
+  return careerFetch("/api/career/tech-stack");
 }
 
 export function getPopularTechStacks(): Promise<ListResponse<TechStack>> {
-  return careerFetch('/api/career/tech-stack/popular');
+  return careerFetch("/api/career/tech-stack/popular");
 }
 
 export function createTechStack(name: string): Promise<TechStack> {
-  return careerFetch('/api/career/tech-stack', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return careerFetch("/api/career/tech-stack", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
   });
 }
@@ -217,25 +244,28 @@ export interface ProjectPayload {
 }
 
 export function getProjects(): Promise<ListResponse<Project>> {
-  return careerFetch('/api/career/projects');
+  return careerFetch("/api/career/projects");
 }
 
 export function createProject(payload: ProjectPayload): Promise<Project> {
-  return careerFetch('/api/career/projects', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return careerFetch("/api/career/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
-export function updateProject(id: number, payload: Partial<ProjectPayload>): Promise<Project> {
+export function updateProject(
+  id: number,
+  payload: Partial<ProjectPayload>,
+): Promise<Project> {
   return careerFetch(`/api/career/projects/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteProject(id: number): Promise<void> {
-  return careerFetch(`/api/career/projects/${id}`, { method: 'DELETE' });
+  return careerFetch(`/api/career/projects/${id}`, { method: "DELETE" });
 }

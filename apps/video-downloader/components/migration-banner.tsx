@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
-import Image from 'next/image';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Icon } from '@repo/ui/core-elements/icon';
-import './migration-banner.css';
+import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import Image from "next/image";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Icon } from "@repo/ui/core-elements/icon";
+import "./migration-banner.css";
 
-const DEADLINE_MS = new Date('2026-06-01T00:00:00Z').getTime();
-const MEDIA2GO_HOSTS = new Set(['media2go.app', 'www.media2go.app']);
+const DEADLINE_MS = new Date("2026-06-01T00:00:00Z").getTime();
+const MEDIA2GO_HOSTS = new Set(["media2go.app", "www.media2go.app"]);
 
 export interface MigrationBannerProps {
   serverDate: string;
 }
 
 export function MigrationBanner({ serverDate }: MigrationBannerProps) {
-  const t = useTranslations('MigrationBanner');
+  const t = useTranslations("MigrationBanner");
   const [visible, setVisible] = useState(false);
   const [daysLeft, setDaysLeft] = useState(0);
 
@@ -37,7 +37,7 @@ export function MigrationBanner({ serverDate }: MigrationBannerProps) {
         borderRadius={14}
         className="vi-card"
         flexDirection="column"
-        styles={{ overflow: 'hidden' }}
+        styles={{ overflow: "hidden" }}
       >
         <div className="mb-image-wrapper">
           <Image
@@ -51,17 +51,17 @@ export function MigrationBanner({ serverDate }: MigrationBannerProps) {
             type="button"
             className="mb-close-btn"
             onClick={() => setVisible(false)}
-            aria-label={t('close')}
+            aria-label={t("close")}
           >
             <Icon icon="/icons/close.svg" size={14} color="#fff" />
           </button>
         </div>
         <div className="mb-body">
           <Typography variant="body-sm" fontWeight={500}>
-            {t('heading')}
+            {t("heading")}
           </Typography>
           <Typography variant="body-sm">
-            {t('body', { days: daysLeft })}
+            {t("body", { days: daysLeft })}
           </Typography>
           <Typography variant="body-sm">
             <a

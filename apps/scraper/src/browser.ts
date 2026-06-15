@@ -1,7 +1,11 @@
-import { chromium } from 'playwright-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import type { Browser, BrowserContext, BrowserContextOptions } from 'playwright';
-import { loadNetscapeCookies } from './cookies';
+import { chromium } from "playwright-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import type {
+  Browser,
+  BrowserContext,
+  BrowserContextOptions,
+} from "playwright";
+import { loadNetscapeCookies } from "./cookies";
 
 chromium.use(StealthPlugin());
 
@@ -17,14 +21,14 @@ export async function getBrowser(): Promise<Browser> {
   browser = await chromium.launch({
     headless: true,
     args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage', // required in Docker (low /dev/shm)
-      '--disable-gpu',
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage", // required in Docker (low /dev/shm)
+      "--disable-gpu",
     ],
   });
 
-  browser.on('disconnected', () => {
+  browser.on("disconnected", () => {
     browser = null;
   });
 
@@ -35,7 +39,9 @@ export async function getBrowser(): Promise<Browser> {
  * Creates a new isolated BrowserContext with the Netscape cookies
  * pre-loaded. Callers must close the context when done.
  */
-export async function newContext(options?: BrowserContextOptions): Promise<BrowserContext> {
+export async function newContext(
+  options?: BrowserContextOptions,
+): Promise<BrowserContext> {
   const b = await getBrowser();
   const context = await b.newContext(options);
 

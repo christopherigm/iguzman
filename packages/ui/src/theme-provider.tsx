@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { createContext, use, useState, useEffect, useCallback } from 'react';
+import { createContext, use, useState, useEffect, useCallback } from "react";
 
 // --- Types ---
 
-type ThemeMode = 'light' | 'dark' | 'system';
-type ResolvedTheme = 'light' | 'dark';
+type ThemeMode = "light" | "dark" | "system";
+type ResolvedTheme = "light" | "dark";
 
 interface ThemeState {
   mode: ThemeMode;
@@ -23,8 +23,8 @@ interface ThemeContextValue {
 
 // --- Constants ---
 
-const COOKIE_NAME = 'theme-mode';
-const RESOLVED_COOKIE_NAME = 'theme-resolved';
+const COOKIE_NAME = "theme-mode";
+const RESOLVED_COOKIE_NAME = "theme-resolved";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 400; // ~13 months
 
 // --- Context ---
@@ -34,14 +34,14 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 // --- Helpers ---
 
 function getSystemTheme(): ResolvedTheme {
-  if (typeof window === 'undefined') return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light';
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 function resolveTheme(mode: ThemeMode): ResolvedTheme {
-  if (mode === 'system') return getSystemTheme();
+  if (mode === "system") return getSystemTheme();
   return mode;
 }
 
@@ -54,7 +54,7 @@ function setResolvedCookie(resolved: ResolvedTheme): void {
 }
 
 function applyThemeToDOM(resolved: ResolvedTheme): void {
-  document.documentElement.setAttribute('data-theme', resolved);
+  document.documentElement.setAttribute("data-theme", resolved);
   document.documentElement.style.colorScheme = resolved;
 }
 
@@ -68,21 +68,21 @@ interface ThemeProviderProps {
 
 function ThemeProvider({
   children,
-  initialMode = 'light',
-  initialResolved = 'light',
+  initialMode = "light",
+  initialResolved = "light",
 }: ThemeProviderProps) {
   const [mode, setModeState] = useState<ThemeMode>(initialMode);
   const [resolved, setResolved] = useState<ResolvedTheme>(
-    initialMode === 'system' ? initialResolved : (initialMode as ResolvedTheme),
+    initialMode === "system" ? initialResolved : (initialMode as ResolvedTheme),
   );
 
   useEffect(() => {
-    if (mode !== 'system') return;
+    if (mode !== "system") return;
 
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
 
     const handler = (e: MediaQueryListEvent) => {
-      const next: ResolvedTheme = e.matches ? 'dark' : 'light';
+      const next: ResolvedTheme = e.matches ? "dark" : "light";
       setResolved(next);
       applyThemeToDOM(next);
       setResolvedCookie(next);
@@ -94,12 +94,12 @@ function ThemeProvider({
     applyThemeToDOM(current);
     setResolvedCookie(current);
 
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
   }, [mode]);
 
   useEffect(() => {
-    if (mode === 'system') return;
+    if (mode === "system") return;
     applyThemeToDOM(resolved);
   }, [mode, resolved]);
 
@@ -124,7 +124,7 @@ function ThemeProvider({
 function useTheme(): ThemeContextValue {
   const context = use(ThemeContext);
   if (context === null) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
 }
@@ -143,7 +143,13 @@ function ThemeScript() {
 
 // --- Exports ---
 
-export { ThemeProvider, useTheme, ThemeScript, COOKIE_NAME, RESOLVED_COOKIE_NAME };
+export {
+  ThemeProvider,
+  useTheme,
+  ThemeScript,
+  COOKIE_NAME,
+  RESOLVED_COOKIE_NAME,
+};
 export type {
   ThemeMode,
   ResolvedTheme,

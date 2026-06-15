@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import './locale-switcher.css';
+import { useState, useRef, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import "./locale-switcher.css";
 
 const DEFAULT_FLAGS: Record<string, string> = {
-  de: '🇩🇪',
-  en: '🇺🇸',
-  es: '🇲🇽',
-  fr: '🇫🇷',
-  pt: '🇧🇷',
+  de: "🇩🇪",
+  en: "🇺🇸",
+  es: "🇲🇽",
+  fr: "🇫🇷",
+  pt: "🇧🇷",
 };
 
 const DEFAULT_LABELS: Record<string, string> = {
-  de: 'DE',
-  en: 'EN',
-  es: 'ES',
-  fr: 'FR',
-  pt: 'PT',
+  de: "DE",
+  en: "EN",
+  es: "ES",
+  fr: "FR",
+  pt: "PT",
 };
 
 interface LocaleSwitcherProps {
@@ -57,18 +57,18 @@ export function LocaleSwitcher({
         setOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const switchLocale = (locale: string) => {
-    const segments = pathname.split('/');
+    const segments = pathname.split("/");
     segments[1] = locale;
-    router.push(segments.join('/'));
+    router.push(segments.join("/"));
     setOpen(false);
   };
 
-  const currentFlag = resolvedFlags[currentLocale] ?? '🌐';
+  const currentFlag = resolvedFlags[currentLocale] ?? "🌐";
   const currentLabel =
     resolvedLabels[currentLocale] ?? currentLocale.toUpperCase();
 
@@ -80,7 +80,7 @@ export function LocaleSwitcher({
         aria-haspopup="listbox"
         aria-label={`Language: ${currentLabel}`}
         type="button"
-        {...(open !== undefined ? { 'aria-expanded': open } : {})}
+        {...(open !== undefined ? { "aria-expanded": open } : {})}
       >
         <span className="locale-switcher__flag" aria-hidden="true">
           {currentFlag}
@@ -100,15 +100,15 @@ export function LocaleSwitcher({
           {locales.map((locale) => (
             <li
               key={locale}
-              className={`locale-switcher__option${locale === currentLocale ? ' locale-switcher__option--active' : ''}`}
+              className={`locale-switcher__option${locale === currentLocale ? " locale-switcher__option--active" : ""}`}
               role="option"
               onClick={() => switchLocale(locale)}
               {...(locale === currentLocale
-                ? { 'aria-selected': true }
-                : { 'aria-selected': false })}
+                ? { "aria-selected": true }
+                : { "aria-selected": false })}
             >
               <span className="locale-switcher__flag" aria-hidden="true">
-                {resolvedFlags[locale] ?? '🌐'}
+                {resolvedFlags[locale] ?? "🌐"}
               </span>
               <span className="locale-switcher__label">
                 {resolvedLabels[locale] ?? locale.toUpperCase()}

@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { useTranslations } from 'next-intl';
-import { useRouter } from '@repo/i18n/navigation';
-import { Container } from '@repo/ui/core-elements/container';
-import { Box } from '@repo/ui/core-elements/box';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Button } from '@repo/ui/core-elements/button';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@repo/i18n/navigation";
+import { Container } from "@repo/ui/core-elements/container";
+import { Box } from "@repo/ui/core-elements/box";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Button } from "@repo/ui/core-elements/button";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import {
   getAccessToken,
   getProfile,
@@ -22,12 +22,12 @@ import {
   registerPasskey,
   ApiError,
   type UserProfile,
-} from '@/lib/auth';
+} from "@/lib/auth";
 import {
   AdminImageUploader,
   type NewImage,
-} from '@/components/admin-image-uploader/admin-image-uploader';
-import './my-account-form.css';
+} from "@/components/admin-image-uploader/admin-image-uploader";
+import "./my-account-form.css";
 
 interface Props {
   apiUrl: string;
@@ -60,7 +60,7 @@ function ProfileSection({
   apiUrl: string;
   accessToken: string;
 }) {
-  const t = useTranslations('MyAccountPage');
+  const t = useTranslations("MyAccountPage");
   const [firstName, setFirstName] = useState(profile.first_name);
   const [lastName, setLastName] = useState(profile.last_name);
   const [pendingPicture, setPendingPicture] = useState<NewImage | null>(null);
@@ -96,9 +96,9 @@ function ProfileSection({
       }
       await Promise.all(tasks);
       setPendingPicture(null);
-      setSuccess(t('profileSaved'));
+      setSuccess(t("profileSaved"));
     } catch {
-      setError(t('profileError'));
+      setError(t("profileError"));
     } finally {
       setLoading(false);
     }
@@ -121,31 +121,31 @@ function ProfileSection({
         fontWeight={600}
         className="my-account__section-title"
       >
-        {t('profileSection')}
+        {t("profileSection")}
       </Typography>
       <form onSubmit={handleSubmit} className="my-account__form">
         <AdminImageUploader
           existingImages={existingImages}
           onChange={(newImages) => handleImagesChange(newImages)}
           maxImages={1}
-          label={t('profilePictureLabel')}
+          label={t("profilePictureLabel")}
         />
         <TextInput
-          label={t('emailLabel')}
+          label={t("emailLabel")}
           type="email"
           value={profile.email}
           disabled
         />
         <Box display="flex" gap={12}>
           <TextInput
-            label={t('firstNameLabel')}
+            label={t("firstNameLabel")}
             type="text"
             value={firstName}
             onChange={setFirstName}
             autoComplete="given-name"
           />
           <TextInput
-            label={t('lastNameLabel')}
+            label={t("lastNameLabel")}
             type="text"
             value={lastName}
             onChange={setLastName}
@@ -154,9 +154,9 @@ function ProfileSection({
         </Box>
         {success && <SuccessMessage message={success} />}
         {error && <ErrorMessage message={error} />}
-        {loading && <ProgressBar label={t('savingProfile')} />}
+        {loading && <ProgressBar label={t("savingProfile")} />}
         <Button
-          text={loading ? t('savingProfile') : t('saveProfile')}
+          text={loading ? t("savingProfile") : t("saveProfile")}
           type="submit"
           size="md"
           width="100%"
@@ -177,10 +177,10 @@ function ChangePasswordSection({
   apiUrl: string;
   accessToken: string;
 }) {
-  const t = useTranslations('MyAccountPage');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const t = useTranslations("MyAccountPage");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -191,7 +191,7 @@ function ChangePasswordSection({
     setSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setError(t('passwordMismatch'));
+      setError(t("passwordMismatch"));
       return;
     }
 
@@ -204,20 +204,20 @@ function ChangePasswordSection({
         accessToken,
         apiUrl,
       );
-      setSuccess(t('passwordSaved'));
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      setSuccess(t("passwordSaved"));
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
         const data = err.data as Record<string, unknown>;
         if (data.current_password) {
-          setError(t('passwordWrong'));
+          setError(t("passwordWrong"));
         } else {
-          setError(t('passwordError'));
+          setError(t("passwordError"));
         }
       } else {
-        setError(t('passwordError'));
+        setError(t("passwordError"));
       }
     } finally {
       setLoading(false);
@@ -241,11 +241,11 @@ function ChangePasswordSection({
         fontWeight={600}
         className="my-account__section-title"
       >
-        {t('securitySection')}
+        {t("securitySection")}
       </Typography>
       <form onSubmit={handleSubmit} className="my-account__form">
         <TextInput
-          label={t('currentPasswordLabel')}
+          label={t("currentPasswordLabel")}
           type="password"
           value={currentPassword}
           onChange={setCurrentPassword}
@@ -253,7 +253,7 @@ function ChangePasswordSection({
           autoComplete="current-password"
         />
         <TextInput
-          label={t('newPasswordLabel')}
+          label={t("newPasswordLabel")}
           type="password"
           value={newPassword}
           onChange={setNewPassword}
@@ -261,7 +261,7 @@ function ChangePasswordSection({
           autoComplete="new-password"
         />
         <TextInput
-          label={t('confirmPasswordLabel')}
+          label={t("confirmPasswordLabel")}
           type="password"
           value={confirmPassword}
           onChange={setConfirmPassword}
@@ -270,9 +270,9 @@ function ChangePasswordSection({
         />
         {success && <SuccessMessage message={success} />}
         {error && <ErrorMessage message={error} />}
-        {loading && <ProgressBar label={t('savingPassword')} />}
+        {loading && <ProgressBar label={t("savingPassword")} />}
         <Button
-          text={loading ? t('savingPassword') : t('savePassword')}
+          text={loading ? t("savingPassword") : t("savePassword")}
           type="submit"
           size="md"
           width="100%"
@@ -293,7 +293,7 @@ function PasskeySection({
   apiUrl: string;
   accessToken: string;
 }) {
-  const t = useTranslations('MyAccountPage');
+  const t = useTranslations("MyAccountPage");
   const [credentials, setCredentials] = useState<
     { id: number; name: string; created_at: string }[]
   >([]);
@@ -321,9 +321,9 @@ function PasskeySection({
     try {
       await deletePasskeyCredential(apiUrl, accessToken, id);
       setCredentials((prev) => prev.filter((c) => c.id !== id));
-      setToast({ message: t('passkeyDeleted'), isError: false });
+      setToast({ message: t("passkeyDeleted"), isError: false });
     } catch {
-      setToast({ message: t('passkeyDeleteError'), isError: true });
+      setToast({ message: t("passkeyDeleteError"), isError: true });
     } finally {
       setDeletingId(null);
     }
@@ -339,9 +339,9 @@ function PasskeySection({
         accessToken,
       );
       setCredentials(creds);
-      setToast({ message: t('passkeyAdded'), isError: false });
+      setToast({ message: t("passkeyAdded"), isError: false });
     } catch {
-      setToast({ message: t('passkeyAddError'), isError: true });
+      setToast({ message: t("passkeyAddError"), isError: true });
     } finally {
       setAddingPasskey(false);
     }
@@ -351,8 +351,8 @@ function PasskeySection({
     <>
       {confirmDeleteId !== null && (
         <ConfirmationModal
-          title={t('confirmDeletePasskeyTitle')}
-          text={t('confirmDeletePasskeyText')}
+          title={t("confirmDeletePasskeyTitle")}
+          text={t("confirmDeletePasskeyText")}
           okCallback={handleDelete}
           cancelCallback={() => setConfirmDeleteId(null)}
         />
@@ -373,7 +373,7 @@ function PasskeySection({
           fontWeight={600}
           className="my-account__section-title"
         >
-          {t('passkeySection')}
+          {t("passkeySection")}
         </Typography>
         <Box display="flex" flexDirection="column" gap={8}>
           {loadingCreds && <ProgressBar />}
@@ -382,7 +382,7 @@ function PasskeySection({
               variant="caption"
               color="var(--muted-foreground, #6b7280)"
             >
-              {t('noPasskeys')}
+              {t("noPasskeys")}
             </Typography>
           )}
           {credentials.map((cred) => (
@@ -407,7 +407,7 @@ function PasskeySection({
                 type="button"
                 disabled={deletingId === cred.id}
                 onClick={() => setConfirmDeleteId(cred.id)}
-                aria-label={t('deletePasskey')}
+                aria-label={t("deletePasskey")}
                 kind="error"
               >
                 <Image
@@ -428,7 +428,7 @@ function PasskeySection({
           ))}
         {addingPasskey && <ProgressBar />}
         <Button
-          text={t('addPasskey')}
+          text={t("addPasskey")}
           type="button"
           onClick={handleAddPasskey}
           disabled={addingPasskey}
@@ -445,7 +445,7 @@ function PasskeySection({
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function MyAccountForm({ apiUrl }: Props) {
-  const t = useTranslations('MyAccountPage');
+  const t = useTranslations("MyAccountPage");
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -454,13 +454,13 @@ export function MyAccountForm({ apiUrl }: Props) {
   useEffect(() => {
     const token = getAccessToken();
     if (!token) {
-      router.push('/auth');
+      router.push("/auth");
       return;
     }
     setAccessToken(token);
     getProfile(token, apiUrl)
       .then(setProfile)
-      .catch(() => router.push('/auth'))
+      .catch(() => router.push("/auth"))
       .finally(() => setLoading(false));
   }, [apiUrl, router]);
 
@@ -470,12 +470,12 @@ export function MyAccountForm({ apiUrl }: Props) {
         display="flex"
         alignItems="center"
         styles={{
-          minHeight: '100vh',
-          flexDirection: 'column',
-          justifyContent: 'center',
+          minHeight: "100vh",
+          flexDirection: "column",
+          justifyContent: "center",
         }}
       >
-        <ProgressBar label={t('loading')} />
+        <ProgressBar label={t("loading")} />
       </Container>
     );
   }
@@ -485,19 +485,19 @@ export function MyAccountForm({ apiUrl }: Props) {
       display="flex"
       alignItems="center"
       styles={{
-        minHeight: '100vh',
-        flexDirection: 'column',
-        justifyContent: 'flex-start',
-        paddingTop: 'var(--ui-navbar-height)',
+        minHeight: "100vh",
+        flexDirection: "column",
+        justifyContent: "flex-start",
+        paddingTop: "var(--ui-navbar-height)",
       }}
       paddingX={10}
     >
       <Box width="100%" maxWidth={520} marginBottom={20} marginTop={20}>
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
-          {t('title')}
+          {t("title")}
         </Typography>
         <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-          {t('subtitle')}
+          {t("subtitle")}
         </Typography>
       </Box>
       <Box

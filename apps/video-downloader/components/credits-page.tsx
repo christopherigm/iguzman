@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Button } from '@repo/ui/core-elements/button';
-import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
-import { Container } from '@repo/ui/core-elements/container';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { CREDIT_PACKS, type CreditPack } from '../lib/credit-packs';
-import { setCreditsBalance } from './use-credits-store';
+import { useState, useEffect, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Button } from "@repo/ui/core-elements/button";
+import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import { Container } from "@repo/ui/core-elements/container";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { CREDIT_PACKS, type CreditPack } from "../lib/credit-packs";
+import { setCreditsBalance } from "./use-credits-store";
 
-const LS_KEY = 'vd_credits_key';
+const LS_KEY = "vd_credits_key";
 
 function PackButton({
   pack,
@@ -32,16 +32,16 @@ function PackButton({
       type="button"
       onClick={() => onSelect(pack.id)}
       style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        border: `2px solid ${isSelected ? 'var(--accent, #06b6d4)' : 'var(--border, #e5e7eb)'}`,
-        background: 'var(--surface-1, #f9fafb)',
-        cursor: 'pointer',
-        width: '100%',
-        textAlign: 'left',
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "12px 16px",
+        borderRadius: "8px",
+        border: `2px solid ${isSelected ? "var(--accent, #06b6d4)" : "var(--border, #e5e7eb)"}`,
+        background: "var(--surface-1, #f9fafb)",
+        cursor: "pointer",
+        width: "100%",
+        textAlign: "left",
       }}
     >
       <Box display="flex" flexDirection="column" gap={2}>
@@ -60,7 +60,7 @@ function PackButton({
 }
 
 export function CreditsPageContent() {
-  const t = useTranslations('Credits');
+  const t = useTranslations("Credits");
   const locale = useLocale();
   const [mounted, setMounted] = useState(false);
   const [hasKey, setHasKey] = useState(false);
@@ -71,15 +71,15 @@ export function CreditsPageContent() {
   const [copied, setCopied] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const [keyInput, setKeyInput] = useState('');
+  const [keyInput, setKeyInput] = useState("");
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
-  const [selectedPack, setSelectedPack] = useState<string>('basic');
+  const [selectedPack, setSelectedPack] = useState<string>("basic");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const [couponInput, setCouponInput] = useState('');
+  const [couponInput, setCouponInput] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponModal, setCouponModal] = useState<{
     success: boolean;
@@ -88,8 +88,8 @@ export function CreditsPageContent() {
 
   const fetchBalance = useCallback(async (key: string) => {
     try {
-      const res = await fetch('/api/credits/balance', {
-        headers: { 'x-credits-key': key },
+      const res = await fetch("/api/credits/balance", {
+        headers: { "x-credits-key": key },
       });
       if (res.ok) {
         const data = (await res.json()) as { credits: number };
@@ -107,11 +107,11 @@ export function CreditsPageContent() {
     setCouponLoading(true);
     try {
       const existingKey = localStorage.getItem(LS_KEY) ?? undefined;
-      const res = await fetch('/api/credits/redeem', {
-        method: 'POST',
+      const res = await fetch("/api/credits/redeem", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(existingKey ? { 'x-credits-key': existingKey } : {}),
+          "Content-Type": "application/json",
+          ...(existingKey ? { "x-credits-key": existingKey } : {}),
         },
         body: JSON.stringify({ code: trimmed }),
       });
@@ -132,7 +132,7 @@ export function CreditsPageContent() {
       setBalance(data.creditsRemaining);
       setCreditsBalance(data.creditsRemaining);
       setCouponModal({ success: true, creditsAdded: data.creditsAdded });
-      setCouponInput('');
+      setCouponInput("");
     } catch {
       setCouponModal({ success: false });
     } finally {
@@ -144,27 +144,27 @@ export function CreditsPageContent() {
     setMounted(true);
 
     const params = new URLSearchParams(window.location.search);
-    const keyParam = params.get('credits_key');
-    const creditsAdded = parseInt(params.get('credits_added') ?? '0', 10);
-    const couponParam = params.get('coupon');
+    const keyParam = params.get("credits_key");
+    const creditsAdded = parseInt(params.get("credits_added") ?? "0", 10);
+    const couponParam = params.get("coupon");
 
     const newUrl = new URL(window.location.href);
     let urlChanged = false;
 
     if (keyParam) {
       localStorage.setItem(LS_KEY, keyParam);
-      newUrl.searchParams.delete('credits_key');
-      newUrl.searchParams.delete('credits_added');
+      newUrl.searchParams.delete("credits_key");
+      newUrl.searchParams.delete("credits_added");
       urlChanged = true;
     }
 
     if (couponParam) {
-      newUrl.searchParams.delete('coupon');
+      newUrl.searchParams.delete("coupon");
       urlChanged = true;
     }
 
     if (urlChanged) {
-      window.history.replaceState({}, '', newUrl.toString());
+      window.history.replaceState({}, "", newUrl.toString());
     }
 
     const key = localStorage.getItem(LS_KEY);
@@ -213,11 +213,11 @@ export function CreditsPageContent() {
     setRestoreLoading(true);
     setRestoreError(null);
     try {
-      const res = await fetch('/api/credits/balance', {
-        headers: { 'x-credits-key': trimmed },
+      const res = await fetch("/api/credits/balance", {
+        headers: { "x-credits-key": trimmed },
       });
       if (!res.ok) {
-        setRestoreError(t('restoreInvalidKey'));
+        setRestoreError(t("restoreInvalidKey"));
         return;
       }
       const data = (await res.json()) as { credits: number };
@@ -227,7 +227,7 @@ export function CreditsPageContent() {
       setBalance(data.credits);
       setCreditsBalance(data.credits);
     } catch {
-      setRestoreError(t('restoreError'));
+      setRestoreError(t("restoreError"));
     } finally {
       setRestoreLoading(false);
     }
@@ -238,20 +238,20 @@ export function CreditsPageContent() {
     setCheckoutError(null);
     try {
       const existingKey = localStorage.getItem(LS_KEY) || undefined;
-      const res = await fetch('/api/credits/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/credits/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ packId: selectedPack, existingKey, locale }),
       });
       if (!res.ok) {
-        setCheckoutError(t('purchaseError'));
+        setCheckoutError(t("purchaseError"));
         setCheckoutLoading(false);
         return;
       }
       const data = (await res.json()) as { url: string };
       window.location.href = data.url;
     } catch {
-      setCheckoutError(t('purchaseError'));
+      setCheckoutError(t("purchaseError"));
     } finally {
       setCheckoutLoading(false);
     }
@@ -281,14 +281,14 @@ export function CreditsPageContent() {
               <Box display="flex" flexDirection="column" gap={12}>
                 <Box>
                   <Typography as="h1" variant="h5">
-                    {t('purchaseTitle')}
+                    {t("purchaseTitle")}
                   </Typography>
                 </Box>
                 <Typography
                   variant="body-sm"
                   color="var(--foreground-muted, #888)"
                 >
-                  {t('purchaseText')}
+                  {t("purchaseText")}
                 </Typography>
                 {CREDIT_PACKS.map((pack) => (
                   <PackButton
@@ -296,7 +296,7 @@ export function CreditsPageContent() {
                     pack={pack}
                     isSelected={selectedPack === pack.id}
                     onSelect={setSelectedPack}
-                    creditsLabel={t('creditsCount', { credits: pack.credits })}
+                    creditsLabel={t("creditsCount", { credits: pack.credits })}
                   />
                 ))}
                 {checkoutError ? (
@@ -308,10 +308,10 @@ export function CreditsPageContent() {
                   variant="caption"
                   color="var(--foreground-muted, #888)"
                 >
-                  {t('purchaseNote')}
+                  {t("purchaseNote")}
                 </Typography>
                 <Button
-                  text={checkoutLoading ? t('redirecting') : t('checkout')}
+                  text={checkoutLoading ? t("redirecting") : t("checkout")}
                   onClick={handleCheckout}
                   disabled={checkoutLoading}
                   width="100%"
@@ -321,23 +321,23 @@ export function CreditsPageContent() {
 
                 <Box
                   styles={{
-                    borderTop: '1px solid var(--border, #e5e7eb)',
-                    paddingTop: '12px',
+                    borderTop: "1px solid var(--border, #e5e7eb)",
+                    paddingTop: "12px",
                   }}
                 >
                   <Typography variant="body-sm" fontWeight={600}>
-                    {t('couponTitle')}
+                    {t("couponTitle")}
                   </Typography>
                 </Box>
                 <TextInput
-                  label={t('couponInputLabel')}
+                  label={t("couponInputLabel")}
                   value={couponInput}
                   onChange={setCouponInput}
                 />
                 <Button
                   kind="success"
                   text={
-                    couponLoading ? t('couponRedeeming') : t('couponButton')
+                    couponLoading ? t("couponRedeeming") : t("couponButton")
                   }
                   onClick={() => void handleRedeemCoupon(couponInput)}
                   disabled={couponLoading || !couponInput.trim()}
@@ -347,8 +347,8 @@ export function CreditsPageContent() {
 
                 <Box
                   styles={{
-                    borderTop: '1px solid var(--border, #e5e7eb)',
-                    paddingTop: '12px',
+                    borderTop: "1px solid var(--border, #e5e7eb)",
+                    paddingTop: "12px",
                   }}
                 >
                   <Typography
@@ -356,17 +356,17 @@ export function CreditsPageContent() {
                     fontWeight={600}
                     marginBottom={8}
                   >
-                    {t('restoreTitle')}
+                    {t("restoreTitle")}
                   </Typography>
                   <Typography
                     variant="caption"
                     color="var(--foreground-muted, #888)"
                   >
-                    {t('restoreText')}
+                    {t("restoreText")}
                   </Typography>
                 </Box>
                 <TextInput
-                  label={t('restoreKeyLabel')}
+                  label={t("restoreKeyLabel")}
                   value={keyInput}
                   onChange={setKeyInput}
                 />
@@ -377,7 +377,7 @@ export function CreditsPageContent() {
                 ) : null}
                 <Button
                   kind="success"
-                  text={restoreLoading ? t('verifying') : t('restore')}
+                  text={restoreLoading ? t("verifying") : t("restore")}
                   onClick={handleRestore}
                   disabled={restoreLoading || !keyInput.trim()}
                   width="100%"
@@ -392,71 +392,71 @@ export function CreditsPageContent() {
                   alignItems="center"
                 >
                   <Typography as="h1" variant="h5">
-                    {t('purchaseTitle')}
+                    {t("purchaseTitle")}
                   </Typography>
                   {balance !== null ? (
                     <Typography
                       variant="body-sm"
                       fontWeight={600}
-                      styles={{ whiteSpace: 'nowrap' }}
+                      styles={{ whiteSpace: "nowrap" }}
                     >
-                      {t('balanceLabel', { credits: balance })}
+                      {t("balanceLabel", { credits: balance })}
                     </Typography>
                   ) : null}
                 </Box>
 
                 <Box display="flex" flexDirection="column" gap={4}>
                   <Typography variant="body-sm" fontWeight={600}>
-                    {t('keyLabel')}
+                    {t("keyLabel")}
                   </Typography>
                   <Box display="flex" alignItems="center" gap={4}>
                     <Box
                       styles={{
                         flex: 1,
-                        fontFamily: 'monospace',
-                        fontSize: '13px',
-                        padding: '8px 10px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border, #e5e7eb)',
-                        background: 'var(--surface-2, #f3f4f6)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        color: 'var(--foreground, #111)',
-                        letterSpacing: showKey ? 'normal' : '3px',
+                        fontFamily: "monospace",
+                        fontSize: "13px",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--border, #e5e7eb)",
+                        background: "var(--surface-2, #f3f4f6)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        color: "var(--foreground, #111)",
+                        letterSpacing: showKey ? "normal" : "3px",
                       }}
                     >
-                      {showKey ? (keyValue ?? '') : '••••••••••••••••'}
+                      {showKey ? (keyValue ?? "") : "••••••••••••••••"}
                     </Box>
                     <Button
-                      aria-label={t('copyKey')}
+                      aria-label={t("copyKey")}
                       onClick={handleCopyKey}
                       borderRadius={6}
                       padding="6px"
                       icon="/icons/copy.svg"
                       iconSize="18px"
                       iconColor="var(--foreground, #171717)"
-                      styles={{ flexShrink: 0, cursor: 'pointer' }}
+                      styles={{ flexShrink: 0, cursor: "pointer" }}
                     />
                     <Button
-                      aria-label={showKey ? t('hideKey') : t('revealKey')}
+                      aria-label={showKey ? t("hideKey") : t("revealKey")}
                       onClick={() => setShowKey((v) => !v)}
                       borderRadius={6}
                       padding="6px"
                       icon="/icons/show.svg"
                       iconSize="18px"
                       iconColor="var(--foreground, #171717)"
-                      styles={{ flexShrink: 0, cursor: 'pointer' }}
+                      styles={{ flexShrink: 0, cursor: "pointer" }}
                     />
                     <Button
-                      aria-label={t('deleteKey')}
+                      aria-label={t("deleteKey")}
                       onClick={() => setShowDeleteModal(true)}
                       borderRadius={6}
                       padding="6px"
                       icon="/icons/delete-video.svg"
                       iconSize="18px"
                       iconColor="var(--foreground, #171717)"
-                      styles={{ flexShrink: 0, cursor: 'pointer' }}
+                      styles={{ flexShrink: 0, cursor: "pointer" }}
                     />
                   </Box>
                   {copied ? (
@@ -464,20 +464,20 @@ export function CreditsPageContent() {
                       variant="caption"
                       color="var(--success, #22c55e)"
                     >
-                      {t('keyCopied')}
+                      {t("keyCopied")}
                     </Typography>
                   ) : null}
                 </Box>
 
                 <Box
-                  styles={{ borderTop: '1px solid var(--border, #e5e7eb)' }}
+                  styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
                 />
 
                 <Typography
                   variant="body-sm"
                   color="var(--foreground-muted, #888)"
                 >
-                  {t('purchaseText')}
+                  {t("purchaseText")}
                 </Typography>
                 {CREDIT_PACKS.map((pack) => (
                   <PackButton
@@ -485,7 +485,7 @@ export function CreditsPageContent() {
                     pack={pack}
                     isSelected={selectedPack === pack.id}
                     onSelect={setSelectedPack}
-                    creditsLabel={t('creditsCount', { credits: pack.credits })}
+                    creditsLabel={t("creditsCount", { credits: pack.credits })}
                   />
                 ))}
                 {checkoutError ? (
@@ -497,10 +497,10 @@ export function CreditsPageContent() {
                   variant="caption"
                   color="var(--foreground-muted, #888)"
                 >
-                  {t('purchaseNote')}
+                  {t("purchaseNote")}
                 </Typography>
                 <Button
-                  text={checkoutLoading ? t('redirecting') : t('checkout')}
+                  text={checkoutLoading ? t("redirecting") : t("checkout")}
                   onClick={handleCheckout}
                   disabled={checkoutLoading}
                   width="100%"
@@ -510,23 +510,23 @@ export function CreditsPageContent() {
 
                 <Box
                   styles={{
-                    borderTop: '1px solid var(--border, #e5e7eb)',
-                    paddingTop: '12px',
+                    borderTop: "1px solid var(--border, #e5e7eb)",
+                    paddingTop: "12px",
                   }}
                 >
                   <Typography variant="body-sm" fontWeight={600}>
-                    {t('couponTitle')}
+                    {t("couponTitle")}
                   </Typography>
                 </Box>
                 <TextInput
-                  label={t('couponInputLabel')}
+                  label={t("couponInputLabel")}
                   value={couponInput}
                   onChange={setCouponInput}
                 />
                 <Button
                   kind="success"
                   text={
-                    couponLoading ? t('couponRedeeming') : t('couponButton')
+                    couponLoading ? t("couponRedeeming") : t("couponButton")
                   }
                   onClick={() => void handleRedeemCoupon(couponInput)}
                   disabled={couponLoading || !couponInput.trim()}
@@ -542,8 +542,8 @@ export function CreditsPageContent() {
 
       {showDeleteModal ? (
         <ConfirmationModal
-          title={t('deleteKeyTitle')}
-          text={t('deleteKeyText')}
+          title={t("deleteKeyTitle")}
+          text={t("deleteKeyText")}
           okCallback={handleDeleteKey}
           cancelCallback={() => setShowDeleteModal(false)}
         />
@@ -551,8 +551,8 @@ export function CreditsPageContent() {
 
       {couponModal?.success ? (
         <ConfirmationModal
-          title={t('couponSuccessTitle')}
-          text={t('couponSuccessText', {
+          title={t("couponSuccessTitle")}
+          text={t("couponSuccessText", {
             credits: couponModal.creditsAdded ?? 0,
           })}
           okCallback={() => setCouponModal(null)}
@@ -561,8 +561,8 @@ export function CreditsPageContent() {
 
       {couponModal !== null && !couponModal.success ? (
         <ConfirmationModal
-          title={t('couponErrorTitle')}
-          text={t('couponErrorText')}
+          title={t("couponErrorTitle")}
+          text={t("couponErrorText")}
           okCallback={() => setCouponModal(null)}
         />
       ) : null}

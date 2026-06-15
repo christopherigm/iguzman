@@ -1,7 +1,7 @@
-import { setRequestLocale } from 'next-intl/server';
-import { Container } from '@repo/ui/core-elements/container';
-import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
-import { BarcodeScanner } from '@/components/barcode-scanner/barcode-scanner';
+import { setRequestLocale } from "next-intl/server";
+import { Container } from "@repo/ui/core-elements/container";
+import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
+import { BarcodeScanner } from "@/components/barcode-scanner/barcode-scanner";
 
 type Props = { params: Promise<{ locale: string }> };
 

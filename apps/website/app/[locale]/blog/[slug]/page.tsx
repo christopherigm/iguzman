@@ -1,35 +1,39 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { Container } from '@repo/ui/core-elements/container';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Box } from '@repo/ui/core-elements/box';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
-import type { BreadcrumbItem } from '@repo/ui/core-elements/breadcrumbs';
-import { Hero } from '@repo/ui/hero';
-import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
-import { RichText } from '@repo/ui/core-elements/rich-text';
-import { getSuccessStory } from '@/lib/success-stories';
-import { ItemGalleryClient } from '@/components/item-gallery-client';
-import type { GalleryImage } from '@/components/item-gallery-client';
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { setRequestLocale, getTranslations } from "next-intl/server";
+import { Container } from "@repo/ui/core-elements/container";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Box } from "@repo/ui/core-elements/box";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import type { BreadcrumbItem } from "@repo/ui/core-elements/breadcrumbs";
+import { Hero } from "@repo/ui/hero";
+import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
+import { RichText } from "@repo/ui/core-elements/rich-text";
+import { getSuccessStory } from "@/lib/success-stories";
+import { ItemGalleryClient } from "@/components/item-gallery-client";
+import type { GalleryImage } from "@/components/item-gallery-client";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
   const { locale, slug } = await params;
   const story = await getSuccessStory(slug);
   if (!story) return {};
 
   const name =
-    (locale === 'en' ? story.en_name : story.name) ??
+    (locale === "en" ? story.en_name : story.name) ??
     story.name ??
     story.en_name ??
     slug;
 
   const description =
-    (locale === 'en' ? story.en_short_description : story.short_description) ??
+    (locale === "en" ? story.en_short_description : story.short_description) ??
     story.short_description ??
     story.en_short_description ??
     undefined;
@@ -51,33 +55,33 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
 
   const [story, t] = await Promise.all([
     getSuccessStory(slug),
-    getTranslations('SuccessStoryDetail'),
+    getTranslations("SuccessStoryDetail"),
   ]);
 
   if (!story) notFound();
 
   const name =
-    (locale === 'en' ? story.en_name : story.name) ??
+    (locale === "en" ? story.en_name : story.name) ??
     story.name ??
     story.en_name ??
     slug;
 
   const shortDescription =
-    (locale === 'en' ? story.en_short_description : story.short_description) ??
+    (locale === "en" ? story.en_short_description : story.short_description) ??
     story.short_description ??
     story.en_short_description ??
     null;
 
   const description =
-    (locale === 'en' ? story.en_description : story.description) ??
+    (locale === "en" ? story.en_description : story.description) ??
     story.description ??
     story.en_description ??
     null;
 
   const formattedDate = new Intl.DateTimeFormat(locale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   }).format(new Date(story.created));
 
   const galleryImages: GalleryImage[] = [
@@ -87,16 +91,16 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
       .map((img) => ({
         url: img.image!,
         alt:
-          (locale === 'en' ? img.en_name : img.name) ??
+          (locale === "en" ? img.en_name : img.name) ??
           img.name ??
           img.en_name ??
-          '',
+          "",
       })),
   ];
 
   const breadcrumbs: BreadcrumbItem[] = [
-    { label: t('home'), href: '/' },
-    { label: t('successStories'), href: '/#stories' },
+    { label: t("home"), href: "/" },
+    { label: t("successStories"), href: "/#stories" },
     { label: name },
   ];
 
@@ -108,7 +112,7 @@ export default async function SuccessStoryDetailPage({ params }: Props) {
         <Hero
           backgroundImage={story.image}
           slogan={name}
-          style={{ height: 'clamp(220px, 30vw, 500px)' }}
+          style={{ height: "clamp(220px, 30vw, 500px)" }}
         />
       )}
       {!hasImage && <NavbarSpacer />}

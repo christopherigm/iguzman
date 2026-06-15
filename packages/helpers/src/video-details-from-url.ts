@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec } from "child_process";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -8,16 +8,16 @@ import { exec } from 'child_process';
 const MAX_BUFFER = 1024 * 2048;
 
 /** Current Node environment. */
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default yt-dlp binary path based on environment. */
-const DEFAULT_YT_DLP_BINARY = NODE_ENV === 'production' ? 'yt-dlp' : './yt-dlp';
+const DEFAULT_YT_DLP_BINARY = NODE_ENV === "production" ? "yt-dlp" : "./yt-dlp";
 
 /** Default cookies file path based on environment. */
 const DEFAULT_COOKIES_FILE =
-  NODE_ENV === 'production'
-    ? '/app/netscape-cookies.txt'
-    : './netscape-cookies.txt';
+  NODE_ENV === "production"
+    ? "/app/netscape-cookies.txt"
+    : "./netscape-cookies.txt";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -25,7 +25,7 @@ const DEFAULT_COOKIES_FILE =
 
 /** Represents a caption file object. */
 export type CaptionObject = {
-  ext: 'json3' | 'srt';
+  ext: "json3" | "srt";
   url: string;
 };
 
@@ -112,20 +112,20 @@ const fetchVideoDetails = ({
 
     exec(command, { maxBuffer: MAX_BUFFER }, (error, data: string) => {
       if (error) {
-        console.error('Error executing yt-dlp command:', error);
+        console.error("Error executing yt-dlp command:", error);
         return reject(new Error(`yt-dlp execution failed: ${error.message}`));
       }
 
       if (!data) {
-        console.error('No data returned from yt-dlp command');
-        return reject(new Error('No data returned from yt-dlp'));
+        console.error("No data returned from yt-dlp command");
+        return reject(new Error("No data returned from yt-dlp"));
       }
 
       try {
         const youtubeData: YouTubePayload = JSON.parse(data);
         resolve(youtubeData);
       } catch (parseError) {
-        console.error('Error parsing JSON from yt-dlp:', parseError);
+        console.error("Error parsing JSON from yt-dlp:", parseError);
         reject(new Error(`Failed to parse yt-dlp output: ${parseError}`));
       }
     });

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { createContext, use, useMemo, useEffect } from 'react';
-import { useTheme } from './theme-provider';
-import { palettes, DEFAULT_PALETTE } from './palettes';
-import type { PaletteDefinition } from './palettes';
+import { createContext, use, useMemo, useEffect } from "react";
+import { useTheme } from "./theme-provider";
+import { palettes, DEFAULT_PALETTE } from "./palettes";
+import type { PaletteDefinition } from "./palettes";
 
 // --- Types ---
 
@@ -38,7 +38,7 @@ function PaletteProvider({
   const { state } = useTheme();
   const resolved = state.resolved;
 
-  if (process.env.NODE_ENV !== 'production' && !palettes[palette]) {
+  if (process.env.NODE_ENV !== "production" && !palettes[palette]) {
     console.warn(
       `[PaletteProvider] Unknown palette "${palette}", falling back to "${DEFAULT_PALETTE}"`,
     );
@@ -53,7 +53,7 @@ function PaletteProvider({
       vars[key] = value;
     }
     if (accent) {
-      vars['--accent'] = accent;
+      vars["--accent"] = accent;
     }
     return { ...vars, ...styleProp };
   }, [variables, styleProp, accent]);
@@ -63,7 +63,7 @@ function PaletteProvider({
       document.body.style.setProperty(key, String(value));
     }
     if (className) {
-      document.body.classList.add(...className.split(' ').filter(Boolean));
+      document.body.classList.add(...className.split(" ").filter(Boolean));
     }
   }, [style, className]);
 
@@ -72,11 +72,7 @@ function PaletteProvider({
     [definition],
   );
 
-  return (
-    <PaletteContext value={contextValue}>
-      {children}
-    </PaletteContext>
-  );
+  return <PaletteContext value={contextValue}>{children}</PaletteContext>;
 }
 
 // --- usePalette Hook ---

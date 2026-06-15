@@ -1,45 +1,45 @@
-import React, { CSSProperties } from 'react';
+import React, { CSSProperties } from "react";
 
 /**
  * Props for the `UI Components` component (extracted for reuse).
  */
 export interface UIComponentProps {
-  display?: CSSProperties['display'];
-  flexDirection?: CSSProperties['flexDirection'];
-  justifyContent?: CSSProperties['justifyContent'];
-  alignItems?: CSSProperties['alignItems'];
-  flexWrap?: CSSProperties['flexWrap'];
-  flexGrow?: CSSProperties['flexGrow'];
-  gap?: CSSProperties['gap'];
-  flex?: CSSProperties['flex'];
-  alignSelf?: CSSProperties['alignSelf'];
-  order?: CSSProperties['order'];
-  width?: CSSProperties['width'];
-  height?: CSSProperties['height'];
-  minWidth?: CSSProperties['minWidth'];
-  maxWidth?: CSSProperties['maxWidth'];
-  minHeight?: CSSProperties['minHeight'];
-  maxHeight?: CSSProperties['maxHeight'];
-  padding?: CSSProperties['padding'];
-  paddingTop?: CSSProperties['paddingTop'];
-  paddingBottom?: CSSProperties['paddingBottom'];
-  paddingLeft?: CSSProperties['paddingLeft'];
-  paddingRight?: CSSProperties['paddingRight'];
+  display?: CSSProperties["display"];
+  flexDirection?: CSSProperties["flexDirection"];
+  justifyContent?: CSSProperties["justifyContent"];
+  alignItems?: CSSProperties["alignItems"];
+  flexWrap?: CSSProperties["flexWrap"];
+  flexGrow?: CSSProperties["flexGrow"];
+  gap?: CSSProperties["gap"];
+  flex?: CSSProperties["flex"];
+  alignSelf?: CSSProperties["alignSelf"];
+  order?: CSSProperties["order"];
+  width?: CSSProperties["width"];
+  height?: CSSProperties["height"];
+  minWidth?: CSSProperties["minWidth"];
+  maxWidth?: CSSProperties["maxWidth"];
+  minHeight?: CSSProperties["minHeight"];
+  maxHeight?: CSSProperties["maxHeight"];
+  padding?: CSSProperties["padding"];
+  paddingTop?: CSSProperties["paddingTop"];
+  paddingBottom?: CSSProperties["paddingBottom"];
+  paddingLeft?: CSSProperties["paddingLeft"];
+  paddingRight?: CSSProperties["paddingRight"];
   /** Shorthand for paddingLeft + paddingRight. Individual side props take precedence. */
-  paddingX?: CSSProperties['paddingLeft'];
+  paddingX?: CSSProperties["paddingLeft"];
   /** Shorthand for paddingTop + paddingBottom. Individual side props take precedence. */
-  paddingY?: CSSProperties['paddingTop'];
-  margin?: CSSProperties['margin'];
-  marginTop?: CSSProperties['marginTop'];
-  marginBottom?: CSSProperties['marginBottom'];
-  marginLeft?: CSSProperties['marginLeft'];
-  marginRight?: CSSProperties['marginRight'];
-  marginInlineStart?: CSSProperties['marginInlineStart'];
-  marginInlineEnd?: CSSProperties['marginInlineEnd'];
-  border?: CSSProperties['border'];
-  borderRadius?: CSSProperties['borderRadius'];
-  color?: CSSProperties['color'];
-  backgroundColor?: CSSProperties['backgroundColor'];
+  paddingY?: CSSProperties["paddingTop"];
+  margin?: CSSProperties["margin"];
+  marginTop?: CSSProperties["marginTop"];
+  marginBottom?: CSSProperties["marginBottom"];
+  marginLeft?: CSSProperties["marginLeft"];
+  marginRight?: CSSProperties["marginRight"];
+  marginInlineStart?: CSSProperties["marginInlineStart"];
+  marginInlineEnd?: CSSProperties["marginInlineEnd"];
+  border?: CSSProperties["border"];
+  borderRadius?: CSSProperties["borderRadius"];
+  color?: CSSProperties["color"];
+  backgroundColor?: CSSProperties["backgroundColor"];
   /** Toggle a default shadow. Use `elevation` for finer control. */
   shadow?: boolean;
   /** Numeric elevation level (higher = stronger shadow) */
@@ -78,38 +78,38 @@ export const getBoxShadow = (elevation?: number): string | undefined => {
 };
 
 const CSS_PROP_KEYS: (keyof UIComponentProps & keyof CSSProperties)[] = [
-  'display',
-  'flexDirection',
-  'justifyContent',
-  'alignItems',
-  'flexWrap',
-  'flexGrow',
-  'gap',
-  'flex',
-  'alignSelf',
-  'order',
-  'width',
-  'height',
-  'minWidth',
-  'maxWidth',
-  'minHeight',
-  'maxHeight',
-  'padding',
-  'paddingTop',
-  'paddingBottom',
-  'paddingLeft',
-  'paddingRight',
-  'margin',
-  'marginTop',
-  'marginBottom',
-  'marginLeft',
-  'marginRight',
-  'marginInlineStart',
-  'marginInlineEnd',
-  'border',
-  'borderRadius',
-  'color',
-  'backgroundColor',
+  "display",
+  "flexDirection",
+  "justifyContent",
+  "alignItems",
+  "flexWrap",
+  "flexGrow",
+  "gap",
+  "flex",
+  "alignSelf",
+  "order",
+  "width",
+  "height",
+  "minWidth",
+  "maxWidth",
+  "minHeight",
+  "maxHeight",
+  "padding",
+  "paddingTop",
+  "paddingBottom",
+  "paddingLeft",
+  "paddingRight",
+  "margin",
+  "marginTop",
+  "marginBottom",
+  "marginLeft",
+  "marginRight",
+  "marginInlineStart",
+  "marginInlineEnd",
+  "border",
+  "borderRadius",
+  "color",
+  "backgroundColor",
 ];
 
 /**
@@ -137,7 +137,7 @@ export function buildStyleProps(props: UIComponentProps): CSSProperties {
 /**
  * Breakpoint keys for the responsive grid system.
  */
-export type Breakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type Breakpoint = "xs" | "sm" | "md" | "lg" | "xl";
 
 /**
  * Breakpoint minimum-width values in pixels (mobile-first).

@@ -1,7 +1,7 @@
-import { execFile } from 'child_process';
-import getRandomNumber from '@repo/helpers/random-number';
+import { execFile } from "child_process";
+import getRandomNumber from "@repo/helpers/random-number";
 
-const nodeEnv = process.env.NODE_ENV?.trim() ?? 'localhost';
+const nodeEnv = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Options for downloading an image via `wget`. */
 interface DownloadImageOptions {
@@ -27,24 +27,24 @@ interface DownloadImageOptions {
 const downloadImage = ({
   url,
   name,
-  outputFolder = nodeEnv === 'production' ? '/app/media' : 'public/media',
-  cookies = nodeEnv === 'production'
-    ? '/app/netscape-cookies.txt'
-    : './netscape-cookies.txt',
+  outputFolder = nodeEnv === "production" ? "/app/media" : "public/media",
+  cookies = nodeEnv === "production"
+    ? "/app/netscape-cookies.txt"
+    : "./netscape-cookies.txt",
 }: DownloadImageOptions): Promise<string> => {
   /** Strip the `media/` prefix, falling back to a random ID for empty names. */
   const baseName =
-    name.replaceAll('media/', '') || getRandomNumber(1, 19999).toString();
+    name.replaceAll("media/", "") || getRandomNumber(1, 19999).toString();
   const file = `${outputFolder}/${baseName}.jpg`;
 
   return new Promise((resolve, reject) => {
     execFile(
-      'wget',
-      ['--load-cookies', cookies, url, '-O', file],
+      "wget",
+      ["--load-cookies", cookies, url, "-O", file],
       { maxBuffer: 1024 * 2048 },
       (error) => {
         if (error) {
-          console.error('Failed to download image:', error);
+          console.error("Failed to download image:", error);
           return reject(error);
         }
         return resolve(`media/${baseName}.jpg`);

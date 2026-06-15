@@ -1,8 +1,8 @@
-import { setRequestLocale } from 'next-intl/server';
-import { Container } from '@repo/ui/core-elements/container';
-import { DownloadPage } from '@/components/download-page';
-import { ThemeSwitch } from '@repo/ui/theme-switch';
-import { NavbarSpacer, PageBottomSpacer } from '@repo/ui/core-elements/navbar';
+import { setRequestLocale } from "next-intl/server";
+import { Container } from "@repo/ui/core-elements/container";
+import { DownloadPage } from "@/components/download-page";
+import { ThemeSwitch } from "@repo/ui/theme-switch";
+import { NavbarSpacer, PageBottomSpacer } from "@repo/ui/core-elements/navbar";
 
 type Props = {
   params: Promise<{ locale: string }>;

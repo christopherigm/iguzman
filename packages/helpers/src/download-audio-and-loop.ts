@@ -1,7 +1,7 @@
-import downloadVideo from './download-video-legacy';
-import loopAudioToLength from '@repo/helpers/duplicate-audio-time-length';
-import deleteMediaFile from '@repo/helpers/delete-media-file';
-import extractAudioFromVideo from '@repo/helpers/extract-audio-from-video';
+import downloadVideo from "./download-video-legacy";
+import loopAudioToLength from "@repo/helpers/duplicate-audio-time-length";
+import deleteMediaFile from "@repo/helpers/delete-media-file";
+import extractAudioFromVideo from "@repo/helpers/extract-audio-from-video";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -26,7 +26,7 @@ export interface DownloadAudioAndLoopOptions {
  * combined with an output folder without duplicating the segment.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */

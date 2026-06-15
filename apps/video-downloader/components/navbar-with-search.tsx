@@ -1,27 +1,27 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { usePathname } from '@repo/i18n/navigation';
-import Link from 'next/link';
-import { useTranslations, useLocale } from 'next-intl';
-import { Navbar } from '@repo/ui/core-elements/navbar';
-import type { NavbarProps } from '@repo/ui/core-elements/navbar';
-import { SpeechButton } from '@repo/ui/core-elements/speech-button';
-import { Button } from '@repo/ui/core-elements/button';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Box } from '@repo/ui/core-elements/box';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { setSearchQuery, useSearchQuery } from './use-search-store';
-import { useCreditsBalance } from './use-credits-store';
+import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "@repo/i18n/navigation";
+import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { Navbar } from "@repo/ui/core-elements/navbar";
+import type { NavbarProps } from "@repo/ui/core-elements/navbar";
+import { SpeechButton } from "@repo/ui/core-elements/speech-button";
+import { Button } from "@repo/ui/core-elements/button";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Box } from "@repo/ui/core-elements/box";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { setSearchQuery, useSearchQuery } from "./use-search-store";
+import { useCreditsBalance } from "./use-credits-store";
 
 type NavbarWithSearchProps = Omit<
   NavbarProps,
-  | 'onSearch'
-  | 'onSearchChange'
-  | 'items'
-  | 'searchValue'
-  | 'rightSlot'
-  | 'searchBox'
+  | "onSearch"
+  | "onSearchChange"
+  | "items"
+  | "searchValue"
+  | "rightSlot"
+  | "searchBox"
 > & {
   searchHiddenPaths?: string[];
   creditsHiddenPaths?: string[];
@@ -32,26 +32,26 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const pathname = usePathname();
   const showSearch = !searchHiddenPaths?.includes(pathname);
   const showCredits = !creditsHiddenPaths?.includes(pathname);
-  const t = useTranslations('Navbar');
+  const t = useTranslations("Navbar");
   const locale = useLocale();
   const whisperLang = locale.slice(0, 2);
   const searchQuery = useSearchQuery();
   const creditsBalance = useCreditsBalance();
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalQuery, setModalQuery] = useState('');
+  const [modalQuery, setModalQuery] = useState("");
 
   // When the search store is cleared externally (e.g. "Clear search" in VideoGrid),
   // keep modal query in sync.
   useEffect(() => {
-    if (!searchQuery) setModalQuery('');
+    if (!searchQuery) setModalQuery("");
   }, [searchQuery]);
 
   const allItems = [
-    { label: t('home'), href: '/' },
-    { label: t('reelMode'), href: '/reel-mode' },
-    { label: t('musicPlayer'), href: '/music-player' },
-    { label: t('buyCredits'), href: '/credits' },
-    { label: t('terms'), href: '/terms' },
+    { label: t("home"), href: "/" },
+    { label: t("reelMode"), href: "/reel-mode" },
+    { label: t("musicPlayer"), href: "/music-player" },
+    { label: t("buyCredits"), href: "/credits" },
+    { label: t("terms"), href: "/terms" },
   ];
   const items = allItems.filter((item) => item.href !== pathname);
 
@@ -61,7 +61,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   }, []);
 
   const handleTranscript = useCallback((text: string) => {
-    const cleaned = text.replace(/[.,!?]+$/, '');
+    const cleaned = text.replace(/[.,!?]+$/, "");
     setModalQuery(cleaned);
     setSearchQuery(cleaned);
   }, []);
@@ -71,8 +71,8 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   }, []);
 
   const handleCancel = useCallback(() => {
-    setModalQuery('');
-    setSearchQuery('');
+    setModalQuery("");
+    setSearchQuery("");
     setModalOpen(false);
   }, []);
 
@@ -80,7 +80,11 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
     <>
       <Navbar
         {...navbarProps}
-        hiddenPaths={['/reel-mode', '/music-player', ...(navbarProps.hiddenPaths ?? [])]}
+        hiddenPaths={[
+          "/reel-mode",
+          "/music-player",
+          ...(navbarProps.hiddenPaths ?? []),
+        ]}
         searchBox={false}
         items={items}
         rightSlot={
@@ -91,11 +95,11 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
                 prefetch
                 style={{
                   fontWeight: 600,
-                  fontSize: '0.875rem',
-                  whiteSpace: 'nowrap',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  cursor: 'pointer',
+                  fontSize: "0.875rem",
+                  whiteSpace: "nowrap",
+                  textDecoration: "none",
+                  color: "inherit",
+                  cursor: "pointer",
                 }}
               >
                 🪙 {creditsBalance}
@@ -104,10 +108,10 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
             {showSearch && (
               <Button
                 icon="/icons/search.svg"
-                aria-label={t('searchModal.openLabel')}
+                aria-label={t("searchModal.openLabel")}
                 onClick={() => setModalOpen(true)}
                 iconSize="20px"
-                styles={{ cursor: 'pointer' }}
+                styles={{ cursor: "pointer" }}
                 kind="success"
               />
             )}
@@ -116,8 +120,8 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
       />
       {modalOpen && (
         <ConfirmationModal
-          title={t('searchModal.title')}
-          text={t('searchModal.description')}
+          title={t("searchModal.title")}
+          text={t("searchModal.description")}
           okCallback={handleOk}
           cancelCallback={handleCancel}
           panelMaxWidth="480px"
@@ -126,7 +130,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
         >
           <Box display="flex" flexDirection="column" gap={12}>
             <TextInput
-              label={t('searchModal.inputLabel')}
+              label={t("searchModal.inputLabel")}
               value={modalQuery}
               onChange={handleQueryChange}
             />

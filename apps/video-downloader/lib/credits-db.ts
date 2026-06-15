@@ -1,12 +1,13 @@
-import { type Collection, type WithId } from 'mongodb';
-import { connectToDatabase } from '@repo/helpers/mongo-db';
-import { randomUUID, randomBytes } from 'crypto';
+import { type Collection, type WithId } from "mongodb";
+import { connectToDatabase } from "@repo/helpers/mongo-db";
+import { randomUUID, randomBytes } from "crypto";
 
-const DB_NAME = 'videos';
-const IS_PROD = process.env.NODE_ENV?.trim() === 'production';
+const DB_NAME = "videos";
+const IS_PROD = process.env.NODE_ENV?.trim() === "production";
 const MONGO_URI = IS_PROD
-  ? (process.env.MONGO_URI ?? 'mongodb://mongodb.video-downloader-2.svc.cluster.local:27017')
-  : 'mongodb://127.0.0.1:27017';
+  ? (process.env.MONGO_URI ??
+    "mongodb://mongodb.video-downloader-2.svc.cluster.local:27017")
+  : "mongodb://127.0.0.1:27017";
 
 /* ── Schemas ────────────────────────────────────────── */
 
@@ -40,7 +41,7 @@ let couponsCol: Collection<CouponDocument> | null = null;
 async function getKeysCollection(): Promise<Collection<CreditKeyDocument>> {
   if (!keysCol) {
     const db = await connectToDatabase(DB_NAME, MONGO_URI);
-    keysCol = db.collection<CreditKeyDocument>('credit_keys');
+    keysCol = db.collection<CreditKeyDocument>("credit_keys");
     await keysCol.createIndex({ key: 1 }, { unique: true });
   }
   return keysCol;
@@ -49,7 +50,7 @@ async function getKeysCollection(): Promise<Collection<CreditKeyDocument>> {
 async function getCouponsCollection(): Promise<Collection<CouponDocument>> {
   if (!couponsCol) {
     const db = await connectToDatabase(DB_NAME, MONGO_URI);
-    couponsCol = db.collection<CouponDocument>('coupons');
+    couponsCol = db.collection<CouponDocument>("coupons");
     await couponsCol.createIndex({ code: 1 }, { unique: true });
   }
   return couponsCol;
@@ -76,7 +77,10 @@ export async function getCreditKey(
   return col.findOne({ key });
 }
 
-export async function addCredits(key: string, amount: number): Promise<boolean> {
+export async function addCredits(
+  key: string,
+  amount: number,
+): Promise<boolean> {
   const col = await getKeysCollection();
   const result = await col.updateOne({ key }, { $inc: { credits: amount } });
   return result.matchedCount > 0;
@@ -98,7 +102,7 @@ export async function deductCredits(
       $inc: { credits: -amount },
       $set: { lastUsedAt: new Date() },
     },
-    { returnDocument: 'after' },
+    { returnDocument: "after" },
   );
   if (!result) return null;
   return result.credits;
@@ -120,14 +124,16 @@ export async function redeemCoupon(
   const coupon = await col.findOneAndUpdate(
     {
       code: code.toUpperCase(),
-      $expr: { $lt: ['$redeemed', '$maxRedemptions'] },
+      $expr: { $lt: ["$redeemed", "$maxRedemptions"] },
       $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
     },
     {
       $inc: { redeemed: 1 },
-      $push: { redemptions: { key, redeemedAt: now } } as Parameters<typeof col.findOneAndUpdate>[1],
+      $push: { redemptions: { key, redeemedAt: now } } as Parameters<
+        typeof col.findOneAndUpdate
+      >[1],
     },
-    { returnDocument: 'after' },
+    { returnDocument: "after" },
   );
 
   if (!coupon) return null;
@@ -138,11 +144,11 @@ export async function redeemCoupon(
 
 /* ── Coupon management ──────────────────────────────── */
 
-const COUPON_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const COUPON_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 function generateCouponCode(): string {
   const bytes = randomBytes(8);
-  let code = '';
+  let code = "";
   for (let i = 0; i < 8; i++) {
     code += COUPON_CHARS[bytes[i]! % COUPON_CHARS.length];
   }
@@ -191,13 +197,13 @@ export async function listCoupons(filters?: {
   const query: Record<string, unknown> = {};
 
   if (filters?.redeemed === true) {
-    query['redeemed'] = { $gt: 0 };
+    query["redeemed"] = { $gt: 0 };
   } else if (filters?.redeemed === false) {
-    query['redeemed'] = 0;
+    query["redeemed"] = 0;
   }
 
   if (filters?.credits !== undefined) {
-    query['credits'] = filters.credits;
+    query["credits"] = filters.credits;
   }
 
   return col.find(query).sort({ createdAt: -1 }).toArray();

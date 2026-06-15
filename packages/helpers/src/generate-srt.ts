@@ -1,9 +1,9 @@
-import { readFile } from 'fs/promises';
-import { srtServerURL } from '@repo/helpers/constants';
-import copyFile from '@repo/helpers/copy-file';
-import deleteMediaFile from '@repo/helpers/delete-media-file';
+import { readFile } from "fs/promises";
+import { srtServerURL } from "@repo/helpers/constants";
+import copyFile from "@repo/helpers/copy-file";
+import deleteMediaFile from "@repo/helpers/delete-media-file";
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Maximum number of retry attempts when the SRT server is busy. */
 const MAX_RETRIES = 20;
@@ -68,29 +68,29 @@ const delay = (ms: number): Promise<void> =>
  */
 const sendSrtRequest = async ({
   src,
-  language = 'en',
+  language = "en",
   maxWordsPerLine,
-  model = 'base',
+  model = "base",
 }: SrtRequestOptions): Promise<string> => {
   const body = {
     name: src,
     language,
     max_words_per_line: maxWordsPerLine,
     model,
-    production: NODE_ENV === 'production',
+    production: NODE_ENV === "production",
   };
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const response = await fetch(srtServerURL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 
     const data: SrtServerResponse = await response.json();
 
-    if (data.status !== 'busy') {
-      return src.replace(/\.(wav|mp4)$/, '.srt');
+    if (data.status !== "busy") {
+      return src.replace(/\.(wav|mp4)$/, ".srt");
     }
 
     console.warn(
@@ -118,12 +118,12 @@ const sendSrtRequest = async ({
 const generateSrt = async ({
   src,
   dest,
-  language = 'en',
-  outputFolder = NODE_ENV === 'production' ? '/app/media' : 'public/media',
+  language = "en",
+  outputFolder = NODE_ENV === "production" ? "/app/media" : "public/media",
   maxWordsPerLine,
-  model = 'base',
+  model = "base",
 }: GenerateSrtOptions): Promise<GenerateSrtResult> => {
-  const cleanDest = dest.replaceAll('media/', '');
+  const cleanDest = dest.replaceAll("media/", "");
   const destFile = `${outputFolder}/${cleanDest}`;
 
   const srtPath = await sendSrtRequest({
@@ -136,7 +136,7 @@ const generateSrt = async ({
   await copyFile({ src: srtPath, dest: cleanDest });
   await deleteMediaFile(srtPath);
 
-  const srt = await readFile(destFile, 'utf-8');
+  const srt = await readFile(destFile, "utf-8");
 
   return { file: `media/${cleanDest}`, srt };
 };

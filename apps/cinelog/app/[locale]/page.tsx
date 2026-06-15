@@ -1,7 +1,7 @@
-import { setRequestLocale } from 'next-intl/server';
-import { Container } from '@repo/ui/core-elements/container';
-import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
-import { MovieCatalog } from '@/components/movie-catalog/movie-catalog';
+import { setRequestLocale } from "next-intl/server";
+import { Container } from "@repo/ui/core-elements/container";
+import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
+import { MovieCatalog } from "@/components/movie-catalog/movie-catalog";
 
 type Props = { params: Promise<{ locale: string }> };
 

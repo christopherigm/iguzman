@@ -1,5 +1,5 @@
-import { setRequestLocale } from 'next-intl/server';
-import { InfinitePage } from '@/components/infinite-page';
+import { setRequestLocale } from "next-intl/server";
+import { InfinitePage } from "@/components/infinite-page";
 
 type Props = {
   params: Promise<{ locale: string }>;

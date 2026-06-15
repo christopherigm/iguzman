@@ -1,16 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { apiFetch } from '@/lib/api-fetch';
+import { NextRequest, NextResponse } from "next/server";
+import { apiFetch } from "@/lib/api-fetch";
 
 export async function GET() {
-  const res = await apiFetch('/api/career/languages/', { cache: 'no-store' });
+  const res = await apiFetch("/api/career/languages/", { cache: "no-store" });
   return NextResponse.json(await res.json(), { status: res.status });
 }
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const res = await apiFetch('/api/career/languages/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await apiFetch("/api/career/languages/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   return NextResponse.json(await res.json(), { status: res.status });

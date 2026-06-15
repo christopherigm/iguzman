@@ -1,4 +1,4 @@
-import pino from 'pino';
+import pino from "pino";
 
 /**
  * Root logger for the website app.
@@ -11,8 +11,8 @@ import pino from 'pino';
 const logger = pino({
   level:
     process.env.LOG_LEVEL ??
-    (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
-  base: { app: 'website' },
+    (process.env.NODE_ENV === "production" ? "info" : "debug"),
+  base: { app: "website" },
 });
 
 export default logger;

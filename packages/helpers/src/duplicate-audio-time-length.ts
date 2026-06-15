@@ -1,7 +1,7 @@
-import duplicateAudio from '@repo/helpers/duplicate-audio-x-times';
-import getAudioDuration from '@repo/helpers/get-audio-duration';
-import cutVideoLength from '@repo/helpers/cut-video-length';
-import deleteMediaFile from '@repo/helpers/delete-media-file';
+import duplicateAudio from "@repo/helpers/duplicate-audio-x-times";
+import getAudioDuration from "@repo/helpers/get-audio-duration";
+import cutVideoLength from "@repo/helpers/cut-video-length";
+import deleteMediaFile from "@repo/helpers/delete-media-file";
 
 /**
  * Default crossfade overlap (in seconds) applied by
@@ -16,14 +16,14 @@ const CROSSFADE_OVERLAP = 5;
  * Resolves the current Node environment, defaulting to `"localhost"`
  * when `NODE_ENV` is not set.
  */
-const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? 'localhost';
+const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? "localhost";
 
 /**
  * Removes a leading `media/` prefix from a file path so it can be
  * joined with the output folder without duplicating the segment.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -75,22 +75,22 @@ export const loopAudioToLength = async ({
   src,
   dest,
   timeLength,
-  outputFolder = getNodeEnv() === 'production' ? '/app/media' : 'public/media',
+  outputFolder = getNodeEnv() === "production" ? "/app/media" : "public/media",
 }: LoopAudioToLengthOptions): Promise<string> => {
-  if (!src || typeof src !== 'string') {
-    throw new Error('Source file path must be a non-empty string');
+  if (!src || typeof src !== "string") {
+    throw new Error("Source file path must be a non-empty string");
   }
 
-  if (!dest || typeof dest !== 'string') {
-    throw new Error('Destination file path must be a non-empty string');
+  if (!dest || typeof dest !== "string") {
+    throw new Error("Destination file path must be a non-empty string");
   }
 
   if (
-    typeof timeLength !== 'number' ||
+    typeof timeLength !== "number" ||
     timeLength <= 0 ||
     !Number.isFinite(timeLength)
   ) {
-    throw new Error('timeLength must be a positive finite number');
+    throw new Error("timeLength must be a positive finite number");
   }
 
   const cleanSrc = stripMediaPrefix(src);

@@ -1,14 +1,14 @@
-import { mkdir, readdir } from 'fs/promises';
-import path from 'path';
+import { mkdir, readdir } from "fs/promises";
+import path from "path";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const sharp = require('sharp');
+const sharp = require("sharp");
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
 /* ------------------------------------------------------------------ */
 
 /** Supported aspect ratio presets for cropping. */
-export type AspectRatio = 'portrait' | 'landscape' | 'square' | 'wide';
+export type AspectRatio = "portrait" | "landscape" | "square" | "wide";
 
 /** Pixel dimensions used for the resize operation. */
 interface Dimensions {
@@ -40,15 +40,15 @@ const DIMENSIONS: Record<AspectRatio, Dimensions> = {
 
 /** File extensions recognised as images by sharp. */
 const IMAGE_EXTENSIONS = new Set([
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.webp',
-  '.gif',
-  '.avif',
-  '.tiff',
-  '.tif',
-  '.svg',
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+  ".avif",
+  ".tiff",
+  ".tif",
+  ".svg",
 ]);
 
 /* ------------------------------------------------------------------ */
@@ -73,7 +73,7 @@ const IMAGE_EXTENSIONS = new Set([
 const cropImages = async ({
   inputFolder,
   outputFolder,
-  aspectRatio = 'portrait',
+  aspectRatio = "portrait",
 }: CropImagesOptions): Promise<void> => {
   await mkdir(outputFolder, { recursive: true });
 

@@ -1,4 +1,4 @@
-export type SortOrder = 'asc' | 'desc';
+export type SortOrder = "asc" | "desc";
 
 /**
  * Creates a comparator function that sorts an array of objects by a given property.
@@ -19,7 +19,7 @@ export type SortOrder = 'asc' | 'desc';
  */
 const sortByProperty = <T extends Record<string, unknown>>(
   key: keyof T & string,
-  order: SortOrder = 'asc',
+  order: SortOrder = "asc",
 ) => {
   return (a: T, b: T): number => {
     if (!(key in a) || !(key in b)) return 0;
@@ -27,8 +27,8 @@ const sortByProperty = <T extends Record<string, unknown>>(
     const valA = a[key];
     const valB = b[key];
 
-    if (valA > valB) return order === 'desc' ? -1 : 1;
-    if (valA < valB) return order === 'desc' ? 1 : -1;
+    if (valA > valB) return order === "desc" ? -1 : 1;
+    if (valA < valB) return order === "desc" ? 1 : -1;
     return 0;
   };
 };

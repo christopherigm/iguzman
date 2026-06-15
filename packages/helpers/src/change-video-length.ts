@@ -1,10 +1,10 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default output folder based on the current environment. */
 const DEFAULT_OUTPUT_FOLDER =
-  NODE_ENV === 'production' ? '/app/media' : 'public/media';
+  NODE_ENV === "production" ? "/app/media" : "public/media";
 
 /** Minimum value accepted by ffmpeg's `atempo` filter. */
 const ATEMPO_MIN = 0.5;
@@ -57,7 +57,7 @@ const buildAtempoChain = (tempo: number): string => {
   }
 
   filters.push(`atempo=${remaining}`);
-  return filters.join(',');
+  return filters.join(",");
 };
 
 /**
@@ -92,7 +92,7 @@ const changeVideoLength = ({
 
   /** Strip a leading `media/` prefix so paths are relative to outputFolder. */
   const stripMediaPrefix = (path: string): string =>
-    path.startsWith('media/') ? path.slice('media/'.length) : path;
+    path.startsWith("media/") ? path.slice("media/".length) : path;
 
   const srcClean = stripMediaPrefix(src);
   const destClean = stripMediaPrefix(dest);
@@ -107,20 +107,20 @@ const changeVideoLength = ({
 
   // @see https://trac.ffmpeg.org/wiki/How%20to%20speed%20up%20/%20slow%20down%20a%20video
   const args = [
-    '-y',
-    '-i',
+    "-y",
+    "-i",
     srcFile,
-    '-filter:v',
+    "-filter:v",
     `setpts=${setptsFactor}*PTS`,
-    '-filter:a',
+    "-filter:a",
     atempoFilter,
     destFile,
   ];
 
   return new Promise<string>((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error) => {
+    execFile("ffmpeg", args, { maxBuffer: 1024 * 2048 }, (error) => {
       if (error) {
-        console.error('Error changing video length:', error);
+        console.error("Error changing video length:", error);
         return reject(error);
       }
       resolve(`media/${destClean}`);

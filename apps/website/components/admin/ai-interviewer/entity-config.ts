@@ -1,4 +1,4 @@
-export type AiEntityType = 'product' | 'service' | 'system';
+export type AiEntityType = "product" | "service" | "system";
 
 export interface FieldLengthConfig {
   paragraphs: number;

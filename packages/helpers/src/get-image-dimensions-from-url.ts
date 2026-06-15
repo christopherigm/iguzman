@@ -1,5 +1,5 @@
-import base64ToImage from '@repo/helpers/base64-to-image';
-import type { ImageDimensions } from '@repo/helpers/get-image-dimensions-from-base64';
+import base64ToImage from "@repo/helpers/base64-to-image";
+import type { ImageDimensions } from "@repo/helpers/get-image-dimensions-from-base64";
 
 /**
  * Loads an image from a URL and returns its intrinsic dimensions.
@@ -14,7 +14,9 @@ import type { ImageDimensions } from '@repo/helpers/get-image-dimensions-from-ba
  * );
  * ```
  */
-const getImageDimensionsFromUrl = async (url: string): Promise<ImageDimensions> => {
+const getImageDimensionsFromUrl = async (
+  url: string,
+): Promise<ImageDimensions> => {
   const image = await base64ToImage(url);
 
   return {

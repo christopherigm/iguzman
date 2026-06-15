@@ -1,8 +1,8 @@
-import React from 'react';
-import type { UIComponentProps } from './utils';
-import { buildStyleProps } from './utils';
+import React from "react";
+import type { UIComponentProps } from "./utils";
+import { buildStyleProps } from "./utils";
 
-export type BackgroundShape = 'circle' | 'square' | 'triangle' | '';
+export type BackgroundShape = "circle" | "square" | "triangle" | "";
 
 /**
  *
@@ -21,32 +21,32 @@ export interface IconProps extends UIComponentProps {
 
 export const Icon = ({
   icon,
-  color = 'var(--accent, #06b6d4)',
-  size = '24px',
+  color = "var(--accent, #06b6d4)",
+  size = "24px",
   padding = 0,
-  backgroundColor = '',
-  backgroundShape = '',
+  backgroundColor = "",
+  backgroundShape = "",
   shadow = false,
   className,
   ...props
 }: IconProps) => {
   const outerRadius =
-    backgroundShape === 'circle' ? '50%' : backgroundShape === 'square' ? 6 : 0;
+    backgroundShape === "circle" ? "50%" : backgroundShape === "square" ? 6 : 0;
 
   const triangleClip =
-    backgroundShape === 'triangle'
-      ? 'polygon(50% 6%, 94% 88%, 6% 88%)'
+    backgroundShape === "triangle"
+      ? "polygon(50% 6%, 94% 88%, 6% 88%)"
       : undefined;
 
   // Build base style from UI props, then merge in shape-specific helpers.
   const safeBase = buildStyleProps({
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     width: size,
     height: size,
     padding,
-    backgroundColor: backgroundColor || 'transparent',
+    backgroundColor: backgroundColor || "transparent",
     borderRadius: outerRadius,
     shadow,
     ...props,
@@ -55,23 +55,23 @@ export const Icon = ({
   const outerStyle: React.CSSProperties = {
     ...safeBase,
     clipPath: triangleClip,
-    boxSizing: 'border-box',
-    filter: shadow ? 'drop-shadow(0 6px 10px rgba(0,0,0,0.12))' : undefined,
+    boxSizing: "border-box",
+    filter: shadow ? "drop-shadow(0 6px 10px rgba(0,0,0,0.12))" : undefined,
   };
 
   const maskStyle: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     // color applied through background; SVG used as mask
     backgroundColor: color,
     WebkitMaskImage: `url(${icon})`,
-    WebkitMaskRepeat: 'no-repeat',
-    WebkitMaskPosition: 'center',
-    WebkitMaskSize: 'contain',
+    WebkitMaskRepeat: "no-repeat",
+    WebkitMaskPosition: "center",
+    WebkitMaskSize: "contain",
     maskImage: `url(${icon})`,
-    maskRepeat: 'no-repeat',
-    maskPosition: 'center',
-    maskSize: 'contain',
+    maskRepeat: "no-repeat",
+    maskPosition: "center",
+    maskSize: "contain",
     // ensure the masked element doesn't inherit outer background
     // (so when backgroundColor is provided, it sits behind the mask)
   };

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, CSSProperties, SelectHTMLAttributes } from 'react';
-import { UIComponentProps, buildStyleProps } from './utils';
-import './select.css';
+import { useState, CSSProperties, SelectHTMLAttributes } from "react";
+import { UIComponentProps, buildStyleProps } from "./utils";
+import "./select.css";
 
 export interface SelectOption {
   value: string;
@@ -11,7 +11,7 @@ export interface SelectOption {
 
 type NativeSelectProps = Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
-  'value' | 'onChange' | 'children' | 'color' | 'className' | 'id'
+  "value" | "onChange" | "children" | "color" | "className" | "id"
 >;
 
 export interface SelectProps extends UIComponentProps, NativeSelectProps {
@@ -34,19 +34,19 @@ export const Select = ({
 }: SelectProps) => {
   const [isFocused, setIsFocused] = useState(false);
 
-  const isActive = isFocused || (value !== undefined && value !== '');
+  const isActive = isFocused || (value !== undefined && value !== "");
 
   const uiProps = rest as UIComponentProps;
   const safeStyle: CSSProperties = buildStyleProps(uiProps);
 
   const wrapperCls = [
-    'ui-select-wrapper',
-    isActive ? 'ui-select-wrapper--active' : '',
-    !label ? 'ui-select-wrapper--no-label' : '',
+    "ui-select-wrapper",
+    isActive ? "ui-select-wrapper--active" : "",
+    !label ? "ui-select-wrapper--no-label" : "",
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <div className={wrapperCls} style={safeStyle}>

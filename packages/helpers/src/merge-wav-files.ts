@@ -1,10 +1,10 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default output folder based on the current environment. */
 const DEFAULT_OUTPUT_FOLDER =
-  NODE_ENV === 'production' ? '/app/media' : 'public/media';
+  NODE_ENV === "production" ? "/app/media" : "public/media";
 
 interface MixWavFilesOptions {
   /** List of WAV file paths to mix together simultaneously. */
@@ -38,7 +38,7 @@ const mixWavFiles = ({
   outputFolder = DEFAULT_OUTPUT_FOLDER,
 }: MixWavFilesOptions): Promise<string> => {
   if (files.length === 0) {
-    return Promise.reject(new Error('files array must not be empty'));
+    return Promise.reject(new Error("files array must not be empty"));
   }
 
   const destFile = `${outputFolder}/${dest}`;
@@ -49,30 +49,29 @@ const mixWavFiles = ({
 
   for (let i = 0; i < files.length; i++) {
     const srcFile = `${outputFolder}/${files[i]}`;
-    inputArgs.push('-i', srcFile);
+    inputArgs.push("-i", srcFile);
     streamLabels.push(`[${i}:a]`);
   }
 
   // amix filter: overlay all audio streams simultaneously.
   // `duration=shortest` ends the output when the shortest input finishes.
   // @see https://ffmpeg.org/ffmpeg-filters.html#amix
-  const filterComplex =
-    `${streamLabels.join('')}amix=inputs=${files.length}:duration=shortest[out]`;
+  const filterComplex = `${streamLabels.join("")}amix=inputs=${files.length}:duration=shortest[out]`;
 
   const args = [
-    '-y',
+    "-y",
     ...inputArgs,
-    '-filter_complex',
+    "-filter_complex",
     filterComplex,
-    '-map',
-    '[out]',
+    "-map",
+    "[out]",
     destFile,
   ];
 
   return new Promise<string>((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error) => {
+    execFile("ffmpeg", args, { maxBuffer: 1024 * 2048 }, (error) => {
       if (error) {
-        console.error('Error mixing WAV files:', error);
+        console.error("Error mixing WAV files:", error);
         return reject(error);
       }
       resolve(`media/${dest}`);

@@ -1,29 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
-import { AdminForm, type FieldDef } from '@/components/admin/admin-form';
+import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
+import { AdminForm, type FieldDef } from "@/components/admin/admin-form";
 import {
   AdminImageUploader,
   type NewImage,
-} from '@/components/admin-image-uploader/admin-image-uploader';
-import { getSystem, updateSystem } from '@/lib/admin-api';
-import { getUserFromToken } from '@/lib/auth';
-import { GradientBuilder } from '@repo/ui/core-elements/gradient-builder';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import logoToAssets from '@repo/helpers/logo-to-assets';
+} from "@/components/admin-image-uploader/admin-image-uploader";
+import { getSystem, updateSystem } from "@/lib/admin-api";
+import { getUserFromToken } from "@/lib/auth";
+import { GradientBuilder } from "@repo/ui/core-elements/gradient-builder";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import logoToAssets from "@repo/helpers/logo-to-assets";
 
 /** Fields that are auto-generated from the logo when the user confirms. */
 const LOGO_DERIVED_FIELDS = [
-  'img_favicon',
-  'img_manifest_1080',
-  'img_manifest_512',
-  'img_manifest_256',
-  'img_manifest_192',
-  'img_manifest_128',
+  "img_favicon",
+  "img_manifest_1080",
+  "img_manifest_512",
+  "img_manifest_256",
+  "img_manifest_192",
+  "img_manifest_128",
 ] as const;
 
 type LogoDerivedField = (typeof LOGO_DERIVED_FIELDS)[number];
@@ -36,36 +36,36 @@ async function dataUrlToFile(dataUrl: string, filename: string): Promise<File> {
 }
 
 export default function AdminSystemPage() {
-  const t = useTranslations('Admin');
-  const tGb = useTranslations('GradientBuilder');
+  const t = useTranslations("Admin");
+  const tGb = useTranslations("GradientBuilder");
 
   const [values, setValues] = useState<Record<string, unknown>>({
-    site_name: '',
-    site_description: '',
-    en_site_description: '',
-    host: '',
-    slogan: '',
-    video_link: '',
-    primary_color: '#2196f3',
-    secondary_color: '#e040fb',
-    highlights_bg: '',
-    highlights_title: '',
-    en_highlights_title: '',
-    highlights_subtitle: '',
-    en_highlights_subtitle: '',
-    catalog_items_bg: '',
-    about: '',
-    en_about: '',
-    mission: '',
-    en_mission: '',
-    vision: '',
-    en_vision: '',
-    privacy_policy: '',
-    en_privacy_policy: '',
-    terms_and_conditions: '',
-    en_terms_and_conditions: '',
-    user_data: '',
-    en_user_data: '',
+    site_name: "",
+    site_description: "",
+    en_site_description: "",
+    host: "",
+    slogan: "",
+    video_link: "",
+    primary_color: "#2196f3",
+    secondary_color: "#e040fb",
+    highlights_bg: "",
+    highlights_title: "",
+    en_highlights_title: "",
+    highlights_subtitle: "",
+    en_highlights_subtitle: "",
+    catalog_items_bg: "",
+    about: "",
+    en_about: "",
+    mission: "",
+    en_mission: "",
+    vision: "",
+    en_vision: "",
+    privacy_policy: "",
+    en_privacy_policy: "",
+    terms_and_conditions: "",
+    en_terms_and_conditions: "",
+    user_data: "",
+    en_user_data: "",
     enabled: true,
   });
 
@@ -111,46 +111,46 @@ export default function AdminSystemPage() {
     getSystem(systemId)
       .then((data) => {
         setValues({
-          site_name: data.site_name ?? '',
-          site_description: data.site_description ?? '',
-          en_site_description: data.en_site_description ?? '',
-          host: data.host ?? '',
-          slogan: data.slogan ?? '',
-          video_link: data.video_link ?? '',
-          primary_color: data.primary_color ?? '#2196f3',
-          secondary_color: data.secondary_color ?? '#e040fb',
-          highlights_bg: data.highlights_bg ?? '',
-          highlights_title: data.highlights_title ?? '',
-          en_highlights_title: data.en_highlights_title ?? '',
-          highlights_subtitle: data.highlights_subtitle ?? '',
-          en_highlights_subtitle: data.en_highlights_subtitle ?? '',
-          catalog_items_bg: data.catalog_items_bg ?? '',
-          about: data.about ?? '',
-          en_about: data.en_about ?? '',
-          mission: data.mission ?? '',
-          en_mission: data.en_mission ?? '',
-          vision: data.vision ?? '',
-          en_vision: data.en_vision ?? '',
-          privacy_policy: data.privacy_policy ?? '',
-          en_privacy_policy: data.en_privacy_policy ?? '',
-          terms_and_conditions: data.terms_and_conditions ?? '',
-          en_terms_and_conditions: data.en_terms_and_conditions ?? '',
-          user_data: data.user_data ?? '',
-          en_user_data: data.en_user_data ?? '',
+          site_name: data.site_name ?? "",
+          site_description: data.site_description ?? "",
+          en_site_description: data.en_site_description ?? "",
+          host: data.host ?? "",
+          slogan: data.slogan ?? "",
+          video_link: data.video_link ?? "",
+          primary_color: data.primary_color ?? "#2196f3",
+          secondary_color: data.secondary_color ?? "#e040fb",
+          highlights_bg: data.highlights_bg ?? "",
+          highlights_title: data.highlights_title ?? "",
+          en_highlights_title: data.en_highlights_title ?? "",
+          highlights_subtitle: data.highlights_subtitle ?? "",
+          en_highlights_subtitle: data.en_highlights_subtitle ?? "",
+          catalog_items_bg: data.catalog_items_bg ?? "",
+          about: data.about ?? "",
+          en_about: data.en_about ?? "",
+          mission: data.mission ?? "",
+          en_mission: data.en_mission ?? "",
+          vision: data.vision ?? "",
+          en_vision: data.en_vision ?? "",
+          privacy_policy: data.privacy_policy ?? "",
+          en_privacy_policy: data.en_privacy_policy ?? "",
+          terms_and_conditions: data.terms_and_conditions ?? "",
+          en_terms_and_conditions: data.en_terms_and_conditions ?? "",
+          user_data: data.user_data ?? "",
+          en_user_data: data.en_user_data ?? "",
           enabled: data.enabled ?? true,
         });
         // Populate existing images
         const imageFields = [
-          'img_logo',
-          'img_logo_hero',
-          'img_favicon',
-          'img_hero',
-          'img_about',
-          'img_manifest_1080',
-          'img_manifest_512',
-          'img_manifest_256',
-          'img_manifest_192',
-          'img_manifest_128',
+          "img_logo",
+          "img_logo_hero",
+          "img_favicon",
+          "img_hero",
+          "img_about",
+          "img_manifest_1080",
+          "img_manifest_512",
+          "img_manifest_256",
+          "img_manifest_192",
+          "img_manifest_128",
         ] as const;
         setImages((prev) => {
           const next = { ...prev };
@@ -164,7 +164,7 @@ export default function AdminSystemPage() {
           return next;
         });
       })
-      .catch(() => setError(t('errorLoad')))
+      .catch(() => setError(t("errorLoad")))
       .finally(() => setLoading(false));
   }, [systemId, t]);
 
@@ -190,7 +190,7 @@ export default function AdminSystemPage() {
       const entries = await Promise.all(
         LOGO_DERIVED_FIELDS.map(async (field) => {
           const dataUrl = assets[field];
-          const ext = field === 'img_favicon' ? 'ico' : 'png';
+          const ext = field === "img_favicon" ? "ico" : "png";
           const file = await dataUrlToFile(dataUrl, `${field}.${ext}`);
           const newImage: NewImage = {
             base64: dataUrl,
@@ -216,7 +216,7 @@ export default function AdminSystemPage() {
       // Force uploaders for derived fields to re-mount with the new existing images.
       setDerivedImageKey((k) => k + 1);
     } catch {
-      setError(t('errorGenerateAssets'));
+      setError(t("errorGenerateAssets"));
     } finally {
       setGeneratingAssets(false);
       setShowLogoAssetsModal(false);
@@ -229,9 +229,9 @@ export default function AdminSystemPage() {
     setSuccess(null);
     try {
       const payload: Record<string, unknown> = { ...values };
-      ['video_link', 'slogan', 'highlights_bg', 'catalog_items_bg'].forEach(
+      ["video_link", "slogan", "highlights_bg", "catalog_items_bg"].forEach(
         (k) => {
-          if (payload[k] === '') payload[k] = null;
+          if (payload[k] === "") payload[k] = null;
         },
       );
       // Attach pending images as base64
@@ -243,104 +243,104 @@ export default function AdminSystemPage() {
         }
       });
       await updateSystem(systemId, payload);
-      setSuccess(t('saved'));
+      setSuccess(t("saved"));
     } catch {
-      setError(t('errorSave'));
+      setError(t("errorSave"));
     } finally {
       setSaving(false);
     }
   };
 
   const fields: FieldDef[] = [
-    { key: 'site_name', label: t('siteName') ?? 'Site Name', required: true },
+    { key: "site_name", label: t("siteName") ?? "Site Name", required: true },
     {
-      key: 'site_description',
-      label: t('siteDescription') ?? 'Site Description (ES)',
-      type: 'textarea',
+      key: "site_description",
+      label: t("siteDescription") ?? "Site Description (ES)",
+      type: "textarea",
     },
     {
-      key: 'en_site_description',
-      label: t('enSiteDescription') ?? 'Site Description (EN)',
-      type: 'textarea',
+      key: "en_site_description",
+      label: t("enSiteDescription") ?? "Site Description (EN)",
+      type: "textarea",
     },
-    { key: 'host', label: t('host') ?? 'Host', required: true },
-    { key: 'slogan', label: t('slogan') ?? 'Slogan' },
+    { key: "host", label: t("host") ?? "Host", required: true },
+    { key: "slogan", label: t("slogan") ?? "Slogan" },
     {
-      key: 'video_link',
-      label: t('videoLink') ?? 'Hero Video Link',
-      type: 'url',
-    },
-    {
-      key: 'primary_color',
-      label: t('primaryColor') ?? 'Primary Color',
-      type: 'color',
+      key: "video_link",
+      label: t("videoLink") ?? "Hero Video Link",
+      type: "url",
     },
     {
-      key: 'secondary_color',
-      label: t('secondaryColor') ?? 'Secondary Color',
-      type: 'color',
+      key: "primary_color",
+      label: t("primaryColor") ?? "Primary Color",
+      type: "color",
     },
     {
-      key: 'highlights_title',
-      label: t('highlightsTitle') ?? 'Highlights Title (ES)',
-    },
-    { key: 'en_highlights_title', label: 'Highlights Title (EN)' },
-    {
-      key: 'highlights_subtitle',
-      label: t('highlightsSubtitle') ?? 'Highlights Subtitle (ES)',
-      type: 'textarea',
+      key: "secondary_color",
+      label: t("secondaryColor") ?? "Secondary Color",
+      type: "color",
     },
     {
-      key: 'en_highlights_subtitle',
-      label: 'Highlights Subtitle (EN)',
-      type: 'textarea',
+      key: "highlights_title",
+      label: t("highlightsTitle") ?? "Highlights Title (ES)",
     },
-    { key: 'about', label: t('about') ?? 'About (ES)', type: 'textarea' },
-    { key: 'en_about', label: 'About (EN)', type: 'textarea' },
-    { key: 'mission', label: t('mission') ?? 'Mission (ES)', type: 'textarea' },
-    { key: 'en_mission', label: 'Mission (EN)', type: 'textarea' },
-    { key: 'vision', label: t('vision') ?? 'Vision (ES)', type: 'textarea' },
-    { key: 'en_vision', label: 'Vision (EN)', type: 'textarea' },
+    { key: "en_highlights_title", label: "Highlights Title (EN)" },
     {
-      key: 'privacy_policy',
-      label: t('privacyPolicy') ?? 'Privacy Policy (ES)',
-      type: 'textarea',
+      key: "highlights_subtitle",
+      label: t("highlightsSubtitle") ?? "Highlights Subtitle (ES)",
+      type: "textarea",
     },
     {
-      key: 'en_privacy_policy',
-      label: 'Privacy Policy (EN)',
-      type: 'textarea',
+      key: "en_highlights_subtitle",
+      label: "Highlights Subtitle (EN)",
+      type: "textarea",
+    },
+    { key: "about", label: t("about") ?? "About (ES)", type: "textarea" },
+    { key: "en_about", label: "About (EN)", type: "textarea" },
+    { key: "mission", label: t("mission") ?? "Mission (ES)", type: "textarea" },
+    { key: "en_mission", label: "Mission (EN)", type: "textarea" },
+    { key: "vision", label: t("vision") ?? "Vision (ES)", type: "textarea" },
+    { key: "en_vision", label: "Vision (EN)", type: "textarea" },
+    {
+      key: "privacy_policy",
+      label: t("privacyPolicy") ?? "Privacy Policy (ES)",
+      type: "textarea",
     },
     {
-      key: 'terms_and_conditions',
-      label: t('terms') ?? 'Terms & Conditions (ES)',
-      type: 'textarea',
+      key: "en_privacy_policy",
+      label: "Privacy Policy (EN)",
+      type: "textarea",
     },
     {
-      key: 'en_terms_and_conditions',
-      label: 'Terms & Conditions (EN)',
-      type: 'textarea',
+      key: "terms_and_conditions",
+      label: t("terms") ?? "Terms & Conditions (ES)",
+      type: "textarea",
     },
     {
-      key: 'user_data',
-      label: t('userData') ?? 'User Data Policy (ES)',
-      type: 'textarea',
+      key: "en_terms_and_conditions",
+      label: "Terms & Conditions (EN)",
+      type: "textarea",
     },
-    { key: 'en_user_data', label: 'User Data Policy (EN)', type: 'textarea' },
-    { key: 'enabled', label: t('enabled'), type: 'boolean' },
+    {
+      key: "user_data",
+      label: t("userData") ?? "User Data Policy (ES)",
+      type: "textarea",
+    },
+    { key: "en_user_data", label: "User Data Policy (EN)", type: "textarea" },
+    { key: "enabled", label: t("enabled"), type: "boolean" },
   ];
 
   const IMAGE_LABELS: Record<string, string> = {
-    img_logo: 'Logo',
-    img_logo_hero: 'Logo (Hero)',
-    img_favicon: 'Favicon',
-    img_hero: 'Hero Image',
-    img_about: 'About Image',
-    img_manifest_1080: 'Manifest 1080×',
-    img_manifest_512: 'Manifest 512×',
-    img_manifest_256: 'Manifest 256×',
-    img_manifest_192: 'Manifest 192×',
-    img_manifest_128: 'Manifest 128×',
+    img_logo: "Logo",
+    img_logo_hero: "Logo (Hero)",
+    img_favicon: "Favicon",
+    img_hero: "Hero Image",
+    img_about: "About Image",
+    img_manifest_1080: "Manifest 1080×",
+    img_manifest_512: "Manifest 512×",
+    img_manifest_256: "Manifest 256×",
+    img_manifest_192: "Manifest 192×",
+    img_manifest_128: "Manifest 128×",
   };
 
   /** Fields whose uploader key includes `derivedImageKey` so they re-mount after generation. */
@@ -350,7 +350,7 @@ export default function AdminSystemPage() {
   if (loading)
     return (
       <Box padding="24px">
-        <Typography variant="body">{t('loading')}</Typography>
+        <Typography variant="body">{t("loading")}</Typography>
       </Box>
     );
 
@@ -358,13 +358,13 @@ export default function AdminSystemPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: t('home'), href: '/' },
-          { label: t('breadcrumbAdmin'), href: '/admin' },
-          { label: t('system') },
+          { label: t("home"), href: "/" },
+          { label: t("breadcrumbAdmin"), href: "/admin" },
+          { label: t("system") },
         ]}
       />
       <AdminForm
-        title={t('system')}
+        title={t("system")}
         hideCancel
         fields={fields}
         values={values}
@@ -376,39 +376,39 @@ export default function AdminSystemPage() {
         aiInterviewEntityType="system"
       >
         <GradientBuilder
-          label={t('highlightsBg')}
-          value={String(values.highlights_bg ?? '')}
+          label={t("highlightsBg")}
+          value={String(values.highlights_bg ?? "")}
           onChange={(v) => setValues((prev) => ({ ...prev, highlights_bg: v }))}
           labels={{
-            linear: tGb('linear'),
-            radial: tGb('radial'),
-            solid: tGb('solid'),
-            angle: tGb('angle'),
-            color: tGb('color'),
-            stops: tGb('stops'),
-            addStop: tGb('addStop'),
-            removeStop: tGb('removeStop'),
-            pickColor: tGb('pickColor'),
-            rawCss: tGb('rawCss'),
+            linear: tGb("linear"),
+            radial: tGb("radial"),
+            solid: tGb("solid"),
+            angle: tGb("angle"),
+            color: tGb("color"),
+            stops: tGb("stops"),
+            addStop: tGb("addStop"),
+            removeStop: tGb("removeStop"),
+            pickColor: tGb("pickColor"),
+            rawCss: tGb("rawCss"),
           }}
         />
         <GradientBuilder
-          label={t('catalogBg')}
-          value={String(values.catalog_items_bg ?? '')}
+          label={t("catalogBg")}
+          value={String(values.catalog_items_bg ?? "")}
           onChange={(v) =>
             setValues((prev) => ({ ...prev, catalog_items_bg: v }))
           }
           labels={{
-            linear: tGb('linear'),
-            radial: tGb('radial'),
-            solid: tGb('solid'),
-            angle: tGb('angle'),
-            color: tGb('color'),
-            stops: tGb('stops'),
-            addStop: tGb('addStop'),
-            removeStop: tGb('removeStop'),
-            pickColor: tGb('pickColor'),
-            rawCss: tGb('rawCss'),
+            linear: tGb("linear"),
+            radial: tGb("radial"),
+            solid: tGb("solid"),
+            angle: tGb("angle"),
+            color: tGb("color"),
+            stops: tGb("stops"),
+            addStop: tGb("addStop"),
+            removeStop: tGb("removeStop"),
+            pickColor: tGb("pickColor"),
+            rawCss: tGb("rawCss"),
           }}
         />
         {Object.entries(images).map(([field, state]) => (
@@ -440,13 +440,13 @@ export default function AdminSystemPage() {
 
       {showLogoAssetsModal && (
         <ConfirmationModal
-          title={t('logoAssetsModalTitle')}
-          text={t('logoAssetsModalText')}
+          title={t("logoAssetsModalTitle")}
+          text={t("logoAssetsModalText")}
           okCallback={handleGenerateAssets}
           cancelCallback={() => setShowLogoAssetsModal(false)}
         >
           {generatingAssets && (
-            <Typography variant="body-sm">{t('generatingAssets')}</Typography>
+            <Typography variant="body-sm">{t("generatingAssets")}</Typography>
           )}
         </ConfirmationModal>
       )}

@@ -1,4 +1,4 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -7,11 +7,11 @@ import { execFile } from 'child_process';
 /** Maximum buffer size for ffmpeg command execution (2 MB). */
 const MAX_BUFFER = 1024 * 2048;
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default output folder based on the current environment. */
 const DEFAULT_OUTPUT_FOLDER =
-  NODE_ENV === 'production' ? '/app/media' : 'public/media';
+  NODE_ENV === "production" ? "/app/media" : "public/media";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -41,7 +41,7 @@ export interface ConvertWavToOggOptions {
  * that nested segments like `some/media/file.mp4` stay intact.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -80,22 +80,22 @@ const convertWavToOgg = ({
   const destFile = `${outputFolder}/${cleanDest}`;
 
   const args: string[] = [
-    '-y',
-    '-i',
+    "-y",
+    "-i",
     srcFile,
-    '-c:a',
-    'libvorbis',
-    '-qscale:a',
-    '10',
-    '-ac',
-    '2',
+    "-c:a",
+    "libvorbis",
+    "-qscale:a",
+    "10",
+    "-ac",
+    "2",
     destFile,
   ];
 
   return new Promise<string>((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: MAX_BUFFER }, (error) => {
+    execFile("ffmpeg", args, { maxBuffer: MAX_BUFFER }, (error) => {
       if (error) {
-        console.error('convertWavToOgg error:', error);
+        console.error("convertWavToOgg error:", error);
         return reject(error);
       }
       return resolve(`media/${cleanDest}`);

@@ -1,5 +1,5 @@
-import { Hero as HeroUI } from '@repo/ui/hero';
-import { type System } from '@/lib/system';
+import { Hero as HeroUI } from "@repo/ui/hero";
+import { type System } from "@/lib/system";
 
 type Props = {
   system: System | null;

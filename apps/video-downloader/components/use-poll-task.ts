@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef } from "react";
 import type {
   TaskStatus,
   VideoResultFields,
   DownloadVideoError,
-} from '@/lib/types';
+} from "@/lib/types";
 
 /* ── Types ──────────────────────────────────────────── */
 
@@ -59,7 +59,7 @@ export function usePollTask() {
           const data: { task: TaskData } = await res.json();
           onUpdate(data.task);
 
-          if (data.task.status === 'done' || data.task.status === 'error') {
+          if (data.task.status === "done" || data.task.status === "error") {
             controllers.current.delete(taskId);
             return;
           }

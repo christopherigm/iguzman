@@ -1,22 +1,26 @@
-import type { Metadata, Viewport } from 'next';
-import { cookies } from 'next/headers';
-import { notFound } from 'next/navigation';
-import { hasLocale, NextIntlClientProvider } from 'next-intl';
+import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+import { hasLocale, NextIntlClientProvider } from "next-intl";
 import {
   getMessages,
   getTranslations,
   setRequestLocale,
-} from 'next-intl/server';
-import { ThemeProvider, ThemeScript, RESOLVED_COOKIE_NAME } from '@repo/ui/theme-provider';
-import type { ThemeMode, ResolvedTheme } from '@repo/ui/theme-provider';
-import { PaletteProvider } from '@repo/ui/palette-provider';
-import { routing } from '@repo/i18n/routing';
-import { NavbarClient } from './navbar-client';
-import { Footer } from '@/components/footer';
-import { FooterVisibility } from '@/components/footer-visibility';
-import packageJson from '@/package.json';
-import { getSystem } from '@/lib/system';
-import '../globals.css';
+} from "next-intl/server";
+import {
+  ThemeProvider,
+  ThemeScript,
+  RESOLVED_COOKIE_NAME,
+} from "@repo/ui/theme-provider";
+import type { ThemeMode, ResolvedTheme } from "@repo/ui/theme-provider";
+import { PaletteProvider } from "@repo/ui/palette-provider";
+import { routing } from "@repo/i18n/routing";
+import { NavbarClient } from "./navbar-client";
+import { Footer } from "@/components/footer";
+import { FooterVisibility } from "@/components/footer-visibility";
+import packageJson from "@/package.json";
+import { getSystem } from "@/lib/system";
+import "../globals.css";
 
 type Props = {
   children: React.ReactNode;
@@ -28,7 +32,7 @@ export function generateStaticParams() {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#68c3f7',
+  themeColor: "#68c3f7",
 };
 
 export async function generateMetadata({
@@ -37,24 +41,24 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const t = (await getTranslations({ locale, namespace: 'Metadata' })) as (
+  const t = (await getTranslations({ locale, namespace: "Metadata" })) as (
     key: string,
   ) => string;
 
   const system = await getSystem();
 
   return {
-    title: system?.site_name ?? t('title'),
-    description: system?.site_description ?? t('description'),
-    manifest: '/manifest.webmanifest',
+    title: system?.site_name ?? t("title"),
+    description: system?.site_description ?? t("description"),
+    manifest: "/manifest.webmanifest",
     icons: {
-      icon: system?.img_favicon ?? '/favicon.ico',
-      apple: system?.img_manifest_128 ?? '/icons/icon-192x192.png',
+      icon: system?.img_favicon ?? "/favicon.ico",
+      apple: system?.img_manifest_128 ?? "/icons/icon-192x192.png",
     },
     appleWebApp: {
       capable: true,
-      statusBarStyle: 'default',
-      title: system?.site_name ?? t('title'),
+      statusBarStyle: "default",
+      title: system?.site_name ?? t("title"),
     },
     formatDetection: {
       telephone: false,
@@ -74,16 +78,16 @@ export default async function LocaleLayout({ children, params }: Props) {
   const [messages, system] = await Promise.all([getMessages(), getSystem()]);
 
   const cookieStore = await cookies();
-  const themeModeCookie = cookieStore.get('theme-mode')?.value as
+  const themeModeCookie = cookieStore.get("theme-mode")?.value as
     | ThemeMode
     | undefined;
   const themeResolvedCookie = cookieStore.get(RESOLVED_COOKIE_NAME)?.value as
     | ResolvedTheme
     | undefined;
-  const initialMode: ThemeMode = themeModeCookie ?? 'system';
+  const initialMode: ThemeMode = themeModeCookie ?? "system";
   const initialResolved: ResolvedTheme =
-    initialMode === 'system'
-      ? (themeResolvedCookie ?? 'light')
+    initialMode === "system"
+      ? (themeResolvedCookie ?? "light")
       : (initialMode as ResolvedTheme);
 
   return (
@@ -103,14 +107,14 @@ export default async function LocaleLayout({ children, params }: Props) {
         >
           <PaletteProvider palette="cyan">
             <NavbarClient
-              logo={system?.img_logo ?? '/logo.png'}
+              logo={system?.img_logo ?? "/logo.png"}
               version={`v${packageJson.version}`}
               productCount={system?.product_count ?? 0}
               serviceCount={system?.service_count ?? 0}
             />
             {children}
             <FooterVisibility>
-              <Footer logo={system?.img_logo ?? '/logo.png'} system={system} />
+              <Footer logo={system?.img_logo ?? "/logo.png"} system={system} />
             </FooterVisibility>
           </PaletteProvider>
         </ThemeProvider>

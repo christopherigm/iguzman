@@ -1,5 +1,5 @@
-import type { EnvironmentVariables, Language } from '@repo/helpers/types';
-import getBooleanFromString from '@repo/helpers/get-boolean-from-string';
+import type { EnvironmentVariables, Language } from "@repo/helpers/types";
+import getBooleanFromString from "@repo/helpers/get-boolean-from-string";
 
 /* ------------------------------------------------------------------ */
 /*  Env-reading helpers                                               */
@@ -20,7 +20,7 @@ const readEnv = (key: string, fallback: string): string =>
  * Returns `true` only when the raw value (case-insensitive) equals `"true"`.
  */
 const readBoolEnv = (key: string): boolean =>
-  getBooleanFromString(readEnv(key, ''));
+  getBooleanFromString(readEnv(key, ""));
 
 /**
  * Reads a numeric environment variable, returning {@link fallback}
@@ -46,56 +46,56 @@ const readNumEnv = (key: string, fallback: number): number => {
  * 3. A built-in default value
  */
 const getEnvVariables = (): EnvironmentVariables => {
-  const defaultLanguage = readEnv('DEFAULT_LANGUAGE', 'en') as Language;
+  const defaultLanguage = readEnv("DEFAULT_LANGUAGE", "en") as Language;
 
   return {
     /* Server */
-    host: process.env.HOST?.trim() ?? '127.0.0.1',
-    hostName: readEnv('HOSTNAME', 'localhost'),
-    URLBase: readEnv('URL_BASE', 'http://127.0.0.1:3000'),
-    K8sURLBase: readEnv('K8S_URL_BASE', 'http://127.0.0.1:3000'),
-    domainURL: readEnv('DOMAIN_URL', 'http://127.0.0.1:3000'),
-    redisURL: readEnv('REDIS_URL', 'redis://localhost:6379'),
+    host: process.env.HOST?.trim() ?? "127.0.0.1",
+    hostName: readEnv("HOSTNAME", "localhost"),
+    URLBase: readEnv("URL_BASE", "http://127.0.0.1:3000"),
+    K8sURLBase: readEnv("K8S_URL_BASE", "http://127.0.0.1:3000"),
+    domainURL: readEnv("DOMAIN_URL", "http://127.0.0.1:3000"),
+    redisURL: readEnv("REDIS_URL", "redis://localhost:6379"),
 
     /* Localisation */
     defaultLanguage,
     language: defaultLanguage,
 
     /* Branding */
-    logo: readEnv('LOGO', '/images/logo.png'),
-    logoWidth: readNumEnv('LOGO_WIDTH', 100),
-    primaryColor: readEnv('PRIMARY_COLOR', '#000'),
-    secondaryColor: readEnv('SECONDARY_COLOR', '#777'),
-    accentColor: readEnv('ACCENT_COLOR', ''),
-    themeColor: readEnv('THEME_COLOR', '#ffffff'),
+    logo: readEnv("LOGO", "/images/logo.png"),
+    logoWidth: readNumEnv("LOGO_WIDTH", 100),
+    primaryColor: readEnv("PRIMARY_COLOR", "#000"),
+    secondaryColor: readEnv("SECONDARY_COLOR", "#777"),
+    accentColor: readEnv("ACCENT_COLOR", ""),
+    themeColor: readEnv("THEME_COLOR", "#ffffff"),
 
     /* Layout */
-    navBarBGColor: readEnv('NAVBAR_BG_COLOR', ''),
-    darkNavBar: readBoolEnv('DARK_NAVBAR'),
-    footerBGColor: readEnv('FOOTER_BG_COLOR', ''),
-    darkFooter: readBoolEnv('DARK_FOOTER'),
-    bodyBGColor: readEnv('BODY_BG_COLOR', '#ffffff'),
-    topPadding: readBoolEnv('TOP_PADDING'),
-    bottomPadding: readBoolEnv('BOTTOM_PADDING'),
+    navBarBGColor: readEnv("NAVBAR_BG_COLOR", ""),
+    darkNavBar: readBoolEnv("DARK_NAVBAR"),
+    footerBGColor: readEnv("FOOTER_BG_COLOR", ""),
+    darkFooter: readBoolEnv("DARK_FOOTER"),
+    bodyBGColor: readEnv("BODY_BG_COLOR", "#ffffff"),
+    topPadding: readBoolEnv("TOP_PADDING"),
+    bottomPadding: readBoolEnv("BOTTOM_PADDING"),
 
     /* Feature flags */
-    loginEnabled: readBoolEnv('LOGIN_ENABLED'),
-    cartEnabled: readBoolEnv('CART_ENABLED'),
-    favoritesEnabled: readBoolEnv('FAVORITES_ENABLED'),
-    ordersEnabled: readBoolEnv('ORDERS_ENABLED'),
-    searchEnabled: readBoolEnv('SEARCH_ENABLED'),
+    loginEnabled: readBoolEnv("LOGIN_ENABLED"),
+    cartEnabled: readBoolEnv("CART_ENABLED"),
+    favoritesEnabled: readBoolEnv("FAVORITES_ENABLED"),
+    ordersEnabled: readBoolEnv("ORDERS_ENABLED"),
+    searchEnabled: readBoolEnv("SEARCH_ENABLED"),
 
     /* Open Graph / SEO */
-    ogTitle: readEnv('OG_TITLE', 'My Web App'),
-    ogSite: readEnv('OG_SITE', 'My web site'),
-    ogImg: readEnv('OG_IMG', '/static/logo.png'),
-    ogURL: readEnv('OG_URL', '/'),
-    ogDescription: readEnv('OG_DESCRIPTION', 'My Web App'),
+    ogTitle: readEnv("OG_TITLE", "My Web App"),
+    ogSite: readEnv("OG_SITE", "My web site"),
+    ogImg: readEnv("OG_IMG", "/static/logo.png"),
+    ogURL: readEnv("OG_URL", "/"),
+    ogDescription: readEnv("OG_DESCRIPTION", "My Web App"),
 
     /* Misc */
-    version: readEnv('VERSION', '0.0.1'),
-    favicon: readEnv('FAVICON', '/static/favicon.ico'),
-    github: readEnv('GITHUB', ''),
+    version: readEnv("VERSION", "0.0.1"),
+    favicon: readEnv("FAVICON", "/static/favicon.ico"),
+    github: readEnv("GITHUB", ""),
   };
 };
 

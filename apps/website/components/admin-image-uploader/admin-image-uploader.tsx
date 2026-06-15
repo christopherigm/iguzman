@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useRef, useCallback, DragEvent } from 'react';
-import { useTranslations } from 'next-intl';
-import Image from 'next/image';
-import { Box } from '@repo/ui/core-elements/box';
-import { Button } from '@repo/ui/core-elements/button';
-import { Typography } from '@repo/ui/core-elements/typography';
-import './admin-image-uploader.css';
+import { useState, useRef, useCallback, DragEvent } from "react";
+import { useTranslations } from "next-intl";
+import Image from "next/image";
+import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
+import { Typography } from "@repo/ui/core-elements/typography";
+import "./admin-image-uploader.css";
 
 export interface ExistingImage {
   id: number;
@@ -42,17 +42,17 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 type ImageEntry =
-  | { kind: 'existing'; id: number; url: string; sortOrder: number }
-  | { kind: 'new'; key: string; preview: string; base64: string; file: File };
+  | { kind: "existing"; id: number; url: string; sortOrder: number }
+  | { kind: "new"; key: string; preview: string; base64: string; file: File };
 
 export function AdminImageUploader({
   existingImages = [],
   onChange,
   maxImages = 20,
-  accept = 'image/*',
+  accept = "image/*",
   label,
 }: AdminImageUploaderProps) {
-  const t = useTranslations('AdminImageUploader');
+  const t = useTranslations("AdminImageUploader");
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [entries, setEntries] = useState<ImageEntry[]>(() =>
@@ -60,7 +60,7 @@ export function AdminImageUploader({
       .slice()
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((img, i) => ({
-        kind: 'existing',
+        kind: "existing",
         id: img.id,
         url: img.url,
         sortOrder: i,
@@ -75,13 +75,13 @@ export function AdminImageUploader({
       if (!onChange) return;
       const newImages = nextEntries
         .filter(
-          (e): e is Extract<ImageEntry, { kind: 'new' }> => e.kind === 'new',
+          (e): e is Extract<ImageEntry, { kind: "new" }> => e.kind === "new",
         )
         .map((e) => ({ base64: e.base64, preview: e.preview, file: e.file }));
       const orderedExistingIds = nextEntries
         .filter(
-          (e): e is Extract<ImageEntry, { kind: 'existing' }> =>
-            e.kind === 'existing',
+          (e): e is Extract<ImageEntry, { kind: "existing" }> =>
+            e.kind === "existing",
         )
         .map((e) => e.id);
       onChange(newImages, nextDeletedIds, orderedExistingIds);
@@ -92,7 +92,7 @@ export function AdminImageUploader({
   const addFiles = useCallback(
     async (files: FileList | File[]) => {
       const fileArray = Array.from(files).filter((f) =>
-        f.type.startsWith('image/'),
+        f.type.startsWith("image/"),
       );
       const available = maxImages - entries.length;
       const toAdd = fileArray.slice(0, Math.max(0, available));
@@ -102,7 +102,7 @@ export function AdminImageUploader({
         toAdd.map(async (file) => {
           const base64 = await fileToBase64(file);
           return {
-            kind: 'new' as const,
+            kind: "new" as const,
             key: `${file.name}-${Date.now()}-${Math.random()}`,
             preview: base64,
             base64,
@@ -128,7 +128,7 @@ export function AdminImageUploader({
     if (!entry) return;
     const next = entries.filter((_, i) => i !== index);
     let nextDeleted = deletedIds;
-    if (entry.kind === 'existing') {
+    if (entry.kind === "existing") {
       nextDeleted = [...deletedIds, entry.id];
       setDeletedIds(nextDeleted);
     }
@@ -176,7 +176,7 @@ export function AdminImageUploader({
       {/* Drop zone */}
       {canAdd && (
         <div
-          className={`aiu__dropzone${isDragOver ? ' aiu__dropzone--active' : ''}`}
+          className={`aiu__dropzone${isDragOver ? " aiu__dropzone--active" : ""}`}
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragOver(true);
@@ -186,8 +186,8 @@ export function AdminImageUploader({
           onClick={() => inputRef.current?.click()}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
-          aria-label={t('dropzoneLabel')}
+          onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+          aria-label={t("dropzoneLabel")}
         >
           <span className="aiu__dropzone-icon">🖼️</span>
           <Typography
@@ -195,14 +195,14 @@ export function AdminImageUploader({
             variant="body-sm"
             className="aiu__dropzone-text"
           >
-            {t('dropzoneText')}
+            {t("dropzoneText")}
           </Typography>
           <Typography
             as="span"
             variant="caption"
             className="aiu__dropzone-hint"
           >
-            {t('dropzoneHint')}
+            {t("dropzoneHint")}
           </Typography>
           <input
             ref={inputRef}
@@ -221,15 +221,15 @@ export function AdminImageUploader({
       {entries.length > 0 && (
         <Box className="aiu__grid">
           {entries.map((entry, index) => {
-            const url = entry.kind === 'existing' ? entry.url : entry.preview;
+            const url = entry.kind === "existing" ? entry.url : entry.preview;
             const isDragging = dragIndex === index;
             const isOver = dragOverIndex === index && dragIndex !== index;
             return (
               <div
                 key={
-                  entry.kind === 'existing' ? `existing-${entry.id}` : entry.key
+                  entry.kind === "existing" ? `existing-${entry.id}` : entry.key
                 }
-                className={`aiu__thumb${isDragging ? ' aiu__thumb--dragging' : ''}${isOver ? ' aiu__thumb--over' : ''}`}
+                className={`aiu__thumb${isDragging ? " aiu__thumb--dragging" : ""}${isOver ? " aiu__thumb--over" : ""}`}
                 draggable
                 onDragStart={() => handleItemDragStart(index)}
                 onDragOver={(e) => handleItemDragOver(e, index)}
@@ -242,7 +242,7 @@ export function AdminImageUploader({
                     alt=""
                     fill
                     className="aiu__thumb-img"
-                    unoptimized={entry.kind === 'new'}
+                    unoptimized={entry.kind === "new"}
                   />
                 </Box>
                 <Box className="aiu__thumb-overlay">
@@ -257,7 +257,7 @@ export function AdminImageUploader({
                       e.stopPropagation();
                       handleDelete(index);
                     }}
-                    aria-label={t('deleteImage')}
+                    aria-label={t("deleteImage")}
                   >
                     ✕
                   </Button>
@@ -268,7 +268,7 @@ export function AdminImageUploader({
                     variant="caption"
                     className="aiu__thumb-badge"
                   >
-                    {t('main')}
+                    {t("main")}
                   </Typography>
                 )}
               </div>
@@ -279,7 +279,7 @@ export function AdminImageUploader({
 
       {entries.length === 0 && !canAdd && (
         <Typography variant="body-sm" className="aiu__empty">
-          {t('maxReached')}
+          {t("maxReached")}
         </Typography>
       )}
     </Box>

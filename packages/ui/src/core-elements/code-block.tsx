@@ -1,19 +1,41 @@
-'use client';
+"use client";
 
-import React, { CSSProperties, useState } from 'react';
-import { UIComponentProps, buildStyleProps } from './utils';
-import { Button } from './button';
-import './code-block.css';
+import React, { CSSProperties, useState } from "react";
+import { UIComponentProps, buildStyleProps } from "./utils";
+import { Button } from "./button";
+import "./code-block.css";
 
 const CopyIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </svg>
 );
 
 const CheckIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
@@ -48,7 +70,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   return (
     <div
       id={id}
-      className={['ui-code-block', className].filter(Boolean).join(' ')}
+      className={["ui-code-block", className].filter(Boolean).join(" ")}
       style={outerStyle}
     >
       {hasHeader && (
@@ -61,9 +83,13 @@ export const CodeBlock: React.FC<CodeBlockProps> = (props) => {
               <Button
                 unstyled
                 aria-label="Copy code"
-                title={copied ? 'Copied!' : 'Copy code'}
+                title={copied ? "Copied!" : "Copy code"}
                 onClick={handleCopy}
-                color={copied ? 'var(--accent, #06b6d4)' : 'var(--foreground-muted, #888)'}
+                color={
+                  copied
+                    ? "var(--accent, #06b6d4)"
+                    : "var(--foreground-muted, #888)"
+                }
               >
                 {copied ? <CheckIcon /> : <CopyIcon />}
               </Button>

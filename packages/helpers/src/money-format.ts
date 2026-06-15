@@ -1,10 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const wNumb = require('wnumb');
+const wNumb = require("wnumb");
 
 const defaultOptions = {
-  mark: '.',
-  thousand: ',',
-  prefix: '$',
+  mark: ".",
+  thousand: ",",
+  prefix: "$",
   decimals: 2,
 };
 

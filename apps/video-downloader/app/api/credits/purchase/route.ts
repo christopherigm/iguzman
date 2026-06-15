@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { createCreditKey, getCreditKey } from '@/lib/credits-db';
-import { CREDIT_PACKS } from '@/lib/credit-packs';
-import logger from '@/lib/logger';
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { createCreditKey, getCreditKey } from "@/lib/credits-db";
+import { CREDIT_PACKS } from "@/lib/credit-packs";
+import logger from "@/lib/logger";
 
-const log = logger.child({ module: 'api/credits/purchase' });
+const log = logger.child({ module: "api/credits/purchase" });
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? '';
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY ?? "";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 
 function getPack(id: string) {
   return CREDIT_PACKS.find((p) => p.id === id);
@@ -15,9 +15,9 @@ function getPack(id: string) {
 
 export async function POST(request: NextRequest) {
   if (!STRIPE_SECRET_KEY) {
-    log.error('STRIPE_SECRET_KEY is not configured');
+    log.error("STRIPE_SECRET_KEY is not configured");
     return NextResponse.json(
-      { error: 'Payments not configured' },
+      { error: "Payments not configured" },
       { status: 500 },
     );
   }
@@ -26,15 +26,15 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as typeof body;
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const pack = getPack(body.packId ?? '');
+  const pack = getPack(body.packId ?? "");
   if (!pack) {
-    return NextResponse.json({ error: 'Invalid pack ID' }, { status: 400 });
+    return NextResponse.json({ error: "Invalid pack ID" }, { status: 400 });
   }
 
-  const locale = body.locale?.trim() || 'en';
+  const locale = body.locale?.trim() || "en";
   const creditsPageUrl = `${BASE_URL}/${locale}/credits`;
 
   // Validate existing key if provided, else we'll create a new one after payment
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const doc = await getCreditKey(existingKey);
     if (!doc) {
       return NextResponse.json(
-        { error: 'INVALID_CREDITS_KEY' },
+        { error: "INVALID_CREDITS_KEY" },
         { status: 400 },
       );
     }
@@ -56,13 +56,13 @@ export async function POST(request: NextRequest) {
   const stripe = new Stripe(STRIPE_SECRET_KEY);
 
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    mode: 'payment',
+    payment_method_types: ["card"],
+    mode: "payment",
     line_items: [
       {
         quantity: 1,
         price_data: {
-          currency: 'usd',
+          currency: "usd",
           unit_amount: pack.priceCents,
           product_data: {
             name: `${pack.label} Credit Pack`,
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
   log.info(
     { packId: pack.id, credits: pack.credits },
-    'Stripe checkout session created',
+    "Stripe checkout session created",
   );
   return NextResponse.json({ url: session.url });
 }

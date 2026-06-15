@@ -1,17 +1,17 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import { getLocale } from 'next-intl/server';
+import Image from "next/image";
+import Link from "next/link";
+import { getLocale } from "next-intl/server";
 import {
   getHighlights,
   type CompanyHighlight,
   type CompanyHighlightItem,
-} from '@/lib/highlights';
-import { getSystem } from '@/lib/system';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Grid } from '@repo/ui/core-elements/grid';
-import type { GridSize } from '@repo/ui/core-elements/grid';
-import './company-highlights.css';
+} from "@/lib/highlights";
+import { getSystem } from "@/lib/system";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Grid } from "@repo/ui/core-elements/grid";
+import type { GridSize } from "@repo/ui/core-elements/grid";
+import "./company-highlights.css";
 
 const HIGHLIGHT_GRID_SIZE: Record<string, GridSize> = {
   sm: { xs: 6, md: 3 },
@@ -21,25 +21,25 @@ const HIGHLIGHT_GRID_SIZE: Record<string, GridSize> = {
 };
 
 function isIconPath(icon: string): boolean {
-  return icon.startsWith('/') || icon.startsWith('http');
+  return icon.startsWith("/") || icon.startsWith("http");
 }
 
 function HighlightItemCard({ item }: { item: CompanyHighlightItem }) {
   return (
     <Box className="highlight-item">
       {item.image ? (
-        <Image fill src={item.image} alt={item.name ?? ''} />
+        <Image fill src={item.image} alt={item.name ?? ""} />
       ) : item.icon && isIconPath(item.icon) ? (
         <Image
           width={32}
           height={32}
           className="highlight-item__icon"
           src={item.icon}
-          alt={item.name ?? ''}
+          alt={item.name ?? ""}
         />
       ) : (
         <Typography as="span" variant="none" styles={{ fontSize: 24 }}>
-          {item.icon ?? ''}
+          {item.icon ?? ""}
         </Typography>
       )}
     </Box>
@@ -54,24 +54,24 @@ function HighlightCard({
   locale: string;
 }) {
   const name =
-    (locale === 'en' ? highlight.en_name : highlight.name) ??
+    (locale === "en" ? highlight.en_name : highlight.name) ??
     highlight.name ??
     highlight.en_name ??
-    '';
+    "";
   const description =
-    (locale === 'en' ? highlight.en_description : highlight.description) ??
+    (locale === "en" ? highlight.en_description : highlight.description) ??
     highlight.description ??
     highlight.en_description ??
-    '';
+    "";
   const category =
-    (locale === 'en' ? highlight.en_category : highlight.category) ??
+    (locale === "en" ? highlight.en_category : highlight.category) ??
     highlight.category ??
     highlight.en_category ??
-    '';
+    "";
 
   const hasImage = Boolean(highlight.image);
   const hasItems = highlight.items.length > 0;
-  const cardClass = `highlight-card elevation-5 highlight-card--${highlight.size}${hasImage ? ' highlight-card--has-image' : ''}`;
+  const cardClass = `highlight-card elevation-5 highlight-card--${highlight.size}${hasImage ? " highlight-card--has-image" : ""}`;
 
   const cardBody = (
     <>
@@ -130,7 +130,7 @@ function HighlightCard({
             </Typography>
           )}
 
-          {hasItems && (highlight.size === 'sm' || highlight.size === 'md') && (
+          {hasItems && (highlight.size === "sm" || highlight.size === "md") && (
             <Box className="highlight-card__items">
               {highlight.items.map((item) => (
                 <HighlightItemCard key={item.id} item={item} />
@@ -139,7 +139,7 @@ function HighlightCard({
           )}
         </Box>
 
-        {hasItems && (highlight.size === 'lg' || highlight.size === 'xl') && (
+        {hasItems && (highlight.size === "lg" || highlight.size === "xl") && (
           <Box className="highlight-card__items">
             {highlight.items.map((item) => (
               <HighlightItemCard key={item.id} item={item} />
@@ -152,7 +152,7 @@ function HighlightCard({
 
   const linkHref = highlight.slug
     ? `/highlights/${highlight.slug}`
-    : highlight.href ?? null;
+    : (highlight.href ?? null);
 
   if (linkHref) {
     return (
@@ -175,7 +175,7 @@ export async function CompanyHighlights() {
   if (highlights.length === 0) return null;
 
   const title =
-    (locale === 'en'
+    (locale === "en"
       ? system?.en_highlights_title
       : system?.highlights_title) ??
     system?.highlights_title ??
@@ -183,7 +183,7 @@ export async function CompanyHighlights() {
     null;
 
   const subtitle =
-    (locale === 'en'
+    (locale === "en"
       ? system?.en_highlights_subtitle
       : system?.highlights_subtitle) ??
     system?.highlights_subtitle ??

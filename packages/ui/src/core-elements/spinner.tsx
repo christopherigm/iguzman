@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { CSSProperties } from 'react';
-import { UIComponentProps, buildStyleProps } from './utils';
-import './spinner.css';
+import { CSSProperties } from "react";
+import { UIComponentProps, buildStyleProps } from "./utils";
+import "./spinner.css";
 
 export interface SpinnerProps extends UIComponentProps {
   /** Diameter in pixels. @defaultValue 20 */
@@ -16,14 +16,14 @@ export interface SpinnerProps extends UIComponentProps {
 export const Spinner = ({
   size = 20,
   thickness = 2,
-  label = 'Loading',
+  label = "Loading",
   className,
   id,
   ...rest
 }: SpinnerProps) => {
   const uiStyle: CSSProperties = buildStyleProps(rest as UIComponentProps);
 
-  const rootClasses = ['spinner', className].filter(Boolean).join(' ');
+  const rootClasses = ["spinner", className].filter(Boolean).join(" ");
 
   return (
     <span

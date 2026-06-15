@@ -1,6 +1,6 @@
-import { spawn } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
-import * as os from 'os';
+import { spawn } from "child_process";
+import { readFileSync, existsSync } from "fs";
+import * as os from "os";
 
 /* ── Public types ────────────────────────────────────────────────────── */
 
@@ -61,7 +61,10 @@ export interface GetSystemStatsOptions {
   includeNetwork?: boolean;
 }
 
-export interface WatchSystemStatsOptions extends Omit<GetSystemStatsOptions, 'cpuSampleMs'> {
+export interface WatchSystemStatsOptions extends Omit<
+  GetSystemStatsOptions,
+  "cpuSampleMs"
+> {
   /**
    * How often (in seconds) to emit a new `SystemStats` snapshot.
    * CPU and network rates are computed across the full interval. Default 2.
@@ -99,7 +102,10 @@ function computeCpuUsage(before: CpuSample[], after: CpuSample[]): number {
     totalDelta += after[i]!.total - before[i]!.total;
   }
   if (totalDelta === 0) return 0;
-  return Math.min(100, Math.max(0, Math.round((1 - idleDelta / totalDelta) * 100)));
+  return Math.min(
+    100,
+    Math.max(0, Math.round((1 - idleDelta / totalDelta) * 100)),
+  );
 }
 
 /* ── Internal: Memory ────────────────────────────────────────────────── */
@@ -121,13 +127,15 @@ function readMemory(): MemoryStats {
 function runDf(): Promise<DiskStats[]> {
   return new Promise((resolve) => {
     // -P: POSIX output (portable across Linux + macOS), 1 KB blocks
-    const proc = spawn('df', ['-P']);
-    let output = '';
+    const proc = spawn("df", ["-P"]);
+    let output = "";
 
-    proc.stdout.on('data', (chunk: Buffer) => { output += chunk.toString(); });
-    proc.on('error', () => resolve([]));
-    proc.on('close', () => {
-      const lines = output.trim().split('\n').slice(1);
+    proc.stdout.on("data", (chunk: Buffer) => {
+      output += chunk.toString();
+    });
+    proc.on("error", () => resolve([]));
+    proc.on("close", () => {
+      const lines = output.trim().split("\n").slice(1);
       const results: DiskStats[] = [];
 
       for (const line of lines) {
@@ -135,10 +143,12 @@ function runDf(): Promise<DiskStats[]> {
         if (parts.length < 6) continue;
 
         const [filesystem, blocksStr, usedStr, availStr, , mountpoint] = parts;
-        if (!filesystem || !blocksStr || !usedStr || !availStr || !mountpoint) continue;
+        if (!filesystem || !blocksStr || !usedStr || !availStr || !mountpoint)
+          continue;
 
         // Only include real block devices; skip virtual/pseudo filesystems
-        if (!filesystem.startsWith('/dev/') && !filesystem.startsWith('//')) continue;
+        if (!filesystem.startsWith("/dev/") && !filesystem.startsWith("//"))
+          continue;
 
         const totalBytes = Number(blocksStr) * 1024;
         const usedBytes = Number(usedStr) * 1024;
@@ -150,7 +160,8 @@ function runDf(): Promise<DiskStats[]> {
           totalBytes,
           usedBytes,
           freeBytes,
-          usagePercent: totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 100) : 0,
+          usagePercent:
+            totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 100) : 0,
         });
       }
 
@@ -168,19 +179,28 @@ interface NetCounter {
 }
 
 function readNetCounters(): NetCounter[] {
-  const path = '/proc/net/dev';
+  const path = "/proc/net/dev";
   if (!existsSync(path)) return [];
 
   try {
     // Format: <iface>: rx_bytes rx_packets ... (8 rx fields) tx_bytes tx_packets ...
-    const lines = readFileSync(path, 'utf8').trim().split('\n').slice(2);
+    const lines = readFileSync(path, "utf8").trim().split("\n").slice(2);
     return lines.flatMap((line) => {
-      const colonIdx = line.indexOf(':');
+      const colonIdx = line.indexOf(":");
       if (colonIdx === -1) return [];
       const iface = line.slice(0, colonIdx).trim();
-      if (iface === 'lo') return [];
-      const fields = line.slice(colonIdx + 1).trim().split(/\s+/);
-      return [{ interface: iface, rxBytes: Number(fields[0] ?? 0), txBytes: Number(fields[8] ?? 0) }];
+      if (iface === "lo") return [];
+      const fields = line
+        .slice(colonIdx + 1)
+        .trim()
+        .split(/\s+/);
+      return [
+        {
+          interface: iface,
+          rxBytes: Number(fields[0] ?? 0),
+          txBytes: Number(fields[8] ?? 0),
+        },
+      ];
     });
   } catch {
     return [];
@@ -222,13 +242,14 @@ function buildStats(
     cpu: {
       usagePercent: computeCpuUsage(cpuBefore, cpuAfter),
       coreCount: cpus.length,
-      model: cpus[0]?.model ?? 'Unknown',
+      model: cpus[0]?.model ?? "Unknown",
     },
     memory: readMemory(),
     disk,
-    network: netBefore.length > 0 || netAfter.length > 0
-      ? computeNetworkStats(netBefore, netAfter, deltaMs)
-      : [],
+    network:
+      netBefore.length > 0 || netAfter.length > 0
+        ? computeNetworkStats(netBefore, netAfter, deltaMs)
+        : [],
     uptime: os.uptime(),
     loadAverage: os.loadavg() as [number, number, number],
     timestamp: Date.now(),
@@ -247,7 +268,9 @@ function buildStats(
  *
  * @returns A `SystemStats` snapshot.
  */
-export async function getSystemStats(options: GetSystemStatsOptions = {}): Promise<SystemStats> {
+export async function getSystemStats(
+  options: GetSystemStatsOptions = {},
+): Promise<SystemStats> {
   const {
     cpuSampleMs = 300,
     includeDisk = true,
@@ -324,11 +347,15 @@ export function watchSystemStats(options: WatchSystemStatsOptions): () => void {
     }
 
     if (!stopped) {
-      timer = setTimeout(() => { void tick(); }, intervalSec * 1000);
+      timer = setTimeout(() => {
+        void tick();
+      }, intervalSec * 1000);
     }
   };
 
-  timer = setTimeout(() => { void tick(); }, intervalSec * 1000);
+  timer = setTimeout(() => {
+    void tick();
+  }, intervalSec * 1000);
 
   return () => {
     stopped = true;

@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { useTranslations } from 'next-intl';
-import { useRouter } from '@repo/i18n/navigation';
-import { Container } from '@repo/ui/core-elements/container';
-import { Box } from '@repo/ui/core-elements/box';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Button } from '@repo/ui/core-elements/button';
-import { LinkButton } from '@repo/ui/core-elements/link-button';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Switch } from '@repo/ui/core-elements/switch';
-import './auth-form.css';
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@repo/i18n/navigation";
+import { Container } from "@repo/ui/core-elements/container";
+import { Box } from "@repo/ui/core-elements/box";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Button } from "@repo/ui/core-elements/button";
+import { LinkButton } from "@repo/ui/core-elements/link-button";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Switch } from "@repo/ui/core-elements/switch";
+import "./auth-form.css";
 import {
   login,
   LoginError,
@@ -25,12 +25,12 @@ import {
   getProfile,
   storeUser,
   type UserProfile,
-} from '@/lib/auth';
+} from "@/lib/auth";
 
-const REMEMBERED_EMAIL_KEY = 'auth_remembered_email';
-const REMEMBER_EMAIL_PREF_KEY = 'auth_remember_email';
+const REMEMBERED_EMAIL_KEY = "auth_remembered_email";
+const REMEMBER_EMAIL_PREF_KEY = "auth_remember_email";
 
-type Tab = 'sign-in' | 'sign-up' | 'reset-password';
+type Tab = "sign-in" | "sign-up" | "reset-password";
 
 function ErrorMessage({ message }: { message: string }) {
   return (
@@ -43,22 +43,24 @@ function ErrorMessage({ message }: { message: string }) {
 // ── Sign-in tab ───────────────────────────────────────────────────────────────
 
 function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
-  const t = useTranslations('AuthPage');
+  const t = useTranslations("AuthPage");
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [passkeyPrompt, setPasskeyPrompt] = useState(false);
   const [passkeySuccess, setPasskeySuccess] = useState(false);
-  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(
+    null,
+  );
   const [rememberEmail, setRememberEmail] = useState(false);
 
   useEffect(() => {
-    const pref = localStorage.getItem(REMEMBER_EMAIL_PREF_KEY) === 'true';
+    const pref = localStorage.getItem(REMEMBER_EMAIL_PREF_KEY) === "true";
     setRememberEmail(pref);
     if (pref) {
-      const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? '';
+      const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? "";
       if (saved) setEmail(saved);
     }
   }, []);
@@ -95,12 +97,12 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         return;
       }
 
-      router.push(profile.job_title ? '/' : '/onboarding');
+      router.push(profile.job_title ? "/" : "/onboarding");
     } catch (err) {
       if (err instanceof LoginError && err.status === 401) {
-        setError(t('signIn.errorInvalidCredentials'));
+        setError(t("signIn.errorInvalidCredentials"));
       } else {
-        setError(t('signIn.errorGeneric'));
+        setError(t("signIn.errorGeneric"));
       }
     } finally {
       setLoading(false);
@@ -109,7 +111,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
 
   async function handlePasskeySignIn() {
     if (!email) {
-      setError(t('signIn.errorEmailRequired'));
+      setError(t("signIn.errorEmailRequired"));
       return;
     }
     setError(null);
@@ -118,12 +120,12 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
       await loginWithPasskey(email);
       const profile = await getProfile();
       storeUser(profile);
-      router.push(profile.job_title ? '/' : '/onboarding');
+      router.push(profile.job_title ? "/" : "/onboarding");
     } catch (err) {
       if (err instanceof LoginError) {
-        setError(t('signIn.errorPasskeyFailed'));
+        setError(t("signIn.errorPasskeyFailed"));
       } else {
-        setError(t('signIn.errorGeneric'));
+        setError(t("signIn.errorGeneric"));
       }
     } finally {
       setLoading(false);
@@ -136,9 +138,12 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     try {
       await registerPasskey();
       setPasskeySuccess(true);
-      setTimeout(() => router.push(currentProfile?.job_title ? '/' : '/onboarding'), 1500);
+      setTimeout(
+        () => router.push(currentProfile?.job_title ? "/" : "/onboarding"),
+        1500,
+      );
     } catch {
-      setError(t('passkey.errorGeneric'));
+      setError(t("passkey.errorGeneric"));
     } finally {
       setLoading(false);
     }
@@ -148,14 +153,14 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     return (
       <Box display="flex" flexDirection="column" gap={16} alignItems="center">
         <Typography variant="body-sm" fontWeight={600}>
-          {t('passkey.promptTitle')}
+          {t("passkey.promptTitle")}
         </Typography>
-        <Typography variant="caption" styles={{ textAlign: 'center' }}>
-          {t('passkey.promptDescription')}
+        <Typography variant="caption" styles={{ textAlign: "center" }}>
+          {t("passkey.promptDescription")}
         </Typography>
         {passkeySuccess && (
           <Typography variant="caption" className="auth-form__success">
-            {t('passkey.successMessage')}
+            {t("passkey.successMessage")}
           </Typography>
         )}
         {error && <ErrorMessage message={error} />}
@@ -163,7 +168,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         {!passkeySuccess && (
           <>
             <Button
-              text={t('passkey.registerButton')}
+              text={t("passkey.registerButton")}
               type="button"
               onClick={handleRegisterPasskey}
               size="md"
@@ -171,8 +176,10 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
               kind="success"
             />
             <LinkButton
-              onClick={() => router.push(currentProfile?.job_title ? '/' : '/onboarding')}
-              label={t('passkey.skipButton')}
+              onClick={() =>
+                router.push(currentProfile?.job_title ? "/" : "/onboarding")
+              }
+              label={t("passkey.skipButton")}
             />
           </>
         )}
@@ -183,7 +190,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
   return (
     <form onSubmit={handleSubmit} className="auth-form__form">
       <TextInput
-        label={t('signIn.emailLabel')}
+        label={t("signIn.emailLabel")}
         type="email"
         value={email}
         onChange={handleEmailChange}
@@ -191,7 +198,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         autoComplete="email"
       />
       <TextInput
-        label={t('signIn.passwordLabel')}
+        label={t("signIn.passwordLabel")}
         type="password"
         value={password}
         onChange={setPassword}
@@ -201,22 +208,22 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
       <Box display="flex" alignItems="center" gap={8}>
         <Switch checked={rememberEmail} onChange={handleRememberEmailChange} />
         <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
-          {t('signIn.rememberEmail')}
+          {t("signIn.rememberEmail")}
         </Typography>
       </Box>
       {error && <ErrorMessage message={error} />}
-      {loading && <ProgressBar label={t('signIn.submitting')} />}
+      {loading && <ProgressBar label={t("signIn.submitting")} />}
       <Button
-        text={loading ? t('signIn.submitting') : t('signIn.submitButton')}
+        text={loading ? t("signIn.submitting") : t("signIn.submitButton")}
         type="submit"
         size="md"
         width="100%"
         marginTop={4}
-        kind={email && password ? 'success' : undefined}
+        kind={email && password ? "success" : undefined}
         disabled={!email || !password}
       />
       <Typography variant="none" className="auth-form__divider">
-        {t('signIn.orDivider')}
+        {t("signIn.orDivider")}
       </Typography>
       <Box display="flex" justifyContent="center" gap={12}>
         <Button
@@ -225,20 +232,20 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
           onClick={handlePasskeySignIn}
           disabled={!email}
           className="auth-form__passkey-icon-btn"
-          aria-label={t('signIn.passkeyButton')}
-          title={t('signIn.passkeyButton')}
+          aria-label={t("signIn.passkeyButton")}
+          title={t("signIn.passkeyButton")}
         >
           <Image src="/icons/fingerprint.svg" width={28} height={28} alt="" />
         </Button>
       </Box>
       <Box display="flex" flexDirection="column" gap={8} alignItems="center">
         <LinkButton
-          onClick={() => switchTab('reset-password')}
-          label={t('signIn.forgotPassword')}
+          onClick={() => switchTab("reset-password")}
+          label={t("signIn.forgotPassword")}
         />
         <LinkButton
-          onClick={() => switchTab('sign-up')}
-          label={t('signIn.noAccount')}
+          onClick={() => switchTab("sign-up")}
+          label={t("signIn.noAccount")}
         />
       </Box>
     </form>
@@ -248,12 +255,12 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
 // ── Sign-up tab ───────────────────────────────────────────────────────────────
 
 function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
-  const t = useTranslations('AuthPage');
-  const [email, setEmail] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [password, setPassword] = useState('');
-  const [password2, setPassword2] = useState('');
+  const t = useTranslations("AuthPage");
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -264,7 +271,7 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     setSuccess(null);
 
     if (password !== password2) {
-      setError(t('signUp.errorPasswordMismatch'));
+      setError(t("signUp.errorPasswordMismatch"));
       return;
     }
 
@@ -277,21 +284,21 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         first_name: firstName || undefined,
         last_name: lastName || undefined,
       });
-      setSuccess(t('signUp.successDetail'));
+      setSuccess(t("signUp.successDetail"));
     } catch (err) {
       if (err instanceof ApiError) {
         const emailErr = (err.data as Record<string, string[]>)?.email;
         if (emailErr) {
           setError(
             Array.isArray(emailErr)
-              ? (emailErr[0] ?? t('signUp.errorGeneric'))
+              ? (emailErr[0] ?? t("signUp.errorGeneric"))
               : String(emailErr),
           );
         } else {
-          setError(t('signUp.errorGeneric'));
+          setError(t("signUp.errorGeneric"));
         }
       } else {
-        setError(t('signUp.errorGeneric'));
+        setError(t("signUp.errorGeneric"));
       }
     } finally {
       setLoading(false);
@@ -305,12 +312,12 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         flexDirection="column"
         gap={16}
         alignItems="center"
-        styles={{ textAlign: 'center' }}
+        styles={{ textAlign: "center" }}
       >
         <Typography variant="body-sm">{success}</Typography>
         <LinkButton
-          onClick={() => switchTab('sign-in')}
-          label={t('signUp.haveAccount')}
+          onClick={() => switchTab("sign-in")}
+          label={t("signUp.haveAccount")}
         />
       </Box>
     );
@@ -320,14 +327,14 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     <form onSubmit={handleSubmit} className="auth-form__form">
       <Box display="flex" gap={12}>
         <TextInput
-          label={t('signUp.firstNameLabel')}
+          label={t("signUp.firstNameLabel")}
           type="text"
           value={firstName}
           onChange={setFirstName}
           autoComplete="given-name"
         />
         <TextInput
-          label={t('signUp.lastNameLabel')}
+          label={t("signUp.lastNameLabel")}
           type="text"
           value={lastName}
           onChange={setLastName}
@@ -335,7 +342,7 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         />
       </Box>
       <TextInput
-        label={t('signUp.emailLabel')}
+        label={t("signUp.emailLabel")}
         type="email"
         value={email}
         onChange={setEmail}
@@ -343,7 +350,7 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         autoComplete="email"
       />
       <TextInput
-        label={t('signUp.passwordLabel')}
+        label={t("signUp.passwordLabel")}
         type="password"
         value={password}
         onChange={setPassword}
@@ -351,7 +358,7 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         autoComplete="new-password"
       />
       <TextInput
-        label={t('signUp.confirmPasswordLabel')}
+        label={t("signUp.confirmPasswordLabel")}
         type="password"
         value={password2}
         onChange={setPassword2}
@@ -359,28 +366,28 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         autoComplete="new-password"
       />
       {error && <ErrorMessage message={error} />}
-      {loading && <ProgressBar label={t('signUp.submitting')} />}
+      {loading && <ProgressBar label={t("signUp.submitting")} />}
       <Button
-        text={loading ? t('signUp.submitting') : t('signUp.submitButton')}
+        text={loading ? t("signUp.submitting") : t("signUp.submitButton")}
         type="submit"
         size="md"
         width="100%"
         marginTop={4}
         kind={
           email && password && password2 && password === password2
-            ? 'success'
+            ? "success"
             : undefined
         }
         disabled={!email || !password || !password2 || password !== password2}
       />
       <Box display="flex" flexDirection="column" gap={8} alignItems="center">
         <LinkButton
-          onClick={() => switchTab('sign-in')}
-          label={t('signUp.haveAccount')}
+          onClick={() => switchTab("sign-in")}
+          label={t("signUp.haveAccount")}
         />
         <LinkButton
-          onClick={() => switchTab('reset-password')}
-          label={t('signUp.forgotPassword')}
+          onClick={() => switchTab("reset-password")}
+          label={t("signUp.forgotPassword")}
         />
       </Box>
     </form>
@@ -390,8 +397,8 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
 // ── Reset-password tab ────────────────────────────────────────────────────────
 
 function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
-  const t = useTranslations('AuthPage');
-  const [email, setEmail] = useState('');
+  const t = useTranslations("AuthPage");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -403,9 +410,9 @@ function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
     setLoading(true);
     try {
       await requestPasswordReset(email);
-      setSuccess(t('resetPassword.successDetail'));
+      setSuccess(t("resetPassword.successDetail"));
     } catch {
-      setError(t('resetPassword.errorGeneric'));
+      setError(t("resetPassword.errorGeneric"));
     } finally {
       setLoading(false);
     }
@@ -417,14 +424,14 @@ function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         <Box display="flex" flexDirection="column" gap={16}>
           <Typography variant="body-sm">{success}</Typography>
           <LinkButton
-            onClick={() => switchTab('sign-in')}
-            label={t('resetPassword.backToSignIn')}
+            onClick={() => switchTab("sign-in")}
+            label={t("resetPassword.backToSignIn")}
           />
         </Box>
       ) : (
         <form onSubmit={handleSubmit} className="auth-form__form">
           <TextInput
-            label={t('resetPassword.emailLabel')}
+            label={t("resetPassword.emailLabel")}
             type="email"
             value={email}
             onChange={setEmail}
@@ -432,24 +439,24 @@ function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
             autoComplete="email"
           />
           {error && <ErrorMessage message={error} />}
-          {loading && <ProgressBar label={t('resetPassword.submitting')} />}
+          {loading && <ProgressBar label={t("resetPassword.submitting")} />}
           <Button
             text={
               loading
-                ? t('resetPassword.submitting')
-                : t('resetPassword.submitButton')
+                ? t("resetPassword.submitting")
+                : t("resetPassword.submitButton")
             }
             type="submit"
             size="md"
             width="100%"
             marginTop={4}
-            kind={email ? 'success' : undefined}
+            kind={email ? "success" : undefined}
             disabled={!email}
           />
           <Box display="flex" justifyContent="center">
             <LinkButton
-              onClick={() => switchTab('sign-in')}
-              label={t('resetPassword.backToSignIn')}
+              onClick={() => switchTab("sign-in")}
+              label={t("resetPassword.backToSignIn")}
             />
           </Box>
         </form>
@@ -461,30 +468,30 @@ function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function AuthForm() {
-  const t = useTranslations('AuthPage');
-  const [tab, setTab] = useState<Tab>('sign-in');
+  const t = useTranslations("AuthPage");
+  const [tab, setTab] = useState<Tab>("sign-in");
 
   const tabHeadings: Record<Tab, { title: string; subtitle: string }> = {
-    'sign-in': { title: t('signIn.title'), subtitle: t('signIn.subtitle') },
-    'sign-up': { title: t('signUp.title'), subtitle: t('signUp.subtitle') },
-    'reset-password': {
-      title: t('resetPassword.title'),
-      subtitle: t('resetPassword.subtitle'),
+    "sign-in": { title: t("signIn.title"), subtitle: t("signIn.subtitle") },
+    "sign-up": { title: t("signUp.title"), subtitle: t("signUp.subtitle") },
+    "reset-password": {
+      title: t("resetPassword.title"),
+      subtitle: t("resetPassword.subtitle"),
     },
   };
 
   useEffect(() => {
     const readHash = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash === 'sign-up' || hash === 'reset-password') {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "sign-up" || hash === "reset-password") {
         setTab(hash);
       } else {
-        setTab('sign-in');
+        setTab("sign-in");
       }
     };
     readHash();
-    window.addEventListener('hashchange', readHash);
-    return () => window.removeEventListener('hashchange', readHash);
+    window.addEventListener("hashchange", readHash);
+    return () => window.removeEventListener("hashchange", readHash);
   }, []);
 
   const switchTab = (newTab: Tab) => {
@@ -493,9 +500,9 @@ export function AuthForm() {
   };
 
   const tabLabels: Record<Tab, string> = {
-    'sign-in': t('tabSignIn'),
-    'sign-up': t('tabSignUp'),
-    'reset-password': t('tabReset'),
+    "sign-in": t("tabSignIn"),
+    "sign-up": t("tabSignUp"),
+    "reset-password": t("tabReset"),
   };
 
   const { title, subtitle } = tabHeadings[tab];
@@ -505,9 +512,9 @@ export function AuthForm() {
       display="flex"
       alignItems="center"
       styles={{
-        minHeight: '100vh',
-        flexDirection: 'column',
-        justifyContent: 'flex-start',
+        minHeight: "100vh",
+        flexDirection: "column",
+        justifyContent: "flex-start",
       }}
       paddingTop={16}
       paddingX={10}
@@ -531,7 +538,7 @@ export function AuthForm() {
         backgroundColor="var(--surface-1)"
       >
         <Box className="auth-form__tabs">
-          {(['sign-in', 'sign-up', 'reset-password'] as Tab[]).map((id) => (
+          {(["sign-in", "sign-up", "reset-password"] as Tab[]).map((id) => (
             <Button
               key={id}
               unstyled
@@ -545,9 +552,9 @@ export function AuthForm() {
           ))}
         </Box>
 
-        {tab === 'sign-in' && <SignInTab switchTab={switchTab} />}
-        {tab === 'sign-up' && <SignUpTab switchTab={switchTab} />}
-        {tab === 'reset-password' && <ResetPasswordTab switchTab={switchTab} />}
+        {tab === "sign-in" && <SignInTab switchTab={switchTab} />}
+        {tab === "sign-up" && <SignUpTab switchTab={switchTab} />}
+        {tab === "reset-password" && <ResetPasswordTab switchTab={switchTab} />}
       </Box>
     </Container>
   );

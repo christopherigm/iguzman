@@ -42,11 +42,11 @@ const getDatesDifference = (
   }
 
   const parts: string[] = [];
-  if (years > 0) parts.push(`${years} ${years === 1 ? 'yr' : 'yrs'}`);
-  if (months > 0) parts.push(`${months} ${months === 1 ? 'mo' : 'mos'}`);
+  if (years > 0) parts.push(`${years} ${years === 1 ? "yr" : "yrs"}`);
+  if (months > 0) parts.push(`${months} ${months === 1 ? "mo" : "mos"}`);
 
   return {
-    text: parts.join(', ') || '0 mos',
+    text: parts.join(", ") || "0 mos",
     years,
     months,
   };

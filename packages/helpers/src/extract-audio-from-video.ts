@@ -1,5 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
@@ -10,15 +10,14 @@ const MAX_BUFFER = 1024 * 2048;
  * Resolves the current Node environment, defaulting to `"localhost"`
  * when `NODE_ENV` is not set.
  */
-const getNodeEnv = (): string =>
-  process.env.NODE_ENV?.trim() ?? 'localhost';
+const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? "localhost";
 
 /**
  * Removes a leading `media/` prefix from a file path so it can be
  * joined with the output folder without duplicating the segment.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -27,7 +26,7 @@ const stripMediaPrefix = (filePath: string): string =>
 /** Audio extraction settings used by ffmpeg. */
 const AUDIO_CONFIG = {
   /** Audio codec for uncompressed 16-bit PCM. */
-  codec: 'pcm_s16le',
+  codec: "pcm_s16le",
   /** Sample rate in Hz. */
   sampleRate: 44100,
   /** Number of audio channels (2 = stereo). */
@@ -67,16 +66,14 @@ export interface ExtractAudioFromVideoOptions {
 export const extractAudioFromVideo = async ({
   src,
   dest,
-  outputFolder = getNodeEnv() === 'production'
-    ? '/app/media'
-    : 'public/media',
+  outputFolder = getNodeEnv() === "production" ? "/app/media" : "public/media",
 }: ExtractAudioFromVideoOptions): Promise<string> => {
-  if (!src || typeof src !== 'string') {
-    throw new Error('Source file path must be a non-empty string');
+  if (!src || typeof src !== "string") {
+    throw new Error("Source file path must be a non-empty string");
   }
 
-  if (!dest || typeof dest !== 'string') {
-    throw new Error('Destination file path must be a non-empty string');
+  if (!dest || typeof dest !== "string") {
+    throw new Error("Destination file path must be a non-empty string");
   }
 
   const cleanSrc = stripMediaPrefix(src);
@@ -91,7 +88,7 @@ export const extractAudioFromVideo = async ({
     `ffmpeg -y -i "${srcFile}"`,
     `-vn -acodec ${codec} -ar ${sampleRate} -ac ${channels}`,
     `"${destFile}"`,
-  ].join(' ');
+  ].join(" ");
 
   try {
     await execAsync(command, { maxBuffer: MAX_BUFFER });

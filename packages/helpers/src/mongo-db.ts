@@ -1,7 +1,7 @@
-import { Db, MongoClient } from 'mongodb';
+import { Db, MongoClient } from "mongodb";
 
 /** Default MongoDB connection URI used when `MONGO_URI` is not set. */
-const DEFAULT_MONGO_URI = 'mongodb://127.0.0.1:27017/';
+const DEFAULT_MONGO_URI = "mongodb://127.0.0.1:27017/";
 
 /** Cached client instance, reused across calls to avoid creating multiple connections. */
 let client: MongoClient | null = null;

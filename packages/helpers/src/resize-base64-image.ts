@@ -1,4 +1,4 @@
-import base64ToImage from '@repo/helpers/base64-to-image';
+import base64ToImage from "@repo/helpers/base64-to-image";
 
 /** Valid rotation angles (in degrees, clockwise). */
 type RotationDegrees = 0 | 90 | 180 | 270;
@@ -49,11 +49,11 @@ const resizeBase64Image = async (
   const scaledWidth = Math.round(img.width * ratio);
   const scaledHeight = Math.round(img.height * ratio);
 
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
 
   if (!ctx) {
-    throw new Error('Failed to get 2D canvas context');
+    throw new Error("Failed to get 2D canvas context");
   }
 
   /** Swap canvas dimensions when rotating 90 or 270 degrees. */

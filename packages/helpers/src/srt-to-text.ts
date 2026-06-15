@@ -16,11 +16,11 @@ const srtToText = (srt: string): string => {
   /** Returns `true` for non-text lines: metadata, timestamps, and sequence numbers. */
   const isMetadataLine = (line: string): boolean =>
     /^\d+$/.test(line) ||
-    line.includes('-->') ||
-    line.includes('WEBVTT') ||
-    line.startsWith('Kind:') ||
-    line.startsWith('Language:') ||
-    line.includes('</c>');
+    line.includes("-->") ||
+    line.includes("WEBVTT") ||
+    line.startsWith("Kind:") ||
+    line.startsWith("Language:") ||
+    line.includes("</c>");
 
   const textLines = lines.filter((line) => !isMetadataLine(line));
 
@@ -29,7 +29,7 @@ const srtToText = (srt: string): string => {
     (line, index) => index === 0 || line !== textLines[index - 1],
   );
 
-  return deduped.join('\n');
+  return deduped.join("\n");
 };
 
 export default srtToText;

@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import Link from 'next/link';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination } from 'swiper/modules';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import type { SuccessStory } from '@/lib/success-stories';
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
+import Image from "next/image";
+import Link from "next/link";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Pagination } from "swiper/modules";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import type { SuccessStory } from "@/lib/success-stories";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 function StoryCard({
   story,
@@ -21,19 +21,19 @@ function StoryCard({
   readMore: string;
 }) {
   const name =
-    (locale === 'en' ? story.en_name : story.name) ??
+    (locale === "en" ? story.en_name : story.name) ??
     story.name ??
     story.en_name ??
-    '';
+    "";
   const description =
-    (locale === 'en' ? story.en_short_description : story.short_description) ??
+    (locale === "en" ? story.en_short_description : story.short_description) ??
     story.short_description ??
     story.en_short_description ??
-    '';
+    "";
   const date = new Date(story.created).toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
   const hasImage = Boolean(story.image);
 
@@ -43,18 +43,23 @@ function StoryCard({
       borderRadius={12}
       padding={10}
       styles={{
-        position: 'relative',
-        height: '100%',
-        overflow: 'hidden',
-        backgroundColor: story.background_color ?? '#111827',
+        position: "relative",
+        height: "100%",
+        overflow: "hidden",
+        backgroundColor: story.background_color ?? "#111827",
       }}
     >
       {hasImage && (
-        <Image fill className="story-card__image" src={story.image!} alt={name} />
+        <Image
+          fill
+          className="story-card__image"
+          src={story.image!}
+          alt={name}
+        />
       )}
 
       <Box
-        className={`story-card__overlay${hasImage ? '' : ' story-card__overlay--no-image'}`}
+        className={`story-card__overlay${hasImage ? "" : " story-card__overlay--no-image"}`}
       />
 
       <Box className="story-card__date">{date}</Box>
@@ -83,7 +88,13 @@ function StoryCard({
 
         {(story.slug || story.href) && (
           <Box className="story-card__cta">
-            <Typography as="span" variant="none" className="story-card__cta-btn">{readMore} →</Typography>
+            <Typography
+              as="span"
+              variant="none"
+              className="story-card__cta-btn"
+            >
+              {readMore} →
+            </Typography>
           </Box>
         )}
       </Box>
@@ -92,7 +103,11 @@ function StoryCard({
 
   if (story.slug) {
     return (
-      <Link href={`/blog/${story.slug}`} prefetch className="story-card zoom-on-hover">
+      <Link
+        href={`/blog/${story.slug}`}
+        prefetch
+        className="story-card zoom-on-hover"
+      >
         {boxContent}
       </Link>
     );
@@ -130,8 +145,8 @@ export function StoriesSlider({
       slidesPerView={1}
       spaceBetween={16}
       breakpoints={{
-        600: { slidesPerView: 2 },   // sm
-        1200: { slidesPerView: 3 },  // lg
+        600: { slidesPerView: 2 }, // sm
+        1200: { slidesPerView: 3 }, // lg
       }}
       navigation
       pagination={{ clickable: true }}

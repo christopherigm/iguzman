@@ -17,7 +17,8 @@ const base64ToImage = (src: string): Promise<HTMLImageElement> => {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`Failed to load image: ${src.slice(0, 50)}...`));
+    image.onerror = () =>
+      reject(new Error(`Failed to load image: ${src.slice(0, 50)}...`));
     image.src = src;
   });
 };

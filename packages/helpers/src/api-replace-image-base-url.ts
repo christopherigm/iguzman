@@ -1,4 +1,4 @@
-const NODE_ENV = process.env.NODE_ENV ?? 'development';
+const NODE_ENV = process.env.NODE_ENV ?? "development";
 
 /**
  * Returns the public-facing API base URL.
@@ -7,10 +7,10 @@ const NODE_ENV = process.env.NODE_ENV ?? 'development';
  * In production the value is read from `process.env.URL_BASE`.
  */
 const getBaseUrl = (): string => {
-  if (NODE_ENV !== 'production') {
-    return 'http://127.0.0.1:8000';
+  if (NODE_ENV !== "production") {
+    return "http://127.0.0.1:8000";
   }
-  return process.env.URL_BASE ?? '';
+  return process.env.URL_BASE ?? "";
 };
 
 /**
@@ -21,10 +21,10 @@ const getBaseUrl = (): string => {
  * back to `process.env.URL_BASE` when the K8s-specific variable is not set.
  */
 const getK8sBaseUrl = (): string => {
-  if (NODE_ENV !== 'production') {
-    return 'http://127.0.0.1:8000';
+  if (NODE_ENV !== "production") {
+    return "http://127.0.0.1:8000";
   }
-  return process.env.K8S_URL_BASE ?? process.env.URL_BASE ?? '';
+  return process.env.K8S_URL_BASE ?? process.env.URL_BASE ?? "";
 };
 
 /**
@@ -38,9 +38,9 @@ const getK8sBaseUrl = (): string => {
  * @returns The string with all internal URLs replaced by the public URL,
  *          or an empty string if `img` is falsy.
  */
-export const apiReplaceImageBaseUrl = (img: string = ''): string => {
+export const apiReplaceImageBaseUrl = (img: string = ""): string => {
   if (!img) {
-    return '';
+    return "";
   }
   const publicBaseUrl = getBaseUrl();
   const k8sBaseUrl = getK8sBaseUrl();

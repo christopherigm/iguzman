@@ -1,7 +1,7 @@
-'use server';
+"use server";
 
-import { cookies } from 'next/headers';
-import { AccessStorageKeys } from '@repo/helpers/constants';
+import { cookies } from "next/headers";
+import { AccessStorageKeys } from "@repo/helpers/constants";
 
 /**
  * Retrieves the access cookie value from the cookie store.
@@ -29,13 +29,13 @@ export const getAccessCookie = async (): Promise<string | null> => {
     }
 
     // Remove surrounding quotes if present
-    const cleanedCookie = accessCookie.replaceAll('"', '');
+    const cleanedCookie = accessCookie.replaceAll('"', "");
 
     // Return cleaned cookie value
     return cleanedCookie || null;
   } catch (error) {
     // Log error but return null to maintain consistent API
-    console.error('Error retrieving access cookie:', error);
+    console.error("Error retrieving access cookie:", error);
     return null;
   }
 };

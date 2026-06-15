@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, CSSProperties } from 'react';
-import { UIComponentProps, buildStyleProps } from './utils';
+import { useState, CSSProperties } from "react";
+import { UIComponentProps, buildStyleProps } from "./utils";
 
 interface SwitchProps extends UIComponentProps {
   checked?: boolean;
@@ -10,7 +10,7 @@ interface SwitchProps extends UIComponentProps {
   disabled?: boolean;
   className?: string;
   id?: string;
-  'aria-label'?: string;
+  "aria-label"?: string;
 }
 
 export const Switch = ({
@@ -36,7 +36,7 @@ export const Switch = ({
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key === ' ' || e.key === 'Enter') {
+    if (e.key === " " || e.key === "Enter") {
       e.preventDefault();
       toggle();
     }
@@ -44,23 +44,23 @@ export const Switch = ({
 
   const sharedProps = {
     id,
-    type: 'button' as const,
-    'aria-label': props['aria-label'] ?? 'Toggle',
+    type: "button" as const,
+    "aria-label": props["aria-label"] ?? "Toggle",
     onClick: toggle,
     onKeyDown: handleKey,
     className,
     style: {
-      display: 'inline-flex' as const,
-      alignItems: 'center' as const,
+      display: "inline-flex" as const,
+      alignItems: "center" as const,
       width: 42,
       height: 26,
       padding: 3,
       borderRadius: 9999,
       background: value
-        ? 'var(--accent, #06b6d4)'
-        : 'var(--surface-2, #e5e7eb)',
-      border: 'none',
-      cursor: disabled ? 'not-allowed' : 'pointer',
+        ? "var(--accent, #06b6d4)"
+        : "var(--surface-2, #e5e7eb)",
+      border: "none",
+      cursor: disabled ? "not-allowed" : "pointer",
       opacity: disabled ? 0.5 : 1,
       flexShrink: 0,
       ...safeStyle,
@@ -71,23 +71,33 @@ export const Switch = ({
     <span
       aria-hidden
       style={{
-        display: 'block',
+        display: "block",
         width: 20,
         height: 20,
-        borderRadius: '50%',
-        background: 'var(--accent-foreground, white)',
-        transform: value ? 'translateX(16px)' : 'translateX(0)',
-        transition: 'transform 150ms ease-in-out',
+        borderRadius: "50%",
+        background: "var(--accent-foreground, white)",
+        transform: value ? "translateX(16px)" : "translateX(0)",
+        transition: "transform 150ms ease-in-out",
       }}
     />
   );
 
   return value ? (
-    <button role="switch" {...sharedProps} aria-checked="true" disabled={disabled}>
+    <button
+      role="switch"
+      {...sharedProps}
+      aria-checked="true"
+      disabled={disabled}
+    >
       {thumb}
     </button>
   ) : (
-    <button role="switch" {...sharedProps} aria-checked="false" disabled={disabled}>
+    <button
+      role="switch"
+      {...sharedProps}
+      aria-checked="false"
+      disabled={disabled}
+    >
       {thumb}
     </button>
   );

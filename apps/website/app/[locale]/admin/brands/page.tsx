@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { AdminEntityList } from '@/components/admin/admin-entity-list';
-import { Breadcrumbs } from '@repo/ui/core-elements/breadcrumbs';
-import { listBrands, deleteBrand } from '@/lib/admin-api';
-import { getUserFromToken } from '@/lib/auth';
+import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import { AdminEntityList } from "@/components/admin/admin-entity-list";
+import { Breadcrumbs } from "@repo/ui/core-elements/breadcrumbs";
+import { listBrands, deleteBrand } from "@/lib/admin-api";
+import { getUserFromToken } from "@/lib/auth";
 
 export default function AdminBrandsPage() {
-  const t = useTranslations('Admin');
+  const t = useTranslations("Admin");
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function AdminBrandsPage() {
     try {
       setItems(await listBrands(systemId));
     } catch {
-      setError(t('errorLoad'));
+      setError(t("errorLoad"));
     } finally {
       setLoading(false);
     }
@@ -35,28 +35,28 @@ export default function AdminBrandsPage() {
       await deleteBrand(id);
       setItems((prev) => prev.filter((i) => i.id !== id));
     } catch {
-      setError(t('errorDelete'));
+      setError(t("errorDelete"));
     }
   };
 
   const columns = [
-    { key: 'logo', label: 'Logo' },
-    { key: 'name', label: t('name') },
-    { key: 'slug', label: 'Slug' },
-    { key: 'enabled', label: t('enabled') },
+    { key: "logo", label: "Logo" },
+    { key: "name", label: t("name") },
+    { key: "slug", label: "Slug" },
+    { key: "enabled", label: t("enabled") },
   ];
 
   return (
     <>
       <Breadcrumbs
         items={[
-          { label: t('home'), href: '/' },
-          { label: t('breadcrumbAdmin'), href: '/admin' },
-          { label: t('brands') },
+          { label: t("home"), href: "/" },
+          { label: t("breadcrumbAdmin"), href: "/admin" },
+          { label: t("brands") },
         ]}
       />
       <AdminEntityList
-        title={t('brands')}
+        title={t("brands")}
         items={items}
         columns={columns}
         basePath="/admin/brands"

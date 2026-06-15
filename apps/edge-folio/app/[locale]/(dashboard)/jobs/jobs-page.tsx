@@ -190,7 +190,9 @@ function JobSection({
                 onDelete={onDelete}
                 saving={savingId === posting.id}
                 deleting={deletingId === posting.id}
-                savedAppId={savedMap[posting.id] ?? posting.saved_application_id}
+                savedAppId={
+                  savedMap[posting.id] ?? posting.saved_application_id
+                }
                 isStaff={isStaff}
               />
             ))}
@@ -283,8 +285,7 @@ export function JobsPage() {
       }
       // A filter change (anything other than a page move) resets both lists'
       // pagination so each starts from page 1 against the new filters.
-      const isPageMove =
-        "page_private" in updates || "page_shared" in updates;
+      const isPageMove = "page_private" in updates || "page_shared" in updates;
       if (!isPageMove) {
         params.delete("page_private");
         params.delete("page_shared");

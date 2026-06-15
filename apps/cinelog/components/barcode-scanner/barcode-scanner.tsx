@@ -1,18 +1,21 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { useBarcodeScanner, type ScanStatus } from '@/hooks/use-barcode-scanner';
-import './barcode-scanner.css';
+import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import {
+  useBarcodeScanner,
+  type ScanStatus,
+} from "@/hooks/use-barcode-scanner";
+import "./barcode-scanner.css";
 
-const CONTAINER_ID = 'barcode-scanner-view';
+const CONTAINER_ID = "barcode-scanner-view";
 
 export function BarcodeScanner() {
-  const t = useTranslations('ScannerPage');
+  const t = useTranslations("ScannerPage");
   const { lastScan, flash, scanCount, onScan } = useBarcodeScanner();
-  const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
+  const [scanStatus, setScanStatus] = useState<ScanStatus>("idle");
   const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
 
   useEffect(() => {
@@ -26,9 +29,9 @@ export function BarcodeScanner() {
       }
       // Clear any injected DOM so html5-qrcode starts with a clean container
       const container = document.getElementById(CONTAINER_ID);
-      if (container) container.innerHTML = '';
+      if (container) container.innerHTML = "";
 
-      const { Html5Qrcode } = await import('html5-qrcode');
+      const { Html5Qrcode } = await import("html5-qrcode");
       if (!active) return;
 
       const scanner = new Html5Qrcode(CONTAINER_ID);
@@ -36,21 +39,21 @@ export function BarcodeScanner() {
 
       try {
         await scanner.start(
-          { facingMode: 'environment' },
+          { facingMode: "environment" },
           { fps: 10 },
           onScan,
-          () => {}
+          () => {},
         );
-        if (active) setScanStatus('scanning');
+        if (active) setScanStatus("scanning");
       } catch (err) {
         if (active) {
           const msg = String(err).toLowerCase();
           if (
-            msg.includes('permission') ||
-            msg.includes('denied') ||
-            msg.includes('notallowederror')
+            msg.includes("permission") ||
+            msg.includes("denied") ||
+            msg.includes("notallowederror")
           ) {
-            setScanStatus('permission_denied');
+            setScanStatus("permission_denied");
           }
         }
       }
@@ -67,21 +70,31 @@ export function BarcodeScanner() {
   }, [onScan]);
 
   const statusLabel = lastScan
-    ? lastScan.status === 'saved'
-      ? t('statusSaved')
-      : lastScan.status === 'queued'
-        ? t('statusQueued')
-        : lastScan.status === 'exists'
-          ? t('statusExists')
-          : lastScan.status === 'pending'
-            ? t('statusPending')
-            : t('statusError')
+    ? lastScan.status === "saved"
+      ? t("statusSaved")
+      : lastScan.status === "queued"
+        ? t("statusQueued")
+        : lastScan.status === "exists"
+          ? t("statusExists")
+          : lastScan.status === "pending"
+            ? t("statusPending")
+            : t("statusError")
     : null;
 
   return (
-    <Box flexDirection="column" alignItems="center" width="100%" gap={16} paddingY={16}>
-      <Typography variant="caption" color="var(--foreground)" styles={{ opacity: 0.6 }}>
-        {t('subtitle')}
+    <Box
+      flexDirection="column"
+      alignItems="center"
+      width="100%"
+      gap={16}
+      paddingY={16}
+    >
+      <Typography
+        variant="caption"
+        color="var(--foreground)"
+        styles={{ opacity: 0.6 }}
+      >
+        {t("subtitle")}
       </Typography>
 
       {/* Camera viewfinder */}
@@ -90,48 +103,48 @@ export function BarcodeScanner() {
         width="100%"
         borderRadius={12}
         styles={{
-          position: 'relative',
-          overflow: 'hidden',
-          aspectRatio: '4 / 3',
-          maxWidth: '480px',
-          background: '#000',
-          boxShadow: flash ? '0 0 0 3px var(--accent)' : 'none',
+          position: "relative",
+          overflow: "hidden",
+          aspectRatio: "4 / 3",
+          maxWidth: "480px",
+          background: "#000",
+          boxShadow: flash ? "0 0 0 3px var(--accent)" : "none",
         }}
       >
         {/* html5-qrcode render target */}
         <Box
           id={CONTAINER_ID}
           className="scanner-video-container"
-          styles={{ position: 'absolute', inset: 0 }}
+          styles={{ position: "absolute", inset: 0 }}
         />
 
         {/* Scanning frame overlay */}
         <Box
           aria-hidden={true}
           styles={{
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            pointerEvents: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <Box styles={{ position: 'relative', width: '72%', height: '32%' }}>
+          <Box styles={{ position: "relative", width: "72%", height: "32%" }}>
             <span className="scanner-corner scanner-corner--tl" />
             <span className="scanner-corner scanner-corner--tr" />
             <span className="scanner-corner scanner-corner--bl" />
             <span className="scanner-corner scanner-corner--br" />
-            {scanStatus === 'scanning' && <span className="scanner-line" />}
+            {scanStatus === "scanning" && <span className="scanner-line" />}
           </Box>
         </Box>
       </Box>
 
       {/* Permission denied */}
-      {scanStatus === 'permission_denied' && (
+      {scanStatus === "permission_denied" && (
         <Box flexDirection="column" alignItems="center" gap={8} paddingX={16}>
           <Typography variant="body-sm" textAlign="center">
-            {t('permissionDenied')}
+            {t("permissionDenied")}
           </Typography>
           <Typography
             variant="caption"
@@ -139,15 +152,19 @@ export function BarcodeScanner() {
             color="var(--foreground)"
             styles={{ opacity: 0.55 }}
           >
-            {t('permissionHelp')}
+            {t("permissionHelp")}
           </Typography>
         </Box>
       )}
 
       {/* Scan count */}
-      {scanStatus === 'scanning' && scanCount > 0 && (
-        <Typography variant="caption" color="var(--foreground)" styles={{ opacity: 0.45 }}>
-          {t('scanCount', { count: scanCount })}
+      {scanStatus === "scanning" && scanCount > 0 && (
+        <Typography
+          variant="caption"
+          color="var(--foreground)"
+          styles={{ opacity: 0.45 }}
+        >
+          {t("scanCount", { count: scanCount })}
         </Typography>
       )}
 
@@ -158,7 +175,7 @@ export function BarcodeScanner() {
           flexDirection="column"
           alignItems="center"
           width="100%"
-          styles={{ maxWidth: '480px' }}
+          styles={{ maxWidth: "480px" }}
           borderRadius={8}
           paddingX={16}
           paddingY={12}
@@ -176,7 +193,7 @@ export function BarcodeScanner() {
             variant="caption"
             textAlign="center"
             color="var(--foreground)"
-            styles={{ opacity: 0.45, fontFamily: 'monospace' }}
+            styles={{ opacity: 0.45, fontFamily: "monospace" }}
           >
             {lastScan.barcode}
           </Typography>

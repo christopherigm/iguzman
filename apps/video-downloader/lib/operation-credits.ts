@@ -1,6 +1,6 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import type { OperationCredits } from './types';
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import type { OperationCredits } from "./types";
 
 export type { OperationCredits };
 
@@ -66,20 +66,20 @@ export async function getVideoMetaFromFile(
   filePath: string,
 ): Promise<VideoMeta> {
   try {
-    const { stdout } = await execFileAsync('ffprobe', [
-      '-v',
-      'quiet',
-      '-print_format',
-      'json',
-      '-show_streams',
-      '-show_format',
+    const { stdout } = await execFileAsync("ffprobe", [
+      "-v",
+      "quiet",
+      "-print_format",
+      "json",
+      "-show_streams",
+      "-show_format",
       filePath,
     ]);
     const data = JSON.parse(stdout) as {
       streams?: { codec_type: string; width?: number; height?: number }[];
       format?: { duration?: string };
     };
-    const vs = data.streams?.find((s) => s.codec_type === 'video');
+    const vs = data.streams?.find((s) => s.codec_type === "video");
     return {
       width: vs?.width ?? null,
       height: vs?.height ?? null,

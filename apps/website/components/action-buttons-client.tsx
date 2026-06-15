@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { Box } from '@repo/ui/core-elements/box';
-import { Button } from '@repo/ui/core-elements/button';
-import './action-buttons-client.css';
+import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
+import "./action-buttons-client.css";
 
 interface ActionButtonsClientProps {
   addToCartLabel: string;

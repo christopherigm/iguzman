@@ -1,37 +1,37 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
-import { useTranslations } from 'next-intl';
-import type { Platform } from '@repo/helpers/checkers';
-import type { VideoStatus, StoredVideo } from './use-video-store';
-import './video-toolbar.css';
-import Box from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
+import { useMemo } from "react";
+import { useTranslations } from "next-intl";
+import type { Platform } from "@repo/helpers/checkers";
+import type { VideoStatus, StoredVideo } from "./use-video-store";
+import "./video-toolbar.css";
+import Box from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
 
 /* ── Platform icon map (mirrors video-item.tsx) ──────── */
 
 const PLATFORM_ICONS: Record<string, string> = {
-  facebook: '/icons/facebook.svg',
-  instagram: '/icons/instagram.svg',
-  pinterest: '/icons/pinterest.svg',
-  rednote: '/icons/url.svg',
-  tidal: '/icons/url.svg',
-  tiktok: '/icons/tiktok.svg',
-  x: '/icons/x.svg',
-  youtube: '/icons/youtube.svg',
+  facebook: "/icons/facebook.svg",
+  instagram: "/icons/instagram.svg",
+  pinterest: "/icons/pinterest.svg",
+  rednote: "/icons/url.svg",
+  tidal: "/icons/url.svg",
+  tiktok: "/icons/tiktok.svg",
+  x: "/icons/x.svg",
+  youtube: "/icons/youtube.svg",
 };
 
 const PER_PAGE_OPTIONS = [8, 12, 16, 24, 32] as const;
 
-const STATUS_OPTIONS: (VideoStatus | 'all')[] = [
-  'all',
-  'pending',
-  'downloading',
-  'queued',
-  'processing',
-  'converting',
-  'done',
-  'error',
+const STATUS_OPTIONS: (VideoStatus | "all")[] = [
+  "all",
+  "pending",
+  "downloading",
+  "queued",
+  "processing",
+  "converting",
+  "done",
+  "error",
 ];
 
 /* ── Props ──────────────────────────────────────────── */
@@ -45,8 +45,8 @@ export interface VideoToolbarProps {
   audioOnly: boolean;
   onAudioOnlyChange: (active: boolean) => void;
   /** Status filter. */
-  statusFilter: VideoStatus | 'all';
-  onStatusFilterChange: (status: VideoStatus | 'all') => void;
+  statusFilter: VideoStatus | "all";
+  onStatusFilterChange: (status: VideoStatus | "all") => void;
   /** Items per page. */
   perPage: number;
   onPerPageChange: (n: number) => void;
@@ -74,24 +74,24 @@ export function VideoToolbar({
   filteredCount,
   onPageChange,
 }: VideoToolbarProps) {
-  const t = useTranslations('VideoGrid');
+  const t = useTranslations("VideoGrid");
 
   /* Derive unique platforms present in the video list. */
   const platforms = useMemo(() => {
     const set = new Set<Platform>();
     for (const v of videos) {
-      if (v.platform !== 'unknown') set.add(v.platform);
+      if (v.platform !== "unknown") set.add(v.platform);
     }
     /* Deterministic order matching the union type declaration */
     const order: Platform[] = [
-      'facebook',
-      'instagram',
-      'pinterest',
-      'rednote',
-      'tidal',
-      'tiktok',
-      'x',
-      'youtube',
+      "facebook",
+      "instagram",
+      "pinterest",
+      "rednote",
+      "tidal",
+      "tiktok",
+      "x",
+      "youtube",
     ];
     return order.filter((p) => set.has(p));
   }, [videos]);
@@ -115,14 +115,14 @@ export function VideoToolbar({
             onPlatformChange(null);
             onAudioOnlyChange(false);
           }}
-          title={t('filterAll')}
-          aria-label={t('filterAll')}
+          title={t("filterAll")}
+          aria-label={t("filterAll")}
         >
           <span
             className="vt-icon"
             style={{
-              maskImage: 'url(/icons/filter.svg)',
-              WebkitMaskImage: 'url(/icons/filter.svg)',
+              maskImage: "url(/icons/filter.svg)",
+              WebkitMaskImage: "url(/icons/filter.svg)",
             }}
           />
         </button>
@@ -140,7 +140,7 @@ export function VideoToolbar({
                 onPlatformChange(activePlatform === platform ? null : platform);
               }}
               title={platform}
-              aria-label={`${t('filterPlatform')}: ${platform}`}
+              aria-label={`${t("filterPlatform")}: ${platform}`}
             >
               <span
                 className="vt-icon"
@@ -165,14 +165,14 @@ export function VideoToolbar({
                 if (!audioOnly) onPlatformChange(null);
                 onAudioOnlyChange(!audioOnly);
               }}
-              title={t('filterAudioOnly')}
-              aria-label={t('filterAudioOnly')}
+              title={t("filterAudioOnly")}
+              aria-label={t("filterAudioOnly")}
             >
               <span
                 className="vt-icon"
                 style={{
-                  maskImage: 'url(/icons/music.svg)',
-                  WebkitMaskImage: 'url(/icons/music.svg)',
+                  maskImage: "url(/icons/music.svg)",
+                  WebkitMaskImage: "url(/icons/music.svg)",
                 }}
               />
             </button>
@@ -185,13 +185,13 @@ export function VideoToolbar({
           className="vt-select"
           value={statusFilter}
           onChange={(e) =>
-            onStatusFilterChange(e.target.value as VideoStatus | 'all')
+            onStatusFilterChange(e.target.value as VideoStatus | "all")
           }
-          aria-label={t('filterStatus')}
+          aria-label={t("filterStatus")}
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
-              {s === 'all' ? t('filterStatusAll') : t(`status_${s}`)}
+              {s === "all" ? t("filterStatusAll") : t(`status_${s}`)}
             </option>
           ))}
         </select>
@@ -204,11 +204,11 @@ export function VideoToolbar({
             className="vt-select"
             value={perPage}
             onChange={(e) => onPerPageChange(Number(e.target.value))}
-            aria-label={t('perPage')}
+            aria-label={t("perPage")}
           >
             {PER_PAGE_OPTIONS.map((n) => (
               <option key={n} value={n}>
-                {n} / {t('perPageLabel')}
+                {n} / {t("perPageLabel")}
               </option>
             ))}
           </select>
@@ -226,20 +226,25 @@ export function VideoToolbar({
               className="vt-page-btn vt-page-btn--prev"
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
-              aria-label={t('prevPage')}
+              aria-label={t("prevPage")}
             >
               <span
                 className="vt-icon"
                 style={{
-                  maskImage: 'url(/icons/chevron-down.svg)',
-                  WebkitMaskImage: 'url(/icons/chevron-down.svg)',
+                  maskImage: "url(/icons/chevron-down.svg)",
+                  WebkitMaskImage: "url(/icons/chevron-down.svg)",
                 }}
               />
             </button>
 
             <Typography variant="body-sm" className="vt-page-info">
               {page} / {totalPages}
-              <Typography as="span" variant="none" marginLeft={4} styles={{ opacity: 0.7 }}>
+              <Typography
+                as="span"
+                variant="none"
+                marginLeft={4}
+                styles={{ opacity: 0.7 }}
+              >
                 ({filteredCount})
               </Typography>
             </Typography>
@@ -249,13 +254,13 @@ export function VideoToolbar({
               className="vt-page-btn vt-page-btn--next"
               disabled={page >= totalPages}
               onClick={() => onPageChange(page + 1)}
-              aria-label={t('nextPage')}
+              aria-label={t("nextPage")}
             >
               <span
                 className="vt-icon"
                 style={{
-                  maskImage: 'url(/icons/chevron-down.svg)',
-                  WebkitMaskImage: 'url(/icons/chevron-down.svg)',
+                  maskImage: "url(/icons/chevron-down.svg)",
+                  WebkitMaskImage: "url(/icons/chevron-down.svg)",
                 }}
               />
             </button>

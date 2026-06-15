@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
-import { Button } from '@repo/ui/core-elements/button';
-import './favorite-button-client.css';
+import { useState } from "react";
+import Image from "next/image";
+import { Button } from "@repo/ui/core-elements/button";
+import "./favorite-button-client.css";
 
 interface FavoriteButtonClientProps {
   label: string;
@@ -16,7 +16,7 @@ export function FavoriteButtonClient({ label }: FavoriteButtonClientProps) {
     <Button
       unstyled
       type="button"
-      className={`favorite-btn${active ? ' favorite-btn--active' : ''}`}
+      className={`favorite-btn${active ? " favorite-btn--active" : ""}`}
       onClick={() => setActive((prev) => !prev)}
       aria-label={label}
       aria-pressed={active}

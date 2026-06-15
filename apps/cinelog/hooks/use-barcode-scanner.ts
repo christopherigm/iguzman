@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from "react";
 
-export type ScanStatus = 'idle' | 'scanning' | 'permission_denied';
+export type ScanStatus = "idle" | "scanning" | "permission_denied";
 
 export type ScanFeedback = {
   barcode: string;
-  status: 'pending' | 'saved' | 'queued' | 'exists' | 'error';
+  status: "pending" | "saved" | "queued" | "exists" | "error";
   title?: string;
 };
 
 type ApiScanResponse = {
-  status: 'saved' | 'queued' | 'exists';
+  status: "saved" | "queued" | "exists";
   movie?: { title: string };
 };
 
 function vibrate(pattern: number | number[]) {
-  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     navigator.vibrate(pattern);
   }
 }
@@ -26,7 +26,7 @@ export function useBarcodeScanner() {
   const [flash, setFlash] = useState(false);
   const [scanCount, setScanCount] = useState(0);
 
-  const lastBarcodeRef = useRef('');
+  const lastBarcodeRef = useRef("");
   const cooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,33 +44,35 @@ export function useBarcodeScanner() {
     flashRef.current = setTimeout(() => setFlash(false), 600);
 
     if (cooldownRef.current) clearTimeout(cooldownRef.current);
-    cooldownRef.current = setTimeout(() => { lastBarcodeRef.current = ''; }, 3000);
+    cooldownRef.current = setTimeout(() => {
+      lastBarcodeRef.current = "";
+    }, 3000);
 
     vibrate(50);
-    setLastScan({ barcode, status: 'pending' });
+    setLastScan({ barcode, status: "pending" });
 
     try {
-      const res = await fetch('/api/catalog/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/catalog/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ barcode }),
       });
       if (res.ok) {
         const data = (await res.json()) as ApiScanResponse;
-        if (data.status === 'saved') vibrate(150);
-        else if (data.status === 'exists') vibrate([50, 50, 50]);
+        if (data.status === "saved") vibrate(150);
+        else if (data.status === "exists") vibrate([50, 50, 50]);
         setLastScan({ barcode, status: data.status, title: data.movie?.title });
         // The slow path is already handed off to the worker; the user can keep
         // scanning and review it later in the inbox. Auto-clear so the lingering
         // "queued" card doesn't imply there's something to wait for here.
-        if (data.status === 'queued') {
+        if (data.status === "queued") {
           clearRef.current = setTimeout(() => setLastScan(null), 2500);
         }
       } else {
-        setLastScan({ barcode, status: 'error' });
+        setLastScan({ barcode, status: "error" });
       }
     } catch {
-      setLastScan({ barcode, status: 'error' });
+      setLastScan({ barcode, status: "error" });
     }
   }, []);
 

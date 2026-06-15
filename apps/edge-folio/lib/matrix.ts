@@ -1,7 +1,12 @@
-import type { SkeletonJson } from './skeleton-json';
+import type { SkeletonJson } from "./skeleton-json";
 
-export type Category = 'impact' | 'technical' | 'leadership' | 'collaboration' | 'other';
-export type Source = 'manual' | 'extracted';
+export type Category =
+  | "impact"
+  | "technical"
+  | "leadership"
+  | "collaboration"
+  | "other";
+export type Source = "manual" | "extracted";
 
 export interface Skill {
   id: number;
@@ -35,7 +40,7 @@ export class MatrixError extends Error {
     public readonly status: number,
     public readonly data: Record<string, unknown>,
   ) {
-    super('Matrix API request failed');
+    super("Matrix API request failed");
   }
 }
 
@@ -52,33 +57,39 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 // ── Skills ────────────────────────────────────────────────────────────────────
 
 export function getSkills(): Promise<PaginatedResponse<Skill>> {
-  return request('/api/matrix/skills');
+  return request("/api/matrix/skills");
 }
 
-export function createSkill(payload: { name: string; proficiency: number }): Promise<Skill> {
-  return request('/api/matrix/skills', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+export function createSkill(payload: {
+  name: string;
+  proficiency: number;
+}): Promise<Skill> {
+  return request("/api/matrix/skills", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
-export function updateSkill(id: number, payload: Partial<{ name: string; proficiency: number }>): Promise<Skill> {
+export function updateSkill(
+  id: number,
+  payload: Partial<{ name: string; proficiency: number }>,
+): Promise<Skill> {
   return request(`/api/matrix/skills/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteSkill(id: number): Promise<void> {
-  return request(`/api/matrix/skills/${id}`, { method: 'DELETE' });
+  return request(`/api/matrix/skills/${id}`, { method: "DELETE" });
 }
 
 // ── Bullet points ─────────────────────────────────────────────────────────────
 
 export function getBullets(): Promise<PaginatedResponse<BulletPoint>> {
-  return request('/api/matrix/bullets');
+  return request("/api/matrix/bullets");
 }
 
 export interface CreateBulletPayload {
@@ -90,10 +101,12 @@ export interface CreateBulletPayload {
   skill_ids?: number[];
 }
 
-export function createBullet(payload: CreateBulletPayload): Promise<BulletPoint> {
-  return request('/api/matrix/bullets', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+export function createBullet(
+  payload: CreateBulletPayload,
+): Promise<BulletPoint> {
+  return request("/api/matrix/bullets", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
@@ -107,16 +120,19 @@ export interface UpdateBulletPayload {
   skill_ids?: number[];
 }
 
-export function updateBullet(id: number, payload: UpdateBulletPayload): Promise<BulletPoint> {
+export function updateBullet(
+  id: number,
+  payload: UpdateBulletPayload,
+): Promise<BulletPoint> {
   return request(`/api/matrix/bullets/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteBullet(id: number): Promise<void> {
-  return request(`/api/matrix/bullets/${id}`, { method: 'DELETE' });
+  return request(`/api/matrix/bullets/${id}`, { method: "DELETE" });
 }
 
 // ── Skeleton synthesis ────────────────────────────────────────────────────────
@@ -131,10 +147,12 @@ export interface SynthesisResult {
   drafts: DraftBullet[];
 }
 
-export function synthesizeSkeleton(skeleton: SkeletonJson): Promise<SynthesisResult> {
-  return request('/api/matrix/extract', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+export function synthesizeSkeleton(
+  skeleton: SkeletonJson,
+): Promise<SynthesisResult> {
+  return request("/api/matrix/extract", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(skeleton),
   });
 }

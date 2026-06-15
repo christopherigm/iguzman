@@ -1,7 +1,7 @@
-import { cache } from 'react';
-import { headers } from 'next/headers';
-import { API_URL } from './config';
-import logger from './logger';
+import { cache } from "react";
+import { headers } from "next/headers";
+import { API_URL } from "./config";
+import logger from "./logger";
 
 export interface SuccessStoryImage {
   id: number;
@@ -37,52 +37,57 @@ export interface SuccessStory {
   images: SuccessStoryImage[];
 }
 
-export const getSuccessStory = cache(async (slug: string): Promise<SuccessStory | null> => {
-  const headersList = await headers();
-  const host = headersList.get('host') ?? '';
+export const getSuccessStory = cache(
+  async (slug: string): Promise<SuccessStory | null> => {
+    const headersList = await headers();
+    const host = headersList.get("host") ?? "";
 
-  try {
-    const res = await fetch(`${API_URL}/api/success-stories/slug/${slug}/`, {
-      headers: { 'X-Website-Host': host },
-    });
+    try {
+      const res = await fetch(`${API_URL}/api/success-stories/slug/${slug}/`, {
+        headers: { "X-Website-Host": host },
+      });
 
-    if (res.status === 404) return null;
+      if (res.status === 404) return null;
 
-    if (!res.ok) {
-      logger.warn(
-        { host, slug, status: res.status },
-        'Success story by slug API returned non-OK status',
+      if (!res.ok) {
+        logger.warn(
+          { host, slug, status: res.status },
+          "Success story by slug API returned non-OK status",
+        );
+        return null;
+      }
+
+      return res.json() as Promise<SuccessStory>;
+    } catch (err) {
+      logger.error(
+        { host, slug, err },
+        "Failed to fetch success story by slug",
       );
       return null;
     }
-
-    return res.json() as Promise<SuccessStory>;
-  } catch (err) {
-    logger.error({ host, slug, err }, 'Failed to fetch success story by slug');
-    return null;
-  }
-});
+  },
+);
 
 export const getSuccessStories = cache(async (): Promise<SuccessStory[]> => {
   const headersList = await headers();
-  const host = headersList.get('host') ?? '';
+  const host = headersList.get("host") ?? "";
 
   try {
     const res = await fetch(`${API_URL}/api/success-stories/`, {
-      headers: { 'X-Website-Host': host },
+      headers: { "X-Website-Host": host },
     });
 
     if (!res.ok) {
       logger.warn(
         { host, status: res.status },
-        'Success stories API returned non-OK status',
+        "Success stories API returned non-OK status",
       );
       return [];
     }
 
     return res.json() as Promise<SuccessStory[]>;
   } catch (err) {
-    logger.error({ host, err }, 'Failed to fetch success stories');
+    logger.error({ host, err }, "Failed to fetch success stories");
     return [];
   }
 });

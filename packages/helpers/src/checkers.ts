@@ -4,15 +4,15 @@
 
 /** Platform identifiers returned by {@link detectPlatform}. */
 export type Platform =
-  | 'facebook'
-  | 'instagram'
-  | 'pinterest'
-  | 'rednote'
-  | 'tidal'
-  | 'tiktok'
-  | 'x'
-  | 'youtube'
-  | 'unknown';
+  | "facebook"
+  | "instagram"
+  | "pinterest"
+  | "rednote"
+  | "tidal"
+  | "tiktok"
+  | "x"
+  | "youtube"
+  | "unknown";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
@@ -24,52 +24,40 @@ export type Platform =
  * Hostnames are matched against the URL's `hostname` property, so
  * protocol, path, and query-string differences are ignored.
  */
-const PLATFORM_HOSTNAMES: Record<Exclude<Platform, 'unknown'>, Set<string>> = {
+const PLATFORM_HOSTNAMES: Record<Exclude<Platform, "unknown">, Set<string>> = {
   facebook: new Set([
-    'facebook.com',
-    'www.facebook.com',
-    'fb.com',
-    'www.fb.com',
-    'fb.watch',
+    "facebook.com",
+    "www.facebook.com",
+    "fb.com",
+    "www.fb.com",
+    "fb.watch",
   ]),
   instagram: new Set([
-    'instagram.com',
-    'www.instagram.com',
-    'ig.com',
-    'www.ig.com',
+    "instagram.com",
+    "www.instagram.com",
+    "ig.com",
+    "www.ig.com",
   ]),
-  pinterest: new Set([
-    'pin.it',
-    'www.pinterest.com',
-    'pinterest.com',
-  ]),
+  pinterest: new Set(["pin.it", "www.pinterest.com", "pinterest.com"]),
   rednote: new Set([
-    'xhslink.com',
-    'www.xhslink.com',
-    'xiaohongshu.com',
-    'www.xiaohongshu.com',
+    "xhslink.com",
+    "www.xhslink.com",
+    "xiaohongshu.com",
+    "www.xiaohongshu.com",
   ]),
-  tidal: new Set([
-    'tidal.com',
-    'www.tidal.com',
-  ]),
+  tidal: new Set(["tidal.com", "www.tidal.com"]),
   tiktok: new Set([
-    'tiktok.com',
-    'www.tiktok.com',
-    'vm.tiktok.com',
-    'vt.tiktok.com',
+    "tiktok.com",
+    "www.tiktok.com",
+    "vm.tiktok.com",
+    "vt.tiktok.com",
   ]),
-  x: new Set([
-    'twitter.com',
-    'www.twitter.com',
-    'x.com',
-    'www.x.com',
-  ]),
+  x: new Set(["twitter.com", "www.twitter.com", "x.com", "www.x.com"]),
   youtube: new Set([
-    'youtube.com',
-    'www.youtube.com',
-    'youtu.be',
-    'www.youtu.be',
+    "youtube.com",
+    "www.youtube.com",
+    "youtu.be",
+    "www.youtu.be",
   ]),
 };
 
@@ -96,7 +84,7 @@ const extractHostname = (url: string): string | null => {
  * known hosts.
  */
 const createPlatformChecker =
-  (platform: Exclude<Platform, 'unknown'>) =>
+  (platform: Exclude<Platform, "unknown">) =>
   (url: string): boolean => {
     const hostname = extractHostname(url);
     if (!hostname) return false;
@@ -133,17 +121,17 @@ export const isEmailValid = (email: string): boolean =>
  */
 export const isIOSBrowser = (): boolean => {
   const iosDevices = [
-    'iPad Simulator',
-    'iPhone Simulator',
-    'iPod Simulator',
-    'iPad',
-    'iPhone',
-    'iPod',
+    "iPad Simulator",
+    "iPhone Simulator",
+    "iPod Simulator",
+    "iPad",
+    "iPhone",
+    "iPod",
   ];
 
   return (
     iosDevices.includes(navigator.platform) ||
-    (navigator.userAgent.includes('Mac') && 'ontouchend' in document)
+    (navigator.userAgent.includes("Mac") && "ontouchend" in document)
   );
 };
 
@@ -152,31 +140,31 @@ export const isIOSBrowser = (): boolean => {
 /* ------------------------------------------------------------------ */
 
 /** Returns `true` when the URL points to Facebook. */
-export const isFacebook = createPlatformChecker('facebook');
+export const isFacebook = createPlatformChecker("facebook");
 
 /** Returns `true` when the URL points to Instagram. */
-export const isInstagram = createPlatformChecker('instagram');
+export const isInstagram = createPlatformChecker("instagram");
 
 /** Returns `true` when the URL points to Pinterest. */
-export const isPinterest = createPlatformChecker('pinterest');
+export const isPinterest = createPlatformChecker("pinterest");
 
 /** Returns `true` when the URL points to RedNote (Xiaohongshu). */
-export const isRedNote = createPlatformChecker('rednote');
+export const isRedNote = createPlatformChecker("rednote");
 
 /** Returns `true` when the URL points to Tidal. */
-export const isTidal = createPlatformChecker('tidal');
+export const isTidal = createPlatformChecker("tidal");
 
 /** Returns `true` when the URL points to TikTok. */
-export const isTiktok = createPlatformChecker('tiktok');
+export const isTiktok = createPlatformChecker("tiktok");
 
 /** Returns `true` when the URL points to X (formerly Twitter). */
-export const isX = createPlatformChecker('x');
+export const isX = createPlatformChecker("x");
 
 /** @deprecated Use {@link isX} instead. */
 export const isTwitter = isX;
 
 /** Returns `true` when the URL points to YouTube. */
-export const isYoutube = createPlatformChecker('youtube');
+export const isYoutube = createPlatformChecker("youtube");
 
 /* ------------------------------------------------------------------ */
 /*  Generic detector                                                  */
@@ -189,11 +177,11 @@ export const isYoutube = createPlatformChecker('youtube');
  */
 export const detectPlatform = (url: string): Platform => {
   const hostname = extractHostname(url);
-  if (!hostname) return 'unknown';
+  if (!hostname) return "unknown";
 
   for (const [platform, hosts] of Object.entries(PLATFORM_HOSTNAMES)) {
     if (hosts.has(hostname)) return platform as Platform;
   }
 
-  return 'unknown';
+  return "unknown";
 };

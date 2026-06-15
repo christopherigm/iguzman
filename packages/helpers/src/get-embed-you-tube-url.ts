@@ -23,7 +23,7 @@ const YOUTUBE_VIDEO_ID_RE =
  */
 const getEmbedYouTubeUrl = (url: string): string => {
   const videoId = url.match(YOUTUBE_VIDEO_ID_RE)?.[1];
-  return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
 };
 
 export default getEmbedYouTubeUrl;

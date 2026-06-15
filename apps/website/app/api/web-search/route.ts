@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface TavilyResult {
   title: string;
@@ -16,30 +16,33 @@ interface TavilyResponse {
 interface RequestBody {
   query: string;
   maxResults?: number;
-  searchDepth?: 'basic' | 'advanced';
+  searchDepth?: "basic" | "advanced";
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
-  const tavilyKey = process.env.TAVILY_API_KEY ?? '';
+  const tavilyKey = process.env.TAVILY_API_KEY ?? "";
   if (!tavilyKey) {
     return NextResponse.json(
-      { detail: 'Tavily API key not configured.' },
+      { detail: "Tavily API key not configured." },
       { status: 500 },
     );
   }
 
-  const { query, maxResults = 5, searchDepth = 'basic' } =
-    (await req.json()) as RequestBody;
+  const {
+    query,
+    maxResults = 5,
+    searchDepth = "basic",
+  } = (await req.json()) as RequestBody;
 
   if (!query?.trim()) {
-    return NextResponse.json({ detail: 'query is required.' }, { status: 400 });
+    return NextResponse.json({ detail: "query is required." }, { status: 400 });
   }
 
   let tavilyRes: globalThis.Response;
   try {
-    tavilyRes = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    tavilyRes = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         api_key: tavilyKey,
         query,
@@ -48,7 +51,8 @@ export async function POST(req: NextRequest): Promise<Response> {
       }),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to reach Tavily API';
+    const message =
+      err instanceof Error ? err.message : "Failed to reach Tavily API";
     return NextResponse.json({ detail: message }, { status: 502 });
   }
 
@@ -56,7 +60,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     const body = await tavilyRes.text();
     return new Response(body, {
       status: tavilyRes.status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 

@@ -1,24 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { Button } from '@repo/ui/core-elements/button';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Typography } from '@repo/ui/core-elements/typography';
-import type { Platform } from '@repo/helpers/checkers';
-import type { BurnCaptionsConfig } from '@/lib/types';
-import { PinnedVideoItemDownloading } from './pinned-video-item-downloading';
-import { PinnedVideoItemClient } from './pinned-video-item-client';
-import { PinnedVideoItemServer } from './pinned-video-item-server';
-import {
-  ReadOnlyVideoItem,
-  type ReprocessAction,
-} from './readonly-video-item';
-import { VideoToolbar } from './video-toolbar';
-import type { StoredVideo, VideoStatus } from './use-video-store';
-import { useSearchQuery, setSearchQuery } from './use-search-store';
-import './video-grid.css';
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Typography } from "@repo/ui/core-elements/typography";
+import type { Platform } from "@repo/helpers/checkers";
+import type { BurnCaptionsConfig } from "@/lib/types";
+import { PinnedVideoItemDownloading } from "./pinned-video-item-downloading";
+import { PinnedVideoItemClient } from "./pinned-video-item-client";
+import { PinnedVideoItemServer } from "./pinned-video-item-server";
+import { ReadOnlyVideoItem, type ReprocessAction } from "./readonly-video-item";
+import { VideoToolbar } from "./video-toolbar";
+import type { StoredVideo, VideoStatus } from "./use-video-store";
+import { useSearchQuery, setSearchQuery } from "./use-search-store";
+import "./video-grid.css";
 
 /* ── Constants ──────────────────────────────────────── */
 
@@ -51,13 +48,13 @@ export function VideoGrid({
   onRemoveCompleted,
   onDuplicateCompleted,
 }: VideoGridProps) {
-  const t = useTranslations('VideoGrid');
+  const t = useTranslations("VideoGrid");
   const searchQuery = useSearchQuery();
 
   /* ── Filter + pagination state ──────────────────── */
   const [activePlatform, setActivePlatform] = useState<Platform | null>(null);
   const [audioOnly, setAudioOnly] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<VideoStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<VideoStatus | "all">("all");
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [page, setPage] = useState(1);
 
@@ -86,7 +83,7 @@ export function VideoGrid({
       list = list.filter((v) => v.platform === activePlatform);
     }
 
-    if (statusFilter !== 'all') {
+    if (statusFilter !== "all") {
       list = list.filter((v) => v.status === statusFilter);
     }
 
@@ -110,7 +107,7 @@ export function VideoGrid({
     setPage(1);
   }, []);
 
-  const handleStatusFilterChange = useCallback((s: VideoStatus | 'all') => {
+  const handleStatusFilterChange = useCallback((s: VideoStatus | "all") => {
     setStatusFilter(s);
     setPage(1);
   }, []);
@@ -129,11 +126,16 @@ export function VideoGrid({
       isFirstMount.current = false;
       return;
     }
-    completedTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    completedTopRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   }, [safePage]);
 
   /* ── Scroll to newly duplicated video ────────────── */
-  const [pendingScrollUuid, setPendingScrollUuid] = useState<string | null>(null);
+  const [pendingScrollUuid, setPendingScrollUuid] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!pendingScrollUuid) return;
@@ -151,9 +153,11 @@ export function VideoGrid({
     }
 
     const raf = requestAnimationFrame(() => {
-      const el = document.querySelector(`[data-video-uuid="${pendingScrollUuid}"]`);
+      const el = document.querySelector(
+        `[data-video-uuid="${pendingScrollUuid}"]`,
+      );
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
       }
       setPendingScrollUuid(null);
     });
@@ -170,45 +174,45 @@ export function VideoGrid({
       config?: BurnCaptionsConfig,
     ) => {
       switch (action) {
-        case 'fps':
+        case "fps":
           onReprocessCompleted(uuid, {
-            status: 'processing' as VideoStatus,
+            status: "processing" as VideoStatus,
             fps: String(extra as number),
             fpsApplied: false,
           });
           break;
-        case 'h264':
+        case "h264":
           onReprocessCompleted(uuid, {
-            status: 'converting' as VideoStatus,
+            status: "converting" as VideoStatus,
           });
           break;
-        case 'h265':
+        case "h265":
           onReprocessCompleted(uuid, {
-            status: 'converting' as VideoStatus,
+            status: "converting" as VideoStatus,
           });
           break;
-        case 'bars':
+        case "bars":
           onReprocessCompleted(uuid, {
-            status: 'processing' as VideoStatus,
+            status: "processing" as VideoStatus,
             blackBarsRemoved: false,
           });
           break;
-        case 'burnCaptions':
+        case "burnCaptions":
           onReprocessCompleted(uuid, {
-            status: 'burning' as VideoStatus,
+            status: "burning" as VideoStatus,
             burnCaptionsConfig: config ?? null,
             captionsBurned: false,
           });
           break;
-        case 'scaleDown':
+        case "scaleDown":
           onReprocessCompleted(uuid, {
-            status: 'processing' as VideoStatus,
+            status: "processing" as VideoStatus,
             scaleDownTargetHeight: extra as number,
           });
           break;
-        case 'diarize':
+        case "diarize":
           onReprocessCompleted(uuid, {
-            status: 'diarizing' as VideoStatus,
+            status: "diarizing" as VideoStatus,
           });
           break;
       }
@@ -231,7 +235,7 @@ export function VideoGrid({
           color="var(--foreground-muted, #999)"
           styles={{ fontSize: 13, fontWeight: 500, opacity: 0.6 }}
         >
-          {t('emptyState')}
+          {t("emptyState")}
         </Typography>
       </Box>
     );
@@ -251,9 +255,9 @@ export function VideoGrid({
           variant="h2"
           color="var(--foreground, #171717)"
           fontWeight={700}
-          styles={{ fontSize: 15, letterSpacing: '-0.02em' }}
+          styles={{ fontSize: 15, letterSpacing: "-0.02em" }}
         >
-          {t('title')}
+          {t("title")}
         </Typography>
         <Typography
           variant="body-sm"
@@ -266,7 +270,7 @@ export function VideoGrid({
           borderRadius="999px"
           color="var(--accent-foreground, white)"
           backgroundColor="var(--accent, #06b6d4)"
-          styles={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.02em' }}
+          styles={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.02em" }}
         >
           {totalCount}
         </Typography>
@@ -289,11 +293,11 @@ export function VideoGrid({
               fontWeight={700}
               styles={{
                 fontSize: 11,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
               }}
             >
-              {t('processingTitle')}
+              {t("processingTitle")}
             </Typography>
             <Typography
               variant="body-sm"
@@ -309,7 +313,7 @@ export function VideoGrid({
               styles={{
                 fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: '0.02em',
+                letterSpacing: "0.02em",
               }}
             >
               {pinned.length}
@@ -318,9 +322,9 @@ export function VideoGrid({
           <Grid container spacing={2}>
             {pinned.map((video) => {
               const isDownloading =
-                video.status === 'pending' ||
-                video.status === 'downloading' ||
-                video.status === 'queued';
+                video.status === "pending" ||
+                video.status === "downloading" ||
+                video.status === "queued";
               const isServerMode = video.useServerProcessing === true;
 
               return (
@@ -386,12 +390,12 @@ export function VideoGrid({
             color="var(--accent, #06b6d4)"
             fontWeight={500}
           >
-            {t('searchActive', { query: searchQuery })}
+            {t("searchActive", { query: searchQuery })}
           </Typography>
           <Button
-            onClick={() => setSearchQuery('')}
-            aria-label={t('clearSearch')}
-            text={t('clearSearch')}
+            onClick={() => setSearchQuery("")}
+            aria-label={t("clearSearch")}
+            text={t("clearSearch")}
             kind="warning"
           />
         </Box>
@@ -409,13 +413,17 @@ export function VideoGrid({
             color="var(--foreground-muted, #999)"
             styles={{ fontSize: 13, fontWeight: 500, opacity: 0.6 }}
           >
-            {t('noResults')}
+            {t("noResults")}
           </Typography>
         </Box>
       ) : (
         <Grid container spacing={2}>
           {pageVideos.map((video) => (
-            <Grid key={video.uuid} size={{ xs: 12, sm: 6, md: 4, lg: 3 }} data-video-uuid={video.uuid}>
+            <Grid
+              key={video.uuid}
+              size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
+              data-video-uuid={video.uuid}
+            >
               <ReadOnlyVideoItem
                 video={video}
                 onReprocess={handleReprocess}

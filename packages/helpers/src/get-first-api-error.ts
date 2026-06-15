@@ -1,9 +1,9 @@
-import type { ApiError } from '@repo/helpers/types';
+import type { ApiError } from "@repo/helpers/types";
 
 /** Fallback error returned when no valid error is found in the array. */
 const EMPTY_ERROR: ApiError = {
-  code: '',
-  message: '',
+  code: "",
+  message: "",
   status: 0,
 };
 
@@ -14,9 +14,9 @@ const EMPTY_ERROR: ApiError = {
  * last segment (`"email"`). Returns an empty string when the pointer is empty.
  */
 const parseEntityFromPointer = (pointer: string): string => {
-  if (!pointer) return '';
-  const segments = pointer.split('/');
-  return segments[segments.length - 1] ?? '';
+  if (!pointer) return "";
+  const segments = pointer.split("/");
+  return segments[segments.length - 1] ?? "";
 };
 
 /**
@@ -45,12 +45,12 @@ const getFirstApiError = (errors: ApiError[]): ApiError => {
   const first = errors.find(Boolean);
   if (!first) return { ...EMPTY_ERROR };
 
-  const entity = parseEntityFromPointer(first.source?.pointer ?? '');
-  const detail = first.detail ?? '';
-  const message = detail ? `${detail}${entity ? ` [${entity}]` : ''}` : '';
+  const entity = parseEntityFromPointer(first.source?.pointer ?? "");
+  const detail = first.detail ?? "";
+  const message = detail ? `${detail}${entity ? ` [${entity}]` : ""}` : "";
 
   return {
-    code: first.code ?? '',
+    code: first.code ?? "",
     status: Number(first.status ?? 0),
     message,
     ...(detail && { detail }),

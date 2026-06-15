@@ -1,19 +1,19 @@
-import { ObjectId, type Collection, type WithId } from 'mongodb';
-import { connectToDatabase } from '@repo/helpers/mongo-db';
-import type { DownloadVideoResult } from '@repo/helpers/download-video';
+import { ObjectId, type Collection, type WithId } from "mongodb";
+import { connectToDatabase } from "@repo/helpers/mongo-db";
+import type { DownloadVideoResult } from "@repo/helpers/download-video";
 import type {
   TaskStatus,
   VideoDownloadInput,
   VideoResultFields,
   DownloadVideoError,
-} from '@/lib/types';
+} from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */
 /* ------------------------------------------------------------------ */
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
-const IS_PRODUCTION = NODE_ENV === 'production';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
+const IS_PRODUCTION = NODE_ENV === "production";
 
 /* ── Document schema ──────────────────────────────── */
 
@@ -31,12 +31,12 @@ export interface VideoTaskDocument
 
 /* ── Constants ────────────────────────────────────── */
 
-const DB_NAME = 'videos';
-const COLLECTION_NAME = 'tasks';
+const DB_NAME = "videos";
+const COLLECTION_NAME = "tasks";
 const MONGO_URI = IS_PRODUCTION
   ? (process.env.MONGO_URI ??
-    'mongodb://mongodb.video-downloader-2.svc.cluster.local:27017')
-  : 'mongodb://127.0.0.1:27017';
+    "mongodb://mongodb.video-downloader-2.svc.cluster.local:27017")
+  : "mongodb://127.0.0.1:27017";
 
 /* ── Helpers ──────────────────────────────────────── */
 
@@ -74,7 +74,7 @@ export async function createTask(
     commentsEnabled: params.commentsEnabled,
     maxComments: params.maxComments,
     metadataEnabled: params.metadataEnabled,
-    status: 'pending',
+    status: "pending",
     progress: 0,
     result: null,
     error: null,
@@ -121,7 +121,7 @@ export async function findActiveTaskByUrl(
   url: string,
 ): Promise<WithId<VideoTaskDocument> | null> {
   const col = await getTasksCollection();
-  return col.findOne({ url, status: { $in: ['pending', 'downloading'] } });
+  return col.findOne({ url, status: { $in: ["pending", "downloading"] } });
 }
 
 export async function getTask(

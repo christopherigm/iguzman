@@ -3,7 +3,7 @@
 /* ------------------------------------------------------------------ */
 
 /** Supported application language codes. */
-export type Language = 'en' | 'es';
+export type Language = "en" | "es";
 
 /* ------------------------------------------------------------------ */
 /*  API Errors                                                        */
@@ -91,7 +91,7 @@ export interface JsonApiArrayResponse {
 /** JSON:API resource representing a country. */
 export interface Country {
   id: number;
-  type: 'Country';
+  type: "Country";
   attributes: {
     /** Country display name. */
     name: string;
@@ -107,7 +107,7 @@ export interface Country {
 /** JSON:API resource representing a state or province. */
 export interface State {
   id: number;
-  type: 'State';
+  type: "State";
   attributes: {
     /** State / province display name. */
     name: string;
@@ -122,7 +122,7 @@ export interface State {
 /** JSON:API resource representing a city. */
 export interface City {
   id: number;
-  type: 'City';
+  type: "City";
   attributes: {
     /** City display name. */
     name: string;

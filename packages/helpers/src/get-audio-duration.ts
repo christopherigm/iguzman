@@ -1,5 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
@@ -10,15 +10,14 @@ const MAX_BUFFER = 1024 * 2048;
  * Resolves the current Node environment, defaulting to `"localhost"`
  * when `NODE_ENV` is not set.
  */
-const getNodeEnv = (): string =>
-  process.env.NODE_ENV?.trim() ?? 'localhost';
+const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? "localhost";
 
 /**
  * Removes a leading `media/` prefix from a file path so it can be
  * joined with the output folder without duplicating the segment.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -53,36 +52,38 @@ export interface GetAudioDurationOptions {
  */
 export const getAudioDuration = async ({
   src,
-  outputFolder = getNodeEnv() === 'production'
-    ? '/app/media'
-    : 'public/media',
+  outputFolder = getNodeEnv() === "production" ? "/app/media" : "public/media",
 }: GetAudioDurationOptions): Promise<number> => {
-  if (!src || typeof src !== 'string') {
-    throw new Error('Source file path must be a non-empty string');
+  if (!src || typeof src !== "string") {
+    throw new Error("Source file path must be a non-empty string");
   }
 
   const cleanSrc = stripMediaPrefix(src);
   const filePath = `${outputFolder}/${cleanSrc}`;
 
   const command = [
-    'ffprobe -v error',
-    '-show_entries format=duration',
-    '-of default=noprint_wrappers=1:nokey=1',
+    "ffprobe -v error",
+    "-show_entries format=duration",
+    "-of default=noprint_wrappers=1:nokey=1",
     `"${filePath}"`,
-  ].join(' ');
+  ].join(" ");
 
   try {
     const { stdout } = await execAsync(command, { maxBuffer: MAX_BUFFER });
     const duration = Number(stdout.trim());
 
     if (Number.isNaN(duration)) {
-      throw new Error(`ffprobe returned non-numeric output: "${stdout.trim()}"`);
+      throw new Error(
+        `ffprobe returned non-numeric output: "${stdout.trim()}"`,
+      );
     }
 
     return duration;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to get audio duration for "${filePath}": ${message}`);
+    throw new Error(
+      `Failed to get audio duration for "${filePath}": ${message}`,
+    );
   }
 };
 

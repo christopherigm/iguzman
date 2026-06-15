@@ -1,7 +1,7 @@
-import getEnvVariables from '@repo/helpers/get-env-variables';
+import getEnvVariables from "@repo/helpers/get-env-variables";
 
 /** Default API base URL used in non-production environments. */
-const DEV_API_URL = 'http://127.0.0.1:8000';
+const DEV_API_URL = "http://127.0.0.1:8000";
 
 /**
  * Resolves the Kubernetes-internal base URL for backend API requests.
@@ -23,10 +23,10 @@ const DEV_API_URL = 'http://127.0.0.1:8000';
  * ```
  */
 const getK8sApiBaseUrl = (): string => {
-  if (process.env.NODE_ENV !== 'production') return DEV_API_URL;
+  if (process.env.NODE_ENV !== "production") return DEV_API_URL;
 
   const { K8sURLBase, URLBase } = getEnvVariables();
-  return K8sURLBase ?? URLBase ?? '';
+  return K8sURLBase ?? URLBase ?? "";
 };
 
 export default getK8sApiBaseUrl;

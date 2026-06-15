@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Thumbs, Navigation, FreeMode } from 'swiper/modules';
-import type { Swiper as SwiperType } from 'swiper';
-import { Box } from '@repo/ui/core-elements/box';
-import { Button } from '@repo/ui/core-elements/button';
-import getImageDimensionsFromUrl from '@repo/helpers/get-image-dimensions-from-url';
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/free-mode';
-import 'swiper/css/thumbs';
-import './item-gallery-client.css';
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Thumbs, Navigation, FreeMode } from "swiper/modules";
+import type { Swiper as SwiperType } from "swiper";
+import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
+import getImageDimensionsFromUrl from "@repo/helpers/get-image-dimensions-from-url";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/free-mode";
+import "swiper/css/thumbs";
+import "./item-gallery-client.css";
 
 export interface GalleryImage {
   url: string;
@@ -47,18 +47,18 @@ export function ItemGalleryClient({
   useEffect(() => {
     if (fullscreenIndex === null) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeFullscreen();
-      if (e.key === 'ArrowLeft')
+      if (e.key === "Escape") closeFullscreen();
+      if (e.key === "ArrowLeft")
         setFullscreenIndex((i) =>
           i === null ? null : (i - 1 + images.length) % images.length,
         );
-      if (e.key === 'ArrowRight')
+      if (e.key === "ArrowRight")
         setFullscreenIndex((i) =>
           i === null ? null : (i + 1) % images.length,
         );
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [fullscreenIndex, closeFullscreen]);
 
   useEffect(() => {
@@ -82,7 +82,7 @@ export function ItemGalleryClient({
       <Box
         className="item-gallery item-gallery--placeholder"
         styles={{
-          backgroundColor: placeholderColor ?? 'var(--surface-1, #e0e0e0)',
+          backgroundColor: placeholderColor ?? "var(--surface-1, #e0e0e0)",
         }}
       />
     );
@@ -164,7 +164,7 @@ export function ItemGalleryClient({
 
       {fullscreenIndex !== null && (
         <Box
-          className={`item-gallery__overlay${isClosing ? ' item-gallery__overlay--closing' : ''}`}
+          className={`item-gallery__overlay${isClosing ? " item-gallery__overlay--closing" : ""}`}
           role="dialog"
           aria-modal
           aria-label="Image fullscreen"
@@ -175,7 +175,7 @@ export function ItemGalleryClient({
             styles={
               imageAspectRatios[fullscreenIndex] != null
                 ? ({
-                    '--img-ar': String(imageAspectRatios[fullscreenIndex]),
+                    "--img-ar": String(imageAspectRatios[fullscreenIndex]),
                   } as React.CSSProperties)
                 : undefined
             }
@@ -183,8 +183,8 @@ export function ItemGalleryClient({
           >
             <Image
               fill
-              src={images[fullscreenIndex]?.url ?? ''}
-              alt={images[fullscreenIndex]?.alt ?? ''}
+              src={images[fullscreenIndex]?.url ?? ""}
+              alt={images[fullscreenIndex]?.alt ?? ""}
               className="item-gallery__overlay-image"
               sizes="90vw"
             />

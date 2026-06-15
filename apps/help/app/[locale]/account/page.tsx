@@ -1,5 +1,5 @@
-import { setRequestLocale } from 'next-intl/server';
-import { AccountForm } from './account-form';
+import { setRequestLocale } from "next-intl/server";
+import { AccountForm } from "./account-form";
 
 type Props = { params: Promise<{ locale: string }> };
 

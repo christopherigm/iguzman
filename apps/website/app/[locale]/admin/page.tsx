@@ -1,30 +1,30 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { getUserFromToken } from '@/lib/auth';
-import './admin-home.css';
-import { ADMIN_NAV_ITEMS } from './admin-nav-items';
+import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { getUserFromToken } from "@/lib/auth";
+import "./admin-home.css";
+import { ADMIN_NAV_ITEMS } from "./admin-nav-items";
 
 const MAX_NAME_LENGTH = 20;
 
 function trimName(name: string): string {
   return name.length > MAX_NAME_LENGTH
-    ? name.slice(0, MAX_NAME_LENGTH) + '…'
+    ? name.slice(0, MAX_NAME_LENGTH) + "…"
     : name;
 }
 
 export default function AdminPage() {
-  const t = useTranslations('Admin');
-  const [username, setUsername] = useState(t('breadcrumbAdmin'));
+  const t = useTranslations("Admin");
+  const [username, setUsername] = useState(t("breadcrumbAdmin"));
 
   useEffect(() => {
     const user = getUserFromToken();
-    const rawName = user?.firstName ?? user?.email ?? t('breadcrumbAdmin');
+    const rawName = user?.firstName ?? user?.email ?? t("breadcrumbAdmin");
     setUsername(trimName(rawName));
   }, [t]);
 
@@ -32,10 +32,10 @@ export default function AdminPage() {
     <Box className="admin-home">
       <Box className="admin-home__header">
         <Typography as="h1" variant="h2" className="admin-home__title">
-          {t('welcome', { username })}
+          {t("welcome", { username })}
         </Typography>
         <Typography variant="body" className="admin-home__subtitle">
-          {t('welcomeSubtitle')}
+          {t("welcomeSubtitle")}
         </Typography>
       </Box>
 

@@ -1,10 +1,10 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default output folder based on the current environment. */
 const DEFAULT_OUTPUT_FOLDER =
-  NODE_ENV === 'production' ? '/app/media' : 'public/media';
+  NODE_ENV === "production" ? "/app/media" : "public/media";
 
 interface ConcatWavFilesOptions {
   /** List of source WAV file paths to concatenate (a leading `media/` prefix is stripped automatically). */
@@ -38,12 +38,12 @@ const concatWavFiles = ({
   outputFolder = DEFAULT_OUTPUT_FOLDER,
 }: ConcatWavFilesOptions): Promise<string> => {
   if (files.length === 0) {
-    return Promise.reject(new Error('files array must not be empty'));
+    return Promise.reject(new Error("files array must not be empty"));
   }
 
   /** Strip a leading `media/` prefix so paths are relative to outputFolder. */
   const stripMediaPrefix = (path: string): string =>
-    path.startsWith('media/') ? path.slice('media/'.length) : path;
+    path.startsWith("media/") ? path.slice("media/".length) : path;
 
   const destClean = stripMediaPrefix(dest);
   const destFile = `${outputFolder}/${destClean}`;
@@ -53,29 +53,29 @@ const concatWavFiles = ({
   const streamLabels: string[] = [];
 
   for (let i = 0; i < files.length; i++) {
-    const srcFile = `${outputFolder}/${stripMediaPrefix(files[i] ?? '')}`;
-    inputArgs.push('-i', srcFile);
+    const srcFile = `${outputFolder}/${stripMediaPrefix(files[i] ?? "")}`;
+    inputArgs.push("-i", srcFile);
     streamLabels.push(`[${i}:a]`);
   }
 
   // Concat filter: join all audio streams sequentially.
   // @see https://trac.ffmpeg.org/wiki/Concatenate#filterdemuxer
-  const filterComplex = `${streamLabels.join('')}concat=n=${files.length}:v=0:a=1[out]`;
+  const filterComplex = `${streamLabels.join("")}concat=n=${files.length}:v=0:a=1[out]`;
 
   const args = [
-    '-y',
+    "-y",
     ...inputArgs,
-    '-filter_complex',
+    "-filter_complex",
     filterComplex,
-    '-map',
-    '[out]',
+    "-map",
+    "[out]",
     destFile,
   ];
 
   return new Promise<string>((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error) => {
+    execFile("ffmpeg", args, { maxBuffer: 1024 * 2048 }, (error) => {
       if (error) {
-        console.error('Error concatenating WAV files:', error);
+        console.error("Error concatenating WAV files:", error);
         return reject(error);
       }
       resolve(`media/${destClean}`);

@@ -881,99 +881,98 @@ export function ProfilePage() {
       </Box>
 
       <Container size="lg" paddingX={0} marginBottom={40}>
-        <Grid container spacing={3}>
-          {/* ── Contact Info ── */}
-          {tnSuggestModal && (
-            <ConfirmationModal
-              title={t("tnSuggestModalTitle")}
-              text={t("tnSuggestModalSubtitle")}
-              okCallback={() => setTnSuggestModal(false)}
-              panelMaxWidth="540px"
-            >
-              <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
-                {tnSuggestResults.length === 0 ? (
-                  <Typography
-                    variant="body-sm"
-                    color="var(--muted-foreground, #6b7280)"
-                  >
-                    {t("tnSuggestNoMatches")}
-                  </Typography>
-                ) : (
-                  tnSuggestResults.map((r) => {
-                    const color =
-                      r.likelihood >= 70
-                        ? "var(--success, #22c55e)"
-                        : r.likelihood >= 45
-                          ? "#f59e0b"
-                          : "var(--error, #ef4444)";
-                    return (
+        {tnSuggestModal && (
+          <ConfirmationModal
+            title={t("tnSuggestModalTitle")}
+            text={t("tnSuggestModalSubtitle")}
+            okCallback={() => setTnSuggestModal(false)}
+            panelMaxWidth="540px"
+          >
+            <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
+              {tnSuggestResults.length === 0 ? (
+                <Typography
+                  variant="body-sm"
+                  color="var(--muted-foreground, #6b7280)"
+                >
+                  {t("tnSuggestNoMatches")}
+                </Typography>
+              ) : (
+                tnSuggestResults.map((r) => {
+                  const color =
+                    r.likelihood >= 70
+                      ? "var(--success, #22c55e)"
+                      : r.likelihood >= 45
+                        ? "#f59e0b"
+                        : "var(--error, #ef4444)";
+                  return (
+                    <Box
+                      key={r.category}
+                      display="flex"
+                      flexDirection="column"
+                      gap={6}
+                    >
                       <Box
-                        key={r.category}
                         display="flex"
-                        flexDirection="column"
-                        gap={6}
+                        justifyContent="space-between"
+                        alignItems="center"
                       >
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="center"
-                        >
-                          <Typography variant="body" fontWeight={600}>
-                            {r.category}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            fontWeight={600}
-                            color={color}
-                          >
-                            {r.likelihood}%
-                          </Typography>
-                        </Box>
-                        <ProgressBar
-                          value={r.likelihood}
-                          size={6}
-                          label={r.category}
-                        />
+                        <Typography variant="body" fontWeight={600}>
+                          {r.category}
+                        </Typography>
                         <Typography
-                          variant="body-sm"
-                          color="var(--muted-foreground, #6b7280)"
-                          styles={{ lineHeight: 1.5 }}
+                          variant="caption"
+                          fontWeight={600}
+                          color={color}
                         >
-                          {r.explanation}
+                          {r.likelihood}%
                         </Typography>
                       </Box>
-                    );
-                  })
-                )}
-              </Box>
-            </ConfirmationModal>
-          )}
-          {summaryShowEnhanceOptions && (
-            <ConfirmationModal
-              title={t("summaryEnhanceOptionsTitle")}
-              text={t("summaryEnhanceOptionsText")}
-              okCallback={() => void handleSummaryConfirmEnhanceOptions()}
-              cancelCallback={() => setSummaryShowEnhanceOptions(false)}
-            >
-              <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
-                <Slider
-                  steps={SUMMARY_PARAGRAPH_COUNT_STEPS}
-                  value={summaryEnhanceParagraphs}
-                  onChange={(v) => setSummaryEnhanceParagraphs(Number(v))}
-                  label={t("summaryEnhanceParagraphsLabel")}
-                />
-                <Slider
-                  steps={SUMMARY_LENGTH_STEPS}
-                  value={summaryEnhanceParagraphLength}
-                  onChange={(v) => setSummaryEnhanceParagraphLength(String(v))}
-                  label={`${t("summaryEnhanceLengthLabel")} (${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).min}-${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).max} words/para)`}
-                />
-              </Box>
-            </ConfirmationModal>
-          )}
+                      <ProgressBar
+                        value={r.likelihood}
+                        size={6}
+                        label={r.category}
+                      />
+                      <Typography
+                        variant="body-sm"
+                        color="var(--muted-foreground, #6b7280)"
+                        styles={{ lineHeight: 1.5 }}
+                      >
+                        {r.explanation}
+                      </Typography>
+                    </Box>
+                  );
+                })
+              )}
+            </Box>
+          </ConfirmationModal>
+        )}
+        {summaryShowEnhanceOptions && (
+          <ConfirmationModal
+            title={t("summaryEnhanceOptionsTitle")}
+            text={t("summaryEnhanceOptionsText")}
+            okCallback={() => void handleSummaryConfirmEnhanceOptions()}
+            cancelCallback={() => setSummaryShowEnhanceOptions(false)}
+          >
+            <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
+              <Slider
+                steps={SUMMARY_PARAGRAPH_COUNT_STEPS}
+                value={summaryEnhanceParagraphs}
+                onChange={(v) => setSummaryEnhanceParagraphs(Number(v))}
+                label={t("summaryEnhanceParagraphsLabel")}
+              />
+              <Slider
+                steps={SUMMARY_LENGTH_STEPS}
+                value={summaryEnhanceParagraphLength}
+                onChange={(v) => setSummaryEnhanceParagraphLength(String(v))}
+                label={`${t("summaryEnhanceLengthLabel")} (${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).min}-${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).max} words/para)`}
+              />
+            </Box>
+          </ConfirmationModal>
+        )}
 
+        <Grid masonry spacing={3}>
           {/* ── Professional Info ── */}
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item>
             <Section
               title={t("professionalSection")}
               subtitle={t("professionalSubtitle")}
@@ -1156,7 +1155,7 @@ export function ProfilePage() {
           </Grid>
 
           {/* ── Languages ── */}
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item>
             <Section
               title={t("languagesSection")}
               subtitle={t("languagesSubtitle")}
@@ -1315,7 +1314,7 @@ export function ProfilePage() {
           </Grid>
 
           {/* ── Contact Info ── */}
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item>
             <Section
               title={t("contactSection")}
               subtitle={t("contactSubtitle")}
@@ -1398,38 +1397,8 @@ export function ProfilePage() {
             </Section>
           </Grid>
 
-          {/* ── Job Search ── */}
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <JobSearchSection />
-          </Grid>
-
-          {/* ── Tech Stack ── */}
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Section title={t("techSection")} subtitle={t("techSubtitle")}>
-              <TechTagInput
-                tags={techStack}
-                onChange={(tags) => {
-                  setTechStack(tags);
-                  setStackSuccess(false);
-                }}
-                suggestions={popularTechSuggestions}
-              />
-              {savingStack && <ProgressBar label={t("savingStack")} />}
-              <Box display="flex" justifyContent="flex-end" marginTop={20}>
-                <Button
-                  text={savingStack ? t("savingStack") : t("saveStack")}
-                  type="button"
-                  size="lg"
-                  kind="success"
-                  disabled={savingStack}
-                  onClick={() => void handleSaveStack()}
-                />
-              </Box>
-            </Section>
-          </Grid>
-
           {/* ── Resume ── */}
-          <Grid size={{ xs: 12, sm: 6 }}>
+          <Grid item>
             <Section title={t("resumeSection")} subtitle={t("resumeSubtitle")}>
               {(uploadState === "idle" || uploadState === "error") && (
                 <>
@@ -1558,6 +1527,36 @@ export function ProfilePage() {
                   </Button>
                 </Box>
               )}
+            </Section>
+          </Grid>
+
+          {/* ── Job Search ── */}
+          <Grid item>
+            <JobSearchSection />
+          </Grid>
+
+          {/* ── Tech Stack ── */}
+          <Grid item>
+            <Section title={t("techSection")} subtitle={t("techSubtitle")}>
+              <TechTagInput
+                tags={techStack}
+                onChange={(tags) => {
+                  setTechStack(tags);
+                  setStackSuccess(false);
+                }}
+                suggestions={popularTechSuggestions}
+              />
+              {savingStack && <ProgressBar label={t("savingStack")} />}
+              <Box display="flex" justifyContent="flex-end" marginTop={20}>
+                <Button
+                  text={savingStack ? t("savingStack") : t("saveStack")}
+                  type="button"
+                  size="lg"
+                  kind="success"
+                  disabled={savingStack}
+                  onClick={() => void handleSaveStack()}
+                />
+              </Box>
             </Section>
           </Grid>
         </Grid>

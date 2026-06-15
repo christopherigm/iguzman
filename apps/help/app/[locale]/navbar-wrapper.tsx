@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Navbar } from '@repo/ui/core-elements/navbar';
-import type { MenuItem } from '@repo/ui/core-elements/navbar';
-import { logout, clearUser, getStoredUser } from '@/lib/auth';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Navbar } from "@repo/ui/core-elements/navbar";
+import type { MenuItem } from "@repo/ui/core-elements/navbar";
+import { logout, clearUser, getStoredUser } from "@/lib/auth";
 
 interface NavbarWrapperProps {
   logo: string;
@@ -19,16 +19,18 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
   useEffect(() => {
     setDisplayName(getStoredUser()?.displayName ?? null);
     const handler = (e: Event) => {
-      setDisplayName((e as CustomEvent<{ displayName: string | null }>).detail.displayName);
+      setDisplayName(
+        (e as CustomEvent<{ displayName: string | null }>).detail.displayName,
+      );
     };
-    window.addEventListener('app-auth', handler);
-    return () => window.removeEventListener('app-auth', handler);
+    window.addEventListener("app-auth", handler);
+    return () => window.removeEventListener("app-auth", handler);
   }, []);
 
   const handleSignOut = async () => {
     await logout();
     clearUser();
-    router.push('/auth');
+    router.push("/auth");
   };
 
   // const accountItem: MenuItem = displayName
@@ -38,7 +40,7 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
   return (
     <Navbar
       logo={logo}
-      items={[{ label: labels.home, href: '/' }]}
+      items={[{ label: labels.home, href: "/" }]}
       fixedItems={[]}
       version={version}
       translucent

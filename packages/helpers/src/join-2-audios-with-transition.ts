@@ -1,5 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
@@ -10,15 +10,14 @@ const MAX_BUFFER = 1024 * 2048;
  * Resolves the current Node environment, defaulting to `"localhost"`
  * when `NODE_ENV` is not set.
  */
-const getNodeEnv = (): string =>
-  process.env.NODE_ENV?.trim() ?? 'localhost';
+const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? "localhost";
 
 /**
  * Removes a leading `media/` prefix from a file path so it can be
  * joined with the output folder without duplicating the segment.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -73,24 +72,26 @@ export const joinAudiosWithCrossfade = async ({
   src2,
   dest,
   duration = 5,
-  outputFolder = getNodeEnv() === 'production'
-    ? '/app/media'
-    : 'public/media',
+  outputFolder = getNodeEnv() === "production" ? "/app/media" : "public/media",
 }: JoinAudiosWithCrossfadeOptions): Promise<string> => {
-  if (!src1 || typeof src1 !== 'string') {
-    throw new Error('First source file path must be a non-empty string');
+  if (!src1 || typeof src1 !== "string") {
+    throw new Error("First source file path must be a non-empty string");
   }
 
-  if (!src2 || typeof src2 !== 'string') {
-    throw new Error('Second source file path must be a non-empty string');
+  if (!src2 || typeof src2 !== "string") {
+    throw new Error("Second source file path must be a non-empty string");
   }
 
-  if (!dest || typeof dest !== 'string') {
-    throw new Error('Destination file path must be a non-empty string');
+  if (!dest || typeof dest !== "string") {
+    throw new Error("Destination file path must be a non-empty string");
   }
 
-  if (typeof duration !== 'number' || duration <= 0 || !Number.isFinite(duration)) {
-    throw new Error('Duration must be a positive finite number');
+  if (
+    typeof duration !== "number" ||
+    duration <= 0 ||
+    !Number.isFinite(duration)
+  ) {
+    throw new Error("Duration must be a positive finite number");
   }
 
   const cleanSrc1 = stripMediaPrefix(src1);
@@ -102,12 +103,12 @@ export const joinAudiosWithCrossfade = async ({
   const destFile = `${outputFolder}/${cleanDest}`;
 
   const command = [
-    'ffmpeg -y',
+    "ffmpeg -y",
     `-i "${src1File}"`,
     `-i "${src2File}"`,
     `-filter_complex "[0:a][1:a]acrossfade=d=${duration}:c1=exp:c2=log"`,
     `"${destFile}"`,
-  ].join(' ');
+  ].join(" ");
 
   try {
     await execAsync(command, { maxBuffer: MAX_BUFFER });

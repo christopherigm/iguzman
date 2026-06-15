@@ -1,5 +1,5 @@
-import { setRequestLocale } from 'next-intl/server';
-import { MusicPlayer } from '@/components/music-player';
+import { setRequestLocale } from "next-intl/server";
+import { MusicPlayer } from "@/components/music-player";
 
 type Props = {
   params: Promise<{ locale: string }>;

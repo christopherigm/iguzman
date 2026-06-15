@@ -1,30 +1,39 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
-import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Badge } from '@repo/ui/core-elements/badge';
-import { Button } from '@repo/ui/core-elements/button';
-import { Spinner } from '@repo/ui/core-elements/spinner';
-import { LinkButton } from '@repo/ui/core-elements/link-button';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Toast } from '@repo/ui/core-elements/toast';
-import { ApiError, deleteMovie, getMovie, type MovieDetail as MovieDetailData } from '@/lib/catalog';
-import './movie-detail.css';
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { Button } from "@repo/ui/core-elements/button";
+import { Spinner } from "@repo/ui/core-elements/spinner";
+import { LinkButton } from "@repo/ui/core-elements/link-button";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Toast } from "@repo/ui/core-elements/toast";
+import {
+  ApiError,
+  deleteMovie,
+  getMovie,
+  type MovieDetail as MovieDetailData,
+} from "@/lib/catalog";
+import "./movie-detail.css";
 
-type Status = 'loading' | 'ready' | 'not_found' | 'error';
+type Status = "loading" | "ready" | "not_found" | "error";
 
-const LABEL_STYLES = { opacity: 0.6, textTransform: 'uppercase' as const, letterSpacing: '0.05em' };
+const LABEL_STYLES = {
+  opacity: 0.6,
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.05em",
+};
 
 export function MovieDetail({ id }: { id: string }) {
-  const t = useTranslations('MovieDetailPage');
-  const tFormat = useTranslations('MovieFormat');
+  const t = useTranslations("MovieDetailPage");
+  const tFormat = useTranslations("MovieFormat");
   const router = useRouter();
   const [movie, setMovie] = useState<MovieDetailData | null>(null);
-  const [status, setStatus] = useState<Status>('loading');
+  const [status, setStatus] = useState<Status>("loading");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
@@ -34,7 +43,7 @@ export function MovieDetail({ id }: { id: string }) {
     setDeleting(true);
     try {
       await deleteMovie(id);
-      router.push('/');
+      router.push("/");
     } catch {
       setDeleting(false);
       setDeleteError(true);
@@ -47,32 +56,34 @@ export function MovieDetail({ id }: { id: string }) {
       .then((data) => {
         if (!active) return;
         setMovie(data);
-        setStatus('ready');
+        setStatus("ready");
       })
       .catch((err) => {
         if (!active) return;
-        setStatus(err instanceof ApiError && err.status === 404 ? 'not_found' : 'error');
+        setStatus(
+          err instanceof ApiError && err.status === 404 ? "not_found" : "error",
+        );
       });
     return () => {
       active = false;
     };
   }, [id]);
 
-  if (status === 'loading') {
+  if (status === "loading") {
     return (
       <Box display="flex" justifyContent="center" paddingY={40}>
-        <Spinner label={t('loading')} />
+        <Spinner label={t("loading")} />
       </Box>
     );
   }
 
-  if (status !== 'ready' || !movie) {
+  if (status !== "ready" || !movie) {
     return (
       <Box flexDirection="column" alignItems="center" gap={12} paddingY={40}>
         <Typography variant="body-sm" role="alert">
-          {status === 'not_found' ? t('notFound') : t('error')}
+          {status === "not_found" ? t("notFound") : t("error")}
         </Typography>
-        <LinkButton label={t('back')} href="/" />
+        <LinkButton label={t("back")} href="/" />
       </Box>
     );
   }
@@ -81,8 +92,8 @@ export function MovieDetail({ id }: { id: string }) {
     <Box flexDirection="column" gap={20} paddingY={16}>
       {showDeleteConfirm && (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText', { title: movie.title })}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText", { title: movie.title })}
           okCallback={handleConfirmDelete}
           cancelCallback={() => setShowDeleteConfirm(false)}
         />
@@ -90,16 +101,22 @@ export function MovieDetail({ id }: { id: string }) {
 
       {deleteError && (
         <Toast
-          message={t('deleteError')}
+          message={t("deleteError")}
           variant="error"
           position="top-center"
         />
       )}
 
-      <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={8}>
-        <LinkButton label={t('back')} href="/" />
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        flexWrap="wrap"
+        gap={8}
+      >
+        <LinkButton label={t("back")} href="/" />
         <Button
-          text={t('delete')}
+          text={t("delete")}
           icon="/icons/delete.svg"
           kind="error"
           size="md"
@@ -108,12 +125,22 @@ export function MovieDetail({ id }: { id: string }) {
         />
       </Box>
 
-      <Box display="flex" flexDirection="column" className="movie-detail__layout" gap={24}>
+      <Box
+        display="flex"
+        flexDirection="column"
+        className="movie-detail__layout"
+        gap={24}
+      >
         <Box
           width="100%"
           maxWidth={280}
           borderRadius={8}
-          styles={{ position: 'relative', overflow: 'hidden', aspectRatio: '2 / 3', flexShrink: 0 }}
+          styles={{
+            position: "relative",
+            overflow: "hidden",
+            aspectRatio: "2 / 3",
+            flexShrink: 0,
+          }}
         >
           {movie.cover ? (
             <Image
@@ -133,7 +160,7 @@ export function MovieDetail({ id }: { id: string }) {
               backgroundColor="var(--surface-2)"
             >
               <Typography variant="caption" styles={{ opacity: 0.6 }}>
-                {t('noCover')}
+                {t("noCover")}
               </Typography>
             </Box>
           )}
@@ -146,13 +173,15 @@ export function MovieDetail({ id }: { id: string }) {
 
           <Box display="flex" gap={8} flexWrap="wrap">
             {movie.year && <Badge variant="subtle">{movie.year}</Badge>}
-            {movie.format && <Badge variant="subtle">{tFormat(movie.format)}</Badge>}
+            {movie.format && (
+              <Badge variant="subtle">{tFormat(movie.format)}</Badge>
+            )}
           </Box>
 
           {movie.director && (
             <Box flexDirection="column" gap={2}>
               <Typography variant="label" styles={LABEL_STYLES}>
-                {t('director')}
+                {t("director")}
               </Typography>
               <Typography variant="body">{movie.director}</Typography>
             </Box>
@@ -161,7 +190,7 @@ export function MovieDetail({ id }: { id: string }) {
           {movie.genres.length > 0 && (
             <Box flexDirection="column" gap={6}>
               <Typography variant="label" styles={LABEL_STYLES}>
-                {t('genres')}
+                {t("genres")}
               </Typography>
               <Box display="flex" gap={6} flexWrap="wrap">
                 {movie.genres.map((genre) => (
@@ -176,9 +205,11 @@ export function MovieDetail({ id }: { id: string }) {
           {movie.cast.length > 0 && (
             <Box flexDirection="column" gap={6}>
               <Typography variant="label" styles={LABEL_STYLES}>
-                {t('cast')}
+                {t("cast")}
               </Typography>
-              <Typography variant="body-sm">{movie.cast.map((actor) => actor.name).join(', ')}</Typography>
+              <Typography variant="body-sm">
+                {movie.cast.map((actor) => actor.name).join(", ")}
+              </Typography>
             </Box>
           )}
         </Box>

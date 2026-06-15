@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   createContext,
@@ -6,7 +6,7 @@ import {
   useState,
   useCallback,
   useMemo,
-} from 'react';
+} from "react";
 
 export interface OPFSVideoUrls {
   videoUrl: string | null;

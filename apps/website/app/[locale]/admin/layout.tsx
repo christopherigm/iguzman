@@ -1,9 +1,9 @@
-import { setRequestLocale } from 'next-intl/server';
-import { AdminSidebar } from './admin-sidebar';
-import { Box } from '@repo/ui/core-elements/box';
-import Container from '@repo/ui/core-elements/container';
-import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
-import './admin-layout.css';
+import { setRequestLocale } from "next-intl/server";
+import { AdminSidebar } from "./admin-sidebar";
+import { Box } from "@repo/ui/core-elements/box";
+import Container from "@repo/ui/core-elements/container";
+import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
+import "./admin-layout.css";
 
 type Props = {
   children: React.ReactNode;

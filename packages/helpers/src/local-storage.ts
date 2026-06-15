@@ -6,7 +6,7 @@
  */
 const isLocalStorageAvailable = (): boolean => {
   try {
-    return typeof localStorage !== 'undefined';
+    return typeof localStorage !== "undefined";
   } catch {
     return false;
   }
@@ -28,7 +28,7 @@ export const getLocalStorageItem = (key: string): string | null => {
 
   try {
     const data = localStorage.getItem(key);
-    if (data === null || data === 'undefined') return null;
+    if (data === null || data === "undefined") return null;
     return data;
   } catch {
     return null;

@@ -1,4 +1,4 @@
-import { writeToOPFS, deleteFromOPFS } from './opfs';
+import { writeToOPFS, deleteFromOPFS } from "./opfs";
 
 type UrlCache = { videoUrl: string | null; thumbnailUrl: string | null };
 

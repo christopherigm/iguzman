@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { Select, type SelectOption } from '@repo/ui/core-elements/select';
-import type { Category, MovieFormat } from '@/lib/catalog';
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { Select, type SelectOption } from "@repo/ui/core-elements/select";
+import type { Category, MovieFormat } from "@/lib/catalog";
 
-const FORMATS: Exclude<MovieFormat, ''>[] = ['dvd', 'bluray', '4k', 'other'];
+const FORMATS: Exclude<MovieFormat, "">[] = ["dvd", "bluray", "4k", "other"];
 
 type Props = {
   search: string;
@@ -27,16 +27,19 @@ export function MovieFilters({
   onFormatChange,
   categories,
 }: Props) {
-  const t = useTranslations('CatalogPage');
-  const tFormat = useTranslations('MovieFormat');
+  const t = useTranslations("CatalogPage");
+  const tFormat = useTranslations("MovieFormat");
 
   const genreOptions: SelectOption[] = [
-    { value: '', label: t('allGenres') },
-    ...categories.map((category) => ({ value: category.slug, label: category.name })),
+    { value: "", label: t("allGenres") },
+    ...categories.map((category) => ({
+      value: category.slug,
+      label: category.name,
+    })),
   ];
 
   const formatOptions: SelectOption[] = [
-    { value: '', label: t('allFormats') },
+    { value: "", label: t("allFormats") },
     ...FORMATS.map((value) => ({ value, label: tFormat(value) })),
   ];
 
@@ -44,20 +47,20 @@ export function MovieFilters({
     <Box display="flex" gap={8} flexWrap="wrap">
       <TextInput
         type="search"
-        label={t('searchLabel')}
+        label={t("searchLabel")}
         value={search}
         onChange={onSearchChange}
         flex="2 1 200px"
       />
       <Select
-        label={t('genreLabel')}
+        label={t("genreLabel")}
         value={genre}
         onChange={onGenreChange}
         options={genreOptions}
         flex="1 1 140px"
       />
       <Select
-        label={t('formatLabel')}
+        label={t("formatLabel")}
         value={format}
         onChange={(value) => onFormatChange(value as MovieFormat)}
         options={formatOptions}

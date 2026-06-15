@@ -107,7 +107,7 @@ nodeAffinity:
 ```yaml
 # Plain env vars
 env:
-  MYSQL_ROOT_HOST: '%'
+  MYSQL_ROOT_HOST: "%"
 
 # From Kubernetes Secrets
 envFromSecret:

@@ -1,7 +1,7 @@
-import duplicateAudio from '@repo/helpers/duplicate-audio-x-times';
-import getAudioDuration from '@repo/helpers/get-audio-duration';
-import cutVideoLength from '@repo/helpers/cut-video-length';
-import deleteMediaFile from '@repo/helpers/delete-media-file';
+import duplicateAudio from "@repo/helpers/duplicate-audio-x-times";
+import getAudioDuration from "@repo/helpers/get-audio-duration";
+import cutVideoLength from "@repo/helpers/cut-video-length";
+import deleteMediaFile from "@repo/helpers/delete-media-file";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -39,7 +39,7 @@ export interface LoopVideoToLengthOptions {
  * that nested segments like `some/media/file.mp4` stay intact.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /**
  * Computes the number of copies needed so that the total duration

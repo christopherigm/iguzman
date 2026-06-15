@@ -1,8 +1,8 @@
-import { getLocalStorageItem } from '@repo/helpers/local-storage';
-import type { JwtPayload } from '@repo/helpers/types';
+import { getLocalStorageItem } from "@repo/helpers/local-storage";
+import type { JwtPayload } from "@repo/helpers/types";
 
 /** The `localStorage` key where the JWT payload is persisted. */
-const JWT_STORAGE_KEY = 'jwt';
+const JWT_STORAGE_KEY = "jwt";
 
 /**
  * Retrieves and parses the JWT payload stored in `localStorage`.
@@ -23,11 +23,11 @@ const getStoredJwt = (): JwtPayload | null => {
     const parsed: unknown = JSON.parse(raw);
 
     if (
-      typeof parsed === 'object' &&
+      typeof parsed === "object" &&
       parsed !== null &&
-      'access' in parsed &&
-      typeof (parsed as JwtPayload).access === 'string' &&
-      (parsed as JwtPayload).access !== ''
+      "access" in parsed &&
+      typeof (parsed as JwtPayload).access === "string" &&
+      (parsed as JwtPayload).access !== ""
     ) {
       return parsed as JwtPayload;
     }

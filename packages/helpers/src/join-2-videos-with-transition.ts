@@ -1,6 +1,6 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { getAudioDuration } from '@repo/helpers/get-audio-duration';
+import { exec } from "child_process";
+import { promisify } from "util";
+import { getAudioDuration } from "@repo/helpers/get-audio-duration";
 
 const execAsync = promisify(exec);
 
@@ -11,14 +11,14 @@ const MAX_BUFFER = 1024 * 2048;
  * Resolves the current Node environment, defaulting to `"localhost"`
  * when `NODE_ENV` is not set.
  */
-const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? 'localhost';
+const getNodeEnv = (): string => process.env.NODE_ENV?.trim() ?? "localhost";
 
 /**
  * Removes a leading `media/` prefix from a file path so it can be
  * joined with the output folder without duplicating the segment.
  */
 const stripMediaPrefix = (filePath: string): string =>
-  filePath.replace(/^media\//, '');
+  filePath.replace(/^media\//, "");
 
 /* ------------------------------------------------------------------ */
 /*  Transition types                                                   */
@@ -30,29 +30,29 @@ const stripMediaPrefix = (filePath: string): string =>
  * @see https://ffmpeg.org/ffmpeg-filters.html#xfade
  */
 export type XfadeTransition =
-  | 'circleclose'
-  | 'circleopen'
-  | 'circlecrop'
-  | 'diagtl'
-  | 'dissolve'
-  | 'distance'
-  | 'fadeblack'
-  | 'fadegrays'
-  | 'fadewhite'
-  | 'hblur'
-  | 'hlslice'
-  | 'hrslice'
-  | 'pixelize'
-  | 'radial'
-  | 'rectcrop'
-  | 'slidedown'
-  | 'slideleft'
-  | 'slideright'
-  | 'slideup'
-  | 'vdslice'
-  | 'vuslice'
-  | 'wipeleft'
-  | 'wiperight';
+  | "circleclose"
+  | "circleopen"
+  | "circlecrop"
+  | "diagtl"
+  | "dissolve"
+  | "distance"
+  | "fadeblack"
+  | "fadegrays"
+  | "fadewhite"
+  | "hblur"
+  | "hlslice"
+  | "hrslice"
+  | "pixelize"
+  | "radial"
+  | "rectcrop"
+  | "slidedown"
+  | "slideleft"
+  | "slideright"
+  | "slideup"
+  | "vdslice"
+  | "vuslice"
+  | "wipeleft"
+  | "wiperight";
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -112,27 +112,27 @@ export const joinVideosWithTransition = async ({
   src2,
   dest,
   duration = 3,
-  transition = 'dissolve',
-  outputFolder = getNodeEnv() === 'production' ? '/app/media' : 'public/media',
+  transition = "dissolve",
+  outputFolder = getNodeEnv() === "production" ? "/app/media" : "public/media",
 }: JoinVideosWithTransitionOptions): Promise<string> => {
-  if (!src1 || typeof src1 !== 'string') {
-    throw new Error('First source file path must be a non-empty string');
+  if (!src1 || typeof src1 !== "string") {
+    throw new Error("First source file path must be a non-empty string");
   }
 
-  if (!src2 || typeof src2 !== 'string') {
-    throw new Error('Second source file path must be a non-empty string');
+  if (!src2 || typeof src2 !== "string") {
+    throw new Error("Second source file path must be a non-empty string");
   }
 
-  if (!dest || typeof dest !== 'string') {
-    throw new Error('Destination file path must be a non-empty string');
+  if (!dest || typeof dest !== "string") {
+    throw new Error("Destination file path must be a non-empty string");
   }
 
   if (
-    typeof duration !== 'number' ||
+    typeof duration !== "number" ||
     duration <= 0 ||
     !Number.isFinite(duration)
   ) {
-    throw new Error('Duration must be a positive finite number');
+    throw new Error("Duration must be a positive finite number");
   }
 
   const cleanSrc1 = stripMediaPrefix(src1);
@@ -158,12 +158,12 @@ export const joinVideosWithTransition = async ({
   }
 
   const command = [
-    'ffmpeg -y',
+    "ffmpeg -y",
     `-i "${src1File}"`,
     `-i "${src2File}"`,
     `-filter_complex "xfade=transition=${transition}:duration=${duration}:offset=${offset}"`,
     `"${destFile}"`,
-  ].join(' ');
+  ].join(" ");
 
   try {
     await execAsync(command, { maxBuffer: MAX_BUFFER });

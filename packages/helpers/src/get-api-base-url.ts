@@ -1,7 +1,7 @@
-import getEnvVariables from '@repo/helpers/get-env-variables';
+import getEnvVariables from "@repo/helpers/get-env-variables";
 
 /** Default API base URL used in non-production environments. */
-const DEV_API_URL = 'http://127.0.0.1:8000';
+const DEV_API_URL = "http://127.0.0.1:8000";
 
 /**
  * Resolves the base URL for backend API requests based on the current environment.
@@ -22,10 +22,10 @@ const DEV_API_URL = 'http://127.0.0.1:8000';
  * ```
  */
 const getApiBaseUrl = (): string => {
-  if (process.env.NODE_ENV !== 'production') return DEV_API_URL;
+  if (process.env.NODE_ENV !== "production") return DEV_API_URL;
 
   const { URLBase } = getEnvVariables();
-  return URLBase ?? '';
+  return URLBase ?? "";
 };
 
 export default getApiBaseUrl;

@@ -20,10 +20,10 @@ const getRandomNumber = (min: number, max: number): number => {
  */
 export const addRandomNumberToURL = (url: string): string => {
   const randomId = getRandomNumber(1, 9999);
-  const [base, ...searchParts] = url.split('?');
-  const params = new URLSearchParams(searchParts.join('?'));
+  const [base, ...searchParts] = url.split("?");
+  const params = new URLSearchParams(searchParts.join("?"));
 
-  params.set('vdRID', String(randomId));
+  params.set("vdRID", String(randomId));
 
   return `${base}?${params.toString()}`;
 };

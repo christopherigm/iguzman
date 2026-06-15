@@ -4,66 +4,66 @@
 
 /** Full English month names, indexed 0-11. */
 export const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ] as const;
 
 /** Full Spanish month names, indexed 0-11. */
 export const SPANISH_MONTHS = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
 ] as const;
 
 /** Abbreviated English month names, indexed 0-11. */
 export const SHORT_MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ] as const;
 
 /** Abbreviated Spanish month names, indexed 0-11. */
 export const SPANISH_SHORT_MONTHS = [
-  'Ene',
-  'Feb',
-  'Mar',
-  'Abr',
-  'May',
-  'Jun',
-  'Jul',
-  'Ago',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dic',
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -87,7 +87,7 @@ interface JsonApiError {
 /* ------------------------------------------------------------------ */
 
 /** Zero-pads a number to at least two digits. */
-const pad = (n: number): string => String(n).padStart(2, '0');
+const pad = (n: number): string => String(n).padStart(2, "0");
 
 /**
  * Safely converts a {@link DateLike} value into a `Date` instance.
@@ -132,9 +132,7 @@ export const shortDateParser = (
   const month = d.getMonth() + 1;
   const day = d.getDate();
 
-  return withYear
-    ? `${month}/${day}/${d.getFullYear()}`
-    : `${month}/${day}`;
+  return withYear ? `${month}/${day}/${d.getFullYear()}` : `${month}/${day}`;
 };
 
 /**
@@ -144,7 +142,7 @@ export const shortDateParser = (
  * Returns an empty string when `date` is falsy.
  */
 export const dateFormatForInput = (date: DateLike): string => {
-  if (!date) return '';
+  if (!date) return "";
 
   const d = toDate(date);
   const year = d.getFullYear();
@@ -172,7 +170,7 @@ export const hourParser = (date: DateLike): string => {
 export const hourParser12Format = (date: DateLike): string => {
   const d = toDate(date);
   const hours = d.getHours();
-  const period = hours >= 12 ? 'pm' : 'am';
+  const period = hours >= 12 ? "pm" : "am";
 
   /** Convert 0 → 12 (midnight) and 13-23 → 1-11 (afternoon/evening). */
   const h12 = hours % 12 || 12;
@@ -191,7 +189,7 @@ export const hourParser12Format = (date: DateLike): string => {
  * Returns an empty string when `date` is falsy.
  */
 export const djangoDateTimeField = (date: DateLike): string => {
-  if (!date) return '';
+  if (!date) return "";
   return `${dateFormatForInput(date)}T${hourParser(date)}`;
 };
 
@@ -254,18 +252,14 @@ export const dateRangeComposer = (
   endDate: Date | null,
   shortMonth: boolean = false,
 ): string => {
-  const startLabel = startDate
-    ? dateParser(startDate, shortMonth)
-    : '';
-  const endLabel = endDate
-    ? dateParser(endDate, shortMonth)
-    : 'Present';
+  const startLabel = startDate ? dateParser(startDate, shortMonth) : "";
+  const endLabel = endDate ? dateParser(endDate, shortMonth) : "Present";
 
   const from = startDate ?? new Date();
   const to = endDate ?? new Date();
   const { years, months } = getDateDifference(from, to);
 
-  const fractional = months > 0 ? `.${months}` : '';
+  const fractional = months > 0 ? `.${months}` : "";
 
   return `${startLabel} to ${endLabel} (${years}${fractional} years)`;
 };
@@ -284,22 +278,22 @@ export const arrayErrorsToHtmlList = (errors: JsonApiError[]): string =>
   errors
     .map((error) => {
       if (!error.source) {
-        if (error.detail === 'Wrong credentials') {
-          return '<li>El correo o la contrasena son incorrectos (Wrong credentials).</li>';
+        if (error.detail === "Wrong credentials") {
+          return "<li>El correo o la contrasena son incorrectos (Wrong credentials).</li>";
         }
         return `<li>${error.detail}</li>`;
       }
 
-      const segments = error.source.pointer.split('/');
+      const segments = error.source.pointer.split("/");
       const field = segments[segments.length - 1];
 
-      if (error.code === 'unique' && field === 'email') {
-        return '<li>Hay una cuenta registrada con este correo electronico.</li>';
+      if (error.code === "unique" && field === "email") {
+        return "<li>Hay una cuenta registrada con este correo electronico.</li>";
       }
 
-      if (error.code === 'blank') return '';
+      if (error.code === "blank") return "";
 
       return `<li>${error.detail}: ${field}</li>`;
     })
     .filter(Boolean)
-    .join('');
+    .join("");

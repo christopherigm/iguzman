@@ -1,4 +1,4 @@
-import type { TechStack } from './career';
+import type { TechStack } from "./career";
 
 export interface UserProfile {
   id: number;
@@ -19,18 +19,22 @@ export interface UserProfile {
   is_staff: boolean;
 }
 
-const USER_PROFILE_KEY = 'ef_user';
+const USER_PROFILE_KEY = "ef_user";
 
 export function storeUser(profile: UserProfile): void {
-  const raw = (profile.first_name?.trim() || profile.email) ?? '';
+  const raw = (profile.first_name?.trim() || profile.email) ?? "";
   const displayName = raw.substring(0, 10);
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify({ displayName }));
-  window.dispatchEvent(new CustomEvent('app-auth', { detail: { displayName } }));
+  window.dispatchEvent(
+    new CustomEvent("app-auth", { detail: { displayName } }),
+  );
 }
 
 export function clearUser(): void {
   localStorage.removeItem(USER_PROFILE_KEY);
-  window.dispatchEvent(new CustomEvent('app-auth', { detail: { displayName: null } }));
+  window.dispatchEvent(
+    new CustomEvent("app-auth", { detail: { displayName: null } }),
+  );
 }
 
 export function getStoredUser(): { displayName: string } | null {
@@ -47,7 +51,7 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly data: Record<string, unknown>,
   ) {
-    super('API request failed');
+    super("API request failed");
   }
 }
 
@@ -56,7 +60,7 @@ export class LoginError extends Error {
     public readonly status: number,
     public readonly data: Record<string, unknown>,
   ) {
-    super('Login failed');
+    super("Login failed");
   }
 }
 
@@ -64,9 +68,9 @@ export async function login(payload: {
   email: string;
   password: string;
 }): Promise<void> {
-  const res = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -76,7 +80,7 @@ export async function login(payload: {
 }
 
 export async function logout(): Promise<void> {
-  await fetch('/api/auth/logout', { method: 'POST' });
+  await fetch("/api/auth/logout", { method: "POST" });
 }
 
 export async function signUp(payload: {
@@ -86,9 +90,9 @@ export async function signUp(payload: {
   first_name?: string;
   last_name?: string;
 }): Promise<void> {
-  const res = await fetch('/api/auth/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/auth/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -106,9 +110,9 @@ export async function verifyEmail(token: string): Promise<void> {
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-  const res = await fetch('/api/auth/password-reset', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/auth/password-reset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
   if (!res.ok) {
@@ -118,7 +122,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
 }
 
 export async function getProfile(): Promise<UserProfile> {
-  const res = await fetch('/api/auth/profile');
+  const res = await fetch("/api/auth/profile");
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
@@ -130,9 +134,9 @@ export async function updateProfile(payload: {
   first_name?: string;
   last_name?: string;
 }): Promise<UserProfile> {
-  const res = await fetch('/api/auth/profile', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/auth/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -147,9 +151,9 @@ export async function saveOnboarding(payload: {
   years_of_experience: number | null;
   preferred_stack: string[];
 }): Promise<UserProfile> {
-  const res = await fetch('/api/auth/onboarding', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/auth/onboarding", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -162,9 +166,9 @@ export async function saveOnboarding(payload: {
 export async function uploadProfilePicture(
   base64Image: string,
 ): Promise<{ profile_picture: string | null }> {
-  const res = await fetch('/api/auth/profile/picture', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/auth/profile/picture", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ base64_image: base64Image }),
   });
   if (!res.ok) {
@@ -179,9 +183,9 @@ export async function changePassword(
   newPassword: string,
   newPassword2: string,
 ): Promise<void> {
-  const res = await fetch('/api/auth/change-password', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await fetch("/api/auth/change-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       current_password: currentPassword,
       new_password: newPassword,
@@ -205,9 +209,9 @@ export interface ResumeImportResult {
 
 export async function uploadResume(file: File): Promise<ResumeImportResult> {
   const form = new FormData();
-  form.append('resume', file);
-  const res = await fetch('/api/auth/resume', {
-    method: 'POST',
+  form.append("resume", file);
+  const res = await fetch("/api/auth/resume", {
+    method: "POST",
     body: form,
   });
   if (!res.ok) {
@@ -219,7 +223,7 @@ export async function uploadResume(file: File): Promise<ResumeImportResult> {
 
 export async function deletePasskeyCredential(id: number): Promise<void> {
   const res = await fetch(`/api/auth/passkey/credentials/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
   if (!res.ok) {
     throw new ApiError(res.status, {});
@@ -230,7 +234,7 @@ export async function getPasskeyCredentials(): Promise<{
   count: number;
   credentials: { id: number; name: string; created_at: string }[];
 }> {
-  const res = await fetch('/api/auth/passkey/credentials');
+  const res = await fetch("/api/auth/passkey/credentials");
   if (!res.ok) return { count: 0, credentials: [] };
   return res.json() as Promise<{
     count: number;
@@ -239,32 +243,36 @@ export async function getPasskeyCredentials(): Promise<{
 }
 
 export async function registerPasskey(
-  name = 'My passkey',
+  name = "My passkey",
 ): Promise<{ id: number; name: string }> {
-  const { startRegistration } = await import('@simplewebauthn/browser');
+  const { startRegistration } = await import("@simplewebauthn/browser");
 
-  const optionsRes = await fetch('/api/auth/passkey/register/options', {
-    method: 'POST',
+  const optionsRes = await fetch("/api/auth/passkey/register/options", {
+    method: "POST",
   });
   if (!optionsRes.ok) {
-    const data: Record<string, unknown> = await optionsRes.json().catch(() => ({}));
+    const data: Record<string, unknown> = await optionsRes
+      .json()
+      .catch(() => ({}));
     throw new ApiError(optionsRes.status, data);
   }
 
   const { options, challenge_id } = (await optionsRes.json()) as {
-    options: Parameters<typeof startRegistration>[0]['optionsJSON'];
+    options: Parameters<typeof startRegistration>[0]["optionsJSON"];
     challenge_id: string;
   };
 
   const credential = await startRegistration({ optionsJSON: options });
 
-  const verifyRes = await fetch('/api/auth/passkey/register/verify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const verifyRes = await fetch("/api/auth/passkey/register/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ credential, challenge_id, name }),
   });
   if (!verifyRes.ok) {
-    const data: Record<string, unknown> = await verifyRes.json().catch(() => ({}));
+    const data: Record<string, unknown> = await verifyRes
+      .json()
+      .catch(() => ({}));
     throw new ApiError(verifyRes.status, data);
   }
 
@@ -272,32 +280,36 @@ export async function registerPasskey(
 }
 
 export async function loginWithPasskey(email: string): Promise<void> {
-  const { startAuthentication } = await import('@simplewebauthn/browser');
+  const { startAuthentication } = await import("@simplewebauthn/browser");
 
-  const optionsRes = await fetch('/api/auth/passkey/authenticate/options', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const optionsRes = await fetch("/api/auth/passkey/authenticate/options", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
   if (!optionsRes.ok) {
-    const data: Record<string, unknown> = await optionsRes.json().catch(() => ({}));
+    const data: Record<string, unknown> = await optionsRes
+      .json()
+      .catch(() => ({}));
     throw new LoginError(optionsRes.status, data);
   }
 
   const { options, challenge_id } = (await optionsRes.json()) as {
-    options: Parameters<typeof startAuthentication>[0]['optionsJSON'];
+    options: Parameters<typeof startAuthentication>[0]["optionsJSON"];
     challenge_id: string;
   };
 
   const credential = await startAuthentication({ optionsJSON: options });
 
-  const verifyRes = await fetch('/api/auth/passkey/authenticate/verify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const verifyRes = await fetch("/api/auth/passkey/authenticate/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, credential, challenge_id }),
   });
   if (!verifyRes.ok) {
-    const data: Record<string, unknown> = await verifyRes.json().catch(() => ({}));
+    const data: Record<string, unknown> = await verifyRes
+      .json()
+      .catch(() => ({}));
     throw new LoginError(verifyRes.status, data);
   }
 }
@@ -315,7 +327,7 @@ export interface JobSearchPrefs {
 }
 
 export async function getJobSearchPrefs(): Promise<JobSearchPrefs> {
-  const res = await fetch('/api/auth/job-search-prefs');
+  const res = await fetch("/api/auth/job-search-prefs");
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
@@ -323,10 +335,12 @@ export async function getJobSearchPrefs(): Promise<JobSearchPrefs> {
   return res.json() as Promise<JobSearchPrefs>;
 }
 
-export async function saveJobSearchPrefs(payload: Partial<JobSearchPrefs>): Promise<JobSearchPrefs> {
-  const res = await fetch('/api/auth/job-search-prefs', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+export async function saveJobSearchPrefs(
+  payload: Partial<JobSearchPrefs>,
+): Promise<JobSearchPrefs> {
+  const res = await fetch("/api/auth/job-search-prefs", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -344,15 +358,31 @@ export async function updateContactInfo(payload: {
   summary?: string;
   tn_profession?: string;
   citizenship?: string;
-}): Promise<{ phone: string; location: string; github_url: string; linkedin_url: string; summary: string; tn_profession: string; citizenship: string }> {
-  const res = await fetch('/api/auth/contact', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+}): Promise<{
+  phone: string;
+  location: string;
+  github_url: string;
+  linkedin_url: string;
+  summary: string;
+  tn_profession: string;
+  citizenship: string;
+}> {
+  const res = await fetch("/api/auth/contact", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
   }
-  return res.json() as Promise<{ phone: string; location: string; github_url: string; linkedin_url: string; summary: string; tn_profession: string; citizenship: string }>;
+  return res.json() as Promise<{
+    phone: string;
+    location: string;
+    github_url: string;
+    linkedin_url: string;
+    summary: string;
+    tn_profession: string;
+    citizenship: string;
+  }>;
 }

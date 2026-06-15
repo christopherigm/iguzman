@@ -1,15 +1,15 @@
-'use server';
+"use server";
 
-import getHostFromServer from '@repo/helpers/server-get-host';
+import getHostFromServer from "@repo/helpers/server-get-host";
 
 /** Environment variable for Node.js environment */
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'development';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "development";
 
 /** Protocol constant for production environment */
-const PRODUCTION_PROTOCOL = 'https';
+const PRODUCTION_PROTOCOL = "https";
 
 /** Protocol constant for non-production environments */
-const NON_PRODUCTION_PROTOCOL = 'http';
+const NON_PRODUCTION_PROTOCOL = "http";
 
 /**
  * Retrieves the base URL for the server based on the environment.
@@ -25,12 +25,12 @@ const NON_PRODUCTION_PROTOCOL = 'http';
  */
 const getBaseURL = async (): Promise<string> => {
   const protocol =
-    NODE_ENV === 'production' ? PRODUCTION_PROTOCOL : NON_PRODUCTION_PROTOCOL;
+    NODE_ENV === "production" ? PRODUCTION_PROTOCOL : NON_PRODUCTION_PROTOCOL;
 
   const host = await getHostFromServer();
 
   if (!host) {
-    throw new Error('Unable to determine host for base URL');
+    throw new Error("Unable to determine host for base URL");
   }
 
   return `${protocol}://${host}`;

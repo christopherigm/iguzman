@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { usePathname } from 'next/navigation';
+import { usePathname } from "next/navigation";
 
 type Props = {
   children: React.ReactNode;
@@ -8,6 +8,6 @@ type Props = {
 
 export function FooterVisibility({ children }: Props) {
   const pathname = usePathname();
-  if (pathname.includes('/admin')) return null;
+  if (pathname.includes("/admin")) return null;
   return <>{children}</>;
 }

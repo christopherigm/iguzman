@@ -1,9 +1,9 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import type { Cookie } from 'playwright';
+import { readFileSync } from "fs";
+import { join } from "path";
+import type { Cookie } from "playwright";
 
 const COOKIES_PATH =
-  process.env['COOKIES_PATH'] ?? join(__dirname, '..', 'netscape-cookies.txt');
+  process.env["COOKIES_PATH"] ?? join(__dirname, "..", "netscape-cookies.txt");
 
 /**
  * Parses a Netscape-format cookies file (e.g. exported by yt-dlp or browser extensions)
@@ -15,34 +15,34 @@ const COOKIES_PATH =
 export function loadNetscapeCookies(): Cookie[] {
   let raw: string;
   try {
-    raw = readFileSync(COOKIES_PATH, 'utf-8');
+    raw = readFileSync(COOKIES_PATH, "utf-8");
   } catch {
     return [];
   }
 
   const cookies: Cookie[] = [];
 
-  for (const line of raw.split('\n')) {
+  for (const line of raw.split("\n")) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
+    if (!trimmed || trimmed.startsWith("#")) continue;
 
-    const parts = trimmed.split('\t');
+    const parts = trimmed.split("\t");
     if (parts.length < 7) continue;
 
     const [domain, , path, secure, expiresStr, name, ...valueParts] = parts;
-    const value = valueParts.join('\t');
-    const expires = parseInt(expiresStr ?? '0', 10);
+    const value = valueParts.join("\t");
+    const expires = parseInt(expiresStr ?? "0", 10);
 
     cookies.push({
-      name: name ?? '',
+      name: name ?? "",
       value,
-      domain: domain ?? '',
-      path: path ?? '/',
+      domain: domain ?? "",
+      path: path ?? "/",
       // -1 tells Playwright this is a session cookie (expires when browser closes)
       expires: expires > 0 ? expires : -1,
       httpOnly: false,
-      secure: secure === 'TRUE',
-      sameSite: 'None',
+      secure: secure === "TRUE",
+      sameSite: "None",
     });
   }
 

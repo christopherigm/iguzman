@@ -25,12 +25,12 @@ helm install pihole pihole/ -n pihole --create-namespace -f pihole/values.yaml
 
 Edit `values.yaml` before installing:
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `pihole.admin.password` | Web UI password | `changeme` |
-| `pihole.serviceDns.loadBalancerIP` | DNS service IP | `192.168.0.200` |
-| `pihole.serviceWeb.loadBalancerIP` | Web UI IP | `192.168.0.200` |
-| `pihole.persistentVolumeClaim.size` | PVC size | `2Gi` |
+| Parameter                           | Description     | Default         |
+| ----------------------------------- | --------------- | --------------- |
+| `pihole.admin.password`             | Web UI password | `changeme`      |
+| `pihole.serviceDns.loadBalancerIP`  | DNS service IP  | `192.168.0.200` |
+| `pihole.serviceWeb.loadBalancerIP`  | Web UI IP       | `192.168.0.200` |
+| `pihole.persistentVolumeClaim.size` | PVC size        | `2Gi`           |
 
 ### Update Admin Password
 
@@ -68,7 +68,7 @@ To pin a specific version instead of using `>=2.35.0`, edit `Chart.yaml`:
 ```yaml
 dependencies:
   - name: pihole
-    version: "2.35.0"  # specific version
+    version: "2.35.0" # specific version
     repository: "https://mojo2600.github.io/pihole-kubernetes/"
 ```
 
@@ -136,6 +136,7 @@ kubectl get svc -n pihole
 ```
 
 Expected output:
+
 ```
 NAME          TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)
 pihole-dns    LoadBalancer   10.152.183.x    192.168.0.200   53/UDP,53/TCP

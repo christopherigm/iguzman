@@ -1,34 +1,34 @@
-const ACCESS_TOKEN_KEY = 'auth_access';
-const REFRESH_TOKEN_KEY = 'auth_refresh';
+const ACCESS_TOKEN_KEY = "auth_access";
+const REFRESH_TOKEN_KEY = "auth_refresh";
 
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly data: Record<string, unknown>,
   ) {
-    super('API request failed');
+    super("API request failed");
   }
 }
 
 export function storeTokens(access: string, refresh: string): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   localStorage.setItem(ACCESS_TOKEN_KEY, access);
   localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
-  window.dispatchEvent(new CustomEvent('auth-changed'));
+  window.dispatchEvent(new CustomEvent("auth-changed"));
 }
 
 export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
 export function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function clearTokens(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
@@ -42,20 +42,25 @@ export interface TokenUser {
 }
 
 export function getUserFromToken(): TokenUser | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   if (!token) return null;
 
   try {
-    const payload = token.split('.')[1];
+    const payload = token.split(".")[1];
     if (!payload) return null;
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as Record<string, unknown>;
+    const decoded = JSON.parse(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
+    ) as Record<string, unknown>;
     return {
-      firstName: typeof decoded.first_name === 'string' ? decoded.first_name : undefined,
-      lastName: typeof decoded.last_name === 'string' ? decoded.last_name : undefined,
-      email: typeof decoded.email === 'string' ? decoded.email : undefined,
-      isAdmin: typeof decoded.is_admin === 'boolean' ? decoded.is_admin : false,
-      systemId: typeof decoded.system_id === 'number' ? decoded.system_id : undefined,
+      firstName:
+        typeof decoded.first_name === "string" ? decoded.first_name : undefined,
+      lastName:
+        typeof decoded.last_name === "string" ? decoded.last_name : undefined,
+      email: typeof decoded.email === "string" ? decoded.email : undefined,
+      isAdmin: typeof decoded.is_admin === "boolean" ? decoded.is_admin : false,
+      systemId:
+        typeof decoded.system_id === "number" ? decoded.system_id : undefined,
     };
   } catch {
     return null;
@@ -78,7 +83,7 @@ export class LoginError extends Error {
     public readonly status: number,
     public readonly data: Record<string, unknown>,
   ) {
-    super('Login failed');
+    super("Login failed");
   }
 }
 
@@ -100,10 +105,13 @@ export interface SignUpResponse {
   detail: string;
 }
 
-export async function signUp(payload: SignUpPayload, apiUrl = ''): Promise<SignUpResponse> {
+export async function signUp(
+  payload: SignUpPayload,
+  apiUrl = "",
+): Promise<SignUpResponse> {
   const res = await fetch(`${apiUrl}/api/auth/signup/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
@@ -118,11 +126,11 @@ export async function signUp(payload: SignUpPayload, apiUrl = ''): Promise<SignU
 export async function requestPasswordReset(
   email: string,
   system_id: number,
-  apiUrl = '',
+  apiUrl = "",
 ): Promise<void> {
   const res = await fetch(`${apiUrl}/api/auth/password-reset/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, system_id }),
   });
 
@@ -136,12 +144,16 @@ export async function confirmPasswordReset(
   token: string,
   newPassword: string,
   newPassword2: string,
-  apiUrl = '',
+  apiUrl = "",
 ): Promise<void> {
   const res = await fetch(`${apiUrl}/api/auth/password-reset/confirm/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, new_password: newPassword, new_password2: newPassword2 }),
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token,
+      new_password: newPassword,
+      new_password2: newPassword2,
+    }),
   });
 
   if (!res.ok) {
@@ -150,7 +162,7 @@ export async function confirmPasswordReset(
   }
 }
 
-export async function verifyEmail(token: string, apiUrl = ''): Promise<void> {
+export async function verifyEmail(token: string, apiUrl = ""): Promise<void> {
   const res = await fetch(`${apiUrl}/api/auth/verify-email/${token}/`);
 
   if (!res.ok) {
@@ -159,13 +171,13 @@ export async function verifyEmail(token: string, apiUrl = ''): Promise<void> {
   }
 }
 
-export async function refreshTokens(apiUrl = ''): Promise<string | null> {
+export async function refreshTokens(apiUrl = ""): Promise<string | null> {
   const refresh = getRefreshToken();
   if (!refresh) return null;
 
   const res = await fetch(`${apiUrl}/api/auth/token/refresh/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh }),
   });
 
@@ -180,10 +192,13 @@ export async function refreshTokens(apiUrl = ''): Promise<string | null> {
   return data.access;
 }
 
-export async function login(payload: LoginPayload, apiUrl = ''): Promise<LoginResponse> {
+export async function login(
+  payload: LoginPayload,
+  apiUrl = "",
+): Promise<LoginResponse> {
   const res = await fetch(`${apiUrl}/api/auth/login/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 
@@ -204,7 +219,10 @@ export interface UserProfile {
   system_id: number;
 }
 
-export async function getProfile(accessToken: string, apiUrl = ''): Promise<UserProfile> {
+export async function getProfile(
+  accessToken: string,
+  apiUrl = "",
+): Promise<UserProfile> {
   const res = await fetch(`${apiUrl}/api/auth/profile/`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -218,12 +236,12 @@ export async function getProfile(accessToken: string, apiUrl = ''): Promise<User
 export async function updateProfile(
   payload: { first_name?: string; last_name?: string },
   accessToken: string,
-  apiUrl = '',
+  apiUrl = "",
 ): Promise<UserProfile> {
   const res = await fetch(`${apiUrl}/api/auth/profile/`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(payload),
@@ -238,12 +256,12 @@ export async function updateProfile(
 export async function uploadProfilePicture(
   base64Image: string,
   accessToken: string,
-  apiUrl = '',
+  apiUrl = "",
 ): Promise<{ profile_picture: string | null }> {
   const res = await fetch(`${apiUrl}/api/auth/profile/picture/`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ base64_image: base64Image }),
@@ -260,12 +278,12 @@ export async function changePassword(
   newPassword: string,
   newPassword2: string,
   accessToken: string,
-  apiUrl = '',
+  apiUrl = "",
 ): Promise<void> {
   const res = await fetch(`${apiUrl}/api/auth/change-password/`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
@@ -285,39 +303,46 @@ export async function changePassword(
 export async function registerPasskey(
   apiUrl: string,
   accessToken: string,
-  name = 'My passkey',
+  name = "My passkey",
 ): Promise<{ id: number; name: string }> {
-  const { startRegistration } = await import('@simplewebauthn/browser');
+  const { startRegistration } = await import("@simplewebauthn/browser");
 
-  const optionsRes = await fetch(`${apiUrl}/api/auth/passkey/register/options/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
+  const optionsRes = await fetch(
+    `${apiUrl}/api/auth/passkey/register/options/`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
     },
-  });
+  );
   if (!optionsRes.ok) {
-    const data: Record<string, unknown> = await optionsRes.json().catch(() => ({}));
+    const data: Record<string, unknown> = await optionsRes
+      .json()
+      .catch(() => ({}));
     throw new ApiError(optionsRes.status, data);
   }
 
   const { options, challenge_id } = (await optionsRes.json()) as {
-    options: Parameters<typeof startRegistration>[0]['optionsJSON'];
+    options: Parameters<typeof startRegistration>[0]["optionsJSON"];
     challenge_id: string;
   };
 
   const credential = await startRegistration({ optionsJSON: options });
 
   const verifyRes = await fetch(`${apiUrl}/api/auth/passkey/register/verify/`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ credential, challenge_id, name }),
   });
   if (!verifyRes.ok) {
-    const data: Record<string, unknown> = await verifyRes.json().catch(() => ({}));
+    const data: Record<string, unknown> = await verifyRes
+      .json()
+      .catch(() => ({}));
     throw new ApiError(verifyRes.status, data);
   }
 
@@ -327,34 +352,49 @@ export async function registerPasskey(
 export async function loginWithPasskey(
   email: string,
   systemId: number,
-  apiUrl = '',
+  apiUrl = "",
 ): Promise<LoginResponse> {
-  const { startAuthentication } = await import('@simplewebauthn/browser');
+  const { startAuthentication } = await import("@simplewebauthn/browser");
 
-  const optionsRes = await fetch(`${apiUrl}/api/auth/passkey/authenticate/options/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, system_id: systemId }),
-  });
+  const optionsRes = await fetch(
+    `${apiUrl}/api/auth/passkey/authenticate/options/`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, system_id: systemId }),
+    },
+  );
   if (!optionsRes.ok) {
-    const data: Record<string, unknown> = await optionsRes.json().catch(() => ({}));
+    const data: Record<string, unknown> = await optionsRes
+      .json()
+      .catch(() => ({}));
     throw new LoginError(optionsRes.status, data);
   }
 
   const { options, challenge_id } = (await optionsRes.json()) as {
-    options: Parameters<typeof startAuthentication>[0]['optionsJSON'];
+    options: Parameters<typeof startAuthentication>[0]["optionsJSON"];
     challenge_id: string;
   };
 
   const credential = await startAuthentication({ optionsJSON: options });
 
-  const verifyRes = await fetch(`${apiUrl}/api/auth/passkey/authenticate/verify/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, system_id: systemId, credential, challenge_id }),
-  });
+  const verifyRes = await fetch(
+    `${apiUrl}/api/auth/passkey/authenticate/verify/`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        system_id: systemId,
+        credential,
+        challenge_id,
+      }),
+    },
+  );
   if (!verifyRes.ok) {
-    const data: Record<string, unknown> = await verifyRes.json().catch(() => ({}));
+    const data: Record<string, unknown> = await verifyRes
+      .json()
+      .catch(() => ({}));
     throw new LoginError(verifyRes.status, data);
   }
 
@@ -364,14 +404,20 @@ export async function loginWithPasskey(
 export async function getPasskeyCredentials(
   apiUrl: string,
   accessToken: string,
-): Promise<{ count: number; credentials: { id: number; name: string; created_at: string }[] }> {
+): Promise<{
+  count: number;
+  credentials: { id: number; name: string; created_at: string }[];
+}> {
   const res = await fetch(`${apiUrl}/api/auth/passkey/credentials/`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) {
     return { count: 0, credentials: [] };
   }
-  return res.json() as Promise<{ count: number; credentials: { id: number; name: string; created_at: string }[] }>;
+  return res.json() as Promise<{
+    count: number;
+    credentials: { id: number; name: string; created_at: string }[];
+  }>;
 }
 
 export async function deletePasskeyCredential(
@@ -379,13 +425,15 @@ export async function deletePasskeyCredential(
   accessToken: string,
   credentialId: number,
 ): Promise<void> {
-  const res = await fetch(`${apiUrl}/api/auth/passkey/credentials/${credentialId}/`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const res = await fetch(
+    `${apiUrl}/api/auth/passkey/credentials/${credentialId}/`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
   }
 }
-

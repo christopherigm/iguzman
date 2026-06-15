@@ -1,4 +1,9 @@
-import { ApiError, type MovieDetail, type MovieFormat, type Paginated } from './catalog';
+import {
+  ApiError,
+  type MovieDetail,
+  type MovieFormat,
+  type Paginated,
+} from "./catalog";
 
 export interface InboxItem {
   id: number;
@@ -30,7 +35,7 @@ export interface InboxAcceptPayload {
 }
 
 export async function getInboxItems(page = 1): Promise<Paginated<InboxItem>> {
-  const qs = page > 1 ? `?page=${page}` : '';
+  const qs = page > 1 ? `?page=${page}` : "";
   const res = await fetch(`/api/catalog/inbox${qs}`);
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
@@ -39,10 +44,13 @@ export async function getInboxItems(page = 1): Promise<Paginated<InboxItem>> {
   return res.json() as Promise<Paginated<InboxItem>>;
 }
 
-export async function acceptInboxItem(id: number, payload: InboxAcceptPayload): Promise<MovieDetail> {
+export async function acceptInboxItem(
+  id: number,
+  payload: InboxAcceptPayload,
+): Promise<MovieDetail> {
   const res = await fetch(`/api/catalog/inbox/${id}/accept`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -53,7 +61,9 @@ export async function acceptInboxItem(id: number, payload: InboxAcceptPayload): 
 }
 
 export async function rejectInboxItem(id: number): Promise<void> {
-  const res = await fetch(`/api/catalog/inbox/${id}/reject`, { method: 'POST' });
+  const res = await fetch(`/api/catalog/inbox/${id}/reject`, {
+    method: "POST",
+  });
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);

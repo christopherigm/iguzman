@@ -1,45 +1,45 @@
-'use client';
+"use client";
 
-import { useRef, useState, useEffect } from 'react';
-import Image from 'next/image';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination, Autoplay } from 'swiper/modules';
-import type { Swiper as SwiperType } from 'swiper';
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Button } from '@repo/ui/core-elements/button';
-import { Icon } from '@repo/ui/core-elements/icon';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import 'swiper/css';
-import 'swiper/css/pagination';
-import './feature-slider.css';
+import { useRef, useState, useEffect } from "react";
+import Image from "next/image";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Autoplay } from "swiper/modules";
+import type { Swiper as SwiperType } from "swiper";
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Button } from "@repo/ui/core-elements/button";
+import { Icon } from "@repo/ui/core-elements/icon";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import "swiper/css";
+import "swiper/css/pagination";
+import "./feature-slider.css";
 
-const LS_KEY = 'feature-slider-dismissed';
+const LS_KEY = "feature-slider-dismissed";
 
 interface FeatureCard {
-  key: 'offline' | 'reelMode' | 'subtitles' | 'musicPlayer' | 'videoEditor';
+  key: "offline" | "reelMode" | "subtitles" | "musicPlayer" | "videoEditor";
   src: string;
   width: number;
   height: number;
 }
 
 const CARDS: FeatureCard[] = [
-  { key: 'offline', src: '/banner-offline.jpg', width: 910, height: 360 },
-  { key: 'reelMode', src: '/banner-reel-mode.jpg', width: 910, height: 360 },
-  { key: 'subtitles', src: '/banner-subtitles.jpg', width: 910, height: 360 },
-  { key: 'musicPlayer', src: '/banner-music.jpg', width: 910, height: 360 },
-  { key: 'videoEditor', src: '/banner-ffmpeg.jpg', width: 910, height: 360 },
+  { key: "offline", src: "/banner-offline.jpg", width: 910, height: 360 },
+  { key: "reelMode", src: "/banner-reel-mode.jpg", width: 910, height: 360 },
+  { key: "subtitles", src: "/banner-subtitles.jpg", width: 910, height: 360 },
+  { key: "musicPlayer", src: "/banner-music.jpg", width: 910, height: 360 },
+  { key: "videoEditor", src: "/banner-ffmpeg.jpg", width: 910, height: 360 },
 ];
 
 export function FeatureSlider() {
-  const t = useTranslations('FeatureSlider');
+  const t = useTranslations("FeatureSlider");
   const swiperRef = useRef<SwiperType | null>(null);
   const [visible, setVisible] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem(LS_KEY) !== 'true') {
+    if (localStorage.getItem(LS_KEY) !== "true") {
       setVisible(true);
     }
   }, []);
@@ -54,7 +54,7 @@ export function FeatureSlider() {
           borderRadius={14}
           className="vi-card"
           flexDirection="column"
-          styles={{ overflow: 'hidden' }}
+          styles={{ overflow: "hidden" }}
         >
           <Swiper
             className="fs-swiper"
@@ -63,7 +63,7 @@ export function FeatureSlider() {
             spaceBetween={0}
             loop
             autoplay={{ delay: 15000, disableOnInteraction: false }}
-            pagination={{ el: '.fs-pagination', clickable: true }}
+            pagination={{ el: ".fs-pagination", clickable: true }}
             onSwiper={(s) => {
               swiperRef.current = s;
             }}
@@ -82,7 +82,7 @@ export function FeatureSlider() {
                     type="button"
                     className="fs-close-btn"
                     onClick={() => setVisible(false)}
-                    aria-label={t('close')}
+                    aria-label={t("close")}
                   >
                     <Icon icon="/icons/close.svg" size={14} color="#fff" />
                   </button>
@@ -99,7 +99,7 @@ export function FeatureSlider() {
                   </Typography>
                   <Box marginTop={4}>
                     <Button
-                      text={t('dontShowAgain')}
+                      text={t("dontShowAgain")}
                       onClick={() => setShowConfirm(true)}
                       size="md"
                     />
@@ -113,7 +113,7 @@ export function FeatureSlider() {
             <button
               type="button"
               className="fs-nav-btn"
-              aria-label={t('prev')}
+              aria-label={t("prev")}
               onClick={() => swiperRef.current?.slidePrev()}
             >
               <svg
@@ -130,7 +130,7 @@ export function FeatureSlider() {
             <button
               type="button"
               className="fs-nav-btn"
-              aria-label={t('next')}
+              aria-label={t("next")}
               onClick={() => swiperRef.current?.slideNext()}
             >
               <svg
@@ -149,10 +149,10 @@ export function FeatureSlider() {
 
       {showConfirm && (
         <ConfirmationModal
-          title={t('dontShowAgainTitle')}
-          text={t('dontShowAgainText')}
+          title={t("dontShowAgainTitle")}
+          text={t("dontShowAgainText")}
           okCallback={() => {
-            localStorage.setItem(LS_KEY, 'true');
+            localStorage.setItem(LS_KEY, "true");
             setVisible(false);
             setShowConfirm(false);
           }}

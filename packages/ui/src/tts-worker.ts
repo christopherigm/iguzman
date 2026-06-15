@@ -22,23 +22,23 @@
  *   { id, type: 'error',      payload: { message: string } }    - any failure
  */
 
-import { pipeline, env } from '@huggingface/transformers';
+import { pipeline, env } from "@huggingface/transformers";
 
 // Always fetch models from Hugging Face Hub; never look for local files.
 env.allowLocalModels = false;
 
 /* ── Constants ───────────────────────────────────────────── */
 
-const DEFAULT_MODEL = 'Xenova/speecht5_tts';
+const DEFAULT_MODEL = "Xenova/speecht5_tts";
 // Default speaker embeddings from the transformers.js-docs dataset.
 const DEFAULT_SPEAKER_EMBEDDINGS =
-  'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin';
+  "https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin";
 
 /* ── Worker state ────────────────────────────────────────── */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let synthesizer: any = null;
-let loadedModelId = '';
+let loadedModelId = "";
 let loadPromise: Promise<void> | null = null;
 
 /* ── Helpers ─────────────────────────────────────────────── */
@@ -49,14 +49,11 @@ async function ensureLoaded(modelId: string): Promise<void> {
 
   loadedModelId = modelId;
   loadPromise = (async () => {
-    synthesizer = await pipeline('text-to-speech', modelId, {
-      progress_callback: (info: {
-        status: string;
-        progress?: number;
-      }) => {
-        if (info.status === 'progress' && info.progress !== undefined) {
+    synthesizer = await pipeline("text-to-speech", modelId, {
+      progress_callback: (info: { status: string; progress?: number }) => {
+        if (info.status === "progress" && info.progress !== undefined) {
           self.postMessage({
-            type: 'model-progress',
+            type: "model-progress",
             payload: { progress: Math.round(info.progress) },
           });
         }
@@ -79,18 +76,18 @@ self.onmessage = async (
   const { id, type, payload } = event.data;
 
   const sendError = (message: string) => {
-    self.postMessage({ id, type: 'error', payload: { message } });
+    self.postMessage({ id, type: "error", payload: { message } });
   };
 
   try {
-    if (type === 'load') {
+    if (type === "load") {
       const { model = DEFAULT_MODEL } = payload as { model?: string };
       await ensureLoaded(model);
-      self.postMessage({ id, type: 'loaded', payload: {} });
+      self.postMessage({ id, type: "loaded", payload: {} });
       return;
     }
 
-    if (type === 'synthesize') {
+    if (type === "synthesize") {
       const {
         text,
         model = DEFAULT_MODEL,
@@ -109,7 +106,7 @@ self.onmessage = async (
 
       self.postMessage({
         id,
-        type: 'result',
+        type: "result",
         payload: {
           audio: (result as { audio: Float32Array }).audio,
           samplingRate: (result as { sampling_rate: number }).sampling_rate,

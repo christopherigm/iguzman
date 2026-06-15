@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useRef, useCallback } from 'react';
-import type { AstWorkerInbound, AstWorkerOutbound } from './ast-worker-types';
-import type { SkeletonJson } from './skeleton-json';
+import { useState, useRef, useCallback } from "react";
+import type { AstWorkerInbound, AstWorkerOutbound } from "./ast-worker-types";
+import type { SkeletonJson } from "./skeleton-json";
 
-export type AstExtractorStatus = 'idle' | 'running' | 'done' | 'error';
+export type AstExtractorStatus = "idle" | "running" | "done" | "error";
 
 export interface UseAstExtractorResult {
   status: AstExtractorStatus;
@@ -17,8 +17,8 @@ export interface UseAstExtractorResult {
 }
 
 export function useAstExtractor(): UseAstExtractorResult {
-  const [status, setStatus] = useState<AstExtractorStatus>('idle');
-  const [phase, setPhase] = useState('');
+  const [status, setStatus] = useState<AstExtractorStatus>("idle");
+  const [phase, setPhase] = useState("");
   const [skeleton, setSkeleton] = useState<SkeletonJson | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,53 +31,60 @@ export function useAstExtractor(): UseAstExtractorResult {
 
   const extract = useCallback((handle: FileSystemDirectoryHandle) => {
     terminateWorker();
-    setStatus('running');
-    setPhase('init');
+    setStatus("running");
+    setPhase("init");
     setSkeleton(null);
     setError(null);
 
-    const worker = new Worker(new URL('./ast-worker.ts', import.meta.url), { type: 'module' });
+    const worker = new Worker(new URL("./ast-worker.ts", import.meta.url), {
+      type: "module",
+    });
     workerRef.current = worker;
 
-    worker.addEventListener('message', (event: MessageEvent<AstWorkerOutbound>) => {
-      const msg = event.data;
-      switch (msg.type) {
-        case 'PROGRESS':
-          setPhase(msg.phase);
-          break;
-        case 'DONE':
-          setSkeleton(msg.skeleton);
-          setStatus('done');
-          terminateWorker();
-          break;
-        case 'ERROR':
-          setError(msg.error);
-          setStatus('error');
-          terminateWorker();
-          break;
-      }
-    });
+    worker.addEventListener(
+      "message",
+      (event: MessageEvent<AstWorkerOutbound>) => {
+        const msg = event.data;
+        switch (msg.type) {
+          case "PROGRESS":
+            setPhase(msg.phase);
+            break;
+          case "DONE":
+            setSkeleton(msg.skeleton);
+            setStatus("done");
+            terminateWorker();
+            break;
+          case "ERROR":
+            setError(msg.error);
+            setStatus("error");
+            terminateWorker();
+            break;
+        }
+      },
+    );
 
-    worker.addEventListener('error', (e) => {
+    worker.addEventListener("error", (e) => {
       setError(e.message);
-      setStatus('error');
+      setStatus("error");
       terminateWorker();
     });
 
-    worker.postMessage({ type: 'EXTRACT', handle } satisfies AstWorkerInbound);
+    worker.postMessage({ type: "EXTRACT", handle } satisfies AstWorkerInbound);
   }, []);
 
   const abort = useCallback(() => {
-    workerRef.current?.postMessage({ type: 'ABORT' } satisfies AstWorkerInbound);
+    workerRef.current?.postMessage({
+      type: "ABORT",
+    } satisfies AstWorkerInbound);
     terminateWorker();
-    setStatus('idle');
-    setPhase('');
+    setStatus("idle");
+    setPhase("");
   }, []);
 
   const reset = useCallback(() => {
     terminateWorker();
-    setStatus('idle');
-    setPhase('');
+    setStatus("idle");
+    setPhase("");
     setSkeleton(null);
     setError(null);
   }, []);

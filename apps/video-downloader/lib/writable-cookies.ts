@@ -1,9 +1,14 @@
-import { copyFile, writeFile } from 'node:fs/promises';
+import { copyFile, writeFile } from "node:fs/promises";
 
-const IS_PRODUCTION = (process.env.NODE_ENV?.trim() ?? 'localhost') === 'production';
+const IS_PRODUCTION =
+  (process.env.NODE_ENV?.trim() ?? "localhost") === "production";
 
-const COOKIES_PATH = IS_PRODUCTION ? '/app/netscape-cookies.txt' : './netscape-cookies.txt';
-const WRITABLE_COOKIES_PATH = IS_PRODUCTION ? '/tmp/netscape-cookies.txt' : COOKIES_PATH;
+const COOKIES_PATH = IS_PRODUCTION
+  ? "/app/netscape-cookies.txt"
+  : "./netscape-cookies.txt";
+const WRITABLE_COOKIES_PATH = IS_PRODUCTION
+  ? "/tmp/netscape-cookies.txt"
+  : COOKIES_PATH;
 
 let _cookiesCopied = false;
 
@@ -22,7 +27,7 @@ export async function getWritableCookiesPath(): Promise<string> {
     try {
       await copyFile(COOKIES_PATH, WRITABLE_COOKIES_PATH);
     } catch {
-      await writeFile(WRITABLE_COOKIES_PATH, '# Netscape HTTP Cookie File\n');
+      await writeFile(WRITABLE_COOKIES_PATH, "# Netscape HTTP Cookie File\n");
     }
     _cookiesCopied = true;
   }

@@ -1,10 +1,10 @@
-import { execFile } from 'child_process';
+import { execFile } from "child_process";
 
-const NODE_ENV = process.env.NODE_ENV?.trim() ?? 'localhost';
+const NODE_ENV = process.env.NODE_ENV?.trim() ?? "localhost";
 
 /** Default output folder based on the current environment. */
 const DEFAULT_OUTPUT_FOLDER =
-  NODE_ENV === 'production' ? '/app/media' : 'public/media';
+  NODE_ENV === "production" ? "/app/media" : "public/media";
 
 interface Concat2VideosOptions {
   /** First source video path (a leading `media/` prefix is stripped automatically). */
@@ -42,7 +42,7 @@ const concat2Videos = ({
 }: Concat2VideosOptions): Promise<string> => {
   /** Strip a leading `media/` prefix so paths are relative to outputFolder. */
   const stripMediaPrefix = (path: string): string =>
-    path.startsWith('media/') ? path.slice('media/'.length) : path;
+    path.startsWith("media/") ? path.slice("media/".length) : path;
 
   const src1Clean = stripMediaPrefix(src1);
   const src2Clean = stripMediaPrefix(src2);
@@ -54,28 +54,27 @@ const concat2Videos = ({
 
   // Concat filter: take video+audio from both inputs, produce single output.
   // @see https://trac.ffmpeg.org/wiki/Concatenate#filterdemuxer
-  const filterComplex =
-    '[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[outv][outa]';
+  const filterComplex = "[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[outv][outa]";
 
   const args = [
-    '-y',
-    '-i',
+    "-y",
+    "-i",
     src1File,
-    '-i',
+    "-i",
     src2File,
-    '-filter_complex',
+    "-filter_complex",
     filterComplex,
-    '-map',
-    '[outv]',
-    '-map',
-    '[outa]',
+    "-map",
+    "[outv]",
+    "-map",
+    "[outa]",
     destFile,
   ];
 
   return new Promise<string>((resolve, reject) => {
-    execFile('ffmpeg', args, { maxBuffer: 1024 * 2048 }, (error) => {
+    execFile("ffmpeg", args, { maxBuffer: 1024 * 2048 }, (error) => {
       if (error) {
-        console.error('Error concatenating videos:', error);
+        console.error("Error concatenating videos:", error);
         return reject(error);
       }
       resolve(`media/${destClean}`);

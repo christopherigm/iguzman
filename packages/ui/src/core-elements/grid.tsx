@@ -10,11 +10,29 @@ import "./grid.css";
 export type GridSize = Partial<Record<Breakpoint, number>>;
 
 /**
+ * Responsive masonry column count per breakpoint.
+ * Mobile-first: xs is the base; larger breakpoints override at their min-width.
+ */
+export type MasonryColumns = Partial<Record<Breakpoint, number>>;
+
+/** Default masonry column counts when `masonry` is passed as a boolean. */
+const DEFAULT_MASONRY_COLUMNS: MasonryColumns = { xs: 1, sm: 2 };
+
+/**
  * Props for the Grid component.
  */
 export interface GridProps extends UIComponentProps {
   /** When true, renders as a 12-column grid container. */
   container?: boolean;
+  /**
+   * Lays out children as a masonry (CSS multi-column) instead of a flex grid.
+   * Children flow top-to-bottom into balanced columns, eliminating the vertical
+   * gaps a flex grid leaves when items have unequal heights.
+   * Pass `true` for the default `{ xs: 1, sm: 2 }`, or a responsive column-count
+   * map (e.g. `{ xs: 1, sm: 2, lg: 3 }`). Implies `container`; item `size` props
+   * are ignored in masonry mode (each child spans one column).
+   */
+  masonry?: boolean | MasonryColumns;
   /** When true, renders as a grid item. Implicit if `size` is provided. */
   item?: boolean;
   /** Responsive column span per breakpoint (1-12). */
@@ -31,17 +49,39 @@ export interface GridProps extends UIComponentProps {
 const SPACING_UNIT = 8;
 
 /**
+ * Resolve the `masonry` prop into a responsive column-count map, or `undefined`
+ * when masonry layout is disabled.
+ */
+function resolveMasonry(
+  masonry: boolean | MasonryColumns | undefined,
+): MasonryColumns | undefined {
+  if (!masonry) return undefined;
+  if (masonry === true) return DEFAULT_MASONRY_COLUMNS;
+  return masonry;
+}
+
+/**
  * Build the CSS class list for a Grid element.
  */
 function buildGridClasses(
   container: boolean,
   isItem: boolean,
   size: GridSize | undefined,
+  masonryColumns: MasonryColumns | undefined,
   className: string | undefined,
 ): string {
   const classes: string[] = [];
 
-  if (container) {
+  if (masonryColumns) {
+    classes.push("ui-grid-masonry");
+    const breakpoints = Object.keys(masonryColumns) as Breakpoint[];
+    for (const bp of breakpoints) {
+      const cols = masonryColumns[bp];
+      if (cols !== undefined && cols >= 1) {
+        classes.push(`ui-grid-masonry-${bp}-${Math.round(cols)}`);
+      }
+    }
+  } else if (container) {
     classes.push("ui-grid-container");
   }
 
@@ -49,7 +89,8 @@ function buildGridClasses(
     classes.push("ui-grid-item");
   }
 
-  if (size) {
+  // Span classes only apply to a flex grid; masonry children span one column.
+  if (size && !masonryColumns) {
     const breakpoints = Object.keys(size) as Breakpoint[];
     for (const bp of breakpoints) {
       const cols = size[bp];
@@ -79,10 +120,19 @@ function buildGridClasses(
  *   <Grid size={{ xs: 12, sm: 6, md: 4 }}>Column 2</Grid>
  *   <Grid size={{ xs: 12, sm: 6, md: 4 }}>Column 3</Grid>
  * </Grid>
+ *
+ * @example
+ * // Masonry: children flow into balanced columns with no vertical gaps.
+ * <Grid masonry={{ xs: 1, sm: 2 }} spacing={3}>
+ *   <Grid item>Short card</Grid>
+ *   <Grid item>Tall card</Grid>
+ *   <Grid item>Another card</Grid>
+ * </Grid>
  */
 export const Grid: React.FC<GridProps> = (props) => {
   const {
     container = false,
+    masonry,
     item,
     size,
     spacing,
@@ -94,12 +144,20 @@ export const Grid: React.FC<GridProps> = (props) => {
     styles,
   } = props;
 
+  const masonryColumns = resolveMasonry(masonry);
+  const isContainer = container || masonryColumns !== undefined;
   const isItem = item === true || size !== undefined;
-  const gridClassName = buildGridClasses(container, isItem, size, className);
+  const gridClassName = buildGridClasses(
+    container,
+    isItem,
+    size,
+    masonryColumns,
+    className,
+  );
 
   const style: Record<string, unknown> = { ...buildStyleProps(props) };
 
-  if (container) {
+  if (isContainer) {
     const resolvedX = spacingX ?? spacing;
     const resolvedY = spacingY ?? spacing;
     if (resolvedX !== undefined) {

@@ -1,7 +1,7 @@
-import { cache } from 'react';
-import { headers } from 'next/headers';
-import { API_URL } from './config';
-import logger from './logger';
+import { cache } from "react";
+import { headers } from "next/headers";
+import { API_URL } from "./config";
+import logger from "./logger";
 
 export interface ProductCategory {
   id: number;
@@ -34,7 +34,7 @@ async function fetchWithHost<T>(
 ): Promise<T[]> {
   try {
     const res = await fetch(`${API_URL}${path}`, {
-      headers: { 'X-Website-Host': host },
+      headers: { "X-Website-Host": host },
     });
 
     if (!res.ok) {
@@ -59,7 +59,7 @@ async function fetchOneWithHost<T>(
 ): Promise<T | null> {
   try {
     const res = await fetch(`${API_URL}${path}`, {
-      headers: { 'X-Website-Host': host },
+      headers: { "X-Website-Host": host },
     });
 
     if (!res.ok) {
@@ -81,11 +81,11 @@ async function fetchOneWithHost<T>(
 export const getProductCategories = cache(
   async (): Promise<ProductCategory[]> => {
     const headersList = await headers();
-    const host = headersList.get('host') ?? '';
+    const host = headersList.get("host") ?? "";
     return fetchWithHost<ProductCategory>(
-      '/api/catalog/product-categories/',
+      "/api/catalog/product-categories/",
       host,
-      'product categories',
+      "product categories",
     );
   },
 );
@@ -93,11 +93,11 @@ export const getProductCategories = cache(
 export const getServiceCategories = cache(
   async (): Promise<ServiceCategory[]> => {
     const headersList = await headers();
-    const host = headersList.get('host') ?? '';
+    const host = headersList.get("host") ?? "";
     return fetchWithHost<ServiceCategory>(
-      '/api/catalog/service-categories/',
+      "/api/catalog/service-categories/",
       host,
-      'service categories',
+      "service categories",
     );
   },
 );
@@ -289,11 +289,11 @@ export interface ServiceDetail {
 export const getFeaturedProducts = cache(
   async (): Promise<FeaturedProduct[]> => {
     const headersList = await headers();
-    const host = headersList.get('host') ?? '';
+    const host = headersList.get("host") ?? "";
     return fetchWithHost<FeaturedProduct>(
-      '/api/catalog/products/?featured=true',
+      "/api/catalog/products/?featured=true",
       host,
-      'featured products',
+      "featured products",
     );
   },
 );
@@ -301,25 +301,33 @@ export const getFeaturedProducts = cache(
 export const getFeaturedServices = cache(
   async (): Promise<FeaturedService[]> => {
     const headersList = await headers();
-    const host = headersList.get('host') ?? '';
+    const host = headersList.get("host") ?? "";
     return fetchWithHost<FeaturedService>(
-      '/api/catalog/services/?featured=true',
+      "/api/catalog/services/?featured=true",
       host,
-      'featured services',
+      "featured services",
     );
   },
 );
 
 export const getAllProducts = cache(async (): Promise<FeaturedProduct[]> => {
   const headersList = await headers();
-  const host = headersList.get('host') ?? '';
-  return fetchWithHost<FeaturedProduct>('/api/catalog/products/', host, 'all products');
+  const host = headersList.get("host") ?? "";
+  return fetchWithHost<FeaturedProduct>(
+    "/api/catalog/products/",
+    host,
+    "all products",
+  );
 });
 
 export const getAllServices = cache(async (): Promise<FeaturedService[]> => {
   const headersList = await headers();
-  const host = headersList.get('host') ?? '';
-  return fetchWithHost<FeaturedService>('/api/catalog/services/', host, 'all services');
+  const host = headersList.get("host") ?? "";
+  return fetchWithHost<FeaturedService>(
+    "/api/catalog/services/",
+    host,
+    "all services",
+  );
 });
 
 export async function getProductCategory(
@@ -340,7 +348,7 @@ export async function getProductsByCategory(
   categoryId: number,
 ): Promise<FeaturedProduct[]> {
   const headersList = await headers();
-  const host = headersList.get('host') ?? '';
+  const host = headersList.get("host") ?? "";
   return fetchWithHost<FeaturedProduct>(
     `/api/catalog/products/?category=${categoryId}`,
     host,
@@ -352,7 +360,7 @@ export async function getServicesByCategory(
   categoryId: number,
 ): Promise<FeaturedService[]> {
   const headersList = await headers();
-  const host = headersList.get('host') ?? '';
+  const host = headersList.get("host") ?? "";
   return fetchWithHost<FeaturedService>(
     `/api/catalog/services/?category=${categoryId}`,
     host,
@@ -362,7 +370,7 @@ export async function getServicesByCategory(
 
 export async function getProduct(slug: string): Promise<ProductDetail | null> {
   const headersList = await headers();
-  const host = headersList.get('host') ?? '';
+  const host = headersList.get("host") ?? "";
   return fetchOneWithHost<ProductDetail>(
     `/api/catalog/products/?slug=${encodeURIComponent(slug)}`,
     host,
@@ -372,7 +380,7 @@ export async function getProduct(slug: string): Promise<ProductDetail | null> {
 
 export async function getService(slug: string): Promise<ServiceDetail | null> {
   const headersList = await headers();
-  const host = headersList.get('host') ?? '';
+  const host = headersList.get("host") ?? "";
   return fetchOneWithHost<ServiceDetail>(
     `/api/catalog/services/?slug=${encodeURIComponent(slug)}`,
     host,
