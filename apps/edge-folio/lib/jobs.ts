@@ -112,3 +112,7 @@ export function createJobCredential(payload: CreateCredentialPayload): Promise<J
 export function deleteJobCredential(id: number): Promise<void> {
   return request(`/api/jobs/credentials/${id}`, { method: 'DELETE' });
 }
+
+export function deleteJob(id: number): Promise<void> {
+  return request(`/api/jobs/${id}`, { method: 'DELETE' });
+}

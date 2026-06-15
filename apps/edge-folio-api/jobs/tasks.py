@@ -9,10 +9,18 @@ from .providers import ProviderError, get_client
 
 logger = logging.getLogger(__name__)
 
-# Map free-text profile locations onto the catalog's supported countries.
 _COUNTRY_TOKENS = {
     'ca': ('canada', 'ontario', 'quebec', 'toronto', 'vancouver', 'montreal', 'alberta'),
     'mx': ('mexico', 'méxico', 'cdmx', 'guadalajara', 'monterrey', 'jalisco'),
+}
+
+_YEARS_QUERY: dict[int, str] = {
+    0: 'entry level',
+    1: '1-2 years experience',
+    3: '3-5 years experience',
+    6: '6-9 years experience',
+    10: '10+ years experience',
+    15: '15+ years experience',
 }
 
 
@@ -24,12 +32,48 @@ def _detect_country(location: str) -> str:
     return 'us'
 
 
+def _build_query_parts(profile) -> list[str]:
+    """Build query terms from a UserProfile according to its job search preferences."""
+    from career.models import Education, Language
+
+    user_id = profile.user_id
+    parts: list[str] = []
+
+    if profile.job_search_include_title and profile.job_title.strip():
+        parts.append(profile.job_title.strip())
+
+    if profile.job_search_include_stack:
+        top_stack = profile.preferred_stack.first()
+        if top_stack:
+            parts.append(top_stack.name)
+
+    if profile.job_search_include_tn_profession and profile.tn_profession:
+        parts.append(profile.tn_profession)
+
+    if profile.job_search_include_years and profile.years_of_experience is not None:
+        label = _YEARS_QUERY.get(profile.years_of_experience, f'{profile.years_of_experience}+ years experience')
+        parts.append(label)
+
+    if profile.job_search_bilingual:
+        if Language.objects.filter(user_id=user_id).count() >= 2:
+            parts.append('bilingual')
+
+    if profile.job_search_include_education:
+        edu = Education.objects.filter(user_id=user_id).order_by('-start_year').first()
+        if edu:
+            parts.append(edu.get_degree_display())
+
+    if profile.job_search_extra_text.strip():
+        parts.append(profile.job_search_extra_text.strip())
+
+    return parts or [profile.job_title.strip()]
+
+
 def _build_queries(budget: int) -> list[dict]:
     """Deduplicated search queries derived from active users' profiles.
 
-    Each query combines the user's job title with their top preferred stack and
-    is scoped to a country/location. Capped at ``budget`` to respect Adzuna's
-    free-tier daily ceiling.
+    Each query is built from the user's job search preferences.
+    Capped at ``budget`` to respect Adzuna's free-tier daily ceiling.
     """
     from users.models import UserProfile
 
@@ -43,21 +87,23 @@ def _build_queries(budget: int) -> list[dict]:
         .select_related('user')
     )
     for profile in profiles:
-        job_title = profile.job_title.strip()
-        if not job_title:
+        if not profile.job_title.strip():
             continue
-        top_stack = profile.preferred_stack.first()
-        query = f'{job_title} {top_stack.name}'.strip() if top_stack else job_title
-        country = _detect_country(profile.location)
+
+        query = ' '.join(_build_query_parts(profile))
+
+        if profile.job_search_include_location:
+            location = profile.location.strip()
+            country = _detect_country(profile.location)
+        else:
+            location = ''
+            country = 'us'
+
         key = (query.lower(), country)
         if key in seen:
             continue
         seen.add(key)
-        queries.append({
-            'query': query,
-            'location': profile.location.strip(),
-            'country': country,
-        })
+        queries.append({'query': query, 'location': location, 'country': country})
         if len(queries) >= budget:
             break
 
@@ -145,10 +191,14 @@ def ingest_user_feed(user_id: int) -> None:
         logger.info('ingest_user_feed: user=%s has no job title to search with', user_id)
         return
 
-    top_stack = profile.preferred_stack.first()
-    query = f'{profile.job_title} {top_stack.name}'.strip() if top_stack else profile.job_title.strip()
-    location = profile.location.strip()
-    country = _detect_country(profile.location)
+    query = ' '.join(_build_query_parts(profile))
+
+    if profile.job_search_include_location:
+        location = profile.location.strip()
+        country = _detect_country(profile.location)
+    else:
+        location = ''
+        country = 'us'
 
     for credential in credentials:
         try:

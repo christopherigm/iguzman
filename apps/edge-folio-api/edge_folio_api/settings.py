@@ -279,8 +279,9 @@ JSEARCH_API_KEY = os.environ.get('JSEARCH_API_KEY', '')
 # Fernet key for encrypting BYOK provider credentials. Falls back to a key derived
 # from SECRET_KEY for local dev so the feature works without extra configuration.
 JOBS_ENCRYPTION_KEY = os.environ.get('JOBS_ENCRYPTION_KEY', '')
-# Per-day ceiling on platform Adzuna queries (free tier is ~250/day).
-JOBS_ADZUNA_DAILY_BUDGET = int(os.environ.get('JOBS_ADZUNA_DAILY_BUDGET', '200'))
+# Per-run ceiling on platform Adzuna queries. Default fits the free tier (250 calls/month)
+# at one run per day: 8 × 30 = 240. Raise via env var when on a paid plan.
+JOBS_ADZUNA_DAILY_BUDGET = int(os.environ.get('JOBS_ADZUNA_DAILY_BUDGET', '8'))
 
 # ── Celery ────────────────────────────────────────────────────────────────────
 # Run tasks synchronously in dev when no broker is configured.
@@ -308,7 +309,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'ingest-shared-catalog': {
         'task': 'jobs.tasks.ingest_shared_catalog',
-        'schedule': 6 * 3600.0,  # every 6 hours
+        'schedule': 24 * 3600.0,  # daily — keeps usage within the 250 calls/month free tier
     },
     'prune-expired-postings': {
         'task': 'jobs.tasks.prune_expired_postings',

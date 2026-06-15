@@ -185,7 +185,7 @@ interactive_select() {
   local num="${#MENU_ITEMS[@]}"
   local cursor=0
   local has_desc=0
-  [[ "${#MENU_DESCS[@]:-0}" -gt 0 ]] && has_desc=1
+  [[ "${#MENU_DESCS[@]}" -gt 0 ]] && has_desc=1
   local lpi=1
   [[ "${has_desc}" -eq 1 ]] && lpi=2
 
@@ -202,7 +202,7 @@ interactive_select() {
         label_str="${lbl}"
       fi
       printf "  %s  %s\n" "${ptr}" "${label_str}"
-      [[ "${has_desc}" -eq 1 ]] && printf "      %s\n" "$(clr_dim "${MENU_DESCS[$j]:-}")"
+      if [[ "${has_desc}" -eq 1 ]]; then printf "      %s\n" "$(clr_dim "${MENU_DESCS[$j]:-}")"; fi
     done
   }
 

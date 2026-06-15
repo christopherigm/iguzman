@@ -228,6 +228,21 @@ class ContactInfoSerializer(serializers.ModelSerializer):
         fields = ('phone', 'location', 'github_url', 'linkedin_url', 'summary', 'tn_profession', 'citizenship')
 
 
+class JobSearchPrefsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = (
+            'job_search_include_title',
+            'job_search_extra_text',
+            'job_search_bilingual',
+            'job_search_include_tn_profession',
+            'job_search_include_education',
+            'job_search_include_years',
+            'job_search_include_stack',
+            'job_search_include_location',
+        )
+
+
 class OnboardingSerializer(serializers.ModelSerializer):
     preferred_stack = serializers.ListField(
         child=serializers.CharField(max_length=100),

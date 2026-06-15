@@ -35,6 +35,7 @@ from .models import EmailVerificationToken, PasskeyCredential, PasswordResetToke
 from .serializers import (
     ContactInfoSerializer,
     CustomTokenObtainPairSerializer,
+    JobSearchPrefsSerializer,
     OnboardingSerializer,
     PasskeyAuthenticationOptionsSerializer,
     PasskeyAuthenticationVerifySerializer,
@@ -268,6 +269,23 @@ class ContactInfoView(generics.RetrieveUpdateAPIView):
         except Exception:
             pass
         return response
+
+
+class JobSearchPrefsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import UserProfile as UserProfileModel
+        profile, _ = UserProfileModel.objects.get_or_create(user=request.user)
+        return Response(JobSearchPrefsSerializer(profile).data)
+
+    def patch(self, request):
+        from .models import UserProfile as UserProfileModel
+        profile, _ = UserProfileModel.objects.get_or_create(user=request.user)
+        serializer = JobSearchPrefsSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 def _extract_pdf_text(file_obj) -> str:

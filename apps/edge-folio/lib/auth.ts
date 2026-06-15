@@ -302,6 +302,39 @@ export async function loginWithPasskey(email: string): Promise<void> {
   }
 }
 
+export interface JobSearchPrefs {
+  job_search_include_title: boolean;
+  job_search_extra_text: string;
+  job_search_bilingual: boolean;
+  job_search_include_tn_profession: boolean;
+  job_search_include_education: boolean;
+  job_search_include_years: boolean;
+  job_search_include_stack: boolean;
+  job_search_include_location: boolean;
+}
+
+export async function getJobSearchPrefs(): Promise<JobSearchPrefs> {
+  const res = await fetch('/api/auth/job-search-prefs');
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<JobSearchPrefs>;
+}
+
+export async function saveJobSearchPrefs(payload: Partial<JobSearchPrefs>): Promise<JobSearchPrefs> {
+  const res = await fetch('/api/auth/job-search-prefs', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<JobSearchPrefs>;
+}
+
 export async function updateContactInfo(payload: {
   phone?: string;
   location?: string;

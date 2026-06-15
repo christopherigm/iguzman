@@ -14,9 +14,12 @@ import { Badge } from '@repo/ui/core-elements/badge';
 import { Select } from '@repo/ui/core-elements/select';
 import { TextInput } from '@repo/ui/core-elements/text-input';
 import { Toast } from '@repo/ui/core-elements/toast';
+import { Switch } from '@repo/ui/core-elements/switch';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
 import {
   getJobFeed,
   saveJob,
+  deleteJob,
   triggerJobFetch,
   JobsError,
   type JobPosting,
@@ -45,11 +48,14 @@ function formatSalary(posting: JobPosting): string | null {
 interface JobCardProps {
   posting: JobPosting;
   onSave: (posting: JobPosting) => void;
+  onDelete: (posting: JobPosting) => void;
   saving: boolean;
+  deleting: boolean;
   savedAppId: number | null;
+  isStaff: boolean;
 }
 
-function JobCard({ posting, onSave, saving, savedAppId }: JobCardProps) {
+function JobCard({ posting, onSave, onDelete, saving, deleting, savedAppId, isStaff }: JobCardProps) {
   const t = useTranslations('JobsPage');
   const locale = useLocale();
   const salary = formatSalary(posting);
@@ -142,6 +148,15 @@ function JobCard({ posting, onSave, saving, savedAppId }: JobCardProps) {
               onClick={() => onSave(posting)}
             />
           )}
+          {isStaff && (
+            <Button
+              text={deleting ? t('deleting') : t('deletePosting')}
+              type="button"
+              size="md"
+              disabled={deleting}
+              onClick={() => onDelete(posting)}
+            />
+          )}
         </Box>
       </Box>
     </Card>
@@ -166,12 +181,15 @@ export function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [savedMap, setSavedMap] = useState<Record<number, number>>({});
+  const [matchOnly, setMatchOnly] = useState(false);
   const [searchInput, setSearchInput] = useState(q);
   const [toast, setToast] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
   const [toastKey, setToastKey] = useState(0);
   const [isStaff, setIsStaff] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<JobPosting | null>(null);
 
   function showToast(text: string, kind: 'success' | 'error') {
     setToast({ text, kind });
@@ -260,6 +278,29 @@ export function JobsPage() {
     [t],
   );
 
+  const handleDelete = useCallback((posting: JobPosting) => {
+    setPendingDelete(posting);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDelete) return;
+    const posting = pendingDelete;
+    setPendingDelete(null);
+    setDeletingId(posting.id);
+    try {
+      await deleteJob(posting.id);
+      setPostings((prev) => prev.filter((p) => p.id !== posting.id));
+      setCount((prev) => prev - 1);
+      showToast(t('deleted'), 'success');
+    } catch {
+      showToast(t('errorDelete'), 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  }, [pendingDelete, t]);
+
+  const visiblePostings = matchOnly ? postings.filter((p) => p.score > 0) : postings;
+
   const totalPages = Math.max(1, Math.ceil(count / PER_PAGE));
 
   const filterChips = useMemo(
@@ -274,6 +315,16 @@ export function JobsPage() {
             width="100%"
             aria-label={t('searchLabel')}
           />
+        </Box>
+        <Box display="flex" alignItems="center" gap={8} styles={{ paddingBottom: 6 }}>
+          <Switch
+            checked={matchOnly}
+            onChange={setMatchOnly}
+            aria-label={t('matchOnlyLabel')}
+          />
+          <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+            {t('matchOnlyLabel')}
+          </Typography>
         </Box>
         <Box styles={{ minWidth: 140 }}>
           <Select
@@ -301,7 +352,7 @@ export function JobsPage() {
         </Box>
       </Box>
     ),
-    [searchInput, country, workType, t, setParam],
+    [searchInput, matchOnly, country, workType, t, setParam],
   );
 
   return (
@@ -352,7 +403,7 @@ export function JobsPage() {
           </Typography>
           <Button text={t('retry')} type="button" size="md" kind="success" onClick={load} />
         </Box>
-      ) : postings.length === 0 ? (
+      ) : visiblePostings.length === 0 ? (
         <Box
           display="flex"
           flexDirection="column"
@@ -379,13 +430,16 @@ export function JobsPage() {
             gap={16}
             styles={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}
           >
-            {postings.map((posting) => (
+            {visiblePostings.map((posting) => (
               <JobCard
                 key={posting.id}
                 posting={posting}
                 onSave={handleSave}
+                onDelete={handleDelete}
                 saving={savingId === posting.id}
+                deleting={deletingId === posting.id}
                 savedAppId={savedMap[posting.id] ?? posting.saved_application_id}
+                isStaff={isStaff}
               />
             ))}
           </Box>
@@ -416,6 +470,15 @@ export function JobsPage() {
 
       {toast && (
         <Toast key={toastKey} message={toast.text} variant={toast.kind} position="top-center" />
+      )}
+
+      {pendingDelete && (
+        <ConfirmationModal
+          title={t('confirmDeleteTitle')}
+          text={t('confirmDeleteText')}
+          okCallback={confirmDelete}
+          cancelCallback={() => setPendingDelete(null)}
+        />
       )}
     </Container>
   );

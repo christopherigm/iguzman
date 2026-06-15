@@ -31,6 +31,16 @@ class UserProfile(models.Model):
     tn_profession = models.CharField(max_length=200, blank=True, default='')
     citizenship = models.CharField(max_length=50, blank=True, default='')
 
+    # ── Job search preferences ────────────────────────────────────────────────
+    job_search_include_title = models.BooleanField(default=True)
+    job_search_extra_text = models.CharField(max_length=200, blank=True, default='')
+    job_search_bilingual = models.BooleanField(default=False)
+    job_search_include_tn_profession = models.BooleanField(default=False)
+    job_search_include_education = models.BooleanField(default=False)
+    job_search_include_years = models.BooleanField(default=False)
+    job_search_include_stack = models.BooleanField(default=False)
+    job_search_include_location = models.BooleanField(default=False)
+
     def __str__(self):
         return f'Profile of {self.user.username}'
 

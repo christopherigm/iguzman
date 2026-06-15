@@ -228,6 +228,20 @@ class SaveJobView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+class DeleteJobView(APIView):
+    """Staff-only: permanently delete a job posting from the catalog."""
+
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request, pk):
+        try:
+            posting = JobPosting.objects.get(pk=pk)
+        except JobPosting.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        posting.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class UserApiCredentialListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserApiCredentialSerializer
