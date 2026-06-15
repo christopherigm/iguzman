@@ -354,7 +354,9 @@
       "remote": "Remote",
       "onsite": "Vor Ort",
       "hybrid": "Hybrid"
-    }
+    },
+    "privateListTitle": "Deine privaten Stellen",
+    "sharedListTitle": "Gemeinsamer Katalog"
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",

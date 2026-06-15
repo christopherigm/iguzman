@@ -5,7 +5,7 @@ from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, status
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -139,15 +139,24 @@ class JobFeedView(APIView):
             item['saved_application_id'] = (
                 saved_by_posting.get(posting.id) or saved_by_url.get(posting.job_url)
             )
+            item['is_owner'] = posting.owner_id == user.id
             results.append(item)
         return results
 
     def _apply_filters(self, ranked, params):
         country = params.get('country')
         work_type = params.get('work_type')
+        scope = params.get('scope')
         q = (params.get('q') or '').strip().lower()
 
         items = ranked
+        # A private posting in the feed is always owned by the requesting user
+        # (the queryset is is_private=False OR owner=user), so is_private alone
+        # separates the owned list from the shared catalog.
+        if scope == 'private':
+            items = [p for p in items if p['is_private']]
+        elif scope == 'shared':
+            items = [p for p in items if not p['is_private']]
         if country:
             items = [p for p in items if p['country'] == country]
         if work_type:
@@ -245,16 +254,29 @@ class SaveJobView(APIView):
 
 
 class DeleteJobView(APIView):
-    """Staff-only: permanently delete a job posting from the catalog."""
+    """Delete a job posting.
 
-    permission_classes = [IsAdminUser]
+    Staff may delete any posting from the shared catalog. A regular user may
+    delete only their own private postings (those fetched with their BYOK key).
+    """
+
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk):
         try:
             posting = JobPosting.objects.get(pk=pk)
         except JobPosting.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        is_owner = posting.owner_id == request.user.id
+        if not (request.user.is_staff or is_owner):
+            # Don't disclose existence of postings the caller can't act on.
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
         posting.delete()
+        # The owner's feed is cached; bust it so the posting disappears at once.
+        if is_owner:
+            _invalidate_feed(request.user.id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

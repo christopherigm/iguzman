@@ -9,10 +9,15 @@ accesslog = '-'
 errorlog = '-'
 
 
-class _KubeProbeFilter(logging.Filter):
+class _AccessNoiseFilter(logging.Filter):
     def filter(self, record):
-        return 'kube-probe' not in record.getMessage()
+        message = record.getMessage()
+        if 'kube-probe' in message:
+            return False
+        if '/static/' in message:
+            return False
+        return True
 
 
 def on_starting(server):
-    logging.getLogger('gunicorn.access').addFilter(_KubeProbeFilter())
+    logging.getLogger('gunicorn.access').addFilter(_AccessNoiseFilter())

@@ -148,8 +148,18 @@ def ingest_shared_catalog() -> None:
         logger.warning('ingest_shared_catalog: %s', exc)
         return
 
+    # Optional fallback for queries Adzuna returns nothing for (e.g. a too-narrow
+    # title + state combo). Uses the platform JSearch key when one is configured.
+    fallback = None
+    if settings.JSEARCH_API_KEY:
+        try:
+            fallback = get_client('jsearch')
+        except ProviderError as exc:
+            logger.warning('ingest_shared_catalog: JSearch fallback unavailable: %s', exc)
+
     totals = {'created': 0, 'refreshed': 0, 'skipped_dup': 0, 'total': 0}
     for spec in queries:
+        provider = 'adzuna'
         try:
             postings = client.search(
                 query=spec['query'],
@@ -158,12 +168,29 @@ def ingest_shared_catalog() -> None:
             )
         except ProviderError as exc:
             logger.warning('Adzuna search failed for %r: %s', spec['query'], exc)
-            continue
-        result = upsert_postings('adzuna', postings)
+            postings = []
+
+        if not postings and fallback is not None:
+            try:
+                postings = fallback.search(
+                    query=spec['query'],
+                    location=spec['location'],
+                    country=spec['country'],
+                )
+                provider = 'jsearch'
+                logger.info(
+                    'ingest_shared_catalog: Adzuna empty for %r; JSearch fallback fetched=%d',
+                    spec['query'], len(postings),
+                )
+            except ProviderError as exc:
+                logger.warning('JSearch fallback failed for %r: %s', spec['query'], exc)
+                continue
+
+        result = upsert_postings(provider, postings)
         logger.info(
-            'ingest_shared_catalog query=%r country=%s location=%r '
+            'ingest_shared_catalog query=%r country=%s location=%r provider=%s '
             'fetched=%d created=%d refreshed=%d skipped_dup=%d',
-            spec['query'], spec['country'], spec['location'],
+            spec['query'], spec['country'], spec['location'], provider,
             result['total'], result['created'], result['refreshed'], result['skipped_dup'],
         )
         for key in totals:
@@ -183,13 +210,11 @@ def prune_expired_postings() -> None:
     logger.info('prune_expired_postings: deleted=%d', deleted)
 
 
-def select_user_credential(user_id: int):
-    """Pick the BYOK credential to spend on a single on-demand fetch.
+def usable_user_credentials(user_id: int) -> list:
+    """Active BYOK credentials with quota left, in :data:`PROVIDER_PRIORITY` order.
 
-    Tries providers in :data:`PROVIDER_PRIORITY` order (Adzuna, then JSearch) and
-    returns the first active credential that still has daily quota left, so the
-    fallback provider is only used once the primary's limit is reached. Returns
-    ``None`` when the user has no active credential with calls remaining.
+    Adzuna comes first, JSearch second, so the primary provider is always spent
+    before the fallback. Credentials whose daily limit is exhausted are dropped.
     """
     from .models import PROVIDER_PRIORITY, UserApiCredential
 
@@ -197,23 +222,36 @@ def select_user_credential(user_id: int):
         cred.provider: cred
         for cred in UserApiCredential.objects.filter(user_id=user_id, is_active=True).select_related('user')
     }
-    for provider in PROVIDER_PRIORITY:
-        cred = by_provider.get(provider)
-        if cred is not None and cred.calls_remaining > 0:
-            return cred
-    return None
+    return [
+        by_provider[provider]
+        for provider in PROVIDER_PRIORITY
+        if by_provider.get(provider) is not None and by_provider[provider].calls_remaining > 0
+    ]
+
+
+def select_user_credential(user_id: int):
+    """The highest-priority BYOK credential with quota left, or ``None``.
+
+    Used to gate an on-demand fetch; the ingest task itself walks every usable
+    credential via :func:`usable_user_credentials` so it can fall back.
+    """
+    creds = usable_user_credentials(user_id)
+    return creds[0] if creds else None
 
 
 @shared_task
 def ingest_user_feed(user_id: int) -> None:
-    """Fetch a private feed for a BYOK user using their own decrypted key.
+    """Fetch a private feed for a BYOK user using their own decrypted key(s).
 
-    Spends exactly one provider call per run — Adzuna first, falling back to
-    JSearch once Adzuna's daily limit is reached. Results are stored as private,
-    owner-scoped postings (option A) and never enter the shared catalog.
+    Walks the user's usable credentials in priority order (Adzuna, then JSearch)
+    and stops at the first provider that returns at least one posting. A provider
+    that returns zero results is treated as a miss and the next provider is tried,
+    so a too-narrow Adzuna query falls back to JSearch when the user has a key for
+    it. Each attempted provider is billed one call. Results are stored as private,
+    owner-scoped postings and never enter the shared catalog.
     """
-    credential = select_user_credential(user_id)
-    if credential is None:
+    credentials = usable_user_credentials(user_id)
+    if not credentials:
         logger.info('ingest_user_feed: no active credential with remaining quota for user=%s', user_id)
         return
 
@@ -233,24 +271,36 @@ def ingest_user_feed(user_id: int) -> None:
         location = ''
         country = 'us'
 
-    try:
-        client = get_client(credential.provider, api_key=credential.get_key())
-        postings = client.search(query=query, location=location, country=country)
-    except ProviderError as exc:
-        logger.warning('ingest_user_feed: %s search failed for user=%s: %s',
-                       credential.provider, user_id, exc)
-        return
+    fetched_any = False
+    for credential in credentials:
+        try:
+            client = get_client(credential.provider, api_key=credential.get_key())
+            postings = client.search(query=query, location=location, country=country)
+        except ProviderError as exc:
+            logger.warning('ingest_user_feed: %s search failed for user=%s: %s',
+                           credential.provider, user_id, exc)
+            continue
 
-    # The provider exposes no usage data, so deduct the call we just made.
-    credential.record_call()
+        # The provider exposes no usage data, so deduct the call we just made.
+        credential.record_call()
+        result = upsert_postings(
+            credential.provider, postings,
+            owner=credential.user, is_private=True,
+        )
+        logger.info(
+            'ingest_user_feed: user=%s provider=%s fetched=%d created=%d refreshed=%d',
+            user_id, credential.provider, result['total'], result['created'], result['refreshed'],
+        )
+
+        if postings:
+            fetched_any = True
+            break
+        logger.info(
+            'ingest_user_feed: %s returned 0 for user=%s; trying fallback provider',
+            credential.provider, user_id,
+        )
+
+    # Quota changed for every attempted provider; refresh the feed if anything landed.
     cache.delete(f'jobs:credentials:{user_id}')
-    result = upsert_postings(
-        credential.provider, postings,
-        owner=credential.user, is_private=True,
-    )
-    # New private postings must appear in this user's ranked feed immediately.
-    cache.delete(f'jobs:feed:{user_id}')
-    logger.info(
-        'ingest_user_feed: user=%s provider=%s created=%d refreshed=%d',
-        user_id, credential.provider, result['created'], result['refreshed'],
-    )
+    if fetched_any:
+        cache.delete(f'jobs:feed:{user_id}')

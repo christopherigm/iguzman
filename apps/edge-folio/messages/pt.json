@@ -354,7 +354,9 @@
       "remote": "Remoto",
       "onsite": "Presencial",
       "hybrid": "Híbrido"
-    }
+    },
+    "privateListTitle": "Suas vagas privadas",
+    "sharedListTitle": "Catálogo compartilhado"
   },
   "AuthPage": {
     "tabSignIn": "Entrar",

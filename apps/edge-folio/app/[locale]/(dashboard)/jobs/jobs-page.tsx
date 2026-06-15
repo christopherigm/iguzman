@@ -26,6 +26,7 @@ import {
   type JobPosting,
   type JobCountry,
   type JobWorkType,
+  type JobScope,
 } from "@/lib/jobs";
 import { getProfile } from "@/lib/auth";
 import "./jobs-page.css";
@@ -215,7 +216,7 @@ function JobCard({
               onClick={() => onSave(posting)}
             />
           )}
-          {isStaff && (
+          {(isStaff || posting.is_owner) && (
             <Button
               text={deleting ? t("deleting") : t("deletePosting")}
               type="button"
@@ -230,6 +231,206 @@ function JobCard({
   );
 }
 
+// ── Job list (one scope) ────────────────────────────────────────────────────
+
+interface JobListFilters {
+  country: JobCountry | "";
+  workType: JobWorkType | "";
+  q: string;
+  page: number;
+}
+
+interface JobListState {
+  postings: JobPosting[];
+  count: number;
+  loading: boolean;
+  error: boolean;
+  reload: () => void;
+  removePosting: (id: number) => void;
+}
+
+// Loads one paginated slice of the feed for a single scope (private/shared).
+// The two lists share the same filters but page independently.
+function useJobList(scope: JobScope, filters: JobListFilters): JobListState {
+  const { country, workType, q, page } = filters;
+  const [postings, setPostings] = useState<JobPosting[]>([]);
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await getJobFeed({
+        scope,
+        country,
+        work_type: workType,
+        q,
+        page,
+        per: PER_PAGE,
+      });
+      setPostings(res.results);
+      setCount(res.count);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [scope, country, workType, q, page]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const removePosting = useCallback((id: number) => {
+    setPostings((prev) => {
+      if (!prev.some((p) => p.id === id)) return prev;
+      setCount((c) => c - 1);
+      return prev.filter((p) => p.id !== id);
+    });
+  }, []);
+
+  return { postings, count, loading, error, reload: load, removePosting };
+}
+
+// ── Job list section (heading + grid + pagination) ──────────────────────────
+
+interface JobSectionProps {
+  title: string;
+  list: JobListState;
+  page: number;
+  onPageChange: (page: number) => void;
+  matchOnly: boolean;
+  onSave: (posting: JobPosting) => void;
+  onDelete: (posting: JobPosting) => void;
+  savingId: number | null;
+  deletingId: number | null;
+  savedMap: Record<number, number>;
+  isStaff: boolean;
+}
+
+function JobSection({
+  title,
+  list,
+  page,
+  onPageChange,
+  matchOnly,
+  onSave,
+  onDelete,
+  savingId,
+  deletingId,
+  savedMap,
+  isStaff,
+}: JobSectionProps) {
+  const t = useTranslations("JobsPage");
+  const visible = matchOnly
+    ? list.postings.filter((p) => p.score > 0)
+    : list.postings;
+
+  // Hide the whole section once it has finished loading with no results.
+  if (!list.loading && !list.error && visible.length === 0) return null;
+
+  const totalPages = Math.max(1, Math.ceil(list.count / PER_PAGE));
+
+  return (
+    <Box display="flex" flexDirection="column" gap={12} marginBottom={32}>
+      <Box display="flex" alignItems="baseline" gap={8}>
+        <Typography as="h2" variant="h3" fontWeight={600}>
+          {title}
+        </Typography>
+        {!list.loading && !list.error && (
+          <Typography
+            variant="caption"
+            color="var(--muted-foreground, #6b7280)"
+          >
+            {list.count}
+          </Typography>
+        )}
+      </Box>
+
+      {list.loading ? (
+        <Box display="flex" justifyContent="center" paddingY={40}>
+          <ProgressBar label={t("loading")} />
+        </Box>
+      ) : list.error ? (
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          gap={16}
+          paddingY={40}
+        >
+          <Typography variant="body-sm" color="var(--error, #ef4444)">
+            {t("errorLoad")}
+          </Typography>
+          <Button
+            text={t("retry")}
+            type="button"
+            size="md"
+            kind="success"
+            onClick={list.reload}
+          />
+        </Box>
+      ) : (
+        <>
+          <Box
+            display="grid"
+            gap={16}
+            styles={{
+              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            }}
+          >
+            {visible.map((posting) => (
+              <JobCard
+                key={posting.id}
+                posting={posting}
+                onSave={onSave}
+                onDelete={onDelete}
+                saving={savingId === posting.id}
+                deleting={deletingId === posting.id}
+                savedAppId={savedMap[posting.id] ?? posting.saved_application_id}
+                isStaff={isStaff}
+              />
+            ))}
+          </Box>
+
+          {totalPages > 1 && (
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              gap={12}
+              marginTop={20}
+            >
+              <Button
+                text={t("prev")}
+                type="button"
+                size="md"
+                disabled={page <= 1}
+                onClick={() => onPageChange(page - 1)}
+              />
+              <Typography
+                variant="body-sm"
+                color="var(--muted-foreground, #6b7280)"
+              >
+                {t("pageOf", { page, total: totalPages })}
+              </Typography>
+              <Button
+                text={t("next")}
+                type="button"
+                size="md"
+                disabled={page >= totalPages}
+                onClick={() => onPageChange(page + 1)}
+              />
+            </Box>
+          )}
+        </>
+      )}
+    </Box>
+  );
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function JobsPage() {
@@ -241,12 +442,15 @@ export function JobsPage() {
   const country = (searchParams.get("country") || "") as JobCountry | "";
   const workType = (searchParams.get("work_type") || "") as JobWorkType | "";
   const q = searchParams.get("q") || "";
-  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+  const pagePrivate = Math.max(
+    1,
+    parseInt(searchParams.get("page_private") || "1", 10) || 1,
+  );
+  const pageShared = Math.max(
+    1,
+    parseInt(searchParams.get("page_shared") || "1", 10) || 1,
+  );
 
-  const [postings, setPostings] = useState<JobPosting[]>([]);
-  const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [savedMap, setSavedMap] = useState<Record<number, number>>({});
@@ -276,36 +480,36 @@ export function JobsPage() {
         if (value) params.set(key, value);
         else params.delete(key);
       }
-      // Any filter change resets pagination.
-      if (!("page" in updates)) params.delete("page");
+      // A filter change (anything other than a page move) resets both lists'
+      // pagination so each starts from page 1 against the new filters.
+      const isPageMove =
+        "page_private" in updates || "page_shared" in updates;
+      if (!isPageMove) {
+        params.delete("page_private");
+        params.delete("page_shared");
+      }
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [searchParams, router, pathname],
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getJobFeed({
-        country,
-        work_type: workType,
-        q,
-        page,
-        per: PER_PAGE,
-      });
-      setPostings(res.results);
-      setCount(res.count);
-    } catch {
-      setError(t("errorLoad"));
-    } finally {
-      setLoading(false);
-    }
-  }, [country, workType, q, page, t]);
+  const privateList = useJobList("private", {
+    country,
+    workType,
+    q,
+    page: pagePrivate,
+  });
+  const sharedList = useJobList("shared", {
+    country,
+    workType,
+    q,
+    page: pageShared,
+  });
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const reloadAll = useCallback(() => {
+    privateList.reload();
+    sharedList.reload();
+  }, [privateList, sharedList]);
 
   // Surface the "Fetch Jobs" control for staff (shared catalog) and for BYOK
   // users with a stored key (private feed). Anonymous users keep both false.
@@ -330,14 +534,14 @@ export function JobsPage() {
       await triggerJobFetch();
       showToast(t("fetchStarted"), "success");
       // The fetch runs async on a worker; refresh shortly to surface new jobs.
-      setTimeout(() => load(), 3000);
+      setTimeout(() => reloadAll(), 3000);
     } catch (err) {
       const isLimit = err instanceof JobsError && err.status === 429;
       showToast(isLimit ? t("fetchLimitReached") : t("fetchError"), "error");
     } finally {
       setFetching(false);
     }
-  }, [t, load]);
+  }, [t, reloadAll]);
 
   // Debounce the search box into the URL query param.
   useEffect(() => {
@@ -374,21 +578,18 @@ export function JobsPage() {
     setDeletingId(posting.id);
     try {
       await deleteJob(posting.id);
-      setPostings((prev) => prev.filter((p) => p.id !== posting.id));
-      setCount((prev) => prev - 1);
+      // The posting lives in exactly one list; remove from both (no-op on the
+      // other) so staff deleting a shared posting and owners deleting a private
+      // one both update the right grid.
+      privateList.removePosting(posting.id);
+      sharedList.removePosting(posting.id);
       showToast(t("deleted"), "success");
     } catch {
       showToast(t("errorDelete"), "error");
     } finally {
       setDeletingId(null);
     }
-  }, [pendingDelete, t]);
-
-  const visiblePostings = matchOnly
-    ? postings.filter((p) => p.score > 0)
-    : postings;
-
-  const totalPages = Math.max(1, Math.ceil(count / PER_PAGE));
+  }, [pendingDelete, t, privateList, sharedList]);
 
   const filterChips = useMemo(
     () => (
@@ -462,6 +663,25 @@ export function JobsPage() {
     [searchInput, matchOnly, country, workType, t, setParam],
   );
 
+  const visibleCount = (list: JobListState) =>
+    (matchOnly ? list.postings.filter((p) => p.score > 0) : list.postings)
+      .length;
+
+  // One spinner on the very first load (both lists pending, no data yet);
+  // afterwards each section manages its own loading state for page moves.
+  const initialLoading =
+    privateList.loading &&
+    sharedList.loading &&
+    privateList.postings.length === 0 &&
+    sharedList.postings.length === 0;
+  const bothEmpty =
+    !privateList.loading &&
+    !sharedList.loading &&
+    !privateList.error &&
+    !sharedList.error &&
+    visibleCount(privateList) === 0 &&
+    visibleCount(sharedList) === 0;
+
   return (
     <Container
       paddingX={10}
@@ -502,30 +722,11 @@ export function JobsPage() {
 
       {filterChips}
 
-      {loading ? (
+      {initialLoading ? (
         <Box display="flex" justifyContent="center" paddingY={60}>
           <ProgressBar label={t("loading")} />
         </Box>
-      ) : error ? (
-        <Box
-          display="flex"
-          flexDirection="column"
-          alignItems="center"
-          gap={16}
-          paddingY={60}
-        >
-          <Typography variant="body-sm" color="var(--error, #ef4444)">
-            {error}
-          </Typography>
-          <Button
-            text={t("retry")}
-            type="button"
-            size="md"
-            kind="success"
-            onClick={load}
-          />
-        </Box>
-      ) : visiblePostings.length === 0 ? (
+      ) : bothEmpty ? (
         <Box
           display="flex"
           flexDirection="column"
@@ -554,59 +755,32 @@ export function JobsPage() {
         </Box>
       ) : (
         <>
-          <Box
-            display="grid"
-            gap={16}
-            styles={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            }}
-          >
-            {visiblePostings.map((posting) => (
-              <JobCard
-                key={posting.id}
-                posting={posting}
-                onSave={handleSave}
-                onDelete={handleDelete}
-                saving={savingId === posting.id}
-                deleting={deletingId === posting.id}
-                savedAppId={
-                  savedMap[posting.id] ?? posting.saved_application_id
-                }
-                isStaff={isStaff}
-              />
-            ))}
-          </Box>
-
-          {totalPages > 1 && (
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              gap={12}
-              marginTop={24}
-            >
-              <Button
-                text={t("prev")}
-                type="button"
-                size="md"
-                disabled={page <= 1}
-                onClick={() => setParam({ page: String(page - 1) })}
-              />
-              <Typography
-                variant="body-sm"
-                color="var(--muted-foreground, #6b7280)"
-              >
-                {t("pageOf", { page, total: totalPages })}
-              </Typography>
-              <Button
-                text={t("next")}
-                type="button"
-                size="md"
-                disabled={page >= totalPages}
-                onClick={() => setParam({ page: String(page + 1) })}
-              />
-            </Box>
-          )}
+          <JobSection
+            title={t("privateListTitle")}
+            list={privateList}
+            page={pagePrivate}
+            onPageChange={(p) => setParam({ page_private: String(p) })}
+            matchOnly={matchOnly}
+            onSave={handleSave}
+            onDelete={handleDelete}
+            savingId={savingId}
+            deletingId={deletingId}
+            savedMap={savedMap}
+            isStaff={isStaff}
+          />
+          <JobSection
+            title={t("sharedListTitle")}
+            list={sharedList}
+            page={pageShared}
+            onPageChange={(p) => setParam({ page_shared: String(p) })}
+            matchOnly={matchOnly}
+            onSave={handleSave}
+            onDelete={handleDelete}
+            savingId={savingId}
+            deletingId={deletingId}
+            savedMap={savedMap}
+            isStaff={isStaff}
+          />
         </>
       )}
 

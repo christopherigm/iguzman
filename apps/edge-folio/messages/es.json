@@ -354,7 +354,9 @@
       "remote": "Remoto",
       "onsite": "Presencial",
       "hybrid": "Híbrido"
-    }
+    },
+    "privateListTitle": "Tus ofertas privadas",
+    "sharedListTitle": "Catálogo compartido"
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",

@@ -116,7 +116,11 @@ scrapes & analyzes a company (about/analysis/intel score, logo download via
 | `<pk>/delete/` | `DeleteJobView` | Remove a posting |
 
 **Providers**: `adzuna` (primary), `jsearch` (fallback) — `PROVIDER_PRIORITY` spends a
-user's daily quota on Adzuna first. `DEFAULT_DAILY_LIMITS`: Adzuna 250/day, JSearch
+user's daily quota on Adzuna first. Both ingest paths fall back to JSearch when Adzuna
+returns **zero results** for a query (not only when its quota is exhausted):
+`ingest_shared_catalog` uses the platform `JSEARCH_API_KEY`, and `ingest_user_feed` walks
+the user's usable BYOK credentials, stopping at the first provider that returns a posting.
+`DEFAULT_DAILY_LIMITS`: Adzuna 250/day, JSearch
 200/day, counted locally (`call_limit`/`calls_used`/`usage_date`). Catalog targets the
 **USMCA region** (`us`/`ca`/`mx`). BYOK keys are encrypted at rest with **Fernet**
 (`jobs/crypto.py`, `JOBS_ENCRYPTION_KEY`, dev-derived from `SECRET_KEY`). Ingestion

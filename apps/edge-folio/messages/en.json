@@ -354,7 +354,9 @@
       "remote": "Remote",
       "onsite": "On-site",
       "hybrid": "Hybrid"
-    }
+    },
+    "privateListTitle": "Your private postings",
+    "sharedListTitle": "Shared catalog"
   },
   "ApplicationDetailPage": {
     "metaTitle": "Application",

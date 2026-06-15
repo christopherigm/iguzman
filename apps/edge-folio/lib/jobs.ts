@@ -23,6 +23,8 @@ export interface JobPosting {
   created: string;
   score: number;
   saved_application_id: number | null;
+  // True when the current user owns this private posting and may delete it.
+  is_owner: boolean;
 }
 
 export interface JobFeed {
@@ -66,9 +68,12 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export type JobScope = 'private' | 'shared';
+
 export interface JobFeedFilters {
   country?: JobCountry | '';
   work_type?: JobWorkType | '';
+  scope?: JobScope;
   q?: string;
   per?: number;
   page?: number;
@@ -78,6 +83,7 @@ export function getJobFeed(filters: JobFeedFilters = {}): Promise<JobFeed> {
   const params = new URLSearchParams();
   if (filters.country) params.set('country', filters.country);
   if (filters.work_type) params.set('work_type', filters.work_type);
+  if (filters.scope) params.set('scope', filters.scope);
   if (filters.q) params.set('q', filters.q);
   if (filters.per) params.set('per', String(filters.per));
   if (filters.page) params.set('page', String(filters.page));

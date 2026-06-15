@@ -6,12 +6,14 @@ from .models import PROVIDER_CHOICES, JobPosting, UserApiCredential
 class JobFeedSerializer(serializers.ModelSerializer):
     """Read serializer for catalog postings.
 
-    ``score`` and ``saved_application_id`` are injected by the view after
-    ranking / save-state lookup; they are not stored on the model.
+    ``score``, ``saved_application_id`` and ``is_owner`` are injected by the view
+    after ranking / save-state lookup; they are not stored on the model.
     """
 
     score = serializers.IntegerField(read_only=True, default=0)
     saved_application_id = serializers.IntegerField(read_only=True, allow_null=True, default=None)
+    # True when the requesting user owns this (private) posting and may delete it.
+    is_owner = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = JobPosting
@@ -20,7 +22,7 @@ class JobFeedSerializer(serializers.ModelSerializer):
             'job_url', 'salary_min', 'salary_max', 'salary_currency',
             'work_type', 'location', 'country', 'category', 'tags',
             'is_private', 'created',
-            'score', 'saved_application_id',
+            'score', 'saved_application_id', 'is_owner',
         )
         read_only_fields = fields
 
