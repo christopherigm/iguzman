@@ -25,12 +25,27 @@ The frontend proxies all API calls through its own Route Handlers, so the Django
 | App | Purpose |
 |---|---|
 | `core` | Abstract base models (`Common`, `BasePicture`, `picture_mixin`), `ResizedImageField`. |
-| `users` | Full auth: signup, login (JWT), email verification, password reset, profile + picture upload. |
+| `users` | Full auth: signup, login (JWT), email verification, password reset, passkeys (WebAuthn), profile + picture upload, contact info, resume upload, job-search prefs. |
+| `matrix` | The Immutable Matrix: `Skill` + `BulletPoint` (STAR, categorized, ordered, approvable) and the skeleton→bullets synthesis endpoint. |
+| `career` | `WorkExperience`, `Education`, `Language`, `Project`, shared `TechStack` catalog. |
+| `applications` | `JobApplication` + `Company`; LLM tailoring/scoring pipeline (`tailoring.py`) and async company-intelligence Celery tasks (`tasks.py`). |
+| `jobs` | Live job-postings catalog: `JobPosting`, BYOK `UserApiCredential` (Fernet-encrypted), provider ingestion (Adzuna/JSearch), per-user feeds, Celery ingestion tasks. |
 
-New feature domains each get their own app. Planned apps:
-- **`matrix`** — The Immutable Matrix: user-approved bullet points (STAR format), skills, projects
-- **`applications`** — Job applications, tailoring sessions, cover letters
-- **`resumes`** — Resume templates, ATS PDF export jobs
+New feature domains each get their own app. ATS resume/cover-letter export is rendered
+**client-side** in the frontend (`@react-pdf/renderer`), not a Django app.
+
+> **Status:** all six apps above are implemented and wired. See
+> `apps/edge-folio-api/README.md` for the full endpoint and function inventory.
+
+### LLM & async infrastructure
+
+- **`edge_folio_api/llm.py`** — `chat_structured` (Groq + `instructor` structured output)
+  and `chat_text`, both failing over to **OpenRouter** on a Groq 429. Models from
+  `GROQ_MODEL` / `OPENROUTER_MODEL`.
+- **Celery** (`celery[redis]`) runs company pipelines and job ingestion. Beat schedule
+  (`settings.CELERY_BEAT_SCHEDULE`): `refresh_stale_companies` hourly,
+  `ingest_shared_catalog` + `prune_expired_postings` daily. Tasks run synchronously when
+  no broker is configured (dev).
 
 ### Creating a New App
 
@@ -47,8 +62,10 @@ Then:
 
 ```
 /api/auth/          → users.urls
-/api/matrix/        → matrix.urls  (planned)
-/api/applications/  → applications.urls  (planned)
+/api/matrix/        → matrix.urls
+/api/career/        → career.urls
+/api/applications/  → applications.urls
+/api/jobs/          → jobs.urls
 ```
 
 ### Authentication

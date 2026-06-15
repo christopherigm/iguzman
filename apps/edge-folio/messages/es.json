@@ -815,8 +815,13 @@
       "jsearch": "JSearch"
     },
     "jobKeysKeyLabel": "Clave de API",
+    "jobKeysAppIdLabel": "App ID",
+    "jobKeysAppIdPlaceholder": "App ID de Adzuna",
+    "jobKeysAppKeyLabel": "Clave de API",
+    "jobKeysGetKeyText": "¿Aún no tienes una clave?",
+    "jobKeysGetKeyLink": "Obtén tu clave de API de {provider}",
     "jobKeysKeyPlaceholder": {
-      "adzuna": "app_id:app_key",
+      "adzuna": "Clave (app key) de Adzuna",
       "jsearch": "Clave de RapidAPI"
     },
     "jobKeysLabelLabel": "Etiqueta (opcional)",

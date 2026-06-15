@@ -23,6 +23,12 @@ import { getLanguages, getEducations } from "@/lib/career";
 
 const PROVIDERS: JobProvider[] = ["adzuna", "jsearch"];
 
+// Where users obtain credentials for each provider.
+const PROVIDER_DOCS: Record<JobProvider, string> = {
+  adzuna: "https://developer.adzuna.com/",
+  jsearch: "https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch",
+};
+
 const YEARS_LABELS: Record<number, string> = {
   0: "less than 1 year",
   1: "1-2 years",
@@ -105,6 +111,7 @@ export function JobSearchSection() {
   const [keysLoading, setKeysLoading] = useState(true);
   const [credentials, setCredentials] = useState<JobApiCredential[]>([]);
   const [provider, setProvider] = useState<JobProvider>("adzuna");
+  const [appId, setAppId] = useState("");
   const [keyValue, setKeyValue] = useState("");
   const [keyLabel, setKeyLabel] = useState("");
   const [saving, setSaving] = useState(false);
@@ -271,8 +278,11 @@ export function JobSearchSection() {
   ]);
 
   const handleAdd = useCallback(async () => {
-    const key = keyValue.trim();
-    if (!key) return;
+    const secret = keyValue.trim();
+    // Adzuna stores the credential as the "app_id:app_key" pair (split here for UX only).
+    const key =
+      provider === "adzuna" ? `${appId.trim()}:${secret}` : secret;
+    if (!secret || (provider === "adzuna" && !appId.trim())) return;
     setSaving(true);
     setError(null);
     try {
@@ -285,6 +295,7 @@ export function JobSearchSection() {
         ...prev.filter((c) => c.provider !== provider),
         created,
       ]);
+      setAppId("");
       setKeyValue("");
       setKeyLabel("");
     } catch {
@@ -292,7 +303,7 @@ export function JobSearchSection() {
     } finally {
       setSaving(false);
     }
-  }, [keyValue, provider, keyLabel, t]);
+  }, [keyValue, provider, appId, keyLabel, t]);
 
   const handleDelete = useCallback(
     async (id: number) => {
@@ -631,17 +642,56 @@ export function JobSearchSection() {
               )}
 
               <Box display="flex" flexDirection="column" gap={12} marginTop={8}>
-                <Select
-                  label={t("jobKeysProviderLabel")}
-                  value={provider}
-                  onChange={(v) => setProvider(v as JobProvider)}
-                  options={PROVIDERS.map((p) => ({
-                    value: p,
-                    label: t(`jobKeysProviders.${p}`),
-                  }))}
-                />
+                <Box display="flex" flexDirection="column" gap={4}>
+                  <Select
+                    label={t("jobKeysProviderLabel")}
+                    value={provider}
+                    onChange={(v) => {
+                      setProvider(v as JobProvider);
+                      setError(null);
+                    }}
+                    options={PROVIDERS.map((p) => ({
+                      value: p,
+                      label: t(`jobKeysProviders.${p}`),
+                    }))}
+                  />
+                  <Typography
+                    variant="caption"
+                    color="var(--muted-foreground, #6b7280)"
+                  >
+                    {t("jobKeysGetKeyText")}{" "}
+                    <a
+                      href={PROVIDER_DOCS[provider]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="profile__review-link"
+                    >
+                      {t("jobKeysGetKeyLink", {
+                        provider: t(`jobKeysProviders.${provider}`),
+                      })}
+                    </a>
+                  </Typography>
+                </Box>
+                {provider === "adzuna" && (
+                  <TextInput
+                    label={t("jobKeysAppIdLabel")}
+                    type="text"
+                    value={appId}
+                    onChange={(v) => {
+                      setAppId(v);
+                      setError(null);
+                    }}
+                    placeholder={t("jobKeysAppIdPlaceholder")}
+                    aria-label={t("jobKeysAppIdLabel")}
+                    autoComplete="off"
+                  />
+                )}
                 <TextInput
-                  label={t("jobKeysKeyLabel")}
+                  label={
+                    provider === "adzuna"
+                      ? t("jobKeysAppKeyLabel")
+                      : t("jobKeysKeyLabel")
+                  }
                   type="password"
                   value={keyValue}
                   onChange={(v) => {
@@ -649,7 +699,11 @@ export function JobSearchSection() {
                     setError(null);
                   }}
                   placeholder={t(`jobKeysKeyPlaceholder.${provider}`)}
-                  aria-label={t("jobKeysKeyLabel")}
+                  aria-label={
+                    provider === "adzuna"
+                      ? t("jobKeysAppKeyLabel")
+                      : t("jobKeysKeyLabel")
+                  }
                   autoComplete="off"
                 />
                 <TextInput
@@ -678,7 +732,11 @@ export function JobSearchSection() {
                   type="button"
                   size="lg"
                   kind="success"
-                  disabled={saving || !keyValue.trim()}
+                  disabled={
+                    saving ||
+                    !keyValue.trim() ||
+                    (provider === "adzuna" && !appId.trim())
+                  }
                   onClick={() => void handleAdd()}
                 />
               </Box>

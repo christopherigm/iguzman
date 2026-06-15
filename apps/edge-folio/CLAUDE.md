@@ -103,15 +103,31 @@ TanStack Query is used for all client-side data fetching. The `QueryClient` is i
 app/[locale]/
   layout.tsx              — Root layout: theme, i18n, QueryClientProvider
   page.tsx                — Landing / marketing page
-  (auth)/                 — login, signup, verify-email, reset-password
-  (dashboard)/            — Authenticated area (guarded by middleware)
-    matrix/               — Immutable Matrix: manage bullet points
-    applications/         — Job application tracker & tailoring
-    extract/              — Local codebase extraction (OPFS + WebGPU)
-    profile/              — User profile settings
+  account/                — Account page
+  ~offline/               — PWA offline fallback
+  (auth)/                 — auth (login/signup), verify-email/[token]
+  (dashboard)/            — Authenticated area (guarded in proxy.ts)
+    matrix/               — Immutable Matrix: skills + bullet points
+    work-experience/      — Employment history
+    education/            — Degrees
+    profile/              — Profile, languages, projects, passkeys, BYOK keys, job-search prefs
+    applications/         — Job application tracker
+    applications/[id]/    — Single application: tailoring, scores, cover/TN letters
+    jobs/                 — Live job-postings catalog + per-user feed
+    extract/              — Local codebase extraction (tree-sitter WASM)
+    onboarding/           — First-run setup
 ```
 
+`app/api/` Route Handlers proxy these domains to Django: `auth/`, `matrix/`, `career/`,
+`applications/`, `jobs/`. Two handlers proxy **external** services instead:
+`groq/chat/` (LLM chat, Groq→OpenRouter) and `scraper/extract/` (job-URL scraper + LLM
+field extraction).
+
 Authentication guard (redirect unauthenticated users) lives in `proxy.ts` alongside the next-intl middleware.
+
+> **Note:** the shipped extractor is **structural (tree-sitter WASM)** — no model
+> download and no WebGPU required. Earlier docs referencing an OPFS/WebGPU Gemma model
+> describe a superseded design; bullet synthesis now runs on the server LLM.
 
 ## Client-Side AST Extraction — web-tree-sitter
 
