@@ -419,6 +419,16 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
 
 // ── Application card ──────────────────────────────────────────────────────────
 
+function formatSalary(app: JobApplication): string | null {
+  const min = app.salary_min != null ? Math.round(Number(app.salary_min)) : null;
+  const max = app.salary_max != null ? Math.round(Number(app.salary_max)) : null;
+  if (min == null && max == null) return null;
+  const cur = app.salary_currency ? `${app.salary_currency} ` : '';
+  const fmt = (n: number) => n.toLocaleString();
+  if (min != null && max != null) return `${cur}${fmt(min)}–${fmt(max)}`;
+  return `${cur}${fmt((min ?? max) as number)}`;
+}
+
 function CardMetricBar({ label, value }: { label: string; value: number }) {
   const color = value >= 70 ? '#22c55e' : value >= 45 ? '#f59e0b' : '#ef4444';
   return (
@@ -450,6 +460,8 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
 
   const hasMetrics = app.overall_match != null || app.technical_match != null || app.nafta_tn_likelihood != null;
   const intelScore: SignalLevel | null = app.company?.intel_score || null;
+  const salary = formatSalary(app);
+  const hasBadges = Boolean(app.location) || (app.work_type ?? []).length > 0 || Boolean(salary);
 
   return (
     <Link href={`/${locale}/applications/${app.id}`} prefetch className="applications__card-link">
@@ -509,6 +521,26 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
             </Typography>
           </Box>
         </Box>
+
+        {hasBadges && (
+          <Box display="flex" gap={6} flexWrap="wrap">
+            {app.location && (
+              <Badge variant="subtle" color="#6b7280">
+                {app.location}
+              </Badge>
+            )}
+            {(app.work_type ?? []).map((wt) => (
+              <Badge key={wt} variant="subtle" color="#0ea5e9">
+                {t(`workTypes.${wt}`)}
+              </Badge>
+            ))}
+            {salary && (
+              <Badge variant="subtle" color="#22c55e">
+                {salary}
+              </Badge>
+            )}
+          </Box>
+        )}
 
         {hasMetrics && (
           <Box display="flex" flexDirection="column" gap={6}>

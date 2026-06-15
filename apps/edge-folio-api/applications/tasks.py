@@ -203,6 +203,11 @@ def _invalidate_applications_for_company(company_id: int) -> None:
         cache.delete(f'applications:application:{user_id}:{pk}')
 
 
+def _invalidate_application(user_id: int, pk: int) -> None:
+    cache.delete(f'applications:applications:{user_id}')
+    cache.delete(f'applications:application:{user_id}:{pk}')
+
+
 # ── Main pipeline task ─────────────────────────────────────────────────────────
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -458,3 +463,110 @@ def refresh_stale_companies() -> None:
         run_company_pipeline.delay(company.pk)
 
     logger.info('refresh_stale_companies: recovered stuck=%d, queued_refresh=%d', 0, len(stale))
+
+
+# ── Resume tailoring task ────────────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=30)
+def run_tailor_pipeline(self, application_id: int) -> None:
+    from career.models import Project, WorkExperience
+    from matrix.models import BulletPoint, Skill
+
+    from .models import JobApplication
+    from .tailoring import tailor_full_resume
+
+    try:
+        application = JobApplication.objects.select_related('company', 'user').get(pk=application_id)
+    except JobApplication.DoesNotExist:
+        return
+
+    user = application.user
+    company_name = application.company.name if application.company_id else application.company_name
+
+    try:
+        approved_bullets = list(
+            BulletPoint.objects.filter(user=user, is_approved=True).prefetch_related('skills')
+        )
+        skills_payload = list(
+            Skill.objects.filter(user=user).values('id', 'name', 'proficiency')
+        )
+        work_experiences = list(
+            WorkExperience.objects.filter(user=user)
+            .order_by('-start_date')
+            .values('id', 'title', 'company', 'start_date', 'end_date', 'is_current', 'description')
+        )
+        we_map = {we['id']: we for we in work_experiences}
+
+        projects_qs = Project.objects.filter(user=user).prefetch_related('tech_stack')
+        projects_payload = [
+            {
+                'id': p.id,
+                'name': p.name,
+                'description': p.description,
+                'tech_stack': [t.name for t in p.tech_stack.all()],
+            }
+            for p in projects_qs
+        ]
+
+        bullet_category = {b.id: b.category for b in approved_bullets}
+        bullet_we_id = {b.id: b.work_experience_id for b in approved_bullets}
+
+        bullets_payload = [
+            {
+                'id': b.id,
+                'text': b.text,
+                'category': b.category,
+                'skills': [s.name for s in b.skills.all()],
+                'work_experience_title': we_map[b.work_experience_id]['title'] if b.work_experience_id and b.work_experience_id in we_map else None,
+                'work_experience_company': we_map[b.work_experience_id]['company'] if b.work_experience_id and b.work_experience_id in we_map else None,
+            }
+            for b in approved_bullets
+        ]
+
+        profile_job_title = ''
+        try:
+            profile_job_title = user.profile.job_title or ''
+        except Exception:
+            pass
+
+        result = tailor_full_resume(
+            job_title=application.job_title,
+            company_name=company_name,
+            job_description=application.job_description,
+            bullets=bullets_payload,
+            skills=skills_payload,
+            work_experiences=work_experiences,
+            projects=projects_payload,
+            profile_job_title=profile_job_title,
+        )
+    except Exception as exc:
+        logger.error('LLM error during full resume tailoring for application %s: %s', application_id, exc)
+        try:
+            raise self.retry(exc=exc)
+        except self.MaxRetriesExceededError:
+            JobApplication.objects.filter(pk=application_id).update(
+                tailor_status='failed',
+                tailor_started_at=None,
+            )
+            _invalidate_application(user.id, application_id)
+            return
+
+    tailored = result['bullets']
+    for bullet in tailored:
+        bullet['category'] = bullet_category.get(bullet.get('id'), 'other')
+        bullet['work_experience_id'] = bullet_we_id.get(bullet.get('id'))
+
+    application.tailored_bullets = tailored
+    application.tailored_work_experiences = result['work_experiences']
+    application.tailored_projects = result['projects']
+    application.professional_summary = result['summary']
+    application.tailor_status = 'complete'
+    application.tailor_started_at = None
+    application.save(update_fields=[
+        'tailored_bullets', 'tailored_work_experiences', 'tailored_projects',
+        'professional_summary', 'tailor_status', 'tailor_started_at', 'modified',
+    ])
+    application.tailored_skills.set(
+        Skill.objects.filter(id__in=result['skill_ids'], user=user)
+    )
+    _invalidate_application(user.id, application_id)

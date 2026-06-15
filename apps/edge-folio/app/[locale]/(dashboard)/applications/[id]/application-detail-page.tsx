@@ -369,6 +369,7 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
   const [tailoredProjects, setTailoredProjects] = useState<TailoredProject[] | null>(initialApp.tailored_projects ?? null);
   const [professionalSummary, setProfessionalSummary] = useState(initialApp.professional_summary || '');
   const [tailorError, setTailorError] = useState<string | null>(null);
+  const tailorPollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cover letter
   const [generatingCL, setGeneratingCL] = useState(false);
@@ -482,13 +483,77 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
     schedule();
   }
 
-  // Start polling when company pipeline is in progress
+  function applyTailoredResult(data: JobApplication) {
+    setTailoredBullets(data.tailored_bullets ?? null);
+    setTailoredWorkExperiences(data.tailored_work_experiences ?? null);
+    setTailoredProjects(data.tailored_projects ?? null);
+    setProfessionalSummary(data.professional_summary || '');
+    setApp(data);
+    setUseTailoredWeIds(new Set((data.tailored_work_experiences ?? []).map((e) => e.id)));
+    setUseTailoredProjectIds(new Set((data.tailored_projects ?? []).map((p) => p.id)));
+  }
+
+  function stopTailorPolling() {
+    if (tailorPollingRef.current) {
+      clearTimeout(tailorPollingRef.current);
+      tailorPollingRef.current = null;
+    }
+  }
+
+  // Poll the tailoring status until it reaches a terminal state. The LLM
+  // pipeline can take several minutes, so the request only kicks off the job
+  // (returns immediately) and the result is fetched here when complete.
+  function startTailorPolling(appId: number) {
+    if (tailorPollingRef.current) return;
+    setTailoring(true);
+    let errorCount = 0;
+
+    const schedule = () => {
+      tailorPollingRef.current = setTimeout(async () => {
+        try {
+          const data = await getApplication(appId);
+          if (data.tailor_status === 'complete') {
+            applyTailoredResult(data);
+            setTailoring(false);
+            tailorPollingRef.current = null;
+            return;
+          }
+          if (data.tailor_status === 'failed') {
+            setTailorError(t('errorTailor'));
+            setTailoring(false);
+            tailorPollingRef.current = null;
+            return;
+          }
+          errorCount = 0;
+        } catch {
+          errorCount++;
+          if (errorCount >= 3) {
+            setTailorError(t('errorTailor'));
+            setTailoring(false);
+            stopTailorPolling();
+            return;
+          }
+        }
+        if (tailorPollingRef.current !== null) schedule();
+      }, 5000);
+    };
+
+    schedule();
+  }
+
+  // Start polling when company pipeline / tailoring is in progress
   useEffect(() => {
     const status = initialApp.company?.status;
     if (status === 'pending' || status === 'processing') {
       startCompanyPolling(initialApp.id);
     }
-    return () => stopCompanyPolling();
+    if (initialApp.tailor_status === 'processing') {
+      startTailorPolling(initialApp.id);
+    }
+    return () => {
+      stopCompanyPolling();
+      stopTailorPolling();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load export section data lazily when tailored bullets are first available
@@ -604,16 +669,19 @@ export function ApplicationDetailPage({ application: initialApp, profile, profil
     setCoverLetter(null);
     try {
       const result = await tailorApplication(app.id);
-      setTailoredBullets(result.bullets);
-      setTailoredWorkExperiences(result.tailored_work_experiences);
-      setTailoredProjects(result.tailored_projects);
-      setProfessionalSummary(result.professional_summary || '');
-      setApp((prev) => ({ ...prev, tailored_skills: result.tailored_skills }));
-      setUseTailoredWeIds(new Set((result.tailored_work_experiences ?? []).map((e) => e.id)));
-      setUseTailoredProjectIds(new Set((result.tailored_projects ?? []).map((p) => p.id)));
+      if (result.status === 'complete') {
+        // Eager (no broker) path: work already finished — fetch the result.
+        const data = await getApplication(app.id);
+        applyTailoredResult(data);
+        setTailoring(false);
+      } else if (result.status === 'failed') {
+        setTailorError(t('errorTailor'));
+        setTailoring(false);
+      } else {
+        startTailorPolling(app.id);
+      }
     } catch {
       setTailorError(t('errorTailor'));
-    } finally {
       setTailoring(false);
     }
   }

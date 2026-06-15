@@ -42,6 +42,7 @@ class JobApplicationSerializer(serializers.ModelSerializer):
             'company',
             'salary_min', 'salary_max', 'salary_currency',
             'work_type', 'location', 'us_citizen_or_pr_required',
+            'tailor_status',
             'professional_summary', 'tailored_bullets', 'tailored_work_experiences',
             'tailored_projects', 'tailored_skills',
             'cover_letter', 'nafta_letter',
@@ -53,6 +54,7 @@ class JobApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = (
             'id', 'created', 'modified',
             'company',
+            'tailor_status',
             'professional_summary', 'tailored_bullets', 'tailored_work_experiences',
             'tailored_projects', 'tailored_skills',
             'cover_letter', 'nafta_letter',

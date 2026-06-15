@@ -32,6 +32,12 @@ COMPANY_STATUS_CHOICES = [
     ('failed', 'Failed'),
 ]
 
+TAILOR_STATUS_CHOICES = [
+    ('processing', 'Processing'),
+    ('complete', 'Complete'),
+    ('failed', 'Failed'),
+]
+
 INTEL_SCORE_CHOICES = [
     ('positive', 'Positive'),
     ('mixed', 'Mixed'),
@@ -105,6 +111,8 @@ class JobApplication(Common):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     notes = models.TextField(blank=True)
     job_url = models.URLField(max_length=2048, blank=True)
+    tailor_status = models.CharField(max_length=20, choices=TAILOR_STATUS_CHOICES, blank=True)
+    tailor_started_at = models.DateTimeField(null=True, blank=True)
     tailored_bullets = models.JSONField(null=True, blank=True)
     tailored_work_experiences = models.JSONField(null=True, blank=True)
     tailored_projects = models.JSONField(null=True, blank=True)

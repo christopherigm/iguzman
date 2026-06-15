@@ -2,6 +2,7 @@ export type ApplicationStatus = 'draft' | 'applied' | 'interview' | 'offer' | 'r
 export type WorkType = 'remote' | 'onsite' | 'hybrid';
 export type SalaryCurrency = 'USD' | 'CAD' | 'EUR' | 'MXN' | 'GBP';
 export type CompanyStatus = 'pending' | 'processing' | 'complete' | 'failed';
+export type TailorStatus = '' | 'processing' | 'complete' | 'failed';
 
 export interface CompanyIntelItem {
   title: string;
@@ -83,6 +84,7 @@ export interface JobApplication {
   notes: string;
   job_url: string;
   company: Company | null;
+  tailor_status: TailorStatus;
   professional_summary: string;
   tailored_bullets: TailoredBullet[] | null;
   tailored_work_experiences: TailoredWorkExperience[] | null;
@@ -189,15 +191,16 @@ export function getApplication(id: number): Promise<JobApplication> {
   return request(`/api/applications/${id}`);
 }
 
-export interface TailoringResult {
-  bullets: TailoredBullet[];
-  tailored_work_experiences: TailoredWorkExperience[];
-  tailored_projects: TailoredProject[];
-  professional_summary: string;
-  tailored_skills: TailoredSkill[];
+export interface TailorStartResult {
+  status: TailorStatus;
 }
 
-export function tailorApplication(id: number): Promise<TailoringResult> {
+/**
+ * Kicks off async resume tailoring. Returns immediately with the current
+ * tailor status — the heavy LLM work runs in the background and is polled
+ * via `getApplication` until `tailor_status` reaches `complete`/`failed`.
+ */
+export function tailorApplication(id: number): Promise<TailorStartResult> {
   return request(`/api/applications/${id}/tailor`, { method: 'POST' });
 }
 

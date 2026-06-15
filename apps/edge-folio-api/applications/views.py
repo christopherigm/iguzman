@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from career.models import Education, Project, WorkExperience
+from career.models import Education, WorkExperience
 from matrix.models import BulletPoint, Skill
 
 from .models import Company, JobApplication, _normalize_company_name
@@ -19,7 +19,6 @@ from .tailoring import (
     generate_cover_letter,
     generate_nafta_letter,
     suggest_tn_categories,
-    tailor_full_resume,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,107 +145,28 @@ class TailorApplicationView(APIView):
         except JobApplication.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        company_name = application.company.name if application.company_id else application.company_name
+        if application.tailor_status == 'processing':
+            return Response({'status': 'processing'}, status=status.HTTP_202_ACCEPTED)
 
-        approved_bullets = (
-            BulletPoint.objects.filter(user=request.user, is_approved=True)
-            .prefetch_related('skills')
-        )
-        if not approved_bullets.exists():
+        if not BulletPoint.objects.filter(user=request.user, is_approved=True).exists():
             return Response(
                 {'detail': 'No approved bullet points in your matrix.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        skills_payload = list(
-            Skill.objects.filter(user=request.user).values('id', 'name', 'proficiency')
-        )
+        from django.utils import timezone
 
-        work_experiences = list(
-            WorkExperience.objects.filter(user=request.user)
-            .order_by('-start_date')
-            .values('id', 'title', 'company', 'start_date', 'end_date', 'is_current', 'description')
-        )
-        we_map = {we['id']: we for we in work_experiences}
+        from .tasks import run_tailor_pipeline
 
-        projects_qs = Project.objects.filter(user=request.user).prefetch_related('tech_stack')
-        projects_payload = [
-            {
-                'id': p.id,
-                'name': p.name,
-                'description': p.description,
-                'tech_stack': [t.name for t in p.tech_stack.all()],
-            }
-            for p in projects_qs
-        ]
-
-        bullet_category = {b.id: b.category for b in approved_bullets}
-        bullet_we_id = {b.id: b.work_experience_id for b in approved_bullets}
-
-        bullets_payload = [
-            {
-                'id': b.id,
-                'text': b.text,
-                'category': b.category,
-                'skills': [s.name for s in b.skills.all()],
-                'work_experience_title': we_map[b.work_experience_id]['title'] if b.work_experience_id and b.work_experience_id in we_map else None,
-                'work_experience_company': we_map[b.work_experience_id]['company'] if b.work_experience_id and b.work_experience_id in we_map else None,
-            }
-            for b in approved_bullets
-        ]
-
-        profile_job_title = ''
-        try:
-            profile_job_title = request.user.profile.job_title or ''
-        except Exception:
-            pass
-
-        try:
-            result = tailor_full_resume(
-                job_title=application.job_title,
-                company_name=company_name,
-                job_description=application.job_description,
-                bullets=bullets_payload,
-                skills=skills_payload,
-                work_experiences=work_experiences,
-                projects=projects_payload,
-                profile_job_title=profile_job_title,
-            )
-        except Exception as exc:
-            logger.error('LLM error during full resume tailoring: %s', exc)
-            return Response(
-                {'detail': 'LLM service unavailable. Please try again later.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-
-        tailored = result['bullets']
-        for bullet in tailored:
-            bullet['category'] = bullet_category.get(bullet.get('id'), 'other')
-            bullet['work_experience_id'] = bullet_we_id.get(bullet.get('id'))
-
-        application.tailored_bullets = tailored
-        application.tailored_work_experiences = result['work_experiences']
-        application.tailored_projects = result['projects']
-        application.professional_summary = result['summary']
-        application.save(update_fields=[
-            'tailored_bullets', 'tailored_work_experiences', 'tailored_projects',
-            'professional_summary', 'modified',
-        ])
-        application.tailored_skills.set(
-            Skill.objects.filter(id__in=result['skill_ids'], user=request.user)
-        )
+        application.tailor_status = 'processing'
+        application.tailor_started_at = timezone.now()
+        application.save(update_fields=['tailor_status', 'tailor_started_at', 'modified'])
         _invalidate_application(request.user.id, pk)
 
-        tailored_skills_data = list(
-            application.tailored_skills.order_by('name').values('id', 'name', 'proficiency')
-        )
-        return Response({
-            'bullets': tailored,
-            'tailored_work_experiences': result['work_experiences'],
-            'tailored_projects': result['projects'],
-            'professional_summary': result['summary'],
-            'tailored_skills': tailored_skills_data,
-        })
+        run_tailor_pipeline.delay(application.pk)
+
+        application.refresh_from_db(fields=['tailor_status'])
+        return Response({'status': application.tailor_status}, status=status.HTTP_202_ACCEPTED)
 
 
 class CoverLetterView(APIView):
