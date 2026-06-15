@@ -75,6 +75,7 @@ Speaker-attributed transcription - runs both diarization and Whisper, then merge
 | `num_speakers` | int        |          | Exact number of speakers                                 |
 | `min_speakers` | int        |          | Minimum number of speakers                               |
 | `max_speakers` | int        |          | Maximum number of speakers                               |
+| `max_words`    | int        |          | Max words per subtitle row, `1`-`10` (default `4`). Each segment is re-chunked into rows of at most this many words using per-word timestamps. |
 
 **Response**
 
@@ -108,7 +109,8 @@ curl -X POST https://diarization.iguzman.com.mx/transcribe \
   -H "X-API-Key: $API_KEY" \
   -F "file=@interview.wav" \
   -F "language=en" \
-  -F "num_speakers=2"
+  -F "num_speakers=2" \
+  -F "max_words=4"
 ```
 
 ---

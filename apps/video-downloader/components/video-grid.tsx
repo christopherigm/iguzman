@@ -213,6 +213,7 @@ export function VideoGrid({
         case "diarize":
           onReprocessCompleted(uuid, {
             status: "diarizing" as VideoStatus,
+            diarizeMaxWords: (extra as number) ?? null,
           });
           break;
       }

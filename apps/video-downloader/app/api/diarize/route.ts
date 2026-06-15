@@ -51,6 +51,7 @@ async function runDiarizeJob(
   inputFile: string,
   creditsKey: string,
   cost: number,
+  maxWords: number,
 ): Promise<void> {
   const refundOnFailure = () =>
     refundCredits(creditsKey, cost).catch((err: unknown) =>
@@ -103,8 +104,9 @@ async function runDiarizeJob(
 
     const form = new FormData();
     form.append("file", fileBlob, inputFile);
+    form.append("max_words", String(maxWords));
 
-    log.info({ taskId, inputFile }, "Sending to diarization service");
+    log.info({ taskId, inputFile, maxWords }, "Sending to diarization service");
 
     const diarizeRes = await fetch(`${DIARIZATION_URL}/transcribe`, {
       method: "POST",
@@ -196,7 +198,12 @@ async function runDiarizeJob(
 }
 
 export async function POST(request: NextRequest) {
-  let body: { file?: string; duration?: number; taskId?: string };
+  let body: {
+    file?: string;
+    duration?: number;
+    taskId?: string;
+    maxWords?: number;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -205,6 +212,12 @@ export async function POST(request: NextRequest) {
 
   const { file: inputFile, duration } = body;
   let { taskId } = body;
+
+  /* Clamp words-per-row to the supported 1-10 range; default to 4. */
+  const maxWords = Math.min(
+    10,
+    Math.max(1, Math.round(Number(body.maxWords) || 4)),
+  );
 
   if (!inputFile || typeof inputFile !== "string") {
     return NextResponse.json({ error: "Missing file" }, { status: 400 });
@@ -239,9 +252,12 @@ export async function POST(request: NextRequest) {
 
   await updateTask(taskId!, { status: "diarizing", progress: 0, error: null });
 
-  void runDiarizeJob(taskId!, inputFile, creditsKey, cost);
+  void runDiarizeJob(taskId!, inputFile, creditsKey, cost, maxWords);
 
-  log.info({ taskId, inputFile, duration, cost }, "Diarization job started");
+  log.info(
+    { taskId, inputFile, duration, cost, maxWords },
+    "Diarization job started",
+  );
   return NextResponse.json(
     { taskId, creditsRemaining: creditResult.remaining },
     { status: 202 },

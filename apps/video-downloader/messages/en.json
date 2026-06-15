@@ -319,6 +319,9 @@
     "fetchingMetadata": "Fetching metadata…",
     "errorGetMetadataFailed": "Failed to fetch metadata.",
     "diarize": "Diarize",
+    "diarizeModalTitle": "Generate subtitles",
+    "diarizeModalText": "Choose how many words appear on each subtitle row. Fewer words keep each line short and easy to read; more words fit longer phrases per line.",
+    "diarizeWordsPerRowLabel": "Words per row",
     "diarizing": "Transcribing audio…",
     "status_diarizing": "Diarizing",
     "errorDiarizeFailed": "Diarization failed"

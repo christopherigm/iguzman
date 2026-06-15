@@ -1,0 +1,12 @@
+.resume-preview__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-foreground, #6b7280);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.resume-preview__back:hover {
+  color: var(--foreground);
+}

@@ -9,6 +9,7 @@ import { Icon } from "@repo/ui/core-elements/icon";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
 import { Grid } from "@repo/ui/core-elements/grid";
+import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import type { OperationCredits } from "@/lib/types";
 import type { StoredVideo, VideoStatus } from "./use-video-store";
@@ -45,6 +46,13 @@ export const STATUS_COLORS: Record<VideoStatus, string> = {
 };
 
 const FPS_MULTIPLIERS = [2, 4, 8] as const;
+
+/** Default and selectable range for the diarization "words per subtitle row" option. */
+export const DIARIZE_DEFAULT_WORDS = 4;
+const DIARIZE_WORD_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
+  value: String(i + 1),
+  label: String(i + 1),
+}));
 
 function buildFpsOptions(
   sourceFps: number | null,
@@ -802,7 +810,7 @@ export function VideoExtraActions({
   onScaleDown?: (targetHeight: number) => void;
   onDuplicate?: () => Promise<void>;
   onGetMetadata?: () => Promise<void>;
-  onDiarize?: () => void;
+  onDiarize?: (maxWords: number) => void;
   useServerProcessing?: boolean;
   onServerModeChange?: (enabled: boolean) => void;
   t: TranslationFn;
@@ -816,6 +824,10 @@ export function VideoExtraActions({
   );
   const [offlineMigrating, setOfflineMigrating] = useState(false);
   const [showScaleDownModal, setShowScaleDownModal] = useState(false);
+  const [showDiarizeModal, setShowDiarizeModal] = useState(false);
+  const [diarizeWords, setDiarizeWords] = useState(
+    String(DIARIZE_DEFAULT_WORDS),
+  );
   const [duplicating, setDuplicating] = useState(false);
   const [fetchingMetadata, setFetchingMetadata] = useState(false);
 
@@ -912,6 +924,26 @@ export function VideoExtraActions({
               </Button>
             ))}
           </Box>
+        </ConfirmationModal>
+      ) : null}
+      {showDiarizeModal ? (
+        <ConfirmationModal
+          title={t("diarizeModalTitle")}
+          text={t("diarizeModalText")}
+          okCallback={() => {
+            setShowDiarizeModal(false);
+            onDiarize?.(Number(diarizeWords) || DIARIZE_DEFAULT_WORDS);
+          }}
+          cancelCallback={() => setShowDiarizeModal(false)}
+          panelMaxWidth="340px"
+        >
+          <Select
+            label={t("diarizeWordsPerRowLabel")}
+            value={diarizeWords}
+            onChange={setDiarizeWords}
+            options={DIARIZE_WORD_OPTIONS}
+            marginTop={10}
+          />
         </ConfirmationModal>
       ) : null}
       <Box className="vi-extra-actions">
@@ -1116,7 +1148,7 @@ export function VideoExtraActions({
                   <Button
                     unstyled
                     className="vi-fps-btn"
-                    onClick={onDiarize}
+                    onClick={() => setShowDiarizeModal(true)}
                     disabled={
                       isBusy ||
                       !video.downloadURL ||

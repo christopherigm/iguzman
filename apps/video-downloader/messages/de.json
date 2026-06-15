@@ -318,6 +318,9 @@
     "fetchingMetadata": "Metadaten werden geladen…",
     "errorGetMetadataFailed": "Metadaten konnten nicht abgerufen werden.",
     "diarize": "Diarisieren",
+    "diarizeModalTitle": "Untertitel erstellen",
+    "diarizeModalText": "Wähle, wie viele Wörter pro Untertitelzeile erscheinen. Weniger Wörter halten jede Zeile kurz und gut lesbar; mehr Wörter ermöglichen längere Phrasen pro Zeile.",
+    "diarizeWordsPerRowLabel": "Wörter pro Zeile",
     "diarizing": "Audio wird transkribiert…",
     "status_diarizing": "Diarisierung",
     "errorDiarizeFailed": "Diarisierung fehlgeschlagen"

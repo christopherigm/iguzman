@@ -62,6 +62,7 @@ async def run_worker() -> None:
                     run_transcription_with_diarization,
                     wav_path,
                     language=payload.get("language"),
+                    max_words=payload.get("max_words", 4),
                     **speaker_kwargs,
                 )
                 segments = await loop.run_in_executor(None, fn)

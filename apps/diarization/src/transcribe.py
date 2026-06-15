@@ -19,6 +19,7 @@ def run_transcription_with_diarization(
     num_speakers: int | None = None,
     min_speakers: int | None = None,
     max_speakers: int | None = None,
+    max_words: int = 4,
 ) -> list[dict]:
     """
     Transcribe an audio file and attribute each segment to a speaker.
@@ -29,12 +30,16 @@ def run_transcription_with_diarization(
         num_speakers:  Exact number of speakers for pyannote.
         min_speakers:  Minimum number of speakers for pyannote.
         max_speakers:  Maximum number of speakers for pyannote.
+        max_words:     Maximum number of words per subtitle row. Each Whisper
+                       segment is re-chunked into rows of at most this many words
+                       using per-word timestamps. Use <= 0 to keep Whisper's
+                       native (full-segment) rows. Defaults to 4.
 
     Returns:
         List of dicts: {speaker, start, end, text, language}
         `language` key only appears on the first segment (detected by Whisper).
     """
-    whisper_segments, detected_language = _run_whisper(audio_path, language)
+    whisper_segments, detected_language = _run_whisper(audio_path, language, max_words)
     diarization_segments = _run_diarization(audio_path, num_speakers, min_speakers, max_speakers)
     merged = _merge(whisper_segments, diarization_segments)
 
@@ -47,23 +52,45 @@ def run_transcription_with_diarization(
 
 # ── Private helpers ───────────────────────────────────────────────────────────
 
-def _run_whisper(audio_path: str, language: str | None) -> tuple[list[dict], str | None]:
+def _run_whisper(
+    audio_path: str,
+    language: str | None,
+    max_words: int = 4,
+) -> tuple[list[dict], str | None]:
     model = get_whisper_model()
 
-    kwargs: dict = {"beam_size": 5}
+    # Word timestamps are needed to split each segment into max_words-sized rows.
+    chunk_words = max_words is not None and max_words > 0
+    kwargs: dict = {"beam_size": 5, "word_timestamps": chunk_words}
     if language:
         kwargs["language"] = language
 
-    logger.info("Transcribing %s with faster-whisper (language=%r)…", audio_path, language)
+    logger.info(
+        "Transcribing %s with faster-whisper (language=%r, max_words=%s)…",
+        audio_path,
+        language,
+        max_words,
+    )
     segments_iter, info = model.transcribe(audio_path, **kwargs)
 
-    segments = [
-        {"start": seg.start, "end": seg.end, "text": seg.text.strip()}
-        for seg in segments_iter
-        if seg.text.strip()
-    ]
+    segments: list[dict] = []
+    for seg in segments_iter:
+        words = getattr(seg, "words", None) or []
+        if chunk_words and words:
+            # Split the segment into consecutive rows of at most max_words words,
+            # carrying the first/last word's timing as the row's start/end.
+            for i in range(0, len(words), max_words):
+                chunk = words[i : i + max_words]
+                text = "".join(w.word for w in chunk).strip()
+                if text:
+                    segments.append({"start": chunk[0].start, "end": chunk[-1].end, "text": text})
+        else:
+            text = seg.text.strip()
+            if text:
+                segments.append({"start": seg.start, "end": seg.end, "text": text})
+
     logger.info(
-        "Whisper done: %d segments, detected language='%s' (prob=%.2f)",
+        "Whisper done: %d rows, detected language='%s' (prob=%.2f)",
         len(segments),
         info.language,
         info.language_probability,

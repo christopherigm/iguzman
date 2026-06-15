@@ -45,6 +45,11 @@ import {
 import type { UserProfile } from "@/lib/auth";
 import { buildResumeMarkdown, downloadMarkdown } from "@/lib/resume-markdown";
 import {
+  buildResumeDocumentProps,
+  resumeExportConfigKey,
+  type ResumeExportConfig,
+} from "@/lib/resume-export";
+import {
   getWorkExperiences,
   getEducations,
   getLanguages,
@@ -946,81 +951,76 @@ export function ApplicationDetailPage({
     }
   }
 
-  function getFilteredExportData() {
-    if (!exportData) return null;
-    const tailoredWeMap = new Map(
-      (tailoredWorkExperiences ?? []).map((t) => [
-        t.id,
-        t.tailored_description,
-      ]),
+  // Current "Customize Export" selections, in a serializable shape shared with
+  // the resume PDF builder and persisted for the Live Resume preview tab.
+  const exportConfig: ResumeExportConfig = {
+    includeContact,
+    includeLinks,
+    includeSkills,
+    includePhoto,
+    includedWorkExpIds: [...includedWorkExpIds],
+    includedEducationIds: [...includedEducationIds],
+    includedLanguageIds: [...includedLanguageIds],
+    includedProjectIds: [...includedProjectIds],
+    useTailoredWeIds: [...useTailoredWeIds],
+    useTailoredProjectIds: [...useTailoredProjectIds],
+  };
+  const exportConfigJson = JSON.stringify(exportConfig);
+
+  // Persist the config so the Live Resume preview (separate tab) mirrors the
+  // current selections, and live-updates via the browser `storage` event.
+  useEffect(() => {
+    if (typeof window === "undefined" || !exportData) return;
+    try {
+      localStorage.setItem(resumeExportConfigKey(app.id), exportConfigJson);
+    } catch {
+      // localStorage unavailable (private mode / quota) - preview falls back
+      // to defaults; export still works.
+    }
+  }, [exportConfigJson, exportData, app.id]);
+
+  function buildResumeProps() {
+    if (!tailoredBullets || !exportData) return null;
+    return buildResumeDocumentProps({
+      profile,
+      application: app,
+      professionalSummary,
+      tailoredBullets,
+      tailoredWorkExperiences,
+      tailoredProjects,
+      workExps: exportData.workExps,
+      educations: exportData.educations,
+      languages: exportData.languages,
+      projects: exportData.projects,
+      config: exportConfig,
+      profilePictureBase64,
+    });
+  }
+
+  function openLiveResume() {
+    // Ensure the latest config is stored before the new tab reads it.
+    try {
+      localStorage.setItem(resumeExportConfigKey(app.id), exportConfigJson);
+    } catch {
+      // ignore - preview falls back to defaults
+    }
+    window.open(
+      `/${locale}/applications/${app.id}/resume`,
+      "_self",
+      "noopener,noreferrer",
     );
-    const tailoredProjectMap = new Map(
-      (tailoredProjects ?? []).map((t) => [t.id, t.tailored_description]),
-    );
-    return {
-      skills: includeSkills ? (app.tailored_skills ?? []) : [],
-      workExps: exportData.workExps
-        .filter((e) => includedWorkExpIds.has(e.id))
-        .map((e) => ({
-          ...e,
-          description: useTailoredWeIds.has(e.id)
-            ? (tailoredWeMap.get(e.id) ?? e.description)
-            : e.description,
-        })),
-      educations: exportData.educations.filter((e) =>
-        includedEducationIds.has(e.id),
-      ),
-      languages: exportData.languages.filter((l) =>
-        includedLanguageIds.has(l.id),
-      ),
-      projects: exportData.projects
-        .filter((p) => includedProjectIds.has(p.id))
-        .map((p) => ({
-          ...p,
-          description: useTailoredProjectIds.has(p.id)
-            ? (tailoredProjectMap.get(p.id) ?? p.description)
-            : p.description,
-        })),
-    };
   }
 
   async function handleExportPDF() {
-    if (!tailoredBullets || !exportData) return;
+    const resumeProps = buildResumeProps();
+    if (!resumeProps) return;
     setExportingPDF(true);
     setExportError(null);
     try {
       const { pdf } = await import("@react-pdf/renderer");
       const { ResumeDocument } = await import("@/lib/resume-pdf");
-      const fullName = profile
-        ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") ||
-          profile.email
-        : "Candidate";
 
-      const filtered = getFilteredExportData()!;
-
-      const photoUrl = includePhoto ? profilePictureBase64 : undefined;
-
-      const blob = await pdf(
-        <ResumeDocument
-          fullName={fullName}
-          email={includeContact ? (profile?.email ?? "") : ""}
-          jobTitle={profile?.job_title ?? ""}
-          phone={includeContact ? (profile?.phone ?? "") : ""}
-          location={includeContact ? (profile?.location ?? "") : ""}
-          githubUrl={includeLinks ? (profile?.github_url ?? "") : ""}
-          linkedinUrl={includeLinks ? (profile?.linkedin_url ?? "") : ""}
-          photoUrl={photoUrl}
-          summary={professionalSummary || (profile?.summary ?? "") || undefined}
-          skills={filtered.skills}
-          workExperiences={filtered.workExps}
-          targetRole={app.job_title}
-          targetCompany={app.company_name}
-          tailoredBullets={tailoredBullets}
-          projects={filtered.projects}
-          educations={filtered.educations}
-          languages={filtered.languages}
-        />,
-      ).toBlob();
+      const blob = await pdf(<ResumeDocument {...resumeProps} />).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -1038,18 +1038,13 @@ export function ApplicationDetailPage({
   }
 
   function handleExportMarkdown() {
-    if (!tailoredBullets || !exportData) return;
-    const fullName = profile
-      ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") ||
-        profile.email
-      : "Candidate";
-
-    const filtered = getFilteredExportData()!;
+    const resumeProps = buildResumeProps();
+    if (!resumeProps) return;
 
     const md = buildResumeMarkdown({
-      fullName,
-      email: includeContact ? (profile?.email ?? "") : "",
-      jobTitle: profile?.job_title ?? "",
+      fullName: resumeProps.fullName,
+      email: resumeProps.email,
+      jobTitle: resumeProps.jobTitle,
       phone: includeContact ? profile?.phone : undefined,
       location: includeContact ? profile?.location : undefined,
       githubUrl: includeLinks ? profile?.github_url : undefined,
@@ -1057,13 +1052,16 @@ export function ApplicationDetailPage({
       summary: professionalSummary || undefined,
       targetRole: app.job_title,
       targetCompany: app.company_name,
-      tailoredBullets,
+      tailoredBullets: resumeProps.tailoredBullets,
       coverLetter: coverLetter ?? undefined,
-      skills: filtered.skills.length > 0 ? filtered.skills : undefined,
-      workExperiences: filtered.workExps,
-      educations: filtered.educations,
-      languages: filtered.languages,
-      projects: filtered.projects,
+      skills:
+        resumeProps.skills && resumeProps.skills.length > 0
+          ? resumeProps.skills
+          : undefined,
+      workExperiences: resumeProps.workExperiences,
+      educations: resumeProps.educations,
+      languages: resumeProps.languages,
+      projects: resumeProps.projects,
     });
     const filename =
       `${app.company_name}-${app.job_title}`
@@ -1861,20 +1859,17 @@ export function ApplicationDetailPage({
 
       {/* ── Tailor resume ─────────────────────────────────────────────── */}
       <Box marginBottom={28} marginTop={48}>
-        <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
-          {t("tailorTitle")}
-        </Typography>
-        <Box
-          styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
-          marginBottom={16}
-        />
         <Box
           display="flex"
           alignItems="center"
-          gap={10}
+          justifyContent="space-between"
+          gap={12}
           flexWrap="wrap"
-          marginBottom={10}
+          marginBottom={8}
         >
+          <Typography as="h2" variant="h3" fontWeight={600}>
+            {t("tailorTitle")}
+          </Typography>
           <Button
             text={
               tailoring
@@ -1883,14 +1878,21 @@ export function ApplicationDetailPage({
                   ? t("tailorAgain")
                   : t("tailor")
             }
+            icon="/icons/enhance.svg"
             type="button"
             size="md"
             kind="success"
             disabled={tailoring}
             onClick={handleTailor}
           />
-          {tailoring && <ProgressBar label={t("tailoring")} />}
         </Box>
+        <Box
+          styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+          marginBottom={12}
+        />
+
+        {tailoring && <ProgressBar label={t("tailoring")} />}
+
         {tailorError && (
           <Typography variant="body" color="var(--error, #ef4444)">
             {tailorError}
@@ -2061,9 +2063,28 @@ export function ApplicationDetailPage({
       {/* ── Export ────────────────────────────────────────────────────── */}
       {tailoredBullets && tailoredBullets.length > 0 && (
         <Box marginBottom={28} marginTop={48}>
-          <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
-            {t("exportTitle")}
-          </Typography>
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            gap={12}
+            flexWrap="wrap"
+            marginBottom={8}
+          >
+            <Typography as="h2" variant="h3" fontWeight={600}>
+              {t("exportTitle")}
+            </Typography>
+            <Button
+              text={t("liveResume")}
+              type="button"
+              size="md"
+              icon="/icons/fullscreen.svg"
+              iconPosition="end"
+              disabled={exportDataLoading || !exportData}
+              onClick={openLiveResume}
+              kind="success"
+            />
+          </Box>
           <Box
             styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
             marginBottom={12}
@@ -2414,20 +2435,17 @@ export function ApplicationDetailPage({
       {/* ── Cover letter ──────────────────────────────────────────────── */}
       {tailoredBullets && tailoredBullets.length > 0 && (
         <Box marginBottom={28} marginTop={48}>
-          <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
-            {t("coverLetterTitle")}
-          </Typography>
-          <Box
-            styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
-            marginBottom={16}
-          />
           <Box
             display="flex"
             alignItems="center"
-            gap={10}
+            justifyContent="space-between"
+            gap={12}
             flexWrap="wrap"
-            marginBottom={10}
+            marginBottom={8}
           >
+            <Typography as="h2" variant="h3" fontWeight={600}>
+              {t("coverLetterTitle")}
+            </Typography>
             <Button
               text={
                 generatingCL
@@ -2442,8 +2460,12 @@ export function ApplicationDetailPage({
               onClick={handleGenerateCL}
               kind="success"
             />
-            {generatingCL && <ProgressBar label={t("generatingCL")} />}
           </Box>
+          <Box
+            styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+            marginBottom={12}
+          />
+          {generatingCL && <ProgressBar label={t("generatingCL")} />}
           {clError && (
             <Typography variant="caption" color="var(--error, #ef4444)">
               {clError}

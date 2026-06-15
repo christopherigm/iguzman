@@ -318,6 +318,9 @@
     "fetchingMetadata": "Récupération des métadonnées…",
     "errorGetMetadataFailed": "Impossible de récupérer les métadonnées.",
     "diarize": "Diariser",
+    "diarizeModalTitle": "Générer des sous-titres",
+    "diarizeModalText": "Choisissez combien de mots apparaissent sur chaque ligne de sous-titre. Moins de mots gardent chaque ligne courte et facile à lire ; plus de mots permettent des phrases plus longues par ligne.",
+    "diarizeWordsPerRowLabel": "Mots par ligne",
     "diarizing": "Transcription audio en cours…",
     "status_diarizing": "Diarisation",
     "errorDiarizeFailed": "Échec de la diarisation"

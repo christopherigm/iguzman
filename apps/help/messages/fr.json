@@ -203,6 +203,7 @@
     "diarizationNumSpeakersLabel": "Locuteurs exacts",
     "diarizationMinSpeakersLabel": "Locuteurs min.",
     "diarizationMaxSpeakersLabel": "Locuteurs max.",
+    "diarizationMaxWordsLabel": "Mots par ligne (1-10)",
     "diarizationExampleRequest": "Exemple de requête",
     "diarizationExampleResponse": "Exemple de réponse",
     "diarizationResultLabel": "Résultat (SRT)",

@@ -174,6 +174,7 @@ async def transcribe(
     num_speakers: int | None = Form(default=None, description="Exact expected number of speakers"),
     min_speakers: int | None = Form(default=None, description="Minimum expected number of speakers"),
     max_speakers: int | None = Form(default=None, description="Maximum expected number of speakers"),
+    max_words: int = Form(default=4, ge=1, le=10, description="Maximum number of words per subtitle row (1-10). Defaults to 4."),
 ):
     """
     Upload an audio file to start speaker-attributed transcription. Returns a job ID immediately.
@@ -189,6 +190,7 @@ async def transcribe(
         "num_speakers": num_speakers,
         "min_speakers": min_speakers,
         "max_speakers": max_speakers,
+        "max_words": max_words,
     })
     await enqueue(job_id)
     return {"job_id": job_id, "status": "queued"}

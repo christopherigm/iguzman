@@ -33,7 +33,8 @@ const TRANSCRIBE_CURL =
   `  -H "X-API-Key: YOUR_API_KEY" \\\n` +
   `  -F "file=@audio.wav" \\\n` +
   `  -F "language=en" \\\n` +
-  `  -F "num_speakers=2"`;
+  `  -F "num_speakers=2" \\\n` +
+  `  -F "max_words=4"`;
 
 const TRANSCRIBE_RESPONSE = JSON.stringify(
   { job_id: "a1b2c3d4-e5f6-...", status: "queued" },
@@ -110,6 +111,7 @@ export function DiarizationPanel() {
   const transcribeFileRef = useRef<HTMLInputElement>(null);
   const [transcribeFile, setTranscribeFile] = useState<File | null>(null);
   const [transcribeLanguage, setTranscribeLanguage] = useState("");
+  const [transcribeMaxWords, setTranscribeMaxWords] = useState("4");
   const [transcribeNumSpeakers, setTranscribeNumSpeakers] = useState("");
   const [transcribeMinSpeakers, setTranscribeMinSpeakers] = useState("");
   const [transcribeMaxSpeakers, setTranscribeMaxSpeakers] = useState("");
@@ -241,6 +243,7 @@ export function DiarizationPanel() {
       const form = new FormData();
       form.append("file", transcribeFile);
       if (transcribeLanguage) form.append("language", transcribeLanguage);
+      if (transcribeMaxWords) form.append("max_words", transcribeMaxWords);
       if (transcribeNumSpeakers)
         form.append("num_speakers", transcribeNumSpeakers);
       if (transcribeMinSpeakers)
@@ -446,6 +449,14 @@ export function DiarizationPanel() {
           value={transcribeLanguage}
           onChange={setTranscribeLanguage}
           placeholder="en"
+        />
+        <TextInput
+          label={t("diarizationMaxWordsLabel")}
+          value={transcribeMaxWords}
+          onChange={setTranscribeMaxWords}
+          type="number"
+          min={1}
+          max={10}
         />
         <Box display="flex" gap={12}>
           <TextInput

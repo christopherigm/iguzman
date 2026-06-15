@@ -88,6 +88,8 @@ export interface StoredVideo extends Omit<VideoResultFields, "isH265"> {
   fileSize: number | null;
   /** Target height for a pending scale-down operation. Null when not pending. */
   scaleDownTargetHeight: number | null;
+  /** Max words per subtitle row for a pending diarization. Null when not pending. */
+  diarizeMaxWords: number | null;
   /** Per-operation server credit costs computed after download. Null until download completes. */
   operationCredits: OperationCredits | null;
 }
@@ -167,6 +169,7 @@ function applyDefaults(v: StoredVideo): StoredVideo {
     serverFileDeleted: v.serverFileDeleted ?? false,
     fileSize: v.fileSize ?? null,
     scaleDownTargetHeight: v.scaleDownTargetHeight ?? null,
+    diarizeMaxWords: v.diarizeMaxWords ?? null,
     operationCredits: v.operationCredits ?? null,
   };
 }
@@ -411,6 +414,7 @@ export function useVideoStore() {
         serverFileDeleted: false,
         fileSize: null,
         scaleDownTargetHeight: null,
+        diarizeMaxWords: null,
         operationCredits: null,
       };
       setPinned((prev) => {

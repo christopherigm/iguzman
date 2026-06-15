@@ -318,6 +318,9 @@
     "fetchingMetadata": "Obtendo metadados…",
     "errorGetMetadataFailed": "Falha ao obter metadados.",
     "diarize": "Diarizar",
+    "diarizeModalTitle": "Gerar legendas",
+    "diarizeModalText": "Escolha quantas palavras aparecem em cada linha de legenda. Menos palavras mantêm cada linha curta e fácil de ler; mais palavras permitem frases mais longas por linha.",
+    "diarizeWordsPerRowLabel": "Palavras por linha",
     "diarizing": "Transcrevendo áudio…",
     "status_diarizing": "Diarizando",
     "errorDiarizeFailed": "Falha ao diarizar"

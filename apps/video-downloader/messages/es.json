@@ -320,6 +320,9 @@
     "fetchingMetadata": "Obteniendo metadatos…",
     "errorGetMetadataFailed": "Error al obtener metadatos.",
     "diarize": "Diarizar",
+    "diarizeModalTitle": "Generar subtítulos",
+    "diarizeModalText": "Elige cuántas palabras aparecen en cada línea de subtítulo. Menos palabras mantienen cada línea corta y fácil de leer; más palabras permiten frases más largas por línea.",
+    "diarizeWordsPerRowLabel": "Palabras por línea",
     "diarizing": "Transcribiendo audio…",
     "status_diarizing": "Diarizando",
     "errorDiarizeFailed": "Error al diarizar"

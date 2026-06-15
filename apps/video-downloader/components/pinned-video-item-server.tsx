@@ -735,6 +735,7 @@ export function PinnedVideoItemServer({
           file: serverFile,
           duration: video.duration,
           taskId: video.taskId ?? "",
+          maxWords: video.diarizeMaxWords ?? undefined,
         }),
       });
 
@@ -790,6 +791,7 @@ export function PinnedVideoItemServer({
     video.opfsStored,
     video.opfsKey,
     video.serverFileDeleted,
+    video.diarizeMaxWords,
     startPolling,
     onUpdate,
     onComplete,
