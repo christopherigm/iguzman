@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { Container } from "@repo/ui/core-elements/container";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Box } from "@repo/ui/core-elements/box";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Button } from "@repo/ui/core-elements/button";
@@ -856,671 +857,711 @@ export function ProfilePage() {
         <Toast message={resumeError} variant="error" position="top-center" />
       )}
 
-      <Box width="100%" maxWidth={640} marginTop={24} marginBottom={16}>
-        <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
-          {t("title")}
-        </Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
-          {t("subtitle")}
-        </Typography>
-      </Box>
-
       <Box
         width="100%"
-        maxWidth={640}
+        marginTop={24}
+        marginBottom={24}
         display="flex"
-        flexDirection="column"
-        gap={24}
-        marginBottom={40}
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={16}
+        flexWrap="wrap"
       >
-        {/* ── Contact Info ── */}
-        {tnSuggestModal && (
-          <ConfirmationModal
-            title={t("tnSuggestModalTitle")}
-            text={t("tnSuggestModalSubtitle")}
-            okCallback={() => setTnSuggestModal(false)}
-            panelMaxWidth="540px"
+        <Box display="flex" flexDirection="column" gap={4}>
+          <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
+            {t("title")}
+          </Typography>
+          <Typography
+            variant="body-sm"
+            color="var(--muted-foreground, #6b7280)"
           >
-            <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
-              {tnSuggestResults.length === 0 ? (
-                <Typography
-                  variant="body-sm"
-                  color="var(--muted-foreground, #6b7280)"
-                >
-                  {t("tnSuggestNoMatches")}
-                </Typography>
-              ) : (
-                tnSuggestResults.map((r) => {
-                  const color =
-                    r.likelihood >= 70
-                      ? "var(--success, #22c55e)"
-                      : r.likelihood >= 45
-                        ? "#f59e0b"
-                        : "var(--error, #ef4444)";
-                  return (
-                    <Box
-                      key={r.category}
-                      display="flex"
-                      flexDirection="column"
-                      gap={6}
-                    >
+            {t("subtitle")}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Container size="lg" paddingX={0} marginBottom={40}>
+        <Grid container spacing={3}>
+          {/* ── Contact Info ── */}
+          {tnSuggestModal && (
+            <ConfirmationModal
+              title={t("tnSuggestModalTitle")}
+              text={t("tnSuggestModalSubtitle")}
+              okCallback={() => setTnSuggestModal(false)}
+              panelMaxWidth="540px"
+            >
+              <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
+                {tnSuggestResults.length === 0 ? (
+                  <Typography
+                    variant="body-sm"
+                    color="var(--muted-foreground, #6b7280)"
+                  >
+                    {t("tnSuggestNoMatches")}
+                  </Typography>
+                ) : (
+                  tnSuggestResults.map((r) => {
+                    const color =
+                      r.likelihood >= 70
+                        ? "var(--success, #22c55e)"
+                        : r.likelihood >= 45
+                          ? "#f59e0b"
+                          : "var(--error, #ef4444)";
+                    return (
                       <Box
+                        key={r.category}
                         display="flex"
-                        justifyContent="space-between"
-                        alignItems="center"
+                        flexDirection="column"
+                        gap={6}
                       >
-                        <Typography variant="body" fontWeight={600}>
-                          {r.category}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          fontWeight={600}
-                          color={color}
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
                         >
-                          {r.likelihood}%
+                          <Typography variant="body" fontWeight={600}>
+                            {r.category}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            fontWeight={600}
+                            color={color}
+                          >
+                            {r.likelihood}%
+                          </Typography>
+                        </Box>
+                        <ProgressBar
+                          value={r.likelihood}
+                          size={6}
+                          label={r.category}
+                        />
+                        <Typography
+                          variant="body-sm"
+                          color="var(--muted-foreground, #6b7280)"
+                          styles={{ lineHeight: 1.5 }}
+                        >
+                          {r.explanation}
                         </Typography>
                       </Box>
-                      <ProgressBar
-                        value={r.likelihood}
-                        size={6}
-                        label={r.category}
-                      />
-                      <Typography
-                        variant="body-sm"
-                        color="var(--muted-foreground, #6b7280)"
-                        styles={{ lineHeight: 1.5 }}
-                      >
-                        {r.explanation}
-                      </Typography>
-                    </Box>
-                  );
-                })
-              )}
-            </Box>
-          </ConfirmationModal>
-        )}
-        {summaryShowEnhanceOptions && (
-          <ConfirmationModal
-            title={t("summaryEnhanceOptionsTitle")}
-            text={t("summaryEnhanceOptionsText")}
-            okCallback={() => void handleSummaryConfirmEnhanceOptions()}
-            cancelCallback={() => setSummaryShowEnhanceOptions(false)}
-          >
-            <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
-              <Slider
-                steps={SUMMARY_PARAGRAPH_COUNT_STEPS}
-                value={summaryEnhanceParagraphs}
-                onChange={(v) => setSummaryEnhanceParagraphs(Number(v))}
-                label={t("summaryEnhanceParagraphsLabel")}
-              />
-              <Slider
-                steps={SUMMARY_LENGTH_STEPS}
-                value={summaryEnhanceParagraphLength}
-                onChange={(v) => setSummaryEnhanceParagraphLength(String(v))}
-                label={`${t("summaryEnhanceLengthLabel")} (${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).min}-${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).max} words/para)`}
-              />
-            </Box>
-          </ConfirmationModal>
-        )}
+                    );
+                  })
+                )}
+              </Box>
+            </ConfirmationModal>
+          )}
+          {summaryShowEnhanceOptions && (
+            <ConfirmationModal
+              title={t("summaryEnhanceOptionsTitle")}
+              text={t("summaryEnhanceOptionsText")}
+              okCallback={() => void handleSummaryConfirmEnhanceOptions()}
+              cancelCallback={() => setSummaryShowEnhanceOptions(false)}
+            >
+              <Box display="flex" flexDirection="column" gap={20} paddingY={4}>
+                <Slider
+                  steps={SUMMARY_PARAGRAPH_COUNT_STEPS}
+                  value={summaryEnhanceParagraphs}
+                  onChange={(v) => setSummaryEnhanceParagraphs(Number(v))}
+                  label={t("summaryEnhanceParagraphsLabel")}
+                />
+                <Slider
+                  steps={SUMMARY_LENGTH_STEPS}
+                  value={summaryEnhanceParagraphLength}
+                  onChange={(v) => setSummaryEnhanceParagraphLength(String(v))}
+                  label={`${t("summaryEnhanceLengthLabel")} (${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).min}-${(PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? { min: 25, max: 40 }).max} words/para)`}
+                />
+              </Box>
+            </ConfirmationModal>
+          )}
 
-        {/* ── Professional Info ── */}
-        <Section
-          title={t("professionalSection")}
-          subtitle={t("professionalSubtitle")}
-        >
-          <Box display="flex" flexDirection="column" gap={12} marginBottom={12}>
-            <TextInput
-              label={t("jobTitleLabel")}
-              type="text"
-              value={jobTitle}
-              onChange={(v) => {
-                setJobTitle(v);
-                setInfoSuccess(false);
-              }}
-              placeholder={t("jobTitlePlaceholder")}
-              autoComplete="organization-title"
-            />
-            <Slider
-              label={t("yearsLabel")}
-              steps={YEARS_STEPS}
-              value={yearsValue}
-              onChange={(v) => {
-                setYearsValue(v);
-                setInfoSuccess(false);
-              }}
-            />
-            <Box display="flex" flexDirection="column" gap={8}>
-              <Box className="profile__field-label-row">
-                <Typography
-                  variant="body"
-                  color="var(--muted-foreground, #6b7280)"
-                >
-                  {t("summaryLabel")}
-                </Typography>
-                <Box display="flex" alignItems="center" gap={6}>
-                  <SpeechButton
-                    language={locale === "es" ? "es" : "en"}
-                    onTranscript={handleSummaryTranscript}
-                    micIcon="/icons/mic.svg"
+          {/* ── Professional Info ── */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Section
+              title={t("professionalSection")}
+              subtitle={t("professionalSubtitle")}
+            >
+              <Box
+                display="flex"
+                flexDirection="column"
+                gap={12}
+                marginBottom={12}
+              >
+                <TextInput
+                  label={t("jobTitleLabel")}
+                  type="text"
+                  value={jobTitle}
+                  onChange={(v) => {
+                    setJobTitle(v);
+                    setInfoSuccess(false);
+                  }}
+                  placeholder={t("jobTitlePlaceholder")}
+                  autoComplete="organization-title"
+                />
+                <Slider
+                  label={t("yearsLabel")}
+                  steps={YEARS_STEPS}
+                  value={yearsValue}
+                  onChange={(v) => {
+                    setYearsValue(v);
+                    setInfoSuccess(false);
+                  }}
+                />
+                <Box display="flex" flexDirection="column" gap={8}>
+                  <Box className="profile__field-label-row">
+                    <Typography
+                      variant="body"
+                      color="var(--muted-foreground, #6b7280)"
+                    >
+                      {t("summaryLabel")}
+                    </Typography>
+                    <Box display="flex" alignItems="center" gap={6}>
+                      <SpeechButton
+                        language={locale === "es" ? "es" : "en"}
+                        onTranscript={handleSummaryTranscript}
+                        micIcon="/icons/mic.svg"
+                      />
+                      <Button
+                        unstyled
+                        type="button"
+                        icon="/icons/enhance.svg"
+                        iconSize="16px"
+                        iconColor={
+                          summaryEnhancePreview
+                            ? "var(--primary, #06b6d4)"
+                            : "var(--foreground, #171717)"
+                        }
+                        disabled={summaryIsGenerating || !contactSummary.trim()}
+                        onClick={() => setSummaryShowEnhanceOptions(true)}
+                        aria-label={t("summaryEnhanceLabel")}
+                        title={t("summaryEnhanceLabel")}
+                        className={[
+                          "ai-enhance-btn",
+                          summaryIsGenerating || !contactSummary.trim()
+                            ? "ai-enhance-btn--busy"
+                            : "",
+                          summaryEnhancePreview ? "ai-enhance-btn--active" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      />
+                    </Box>
+                  </Box>
+                  <TextInput
+                    multirow
+                    rows={7}
+                    value={contactSummary}
+                    onChange={(v) => {
+                      setContactSummary(v);
+                      setInfoSuccess(false);
+                    }}
+                    placeholder={t("summaryPlaceholder")}
+                    aria-label={t("summaryLabel")}
                   />
+                  {summaryEnhancePreview && (
+                    <Box
+                      className="profile__enhance-preview"
+                      flexDirection="column"
+                      gap={10}
+                    >
+                      <Typography variant="body-sm">
+                        {summaryEnhancePreview}
+                      </Typography>
+                      <Box
+                        display="flex"
+                        gap={8}
+                        alignItems="center"
+                        marginTop={12}
+                      >
+                        {summaryIsGenerating ? (
+                          <Button
+                            text={t("summaryEnhanceStop")}
+                            type="button"
+                            size="md"
+                            onClick={handleSummaryDiscardEnhance}
+                          />
+                        ) : (
+                          <>
+                            <Button
+                              text={t("summaryEnhanceDiscard")}
+                              type="button"
+                              size="md"
+                              onClick={handleSummaryDiscardEnhance}
+                            />
+                            <Button
+                              text={t("summaryEnhanceAccept")}
+                              type="button"
+                              size="md"
+                              kind="success"
+                              onClick={handleSummaryAcceptEnhance}
+                            />
+                          </>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+                <Box display="flex" alignItems="center" gap={8}>
+                  <Box styles={{ flex: 1 }}>
+                    <Select
+                      label={t("tnProfessionLabel")}
+                      value={contactTnProfession}
+                      onChange={(v) => {
+                        setContactTnProfession(v);
+                        setInfoSuccess(false);
+                      }}
+                      options={[
+                        { value: "", label: t("tnProfessionPlaceholder") },
+                        ...TN_PROFESSIONS,
+                      ]}
+                      aria-label={t("tnProfessionLabel")}
+                      disabled={tnSuggestLoading}
+                    />
+                  </Box>
                   <Button
                     unstyled
                     type="button"
                     icon="/icons/enhance.svg"
                     iconSize="16px"
                     iconColor={
-                      summaryEnhancePreview
+                      tnSuggestLoading
                         ? "var(--primary, #06b6d4)"
                         : "var(--foreground, #171717)"
                     }
-                    disabled={summaryIsGenerating || !contactSummary.trim()}
-                    onClick={() => setSummaryShowEnhanceOptions(true)}
-                    aria-label={t("summaryEnhanceLabel")}
-                    title={t("summaryEnhanceLabel")}
+                    disabled={tnSuggestLoading}
+                    onClick={() => void handleSuggestTnCategory()}
+                    aria-label={t("tnSuggestLabel")}
+                    title={t("tnSuggestLabel")}
                     className={[
                       "ai-enhance-btn",
-                      summaryIsGenerating || !contactSummary.trim()
-                        ? "ai-enhance-btn--busy"
-                        : "",
-                      summaryEnhancePreview ? "ai-enhance-btn--active" : "",
+                      tnSuggestLoading ? "ai-enhance-btn--busy" : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
                   />
                 </Box>
+                {tnSuggestLoading && (
+                  <ProgressBar label={t("tnSuggestGenerating")} />
+                )}
               </Box>
-              <TextInput
-                multirow
-                rows={7}
-                value={contactSummary}
-                onChange={(v) => {
-                  setContactSummary(v);
-                  setInfoSuccess(false);
-                }}
-                placeholder={t("summaryPlaceholder")}
-                aria-label={t("summaryLabel")}
-              />
-              {summaryEnhancePreview && (
-                <Box
-                  className="profile__enhance-preview"
-                  flexDirection="column"
-                  gap={10}
-                >
-                  <Typography variant="body-sm">
-                    {summaryEnhancePreview}
-                  </Typography>
-                  <Box
-                    display="flex"
-                    gap={8}
-                    alignItems="center"
-                    marginTop={12}
-                  >
-                    {summaryIsGenerating ? (
-                      <Button
-                        text={t("summaryEnhanceStop")}
-                        type="button"
-                        size="md"
-                        onClick={handleSummaryDiscardEnhance}
-                      />
-                    ) : (
-                      <>
-                        <Button
-                          text={t("summaryEnhanceDiscard")}
-                          type="button"
-                          size="md"
-                          onClick={handleSummaryDiscardEnhance}
-                        />
-                        <Button
-                          text={t("summaryEnhanceAccept")}
-                          type="button"
-                          size="md"
-                          kind="success"
-                          onClick={handleSummaryAcceptEnhance}
-                        />
-                      </>
-                    )}
-                  </Box>
-                </Box>
-              )}
-            </Box>
-            <Box display="flex" alignItems="center" gap={8}>
-              <Box styles={{ flex: 1 }}>
-                <Select
-                  label={t("tnProfessionLabel")}
-                  value={contactTnProfession}
-                  onChange={(v) => {
-                    setContactTnProfession(v);
-                    setInfoSuccess(false);
-                  }}
-                  options={[
-                    { value: "", label: t("tnProfessionPlaceholder") },
-                    ...TN_PROFESSIONS,
-                  ]}
-                  aria-label={t("tnProfessionLabel")}
-                  disabled={tnSuggestLoading}
+              {savingInfo && <ProgressBar label={t("savingInfo")} />}
+              <Box display="flex" justifyContent="flex-end">
+                <Button
+                  text={savingInfo ? t("savingInfo") : t("saveInfo")}
+                  type="button"
+                  size="lg"
+                  kind="success"
+                  disabled={savingInfo || !jobTitle.trim()}
+                  onClick={() => void handleSaveInfo()}
                 />
               </Box>
-              <Button
-                unstyled
-                type="button"
-                icon="/icons/enhance.svg"
-                iconSize="16px"
-                iconColor={
-                  tnSuggestLoading
-                    ? "var(--primary, #06b6d4)"
-                    : "var(--foreground, #171717)"
-                }
-                disabled={tnSuggestLoading}
-                onClick={() => void handleSuggestTnCategory()}
-                aria-label={t("tnSuggestLabel")}
-                title={t("tnSuggestLabel")}
-                className={[
-                  "ai-enhance-btn",
-                  tnSuggestLoading ? "ai-enhance-btn--busy" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              />
-            </Box>
-            {tnSuggestLoading && (
-              <ProgressBar label={t("tnSuggestGenerating")} />
-            )}
-          </Box>
-          {savingInfo && <ProgressBar label={t("savingInfo")} />}
-          <Box display="flex" justifyContent="flex-end">
-            <Button
-              text={savingInfo ? t("savingInfo") : t("saveInfo")}
-              type="button"
-              size="lg"
-              kind="success"
-              disabled={savingInfo || !jobTitle.trim()}
-              onClick={() => void handleSaveInfo()}
-            />
-          </Box>
-        </Section>
+            </Section>
+          </Grid>
 
-        {/* ── Languages ── */}
-        <Section
-          title={t("languagesSection")}
-          subtitle={t("languagesSubtitle")}
-        >
-          <Box display="flex" gap={8} flexDirection="column">
-            <TextInput
-              label={t("langNameLabel")}
-              type="text"
-              value={newLangName}
-              onChange={(v) => {
-                setNewLangName(v);
-                setLangError(null);
-              }}
-              placeholder={t("langNamePlaceholder")}
-              aria-label={t("langNameLabel")}
-            />
-            <Box display="flex" alignItems="center" gap={12} marginBottom={20}>
-              <Select
-                label={t("langProficiencyLabel")}
-                value={newLangProficiency}
-                onChange={(v) => {
-                  setNewLangProficiency(v as LanguageProficiency);
-                }}
-                options={proficiencyOptions}
-              />
-              <Button
-                text={addingLang ? t("langAdding") : t("langAdd")}
-                type="button"
-                size="lg"
-                kind="success"
-                disabled={addingLang || !newLangName.trim()}
-                onClick={() => void handleAddLanguage()}
-              />
-            </Box>
-          </Box>
-
-          {languages.length === 0 ? (
-            <Typography
-              variant="body-sm"
-              color="var(--muted-foreground, #6b7280)"
+          {/* ── Languages ── */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Section
+              title={t("languagesSection")}
+              subtitle={t("languagesSubtitle")}
             >
-              {t("langEmpty")}
-            </Typography>
-          ) : (
-            <Box display="flex" flexDirection="column" gap={8}>
-              {languages.map((lang) =>
-                editingLangId === lang.id ? (
-                  <Box
-                    key={lang.id}
-                    display="flex"
-                    alignItems="center"
-                    gap={8}
-                    padding={10}
-                    borderRadius={8}
-                    flexWrap="wrap"
-                    styles={{
-                      border: "1px solid var(--border, #e5e7eb)",
-                      background: "var(--surface-2)",
+              <Box display="flex" gap={8} flexDirection="column">
+                <TextInput
+                  label={t("langNameLabel")}
+                  type="text"
+                  value={newLangName}
+                  onChange={(v) => {
+                    setNewLangName(v);
+                    setLangError(null);
+                  }}
+                  placeholder={t("langNamePlaceholder")}
+                  aria-label={t("langNameLabel")}
+                />
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={12}
+                  marginBottom={20}
+                >
+                  <Select
+                    label={t("langProficiencyLabel")}
+                    value={newLangProficiency}
+                    onChange={(v) => {
+                      setNewLangProficiency(v as LanguageProficiency);
                     }}
-                  >
-                    <Box styles={{ flex: 1, minWidth: "120px" }}>
-                      <TextInput
-                        type="text"
-                        value={editLangName}
-                        onChange={(v) => setEditLangName(v)}
-                        placeholder={t("langNamePlaceholder")}
-                        aria-label={t("langNameLabel")}
-                      />
-                    </Box>
-                    <Select
-                      label={t("langProficiencyLabel")}
-                      value={editLangProficiency}
-                      onChange={(v) =>
-                        setEditLangProficiency(v as LanguageProficiency)
-                      }
-                      options={proficiencyOptions}
-                    />
-                    <Button
-                      text={
-                        savingLangId === lang.id
-                          ? t("langSaving")
-                          : t("langSave")
-                      }
-                      type="button"
-                      size="lg"
-                      kind="success"
-                      disabled={
-                        savingLangId === lang.id || !editLangName.trim()
-                      }
-                      onClick={() => void handleSaveLang(lang.id)}
-                    />
-                    <Button
-                      text={t("langCancel")}
-                      type="button"
-                      size="lg"
-                      disabled={savingLangId === lang.id}
-                      onClick={() => setEditingLangId(null)}
-                    />
-                  </Box>
-                ) : (
-                  <Box
-                    key={lang.id}
-                    display="flex"
-                    alignItems="center"
-                    gap={8}
-                    padding={10}
-                    borderRadius={8}
-                    styles={{
-                      border: "1px solid var(--border, #e5e7eb)",
-                      background: "var(--surface-2)",
-                    }}
-                  >
-                    <Typography variant="body" styles={{ flex: 1 }}>
-                      {lang.name}
-                    </Typography>
-                    <Typography
-                      variant="body-sm"
-                      color="var(--muted-foreground, #6b7280)"
-                    >
-                      {t(`proficiencies.${lang.proficiency}`)}
-                    </Typography>
-                    <Button
-                      unstyled
-                      type="button"
-                      className="profile__upload-another"
-                      onClick={() => {
-                        setEditingLangId(lang.id);
-                        setEditLangName(lang.name);
-                        setEditLangProficiency(lang.proficiency);
-                        setLangError(null);
-                      }}
-                    >
-                      {t("langEdit")}
-                    </Button>
-                    <Button
-                      unstyled
-                      type="button"
-                      className="profile__upload-another"
-                      disabled={deletingLangId === lang.id}
-                      aria-label={`${t("langDelete")} ${lang.name}`}
-                      onClick={() => void handleDeleteLang(lang.id)}
-                    >
-                      {deletingLangId === lang.id ? "…" : t("langDelete")}
-                    </Button>
-                  </Box>
-                ),
-              )}
-            </Box>
-          )}
-        </Section>
+                    options={proficiencyOptions}
+                  />
+                  <Button
+                    text={addingLang ? t("langAdding") : t("langAdd")}
+                    type="button"
+                    size="lg"
+                    kind="success"
+                    disabled={addingLang || !newLangName.trim()}
+                    onClick={() => void handleAddLanguage()}
+                  />
+                </Box>
+              </Box>
 
-        {/* ── Tech Stack ── */}
-        <Section title={t("techSection")} subtitle={t("techSubtitle")}>
-          <TechTagInput
-            tags={techStack}
-            onChange={(tags) => {
-              setTechStack(tags);
-              setStackSuccess(false);
-            }}
-            suggestions={popularTechSuggestions}
-          />
-          {savingStack && <ProgressBar label={t("savingStack")} />}
-          <Box display="flex" justifyContent="flex-end" marginTop={20}>
-            <Button
-              text={savingStack ? t("savingStack") : t("saveStack")}
-              type="button"
-              size="lg"
-              kind="success"
-              disabled={savingStack}
-              onClick={() => void handleSaveStack()}
-            />
-          </Box>
-        </Section>
-
-        {/* ── Job Search ── */}
-        <JobSearchSection />
-
-        <Section title={t("contactSection")} subtitle={t("contactSubtitle")}>
-          <Box display="flex" flexDirection="column" gap={12} marginBottom={12}>
-            <TextInput
-              label={t("phoneLabel")}
-              type="text"
-              value={contactPhone}
-              onChange={(v) => {
-                setContactPhone(v);
-                setContactSuccess(false);
-              }}
-              placeholder={t("phonePlaceholder")}
-              aria-label={t("phoneLabel")}
-            />
-            <TextInput
-              label={t("locationLabel")}
-              type="text"
-              value={contactLocation}
-              onChange={(v) => {
-                setContactLocation(v);
-                setContactSuccess(false);
-              }}
-              placeholder={t("locationPlaceholder")}
-              aria-label={t("locationLabel")}
-            />
-            <TextInput
-              label={t("githubLabel")}
-              type="url"
-              value={contactGithub}
-              onChange={(v) => {
-                setContactGithub(v);
-                setContactSuccess(false);
-              }}
-              placeholder={t("githubPlaceholder")}
-              aria-label={t("githubLabel")}
-            />
-            <TextInput
-              label={t("linkedinLabel")}
-              type="url"
-              value={contactLinkedin}
-              onChange={(v) => {
-                setContactLinkedin(v);
-                setContactSuccess(false);
-              }}
-              placeholder={t("linkedinPlaceholder")}
-              aria-label={t("linkedinLabel")}
-            />
-            <Select
-              label={t("citizenshipLabel")}
-              value={contactCitizenship}
-              onChange={(v) => {
-                setContactCitizenship(v);
-                setContactSuccess(false);
-              }}
-              options={[
-                { value: "", label: t("citizenshipPlaceholder") },
-                ...CITIZENSHIP_OPTIONS,
-              ]}
-              aria-label={t("citizenshipLabel")}
-            />
-          </Box>
-          {savingContact && <ProgressBar label={t("savingContact")} />}
-          <Box display="flex" justifyContent="flex-end">
-            <Button
-              text={savingContact ? t("savingContact") : t("saveContact")}
-              type="button"
-              size="lg"
-              kind="success"
-              disabled={savingContact}
-              onClick={() => void handleSaveContact()}
-            />
-          </Box>
-        </Section>
-
-        {/* ── Resume ── */}
-        <Section title={t("resumeSection")} subtitle={t("resumeSubtitle")}>
-          {(uploadState === "idle" || uploadState === "error") && (
-            <>
-              <Box
-                className={[
-                  "profile__upload-zone",
-                  isDragging ? "profile__upload-zone--dragging" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                role="button"
-                tabIndex={0}
-                aria-label={t("resumeDropZone")}
-                onClick={() => fileInputRef.current?.click()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ")
-                    fileInputRef.current?.click();
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragging(false);
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) void handleResumeFile(file);
-                }}
-              >
+              {languages.length === 0 ? (
                 <Typography
                   variant="body-sm"
-                  styles={{ pointerEvents: "none" }}
-                >
-                  {t("resumeDropZone")}
-                </Typography>
-                <Typography
-                  variant="label"
                   color="var(--muted-foreground, #6b7280)"
-                  styles={{ pointerEvents: "none" }}
                 >
-                  {t("resumeDropHint")}
+                  {t("langEmpty")}
                 </Typography>
+              ) : (
+                <Box display="flex" flexDirection="column" gap={8}>
+                  {languages.map((lang) =>
+                    editingLangId === lang.id ? (
+                      <Box
+                        key={lang.id}
+                        display="flex"
+                        alignItems="center"
+                        gap={8}
+                        padding={10}
+                        borderRadius={8}
+                        flexWrap="wrap"
+                        styles={{
+                          border: "1px solid var(--border, #e5e7eb)",
+                          background: "var(--surface-2)",
+                        }}
+                      >
+                        <Box styles={{ flex: 1, minWidth: "120px" }}>
+                          <TextInput
+                            type="text"
+                            value={editLangName}
+                            onChange={(v) => setEditLangName(v)}
+                            placeholder={t("langNamePlaceholder")}
+                            aria-label={t("langNameLabel")}
+                          />
+                        </Box>
+                        <Select
+                          label={t("langProficiencyLabel")}
+                          value={editLangProficiency}
+                          onChange={(v) =>
+                            setEditLangProficiency(v as LanguageProficiency)
+                          }
+                          options={proficiencyOptions}
+                        />
+                        <Button
+                          text={
+                            savingLangId === lang.id
+                              ? t("langSaving")
+                              : t("langSave")
+                          }
+                          type="button"
+                          size="lg"
+                          kind="success"
+                          disabled={
+                            savingLangId === lang.id || !editLangName.trim()
+                          }
+                          onClick={() => void handleSaveLang(lang.id)}
+                        />
+                        <Button
+                          text={t("langCancel")}
+                          type="button"
+                          size="lg"
+                          disabled={savingLangId === lang.id}
+                          onClick={() => setEditingLangId(null)}
+                        />
+                      </Box>
+                    ) : (
+                      <Box
+                        key={lang.id}
+                        display="flex"
+                        alignItems="center"
+                        gap={8}
+                        padding={10}
+                        borderRadius={8}
+                        styles={{
+                          border: "1px solid var(--border, #e5e7eb)",
+                          background: "var(--surface-2)",
+                        }}
+                      >
+                        <Typography variant="body" styles={{ flex: 1 }}>
+                          {lang.name}
+                        </Typography>
+                        <Typography
+                          variant="body-sm"
+                          color="var(--muted-foreground, #6b7280)"
+                        >
+                          {t(`proficiencies.${lang.proficiency}`)}
+                        </Typography>
+                        <Button
+                          unstyled
+                          type="button"
+                          className="profile__upload-another"
+                          onClick={() => {
+                            setEditingLangId(lang.id);
+                            setEditLangName(lang.name);
+                            setEditLangProficiency(lang.proficiency);
+                            setLangError(null);
+                          }}
+                        >
+                          {t("langEdit")}
+                        </Button>
+                        <Button
+                          unstyled
+                          type="button"
+                          className="profile__upload-another"
+                          disabled={deletingLangId === lang.id}
+                          aria-label={`${t("langDelete")} ${lang.name}`}
+                          onClick={() => void handleDeleteLang(lang.id)}
+                        >
+                          {deletingLangId === lang.id ? "…" : t("langDelete")}
+                        </Button>
+                      </Box>
+                    ),
+                  )}
+                </Box>
+              )}
+            </Section>
+          </Grid>
+
+          {/* ── Contact Info ── */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Section
+              title={t("contactSection")}
+              subtitle={t("contactSubtitle")}
+            >
+              <Box
+                display="flex"
+                flexDirection="column"
+                gap={12}
+                marginBottom={12}
+              >
+                <TextInput
+                  label={t("phoneLabel")}
+                  type="text"
+                  value={contactPhone}
+                  onChange={(v) => {
+                    setContactPhone(v);
+                    setContactSuccess(false);
+                  }}
+                  placeholder={t("phonePlaceholder")}
+                  aria-label={t("phoneLabel")}
+                />
+                <TextInput
+                  label={t("locationLabel")}
+                  type="text"
+                  value={contactLocation}
+                  onChange={(v) => {
+                    setContactLocation(v);
+                    setContactSuccess(false);
+                  }}
+                  placeholder={t("locationPlaceholder")}
+                  aria-label={t("locationLabel")}
+                />
+                <TextInput
+                  label={t("githubLabel")}
+                  type="url"
+                  value={contactGithub}
+                  onChange={(v) => {
+                    setContactGithub(v);
+                    setContactSuccess(false);
+                  }}
+                  placeholder={t("githubPlaceholder")}
+                  aria-label={t("githubLabel")}
+                />
+                <TextInput
+                  label={t("linkedinLabel")}
+                  type="url"
+                  value={contactLinkedin}
+                  onChange={(v) => {
+                    setContactLinkedin(v);
+                    setContactSuccess(false);
+                  }}
+                  placeholder={t("linkedinPlaceholder")}
+                  aria-label={t("linkedinLabel")}
+                />
+                <Select
+                  label={t("citizenshipLabel")}
+                  value={contactCitizenship}
+                  onChange={(v) => {
+                    setContactCitizenship(v);
+                    setContactSuccess(false);
+                  }}
+                  options={[
+                    { value: "", label: t("citizenshipPlaceholder") },
+                    ...CITIZENSHIP_OPTIONS,
+                  ]}
+                  aria-label={t("citizenshipLabel")}
+                />
               </Box>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,application/pdf"
-                aria-hidden="true"
-                className="profile__file-input"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleResumeFile(file);
+              {savingContact && <ProgressBar label={t("savingContact")} />}
+              <Box display="flex" justifyContent="flex-end">
+                <Button
+                  text={savingContact ? t("savingContact") : t("saveContact")}
+                  type="button"
+                  size="lg"
+                  kind="success"
+                  disabled={savingContact}
+                  onClick={() => void handleSaveContact()}
+                />
+              </Box>
+            </Section>
+          </Grid>
+
+          {/* ── Job Search ── */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <JobSearchSection />
+          </Grid>
+
+          {/* ── Tech Stack ── */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Section title={t("techSection")} subtitle={t("techSubtitle")}>
+              <TechTagInput
+                tags={techStack}
+                onChange={(tags) => {
+                  setTechStack(tags);
+                  setStackSuccess(false);
                 }}
+                suggestions={popularTechSuggestions}
               />
-            </>
-          )}
+              {savingStack && <ProgressBar label={t("savingStack")} />}
+              <Box display="flex" justifyContent="flex-end" marginTop={20}>
+                <Button
+                  text={savingStack ? t("savingStack") : t("saveStack")}
+                  type="button"
+                  size="lg"
+                  kind="success"
+                  disabled={savingStack}
+                  onClick={() => void handleSaveStack()}
+                />
+              </Box>
+            </Section>
+          </Grid>
 
-          {uploadState === "uploading" && (
-            <Box className="profile__upload-zone profile__upload-zone--loading">
-              <ProgressBar label={t("resumeAnalyzing")} />
-            </Box>
-          )}
-
-          {uploadState === "done" && resumeResult && (
-            <Box display="flex" flexDirection="column" gap={16}>
-              {(resumeResult.work_experience_imported > 0 ||
-                resumeResult.education_imported > 0 ||
-                resumeResult.projects_imported > 0) && (
-                <Box className="profile__import-banner">
-                  <Typography
-                    variant="body-sm"
-                    fontWeight={600}
-                    color="var(--success, #22c55e)"
+          {/* ── Resume ── */}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <Section title={t("resumeSection")} subtitle={t("resumeSubtitle")}>
+              {(uploadState === "idle" || uploadState === "error") && (
+                <>
+                  <Box
+                    className={[
+                      "profile__upload-zone",
+                      isDragging ? "profile__upload-zone--dragging" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t("resumeDropZone")}
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ")
+                        fileInputRef.current?.click();
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) void handleResumeFile(file);
+                    }}
                   >
-                    ✓{" "}
-                    {t("careerImported", {
-                      jobs: resumeResult.work_experience_imported,
-                      degrees: resumeResult.education_imported,
-                      projects: resumeResult.projects_imported,
-                    })}
-                  </Typography>
-                  <Typography variant="label" color="var(--foreground)">
-                    {t("careerReviewHint")}{" "}
-                    <Link
-                      href="/work-experience"
-                      prefetch
-                      className="profile__review-link"
+                    <Typography
+                      variant="body-sm"
+                      styles={{ pointerEvents: "none" }}
                     >
-                      {t("careerReviewWork")}
-                    </Link>{" "}
-                    {t("careerReviewAnd")}{" "}
-                    <Link
-                      href="/education"
-                      prefetch
-                      className="profile__review-link"
+                      {t("resumeDropZone")}
+                    </Typography>
+                    <Typography
+                      variant="label"
+                      color="var(--muted-foreground, #6b7280)"
+                      styles={{ pointerEvents: "none" }}
                     >
-                      {t("careerReviewEducation")}
-                    </Link>
-                    .
-                  </Typography>
+                      {t("resumeDropHint")}
+                    </Typography>
+                  </Box>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    aria-hidden="true"
+                    className="profile__file-input"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handleResumeFile(file);
+                    }}
+                  />
+                </>
+              )}
+
+              {uploadState === "uploading" && (
+                <Box className="profile__upload-zone profile__upload-zone--loading">
+                  <ProgressBar label={t("resumeAnalyzing")} />
                 </Box>
               )}
 
-              <SkillsDiffPanel
-                newSkills={newSkills}
-                selected={selectedNewSkills}
-                onToggle={toggleDiffSkill}
-                onAdd={() => void handleAddDiffSkills()}
-                saving={savingDiff}
-              />
+              {uploadState === "done" && resumeResult && (
+                <Box display="flex" flexDirection="column" gap={16}>
+                  {(resumeResult.work_experience_imported > 0 ||
+                    resumeResult.education_imported > 0 ||
+                    resumeResult.projects_imported > 0) && (
+                    <Box className="profile__import-banner">
+                      <Typography
+                        variant="body-sm"
+                        fontWeight={600}
+                        color="var(--success, #22c55e)"
+                      >
+                        ✓{" "}
+                        {t("careerImported", {
+                          jobs: resumeResult.work_experience_imported,
+                          degrees: resumeResult.education_imported,
+                          projects: resumeResult.projects_imported,
+                        })}
+                      </Typography>
+                      <Typography variant="label" color="var(--foreground)">
+                        {t("careerReviewHint")}{" "}
+                        <Link
+                          href="/work-experience"
+                          prefetch
+                          className="profile__review-link"
+                        >
+                          {t("careerReviewWork")}
+                        </Link>{" "}
+                        {t("careerReviewAnd")}{" "}
+                        <Link
+                          href="/education"
+                          prefetch
+                          className="profile__review-link"
+                        >
+                          {t("careerReviewEducation")}
+                        </Link>
+                        .
+                      </Typography>
+                    </Box>
+                  )}
 
-              <Button
-                unstyled
-                type="button"
-                className="profile__upload-another"
-                onClick={() => {
-                  setUploadState("idle");
-                  setResumeResult(null);
-                  setNewSkills([]);
-                  setSelectedNewSkills(new Set());
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-              >
-                {t("resumeUploadAnother")}
-              </Button>
-            </Box>
-          )}
-        </Section>
-      </Box>
+                  <SkillsDiffPanel
+                    newSkills={newSkills}
+                    selected={selectedNewSkills}
+                    onToggle={toggleDiffSkill}
+                    onAdd={() => void handleAddDiffSkills()}
+                    saving={savingDiff}
+                  />
+
+                  <Button
+                    unstyled
+                    type="button"
+                    className="profile__upload-another"
+                    onClick={() => {
+                      setUploadState("idle");
+                      setResumeResult(null);
+                      setNewSkills([]);
+                      setSelectedNewSkills(new Set());
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    {t("resumeUploadAnother")}
+                  </Button>
+                </Box>
+              )}
+            </Section>
+          </Grid>
+        </Grid>
+      </Container>
     </Container>
   );
 }
