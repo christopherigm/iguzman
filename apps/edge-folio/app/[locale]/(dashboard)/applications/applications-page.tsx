@@ -627,10 +627,7 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
             >
               {app.job_title}
             </Typography>
-            <Typography
-              variant="body"
-              color="var(--muted-foreground, #6b7280)"
-            >
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {app.company_name}
             </Typography>
           </Box>

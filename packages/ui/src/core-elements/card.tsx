@@ -26,7 +26,8 @@ export const Card: React.FC<CardProps> = ({
   padding = 14,
   borderRadius = 6,
   border = "1px solid var(--border, #e5e7eb)",
-  elevation = 0,
+  elevation = 3,
+  backgroundColor = "var(--surface-1)",
   ...rest
 }) => (
   <Box
@@ -36,6 +37,7 @@ export const Card: React.FC<CardProps> = ({
     borderRadius={borderRadius}
     border={border}
     elevation={elevation}
+    backgroundColor={backgroundColor}
     {...rest}
   />
 );

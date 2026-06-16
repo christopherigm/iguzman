@@ -27,6 +27,7 @@ import {
 } from "@/lib/jobs";
 import { getProfile } from "@/lib/auth";
 import { JobCard } from "./job-card";
+import Card from "@repo/ui/core-elements/card";
 
 const COUNTRIES: JobCountry[] = ["us", "ca", "mx"];
 const WORK_TYPES: JobWorkType[] = ["remote", "onsite", "hybrid"];
@@ -141,10 +142,7 @@ function JobSection({
           {title}
         </Typography>
         {!list.loading && !list.error && (
-          <Typography
-            variant="body"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {list.count}
           </Typography>
         )}
@@ -212,6 +210,7 @@ function JobSection({
                 size="md"
                 disabled={page <= 1}
                 onClick={() => onPageChange(page - 1)}
+                kind="success"
               />
               <Typography
                 variant="body"
@@ -225,6 +224,7 @@ function JobSection({
                 size="md"
                 disabled={page >= totalPages}
                 onClick={() => onPageChange(page + 1)}
+                kind="success"
               />
             </Box>
           )}
@@ -395,8 +395,9 @@ export function JobsPage() {
 
   const filterChips = useMemo(
     () => (
-      <Box
+      <Card
         display="flex"
+        flexDirection="row"
         gap={12}
         flexWrap="wrap"
         alignItems="flex-end"
@@ -423,10 +424,7 @@ export function JobsPage() {
             onChange={setMatchOnly}
             aria-label={t("matchOnlyLabel")}
           />
-          <Typography
-            variant="body"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("matchOnlyLabel")}
           </Typography>
         </Box>
@@ -460,7 +458,7 @@ export function JobsPage() {
             width="100%"
           />
         </Box>
-      </Box>
+      </Card>
     ),
     [searchInput, matchOnly, country, workType, t, setParam],
   );

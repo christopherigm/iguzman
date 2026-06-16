@@ -132,10 +132,7 @@ function MetricBar({
     <Box display="flex" flexDirection="column" gap={4}>
       <Box display="flex" justifyContent="space-between" alignItems="center">
         <Box display="flex" alignItems="center" gap={6}>
-          <Typography
-            variant="body"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {label}
           </Typography>
           {onExplain && (
@@ -352,7 +349,7 @@ function CompanyAnalysisPanel({ analysis }: { analysis: CompanyAnalysis }) {
   const t = useTranslations("ApplicationDetailPage");
   return (
     <Box display="flex" flexDirection="column" gap={16}>
-      <Box display="flex" flexDirection="column" gap={6}>
+      <Card gap={8}>
         <Typography variant="body" fontWeight={600} color="var(--foreground)">
           {t("companyAnalysisSummaryTitle")}
         </Typography>
@@ -363,7 +360,7 @@ function CompanyAnalysisPanel({ analysis }: { analysis: CompanyAnalysis }) {
         >
           {analysis.summary}
         </Typography>
-      </Box>
+      </Card>
       <Box display="flex" flexDirection="column" gap={10}>
         <Typography variant="body" fontWeight={600} color="var(--foreground)">
           {t("companyAnalysisSignalsTitle")}
@@ -1248,7 +1245,9 @@ export function ApplicationDetailPage({
 
       {/* ── Edit form ─────────────────────────────────────────────────── */}
       {editing && (
-        <Box marginBottom={28}>
+        // <Box marginBottom={28}>
+
+        <Card gap={8} marginBottom={28}>
           <form onSubmit={handleSave}>
             <Box display="flex" flexDirection="column" gap={14}>
               <Typography as="h2" variant="h3" fontWeight={600}>
@@ -1458,7 +1457,8 @@ export function ApplicationDetailPage({
               </Box>
             </Box>
           </form>
-        </Box>
+          {/* </Box> */}
+        </Card>
       )}
 
       {/* ── Info & Match metrics ─────────────────────────────────────── */}
@@ -1612,11 +1612,7 @@ export function ApplicationDetailPage({
                       <Typography variant="body" fontWeight={600}>
                         {r.category}
                       </Typography>
-                      <Typography
-                        variant="body"
-                        fontWeight={600}
-                        color={color}
-                      >
+                      <Typography variant="body" fontWeight={600} color={color}>
                         {r.likelihood}%
                       </Typography>
                     </Box>
@@ -1646,56 +1642,58 @@ export function ApplicationDetailPage({
             styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
             marginBottom={16}
           />
-          <Typography
-            as="p"
-            variant="body"
-            styles={{
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              lineHeight: 1.6,
-            }}
-          >
-            {app.job_description}
-          </Typography>
-          {app.job_url && (
-            <Typography
-              variant="body"
-              color="var(--muted-foreground, #6b7280)"
-              as="p"
-              styles={{ marginTop: "12px", marginBottom: "4px" }}
-            >
-              {t("jobUrlLabel")}
-            </Typography>
-          )}
-          {app.job_url && (
-            <a
-              href={app.job_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="detail__url"
-            >
-              {app.job_url} ↗
-            </a>
-          )}
-          {app.notes && (
-            <Typography
-              variant="body"
-              color="var(--muted-foreground, #6b7280)"
-              as="p"
-              styles={{ marginTop: "12px", marginBottom: "6px" }}
-            >
-              {t("notesLabel")}
-            </Typography>
-          )}
-          {app.notes && (
+          <Card gap={8}>
             <Typography
               as="p"
               variant="body"
-              styles={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+              styles={{
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                lineHeight: 1.6,
+              }}
             >
-              {app.notes}
+              {app.job_description}
             </Typography>
-          )}
+            {app.job_url && (
+              <Typography
+                variant="body"
+                color="var(--muted-foreground, #6b7280)"
+                as="p"
+                styles={{ marginTop: "12px", marginBottom: "4px" }}
+              >
+                {t("jobUrlLabel")}
+              </Typography>
+            )}
+            {app.job_url && (
+              <a
+                href={app.job_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="detail__url"
+              >
+                {app.job_url} ↗
+              </a>
+            )}
+            {app.notes && (
+              <Typography
+                variant="body"
+                color="var(--muted-foreground, #6b7280)"
+                as="p"
+                styles={{ marginTop: "12px", marginBottom: "6px" }}
+              >
+                {t("notesLabel")}
+              </Typography>
+            )}
+            {app.notes && (
+              <Typography
+                as="p"
+                variant="body"
+                styles={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+              >
+                {app.notes}
+              </Typography>
+            )}
+          </Card>
         </Box>
       )}
 
@@ -1751,17 +1749,20 @@ export function ApplicationDetailPage({
                   >
                     {t("companyAboutTitle")}
                   </Typography>
-                  <Typography
-                    as="p"
-                    variant="body"
-                    styles={{
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {companyDescription}
-                  </Typography>
+
+                  <Card gap={8}>
+                    <Typography
+                      as="p"
+                      variant="body"
+                      styles={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {companyDescription}
+                    </Typography>
+                  </Card>
                 </Box>
               )}
               {companyAnalysis && (
@@ -1896,7 +1897,7 @@ export function ApplicationDetailPage({
               {t("tailoredSubtitle")}
             </Typography>
             {professionalSummary && (
-              <Box display="flex" flexDirection="column" gap={6}>
+              <Card display="flex" flexDirection="column" gap={6}>
                 <Typography
                   variant="body"
                   fontWeight={600}
@@ -1915,7 +1916,7 @@ export function ApplicationDetailPage({
                 >
                   {professionalSummary}
                 </Typography>
-              </Box>
+              </Card>
             )}
             {app.tailored_skills && app.tailored_skills.length > 0 && (
               <Box display="flex" flexDirection="column" gap={6}>
@@ -1926,21 +1927,23 @@ export function ApplicationDetailPage({
                 >
                   {t("tailoredSkillsTitle")}
                 </Typography>
-                <Box display="flex" flexWrap="wrap" gap={8}>
-                  {app.tailored_skills.map((skill) => (
-                    <Typography
-                      key={skill.id}
-                      variant="body"
-                      styles={{
-                        padding: "2px 10px",
-                        borderRadius: 999,
-                        border: "1px solid var(--border, #e5e7eb)",
-                      }}
-                    >
-                      {skill.name}
-                    </Typography>
-                  ))}
-                </Box>
+                <Card>
+                  <Box display="flex" flexWrap="wrap" gap={8}>
+                    {app.tailored_skills.map((skill) => (
+                      <Typography
+                        key={skill.id}
+                        variant="body"
+                        styles={{
+                          padding: "2px 10px",
+                          borderRadius: 999,
+                          border: "1px solid var(--border, #e5e7eb)",
+                        }}
+                      >
+                        {skill.name}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Card>
               </Box>
             )}
 
@@ -1954,16 +1957,18 @@ export function ApplicationDetailPage({
                 >
                   {t(`categories.${cat}`)}
                 </Typography>
-                {bullets.map((b) => (
-                  <Typography
-                    key={b.id}
-                    as="p"
-                    variant="body"
-                    styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
-                  >
-                    - {b.tailored_text}
-                  </Typography>
-                ))}
+                <Card>
+                  {bullets.map((b) => (
+                    <Typography
+                      key={b.id}
+                      as="p"
+                      variant="body"
+                      styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
+                    >
+                      - {b.tailored_text}
+                    </Typography>
+                  ))}
+                </Card>
               </Box>
             ))}
 
@@ -1980,11 +1985,12 @@ export function ApplicationDetailPage({
                 {tailoredWorkExperiences.map((twe) => {
                   const we = exportData?.workExps.find((e) => e.id === twe.id);
                   return (
-                    <Box
+                    <Card
                       key={twe.id}
                       display="flex"
                       flexDirection="column"
                       gap={4}
+                      marginBottom={8}
                     >
                       {we && (
                         <Typography
@@ -2002,7 +2008,7 @@ export function ApplicationDetailPage({
                       >
                         {twe.tailored_description}
                       </Typography>
-                    </Box>
+                    </Card>
                   );
                 })}
               </Box>
@@ -2021,11 +2027,12 @@ export function ApplicationDetailPage({
                 {tailoredProjects.map((tp) => {
                   const proj = exportData?.projects.find((p) => p.id === tp.id);
                   return (
-                    <Box
+                    <Card
                       key={tp.id}
                       display="flex"
                       flexDirection="column"
                       gap={4}
+                      marginBottom={8}
                     >
                       {proj && (
                         <Typography
@@ -2043,7 +2050,7 @@ export function ApplicationDetailPage({
                       >
                         {tp.tailored_description}
                       </Typography>
-                    </Box>
+                    </Card>
                   );
                 })}
               </Box>
@@ -2115,7 +2122,7 @@ export function ApplicationDetailPage({
               marginBottom={20}
             >
               {/* Global toggles */}
-              <Box display="flex" flexDirection="column" gap={10}>
+              <Card display="flex" flexDirection="column" gap={10}>
                 <SwitchRow
                   label={t("exportIncludeContact")}
                   checked={includeContact}
@@ -2146,7 +2153,7 @@ export function ApplicationDetailPage({
                     </Typography>
                   </Box>
                 )}
-              </Box>
+              </Card>
 
               {/* Work experience */}
               {exportData.workExps.length > 0 && (
@@ -2373,28 +2380,38 @@ export function ApplicationDetailPage({
                   <Typography variant="body" fontWeight={600}>
                     {t("exportLanguagesTitle")}
                   </Typography>
-                  {exportData.languages.map((lang) => (
-                    <SwitchRow
-                      key={lang.id}
-                      label={lang.name}
-                      checked={includedLanguageIds.has(lang.id)}
-                      onChange={(checked) =>
-                        setIncludedLanguageIds((prev) => {
-                          const next = new Set(prev);
-                          if (checked) next.add(lang.id);
-                          else next.delete(lang.id);
-                          return next;
-                        })
-                      }
-                    />
-                  ))}
+                  <Card gap={12}>
+                    {exportData.languages.map((lang) => (
+                      <SwitchRow
+                        key={lang.id}
+                        label={lang.name}
+                        checked={includedLanguageIds.has(lang.id)}
+                        onChange={(checked) =>
+                          setIncludedLanguageIds((prev) => {
+                            const next = new Set(prev);
+                            if (checked) next.add(lang.id);
+                            else next.delete(lang.id);
+                            return next;
+                          })
+                        }
+                      />
+                    ))}
+                  </Card>
                 </Box>
               )}
             </Box>
           )}
 
           {/* ── Export buttons ── */}
-          <Box display="flex" gap={10} flexWrap="wrap">
+          <Box display="flex" justifyContent="center" gap={10} flexWrap="wrap">
+            <Button
+              text={t("exportMarkdown")}
+              type="button"
+              size="md"
+              disabled={exportDataLoading || !exportData}
+              onClick={handleExportMarkdown}
+              kind="success"
+            />
             <Button
               text={exportingPDF ? t("exportingPDF") : t("exportPDF")}
               type="button"
@@ -2402,13 +2419,6 @@ export function ApplicationDetailPage({
               kind="success"
               disabled={exportingPDF || exportDataLoading || !exportData}
               onClick={handleExportPDF}
-            />
-            <Button
-              text={t("exportMarkdown")}
-              type="button"
-              size="md"
-              disabled={exportDataLoading || !exportData}
-              onClick={handleExportMarkdown}
             />
           </Box>
           {exportError && (
@@ -2507,7 +2517,7 @@ export function ApplicationDetailPage({
         </Typography>
 
         {/* ── NAFTA parameters ── */}
-        <Box display="flex" flexDirection="column" gap={14} marginBottom={20}>
+        <Card display="flex" flexDirection="column" gap={14} marginBottom={20}>
           <Box display="flex" gap={12} flexWrap="wrap">
             <Box flex={2} styles={{ minWidth: 220 }}>
               <Box display="flex" alignItems="center" gap={8}>
@@ -2640,15 +2650,9 @@ export function ApplicationDetailPage({
               aria-label={t("naftaCompanyDescLabel")}
             />
           </Box>
-        </Box>
+        </Card>
 
-        <Box
-          display="flex"
-          alignItems="center"
-          gap={10}
-          flexWrap="wrap"
-          marginBottom={10}
-        >
+        <Box display="flex" justifyContent="center" marginBottom={12}>
           <Button
             text={
               generatingNafta
@@ -2671,7 +2675,7 @@ export function ApplicationDetailPage({
           </Typography>
         )}
         {naftaLetter && (
-          <Box display="flex" flexDirection="column" gap={8}>
+          <Card display="flex" flexDirection="column" gap={8}>
             <Typography
               variant="body"
               color="var(--muted-foreground, #6b7280)"
@@ -2688,7 +2692,7 @@ export function ApplicationDetailPage({
               width="100%"
               aria-label={t("naftaLetterTitle")}
             />
-            <Box display="flex" gap={8} alignItems="center" flexWrap="wrap">
+            <Box display="flex" gap={8} justifyContent="center">
               <Button
                 text={
                   exportingNaftaPDF
@@ -2703,15 +2707,11 @@ export function ApplicationDetailPage({
               />
             </Box>
             {naftaPDFError && (
-              <Typography
-                variant="body"
-                color="var(--error, #ef4444)"
-                as="p"
-              >
+              <Typography variant="body" color="var(--error, #ef4444)" as="p">
                 {naftaPDFError}
               </Typography>
             )}
-          </Box>
+          </Card>
         )}
       </Box>
 

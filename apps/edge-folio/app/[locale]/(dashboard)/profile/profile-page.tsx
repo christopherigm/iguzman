@@ -41,6 +41,7 @@ import {
 import { Toast } from "@repo/ui/core-elements/toast";
 import { JobSearchSection } from "./job-api-keys-section";
 import "./profile-page.css";
+import Card from "@repo/ui/core-elements/card";
 
 const YEARS_STEPS: SliderStep[] = [
   { value: 0, label: "< 1" },
@@ -243,15 +244,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Box
-      width="100%"
-      padding={10}
-      borderRadius={12}
-      flexDirection="column"
-      gap={20}
-      elevation={5}
-      backgroundColor="var(--surface-1)"
-    >
+    <Card gap={8} flexDirection="column">
       <Box display="flex" flexDirection="column" gap={4}>
         <Typography as="h2" variant="h3" fontWeight={600}>
           {title}
@@ -263,7 +256,7 @@ function Section({
         )}
       </Box>
       {children}
-    </Box>
+    </Card>
   );
 }
 
