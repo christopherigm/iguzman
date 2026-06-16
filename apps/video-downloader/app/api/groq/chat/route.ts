@@ -9,6 +9,10 @@ import logger from "@/lib/logger";
 const log = logger.child({ module: "api/groq/chat" });
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY ?? "";
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_MODEL =
+  process.env.OPENROUTER_MODEL ?? "meta-llama/llama-3.3-70b-instruct";
 const CREDITS_PER_TRANSLATION = 1;
 
 export async function POST(req: NextRequest) {
@@ -28,23 +32,71 @@ export async function POST(req: NextRequest) {
 
   const body = await req.text();
 
-  const upstream = await fetch(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
+  let upstream: Response;
+  try {
+    upstream = await fetch(GROQ_API_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
       body,
-    },
-  );
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to reach Groq API";
+    log.warn({ err: message }, "Groq request failed");
+    return new Response(JSON.stringify({ error: message }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (upstream.status === 429) {
+    const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+    if (!openrouterApiKey) {
+      log.warn("Groq rate limit hit and OPENROUTER_API_KEY not configured");
+      const text = await upstream.text();
+      return new Response(text, {
+        status: upstream.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    log.warn("Groq rate limit hit; falling back to OpenRouter");
+
+    let openrouterBody = body;
+    try {
+      const parsed = JSON.parse(body) as Record<string, unknown>;
+      openrouterBody = JSON.stringify({ ...parsed, model: OPENROUTER_MODEL });
+    } catch {
+      // body is not valid JSON; forward as-is to OpenRouter
+    }
+
+    try {
+      upstream = await fetch(OPENROUTER_API_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openrouterApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: openrouterBody,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to reach OpenRouter";
+      log.warn({ err: message }, "OpenRouter fallback failed");
+      return new Response(JSON.stringify({ error: message }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
 
   if (!upstream.ok) {
     const text = await upstream.text();
     log.warn(
       { status: upstream.status, detail: text },
-      "Groq upstream returned error",
+      "Upstream returned error",
     );
     return new Response(text, {
       status: upstream.status,

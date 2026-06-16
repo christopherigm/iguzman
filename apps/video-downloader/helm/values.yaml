@@ -85,6 +85,15 @@ envFromSecret:
   - name: GROQ_API_KEY
     secretName: video-downloader-secrets
     secretKey: GROQ_API_KEY
+  # OpenRouter fallback for /api/groq/chat when Groq returns 429.
+  # Without these the route's process.env.OPENROUTER_API_KEY is empty and the
+  # fallback never fires (the VPN does NOT block OpenRouter — verified reachable).
+  - name: OPENROUTER_API_KEY
+    secretName: video-downloader-secrets
+    secretKey: OPENROUTER_API_KEY
+  - name: OPENROUTER_MODEL
+    secretName: video-downloader-secrets
+    secretKey: OPENROUTER_MODEL
   - name: DIARIZATION_API_KEY
     secretName: video-downloader-secrets
     secretKey: DIARIZATION_API_KEY
