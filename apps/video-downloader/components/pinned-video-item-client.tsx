@@ -384,10 +384,11 @@ export function PinnedVideoItemClient({
         srtContent = originalSrt;
       }
     } catch (err) {
-      console.error("Caption translation failed:", err);
+      const reason = err instanceof Error ? err.message : String(err);
+      console.error("Caption translation failed:", reason, err);
       onUpdate(video.uuid, {
         status: "error",
-        error: t("errorTranslateFailed"),
+        error: `${t("errorTranslateFailed")} (${reason})`,
       });
       return;
     }

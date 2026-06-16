@@ -21,7 +21,9 @@ import {
 import { getJobSearchPrefs, saveJobSearchPrefs, getProfile } from "@/lib/auth";
 import { getLanguages, getEducations } from "@/lib/career";
 
-const PROVIDERS: JobProvider[] = ["adzuna", "jsearch"];
+// JSearch leads: it is the primary provider (full job descriptions); Adzuna is the
+// breadth fallback. Order mirrors the backend's PROVIDER_PRIORITY.
+const PROVIDERS: JobProvider[] = ["jsearch", "adzuna"];
 
 // Where users obtain credentials for each provider.
 const PROVIDER_DOCS: Record<JobProvider, string> = {
@@ -110,7 +112,7 @@ export function JobSearchSection() {
   // API keys state
   const [keysLoading, setKeysLoading] = useState(true);
   const [credentials, setCredentials] = useState<JobApiCredential[]>([]);
-  const [provider, setProvider] = useState<JobProvider>("adzuna");
+  const [provider, setProvider] = useState<JobProvider>("jsearch");
   const [appId, setAppId] = useState("");
   const [keyValue, setKeyValue] = useState("");
   const [keyLabel, setKeyLabel] = useState("");

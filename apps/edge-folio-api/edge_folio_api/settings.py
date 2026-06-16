@@ -279,9 +279,14 @@ JSEARCH_API_KEY = os.environ.get('JSEARCH_API_KEY', '')
 # Fernet key for encrypting BYOK provider credentials. Falls back to a key derived
 # from SECRET_KEY for local dev so the feature works without extra configuration.
 JOBS_ENCRYPTION_KEY = os.environ.get('JOBS_ENCRYPTION_KEY', '')
-# Per-run ceiling on platform Adzuna queries. Default fits the free tier (250 calls/month)
-# at one run per day: 8 × 30 = 240. Raise via env var when on a paid plan.
-JOBS_ADZUNA_DAILY_BUDGET = int(os.environ.get('JOBS_ADZUNA_DAILY_BUDGET', '8'))
+# Per-run ceiling on platform catalog queries (each query spends one provider call,
+# starting with JSearch). Default fits the tighter free tier at one run per day; raise
+# via env var when on a paid plan. Back-compat: falls back to the legacy
+# JOBS_ADZUNA_DAILY_BUDGET env var if the new one is unset.
+JOBS_DAILY_QUERY_BUDGET = int(
+    os.environ.get('JOBS_DAILY_QUERY_BUDGET')
+    or os.environ.get('JOBS_ADZUNA_DAILY_BUDGET', '8')
+)
 
 # ── Celery ────────────────────────────────────────────────────────────────────
 # Run tasks synchronously in dev when no broker is configured.

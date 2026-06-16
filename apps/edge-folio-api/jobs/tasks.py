@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from .ingest import upsert_postings
-from .providers import ProviderError, get_client
+from .providers import ProviderClient, ProviderError, get_client
 
 logger = logging.getLogger(__name__)
 
@@ -123,68 +123,81 @@ def _build_queries(budget: int) -> list[dict]:
     return queries
 
 
+def _platform_clients() -> list[tuple[str, ProviderClient]]:
+    """Configured platform-credential clients, in :data:`PROVIDER_PRIORITY` order.
+
+    JSearch leads because it returns the full job description; Adzuna follows as a
+    breadth fallback for queries JSearch returns nothing for (Adzuna's API only
+    yields a truncated description snippet). Providers without platform
+    credentials configured are skipped.
+    """
+    from .models import PROVIDER_PRIORITY
+
+    configured = {
+        'adzuna': bool(settings.ADZUNA_APP_ID and settings.ADZUNA_APP_KEY),
+        'jsearch': bool(settings.JSEARCH_API_KEY),
+    }
+    clients: list[tuple[str, ProviderClient]] = []
+    for provider in PROVIDER_PRIORITY:
+        if not configured.get(provider):
+            continue
+        try:
+            clients.append((provider, get_client(provider)))
+        except ProviderError as exc:
+            logger.warning('ingest_shared_catalog: %s unavailable: %s', provider, exc)
+    return clients
+
+
 @shared_task
 def ingest_shared_catalog() -> None:
-    """Fetch the shared catalog from the platform Adzuna account."""
-    if not settings.ADZUNA_APP_ID or not settings.ADZUNA_APP_KEY:
-        logger.info('ingest_shared_catalog: Adzuna not configured, skipping.')
+    """Fetch the shared catalog using the platform provider credentials.
+
+    Providers are tried in :data:`PROVIDER_PRIORITY` order (JSearch first for the
+    full description, Adzuna second for breadth); the first to return a posting
+    for a given query wins.
+    """
+    clients = _platform_clients()
+    if not clients:
+        logger.info('ingest_shared_catalog: no provider configured, skipping.')
         return
 
-    budget = settings.JOBS_ADZUNA_DAILY_BUDGET
+    budget = settings.JOBS_DAILY_QUERY_BUDGET
     queries = _build_queries(budget)
     if not queries:
         logger.info('ingest_shared_catalog: no active-user queries to run.')
         return
 
     logger.info(
-        'ingest_shared_catalog: running %d queries: %s',
+        'ingest_shared_catalog: running %d queries across providers %s: %s',
         len(queries),
+        [provider for provider, _ in clients],
         [f"{spec['query']!r}@{spec['country']}/{spec['location']!r}" for spec in queries],
     )
 
-    try:
-        client = get_client('adzuna')
-    except ProviderError as exc:
-        logger.warning('ingest_shared_catalog: %s', exc)
-        return
-
-    # Optional fallback for queries Adzuna returns nothing for (e.g. a too-narrow
-    # title + state combo). Uses the platform JSearch key when one is configured.
-    fallback = None
-    if settings.JSEARCH_API_KEY:
-        try:
-            fallback = get_client('jsearch')
-        except ProviderError as exc:
-            logger.warning('ingest_shared_catalog: JSearch fallback unavailable: %s', exc)
-
     totals = {'created': 0, 'refreshed': 0, 'skipped_dup': 0, 'total': 0}
     for spec in queries:
-        provider = 'adzuna'
-        try:
-            postings = client.search(
-                query=spec['query'],
-                location=spec['location'],
-                country=spec['country'],
-            )
-        except ProviderError as exc:
-            logger.warning('Adzuna search failed for %r: %s', spec['query'], exc)
-            postings = []
-
-        if not postings and fallback is not None:
+        postings: list = []
+        provider = clients[0][0]
+        for prov, client in clients:
             try:
-                postings = fallback.search(
+                postings = client.search(
                     query=spec['query'],
                     location=spec['location'],
                     country=spec['country'],
                 )
-                provider = 'jsearch'
-                logger.info(
-                    'ingest_shared_catalog: Adzuna empty for %r; JSearch fallback fetched=%d',
-                    spec['query'], len(postings),
-                )
             except ProviderError as exc:
-                logger.warning('JSearch fallback failed for %r: %s', spec['query'], exc)
+                logger.warning('%s search failed for %r: %s', prov, spec['query'], exc)
                 continue
+            provider = prov
+            if postings:
+                break
+            logger.info(
+                'ingest_shared_catalog: %s empty for %r; trying next provider',
+                prov, spec['query'],
+            )
+
+        if not postings:
+            continue
 
         result = upsert_postings(provider, postings)
         logger.info(
@@ -213,8 +226,9 @@ def prune_expired_postings() -> None:
 def usable_user_credentials(user_id: int) -> list:
     """Active BYOK credentials with quota left, in :data:`PROVIDER_PRIORITY` order.
 
-    Adzuna comes first, JSearch second, so the primary provider is always spent
-    before the fallback. Credentials whose daily limit is exhausted are dropped.
+    JSearch comes first (full descriptions), Adzuna second (breadth fallback), so
+    the primary provider is always spent before the fallback. Credentials whose
+    daily limit is exhausted are dropped.
     """
     from .models import PROVIDER_PRIORITY, UserApiCredential
 
@@ -243,11 +257,11 @@ def select_user_credential(user_id: int):
 def ingest_user_feed(user_id: int) -> None:
     """Fetch a private feed for a BYOK user using their own decrypted key(s).
 
-    Walks the user's usable credentials in priority order (Adzuna, then JSearch)
+    Walks the user's usable credentials in priority order (JSearch, then Adzuna)
     and stops at the first provider that returns at least one posting. A provider
     that returns zero results is treated as a miss and the next provider is tried,
-    so a too-narrow Adzuna query falls back to JSearch when the user has a key for
-    it. Each attempted provider is billed one call. Results are stored as private,
+    so a JSearch miss falls back to Adzuna when the user has a key for it. Each
+    attempted provider is billed one call. Results are stored as private,
     owner-scoped postings and never enter the shared catalog.
     """
     credentials = usable_user_credentials(user_id)

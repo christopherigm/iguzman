@@ -16,10 +16,11 @@ PROVIDER_CHOICES = [
     ('jsearch', 'JSearch'),
 ]
 
-# Order BYOK providers are spent in: Adzuna is the primary, JSearch the fallback.
-# A user's on-demand fetch tries each in turn, using the first one that still has
-# daily quota left, so JSearch is only touched once Adzuna's limit is reached.
-PROVIDER_PRIORITY = ['adzuna', 'jsearch']
+# Order providers are tried in: JSearch is the primary because it returns the
+# full job description; Adzuna is the breadth fallback (its API only returns a
+# truncated description snippet). A fetch tries each in turn, using the first
+# that returns results / still has daily quota left.
+PROVIDER_PRIORITY = ['jsearch', 'adzuna']
 
 # Adzuna's free tier allows ~250 calls/day; it returns no usage data in its
 # responses, so we count BYOK calls ourselves and reset the tally each day.

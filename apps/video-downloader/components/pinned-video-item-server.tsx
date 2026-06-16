@@ -7,8 +7,6 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
-import { useGroq } from "@repo/ui/use-groq";
-import type { LlmMessage } from "@repo/ui/use-groq";
 import type { VideoStatus } from "@/lib/types";
 import { TRANSLATE_LANGUAGES } from "./burn-captions-modal";
 import { usePollTask, type TaskData } from "./use-poll-task";
@@ -144,19 +142,6 @@ const LANG_LABEL: Record<string, string> = Object.fromEntries(
 
 /* ── Helpers ────────────────────────────────────────── */
 
-function buildTranslationPrompt(targetLangName: string): string {
-  return `You are a professional subtitle translator. Translate the SRT subtitle content into ${targetLangName}.
-
-STRICT RULES:
-- Preserve the EXACT SRT format: block numbers, timestamp lines (e.g. "00:00:02,041 --> 00:00:03,401"), and text lines must remain in their correct positions
-- Do NOT alter, add, or remove any timestamps
-- Do NOT reorder, merge, or split subtitle blocks
-- Translate ONLY the text lines; leave block numbers and timestamps completely untouched
-- Maintain natural speech patterns, tone, and the speaker's intent
-- When translating to Spanish, use Mexican Spanish vocabulary and expressions, not Spain Spanish
-- Return ONLY the translated SRT content - no explanations, no markdown fences, no extra commentary`;
-}
-
 function hexToSSA(hex: string, opacity: number): string {
   const r = hex.slice(1, 3);
   const g = hex.slice(3, 5);
@@ -242,15 +227,6 @@ export function PinnedVideoItemServer({
     ) => void
   >(() => {});
 
-  const { generate } = useGroq({
-    proxyBase: "/api/groq",
-    model: "openai/gpt-oss-120b",
-    getAuthHeaders: (): Record<string, string> => {
-      const key = localStorage.getItem("vd_credits_key");
-      return key ? { "x-credits-key": key } : {};
-    },
-    onCreditsUpdate: setCreditsBalance,
-  });
   const { startPolling } = usePollTask();
 
   const isProcessing =
@@ -530,44 +506,34 @@ export function PinnedVideoItemServer({
     const config = video.burnCaptionsConfig;
     if (!config || !video.captionsFile || video.justAudio) return;
 
+    // Read the original SRT only. Translation (when requested) and the
+    // uppercasing now happen server-side inside the burn task, so the whole
+    // operation is resume-proof: a reload re-polls the same task instead of
+    // re-running (and re-charging) the translation on the client.
     let srtContent: string;
     try {
-      let originalSrt: string;
       if (video.opfsEnabled && video.opfsCaptionsKey) {
         const captionsFile = await readFromOPFS(video.opfsCaptionsKey);
-        originalSrt = await captionsFile.text();
+        srtContent = await captionsFile.text();
       } else {
         const srtRes = await fetch(resolveMediaUrl(video.captionsFile));
         if (!srtRes.ok) throw new Error("Failed to fetch captions file");
-        originalSrt = await srtRes.text();
-      }
-
-      if (config.translate && config.translateTo) {
-        onUpdate(video.uuid, {
-          status: "translating" as VideoStatus,
-          error: null,
-        });
-        const langName = LANG_LABEL[config.translateTo] ?? config.translateTo;
-        const messages: LlmMessage[] = [
-          { role: "system", content: buildTranslationPrompt(langName) },
-          { role: "user", content: originalSrt },
-        ];
-        const translated = await generate(messages);
-        if (!translated) throw new Error("Translation returned empty result");
-        srtContent = translated;
-      } else {
-        srtContent = originalSrt;
+        srtContent = await srtRes.text();
       }
     } catch (err) {
-      console.error("Caption preparation failed:", err);
+      const reason = err instanceof Error ? err.message : String(err);
+      console.error("Caption preparation failed:", reason, err);
       onUpdate(video.uuid, {
         status: "error",
-        error: t("errorTranslateFailed"),
+        error: `${t("errorBurnCaptionsFailed")} (${reason})`,
       });
       return;
     }
 
-    srtContent = srtContent.toUpperCase();
+    const translate = Boolean(config.translate && config.translateTo);
+    const translateLang = config.translateTo
+      ? (LANG_LABEL[config.translateTo] ?? config.translateTo)
+      : undefined;
 
     const primaryColour = hexToSSA(config.primaryColor, 100);
     const borderStyle = config.borderStyle ?? 3;
@@ -599,10 +565,17 @@ export function PinnedVideoItemServer({
     const fontStyle = config.fontStyle ?? "normal";
 
     void runServerProcessing({
-      activeStatus: "burning" as VideoStatus,
+      activeStatus: (translate ? "translating" : "burning") as VideoStatus,
       op: "burnSubtitles",
       extraParams: {
         srtContent,
+        ...(translate
+          ? {
+              translate: true,
+              translateTo: config.translateTo,
+              translateLang,
+            }
+          : {}),
         alignment: config.alignment,
         marginV: config.marginV,
         fontSize: config.fontSize,
@@ -626,7 +599,6 @@ export function PinnedVideoItemServer({
     video.opfsEnabled,
     video.opfsCaptionsKey,
     onUpdate,
-    generate,
     runServerProcessing,
     t,
   ]);
@@ -634,6 +606,103 @@ export function PinnedVideoItemServer({
   /* ── Diarize video ──────────────────────────────────── */
   const handleDiarize = useCallback(async () => {
     if (video.justAudio || !video.duration) return;
+
+    // Persists the diarization SRT (returned via the polled task) into OPFS
+    // and cleans up the temporary server upload.
+    const finishDiarize = async (captionsFileName: string | null) => {
+      if (!captionsFileName) {
+        onUpdate(video.uuid, {
+          status: "error",
+          error: t("errorDiarizeFailed"),
+          serverTaskId: null,
+        });
+        return;
+      }
+
+      const captionsUrl = `/api/media/${captionsFileName}`;
+      let opfsCaptionsKey: string | null = null;
+
+      // Store SRT in OPFS and clean up the temp server upload
+      if (video.opfsEnabled) {
+        setOpfsMigrating(true);
+        try {
+          const srtText = await fetch(captionsUrl).then((r) => r.text());
+          const srtBlob = new Blob([srtText], { type: "text/plain" });
+          opfsCaptionsKey = `captions_${captionsFileName}`;
+          await writeToOPFS(opfsCaptionsKey, srtBlob);
+        } catch (err) {
+          console.error("Failed to save captions to OPFS:", err);
+        } finally {
+          setOpfsMigrating(false);
+        }
+        // Delete the temp server upload. After a reload opfsInputFileRef is
+        // empty, so fall back to video.file (the persisted upload name).
+        const inputFile = opfsInputFileRef.current ?? video.file;
+        if (inputFile) {
+          fetch(`/api/media/${inputFile}`, { method: "DELETE" }).catch(
+            () => {},
+          );
+          opfsInputFileRef.current = null;
+        }
+      }
+
+      onUpdate(video.uuid, {
+        status: "done",
+        captionsFile: captionsUrl,
+        ...(opfsCaptionsKey ? { opfsCaptionsKey } : {}),
+        serverTaskId: null,
+      });
+      onComplete(video.uuid);
+    };
+
+    // Poll the server-side diarization task until it resolves, instead of
+    // holding a single long-lived request open.
+    const pollDiarize = (diarizeTaskId: string) => {
+      startPolling({
+        taskId: diarizeTaskId,
+        onUpdate: (task) => {
+          if (task.status === "diarizing") {
+            onUpdate(video.uuid, { status: "diarizing", error: null });
+          } else if (task.status === "done") {
+            void finishDiarize(task.captionsFile ?? null);
+          } else if (task.status === "error") {
+            onUpdate(video.uuid, {
+              status: "error",
+              error: `${t("errorDiarizeFailed")}: ${task.error?.message ?? "Diarization failed"}`,
+              serverTaskId: null,
+            });
+          }
+        },
+      });
+    };
+
+    // If a diarization task was already dispatched (e.g. the browser was
+    // closed/reloaded mid-job), resume it instead of re-uploading and
+    // re-dispatching - the latter would double-charge credits and discard the
+    // server's progress. The server is the source of truth: just poll it.
+    if (video.serverTaskId) {
+      try {
+        const checkRes = await fetch(
+          `/api/download-video/${video.serverTaskId}`,
+        );
+        if (checkRes.ok) {
+          const checkData = (await checkRes.json()) as { task: TaskData };
+          const existing = checkData.task;
+          if (existing.status === "diarizing") {
+            onUpdate(video.uuid, { status: "diarizing", error: null });
+            pollDiarize(video.serverTaskId);
+            return;
+          }
+          if (existing.status === "done") {
+            void finishDiarize(existing.captionsFile ?? null);
+            return;
+          }
+          // Any other status (error/missing) falls through to re-dispatch.
+        }
+      } catch {
+        // Preflight failed - fall through to re-dispatch.
+      }
+    }
 
     let serverFile = video.file;
 
@@ -674,52 +743,6 @@ export function PinnedVideoItemServer({
     if (!serverFile) return;
 
     onUpdate(video.uuid, { status: "diarizing", error: null });
-
-    // Persists the diarization SRT (returned via the polled task) into OPFS
-    // and cleans up the temporary server upload.
-    const finishDiarize = async (captionsFileName: string | null) => {
-      if (!captionsFileName) {
-        onUpdate(video.uuid, {
-          status: "error",
-          error: t("errorDiarizeFailed"),
-          serverTaskId: null,
-        });
-        return;
-      }
-
-      const captionsUrl = `/api/media/${captionsFileName}`;
-      let opfsCaptionsKey: string | null = null;
-
-      // Store SRT in OPFS and clean up the temp server upload
-      if (video.opfsEnabled) {
-        setOpfsMigrating(true);
-        try {
-          const srtText = await fetch(captionsUrl).then((r) => r.text());
-          const srtBlob = new Blob([srtText], { type: "text/plain" });
-          opfsCaptionsKey = `captions_${captionsFileName}`;
-          await writeToOPFS(opfsCaptionsKey, srtBlob);
-        } catch (err) {
-          console.error("Failed to save captions to OPFS:", err);
-        } finally {
-          setOpfsMigrating(false);
-        }
-        const inputFile = opfsInputFileRef.current;
-        if (inputFile) {
-          fetch(`/api/media/${inputFile}`, { method: "DELETE" }).catch(
-            () => {},
-          );
-          opfsInputFileRef.current = null;
-        }
-      }
-
-      onUpdate(video.uuid, {
-        status: "done",
-        captionsFile: captionsUrl,
-        ...(opfsCaptionsKey ? { opfsCaptionsKey } : {}),
-        serverTaskId: null,
-      });
-      onComplete(video.uuid);
-    };
 
     // Kick off the background diarization job and grab the task id to poll.
     let diarizeTaskId: string;
@@ -763,30 +786,14 @@ export function PinnedVideoItemServer({
       return;
     }
 
-    // Diarization now runs server-side in the background; poll the task until
-    // it resolves instead of holding a single long-lived request open.
-    startPolling({
-      taskId: diarizeTaskId,
-      onUpdate: (task) => {
-        if (task.status === "diarizing") {
-          onUpdate(video.uuid, { status: "diarizing", error: null });
-        } else if (task.status === "done") {
-          void finishDiarize(task.captionsFile ?? null);
-        } else if (task.status === "error") {
-          onUpdate(video.uuid, {
-            status: "error",
-            error: `${t("errorDiarizeFailed")}: ${task.error?.message ?? "Diarization failed"}`,
-            serverTaskId: null,
-          });
-        }
-      },
-    });
+    pollDiarize(diarizeTaskId);
   }, [
     video.uuid,
     video.justAudio,
     video.duration,
     video.file,
     video.taskId,
+    video.serverTaskId,
     video.opfsEnabled,
     video.opfsStored,
     video.opfsKey,

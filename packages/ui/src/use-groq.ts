@@ -110,6 +110,7 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
         const decoder = new TextDecoder();
         let fullText = "";
         let buffer = "";
+        let finishReason: string | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -121,25 +122,69 @@ export function useGroq(options: UseGroqOptions): UseGroqReturn {
 
           for (const line of lines) {
             const trimmed = line.trim();
-            if (!trimmed || trimmed === "data: [DONE]") continue;
+            // Skip blanks, the [DONE] sentinel, and SSE comment keep-alives
+            // (OpenRouter emits ": OPENROUTER PROCESSING" while a slow provider
+            // warms up).
+            if (
+              !trimmed ||
+              trimmed === "data: [DONE]" ||
+              trimmed.startsWith(":")
+            )
+              continue;
 
             const jsonStr = trimmed.startsWith("data: ")
               ? trimmed.slice(6)
               : trimmed;
 
+            let json: {
+              error?: unknown;
+              choices?: {
+                delta?: { content?: string };
+                message?: { content?: string };
+                finish_reason?: string;
+              }[];
+            };
             try {
-              const json = JSON.parse(jsonStr) as {
-                choices?: { delta?: { content?: string } }[];
-              };
-              const token = json.choices?.[0]?.delta?.content ?? "";
-              if (token) {
-                fullText += token;
-                setStreamingText((prev) => prev + token);
-              }
+              json = JSON.parse(jsonStr);
             } catch {
-              // skip non-JSON lines
+              // Non-JSON line - ignore.
+              continue;
             }
+
+            // The proxy forwards upstream 200 responses verbatim, and both Groq
+            // and OpenRouter can embed an error object inside an otherwise-200
+            // stream. Surface it instead of silently yielding an empty result.
+            if (json.error != null) {
+              const detail =
+                typeof json.error === "string"
+                  ? json.error
+                  : ((json.error as { message?: string }).message ??
+                    JSON.stringify(json.error));
+              throw new Error(`LLM provider error: ${detail}`);
+            }
+
+            const choice = json.choices?.[0];
+            // `delta` for streaming; `message` covers providers that ignore
+            // `stream: true` and return a single completion object.
+            const token =
+              choice?.delta?.content ?? choice?.message?.content ?? "";
+            if (token) {
+              fullText += token;
+              setStreamingText((prev) => prev + token);
+            }
+            if (choice?.finish_reason) finishReason = choice.finish_reason;
           }
+        }
+
+        if (!fullText) {
+          // Reaching here with no content is a failure the caller can't
+          // diagnose on its own (e.g. the model spent its budget reasoning and
+          // finished with `length`). Make the reason explicit.
+          throw new Error(
+            `LLM returned no content${
+              finishReason ? ` (finish_reason: ${finishReason})` : ""
+            }`,
+          );
         }
 
         return fullText;

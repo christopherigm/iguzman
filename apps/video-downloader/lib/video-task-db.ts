@@ -25,6 +25,11 @@ export interface VideoTaskDocument
   progress: number;
   result: DownloadVideoResult | null;
   error: DownloadVideoError | null;
+  /** Cached translated SRT from a server-side burn translation. Reused on
+   *  reload/retry so the translation (and its credit) is never charged twice. */
+  translatedSrt?: string | null;
+  /** Cache key (`${langName}:${srtHash}:${len}`) the translatedSrt corresponds to. */
+  translatedSrtKey?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -26,6 +26,11 @@ import {
 } from "@/lib/operation-credits";
 import { USE_R2, uploadFromPath, downloadToPath } from "@/lib/r2";
 import { sweepTmpFiles } from "@/lib/tmp-cleanup";
+import {
+  translateSrt,
+  srtCacheKey,
+  TRANSLATION_CREDITS,
+} from "@/lib/translate-srt";
 import logger from "@/lib/logger";
 
 const log = logger.child({ module: "api/server-processing" });
@@ -64,6 +69,7 @@ async function runFfmpegJob(
   creditsKey: string,
   opCost: number,
   preDownloadedInput?: string,
+  translation?: { langName: string; cachedSrt: string | null; cacheKey: string },
 ): Promise<void> {
   const refundOnFailure = () =>
     refundCredits(creditsKey, opCost).catch((err: unknown) =>
@@ -127,11 +133,32 @@ async function runFfmpegJob(
         });
         break;
 
-      case "burnSubtitles":
+      case "burnSubtitles": {
+        // Optional server-side translation: runs before the burn so it is
+        // resume-proof (a reload just re-polls the same task) and idempotent
+        // (the translated SRT is cached on the task, keyed by language + source
+        // hash, so a reload/retry never re-runs or re-charges the LLM call).
+        let srt = String(params.srtContent ?? "");
+        if (translation) {
+          if (translation.cachedSrt) {
+            srt = translation.cachedSrt;
+          } else {
+            await updateTask(taskId, { status: "translating" }).catch(() => {});
+            srt = await translateSrt({
+              srtContent: srt,
+              langName: translation.langName,
+            });
+            await updateTask(taskId, {
+              translatedSrt: srt,
+              translatedSrtKey: translation.cacheKey,
+            }).catch(() => {});
+          }
+          await updateTask(taskId, { status: "burning" }).catch(() => {});
+        }
         await burnSubtitles({
           inputPath,
           outputPath,
-          srtContent: String(params.srtContent ?? ""),
+          srtContent: srt.toUpperCase(),
           alignment: Number(params.alignment ?? 2),
           marginV: Number(params.marginV ?? 40),
           fontSize: Number(params.fontSize ?? 16),
@@ -146,6 +173,7 @@ async function runFfmpegJob(
           onProgress,
         });
         break;
+      }
 
       case "scaleDown":
         await scaleDown({
@@ -361,6 +389,26 @@ export async function POST(request: NextRequest) {
     opCost = key ? opCredits[key] : opCredits.convertToH264;
   }
 
+  /* ── Optional server-side subtitle translation (burnSubtitles only) ────── */
+  // Translating inside the burn task makes it resume-proof; the result is
+  // cached on the task doc (keyed by language + source hash) so a reload,
+  // re-dispatch, or retry reuses it and never charges the credit twice.
+  let translation:
+    | { langName: string; cachedSrt: string | null; cacheKey: string }
+    | undefined;
+  if (op === "burnSubtitles" && params.translate) {
+    const srtSource = String(params.srtContent ?? "");
+    const langName = String(params.translateLang ?? params.translateTo ?? "");
+    const cacheKey = srtCacheKey(srtSource, langName);
+    const cachedSrt =
+      task.translatedSrt && task.translatedSrtKey === cacheKey
+        ? task.translatedSrt
+        : null;
+    translation = { langName, cachedSrt, cacheKey };
+    // Only charge for translation when there is no usable cached result.
+    if (!cachedSrt) opCost += TRANSLATION_CREDITS;
+  }
+
   const creditResult = await requireCredits(creditsKey, opCost);
   if (!creditResult.ok) {
     // Clean up temp file if credit check fails
@@ -369,7 +417,11 @@ export async function POST(request: NextRequest) {
   }
   /* ────────────────────────────────────────────────────────────────────── */
 
-  const activeStatus = STATUS_BY_OP[op as ProcessingOp];
+  // Surface the "translating" phase up front when a fresh translation will run.
+  const activeStatus: TaskStatus =
+    translation && !translation.cachedSrt
+      ? "translating"
+      : STATUS_BY_OP[op as ProcessingOp];
   await updateTask(taskId!, { status: activeStatus, progress: 0, error: null });
 
   const jobParams = { ...params, inputFile };
@@ -381,6 +433,7 @@ export async function POST(request: NextRequest) {
     creditsKey,
     opCost,
     tempInputPath,
+    translation,
   );
 
   log.info({ taskId, op, inputFile }, "Server FFmpeg job started");
