@@ -57,13 +57,13 @@ export function MigrationBanner({ serverDate }: MigrationBannerProps) {
           </button>
         </div>
         <div className="mb-body">
-          <Typography variant="body-sm" fontWeight={500}>
+          <Typography variant="body" fontWeight={500}>
             {t("heading")}
           </Typography>
-          <Typography variant="body-sm">
+          <Typography variant="body">
             {t("body", { days: daysLeft })}
           </Typography>
-          <Typography variant="body-sm">
+          <Typography variant="body">
             <a
               className="mb-link"
               href="https://media2go.app"

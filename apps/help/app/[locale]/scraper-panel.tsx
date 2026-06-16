@@ -181,7 +181,7 @@ export function ScraperPanel() {
         <Typography as="h2" variant="h3">
           {t("scraperSection")}
         </Typography>
-        <Typography as="p" variant="body-sm" color="var(--foreground-muted)">
+        <Typography as="p" variant="body" color="var(--foreground-muted)">
           {t("scraperIntro")}
         </Typography>
       </Box>
@@ -343,7 +343,7 @@ function EndpointPanel({
       </Typography>
       <Typography
         as="p"
-        variant="body-sm"
+        variant="body"
         color="var(--foreground-muted)"
         marginBottom={16}
       >

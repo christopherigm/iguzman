@@ -45,14 +45,14 @@ function PackButton({
       }}
     >
       <Box display="flex" flexDirection="column" gap={2}>
-        <Typography variant="body-sm" fontWeight={700}>
+        <Typography variant="body" fontWeight={700}>
           {pack.label}
         </Typography>
         <Typography variant="caption" color="var(--foreground-muted, #888)">
           {creditsLabel}
         </Typography>
       </Box>
-      <Typography variant="body-sm" fontWeight={600}>
+      <Typography variant="body" fontWeight={600}>
         ${price}
       </Typography>
     </button>
@@ -285,7 +285,7 @@ export function CreditsPageContent() {
                   </Typography>
                 </Box>
                 <Typography
-                  variant="body-sm"
+                  variant="body"
                   color="var(--foreground-muted, #888)"
                 >
                   {t("purchaseText")}
@@ -325,7 +325,7 @@ export function CreditsPageContent() {
                     paddingTop: "12px",
                   }}
                 >
-                  <Typography variant="body-sm" fontWeight={600}>
+                  <Typography variant="body" fontWeight={600}>
                     {t("couponTitle")}
                   </Typography>
                 </Box>
@@ -352,7 +352,7 @@ export function CreditsPageContent() {
                   }}
                 >
                   <Typography
-                    variant="body-sm"
+                    variant="body"
                     fontWeight={600}
                     marginBottom={8}
                   >
@@ -396,7 +396,7 @@ export function CreditsPageContent() {
                   </Typography>
                   {balance !== null ? (
                     <Typography
-                      variant="body-sm"
+                      variant="body"
                       fontWeight={600}
                       styles={{ whiteSpace: "nowrap" }}
                     >
@@ -406,7 +406,7 @@ export function CreditsPageContent() {
                 </Box>
 
                 <Box display="flex" flexDirection="column" gap={4}>
-                  <Typography variant="body-sm" fontWeight={600}>
+                  <Typography variant="body" fontWeight={600}>
                     {t("keyLabel")}
                   </Typography>
                   <Box display="flex" alignItems="center" gap={4}>
@@ -474,7 +474,7 @@ export function CreditsPageContent() {
                 />
 
                 <Typography
-                  variant="body-sm"
+                  variant="body"
                   color="var(--foreground-muted, #888)"
                 >
                   {t("purchaseText")}
@@ -514,7 +514,7 @@ export function CreditsPageContent() {
                     paddingTop: "12px",
                   }}
                 >
-                  <Typography variant="body-sm" fontWeight={600}>
+                  <Typography variant="body" fontWeight={600}>
                     {t("couponTitle")}
                   </Typography>
                 </Box>

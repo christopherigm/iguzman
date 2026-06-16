@@ -51,7 +51,7 @@ export function Toast({
       styles={{ pointerEvents: phase === "in" ? "auto" : "none" }}
       onAnimationEnd={handleAnimationEnd}
     >
-      <Typography variant="body-sm">{message}</Typography>
+      <Typography variant="body">{message}</Typography>
     </Box>
   );
 }

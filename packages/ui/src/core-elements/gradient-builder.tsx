@@ -305,7 +305,7 @@ export function GradientBuilder({
           {/* Angle (linear only) */}
           {type === "linear" && (
             <Box display="flex" alignItems="center" gap="8px">
-              <Typography as="span" variant="body-sm" className="gb__sublabel">
+              <Typography as="span" variant="body" className="gb__sublabel">
                 {l.angle}
               </Typography>
               <input
@@ -326,7 +326,7 @@ export function GradientBuilder({
                 className="gb__angle-num"
                 aria-label={l.angle}
               />
-              <Typography as="span" variant="body-sm">
+              <Typography as="span" variant="body">
                 °
               </Typography>
             </Box>
@@ -339,7 +339,7 @@ export function GradientBuilder({
               alignItems="center"
               justifyContent="space-between"
             >
-              <Typography as="span" variant="body-sm" className="gb__sublabel">
+              <Typography as="span" variant="body" className="gb__sublabel">
                 {type === "solid" ? l.color : l.stops}
               </Typography>
               {type !== "solid" && (
@@ -374,7 +374,7 @@ export function GradientBuilder({
                       className="gb__pos-num"
                       aria-label={`${l.stops} ${i + 1} position`}
                     />
-                    <Typography as="span" variant="body-sm">
+                    <Typography as="span" variant="body">
                       %
                     </Typography>
                     {stops.length > 2 && (
@@ -398,7 +398,7 @@ export function GradientBuilder({
 
       {/* Raw CSS - always visible */}
       <Box flexDirection="column" gap="4px">
-        <Typography as="span" variant="body-sm" className="gb__sublabel">
+        <Typography as="span" variant="body" className="gb__sublabel">
           {l.rawCss}
         </Typography>
         <TextInput

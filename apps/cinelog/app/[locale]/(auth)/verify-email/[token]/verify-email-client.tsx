@@ -70,7 +70,7 @@ export function VerifyEmailClient({ token }: { token: string }) {
           <Box display="flex" flexDirection="column" gap={16}>
             <ProgressBar label={t("loading")} />
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
               textAlign="center"
             >
@@ -88,7 +88,7 @@ export function VerifyEmailClient({ token }: { token: string }) {
           >
             <Typography variant="h5">{t("successTitle")}</Typography>
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {t("successDetail")}
@@ -117,7 +117,7 @@ export function VerifyEmailClient({ token }: { token: string }) {
               {t("expiredTitle")}
             </Typography>
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {t("expiredDetail")}
@@ -136,7 +136,7 @@ export function VerifyEmailClient({ token }: { token: string }) {
               {t("invalidTitle")}
             </Typography>
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {t("invalidDetail")}

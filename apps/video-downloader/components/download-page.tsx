@@ -277,7 +277,7 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
       {storageError ? (
         <Typography
           as="p"
-          variant="body-sm"
+          variant="body"
           role="alert"
           className="dp-storage-error"
         >

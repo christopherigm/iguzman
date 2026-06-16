@@ -11,7 +11,6 @@ export type TypographyVariant =
   | "h5"
   | "h6"
   | "body"
-  | "body-sm"
   | "caption"
   | "label";
 
@@ -66,7 +65,6 @@ const VARIANT_ELEMENT: Record<TypographyVariant, TypographyElement> = {
   h5: "h5",
   h6: "h6",
   body: "p",
-  "body-sm": "p",
   caption: "p",
   label: "span",
 };
@@ -83,7 +81,7 @@ const VARIANT_ELEMENT: Record<TypographyVariant, TypographyElement> = {
  * @example
  * <Typography variant="h1">Hello World</Typography>
  * @example
- * <Typography variant="body-sm" color="var(--muted-foreground)">Subtitle</Typography>
+ * <Typography variant="body" color="var(--muted-foreground)">Subtitle</Typography>
  * @example
  * <Typography as="h1" variant="h2" fontWeight={600}>Page Title</Typography>
  * @example

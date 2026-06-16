@@ -123,7 +123,7 @@ function HighlightCard({
 
           {description && (
             <Typography
-              variant="body-sm"
+              variant="body"
               className="highlight-card__description"
             >
               {description}

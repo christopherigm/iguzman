@@ -105,7 +105,7 @@ export function JobCard({
           </Box>
           <Typography
             as="p"
-            variant="body-sm"
+            variant="body"
             fontWeight={600}
             color="var(--foreground)"
             marginTop={2}
@@ -113,7 +113,7 @@ export function JobCard({
             {posting.job_title}
           </Typography>
           <Typography
-            variant="caption"
+            variant="body"
             color="var(--muted-foreground, #6b7280)"
           >
             {posting.company_name}
@@ -140,7 +140,7 @@ export function JobCard({
       </Box>
 
       <Typography
-        variant="caption"
+        variant="body"
         color="var(--muted-foreground, #6b7280)"
         styles={{
           display: "-webkit-box",
@@ -159,7 +159,7 @@ export function JobCard({
         marginTop={4}
         gap={8}
       >
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {date}
         </Typography>
         <Box display="flex" gap={6} alignItems="center">

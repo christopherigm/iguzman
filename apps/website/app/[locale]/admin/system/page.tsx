@@ -446,7 +446,7 @@ export default function AdminSystemPage() {
           cancelCallback={() => setShowLogoAssetsModal(false)}
         >
           {generatingAssets && (
-            <Typography variant="body-sm">{t("generatingAssets")}</Typography>
+            <Typography variant="body">{t("generatingAssets")}</Typography>
           )}
         </ConfirmationModal>
       )}

@@ -143,7 +143,7 @@ export function BarcodeScanner() {
       {/* Permission denied */}
       {scanStatus === "permission_denied" && (
         <Box flexDirection="column" alignItems="center" gap={8} paddingX={16}>
-          <Typography variant="body-sm" textAlign="center">
+          <Typography variant="body" textAlign="center">
             {t("permissionDenied")}
           </Typography>
           <Typography
@@ -182,7 +182,7 @@ export function BarcodeScanner() {
           gap={4}
         >
           {lastScan.title && (
-            <Typography variant="body-sm" fontWeight={600} textAlign="center">
+            <Typography variant="body" fontWeight={600} textAlign="center">
               {lastScan.title}
             </Typography>
           )}

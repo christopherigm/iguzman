@@ -153,7 +153,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           </Typography>
           <Typography
             as="p"
-            variant="body-sm"
+            variant="body"
             margin={0}
             styles={{ lineHeight: 1.5 }}
           >

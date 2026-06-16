@@ -412,7 +412,7 @@ function EvSection({
       <Typography as="h2" variant="h3">
         {heading}
       </Typography>
-      <Typography as="p" variant="body-sm" color="var(--foreground-muted)">
+      <Typography as="p" variant="body" color="var(--foreground-muted)">
         {description}
       </Typography>
       {code && <CodeBlock language="bash" code={code} />}

@@ -257,10 +257,7 @@ function Section({
           {title}
         </Typography>
         {subtitle && (
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {subtitle}
           </Typography>
         )}
@@ -289,7 +286,7 @@ function SkillsDiffPanel({
 
   if (newSkills.length === 0) {
     return (
-      <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+      <Typography variant="body" color="var(--muted-foreground, #6b7280)">
         {t("skillsDiffNone")}
       </Typography>
     );
@@ -303,7 +300,7 @@ function SkillsDiffPanel({
       gap={12}
     >
       <Box display="flex" flexDirection="column" gap={4}>
-        <Typography variant="body-sm" fontWeight={700}>
+        <Typography variant="body" fontWeight={700}>
           {t("skillsDiffTitle", { count: newSkills.length })}
         </Typography>
         <Typography variant="label" color="var(--muted-foreground, #6b7280)">
@@ -871,10 +868,7 @@ export function ProfilePage() {
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
             {t("title")}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("subtitle")}
           </Typography>
         </Box>
@@ -891,7 +885,7 @@ export function ProfilePage() {
             <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
               {tnSuggestResults.length === 0 ? (
                 <Typography
-                  variant="body-sm"
+                  variant="body"
                   color="var(--muted-foreground, #6b7280)"
                 >
                   {t("tnSuggestNoMatches")}
@@ -920,7 +914,7 @@ export function ProfilePage() {
                           {r.category}
                         </Typography>
                         <Typography
-                          variant="caption"
+                          variant="body"
                           fontWeight={600}
                           color={color}
                         >
@@ -933,7 +927,7 @@ export function ProfilePage() {
                         label={r.category}
                       />
                       <Typography
-                        variant="body-sm"
+                        variant="body"
                         color="var(--muted-foreground, #6b7280)"
                         styles={{ lineHeight: 1.5 }}
                       >
@@ -1060,7 +1054,7 @@ export function ProfilePage() {
                       flexDirection="column"
                       gap={10}
                     >
-                      <Typography variant="body-sm">
+                      <Typography variant="body">
                         {summaryEnhancePreview}
                       </Typography>
                       <Box
@@ -1199,7 +1193,7 @@ export function ProfilePage() {
 
               {languages.length === 0 ? (
                 <Typography
-                  variant="body-sm"
+                  variant="body"
                   color="var(--muted-foreground, #6b7280)"
                 >
                   {t("langEmpty")}
@@ -1277,7 +1271,7 @@ export function ProfilePage() {
                           {lang.name}
                         </Typography>
                         <Typography
-                          variant="body-sm"
+                          variant="body"
                           color="var(--muted-foreground, #6b7280)"
                         >
                           {t(`proficiencies.${lang.proficiency}`)}
@@ -1430,7 +1424,7 @@ export function ProfilePage() {
                     }}
                   >
                     <Typography
-                      variant="body-sm"
+                      variant="body"
                       styles={{ pointerEvents: "none" }}
                     >
                       {t("resumeDropZone")}
@@ -1470,7 +1464,7 @@ export function ProfilePage() {
                     resumeResult.projects_imported > 0) && (
                     <Box className="profile__import-banner">
                       <Typography
-                        variant="body-sm"
+                        variant="body"
                         fontWeight={600}
                         color="var(--success, #22c55e)"
                       >

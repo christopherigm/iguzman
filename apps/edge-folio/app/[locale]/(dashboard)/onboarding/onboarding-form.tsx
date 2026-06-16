@@ -41,7 +41,7 @@ function ReadinessHandshake() {
         </svg>
       </Box>
       <Box display="flex" flexDirection="column" gap={4}>
-        <Typography variant="body-sm" fontWeight={700}>
+        <Typography variant="body" fontWeight={700}>
           {t("handshakeTitle")}
         </Typography>
         <Typography variant="body" color="var(--foreground)">
@@ -400,7 +400,7 @@ export function OnboardingForm() {
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {t("title")}
         </Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {t("subtitle")}
         </Typography>
       </Box>
@@ -424,10 +424,7 @@ export function OnboardingForm() {
           <Typography as="h2" variant="h3" fontWeight={600}>
             {stepTitles[step - 1]}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {stepSubtitles[step - 1]}
           </Typography>
         </Box>
@@ -493,10 +490,7 @@ export function OnboardingForm() {
                     if (file) void handleResumeFile(file);
                   }}
                 >
-                  <Typography
-                    variant="body-sm"
-                    styles={{ pointerEvents: "none" }}
-                  >
+                  <Typography variant="body" styles={{ pointerEvents: "none" }}>
                     {t("resumeDropZone")}
                   </Typography>
                   <Typography
@@ -529,7 +523,7 @@ export function OnboardingForm() {
 
             {resumeState === "done" && resumeResult && (
               <Box className="onboarding__upload-zone onboarding__upload-zone--done">
-                <Typography variant="body-sm" fontWeight={600}>
+                <Typography variant="body" fontWeight={600}>
                   ✓{" "}
                   {t("resumeSuccess", {
                     bullets: resumeResult.bullets_imported,
@@ -569,7 +563,7 @@ export function OnboardingForm() {
 
             {resumeState === "error" && resumeError && (
               <Typography
-                variant="caption"
+                variant="body"
                 role="alert"
                 className="onboarding__error"
               >
@@ -604,7 +598,7 @@ export function OnboardingForm() {
                 >
                   {t("reviewJobTitle")}
                 </Typography>
-                <Typography variant="body-sm" fontWeight={600}>
+                <Typography variant="body" fontWeight={600}>
                   {jobTitle || "-"}
                 </Typography>
               </Box>
@@ -615,7 +609,7 @@ export function OnboardingForm() {
                 >
                   {t("reviewYears")}
                 </Typography>
-                <Typography variant="body-sm" fontWeight={600}>
+                <Typography variant="body" fontWeight={600}>
                   {yearsValue === 0
                     ? t("reviewYearsLess")
                     : t("reviewYearsValue", { years: yearsLabel })}
@@ -644,7 +638,7 @@ export function OnboardingForm() {
                   </Box>
                 ) : (
                   <Typography
-                    variant="body-sm"
+                    variant="body"
                     color="var(--muted-foreground, #6b7280)"
                   >
                     {t("reviewStackEmpty")}
@@ -658,7 +652,7 @@ export function OnboardingForm() {
                 >
                   {t("reviewResume")}
                 </Typography>
-                <Typography variant="body-sm" fontWeight={600}>
+                <Typography variant="body" fontWeight={600}>
                   {resumeResult
                     ? t("reviewResumeImported", {
                         bullets: resumeResult.bullets_imported,
@@ -675,7 +669,7 @@ export function OnboardingForm() {
 
             {error && (
               <Typography
-                variant="caption"
+                variant="body"
                 role="alert"
                 className="onboarding__error"
               >

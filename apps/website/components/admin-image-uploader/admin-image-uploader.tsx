@@ -192,7 +192,7 @@ export function AdminImageUploader({
           <span className="aiu__dropzone-icon">🖼️</span>
           <Typography
             as="span"
-            variant="body-sm"
+            variant="body"
             className="aiu__dropzone-text"
           >
             {t("dropzoneText")}
@@ -278,7 +278,7 @@ export function AdminImageUploader({
       )}
 
       {entries.length === 0 && !canAdd && (
-        <Typography variant="body-sm" className="aiu__empty">
+        <Typography variant="body" className="aiu__empty">
           {t("maxReached")}
         </Typography>
       )}

@@ -80,7 +80,7 @@ export function MovieDetail({ id }: { id: string }) {
   if (status !== "ready" || !movie) {
     return (
       <Box flexDirection="column" alignItems="center" gap={12} paddingY={40}>
-        <Typography variant="body-sm" role="alert">
+        <Typography variant="body" role="alert">
           {status === "not_found" ? t("notFound") : t("error")}
         </Typography>
         <LinkButton label={t("back")} href="/" />
@@ -207,7 +207,7 @@ export function MovieDetail({ id }: { id: string }) {
               <Typography variant="label" styles={LABEL_STYLES}>
                 {t("cast")}
               </Typography>
-              <Typography variant="body-sm">
+              <Typography variant="body">
                 {movie.cast.map((actor) => actor.name).join(", ")}
               </Typography>
             </Box>

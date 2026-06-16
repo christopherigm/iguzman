@@ -124,7 +124,7 @@ function OptionRow({
     <Box
       className={`df-option-row${disabled ? " df-option-row--disabled" : ""}`}
     >
-      <Typography variant="body-sm" fontWeight={500}>
+      <Typography variant="body" fontWeight={500}>
         {label}
       </Typography>
       <Box className="df-option-control">{children}</Box>
@@ -957,7 +957,7 @@ export function DownloadForm({
                       justifyContent="center"
                       gap={8}
                     >
-                      <Typography variant="body-sm" fontWeight={500}>
+                      <Typography variant="body" fontWeight={500}>
                         {t("smartCaptions")}
                       </Typography>
                       <Switch
@@ -974,7 +974,7 @@ export function DownloadForm({
                       justifyContent="center"
                       gap={8}
                     >
-                      <Typography variant="body-sm" fontWeight={500}>
+                      <Typography variant="body" fontWeight={500}>
                         {t("comments")}
                         {platform !== "youtube" &&
                           platform !== "unknown" &&
@@ -1006,7 +1006,7 @@ export function DownloadForm({
                       justifyContent="center"
                       gap={8}
                     >
-                      <Typography variant="body-sm" fontWeight={500}>
+                      <Typography variant="body" fontWeight={500}>
                         {t("smartMetadata")}
                         {isScrapePlatform && " 🪙 1"}
                       </Typography>
@@ -1032,7 +1032,7 @@ export function DownloadForm({
                   <OptionRow label={t("opfsStorageLabel")} disabled={false}>
                     <Box display="flex" alignItems="center" gap={6}>
                       <Typography
-                        variant="body-sm"
+                        variant="body"
                         fontWeight={500}
                         marginRight={8}
                       >

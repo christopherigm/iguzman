@@ -492,7 +492,7 @@ export function AccountForm() {
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {t("title")}
         </Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {t("subtitle")}
         </Typography>
       </Box>

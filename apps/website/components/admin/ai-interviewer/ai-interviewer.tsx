@@ -838,23 +838,23 @@ export function AiInterviewer({
                   className="aii__status-row"
                 >
                   <Spinner size={14} />
-                  <Typography variant="body-sm">
+                  <Typography variant="body">
                     {t("aiInterviewLoadingBrand")}
                   </Typography>
                 </Box>
               )}
               {personaError && (
-                <Typography variant="body-sm" className="aii__error-note">
+                <Typography variant="body" className="aii__error-note">
                   {t("aiInterviewErrorPersona")}
                 </Typography>
               )}
               {researchError && (
-                <Typography variant="body-sm" className="aii__error-note">
+                <Typography variant="body" className="aii__error-note">
                   {t("aiInterviewErrorResearch")}
                 </Typography>
               )}
               {proposalError && (
-                <Typography variant="body-sm" className="aii__error-note">
+                <Typography variant="body" className="aii__error-note">
                   {t("aiInterviewErrorProposal")}
                 </Typography>
               )}
@@ -870,7 +870,7 @@ export function AiInterviewer({
                     .filter(Boolean)
                     .join(" ")}
                 >
-                  <Typography variant="body-sm" className="aii__msg-text">
+                  <Typography variant="body" className="aii__msg-text">
                     {msg.content}
                   </Typography>
                 </div>
@@ -944,7 +944,7 @@ export function AiInterviewer({
               {/* Live streaming text */}
               {isGenerating && streamingText && (
                 <div className="aii__msg aii__msg--assistant aii__msg--streaming">
-                  <Typography variant="body-sm" className="aii__msg-text">
+                  <Typography variant="body" className="aii__msg-text">
                     {streamingText}
                   </Typography>
                 </div>
@@ -955,7 +955,7 @@ export function AiInterviewer({
                 <div className="aii__msg aii__msg--assistant">
                   <Box display="flex" alignItems="center" gap={8}>
                     <Spinner size={14} />
-                    <Typography variant="body-sm">
+                    <Typography variant="body">
                       {analyzingImage
                         ? t("aiInterviewAnalyzing")
                         : researching
@@ -1009,7 +1009,7 @@ export function AiInterviewer({
                   checked={marketResearchEnabled}
                   onChange={setMarketResearchEnabled}
                 />
-                <Typography as="span" variant="body-sm">
+                <Typography as="span" variant="body">
                   {t("aiInterviewMarketResearch")}
                 </Typography>
               </Box>

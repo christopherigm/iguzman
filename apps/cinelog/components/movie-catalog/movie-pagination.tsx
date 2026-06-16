@@ -68,7 +68,7 @@ export function MoviePagination({ page, totalPages, onPageChange }: Props) {
           <Typography
             key={item}
             as="span"
-            variant="body-sm"
+            variant="body"
             aria-hidden
             padding="0 4px"
           >

@@ -331,7 +331,7 @@ export function DiarizationPanel() {
         <Typography as="h2" variant="h3">
           {t("diarizationSection")}
         </Typography>
-        <Typography as="p" variant="body-sm" color="var(--foreground-muted)">
+        <Typography as="p" variant="body" color="var(--foreground-muted)">
           {t("diarizationIntro")}
         </Typography>
       </Box>
@@ -544,7 +544,7 @@ function FilePicker({
         text={buttonText}
         onClick={() => fileRef.current?.click()}
       />
-      <Typography as="span" variant="body-sm" color="var(--foreground-muted)">
+      <Typography as="span" variant="body" color="var(--foreground-muted)">
         {file ? file.name : noFileText}
       </Typography>
       <input
@@ -644,7 +644,7 @@ function EndpointPanel({
       </Typography>
       <Typography
         as="p"
-        variant="body-sm"
+        variant="body"
         color="var(--foreground-muted)"
         marginBottom={16}
       >

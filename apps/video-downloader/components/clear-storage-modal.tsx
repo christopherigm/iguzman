@@ -244,7 +244,7 @@ export function ClearStorageModal({
     </div>
   ) : isEmpty ? (
     <Typography
-      variant="body-sm"
+      variant="body"
       color="var(--foreground-muted, #888)"
       className="csm-empty"
     >
@@ -277,7 +277,7 @@ export function ClearStorageModal({
           <div key={key} className="csm-category">
             <div className="csm-category-header">
               <div className="csm-category-info">
-                <Typography variant="body-sm" fontWeight={600}>
+                <Typography variant="body" fontWeight={600}>
                   {t(`${key}Title`)}
                 </Typography>
                 <Typography

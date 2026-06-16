@@ -435,7 +435,7 @@ function Section({
       <Typography as="h2" variant="h3">
         {heading}
       </Typography>
-      <Typography as="p" variant="body-sm" color="var(--foreground-muted)">
+      <Typography as="p" variant="body" color="var(--foreground-muted)">
         {description}
       </Typography>
       <CodeBlock language="bash" code={code} />
@@ -457,7 +457,7 @@ function PrereqSection({
       <Typography as="h2" variant="h3">
         {heading}
       </Typography>
-      <Typography as="p" variant="body-sm" color="var(--foreground-muted)">
+      <Typography as="p" variant="body" color="var(--foreground-muted)">
         {description}
       </Typography>
       <Box flexDirection="column" gap={6} marginTop={8}>
@@ -465,7 +465,7 @@ function PrereqSection({
           <Box key={label} alignItems="center" gap={8}>
             <Typography
               as="span"
-              variant="body-sm"
+              variant="body"
               color="var(--foreground-muted)"
             >
               •
@@ -484,14 +484,14 @@ function PrereqSection({
                 {label}
               </a>
             ) : (
-              <Typography as="span" variant="body-sm">
+              <Typography as="span" variant="body">
                 {label}
               </Typography>
             )}
             {note && (
               <Typography
                 as="span"
-                variant="body-sm"
+                variant="body"
                 color="var(--foreground-muted)"
               >
                 - {note}

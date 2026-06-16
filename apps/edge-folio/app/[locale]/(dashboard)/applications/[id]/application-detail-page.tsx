@@ -133,7 +133,7 @@ function MetricBar({
       <Box display="flex" justifyContent="space-between" alignItems="center">
         <Box display="flex" alignItems="center" gap={6}>
           <Typography
-            variant="caption"
+            variant="body"
             color="var(--muted-foreground, #6b7280)"
           >
             {label}
@@ -150,7 +150,7 @@ function MetricBar({
             </Button>
           )}
         </Box>
-        <Typography variant="caption" fontWeight={600} color={color}>
+        <Typography variant="body" fontWeight={600} color={color}>
           {value}%
         </Typography>
       </Box>
@@ -184,7 +184,7 @@ function SwitchRow({
 function InfoField({ label, value }: { label: string; value: string }) {
   return (
     <Box display="flex" flexDirection="column" gap={4}>
-      <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+      <Typography variant="body" color="var(--muted-foreground, #6b7280)">
         {label}
       </Typography>
       <Typography variant="body" fontWeight={600}>
@@ -210,7 +210,7 @@ function IntelItemCard({ item }: { item: CompanyIntelItem }) {
       </Typography>
       <Typography
         as="p"
-        variant="body-sm"
+        variant="body"
         styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
       >
         {item.summary}
@@ -387,18 +387,14 @@ function CompanyAnalysisPanel({ analysis }: { analysis: CompanyAnalysis }) {
                       {t(tKey)}
                     </Typography>
                     <Typography
-                      variant="caption"
+                      variant="body"
                       fontWeight={600}
                       color={SIGNAL_COLORS[signal.level]}
                     >
                       {t(`signalLevels.${signal.level}`)}
                     </Typography>
                   </Box>
-                  <Typography
-                    variant="body-sm"
-                    color="var(--muted-foreground, #6b7280)"
-                    styles={{ lineHeight: 1.5 }}
-                  >
+                  <Typography variant="body" styles={{ lineHeight: 1.5 }}>
                     {signal.explanation}
                   </Typography>
                 </Card>
@@ -1436,7 +1432,7 @@ export function ApplicationDetailPage({
                 />
               </Box>
               {saveError && (
-                <Typography variant="caption" color="var(--error, #ef4444)">
+                <Typography variant="body" color="var(--error, #ef4444)">
                   {saveError}
                 </Typography>
               )}
@@ -1588,7 +1584,7 @@ export function ApplicationDetailPage({
           <Box display="flex" flexDirection="column" gap={16} marginTop={4}>
             {tnSuggestResults.length === 0 ? (
               <Typography
-                variant="body-sm"
+                variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
                 {t("tnSuggestNoMatches")}
@@ -1617,7 +1613,7 @@ export function ApplicationDetailPage({
                         {r.category}
                       </Typography>
                       <Typography
-                        variant="caption"
+                        variant="body"
                         fontWeight={600}
                         color={color}
                       >
@@ -1629,11 +1625,7 @@ export function ApplicationDetailPage({
                       size={6}
                       label={r.category}
                     />
-                    <Typography
-                      variant="body-sm"
-                      color="var(--muted-foreground, #6b7280)"
-                      styles={{ lineHeight: 1.5 }}
-                    >
+                    <Typography variant="body" styles={{ lineHeight: 1.5 }}>
                       {r.explanation}
                     </Typography>
                   </Box>
@@ -1724,7 +1716,7 @@ export function ApplicationDetailPage({
             <Box display="flex" alignItems="center" gap={8} marginBottom={14}>
               <Spinner size={16} label={t("gatheringCompanyData")} />
               <Typography
-                variant="body-sm"
+                variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
                 {t("gatheringCompanyData")}
@@ -1938,7 +1930,7 @@ export function ApplicationDetailPage({
                   {app.tailored_skills.map((skill) => (
                     <Typography
                       key={skill.id}
-                      variant="body-sm"
+                      variant="body"
                       styles={{
                         padding: "2px 10px",
                         borderRadius: 999,
@@ -1996,7 +1988,7 @@ export function ApplicationDetailPage({
                     >
                       {we && (
                         <Typography
-                          variant="body-sm"
+                          variant="body"
                           fontWeight={600}
                           color="var(--muted-foreground, #6b7280)"
                         >
@@ -2037,7 +2029,7 @@ export function ApplicationDetailPage({
                     >
                       {proj && (
                         <Typography
-                          variant="body-sm"
+                          variant="body"
                           fontWeight={600}
                           color="var(--muted-foreground, #6b7280)"
                         >
@@ -2147,7 +2139,7 @@ export function ApplicationDetailPage({
                       onChange={setIncludePhoto}
                     />
                     <Typography
-                      variant="caption"
+                      variant="body"
                       color="var(--muted-foreground, #6b7280)"
                     >
                       {t("exportIncludePhotoHint")}
@@ -2203,7 +2195,7 @@ export function ApplicationDetailPage({
                                 )}
                               </Box>
                               <Typography
-                                variant="caption"
+                                variant="body"
                                 color="var(--muted-foreground, #6b7280)"
                               >
                                 {exp.company}
@@ -2348,7 +2340,7 @@ export function ApplicationDetailPage({
                               </Typography>
                               {edu.field_of_study && (
                                 <Typography
-                                  variant="caption"
+                                  variant="body"
                                   color="var(--muted-foreground, #6b7280)"
                                 >
                                   {edu.field_of_study}
@@ -2421,7 +2413,7 @@ export function ApplicationDetailPage({
           </Box>
           {exportError && (
             <Typography
-              variant="caption"
+              variant="body"
               color="var(--error, #ef4444)"
               marginTop={8}
               as="p"
@@ -2467,7 +2459,7 @@ export function ApplicationDetailPage({
           />
           {generatingCL && <ProgressBar label={t("generatingCL")} />}
           {clError && (
-            <Typography variant="caption" color="var(--error, #ef4444)">
+            <Typography variant="body" color="var(--error, #ef4444)">
               {clError}
             </Typography>
           )}
@@ -2559,7 +2551,7 @@ export function ApplicationDetailPage({
               )}
               {tnSuggestError && (
                 <Typography
-                  variant="caption"
+                  variant="body"
                   role="alert"
                   color="var(--error, #ef4444)"
                 >
@@ -2674,7 +2666,7 @@ export function ApplicationDetailPage({
           {generatingNafta && <ProgressBar label={t("generatingNafta")} />}
         </Box>
         {naftaError && (
-          <Typography variant="caption" color="var(--error, #ef4444)">
+          <Typography variant="body" color="var(--error, #ef4444)">
             {naftaError}
           </Typography>
         )}
@@ -2712,7 +2704,7 @@ export function ApplicationDetailPage({
             </Box>
             {naftaPDFError && (
               <Typography
-                variant="caption"
+                variant="body"
                 color="var(--error, #ef4444)"
                 as="p"
               >

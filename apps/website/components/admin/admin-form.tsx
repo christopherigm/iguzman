@@ -535,7 +535,7 @@ export function AdminForm({
                       />
                       <Typography
                         as="span"
-                        variant="body-sm"
+                        variant="body"
                         className="af__field-bool-label"
                       >
                         {field.label}
@@ -728,7 +728,7 @@ export function AdminForm({
                             flexDirection="column"
                             gap={10}
                           >
-                            <Typography variant="body-sm">
+                            <Typography variant="body">
                               {enhancePreview || "…"}
                             </Typography>
                             <Box
@@ -770,7 +770,7 @@ export function AdminForm({
                             flexDirection="column"
                             gap={10}
                           >
-                            <Typography variant="body-sm">
+                            <Typography variant="body">
                               {translatePreview || "…"}
                             </Typography>
                             <Box

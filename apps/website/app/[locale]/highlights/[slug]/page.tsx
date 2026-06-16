@@ -89,7 +89,7 @@ export default async function HighlightDetailPage({ params }: Props) {
         <Typography as="h1" variant="h1" marginTop={24}>
           {name}
         </Typography>
-        <Typography variant="body-sm" marginTop={8}>
+        <Typography variant="body" marginTop={8}>
           {formattedDate}
         </Typography>
         {shortDescription && (

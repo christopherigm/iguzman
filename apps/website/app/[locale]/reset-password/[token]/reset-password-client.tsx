@@ -91,7 +91,7 @@ export function ResetPasswordClient({ token, apiUrl }: Props) {
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {t("title")}
         </Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {t("subtitle")}
         </Typography>
       </Box>
@@ -110,7 +110,7 @@ export function ResetPasswordClient({ token, apiUrl }: Props) {
           <Box display="flex" flexDirection="column" gap={16}>
             <ProgressBar label={t("submitting")} />
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
               textAlign="center"
             >
@@ -129,7 +129,7 @@ export function ResetPasswordClient({ token, apiUrl }: Props) {
           >
             <Typography variant="h5">{t("successTitle")}</Typography>
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {t("successDetail")}
@@ -150,7 +150,7 @@ export function ResetPasswordClient({ token, apiUrl }: Props) {
               {t("invalidTitle")}
             </Typography>
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {t("invalidDetail")}

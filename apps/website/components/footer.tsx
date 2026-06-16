@@ -65,14 +65,14 @@ export async function Footer({ logo, system }: Props) {
                 </Typography>
               )}
               {system?.slogan && (
-                <Typography as="p" variant="body-sm" className="footer__slogan">
+                <Typography as="p" variant="body" className="footer__slogan">
                   {system.slogan}
                 </Typography>
               )}
               {description && (
                 <Typography
                   as="p"
-                  variant="body-sm"
+                  variant="body"
                   className="footer__description"
                 >
                   {description}
@@ -140,7 +140,7 @@ export async function Footer({ logo, system }: Props) {
         <Box className="footer__bottom">
           <Typography
             as="p"
-            variant="body-sm"
+            variant="body"
             textAlign="center"
             className="footer__description"
           >

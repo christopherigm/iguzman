@@ -64,7 +64,7 @@ export function CategoryCard({
         )}
 
         {description && (
-          <Typography variant="body-sm" className="category-card__description">
+          <Typography variant="body" className="category-card__description">
             {description}
           </Typography>
         )}

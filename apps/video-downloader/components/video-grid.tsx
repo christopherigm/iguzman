@@ -261,7 +261,7 @@ export function VideoGrid({
           {t("title")}
         </Typography>
         <Typography
-          variant="body-sm"
+          variant="body"
           display="inline-flex"
           alignItems="center"
           justifyContent="center"
@@ -301,7 +301,7 @@ export function VideoGrid({
               {t("processingTitle")}
             </Typography>
             <Typography
-              variant="body-sm"
+              variant="body"
               display="inline-flex"
               alignItems="center"
               justifyContent="center"
@@ -387,7 +387,7 @@ export function VideoGrid({
           marginBottom={12}
         >
           <Typography
-            variant="body-sm"
+            variant="body"
             color="var(--accent, #06b6d4)"
             fontWeight={500}
           >

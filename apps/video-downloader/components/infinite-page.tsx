@@ -529,11 +529,11 @@ function InfinitePageInner() {
                   {videos[activeIndex].name}
                 </Typography>
               )}
-              <Typography variant="body-sm" className="infinite-count">
+              <Typography variant="body" className="infinite-count">
                 {activeIndex + 1}/{videos.length}
               </Typography>
               {videos[activeIndex].uploader && (
-                <Typography variant="body-sm" className="infinite-uploader">
+                <Typography variant="body" className="infinite-uploader">
                   {videos[activeIndex].uploader}
                 </Typography>
               )}

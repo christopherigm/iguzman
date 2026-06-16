@@ -53,7 +53,7 @@ export default function AdminPage() {
               >
                 {t(item.key)}
               </Typography>
-              <Typography as="p" variant="body-sm" className="admin-home__desc">
+              <Typography as="p" variant="body" className="admin-home__desc">
                 {t(item.descKey)}
               </Typography>
             </Link>

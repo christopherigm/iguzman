@@ -337,7 +337,7 @@ function EducationForm({
             gap={10}
           >
             <Typography
-              variant="body-sm"
+              variant="body"
               styles={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
             >
               {enhancePreview}
@@ -373,7 +373,7 @@ function EducationForm({
       </Box>
 
       {error && (
-        <Typography variant="caption" color="var(--error, #ef4444)">
+        <Typography variant="body" color="var(--error, #ef4444)">
           {error}
         </Typography>
       )}
@@ -413,10 +413,7 @@ function EducationCard({ entry, onEdit, onDelete }: CardProps) {
               ? `${t(`degrees.${entry.degree}`)} in ${entry.field_of_study}`
               : t(`degrees.${entry.degree}`)}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {entry.institution}
           </Typography>
         </Box>
@@ -448,7 +445,7 @@ function EducationCard({ entry, onEdit, onDelete }: CardProps) {
       {entry.description && (
         <Typography
           as="p"
-          variant="body-sm"
+          variant="body"
           color="var(--foreground)"
           className="education__description"
           styles={{ lineHeight: 1.6 }}
@@ -582,7 +579,7 @@ export function EducationPage() {
           gap: "16px",
         }}
       >
-        <Typography variant="body-sm" color="var(--error, #ef4444)">
+        <Typography variant="body" color="var(--error, #ef4444)">
           {error}
         </Typography>
         <Button text={t("retry")} type="button" size="md" onClick={load} />
@@ -640,10 +637,7 @@ export function EducationPage() {
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
             {t("title")}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("subtitle")}
           </Typography>
         </Box>

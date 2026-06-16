@@ -56,7 +56,7 @@ function PhaseLabel({
     building: t("phaseBuilding"),
   };
   return (
-    <Typography variant="body-sm" fontWeight={600}>
+    <Typography variant="body" fontWeight={600}>
       {map[phase] ?? t("phaseScanning")}
     </Typography>
   );
@@ -80,7 +80,7 @@ function SkeletonReview({
   return (
     <Box display="flex" flexDirection="column" gap={16}>
       <Box>
-        <Typography variant="body-sm" fontWeight={600}>
+        <Typography variant="body" fontWeight={600}>
           {t("skeletonTitle")}
         </Typography>
         <Typography
@@ -254,7 +254,7 @@ function DirCard({
           </Box>
           <Typography
             as="span"
-            variant="body-sm"
+            variant="body"
             fontWeight={600}
             styles={{ wordBreak: "break-all" }}
           >
@@ -656,7 +656,7 @@ export function ExtractPage() {
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {t("title")}
         </Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {t("subtitle")}
         </Typography>
       </Box>
@@ -665,10 +665,7 @@ export function ExtractPage() {
         {/* ── Unsupported browser ── */}
         {!isSupported && (
           <Box className="extract__unsupported">
-            <Typography
-              variant="body-sm"
-              color="var(--muted-foreground, #6b7280)"
-            >
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t("pickerUnsupported")}
             </Typography>
           </Box>
@@ -685,7 +682,7 @@ export function ExtractPage() {
                 gap={12}
               >
                 {pickerStatus === "error" && (
-                  <Typography variant="body-sm" color="var(--error, #ef4444)">
+                  <Typography variant="body" color="var(--error, #ef4444)">
                     {t("pickerError")}
                   </Typography>
                 )}
@@ -697,7 +694,7 @@ export function ExtractPage() {
                     gap={10}
                   >
                     <Typography
-                      variant="body-sm"
+                      variant="body"
                       color="var(--muted-foreground, #6b7280)"
                     >
                       {t("pickerScanning")}
@@ -787,7 +784,7 @@ export function ExtractPage() {
                 {/* Synthesis: loading */}
                 {synthStatus === "synthesizing" && (
                   <Box className="extract__phase">
-                    <Typography variant="body-sm" fontWeight={600}>
+                    <Typography variant="body" fontWeight={600}>
                       {t("synthesizing")}
                     </Typography>
                     <ProgressBar />
@@ -799,7 +796,7 @@ export function ExtractPage() {
                   <Box display="flex" flexDirection="column" gap={12}>
                     <Box className="extract__error">
                       <Typography
-                        variant="body-sm"
+                        variant="body"
                         color="var(--error, #ef4444)"
                         fontWeight={600}
                       >
@@ -837,7 +834,7 @@ export function ExtractPage() {
                       gap={8}
                     >
                       <Box display="flex" flexDirection="column" gap={2}>
-                        <Typography variant="body-sm" fontWeight={600}>
+                        <Typography variant="body" fontWeight={600}>
                           {t("synthTitle")}
                         </Typography>
                         <Typography
@@ -869,7 +866,7 @@ export function ExtractPage() {
 
                     {drafts.length === 0 ? (
                       <Typography
-                        variant="body-sm"
+                        variant="body"
                         color="var(--muted-foreground, #6b7280)"
                       >
                         {t("synthNoDrafts")}
@@ -891,7 +888,7 @@ export function ExtractPage() {
                     {synthStatus === "save-error" && (
                       <Box className="extract__error">
                         <Typography
-                          variant="body-sm"
+                          variant="body"
                           color="var(--error, #ef4444)"
                           fontWeight={600}
                         >
@@ -935,7 +932,7 @@ export function ExtractPage() {
                 {synthStatus === "saved" && (
                   <Box display="flex" flexDirection="column" gap={12}>
                     <Box className="extract__done">
-                      <Typography variant="body-sm" fontWeight={600}>
+                      <Typography variant="body" fontWeight={600}>
                         {t("synthSaved", { count: savedCount })}
                       </Typography>
                       <Typography
@@ -971,7 +968,7 @@ export function ExtractPage() {
               <Box display="flex" flexDirection="column" gap={12}>
                 <Box className="extract__error">
                   <Typography
-                    variant="body-sm"
+                    variant="body"
                     color="var(--error, #ef4444)"
                     fontWeight={600}
                   >

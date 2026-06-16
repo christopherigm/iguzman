@@ -155,7 +155,7 @@ export default async function Home({ params }: Props) {
             >
               <Icon icon="/icons/fingerprint.svg" size="2em" />
               <Typography
-                variant="caption"
+                variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
                 {t("heroNote")}
@@ -191,7 +191,13 @@ export default async function Home({ params }: Props) {
         <Grid container spacing={4}>
           {PILLARS.map(({ key, icon }) => (
             <Grid key={key} size={{ xs: 12, sm: 6, md: 3 }}>
-              <Card gap={12} height="100%">
+              <Card
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                gap={12}
+                height="100%"
+              >
                 <Icon
                   icon={icon}
                   size="2.5em"
@@ -203,8 +209,9 @@ export default async function Home({ params }: Props) {
                   {t(`pillars.${key}.title`)}
                 </Typography>
                 <Typography
-                  variant="body-sm"
+                  variant="body"
                   color="var(--muted-foreground, #6b7280)"
+                  textAlign="center"
                 >
                   {t(`pillars.${key}.body`)}
                 </Typography>
@@ -239,7 +246,7 @@ export default async function Home({ params }: Props) {
                   </Typography>
                 </Box>
                 <Typography
-                  variant="body-sm"
+                  variant="body"
                   color="var(--muted-foreground, #6b7280)"
                 >
                   {t(`features.${key}.body`)}
@@ -280,7 +287,7 @@ export default async function Home({ params }: Props) {
             {t("privacyBody")}
           </Typography>
           <Typography
-            variant="caption"
+            variant="body"
             color="var(--muted-foreground, #6b7280)"
             maxWidth={560}
           >

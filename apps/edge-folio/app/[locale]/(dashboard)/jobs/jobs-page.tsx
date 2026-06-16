@@ -142,7 +142,7 @@ function JobSection({
         </Typography>
         {!list.loading && !list.error && (
           <Typography
-            variant="caption"
+            variant="body"
             color="var(--muted-foreground, #6b7280)"
           >
             {list.count}
@@ -162,7 +162,7 @@ function JobSection({
           gap={16}
           paddingY={40}
         >
-          <Typography variant="body-sm" color="var(--error, #ef4444)">
+          <Typography variant="body" color="var(--error, #ef4444)">
             {t("errorLoad")}
           </Typography>
           <Button
@@ -214,7 +214,7 @@ function JobSection({
                 onClick={() => onPageChange(page - 1)}
               />
               <Typography
-                variant="body-sm"
+                variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
                 {t("pageOf", { page, total: totalPages })}
@@ -424,7 +424,7 @@ export function JobsPage() {
             aria-label={t("matchOnlyLabel")}
           />
           <Typography
-            variant="caption"
+            variant="body"
             color="var(--muted-foreground, #6b7280)"
           >
             {t("matchOnlyLabel")}
@@ -503,10 +503,7 @@ export function JobsPage() {
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
             {t("title")}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("subtitle")}
           </Typography>
         </Box>
@@ -548,10 +545,7 @@ export function JobsPage() {
           >
             {t("emptyTitle")}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("emptyBody")}
           </Typography>
         </Box>

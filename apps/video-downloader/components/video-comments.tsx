@@ -100,7 +100,7 @@ function CommentItem({
             </Typography>
           )}
         </div>
-        <Typography variant="body-sm" className="vc-text">
+        <Typography variant="body" className="vc-text">
           {comment.text}
         </Typography>
         {(comment.like_count ?? 0) > 0 || comment.is_favorited ? (
@@ -160,7 +160,7 @@ function CommentItem({
                       </Typography>
                     )}
                   </div>
-                  <Typography variant="body-sm" className="vc-text">
+                  <Typography variant="body" className="vc-text">
                     {reply.text}
                   </Typography>
                   {(reply.like_count ?? 0) > 0 && (

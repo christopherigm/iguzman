@@ -95,7 +95,7 @@ For **native form elements** (`<select>`, `<input>`, `<textarea>`) where `<Typog
 /* ✓ correct - rem values aligned to Typography scale */
 .my-select {
   font-size: 0.875rem;
-} /* body-sm / 14 px */
+} /* h6 / 14 px */
 .my-textarea {
   font-size: 0.8125rem;
 } /* caption / 13 px */

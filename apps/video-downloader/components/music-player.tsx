@@ -632,7 +632,7 @@ export function MusicPlayer() {
               onChange={setIncludeVideos}
               aria-label={t("includeVideos")}
             />
-            <Typography variant="body-sm" color="var(--mp-text-label)">
+            <Typography variant="body" color="var(--mp-text-label)">
               {t("includeVideos")}
             </Typography>
           </Box>
@@ -963,7 +963,7 @@ export function MusicPlayer() {
               onChange={setIncludeVideos}
               aria-label={t("includeVideos")}
             />
-            <Typography variant="body-sm" color="var(--mp-text-label)">
+            <Typography variant="body" color="var(--mp-text-label)">
               {t("includeVideos")}
             </Typography>
           </Box>

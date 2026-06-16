@@ -257,7 +257,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
       {fetchingUrl && <ProgressBar label={t("fetchingUrl")} />}
 
       {fetchUrlError && (
-        <Typography variant="caption" color="var(--error, #ef4444)">
+        <Typography variant="body" color="var(--error, #ef4444)">
           {fetchUrlError}
         </Typography>
       )}
@@ -454,7 +454,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
       )}
 
       {error && (
-        <Typography variant="caption" color="var(--error, #ef4444)">
+        <Typography variant="body" color="var(--error, #ef4444)">
           {error}
         </Typography>
       )}
@@ -492,10 +492,10 @@ function CardMetricBar({ label, value }: { label: string; value: number }) {
   return (
     <Box display="flex" flexDirection="column" gap={2}>
       <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Typography variant="label" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {label}
         </Typography>
-        <Typography variant="label" fontWeight={600} color={color}>
+        <Typography variant="body" fontWeight={600} color={color}>
           {value}%
         </Typography>
       </Box>
@@ -620,7 +620,7 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
             </Badge>
             <Typography
               as="p"
-              variant="body-sm"
+              variant="body"
               fontWeight={600}
               color="var(--foreground)"
               marginTop={2}
@@ -628,7 +628,7 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
               {app.job_title}
             </Typography>
             <Typography
-              variant="caption"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {app.company_name}
@@ -679,7 +679,7 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
           </Box>
         )}
 
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {date}
         </Typography>
 
@@ -782,7 +782,7 @@ export function ApplicationsPage() {
           gap: "16px",
         }}
       >
-        <Typography variant="body-sm" color="var(--error, #ef4444)">
+        <Typography variant="body" color="var(--error, #ef4444)">
           {error}
         </Typography>
         <Button
@@ -828,10 +828,7 @@ export function ApplicationsPage() {
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
             {t("title")}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("subtitle")}
           </Typography>
         </Box>
@@ -873,10 +870,7 @@ export function ApplicationsPage() {
           >
             {t("emptyTitle")}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("emptyBody")}
           </Typography>
           <Button

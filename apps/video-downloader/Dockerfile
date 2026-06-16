@@ -72,6 +72,13 @@ RUN apk add --no-cache \
     py3-pip \
     ttf-dejavu
 
+# Force the yt-dlp/gallery-dl layer to rebuild whenever a new yt-dlp release
+# ships. BuildKit revalidates a remote ADD against the source's ETag/Last-Modified,
+# so this JSON changes the moment a new release is published, invalidating the
+# cache for the pip layer below and pulling the newest version every build.
+# CACHEBUST stays as a manual override: pass --build-arg CACHEBUST=$(date +%s)
+# (or any new value) to force a re-pull even when no new release exists.
+ADD https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest /tmp/yt-dlp-release.json
 ARG CACHEBUST=1
 RUN pip install --break-system-packages --no-cache-dir --upgrade \
     "yt-dlp[default,curl-cffi]" \

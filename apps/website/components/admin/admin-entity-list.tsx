@@ -127,7 +127,7 @@ export function AdminEntityList({
 function renderCell(value: unknown): React.ReactNode {
   if (value === null || value === undefined)
     return (
-      <Typography as="span" variant="body-sm" className="ael__null">
+      <Typography as="span" variant="body" className="ael__null">
         -
       </Typography>
     );
@@ -162,7 +162,7 @@ function renderCell(value: unknown): React.ReactNode {
     return (
       <Typography
         as="span"
-        variant="body-sm"
+        variant="body"
         className="ael__truncated"
         title={value}
       >

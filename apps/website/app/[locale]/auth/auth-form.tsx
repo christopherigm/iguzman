@@ -170,7 +170,7 @@ function SignInTab({
   if (passkeyPrompt) {
     return (
       <Box display="flex" flexDirection="column" gap={16} alignItems="center">
-        <Typography variant="body-sm" fontWeight={600}>
+        <Typography variant="body" fontWeight={600}>
           {t("passkey.promptTitle")}
         </Typography>
         <Typography variant="caption" styles={{ textAlign: "center" }}>
@@ -347,7 +347,7 @@ function SignUpTab({
         alignItems="center"
         styles={{ textAlign: "center" }}
       >
-        <Typography variant="body-sm">{success}</Typography>
+        <Typography variant="body">{success}</Typography>
         <LinkButton
           onClick={() => switchTab("sign-in")}
           label={t("signUp.haveAccount")}
@@ -459,7 +459,7 @@ function ResetPasswordTab({
     <>
       {success ? (
         <Box display="flex" flexDirection="column" gap={16}>
-          <Typography variant="body-sm">{success}</Typography>
+          <Typography variant="body">{success}</Typography>
           <LinkButton
             onClick={() => switchTab("sign-in")}
             label={t("resetPassword.backToSignIn")}
@@ -558,7 +558,7 @@ export function SignInForm({ systemId, apiUrl }: Props) {
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
           {title}
         </Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {subtitle}
         </Typography>
       </Box>

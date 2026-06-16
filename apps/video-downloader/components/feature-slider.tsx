@@ -88,13 +88,13 @@ export function FeatureSlider() {
                   </button>
                 </div>
                 <div className="fs-body">
-                  <Typography variant="body-sm" fontWeight={500}>
+                  <Typography variant="body" fontWeight={500}>
                     {t(`${card.key}.title`)}
                   </Typography>
-                  <Typography variant="body-sm">
+                  <Typography variant="body">
                     {t(`${card.key}.body1`)}
                   </Typography>
-                  <Typography variant="body-sm">
+                  <Typography variant="body">
                     {t(`${card.key}.body2`)}
                   </Typography>
                   <Box marginTop={4}>

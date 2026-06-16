@@ -96,12 +96,12 @@ export default function AdminUserFormPage({ params }: Props) {
 
         {error && (
           <Box className="uf__banner uf__banner--error">
-            <Typography variant="body-sm">{error}</Typography>
+            <Typography variant="body">{error}</Typography>
           </Box>
         )}
         {success && (
           <Box className="uf__banner uf__banner--success">
-            <Typography variant="body-sm">{success}</Typography>
+            <Typography variant="body">{success}</Typography>
           </Box>
         )}
 

@@ -80,7 +80,7 @@ export function VerifyEmailClient({ token, apiUrl }: Props) {
           <Box display="flex" flexDirection="column" gap={16}>
             <ProgressBar label={t("loading")} />
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
               textAlign="center"
             >
@@ -99,7 +99,7 @@ export function VerifyEmailClient({ token, apiUrl }: Props) {
           >
             <Typography variant="h5">{t("successTitle")}</Typography>
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {t("successDetail")}
@@ -129,7 +129,7 @@ export function VerifyEmailClient({ token, apiUrl }: Props) {
               {t("expiredTitle")}
             </Typography>
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {t("expiredDetail")}
@@ -149,7 +149,7 @@ export function VerifyEmailClient({ token, apiUrl }: Props) {
               {t("invalidTitle")}
             </Typography>
             <Typography
-              variant="body-sm"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {t("invalidDetail")}

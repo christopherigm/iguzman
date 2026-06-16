@@ -186,14 +186,14 @@ export function MovieCatalog() {
       )}
 
       {status === "error" && (
-        <Typography variant="body-sm" role="alert" textAlign="center">
+        <Typography variant="body" role="alert" textAlign="center">
           {t("error")}
         </Typography>
       )}
 
       {status === "ready" && movies.length === 0 && (
         <Typography
-          variant="body-sm"
+          variant="body"
           textAlign="center"
           styles={{ opacity: 0.6 }}
         >

@@ -66,7 +66,7 @@ export function AdminSidebar() {
         <span className="admin-sidebar__toggle-icon">{open ? "✕" : "☰"}</span>
         <Typography
           as="span"
-          variant="body-sm"
+          variant="body"
           className="admin-sidebar__toggle-label"
         >
           {t("menu")}
@@ -102,7 +102,7 @@ export function AdminSidebar() {
                   </span>
                   <Typography
                     as="span"
-                    variant="body-sm"
+                    variant="body"
                     className="admin-sidebar__label"
                   >
                     {t(item.key)}

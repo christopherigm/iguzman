@@ -91,7 +91,7 @@ export function Inbox() {
         <Typography as="h1" variant="h2" fontWeight={700}>
           {t("title")}
         </Typography>
-        <Typography variant="body-sm" styles={{ opacity: 0.6 }}>
+        <Typography variant="body" styles={{ opacity: 0.6 }}>
           {t("subtitle")}
         </Typography>
       </Box>
@@ -103,14 +103,14 @@ export function Inbox() {
       )}
 
       {status === "error" && (
-        <Typography variant="body-sm" role="alert" textAlign="center">
+        <Typography variant="body" role="alert" textAlign="center">
           {t("error")}
         </Typography>
       )}
 
       {status === "ready" && items.length === 0 && (
         <Typography
-          variant="body-sm"
+          variant="body"
           textAlign="center"
           styles={{ opacity: 0.6 }}
         >

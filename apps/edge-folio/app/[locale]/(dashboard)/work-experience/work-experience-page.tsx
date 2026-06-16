@@ -415,7 +415,7 @@ function WorkExperienceForm({
             flexDirection="column"
             gap={10}
           >
-            <Typography variant="body-sm">{enhancePreview}</Typography>
+            <Typography variant="body">{enhancePreview}</Typography>
             <Box display="flex" gap={8} alignItems="center" marginTop={12}>
               {isGenerating ? (
                 <Button
@@ -446,7 +446,7 @@ function WorkExperienceForm({
         )}
 
         {error && (
-          <Typography variant="caption" color="var(--error, #ef4444)">
+          <Typography variant="body" color="var(--error, #ef4444)">
             {error}
           </Typography>
         )}
@@ -501,10 +501,7 @@ function WorkExperienceCard({ entry, onEdit, onDelete }: CardProps) {
           <Typography as="h3" variant="body" fontWeight={700}>
             {entry.title}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {entry.company}
             {entry.location ? ` · ${entry.location}` : ""}
           </Typography>
@@ -529,7 +526,7 @@ function WorkExperienceCard({ entry, onEdit, onDelete }: CardProps) {
       {entry.description && (
         <Typography
           as="p"
-          variant="body-sm"
+          variant="body"
           color="var(--foreground)"
           className="work-exp__description"
           styles={{ lineHeight: 1.6 }}
@@ -980,7 +977,7 @@ function ProjectForm({
             flexDirection="column"
             gap={10}
           >
-            <Typography variant="body-sm">{enhancePreview}</Typography>
+            <Typography variant="body">{enhancePreview}</Typography>
             <Box display="flex" gap={8} alignItems="center" marginTop={12}>
               {isGenerating ? (
                 <Button
@@ -1011,7 +1008,7 @@ function ProjectForm({
         )}
 
         {error && (
-          <Typography variant="caption" color="var(--error, #ef4444)">
+          <Typography variant="body" color="var(--error, #ef4444)">
             {error}
           </Typography>
         )}
@@ -1072,7 +1069,7 @@ function ProjectCard({ entry, onEdit, onDelete }: ProjectCardProps) {
       {entry.description && (
         <Typography
           as="p"
-          variant="body-sm"
+          variant="body"
           color="var(--foreground)"
           className="work-exp__description"
           styles={{ lineHeight: 1.6 }}
@@ -1267,7 +1264,7 @@ export function WorkExperiencePage() {
           gap: "16px",
         }}
       >
-        <Typography variant="body-sm" color="var(--error, #ef4444)">
+        <Typography variant="body" color="var(--error, #ef4444)">
           {error}
         </Typography>
         <Button text={t("retry")} type="button" size="md" onClick={load} />
@@ -1361,10 +1358,7 @@ export function WorkExperiencePage() {
           <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>
             {t("title")}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("subtitle")}
           </Typography>
         </Box>
@@ -1418,10 +1412,7 @@ export function WorkExperiencePage() {
           <Typography as="h2" variant="h2" fontWeight={600} marginBottom={4}>
             {t("projectsTitle")}
           </Typography>
-          <Typography
-            variant="body-sm"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {t("projectsSubtitle")}
           </Typography>
         </Box>

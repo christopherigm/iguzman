@@ -336,7 +336,7 @@ export function JobSearchSection() {
         <Typography as="h2" variant="h3" fontWeight={600}>
           {t("jobSearchSection")}
         </Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {t("jobSearchSubtitle")}
         </Typography>
       </Box>
@@ -346,7 +346,7 @@ export function JobSearchSection() {
         <Typography variant="body" fontWeight={600}>
           {t("jobSearchPrefsTitle")}
         </Typography>
-        <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
           {t("jobSearchPrefsSubtitle")}
         </Typography>
       </Box>
@@ -430,7 +430,7 @@ export function JobSearchSection() {
 
           {prefsError && (
             <Typography
-              variant="caption"
+              variant="body"
               role="alert"
               color="var(--error, #ef4444)"
             >
@@ -447,7 +447,7 @@ export function JobSearchSection() {
             marginBottom={8}
           >
             {prefsSaved && (
-              <Typography variant="caption" color="var(--success, #22c55e)">
+              <Typography variant="body" color="var(--success, #22c55e)">
                 {t("jobSearchPrefsSaved")}
               </Typography>
             )}
@@ -478,7 +478,7 @@ export function JobSearchSection() {
                   {t("jobSearchQueryTitle")}
                 </Typography>
                 <Typography
-                  variant="caption"
+                  variant="body"
                   color="var(--muted-foreground, #6b7280)"
                 >
                   {t("jobSearchQuerySubtitle")}
@@ -513,12 +513,12 @@ export function JobSearchSection() {
               }}
             >
               {(queryGenerating ? queryStreamingText : generatedQuery) ? (
-                <Typography variant="body-sm">
+                <Typography variant="body">
                   {queryGenerating ? queryStreamingText : generatedQuery}
                 </Typography>
               ) : (
                 <Typography
-                  variant="body-sm"
+                  variant="body"
                   color="var(--muted-foreground, #6b7280)"
                 >
                   {t("jobSearchQueryEmpty")}
@@ -527,13 +527,13 @@ export function JobSearchSection() {
             </Box>
 
             {querySaved && (
-              <Typography variant="caption" color="var(--success, #22c55e)">
+              <Typography variant="body" color="var(--success, #22c55e)">
                 {t("jobSearchQuerySaved")}
               </Typography>
             )}
             {queryError && (
               <Typography
-                variant="caption"
+                variant="body"
                 role="alert"
                 color="var(--error, #ef4444)"
               >
@@ -551,7 +551,7 @@ export function JobSearchSection() {
               {t("jobSearchApiTitle")}
             </Typography>
             <Typography
-              variant="caption"
+              variant="body"
               color="var(--muted-foreground, #6b7280)"
             >
               {t("jobKeysSubtitle")}
@@ -585,11 +585,11 @@ export function JobSearchSection() {
                         >
                           {t(`jobKeysProviders.${cred.provider}`)}
                         </Badge>
-                        <Typography variant="body-sm" styles={{ flex: 1 }}>
+                        <Typography variant="body" styles={{ flex: 1 }}>
                           {cred.label || t("jobKeysNoLabel")}
                         </Typography>
                         <Typography
-                          variant="caption"
+                          variant="body"
                           color="var(--muted-foreground, #6b7280)"
                         >
                           {t("jobKeysStored")}
@@ -613,13 +613,13 @@ export function JobSearchSection() {
                           gap={8}
                         >
                           <Typography
-                            variant="caption"
+                            variant="body"
                             color="var(--muted-foreground, #6b7280)"
                           >
                             {t("jobKeysUsageLabel")}
                           </Typography>
                           <Typography
-                            variant="caption"
+                            variant="body"
                             color="var(--muted-foreground, #6b7280)"
                           >
                             {t("jobKeysUsageCount", {
@@ -657,7 +657,7 @@ export function JobSearchSection() {
                     }))}
                   />
                   <Typography
-                    variant="caption"
+                    variant="body"
                     color="var(--muted-foreground, #6b7280)"
                   >
                     {t("jobKeysGetKeyText")}{" "}
@@ -719,7 +719,7 @@ export function JobSearchSection() {
 
               {error && (
                 <Typography
-                  variant="caption"
+                  variant="body"
                   role="alert"
                   color="var(--error, #ef4444)"
                 >

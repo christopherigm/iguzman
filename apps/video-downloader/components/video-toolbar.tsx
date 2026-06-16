@@ -237,7 +237,7 @@ export function VideoToolbar({
               />
             </button>
 
-            <Typography variant="body-sm" className="vt-page-info">
+            <Typography variant="body" className="vt-page-info">
               {page} / {totalPages}
               <Typography
                 as="span"

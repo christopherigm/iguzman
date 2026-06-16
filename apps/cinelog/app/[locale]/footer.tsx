@@ -100,7 +100,7 @@ export async function Footer({ logo }: { logo: string }) {
         <Box className="footer__bottom">
           <Typography
             as="p"
-            variant="body-sm"
+            variant="body"
             textAlign="center"
             className="footer__description"
           >

@@ -67,17 +67,26 @@ const options = MY_VALUES.map((v) => ({
 
 The `Typography` component defines the only approved font-size scale. **Never hardcode a pixel font-size on a `<Typography>` component.** Pick the variant whose native size matches your intent, then drop the `styles={{ fontSize }}` override entirely.
 
-| Variant          | Rendered size        | Use for                                |
-| ---------------- | -------------------- | -------------------------------------- |
-| `label`          | 0.75 rem (12 px)     | Field labels, metadata chips, tag text |
-| `caption`        | 0.8125 rem (13 px)   | Secondary body copy, hints, timestamps |
-| `body-sm` / `h6` | 0.875 rem (14 px)    | Card body text, compact paragraphs     |
-| `body`           | 1 rem (16 px)        | Default prose                          |
-| `h5`             | clamp(13 px → 15 px) | Compact card names                     |
-| `h4`             | clamp(15 px → 18 px) | Secondary headings                     |
-| `h3`             | clamp(17 px → 22 px) | Feature card names                     |
-| `h2`             | clamp(22 px → 32 px) | Section titles                         |
-| `h1`             | clamp(32 px → 56 px) | Hero headings                          |
+| Variant   | Rendered size        | Use for                                |
+| --------- | -------------------- | -------------------------------------- |
+| `label`   | 0.75 rem (12 px)     | Field labels, metadata chips, tag text |
+| `caption` | 0.8125 rem (13 px)   | Secondary body copy, hints, timestamps |
+| `h6`      | 0.875 rem (14 px)    | Compact card body / paragraph headings |
+| `body`    | 1 rem (16 px)        | Default prose **and small body copy**  |
+| `h5`      | clamp(13 px → 15 px) | Compact card names                     |
+| `h4`      | clamp(15 px → 18 px) | Secondary headings                     |
+| `h3`      | clamp(17 px → 22 px) | Feature card names                     |
+| `h2`      | clamp(22 px → 32 px) | Section titles                         |
+| `h1`      | clamp(32 px → 56 px) | Hero headings                          |
+
+#### `body-sm` is removed — do not use it
+
+The `body-sm` variant **no longer exists**. It was overused as a default and made body copy cramped and hard to read. Rules:
+
+- **Default to `body`** for all body copy, including secondary text, hints, error/success messages, card descriptions, and form helper text. When in doubt, `body` is the answer — not a smaller variant.
+- **Use `caption` only when it is strictly necessary** — i.e. genuinely de-emphasised metadata where the smaller size carries meaning: timestamps, byline/source attributions, dense tabular hints, and inline counts. Never reach for `caption` just to make text "fit"; resize the container instead.
+- **Use `label` (12 px)** for field labels and tag/chip text only.
+- There is **no 14 px body variant**. If a compact 14 px paragraph is unavoidable, `h6` is the only 14 px slot — but prefer `body`.
 
 **The only valid reason to keep `styles={{ fontSize }}` on a `<Typography>` is when no variant matches and a specific sub-scale size (e.g. 11 px) is required.** In that case, choose the closest variant (`label` for anything ≤ 12 px) and add the override - but leave a brief inline comment so the next reader understands why.
 
@@ -99,7 +108,7 @@ Most components extend `UIComponentProps`, which maps common CSS properties dire
 
 | Use case                         | Component           | Key props                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | -------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Headings, body text, labels      | `Typography`        | `variant?: 'none'\|'h1'…'h6'\|'body'\|'body-sm'\|'caption'\|'label'`, `as?` (HTML element override), `textAlign?`, `fontWeight?`, `role?`, `aria-current?`, `aria-hidden?`, `aria-label?`, `title?` + UIComponentProps. Heading variants h1-h5 use fluid `clamp()` sizing (h1 56px→32px hero, h2 32px→22px section titles, h3 22px→17px feature card names, h4 18px→15px secondary, h5 15px→13px compact card names). Use `variant="none"` only when a CSS class must fully control typography (e.g. `.section-subtitle` with its special opacity color).                                                                                                                  |
+| Headings, body text, labels      | `Typography`        | `variant?: 'none'\|'h1'…'h6'\|'body'\|'caption'\|'label'` (no `body-sm` — removed; default to `body`, use `caption` only when strictly necessary), `as?` (HTML element override), `textAlign?`, `fontWeight?`, `role?`, `aria-current?`, `aria-hidden?`, `aria-label?`, `title?` + UIComponentProps. Heading variants h1-h5 use fluid `clamp()` sizing (h1 56px→32px hero, h2 32px→22px section titles, h3 22px→17px feature card names, h4 18px→15px secondary, h5 15px→13px compact card names). Use `variant="none"` only when a CSS class must fully control typography (e.g. `.section-subtitle` with its special opacity color).                                                                                                                  |
 | Bordered flex-column card        | `Card`              | Extends `BoxProps` - defaults: `display="flex"`, `flexDirection="column"`, `padding={14}`, `borderRadius={10}`, `border="1px solid var(--border)"`. All props override defaults. Import: `@repo/ui/core-elements/card`.                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Generic `<div>` wrapper          | `Box`               | `role?`, `aria-label?`, `aria-hidden?`, `aria-labelledby?`, `aria-describedby?`, `aria-modal?`, `tabIndex?`, `onClick?`, `onKeyDown?`, `onAnimationEnd?`, `onDragOver?`, `onDragEnter?`, `onDragLeave?`, `onDrop?`, `onDragStart?`, `onDragEnd?` + all `UIComponentProps`                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Centered max-width section       | `Container`         | `size?: 'xs'\|'sm'\|'md'\|'lg'\|'xl'`, `paddingX?`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
