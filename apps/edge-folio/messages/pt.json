@@ -418,7 +418,22 @@
       "hybrid": "Híbrido"
     },
     "privateListTitle": "Suas vagas privadas",
-    "sharedListTitle": "Catálogo compartilhado"
+    "sharedListTitle": "Catálogo compartilhado",
+    "searchRunning": "Busca em andamento…",
+    "fetchAlreadyRunning": "Já há uma busca de vagas em andamento. Aguarde a conclusão.",
+    "recentSearchesTitle": "Buscas recentes",
+    "recentSearchesUntitled": "Busca de vagas",
+    "recentSearchesProgress": "{completed} / {total} avaliadas",
+    "overallMatch": "Correspondência geral",
+    "technicalMatch": "Correspondência técnica",
+    "bucketMatch": "Combinações fortes (85%+)",
+    "bucketSemi": "Combinações possíveis (60–84%)",
+    "bucketNo": "Combinações baixas",
+    "searchStatuses": {
+      "running": "Em andamento",
+      "done": "Concluído",
+      "failed": "Falhou"
+    }
   },
   "AuthPage": {
     "tabSignIn": "Entrar",

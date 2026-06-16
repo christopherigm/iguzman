@@ -1,0 +1,23 @@
+.match-metric__explain-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--border, #e5e7eb);
+  color: var(--muted-foreground, #6b7280);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.match-metric__explain-btn:hover {
+  background: var(--accent, #06b6d4);
+  color: #ffffff;
+}

@@ -8,14 +8,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from career.models import Education, WorkExperience
-from matrix.models import BulletPoint, Skill
+from matrix.models import BulletPoint
 
 from .models import Company, JobApplication, _normalize_company_name
+from .scoring import compute_match_metrics
 from .serializers import JobApplicationSerializer
 from .tailoring import (
-    calculate_nafta_likelihood,
-    calculate_overall_match,
-    calculate_technical_match,
     generate_cover_letter,
     generate_nafta_letter,
     suggest_tn_categories,
@@ -287,57 +285,23 @@ class RefreshMetricsView(APIView):
 
     def post(self, request, pk):
         try:
-            application = JobApplication.objects.select_related('company').get(pk=pk, user=request.user)
+            application = (
+                JobApplication.objects
+                .select_related('company', 'source_posting')
+                .get(pk=pk, user=request.user)
+            )
         except JobApplication.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
         company_name = application.company.name if application.company_id else application.company_name
-        bullets_qs = list(
-            BulletPoint.objects.filter(user=user, is_approved=True).prefetch_related('skills')
-        )
-        bullets_payload = [
-            {
-                'id': b.id,
-                'text': b.text,
-                'category': b.category,
-                'skills': [s.name for s in b.skills.all()],
-            }
-            for b in bullets_qs
-        ]
-        skills = list(Skill.objects.filter(user=user).values('name', 'proficiency'))
-        work_experiences = list(
-            WorkExperience.objects.filter(user=user)
-            .order_by('-start_date')
-            .values('company', 'title', 'start_date', 'end_date', 'is_current', 'location')
-        )
-        educations = list(
-            Education.objects.filter(user=user)
-            .order_by('-start_year')
-            .values('institution', 'degree', 'field_of_study', 'start_year', 'end_year')
-        )
 
         try:
-            overall, overall_explanation = calculate_overall_match(
+            metrics = compute_match_metrics(
+                user=user,
                 job_description=application.job_description,
                 job_title=application.job_title,
                 company_name=company_name,
-                bullets=bullets_payload,
-                skills=skills,
-            )
-            technical, technical_explanation = calculate_technical_match(
-                job_description=application.job_description,
-                job_title=application.job_title,
-                company_name=company_name,
-                bullets=bullets_payload,
-                skills=skills,
-            )
-            nafta, nafta_explanation = calculate_nafta_likelihood(
-                job_description=application.job_description,
-                job_title=application.job_title,
-                skills=skills,
-                work_experiences=work_experiences,
-                educations=educations,
             )
         except Exception as exc:
             logger.error('LLM error during metrics refresh: %s', exc)
@@ -346,12 +310,12 @@ class RefreshMetricsView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-        application.overall_match = overall
-        application.overall_match_explanation = overall_explanation
-        application.technical_match = technical
-        application.technical_match_explanation = technical_explanation
-        application.nafta_tn_likelihood = nafta
-        application.nafta_tn_likelihood_explanation = nafta_explanation
+        application.overall_match = metrics['overall_match']
+        application.overall_match_explanation = metrics['overall_match_explanation']
+        application.technical_match = metrics['technical_match']
+        application.technical_match_explanation = metrics['technical_match_explanation']
+        application.nafta_tn_likelihood = metrics['nafta_tn_likelihood']
+        application.nafta_tn_likelihood_explanation = metrics['nafta_tn_likelihood_explanation']
         application.save(update_fields=[
             'overall_match', 'overall_match_explanation',
             'technical_match', 'technical_match_explanation',
@@ -360,14 +324,26 @@ class RefreshMetricsView(APIView):
         ])
         _invalidate_application(user.id, pk)
 
-        return Response({
-            'overall_match': overall,
-            'overall_match_explanation': overall_explanation,
-            'technical_match': technical,
-            'technical_match_explanation': technical_explanation,
-            'nafta_tn_likelihood': nafta,
-            'nafta_tn_likelihood_explanation': nafta_explanation,
-        })
+        # Mirror the refreshed scores onto the posting this application was saved from,
+        # so the jobs feed shows the same up-to-date metrics. The posting is owner-scoped
+        # (private BYOK result), so writing the per-user score onto the row is safe.
+        posting = application.source_posting
+        if posting is not None:
+            posting.overall_match = metrics['overall_match']
+            posting.overall_match_explanation = metrics['overall_match_explanation']
+            posting.technical_match = metrics['technical_match']
+            posting.technical_match_explanation = metrics['technical_match_explanation']
+            posting.nafta_tn_likelihood = metrics['nafta_tn_likelihood']
+            posting.nafta_tn_likelihood_explanation = metrics['nafta_tn_likelihood_explanation']
+            posting.save(update_fields=[
+                'overall_match', 'overall_match_explanation',
+                'technical_match', 'technical_match_explanation',
+                'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
+                'modified',
+            ])
+            cache.delete(f'jobs:feed:{user.id}')
+
+        return Response(metrics)
 
 
 class TnSuggestView(APIView):

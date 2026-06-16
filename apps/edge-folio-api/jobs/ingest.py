@@ -26,16 +26,22 @@ def upsert_postings(
     postings: list[NormalizedPosting],
     owner=None,
     is_private: bool = False,
+    search=None,
 ) -> dict:
-    """Insert or refresh postings; returns counts for logging.
+    """Insert or refresh postings; returns counts and affected ids for logging.
 
     For the shared catalog, a posting whose ``dedup_hash`` already exists from a
     *different* provider is treated as a duplicate - first-seen wins and we only
     refresh the original's freshness (``fetched_at`` / ``expires_at``).
+
+    When ``search`` is given (private BYOK fetch) it is linked to each upserted
+    posting and the returned ``affected_ids`` lists the postings so the caller can
+    run per-posting LLM scoring.
     """
     now = timezone.now()
     expires_at = now + POSTING_TTL
     created = refreshed = skipped_dup = 0
+    affected_ids: list[int] = []
 
     for posting in postings:
         if not posting.provider_uid or not posting.job_url:
@@ -67,13 +73,16 @@ def upsert_postings(
             'is_private': is_private,
             'owner': owner,
         })
+        if search is not None:
+            defaults['search'] = search
 
-        _, was_created = JobPosting.objects.update_or_create(
+        obj, was_created = JobPosting.objects.update_or_create(
             provider=provider,
             provider_uid=posting.provider_uid,
             owner=owner,
             defaults=defaults,
         )
+        affected_ids.append(obj.pk)
         if was_created:
             created += 1
         else:
@@ -84,4 +93,5 @@ def upsert_postings(
         'refreshed': refreshed,
         'skipped_dup': skipped_dup,
         'total': len(postings),
+        'affected_ids': affected_ids,
     }

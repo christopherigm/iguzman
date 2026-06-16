@@ -25,6 +25,26 @@ export interface JobPosting {
   saved_application_id: number | null;
   // True when the current user owns this private posting and may delete it.
   is_owner: boolean;
+  // Per-user LLM match metrics; only populated for private (owner-scoped) postings.
+  search: number | null;
+  overall_match: number | null;
+  overall_match_explanation: string;
+  technical_match: number | null;
+  technical_match_explanation: string;
+  nafta_tn_likelihood: number | null;
+  nafta_tn_likelihood_explanation: string;
+  us_citizen_or_pr_required: boolean | null;
+}
+
+export type JobSearchStatus = "running" | "done" | "failed";
+
+export interface JobSearch {
+  id: number;
+  query: string;
+  status: JobSearchStatus;
+  jobs_found: number;
+  metrics_completed: number;
+  created: string;
 }
 
 export interface JobFeed {
@@ -103,6 +123,12 @@ export function triggerJobFetch(): Promise<{ detail: string }> {
 
 export function getJobCredentials(): Promise<JobApiCredential[]> {
   return request("/api/jobs/credentials");
+}
+
+// The user's most recent fetch runs (newest first), used to render progress and
+// poll until no search is still "running".
+export function getJobSearches(): Promise<JobSearch[]> {
+  return request("/api/jobs/searches");
 }
 
 export interface CreateCredentialPayload {

@@ -3,6 +3,7 @@ import logging
 from celery import shared_task
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models import F
 from django.utils import timezone
 
 from .ingest import upsert_postings
@@ -253,8 +254,18 @@ def select_user_credential(user_id: int):
     return creds[0] if creds else None
 
 
+def _finish_search(search, status: str) -> None:
+    """Mark a JobSearch terminal and bust the user's searches + feed caches."""
+    if search is None:
+        return
+    search.status = status
+    search.save(update_fields=['status', 'modified'])
+    cache.delete(f'jobs:searches:{search.user_id}')
+    cache.delete(f'jobs:feed:{search.user_id}')
+
+
 @shared_task
-def ingest_user_feed(user_id: int) -> None:
+def ingest_user_feed(user_id: int, search_id: int | None = None) -> None:
     """Fetch a private feed for a BYOK user using their own decrypted key(s).
 
     Walks the user's usable credentials in priority order (JSearch, then Adzuna)
@@ -263,10 +274,21 @@ def ingest_user_feed(user_id: int) -> None:
     so a JSearch miss falls back to Adzuna when the user has a key for it. Each
     attempted provider is billed one call. Results are stored as private,
     owner-scoped postings and never enter the shared catalog.
+
+    When ``search_id`` is given, the run is tracked on that :class:`JobSearch`:
+    ``jobs_found`` is recorded, each posting is LLM-scored one-by-one (updating
+    ``metrics_completed`` so the UI can poll progress), and the search is marked
+    ``done`` / ``failed`` at the end. A zero-result search is marked ``done``
+    immediately so the user can fetch again.
     """
+    from .models import JobSearch
+
+    search = JobSearch.objects.filter(pk=search_id, user_id=user_id).first() if search_id else None
+
     credentials = usable_user_credentials(user_id)
     if not credentials:
         logger.info('ingest_user_feed: no active credential with remaining quota for user=%s', user_id)
+        _finish_search(search, 'done')
         return
 
     from users.models import UserProfile
@@ -274,9 +296,14 @@ def ingest_user_feed(user_id: int) -> None:
     profile = UserProfile.objects.filter(user_id=user_id).prefetch_related('preferred_stack').first()
     if profile is None or not profile.job_title.strip():
         logger.info('ingest_user_feed: user=%s has no job title to search with', user_id)
+        _finish_search(search, 'done')
         return
 
     query = _resolve_query(profile)
+    if search is not None:
+        search.query = query
+        search.save(update_fields=['query', 'modified'])
+        cache.delete(f'jobs:searches:{user_id}')
 
     if profile.job_search_include_location:
         location = profile.location.strip()
@@ -285,7 +312,7 @@ def ingest_user_feed(user_id: int) -> None:
         location = ''
         country = 'us'
 
-    fetched_any = False
+    affected_ids: list[int] = []
     for credential in credentials:
         try:
             client = get_client(credential.provider, api_key=credential.get_key())
@@ -299,7 +326,7 @@ def ingest_user_feed(user_id: int) -> None:
         credential.record_call()
         result = upsert_postings(
             credential.provider, postings,
-            owner=credential.user, is_private=True,
+            owner=credential.user, is_private=True, search=search,
         )
         logger.info(
             'ingest_user_feed: user=%s provider=%s fetched=%d created=%d refreshed=%d',
@@ -307,7 +334,7 @@ def ingest_user_feed(user_id: int) -> None:
         )
 
         if postings:
-            fetched_any = True
+            affected_ids = result['affected_ids']
             break
         logger.info(
             'ingest_user_feed: %s returned 0 for user=%s; trying fallback provider',
@@ -316,5 +343,78 @@ def ingest_user_feed(user_id: int) -> None:
 
     # Quota changed for every attempted provider; refresh the feed if anything landed.
     cache.delete(f'jobs:credentials:{user_id}')
-    if fetched_any:
+    if affected_ids:
+        cache.delete(f'jobs:feed:{user_id}')
+
+    if search is None:
+        return
+
+    from .models import JobPosting
+
+    # Only newly-created or still-unscored postings need LLM scoring. A posting that
+    # reappears in a later search keeps its existing score, so re-scoring it would just
+    # burn LLM calls. Newly-created rows start with overall_match=None, so this single
+    # filter also covers a prior search that never finished scoring a posting.
+    unscored_ids = list(
+        JobPosting.objects
+        .filter(pk__in=affected_ids, overall_match__isnull=True)
+        .values_list('pk', flat=True)
+    )
+
+    search.jobs_found = len(affected_ids)
+    # Pre-count the postings that are already scored so the progress bar (metrics_completed
+    # / jobs_found) still reaches 100% even though we only score the new ones.
+    search.metrics_completed = len(affected_ids) - len(unscored_ids)
+    search.save(update_fields=['jobs_found', 'metrics_completed', 'modified'])
+    cache.delete(f'jobs:searches:{user_id}')
+
+    if not unscored_ids:
+        _finish_search(search, 'done')
+        return
+
+    _score_postings(user_id, search, unscored_ids)
+    _finish_search(search, 'done')
+
+
+def _score_postings(user_id: int, search, posting_ids: list[int]) -> None:
+    """Run LLM match scoring for each posting, updating progress as they complete."""
+    from applications.scoring import compute_match_metrics, detect_us_citizen_required
+
+    from .models import JobPosting
+
+    for posting_id in posting_ids:
+        posting = JobPosting.objects.filter(pk=posting_id).first()
+        if posting is None:
+            continue
+        company_name = posting.company_name
+        try:
+            metrics = compute_match_metrics(
+                user=search.user,
+                job_description=posting.job_description,
+                job_title=posting.job_title,
+                company_name=company_name,
+            )
+            posting.overall_match = metrics['overall_match']
+            posting.overall_match_explanation = metrics['overall_match_explanation']
+            posting.technical_match = metrics['technical_match']
+            posting.technical_match_explanation = metrics['technical_match_explanation']
+            posting.nafta_tn_likelihood = metrics['nafta_tn_likelihood']
+            posting.nafta_tn_likelihood_explanation = metrics['nafta_tn_likelihood_explanation']
+            posting.us_citizen_or_pr_required = detect_us_citizen_required(posting.job_description)
+            posting.save(update_fields=[
+                'overall_match', 'overall_match_explanation',
+                'technical_match', 'technical_match_explanation',
+                'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
+                'us_citizen_or_pr_required', 'modified',
+            ])
+        except Exception as exc:
+            # A single scoring failure shouldn't abort the whole run; the posting
+            # still appears (unscored postings fall into the No-Match bucket in the UI).
+            logger.warning('ingest_user_feed: scoring failed for posting=%s: %s', posting_id, exc)
+
+        search.metrics_completed = F('metrics_completed') + 1
+        search.save(update_fields=['metrics_completed', 'modified'])
+        search.refresh_from_db(fields=['metrics_completed'])
+        # Bust both caches so the searches card and the feed reveal each posting live.
+        cache.delete(f'jobs:searches:{user_id}')
         cache.delete(f'jobs:feed:{user_id}')

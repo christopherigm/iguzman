@@ -418,7 +418,22 @@
       "hybrid": "Híbrido"
     },
     "privateListTitle": "Tus ofertas privadas",
-    "sharedListTitle": "Catálogo compartido"
+    "sharedListTitle": "Catálogo compartido",
+    "searchRunning": "Búsqueda en curso…",
+    "fetchAlreadyRunning": "Ya hay una búsqueda en curso. Espera a que termine.",
+    "recentSearchesTitle": "Búsquedas recientes",
+    "recentSearchesUntitled": "Búsqueda de empleo",
+    "recentSearchesProgress": "{completed} / {total} evaluadas",
+    "overallMatch": "Coincidencia general",
+    "technicalMatch": "Coincidencia técnica",
+    "bucketMatch": "Coincidencias altas (85%+)",
+    "bucketSemi": "Coincidencias posibles (60–84%)",
+    "bucketNo": "Coincidencias bajas",
+    "searchStatuses": {
+      "running": "En curso",
+      "done": "Listo",
+      "failed": "Falló"
+    }
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",

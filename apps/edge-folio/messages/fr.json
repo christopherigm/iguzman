@@ -418,7 +418,22 @@
       "hybrid": "Hybride"
     },
     "privateListTitle": "Vos offres privées",
-    "sharedListTitle": "Catalogue partagé"
+    "sharedListTitle": "Catalogue partagé",
+    "searchRunning": "Recherche en cours…",
+    "fetchAlreadyRunning": "Une recherche d'emploi est déjà en cours. Veuillez patienter.",
+    "recentSearchesTitle": "Recherches récentes",
+    "recentSearchesUntitled": "Recherche d'emploi",
+    "recentSearchesProgress": "{completed} / {total} évaluées",
+    "overallMatch": "Correspondance globale",
+    "technicalMatch": "Correspondance technique",
+    "bucketMatch": "Fortes correspondances (85%+)",
+    "bucketSemi": "Correspondances possibles (60–84%)",
+    "bucketNo": "Faibles correspondances",
+    "searchStatuses": {
+      "running": "En cours",
+      "done": "Terminé",
+      "failed": "Échec"
+    }
   },
   "AuthPage": {
     "tabSignIn": "Se connecter",

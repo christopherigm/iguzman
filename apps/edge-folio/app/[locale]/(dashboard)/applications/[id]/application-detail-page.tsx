@@ -66,6 +66,7 @@ import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
+import { MatchMetrics } from "../../_components/match-metrics";
 import "swiper/css";
 import "swiper/css/pagination";
 import "./application-detail-page.css";
@@ -114,46 +115,6 @@ interface ExportData {
   educations: Education[];
   languages: Language[];
   projects: Project[];
-}
-
-function MetricBar({
-  label,
-  value,
-  explainAriaLabel,
-  onExplain,
-}: {
-  label: string;
-  value: number;
-  explainAriaLabel: string;
-  onExplain?: () => void;
-}) {
-  const color = value >= 70 ? "#22c55e" : value >= 45 ? "#f59e0b" : "#ef4444";
-  return (
-    <Box display="flex" flexDirection="column" gap={4}>
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Box display="flex" alignItems="center" gap={6}>
-          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {label}
-          </Typography>
-          {onExplain && (
-            <Button
-              unstyled
-              type="button"
-              onClick={onExplain}
-              aria-label={explainAriaLabel}
-              className="detail__metric-explain-btn"
-            >
-              ?
-            </Button>
-          )}
-        </Box>
-        <Typography variant="body" fontWeight={600} color={color}>
-          {value}%
-        </Typography>
-      </Box>
-      <ProgressBar value={value} size={6} label={label} />
-    </Box>
-  );
 }
 
 function SwitchRow({
@@ -1214,6 +1175,21 @@ export function ApplicationDetailPage({
           {!editing && (
             <>
               <Button
+                text={deleting ? t("deleting") : t("delete")}
+                type="button"
+                size="md"
+                kind="error"
+                disabled={deleting}
+                onClick={() => setConfirmDelete(true)}
+              />
+              <Button
+                text={t("edit")}
+                type="button"
+                size="md"
+                onClick={openEdit}
+                kind="warning"
+              />
+              <Button
                 text={
                   refreshingMetrics
                     ? t("refreshingMetrics")
@@ -1223,20 +1199,7 @@ export function ApplicationDetailPage({
                 size="md"
                 disabled={refreshingMetrics}
                 onClick={handleRefreshMetrics}
-              />
-              <Button
-                text={t("edit")}
-                type="button"
-                size="md"
-                onClick={openEdit}
-              />
-              <Button
-                text={deleting ? t("deleting") : t("delete")}
-                type="button"
-                size="md"
-                kind="error"
-                disabled={deleting}
-                onClick={() => setConfirmDelete(true)}
+                kind="success"
               />
             </>
           )}
@@ -1470,54 +1433,44 @@ export function ApplicationDetailPage({
               app.nafta_tn_likelihood != null) && (
               <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
                 <Card gap={10}>
-                  {app.overall_match != null && (
-                    <MetricBar
-                      label={t("overallMatch")}
-                      value={app.overall_match}
-                      explainAriaLabel={t("metricExplain")}
-                      onExplain={
-                        app.overall_match_explanation
-                          ? () =>
-                              setExplainModal({
-                                title: t("overallMatch"),
-                                text: app.overall_match_explanation,
-                              })
-                          : undefined
-                      }
-                    />
-                  )}
-                  {app.technical_match != null && (
-                    <MetricBar
-                      label={t("technicalMatch")}
-                      value={app.technical_match}
-                      explainAriaLabel={t("metricExplain")}
-                      onExplain={
-                        app.technical_match_explanation
-                          ? () =>
-                              setExplainModal({
-                                title: t("technicalMatch"),
-                                text: app.technical_match_explanation,
-                              })
-                          : undefined
-                      }
-                    />
-                  )}
-                  {app.nafta_tn_likelihood != null && (
-                    <MetricBar
-                      label={t("naftaLikelihood")}
-                      value={app.nafta_tn_likelihood}
-                      explainAriaLabel={t("metricExplain")}
-                      onExplain={
-                        app.nafta_tn_likelihood_explanation
-                          ? () =>
-                              setExplainModal({
-                                title: t("naftaLikelihood"),
-                                text: app.nafta_tn_likelihood_explanation,
-                              })
-                          : undefined
-                      }
-                    />
-                  )}
+                  <MatchMetrics
+                    explainAriaLabel={t("metricExplain")}
+                    onExplain={(item) =>
+                      setExplainModal({
+                        title: item.label,
+                        text: item.explanation ?? "",
+                      })
+                    }
+                    items={[
+                      ...(app.overall_match != null
+                        ? [
+                            {
+                              label: t("overallMatch"),
+                              value: app.overall_match,
+                              explanation: app.overall_match_explanation,
+                            },
+                          ]
+                        : []),
+                      ...(app.technical_match != null
+                        ? [
+                            {
+                              label: t("technicalMatch"),
+                              value: app.technical_match,
+                              explanation: app.technical_match_explanation,
+                            },
+                          ]
+                        : []),
+                      ...(app.nafta_tn_likelihood != null
+                        ? [
+                            {
+                              label: t("naftaLikelihood"),
+                              value: app.nafta_tn_likelihood,
+                              explanation: app.nafta_tn_likelihood_explanation,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
                 </Card>
               </Grid>
             )}

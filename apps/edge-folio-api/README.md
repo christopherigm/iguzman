@@ -111,6 +111,7 @@ scrapes & analyzes a company (about/analysis/intel score, logo download via
 | ----------------------------------- | -------------------- | ----------------------------------------------- |
 | `feed/`                             | `JobFeedView`        | Shared catalog + optional per-user private feed |
 | `fetch/`                            | `FetchJobsView`      | On-demand BYOK fetch from providers             |
+| `searches/`                         | `JobSearchListView`  | Recent BYOK fetch runs + LLM scoring progress   |
 | `credentials/`, `credentials/<pk>/` | `UserApiCredential*` | Manage encrypted BYOK provider keys             |
 | `<pk>/save/`                        | `SaveJobView`        | Save a posting into a `JobApplication`          |
 | `<pk>/delete/`                      | `DeleteJobView`      | Remove a posting                                |

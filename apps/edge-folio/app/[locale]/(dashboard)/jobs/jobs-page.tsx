@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Container } from "@repo/ui/core-elements/container";
@@ -12,6 +12,8 @@ import { Select } from "@repo/ui/core-elements/select";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { Switch } from "@repo/ui/core-elements/switch";
+import { Badge } from "@repo/ui/core-elements/badge";
+import { Spinner } from "@repo/ui/core-elements/spinner";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import {
   getJobFeed,
@@ -19,8 +21,10 @@ import {
   deleteJob,
   triggerJobFetch,
   getJobCredentials,
+  getJobSearches,
   JobsError,
   type JobPosting,
+  type JobSearch,
   type JobCountry,
   type JobWorkType,
   type JobScope,
@@ -32,6 +36,26 @@ import Card from "@repo/ui/core-elements/card";
 const COUNTRIES: JobCountry[] = ["us", "ca", "mx"];
 const WORK_TYPES: JobWorkType[] = ["remote", "onsite", "hybrid"];
 const PER_PAGE = 20;
+const POLL_INTERVAL = 5000;
+
+type MatchBucket = "match" | "semi" | "no";
+
+// Curated bucket for a scored private posting. An explicit citizenship requirement
+// or a missing/low score lands in "No match"; 85+ is "Match"; 60-84 is "Semi-match".
+function bucketOf(posting: JobPosting): MatchBucket {
+  if (posting.us_citizen_or_pr_required) return "no";
+  const m = posting.overall_match;
+  if (m == null) return "no";
+  if (m >= 85) return "match";
+  if (m >= 60) return "semi";
+  return "no";
+}
+
+const SEARCH_STATUS_COLORS: Record<JobSearch["status"], string> = {
+  running: "#f59e0b",
+  done: "#22c55e",
+  failed: "#ef4444",
+};
 
 // ── Job list (one scope) ────────────────────────────────────────────────────
 
@@ -234,6 +258,82 @@ function JobSection({
   );
 }
 
+// ── Recent job searches card ────────────────────────────────────────────────
+
+function JobSearchesCard({ searches }: { searches: JobSearch[] }) {
+  const t = useTranslations("JobsPage");
+  if (searches.length === 0) return null;
+
+  return (
+    <Card gap={10} marginBottom={20}>
+      <Typography variant="body" fontWeight={600} color="var(--foreground)">
+        {t("recentSearchesTitle")}
+      </Typography>
+      <Box display="flex" flexDirection="column" gap={8}>
+        {searches.map((s) => {
+          const date = new Date(s.created).toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return (
+            <Box
+              key={s.id}
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap={12}
+              flexWrap="wrap"
+            >
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={8}
+                flex={1}
+                styles={{ minWidth: 0 }}
+              >
+                {s.status === "running" && <Spinner size={14} />}
+                <Typography
+                  variant="body"
+                  color="var(--foreground)"
+                  styles={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {s.query || t("recentSearchesUntitled")}
+                </Typography>
+              </Box>
+              <Box display="flex" alignItems="center" gap={8}>
+                <Typography
+                  variant="body"
+                  color="var(--muted-foreground, #6b7280)"
+                >
+                  {t("recentSearchesProgress", {
+                    completed: s.metrics_completed,
+                    total: s.jobs_found,
+                  })}
+                </Typography>
+                <Badge variant="subtle" color={SEARCH_STATUS_COLORS[s.status]}>
+                  {t(`searchStatuses.${s.status}`)}
+                </Badge>
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                >
+                  {date}
+                </Typography>
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+    </Card>
+  );
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export function JobsPage() {
@@ -270,6 +370,10 @@ export function JobsPage() {
   const [canFetch, setCanFetch] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<JobPosting | null>(null);
+  const [searches, setSearches] = useState<JobSearch[]>([]);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A fetch is in flight on the server; the button stays disabled until it finishes.
+  const running = searches.some((s) => s.status === "running");
 
   function showToast(text: string, kind: "success" | "error") {
     setToast({ text, kind });
@@ -308,10 +412,62 @@ export function JobsPage() {
     page: pageShared,
   });
 
-  const reloadAll = useCallback(() => {
-    privateList.reload();
-    sharedList.reload();
-  }, [privateList, sharedList]);
+  // Stable ref to the latest private reload so the poll loop (started once) always
+  // calls the current version without having to re-subscribe.
+  const privateReloadRef = useRef(privateList.reload);
+  privateReloadRef.current = privateList.reload;
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearTimeout(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  const loadSearches = useCallback(async () => {
+    try {
+      const data = await getJobSearches();
+      setSearches(data);
+      return data;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Poll the searches endpoint while a fetch is running (mirrors the tailoring poll
+  // on the application detail page). Each tick refreshes the searches card and, when
+  // a posting finishes scoring (progress advances) or the run ends, reloads the
+  // private list so newly scored postings surface live.
+  const startPolling = useCallback(() => {
+    if (pollRef.current) return;
+    let lastProgress = -1;
+    const tick = async () => {
+      const data = await getJobSearches().catch(() => null);
+      if (data) {
+        setSearches(data);
+        const active = data.find((s) => s.status === "running");
+        const progress = active ? active.metrics_completed : -1;
+        if (progress !== lastProgress) {
+          lastProgress = progress;
+          privateReloadRef.current();
+        }
+        if (!active) {
+          pollRef.current = null;
+          return;
+        }
+      }
+      pollRef.current = setTimeout(tick, POLL_INTERVAL);
+    };
+    pollRef.current = setTimeout(tick, POLL_INTERVAL);
+  }, []);
+
+  // Load recent searches on mount; resume polling if one is still running.
+  useEffect(() => {
+    loadSearches().then((data) => {
+      if (data?.some((s) => s.status === "running")) startPolling();
+    });
+    return () => stopPolling();
+  }, [loadSearches, startPolling, stopPolling]);
 
   // Surface the "Fetch Jobs" control for staff (shared catalog) and for BYOK
   // users with a stored key (private feed). Anonymous users keep both false.
@@ -335,15 +491,22 @@ export function JobsPage() {
     try {
       await triggerJobFetch();
       showToast(t("fetchStarted"), "success");
-      // The fetch runs async on a worker; refresh shortly to surface new jobs.
-      setTimeout(() => reloadAll(), 3000);
+      // Surface the new running search immediately, then poll for scoring progress.
+      await loadSearches();
+      startPolling();
     } catch (err) {
-      const isLimit = err instanceof JobsError && err.status === 429;
-      showToast(isLimit ? t("fetchLimitReached") : t("fetchError"), "error");
+      if (err instanceof JobsError && err.status === 409) {
+        showToast(t("fetchAlreadyRunning"), "error");
+        loadSearches();
+      } else if (err instanceof JobsError && err.status === 429) {
+        showToast(t("fetchLimitReached"), "error");
+      } else {
+        showToast(t("fetchError"), "error");
+      }
     } finally {
       setFetching(false);
     }
-  }, [t, reloadAll]);
+  }, [t, loadSearches, startPolling]);
 
   // Debounce the search box into the URL query param.
   useEffect(() => {
@@ -467,6 +630,34 @@ export function JobsPage() {
     (matchOnly ? list.postings.filter((p) => p.score > 0) : list.postings)
       .length;
 
+  const byCreatedDesc = (a: JobPosting, b: JobPosting) =>
+    new Date(b.created).getTime() - new Date(a.created).getTime();
+
+  // Group the loaded private postings into curated buckets, newest first within each.
+  const privateBuckets = useMemo(() => {
+    const groups: Record<MatchBucket, JobPosting[]> = {
+      match: [],
+      semi: [],
+      no: [],
+    };
+    for (const p of privateList.postings) groups[bucketOf(p)].push(p);
+    (Object.keys(groups) as MatchBucket[]).forEach((k) =>
+      groups[k].sort(byCreatedDesc),
+    );
+    return groups;
+  }, [privateList.postings]);
+
+  // Each bucket reuses JobSection; loading/error/pagination for the private list as a
+  // whole are handled separately, so a per-bucket section never paginates on its own.
+  const bucketList = (postings: JobPosting[]): JobListState => ({
+    postings,
+    count: postings.length,
+    loading: false,
+    error: false,
+    reload: privateList.reload,
+    removePosting: privateList.removePosting,
+  });
+
   // One spinner on the very first load (both lists pending, no data yet);
   // afterwards each section manages its own loading state for page moves.
   const initialLoading =
@@ -479,7 +670,7 @@ export function JobsPage() {
     !sharedList.loading &&
     !privateList.error &&
     !sharedList.error &&
-    visibleCount(privateList) === 0 &&
+    privateList.postings.length === 0 &&
     visibleCount(sharedList) === 0;
 
   return (
@@ -507,15 +698,23 @@ export function JobsPage() {
         </Box>
         {(isStaff || canFetch) && (
           <Button
-            text={fetching ? t("fetching") : t("fetchJobs")}
+            text={
+              running
+                ? t("searchRunning")
+                : fetching
+                  ? t("fetching")
+                  : t("fetchJobs")
+            }
             type="button"
             size="md"
             kind="success"
-            disabled={fetching}
+            disabled={fetching || running}
             onClick={handleFetch}
           />
         )}
       </Box>
+
+      <JobSearchesCard searches={searches} />
 
       {filterChips}
 
@@ -549,19 +748,94 @@ export function JobsPage() {
         </Box>
       ) : (
         <>
-          <JobSection
-            title={t("privateListTitle")}
-            list={privateList}
-            page={pagePrivate}
-            onPageChange={(p) => setParam({ page_private: String(p) })}
-            matchOnly={matchOnly}
-            onSave={handleSave}
-            onDelete={handleDelete}
-            savingId={savingId}
-            deletingId={deletingId}
-            savedMap={savedMap}
-            isStaff={isStaff}
-          />
+          {privateList.error && privateList.postings.length === 0 ? (
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              gap={16}
+              paddingY={40}
+              marginBottom={32}
+            >
+              <Typography variant="body" color="var(--error, #ef4444)">
+                {t("errorLoad")}
+              </Typography>
+              <Button
+                text={t("retry")}
+                type="button"
+                size="md"
+                kind="success"
+                onClick={privateList.reload}
+              />
+            </Box>
+          ) : (
+            <>
+              {(
+                [
+                  ["match", t("bucketMatch")],
+                  ["semi", t("bucketSemi")],
+                  ["no", t("bucketNo")],
+                ] as Array<[MatchBucket, string]>
+              ).map(([bucket, title]) => (
+                <JobSection
+                  key={bucket}
+                  title={title}
+                  list={bucketList(privateBuckets[bucket])}
+                  page={1}
+                  onPageChange={() => {}}
+                  matchOnly={false}
+                  onSave={handleSave}
+                  onDelete={handleDelete}
+                  savingId={savingId}
+                  deletingId={deletingId}
+                  savedMap={savedMap}
+                  isStaff={isStaff}
+                />
+              ))}
+              {privateList.count > PER_PAGE && (
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  gap={12}
+                  marginTop={4}
+                  marginBottom={32}
+                >
+                  <Button
+                    text={t("prev")}
+                    type="button"
+                    size="md"
+                    kind="success"
+                    disabled={pagePrivate <= 1}
+                    onClick={() =>
+                      setParam({ page_private: String(pagePrivate - 1) })
+                    }
+                  />
+                  <Typography
+                    variant="body"
+                    color="var(--muted-foreground, #6b7280)"
+                  >
+                    {t("pageOf", {
+                      page: pagePrivate,
+                      total: Math.max(1, Math.ceil(privateList.count / PER_PAGE)),
+                    })}
+                  </Typography>
+                  <Button
+                    text={t("next")}
+                    type="button"
+                    size="md"
+                    kind="success"
+                    disabled={
+                      pagePrivate >= Math.ceil(privateList.count / PER_PAGE)
+                    }
+                    onClick={() =>
+                      setParam({ page_private: String(pagePrivate + 1) })
+                    }
+                  />
+                </Box>
+              )}
+            </>
+          )}
           <JobSection
             title={t("sharedListTitle")}
             list={sharedList}

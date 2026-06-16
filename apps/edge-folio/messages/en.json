@@ -418,7 +418,22 @@
       "hybrid": "Hybrid"
     },
     "privateListTitle": "Your private postings",
-    "sharedListTitle": "Shared catalog"
+    "sharedListTitle": "Shared catalog",
+    "searchRunning": "Search running…",
+    "fetchAlreadyRunning": "A job search is already running. Please wait for it to finish.",
+    "recentSearchesTitle": "Recent searches",
+    "recentSearchesUntitled": "Job search",
+    "recentSearchesProgress": "{completed} / {total} scored",
+    "overallMatch": "Overall match",
+    "technicalMatch": "Technical match",
+    "bucketMatch": "Strong matches (85%+)",
+    "bucketSemi": "Possible matches (60–84%)",
+    "bucketNo": "Low matches",
+    "searchStatuses": {
+      "running": "Running",
+      "done": "Done",
+      "failed": "Failed"
+    }
   },
   "ApplicationDetailPage": {
     "metaTitle": "Application",

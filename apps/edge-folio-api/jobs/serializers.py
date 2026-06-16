@@ -1,13 +1,14 @@
 from rest_framework import serializers
 
-from .models import PROVIDER_CHOICES, JobPosting, UserApiCredential
+from .models import PROVIDER_CHOICES, JobPosting, JobSearch, UserApiCredential
 
 
 class JobFeedSerializer(serializers.ModelSerializer):
     """Read serializer for catalog postings.
 
     ``score``, ``saved_application_id`` and ``is_owner`` are injected by the view
-    after ranking / save-state lookup; they are not stored on the model.
+    after ranking / save-state lookup; they are not stored on the model. The
+    ``*_match`` LLM metrics are only populated for private (owner-scoped) postings.
     """
 
     score = serializers.IntegerField(read_only=True, default=0)
@@ -23,6 +24,20 @@ class JobFeedSerializer(serializers.ModelSerializer):
             'work_type', 'location', 'country', 'category', 'tags',
             'is_private', 'created',
             'score', 'saved_application_id', 'is_owner',
+            'search',
+            'overall_match', 'overall_match_explanation',
+            'technical_match', 'technical_match_explanation',
+            'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
+            'us_citizen_or_pr_required',
+        )
+        read_only_fields = fields
+
+
+class JobSearchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobSearch
+        fields = (
+            'id', 'query', 'status', 'jobs_found', 'metrics_completed', 'created',
         )
         read_only_fields = fields
 

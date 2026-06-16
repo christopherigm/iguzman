@@ -46,6 +46,15 @@ COUNTRY_CHOICES = [
     ('mx', 'Mexico'),
 ]
 
+# Lifecycle of a per-user fetch run. At most one 'running' row exists per user at a
+# time (enforced by a partial unique constraint); the UI polls until it leaves
+# 'running' and blocks a new fetch while one is active.
+JOB_SEARCH_STATUS_CHOICES = [
+    ('running', 'Running'),
+    ('done', 'Done'),
+    ('failed', 'Failed'),
+]
+
 
 def _normalize_simple(value: str) -> str:
     value = (value or '').lower().strip()
@@ -91,6 +100,24 @@ class JobPosting(Common):
     expires_at = models.DateTimeField(db_index=True)
     raw = models.JSONField(null=True, blank=True)
 
+    # Per-user LLM match metrics. Only populated for private (owner-scoped) postings,
+    # where a single owner makes a per-user score safe to store on the row itself.
+    # Mirrors the metric fields on applications.JobApplication.
+    search = models.ForeignKey(
+        'JobSearch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='postings',
+    )
+    overall_match = models.PositiveSmallIntegerField(null=True, blank=True)
+    overall_match_explanation = models.TextField(blank=True)
+    technical_match = models.PositiveSmallIntegerField(null=True, blank=True)
+    technical_match_explanation = models.TextField(blank=True)
+    nafta_tn_likelihood = models.PositiveSmallIntegerField(null=True, blank=True)
+    nafta_tn_likelihood_explanation = models.TextField(blank=True)
+    us_citizen_or_pr_required = models.BooleanField(null=True, blank=True)
+
     # BYOK private results (option A): postings fetched with a user's own key are
     # owned by that user and excluded from the shared feed for everyone else.
     is_private = models.BooleanField(default=False)
@@ -124,6 +151,36 @@ class JobPosting(Common):
     def __str__(self):
         scope = f'private:{self.owner_id}' if self.is_private else 'shared'
         return f'{self.job_title} at {self.company_name} ({self.provider}/{scope})'
+
+
+class JobSearch(Common):
+    """One per-user BYOK fetch run.
+
+    ``created`` (from :class:`core.models.Common`) records when the search started.
+    ``jobs_found`` is the number of postings stored; ``metrics_completed`` counts how
+    many have finished LLM scoring. The partial unique constraint guarantees at most
+    one ``running`` search per user, which gates concurrent fetches.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='job_searches')
+    query = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=JOB_SEARCH_STATUS_CHOICES, default='running')
+    jobs_found = models.PositiveIntegerField(default=0)
+    metrics_completed = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-created']
+        verbose_name_plural = 'job searches'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=Q(status='running'),
+                name='unique_running_search_per_user',
+            ),
+        ]
+
+    def __str__(self):
+        return f'JobSearch({self.user_id}, {self.status}, {self.metrics_completed}/{self.jobs_found})'
 
 
 class UserApiCredential(Common):

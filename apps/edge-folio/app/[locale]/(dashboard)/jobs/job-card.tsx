@@ -8,6 +8,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import type { JobPosting } from "@/lib/jobs";
+import { MatchMetrics } from "../_components/match-metrics";
 import "./jobs-page.css";
 
 export function formatSalary(posting: JobPosting): string | null {
@@ -112,10 +113,7 @@ export function JobCard({
           >
             {posting.job_title}
           </Typography>
-          <Typography
-            variant="body"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {posting.company_name}
           </Typography>
         </Box>
@@ -152,6 +150,21 @@ export function JobCard({
         {posting.job_description}
       </Typography>
 
+      {(posting.overall_match != null || posting.technical_match != null) && (
+        <MatchMetrics
+          gap={6}
+          barSize={5}
+          items={[
+            ...(posting.overall_match != null
+              ? [{ label: t("overallMatch"), value: posting.overall_match }]
+              : []),
+            ...(posting.technical_match != null
+              ? [{ label: t("technicalMatch"), value: posting.technical_match }]
+              : []),
+          ]}
+        />
+      )}
+
       <Box
         display="flex"
         alignItems="center"
@@ -163,14 +176,23 @@ export function JobCard({
           {date}
         </Typography>
         <Box display="flex" gap={6} alignItems="center">
-          <a
+          {(isStaff || posting.is_owner) && (
+            <Button
+              text={deleting ? t("deleting") : t("deletePosting")}
+              type="button"
+              size="md"
+              disabled={deleting}
+              onClick={() => onDelete(posting)}
+              kind="error"
+            />
+          )}
+          <Button
             href={posting.job_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="jobs__external-link"
-          >
-            {t("viewPosting")}
-          </a>
+            text={t("viewPosting")}
+            type="button"
+            size="md"
+            disabled={deleting}
+          />
           {savedAppId != null ? (
             <Link
               href={`/${locale}/applications/${savedAppId}`}
@@ -187,15 +209,6 @@ export function JobCard({
               kind="success"
               disabled={saving}
               onClick={() => onSave(posting)}
-            />
-          )}
-          {(isStaff || posting.is_owner) && (
-            <Button
-              text={deleting ? t("deleting") : t("deletePosting")}
-              type="button"
-              size="md"
-              disabled={deleting}
-              onClick={() => onDelete(posting)}
             />
           )}
         </Box>

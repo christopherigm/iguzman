@@ -13,8 +13,8 @@ from applications.models import JobApplication
 from applications.serializers import JobApplicationSerializer
 from applications.views import _assign_company, _invalidate_application
 
-from .models import JobPosting, UserApiCredential
-from .serializers import JobFeedSerializer, UserApiCredentialSerializer
+from .models import JobPosting, JobSearch, UserApiCredential
+from .serializers import JobFeedSerializer, JobSearchSerializer, UserApiCredentialSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +22,16 @@ CACHE_TTL = 300
 _MAX_CANDIDATES = 500
 _DEFAULT_PER_PAGE = 20
 _MAX_PER_PAGE = 100
+_RECENT_SEARCHES = 3
 _TOKEN_RE = re.compile(r'[a-z0-9+#.]+')
 
 
 def _invalidate_feed(user_id):
     cache.delete(f'jobs:feed:{user_id}')
+
+
+def _invalidate_searches(user_id):
+    cache.delete(f'jobs:searches:{user_id}')
 
 
 def _invalidate_credentials(user_id):
@@ -181,6 +186,8 @@ class FetchJobsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        from django.db import IntegrityError
+
         from .tasks import ingest_shared_catalog, ingest_user_feed, select_user_credential
 
         if request.user.is_staff:
@@ -190,6 +197,14 @@ class FetchJobsView(APIView):
                 status=status.HTTP_202_ACCEPTED,
             )
 
+        # Only one fetch may run at a time per user: it owns the LLM scoring queue
+        # and the polling UI keys off a single active search.
+        if JobSearch.objects.filter(user=request.user, status='running').exists():
+            return Response(
+                {'detail': 'A job search is already running. Please wait for it to finish.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
         credential = select_user_credential(request.user.id)
         if credential is None:
             return Response(
@@ -197,11 +212,41 @@ class FetchJobsView(APIView):
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
-        ingest_user_feed.delay(request.user.id)
+        try:
+            search = JobSearch.objects.create(user=request.user, status='running')
+        except IntegrityError:
+            # Lost a race against a concurrent fetch that created the running row first.
+            return Response(
+                {'detail': 'A job search is already running. Please wait for it to finish.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        _invalidate_searches(request.user.id)
+        ingest_user_feed.delay(request.user.id, search.id)
         return Response(
-            {'detail': 'Job fetch started.'},
+            {'detail': 'Job fetch started.', 'search_id': search.id},
             status=status.HTTP_202_ACCEPTED,
         )
+
+
+class JobSearchListView(APIView):
+    """The user's most recent fetch runs (newest first), for the jobs-page card.
+
+    Returns the last few searches so the UI can show progress
+    (``metrics_completed / jobs_found``) and poll until none are ``running``.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        cache_key = f'jobs:searches:{request.user.id}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        searches = JobSearch.objects.filter(user=request.user)[:_RECENT_SEARCHES]
+        data = JobSearchSerializer(searches, many=True).data
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
 
 class SaveJobView(APIView):

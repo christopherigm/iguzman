@@ -418,7 +418,22 @@
       "hybrid": "Hybrid"
     },
     "privateListTitle": "Deine privaten Stellen",
-    "sharedListTitle": "Gemeinsamer Katalog"
+    "sharedListTitle": "Gemeinsamer Katalog",
+    "searchRunning": "Suche läuft…",
+    "fetchAlreadyRunning": "Es läuft bereits eine Jobsuche. Bitte warte, bis sie abgeschlossen ist.",
+    "recentSearchesTitle": "Letzte Suchen",
+    "recentSearchesUntitled": "Jobsuche",
+    "recentSearchesProgress": "{completed} / {total} bewertet",
+    "overallMatch": "Gesamtübereinstimmung",
+    "technicalMatch": "Technische Übereinstimmung",
+    "bucketMatch": "Starke Treffer (85%+)",
+    "bucketSemi": "Mögliche Treffer (60–84%)",
+    "bucketNo": "Geringe Treffer",
+    "searchStatuses": {
+      "running": "Läuft",
+      "done": "Fertig",
+      "failed": "Fehlgeschlagen"
+    }
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",
