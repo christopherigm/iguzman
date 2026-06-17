@@ -28,14 +28,9 @@
   background: color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent);
 }
 
-/* Recent-search rows double as filters: the flex layout is responsive (query
-   above meta on mobile), so it lives here rather than as static Box props. */
+/* Recent-search rows double as filters; layout lives on Box props. Only the
+   interactive affordances (cursor + hover) need CSS. */
 .jobs__search-item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -44,34 +39,21 @@
   background: var(--surface-2);
 }
 
-.jobs__search-item-query {
+/* Query + status/tally row. This layout must live in CSS (not Box props) so the
+   media query can override it: Box props render as inline styles, which always
+   win over a media-query class. Mobile: stacked. Desktop: baseline-aligned with
+   the status/tally pushed to the far right of the query. */
+.jobs__search-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.jobs__search-item-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-@media (max-width: 599px) {
-  /* xs - stack the query full-width above the metadata row */
-  .jobs__search-item {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .jobs__search-item-query {
-    width: 100%;
-    flex: none;
-  }
-
-  .jobs__search-item-meta {
-    flex-wrap: wrap;
+@media (min-width: 600px) {
+  .jobs__search-row {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
   }
 }

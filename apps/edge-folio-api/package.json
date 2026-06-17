@@ -1,6 +1,6 @@
 {
   "name": "edge-folio-api",
-  "version": "0.1.52",
+  "version": "0.1.53",
   "scripts": {
     "venv": "source venv/bin/activate",
     "requirements": "pip install -r requirements.txt",

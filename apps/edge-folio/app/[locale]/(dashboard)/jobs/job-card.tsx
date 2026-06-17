@@ -53,7 +53,7 @@ export function JobCard({
   });
 
   return (
-    <Card gap={8}>
+    <Card gap={8} height="100%">
       <Box display="flex" alignItems="flex-start" gap={10}>
         <Box
           display="flex"

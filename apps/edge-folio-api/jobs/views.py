@@ -2,7 +2,7 @@ import logging
 import re
 
 from django.core.cache import cache
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -247,7 +247,32 @@ class JobSearchListView(APIView):
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
-        searches = JobSearch.objects.filter(user=request.user)[:_RECENT_SEARCHES]
+        # Tally each run's postings into the same buckets the jobs page renders:
+        # a citizenship requirement, a missing score, or a score below 60 is "low";
+        # 85+ is "strong"; 60-84 is "possible". A single LEFT JOIN with conditional
+        # counts avoids an N+1 over the related postings.
+        not_citizen = ~Q(postings__us_citizen_or_pr_required=True)
+        searches = (
+            JobSearch.objects.filter(user=request.user)
+            .annotate(
+                strong=Count(
+                    'postings',
+                    filter=not_citizen & Q(postings__overall_match__gte=85),
+                ),
+                possible=Count(
+                    'postings',
+                    filter=not_citizen
+                    & Q(postings__overall_match__gte=60)
+                    & Q(postings__overall_match__lt=85),
+                ),
+                low=Count(
+                    'postings',
+                    filter=Q(postings__us_citizen_or_pr_required=True)
+                    | Q(postings__overall_match__isnull=True)
+                    | Q(postings__overall_match__lt=60),
+                ),
+            )[:_RECENT_SEARCHES]
+        )
         data = JobSearchSerializer(searches, many=True).data
         cache.set(cache_key, data, CACHE_TTL)
         return Response(data)

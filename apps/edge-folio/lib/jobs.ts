@@ -41,9 +41,15 @@ export type JobSearchStatus = "running" | "done" | "failed";
 export interface JobSearch {
   id: number;
   query: string;
+  // Location term used for the search ("" when location filtering was off).
+  location: string;
   status: JobSearchStatus;
   jobs_found: number;
   metrics_completed: number;
+  // Per-run match-bucket tallies (mirror the jobs-page buckets).
+  strong: number;
+  possible: number;
+  low: number;
   created: string;
 }
 

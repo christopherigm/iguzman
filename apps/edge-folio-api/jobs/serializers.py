@@ -34,10 +34,18 @@ class JobFeedSerializer(serializers.ModelSerializer):
 
 
 class JobSearchSerializer(serializers.ModelSerializer):
+    # Per-run match-bucket tallies, mirroring the jobs-page buckets: strong (>=85),
+    # possible (60-84) and low (citizenship-required, unscored, or <60). Supplied by
+    # the view via conditional Count annotations; default to 0 when absent.
+    strong = serializers.IntegerField(read_only=True, default=0)
+    possible = serializers.IntegerField(read_only=True, default=0)
+    low = serializers.IntegerField(read_only=True, default=0)
+
     class Meta:
         model = JobSearch
         fields = (
-            'id', 'query', 'status', 'jobs_found', 'metrics_completed', 'created',
+            'id', 'query', 'location', 'status', 'jobs_found', 'metrics_completed',
+            'strong', 'possible', 'low', 'created',
         )
         read_only_fields = fields
 

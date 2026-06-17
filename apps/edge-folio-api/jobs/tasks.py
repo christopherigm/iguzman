@@ -300,10 +300,6 @@ def ingest_user_feed(user_id: int, search_id: int | None = None) -> None:
         return
 
     query = _resolve_query(profile)
-    if search is not None:
-        search.query = query
-        search.save(update_fields=['query', 'modified'])
-        cache.delete(f'jobs:searches:{user_id}')
 
     if profile.job_search_include_location:
         location = profile.location.strip()
@@ -311,6 +307,12 @@ def ingest_user_feed(user_id: int, search_id: int | None = None) -> None:
     else:
         location = ''
         country = 'us'
+
+    if search is not None:
+        search.query = query
+        search.location = location
+        search.save(update_fields=['query', 'location', 'modified'])
+        cache.delete(f'jobs:searches:{user_id}')
 
     affected_ids: list[int] = []
     for credential in credentials:

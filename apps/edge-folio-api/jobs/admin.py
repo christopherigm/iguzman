@@ -54,10 +54,10 @@ class JobPostingAdmin(admin.ModelAdmin):
 @admin.register(JobSearch)
 class JobSearchAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'user', 'status', 'jobs_found', 'metrics_completed', 'created',
+        'id', 'user', 'status', 'location', 'jobs_found', 'metrics_completed', 'created',
     )
     list_filter = ('status',)
-    search_fields = ('user__email', 'query')
+    search_fields = ('user__email', 'query', 'location')
     raw_id_fields = ('user',)
     readonly_fields = ('created', 'modified')
 

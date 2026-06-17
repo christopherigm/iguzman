@@ -12,6 +12,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
@@ -65,6 +66,13 @@ const SEARCH_STATUS_COLORS: Record<JobSearch["status"], string> = {
   running: "#f59e0b",
   done: "#22c55e",
   failed: "#ef4444",
+};
+
+// Colors for the per-search match tallies, mirroring the bucket semantics.
+const MATCH_COLORS = {
+  strong: "#22c55e",
+  possible: "#f59e0b",
+  low: "var(--muted-foreground, #6b7280)",
 };
 
 // ── Job list (one scope) ────────────────────────────────────────────────────
@@ -210,28 +218,23 @@ function JobSection({
         </Box>
       ) : (
         <>
-          <Box
-            display="grid"
-            gap={16}
-            styles={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            }}
-          >
+          <Grid container spacing={2}>
             {visible.map((posting) => (
-              <JobCard
-                key={posting.id}
-                posting={posting}
-                onSave={onSave}
-                onDelete={onDelete}
-                saving={savingId === posting.id}
-                deleting={deletingId === posting.id}
-                savedAppId={
-                  savedMap[posting.id] ?? posting.saved_application_id
-                }
-                isStaff={isStaff}
-              />
+              <Grid key={posting.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                <JobCard
+                  posting={posting}
+                  onSave={onSave}
+                  onDelete={onDelete}
+                  saving={savingId === posting.id}
+                  deleting={deletingId === posting.id}
+                  savedAppId={
+                    savedMap[posting.id] ?? posting.saved_application_id
+                  }
+                  isStaff={isStaff}
+                />
+              </Grid>
             ))}
-          </Box>
+          </Grid>
 
           {totalPages > 1 && (
             <Box
@@ -302,6 +305,7 @@ function JobSearchesCard({
             minute: "2-digit",
           });
           const selected = selectedSearchId === s.id;
+          const label = s.query || t("recentSearchesUntitled");
           return (
             <Fragment key={s.id}>
               {i > 0 && <Divider />}
@@ -309,7 +313,7 @@ function JobSearchesCard({
                 className="jobs__search-item"
                 role="button"
                 tabIndex={0}
-                aria-label={s.query || t("recentSearchesUntitled")}
+                aria-label={label}
                 onClick={() => onSelect(s.id)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -317,6 +321,9 @@ function JobSearchesCard({
                     onSelect(s.id);
                   }
                 }}
+                display="flex"
+                flexDirection="column"
+                gap={6}
                 border={
                   selected
                     ? "1px solid var(--primary, #06b6d4)"
@@ -325,30 +332,8 @@ function JobSearchesCard({
                 borderRadius={8}
                 padding={8}
               >
-                <Box className="jobs__search-item-query">
-                  {s.status === "running" && <Spinner size={14} />}
-                  <Typography
-                    variant="body"
-                    color="var(--foreground)"
-                    styles={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {s.query || t("recentSearchesUntitled")}
-                  </Typography>
-                </Box>
-                <Box className="jobs__search-item-meta">
-                  <Typography
-                    variant="body"
-                    color="var(--muted-foreground, #6b7280)"
-                  >
-                    {t("recentSearchesProgress", {
-                      completed: s.metrics_completed,
-                      total: s.jobs_found,
-                    })}
-                  </Typography>
+                {/* Status badge + datetime, above the query. */}
+                <Box display="flex" alignItems="center" gap={8}>
                   <Badge
                     variant="subtle"
                     color={SEARCH_STATUS_COLORS[s.status]}
@@ -361,6 +346,65 @@ function JobSearchesCard({
                   >
                     {date}
                   </Typography>
+                </Box>
+
+                {/* Query on the left; status/tally baseline-aligned to its far
+                    right on desktop, stacked below it on mobile. */}
+                <Box className="jobs__search-row">
+                  {/* Query (+ location). Never truncated, regardless of width. */}
+                  <Box display="flex" alignItems="center" gap={8}>
+                    {s.status === "running" && <Spinner size={14} />}
+                    <Typography
+                      variant="body"
+                      color="var(--foreground)"
+                      fontWeight={500}
+                    >
+                      {s.location ? `${label} (${s.location})` : label}
+                    </Typography>
+                  </Box>
+
+                  {/* While running, show scoring progress; once done, show the
+                      match tally (or an empty-state line when nothing was found). */}
+                  {s.status === "running" ? (
+                    <Typography
+                      variant="body"
+                      color="var(--muted-foreground, #6b7280)"
+                    >
+                      {t("recentSearchesProgress", {
+                        completed: s.metrics_completed,
+                        total: s.jobs_found,
+                      })}
+                    </Typography>
+                  ) : s.status === "done" ? (
+                    s.jobs_found === 0 ? (
+                      <Typography
+                        variant="body"
+                        color="var(--muted-foreground, #6b7280)"
+                      >
+                        {t("recentSearchesNoPostings")}
+                      </Typography>
+                    ) : (
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        flexWrap="wrap"
+                        gap={8}
+                      >
+                        <Typography variant="body" color={MATCH_COLORS.strong}>
+                          {t("recentSearchesStrong", { count: s.strong })}
+                        </Typography>
+                        <Typography
+                          variant="body"
+                          color={MATCH_COLORS.possible}
+                        >
+                          {t("recentSearchesPossible", { count: s.possible })}
+                        </Typography>
+                        <Typography variant="body" color={MATCH_COLORS.low}>
+                          {t("recentSearchesLow", { count: s.low })}
+                        </Typography>
+                      </Box>
+                    )
+                  ) : null}
                 </Box>
               </Box>
             </Fragment>

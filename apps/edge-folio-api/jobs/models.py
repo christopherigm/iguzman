@@ -164,6 +164,9 @@ class JobSearch(Common):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='job_searches')
     query = models.TextField(blank=True)
+    # The location term used for the search (empty when the user opted out of
+    # location filtering); surfaced beside the query in the recent-searches card.
+    location = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=20, choices=JOB_SEARCH_STATUS_CHOICES, default='running')
     jobs_found = models.PositiveIntegerField(default=0)
     metrics_completed = models.PositiveIntegerField(default=0)
