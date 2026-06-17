@@ -19,7 +19,6 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Select } from "@repo/ui/core-elements/select";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Toast } from "@repo/ui/core-elements/toast";
-import { Switch } from "@repo/ui/core-elements/switch";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import { Divider } from "@repo/ui/core-elements/divider";
@@ -148,7 +147,6 @@ interface JobSectionProps {
   list: JobListState;
   page: number;
   onPageChange: (page: number) => void;
-  matchOnly: boolean;
   onSave: (posting: JobPosting) => void;
   onDelete: (posting: JobPosting) => void;
   savingId: number | null;
@@ -162,7 +160,6 @@ function JobSection({
   list,
   page,
   onPageChange,
-  matchOnly,
   onSave,
   onDelete,
   savingId,
@@ -171,12 +168,9 @@ function JobSection({
   isStaff,
 }: JobSectionProps) {
   const t = useTranslations("JobsPage");
-  const visible = matchOnly
-    ? list.postings.filter((p) => p.score > 0)
-    : list.postings;
 
   // Hide the whole section once it has finished loading with no results.
-  if (!list.loading && !list.error && visible.length === 0) return null;
+  if (!list.loading && !list.error && list.postings.length === 0) return null;
 
   const totalPages = Math.max(1, Math.ceil(list.count / PER_PAGE));
 
@@ -219,7 +213,7 @@ function JobSection({
       ) : (
         <>
           <Grid container spacing={2}>
-            {visible.map((posting) => (
+            {list.postings.map((posting) => (
               <Grid key={posting.id} size={{ xs: 12, sm: 6, md: 4 }}>
                 <JobCard
                   posting={posting}
@@ -291,13 +285,18 @@ function JobSearchesCard({
   const t = useTranslations("JobsPage");
   if (searches.length === 0) return null;
 
+  // Always render the most recently created search on top.
+  const sorted = [...searches].sort(
+    (a, b) => new Date(b.created).getTime() - new Date(a.created).getTime(),
+  );
+
   return (
     <Card gap={6} marginBottom={20}>
       <Typography variant="body" fontWeight={600} color="var(--foreground)">
         {t("recentSearchesTitle")}
       </Typography>
       <Box display="flex" flexDirection="column" gap={4}>
-        {searches.map((s, i) => {
+        {sorted.map((s, i) => {
           const date = new Date(s.created).toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
@@ -441,7 +440,6 @@ export function JobsPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [savedMap, setSavedMap] = useState<Record<number, number>>({});
-  const [matchOnly, setMatchOnly] = useState(false);
   const [searchInput, setSearchInput] = useState(q);
   const [toast, setToast] = useState<{
     text: string;
@@ -673,21 +671,6 @@ export function JobsPage() {
             aria-label={t("searchLabel")}
           />
         </Box>
-        <Box
-          display="flex"
-          alignItems="center"
-          gap={8}
-          styles={{ paddingBottom: 6 }}
-        >
-          <Switch
-            checked={matchOnly}
-            onChange={setMatchOnly}
-            aria-label={t("matchOnlyLabel")}
-          />
-          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {t("matchOnlyLabel")}
-          </Typography>
-        </Box>
         <Box styles={{ minWidth: 140 }}>
           <Select
             label={t("countryLabel")}
@@ -720,12 +703,10 @@ export function JobsPage() {
         </Box>
       </Card>
     ),
-    [searchInput, matchOnly, country, workType, t, setParam],
+    [searchInput, country, workType, t, setParam],
   );
 
-  const visibleCount = (list: JobListState) =>
-    (matchOnly ? list.postings.filter((p) => p.score > 0) : list.postings)
-      .length;
+  const visibleCount = (list: JobListState) => list.postings.length;
 
   const byCreatedDesc = (a: JobPosting, b: JobPosting) =>
     new Date(b.created).getTime() - new Date(a.created).getTime();
@@ -899,7 +880,6 @@ export function JobsPage() {
                   list={bucketList(privateBuckets[bucket])}
                   page={1}
                   onPageChange={() => {}}
-                  matchOnly={false}
                   onSave={handleSave}
                   onDelete={handleDelete}
                   savingId={savingId}
@@ -963,7 +943,6 @@ export function JobsPage() {
               list={sharedList}
               page={pageShared}
               onPageChange={(p) => setParam({ page_shared: String(p) })}
-              matchOnly={matchOnly}
               onSave={handleSave}
               onDelete={handleDelete}
               savingId={savingId}

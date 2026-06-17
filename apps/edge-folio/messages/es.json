@@ -367,7 +367,8 @@
       "null": "No especificado",
       "true": "Requerida",
       "false": "No requerida"
-    }
+    },
+    "metricExplain": "Explicación de puntuación"
   },
   "JobsPage": {
     "title": "Empleos",
@@ -400,7 +401,6 @@
     "prev": "Anterior",
     "next": "Siguiente",
     "pageOf": "Página {page} de {total}",
-    "matchOnlyLabel": "Solo coincidencias",
     "deletePosting": "Eliminar",
     "deleting": "Eliminando…",
     "deleted": "Oferta de trabajo eliminada.",
@@ -441,7 +441,8 @@
     },
     "refineSearch": "Afinar búsqueda",
     "refineSearchTitle": "Afinar búsqueda",
-    "refineSearchText": "Elige qué campos de tu perfil se incluyen en tu consulta de búsqueda y luego regenérala antes de buscar empleos."
+    "refineSearchText": "Elige qué campos de tu perfil se incluyen en tu consulta de búsqueda y luego regenérala antes de buscar empleos.",
+    "metricExplain": "Explicación de puntuación"
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",

@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Card } from "@repo/ui/core-elements/card";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import type { JobPosting } from "@/lib/jobs";
 import { MatchMetrics } from "../_components/match-metrics";
 import "./jobs-page.css";
@@ -45,6 +47,10 @@ export function JobCard({
 }: JobCardProps) {
   const t = useTranslations("JobsPage");
   const locale = useLocale();
+  const [explainModal, setExplainModal] = useState<{
+    title: string;
+    text: string;
+  } | null>(null);
   const salary = formatSalary(posting);
   const date = new Date(posting.created).toLocaleDateString(undefined, {
     year: "numeric",
@@ -116,18 +122,38 @@ export function JobCard({
         <MatchMetrics
           gap={6}
           barSize={5}
+          explainAriaLabel={t("metricExplain")}
+          onExplain={(item) =>
+            setExplainModal({
+              title: item.label,
+              text: item.explanation ?? "",
+            })
+          }
           items={[
             ...(posting.overall_match != null
-              ? [{ label: t("overallMatch"), value: posting.overall_match }]
+              ? [
+                  {
+                    label: t("overallMatch"),
+                    value: posting.overall_match,
+                    explanation: posting.overall_match_explanation,
+                  },
+                ]
               : []),
             ...(posting.technical_match != null
-              ? [{ label: t("technicalMatch"), value: posting.technical_match }]
+              ? [
+                  {
+                    label: t("technicalMatch"),
+                    value: posting.technical_match,
+                    explanation: posting.technical_match_explanation,
+                  },
+                ]
               : []),
             ...(posting.nafta_tn_likelihood != null
               ? [
                   {
                     label: t("naftaLikelihood"),
                     value: posting.nafta_tn_likelihood,
+                    explanation: posting.nafta_tn_likelihood_explanation,
                   },
                 ]
               : []),
@@ -156,6 +182,7 @@ export function JobCard({
         )}
         <Button
           href={posting.job_url}
+          target="_blank"
           text={t("viewPosting")}
           type="button"
           size="md"
@@ -180,6 +207,14 @@ export function JobCard({
           />
         )}
       </Box>
+
+      {explainModal && (
+        <ConfirmationModal
+          title={explainModal.title}
+          text={explainModal.text}
+          okCallback={() => setExplainModal(null)}
+        />
+      )}
     </Card>
   );
 }

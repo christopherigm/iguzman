@@ -367,7 +367,8 @@
       "null": "Not specified",
       "true": "Required",
       "false": "Not required"
-    }
+    },
+    "metricExplain": "Score explanation"
   },
   "JobsPage": {
     "title": "Jobs",
@@ -400,7 +401,6 @@
     "prev": "Previous",
     "next": "Next",
     "pageOf": "Page {page} of {total}",
-    "matchOnlyLabel": "Matches only",
     "deletePosting": "Delete",
     "deleting": "Deleting…",
     "deleted": "Job posting removed.",
@@ -441,7 +441,8 @@
     },
     "refineSearch": "Refine Search",
     "refineSearchTitle": "Refine Search",
-    "refineSearchText": "Choose which profile fields are included in your search query, then regenerate it before fetching jobs."
+    "refineSearchText": "Choose which profile fields are included in your search query, then regenerate it before fetching jobs.",
+    "metricExplain": "Score explanation"
   },
   "ApplicationDetailPage": {
     "metaTitle": "Application",

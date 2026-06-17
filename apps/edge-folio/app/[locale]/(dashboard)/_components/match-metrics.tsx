@@ -43,7 +43,13 @@ export function MetricBar({
           {onExplain && (
             <Button
               type="button"
-              onClick={onExplain}
+              onClick={(e) => {
+                // Keep the click from reaching an ancestor link (e.g. the
+                // application card wraps its metrics in a <Link>).
+                e.preventDefault();
+                e.stopPropagation();
+                onExplain();
+              }}
               aria-label={explainAriaLabel}
               className="match-metric__explain-btn"
             >

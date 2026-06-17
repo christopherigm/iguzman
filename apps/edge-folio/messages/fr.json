@@ -367,7 +367,8 @@
       "null": "Non précisé",
       "true": "Requise",
       "false": "Non requise"
-    }
+    },
+    "metricExplain": "Explication du score"
   },
   "JobsPage": {
     "title": "Emplois",
@@ -400,7 +401,6 @@
     "prev": "Précédent",
     "next": "Suivant",
     "pageOf": "Page {page} sur {total}",
-    "matchOnlyLabel": "Correspondances uniquement",
     "deletePosting": "Supprimer",
     "deleting": "Suppression…",
     "deleted": "Offre d'emploi supprimée.",
@@ -441,7 +441,8 @@
     },
     "refineSearch": "Affiner la recherche",
     "refineSearchTitle": "Affiner la recherche",
-    "refineSearchText": "Choisissez quels champs de profil sont inclus dans votre requête de recherche, puis régénérez-la avant de récupérer des emplois."
+    "refineSearchText": "Choisissez quels champs de profil sont inclus dans votre requête de recherche, puis régénérez-la avant de récupérer des emplois.",
+    "metricExplain": "Explication du score"
   },
   "AuthPage": {
     "tabSignIn": "Se connecter",

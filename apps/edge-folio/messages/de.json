@@ -367,7 +367,8 @@
       "null": "Nicht angegeben",
       "true": "Erforderlich",
       "false": "Nicht erforderlich"
-    }
+    },
+    "metricExplain": "Bewertungserklärung"
   },
   "JobsPage": {
     "title": "Jobs",
@@ -400,7 +401,6 @@
     "prev": "Zurück",
     "next": "Weiter",
     "pageOf": "Seite {page} von {total}",
-    "matchOnlyLabel": "Nur Treffer",
     "deletePosting": "Löschen",
     "deleting": "Wird gelöscht…",
     "deleted": "Stellenanzeige entfernt.",
@@ -441,7 +441,8 @@
     },
     "refineSearch": "Suche verfeinern",
     "refineSearchTitle": "Suche verfeinern",
-    "refineSearchText": "Wähle, welche Profilfelder in deine Suchanfrage einfließen, und generiere sie dann neu, bevor du Jobs abrufst."
+    "refineSearchText": "Wähle, welche Profilfelder in deine Suchanfrage einfließen, und generiere sie dann neu, bevor du Jobs abrufst.",
+    "metricExplain": "Bewertungserklärung"
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",

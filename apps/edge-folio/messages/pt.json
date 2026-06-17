@@ -367,7 +367,8 @@
       "null": "Não especificado",
       "true": "Obrigatória",
       "false": "Não obrigatória"
-    }
+    },
+    "metricExplain": "Explicação da pontuação"
   },
   "JobsPage": {
     "title": "Vagas",
@@ -400,7 +401,6 @@
     "prev": "Anterior",
     "next": "Próxima",
     "pageOf": "Página {page} de {total}",
-    "matchOnlyLabel": "Apenas correspondências",
     "deletePosting": "Excluir",
     "deleting": "Excluindo…",
     "deleted": "Vaga removida.",
@@ -441,7 +441,8 @@
     },
     "refineSearch": "Refinar busca",
     "refineSearchTitle": "Refinar busca",
-    "refineSearchText": "Escolha quais campos do perfil são incluídos na sua consulta de busca e regenere-a antes de buscar vagas."
+    "refineSearchText": "Escolha quais campos do perfil são incluídos na sua consulta de busca e regenere-a antes de buscar vagas.",
+    "metricExplain": "Explicação da pontuação"
   },
   "AuthPage": {
     "tabSignIn": "Entrar",

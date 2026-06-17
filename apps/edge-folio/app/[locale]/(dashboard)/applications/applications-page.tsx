@@ -30,6 +30,7 @@ import {
   type SignalLevel,
 } from "@/lib/applications";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
+import { MatchMetrics } from "../_components/match-metrics";
 import "./applications-page.css";
 
 const STATUSES: ApplicationStatus[] = [
@@ -487,29 +488,13 @@ function formatSalary(app: JobApplication): string | null {
   return `${cur}${fmt((min ?? max) as number)}`;
 }
 
-function CardMetricBar({ label, value }: { label: string; value: number }) {
-  const color = value >= 70 ? "#22c55e" : value >= 45 ? "#f59e0b" : "#ef4444";
-  return (
-    <Box display="flex" flexDirection="column" gap={2}>
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-          {label}
-        </Typography>
-        <Typography variant="body" fontWeight={600} color={color}>
-          {value}%
-        </Typography>
-      </Box>
-      <ProgressBar value={value} size={4} label={label} />
-    </Box>
-  );
-}
-
 interface ApplicationCardProps {
   app: JobApplication;
   onDelete: (id: number) => void;
+  onExplain: (title: string, text: string) => void;
 }
 
-function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
+function ApplicationCard({ app, onDelete, onExplain }: ApplicationCardProps) {
   const t = useTranslations("ApplicationsPage");
   const locale = useLocale();
   const date = new Date(app.created).toLocaleDateString(undefined, {
@@ -654,26 +639,41 @@ function ApplicationCard({ app, onDelete }: ApplicationCardProps) {
         )}
 
         {hasMetrics && (
-          <Box display="flex" flexDirection="column" gap={6}>
-            {app.overall_match != null && (
-              <CardMetricBar
-                label={t("overallMatch")}
-                value={app.overall_match}
-              />
-            )}
-            {app.technical_match != null && (
-              <CardMetricBar
-                label={t("technicalMatch")}
-                value={app.technical_match}
-              />
-            )}
-            {app.nafta_tn_likelihood != null && (
-              <CardMetricBar
-                label={t("naftaLikelihood")}
-                value={app.nafta_tn_likelihood}
-              />
-            )}
-          </Box>
+          <MatchMetrics
+            gap={6}
+            barSize={4}
+            explainAriaLabel={t("metricExplain")}
+            onExplain={(item) => onExplain(item.label, item.explanation ?? "")}
+            items={[
+              ...(app.overall_match != null
+                ? [
+                    {
+                      label: t("overallMatch"),
+                      value: app.overall_match,
+                      explanation: app.overall_match_explanation,
+                    },
+                  ]
+                : []),
+              ...(app.technical_match != null
+                ? [
+                    {
+                      label: t("technicalMatch"),
+                      value: app.technical_match,
+                      explanation: app.technical_match_explanation,
+                    },
+                  ]
+                : []),
+              ...(app.nafta_tn_likelihood != null
+                ? [
+                    {
+                      label: t("naftaLikelihood"),
+                      value: app.nafta_tn_likelihood,
+                      explanation: app.nafta_tn_likelihood_explanation,
+                    },
+                  ]
+                : []),
+            ]}
+          />
         )}
 
         <Typography variant="body" color="var(--muted-foreground, #6b7280)">
@@ -707,6 +707,10 @@ export function ApplicationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [explainModal, setExplainModal] = useState<{
+    title: string;
+    text: string;
+  } | null>(null);
   const [toast, setToast] = useState<{
     text: string;
     kind: "success" | "error";
@@ -811,6 +815,14 @@ export function ApplicationsPage() {
         />
       )}
 
+      {explainModal && (
+        <ConfirmationModal
+          title={explainModal.title}
+          text={explainModal.text}
+          okCallback={() => setExplainModal(null)}
+        />
+      )}
+
       <Box
         width="100%"
         marginTop={24}
@@ -890,6 +902,7 @@ export function ApplicationsPage() {
               key={app.id}
               app={app}
               onDelete={setPendingDeleteId}
+              onExplain={(title, text) => setExplainModal({ title, text })}
             />
           ))}
         </Box>

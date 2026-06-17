@@ -83,6 +83,10 @@ export interface ButtonProps extends UIComponentProps {
    * renders a `next/Link` (prefetch enabled) instead of a native `button`.
    */
   href?: string | URL;
+  /** Anchor `target` (e.g. `"_blank"`, `"_self"`). Applied to the rendered
+   * `next/Link` when `href` is used. `"_blank"` automatically gets
+   * `rel="noopener noreferrer"`. */
+  target?: React.HTMLAttributeAnchorTarget;
   /** Click handler. If provided, it takes precedence over `href` and Link is not used. */
   onClick?: (
     e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>,
@@ -136,6 +140,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
     text,
     type = "button",
     href,
+    target,
     onClick,
     className,
     id,
@@ -251,7 +256,12 @@ export const Button: React.FC<ButtonProps> = (props) => {
   if (shouldUseLink) {
     const hrefString = href instanceof URL ? href.toString() : String(href);
     return (
-      <Link href={hrefString} prefetch>
+      <Link
+        href={hrefString}
+        prefetch
+        target={target}
+        rel={target === "_blank" ? "noopener noreferrer" : undefined}
+      >
         <button
           id={id}
           title={title}
