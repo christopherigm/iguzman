@@ -1,0 +1,48 @@
+/* IconButton - only pseudo-class state, transitions, and the hover fill live
+   here. Static box styles (size, radius, transparent bg, flex) are component
+   props. */
+
+.ui-icon-button {
+  transition: opacity 180ms ease;
+}
+
+.ui-icon-button:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+/* Hover fill color per semantic kind. */
+.ui-icon-button--default {
+  --icon-button-fill: color-mix(in srgb, var(--foreground, #111) 14%, transparent);
+}
+.ui-icon-button--error {
+  --icon-button-fill: color-mix(in srgb, var(--error, #ef4444) 16%, transparent);
+}
+.ui-icon-button--success {
+  --icon-button-fill: color-mix(in srgb, var(--success, #16a34a) 16%, transparent);
+}
+.ui-icon-button--warning {
+  --icon-button-fill: color-mix(in srgb, var(--warning, #d97706) 16%, transparent);
+}
+
+/* Radial fill that expands from the center on hover and stays for as long as
+   the button is hovered, then shrinks/fades away on blur. */
+.ui-icon-button__wave {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--icon-button-fill, rgba(0, 0, 0, 0.12));
+  transition:
+    transform 400ms ease,
+    opacity 300ms ease;
+}
+.ui-icon-button:hover:not(:disabled) .ui-icon-button__wave {
+  transform: translate(-50%, -50%) scale(8);
+  opacity: 1;
+}

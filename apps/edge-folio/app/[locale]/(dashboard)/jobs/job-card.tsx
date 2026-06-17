@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Card } from "@repo/ui/core-elements/card";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
-import { Icon } from "@repo/ui/core-elements/icon";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
@@ -185,33 +185,20 @@ export function JobCard({
       >
         <Box display="flex" gap={6} alignItems="center">
           {(isStaff || posting.is_owner) && (
-            <button
-              type="button"
-              className="jobs__icon-btn jobs__icon-btn--delete"
+            <IconButton
+              icon="/icons/delete.svg"
+              kind="error"
               disabled={deleting}
               onClick={() => onDelete(posting)}
               aria-label={deleting ? t("deleting") : t("deletePosting")}
-            >
-              <Icon
-                icon="/icons/delete.svg"
-                size={18}
-                color="var(--error, #ef4444)"
-              />
-            </button>
+            />
           )}
-          <a
+          <IconButton
+            icon="/icons/external.svg"
             href={posting.job_url}
             target="_blank"
-            rel="noopener noreferrer"
-            className="jobs__icon-btn"
             aria-label={t("viewPosting")}
-          >
-            <Icon
-              icon="/icons/external.svg"
-              size={16}
-              color="var(--muted-foreground, #6b7280)"
-            />
-          </a>
+          />
         </Box>
         <Box display="flex" gap={8} alignItems="center">
           {savedAppId != null ? (

@@ -7,7 +7,7 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
-import { Icon } from "@repo/ui/core-elements/icon";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { listOPFSFiles, deleteFromOPFS } from "@/lib/opfs";
 import "./clear-storage-modal.css";
 
@@ -308,19 +308,20 @@ export function ClearStorageModal({
                 kind="error"
               />
             </div>
-            <button
-              type="button"
-              className="csm-toggle"
-              onClick={() => toggleCategory(key)}
+            <IconButton
+              icon="/icons/chevron-down.svg"
+              iconSize={14}
+              iconColor="var(--foreground-muted, #999)"
               aria-label={t("toggleFileList")}
-            >
-              <Icon
-                icon="/icons/chevron-down.svg"
-                size={14}
-                color="var(--foreground-muted, #999)"
-                className={isOpen ? "csm-chevron--open" : "csm-chevron--closed"}
-              />
-            </button>
+              aria-expanded={isOpen}
+              onClick={() => toggleCategory(key)}
+              width="100%"
+              marginTop={8}
+              styles={{
+                transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 200ms ease",
+              }}
+            />
             <div
               className={`csm-file-panel${
                 isOpen ? " csm-file-panel--open" : ""

@@ -8,7 +8,7 @@ import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Button } from "@repo/ui/core-elements/button";
-import { Icon } from "@repo/ui/core-elements/icon";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
@@ -225,33 +225,25 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
         </Box>
         <Box display="flex" marginTop={12} gap={8}>
           {urlInput && (
-            <button
-              type="button"
-              className="applications__icon-btn"
-              onClick={() => setUrlInput("")}
+            <IconButton
+              icon="/icons/clear.svg"
               aria-label={t("clearUrl")}
+              onClick={() => setUrlInput("")}
               disabled={fetchingUrl}
-            >
-              <Icon
-                icon="/icons/clear.svg"
-                size={18}
-                color="var(--foreground, #171717)"
-              />
-            </button>
+              iconColor="var(--foreground, #171717)"
+            />
           )}
-          <button
-            type="button"
-            className="applications__icon-btn applications__icon-btn--fetch"
+          <Button
+            kind="primary"
+            icon="/icons/download.svg"
+            aria-label={fetchingUrl ? t("fetchingUrl") : t("fetchFromUrl")}
             disabled={fetchingUrl || !urlInput.trim()}
             onClick={() => void handleFetchUrl()}
-            aria-label={fetchingUrl ? t("fetchingUrl") : t("fetchFromUrl")}
-          >
-            <Icon
-              icon="/icons/download.svg"
-              size={18}
-              color="var(--accent-foreground, white)"
-            />
-          </button>
+            width={36}
+            height={36}
+            borderRadius={10}
+            styles={{ padding: 0, justifyContent: "center" }}
+          />
         </Box>
       </Box>
 

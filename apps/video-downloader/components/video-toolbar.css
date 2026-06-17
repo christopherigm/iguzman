@@ -32,62 +32,6 @@
   background: color-mix(in srgb, var(--foreground, #111) 4%, transparent);
 }
 
-/* ── Icon toggle button ──────────────────────────────── */
-
-.vt-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  background: transparent;
-  position: relative;
-  transition:
-    background 200ms ease,
-    border-color 200ms ease,
-    transform 120ms ease,
-    box-shadow 200ms ease;
-}
-
-.vt-icon-btn:hover {
-  background: color-mix(in srgb, var(--foreground, #111) 7%, transparent);
-  /* transform: scale(1.06); */
-}
-
-.vt-icon-btn:active {
-  /* transform: scale(0.93); */
-}
-
-.vt-icon-btn[data-active='true'] {
-  background: var(--accent, #06b6d4);
-  border-color: var(--accent, #06b6d4);
-  box-shadow: 0 2px 8px
-    color-mix(in srgb, var(--accent, #06b6d4) 30%, transparent);
-}
-
-.vt-icon-btn[data-active='true'] .vt-icon {
-  background-color: var(--accent-foreground, #fff) !important;
-}
-
-/* ── CSS-mask icon (reuses pattern from Icon component) ─ */
-
-.vt-icon {
-  width: 18px;
-  height: 18px;
-  background-color: var(--foreground-muted, #888);
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  transition: background-color 200ms ease;
-}
-
 /* ── Divider between filter groups ───────────────────── */
 
 .vt-divider {
@@ -202,52 +146,6 @@
   padding: 0 6px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-}
-
-.vt-page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 1.5px solid
-    color-mix(in srgb, var(--foreground, #111) 8%, transparent);
-  border-radius: 8px;
-  cursor: pointer;
-  background: color-mix(in srgb, var(--foreground, #111) 3%, transparent);
-  transition:
-    background 180ms ease,
-    border-color 180ms ease,
-    transform 120ms ease,
-    opacity 180ms ease;
-}
-
-.vt-page-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent, #06b6d4) 10%, transparent);
-  border-color: color-mix(in srgb, var(--accent, #06b6d4) 30%, transparent);
-  /* transform: scale(1.06); */
-}
-
-.vt-page-btn:active:not(:disabled) {
-  /* transform: scale(0.93); */
-}
-
-.vt-page-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.vt-page-btn .vt-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.vt-page-btn--prev .vt-icon {
-  transform: rotate(90deg);
-}
-
-.vt-page-btn--next .vt-icon {
-  transform: rotate(-90deg);
 }
 
 /* ── Responsive: stack on narrow screens ─────────────── */

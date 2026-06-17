@@ -203,7 +203,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         size="md"
         width="100%"
         marginTop={4}
-        kind={email && password ? "success" : undefined}
+        kind={email && password ? "primary" : undefined}
         disabled={!email || !password}
       />
       <Typography variant="none" className="auth-form__divider">
@@ -423,7 +423,7 @@ function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         size="md"
         width="100%"
         marginTop={4}
-        kind={email ? "success" : undefined}
+        kind={email ? "primary" : undefined}
         disabled={!email}
       />
       <Box display="flex" justifyContent="center">

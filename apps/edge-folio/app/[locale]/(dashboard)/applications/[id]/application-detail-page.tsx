@@ -249,39 +249,27 @@ function IntelSwiperCard({
           </Swiper>
           {items.length > 1 && (
             <div className="detail__intel-controls">
-              <button
-                type="button"
-                className="detail__intel-nav-btn"
+              <Button
+                icon="/icons/chevron-left.svg"
+                iconSize="16px"
                 aria-label={t("intelNavPrev")}
                 onClick={() => swiperRef.current?.slidePrev()}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="16"
-                  height="16"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                </svg>
-              </button>
+                width={28}
+                height={28}
+                border="1px solid var(--border, #e5e7eb)"
+                styles={{ padding: 0, justifyContent: "center" }}
+              />
               <div className={pagClass} data-intel-pagination />
-              <button
-                type="button"
-                className="detail__intel-nav-btn"
+              <Button
+                icon="/icons/chevron-right.svg"
+                iconSize="16px"
                 aria-label={t("intelNavNext")}
                 onClick={() => swiperRef.current?.slideNext()}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="16"
-                  height="16"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-                </svg>
-              </button>
+                width={28}
+                height={28}
+                border="1px solid var(--border, #e5e7eb)"
+                styles={{ padding: 0, justifyContent: "center" }}
+              />
             </div>
           )}
         </>

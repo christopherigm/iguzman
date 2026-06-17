@@ -87,31 +87,6 @@
   justify-content: center;
 }
 
-.detail__intel-nav-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: 6px;
-  background: var(--surface-2);
-  color: var(--foreground);
-  cursor: pointer;
-  padding: 0;
-  transition:
-    background 160ms ease,
-    color 160ms ease,
-    border-color 160ms ease;
-}
-
-.detail__intel-nav-btn:hover {
-  background: var(--primary, #06b6d4);
-  color: #ffffff;
-  border-color: var(--primary, #06b6d4);
-}
-
 /* ── Metric explain button ────────────────────────────────────── */
 
 .detail__metric-explain-btn {

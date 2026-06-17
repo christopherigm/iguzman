@@ -41,34 +41,6 @@
 }
 
 /* ── File list toggle ─────────────────────────────── */
-.csm-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 4px 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background 180ms ease;
-  margin-top: 8px;
-}
-
-.csm-toggle:hover {
-  background: color-mix(in srgb, var(--foreground, #111) 4%, transparent);
-}
-
-.csm-chevron--open {
-  transform: rotate(180deg);
-  transition: transform 200ms ease;
-}
-
-.csm-chevron--closed {
-  transform: rotate(0deg);
-  transition: transform 200ms ease;
-}
-
 /* ── File list panel (animated expand/collapse) ───── */
 .csm-file-panel {
   display: grid;

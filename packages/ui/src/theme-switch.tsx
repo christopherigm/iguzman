@@ -38,7 +38,7 @@ export function ThemeSwitch({ hideOnMobile = false }: ThemeSwitchProps) {
             type="button"
             text={label}
             onClick={() => actions.setMode(value)}
-            kind={active ? "success" : undefined}
+            kind={active ? "primary" : undefined}
             size="md"
           />
         );

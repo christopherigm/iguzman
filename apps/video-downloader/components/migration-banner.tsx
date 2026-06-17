@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { Icon } from "@repo/ui/core-elements/icon";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import "./migration-banner.css";
 
 const DEADLINE_MS = new Date("2026-06-01T00:00:00Z").getTime();
@@ -47,14 +47,17 @@ export function MigrationBanner({ serverDate }: MigrationBannerProps) {
             height={317}
             priority
           />
-          <button
-            type="button"
-            className="mb-close-btn"
-            onClick={() => setVisible(false)}
+          <IconButton
+            icon="/icons/close.svg"
+            iconSize={14}
+            iconColor="#fff"
             aria-label={t("close")}
-          >
-            <Icon icon="/icons/close.svg" size={14} color="#fff" />
-          </button>
+            onClick={() => setVisible(false)}
+            size="sm"
+            backgroundColor="rgba(0, 0, 0, 0.45)"
+            borderRadius="50%"
+            styles={{ position: "absolute", top: 10, right: 10 }}
+          />
         </div>
         <div className="mb-body">
           <Typography variant="body" fontWeight={500}>

@@ -28,37 +28,6 @@
   background: color-mix(in srgb, var(--primary, #06b6d4) 12%, transparent);
 }
 
-.jobs__icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  background: transparent;
-  text-decoration: none;
-  transition:
-    background 180ms ease,
-    opacity 180ms ease,
-    transform 120ms ease;
-}
-
-.jobs__icon-btn:hover:not(:disabled) {
-  background: var(--surface-2, #f0f0f0);
-}
-
-.jobs__icon-btn:disabled {
-  opacity: 0.28;
-  cursor: not-allowed;
-}
-
-.jobs__icon-btn--delete:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--error, #ef4444) 14%, transparent);
-}
-
 /* Recent-search rows double as filters; layout lives on Box props. Only the
    interactive affordances (cursor + hover) need CSS. */
 .jobs__search-item {

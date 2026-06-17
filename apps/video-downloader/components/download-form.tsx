@@ -9,6 +9,7 @@ import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { Icon } from "@repo/ui/core-elements/icon";
 import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { detectPlatform, type Platform } from "@repo/helpers/checkers";
@@ -728,31 +729,24 @@ export function DownloadForm({
 
         <Box display="flex" marginTop={12} gap={8}>
           {url && (
-            <button
-              type="button"
-              className="df-icon-btn"
-              onClick={handleClear}
+            <IconButton
+              icon="/icons/delete.svg"
               aria-label={t("clearUrl")}
-            >
-              <Icon
-                icon="/icons/delete.svg"
-                size={18}
-                color="var(--foreground, #171717)"
-              />
-            </button>
-          )}
-          <button
-            type="submit"
-            className="df-icon-btn df-icon-btn--download"
-            disabled={!validPlatformUrl || creditsBalance < creditCost}
-            aria-label={t("download")}
-          >
-            <Icon
-              icon="/icons/download.svg"
-              size={18}
-              color="var(--accent-foreground, white)"
+              onClick={handleClear}
+              iconColor="var(--foreground, #171717)"
             />
-          </button>
+          )}
+          <Button
+            type="submit"
+            kind="primary"
+            icon="/icons/download.svg"
+            aria-label={t("download")}
+            disabled={!validPlatformUrl || creditsBalance < creditCost}
+            width={36}
+            height={36}
+            borderRadius={10}
+            styles={{ padding: 0, justifyContent: "center" }}
+          />
         </Box>
       </Box>
       {validPlatformUrl && !justAudio && (
@@ -1044,18 +1038,16 @@ export function DownloadForm({
                           return t("opfsStorageUsage", { used, total, pct });
                         })()}
                       </Typography>
-                      <button
-                        type="button"
-                        className="df-icon-btn df-icon-btn--download"
-                        onClick={() => setShowClearStorageConfirm(true)}
+                      <Button
+                        kind="primary"
+                        icon="/icons/clear.svg"
                         aria-label={t("clearStorageLabel")}
-                      >
-                        <Icon
-                          icon="/icons/clear.svg"
-                          size={18}
-                          color="var(--accent-foreground, white)"
-                        />
-                      </button>
+                        onClick={() => setShowClearStorageConfirm(true)}
+                        width={36}
+                        height={36}
+                        borderRadius={10}
+                        styles={{ padding: 0, justifyContent: "center" }}
+                      />
                     </Box>
                   </OptionRow>
                   <ProgressBar

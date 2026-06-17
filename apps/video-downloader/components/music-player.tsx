@@ -57,17 +57,16 @@ function PlaylistButton({
   ...aria
 }: PlaylistButtonProps) {
   return (
-    <button
+    <Button
+      unstyled
       type="button"
       className={`mp-playlist-btn${isActive ? " mp-playlist-btn--active" : ""}`}
       onClick={onClick}
-      {...(aria && {
-        "aria-label": aria["aria-label"],
-        "aria-pressed": aria["aria-pressed"],
-      })}
+      aria-label={aria["aria-label"]}
+      aria-pressed={aria["aria-pressed"]}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -90,9 +89,13 @@ function PlayerButton({
         : "var(--mp-icon-sm)";
 
   return (
-    <button
+    <Button
+      unstyled
       type="button"
       className={`mp-btn mp-btn--${size}`}
+      icon={icon}
+      iconSize={iconSize}
+      iconColor={iconColor}
       onClick={onClick}
       disabled={disabled}
       aria-label={aria["aria-label"]}
@@ -100,9 +103,8 @@ function PlayerButton({
         ? { "aria-pressed": aria["aria-pressed"] }
         : {})}
     >
-      <Icon icon={icon} size={iconSize} color={iconColor} />
       {children}
-    </button>
+    </Button>
   );
 }
 

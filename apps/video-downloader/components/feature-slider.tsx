@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
-import { Icon } from "@repo/ui/core-elements/icon";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import "swiper/css";
 import "swiper/css/pagination";
@@ -78,14 +78,17 @@ export function FeatureSlider() {
                     height={card.height}
                     className="fs-image"
                   />
-                  <button
-                    type="button"
-                    className="fs-close-btn"
-                    onClick={() => setVisible(false)}
+                  <IconButton
+                    icon="/icons/close.svg"
+                    iconSize={14}
+                    iconColor="#fff"
                     aria-label={t("close")}
-                  >
-                    <Icon icon="/icons/close.svg" size={14} color="#fff" />
-                  </button>
+                    onClick={() => setVisible(false)}
+                    size="sm"
+                    backgroundColor="rgba(0, 0, 0, 0.45)"
+                    borderRadius="50%"
+                    styles={{ position: "absolute", top: 10, right: 10 }}
+                  />
                 </div>
                 <div className="fs-body">
                   <Typography variant="body" fontWeight={500}>
@@ -110,39 +113,25 @@ export function FeatureSlider() {
           </Swiper>
 
           <div className="fs-controls">
-            <button
-              type="button"
-              className="fs-nav-btn"
+            <IconButton
+              icon="/icons/chevron-left.svg"
+              iconSize={18}
+              iconColor="rgba(255, 255, 255, 0.7)"
               aria-label={t("prev")}
               onClick={() => swiperRef.current?.slidePrev()}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-              </svg>
-            </button>
+              width={32}
+              height={32}
+            />
             <div className="fs-pagination" />
-            <button
-              type="button"
-              className="fs-nav-btn"
+            <IconButton
+              icon="/icons/chevron-right.svg"
+              iconSize={18}
+              iconColor="rgba(255, 255, 255, 0.7)"
               aria-label={t("next")}
               onClick={() => swiperRef.current?.slideNext()}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="18"
-                height="18"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-              </svg>
-            </button>
+              width={32}
+              height={32}
+            />
           </div>
         </Box>
       </Box>

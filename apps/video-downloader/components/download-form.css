@@ -35,49 +35,6 @@
   line-height: 1.4;
 }
 
-/* ── Icon Buttons ────────────────────────────────────── */
-
-.df-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  background: transparent;
-  transition:
-    background 180ms ease,
-    opacity 180ms ease,
-    transform 120ms ease;
-}
-
-.df-icon-btn:hover:not(:disabled) {
-  background: var(--surface-2, #f0f0f0);
-}
-
-.df-icon-btn:disabled {
-  opacity: 0.28;
-  cursor: not-allowed;
-}
-
-.df-icon-btn--download {
-  background: var(--accent, #06b6d4);
-  border-radius: 10px;
-  width: 36px;
-  height: 36px;
-}
-
-.df-icon-btn--download:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent, #06b6d4) 85%, black);
-}
-
-.df-icon-btn--download:disabled {
-  opacity: 0.35;
-}
-
 /* ── Options Section ─────────────────────────────────── */
 
 .df-options {
