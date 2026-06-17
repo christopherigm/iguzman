@@ -209,7 +209,7 @@ function JobSection({
             text={t("retry")}
             type="button"
             size="md"
-            kind="success"
+            kind="primary"
             onClick={list.reload}
           />
         </Box>
@@ -247,7 +247,7 @@ function JobSection({
                 size="md"
                 disabled={page <= 1}
                 onClick={() => onPageChange(page - 1)}
-                kind="success"
+                kind="primary"
               />
               <Typography
                 variant="body"
@@ -261,7 +261,7 @@ function JobSection({
                 size="md"
                 disabled={page >= totalPages}
                 onClick={() => onPageChange(page + 1)}
-                kind="success"
+                kind="primary"
               />
             </Box>
           )}
@@ -823,9 +823,11 @@ export function JobsPage() {
               text={t("refineSearch")}
               type="button"
               size="md"
-              kind="success"
+              kind="primary"
               iconSize="16px"
               onClick={() => setRefineOpen(true)}
+              icon="/icons/filter.svg"
+              iconPosition="end"
             />
             <Button
               text={
@@ -840,6 +842,8 @@ export function JobsPage() {
               kind="success"
               disabled={fetching || running}
               onClick={handleFetch}
+              icon="/icons/search.svg"
+              iconPosition="end"
             />
           </Box>
         )}
@@ -863,7 +867,7 @@ export function JobsPage() {
         <Box
           width={28}
           height={0}
-          styles={{ borderTop: "2px solid var(--primary, #06b6d4)" }}
+          styles={{ borderTop: "3px solid var(--success, #16a34a)" }}
         />
         <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
           {t("savedLegend")}
@@ -916,7 +920,7 @@ export function JobsPage() {
                 text={t("retry")}
                 type="button"
                 size="md"
-                kind="success"
+                kind="primary"
                 onClick={privateList.reload}
               />
             </Box>
@@ -956,7 +960,7 @@ export function JobsPage() {
                     text={t("prev")}
                     type="button"
                     size="md"
-                    kind="success"
+                    kind="primary"
                     disabled={pagePrivate <= 1}
                     onClick={() =>
                       setParam({ page_private: String(pagePrivate - 1) })
@@ -978,7 +982,7 @@ export function JobsPage() {
                     text={t("next")}
                     type="button"
                     size="md"
-                    kind="success"
+                    kind="primary"
                     disabled={
                       pagePrivate >= Math.ceil(privateList.count / PER_PAGE)
                     }

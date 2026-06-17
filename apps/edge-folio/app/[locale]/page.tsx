@@ -119,7 +119,7 @@ export default async function Home({ params }: Props) {
                   <Button
                     text={t("privateJobsViewAll")}
                     href={`/${locale}/jobs`}
-                    kind="success"
+                    kind="primary"
                     size="md"
                   />
                 </Box>
@@ -127,7 +127,7 @@ export default async function Home({ params }: Props) {
                 <Button
                   text={t("privateJobsBrowse")}
                   href={`/${locale}/jobs`}
-                  kind="success"
+                  kind="primary"
                   size="lg"
                 />
               )
@@ -141,7 +141,7 @@ export default async function Home({ params }: Props) {
                 <Button
                   text={t("heroCtaPrimary")}
                   href="/auth"
-                  kind="success"
+                  kind="primary"
                   size="lg"
                 />
                 <Button text={t("heroCtaSecondary")} href="/auth" size="lg" />
@@ -321,7 +321,7 @@ export default async function Home({ params }: Props) {
             <Button
               text={t("ctaButton")}
               href="/auth"
-              kind="success"
+              kind="primary"
               size="lg"
             />
           </Box>

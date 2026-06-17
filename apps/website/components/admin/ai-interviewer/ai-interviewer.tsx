@@ -757,7 +757,7 @@ export function AiInterviewer({
         aria-label={t("aiInterviewLabel")}
         title={t("aiInterviewLabel")}
         size="md"
-        kind="success"
+        kind="primary"
       >
         {t("aiInterviewLabel")}
       </Button>
@@ -932,7 +932,7 @@ export function AiInterviewer({
                         {stage === "negotiating" && (
                           <Button
                             text={t("aiInterviewContinue")}
-                            kind="success"
+                            kind="primary"
                             onClick={handleOpenLengthModal}
                           />
                         )}

@@ -828,7 +828,7 @@ export function DownloadForm({
                   }
                   width="100%"
                   size="md"
-                  kind="success"
+                  kind="primary"
                   marginTop={8}
                   marginBottom={8}
                 />
@@ -930,7 +930,7 @@ export function DownloadForm({
                           text={t("commentsBuyCredits")}
                           href="/credits"
                           size="sm"
-                          kind="success"
+                          kind="primary"
                         />
                       </OptionRow>
                     )}

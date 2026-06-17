@@ -181,7 +181,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <Button
             text="OK"
             onClick={okCallback}
-            kind="success"
+            kind="primary"
             size="md"
             disabled={okDisabled}
           />

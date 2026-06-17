@@ -159,7 +159,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
               onClick={handleRegisterPasskey}
               size="md"
               width="100%"
-              kind="success"
+              kind="primary"
             />
             <LinkButton
               onClick={() => router.push("/")}

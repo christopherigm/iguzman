@@ -50,7 +50,7 @@ export function AdminEntityList({
           {title}
         </Typography>
         <Link href={`${basePath}/new`} prefetch>
-          <Button text={`+ ${t("newItem")}`} kind="success" size="md" />
+          <Button text={`+ ${t("newItem")}`} kind="primary" size="md" />
         </Link>
       </Box>
 

@@ -716,7 +716,7 @@ export function OnboardingForm() {
               text={saving ? t("finishing") : t("finish")}
               type="button"
               size="md"
-              kind="success"
+              kind="primary"
               disabled={saving}
               onClick={() => void handleFinish()}
             />

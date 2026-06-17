@@ -65,7 +65,12 @@ export function JobCard({
       gap={8}
       height="100%"
       styles={
-        isSaved ? { borderTop: "2px solid var(--primary, #06b6d4)" } : undefined
+        isSaved
+          ? {
+              borderBottom: "3px solid var(--success, #16a34a)",
+              borderTop: "3px solid var(--success, #16a34a)",
+            }
+          : undefined
       }
     >
       <Box display="flex" alignItems="flex-start" gap={10}>
@@ -216,15 +221,19 @@ export function JobCard({
               type="button"
               size="md"
               kind="success"
+              icon="/icons/customize.svg"
+              iconPosition="end"
             />
           ) : (
             <Button
               text={saving ? t("saving") : t("save")}
               type="button"
               size="md"
-              kind="success"
+              kind="primary"
               disabled={saving}
               onClick={() => onSave(posting)}
+              icon="/icons/download.svg"
+              iconPosition="end"
             />
           )}
         </Box>

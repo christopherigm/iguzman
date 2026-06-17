@@ -754,7 +754,7 @@ export function AdminForm({
                                     text={t("enhanceAccept")}
                                     onClick={handleAcceptEnhance}
                                     size="md"
-                                    kind="success"
+                                    kind="primary"
                                   />
                                 </>
                               )}
@@ -796,7 +796,7 @@ export function AdminForm({
                                     text={t("enhanceAccept")}
                                     onClick={handleAcceptTranslate}
                                     size="md"
-                                    kind="success"
+                                    kind="primary"
                                   />
                                 </>
                               )}
@@ -828,7 +828,7 @@ export function AdminForm({
               type="submit"
               text={saving ? t("saving") : t("save")}
               disabled={saving}
-              kind="success"
+              kind="primary"
               size="lg"
             />
           </Box>

@@ -348,7 +348,7 @@ export function JobSearchPanel() {
                 }
                 type="button"
                 size="md"
-                kind="success"
+                kind="primary"
                 disabled={savingPrefs}
                 onClick={() => void handleSavePrefs()}
               />

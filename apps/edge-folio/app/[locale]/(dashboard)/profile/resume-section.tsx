@@ -81,7 +81,7 @@ function SkillsDiffPanel({
         }
         type="button"
         size="lg"
-        kind="success"
+        kind="primary"
         disabled={saving || selected.size === 0}
         onClick={onAdd}
       />

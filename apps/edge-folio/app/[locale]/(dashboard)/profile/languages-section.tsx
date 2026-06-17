@@ -157,7 +157,7 @@ export function LanguagesPanel() {
             text={addingLang ? t("langAdding") : t("langAdd")}
             type="button"
             size="lg"
-            kind="success"
+            kind="primary"
             disabled={addingLang || !newLangName.trim()}
             onClick={() => void handleAddLanguage()}
           />
@@ -208,7 +208,7 @@ export function LanguagesPanel() {
                   }
                   type="button"
                   size="lg"
-                  kind="success"
+                  kind="primary"
                   disabled={savingLangId === lang.id || !editLangName.trim()}
                   onClick={() => void handleSaveLang(lang.id)}
                 />

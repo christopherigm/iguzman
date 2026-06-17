@@ -418,7 +418,7 @@ function BulletCard({
             text={t("approve")}
             type="button"
             size="md"
-            kind="success"
+            kind="primary"
             onClick={() => onApprove(bullet.id)}
           />
         )}
@@ -620,6 +620,8 @@ function SkillsPanel({
               size="md"
               onClick={() => setAdding(true)}
               kind="success"
+              icon="/icons/new.svg"
+              iconPosition="end"
             />
           )}
         </Box>
@@ -655,7 +657,7 @@ function SkillsPanel({
                 text={saving ? t("saving") : t("save")}
                 type="submit"
                 size="lg"
-                kind="success"
+                kind="primary"
                 disabled={saving || !newName.trim()}
               />
             </Box>
@@ -871,6 +873,8 @@ export function MatrixBoard() {
           size="md"
           onClick={openAdd}
           kind="success"
+          icon="/icons/new.svg"
+          iconPosition="end"
         />
       </Box>
 

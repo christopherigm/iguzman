@@ -983,7 +983,7 @@ export function VideoExtraActions({
                 text={t("serverBuyCredits")}
                 href="/credits"
                 size="sm"
-                kind="success"
+                kind="primary"
               />
             </Box>
           )

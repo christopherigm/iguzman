@@ -198,7 +198,7 @@ export function ScraperPanel() {
         <Button
           text={t("scraperRunButton")}
           size="md"
-          kind="success"
+          kind="primary"
           isLoading={healthLoading}
           onClick={runHealth}
         />
@@ -254,7 +254,7 @@ export function ScraperPanel() {
         <Button
           text={t("scraperRunButton")}
           size="md"
-          kind="success"
+          kind="primary"
           isLoading={searchLoading}
           onClick={runSearch}
         />
@@ -289,7 +289,7 @@ export function ScraperPanel() {
         <Button
           text={t("scraperRunButton")}
           size="md"
-          kind="success"
+          kind="primary"
           isLoading={extractLoading}
           onClick={runExtract}
         />

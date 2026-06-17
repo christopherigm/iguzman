@@ -315,7 +315,7 @@ export function CreditsPageContent() {
                   onClick={handleCheckout}
                   disabled={checkoutLoading}
                   width="100%"
-                  kind="success"
+                  kind="primary"
                   size="md"
                 />
 
@@ -335,7 +335,7 @@ export function CreditsPageContent() {
                   onChange={setCouponInput}
                 />
                 <Button
-                  kind="success"
+                  kind="primary"
                   text={
                     couponLoading ? t("couponRedeeming") : t("couponButton")
                   }
@@ -351,11 +351,7 @@ export function CreditsPageContent() {
                     paddingTop: "12px",
                   }}
                 >
-                  <Typography
-                    variant="body"
-                    fontWeight={600}
-                    marginBottom={8}
-                  >
+                  <Typography variant="body" fontWeight={600} marginBottom={8}>
                     {t("restoreTitle")}
                   </Typography>
                   <Typography
@@ -376,7 +372,7 @@ export function CreditsPageContent() {
                   </Typography>
                 ) : null}
                 <Button
-                  kind="success"
+                  kind="primary"
                   text={restoreLoading ? t("verifying") : t("restore")}
                   onClick={handleRestore}
                   disabled={restoreLoading || !keyInput.trim()}
@@ -504,7 +500,7 @@ export function CreditsPageContent() {
                   onClick={handleCheckout}
                   disabled={checkoutLoading}
                   width="100%"
-                  kind="success"
+                  kind="primary"
                   size="md"
                 />
 
@@ -524,7 +520,7 @@ export function CreditsPageContent() {
                   onChange={setCouponInput}
                 />
                 <Button
-                  kind="success"
+                  kind="primary"
                   text={
                     couponLoading ? t("couponRedeeming") : t("couponButton")
                   }

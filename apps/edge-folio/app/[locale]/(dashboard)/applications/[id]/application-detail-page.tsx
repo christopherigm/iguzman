@@ -70,6 +70,7 @@ import { MatchMetrics } from "../../_components/match-metrics";
 import "swiper/css";
 import "swiper/css/pagination";
 import "./application-detail-page.css";
+import Icon from "@repo/ui/core-elements/icon";
 
 const STATUSES: ApplicationStatus[] = [
   "draft",
@@ -1199,7 +1200,9 @@ export function ApplicationDetailPage({
                 size="md"
                 disabled={refreshingMetrics}
                 onClick={handleRefreshMetrics}
-                kind="success"
+                kind="primary"
+                icon="/icons/refresh.svg"
+                iconPosition="end"
               />
             </>
           )}
@@ -1409,7 +1412,7 @@ export function ApplicationDetailPage({
                   text={saving ? t("saving") : t("save")}
                   type="submit"
                   size="md"
-                  kind="success"
+                  kind="primary"
                   disabled={
                     saving ||
                     !companyName.trim() ||
@@ -1827,7 +1830,7 @@ export function ApplicationDetailPage({
             icon="/icons/enhance.svg"
             type="button"
             size="md"
-            kind="success"
+            kind="primary"
             disabled={tailoring}
             onClick={handleTailor}
           />
@@ -2034,7 +2037,7 @@ export function ApplicationDetailPage({
               iconPosition="end"
               disabled={exportDataLoading || !exportData}
               onClick={openLiveResume}
-              kind="success"
+              kind="primary"
             />
           </Box>
           <Box
@@ -2363,13 +2366,13 @@ export function ApplicationDetailPage({
               size="md"
               disabled={exportDataLoading || !exportData}
               onClick={handleExportMarkdown}
-              kind="success"
+              kind="primary"
             />
             <Button
               text={exportingPDF ? t("exportingPDF") : t("exportPDF")}
               type="button"
               size="md"
-              kind="success"
+              kind="primary"
               disabled={exportingPDF || exportDataLoading || !exportData}
               onClick={handleExportPDF}
             />
@@ -2413,7 +2416,7 @@ export function ApplicationDetailPage({
               size="md"
               disabled={generatingCL}
               onClick={handleGenerateCL}
-              kind="success"
+              kind="primary"
             />
           </Box>
           <Box
@@ -2616,7 +2619,7 @@ export function ApplicationDetailPage({
             }
             type="button"
             size="md"
-            kind="success"
+            kind="primary"
             disabled={generatingNafta}
             onClick={handleGenerateNafta}
           />
@@ -2654,7 +2657,7 @@ export function ApplicationDetailPage({
                 }
                 type="button"
                 size="md"
-                kind="success"
+                kind="primary"
                 disabled={exportingNaftaPDF}
                 onClick={handleDownloadNaftaPDF}
               />

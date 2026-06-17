@@ -238,7 +238,7 @@ export function TechStackPanel() {
           text={savingStack ? t("savingStack") : t("saveStack")}
           type="button"
           size="lg"
-          kind="success"
+          kind="primary"
           disabled={savingStack}
           onClick={() => void handleSaveStack()}
         />

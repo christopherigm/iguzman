@@ -187,7 +187,7 @@ function ProfileSection({ profile }: { profile: UserProfile }) {
           size="md"
           width="100%"
           marginTop={4}
-          kind="success"
+          kind="primary"
         />
       </form>
     </Box>
@@ -291,7 +291,7 @@ function ChangePasswordSection() {
           size="md"
           width="100%"
           marginTop={4}
-          kind="success"
+          kind="primary"
         />
       </form>
     </Box>
@@ -438,7 +438,7 @@ function PasskeySection() {
           size="md"
           width="100%"
           marginTop={4}
-          kind="success"
+          kind="primary"
         />
       </Box>
     </>

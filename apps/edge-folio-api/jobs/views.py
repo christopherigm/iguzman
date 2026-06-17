@@ -277,7 +277,11 @@ class JobSearchListView(APIView):
                     | Q(postings__overall_match__isnull=True)
                     | Q(postings__overall_match__lt=60),
                 ),
-            )[:_RECENT_SEARCHES]
+            )
+            # annotate() injects a GROUP BY that drops the model's default
+            # `-created` ordering, so the slice would otherwise grab the oldest
+            # rows. Re-apply it explicitly to keep the newest runs.
+            .order_by('-created')[:_RECENT_SEARCHES]
         )
         data = JobSearchSerializer(searches, many=True).data
         cache.set(cache_key, data, CACHE_TTL)

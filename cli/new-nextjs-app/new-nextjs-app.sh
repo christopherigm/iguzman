@@ -1593,7 +1593,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         {loading && <ProgressBar />}
         {!passkeySuccess && (
           <>
-            <Button text={t('passkey.registerButton')} type="button" onClick={handleRegisterPasskey} size="md" width="100%" kind="success" />
+            <Button text={t('passkey.registerButton')} type="button" onClick={handleRegisterPasskey} size="md" width="100%" kind="primary" />
             <LinkButton onClick={() => router.push('/')} label={t('passkey.skipButton')} />
           </>
         )}
@@ -1928,7 +1928,7 @@ function ProfileSection({ profile }: { profile: UserProfile }) {
         {success && <SuccessMessage message={success} />}
         {error && <ErrorMessage message={error} />}
         {loading && <ProgressBar label={t('savingProfile')} />}
-        <Button text={loading ? t('savingProfile') : t('saveProfile')} type="submit" size="md" width="100%" marginTop={4} kind="success" />
+        <Button text={loading ? t('savingProfile') : t('saveProfile')} type="submit" size="md" width="100%" marginTop={4} kind="primary" />
       </form>
     </Box>
   );
@@ -1969,7 +1969,7 @@ function ChangePasswordSection() {
         {success && <SuccessMessage message={success} />}
         {error && <ErrorMessage message={error} />}
         {loading && <ProgressBar label={t('savingPassword')} />}
-        <Button text={loading ? t('savingPassword') : t('savePassword')} type="submit" size="md" width="100%" marginTop={4} kind="success" />
+        <Button text={loading ? t('savingPassword') : t('savePassword')} type="submit" size="md" width="100%" marginTop={4} kind="primary" />
       </form>
     </Box>
   );
@@ -2029,7 +2029,7 @@ function PasskeySection() {
         </Box>
         {toast && (toast.isError ? <ErrorMessage message={toast.message} /> : <SuccessMessage message={toast.message} />)}
         {addingPasskey && <ProgressBar />}
-        <Button text={t('addPasskey')} type="button" onClick={handleAddPasskey} disabled={addingPasskey} size="md" width="100%" marginTop={4} kind="success" />
+        <Button text={t('addPasskey')} type="button" onClick={handleAddPasskey} disabled={addingPasskey} size="md" width="100%" marginTop={4} kind="primary" />
       </Box>
     </>
   );

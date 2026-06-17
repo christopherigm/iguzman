@@ -112,7 +112,7 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
                 onClick={() => setModalOpen(true)}
                 iconSize="20px"
                 styles={{ cursor: "pointer" }}
-                kind="success"
+                kind="primary"
               />
             )}
           </Box>

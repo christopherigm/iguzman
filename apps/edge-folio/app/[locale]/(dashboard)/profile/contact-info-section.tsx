@@ -150,7 +150,7 @@ export function ContactInfoPanel() {
           text={savingContact ? t("savingContact") : t("saveContact")}
           type="button"
           size="lg"
-          kind="success"
+          kind="primary"
           disabled={savingContact}
           onClick={() => void handleSaveContact()}
         />

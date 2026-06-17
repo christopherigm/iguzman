@@ -165,7 +165,9 @@ export function ProfessionalInfoPanel() {
     setSummaryShowEnhanceOptions(false);
     const currentText = contactSummary.trim();
     if (!currentText) return;
-    const { min, max } = PARAGRAPH_WORD_COUNTS[summaryEnhanceParagraphLength] ?? {
+    const { min, max } = PARAGRAPH_WORD_COUNTS[
+      summaryEnhanceParagraphLength
+    ] ?? {
       min: 25,
       max: 40,
     };
@@ -332,10 +334,7 @@ export function ProfessionalInfoPanel() {
         />
         <Box display="flex" flexDirection="column" gap={8}>
           <Box className="profile__field-label-row">
-            <Typography
-              variant="body"
-              color="var(--muted-foreground, #6b7280)"
-            >
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t("summaryLabel")}
             </Typography>
             <Box display="flex" alignItems="center" gap={6}>
@@ -440,7 +439,7 @@ export function ProfessionalInfoPanel() {
           text={savingInfo ? t("savingInfo") : t("saveInfo")}
           type="button"
           size="lg"
-          kind="success"
+          kind="primary"
           disabled={savingInfo || !jobTitle.trim()}
           onClick={() => void handleSaveInfo()}
         />

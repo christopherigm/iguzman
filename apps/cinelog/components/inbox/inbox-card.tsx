@@ -198,7 +198,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
         />
         <Button
           text={t("accept")}
-          kind="success"
+          kind="primary"
           size="md"
           onClick={handleAccept}
           isLoading={submitting === "accept"}

@@ -348,7 +348,7 @@ export function DiarizationPanel() {
         <Button
           text={t("diarizationRunButton")}
           size="md"
-          kind="success"
+          kind="primary"
           isLoading={healthLoading}
           onClick={runHealth}
         />
@@ -405,7 +405,7 @@ export function DiarizationPanel() {
         <Button
           text={t("diarizationRunButton")}
           size="md"
-          kind="success"
+          kind="primary"
           isLoading={diarizeLoading}
           disabled={!diarizeFile}
           onClick={runDiarize}
@@ -481,7 +481,7 @@ export function DiarizationPanel() {
         <Button
           text={t("diarizationRunButton")}
           size="md"
-          kind="success"
+          kind="primary"
           isLoading={transcribeLoading}
           disabled={!transcribeFile}
           onClick={runTranscribe}

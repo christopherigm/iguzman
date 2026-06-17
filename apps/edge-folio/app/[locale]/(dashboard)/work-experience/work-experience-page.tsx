@@ -1259,7 +1259,7 @@ export function WorkExperiencePage() {
           text={t("addEntry")}
           type="button"
           size="md"
-          kind="success"
+          kind="primary"
           onClick={openAdd}
         />
       </Box>
@@ -1273,7 +1273,7 @@ export function WorkExperiencePage() {
             text={t("addEntry")}
             type="button"
             size="md"
-            kind="success"
+            kind="primary"
             onClick={openAdd}
           />
         </Box>
@@ -1313,7 +1313,7 @@ export function WorkExperiencePage() {
           text={t("addProject")}
           type="button"
           size="md"
-          kind="success"
+          kind="primary"
           onClick={openAddProject}
         />
       </Box>
@@ -1327,7 +1327,7 @@ export function WorkExperiencePage() {
             text={t("addProject")}
             type="button"
             size="md"
-            kind="success"
+            kind="primary"
             onClick={openAddProject}
           />
         </Box>

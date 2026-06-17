@@ -17,7 +17,7 @@ export type ButtonType = "button" | "submit" | "reset";
 export type ButtonSize = "sm" | "md" | "lg";
 
 /** Semantic color intent for a button. */
-export type ButtonKind = "success" | "error" | "warning";
+export type ButtonKind = "primary" | "success" | "error" | "warning";
 
 const SIZE_STYLES: Record<
   ButtonSize,
@@ -36,9 +36,13 @@ const KIND_STYLES: Record<
     backgroundColor: "var(--surface-2)",
     color: "var(--foreground)",
   },
-  success: {
+  primary: {
     backgroundColor: "var(--accent, #06b6d4)",
     color: "var(--accent-foreground, #ffffff)",
+  },
+  success: {
+    backgroundColor: "var(--success, #16a34a)",
+    color: "var(--success-foreground, #ffffff)",
   },
   error: {
     backgroundColor: "var(--error, #8d0e0e)",

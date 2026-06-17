@@ -343,7 +343,7 @@ export function BurnCaptionsModal({
                 text={t("burnCaptionsTranslateBuyCredits")}
                 href="/credits"
                 size="sm"
-                kind="success"
+                kind="primary"
               />
             </Box>
           )}

@@ -266,7 +266,11 @@ export function JobApiKeysSection() {
           </Box>
 
           {error && (
-            <Typography variant="body" role="alert" color="var(--error, #ef4444)">
+            <Typography
+              variant="body"
+              role="alert"
+              color="var(--error, #ef4444)"
+            >
               {error}
             </Typography>
           )}
@@ -276,7 +280,7 @@ export function JobApiKeysSection() {
               text={saving ? t("jobKeysSaving") : t("jobKeysSave")}
               type="button"
               size="lg"
-              kind="success"
+              kind="primary"
               disabled={
                 saving ||
                 !keyValue.trim() ||

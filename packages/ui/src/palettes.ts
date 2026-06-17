@@ -11,7 +11,9 @@ type CSSVariableKey =
   | "--error"
   | "--error-foreground"
   | "--warning"
-  | "--warning-foreground";
+  | "--warning-foreground"
+  | "--success"
+  | "--success-foreground";
 
 type PaletteVariables = Record<CSSVariableKey, string>;
 
@@ -40,6 +42,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#e98410",
       "--warning-foreground": "#ffffff",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#202020",
@@ -53,6 +57,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 
@@ -71,6 +77,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#d97706",
       "--warning-foreground": "#1c1000",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#020617",
@@ -84,6 +92,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 
@@ -102,6 +112,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#d97706",
       "--warning-foreground": "#1c1000",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#0c0608",
@@ -115,6 +127,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 
@@ -133,6 +147,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#d97706",
       "--warning-foreground": "#1c1000",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#030c06",
@@ -146,6 +162,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 
@@ -164,6 +182,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#d97706",
       "--warning-foreground": "#1c1000",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#0c0a02",
@@ -177,6 +197,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 
@@ -195,6 +217,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#d97706",
       "--warning-foreground": "#1c1000",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#07020e",
@@ -208,6 +232,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 
@@ -226,6 +252,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#d97706",
       "--warning-foreground": "#1c1000",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#020409",
@@ -239,6 +267,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 
@@ -257,6 +287,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#d97706",
       "--warning-foreground": "#1c1000",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#0c0602",
@@ -270,6 +302,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 
@@ -288,6 +322,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#d97706",
       "--warning-foreground": "#1c1000",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#030c0b",
@@ -301,6 +337,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 
@@ -319,6 +357,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#ffffff",
       "--warning": "#d97706",
       "--warning-foreground": "#1c1000",
+      "--success": "#16a34a",
+      "--success-foreground": "#ffffff",
     },
     dark: {
       "--background": "#0a020a",
@@ -332,6 +372,8 @@ const palettes: Record<string, PaletteDefinition> = {
       "--error-foreground": "#1c0002",
       "--warning": "#fbbf24",
       "--warning-foreground": "#0c0800",
+      "--success": "#4ade80",
+      "--success-foreground": "#05140a",
     },
   },
 };

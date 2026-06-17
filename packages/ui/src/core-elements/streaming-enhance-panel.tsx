@@ -165,7 +165,7 @@ export const StreamingEnhancePanel = forwardRef<
               text={labels.accept}
               type="button"
               size="md"
-              kind="success"
+              kind="primary"
               onClick={handleAccept}
             />
           </>

@@ -466,7 +466,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
           text={saving ? t("saving") : t("save")}
           type="submit"
           size="md"
-          kind="success"
+          kind="primary"
           disabled={saving || !isValid}
         />
       </Box>
@@ -791,7 +791,7 @@ export function ApplicationsPage() {
           type="button"
           size="md"
           onClick={load}
-          kind="success"
+          kind="primary"
         />
       </Container>
     );
@@ -848,6 +848,8 @@ export function ApplicationsPage() {
             type="button"
             size="md"
             onClick={() => setFormOpen(true)}
+            icon="/icons/new.svg"
+            iconPosition="end"
           />
         )}
       </Box>

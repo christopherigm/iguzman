@@ -589,7 +589,7 @@ export function EducationPage() {
           text={t("addEntry")}
           type="button"
           size="md"
-          kind="success"
+          kind="primary"
           onClick={openAdd}
         />
       </Box>
@@ -603,7 +603,7 @@ export function EducationPage() {
             text={t("addEntry")}
             type="button"
             size="md"
-            kind="success"
+            kind="primary"
             onClick={openAdd}
           />
         </Box>
