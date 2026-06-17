@@ -118,6 +118,22 @@
   background-color: var(--surface-1, rgba(0, 0, 0, 0.04));
 }
 
+/* Subtle underline for the active page's menu item */
+.ui-navbar-item--active {
+  position: relative;
+}
+
+.ui-navbar-item--active::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background-color: var(--accent, #06b6d4);
+}
+
 /* Chevron rotation when dropdown is open */
 .ui-navbar-item-chevron {
   transition: transform 200ms ease;

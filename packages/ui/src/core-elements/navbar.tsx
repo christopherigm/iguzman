@@ -122,8 +122,9 @@ const NavbarItem: React.FC<{
   item: MenuItem;
   onToggleDropdown?: (label: string | null) => void;
   isDropdownOpen?: boolean;
+  isActive?: boolean;
   chevronIcon?: string;
-}> = ({ item, onToggleDropdown, isDropdownOpen, chevronIcon }) => {
+}> = ({ item, onToggleDropdown, isDropdownOpen, isActive, chevronIcon }) => {
   const hasChildren = item.children && item.children.length > 0;
 
   const handleClick = () => {
@@ -138,8 +139,20 @@ const NavbarItem: React.FC<{
   const linkProps =
     Tag === "a" ? { href: item.href } : { type: "button" as const };
 
+  const itemClassName = [
+    "ui-navbar-item",
+    isActive ? "ui-navbar-item--active" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <Tag className="ui-navbar-item" onClick={handleClick} {...linkProps}>
+    <Tag
+      className={itemClassName}
+      onClick={handleClick}
+      aria-current={isActive ? "page" : undefined}
+      {...linkProps}
+    >
       {item.icon && (
         <Icon icon={item.icon} size="18px" className="ui-navbar-item-icon" />
       )}
@@ -380,6 +393,17 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
   );
   if (hiddenPaths?.includes(pathnameWithoutLocale)) return null;
 
+  // An item is active when its href matches the current path. The home item
+  // ("/") only matches exactly; other items also match nested sub-paths.
+  const isItemActive = (item: MenuItem): boolean => {
+    if (!item.href) return false;
+    if (item.href === "/") return pathnameWithoutLocale === "/";
+    return (
+      pathnameWithoutLocale === item.href ||
+      pathnameWithoutLocale.startsWith(`${item.href}/`)
+    );
+  };
+
   const isHidden = scrollDirection === "down";
 
   const navClasses = [
@@ -429,6 +453,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
                 item={item}
                 onToggleDropdown={hasChildren ? setActiveDropdown : undefined}
                 isDropdownOpen={isOpen}
+                isActive={isItemActive(item)}
                 chevronIcon={chevronIcon}
               />
               {hasChildren && isOpen && (
@@ -458,6 +483,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
                   item={item}
                   onToggleDropdown={hasChildren ? setActiveDropdown : undefined}
                   isDropdownOpen={isOpen}
+                  isActive={isItemActive(item)}
                   chevronIcon={chevronIcon}
                 />
                 {hasChildren && isOpen && (
