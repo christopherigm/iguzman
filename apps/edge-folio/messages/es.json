@@ -394,6 +394,8 @@
     "emptyBody": "Define tu puesto y tu stack en tu perfil para que podamos encontrar vacantes para ti.",
     "searchLabel": "Buscar",
     "searchPlaceholder": "Título o empresa",
+    "savedFilterLabel": "Solo guardados",
+    "savedLegend": "Un borde superior de color indica los empleos que ya guardaste como postulaciones.",
     "countryLabel": "País",
     "countryAll": "Todos los países",
     "workTypeLabel": "Modalidad",

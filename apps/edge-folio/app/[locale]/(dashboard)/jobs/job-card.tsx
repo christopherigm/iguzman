@@ -53,6 +53,7 @@ export function JobCard({
     text: string;
   } | null>(null);
   const salary = formatSalary(posting);
+  const isSaved = savedAppId != null;
   const date = new Date(posting.created).toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -60,7 +61,13 @@ export function JobCard({
   });
 
   return (
-    <Card gap={8} height="100%">
+    <Card
+      gap={8}
+      height="100%"
+      styles={
+        isSaved ? { borderTop: "2px solid var(--primary, #06b6d4)" } : undefined
+      }
+    >
       <Box display="flex" alignItems="flex-start" gap={10}>
         <Box
           display="flex"

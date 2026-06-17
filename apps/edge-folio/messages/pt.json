@@ -394,6 +394,8 @@
     "emptyBody": "Defina o seu cargo e a sua stack no perfil para encontrarmos vagas para você.",
     "searchLabel": "Pesquisar",
     "searchPlaceholder": "Cargo ou empresa",
+    "savedFilterLabel": "Apenas salvos",
+    "savedLegend": "Uma borda superior colorida indica as vagas que você já salvou como candidaturas.",
     "countryLabel": "País",
     "countryAll": "Todos os países",
     "workTypeLabel": "Modelo de trabalho",

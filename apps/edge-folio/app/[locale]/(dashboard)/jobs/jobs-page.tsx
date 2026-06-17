@@ -17,6 +17,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Select } from "@repo/ui/core-elements/select";
+import { Switch } from "@repo/ui/core-elements/switch";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { Badge } from "@repo/ui/core-elements/badge";
@@ -427,6 +428,10 @@ export function JobsPage() {
   const country = (searchParams.get("country") || "") as JobCountry | "";
   const workType = (searchParams.get("work_type") || "") as JobWorkType | "";
   const q = searchParams.get("q") || "";
+  // Client-side "saved only" toggle, persisted in the URL like the other filters.
+  // The feed API has no saved param, so this filters the loaded page in place —
+  // consistent with how the match buckets already group per-page data.
+  const savedOnly = searchParams.get("saved") === "1";
   // Active "filter by search run" selection, surfaced from the URL so it survives
   // reloads and resets pagination through setParam like any other filter.
   const searchFilter = parseInt(searchParams.get("search") || "", 10) || null;
@@ -673,6 +678,18 @@ export function JobsPage() {
             aria-label={t("searchLabel")}
           />
         </Box>
+        <Box display="flex" flexDirection="column">
+          <Typography variant="label" color="var(--muted-foreground, #6b7280)">
+            {t("savedFilterLabel")}
+          </Typography>
+          <Box display="flex" alignItems="center" height={38}>
+            <Switch
+              checked={savedOnly}
+              onChange={(c) => setParam({ saved: c ? "1" : "" })}
+              aria-label={t("savedFilterLabel")}
+            />
+          </Box>
+        </Box>
         <Box styles={{ minWidth: 140 }}>
           <Select
             label={t("countryLabel")}
@@ -705,13 +722,18 @@ export function JobsPage() {
         </Box>
       </Card>
     ),
-    [searchInput, country, workType, t, setParam],
+    [searchInput, country, workType, savedOnly, t, setParam],
   );
-
-  const visibleCount = (list: JobListState) => list.postings.length;
 
   const byCreatedDesc = (a: JobPosting, b: JobPosting) =>
     new Date(b.created).getTime() - new Date(a.created).getTime();
+
+  // A posting counts as saved once it has a saved application, either from the
+  // server payload or from a save made in this session (savedMap).
+  const isSaved = useCallback(
+    (p: JobPosting) => (savedMap[p.id] ?? p.saved_application_id) != null,
+    [savedMap],
+  );
 
   // Group the loaded private postings into curated buckets, newest first within each.
   const privateBuckets = useMemo(() => {
@@ -720,12 +742,22 @@ export function JobsPage() {
       semi: [],
       no: [],
     };
-    for (const p of privateList.postings) groups[bucketOf(p)].push(p);
+    const source = savedOnly
+      ? privateList.postings.filter(isSaved)
+      : privateList.postings;
+    for (const p of source) groups[bucketOf(p)].push(p);
     (Object.keys(groups) as MatchBucket[]).forEach((k) =>
       groups[k].sort(byCreatedDesc),
     );
     return groups;
-  }, [privateList.postings]);
+  }, [privateList.postings, savedOnly, isSaved]);
+
+  // While "saved only" is on, filter the loaded shared catalog page in place.
+  const sharedListView = useMemo<JobListState>(() => {
+    if (!savedOnly) return sharedList;
+    const filtered = sharedList.postings.filter(isSaved);
+    return { ...sharedList, postings: filtered, count: filtered.length };
+  }, [sharedList, savedOnly, isSaved]);
 
   // Each bucket reuses JobSection; loading/error/pagination for the private list as a
   // whole are handled separately, so a per-bucket section never paginates on its own.
@@ -745,18 +777,22 @@ export function JobsPage() {
     sharedList.loading &&
     privateList.postings.length === 0 &&
     sharedList.postings.length === 0;
+  // Counts after the (client-side) "saved only" filter has been applied.
+  const privateVisible =
+    privateBuckets.match.length +
+    privateBuckets.semi.length +
+    privateBuckets.no.length;
+  const sharedVisible = sharedListView.postings.length;
   // While a search filter is active the shared list is hidden, so the empty
   // state hinges on the (filtered) private list alone.
   const bothEmpty = searchFilter
-    ? !privateList.loading &&
-      !privateList.error &&
-      privateList.postings.length === 0
+    ? !privateList.loading && !privateList.error && privateVisible === 0
     : !privateList.loading &&
       !sharedList.loading &&
       !privateList.error &&
       !sharedList.error &&
-      privateList.postings.length === 0 &&
-      visibleCount(sharedList) === 0;
+      privateVisible === 0 &&
+      sharedVisible === 0;
 
   return (
     <Container
@@ -816,6 +852,23 @@ export function JobsPage() {
       />
 
       {filterChips}
+
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={8}
+        marginBottom={20}
+        marginTop={-8}
+      >
+        <Box
+          width={28}
+          height={0}
+          styles={{ borderTop: "2px solid var(--primary, #06b6d4)" }}
+        />
+        <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+          {t("savedLegend")}
+        </Typography>
+      </Box>
 
       {initialLoading ? (
         <Box display="flex" justifyContent="center" paddingY={60}>
@@ -942,7 +995,7 @@ export function JobsPage() {
           {!searchFilter && (
             <JobSection
               title={t("sharedListTitle")}
-              list={sharedList}
+              list={sharedListView}
               page={pageShared}
               onPageChange={(p) => setParam({ page_shared: String(p) })}
               onSave={handleSave}

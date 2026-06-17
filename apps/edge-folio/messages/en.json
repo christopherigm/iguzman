@@ -394,6 +394,8 @@
     "emptyBody": "Set your job title and tech stack in your profile so we can find roles for you.",
     "searchLabel": "Search",
     "searchPlaceholder": "Title or company",
+    "savedFilterLabel": "Saved only",
+    "savedLegend": "A colored top border marks jobs you've already saved as applications.",
     "countryLabel": "Country",
     "countryAll": "All countries",
     "workTypeLabel": "Work type",

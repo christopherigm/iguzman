@@ -394,6 +394,8 @@
     "emptyBody": "Renseignez votre intitulé de poste et votre stack technique dans votre profil pour que nous trouvions des postes pour vous.",
     "searchLabel": "Rechercher",
     "searchPlaceholder": "Titre ou entreprise",
+    "savedFilterLabel": "Enregistrés uniquement",
+    "savedLegend": "Une bordure supérieure colorée indique les offres déjà enregistrées comme candidatures.",
     "countryLabel": "Pays",
     "countryAll": "Tous les pays",
     "workTypeLabel": "Type de travail",

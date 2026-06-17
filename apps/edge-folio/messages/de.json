@@ -394,6 +394,8 @@
     "emptyBody": "Lege deine Jobbezeichnung und deinen Tech-Stack im Profil fest, damit wir Stellen für dich finden können.",
     "searchLabel": "Suche",
     "searchPlaceholder": "Titel oder Unternehmen",
+    "savedFilterLabel": "Nur gespeicherte",
+    "savedLegend": "Ein farbiger oberer Rand kennzeichnet Jobs, die du bereits als Bewerbungen gespeichert hast.",
     "countryLabel": "Land",
     "countryAll": "Alle Länder",
     "workTypeLabel": "Arbeitsmodell",
