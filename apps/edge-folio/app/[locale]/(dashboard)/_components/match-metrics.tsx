@@ -31,9 +31,17 @@ export function MetricBar({
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {label}
           </Typography>
+        </Box>
+        <Box display="flex" gap={8} alignItems="center">
+          <Typography
+            variant="body"
+            fontWeight={600}
+            color={metricColor(value)}
+          >
+            {value}%
+          </Typography>
           {onExplain && (
             <Button
-              unstyled
               type="button"
               onClick={onExplain}
               aria-label={explainAriaLabel}
@@ -43,9 +51,6 @@ export function MetricBar({
             </Button>
           )}
         </Box>
-        <Typography variant="body" fontWeight={600} color={metricColor(value)}>
-          {value}%
-        </Typography>
       </Box>
       <ProgressBar value={value} size={size} label={label} />
     </Box>

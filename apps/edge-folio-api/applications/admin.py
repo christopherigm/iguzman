@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.core.cache import cache
 
+from .metrics import sync_posting_metrics
 from .models import Company, JobApplication
 
 
@@ -49,6 +50,9 @@ class JobApplicationAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         _invalidate_application(obj.user_id, obj.pk)
+        # Editing us_citizen_or_pr_required here can move the source posting's
+        # jobs-page bucket; keep its mirrored fields in sync.
+        sync_posting_metrics(obj)
 
     def delete_model(self, request, obj):
         _invalidate_application(obj.user_id, obj.pk)

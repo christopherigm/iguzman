@@ -14,6 +14,7 @@ def _compute_metrics(application_id: int, user_id: int) -> None:
     from career.models import Education, WorkExperience
     from matrix.models import BulletPoint, Skill
 
+    from .metrics import sync_posting_metrics
     from .models import JobApplication
     from .tailoring import (
         calculate_nafta_likelihood,
@@ -86,6 +87,17 @@ def _compute_metrics(application_id: int, user_id: int) -> None:
     )
     cache.delete(f'applications:applications:{user_id}')
     cache.delete(f'applications:application:{user_id}:{application_id}')
+
+    # Keep the source posting's metrics (and thus the jobs-page bucket + per-search
+    # tally) in sync with the freshly computed scores. The .update() above bypasses
+    # the in-memory instance, so apply the new values before mirroring.
+    app.overall_match = overall
+    app.overall_match_explanation = overall_explanation
+    app.technical_match = technical
+    app.technical_match_explanation = technical_explanation
+    app.nafta_tn_likelihood = nafta
+    app.nafta_tn_likelihood_explanation = nafta_explanation
+    sync_posting_metrics(app)
     logger.info(
         'Metrics computed for application %d: overall=%d technical=%d nafta=%d',
         application_id, overall, technical, nafta,

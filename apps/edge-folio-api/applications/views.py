@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from career.models import Education, WorkExperience
 from matrix.models import BulletPoint
 
+from .metrics import sync_posting_metrics
 from .models import Company, JobApplication, _normalize_company_name
 from .scoring import compute_match_metrics
 from .serializers import JobApplicationSerializer
@@ -115,16 +116,19 @@ class JobApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
         old_company_name = instance.company_name
         response = super().update(request, *args, **kwargs)
         pk = kwargs.get('pk')
+        instance.refresh_from_db()
         new_company_name = request.data.get('company_name', old_company_name)
         if new_company_name != old_company_name:
             try:
-                instance.refresh_from_db()
                 _assign_company(instance)
                 serializer = self.get_serializer(instance)
                 response.data = serializer.data
             except Exception as exc:
                 logger.warning('Company re-assignment failed for application %s: %s', pk, exc)
         _invalidate_application(request.user.id, pk)
+        # An edit can change us_citizen_or_pr_required, which moves the source
+        # posting's jobs-page bucket; keep its mirrored fields in sync.
+        sync_posting_metrics(instance)
         return response
 
     def destroy(self, request, *args, **kwargs):
@@ -325,23 +329,10 @@ class RefreshMetricsView(APIView):
         _invalidate_application(user.id, pk)
 
         # Mirror the refreshed scores onto the posting this application was saved from,
-        # so the jobs feed shows the same up-to-date metrics. The posting is owner-scoped
-        # (private BYOK result), so writing the per-user score onto the row is safe.
-        posting = application.source_posting
-        if posting is not None:
-            posting.overall_match = metrics['overall_match']
-            posting.overall_match_explanation = metrics['overall_match_explanation']
-            posting.technical_match = metrics['technical_match']
-            posting.technical_match_explanation = metrics['technical_match_explanation']
-            posting.nafta_tn_likelihood = metrics['nafta_tn_likelihood']
-            posting.nafta_tn_likelihood_explanation = metrics['nafta_tn_likelihood_explanation']
-            posting.save(update_fields=[
-                'overall_match', 'overall_match_explanation',
-                'technical_match', 'technical_match_explanation',
-                'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
-                'modified',
-            ])
-            cache.delete(f'jobs:feed:{user.id}')
+        # so the jobs feed bucket and per-search tally show the same up-to-date metrics.
+        # The posting is owner-scoped (private BYOK result), so writing the per-user
+        # score onto the row is safe.
+        sync_posting_metrics(application)
 
         return Response(metrics)
 
