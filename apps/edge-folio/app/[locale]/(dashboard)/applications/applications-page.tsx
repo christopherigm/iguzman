@@ -233,7 +233,7 @@ function ApplicationForm({ onSave, onCancel }: ApplicationFormProps) {
               disabled={fetchingUrl}
             >
               <Icon
-                icon="/icons/delete.svg"
+                icon="/icons/clear.svg"
                 size={18}
                 color="var(--foreground, #171717)"
               />

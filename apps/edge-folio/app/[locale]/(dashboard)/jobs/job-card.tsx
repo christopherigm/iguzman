@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Card } from "@repo/ui/core-elements/card";
 import { Box } from "@repo/ui/core-elements/box";
 import { Button } from "@repo/ui/core-elements/button";
+import { Icon } from "@repo/ui/core-elements/icon";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
@@ -165,47 +166,61 @@ export function JobCard({
 
       <Box
         display="flex"
-        justifyContent="center"
+        justifyContent="space-between"
         gap={8}
         alignItems="center"
         marginTop={4}
       >
-        {(isStaff || posting.is_owner) && (
-          <Button
-            text={deleting ? t("deleting") : t("deletePosting")}
-            type="button"
-            size="md"
-            disabled={deleting}
-            onClick={() => onDelete(posting)}
-            kind="error"
-          />
-        )}
-        <Button
-          href={posting.job_url}
-          target="_blank"
-          text={t("viewPosting")}
-          type="button"
-          size="md"
-          disabled={deleting}
-        />
-        {savedAppId != null ? (
-          <Button
-            href={`/${locale}/applications/${savedAppId}`}
-            text={t("tailor")}
-            type="button"
-            size="md"
-            kind="success"
-          />
-        ) : (
-          <Button
-            text={saving ? t("saving") : t("save")}
-            type="button"
-            size="md"
-            kind="success"
-            disabled={saving}
-            onClick={() => onSave(posting)}
-          />
-        )}
+        <Box display="flex" gap={6} alignItems="center">
+          {(isStaff || posting.is_owner) && (
+            <button
+              type="button"
+              className="jobs__icon-btn jobs__icon-btn--delete"
+              disabled={deleting}
+              onClick={() => onDelete(posting)}
+              aria-label={deleting ? t("deleting") : t("deletePosting")}
+            >
+              <Icon
+                icon="/icons/delete.svg"
+                size={18}
+                color="var(--error, #ef4444)"
+              />
+            </button>
+          )}
+          <a
+            href={posting.job_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="jobs__icon-btn"
+            aria-label={t("viewPosting")}
+          >
+            <Icon
+              icon="/icons/external.svg"
+              size={16}
+              color="var(--muted-foreground, #6b7280)"
+            />
+          </a>
+        </Box>
+        <Box display="flex" gap={8} alignItems="center">
+          {savedAppId != null ? (
+            <Button
+              href={`/${locale}/applications/${savedAppId}`}
+              text={t("tailor")}
+              type="button"
+              size="md"
+              kind="success"
+            />
+          ) : (
+            <Button
+              text={saving ? t("saving") : t("save")}
+              type="button"
+              size="md"
+              kind="success"
+              disabled={saving}
+              onClick={() => onSave(posting)}
+            />
+          )}
+        </Box>
       </Box>
 
       {explainModal && (
