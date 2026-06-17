@@ -349,7 +349,10 @@ function JobSearchesCard({
                       total: s.jobs_found,
                     })}
                   </Typography>
-                  <Badge variant="subtle" color={SEARCH_STATUS_COLORS[s.status]}>
+                  <Badge
+                    variant="subtle"
+                    color={SEARCH_STATUS_COLORS[s.status]}
+                  >
                     {t(`searchStatuses.${s.status}`)}
                   </Badge>
                   <Typography
@@ -758,7 +761,6 @@ export function JobsPage() {
               type="button"
               size="md"
               kind="success"
-              icon="/icons/enhance.svg"
               iconSize="16px"
               onClick={() => setRefineOpen(true)}
             />

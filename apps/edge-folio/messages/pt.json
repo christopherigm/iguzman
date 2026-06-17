@@ -426,8 +426,9 @@
     "recentSearchesProgress": "{completed} / {total} avaliadas",
     "overallMatch": "Correspondência geral",
     "technicalMatch": "Correspondência técnica",
+    "naftaLikelihood": "Probabilidade TN NAFTA",
     "bucketMatch": "Combinações fortes (85%+)",
-    "bucketSemi": "Combinações possíveis (60–84%)",
+    "bucketSemi": "Combinações possíveis (60-84%)",
     "bucketNo": "Combinações baixas",
     "searchStatuses": {
       "running": "Em andamento",
@@ -436,7 +437,7 @@
     },
     "refineSearch": "Refinar busca",
     "refineSearchTitle": "Refinar busca",
-    "refineSearchText": "Ajuste suas preferências de busca e regenere a consulta antes de buscar vagas."
+    "refineSearchText": "Escolha quais campos do perfil são incluídos na sua consulta de busca e regenere-a antes de buscar vagas."
   },
   "AuthPage": {
     "tabSignIn": "Entrar",
@@ -921,8 +922,6 @@
     "jobKeysUsageCount": "{used} / {limit} chamadas hoje",
     "jobSearchSection": "Busca de emprego",
     "jobSearchSubtitle": "Personalize quais dados do perfil alimentam sua busca de emprego e conecte suas próprias chaves de API.",
-    "jobSearchPrefsTitle": "Consulta de busca",
-    "jobSearchPrefsSubtitle": "Escolha quais campos do perfil são incluídos nas buscas de emprego.",
     "jobSearchIncludeTitle": "Título profissional",
     "jobSearchExtraTextLabel": "Termos adicionais",
     "jobSearchExtraTextPlaceholder": "ex. apenas remoto",
@@ -938,7 +937,7 @@
     "jobSearchPrefsError": "Não foi possível salvar as preferências",
     "jobSearchPrefsLoadError": "Não foi possível carregar as preferências",
     "jobSearchQueryTitle": "Consulta usada para buscar vagas",
-    "jobSearchQuerySubtitle": "Gere uma consulta de busca otimizada por IA a partir das suas preferências. É usada pelo feed de vagas para encontrar correspondências mais precisas.",
+    "jobSearchQuerySubtitle": "Monte uma consulta de busca a partir das suas preferências. É usada pelo feed de vagas para encontrar correspondências mais precisas.",
     "jobSearchQueryGenerate": "Gerar consulta",
     "jobSearchQueryGenerating": "Gerando…",
     "jobSearchQueryEmpty": "Nenhuma consulta gerada ainda. Clique em Gerar para criar uma a partir das suas preferências.",

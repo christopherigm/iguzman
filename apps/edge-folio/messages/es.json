@@ -426,8 +426,9 @@
     "recentSearchesProgress": "{completed} / {total} evaluadas",
     "overallMatch": "Coincidencia general",
     "technicalMatch": "Coincidencia técnica",
+    "naftaLikelihood": "Probabilidad TN NAFTA",
     "bucketMatch": "Coincidencias altas (85%+)",
-    "bucketSemi": "Coincidencias posibles (60–84%)",
+    "bucketSemi": "Coincidencias posibles (60-84%)",
     "bucketNo": "Coincidencias bajas",
     "searchStatuses": {
       "running": "En curso",
@@ -436,7 +437,7 @@
     },
     "refineSearch": "Afinar búsqueda",
     "refineSearchTitle": "Afinar búsqueda",
-    "refineSearchText": "Ajusta tus preferencias de búsqueda y regenera la consulta antes de buscar empleos."
+    "refineSearchText": "Elige qué campos de tu perfil se incluyen en tu consulta de búsqueda y luego regenérala antes de buscar empleos."
   },
   "AuthPage": {
     "tabSignIn": "Iniciar sesión",
@@ -921,8 +922,6 @@
     "jobKeysUsageCount": "{used} / {limit} llamadas hoy",
     "jobSearchSection": "Búsqueda de trabajo",
     "jobSearchSubtitle": "Personaliza qué datos de tu perfil se usan en tu búsqueda de empleo y conecta tus propias API keys.",
-    "jobSearchPrefsTitle": "Consulta de búsqueda",
-    "jobSearchPrefsSubtitle": "Elige qué campos de tu perfil se incluyen en las búsquedas de empleo.",
     "jobSearchIncludeTitle": "Título profesional",
     "jobSearchExtraTextLabel": "Términos adicionales",
     "jobSearchExtraTextPlaceholder": "ej. solo remoto",
@@ -938,7 +937,7 @@
     "jobSearchPrefsError": "No se pudieron guardar las preferencias",
     "jobSearchPrefsLoadError": "No se pudieron cargar las preferencias",
     "jobSearchQueryTitle": "Consulta usada para buscar empleos",
-    "jobSearchQuerySubtitle": "Genera una consulta de búsqueda optimizada con IA a partir de tus preferencias. La usa el feed de empleos para encontrar coincidencias más precisas.",
+    "jobSearchQuerySubtitle": "Crea una consulta de búsqueda a partir de tus preferencias. La usa el feed de empleos para encontrar coincidencias más precisas.",
     "jobSearchQueryGenerate": "Generar consulta",
     "jobSearchQueryGenerating": "Generando…",
     "jobSearchQueryEmpty": "Aún no hay consulta generada. Pulsa Generar para crear una a partir de tus preferencias.",

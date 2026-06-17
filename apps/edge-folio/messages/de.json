@@ -426,8 +426,9 @@
     "recentSearchesProgress": "{completed} / {total} bewertet",
     "overallMatch": "Gesamtübereinstimmung",
     "technicalMatch": "Technische Übereinstimmung",
+    "naftaLikelihood": "NAFTA-TN-Wahrscheinlichkeit",
     "bucketMatch": "Starke Treffer (85%+)",
-    "bucketSemi": "Mögliche Treffer (60–84%)",
+    "bucketSemi": "Mögliche Treffer (60-84%)",
     "bucketNo": "Geringe Treffer",
     "searchStatuses": {
       "running": "Läuft",
@@ -436,7 +437,7 @@
     },
     "refineSearch": "Suche verfeinern",
     "refineSearchTitle": "Suche verfeinern",
-    "refineSearchText": "Passe deine Sucheinstellungen an und generiere die Abfrage neu, bevor du Jobs abrufst."
+    "refineSearchText": "Wähle, welche Profilfelder in deine Suchanfrage einfließen, und generiere sie dann neu, bevor du Jobs abrufst."
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",
@@ -921,8 +922,6 @@
     "jobKeysUsageCount": "{used} / {limit} Aufrufe heute",
     "jobSearchSection": "Jobsuche",
     "jobSearchSubtitle": "Passe an, welche Profildaten deine Jobsuche steuern, und verbinde eigene API-Schlüssel.",
-    "jobSearchPrefsTitle": "Suchanfrage",
-    "jobSearchPrefsSubtitle": "Wähle, welche Profilfelder in deine Jobsuchanfragen einfließen.",
     "jobSearchIncludeTitle": "Berufsbezeichnung",
     "jobSearchExtraTextLabel": "Zusätzliche Suchbegriffe",
     "jobSearchExtraTextPlaceholder": "z. B. nur remote",
@@ -938,7 +937,7 @@
     "jobSearchPrefsError": "Einstellungen konnten nicht gespeichert werden",
     "jobSearchPrefsLoadError": "Einstellungen konnten nicht geladen werden",
     "jobSearchQueryTitle": "Für die Jobsuche verwendete Suchanfrage",
-    "jobSearchQuerySubtitle": "Erzeuge aus deinen Einstellungen eine KI-optimierte Suchanfrage. Sie wird vom Job-Feed verwendet, um genauere Treffer zu finden.",
+    "jobSearchQuerySubtitle": "Erzeuge aus deinen Einstellungen eine Suchanfrage. Sie wird vom Job-Feed verwendet, um genauere Treffer zu finden.",
     "jobSearchQueryGenerate": "Anfrage erzeugen",
     "jobSearchQueryGenerating": "Wird erzeugt…",
     "jobSearchQueryEmpty": "Noch keine Anfrage erzeugt. Klicke auf Erzeugen, um eine aus deinen Einstellungen zu erstellen.",

@@ -426,8 +426,9 @@
     "recentSearchesProgress": "{completed} / {total} scored",
     "overallMatch": "Overall match",
     "technicalMatch": "Technical match",
+    "naftaLikelihood": "NAFTA TN Likelihood",
     "bucketMatch": "Strong matches (85%+)",
-    "bucketSemi": "Possible matches (60–84%)",
+    "bucketSemi": "Possible matches (60-84%)",
     "bucketNo": "Low matches",
     "searchStatuses": {
       "running": "Running",
@@ -436,7 +437,7 @@
     },
     "refineSearch": "Refine Search",
     "refineSearchTitle": "Refine Search",
-    "refineSearchText": "Tweak your search preferences and regenerate the query before fetching jobs."
+    "refineSearchText": "Choose which profile fields are included in your search query, then regenerate it before fetching jobs."
   },
   "ApplicationDetailPage": {
     "metaTitle": "Application",
@@ -921,8 +922,6 @@
     "jobKeysUsageCount": "{used} / {limit} calls today",
     "jobSearchSection": "Job Search",
     "jobSearchSubtitle": "Customize what profile data powers your job feed and connect your own API keys.",
-    "jobSearchPrefsTitle": "Search Query",
-    "jobSearchPrefsSubtitle": "Choose which profile fields are included in your job search queries.",
     "jobSearchIncludeTitle": "Job title",
     "jobSearchExtraTextLabel": "Additional query terms",
     "jobSearchExtraTextPlaceholder": "e.g. remote only",
@@ -938,7 +937,7 @@
     "jobSearchPrefsError": "Couldn't save preferences",
     "jobSearchPrefsLoadError": "Couldn't load preferences",
     "jobSearchQueryTitle": "Query used to search for jobs",
-    "jobSearchQuerySubtitle": "Generate an AI-optimized search query from your preferences above. Used by the job feed to find more accurate matches.",
+    "jobSearchQuerySubtitle": "Build a search query from your preferences above. Used by the job feed to find more accurate matches.",
     "jobSearchQueryGenerate": "Generate query",
     "jobSearchQueryGenerating": "Generating…",
     "jobSearchQueryEmpty": "No query generated yet. Click Generate to create one from your preferences.",

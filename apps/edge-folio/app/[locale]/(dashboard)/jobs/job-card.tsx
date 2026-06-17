@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Card } from "@repo/ui/core-elements/card";
 import { Box } from "@repo/ui/core-elements/box";
@@ -21,7 +20,7 @@ export function formatSalary(posting: JobPosting): string | null {
   if (min == null && max == null) return null;
   const cur = posting.salary_currency ? `${posting.salary_currency} ` : "";
   const fmt = (n: number) => n.toLocaleString();
-  if (min != null && max != null) return `${cur}${fmt(min)}–${fmt(max)}`;
+  if (min != null && max != null) return `${cur}${fmt(min)}-${fmt(max)}`;
   return `${cur}${fmt((min ?? max) as number)}`;
 }
 
@@ -58,27 +57,6 @@ export function JobCard({
       <Box display="flex" alignItems="flex-start" gap={10}>
         <Box
           display="flex"
-          alignItems="center"
-          justifyContent="center"
-          styles={{
-            width: 48,
-            height: 48,
-            flexShrink: 0,
-            borderRadius: 8,
-            background: "var(--surface-2)",
-          }}
-        >
-          <Typography
-            as="span"
-            variant="h3"
-            fontWeight={700}
-            color="var(--muted-foreground, #6b7280)"
-          >
-            {(posting.company_name || "?").charAt(0).toUpperCase()}
-          </Typography>
-        </Box>
-        <Box
-          display="flex"
           flexDirection="column"
           gap={2}
           flex={1}
@@ -100,11 +78,6 @@ export function JobCard({
       </Box>
 
       <Box display="flex" gap={6} flexWrap="wrap">
-        {posting.is_private && (
-          <Badge variant="subtle" color="#8b5cf6">
-            {t("privateBadge")}
-          </Badge>
-        )}
         {posting.score > 0 && (
           <Badge variant="subtle" color="#06b6d4">
             {t("matchBadge")}
@@ -129,7 +102,6 @@ export function JobCard({
 
       <Typography
         variant="body"
-        color="var(--muted-foreground, #6b7280)"
         styles={{
           display: "-webkit-box",
           WebkitLineClamp: 3,
@@ -151,9 +123,19 @@ export function JobCard({
             ...(posting.technical_match != null
               ? [{ label: t("technicalMatch"), value: posting.technical_match }]
               : []),
+            ...(posting.nafta_tn_likelihood != null
+              ? [
+                  {
+                    label: t("naftaLikelihood"),
+                    value: posting.nafta_tn_likelihood,
+                  },
+                ]
+              : []),
           ]}
         />
       )}
+
+      <Box flexGrow={1} />
 
       <Box
         display="flex"

@@ -376,7 +376,7 @@ function formatSalary(
   if (!hasMin && !hasMax) return notSpecifiedLabel;
   const curr = currency ? ` ${currency}` : "";
   const fmt = (v: number | string) => Number(v).toLocaleString();
-  if (hasMin && hasMax) return `${fmt(min!)} – ${fmt(max!)}${curr}`;
+  if (hasMin && hasMax) return `${fmt(min!)} - ${fmt(max!)}${curr}`;
   if (hasMin) return `${fmt(min!)}+${curr}`;
   return `≤ ${fmt(max!)}${curr}`;
 }

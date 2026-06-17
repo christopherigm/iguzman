@@ -483,7 +483,7 @@ function formatSalary(app: JobApplication): string | null {
   if (min == null && max == null) return null;
   const cur = app.salary_currency ? `${app.salary_currency} ` : "";
   const fmt = (n: number) => n.toLocaleString();
-  if (min != null && max != null) return `${cur}${fmt(min)}–${fmt(max)}`;
+  if (min != null && max != null) return `${cur}${fmt(min)}-${fmt(max)}`;
   return `${cur}${fmt((min ?? max) as number)}`;
 }
 

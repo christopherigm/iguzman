@@ -1,24 +1,26 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Button } from "@repo/ui/core-elements/button";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Switch } from "@repo/ui/core-elements/switch";
-import { useGroqProxy } from "@repo/ui/use-groq";
+import { Toast } from "@repo/ui/core-elements/toast";
 import { getJobSearchPrefs, saveJobSearchPrefs, getProfile } from "@/lib/auth";
 import { getLanguages, getEducations } from "@/lib/career";
 
-const YEARS_LABELS: Record<number, string> = {
-  0: "less than 1 year",
-  1: "1-2 years",
-  3: "3-5 years",
-  6: "6-9 years",
-  10: "10-14 years",
-  15: "15+ years",
+// Mirrors the backend `_YEARS_QUERY` map in jobs/tasks.py so the query built
+// here matches what the API would otherwise compose from the same preferences.
+const YEARS_QUERY: Record<number, string> = {
+  0: "entry level",
+  1: "1-2 years experience",
+  3: "3-5 years experience",
+  6: "6-9 years experience",
+  10: "10+ years experience",
+  15: "15+ years experience",
 };
 
 const DEGREE_LABELS: Record<string, string> = {
@@ -61,7 +63,6 @@ function SwitchRow({
  */
 export function JobSearchPanel() {
   const t = useTranslations("ProfilePage");
-  const locale = useLocale();
 
   // Job search prefs state
   const [prefsLoading, setPrefsLoading] = useState(true);
@@ -84,17 +85,7 @@ export function JobSearchPanel() {
   const [profileYears, setProfileYears] = useState<number | null>(null);
   const [profileTnProfession, setProfileTnProfession] = useState("");
   const [profileEducation, setProfileEducation] = useState("");
-
-  // Generated query state
-  const [generatedQuery, setGeneratedQuery] = useState("");
-  const [queryError, setQueryError] = useState<string | null>(null);
-  const [querySaved, setQuerySaved] = useState(false);
-  const {
-    streamingText: queryStreamingText,
-    isGenerating: queryGenerating,
-    generate: queryGenerate,
-    reset: queryReset,
-  } = useGroqProxy({ temperature: 0.3 });
+  const [profileLocation, setProfileLocation] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -112,12 +103,12 @@ export function JobSearchPanel() {
         setIncludeYears(prefs.job_search_include_years);
         setIncludeStack(prefs.job_search_include_stack);
         setIncludeLocation(prefs.job_search_include_location);
-        setGeneratedQuery(prefs.job_search_generated_query);
         setLanguageCount(langs.results.length);
         setProfileJobTitle(profile.job_title);
         setProfileStack(profile.preferred_stack.map((ts) => ts.name));
         setProfileYears(profile.years_of_experience);
         setProfileTnProfession(profile.tn_profession);
+        setProfileLocation(profile.location);
         const topEdu = educations.results[0];
         if (topEdu) {
           const degree = DEGREE_LABELS[topEdu.degree] ?? "Degree";
@@ -131,6 +122,42 @@ export function JobSearchPanel() {
       .catch(() => setPrefsError(t("jobSearchPrefsLoadError")))
       .finally(() => setPrefsLoading(false));
   }, [t]);
+
+  // Build the job-board search query from the enabled preferences. This mirrors
+  // the backend `_build_query_parts` in jobs/tasks.py: a short keyword phrase
+  // (no location) assembled from the toggled profile fields - no LLM involved.
+  // Recomputes automatically as the user toggles options or edits the extra text.
+  const generatedQuery = useMemo(() => {
+    const parts: string[] = [];
+    if (includeTitle && profileJobTitle.trim())
+      parts.push(profileJobTitle.trim());
+    if (includeStack && profileStack.length > 0) parts.push(profileStack[0]!);
+    if (includeTnProfession && profileTnProfession)
+      parts.push(profileTnProfession);
+    if (includeYears && profileYears !== null) {
+      parts.push(
+        YEARS_QUERY[profileYears] ?? `${profileYears}+ years experience`,
+      );
+    }
+    if (bilingual && languageCount >= 2) parts.push("bilingual");
+    if (includeEducation && profileEducation) parts.push(profileEducation);
+    if (extraText.trim()) parts.push(extraText.trim());
+    return parts.join(" ");
+  }, [
+    includeTitle,
+    profileJobTitle,
+    includeStack,
+    profileStack,
+    includeTnProfession,
+    profileTnProfession,
+    includeYears,
+    profileYears,
+    bilingual,
+    languageCount,
+    includeEducation,
+    profileEducation,
+    extraText,
+  ]);
 
   const handleSavePrefs = useCallback(async () => {
     setSavingPrefs(true);
@@ -146,6 +173,7 @@ export function JobSearchPanel() {
         job_search_include_years: includeYears,
         job_search_include_stack: includeStack,
         job_search_include_location: includeLocation,
+        job_search_generated_query: generatedQuery,
       });
       setPrefsSaved(true);
     } catch {
@@ -162,292 +190,172 @@ export function JobSearchPanel() {
     includeYears,
     includeStack,
     includeLocation,
-    t,
-  ]);
-
-  const handleGenerateQuery = useCallback(async () => {
-    setQueryError(null);
-    setQuerySaved(false);
-    queryReset();
-
-    // Compose the context from the enabled preferences, mirroring what the worker uses.
-    const ctx: string[] = [];
-    if (includeTitle && profileJobTitle.trim())
-      ctx.push(`Job title: ${profileJobTitle.trim()}`);
-    if (includeStack && profileStack.length > 0)
-      ctx.push(`Tech stack: ${profileStack.join(", ")}`);
-    if (includeTnProfession && profileTnProfession)
-      ctx.push(`TN profession: ${profileTnProfession}`);
-    if (includeYears && profileYears !== null) {
-      ctx.push(
-        `Experience: ${YEARS_LABELS[profileYears] ?? `${profileYears}+ years`}`,
-      );
-    }
-    if (bilingual && languageCount >= 2) ctx.push("Bilingual candidate");
-    if (includeEducation && profileEducation)
-      ctx.push(`Education: ${profileEducation}`);
-    if (extraText.trim())
-      ctx.push(`Additional preferences: ${extraText.trim()}`);
-
-    if (ctx.length === 0) {
-      setQueryError(t("jobSearchQueryNoData"));
-      return;
-    }
-
-    const profileCtx = ctx.join(". ");
-    const isEs = locale === "es";
-    const messages = isEs
-      ? [
-          {
-            role: "system" as const,
-            content:
-              "Eres un experto en búsqueda de empleo. A partir del perfil y las preferencias del candidato, redacta UNA sola consulta de búsqueda concisa (una frase corta de palabras clave) optimizada para portales de empleo como Adzuna o JSearch. No incluyas la ubicación. Devuelve únicamente la consulta - sin comillas, explicaciones ni etiquetas.",
-          },
-          { role: "user" as const, content: profileCtx },
-        ]
-      : [
-          {
-            role: "system" as const,
-            content:
-              "You are a job search expert. From the candidate profile and preferences, write ONE concise job-board search query (a short keyword phrase) optimized for job APIs like Adzuna or JSearch. Do not include location. Return only the query - no quotes, explanations, or labels.",
-          },
-          { role: "user" as const, content: profileCtx },
-        ];
-
-    try {
-      const result = await queryGenerate(messages);
-      const cleaned = result
-        .trim()
-        .replace(/^["']+|["']+$/g, "")
-        .trim();
-      if (!cleaned) {
-        setQueryError(t("jobSearchQueryError"));
-        return;
-      }
-      setGeneratedQuery(cleaned);
-      await saveJobSearchPrefs({ job_search_generated_query: cleaned });
-      setQuerySaved(true);
-    } catch {
-      setQueryError(t("jobSearchQueryError"));
-    }
-  }, [
-    queryReset,
-    queryGenerate,
-    includeTitle,
-    profileJobTitle,
-    includeStack,
-    profileStack,
-    includeTnProfession,
-    profileTnProfession,
-    includeYears,
-    profileYears,
-    bilingual,
-    languageCount,
-    includeEducation,
-    profileEducation,
-    extraText,
-    locale,
+    generatedQuery,
     t,
   ]);
 
   return (
-    <Box display="flex" flexDirection="column" gap={20}>
-      {/* ── Search Query Preferences ── */}
-      <Box display="flex" flexDirection="column" gap={4}>
-        <Typography variant="body" fontWeight={600}>
-          {t("jobSearchPrefsTitle")}
-        </Typography>
-        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-          {t("jobSearchPrefsSubtitle")}
-        </Typography>
-      </Box>
-
-      {prefsLoading ? (
-        <ProgressBar label={t("loading")} />
-      ) : (
-        <>
-          <Box display="flex" flexDirection="column" gap={12}>
-            <SwitchRow
-              label={t("jobSearchIncludeTitle")}
-              checked={includeTitle}
-              onChange={(v) => {
-                setIncludeTitle(v);
-                setPrefsSaved(false);
-              }}
-            />
-            <TextInput
-              label={t("jobSearchExtraTextLabel")}
-              type="text"
-              value={extraText}
-              onChange={(v) => {
-                setExtraText(v);
-                setPrefsSaved(false);
-              }}
-              placeholder={t("jobSearchExtraTextPlaceholder")}
-              aria-label={t("jobSearchExtraTextLabel")}
-              width="100%"
-            />
-            {languageCount >= 2 && (
+    <>
+      {prefsSaved && (
+        <Toast
+          message={t("jobSearchPrefsSaved")}
+          variant="success"
+          position="top-center"
+        />
+      )}
+      {prefsError && (
+        <Toast message={prefsError} variant="error" position="top-center" />
+      )}
+      <Box display="flex" flexDirection="column" gap={20}>
+        {prefsLoading ? (
+          <ProgressBar label={t("loading")} />
+        ) : (
+          <>
+            <Box display="flex" flexDirection="column" gap={12}>
               <SwitchRow
-                label={t("jobSearchBilingual")}
-                checked={bilingual}
+                label={t("jobSearchIncludeTitle")}
+                checked={includeTitle}
                 onChange={(v) => {
-                  setBilingual(v);
+                  setIncludeTitle(v);
                   setPrefsSaved(false);
                 }}
               />
-            )}
-            <SwitchRow
-              label={t("jobSearchIncludeTnProfession")}
-              checked={includeTnProfession}
-              onChange={(v) => {
-                setIncludeTnProfession(v);
-                setPrefsSaved(false);
-              }}
-            />
-            <SwitchRow
-              label={t("jobSearchIncludeEducation")}
-              checked={includeEducation}
-              onChange={(v) => {
-                setIncludeEducation(v);
-                setPrefsSaved(false);
-              }}
-            />
-            <SwitchRow
-              label={t("jobSearchIncludeYears")}
-              checked={includeYears}
-              onChange={(v) => {
-                setIncludeYears(v);
-                setPrefsSaved(false);
-              }}
-            />
-            <SwitchRow
-              label={t("jobSearchIncludeStack")}
-              checked={includeStack}
-              onChange={(v) => {
-                setIncludeStack(v);
-                setPrefsSaved(false);
-              }}
-            />
-            <SwitchRow
-              label={t("jobSearchIncludeLocation")}
-              checked={includeLocation}
-              onChange={(v) => {
-                setIncludeLocation(v);
-                setPrefsSaved(false);
-              }}
-            />
-          </Box>
-
-          {prefsError && (
-            <Typography variant="body" role="alert" color="var(--error, #ef4444)">
-              {prefsError}
-            </Typography>
-          )}
-
-          <Box
-            display="flex"
-            justifyContent="flex-end"
-            alignItems="center"
-            gap={12}
-            marginTop={8}
-            marginBottom={8}
-          >
-            {prefsSaved && (
-              <Typography variant="body" color="var(--success, #22c55e)">
-                {t("jobSearchPrefsSaved")}
-              </Typography>
-            )}
-            <Button
-              text={
-                savingPrefs ? t("jobSearchPrefsSaving") : t("jobSearchPrefsSave")
-              }
-              type="button"
-              size="lg"
-              kind="success"
-              disabled={savingPrefs}
-              onClick={() => void handleSavePrefs()}
-            />
-          </Box>
-
-          {/* ── Generated Query ── */}
-          <Box display="flex" flexDirection="column" gap={12}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="flex-start"
-              gap={12}
-            >
-              <Box display="flex" flexDirection="column" gap={4}>
-                <Typography variant="body" fontWeight={600}>
-                  {t("jobSearchQueryTitle")}
-                </Typography>
-                <Typography
-                  variant="body"
-                  color="var(--muted-foreground, #6b7280)"
-                >
-                  {t("jobSearchQuerySubtitle")}
-                </Typography>
-              </Box>
-              <Button
-                text={
-                  queryGenerating
-                    ? t("jobSearchQueryGenerating")
-                    : t("jobSearchQueryGenerate")
+              {languageCount >= 2 && (
+                <SwitchRow
+                  label={t("jobSearchBilingual")}
+                  checked={bilingual}
+                  onChange={(v) => {
+                    setBilingual(v);
+                    setPrefsSaved(false);
+                  }}
+                />
+              )}
+              <SwitchRow
+                label={
+                  profileTnProfession.trim()
+                    ? `${t("jobSearchIncludeTnProfession")} (${profileTnProfession.trim()})`
+                    : t("jobSearchIncludeTnProfession")
                 }
-                type="button"
-                kind="success"
-                size="md"
-                icon="/icons/enhance.svg"
-                iconSize="16px"
-                disabled={queryGenerating}
-                onClick={() => void handleGenerateQuery()}
+                checked={includeTnProfession}
+                onChange={(v) => {
+                  setIncludeTnProfession(v);
+                  setPrefsSaved(false);
+                }}
+              />
+              <SwitchRow
+                label={t("jobSearchIncludeEducation")}
+                checked={includeEducation}
+                onChange={(v) => {
+                  setIncludeEducation(v);
+                  setPrefsSaved(false);
+                }}
+              />
+              <SwitchRow
+                label={t("jobSearchIncludeYears")}
+                checked={includeYears}
+                onChange={(v) => {
+                  setIncludeYears(v);
+                  setPrefsSaved(false);
+                }}
+              />
+              <SwitchRow
+                label={t("jobSearchIncludeStack")}
+                checked={includeStack}
+                onChange={(v) => {
+                  setIncludeStack(v);
+                  setPrefsSaved(false);
+                }}
+              />
+              <SwitchRow
+                label={
+                  profileLocation.trim()
+                    ? `${t("jobSearchIncludeLocation")} (${profileLocation.trim()})`
+                    : t("jobSearchIncludeLocation")
+                }
+                checked={includeLocation}
+                onChange={(v) => {
+                  setIncludeLocation(v);
+                  setPrefsSaved(false);
+                }}
+              />
+              <TextInput
+                label={t("jobSearchExtraTextLabel")}
+                type="text"
+                value={extraText}
+                onChange={(v) => {
+                  setExtraText(v);
+                  setPrefsSaved(false);
+                }}
+                placeholder={t("jobSearchExtraTextPlaceholder")}
+                aria-label={t("jobSearchExtraTextLabel")}
+                width="100%"
               />
             </Box>
 
-            {queryGenerating && (
-              <ProgressBar label={t("jobSearchQueryGenerating")} />
-            )}
+            {/* ── Generated Query ── */}
+            <Box display="flex" flexDirection="column" gap={12}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="flex-start"
+                gap={12}
+              >
+                <Box display="flex" flexDirection="column" gap={4}>
+                  <Typography variant="body" fontWeight={600}>
+                    {t("jobSearchQueryTitle")}
+                  </Typography>
+                  <Typography
+                    variant="body"
+                    color="var(--muted-foreground, #6b7280)"
+                  >
+                    {t("jobSearchQuerySubtitle")}
+                  </Typography>
+                </Box>
+              </Box>
 
-            <Box
-              padding={12}
-              borderRadius={8}
-              styles={{
-                border: "1px solid var(--border, #e5e7eb)",
-                background: "var(--surface-2)",
-              }}
-            >
-              {(queryGenerating ? queryStreamingText : generatedQuery) ? (
-                <Typography variant="body">
-                  {queryGenerating ? queryStreamingText : generatedQuery}
-                </Typography>
-              ) : (
-                <Typography
-                  variant="body"
-                  color="var(--muted-foreground, #6b7280)"
-                >
-                  {t("jobSearchQueryEmpty")}
-                </Typography>
-              )}
+              <Box
+                padding={12}
+                borderRadius={8}
+                styles={{
+                  border: "1px solid var(--border, #e5e7eb)",
+                  background: "var(--surface-2)",
+                }}
+              >
+                {generatedQuery ? (
+                  <Typography variant="body">{generatedQuery}</Typography>
+                ) : (
+                  <Typography
+                    variant="body"
+                    color="var(--muted-foreground, #6b7280)"
+                  >
+                    {t("jobSearchQueryEmpty")}
+                  </Typography>
+                )}
+              </Box>
             </Box>
 
-            {querySaved && (
-              <Typography variant="body" color="var(--success, #22c55e)">
-                {t("jobSearchQuerySaved")}
-              </Typography>
-            )}
-            {queryError && (
-              <Typography
-                variant="body"
-                role="alert"
-                color="var(--error, #ef4444)"
-              >
-                {queryError}
-              </Typography>
-            )}
-          </Box>
-        </>
-      )}
-    </Box>
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              gap={12}
+            >
+              <Button
+                text={
+                  savingPrefs
+                    ? t("jobSearchPrefsSaving")
+                    : t("jobSearchPrefsSave")
+                }
+                type="button"
+                size="md"
+                kind="success"
+                disabled={savingPrefs}
+                onClick={() => void handleSavePrefs()}
+              />
+            </Box>
+          </>
+        )}
+      </Box>
+    </>
   );
 }

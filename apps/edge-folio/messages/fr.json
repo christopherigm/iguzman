@@ -426,8 +426,9 @@
     "recentSearchesProgress": "{completed} / {total} évaluées",
     "overallMatch": "Correspondance globale",
     "technicalMatch": "Correspondance technique",
+    "naftaLikelihood": "Probabilité TN NAFTA",
     "bucketMatch": "Fortes correspondances (85%+)",
-    "bucketSemi": "Correspondances possibles (60–84%)",
+    "bucketSemi": "Correspondances possibles (60-84%)",
     "bucketNo": "Faibles correspondances",
     "searchStatuses": {
       "running": "En cours",
@@ -436,7 +437,7 @@
     },
     "refineSearch": "Affiner la recherche",
     "refineSearchTitle": "Affiner la recherche",
-    "refineSearchText": "Ajustez vos préférences de recherche et régénérez la requête avant de récupérer des emplois."
+    "refineSearchText": "Choisissez quels champs de profil sont inclus dans votre requête de recherche, puis régénérez-la avant de récupérer des emplois."
   },
   "AuthPage": {
     "tabSignIn": "Se connecter",
@@ -921,8 +922,6 @@
     "jobKeysUsageCount": "{used} / {limit} appels aujourd'hui",
     "jobSearchSection": "Recherche d'emploi",
     "jobSearchSubtitle": "Personnalisez les données de profil utilisées dans votre recherche et connectez vos propres clés API.",
-    "jobSearchPrefsTitle": "Requête de recherche",
-    "jobSearchPrefsSubtitle": "Choisissez quels champs de profil sont inclus dans vos recherches d'emploi.",
     "jobSearchIncludeTitle": "Titre de poste",
     "jobSearchExtraTextLabel": "Termes supplémentaires",
     "jobSearchExtraTextPlaceholder": "ex. télétravail uniquement",
@@ -938,7 +937,7 @@
     "jobSearchPrefsError": "Impossible d'enregistrer les préférences",
     "jobSearchPrefsLoadError": "Impossible de charger les préférences",
     "jobSearchQueryTitle": "Requête utilisée pour rechercher des emplois",
-    "jobSearchQuerySubtitle": "Générez une requête de recherche optimisée par IA à partir de vos préférences. Elle est utilisée par le flux d'emplois pour trouver des correspondances plus précises.",
+    "jobSearchQuerySubtitle": "Composez une requête de recherche à partir de vos préférences. Elle est utilisée par le flux d'emplois pour trouver des correspondances plus précises.",
     "jobSearchQueryGenerate": "Générer la requête",
     "jobSearchQueryGenerating": "Génération…",
     "jobSearchQueryEmpty": "Aucune requête générée. Cliquez sur Générer pour en créer une à partir de vos préférences.",
