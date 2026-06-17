@@ -26,7 +26,7 @@ export const Card: React.FC<CardProps> = ({
   padding = 14,
   borderRadius = 6,
   border = "1px solid var(--border, #e5e7eb)",
-  elevation = 3,
+  elevation = 5,
   backgroundColor = "var(--surface-1)",
   ...rest
 }) => (

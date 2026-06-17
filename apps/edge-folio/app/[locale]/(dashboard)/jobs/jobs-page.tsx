@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  Fragment,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Container } from "@repo/ui/core-elements/container";
@@ -14,6 +21,7 @@ import { Toast } from "@repo/ui/core-elements/toast";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Spinner } from "@repo/ui/core-elements/spinner";
+import { Divider } from "@repo/ui/core-elements/divider";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import {
   getJobFeed,
@@ -31,7 +39,9 @@ import {
 } from "@/lib/jobs";
 import { getProfile } from "@/lib/auth";
 import { JobCard } from "./job-card";
+import { JobSearchPanel } from "../profile/job-search-section";
 import Card from "@repo/ui/core-elements/card";
+import "./jobs-page.css";
 
 const COUNTRIES: JobCountry[] = ["us", "ca", "mx"];
 const WORK_TYPES: JobWorkType[] = ["remote", "onsite", "hybrid"];
@@ -63,6 +73,8 @@ interface JobListFilters {
   country: JobCountry | "";
   workType: JobWorkType | "";
   q: string;
+  // When set, restricts the list to postings from a single JobSearch run.
+  search: number | null;
   page: number;
 }
 
@@ -78,7 +90,7 @@ interface JobListState {
 // Loads one paginated slice of the feed for a single scope (private/shared).
 // The two lists share the same filters but page independently.
 function useJobList(scope: JobScope, filters: JobListFilters): JobListState {
-  const { country, workType, q, page } = filters;
+  const { country, workType, q, search, page } = filters;
   const [postings, setPostings] = useState<JobPosting[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -93,6 +105,7 @@ function useJobList(scope: JobScope, filters: JobListFilters): JobListState {
         country,
         work_type: workType,
         q,
+        search: search ?? undefined,
         page,
         per: PER_PAGE,
       });
@@ -103,7 +116,7 @@ function useJobList(scope: JobScope, filters: JobListFilters): JobListState {
     } finally {
       setLoading(false);
     }
-  }, [scope, country, workType, q, page]);
+  }, [scope, country, workType, q, search, page]);
 
   useEffect(() => {
     load();
@@ -260,73 +273,94 @@ function JobSection({
 
 // ── Recent job searches card ────────────────────────────────────────────────
 
-function JobSearchesCard({ searches }: { searches: JobSearch[] }) {
+interface JobSearchesCardProps {
+  searches: JobSearch[];
+  // The currently active search filter (null when none), and the toggle handler.
+  selectedSearchId: number | null;
+  onSelect: (id: number) => void;
+}
+
+function JobSearchesCard({
+  searches,
+  selectedSearchId,
+  onSelect,
+}: JobSearchesCardProps) {
   const t = useTranslations("JobsPage");
   if (searches.length === 0) return null;
 
   return (
-    <Card gap={10} marginBottom={20}>
+    <Card gap={6} marginBottom={20}>
       <Typography variant="body" fontWeight={600} color="var(--foreground)">
         {t("recentSearchesTitle")}
       </Typography>
-      <Box display="flex" flexDirection="column" gap={8}>
-        {searches.map((s) => {
+      <Box display="flex" flexDirection="column" gap={4}>
+        {searches.map((s, i) => {
           const date = new Date(s.created).toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
             hour: "2-digit",
             minute: "2-digit",
           });
+          const selected = selectedSearchId === s.id;
           return (
-            <Box
-              key={s.id}
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              gap={12}
-              flexWrap="wrap"
-            >
+            <Fragment key={s.id}>
+              {i > 0 && <Divider />}
               <Box
-                display="flex"
-                alignItems="center"
-                gap={8}
-                flex={1}
-                styles={{ minWidth: 0 }}
+                className="jobs__search-item"
+                role="button"
+                tabIndex={0}
+                aria-label={s.query || t("recentSearchesUntitled")}
+                onClick={() => onSelect(s.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelect(s.id);
+                  }
+                }}
+                border={
+                  selected
+                    ? "1px solid var(--primary, #06b6d4)"
+                    : "1px solid transparent"
+                }
+                borderRadius={8}
+                padding={8}
               >
-                {s.status === "running" && <Spinner size={14} />}
-                <Typography
-                  variant="body"
-                  color="var(--foreground)"
-                  styles={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {s.query || t("recentSearchesUntitled")}
-                </Typography>
+                <Box className="jobs__search-item-query">
+                  {s.status === "running" && <Spinner size={14} />}
+                  <Typography
+                    variant="body"
+                    color="var(--foreground)"
+                    styles={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {s.query || t("recentSearchesUntitled")}
+                  </Typography>
+                </Box>
+                <Box className="jobs__search-item-meta">
+                  <Typography
+                    variant="body"
+                    color="var(--muted-foreground, #6b7280)"
+                  >
+                    {t("recentSearchesProgress", {
+                      completed: s.metrics_completed,
+                      total: s.jobs_found,
+                    })}
+                  </Typography>
+                  <Badge variant="subtle" color={SEARCH_STATUS_COLORS[s.status]}>
+                    {t(`searchStatuses.${s.status}`)}
+                  </Badge>
+                  <Typography
+                    variant="caption"
+                    color="var(--muted-foreground, #6b7280)"
+                  >
+                    {date}
+                  </Typography>
+                </Box>
               </Box>
-              <Box display="flex" alignItems="center" gap={8}>
-                <Typography
-                  variant="body"
-                  color="var(--muted-foreground, #6b7280)"
-                >
-                  {t("recentSearchesProgress", {
-                    completed: s.metrics_completed,
-                    total: s.jobs_found,
-                  })}
-                </Typography>
-                <Badge variant="subtle" color={SEARCH_STATUS_COLORS[s.status]}>
-                  {t(`searchStatuses.${s.status}`)}
-                </Badge>
-                <Typography
-                  variant="caption"
-                  color="var(--muted-foreground, #6b7280)"
-                >
-                  {date}
-                </Typography>
-              </Box>
-            </Box>
+            </Fragment>
           );
         })}
       </Box>
@@ -345,6 +379,9 @@ export function JobsPage() {
   const country = (searchParams.get("country") || "") as JobCountry | "";
   const workType = (searchParams.get("work_type") || "") as JobWorkType | "";
   const q = searchParams.get("q") || "";
+  // Active "filter by search run" selection, surfaced from the URL so it survives
+  // reloads and resets pagination through setParam like any other filter.
+  const searchFilter = parseInt(searchParams.get("search") || "", 10) || null;
   const pagePrivate = Math.max(
     1,
     parseInt(searchParams.get("page_private") || "1", 10) || 1,
@@ -369,6 +406,7 @@ export function JobsPage() {
   // to their own provider quota), producing private postings only they can see.
   const [canFetch, setCanFetch] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [refineOpen, setRefineOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<JobPosting | null>(null);
   const [searches, setSearches] = useState<JobSearch[]>([]);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -403,14 +441,26 @@ export function JobsPage() {
     country,
     workType,
     q,
+    search: searchFilter,
     page: pagePrivate,
   });
   const sharedList = useJobList("shared", {
     country,
     workType,
     q,
+    // The shared catalog has no per-search association; it is hidden entirely
+    // while a search filter is active, so it never receives one.
+    search: null,
     page: pageShared,
   });
+
+  // Toggle the search filter: selecting the active one clears it.
+  const handleSelectSearch = useCallback(
+    (id: number) => {
+      setParam({ search: searchFilter === id ? "" : String(id) });
+    },
+    [searchFilter, setParam],
+  );
 
   // Stable ref to the latest private reload so the poll loop (started once) always
   // calls the current version without having to re-subscribe.
@@ -665,13 +715,18 @@ export function JobsPage() {
     sharedList.loading &&
     privateList.postings.length === 0 &&
     sharedList.postings.length === 0;
-  const bothEmpty =
-    !privateList.loading &&
-    !sharedList.loading &&
-    !privateList.error &&
-    !sharedList.error &&
-    privateList.postings.length === 0 &&
-    visibleCount(sharedList) === 0;
+  // While a search filter is active the shared list is hidden, so the empty
+  // state hinges on the (filtered) private list alone.
+  const bothEmpty = searchFilter
+    ? !privateList.loading &&
+      !privateList.error &&
+      privateList.postings.length === 0
+    : !privateList.loading &&
+      !sharedList.loading &&
+      !privateList.error &&
+      !sharedList.error &&
+      privateList.postings.length === 0 &&
+      visibleCount(sharedList) === 0;
 
   return (
     <Container
@@ -697,24 +752,39 @@ export function JobsPage() {
           </Typography>
         </Box>
         {(isStaff || canFetch) && (
-          <Button
-            text={
-              running
-                ? t("searchRunning")
-                : fetching
-                  ? t("fetching")
-                  : t("fetchJobs")
-            }
-            type="button"
-            size="md"
-            kind="success"
-            disabled={fetching || running}
-            onClick={handleFetch}
-          />
+          <Box display="flex" alignItems="center" gap={12} flexWrap="wrap">
+            <Button
+              text={t("refineSearch")}
+              type="button"
+              size="md"
+              kind="success"
+              icon="/icons/enhance.svg"
+              iconSize="16px"
+              onClick={() => setRefineOpen(true)}
+            />
+            <Button
+              text={
+                running
+                  ? t("searchRunning")
+                  : fetching
+                    ? t("fetching")
+                    : t("fetchJobs")
+              }
+              type="button"
+              size="md"
+              kind="success"
+              disabled={fetching || running}
+              onClick={handleFetch}
+            />
+          </Box>
         )}
       </Box>
 
-      <JobSearchesCard searches={searches} />
+      <JobSearchesCard
+        searches={searches}
+        selectedSearchId={searchFilter}
+        onSelect={handleSelectSearch}
+      />
 
       {filterChips}
 
@@ -817,7 +887,10 @@ export function JobsPage() {
                   >
                     {t("pageOf", {
                       page: pagePrivate,
-                      total: Math.max(1, Math.ceil(privateList.count / PER_PAGE)),
+                      total: Math.max(
+                        1,
+                        Math.ceil(privateList.count / PER_PAGE),
+                      ),
                     })}
                   </Typography>
                   <Button
@@ -836,19 +909,23 @@ export function JobsPage() {
               )}
             </>
           )}
-          <JobSection
-            title={t("sharedListTitle")}
-            list={sharedList}
-            page={pageShared}
-            onPageChange={(p) => setParam({ page_shared: String(p) })}
-            matchOnly={matchOnly}
-            onSave={handleSave}
-            onDelete={handleDelete}
-            savingId={savingId}
-            deletingId={deletingId}
-            savedMap={savedMap}
-            isStaff={isStaff}
-          />
+          {/* A search run owns only private postings, so hide the shared
+              catalog entirely while filtering by a specific search. */}
+          {!searchFilter && (
+            <JobSection
+              title={t("sharedListTitle")}
+              list={sharedList}
+              page={pageShared}
+              onPageChange={(p) => setParam({ page_shared: String(p) })}
+              matchOnly={matchOnly}
+              onSave={handleSave}
+              onDelete={handleDelete}
+              savingId={savingId}
+              deletingId={deletingId}
+              savedMap={savedMap}
+              isStaff={isStaff}
+            />
+          )}
         </>
       )}
 
@@ -859,6 +936,18 @@ export function JobsPage() {
           variant={toast.kind}
           position="top-center"
         />
+      )}
+
+      {refineOpen && (
+        <ConfirmationModal
+          title={t("refineSearchTitle")}
+          text={t("refineSearchText")}
+          okCallback={() => setRefineOpen(false)}
+          cancelCallback={() => setRefineOpen(false)}
+          panelMaxWidth="640px"
+        >
+          <JobSearchPanel />
+        </ConfirmationModal>
       )}
 
       {pendingDelete && (

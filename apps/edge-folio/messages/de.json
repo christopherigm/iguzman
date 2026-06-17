@@ -382,8 +382,8 @@
     "save": "Speichern",
     "tailor": "Anpassen",
     "viewPosting": "Stelle ansehen",
-    "fetchJobs": "Jobs abrufen",
-    "fetching": "Wird abgerufen…",
+    "fetchJobs": "Jobs suchen",
+    "fetching": "Wird gesucht…",
     "fetchStarted": "Abruf gestartet. Neue Stellen erscheinen in Kürze.",
     "fetchError": "Abruf konnte nicht gestartet werden. Bitte versuche es erneut.",
     "fetchLimitReached": "Dein API-Schlüssel hat heute keine Aufrufe mehr. Er wird morgen zurückgesetzt, oder füge einen weiteren Anbieterschlüssel hinzu.",
@@ -433,7 +433,10 @@
       "running": "Läuft",
       "done": "Fertig",
       "failed": "Fehlgeschlagen"
-    }
+    },
+    "refineSearch": "Suche verfeinern",
+    "refineSearchTitle": "Suche verfeinern",
+    "refineSearchText": "Passe deine Sucheinstellungen an und generiere die Abfrage neu, bevor du Jobs abrufst."
   },
   "AuthPage": {
     "tabSignIn": "Anmelden",

@@ -382,8 +382,8 @@
     "save": "Save",
     "tailor": "Tailor",
     "viewPosting": "View posting",
-    "fetchJobs": "Fetch Jobs",
-    "fetching": "Fetching…",
+    "fetchJobs": "Search Jobs",
+    "fetching": "Searching…",
     "fetchStarted": "Job fetch started. New roles will appear shortly.",
     "fetchError": "Couldn't start the fetch. Please try again.",
     "fetchLimitReached": "Your API key has no calls left today. It resets tomorrow, or add another provider key.",
@@ -433,7 +433,10 @@
       "running": "Running",
       "done": "Done",
       "failed": "Failed"
-    }
+    },
+    "refineSearch": "Refine Search",
+    "refineSearchTitle": "Refine Search",
+    "refineSearchText": "Tweak your search preferences and regenerate the query before fetching jobs."
   },
   "ApplicationDetailPage": {
     "metaTitle": "Application",

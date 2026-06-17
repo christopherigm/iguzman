@@ -82,15 +82,6 @@
   text-decoration: underline;
 }
 
-/* ── Enhance preview panel ────────────────────────────────────────────────── */
-
-.work-exp__enhance-preview {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--primary, #06b6d4) 30%, transparent);
-  background: color-mix(in srgb, var(--primary, #06b6d4) 5%, transparent);
-}
-
 /* ── Tech Stack picker ────────────────────────────────────────────────────── */
 
 .work-exp__tech-tag-remove {

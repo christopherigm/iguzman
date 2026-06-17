@@ -121,13 +121,25 @@ export async function requestPasswordReset(email: string): Promise<void> {
   }
 }
 
-export async function getProfile(): Promise<UserProfile> {
-  const res = await fetch("/api/auth/profile");
-  if (!res.ok) {
-    const data: Record<string, unknown> = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, data);
-  }
-  return res.json() as Promise<UserProfile>;
+// In-flight request dedupe: the profile page and the job-search section both
+// request the profile on mount in the same tick. Collapsing concurrent calls
+// into one shared request avoids the duplicate round-trip; the cache clears as
+// soon as the request settles, so later navigations still fetch fresh data.
+let profileInFlight: Promise<UserProfile> | null = null;
+
+export function getProfile(): Promise<UserProfile> {
+  if (profileInFlight) return profileInFlight;
+  profileInFlight = (async () => {
+    const res = await fetch("/api/auth/profile");
+    if (!res.ok) {
+      const data: Record<string, unknown> = await res.json().catch(() => ({}));
+      throw new ApiError(res.status, data);
+    }
+    return res.json() as Promise<UserProfile>;
+  })().finally(() => {
+    profileInFlight = null;
+  });
+  return profileInFlight;
 }
 
 export async function updateProfile(payload: {
@@ -147,9 +159,9 @@ export async function updateProfile(payload: {
 }
 
 export async function saveOnboarding(payload: {
-  job_title: string;
-  years_of_experience: number | null;
-  preferred_stack: string[];
+  job_title?: string;
+  years_of_experience?: number | null;
+  preferred_stack?: string[];
 }): Promise<UserProfile> {
   const res = await fetch("/api/auth/onboarding", {
     method: "PATCH",

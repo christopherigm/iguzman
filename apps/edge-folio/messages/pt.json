@@ -433,7 +433,10 @@
       "running": "Em andamento",
       "done": "Concluído",
       "failed": "Falhou"
-    }
+    },
+    "refineSearch": "Refinar busca",
+    "refineSearchTitle": "Refinar busca",
+    "refineSearchText": "Ajuste suas preferências de busca e regenere a consulta antes de buscar vagas."
   },
   "AuthPage": {
     "tabSignIn": "Entrar",

@@ -1,3 +1,41 @@
+/* ── Sections layout ──
+ * Two independent flex columns (not a CSS grid, not column-count masonry).
+ *
+ * A grid (grid-template-columns: 1fr 1fr) ties the two cards of each row to a
+ * shared row track sized to the taller card, leaving a vertical gap under the
+ * shorter one — the gap bug. column-count masonry closes that gap but forces
+ * the browser to re-balance every card across columns on any height change
+ * (typing in the summary, the AI enhance preview, a save ProgressBar) — the
+ * source of typing/streaming lag.
+ *
+ * Two explicit flex columns give masonry-style packing with neither problem:
+ * each column flows its own cards top-to-bottom, so a height change only
+ * reflows the cards below it within the same column — never across columns.
+ */
+.profile__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile__col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+@media (min-width: 600px) {
+  .profile__sections {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .profile__col {
+    flex: 1 1 0;
+  }
+}
+
 /* ── Tech tag input ── */
 
 .profile__tags {
@@ -39,7 +77,10 @@
   color: var(--foreground);
   font-size: 0.75rem;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .profile__suggestion:hover {
@@ -68,7 +109,9 @@
   color: var(--foreground);
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .profile__upload-zone:hover {
@@ -153,16 +196,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-/* ── Enhance preview panel ── */
-
-.profile__enhance-preview {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--primary, #06b6d4) 30%, transparent);
-  background: color-mix(in srgb, var(--primary, #06b6d4) 5%, transparent);
-  display: flex;
 }
 
 /* ── Status messages ── */

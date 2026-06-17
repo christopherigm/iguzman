@@ -16,7 +16,10 @@ import { Slider } from "@repo/ui/core-elements/slider";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Card } from "@repo/ui/core-elements/card";
-import { useGroqProxy } from "@repo/ui/use-groq";
+import {
+  StreamingEnhancePanel,
+  type StreamingEnhanceHandle,
+} from "@repo/ui/core-elements/streaming-enhance-panel";
 import {
   getSkills,
   createSkill,
@@ -123,41 +126,23 @@ function BulletForm({
   const [error, setError] = useState<string | null>(null);
 
   // ── AI Enhance ──────────────────────────────────────────────────────────────
-  const {
-    streamingText,
-    isGenerating,
-    generate,
-    abort,
-    reset: resetLlm,
-  } = useGroqProxy({ temperature: 0.7 });
-  const [enhancePreview, setEnhancePreview] = useState("");
+  // Streaming lives in <StreamingEnhancePanel> so per-token updates don't
+  // re-render this form. These flags only track coarse transitions it reports.
+  const enhanceRef = useRef<StreamingEnhanceHandle>(null);
+  const [enhancing, setEnhancing] = useState(false);
+  const [previewActive, setPreviewActive] = useState(false);
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
   const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
   const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("sm");
 
   useEffect(() => {
-    if (streamingText) setEnhancePreview(streamingText);
-  }, [streamingText]);
-
-  // Abort streaming if form unmounts mid-generation.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(
-    () => () => {
-      if (isGenerating) abort();
-    },
-    [],
-  );
-
-  useEffect(() => {
     onValidityChange?.(!saving && text.trim().length > 0);
   }, [saving, text, onValidityChange]);
 
-  const handleConfirmEnhanceOptions = async () => {
+  const handleConfirmEnhanceOptions = () => {
     setShowEnhanceOptions(false);
     const currentText = text.trim();
     if (!currentText) return;
-    setEnhancePreview("");
-    resetLlm();
     const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? {
       min: 50,
       max: 75,
@@ -178,19 +163,7 @@ function BulletForm({
           },
           { role: "user" as const, content: currentText },
         ];
-    await generate(messages);
-  };
-
-  const handleAcceptEnhance = () => {
-    if (enhancePreview) setText(enhancePreview);
-    setEnhancePreview("");
-    resetLlm();
-  };
-
-  const handleDiscardEnhance = () => {
-    if (isGenerating) abort();
-    setEnhancePreview("");
-    resetLlm();
+    enhanceRef.current?.start(messages);
   };
 
   // ── Voice input ──────────────────────────────────────────────────────────────
@@ -230,7 +203,6 @@ function BulletForm({
     }
   }
 
-  const llmBusy = isGenerating;
   const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[
     enhanceParagraphLength
   ] ?? { min: 50, max: 75 };
@@ -278,18 +250,18 @@ function BulletForm({
               icon="/icons/enhance.svg"
               iconSize="16px"
               iconColor={
-                enhancePreview
+                previewActive
                   ? "var(--primary, #06b6d4)"
                   : "var(--foreground, #171717)"
               }
-              disabled={llmBusy || !text.trim()}
+              disabled={enhancing || !text.trim()}
               onClick={() => setShowEnhanceOptions(true)}
               aria-label={t("enhanceLabel")}
               title={t("enhanceLabel")}
               className={[
                 "matrix__enhance-btn",
-                llmBusy || !text.trim() ? "matrix__enhance-btn--busy" : "",
-                enhancePreview ? "matrix__enhance-btn--active" : "",
+                enhancing || !text.trim() ? "matrix__enhance-btn--busy" : "",
+                previewActive ? "matrix__enhance-btn--active" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -307,41 +279,17 @@ function BulletForm({
           aria-label={t("textLabel")}
         />
         {/* Enhance preview panel */}
-        {enhancePreview && (
-          <Box
-            className="matrix__enhance-preview"
-            flexDirection="column"
-            gap={10}
-          >
-            <Typography variant="body">{enhancePreview}</Typography>
-            <Box display="flex" gap={8} alignItems="center" marginTop={12}>
-              {isGenerating ? (
-                <Button
-                  text={t("enhanceStop")}
-                  type="button"
-                  size="md"
-                  onClick={handleDiscardEnhance}
-                />
-              ) : (
-                <>
-                  <Button
-                    text={t("enhanceDiscard")}
-                    type="button"
-                    size="md"
-                    onClick={handleDiscardEnhance}
-                  />
-                  <Button
-                    text={t("enhanceAccept")}
-                    type="button"
-                    size="md"
-                    kind="success"
-                    onClick={handleAcceptEnhance}
-                  />
-                </>
-              )}
-            </Box>
-          </Box>
-        )}
+        <StreamingEnhancePanel
+          ref={enhanceRef}
+          onAccept={setText}
+          onGeneratingChange={setEnhancing}
+          onPreviewActiveChange={setPreviewActive}
+          labels={{
+            stop: t("enhanceStop"),
+            discard: t("enhanceDiscard"),
+            accept: t("enhanceAccept"),
+          }}
+        />
         <Select
           label={t("categoryLabel")}
           value={selectedCategory}

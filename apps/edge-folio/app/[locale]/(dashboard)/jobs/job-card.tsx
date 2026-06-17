@@ -84,26 +84,6 @@ export function JobCard({
           flex={1}
           styles={{ minWidth: 0 }}
         >
-          <Box display="flex" alignItems="center" gap={6} flexWrap="wrap">
-            {posting.is_private && (
-              <Badge
-                variant="subtle"
-                color="#8b5cf6"
-                style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}
-              >
-                {t("privateBadge")}
-              </Badge>
-            )}
-            {posting.score > 0 && (
-              <Badge
-                variant="subtle"
-                color="#06b6d4"
-                style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}
-              >
-                {t("matchBadge")}
-              </Badge>
-            )}
-          </Box>
           <Typography
             as="p"
             variant="body"
@@ -114,14 +94,24 @@ export function JobCard({
             {posting.job_title}
           </Typography>
           <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-            {posting.company_name}
+            {posting.company_name} - {date}
           </Typography>
         </Box>
       </Box>
 
       <Box display="flex" gap={6} flexWrap="wrap">
+        {posting.is_private && (
+          <Badge variant="subtle" color="#8b5cf6">
+            {t("privateBadge")}
+          </Badge>
+        )}
+        {posting.score > 0 && (
+          <Badge variant="subtle" color="#06b6d4">
+            {t("matchBadge")}
+          </Badge>
+        )}
         {posting.location && (
-          <Badge variant="subtle" color="#6b7280">
+          <Badge variant="subtle" color="#ff6ae3">
             {posting.location}
           </Badge>
         )}
@@ -167,51 +157,46 @@ export function JobCard({
 
       <Box
         display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        marginTop={4}
+        justifyContent="center"
         gap={8}
+        alignItems="center"
+        marginTop={4}
       >
-        <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-          {date}
-        </Typography>
-        <Box display="flex" gap={6} alignItems="center">
-          {(isStaff || posting.is_owner) && (
-            <Button
-              text={deleting ? t("deleting") : t("deletePosting")}
-              type="button"
-              size="md"
-              disabled={deleting}
-              onClick={() => onDelete(posting)}
-              kind="error"
-            />
-          )}
+        {(isStaff || posting.is_owner) && (
           <Button
-            href={posting.job_url}
-            text={t("viewPosting")}
+            text={deleting ? t("deleting") : t("deletePosting")}
             type="button"
             size="md"
             disabled={deleting}
+            onClick={() => onDelete(posting)}
+            kind="error"
           />
-          {savedAppId != null ? (
-            <Link
-              href={`/${locale}/applications/${savedAppId}`}
-              prefetch
-              className="jobs__saved-link"
-            >
-              {t("tailor")}
-            </Link>
-          ) : (
-            <Button
-              text={saving ? t("saving") : t("save")}
-              type="button"
-              size="md"
-              kind="success"
-              disabled={saving}
-              onClick={() => onSave(posting)}
-            />
-          )}
-        </Box>
+        )}
+        <Button
+          href={posting.job_url}
+          text={t("viewPosting")}
+          type="button"
+          size="md"
+          disabled={deleting}
+        />
+        {savedAppId != null ? (
+          <Button
+            href={`/${locale}/applications/${savedAppId}`}
+            text={t("tailor")}
+            type="button"
+            size="md"
+            kind="success"
+          />
+        ) : (
+          <Button
+            text={saving ? t("saving") : t("save")}
+            type="button"
+            size="md"
+            kind="success"
+            disabled={saving}
+            onClick={() => onSave(posting)}
+          />
+        )}
       </Box>
     </Card>
   );

@@ -17,7 +17,10 @@ import { Switch } from "@repo/ui/core-elements/switch";
 import { Slider } from "@repo/ui/core-elements/slider";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
-import { useGroqProxy } from "@repo/ui/use-groq";
+import {
+  StreamingEnhancePanel,
+  type StreamingEnhanceHandle,
+} from "@repo/ui/core-elements/streaming-enhance-panel";
 import {
   getWorkExperiences,
   createWorkExperience,
@@ -146,29 +149,14 @@ function WorkExperienceForm({
   const [error, setError] = useState<string | null>(null);
 
   // ── AI Enhance ──────────────────────────────────────────────────────────────
-  const {
-    streamingText,
-    isGenerating,
-    generate,
-    abort,
-    reset: resetLlm,
-  } = useGroqProxy({ temperature: 0.7 });
-  const [enhancePreview, setEnhancePreview] = useState("");
+  // Streaming lives in <StreamingEnhancePanel> so per-token updates don't
+  // re-render this form. These flags only track coarse transitions it reports.
+  const enhanceRef = useRef<StreamingEnhanceHandle>(null);
+  const [enhancing, setEnhancing] = useState(false);
+  const [previewActive, setPreviewActive] = useState(false);
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
   const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
   const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("sm");
-
-  useEffect(() => {
-    if (streamingText) setEnhancePreview(streamingText);
-  }, [streamingText]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(
-    () => () => {
-      if (isGenerating) abort();
-    },
-    [],
-  );
 
   const isValid =
     !saving &&
@@ -181,12 +169,10 @@ function WorkExperienceForm({
     onValidityChange(isValid);
   }, [isValid, onValidityChange]);
 
-  const handleConfirmEnhanceOptions = async () => {
+  const handleConfirmEnhanceOptions = () => {
     setShowEnhanceOptions(false);
     const currentText = description.trim();
     if (!currentText) return;
-    setEnhancePreview("");
-    resetLlm();
     const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? {
       min: 50,
       max: 75,
@@ -207,19 +193,7 @@ function WorkExperienceForm({
           },
           { role: "user" as const, content: currentText },
         ];
-    await generate(messages);
-  };
-
-  const handleAcceptEnhance = () => {
-    if (enhancePreview) setDescription(enhancePreview);
-    setEnhancePreview("");
-    resetLlm();
-  };
-
-  const handleDiscardEnhance = () => {
-    if (isGenerating) abort();
-    setEnhancePreview("");
-    resetLlm();
+    enhanceRef.current?.start(messages);
   };
 
   // ── Voice input ──────────────────────────────────────────────────────────────
@@ -261,7 +235,6 @@ function WorkExperienceForm({
     }
   }
 
-  const llmBusy = isGenerating;
   const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[
     enhanceParagraphLength
   ] ?? { min: 50, max: 75 };
@@ -376,20 +349,20 @@ function WorkExperienceForm({
               icon="/icons/enhance.svg"
               iconSize="16px"
               iconColor={
-                enhancePreview
+                previewActive
                   ? "var(--primary, #06b6d4)"
                   : "var(--foreground, #171717)"
               }
-              disabled={llmBusy || !description.trim()}
+              disabled={enhancing || !description.trim()}
               onClick={() => setShowEnhanceOptions(true)}
               aria-label={t("enhanceLabel")}
               title={t("enhanceLabel")}
               className={[
                 "work-exp__enhance-btn",
-                llmBusy || !description.trim()
+                enhancing || !description.trim()
                   ? "work-exp__enhance-btn--busy"
                   : "",
-                enhancePreview ? "work-exp__enhance-btn--active" : "",
+                previewActive ? "work-exp__enhance-btn--active" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -408,42 +381,17 @@ function WorkExperienceForm({
         />
 
         {/* Enhance preview panel */}
-        {enhancePreview && (
-          <Box
-            className="work-exp__enhance-preview"
-            display="flex"
-            flexDirection="column"
-            gap={10}
-          >
-            <Typography variant="body">{enhancePreview}</Typography>
-            <Box display="flex" gap={8} alignItems="center" marginTop={12}>
-              {isGenerating ? (
-                <Button
-                  text={t("enhanceStop")}
-                  type="button"
-                  size="md"
-                  onClick={handleDiscardEnhance}
-                />
-              ) : (
-                <>
-                  <Button
-                    text={t("enhanceDiscard")}
-                    type="button"
-                    size="md"
-                    onClick={handleDiscardEnhance}
-                  />
-                  <Button
-                    text={t("enhanceAccept")}
-                    type="button"
-                    size="md"
-                    kind="success"
-                    onClick={handleAcceptEnhance}
-                  />
-                </>
-              )}
-            </Box>
-          </Box>
-        )}
+        <StreamingEnhancePanel
+          ref={enhanceRef}
+          onAccept={setDescription}
+          onGeneratingChange={setEnhancing}
+          onPreviewActiveChange={setPreviewActive}
+          labels={{
+            stop: t("enhanceStop"),
+            discard: t("enhanceDiscard"),
+            accept: t("enhanceAccept"),
+          }}
+        />
 
         {error && (
           <Typography variant="body" color="var(--error, #ef4444)">
@@ -666,29 +614,14 @@ function ProjectForm({
   }
 
   // ── AI Enhance ──────────────────────────────────────────────────────────────
-  const {
-    streamingText,
-    isGenerating,
-    generate,
-    abort,
-    reset: resetLlm,
-  } = useGroqProxy({ temperature: 0.7 });
-  const [enhancePreview, setEnhancePreview] = useState("");
+  // Streaming lives in <StreamingEnhancePanel> so per-token updates don't
+  // re-render this form. These flags only track coarse transitions it reports.
+  const enhanceRef = useRef<StreamingEnhanceHandle>(null);
+  const [enhancing, setEnhancing] = useState(false);
+  const [previewActive, setPreviewActive] = useState(false);
   const [showEnhanceOptions, setShowEnhanceOptions] = useState(false);
   const [enhanceParagraphs, setEnhanceParagraphs] = useState(1);
   const [enhanceParagraphLength, setEnhanceParagraphLength] = useState("sm");
-
-  useEffect(() => {
-    if (streamingText) setEnhancePreview(streamingText);
-  }, [streamingText]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(
-    () => () => {
-      if (isGenerating) abort();
-    },
-    [],
-  );
 
   const isValid = !saving && name.trim().length > 0;
 
@@ -696,12 +629,10 @@ function ProjectForm({
     onValidityChange(isValid);
   }, [isValid, onValidityChange]);
 
-  const handleConfirmEnhanceOptions = async () => {
+  const handleConfirmEnhanceOptions = () => {
     setShowEnhanceOptions(false);
     const currentText = description.trim();
     if (!currentText) return;
-    setEnhancePreview("");
-    resetLlm();
     const { min, max } = PARAGRAPH_WORD_COUNTS[enhanceParagraphLength] ?? {
       min: 50,
       max: 75,
@@ -722,19 +653,7 @@ function ProjectForm({
           },
           { role: "user" as const, content: currentText },
         ];
-    await generate(messages);
-  };
-
-  const handleAcceptEnhance = () => {
-    if (enhancePreview) setDescription(enhancePreview);
-    setEnhancePreview("");
-    resetLlm();
-  };
-
-  const handleDiscardEnhance = () => {
-    if (isGenerating) abort();
-    setEnhancePreview("");
-    resetLlm();
+    enhanceRef.current?.start(messages);
   };
 
   // ── Voice input ──────────────────────────────────────────────────────────────
@@ -772,7 +691,6 @@ function ProjectForm({
     }
   }
 
-  const llmBusy = isGenerating;
   const currentLengthWordRange = PARAGRAPH_WORD_COUNTS[
     enhanceParagraphLength
   ] ?? { min: 50, max: 75 };
@@ -938,20 +856,20 @@ function ProjectForm({
               icon="/icons/enhance.svg"
               iconSize="16px"
               iconColor={
-                enhancePreview
+                previewActive
                   ? "var(--primary, #06b6d4)"
                   : "var(--foreground, #171717)"
               }
-              disabled={llmBusy || !description.trim()}
+              disabled={enhancing || !description.trim()}
               onClick={() => setShowEnhanceOptions(true)}
               aria-label={t("projectEnhanceLabel")}
               title={t("projectEnhanceLabel")}
               className={[
                 "work-exp__enhance-btn",
-                llmBusy || !description.trim()
+                enhancing || !description.trim()
                   ? "work-exp__enhance-btn--busy"
                   : "",
-                enhancePreview ? "work-exp__enhance-btn--active" : "",
+                previewActive ? "work-exp__enhance-btn--active" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -970,42 +888,17 @@ function ProjectForm({
         />
 
         {/* Enhance preview panel */}
-        {enhancePreview && (
-          <Box
-            className="work-exp__enhance-preview"
-            display="flex"
-            flexDirection="column"
-            gap={10}
-          >
-            <Typography variant="body">{enhancePreview}</Typography>
-            <Box display="flex" gap={8} alignItems="center" marginTop={12}>
-              {isGenerating ? (
-                <Button
-                  text={t("projectEnhanceStop")}
-                  type="button"
-                  size="md"
-                  onClick={handleDiscardEnhance}
-                />
-              ) : (
-                <>
-                  <Button
-                    text={t("projectEnhanceDiscard")}
-                    type="button"
-                    size="md"
-                    onClick={handleDiscardEnhance}
-                  />
-                  <Button
-                    text={t("projectEnhanceAccept")}
-                    type="button"
-                    size="md"
-                    kind="success"
-                    onClick={handleAcceptEnhance}
-                  />
-                </>
-              )}
-            </Box>
-          </Box>
-        )}
+        <StreamingEnhancePanel
+          ref={enhanceRef}
+          onAccept={setDescription}
+          onGeneratingChange={setEnhancing}
+          onPreviewActiveChange={setPreviewActive}
+          labels={{
+            stop: t("projectEnhanceStop"),
+            discard: t("projectEnhanceDiscard"),
+            accept: t("projectEnhanceAccept"),
+          }}
+        />
 
         {error && (
           <Typography variant="body" color="var(--error, #ef4444)">

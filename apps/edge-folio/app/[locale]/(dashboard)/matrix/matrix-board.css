@@ -94,15 +94,6 @@
   cursor: not-allowed;
 }
 
-/* ── Enhance preview panel ────────────────────────────────────────────────── */
-
-.matrix__enhance-preview {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--primary, #06b6d4) 30%, transparent);
-  background: color-mix(in srgb, var(--primary, #06b6d4) 5%, transparent);
-}
-
 /* ── Enhance options modal content ────────────────────────────────────────── */
 
 .matrix__enhance-options {

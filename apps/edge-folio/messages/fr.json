@@ -382,8 +382,8 @@
     "save": "Enregistrer",
     "tailor": "Personnaliser",
     "viewPosting": "Voir l'offre",
-    "fetchJobs": "Récupérer des emplois",
-    "fetching": "Récupération…",
+    "fetchJobs": "Rechercher des emplois",
+    "fetching": "Recherche…",
     "fetchStarted": "Récupération lancée. De nouveaux postes apparaîtront sous peu.",
     "fetchError": "Impossible de lancer la récupération. Veuillez réessayer.",
     "fetchLimitReached": "Votre clé API n'a plus d'appels disponibles aujourd'hui. Elle se réinitialise demain, ou ajoutez une autre clé de fournisseur.",
@@ -433,7 +433,10 @@
       "running": "En cours",
       "done": "Terminé",
       "failed": "Échec"
-    }
+    },
+    "refineSearch": "Affiner la recherche",
+    "refineSearchTitle": "Affiner la recherche",
+    "refineSearchText": "Ajustez vos préférences de recherche et régénérez la requête avant de récupérer des emplois."
   },
   "AuthPage": {
     "tabSignIn": "Se connecter",

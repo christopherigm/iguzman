@@ -172,8 +172,19 @@ export interface LanguagePayload {
   order?: number;
 }
 
+// In-flight request dedupe — the profile page and job-search section both load
+// languages on mount in the same tick. Share one request and clear once it
+// settles so later calls refetch fresh data. See getProfile in lib/auth.ts.
+let languagesInFlight: Promise<ListResponse<Language>> | null = null;
+
 export function getLanguages(): Promise<ListResponse<Language>> {
-  return careerFetch("/api/career/languages");
+  if (languagesInFlight) return languagesInFlight;
+  languagesInFlight = careerFetch<ListResponse<Language>>(
+    "/api/career/languages",
+  ).finally(() => {
+    languagesInFlight = null;
+  });
+  return languagesInFlight;
 }
 
 export function createLanguage(payload: LanguagePayload): Promise<Language> {

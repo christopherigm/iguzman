@@ -152,6 +152,7 @@ class JobFeedView(APIView):
         country = params.get('country')
         work_type = params.get('work_type')
         scope = params.get('scope')
+        search = params.get('search')
         q = (params.get('q') or '').strip().lower()
 
         items = ranked
@@ -162,6 +163,9 @@ class JobFeedView(APIView):
             items = [p for p in items if p['is_private']]
         elif scope == 'shared':
             items = [p for p in items if not p['is_private']]
+        # Restrict to a single JobSearch run (only private postings carry a search).
+        if search:
+            items = [p for p in items if str(p.get('search')) == search]
         if country:
             items = [p for p in items if p['country'] == country]
         if work_type:

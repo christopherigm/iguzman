@@ -95,6 +95,8 @@ export interface JobFeedFilters {
   work_type?: JobWorkType | "";
   scope?: JobScope;
   q?: string;
+  // Restrict the feed to postings produced by a single JobSearch run.
+  search?: number;
   per?: number;
   page?: number;
 }
@@ -105,6 +107,7 @@ export function getJobFeed(filters: JobFeedFilters = {}): Promise<JobFeed> {
   if (filters.work_type) params.set("work_type", filters.work_type);
   if (filters.scope) params.set("scope", filters.scope);
   if (filters.q) params.set("q", filters.q);
+  if (filters.search) params.set("search", String(filters.search));
   if (filters.per) params.set("per", String(filters.per));
   if (filters.page) params.set("page", String(filters.page));
   const qs = params.toString();

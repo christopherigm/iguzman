@@ -16,7 +16,10 @@ import { Select } from "@repo/ui/core-elements/select";
 import { Switch } from "@repo/ui/core-elements/switch";
 import { SpeechButton } from "@repo/ui/core-elements/speech-button";
 import { Toast } from "@repo/ui/core-elements/toast";
-import { useGroqProxy } from "@repo/ui/use-groq";
+import {
+  StreamingEnhancePanel,
+  type StreamingEnhanceHandle,
+} from "@repo/ui/core-elements/streaming-enhance-panel";
 import {
   getEducations,
   createEducation,
@@ -90,32 +93,15 @@ function EducationForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const {
-    streamingText,
-    isGenerating,
-    generate,
-    abort,
-    reset: resetLlm,
-  } = useGroqProxy({ temperature: 0.7 });
-  const [enhancePreview, setEnhancePreview] = useState("");
+  // Streaming lives in <StreamingEnhancePanel> so per-token updates don't
+  // re-render this form. These flags only track coarse transitions it reports.
+  const enhanceRef = useRef<StreamingEnhanceHandle>(null);
+  const [enhancing, setEnhancing] = useState(false);
+  const [previewActive, setPreviewActive] = useState(false);
 
-  useEffect(() => {
-    if (streamingText) setEnhancePreview(streamingText);
-  }, [streamingText]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(
-    () => () => {
-      if (isGenerating) abort();
-    },
-    [],
-  );
-
-  async function handleEnhance() {
+  function handleEnhance() {
     const current = description.trim();
     if (!current) return;
-    setEnhancePreview("");
-    resetLlm();
     const isEs = locale === "es";
     const messages = isEs
       ? [
@@ -134,19 +120,7 @@ function EducationForm({
           },
           { role: "user" as const, content: current },
         ];
-    await generate(messages);
-  }
-
-  function handleAcceptEnhance() {
-    if (enhancePreview) setDescription(enhancePreview);
-    setEnhancePreview("");
-    resetLlm();
-  }
-
-  function handleDiscardEnhance() {
-    if (isGenerating) abort();
-    setEnhancePreview("");
-    resetLlm();
+    enhanceRef.current?.start(messages);
   }
 
   const isValid =
@@ -301,20 +275,20 @@ function EducationForm({
               icon="/icons/enhance.svg"
               iconSize="16px"
               iconColor={
-                enhancePreview
+                previewActive
                   ? "var(--primary, #06b6d4)"
                   : "var(--foreground, #171717)"
               }
-              disabled={isGenerating || !description.trim()}
+              disabled={enhancing || !description.trim()}
               onClick={handleEnhance}
               aria-label={t("enhance")}
               title={t("enhance")}
               className={[
                 "education__enhance-btn",
-                isGenerating || !description.trim()
+                enhancing || !description.trim()
                   ? "education__enhance-btn--busy"
                   : "",
-                enhancePreview ? "education__enhance-btn--active" : "",
+                previewActive ? "education__enhance-btn--active" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -329,47 +303,17 @@ function EducationForm({
           maxLength={2000}
           placeholder={t("descriptionPlaceholder")}
         />
-        {enhancePreview && (
-          <Box
-            className="education__enhance-preview"
-            display="flex"
-            flexDirection="column"
-            gap={10}
-          >
-            <Typography
-              variant="body"
-              styles={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
-            >
-              {enhancePreview}
-            </Typography>
-            <Box display="flex" gap={8} alignItems="center" marginTop={4}>
-              {isGenerating ? (
-                <Button
-                  text={t("enhanceDiscard")}
-                  type="button"
-                  size="sm"
-                  onClick={handleDiscardEnhance}
-                />
-              ) : (
-                <>
-                  <Button
-                    text={t("enhanceDiscard")}
-                    type="button"
-                    size="sm"
-                    onClick={handleDiscardEnhance}
-                  />
-                  <Button
-                    text={t("enhanceAccept")}
-                    type="button"
-                    size="sm"
-                    kind="success"
-                    onClick={handleAcceptEnhance}
-                  />
-                </>
-              )}
-            </Box>
-          </Box>
-        )}
+        <StreamingEnhancePanel
+          ref={enhanceRef}
+          onAccept={setDescription}
+          onGeneratingChange={setEnhancing}
+          onPreviewActiveChange={setPreviewActive}
+          labels={{
+            stop: t("enhanceDiscard"),
+            discard: t("enhanceDiscard"),
+            accept: t("enhanceAccept"),
+          }}
+        />
       </Box>
 
       {error && (
