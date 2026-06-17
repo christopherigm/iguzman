@@ -394,10 +394,10 @@
     "emptyBody": "Set your job title and tech stack in your profile so we can find roles for you.",
     "searchLabel": "Search",
     "searchPlaceholder": "Title or company",
-    "savedFilterLabel": "Saved only",
+    "hideSavedFilterLabel": "Hide Saved Jobs",
     "savedLegend": "A colored top border marks jobs you've already saved as applications.",
-    "countryLabel": "Country",
-    "countryAll": "All countries",
+    "locationLabel": "Location",
+    "locationAll": "All locations",
     "workTypeLabel": "Work type",
     "workTypeAll": "All types",
     "prev": "Previous",
@@ -409,11 +409,6 @@
     "errorDelete": "Couldn't delete this posting. Please try again.",
     "confirmDeleteTitle": "Delete Job Posting",
     "confirmDeleteText": "Are you sure you want to remove this job posting? This cannot be undone.",
-    "countries": {
-      "us": "United States",
-      "ca": "Canada",
-      "mx": "Mexico"
-    },
     "workTypes": {
       "remote": "Remote",
       "onsite": "On-site",

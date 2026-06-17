@@ -99,6 +99,8 @@ export type JobScope = "private" | "shared";
 
 export interface JobFeedFilters {
   country?: JobCountry | "";
+  // Exact-match location filter; options come from getJobLocations().
+  location?: string;
   work_type?: JobWorkType | "";
   scope?: JobScope;
   q?: string;
@@ -111,6 +113,7 @@ export interface JobFeedFilters {
 export function getJobFeed(filters: JobFeedFilters = {}): Promise<JobFeed> {
   const params = new URLSearchParams();
   if (filters.country) params.set("country", filters.country);
+  if (filters.location) params.set("location", filters.location);
   if (filters.work_type) params.set("work_type", filters.work_type);
   if (filters.scope) params.set("scope", filters.scope);
   if (filters.q) params.set("q", filters.q);
@@ -119,6 +122,12 @@ export function getJobFeed(filters: JobFeedFilters = {}): Promise<JobFeed> {
   if (filters.page) params.set("page", String(filters.page));
   const qs = params.toString();
   return request(`/api/jobs/feed${qs ? `?${qs}` : ""}`);
+}
+
+// Distinct locations across the user's accessible postings (private + shared),
+// for the jobs-page location dropdown.
+export function getJobLocations(): Promise<string[]> {
+  return request("/api/jobs/locations");
 }
 
 export function saveJob(id: number): Promise<JobApplication> {

@@ -394,10 +394,10 @@
     "emptyBody": "Define tu puesto y tu stack en tu perfil para que podamos encontrar vacantes para ti.",
     "searchLabel": "Buscar",
     "searchPlaceholder": "Título o empresa",
-    "savedFilterLabel": "Solo guardados",
+    "hideSavedFilterLabel": "Ocultar guardados",
     "savedLegend": "Un borde superior de color indica los empleos que ya guardaste como postulaciones.",
-    "countryLabel": "País",
-    "countryAll": "Todos los países",
+    "locationLabel": "Ubicación",
+    "locationAll": "Todas las ubicaciones",
     "workTypeLabel": "Modalidad",
     "workTypeAll": "Todas",
     "prev": "Anterior",
@@ -409,11 +409,6 @@
     "errorDelete": "No se pudo eliminar la oferta. Intenta de nuevo.",
     "confirmDeleteTitle": "Eliminar oferta de trabajo",
     "confirmDeleteText": "¿Estás seguro de que deseas eliminar esta oferta? Esta acción no se puede deshacer.",
-    "countries": {
-      "us": "Estados Unidos",
-      "ca": "Canadá",
-      "mx": "México"
-    },
     "workTypes": {
       "remote": "Remoto",
       "onsite": "Presencial",

@@ -394,10 +394,10 @@
     "emptyBody": "Defina o seu cargo e a sua stack no perfil para encontrarmos vagas para você.",
     "searchLabel": "Pesquisar",
     "searchPlaceholder": "Cargo ou empresa",
-    "savedFilterLabel": "Apenas salvos",
+    "hideSavedFilterLabel": "Ocultar salvos",
     "savedLegend": "Uma borda superior colorida indica as vagas que você já salvou como candidaturas.",
-    "countryLabel": "País",
-    "countryAll": "Todos os países",
+    "locationLabel": "Localização",
+    "locationAll": "Todas as localizações",
     "workTypeLabel": "Modelo de trabalho",
     "workTypeAll": "Todos",
     "prev": "Anterior",
@@ -409,11 +409,6 @@
     "errorDelete": "Não foi possível excluir esta vaga. Tente novamente.",
     "confirmDeleteTitle": "Excluir vaga de emprego",
     "confirmDeleteText": "Tem certeza de que deseja remover esta vaga? Esta ação não pode ser desfeita.",
-    "countries": {
-      "us": "Estados Unidos",
-      "ca": "Canadá",
-      "mx": "México"
-    },
     "workTypes": {
       "remote": "Remoto",
       "onsite": "Presencial",

@@ -394,10 +394,10 @@
     "emptyBody": "Lege deine Jobbezeichnung und deinen Tech-Stack im Profil fest, damit wir Stellen für dich finden können.",
     "searchLabel": "Suche",
     "searchPlaceholder": "Titel oder Unternehmen",
-    "savedFilterLabel": "Nur gespeicherte",
+    "hideSavedFilterLabel": "Gespeicherte ausblenden",
     "savedLegend": "Ein farbiger oberer Rand kennzeichnet Jobs, die du bereits als Bewerbungen gespeichert hast.",
-    "countryLabel": "Land",
-    "countryAll": "Alle Länder",
+    "locationLabel": "Standort",
+    "locationAll": "Alle Standorte",
     "workTypeLabel": "Arbeitsmodell",
     "workTypeAll": "Alle",
     "prev": "Zurück",
@@ -409,11 +409,6 @@
     "errorDelete": "Stellenanzeige konnte nicht gelöscht werden. Bitte erneut versuchen.",
     "confirmDeleteTitle": "Stellenanzeige löschen",
     "confirmDeleteText": "Möchten Sie diese Stellenanzeige wirklich entfernen? Dies kann nicht rückgängig gemacht werden.",
-    "countries": {
-      "us": "Vereinigte Staaten",
-      "ca": "Kanada",
-      "mx": "Mexiko"
-    },
     "workTypes": {
       "remote": "Remote",
       "onsite": "Vor Ort",

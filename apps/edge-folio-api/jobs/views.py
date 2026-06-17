@@ -19,15 +19,22 @@ from .serializers import JobFeedSerializer, JobSearchSerializer, UserApiCredenti
 logger = logging.getLogger(__name__)
 
 CACHE_TTL = 300
-_MAX_CANDIDATES = 500
+# Cap private and shared candidates independently so a large shared catalog can't
+# crowd a user's own (private) postings out of the ranked slice. The jobs page
+# loads the full private set in one page and buckets/paginates it client-side.
+_MAX_PRIVATE = 300
+_MAX_SHARED = 300
 _DEFAULT_PER_PAGE = 20
-_MAX_PER_PAGE = 100
+# Large enough that the jobs page can pull the full private set (_MAX_PRIVATE) in
+# a single page for client-side bucketing.
+_MAX_PER_PAGE = 300
 _RECENT_SEARCHES = 3
 _TOKEN_RE = re.compile(r'[a-z0-9+#.]+')
 
 
 def _invalidate_feed(user_id):
     cache.delete(f'jobs:feed:{user_id}')
+    cache.delete(f'jobs:locations:{user_id}')
 
 
 def _invalidate_searches(user_id):
@@ -134,7 +141,11 @@ class JobFeedView(APIView):
         for posting in postings:
             scored.append((_score(posting, stack_terms, title_tokens), posting))
         scored.sort(key=lambda pair: (pair[0], pair[1].created), reverse=True)
-        scored = scored[:_MAX_CANDIDATES]
+        # A private posting here is always owned by the requesting user (the
+        # queryset is is_private=False OR owner=user); cap each pool separately.
+        private_scored = [pair for pair in scored if pair[1].is_private][:_MAX_PRIVATE]
+        shared_scored = [pair for pair in scored if not pair[1].is_private][:_MAX_SHARED]
+        scored = private_scored + shared_scored
 
         serializer = JobFeedSerializer([p for _, p in scored], many=True)
         results = []
@@ -150,6 +161,7 @@ class JobFeedView(APIView):
 
     def _apply_filters(self, ranked, params):
         country = params.get('country')
+        location = params.get('location')
         work_type = params.get('work_type')
         scope = params.get('scope')
         search = params.get('search')
@@ -168,6 +180,8 @@ class JobFeedView(APIView):
             items = [p for p in items if str(p.get('search')) == search]
         if country:
             items = [p for p in items if p['country'] == country]
+        if location:
+            items = [p for p in items if p['location'] == location]
         if work_type:
             items = [p for p in items if work_type in (p['work_type'] or [])]
         if q:
@@ -176,6 +190,34 @@ class JobFeedView(APIView):
                 if q in (p['job_title'] or '').lower() or q in (p['company_name'] or '').lower()
             ]
         return items
+
+
+class JobLocationsView(APIView):
+    """Distinct locations across the user's accessible postings (private + shared).
+
+    Feeds the jobs-page location dropdown so its options reflect the full dataset,
+    not just the current page.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        cache_key = f'jobs:locations:{request.user.id}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        now = timezone.now()
+        locations = (
+            JobPosting.objects
+            .filter(expires_at__gt=now)
+            .filter(Q(is_private=False) | Q(owner=request.user))
+            .exclude(location='')
+            .values_list('location', flat=True)
+            .distinct()
+        )
+        data = sorted({loc for loc in locations if loc})
+        cache.set(cache_key, data, CACHE_TTL)
+        return Response(data)
 
 
 class FetchJobsView(APIView):

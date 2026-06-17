@@ -262,6 +262,7 @@ def _finish_search(search, status: str) -> None:
     search.save(update_fields=['status', 'modified'])
     cache.delete(f'jobs:searches:{search.user_id}')
     cache.delete(f'jobs:feed:{search.user_id}')
+    cache.delete(f'jobs:locations:{search.user_id}')
 
 
 @shared_task
@@ -347,6 +348,7 @@ def ingest_user_feed(user_id: int, search_id: int | None = None) -> None:
     cache.delete(f'jobs:credentials:{user_id}')
     if affected_ids:
         cache.delete(f'jobs:feed:{user_id}')
+        cache.delete(f'jobs:locations:{user_id}')
 
     if search is None:
         return
@@ -421,3 +423,4 @@ def _score_postings(user_id: int, search, posting_ids: list[int]) -> None:
         # Bust both caches so the searches card and the feed reveal each posting live.
         cache.delete(f'jobs:searches:{user_id}')
         cache.delete(f'jobs:feed:{user_id}')
+        cache.delete(f'jobs:locations:{user_id}')

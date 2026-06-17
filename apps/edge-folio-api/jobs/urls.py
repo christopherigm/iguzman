@@ -4,6 +4,7 @@ from .views import (
     DeleteJobView,
     FetchJobsView,
     JobFeedView,
+    JobLocationsView,
     JobSearchListView,
     SaveJobView,
     UserApiCredentialDetailView,
@@ -12,6 +13,7 @@ from .views import (
 
 urlpatterns = [
     path('feed/', JobFeedView.as_view(), name='jobs-feed'),
+    path('locations/', JobLocationsView.as_view(), name='jobs-locations'),
     path('fetch/', FetchJobsView.as_view(), name='jobs-fetch'),
     path('searches/', JobSearchListView.as_view(), name='jobs-searches'),
     path('credentials/', UserApiCredentialListCreateView.as_view(), name='jobs-credentials'),

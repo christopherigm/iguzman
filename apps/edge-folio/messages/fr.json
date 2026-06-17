@@ -394,10 +394,10 @@
     "emptyBody": "Renseignez votre intitulé de poste et votre stack technique dans votre profil pour que nous trouvions des postes pour vous.",
     "searchLabel": "Rechercher",
     "searchPlaceholder": "Titre ou entreprise",
-    "savedFilterLabel": "Enregistrés uniquement",
+    "hideSavedFilterLabel": "Masquer les enregistrés",
     "savedLegend": "Une bordure supérieure colorée indique les offres déjà enregistrées comme candidatures.",
-    "countryLabel": "Pays",
-    "countryAll": "Tous les pays",
+    "locationLabel": "Lieu",
+    "locationAll": "Tous les lieux",
     "workTypeLabel": "Type de travail",
     "workTypeAll": "Tous",
     "prev": "Précédent",
@@ -409,11 +409,6 @@
     "errorDelete": "Impossible de supprimer cette offre. Veuillez réessayer.",
     "confirmDeleteTitle": "Supprimer l'offre d'emploi",
     "confirmDeleteText": "Êtes-vous sûr de vouloir supprimer cette offre d'emploi ? Cette action est irréversible.",
-    "countries": {
-      "us": "États-Unis",
-      "ca": "Canada",
-      "mx": "Mexique"
-    },
     "workTypes": {
       "remote": "À distance",
       "onsite": "Sur site",

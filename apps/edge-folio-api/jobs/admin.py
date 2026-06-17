@@ -6,6 +6,7 @@ from .models import JobPosting, JobSearch, UserApiCredential
 
 def _invalidate_feed(user_id):
     cache.delete(f'jobs:feed:{user_id}')
+    cache.delete(f'jobs:locations:{user_id}')
 
 
 def _invalidate_searches(user_id):

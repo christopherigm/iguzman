@@ -26,6 +26,7 @@ import { Divider } from "@repo/ui/core-elements/divider";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import {
   getJobFeed,
+  getJobLocations,
   saveJob,
   deleteJob,
   triggerJobFetch,
@@ -34,7 +35,6 @@ import {
   JobsError,
   type JobPosting,
   type JobSearch,
-  type JobCountry,
   type JobWorkType,
   type JobScope,
 } from "@/lib/jobs";
@@ -44,9 +44,13 @@ import { JobSearchPanel } from "../profile/job-search-section";
 import Card from "@repo/ui/core-elements/card";
 import "./jobs-page.css";
 
-const COUNTRIES: JobCountry[] = ["us", "ca", "mx"];
 const WORK_TYPES: JobWorkType[] = ["remote", "onsite", "hybrid"];
-const PER_PAGE = 20;
+// Page size for every rendered section (each private match bucket and the shared
+// catalog) shows this many at a time.
+const PER_PAGE = 12;
+// The private feed is loaded in one page and bucketed/paginated client-side, so a
+// search/filter operates over the full dataset rather than a single server page.
+const PRIVATE_FETCH = 300;
 const POLL_INTERVAL = 5000;
 
 type MatchBucket = "match" | "semi" | "no";
@@ -80,12 +84,13 @@ const MATCH_COLORS = {
 // ── Job list (one scope) ────────────────────────────────────────────────────
 
 interface JobListFilters {
-  country: JobCountry | "";
+  location: string;
   workType: JobWorkType | "";
   q: string;
   // When set, restricts the list to postings from a single JobSearch run.
   search: number | null;
   page: number;
+  per: number;
 }
 
 interface JobListState {
@@ -100,7 +105,7 @@ interface JobListState {
 // Loads one paginated slice of the feed for a single scope (private/shared).
 // The two lists share the same filters but page independently.
 function useJobList(scope: JobScope, filters: JobListFilters): JobListState {
-  const { country, workType, q, search, page } = filters;
+  const { location, workType, q, search, page, per } = filters;
   const [postings, setPostings] = useState<JobPosting[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -112,12 +117,12 @@ function useJobList(scope: JobScope, filters: JobListFilters): JobListState {
     try {
       const res = await getJobFeed({
         scope,
-        country,
+        location,
         work_type: workType,
         q,
         search: search ?? undefined,
         page,
-        per: PER_PAGE,
+        per,
       });
       setPostings(res.results);
       setCount(res.count);
@@ -126,7 +131,7 @@ function useJobList(scope: JobScope, filters: JobListFilters): JobListState {
     } finally {
       setLoading(false);
     }
-  }, [scope, country, workType, q, search, page]);
+  }, [scope, location, workType, q, search, page, per]);
 
   useEffect(() => {
     load();
@@ -425,29 +430,33 @@ export function JobsPage() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const country = (searchParams.get("country") || "") as JobCountry | "";
+  const location = searchParams.get("location") || "";
   const workType = (searchParams.get("work_type") || "") as JobWorkType | "";
   const q = searchParams.get("q") || "";
-  // Client-side "saved only" toggle, persisted in the URL like the other filters.
-  // The feed API has no saved param, so this filters the loaded page in place —
-  // consistent with how the match buckets already group per-page data.
-  const savedOnly = searchParams.get("saved") === "1";
+  // "Hide saved jobs" toggle, on by default — hides postings already saved as
+  // applications so the lists surface roles still worth acting on. Persisted in
+  // the URL ("0" means show saved); the feed API has no saved param, so this
+  // filters the loaded data in place.
+  const hideSaved = searchParams.get("hide_saved") !== "0";
   // Active "filter by search run" selection, surfaced from the URL so it survives
   // reloads and resets pagination through setParam like any other filter.
   const searchFilter = parseInt(searchParams.get("search") || "", 10) || null;
-  const pagePrivate = Math.max(
-    1,
-    parseInt(searchParams.get("page_private") || "1", 10) || 1,
-  );
-  const pageShared = Math.max(
-    1,
-    parseInt(searchParams.get("page_shared") || "1", 10) || 1,
-  );
+  // Per-bucket and shared-catalog page numbers (the private feed is bucketed and
+  // paginated client-side, so each match group pages independently).
+  const readPage = (key: string) =>
+    Math.max(1, parseInt(searchParams.get(key) || "1", 10) || 1);
+  const pageMatch = readPage("page_match");
+  const pageSemi = readPage("page_semi");
+  const pageNo = readPage("page_no");
+  const pageShared = readPage("page_shared");
 
   const [savingId, setSavingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [savedMap, setSavedMap] = useState<Record<number, number>>({});
   const [searchInput, setSearchInput] = useState(q);
+  // Distinct locations across the full dataset (private + shared), for the filter
+  // dropdown options.
+  const [locationOptions, setLocationOptions] = useState<string[]>([]);
   const [toast, setToast] = useState<{
     text: string;
     kind: "success" | "error";
@@ -477,11 +486,13 @@ export function JobsPage() {
         if (value) params.set(key, value);
         else params.delete(key);
       }
-      // A filter change (anything other than a page move) resets both lists'
+      // A filter change (anything other than a page move) resets every list's
       // pagination so each starts from page 1 against the new filters.
-      const isPageMove = "page_private" in updates || "page_shared" in updates;
+      const isPageMove = Object.keys(updates).some((k) => k.startsWith("page_"));
       if (!isPageMove) {
-        params.delete("page_private");
+        params.delete("page_match");
+        params.delete("page_semi");
+        params.delete("page_no");
         params.delete("page_shared");
       }
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
@@ -490,20 +501,23 @@ export function JobsPage() {
   );
 
   const privateList = useJobList("private", {
-    country,
+    location,
     workType,
     q,
     search: searchFilter,
-    page: pagePrivate,
+    // Load the whole private set in one page; bucketing + pagination is client-side.
+    page: 1,
+    per: PRIVATE_FETCH,
   });
   const sharedList = useJobList("shared", {
-    country,
+    location,
     workType,
     q,
     // The shared catalog has no per-search association; it is hidden entirely
     // while a search filter is active, so it never receives one.
     search: null,
     page: pageShared,
+    per: PER_PAGE,
   });
 
   // Toggle the search filter: selecting the active one clears it.
@@ -610,6 +624,13 @@ export function JobsPage() {
     }
   }, [t, loadSearches, startPolling]);
 
+  // Populate the location dropdown from the full dataset (private + shared).
+  useEffect(() => {
+    getJobLocations()
+      .then(setLocationOptions)
+      .catch(() => setLocationOptions([]));
+  }, []);
+
   // Debounce the search box into the URL query param.
   useEffect(() => {
     if (searchInput === q) return;
@@ -680,27 +701,24 @@ export function JobsPage() {
         </Box>
         <Box display="flex" flexDirection="column">
           <Typography variant="label" color="var(--muted-foreground, #6b7280)">
-            {t("savedFilterLabel")}
+            {t("hideSavedFilterLabel")}
           </Typography>
           <Box display="flex" alignItems="center" height={38}>
             <Switch
-              checked={savedOnly}
-              onChange={(c) => setParam({ saved: c ? "1" : "" })}
-              aria-label={t("savedFilterLabel")}
+              checked={hideSaved}
+              onChange={(c) => setParam({ hide_saved: c ? "" : "0" })}
+              aria-label={t("hideSavedFilterLabel")}
             />
           </Box>
         </Box>
         <Box styles={{ minWidth: 140 }}>
           <Select
-            label={t("countryLabel")}
-            value={country}
-            onChange={(v) => setParam({ country: v })}
+            label={t("locationLabel")}
+            value={location}
+            onChange={(v) => setParam({ location: v })}
             options={[
-              { value: "", label: t("countryAll") },
-              ...COUNTRIES.map((c) => ({
-                value: c,
-                label: t(`countries.${c}`),
-              })),
+              { value: "", label: t("locationAll") },
+              ...locationOptions.map((l) => ({ value: l, label: l })),
             ]}
             width="100%"
           />
@@ -722,7 +740,7 @@ export function JobsPage() {
         </Box>
       </Card>
     ),
-    [searchInput, country, workType, savedOnly, t, setParam],
+    [searchInput, location, workType, hideSaved, locationOptions, t, setParam],
   );
 
   const byCreatedDesc = (a: JobPosting, b: JobPosting) =>
@@ -742,33 +760,41 @@ export function JobsPage() {
       semi: [],
       no: [],
     };
-    const source = savedOnly
-      ? privateList.postings.filter(isSaved)
+    const source = hideSaved
+      ? privateList.postings.filter((p) => !isSaved(p))
       : privateList.postings;
     for (const p of source) groups[bucketOf(p)].push(p);
     (Object.keys(groups) as MatchBucket[]).forEach((k) =>
       groups[k].sort(byCreatedDesc),
     );
     return groups;
-  }, [privateList.postings, savedOnly, isSaved]);
+  }, [privateList.postings, hideSaved, isSaved]);
 
-  // While "saved only" is on, filter the loaded shared catalog page in place.
+  // While "hide saved jobs" is on, drop saved postings from the loaded shared
+  // catalog page in place.
   const sharedListView = useMemo<JobListState>(() => {
-    if (!savedOnly) return sharedList;
-    const filtered = sharedList.postings.filter(isSaved);
+    if (!hideSaved) return sharedList;
+    const filtered = sharedList.postings.filter((p) => !isSaved(p));
     return { ...sharedList, postings: filtered, count: filtered.length };
-  }, [sharedList, savedOnly, isSaved]);
+  }, [sharedList, hideSaved, isSaved]);
 
-  // Each bucket reuses JobSection; loading/error/pagination for the private list as a
-  // whole are handled separately, so a per-bucket section never paginates on its own.
-  const bucketList = (postings: JobPosting[]): JobListState => ({
-    postings,
-    count: postings.length,
-    loading: false,
-    error: false,
-    reload: privateList.reload,
-    removePosting: privateList.removePosting,
-  });
+  // Each bucket reuses JobSection. The full bucket is bucketed/filtered client-side;
+  // this slices it to the requested page and reports the full length as the count so
+  // JobSection renders PER_PAGE cards and computes its own page total.
+  const bucketSection = (
+    postings: JobPosting[],
+    page: number,
+  ): JobListState => {
+    const start = (page - 1) * PER_PAGE;
+    return {
+      postings: postings.slice(start, start + PER_PAGE),
+      count: postings.length,
+      loading: false,
+      error: false,
+      reload: privateList.reload,
+      removePosting: privateList.removePosting,
+    };
+  };
 
   // One spinner on the very first load (both lists pending, no data yet);
   // afterwards each section manages its own loading state for page moves.
@@ -777,7 +803,7 @@ export function JobsPage() {
     sharedList.loading &&
     privateList.postings.length === 0 &&
     sharedList.postings.length === 0;
-  // Counts after the (client-side) "saved only" filter has been applied.
+  // Counts after the (client-side) "hide saved jobs" filter has been applied.
   const privateVisible =
     privateBuckets.match.length +
     privateBuckets.semi.length +
@@ -928,17 +954,17 @@ export function JobsPage() {
             <>
               {(
                 [
-                  ["match", t("bucketMatch")],
-                  ["semi", t("bucketSemi")],
-                  ["no", t("bucketNo")],
-                ] as Array<[MatchBucket, string]>
-              ).map(([bucket, title]) => (
+                  ["match", t("bucketMatch"), pageMatch, "page_match"],
+                  ["semi", t("bucketSemi"), pageSemi, "page_semi"],
+                  ["no", t("bucketNo"), pageNo, "page_no"],
+                ] as Array<[MatchBucket, string, number, string]>
+              ).map(([bucket, title, page, key]) => (
                 <JobSection
                   key={bucket}
                   title={title}
-                  list={bucketList(privateBuckets[bucket])}
-                  page={1}
-                  onPageChange={() => {}}
+                  list={bucketSection(privateBuckets[bucket], page)}
+                  page={page}
+                  onPageChange={(p) => setParam({ [key]: String(p) })}
                   onSave={handleSave}
                   onDelete={handleDelete}
                   savingId={savingId}
@@ -947,51 +973,6 @@ export function JobsPage() {
                   isStaff={isStaff}
                 />
               ))}
-              {privateList.count > PER_PAGE && (
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  gap={12}
-                  marginTop={4}
-                  marginBottom={32}
-                >
-                  <Button
-                    text={t("prev")}
-                    type="button"
-                    size="md"
-                    kind="primary"
-                    disabled={pagePrivate <= 1}
-                    onClick={() =>
-                      setParam({ page_private: String(pagePrivate - 1) })
-                    }
-                  />
-                  <Typography
-                    variant="body"
-                    color="var(--muted-foreground, #6b7280)"
-                  >
-                    {t("pageOf", {
-                      page: pagePrivate,
-                      total: Math.max(
-                        1,
-                        Math.ceil(privateList.count / PER_PAGE),
-                      ),
-                    })}
-                  </Typography>
-                  <Button
-                    text={t("next")}
-                    type="button"
-                    size="md"
-                    kind="primary"
-                    disabled={
-                      pagePrivate >= Math.ceil(privateList.count / PER_PAGE)
-                    }
-                    onClick={() =>
-                      setParam({ page_private: String(pagePrivate + 1) })
-                    }
-                  />
-                </Box>
-              )}
             </>
           )}
           {/* A search run owns only private postings, so hide the shared
