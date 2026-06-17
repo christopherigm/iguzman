@@ -190,6 +190,7 @@ def compute_match_metrics(user, job_description: str, job_title: str, company_na
         company_name=company_name,
         bullets=bullets_payload,
         skills=skills,
+        languages=languages,
     )
     nafta, nafta_explanation = calculate_nafta_likelihood(
         job_description=job_description,

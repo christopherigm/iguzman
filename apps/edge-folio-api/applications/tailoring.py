@@ -658,12 +658,20 @@ Return ONLY valid JSON - no markdown, no extra text: {"score": <integer 1-100>, 
 """
 
 _TECHNICAL_MATCH_SYSTEM_PROMPT = """\
-You are an expert software engineering hiring manager evaluating a candidate's technical \
-skills against a job's technical requirements.
+You are an expert hiring manager evaluating a candidate's technical and job-specific \
+skills against a job's stated requirements.
 
-Analyze the job description's technical requirements (languages, frameworks, tools, cloud \
-platforms, methodologies) against the candidate's declared skills (with proficiency levels 1-5) \
-and technical bullet points from their work history.
+Analyze the job description's hard requirements (programming languages, frameworks, tools, \
+cloud platforms, methodologies, and any role-specific software or systems) against the \
+candidate's declared skills (with proficiency levels 1-5) and technical bullet points from \
+their work history.
+
+When the posting requires a specific spoken language or bilingual/multilingual ability (e.g. a \
+bilingual customer-facing or HR role), treat it as a required job skill: credit the candidate \
+when their listed spoken languages satisfy it, and treat an unmet language requirement as a \
+genuine gap. Never penalize the candidate for a bilingual or spoken-language requirement when \
+their listed spoken languages already meet it. Here "programming languages" and "spoken \
+languages" are distinct - do not conflate them.
 
 Scoring guide:
 - 80-100: Covers nearly all required technical skills at appropriate proficiency
@@ -763,9 +771,14 @@ def calculate_technical_match(
     company_name: str,
     bullets: list[dict],
     skills: list[dict],
+    languages: list[dict] | None = None,
 ) -> tuple[int, str]:
     """Return (score, explanation) for technical skills match."""
     skill_summary = ", ".join(f"{s['name']} ({s['proficiency']}/5)" for s in skills)
+    language_summary = ", ".join(
+        f"{lang['name']} ({lang['proficiency']})" if lang.get('proficiency') else lang['name']
+        for lang in (languages or [])
+    )
     technical_bullets = [b for b in bullets if b.get('category') in ('technical', 'impact')]
     bullet_lines = "\n".join(
         f"{b['text']}" + (f" | technologies: {', '.join(b['skills'])}" if b.get('skills') else "")
@@ -775,6 +788,7 @@ def calculate_technical_match(
         f"ROLE: {job_title} at {company_name}\n\n"
         f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
         f"CANDIDATE TECHNICAL SKILLS: {skill_summary or 'None listed'}\n\n"
+        f"CANDIDATE SPOKEN LANGUAGES: {language_summary or 'None listed'}\n\n"
         f"CANDIDATE TECHNICAL BULLETS:\n{bullet_lines or 'None listed'}\n\n"
         "Return the technical match score and explanation as JSON."
     )

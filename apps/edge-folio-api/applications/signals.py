@@ -68,6 +68,7 @@ def _compute_metrics(application_id: int, user_id: int) -> None:
             company_name=app.company_name,
             bullets=bullets_payload,
             skills=skills,
+            languages=languages,
         )
         nafta, nafta_explanation = calculate_nafta_likelihood(
             job_description=app.job_description,
