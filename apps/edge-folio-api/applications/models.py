@@ -131,6 +131,9 @@ class JobApplication(Common):
     work_type = models.JSONField(null=True, blank=True)
     location = models.CharField(max_length=200, blank=True)
     us_citizen_or_pr_required = models.BooleanField(null=True, blank=True)
+    # Computed hard gate: the JD requires a spoken language the user does not have.
+    # Mirrored onto the source JobPosting so the jobs-page bucket stays in sync.
+    language_requirement_unmet = models.BooleanField(null=True, blank=True)
     tailored_skills = models.ManyToManyField(
         'matrix.Skill',
         blank=True,

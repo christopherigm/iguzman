@@ -642,7 +642,10 @@ You are an expert technical recruiter evaluating a candidate's fit for a specifi
 Analyze the candidate's skills, work experience bullet points, and the job description.
 Provide an overall match score from 1 to 100 representing how well the candidate's complete \
 profile fits the role - considering technical alignment, soft skill signals, seniority level \
-match, and domain experience.
+match, domain experience, and spoken-language requirements. When the posting calls for a \
+specific language or bilingual/multilingual ability (e.g. a bilingual customer-facing or HR \
+role), credit the candidate when their listed spoken languages satisfy it, and treat an unmet \
+language requirement as a meaningful gap.
 
 Scoring guide:
 - 80-100: Exceptional fit; meets or exceeds nearly all requirements
@@ -690,6 +693,18 @@ Consider:
 - Years of relevant work experience as a credential supplement where degree is missing
 - Technical depth and specificity of the role (stronger technical match = stronger TN case)
 
+IMPORTANT - visa sponsorship statements:
+A TN visa is NOT employer-sponsored in the H-1B sense. Unlike an H-1B petition (a long, \
+expensive, bureaucratic process the employer must file and fund), a TN only requires the \
+employer to provide a job offer / support letter; the candidate applies for TN status on \
+their own at the border or via USCIS. Therefore a posting that says it "does not offer visa \
+sponsorship", "no sponsorship available", "unable to sponsor", or similar MUST NOT lower the \
+TN likelihood score - such statements refer to costly petition-based sponsorship (H-1B, green \
+card) and are irrelevant to TN eligibility. Do NOT treat them as a negative factor. The only \
+work-authorization condition that genuinely defeats a TN case is an explicit requirement of \
+U.S. citizenship (or permanent residency / security clearance requiring citizenship), which is \
+handled separately - judge TN likelihood purely on profession mapping and credentials.
+
 Scoring guide:
 - 80-100: Strong TN case; role clearly maps to TN category; candidate credentials meet requirements
 - 60-79: Good TN case; minor concerns (e.g., title mismatch) but overall approvable
@@ -719,9 +734,14 @@ def calculate_overall_match(
     company_name: str,
     bullets: list[dict],
     skills: list[dict],
+    languages: list[dict] | None = None,
 ) -> tuple[int, str]:
     """Return (score, explanation) for overall candidate-job fit."""
     skill_summary = ", ".join(f"{s['name']} ({s['proficiency']}/5)" for s in skills)
+    language_summary = ", ".join(
+        f"{lang['name']} ({lang['proficiency']})" if lang.get('proficiency') else lang['name']
+        for lang in (languages or [])
+    )
     bullet_lines = "\n".join(
         f"[{b['category']}] {b['text']}" + (f" | skills: {', '.join(b['skills'])}" if b.get('skills') else "")
         for b in bullets[:30]
@@ -730,6 +750,7 @@ def calculate_overall_match(
         f"ROLE: {job_title} at {company_name}\n\n"
         f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
         f"CANDIDATE SKILLS: {skill_summary or 'None listed'}\n\n"
+        f"CANDIDATE SPOKEN LANGUAGES: {language_summary or 'None listed'}\n\n"
         f"CANDIDATE EXPERIENCE BULLETS:\n{bullet_lines or 'None listed'}\n\n"
         "Return the overall match score and explanation as JSON."
     )

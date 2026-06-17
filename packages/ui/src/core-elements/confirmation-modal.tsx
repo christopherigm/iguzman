@@ -65,6 +65,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   backgroundBlur = "blur(2px)",
 }) => {
   const { alignItems, justifyContent } = POSITION_MAP[position];
+  // Dismissing the modal (Escape / overlay click) falls back to okCallback
+  // when no cancelCallback is provided, since OK is then the only way out.
+  const dismiss = cancelCallback ?? okCallback;
   // Prevent body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -76,8 +79,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   // Keyboard shortcuts: Enter → OK (unless disabled or an interactive child is focused), Escape → Cancel
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && cancelCallback) {
-        cancelCallback();
+      if (e.key === "Escape") {
+        dismiss();
         return;
       }
       if (e.key === "Enter" && !okDisabled) {
@@ -89,11 +92,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cancelCallback, okCallback, okDisabled]);
+  }, [dismiss, okCallback, okDisabled]);
 
   // Close when clicking the overlay directly (not the panel)
   const handleOverlayClick = (e: React.MouseEvent) => {
-    if (cancelCallback && e.target === e.currentTarget) cancelCallback();
+    if (e.target === e.currentTarget) dismiss();
   };
 
   const modal = (

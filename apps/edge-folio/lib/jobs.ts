@@ -34,6 +34,7 @@ export interface JobPosting {
   nafta_tn_likelihood: number | null;
   nafta_tn_likelihood_explanation: string;
   us_citizen_or_pr_required: boolean | null;
+  language_requirement_unmet: boolean | null;
 }
 
 export type JobSearchStatus = "running" | "done" | "failed";

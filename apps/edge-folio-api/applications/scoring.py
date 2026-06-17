@@ -58,14 +58,97 @@ def detect_us_citizen_required(job_description: str) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# Spoken-language requirements
+# ---------------------------------------------------------------------------
+# A posting that demands fluency in a spoken language the user does not have is a hard
+# gate, mirroring citizenship: it drops to the "No Match" bucket regardless of the LLM
+# score. English is always assumed (it is the baseline working language for these roles
+# and EdgeFolio's own UI), so an "English required" JD never gates on its own. The gate
+# fires for a *named* non-English language the user hasn't listed, or for a
+# "bilingual"/"multilingual" requirement the user's language count cannot satisfy.
+
+# Spoken-language names recognised by name in a JD.
+_LANGUAGE_NAMES = (
+    'english', 'spanish', 'french', 'german', 'mandarin', 'cantonese', 'chinese',
+    'portuguese', 'italian', 'japanese', 'korean', 'arabic', 'russian', 'hindi',
+    'dutch', 'swedish', 'norwegian', 'danish', 'finnish', 'polish', 'turkish',
+    'vietnamese', 'thai', 'indonesian', 'tagalog', 'filipino', 'hebrew', 'greek',
+    'czech', 'romanian', 'hungarian', 'ukrainian', 'farsi', 'persian', 'urdu',
+    'bengali', 'punjabi', 'tamil', 'malay',
+)
+# Synonyms folded onto a canonical name so "Chinese" satisfies a "Mandarin"
+# requirement (and vice versa), etc.
+_LANGUAGE_SYNONYMS = {
+    'mandarin': 'chinese',
+    'cantonese': 'chinese',
+    'farsi': 'persian',
+    'filipino': 'tagalog',
+}
+_LANGUAGE_NAME_RE = re.compile(r'\b(' + '|'.join(_LANGUAGE_NAMES) + r')\b', re.IGNORECASE)
+_BILINGUAL_RE = re.compile(r'\bbi-?lingual\b', re.IGNORECASE)
+_MULTILINGUAL_RE = re.compile(r'\bmulti-?lingual\b', re.IGNORECASE)
+# Requirement context that turns a language mention into a requirement: "Spanish
+# required", "fluent in French", "must speak German", "native Italian", "verbal and
+# written communication in Portuguese".
+_LANG_REQUIREMENT_RE = re.compile(
+    r'(require|must|fluen|proficien|native|speak|bilingual|multilingual'
+    r'|verbal|written|communicat)',
+    re.IGNORECASE,
+)
+
+
+def _canonical_language(name: str) -> str:
+    name = (name or '').strip().lower()
+    return _LANGUAGE_SYNONYMS.get(name, name)
+
+
+def _spoken_languages(languages) -> set:
+    """Canonical set of languages the user speaks. English is always assumed."""
+    spoken = {
+        _canonical_language(lang['name'] if isinstance(lang, dict) else lang)
+        for lang in (languages or [])
+    }
+    spoken.discard('')
+    spoken.add('english')
+    return spoken
+
+
+def detect_unmet_language_requirement(job_description: str, languages) -> bool:
+    """True when the JD requires a spoken language the user does not have.
+
+    ``languages`` is the user's spoken languages (dicts with a ``name`` key, or plain
+    name strings). English is assumed satisfied. Fires for a named non-English language
+    that sits within :data:`_PROXIMITY` characters of requirement-context language, or
+    for a "bilingual"/"multilingual" requirement the user's language count cannot meet
+    (>= 2 / >= 3 languages, English included).
+    """
+    text = job_description or ''
+    spoken = _spoken_languages(languages)
+
+    for term in _LANGUAGE_NAME_RE.finditer(text):
+        if _canonical_language(term.group(1)) in spoken:
+            continue
+        window = text[max(0, term.start() - _PROXIMITY):term.end() + _PROXIMITY]
+        if _LANG_REQUIREMENT_RE.search(window):
+            return True
+
+    if _BILINGUAL_RE.search(text) and len(spoken) < 2:
+        return True
+    if _MULTILINGUAL_RE.search(text) and len(spoken) < 3:
+        return True
+    return False
+
+
 def compute_match_metrics(user, job_description: str, job_title: str, company_name: str) -> dict:
     """Compute the three LLM match metrics for ``user`` against a job description.
 
     Returns a dict with ``overall_match`` / ``technical_match`` /
-    ``nafta_tn_likelihood`` integers and their ``*_explanation`` strings. Raises if
-    the LLM is unavailable - callers decide how to surface that.
+    ``nafta_tn_likelihood`` integers, their ``*_explanation`` strings, and the
+    ``language_requirement_unmet`` hard-gate flag. Raises if the LLM is unavailable -
+    callers decide how to surface that.
     """
-    from career.models import Education, WorkExperience
+    from career.models import Education, Language, WorkExperience
     from matrix.models import BulletPoint, Skill
 
     bullets_qs = list(
@@ -81,6 +164,7 @@ def compute_match_metrics(user, job_description: str, job_title: str, company_na
         for b in bullets_qs
     ]
     skills = list(Skill.objects.filter(user=user).values('name', 'proficiency'))
+    languages = list(Language.objects.filter(user=user).values('name', 'proficiency'))
     work_experiences = list(
         WorkExperience.objects.filter(user=user)
         .order_by('-start_date')
@@ -98,6 +182,7 @@ def compute_match_metrics(user, job_description: str, job_title: str, company_na
         company_name=company_name,
         bullets=bullets_payload,
         skills=skills,
+        languages=languages,
     )
     technical, technical_explanation = calculate_technical_match(
         job_description=job_description,
@@ -121,4 +206,5 @@ def compute_match_metrics(user, job_description: str, job_title: str, company_na
         'technical_match_explanation': technical_explanation,
         'nafta_tn_likelihood': nafta,
         'nafta_tn_likelihood_explanation': nafta_explanation,
+        'language_requirement_unmet': detect_unmet_language_requirement(job_description, languages),
     }

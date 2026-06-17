@@ -50,10 +50,12 @@ const POLL_INTERVAL = 5000;
 
 type MatchBucket = "match" | "semi" | "no";
 
-// Curated bucket for a scored private posting. An explicit citizenship requirement
-// or a missing/low score lands in "No match"; 85+ is "Match"; 60-84 is "Semi-match".
+// Curated bucket for a scored private posting. An explicit citizenship requirement,
+// an unmet spoken-language requirement, or a missing/low score lands in "No match";
+// 85+ is "Match"; 60-84 is "Semi-match".
 function bucketOf(posting: JobPosting): MatchBucket {
   if (posting.us_citizen_or_pr_required) return "no";
+  if (posting.language_requirement_unmet) return "no";
   const m = posting.overall_match;
   if (m == null) return "no";
   if (m >= 85) return "match";

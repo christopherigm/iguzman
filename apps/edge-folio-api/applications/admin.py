@@ -36,7 +36,7 @@ class CompanyAdmin(admin.ModelAdmin):
 @admin.register(JobApplication)
 class JobApplicationAdmin(admin.ModelAdmin):
     list_display = ('job_title', 'company_name', 'status', 'tailor_status', 'location', 'salary_min', 'salary_max', 'salary_currency', 'overall_match', 'technical_match', 'nafta_tn_likelihood', 'user', 'created')
-    list_filter = ('status', 'tailor_status', 'salary_currency', 'us_citizen_or_pr_required')
+    list_filter = ('status', 'tailor_status', 'salary_currency', 'us_citizen_or_pr_required', 'language_requirement_unmet')
     search_fields = ('job_title', 'company_name', 'user__email')
     raw_id_fields = ('user', 'company')
     readonly_fields = (
@@ -44,6 +44,7 @@ class JobApplicationAdmin(admin.ModelAdmin):
         'professional_summary', 'tailored_bullets', 'tailored_skills',
         'cover_letter', 'nafta_letter',
         'overall_match', 'technical_match', 'nafta_tn_likelihood',
+        'language_requirement_unmet',
         'created', 'modified',
     )
 

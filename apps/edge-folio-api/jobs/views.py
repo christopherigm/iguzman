@@ -248,26 +248,32 @@ class JobSearchListView(APIView):
         if cached is not None:
             return Response(cached)
         # Tally each run's postings into the same buckets the jobs page renders:
-        # a citizenship requirement, a missing score, or a score below 60 is "low";
-        # 85+ is "strong"; 60-84 is "possible". A single LEFT JOIN with conditional
-        # counts avoids an N+1 over the related postings.
-        not_citizen = ~Q(postings__us_citizen_or_pr_required=True)
+        # a citizenship requirement, an unmet spoken-language requirement, a missing
+        # score, or a score below 60 is "low"; 85+ is "strong"; 60-84 is "possible". A
+        # single LEFT JOIN with conditional counts avoids an N+1 over the related postings.
+        # A gate fires only when the flag is explicitly True; NULL (not yet scored for
+        # the gate) counts as "not gated", matching the jobs-page truthiness check.
+        gated = Q(postings__us_citizen_or_pr_required=True) | Q(postings__language_requirement_unmet=True)
+        not_gated = (
+            (Q(postings__us_citizen_or_pr_required=False) | Q(postings__us_citizen_or_pr_required__isnull=True))
+            & (Q(postings__language_requirement_unmet=False) | Q(postings__language_requirement_unmet__isnull=True))
+        )
         searches = (
             JobSearch.objects.filter(user=request.user)
             .annotate(
                 strong=Count(
                     'postings',
-                    filter=not_citizen & Q(postings__overall_match__gte=85),
+                    filter=not_gated & Q(postings__overall_match__gte=85),
                 ),
                 possible=Count(
                     'postings',
-                    filter=not_citizen
+                    filter=not_gated
                     & Q(postings__overall_match__gte=60)
                     & Q(postings__overall_match__lt=85),
                 ),
                 low=Count(
                     'postings',
-                    filter=Q(postings__us_citizen_or_pr_required=True)
+                    filter=gated
                     | Q(postings__overall_match__isnull=True)
                     | Q(postings__overall_match__lt=60),
                 ),

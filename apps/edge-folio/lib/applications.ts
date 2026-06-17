@@ -109,6 +109,7 @@ export interface JobApplication {
   work_type: WorkType[] | null;
   location: string;
   us_citizen_or_pr_required: boolean | null;
+  language_requirement_unmet: boolean | null;
   created: string;
   modified: string;
 }

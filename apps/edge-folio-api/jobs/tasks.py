@@ -403,11 +403,12 @@ def _score_postings(user_id: int, search, posting_ids: list[int]) -> None:
             posting.nafta_tn_likelihood = metrics['nafta_tn_likelihood']
             posting.nafta_tn_likelihood_explanation = metrics['nafta_tn_likelihood_explanation']
             posting.us_citizen_or_pr_required = detect_us_citizen_required(posting.job_description)
+            posting.language_requirement_unmet = metrics['language_requirement_unmet']
             posting.save(update_fields=[
                 'overall_match', 'overall_match_explanation',
                 'technical_match', 'technical_match_explanation',
                 'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
-                'us_citizen_or_pr_required', 'modified',
+                'us_citizen_or_pr_required', 'language_requirement_unmet', 'modified',
             ])
         except Exception as exc:
             # A single scoring failure shouldn't abort the whole run; the posting

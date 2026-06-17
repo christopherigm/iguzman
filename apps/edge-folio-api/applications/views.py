@@ -320,11 +320,12 @@ class RefreshMetricsView(APIView):
         application.technical_match_explanation = metrics['technical_match_explanation']
         application.nafta_tn_likelihood = metrics['nafta_tn_likelihood']
         application.nafta_tn_likelihood_explanation = metrics['nafta_tn_likelihood_explanation']
+        application.language_requirement_unmet = metrics['language_requirement_unmet']
         application.save(update_fields=[
             'overall_match', 'overall_match_explanation',
             'technical_match', 'technical_match_explanation',
             'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
-            'modified',
+            'language_requirement_unmet', 'modified',
         ])
         _invalidate_application(user.id, pk)
 

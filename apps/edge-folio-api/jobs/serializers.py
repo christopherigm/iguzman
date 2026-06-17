@@ -28,7 +28,7 @@ class JobFeedSerializer(serializers.ModelSerializer):
             'overall_match', 'overall_match_explanation',
             'technical_match', 'technical_match_explanation',
             'nafta_tn_likelihood', 'nafta_tn_likelihood_explanation',
-            'us_citizen_or_pr_required',
+            'us_citizen_or_pr_required', 'language_requirement_unmet',
         )
         read_only_fields = fields
 

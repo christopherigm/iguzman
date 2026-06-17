@@ -117,6 +117,9 @@ class JobPosting(Common):
     nafta_tn_likelihood = models.PositiveSmallIntegerField(null=True, blank=True)
     nafta_tn_likelihood_explanation = models.TextField(blank=True)
     us_citizen_or_pr_required = models.BooleanField(null=True, blank=True)
+    # Hard gate: the JD requires a spoken language the user does not have (see
+    # applications.scoring.detect_unmet_language_requirement). Drops to "No Match".
+    language_requirement_unmet = models.BooleanField(null=True, blank=True)
 
     # BYOK private results (option A): postings fetched with a user's own key are
     # owned by that user and excluded from the shared feed for everyone else.

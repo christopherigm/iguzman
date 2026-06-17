@@ -4,9 +4,10 @@ from django.utils import timezone
 # Metric fields mirrored from a JobApplication onto the JobPosting it was saved
 # from, so the jobs feed and recent-searches tallies reflect the same scores.
 # The jobs page buckets postings client-side from ``overall_match`` +
-# ``us_citizen_or_pr_required``, and the per-search strong/possible/low tallies
-# are aggregated from ``overall_match`` at query time, so syncing these fields
-# keeps both the bucket placement and the tallies consistent with the application.
+# ``us_citizen_or_pr_required`` + ``language_requirement_unmet``, and the per-search
+# strong/possible/low tallies are aggregated from those same fields at query time, so
+# syncing them keeps both the bucket placement and the tallies consistent with the
+# application.
 _MIRRORED_FIELDS = (
     'overall_match',
     'overall_match_explanation',
@@ -15,6 +16,7 @@ _MIRRORED_FIELDS = (
     'nafta_tn_likelihood',
     'nafta_tn_likelihood_explanation',
     'us_citizen_or_pr_required',
+    'language_requirement_unmet',
 )
 
 
