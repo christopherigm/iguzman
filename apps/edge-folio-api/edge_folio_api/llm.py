@@ -19,13 +19,23 @@ def _caused_by_rate_limit(exc: BaseException) -> bool:
 
 
 def _openrouter_client() -> instructor.Instructor:
+    # Use TOOLS (function-calling) mode rather than JSON mode: reasoning models
+    # served by generic OpenRouter providers leak their chain-of-thought into the
+    # message content under plain JSON mode, which breaks schema parsing. Tool
+    # calls force a structured argument payload instead.
     return instructor.from_openai(
         OpenAI(
             base_url='https://openrouter.ai/api/v1',
             api_key=settings.OPENROUTER_API_KEY,
         ),
-        mode=instructor.Mode.JSON,
+        mode=instructor.Mode.TOOLS,
     )
+
+
+# Restrict OpenRouter routing to providers that actually support every request
+# parameter we send (i.e. tool calling). Without this, OpenRouter may route to a
+# provider that silently ignores the tools schema and returns malformed output.
+_OPENROUTER_EXTRA_BODY = {'provider': {'require_parameters': True}}
 
 
 def chat_structured(
@@ -58,6 +68,7 @@ def chat_structured(
         response_model=response_model,
         temperature=temperature,
         max_retries=max_retries,
+        extra_body=_OPENROUTER_EXTRA_BODY,
     )
 
 

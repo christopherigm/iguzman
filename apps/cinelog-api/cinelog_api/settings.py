@@ -244,7 +244,9 @@ SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
-OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'openai/gpt-oss-120b')
+# Plain instruct model, NOT a reasoning model: generic OpenRouter providers leak
+# chain-of-thought into the response and break instructor structured output.
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct')
 
 # ── Celery ────────────────────────────────────────────────────────────────────
 _celery_broker = os.environ.get('CELERY_BROKER_URL', _REDIS_URL or 'redis://localhost:6379/0')
