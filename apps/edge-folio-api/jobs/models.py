@@ -30,6 +30,14 @@ DEFAULT_DAILY_LIMITS = {
     'jsearch': 200,
 }
 
+# A newly-verified user gets a system-funded JSearch trial credential so they can
+# try the job-search feature before bringing their own key. Unlike a BYOK
+# credential's daily allowance, this is a *lifetime* total: once the 10 searches
+# are spent the credential is exhausted (it never resets).
+TRIAL_PROVIDER = 'jsearch'
+TRIAL_CALL_LIMIT = 10
+TRIAL_LABEL = 'Trial (system key)'
+
 CURRENCY_CHOICES = [
     ('USD', 'USD'),
     ('CAD', 'CAD'),
@@ -192,13 +200,22 @@ class JobSearch(Common):
 class UserApiCredential(Common):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='api_credentials')
     provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
-    encrypted_key = models.TextField()
+    # Blank for trial credentials: they run on the platform's system key
+    # (``settings.JSEARCH_API_KEY``), which is never copied into per-user rows.
+    encrypted_key = models.TextField(blank=True)
     label = models.CharField(max_length=120, blank=True)
     is_active = models.BooleanField(default=True)
 
+    # System-funded JSearch trial: a lifetime allowance of TRIAL_CALL_LIMIT
+    # searches on the platform key, granted at email verification so a user can
+    # try the feature before bringing their own key. ``calls_used`` is a lifetime
+    # tally for a trial (never resets); ``usage_date`` is unused for trials.
+    is_trial = models.BooleanField(default=False)
+
     # Usage tracking. Providers like Adzuna do not report consumed/remaining
     # quota, so we count each search() call against a daily limit ourselves.
-    # ``calls_used`` applies to ``usage_date``; it auto-resets on a new day.
+    # ``calls_used`` applies to ``usage_date``; it auto-resets on a new day
+    # (BYOK only - a trial's allowance is a lifetime total).
     call_limit = models.PositiveIntegerField(default=0)
     calls_used = models.PositiveIntegerField(default=0)
     usage_date = models.DateField(null=True, blank=True)
@@ -220,7 +237,14 @@ class UserApiCredential(Common):
 
     @property
     def calls_used_today(self) -> int:
-        """Calls consumed today, treating a stale ``usage_date`` as a fresh day."""
+        """Calls consumed in the current accounting window.
+
+        A trial credit is a lifetime total, so its usage never resets and the
+        full ``calls_used`` tally is returned. A BYOK credential resets daily, so
+        a stale ``usage_date`` counts as a fresh day with zero used.
+        """
+        if self.is_trial:
+            return self.calls_used
         if self.usage_date != timezone.localdate():
             return 0
         return self.calls_used
@@ -230,7 +254,15 @@ class UserApiCredential(Common):
         return max(0, self.call_limit - self.calls_used_today)
 
     def record_call(self, count: int = 1) -> None:
-        """Deduct ``count`` API calls from today's allowance, resetting on a new day."""
+        """Deduct ``count`` API calls from the allowance.
+
+        Trial credits draw down a lifetime total; BYOK credits draw down today's
+        allowance, resetting on a new day.
+        """
+        if self.is_trial:
+            self.calls_used += count
+            self.save(update_fields=['calls_used', 'modified'])
+            return
         today = timezone.localdate()
         if self.usage_date != today:
             self.usage_date = today
@@ -243,6 +275,17 @@ class UserApiCredential(Common):
 
     def get_key(self) -> str:
         return decrypt_key(self.encrypted_key)
+
+    def resolve_key(self) -> str | None:
+        """The API key a fetch should use for this credential.
+
+        A trial runs on the platform's system key, so ``None`` is returned and
+        the provider client falls back to ``settings.JSEARCH_API_KEY``. A BYOK
+        credential decrypts the user's own stored key.
+        """
+        if self.is_trial:
+            return None
+        return self.get_key()
 
     def __str__(self):
         return f'{self.provider} credential ({self.user.email})'

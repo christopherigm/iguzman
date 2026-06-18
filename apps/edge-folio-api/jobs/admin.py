@@ -77,10 +77,10 @@ class JobSearchAdmin(admin.ModelAdmin):
 @admin.register(UserApiCredential)
 class UserApiCredentialAdmin(admin.ModelAdmin):
     list_display = (
-        'provider', 'user', 'label', 'is_active',
+        'provider', 'user', 'label', 'is_active', 'is_trial',
         'call_limit', 'calls_used', 'usage_date', 'created',
     )
-    list_filter = ('provider', 'is_active')
+    list_filter = ('provider', 'is_active', 'is_trial')
     search_fields = ('user__email', 'label')
     raw_id_fields = ('user',)
     readonly_fields = ('encrypted_key', 'calls_used', 'usage_date', 'created', 'modified')

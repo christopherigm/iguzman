@@ -123,7 +123,14 @@ returns a truncated snippet. Both ingest paths fall back to Adzuna when JSearch 
 `ingest_shared_catalog` uses the platform provider credentials, and `ingest_user_feed` walks
 the user's usable BYOK credentials, stopping at the first provider that returns a posting.
 `DEFAULT_DAILY_LIMITS`: Adzuna 250/day, JSearch
-200/day, counted locally (`call_limit`/`calls_used`/`usage_date`). Catalog targets the
+200/day, counted locally (`call_limit`/`calls_used`/`usage_date`). **Trial credit**: on
+email verification a user is granted a system-funded JSearch `UserApiCredential`
+(`is_trial=True`, `jobs/trial.py::grant_trial_credential`) - a **lifetime** allowance of
+`TRIAL_CALL_LIMIT` (10) searches on `settings.JSEARCH_API_KEY` (no key stored on the row;
+`resolve_key()` returns `None` so the client falls back to the platform key) so a user can
+try job search before bringing their own key. The trial never daily-resets; adding their own
+JSearch key upgrades the row in place (clears `is_trial`, switches to the daily limit, resets
+usage). Catalog targets the
 **USMCA region** (`us`/`ca`/`mx`). BYOK keys are encrypted at rest with **Fernet**
 (`jobs/crypto.py`, `JOBS_ENCRYPTION_KEY`, dev-derived from `SECRET_KEY`). Ingestion
 (`jobs/ingest.py`, `jobs/tasks.py`): `ingest_shared_catalog` (daily), `ingest_user_feed`,

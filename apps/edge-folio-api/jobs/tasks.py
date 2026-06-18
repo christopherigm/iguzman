@@ -318,7 +318,7 @@ def ingest_user_feed(user_id: int, search_id: int | None = None) -> None:
     affected_ids: list[int] = []
     for credential in credentials:
         try:
-            client = get_client(credential.provider, api_key=credential.get_key())
+            client = get_client(credential.provider, api_key=credential.resolve_key())
             postings = client.search(query=query, location=location, country=country)
         except ProviderError as exc:
             logger.warning('ingest_user_feed: %s search failed for user=%s: %s',

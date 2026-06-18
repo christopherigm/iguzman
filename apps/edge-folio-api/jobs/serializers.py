@@ -1,6 +1,12 @@
 from rest_framework import serializers
 
-from .models import PROVIDER_CHOICES, JobPosting, JobSearch, UserApiCredential
+from .models import (
+    DEFAULT_DAILY_LIMITS,
+    PROVIDER_CHOICES,
+    JobPosting,
+    JobSearch,
+    UserApiCredential,
+)
 
 
 class JobFeedSerializer(serializers.ModelSerializer):
@@ -67,12 +73,12 @@ class UserApiCredentialSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserApiCredential
         fields = (
-            'id', 'provider', 'label', 'is_active', 'key', 'has_key',
+            'id', 'provider', 'label', 'is_active', 'key', 'has_key', 'is_trial',
             'call_limit', 'calls_used_today', 'calls_remaining', 'usage_date',
             'created', 'modified',
         )
         read_only_fields = (
-            'id', 'has_key', 'call_limit', 'calls_used_today', 'calls_remaining',
+            'id', 'has_key', 'is_trial', 'call_limit', 'calls_used_today', 'calls_remaining',
             'usage_date', 'created', 'modified',
         )
 
@@ -87,8 +93,31 @@ class UserApiCredentialSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         key = validated_data.pop('key')
+        user = self.context['request'].user
+        provider = validated_data['provider']
+
+        # The (user, provider) unique constraint allows only one credential per
+        # provider. If one already exists (typically the system-funded trial),
+        # adopt the user's own key in place rather than failing the insert. A
+        # trial is promoted to a full BYOK credential: its lifetime trial
+        # allowance is replaced with the provider's daily limit and its usage
+        # tally reset.
+        existing = UserApiCredential.objects.filter(user=user, provider=provider).first()
+        if existing is not None:
+            if existing.is_trial:
+                existing.is_trial = False
+                existing.call_limit = DEFAULT_DAILY_LIMITS.get(provider, 250)
+                existing.calls_used = 0
+                existing.usage_date = None
+            existing.label = validated_data.get('label', existing.label)
+            if 'is_active' in validated_data:
+                existing.is_active = validated_data['is_active']
+            existing.set_key(key)
+            existing.save()
+            return existing
+
         credential = UserApiCredential(**validated_data)
-        credential.user = self.context['request'].user
+        credential.user = user
         credential.set_key(key)
         credential.save()
         return credential

@@ -171,6 +171,16 @@ class VerifyEmailView(APIView):
         user.is_active = True
         user.save(update_fields=['is_active'])
         verification.delete()
+
+        # Grant a system-funded JSearch trial so the user can try job search
+        # before adding their own key. Never let a provisioning hiccup block
+        # account activation.
+        try:
+            from jobs.trial import grant_trial_credential
+            grant_trial_credential(user)
+        except Exception as exc:
+            logger.warning('Trial credential provisioning failed for user=%s: %s', user.id, exc)
+
         return Response({'detail': 'Email verified successfully.'})
 
 

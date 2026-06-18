@@ -67,6 +67,9 @@ export interface JobApiCredential {
   label: string;
   is_active: boolean;
   has_key: boolean;
+  // System-funded JSearch trial: active and fetch-capable despite having no
+  // stored key of its own (it runs on the platform key).
+  is_trial: boolean;
   // Usage tracking - counted locally since providers report no quota.
   call_limit: number;
   calls_used_today: number;

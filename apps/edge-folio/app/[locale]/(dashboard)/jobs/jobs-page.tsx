@@ -35,6 +35,7 @@ import {
   JobsError,
   type JobPosting,
   type JobSearch,
+  type JobApiCredential,
   type JobWorkType,
   type JobScope,
 } from "@/lib/jobs";
@@ -278,17 +279,46 @@ function JobSection({
 
 // ── Recent job searches card ────────────────────────────────────────────────
 
+// Compact usage readout for the credential backing job searches: "Search 1/200"
+// over a progress bar whose width tracks the label's own width and whose fill
+// reflects the searches consumed. Works for both BYOK and trial credentials —
+// the API already exposes the right tally for each via `calls_used_today`.
+function SearchUsage({ credential }: { credential: JobApiCredential }) {
+  const t = useTranslations("JobsPage");
+  const used = credential.calls_used_today;
+  const limit = credential.call_limit;
+  const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+  const label = t("searchUsage", { used, limit });
+  return (
+    <Box
+      display="inline-flex"
+      flexDirection="column"
+      alignItems="flex-end"
+      gap={4}
+    >
+      <Typography variant="caption" color="var(--muted-foreground, #6b7280)">
+        {label}
+      </Typography>
+      <ProgressBar value={pct} width="100%" label={label} />
+    </Box>
+  );
+}
+
 interface JobSearchesCardProps {
   searches: JobSearch[];
   // The currently active search filter (null when none), and the toggle handler.
   selectedSearchId: number | null;
   onSelect: (id: number) => void;
+  // Credential backing the searches (JSearch preferred, else Adzuna); drives the
+  // far-right usage readout in the title row. Null when none is available.
+  usageCredential: JobApiCredential | null;
 }
 
 function JobSearchesCard({
   searches,
   selectedSearchId,
   onSelect,
+  usageCredential,
 }: JobSearchesCardProps) {
   const t = useTranslations("JobsPage");
   if (searches.length === 0) return null;
@@ -300,9 +330,17 @@ function JobSearchesCard({
 
   return (
     <Card gap={6} marginBottom={20}>
-      <Typography variant="body" fontWeight={600} color="var(--foreground)">
-        {t("recentSearchesTitle")}
-      </Typography>
+      <Box
+        display="flex"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        gap={12}
+      >
+        <Typography variant="body" fontWeight={600} color="var(--foreground)">
+          {t("recentSearchesTitle")}
+        </Typography>
+        {usageCredential && <SearchUsage credential={usageCredential} />}
+      </Box>
       <Box display="flex" flexDirection="column" gap={4}>
         {sorted.map((s, i) => {
           const date = new Date(s.created).toLocaleDateString(undefined, {
@@ -466,6 +504,10 @@ export function JobsPage() {
   // BYOK users with at least one active stored key may also fetch jobs (billed
   // to their own provider quota), producing private postings only they can see.
   const [canFetch, setCanFetch] = useState(false);
+  // Credential whose search usage is shown in the recent-searches header. JSearch
+  // is preferred (it backs the trial too); Adzuna is the fallback.
+  const [usageCredential, setUsageCredential] =
+    useState<JobApiCredential | null>(null);
   const [fetching, setFetching] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<JobPosting | null>(null);
@@ -488,7 +530,9 @@ export function JobsPage() {
       }
       // A filter change (anything other than a page move) resets every list's
       // pagination so each starts from page 1 against the new filters.
-      const isPageMove = Object.keys(updates).some((k) => k.startsWith("page_"));
+      const isPageMove = Object.keys(updates).some((k) =>
+        k.startsWith("page_"),
+      );
       if (!isPageMove) {
         params.delete("page_match");
         params.delete("page_semi");
@@ -595,7 +639,16 @@ export function JobsPage() {
     ]).then(([profile, creds]) => {
       if (!active) return;
       setIsStaff(Boolean(profile?.is_staff));
-      setCanFetch(creds.some((c) => c.is_active && c.has_key));
+      // A credential can fetch when it has a stored BYOK key, or when it's the
+      // system-funded trial (active, keyless, runs on the platform key).
+      setCanFetch(creds.some((c) => c.is_active && (c.has_key || c.is_trial)));
+      // Prefer the JSearch credential (also the trial's provider); fall back to
+      // Adzuna so users on either provider see their remaining searches.
+      setUsageCredential(
+        creds.find((c) => c.provider === "jsearch") ??
+          creds.find((c) => c.provider === "adzuna") ??
+          null,
+      );
     });
     return () => {
       active = false;
@@ -679,69 +732,104 @@ export function JobsPage() {
     }
   }, [pendingDelete, t, privateList, sharedList]);
 
-  const filterChips = useMemo(
-    () => (
-      <Card
-        display="flex"
-        flexDirection="row"
-        gap={12}
-        flexWrap="wrap"
-        alignItems="flex-end"
-        marginBottom={20}
-      >
-        <Box styles={{ minWidth: 160, flex: 1 }}>
-          <TextInput
-            label={t("searchLabel")}
-            value={searchInput}
-            onChange={setSearchInput}
-            placeholder={t("searchPlaceholder")}
-            width="100%"
-            aria-label={t("searchLabel")}
-          />
-        </Box>
-        <Box display="flex" flexDirection="column">
-          <Typography variant="label" color="var(--muted-foreground, #6b7280)">
-            {t("hideSavedFilterLabel")}
-          </Typography>
-          <Box display="flex" alignItems="center" height={38}>
-            <Switch
-              checked={hideSaved}
-              onChange={(c) => setParam({ hide_saved: c ? "" : "0" })}
-              aria-label={t("hideSavedFilterLabel")}
+  const filterChips = useMemo(() => {
+    // The recent-search run currently constraining the lists (null when none),
+    // surfaced as a clear-filter button beside the work-type select.
+    const activeSearch = searchFilter
+      ? (searches.find((s) => s.id === searchFilter) ?? null)
+      : null;
+    const activeLabel = activeSearch
+      ? activeSearch.query || t("recentSearchesUntitled")
+      : "";
+    return (
+      <Card gap={12} marginBottom={20}>
+        <Typography variant="body" fontWeight={600} color="var(--foreground)">
+          {t("filtersTitle")}
+        </Typography>
+        <Box
+          display="flex"
+          flexDirection="row"
+          gap={12}
+          flexWrap="wrap"
+          alignItems="flex-end"
+        >
+          <Box styles={{ minWidth: 160, flex: 1 }}>
+            <TextInput
+              label={t("searchLabel")}
+              value={searchInput}
+              onChange={setSearchInput}
+              placeholder={t("searchPlaceholder")}
+              width="100%"
+              aria-label={t("searchLabel")}
             />
           </Box>
-        </Box>
-        <Box styles={{ minWidth: 140 }}>
-          <Select
-            label={t("locationLabel")}
-            value={location}
-            onChange={(v) => setParam({ location: v })}
-            options={[
-              { value: "", label: t("locationAll") },
-              ...locationOptions.map((l) => ({ value: l, label: l })),
-            ]}
-            width="100%"
-          />
-        </Box>
-        <Box styles={{ minWidth: 140 }}>
-          <Select
-            label={t("workTypeLabel")}
-            value={workType}
-            onChange={(v) => setParam({ work_type: v })}
-            options={[
-              { value: "", label: t("workTypeAll") },
-              ...WORK_TYPES.map((w) => ({
-                value: w,
-                label: t(`workTypes.${w}`),
-              })),
-            ]}
-            width="100%"
-          />
+          <Box display="flex" flexDirection="column">
+            <Typography
+              variant="label"
+              color="var(--muted-foreground, #6b7280)"
+            >
+              {t("hideSavedFilterLabel")}
+            </Typography>
+            <Box display="flex" alignItems="center" height={38}>
+              <Switch
+                checked={hideSaved}
+                onChange={(c) => setParam({ hide_saved: c ? "" : "0" })}
+                aria-label={t("hideSavedFilterLabel")}
+              />
+            </Box>
+          </Box>
+          <Box styles={{ minWidth: 140 }}>
+            <Select
+              label={t("locationLabel")}
+              value={location}
+              onChange={(v) => setParam({ location: v })}
+              options={[
+                { value: "", label: t("locationAll") },
+                ...locationOptions.map((l) => ({ value: l, label: l })),
+              ]}
+              width="100%"
+            />
+          </Box>
+          <Box styles={{ minWidth: 140 }}>
+            <Select
+              label={t("workTypeLabel")}
+              value={workType}
+              onChange={(v) => setParam({ work_type: v })}
+              options={[
+                { value: "", label: t("workTypeAll") },
+                ...WORK_TYPES.map((w) => ({
+                  value: w,
+                  label: t(`workTypes.${w}`),
+                })),
+              ]}
+              width="100%"
+            />
+          </Box>
+          {activeSearch && (
+            <Button
+              text={t("clearSearchFilter", { query: activeLabel })}
+              type="button"
+              size="md"
+              icon="/icons/close.svg"
+              iconPosition="end"
+              onClick={() => setParam({ search: "" })}
+              kind="primary"
+            />
+          )}
         </Box>
       </Card>
-    ),
-    [searchInput, location, workType, hideSaved, locationOptions, t, setParam],
-  );
+    );
+  }, [
+    searchInput,
+    location,
+    workType,
+    hideSaved,
+    locationOptions,
+    searchFilter,
+    searches,
+    t,
+    setParam,
+  ]);
 
   const byCreatedDesc = (a: JobPosting, b: JobPosting) =>
     new Date(b.created).getTime() - new Date(a.created).getTime();
@@ -879,6 +967,7 @@ export function JobsPage() {
         searches={searches}
         selectedSearchId={searchFilter}
         onSelect={handleSelectSearch}
+        usageCredential={usageCredential}
       />
 
       {filterChips}
