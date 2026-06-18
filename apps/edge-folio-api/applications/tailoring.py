@@ -122,6 +122,22 @@ _STOPWORDS = frozenset({
 _MAX_BULLETS_TO_LLM = 40
 
 
+def _format_custom_instructions(custom_instructions: str) -> str:
+    """
+    Render the user's free-text tailoring instructions as a clearly-delimited,
+    high-priority block to append to a tailoring user message. Returns '' when
+    no instructions were provided.
+    """
+    text = (custom_instructions or '').strip()
+    if not text:
+        return ''
+    return (
+        "\n\nADDITIONAL USER INSTRUCTIONS (apply these with high priority, but never "
+        "invent experience or break the rules above):\n"
+        f"{text[:1000]}\n"
+    )
+
+
 # ---------------------------------------------------------------------------
 # TN category suggestion
 # ---------------------------------------------------------------------------

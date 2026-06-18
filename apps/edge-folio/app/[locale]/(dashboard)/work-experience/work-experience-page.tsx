@@ -1258,8 +1258,10 @@ export function WorkExperiencePage() {
           text={t("addEntry")}
           type="button"
           size="md"
-          kind="primary"
+          kind="success"
           onClick={openAdd}
+          icon="/icons/new.svg"
+          iconPosition="end"
         />
       </Box>
 
@@ -1272,8 +1274,10 @@ export function WorkExperiencePage() {
             text={t("addEntry")}
             type="button"
             size="md"
-            kind="primary"
+            kind="success"
             onClick={openAdd}
+            icon="/icons/new.svg"
+            iconPosition="end"
           />
         </Box>
       ) : (
@@ -1312,8 +1316,10 @@ export function WorkExperiencePage() {
           text={t("addProject")}
           type="button"
           size="md"
-          kind="primary"
+          kind="success"
           onClick={openAddProject}
+          icon="/icons/new.svg"
+          iconPosition="end"
         />
       </Box>
 
@@ -1326,8 +1332,10 @@ export function WorkExperiencePage() {
             text={t("addProject")}
             type="button"
             size="md"
-            kind="primary"
+            kind="success"
             onClick={openAddProject}
+            icon="/icons/new.svg"
+            iconPosition="end"
           />
         </Box>
       ) : (
