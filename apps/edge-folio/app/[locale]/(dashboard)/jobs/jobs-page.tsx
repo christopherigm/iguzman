@@ -41,7 +41,10 @@ import {
 } from "@/lib/jobs";
 import { getProfile } from "@/lib/auth";
 import { JobCard } from "./job-card";
-import { JobSearchPanel } from "../profile/job-search-section";
+import {
+  JobSearchPanel,
+  type JobSearchPanelHandle,
+} from "../profile/job-search-section";
 import Card from "@repo/ui/core-elements/card";
 import "./jobs-page.css";
 
@@ -464,6 +467,9 @@ function JobSearchesCard({
 
 export function JobsPage() {
   const t = useTranslations("JobsPage");
+  // The refine modal renders the profile's JobSearchPanel, whose save toasts use
+  // the ProfilePage namespace; reuse those keys for the OK-driven save feedback.
+  const tProfile = useTranslations("ProfilePage");
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -513,6 +519,9 @@ export function JobsPage() {
   const [pendingDelete, setPendingDelete] = useState<JobPosting | null>(null);
   const [searches, setSearches] = useState<JobSearch[]>([]);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Handle to the refine modal's panel so the modal's OK button can persist the
+  // edited preferences before closing.
+  const jobSearchPanelRef = useRef<JobSearchPanelHandle>(null);
   // A fetch is in flight on the server; the button stays disabled until it finishes.
   const running = searches.some((s) => s.status === "running");
 
@@ -1096,11 +1105,22 @@ export function JobsPage() {
         <ConfirmationModal
           title={t("refineSearchTitle")}
           text={t("refineSearchText")}
-          okCallback={() => setRefineOpen(false)}
+          okCallback={() => {
+            void (async () => {
+              const ok = await jobSearchPanelRef.current?.save();
+              setRefineOpen(false);
+              showToast(
+                ok
+                  ? tProfile("jobSearchPrefsSaved")
+                  : tProfile("jobSearchPrefsError"),
+                ok ? "success" : "error",
+              );
+            })();
+          }}
           cancelCallback={() => setRefineOpen(false)}
           panelMaxWidth="640px"
         >
-          <JobSearchPanel />
+          <JobSearchPanel ref={jobSearchPanelRef} hideSaveButton showEditProfile />
         </ConfirmationModal>
       )}
 

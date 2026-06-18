@@ -241,6 +241,8 @@ export function TechStackPanel() {
           kind="primary"
           disabled={savingStack}
           onClick={() => void handleSaveStack()}
+          icon="/icons/download.svg"
+          iconPosition="end"
         />
       </Box>
     </>

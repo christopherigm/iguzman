@@ -673,16 +673,20 @@ function ApplicationCard({ app, onDelete, onExplain }: ApplicationCardProps) {
         </Typography>
 
         <Box display="flex" gap={6} justifyContent="flex-end" marginTop={4}>
-          <Button
-            text={t("delete")}
-            type="button"
-            size="md"
+          <IconButton
+            icon="/icons/delete.svg"
             kind="error"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               onDelete(app.id);
             }}
+            aria-label={t("delete")}
+          />
+          <IconButton
+            icon="/icons/external.svg"
+            target="_blank"
+            aria-label="viewPosting"
           />
         </Box>
       </Card>

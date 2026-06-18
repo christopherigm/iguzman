@@ -287,6 +287,8 @@ export function JobApiKeysSection() {
                 (provider === "adzuna" && !appId.trim())
               }
               onClick={() => void handleAdd()}
+              icon="/icons/download.svg"
+              iconPosition="end"
             />
           </Box>
         </>

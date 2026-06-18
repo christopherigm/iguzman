@@ -442,6 +442,8 @@ export function ProfessionalInfoPanel() {
           kind="primary"
           disabled={savingInfo || !jobTitle.trim()}
           onClick={() => void handleSaveInfo()}
+          icon="/icons/download.svg"
+          iconPosition="end"
         />
       </Box>
     </>

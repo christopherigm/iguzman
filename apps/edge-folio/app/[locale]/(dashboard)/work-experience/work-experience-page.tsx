@@ -42,6 +42,7 @@ import {
   type TechStack,
 } from "@/lib/career";
 import "./work-experience-page.css";
+import IconButton from "@repo/ui/core-elements/icon-button";
 
 const EMPLOYMENT_TYPES: EmploymentType[] = [
   "full_time",
@@ -484,18 +485,17 @@ function WorkExperienceCard({ entry, onEdit, onDelete }: CardProps) {
       )}
 
       <Box display="flex" gap={8} justifyContent="flex-end" marginTop={4}>
-        <Button
-          text={t("delete")}
-          type="button"
-          size="md"
+        <IconButton
+          icon="/icons/delete.svg"
           kind="error"
           onClick={() => onDelete(entry.id)}
+          aria-label={t("delete")}
         />
-        <Button
-          text={t("edit")}
-          type="button"
-          size="md"
+        <IconButton
+          icon="/icons/edit.svg"
+          kind="warning"
           onClick={() => onEdit(entry)}
+          aria-label={t("edit")}
         />
       </Box>
     </Card>
@@ -971,18 +971,17 @@ function ProjectCard({ entry, onEdit, onDelete }: ProjectCardProps) {
         </Typography>
       )}
       <Box display="flex" gap={8} justifyContent="flex-end" marginTop={4}>
-        <Button
-          text={t("delete")}
-          type="button"
-          size="md"
+        <IconButton
+          icon="/icons/delete.svg"
           kind="error"
           onClick={() => onDelete(entry.id)}
+          aria-label={t("delete")}
         />
-        <Button
-          text={t("edit")}
-          type="button"
-          size="md"
+        <IconButton
+          icon="/icons/edit.svg"
+          kind="warning"
           onClick={() => onEdit(entry)}
+          aria-label={t("edit")}
         />
       </Box>
     </Card>

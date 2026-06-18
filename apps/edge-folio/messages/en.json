@@ -941,6 +941,8 @@
     "jobSearchPrefsSaved": "Preferences saved",
     "jobSearchPrefsError": "Couldn't save preferences",
     "jobSearchPrefsLoadError": "Couldn't load preferences",
+    "jobSearchEditProfileHint": "Edit your profile data (job title, years of experience, etc.) used to build this query.",
+    "jobSearchEditProfile": "Edit profile",
     "jobSearchQueryTitle": "Query used to search for jobs",
     "jobSearchQuerySubtitle": "Build a search query from your preferences above. Used by the job feed to find more accurate matches.",
     "jobSearchQueryGenerate": "Generate query",

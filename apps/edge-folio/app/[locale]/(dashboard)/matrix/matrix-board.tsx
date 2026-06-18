@@ -34,6 +34,7 @@ import {
   type Category,
 } from "@/lib/matrix";
 import "./matrix-board.css";
+import IconButton from "@repo/ui/core-elements/icon-button";
 
 const PARAGRAPH_WORD_COUNTS: Record<string, { min: number; max: number }> = {
   xs: { min: 10, max: 20 },
@@ -400,18 +401,17 @@ function BulletCard({
         justifyContent="flex-end"
         marginTop={2}
       >
-        <Button
-          text={t("delete")}
-          type="button"
-          size="md"
+        <IconButton
+          icon="/icons/delete.svg"
           kind="error"
           onClick={() => onDelete(bullet.id)}
+          aria-label={t("delete")}
         />
-        <Button
-          text={t("edit")}
-          type="button"
-          size="md"
+        <IconButton
+          icon="/icons/edit.svg"
+          kind="warning"
           onClick={() => onEdit(bullet)}
+          aria-label={t("edit")}
         />
         {showApprove && (
           <Button

@@ -941,6 +941,8 @@
     "jobSearchPrefsSaved": "Préférences enregistrées",
     "jobSearchPrefsError": "Impossible d'enregistrer les préférences",
     "jobSearchPrefsLoadError": "Impossible de charger les préférences",
+    "jobSearchEditProfileHint": "Modifiez les données de votre profil (intitulé du poste, années d'expérience, etc.) utilisées pour construire cette requête.",
+    "jobSearchEditProfile": "Modifier le profil",
     "jobSearchQueryTitle": "Requête utilisée pour rechercher des emplois",
     "jobSearchQuerySubtitle": "Composez une requête de recherche à partir de vos préférences. Elle est utilisée par le flux d'emplois pour trouver des correspondances plus précises.",
     "jobSearchQueryGenerate": "Générer la requête",

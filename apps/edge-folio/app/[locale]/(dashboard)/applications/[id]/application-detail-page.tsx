@@ -71,6 +71,7 @@ import "swiper/css";
 import "swiper/css/pagination";
 import "./application-detail-page.css";
 import Icon from "@repo/ui/core-elements/icon";
+import IconButton from "@repo/ui/core-elements/icon-button";
 
 const STATUSES: ApplicationStatus[] = [
   "draft",
@@ -1163,20 +1164,19 @@ export function ApplicationDetailPage({
         >
           {!editing && (
             <>
-              <Button
-                text={deleting ? t("deleting") : t("delete")}
-                type="button"
-                size="md"
+              <IconButton
+                icon="/icons/delete.svg"
                 kind="error"
                 disabled={deleting}
                 onClick={() => setConfirmDelete(true)}
+                aria-label={deleting ? t("deleting") : t("delete")}
               />
-              <Button
-                text={t("edit")}
-                type="button"
-                size="md"
-                onClick={openEdit}
+              <IconButton
+                icon="/icons/edit.svg"
                 kind="warning"
+                disabled={deleting}
+                onClick={openEdit}
+                aria-label={editing ? t("edit") : t("edit")}
               />
               <Button
                 text={

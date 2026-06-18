@@ -202,23 +202,33 @@ export function LanguagesPanel() {
                   }
                   options={proficiencyOptions}
                 />
-                <Button
-                  text={
-                    savingLangId === lang.id ? t("langSaving") : t("langSave")
-                  }
-                  type="button"
-                  size="lg"
-                  kind="primary"
-                  disabled={savingLangId === lang.id || !editLangName.trim()}
-                  onClick={() => void handleSaveLang(lang.id)}
-                />
-                <Button
-                  text={t("langCancel")}
-                  type="button"
-                  size="lg"
-                  disabled={savingLangId === lang.id}
-                  onClick={() => setEditingLangId(null)}
-                />
+                <Box
+                  display="flex"
+                  justifyContent="end"
+                  gap={8}
+                  width="100%"
+                  marginTop={4}
+                >
+                  <Button
+                    text={t("langCancel")}
+                    type="button"
+                    size="lg"
+                    disabled={savingLangId === lang.id}
+                    onClick={() => setEditingLangId(null)}
+                  />
+                  <Button
+                    text={
+                      savingLangId === lang.id ? t("langSaving") : t("langSave")
+                    }
+                    type="button"
+                    size="lg"
+                    kind="primary"
+                    disabled={savingLangId === lang.id || !editLangName.trim()}
+                    onClick={() => void handleSaveLang(lang.id)}
+                    icon="/icons/download.svg"
+                    iconPosition="end"
+                  />
+                </Box>
               </Box>
             ) : (
               <Box

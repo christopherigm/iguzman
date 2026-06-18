@@ -153,6 +153,8 @@ export function ContactInfoPanel() {
           kind="primary"
           disabled={savingContact}
           onClick={() => void handleSaveContact()}
+          icon="/icons/download.svg"
+          iconPosition="end"
         />
       </Box>
     </>

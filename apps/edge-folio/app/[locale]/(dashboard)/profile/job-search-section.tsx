@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Button } from "@repo/ui/core-elements/button";
@@ -55,14 +62,37 @@ function SwitchRow({
   );
 }
 
+/** Imperative handle exposed via ref so an external control (e.g. a modal's OK
+ * button) can persist the current preferences and learn whether it succeeded. */
+export interface JobSearchPanelHandle {
+  save: () => Promise<boolean>;
+}
+
+export interface JobSearchPanelProps {
+  /** Hide the internal "Save preferences" button. Used when an external control
+      drives saving through the ref handle (the jobs page modal's OK button). */
+  hideSaveButton?: boolean;
+  /** Show an "Edit profile" row above the switches, pointing the user to the
+      profile page to edit the underlying data (job title, years, etc.). Only
+      the jobs page modal sets this; the profile page already hosts that data. */
+  showEditProfile?: boolean;
+}
+
 /**
  * JobSearch - search query preferences + generated query, rendered as bare
  * content (no surrounding card). The caller supplies the wrapper: the profile
  * page wraps it in a section card, the jobs page renders it inside a modal to
  * let the user refine the search before fetching.
  */
-export function JobSearchPanel() {
+export const JobSearchPanel = forwardRef<
+  JobSearchPanelHandle,
+  JobSearchPanelProps
+>(function JobSearchPanel(
+  { hideSaveButton = false, showEditProfile = false },
+  ref,
+) {
   const t = useTranslations("ProfilePage");
+  const locale = useLocale();
 
   // Job search prefs state
   const [prefsLoading, setPrefsLoading] = useState(true);
@@ -159,7 +189,7 @@ export function JobSearchPanel() {
     extraText,
   ]);
 
-  const handleSavePrefs = useCallback(async () => {
+  const handleSavePrefs = useCallback(async (): Promise<boolean> => {
     setSavingPrefs(true);
     setPrefsError(null);
     setPrefsSaved(false);
@@ -176,8 +206,10 @@ export function JobSearchPanel() {
         job_search_generated_query: generatedQuery,
       });
       setPrefsSaved(true);
+      return true;
     } catch {
       setPrefsError(t("jobSearchPrefsError"));
+      return false;
     } finally {
       setSavingPrefs(false);
     }
@@ -194,9 +226,15 @@ export function JobSearchPanel() {
     t,
   ]);
 
+  // Let an external control (the jobs page modal's OK button) persist the
+  // current preferences through the ref.
+  useImperativeHandle(ref, () => ({ save: handleSavePrefs }), [
+    handleSavePrefs,
+  ]);
+
   return (
     <>
-      {prefsSaved && (
+      {prefsSaved && !hideSaveButton && (
         <Toast
           message={t("jobSearchPrefsSaved")}
           variant="success"
@@ -211,6 +249,34 @@ export function JobSearchPanel() {
           <ProgressBar label={t("loading")} />
         ) : (
           <>
+            {showEditProfile && (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                gap={12}
+                padding={12}
+                borderRadius={8}
+                styles={{
+                  border: "1px solid var(--border, #e5e7eb)",
+                  background: "var(--surface-2)",
+                }}
+              >
+                <Typography
+                  variant="body"
+                  color="var(--muted-foreground, #6b7280)"
+                >
+                  {t("jobSearchEditProfileHint")}
+                </Typography>
+                <Button
+                  text={t("jobSearchEditProfile")}
+                  type="button"
+                  size="md"
+                  kind="primary"
+                  href={`/${locale}/profile`}
+                />
+              </Box>
+            )}
             <Box display="flex" flexDirection="column" gap={12}>
               <SwitchRow
                 label={t("jobSearchIncludeTitle")}
@@ -334,28 +400,32 @@ export function JobSearchPanel() {
               </Box>
             </Box>
 
-            <Box
-              display="flex"
-              justifyContent="center"
-              alignItems="center"
-              gap={12}
-            >
-              <Button
-                text={
-                  savingPrefs
-                    ? t("jobSearchPrefsSaving")
-                    : t("jobSearchPrefsSave")
-                }
-                type="button"
-                size="md"
-                kind="primary"
-                disabled={savingPrefs}
-                onClick={() => void handleSavePrefs()}
-              />
-            </Box>
+            {!hideSaveButton && (
+              <Box
+                display="flex"
+                justifyContent="end"
+                alignItems="center"
+                gap={12}
+              >
+                <Button
+                  text={
+                    savingPrefs
+                      ? t("jobSearchPrefsSaving")
+                      : t("jobSearchPrefsSave")
+                  }
+                  type="button"
+                  size="md"
+                  kind="primary"
+                  disabled={savingPrefs}
+                  onClick={() => void handleSavePrefs()}
+                  icon="/icons/download.svg"
+                  iconPosition="end"
+                />
+              </Box>
+            )}
           </>
         )}
       </Box>
     </>
   );
-}
+});

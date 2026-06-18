@@ -941,6 +941,8 @@
     "jobSearchPrefsSaved": "Preferencias guardadas",
     "jobSearchPrefsError": "No se pudieron guardar las preferencias",
     "jobSearchPrefsLoadError": "No se pudieron cargar las preferencias",
+    "jobSearchEditProfileHint": "Edita los datos de tu perfil (puesto, años de experiencia, etc.) que se usan para construir esta consulta.",
+    "jobSearchEditProfile": "Editar perfil",
     "jobSearchQueryTitle": "Consulta usada para buscar empleos",
     "jobSearchQuerySubtitle": "Crea una consulta de búsqueda a partir de tus preferencias. La usa el feed de empleos para encontrar coincidencias más precisas.",
     "jobSearchQueryGenerate": "Generar consulta",

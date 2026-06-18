@@ -941,6 +941,8 @@
     "jobSearchPrefsSaved": "Einstellungen gespeichert",
     "jobSearchPrefsError": "Einstellungen konnten nicht gespeichert werden",
     "jobSearchPrefsLoadError": "Einstellungen konnten nicht geladen werden",
+    "jobSearchEditProfileHint": "Bearbeite deine Profildaten (Jobtitel, Berufserfahrung usw.), die zum Erstellen dieser Suchanfrage verwendet werden.",
+    "jobSearchEditProfile": "Profil bearbeiten",
     "jobSearchQueryTitle": "Für die Jobsuche verwendete Suchanfrage",
     "jobSearchQuerySubtitle": "Erzeuge aus deinen Einstellungen eine Suchanfrage. Sie wird vom Job-Feed verwendet, um genauere Treffer zu finden.",
     "jobSearchQueryGenerate": "Anfrage erzeugen",
