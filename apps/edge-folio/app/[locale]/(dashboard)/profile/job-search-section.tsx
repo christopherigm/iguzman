@@ -255,25 +255,28 @@ export const JobSearchPanel = forwardRef<
                 alignItems="center"
                 justifyContent="space-between"
                 gap={12}
-                padding={12}
+                padding={8}
                 borderRadius={8}
                 styles={{
-                  border: "1px solid var(--border, #e5e7eb)",
-                  background: "var(--surface-2)",
+                  border: "1px solid var(--warning, #e5e7eb)",
+                  // background: "var(--warning)",
                 }}
               >
                 <Typography
                   variant="body"
-                  color="var(--muted-foreground, #6b7280)"
+                  // color="var(--muted-foreground, #6b7280)"
                 >
                   {t("jobSearchEditProfileHint")}
                 </Typography>
+                {/* <Box styles={{ flexShrink: 0 }} /> */}
                 <Button
                   text={t("jobSearchEditProfile")}
                   type="button"
                   size="md"
                   kind="primary"
                   href={`/${locale}/profile`}
+                  icon="/icons/edit.svg"
+                  iconPosition="end"
                 />
               </Box>
             )}

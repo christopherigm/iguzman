@@ -1,69 +1,69 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import { CSSProperties } from "react";
-import { UIComponentProps, buildStyleProps, getBoxShadow } from "./utils";
-import { Icon } from "./icon";
-import { Spinner } from "./spinner";
-import "./button.css";
+import React from 'react';
+import Link from 'next/link';
+import { CSSProperties } from 'react';
+import { UIComponentProps, buildStyleProps, getBoxShadow } from './utils';
+import { Icon } from './icon';
+import { Spinner } from './spinner';
+import './button.css';
 
 /**
  * Allowed HTML button types.
  */
-export type ButtonType = "button" | "submit" | "reset";
+export type ButtonType = 'button' | 'submit' | 'reset';
 
 /** Standardized button size tokens. */
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 /** Semantic color intent for a button. */
-export type ButtonKind = "primary" | "success" | "error" | "warning";
+export type ButtonKind = 'primary' | 'success' | 'error' | 'warning';
 
 const SIZE_STYLES: Record<
   ButtonSize,
-  Pick<CSSProperties, "padding" | "fontSize" | "borderRadius">
+  Pick<CSSProperties, 'padding' | 'fontSize' | 'borderRadius'>
 > = {
-  sm: { padding: "6px", fontSize: 13, borderRadius: 6 },
-  md: { padding: "8px 14px", fontSize: 13, borderRadius: 6 },
-  lg: { padding: "10px 20px", fontSize: 14, borderRadius: 8 },
+  sm: { padding: '6px', fontSize: 13, borderRadius: 6 },
+  md: { padding: '8px 14px', fontSize: 13, borderRadius: 6 },
+  lg: { padding: '10px 20px', fontSize: 14, borderRadius: 8 },
 };
 
 const KIND_STYLES: Record<
-  "default" | ButtonKind,
-  Pick<CSSProperties, "backgroundColor" | "color">
+  'default' | ButtonKind,
+  Pick<CSSProperties, 'backgroundColor' | 'color'>
 > = {
   default: {
-    backgroundColor: "var(--surface-2)",
-    color: "var(--foreground)",
+    backgroundColor: 'var(--surface-2)',
+    color: 'var(--foreground)',
   },
   primary: {
-    backgroundColor: "var(--accent, #06b6d4)",
-    color: "var(--accent-foreground, #ffffff)",
+    backgroundColor: 'var(--accent, #06b6d4)',
+    color: 'var(--accent-foreground, #ffffff)',
   },
   success: {
-    backgroundColor: "var(--success, #16a34a)",
-    color: "var(--success-foreground, #ffffff)",
+    backgroundColor: 'var(--success, #16a34a)',
+    color: 'var(--success-foreground, #ffffff)',
   },
   error: {
-    backgroundColor: "var(--error, #8d0e0e)",
-    color: "var(--error-foreground, #ffffff)",
+    backgroundColor: 'var(--error, #8d0e0e)',
+    color: 'var(--error-foreground, #ffffff)',
   },
   warning: {
-    backgroundColor: "var(--warning, #d97706)",
-    color: "var(--warning-foreground, #1c1000)",
+    backgroundColor: 'var(--warning, #d97706)',
+    color: 'var(--warning-foreground, #1c1000)',
   },
 };
 
 const ICON_SIZES: Record<ButtonSize, string> = {
-  sm: "13px",
-  md: "15px",
-  lg: "17px",
+  sm: '13px',
+  md: '15px',
+  lg: '17px',
 };
 
 const ICON_GAPS: Record<ButtonSize, string> = {
-  sm: "5px",
-  md: "6px",
-  lg: "8px",
+  sm: '5px',
+  md: '6px',
+  lg: '8px',
 };
 
 const SPINNER_SIZES: Record<ButtonSize, number> = {
@@ -114,21 +114,27 @@ export interface ButtonProps extends UIComponentProps {
   /** SVG path passed to the internal Icon component. */
   icon?: string;
   /** Position of the icon relative to the label. Defaults to `'start'`. */
-  iconPosition?: "start" | "end";
+  iconPosition?: 'start' | 'end';
   /** Overrides the auto-derived icon size (sm→13px, md→15px, lg→17px). */
   iconSize?: string;
   /** Overrides the icon color. Defaults to `currentColor` so it inherits the button's text color. */
   iconColor?: string;
   /** Accessible label when visible text is absent or insufficient (e.g. icon-only buttons). */
-  "aria-label"?: string;
+  'aria-label'?: string;
   /** Indicates whether a toggle button is currently pressed. */
-  "aria-pressed"?: boolean;
+  'aria-pressed'?: boolean;
   /** Indicates whether a control is expanded or collapsed. */
-  "aria-expanded"?: boolean;
+  'aria-expanded'?: boolean;
   /** IDs of elements whose contents are controlled by this button. */
-  "aria-controls"?: string;
+  'aria-controls'?: string;
   /** Shows a loading spinner and disables the button while true. */
   isLoading?: boolean;
+  /**
+   * When `false` (default), the button resists flex compression and keeps its
+   * text on a single line. Set to `true` to allow the button to shrink and
+   * its text to wrap when space is tight.
+   */
+  shrink?: boolean;
 }
 
 /**
@@ -142,7 +148,7 @@ export interface ButtonProps extends UIComponentProps {
 export const Button: React.FC<ButtonProps> = (props) => {
   const {
     text,
-    type = "button",
+    type = 'button',
     href,
     target,
     onClick,
@@ -151,20 +157,21 @@ export const Button: React.FC<ButtonProps> = (props) => {
     unstyled,
     title,
     disabled,
-    size = "sm",
+    size = 'sm',
     kind,
     icon,
-    iconPosition = "start",
+    iconPosition = 'start',
     iconSize,
     iconColor,
     isLoading,
+    shrink = false,
   } = props;
   const [isHovered, setIsHovered] = React.useState(false);
 
-  const ariaLabel = props["aria-label"];
-  const ariaPressed = props["aria-pressed"];
-  const ariaExpanded = props["aria-expanded"];
-  const ariaControls = props["aria-controls"];
+  const ariaLabel = props['aria-label'];
+  const ariaPressed = props['aria-pressed'];
+  const ariaExpanded = props['aria-expanded'];
+  const ariaControls = props['aria-controls'];
 
   const isDisabled = disabled || isLoading;
 
@@ -174,7 +181,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
     <Icon
       icon={icon}
       size={iconSize ?? ICON_SIZES[size]}
-      color={iconColor ?? "currentColor"}
+      color={iconColor ?? 'currentColor'}
     />
   ) : null;
 
@@ -197,8 +204,8 @@ export const Button: React.FC<ButtonProps> = (props) => {
   const iconFlexDefaults: CSSProperties =
     iconEl || spinnerEl
       ? {
-          display: "inline-flex",
-          alignItems: "center",
+          display: 'inline-flex',
+          alignItems: 'center',
           ...(hasGap ? { gap: ICON_GAPS[size] } : {}),
         }
       : {};
@@ -206,9 +213,9 @@ export const Button: React.FC<ButtonProps> = (props) => {
   const contentWithIcon =
     iconEl || spinnerEl ? (
       <>
-        {iconPosition !== "end" && iconEl}
+        {iconPosition !== 'end' && iconEl}
         {content}
-        {iconPosition === "end" && iconEl}
+        {iconPosition === 'end' && iconEl}
         {spinnerEl}
       </>
     ) : (
@@ -218,24 +225,25 @@ export const Button: React.FC<ButtonProps> = (props) => {
   const defaultStyle: CSSProperties = {
     ...SIZE_STYLES[size],
     ...iconFlexDefaults,
-    ...KIND_STYLES[isDisabled ? "default" : (kind ?? "default")],
-    border: "none",
-    cursor: "pointer",
+    ...KIND_STYLES[isDisabled ? 'default' : (kind ?? 'default')],
+    border: 'none',
+    cursor: 'pointer',
     fontWeight: 600,
-    flexShrink: 0,
+    flexShrink: shrink ? 1 : 0,
+    whiteSpace: shrink ? undefined : 'nowrap',
     transition:
-      "background 150ms ease, color 150ms ease, box-shadow 450ms ease",
-    ...(isDisabled ? { opacity: 0.7, cursor: "not-allowed" } : {}),
+      'background 150ms ease, color 150ms ease, box-shadow 450ms ease',
+    ...(isDisabled ? { opacity: 0.7, cursor: 'not-allowed' } : {}),
   };
 
   const handleMouseEnter = () => {
     setIsHovered(true);
-    if (typeof props.onHover === "function") props.onHover(true);
+    if (typeof props.onHover === 'function') props.onHover(true);
   };
 
   const handleMouseLeave = () => {
     setIsHovered(false);
-    if (typeof props.onHover === "function") props.onHover(false);
+    if (typeof props.onHover === 'function') props.onHover(false);
   };
 
   const finalStyle: CSSProperties = unstyled
@@ -248,9 +256,9 @@ export const Button: React.FC<ButtonProps> = (props) => {
         ...defaultStyle,
         ...buildStyleProps(props as UIComponentProps),
         ...props.styles,
-        boxShadow: getBoxShadow(isHovered ? 3 : 0) ?? "none",
-        position: "relative",
-        overflow: "hidden",
+        boxShadow: getBoxShadow(isHovered ? 3 : 0) ?? 'none',
+        position: 'relative',
+        overflow: 'hidden',
       };
 
   const shouldUseLink = href !== undefined && onClick === undefined;
@@ -264,25 +272,25 @@ export const Button: React.FC<ButtonProps> = (props) => {
         href={hrefString}
         prefetch
         target={target}
-        rel={target === "_blank" ? "noopener noreferrer" : undefined}
+        rel={target === '_blank' ? 'noopener noreferrer' : undefined}
       >
         <button
           id={id}
           title={title}
           disabled={isDisabled}
-          className={[showWave ? "ui-button-wave" : undefined, className]
+          className={[showWave ? 'ui-button-wave' : undefined, className]
             .filter(Boolean)
-            .join(" ")}
+            .join(' ')}
           style={finalStyle}
           aria-label={ariaLabel}
           aria-controls={ariaControls}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           {...(ariaPressed !== undefined
-            ? { "aria-pressed": ariaPressed }
+            ? { 'aria-pressed': ariaPressed }
             : {})}
           {...(ariaExpanded !== undefined
-            ? { "aria-expanded": ariaExpanded }
+            ? { 'aria-expanded': ariaExpanded }
             : {})}
         >
           {contentWithIcon}
@@ -293,7 +301,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
   }
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (typeof onClick === "function") onClick(e);
+    if (typeof onClick === 'function') onClick(e);
   };
 
   return (
@@ -302,17 +310,17 @@ export const Button: React.FC<ButtonProps> = (props) => {
       id={id}
       title={title}
       disabled={isDisabled}
-      className={[showWave ? "ui-button-wave" : undefined, className]
+      className={[showWave ? 'ui-button-wave' : undefined, className]
         .filter(Boolean)
-        .join(" ")}
+        .join(' ')}
       style={finalStyle}
-      onClick={typeof onClick === "function" ? handleClick : undefined}
+      onClick={typeof onClick === 'function' ? handleClick : undefined}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       aria-label={ariaLabel}
       aria-controls={ariaControls}
-      {...(ariaPressed !== undefined ? { "aria-pressed": ariaPressed } : {})}
-      {...(ariaExpanded !== undefined ? { "aria-expanded": ariaExpanded } : {})}
+      {...(ariaPressed !== undefined ? { 'aria-pressed': ariaPressed } : {})}
+      {...(ariaExpanded !== undefined ? { 'aria-expanded': ariaExpanded } : {})}
     >
       {contentWithIcon}
       {showWave && <span aria-hidden className="ui-wave" />}
