@@ -991,7 +991,7 @@ export async function Footer({ logo }: { logo: string }) {
           </Grid>
         </Grid>
         <Box className="footer__bottom">
-          <Typography as="p" variant="body-sm" textAlign="center" className="footer__description">
+          <Typography as="p" variant="body" textAlign="center" className="footer__description">
             {t('copyright', { year: new Date().getFullYear(), version })}
           </Typography>
         </Box>
@@ -1586,7 +1586,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
   if (passkeyPrompt) {
     return (
       <Box display="flex" flexDirection="column" gap={16} alignItems="center">
-        <Typography variant="body-sm" fontWeight={600}>{t('passkey.promptTitle')}</Typography>
+        <Typography variant="body" fontWeight={600}>{t('passkey.promptTitle')}</Typography>
         <Typography variant="caption" styles={{ textAlign: 'center' }}>{t('passkey.promptDescription')}</Typography>
         {passkeySuccess && <Typography variant="caption" className="auth-form__success">{t('passkey.successMessage')}</Typography>}
         {error && <ErrorMessage message={error} />}
@@ -1649,7 +1649,7 @@ function SignUpTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
 
   if (success) return (
     <Box display="flex" flexDirection="column" gap={16} alignItems="center" styles={{ textAlign: 'center' }}>
-      <Typography variant="body-sm">{success}</Typography>
+      <Typography variant="body">{success}</Typography>
       <LinkButton onClick={() => switchTab('sign-in')} label={t('signUp.haveAccount')} />
     </Box>
   );
@@ -1687,7 +1687,7 @@ function ResetPasswordTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
 
   return success ? (
     <Box display="flex" flexDirection="column" gap={16}>
-      <Typography variant="body-sm">{success}</Typography>
+      <Typography variant="body">{success}</Typography>
       <LinkButton onClick={() => switchTab('sign-in')} label={t('resetPassword.backToSignIn')} />
     </Box>
   ) : (
@@ -1731,7 +1731,7 @@ export function AuthForm() {
     <Container display="flex" alignItems="center" styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'flex-start' }} paddingTop={16} paddingX={10}>
       <Box width="100%" maxWidth={420} marginBottom={20}>
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>{title}</Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">{subtitle}</Typography>
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">{subtitle}</Typography>
       </Box>
       <Box width="100%" maxWidth={420} padding={10} borderRadius={12} flexDirection="column" gap={20} elevation={5} backgroundColor="var(--surface-1)">
         <Box className="auth-form__tabs">
@@ -1806,10 +1806,10 @@ export function VerifyEmailClient({ token }: { token: string }) {
   return (
     <Container display="flex" alignItems="center" styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'center' }} paddingX={10}>
       <Box width="100%" maxWidth={420} padding={10} borderRadius={12} flexDirection="column" gap={20} elevation={5} backgroundColor="var(--surface-1)">
-        {status === 'loading' && <Box display="flex" flexDirection="column" gap={16}><ProgressBar label={t('loading')} /><Typography variant="body-sm" color="var(--muted-foreground, #6b7280)" textAlign="center">{t('loading')}</Typography></Box>}
-        {status === 'success' && <Box display="flex" flexDirection="column" gap={12} alignItems="center" styles={{ textAlign: 'center' }}><Typography variant="h5">{t('successTitle')}</Typography><Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">{t('successDetail')}</Typography><Typography variant="caption" color="var(--muted-foreground, #6b7280)">{t('redirecting', { seconds: countdown })}</Typography><ProgressBar value={((REDIRECT_SECONDS - countdown) / REDIRECT_SECONDS) * 100} label={t('redirectProgress')} /></Box>}
-        {status === 'expired' && <Box display="flex" flexDirection="column" gap={12} alignItems="center" styles={{ textAlign: 'center' }}><Typography variant="h5" role="alert" color="var(--error, #ef4444)">{t('expiredTitle')}</Typography><Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">{t('expiredDetail')}</Typography></Box>}
-        {status === 'invalid' && <Box display="flex" flexDirection="column" gap={12} alignItems="center" styles={{ textAlign: 'center' }}><Typography variant="h5" role="alert" color="var(--error, #ef4444)">{t('invalidTitle')}</Typography><Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">{t('invalidDetail')}</Typography></Box>}
+        {status === 'loading' && <Box display="flex" flexDirection="column" gap={16}><ProgressBar label={t('loading')} /><Typography variant="body" color="var(--muted-foreground, #6b7280)" textAlign="center">{t('loading')}</Typography></Box>}
+        {status === 'success' && <Box display="flex" flexDirection="column" gap={12} alignItems="center" styles={{ textAlign: 'center' }}><Typography variant="h5">{t('successTitle')}</Typography><Typography variant="body" color="var(--muted-foreground, #6b7280)">{t('successDetail')}</Typography><Typography variant="caption" color="var(--muted-foreground, #6b7280)">{t('redirecting', { seconds: countdown })}</Typography><ProgressBar value={((REDIRECT_SECONDS - countdown) / REDIRECT_SECONDS) * 100} label={t('redirectProgress')} /></Box>}
+        {status === 'expired' && <Box display="flex" flexDirection="column" gap={12} alignItems="center" styles={{ textAlign: 'center' }}><Typography variant="h5" role="alert" color="var(--error, #ef4444)">{t('expiredTitle')}</Typography><Typography variant="body" color="var(--muted-foreground, #6b7280)">{t('expiredDetail')}</Typography></Box>}
+        {status === 'invalid' && <Box display="flex" flexDirection="column" gap={12} alignItems="center" styles={{ textAlign: 'center' }}><Typography variant="h5" role="alert" color="var(--error, #ef4444)">{t('invalidTitle')}</Typography><Typography variant="body" color="var(--muted-foreground, #6b7280)">{t('invalidDetail')}</Typography></Box>}
       </Box>
     </Container>
   );
@@ -2057,7 +2057,7 @@ export function AccountForm() {
     <Container display="flex" alignItems="center" styles={{ minHeight: '100vh', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: 'var(--ui-navbar-height)' }} paddingX={10}>
       <Box width="100%" maxWidth={520} marginBottom={20} marginTop={20}>
         <Typography as="h1" variant="h2" fontWeight={600} marginBottom={4}>{t('title')}</Typography>
-        <Typography variant="body-sm" color="var(--muted-foreground, #6b7280)">{t('subtitle')}</Typography>
+        <Typography variant="body" color="var(--muted-foreground, #6b7280)">{t('subtitle')}</Typography>
       </Box>
       <Box display="flex" flexDirection="column" gap={24} width="100%" maxWidth={520} marginBottom={40}>
         <ProfileSection profile={profile} />

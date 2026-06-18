@@ -1,0 +1,77 @@
+{
+  "Metadata": { "title": "Tanda", "description": "" },
+  "HomePage": { "title": "Tanda" },
+  "Navbar": { "home": "Inicio", "account": "Cuenta", "signOut": "Cerrar sesión" },
+  "Footer": {
+    "appHeading": "Aplicación", "legalHeading": "Legal",
+    "home": "Inicio", "account": "Cuenta",
+    "privacyPolicy": "Política de privacidad", "terms": "Términos de servicio", "userData": "Mis datos",
+    "copyright": "© {year} Tanda v{version}. Todos los derechos reservados."
+  },
+  "VerifyEmailPage": {
+    "loading": "Verificando tu correo…",
+    "successTitle": "Correo verificado", "successDetail": "Tu correo ha sido verificado. Ya puedes iniciar sesión.",
+    "redirecting": "Redirigiendo en {seconds}…", "redirectProgress": "Progreso de redirección",
+    "expiredTitle": "Enlace expirado", "expiredDetail": "Este enlace de verificación ha expirado. Regístrate de nuevo para solicitar uno nuevo.",
+    "invalidTitle": "Enlace inválido", "invalidDetail": "Este enlace de verificación no es válido. Revisa tu correo o regístrate de nuevo."
+  },
+  "AuthPage": {
+    "tabSignIn": "Iniciar sesión", "tabSignUp": "Registrarse", "tabReset": "Restablecer contraseña",
+    "signIn": {
+      "title": "Iniciar sesión", "subtitle": "Bienvenido de nuevo",
+      "emailLabel": "Correo", "passwordLabel": "Contraseña",
+      "submitButton": "Iniciar sesión", "submitting": "Iniciando sesión…",
+      "errorInvalidCredentials": "Correo o contraseña incorrectos.",
+      "errorGeneric": "Algo salió mal. Por favor intenta de nuevo.",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "noAccount": "¿No tienes cuenta? Regístrate",
+      "orDivider": "o", "passkeyButton": "Iniciar sesión con llave de acceso",
+      "errorPasskeyFailed": "La autenticación con llave falló. Por favor intenta de nuevo.",
+      "errorEmailRequired": "Por favor ingresa tu correo primero.",
+      "rememberEmail": "Recordar correo"
+    },
+    "signUp": {
+      "title": "Crear cuenta", "subtitle": "Únete a Tanda hoy",
+      "emailLabel": "Correo", "firstNameLabel": "Nombre", "lastNameLabel": "Apellido",
+      "passwordLabel": "Contraseña", "confirmPasswordLabel": "Confirmar contraseña",
+      "submitButton": "Crear cuenta", "submitting": "Creando cuenta…",
+      "successDetail": "¡Cuenta creada! Revisa tu correo para verificar tu cuenta.",
+      "errorEmailTaken": "Ya existe una cuenta con este correo.",
+      "errorPasswordMismatch": "Las contraseñas no coinciden.",
+      "errorGeneric": "Algo salió mal. Por favor intenta de nuevo.",
+      "haveAccount": "¿Ya tienes cuenta? Inicia sesión",
+      "forgotPassword": "¿Olvidaste tu contraseña?"
+    },
+    "resetPassword": {
+      "title": "Restablecer contraseña", "subtitle": "Ingresa tu correo para recibir un enlace de restablecimiento",
+      "emailLabel": "Correo", "submitButton": "Enviar enlace", "submitting": "Enviando…",
+      "successDetail": "Si existe una cuenta con ese correo, se ha enviado un enlace para restablecer la contraseña.",
+      "errorGeneric": "Algo salió mal. Por favor intenta de nuevo.",
+      "backToSignIn": "Volver a iniciar sesión"
+    },
+    "passkey": {
+      "promptTitle": "¿Configurar una llave de acceso?",
+      "promptDescription": "Inicia sesión más rápido y con mayor seguridad. Usa tu huella, rostro o PIN del dispositivo.",
+      "registerButton": "Configurar llave", "skipButton": "Omitir por ahora",
+      "successMessage": "¡Llave de acceso registrada exitosamente!",
+      "errorGeneric": "No se pudo registrar la llave. Puedes intentarlo más tarde."
+    }
+  },
+  "AccountPage": {
+    "title": "Mi cuenta", "subtitle": "Administra tu perfil y configuración de seguridad",
+    "profileSection": "Perfil", "securitySection": "Seguridad", "passkeySection": "Llaves de acceso",
+    "emailLabel": "Correo", "firstNameLabel": "Nombre", "lastNameLabel": "Apellido",
+    "changePhoto": "Cambiar foto", "saveProfile": "Guardar perfil", "savingProfile": "Guardando…",
+    "profileSaved": "Perfil guardado.", "profileError": "No se pudo guardar el perfil. Por favor intenta de nuevo.",
+    "currentPasswordLabel": "Contraseña actual", "newPasswordLabel": "Nueva contraseña", "confirmPasswordLabel": "Confirmar nueva contraseña",
+    "savePassword": "Actualizar contraseña", "savingPassword": "Actualizando…",
+    "passwordSaved": "Contraseña actualizada.", "passwordError": "No se pudo actualizar la contraseña. Por favor intenta de nuevo.",
+    "passwordMismatch": "Las contraseñas no coinciden.", "passwordWrong": "La contraseña actual es incorrecta.",
+    "noPasskeys": "Sin llaves de acceso registradas.", "deletePasskey": "Eliminar",
+    "confirmDeletePasskeyTitle": "Eliminar llave de acceso",
+    "confirmDeletePasskeyText": "¿Estás seguro de que quieres eliminar esta llave? No podrás usarla para iniciar sesión.",
+    "passkeyDeleted": "Llave eliminada.", "passkeyDeleteError": "No se pudo eliminar la llave. Por favor intenta de nuevo.",
+    "addPasskey": "Agregar llave", "passkeyAdded": "Llave agregada.", "passkeyAddError": "No se pudo agregar la llave. Por favor intenta de nuevo.",
+    "loading": "Cargando…"
+  }
+}
