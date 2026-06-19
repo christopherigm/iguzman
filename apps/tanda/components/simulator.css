@@ -1,0 +1,17 @@
+.simulator__explain-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--border, #e5e7eb);
+  color: var(--muted-foreground, #6b7280);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.simulator__explain-btn:hover {
+  background: var(--accent, #06b6d4);
+  color: #ffffff;
+}

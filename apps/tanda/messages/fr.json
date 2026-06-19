@@ -1,40 +1,67 @@
 {
-  "Metadata": { "title": "Tanda", "description": "" },
-  "HomePage": { "title": "Tanda" },
-  "Navbar": { "home": "Accueil", "account": "Mon Compte", "signOut": "Se déconnecter" },
+  "Metadata": {
+    "title": "Tanda",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Tanda"
+  },
+  "Navbar": {
+    "home": "Accueil",
+    "analysis": "Analyse",
+    "account": "Mon Compte",
+    "signOut": "Se déconnecter"
+  },
   "Footer": {
-    "appHeading": "Application", "legalHeading": "Légal",
-    "home": "Accueil", "account": "Mon Compte",
-    "privacyPolicy": "Politique de Confidentialité", "terms": "Conditions d'Utilisation", "userData": "Données Utilisateur",
+    "appHeading": "Application",
+    "legalHeading": "Légal",
+    "home": "Accueil",
+    "account": "Mon Compte",
+    "analysis": "Analyse",
     "copyright": "© {year} Tanda v{version}. Tous droits réservés."
   },
   "VerifyEmailPage": {
     "loading": "Vérification de votre e-mail…",
-    "successTitle": "E-mail vérifié", "successDetail": "Votre e-mail a été vérifié. Vous pouvez maintenant vous connecter.",
-    "redirecting": "Redirection dans {seconds}…", "redirectProgress": "Progression de la redirection",
-    "expiredTitle": "Lien expiré", "expiredDetail": "Ce lien de vérification a expiré. Veuillez vous inscrire à nouveau pour en obtenir un nouveau.",
-    "invalidTitle": "Lien invalide", "invalidDetail": "Ce lien de vérification est invalide. Vérifiez votre e-mail ou inscrivez-vous à nouveau."
+    "successTitle": "E-mail vérifié",
+    "successDetail": "Votre e-mail a été vérifié. Vous pouvez maintenant vous connecter.",
+    "redirecting": "Redirection dans {seconds}…",
+    "redirectProgress": "Progression de la redirection",
+    "expiredTitle": "Lien expiré",
+    "expiredDetail": "Ce lien de vérification a expiré. Veuillez vous inscrire à nouveau pour en obtenir un nouveau.",
+    "invalidTitle": "Lien invalide",
+    "invalidDetail": "Ce lien de vérification est invalide. Vérifiez votre e-mail ou inscrivez-vous à nouveau."
   },
   "AuthPage": {
-    "tabSignIn": "Se connecter", "tabSignUp": "S'inscrire", "tabReset": "Réinitialiser le mot de passe",
+    "tabSignIn": "Se connecter",
+    "tabSignUp": "S'inscrire",
+    "tabReset": "Réinitialiser le mot de passe",
     "signIn": {
-      "title": "Se connecter", "subtitle": "Bon retour parmi nous",
-      "emailLabel": "E-mail", "passwordLabel": "Mot de passe",
-      "submitButton": "Se connecter", "submitting": "Connexion en cours…",
+      "title": "Se connecter",
+      "subtitle": "Bon retour parmi nous",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Mot de passe",
+      "submitButton": "Se connecter",
+      "submitting": "Connexion en cours…",
       "errorInvalidCredentials": "E-mail ou mot de passe incorrect.",
       "errorGeneric": "Quelque chose s'est mal passé. Veuillez réessayer.",
       "forgotPassword": "Mot de passe oublié ?",
       "noAccount": "Pas encore de compte ? S'inscrire",
-      "orDivider": "ou", "passkeyButton": "Se connecter avec une clé d'accès",
+      "orDivider": "ou",
+      "passkeyButton": "Se connecter avec une clé d'accès",
       "errorPasskeyFailed": "L'authentification par clé d'accès a échoué. Veuillez réessayer.",
       "errorEmailRequired": "Veuillez d'abord saisir votre e-mail.",
       "rememberEmail": "Se souvenir de l'e-mail"
     },
     "signUp": {
-      "title": "Créer un compte", "subtitle": "Rejoignez Tanda aujourd'hui",
-      "emailLabel": "E-mail", "firstNameLabel": "Prénom", "lastNameLabel": "Nom de famille",
-      "passwordLabel": "Mot de passe", "confirmPasswordLabel": "Confirmer le mot de passe",
-      "submitButton": "Créer un compte", "submitting": "Création du compte…",
+      "title": "Créer un compte",
+      "subtitle": "Rejoignez Tanda aujourd'hui",
+      "emailLabel": "E-mail",
+      "firstNameLabel": "Prénom",
+      "lastNameLabel": "Nom de famille",
+      "passwordLabel": "Mot de passe",
+      "confirmPasswordLabel": "Confirmer le mot de passe",
+      "submitButton": "Créer un compte",
+      "submitting": "Création du compte…",
       "successDetail": "Compte créé ! Vérifiez votre e-mail pour activer votre compte.",
       "errorEmailTaken": "Un compte avec cet e-mail existe déjà.",
       "errorPasswordMismatch": "Les mots de passe ne correspondent pas.",
@@ -43,8 +70,11 @@
       "forgotPassword": "Mot de passe oublié ?"
     },
     "resetPassword": {
-      "title": "Réinitialiser le mot de passe", "subtitle": "Saisissez votre e-mail pour recevoir un lien",
-      "emailLabel": "E-mail", "submitButton": "Envoyer le lien", "submitting": "Envoi en cours…",
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Saisissez votre e-mail pour recevoir un lien",
+      "emailLabel": "E-mail",
+      "submitButton": "Envoyer le lien",
+      "submitting": "Envoi en cours…",
       "successDetail": "Si un compte avec cet e-mail existe, un lien de réinitialisation a été envoyé.",
       "errorGeneric": "Quelque chose s'est mal passé. Veuillez réessayer.",
       "backToSignIn": "Retour à la connexion"
@@ -52,26 +82,153 @@
     "passkey": {
       "promptTitle": "Configurer une clé d'accès ?",
       "promptDescription": "Connectez-vous plus rapidement et en toute sécurité avec votre empreinte, visage ou code PIN.",
-      "registerButton": "Configurer la clé d'accès", "skipButton": "Ignorer pour l'instant",
+      "registerButton": "Configurer la clé d'accès",
+      "skipButton": "Ignorer pour l'instant",
       "successMessage": "Clé d'accès enregistrée avec succès !",
       "errorGeneric": "Impossible d'enregistrer la clé d'accès. Vous pouvez réessayer plus tard."
     }
   },
+  "SimulatorPage": {
+    "heading": "Simulateur TandaOmni",
+    "subtitle": "Estimez votre plan d’épargne communautaire sans intérêts. Réalisé pour le Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM, par Christopher Guzman.",
+    "tiers": {
+      "realEstate": {
+        "label": "Immobilier",
+        "mitigation": "Fiducie légale (Reserva de Dominio) requise. Votre titre de propriété est détenu en fiducie jusqu’à ce que le groupe complète tous les paiements."
+      },
+      "vehicle": {
+        "label": "Véhicule / Équipement",
+        "mitigation": "Une police d'assurance obligatoire gérée par la plateforme est requise pour toute la durée du groupe — qu'il s'agisse d'un véhicule neuf ou d'occasion."
+      },
+      "travel": {
+        "label": "Voyages & Expériences",
+        "mitigation": "Blocage séquestre : le versement est libéré uniquement après que 60 % du coût actuel est financé. Une pré-autorisation par carte bancaire sera effectuée."
+      }
+    },
+    "priceLabelG": "Prix cible de l’actif (G)",
+    "termLabel": "Durée : {months} mois ({years} ans)",
+    "deltaLabel": "Delta de prix annuel (δ) : {pct}%",
+    "downpaymentLabel": "Apport initial requis (d)",
+    "resultsHeading": "Résultats de la simulation",
+    "monthlyPayment": "Mensualité (P)",
+    "downpaymentRequired": "Apport initial requis",
+    "groupSize": "Taille du groupe (N)",
+    "groupSizeValue": "{n} membres",
+    "assetPriceAtEnd": "Prix de l’actif en fin de période (G + {years} ans)",
+    "totalContributed": "Total versé par membre",
+    "escrowHeading": "Seuil de déblocage du séquestre",
+    "escrowUnlocks": "Débloqué au mois {month} / {total}",
+    "escrowNote": "Le versement est libéré lorsque les contributions atteignent 60 % du coût actuel de l’actif.",
+    "vehicleConditionLabel": "Type de véhicule",
+    "vehicleCondition": {
+      "new": "🆕 Neuf",
+      "used": "🔄 Occasion"
+    },
+    "emptyState": "Entrez un prix d’actif pour voir votre simulation.",
+    "explain": {
+      "priceLabelGTitle": "Prix cible de l’actif (G)",
+      "priceLabelGText": "La valeur de base de l’actif que vous souhaitez acquérir. C’est le montant objectif que votre groupe tanda financera collectivement. Tous les paiements mensuels, apports initiaux et projections en découlent.",
+      "termTitle": "Durée du groupe",
+      "termText": "La durée totale de votre groupe d’épargne en mois. Chaque mois, un membre reçoit le versement intégral du groupe. Des durées plus longues produisent des mensualités plus faibles, mais augmentent l’exposition aux variations de prix dans le temps.",
+      "deltaTitle": "Delta de prix annuel (δ)",
+      "deltaText": "Le taux annuel estimé de variation du prix de l'actif. Positif pour les actifs valorisants comme l'immobilier (+4%–+6%). Pour les véhicules, la direction dépend de ce que vous achetez : positif (+3%–+6%) si vous ciblez un modèle neuf de l'année (suit l'inflation du MSRP à chaque année-modèle), ou négatif (−5%–10%) si vous ciblez un véhicule d'occasion spécifique (suit la dépréciation pendant qu'il vieillit dans la file). Ce taux est utilisé pour calculer votre mensualité fixe et le prix projeté en fin de période.",
+      "downpaymentTitle": "Apport initial requis (d)",
+      "downpaymentText": "Un paiement initial en pourcentage du prix cible, versé avant le début du groupe. Il réduit la charge mensuelle de tous les membres et garantit votre position dans la file de versement.",
+      "monthlyPaymentTitle": "Mensualité (P)",
+      "monthlyPaymentText": "Votre contribution mensuelle fixe. Calculée en moyennant le prix changeant de l’actif sur toute la durée : P = [G × (1 + δ × T/2) − G × d] / M. Chaque membre paie le même montant quelle que soit la date de son versement.",
+      "downpaymentRequiredTitle": "Apport initial requis",
+      "downpaymentRequiredText": "Le montant réel de votre apport initial (G × d). Il doit être versé à l’avance pour activer votre position dans la file de versement du groupe.",
+      "groupSizeTitle": "Taille du groupe (N)",
+      "groupSizeText": "Le nombre de participants dans votre groupe tanda. Dans le modèle ROSCA classique, un membre reçoit le versement complet chaque mois, la taille du groupe est donc égale à la durée en mois (N = M).",
+      "assetPriceAtEndTitle": "Prix de l’actif en fin de période",
+      "assetPriceAtEndText": "Le prix projeté de l’actif à la fin de la période, calculé avec la Courbe Delta : G₂ = G × (1 + δ)^T. Cela représente ce que le dernier membre de la file paiera pour son actif.",
+      "totalContributedTitle": "Total versé par membre",
+      "totalContributedText": "Le montant total que chaque membre paie sur toute la durée : (P × M) + apport initial. Comme TandaOmni ne prélève aucun intérêt, cela correspond approximativement au prix original de l’actif — la communauté se finance mutuellement sans frais.",
+      "escrowTitle": "Seuil de déblocage du séquestre",
+      "escrowText": "Pour les voyages & expériences (actifs non récupérables), votre versement est bloqué jusqu’à ce que vos contributions totales atteignent 60 % du coût actuel de l’actif. Cela protège le groupe contre le financement d’une expérience non remboursable en cas de défaillance d’un membre."
+    }
+  },
+  "AnalysisPage": {
+    "heading": "TandaOmni — Analyse Produit",
+    "subtitle": "Un écosystème financier communautaire sans intérêts pour l’Immobilier, les Véhicules et les Expériences. Réalisé pour le Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM.",
+    "section": {
+      "overview": "1. Présentation du Projet",
+      "riskVerticals": "2. Segments de Risque",
+      "mathModels": "3. Modèles Mathématiques de Risque",
+      "taskBreakdown": "4. Détail des Tâches"
+    },
+    "overview": {
+      "objectiveLabel": "Objectif",
+      "objective": "Un écosystème financier communautaire sans intérêts (modèle ROSCA/Tanda) pour l’Immobilier (valorisant), les Véhicules/Équipements (dévalorisants) et les Expériences (irrécupérables).",
+      "stackLabel": "Stack Technique",
+      "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (BDD), Redis/Celery (Async), Kubernetes (Infra).",
+      "courseLabel": "Formation",
+      "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM",
+      "studentLabel": "Étudiant",
+      "studentValue": "Christopher Guzman",
+      "body": "La plateforme regroupe dynamiquement les utilisateurs en niveaux de risque spécifiques selon la classe d’actif."
+    },
+    "tiers": {
+      "t1": {
+        "name": "Immobilier (Actif Valorisant)",
+        "term": "60 à 120 Mois",
+        "delta": "+4% à +6%",
+        "mitigation": "15% d’Apport, Fiducie Juridique (Reserva de Dominio)."
+      },
+      "t2": {
+        "name": "Véhicules & Équipements Commerciaux (Dévalorisant)",
+        "term": "12 à 36 Mois",
+        "delta": "Neuf : +3% à +6% / Occasion : −5% à −10%",
+        "mitigation": "20% d'Apport, Police d'Assurance Obligatoire sur la Plateforme (quelle que soit la direction du delta)."
+      },
+      "t3": {
+        "name": "Voyages & Expériences (Irrécupérable)",
+        "term": "6 à 12 Mois",
+        "delta": "+2% à +4%",
+        "mitigation": "Blocage Fiduciaire — Le déboursement est libéré après 60% du coût financé. Pré-autorisation carte bancaire."
+      }
+    },
+    "math": {
+      "universalVarsLabel": "Variables Universelles"
+    },
+    "phase": {
+      "be": "Infrastructure Backend & Moteur de Risque (Django / DRF)",
+      "fe": "Implémentation Frontend (Next.js)",
+      "do": "Déploiement & Infrastructure (Kubernetes)"
+    }
+  },
   "AccountPage": {
-    "title": "Mon Compte", "subtitle": "Gérez votre profil et vos paramètres de sécurité",
-    "profileSection": "Profil", "securitySection": "Sécurité", "passkeySection": "Clés d'accès",
-    "emailLabel": "E-mail", "firstNameLabel": "Prénom", "lastNameLabel": "Nom de famille",
-    "changePhoto": "Changer la photo", "saveProfile": "Enregistrer le profil", "savingProfile": "Enregistrement…",
-    "profileSaved": "Profil enregistré.", "profileError": "Impossible d'enregistrer le profil. Veuillez réessayer.",
-    "currentPasswordLabel": "Mot de passe actuel", "newPasswordLabel": "Nouveau mot de passe", "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
-    "savePassword": "Mettre à jour le mot de passe", "savingPassword": "Mise à jour…",
-    "passwordSaved": "Mot de passe mis à jour.", "passwordError": "Impossible de mettre à jour le mot de passe. Veuillez réessayer.",
-    "passwordMismatch": "Les mots de passe ne correspondent pas.", "passwordWrong": "Le mot de passe actuel est incorrect.",
-    "noPasskeys": "Aucune clé d'accès enregistrée.", "deletePasskey": "Supprimer",
+    "title": "Mon Compte",
+    "subtitle": "Gérez votre profil et vos paramètres de sécurité",
+    "profileSection": "Profil",
+    "securitySection": "Sécurité",
+    "passkeySection": "Clés d'accès",
+    "emailLabel": "E-mail",
+    "firstNameLabel": "Prénom",
+    "lastNameLabel": "Nom de famille",
+    "changePhoto": "Changer la photo",
+    "saveProfile": "Enregistrer le profil",
+    "savingProfile": "Enregistrement…",
+    "profileSaved": "Profil enregistré.",
+    "profileError": "Impossible d'enregistrer le profil. Veuillez réessayer.",
+    "currentPasswordLabel": "Mot de passe actuel",
+    "newPasswordLabel": "Nouveau mot de passe",
+    "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
+    "savePassword": "Mettre à jour le mot de passe",
+    "savingPassword": "Mise à jour…",
+    "passwordSaved": "Mot de passe mis à jour.",
+    "passwordError": "Impossible de mettre à jour le mot de passe. Veuillez réessayer.",
+    "passwordMismatch": "Les mots de passe ne correspondent pas.",
+    "passwordWrong": "Le mot de passe actuel est incorrect.",
+    "noPasskeys": "Aucune clé d'accès enregistrée.",
+    "deletePasskey": "Supprimer",
     "confirmDeletePasskeyTitle": "Supprimer la clé d'accès",
     "confirmDeletePasskeyText": "Êtes-vous sûr de vouloir supprimer cette clé d'accès ? Vous ne pourrez plus l'utiliser pour vous connecter.",
-    "passkeyDeleted": "Clé d'accès supprimée.", "passkeyDeleteError": "Impossible de supprimer la clé d'accès. Veuillez réessayer.",
-    "addPasskey": "Ajouter une clé d'accès", "passkeyAdded": "Clé d'accès ajoutée.", "passkeyAddError": "Impossible d'ajouter la clé d'accès. Veuillez réessayer.",
+    "passkeyDeleted": "Clé d'accès supprimée.",
+    "passkeyDeleteError": "Impossible de supprimer la clé d'accès. Veuillez réessayer.",
+    "addPasskey": "Ajouter une clé d'accès",
+    "passkeyAdded": "Clé d'accès ajoutée.",
+    "passkeyAddError": "Impossible d'ajouter la clé d'accès. Veuillez réessayer.",
     "loading": "Chargement…"
   }
 }

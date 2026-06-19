@@ -9,7 +9,7 @@ import { logout, clearUser, getStoredUser } from '@/lib/auth';
 interface NavbarWrapperProps {
   logo: string;
   version: string;
-  labels: { home: string; account: string; signOut: string };
+  labels: { home: string; analysis: string; account: string; signOut: string };
 }
 
 export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
@@ -19,7 +19,9 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
   useEffect(() => {
     setDisplayName(getStoredUser()?.displayName ?? null);
     const handler = (e: Event) => {
-      setDisplayName((e as CustomEvent<{ displayName: string | null }>).detail.displayName);
+      setDisplayName(
+        (e as CustomEvent<{ displayName: string | null }>).detail.displayName,
+      );
     };
     window.addEventListener('app-auth', handler);
     return () => window.removeEventListener('app-auth', handler);
@@ -32,13 +34,23 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
   };
 
   const accountItem: MenuItem = displayName
-    ? { label: displayName, children: [{ label: labels.account, href: '/account' }, { label: labels.signOut, onClick: handleSignOut }] }
+    ? {
+        label: displayName,
+        children: [
+          { label: labels.account, href: '/account' },
+          { label: labels.signOut, onClick: handleSignOut },
+        ],
+      }
     : { label: labels.account, href: '/account' };
 
   return (
     <Navbar
       logo={logo}
-      items={[{ label: labels.home, href: '/' }, accountItem]}
+      items={[
+        { label: labels.home, href: '/' },
+        { label: labels.analysis, href: '/analysis' },
+        accountItem,
+      ]}
       fixedItems={[]}
       version={version}
       translucent

@@ -1,15 +1,15 @@
-import { cookies } from "next/headers";
-import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Container } from "@repo/ui/core-elements/container";
-import { Box } from "@repo/ui/core-elements/box";
-import { Grid } from "@repo/ui/core-elements/grid";
-import { Card } from "@repo/ui/core-elements/card";
-import { Typography } from "@repo/ui/core-elements/typography";
-import { Button } from "@repo/ui/core-elements/button";
-import { Badge } from "@repo/ui/core-elements/badge";
-import { Icon } from "@repo/ui/core-elements/icon";
-import type { JobFeed, JobPosting } from "@/lib/jobs";
-import { HeroJobCards } from "./hero-job-cards";
+import { cookies } from 'next/headers';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { Container } from '@repo/ui/core-elements/container';
+import { Box } from '@repo/ui/core-elements/box';
+import { Grid } from '@repo/ui/core-elements/grid';
+import { Card } from '@repo/ui/core-elements/card';
+import { Typography } from '@repo/ui/core-elements/typography';
+import { Button } from '@repo/ui/core-elements/button';
+import { Badge } from '@repo/ui/core-elements/badge';
+import { Icon } from '@repo/ui/core-elements/icon';
+import type { JobFeed, JobPosting } from '@/lib/jobs';
+import { HeroJobCards } from './hero-job-cards';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -21,12 +21,12 @@ const PRIVATE_JOBS_LIMIT = 6;
 // hero. Returns an empty list for anonymous users or any API error so the hero
 // silently falls back to the auth CTA buttons.
 async function getPrivateJobs(): Promise<JobPosting[]> {
-  const token = (await cookies()).get("access_token")?.value;
+  const token = (await cookies()).get('access_token')?.value;
   if (!token) return [];
   try {
     const res = await fetch(
       `${process.env.API_URL}/api/jobs/feed/?scope=private&per=${PRIVATE_JOBS_LIMIT}`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
     );
     if (!res.ok) return [];
     const feed = (await res.json()) as JobFeed;
@@ -37,29 +37,29 @@ async function getPrivateJobs(): Promise<JobPosting[]> {
 }
 
 const PILLARS = [
-  { key: "matrix", icon: "/icons/user.svg" },
-  { key: "tailor", icon: "/icons/enhance.svg" },
-  { key: "jobs", icon: "/icons/search.svg" },
-  { key: "export", icon: "/icons/download.svg" },
+  { key: 'matrix', icon: '/icons/user.svg' },
+  { key: 'tailor', icon: '/icons/enhance.svg' },
+  { key: 'jobs', icon: '/icons/search.svg' },
+  { key: 'export', icon: '/icons/download.svg' },
 ] as const;
 
 const FEATURES = [
-  { key: "matrix", icon: "/icons/user.svg" },
-  { key: "tailor", icon: "/icons/enhance.svg" },
-  { key: "company", icon: "/icons/link.svg" },
-  { key: "letters", icon: "/icons/download.svg" },
-  { key: "jobs", icon: "/icons/bookmark.svg" },
-  { key: "passkeys", icon: "/icons/fingerprint.svg" },
+  { key: 'matrix', icon: '/icons/user.svg' },
+  { key: 'tailor', icon: '/icons/enhance.svg' },
+  { key: 'company', icon: '/icons/link.svg' },
+  { key: 'letters', icon: '/icons/download.svg' },
+  { key: 'jobs', icon: '/icons/bookmark.svg' },
+  { key: 'passkeys', icon: '/icons/fingerprint.svg' },
 ] as const;
 
 export default async function Home({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const t = await getTranslations("HomePage");
+  const t = await getTranslations('HomePage');
 
   const privateJobs = await getPrivateJobs();
-  const isLoggedIn = (await cookies()).has("access_token");
+  const isLoggedIn = (await cookies()).has('access_token');
 
   return (
     <Box display="flex" flexDirection="column" paddingBottom={60}>
@@ -67,7 +67,7 @@ export default async function Home({ params }: Props) {
       <Box
         styles={{
           background:
-            "radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent, #06b6d4) 14%, transparent) 0%, transparent 60%)",
+            'radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent, #06b6d4) 14%, transparent) 0%, transparent 60%)',
         }}
       >
         <Container paddingX={20}>
@@ -77,10 +77,10 @@ export default async function Home({ params }: Props) {
             alignItems="center"
             gap={24}
             paddingY={80}
-            styles={{ textAlign: "center" }}
+            styles={{ textAlign: 'center' }}
           >
             <Badge variant="subtle" size="md">
-              {t("heroEyebrow")}
+              {t('heroEyebrow')}
             </Badge>
             <Typography
               as="h1"
@@ -89,7 +89,7 @@ export default async function Home({ params }: Props) {
               maxWidth={820}
               styles={{ lineHeight: 1.1 }}
             >
-              {t("heroTitle")}
+              {t('heroTitle')}
             </Typography>
             <Typography
               as="p"
@@ -97,7 +97,7 @@ export default async function Home({ params }: Props) {
               color="var(--muted-foreground, #6b7280)"
               maxWidth={620}
             >
-              {t("heroSubtitle")}
+              {t('heroSubtitle')}
             </Typography>
             {isLoggedIn ? (
               privateJobs.length > 0 ? (
@@ -111,13 +111,13 @@ export default async function Home({ params }: Props) {
                     as="h2"
                     variant="h5"
                     fontWeight={700}
-                    styles={{ textAlign: "left" }}
+                    styles={{ textAlign: 'left' }}
                   >
-                    {t("privateJobsTitle")}
+                    {t('privateJobsTitle')}
                   </Typography>
                   <HeroJobCards jobs={privateJobs} />
                   <Button
-                    text={t("privateJobsViewAll")}
+                    text={t('privateJobsViewAll')}
                     href={`/${locale}/jobs`}
                     kind="primary"
                     size="md"
@@ -125,7 +125,7 @@ export default async function Home({ params }: Props) {
                 </Box>
               ) : (
                 <Button
-                  text={t("privateJobsBrowse")}
+                  text={t('privateJobsBrowse')}
                   href={`/${locale}/jobs`}
                   kind="primary"
                   size="lg"
@@ -139,12 +139,12 @@ export default async function Home({ params }: Props) {
                 justifyContent="center"
               >
                 <Button
-                  text={t("heroCtaPrimary")}
+                  text={t('heroCtaPrimary')}
                   href="/auth"
                   kind="primary"
                   size="lg"
                 />
-                <Button text={t("heroCtaSecondary")} href="/auth" size="lg" />
+                <Button text={t('heroCtaSecondary')} href="/auth" size="lg" />
               </Box>
             )}
             <Box
@@ -158,7 +158,7 @@ export default async function Home({ params }: Props) {
                 variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
-                {t("heroNote")}
+                {t('heroNote')}
               </Typography>
             </Box>
           </Box>
@@ -173,10 +173,10 @@ export default async function Home({ params }: Props) {
           alignItems="center"
           gap={12}
           paddingY={48}
-          styles={{ textAlign: "center" }}
+          styles={{ textAlign: 'center' }}
         >
           <Typography as="h2" variant="h2" fontWeight={700}>
-            {t("pillarsTitle")}
+            {t('pillarsTitle')}
           </Typography>
           <Typography
             as="p"
@@ -185,7 +185,7 @@ export default async function Home({ params }: Props) {
             fontWeight={600}
             maxWidth={560}
           >
-            {t("pillarsSubtitle")}
+            {t('pillarsSubtitle')}
           </Typography>
         </Box>
         <Grid container spacing={4}>
@@ -229,10 +229,10 @@ export default async function Home({ params }: Props) {
           alignItems="center"
           gap={12}
           paddingY={48}
-          styles={{ textAlign: "center" }}
+          styles={{ textAlign: 'center' }}
         >
           <Typography as="h2" variant="h2" fontWeight={700} maxWidth={680}>
-            {t("featuresTitle")}
+            {t('featuresTitle')}
           </Typography>
         </Box>
         <Grid container spacing={4}>
@@ -266,7 +266,7 @@ export default async function Home({ params }: Props) {
           borderRadius={16}
           backgroundColor="var(--surface-1)"
           alignItems="center"
-          styles={{ textAlign: "center" }}
+          styles={{ textAlign: 'center' }}
         >
           <Icon
             icon="/icons/fingerprint.svg"
@@ -276,7 +276,7 @@ export default async function Home({ params }: Props) {
             backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 14%, transparent)"
           />
           <Typography as="h2" variant="h2" fontWeight={700} maxWidth={560}>
-            {t("privacyTitle")}
+            {t('privacyTitle')}
           </Typography>
           <Typography
             as="p"
@@ -284,14 +284,14 @@ export default async function Home({ params }: Props) {
             color="var(--muted-foreground, #6b7280)"
             maxWidth={620}
           >
-            {t("privacyBody")}
+            {t('privacyBody')}
           </Typography>
           <Typography
             variant="body"
             color="var(--muted-foreground, #6b7280)"
             maxWidth={560}
           >
-            {t("privacyTech")}
+            {t('privacyTech')}
           </Typography>
         </Card>
       </Container>
@@ -305,10 +305,10 @@ export default async function Home({ params }: Props) {
             alignItems="center"
             gap={20}
             paddingY={80}
-            styles={{ textAlign: "center" }}
+            styles={{ textAlign: 'center' }}
           >
             <Typography as="h2" variant="h2" fontWeight={800} maxWidth={620}>
-              {t("ctaTitle")}
+              {t('ctaTitle')}
             </Typography>
             <Typography
               as="p"
@@ -316,10 +316,10 @@ export default async function Home({ params }: Props) {
               color="var(--muted-foreground, #6b7280)"
               maxWidth={520}
             >
-              {t("ctaSubtitle")}
+              {t('ctaSubtitle')}
             </Typography>
             <Button
-              text={t("ctaButton")}
+              text={t('ctaButton')}
               href="/auth"
               kind="primary"
               size="lg"
