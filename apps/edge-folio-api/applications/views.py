@@ -18,7 +18,6 @@ from .scoring import compute_match_metrics
 from .serializers import JobApplicationSerializer
 from .tailoring import (
     generate_cover_letter,
-    generate_nafta_letter,
     suggest_tn_categories,
 )
 
@@ -231,64 +230,49 @@ class NaftaLetterView(APIView):
         except JobApplication.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        user = request.user
-        full_name = f'{user.first_name} {user.last_name}'.strip() or user.email
-        company_name = application.company.name if application.company_id else application.company_name
+        if application.nafta_letter_status == 'processing':
+            return Response({'status': 'processing'}, status=status.HTTP_202_ACCEPTED)
 
-        try:
-            current_job_title = user.profile.job_title
-        except Exception:
-            current_job_title = ''
-
-        from career.models import Education, WorkExperience
-        education = Education.objects.filter(user=user).order_by('-start_year').first()
-        work_experiences = list(
-            WorkExperience.objects.filter(user=user)
-            .order_by('-start_date')
-            .values('company', 'title', 'start_date', 'end_date', 'is_current', 'location')
-        )
-
-        data = request.data
-        try:
-            locale = parse_accept_language(request.META.get('HTTP_ACCEPT_LANGUAGE', ''))
-            hours_raw = data.get('hours_per_week', 40)
-            try:
-                hours_per_week = int(hours_raw)
-            except (TypeError, ValueError):
-                hours_per_week = 40
-
-            nafta_letter = generate_nafta_letter(
-                job_title=application.job_title,
-                company_name=company_name,
-                job_description=application.job_description,
-                full_name=full_name,
-                current_job_title=current_job_title,
-                degree=education.degree if education else '',
-                institution=education.institution if education else '',
-                field_of_study=education.field_of_study if education else '',
-                tn_profession=data.get('tn_profession', ''),
-                is_continuation=bool(data.get('is_continuation', False)),
-                company_description=data.get('company_description', ''),
-                hours_per_week=hours_per_week,
-                duration=data.get('duration', '3 years'),
-                passport_number=data.get('passport_number', ''),
-                date_of_birth=data.get('date_of_birth', ''),
-                citizenship=data.get('citizenship', ''),
-                work_experiences=work_experiences,
-                locale=locale,
-            )
-        except Exception as exc:
-            logger.error('LLM error during NAFTA letter generation: %s', exc)
+        bullets = request.data.get('bullets', [])
+        if not isinstance(bullets, list) or not all(
+            isinstance(b, dict) and 'tailored_text' in b for b in bullets
+        ):
             return Response(
-                {'detail': 'LLM service unavailable. Please try again later.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                {'detail': 'bullets must be a list of objects with tailored_text.'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        application.nafta_letter = nafta_letter
-        application.save(update_fields=['nafta_letter', 'modified'])
+        from django.utils import timezone
+        from .tasks import run_nafta_letter_pipeline
+
+        user = request.user
+        company_name = application.company.name if application.company_id else application.company_name
+        combined_company_desc = application.company.description if application.company_id else ''
+        extra_desc = request.data.get('company_description', '')
+        if extra_desc:
+            combined_company_desc = '\n\n'.join(filter(None, [combined_company_desc, extra_desc]))
+
+        payload = {
+            'tn_profession': request.data.get('tn_profession', ''),
+            'is_continuation': bool(request.data.get('is_continuation', False)),
+            'company_description': combined_company_desc,
+            'hours_per_week': request.data.get('hours_per_week', 40),
+            'duration': request.data.get('duration', '3 years'),
+            'passport_number': request.data.get('passport_number', ''),
+            'date_of_birth': request.data.get('date_of_birth', ''),
+            'citizenship': request.data.get('citizenship', ''),
+        }
+
+        application.nafta_letter_status = 'processing'
+        application.nafta_letter_started_at = timezone.now()
+        application.save(update_fields=['nafta_letter_status', 'nafta_letter_started_at', 'modified'])
         _invalidate_application(request.user.id, pk)
 
-        return Response({'nafta_letter': nafta_letter})
+        locale = parse_accept_language(request.META.get('HTTP_ACCEPT_LANGUAGE', ''))
+        run_nafta_letter_pipeline.delay(application.pk, payload=payload, locale=locale)
+
+        application.refresh_from_db(fields=['nafta_letter_status'])
+        return Response({'status': application.nafta_letter_status}, status=status.HTTP_202_ACCEPTED)
 
 
 class RefreshMetricsView(APIView):

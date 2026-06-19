@@ -571,3 +571,78 @@ def run_tailor_pipeline(self, application_id: int, locale: str = 'en') -> None:
         Skill.objects.filter(id__in=result['skill_ids'], user=user)
     )
     _invalidate_application(user.id, application_id)
+
+
+# ── NAFTA letter task ────────────────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=30)
+def run_nafta_letter_pipeline(self, application_id: int, payload: dict, locale: str = 'en') -> None:
+    from .models import JobApplication
+    from .tailoring import generate_nafta_letter
+
+    try:
+        application = JobApplication.objects.select_related('company', 'user').get(pk=application_id)
+    except JobApplication.DoesNotExist:
+        return
+
+    user = application.user
+    company_name = application.company.name if application.company_id else application.company_name
+
+    full_name = f'{user.first_name} {user.last_name}'.strip() or user.email
+    try:
+        current_job_title = user.profile.job_title
+    except Exception:
+        current_job_title = ''
+
+    from career.models import Education, WorkExperience
+    education = Education.objects.filter(user=user).order_by('-start_year').first()
+    work_experiences = list(
+        WorkExperience.objects.filter(user=user)
+        .order_by('-start_date')
+        .values('company', 'title', 'start_date', 'end_date', 'is_current', 'location')
+    )
+
+    hours_raw = payload.get('hours_per_week', 40)
+    try:
+        hours_per_week = int(hours_raw)
+    except (TypeError, ValueError):
+        hours_per_week = 40
+
+    try:
+        nafta_letter = generate_nafta_letter(
+            job_title=application.job_title,
+            company_name=company_name,
+            job_description=application.job_description,
+            full_name=full_name,
+            current_job_title=current_job_title,
+            degree=education.degree if education else '',
+            institution=education.institution if education else '',
+            field_of_study=education.field_of_study if education else '',
+            tn_profession=payload.get('tn_profession', ''),
+            is_continuation=bool(payload.get('is_continuation', False)),
+            company_description=payload.get('company_description', ''),
+            hours_per_week=hours_per_week,
+            duration=payload.get('duration', '3 years'),
+            passport_number=payload.get('passport_number', ''),
+            date_of_birth=payload.get('date_of_birth', ''),
+            citizenship=payload.get('citizenship', ''),
+            work_experiences=work_experiences,
+            locale=locale,
+        )
+    except Exception as exc:
+        logger.error('LLM error during NAFTA letter generation for application %s: %s', application_id, exc)
+        try:
+            raise self.retry(exc=exc)
+        except self.MaxRetriesExceededError:
+            JobApplication.objects.filter(pk=application_id).update(
+                nafta_letter_status='failed',
+                nafta_letter_started_at=None,
+            )
+            _invalidate_application(user.id, application_id)
+            return
+
+    application.nafta_letter = nafta_letter
+    application.nafta_letter_status = 'complete'
+    application.nafta_letter_started_at = None
+    application.save(update_fields=['nafta_letter', 'nafta_letter_status', 'nafta_letter_started_at', 'modified'])
+    _invalidate_application(user.id, application_id)

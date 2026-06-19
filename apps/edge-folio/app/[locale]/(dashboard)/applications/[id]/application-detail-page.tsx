@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { useState, useRef, useEffect, useId } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
-import { Container } from "@repo/ui/core-elements/container";
-import { Box } from "@repo/ui/core-elements/box";
-import { Button } from "@repo/ui/core-elements/button";
-import { Typography } from "@repo/ui/core-elements/typography";
-import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
-import { Spinner } from "@repo/ui/core-elements/spinner";
-import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
-import { Badge } from "@repo/ui/core-elements/badge";
-import { TextInput } from "@repo/ui/core-elements/text-input";
-import { Select } from "@repo/ui/core-elements/select";
-import { Switch } from "@repo/ui/core-elements/switch";
-import { Toast } from "@repo/ui/core-elements/toast";
-import Image from "next/image";
+import { useState, useRef, useEffect, useId } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
+import { Container } from '@repo/ui/core-elements/container';
+import { Box } from '@repo/ui/core-elements/box';
+import { Button } from '@repo/ui/core-elements/button';
+import { Typography } from '@repo/ui/core-elements/typography';
+import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
+import { Spinner } from '@repo/ui/core-elements/spinner';
+import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
+import { Badge } from '@repo/ui/core-elements/badge';
+import { TextInput } from '@repo/ui/core-elements/text-input';
+import { Select } from '@repo/ui/core-elements/select';
+import { Switch } from '@repo/ui/core-elements/switch';
+import { Toast } from '@repo/ui/core-elements/toast';
+import Image from 'next/image';
 import {
   updateApplication,
   deleteApplication,
@@ -41,14 +41,14 @@ import {
   type CompanyIntelItem,
   type CompanyAnalysis,
   type SignalLevel,
-} from "@/lib/applications";
-import type { UserProfile } from "@/lib/auth";
-import { buildResumeMarkdown, downloadMarkdown } from "@/lib/resume-markdown";
+} from '@/lib/applications';
+import type { UserProfile } from '@/lib/auth';
+import { buildResumeMarkdown, downloadMarkdown } from '@/lib/resume-markdown';
 import {
   buildResumeDocumentProps,
   resumeExportConfigKey,
   type ResumeExportConfig,
-} from "@/lib/resume-export";
+} from '@/lib/resume-export';
 import {
   getWorkExperiences,
   getEducations,
@@ -58,43 +58,43 @@ import {
   type Education,
   type Language,
   type Project,
-} from "@/lib/career";
-import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from "@/lib/nafta-constants";
-import { Grid } from "@repo/ui/core-elements/grid";
-import { Card } from "@repo/ui/core-elements/card";
-import { SpeechButton } from "@repo/ui/core-elements/speech-button";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination } from "swiper/modules";
-import type { Swiper as SwiperType } from "swiper";
-import { MatchMetrics } from "../../_components/match-metrics";
-import "swiper/css";
-import "swiper/css/pagination";
-import "./application-detail-page.css";
-import Icon from "@repo/ui/core-elements/icon";
-import IconButton from "@repo/ui/core-elements/icon-button";
+} from '@/lib/career';
+import { TN_PROFESSIONS, CITIZENSHIP_OPTIONS } from '@/lib/nafta-constants';
+import { Grid } from '@repo/ui/core-elements/grid';
+import { Card } from '@repo/ui/core-elements/card';
+import { SpeechButton } from '@repo/ui/core-elements/speech-button';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination } from 'swiper/modules';
+import type { Swiper as SwiperType } from 'swiper';
+import { MatchMetrics } from '../../_components/match-metrics';
+import 'swiper/css';
+import 'swiper/css/pagination';
+import './application-detail-page.css';
+import Icon from '@repo/ui/core-elements/icon';
+import IconButton from '@repo/ui/core-elements/icon-button';
 
 const STATUSES: ApplicationStatus[] = [
-  "draft",
-  "applied",
-  "interview",
-  "offer",
-  "rejected",
+  'draft',
+  'applied',
+  'interview',
+  'offer',
+  'rejected',
 ];
 
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
-  draft: "#6b7280",
-  applied: "#06b6d4",
-  interview: "#f59e0b",
-  offer: "#22c55e",
-  rejected: "#ef4444",
+  draft: '#6b7280',
+  applied: '#06b6d4',
+  interview: '#f59e0b',
+  offer: '#22c55e',
+  rejected: '#ef4444',
 };
 
 const CATEGORY_ORDER = [
-  "impact",
-  "technical",
-  "leadership",
-  "collaboration",
-  "other",
+  'impact',
+  'technical',
+  'leadership',
+  'collaboration',
+  'other',
 ];
 
 function groupByCategory(
@@ -102,7 +102,7 @@ function groupByCategory(
 ): Array<{ cat: string; bullets: TailoredBullet[] }> {
   const map = new Map<string, TailoredBullet[]>();
   for (const b of bullets) {
-    const cat = b.category || "other";
+    const cat = b.category || 'other';
     if (!map.has(cat)) map.set(cat, []);
     map.get(cat)!.push(b);
   }
@@ -171,7 +171,7 @@ function IntelItemCard({ item }: { item: CompanyIntelItem }) {
       <Typography
         as="p"
         variant="body"
-        styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
+        styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}
       >
         {item.summary}
       </Typography>
@@ -196,13 +196,13 @@ function IntelSwiperCard({
   items: CompanyIntelItem[];
   loading?: boolean;
 }) {
-  const t = useTranslations("ApplicationDetailPage");
+  const t = useTranslations('ApplicationDetailPage');
   const swiperRef = useRef<SwiperType | null>(null);
   const id = useId();
-  const pagClass = `detail__intel-pag-${id.replace(/:/g, "")}`;
+  const pagClass = `detail__intel-pag-${id.replace(/:/g, '')}`;
 
   return (
-    <Card padding={0} styles={{ overflow: "hidden" }}>
+    <Card padding={0} styles={{ overflow: 'hidden' }}>
       <Box paddingX={14} paddingTop={14} paddingBottom={10}>
         <Typography variant="body" fontWeight={600} color="var(--foreground)">
           {title}
@@ -253,23 +253,23 @@ function IntelSwiperCard({
               <Button
                 icon="/icons/chevron-left.svg"
                 iconSize="16px"
-                aria-label={t("intelNavPrev")}
+                aria-label={t('intelNavPrev')}
                 onClick={() => swiperRef.current?.slidePrev()}
                 width={28}
                 height={28}
                 border="1px solid var(--border, #e5e7eb)"
-                styles={{ padding: 0, justifyContent: "center" }}
+                styles={{ padding: 0, justifyContent: 'center' }}
               />
               <div className={pagClass} data-intel-pagination />
               <Button
                 icon="/icons/chevron-right.svg"
                 iconSize="16px"
-                aria-label={t("intelNavNext")}
+                aria-label={t('intelNavNext')}
                 onClick={() => swiperRef.current?.slideNext()}
                 width={28}
                 height={28}
                 border="1px solid var(--border, #e5e7eb)"
-                styles={{ padding: 0, justifyContent: "center" }}
+                styles={{ padding: 0, justifyContent: 'center' }}
               />
             </div>
           )}
@@ -280,41 +280,41 @@ function IntelSwiperCard({
 }
 
 const SIGNAL_COLORS: Record<SignalLevel, string> = {
-  positive: "#22c55e",
-  mixed: "#f59e0b",
-  concerning: "#ef4444",
+  positive: '#22c55e',
+  mixed: '#f59e0b',
+  concerning: '#ef4444',
 };
 
 const SIGNAL_KEYS: Array<{
-  key: keyof Omit<CompanyAnalysis, "summary">;
+  key: keyof Omit<CompanyAnalysis, 'summary'>;
   tKey: string;
 }> = [
-  { key: "job_security", tKey: "signals.job_security" },
-  { key: "financial_health", tKey: "signals.financial_health" },
-  { key: "leadership_stability", tKey: "signals.leadership_stability" },
-  { key: "work_culture", tKey: "signals.work_culture" },
-  { key: "growth_trajectory", tKey: "signals.growth_trajectory" },
+  { key: 'job_security', tKey: 'signals.job_security' },
+  { key: 'financial_health', tKey: 'signals.financial_health' },
+  { key: 'leadership_stability', tKey: 'signals.leadership_stability' },
+  { key: 'work_culture', tKey: 'signals.work_culture' },
+  { key: 'growth_trajectory', tKey: 'signals.growth_trajectory' },
 ];
 
 function CompanyAnalysisPanel({ analysis }: { analysis: CompanyAnalysis }) {
-  const t = useTranslations("ApplicationDetailPage");
+  const t = useTranslations('ApplicationDetailPage');
   return (
     <Box display="flex" flexDirection="column" gap={16}>
       <Card gap={8}>
         <Typography variant="body" fontWeight={600} color="var(--foreground)">
-          {t("companyAnalysisSummaryTitle")}
+          {t('companyAnalysisSummaryTitle')}
         </Typography>
         <Typography
           as="p"
           variant="body"
-          styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
+          styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}
         >
           {analysis.summary}
         </Typography>
       </Card>
       <Box display="flex" flexDirection="column" gap={10}>
         <Typography variant="body" fontWeight={600} color="var(--foreground)">
-          {t("companyAnalysisSignalsTitle")}
+          {t('companyAnalysisSignalsTitle')}
         </Typography>
         <Grid container spacing={2}>
           {SIGNAL_KEYS.map(({ key, tKey }) => {
@@ -361,10 +361,10 @@ function formatSalary(
   currency: string | null | undefined,
   notSpecifiedLabel: string,
 ): string {
-  const hasMin = min != null && min !== "";
-  const hasMax = max != null && max !== "";
+  const hasMin = min != null && min !== '';
+  const hasMax = max != null && max !== '';
   if (!hasMin && !hasMax) return notSpecifiedLabel;
-  const curr = currency ? ` ${currency}` : "";
+  const curr = currency ? ` ${currency}` : '';
   const fmt = (v: number | string) => Number(v).toLocaleString();
   if (hasMin && hasMax) return `${fmt(min!)} - ${fmt(max!)}${curr}`;
   if (hasMin) return `${fmt(min!)}+${curr}`;
@@ -382,7 +382,7 @@ export function ApplicationDetailPage({
   profile,
   profilePictureBase64,
 }: Props) {
-  const t = useTranslations("ApplicationDetailPage");
+  const t = useTranslations('ApplicationDetailPage');
   const locale = useLocale();
   const router = useRouter();
 
@@ -398,18 +398,18 @@ export function ApplicationDetailPage({
   );
   const [notes, setNotes] = useState(app.notes);
   const [location, setLocation] = useState(app.location);
-  const [salaryMin, setSalaryMin] = useState(app.salary_min ?? "");
-  const [salaryMax, setSalaryMax] = useState(app.salary_max ?? "");
-  const [salaryCurrency, setSalaryCurrency] = useState<SalaryCurrency | "">(
-    app.salary_currency ?? "",
+  const [salaryMin, setSalaryMin] = useState(app.salary_min ?? '');
+  const [salaryMax, setSalaryMax] = useState(app.salary_max ?? '');
+  const [salaryCurrency, setSalaryCurrency] = useState<SalaryCurrency | ''>(
+    app.salary_currency ?? '',
   );
   const [workType, setWorkType] = useState<WorkType[]>(app.work_type ?? []);
-  const [usCitizenOrPr, setUsCitizenOrPr] = useState<"null" | "true" | "false">(
+  const [usCitizenOrPr, setUsCitizenOrPr] = useState<'null' | 'true' | 'false'>(
     app.us_citizen_or_pr_required == null
-      ? "null"
+      ? 'null'
       : app.us_citizen_or_pr_required
-        ? "true"
-        : "false",
+        ? 'true'
+        : 'false',
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -426,7 +426,7 @@ export function ApplicationDetailPage({
     TailoredProject[] | null
   >(initialApp.tailored_projects ?? null);
   const [professionalSummary, setProfessionalSummary] = useState(
-    initialApp.professional_summary || "",
+    initialApp.professional_summary || '',
   );
   const [tailorError, setTailorError] = useState<string | null>(null);
   const tailorPollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -440,17 +440,20 @@ export function ApplicationDetailPage({
   const [copied, setCopied] = useState(false);
 
   // NAFTA letter
-  const [generatingNafta, setGeneratingNafta] = useState(false);
+  const [generatingNafta, setGeneratingNafta] = useState(
+    initialApp.nafta_letter_status === 'processing',
+  );
   const [naftaLetter, setNaftaLetter] = useState<string | null>(
     initialApp.nafta_letter || null,
   );
   const [naftaError, setNaftaError] = useState<string | null>(null);
   const [exportingNaftaPDF, setExportingNaftaPDF] = useState(false);
   const [naftaPDFError, setNaftaPDFError] = useState<string | null>(null);
+  const naftaPollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Company info (populated by async pipeline, polled until complete)
   const [companyDescription, setCompanyDescription] = useState(
-    initialApp.company?.description ?? "",
+    initialApp.company?.description ?? '',
   );
   const [companyIntel, setCompanyIntel] = useState<CompanyIntel | null>(
     initialApp.company?.intel ?? null,
@@ -461,17 +464,17 @@ export function ApplicationDetailPage({
 
   // NAFTA letter parameters
   const [naftaTnProfession, setNaftaTnProfession] = useState(
-    profile?.tn_profession ?? "",
+    profile?.tn_profession ?? '',
   );
   const [naftaIsContinuation, setNaftaIsContinuation] = useState(false);
   const [naftaCitizenship, setNaftaCitizenship] = useState(
-    profile?.citizenship ?? "",
+    profile?.citizenship ?? '',
   );
-  const [naftaDob, setNaftaDob] = useState("");
-  const [naftaPassport, setNaftaPassport] = useState("");
-  const [naftaHoursPerWeek, setNaftaHoursPerWeek] = useState("40");
-  const [naftaDuration, setNaftaDuration] = useState("3 years");
-  const [naftaCompanyDescription, setNaftaCompanyDescription] = useState("");
+  const [naftaDob, setNaftaDob] = useState('');
+  const [naftaPassport, setNaftaPassport] = useState('');
+  const [naftaHoursPerWeek, setNaftaHoursPerWeek] = useState('40');
+  const [naftaDuration, setNaftaDuration] = useState('3 years');
+  const [naftaCompanyDescription, setNaftaCompanyDescription] = useState('');
 
   // Export section data (lazily loaded when section first appears)
   const exportDataFetchRef = useRef(false);
@@ -515,7 +518,7 @@ export function ApplicationDetailPage({
 
   const [toast, setToast] = useState<{
     text: string;
-    kind: "success" | "error";
+    kind: 'success' | 'error';
   } | null>(null);
   const [toastKey, setToastKey] = useState(0);
 
@@ -532,6 +535,51 @@ export function ApplicationDetailPage({
   >([]);
   const [tnSuggestLoading, setTnSuggestLoading] = useState(false);
   const [tnSuggestError, setTnSuggestError] = useState<string | null>(null);
+
+  function stopNaftaPolling() {
+    if (naftaPollingRef.current) {
+      clearTimeout(naftaPollingRef.current);
+      naftaPollingRef.current = null;
+    }
+  }
+
+  function startNaftaPolling(appId: number) {
+    if (naftaPollingRef.current) return;
+    setGeneratingNafta(true);
+    let errorCount = 0;
+
+    const schedule = () => {
+      naftaPollingRef.current = setTimeout(async () => {
+        try {
+          const data = await getApplication(appId);
+          if (data.nafta_letter_status === 'complete') {
+            setNaftaLetter(data.nafta_letter || null);
+            setGeneratingNafta(false);
+            naftaPollingRef.current = null;
+            return;
+          }
+          if (data.nafta_letter_status === 'failed') {
+            setNaftaError(t('errorNaftaLetter'));
+            setGeneratingNafta(false);
+            naftaPollingRef.current = null;
+            return;
+          }
+          errorCount = 0;
+        } catch {
+          errorCount++;
+          if (errorCount >= 3) {
+            setNaftaError(t('errorNaftaLetter'));
+            setGeneratingNafta(false);
+            stopNaftaPolling();
+            return;
+          }
+        }
+        if (naftaPollingRef.current !== null) schedule();
+      }, 5000);
+    };
+
+    schedule();
+  }
 
   function stopCompanyPolling() {
     if (companyPollingRef.current) {
@@ -555,8 +603,8 @@ export function ApplicationDetailPage({
           setApp(data);
           if (
             !company ||
-            company.status === "complete" ||
-            company.status === "failed"
+            company.status === 'complete' ||
+            company.status === 'failed'
           ) {
             companyPollingRef.current = null;
             return;
@@ -580,7 +628,7 @@ export function ApplicationDetailPage({
     setTailoredBullets(data.tailored_bullets ?? null);
     setTailoredWorkExperiences(data.tailored_work_experiences ?? null);
     setTailoredProjects(data.tailored_projects ?? null);
-    setProfessionalSummary(data.professional_summary || "");
+    setProfessionalSummary(data.professional_summary || '');
     setApp(data);
     setUseTailoredWeIds(
       new Set((data.tailored_work_experiences ?? []).map((e) => e.id)),
@@ -609,14 +657,14 @@ export function ApplicationDetailPage({
       tailorPollingRef.current = setTimeout(async () => {
         try {
           const data = await getApplication(appId);
-          if (data.tailor_status === "complete") {
+          if (data.tailor_status === 'complete') {
             applyTailoredResult(data);
             setTailoring(false);
             tailorPollingRef.current = null;
             return;
           }
-          if (data.tailor_status === "failed") {
-            setTailorError(t("errorTailor"));
+          if (data.tailor_status === 'failed') {
+            setTailorError(t('errorTailor'));
             setTailoring(false);
             tailorPollingRef.current = null;
             return;
@@ -625,7 +673,7 @@ export function ApplicationDetailPage({
         } catch {
           errorCount++;
           if (errorCount >= 3) {
-            setTailorError(t("errorTailor"));
+            setTailorError(t('errorTailor'));
             setTailoring(false);
             stopTailorPolling();
             return;
@@ -638,18 +686,22 @@ export function ApplicationDetailPage({
     schedule();
   }
 
-  // Start polling when company pipeline / tailoring is in progress
+  // Start polling when company pipeline / tailoring / nafta is in progress
   useEffect(() => {
     const status = initialApp.company?.status;
-    if (status === "pending" || status === "processing") {
+    if (status === 'pending' || status === 'processing') {
       startCompanyPolling(initialApp.id);
     }
-    if (initialApp.tailor_status === "processing") {
+    if (initialApp.tailor_status === 'processing') {
       startTailorPolling(initialApp.id);
+    }
+    if (initialApp.nafta_letter_status === 'processing') {
+      startNaftaPolling(initialApp.id);
     }
     return () => {
       stopCompanyPolling();
       stopTailorPolling();
+      stopNaftaPolling();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -670,13 +722,13 @@ export function ApplicationDetailPage({
       getProjects(),
     ]).then(([workExpsRes, educationsRes, languagesRes, projectsRes]) => {
       const workExps =
-        workExpsRes.status === "fulfilled" ? workExpsRes.value.results : [];
+        workExpsRes.status === 'fulfilled' ? workExpsRes.value.results : [];
       const educations =
-        educationsRes.status === "fulfilled" ? educationsRes.value.results : [];
+        educationsRes.status === 'fulfilled' ? educationsRes.value.results : [];
       const languages =
-        languagesRes.status === "fulfilled" ? languagesRes.value.results : [];
+        languagesRes.status === 'fulfilled' ? languagesRes.value.results : [];
       const projects =
-        projectsRes.status === "fulfilled" ? projectsRes.value.results : [];
+        projectsRes.status === 'fulfilled' ? projectsRes.value.results : [];
       setExportData({ workExps, educations, languages, projects });
       setIncludedWorkExpIds(new Set(workExps.map((e) => e.id)));
       setIncludedEducationIds(new Set(educations.map((e) => e.id)));
@@ -686,7 +738,7 @@ export function ApplicationDetailPage({
     });
   }, [tailoredBullets]);
 
-  function showToast(text: string, kind: "success" | "error") {
+  function showToast(text: string, kind: 'success' | 'error') {
     setToast({ text, kind });
     setToastKey((k) => k + 1);
   }
@@ -698,16 +750,16 @@ export function ApplicationDetailPage({
     setSelectedStatus(app.status);
     setNotes(app.notes);
     setLocation(app.location);
-    setSalaryMin(app.salary_min ?? "");
-    setSalaryMax(app.salary_max ?? "");
-    setSalaryCurrency(app.salary_currency ?? "");
+    setSalaryMin(app.salary_min ?? '');
+    setSalaryMax(app.salary_max ?? '');
+    setSalaryCurrency(app.salary_currency ?? '');
     setWorkType(app.work_type ?? []);
     setUsCitizenOrPr(
       app.us_citizen_or_pr_required == null
-        ? "null"
+        ? 'null'
         : app.us_citizen_or_pr_required
-          ? "true"
-          : "false",
+          ? 'true'
+          : 'false',
     );
     setSaveError(null);
     setEditing(true);
@@ -729,17 +781,17 @@ export function ApplicationDetailPage({
         location: location.trim(),
         salary_min: salaryMin ? parseFloat(salaryMin) : null,
         salary_max: salaryMax ? parseFloat(salaryMax) : null,
-        salary_currency: salaryCurrency || "",
+        salary_currency: salaryCurrency || '',
         work_type: workType.length ? workType : null,
         us_citizen_or_pr_required:
-          usCitizenOrPr === "null" ? null : usCitizenOrPr === "true",
+          usCitizenOrPr === 'null' ? null : usCitizenOrPr === 'true',
       });
       setApp(updated);
       setEditing(false);
-      showToast(t("savedToast"), "success");
+      showToast(t('savedToast'), 'success');
     } catch (err) {
       const isAuth = err instanceof ApplicationError && err.status === 401;
-      setSaveError(isAuth ? t("errorUnauthorized") : t("errorSave"));
+      setSaveError(isAuth ? t('errorUnauthorized') : t('errorSave'));
     } finally {
       setSaving(false);
     }
@@ -751,7 +803,7 @@ export function ApplicationDetailPage({
       await deleteApplication(app.id);
       router.push(`/${locale}/applications`);
     } catch {
-      showToast(t("errorDelete"), "error");
+      showToast(t('errorDelete'), 'error');
       setDeleting(false);
     }
   }
@@ -769,9 +821,9 @@ export function ApplicationDetailPage({
         nafta_tn_likelihood: result.nafta_tn_likelihood,
         nafta_tn_likelihood_explanation: result.nafta_tn_likelihood_explanation,
       }));
-      showToast(t("refreshMetrics"), "success");
+      showToast(t('refreshMetrics'), 'success');
     } catch {
-      showToast(t("errorRefreshMetrics"), "error");
+      showToast(t('errorRefreshMetrics'), 'error');
     } finally {
       setRefreshingMetrics(false);
     }
@@ -783,19 +835,19 @@ export function ApplicationDetailPage({
     setCoverLetter(null);
     try {
       const result = await tailorApplication(app.id, locale);
-      if (result.status === "complete") {
+      if (result.status === 'complete') {
         // Eager (no broker) path: work already finished - fetch the result.
         const data = await getApplication(app.id);
         applyTailoredResult(data);
         setTailoring(false);
-      } else if (result.status === "failed") {
-        setTailorError(t("errorTailor"));
+      } else if (result.status === 'failed') {
+        setTailorError(t('errorTailor'));
         setTailoring(false);
       } else {
         startTailorPolling(app.id);
       }
     } catch {
-      setTailorError(t("errorTailor"));
+      setTailorError(t('errorTailor'));
       setTailoring(false);
     }
   }
@@ -809,7 +861,7 @@ export function ApplicationDetailPage({
       setCoverLetter(result.cover_letter);
       setCopied(false);
     } catch {
-      setClError(t("errorCoverLetter"));
+      setClError(t('errorCoverLetter'));
     } finally {
       setGeneratingCL(false);
     }
@@ -823,14 +875,13 @@ export function ApplicationDetailPage({
   }
 
   async function handleGenerateNafta() {
-    setGeneratingNafta(true);
     setNaftaError(null);
     const combinedCompanyDesc = [
       app.company?.description ?? companyDescription,
       naftaCompanyDescription,
     ]
       .filter(Boolean)
-      .join("\n\n");
+      .join('\n\n');
     const payload: NaftaLetterPayload = {
       tn_profession: naftaTnProfession || undefined,
       is_continuation: naftaIsContinuation,
@@ -838,15 +889,24 @@ export function ApplicationDetailPage({
       date_of_birth: naftaDob || undefined,
       passport_number: naftaPassport || undefined,
       hours_per_week: naftaHoursPerWeek ? Number(naftaHoursPerWeek) : 40,
-      duration: naftaDuration || "3 years",
+      duration: naftaDuration || '3 years',
       company_description: combinedCompanyDesc || undefined,
     };
     try {
       const result = await generateNaftaLetter(app.id, payload, locale);
-      setNaftaLetter(result.nafta_letter);
+      if (result.status === 'complete') {
+        // Eager (no broker) path: already done – re-fetch to get the letter text.
+        const data = await getApplication(app.id);
+        setNaftaLetter(data.nafta_letter || null);
+        setGeneratingNafta(false);
+      } else if (result.status === 'failed') {
+        setNaftaError(t('errorNaftaLetter'));
+        setGeneratingNafta(false);
+      } else {
+        startNaftaPolling(app.id);
+      }
     } catch {
-      setNaftaError(t("errorNaftaLetter"));
-    } finally {
+      setNaftaError(t('errorNaftaLetter'));
       setGeneratingNafta(false);
     }
   }
@@ -856,8 +916,8 @@ export function ApplicationDetailPage({
     setExportingNaftaPDF(true);
     setNaftaPDFError(null);
     try {
-      const { pdf } = await import("@react-pdf/renderer");
-      const { NaftaLetterDocument } = await import("@/lib/resume-pdf");
+      const { pdf } = await import('@react-pdf/renderer');
+      const { NaftaLetterDocument } = await import('@/lib/resume-pdf');
       const blob = await pdf(
         <NaftaLetterDocument
           companyName={app.company_name}
@@ -865,16 +925,16 @@ export function ApplicationDetailPage({
         />,
       ).toBlob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
       a.download = `${app.company_name}-${app.job_title}-tn-nafta-letter.pdf`
         .toLowerCase()
-        .replace(/[^a-z0-9-]/g, "-")
-        .replace(/-+/g, "-");
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-');
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setNaftaPDFError(t("errorNaftaPDF"));
+      setNaftaPDFError(t('errorNaftaPDF'));
     } finally {
       setExportingNaftaPDF(false);
     }
@@ -889,7 +949,7 @@ export function ApplicationDetailPage({
       setTnSuggestModal(true);
     } catch (err) {
       const is400 = err instanceof ApplicationError && err.status === 400;
-      setTnSuggestError(t(is400 ? "tnSuggestNoData" : "tnSuggestError"));
+      setTnSuggestError(t(is400 ? 'tnSuggestNoData' : 'tnSuggestError'));
     } finally {
       setTnSuggestLoading(false);
     }
@@ -914,7 +974,7 @@ export function ApplicationDetailPage({
   // Persist the config so the Live Resume preview (separate tab) mirrors the
   // current selections, and live-updates via the browser `storage` event.
   useEffect(() => {
-    if (typeof window === "undefined" || !exportData) return;
+    if (typeof window === 'undefined' || !exportData) return;
     try {
       localStorage.setItem(resumeExportConfigKey(app.id), exportConfigJson);
     } catch {
@@ -950,8 +1010,8 @@ export function ApplicationDetailPage({
     }
     window.open(
       `/${locale}/applications/${app.id}/resume`,
-      "_self",
-      "noopener,noreferrer",
+      '_self',
+      'noopener,noreferrer',
     );
   }
 
@@ -961,21 +1021,21 @@ export function ApplicationDetailPage({
     setExportingPDF(true);
     setExportError(null);
     try {
-      const { pdf } = await import("@react-pdf/renderer");
-      const { ResumeDocument } = await import("@/lib/resume-pdf");
+      const { pdf } = await import('@react-pdf/renderer');
+      const { ResumeDocument } = await import('@/lib/resume-pdf');
 
       const blob = await pdf(<ResumeDocument {...resumeProps} />).toBlob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
       a.download = `${app.company_name}-${app.job_title}-resume.pdf`
         .toLowerCase()
-        .replace(/[^a-z0-9-]/g, "-")
-        .replace(/-+/g, "-");
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-');
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setExportError(t("errorExport"));
+      setExportError(t('errorExport'));
     } finally {
       setExportingPDF(false);
     }
@@ -1010,8 +1070,8 @@ export function ApplicationDetailPage({
     const filename =
       `${app.company_name}-${app.job_title}`
         .toLowerCase()
-        .replace(/[^a-z0-9-]/g, "-")
-        .replace(/-+/g, "-") + ".md";
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-') + '.md';
     downloadMarkdown(md, filename);
   }
 
@@ -1024,12 +1084,12 @@ export function ApplicationDetailPage({
   return (
     <Container
       paddingX={10}
-      styles={{ paddingTop: "var(--ui-navbar-height)", paddingBottom: "60px" }}
+      styles={{ paddingTop: 'var(--ui-navbar-height)', paddingBottom: '60px' }}
     >
       {confirmDelete && (
         <ConfirmationModal
-          title={t("confirmDeleteTitle")}
-          text={t("confirmDeleteText")}
+          title={t('confirmDeleteTitle')}
+          text={t('confirmDeleteText')}
           okCallback={() => {
             setConfirmDelete(false);
             handleDelete();
@@ -1041,7 +1101,7 @@ export function ApplicationDetailPage({
       <Box marginTop={20} />
 
       <Link href={`/${locale}/applications`} prefetch className="detail__back">
-        ← {t("backToList")}
+        ← {t('backToList')}
       </Link>
 
       {/* ── Header ────────────────────────────────────────────────────── */}
@@ -1056,7 +1116,7 @@ export function ApplicationDetailPage({
         <Box display="flex" alignItems="flex-start" gap={14}>
           <Box
             styles={{
-              position: "relative",
+              position: 'relative',
               width: 96,
               height: 96,
               flexShrink: 0,
@@ -1065,11 +1125,11 @@ export function ApplicationDetailPage({
             {app.company?.image_url ? (
               <Box
                 styles={{
-                  position: "relative",
-                  width: "100%",
-                  height: "100%",
+                  position: 'relative',
+                  width: '100%',
+                  height: '100%',
                   borderRadius: 8,
-                  overflow: "hidden",
+                  overflow: 'hidden',
                 }}
               >
                 <Image
@@ -1077,7 +1137,7 @@ export function ApplicationDetailPage({
                   alt={app.company_name}
                   fill
                   sizes="96px"
-                  style={{ objectFit: "cover" }}
+                  style={{ objectFit: 'cover' }}
                 />
               </Box>
             ) : (
@@ -1086,10 +1146,10 @@ export function ApplicationDetailPage({
                 alignItems="center"
                 justifyContent="center"
                 styles={{
-                  width: "100%",
-                  height: "100%",
+                  width: '100%',
+                  height: '100%',
                   borderRadius: 8,
-                  background: "var(--surface-2)",
+                  background: 'var(--surface-2)',
                 }}
               >
                 <Typography
@@ -1105,15 +1165,15 @@ export function ApplicationDetailPage({
             {app.company?.intel_score && (
               <Box
                 styles={{
-                  position: "absolute",
+                  position: 'absolute',
                   top: -4,
                   right: -4,
                   width: 14,
                   height: 14,
-                  borderRadius: "50%",
+                  borderRadius: '50%',
                   background:
                     SIGNAL_COLORS[app.company.intel_score as SignalLevel],
-                  border: "2px solid var(--background)",
+                  border: '2px solid var(--background)',
                 }}
               />
             )}
@@ -1122,7 +1182,7 @@ export function ApplicationDetailPage({
             <Badge
               variant="subtle"
               color={STATUS_COLORS[app.status]}
-              style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}
+              style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}
               size="lg"
             >
               {t(`statuses.${app.status}`)}
@@ -1150,7 +1210,7 @@ export function ApplicationDetailPage({
                 rel="noopener noreferrer"
                 className="detail__url"
               >
-                {t("jobUrlLink")} ↗
+                {t('jobUrlLink')} ↗
               </a>
             )}
           </Box>
@@ -1169,20 +1229,20 @@ export function ApplicationDetailPage({
                 kind="error"
                 disabled={deleting}
                 onClick={() => setConfirmDelete(true)}
-                aria-label={deleting ? t("deleting") : t("delete")}
+                aria-label={deleting ? t('deleting') : t('delete')}
               />
               <IconButton
                 icon="/icons/edit.svg"
                 kind="warning"
                 disabled={deleting}
                 onClick={openEdit}
-                aria-label={editing ? t("edit") : t("edit")}
+                aria-label={editing ? t('edit') : t('edit')}
               />
               <Button
                 text={
                   refreshingMetrics
-                    ? t("refreshingMetrics")
-                    : t("refreshMetrics")
+                    ? t('refreshingMetrics')
+                    : t('refreshMetrics')
                 }
                 type="button"
                 size="md"
@@ -1205,12 +1265,12 @@ export function ApplicationDetailPage({
           <form onSubmit={handleSave}>
             <Box display="flex" flexDirection="column" gap={14}>
               <Typography as="h2" variant="h3" fontWeight={600}>
-                {t("editTitle")}
+                {t('editTitle')}
               </Typography>
               <Box display="flex" gap={12} flexWrap="wrap">
                 <Box flex={1} styles={{ minWidth: 200 }}>
                   <TextInput
-                    label={t("companyLabel")}
+                    label={t('companyLabel')}
                     value={companyName}
                     onChange={setCompanyName}
                     required
@@ -1220,7 +1280,7 @@ export function ApplicationDetailPage({
                 </Box>
                 <Box flex={1} styles={{ minWidth: 200 }}>
                   <TextInput
-                    label={t("jobTitleLabel")}
+                    label={t('jobTitleLabel')}
                     value={jobTitle}
                     onChange={setJobTitle}
                     required
@@ -1230,13 +1290,13 @@ export function ApplicationDetailPage({
                 </Box>
               </Box>
               <Select
-                label={t("statusLabel")}
+                label={t('statusLabel')}
                 value={selectedStatus}
                 onChange={(v) => setSelectedStatus(v as ApplicationStatus)}
                 options={statusOptions}
               />
               <TextInput
-                label={t("locationLabel")}
+                label={t('locationLabel')}
                 value={location}
                 onChange={setLocation}
                 maxLength={200}
@@ -1245,7 +1305,7 @@ export function ApplicationDetailPage({
               <Box display="flex" gap={8} flexWrap="wrap" alignItems="flex-end">
                 <Box flex={1} styles={{ minWidth: 140 }}>
                   <TextInput
-                    label={t("salaryMinLabel")}
+                    label={t('salaryMinLabel')}
                     value={salaryMin}
                     onChange={setSalaryMin}
                     type="number"
@@ -1255,7 +1315,7 @@ export function ApplicationDetailPage({
                 </Box>
                 <Box flex={1} styles={{ minWidth: 140 }}>
                   <TextInput
-                    label={t("salaryMaxLabel")}
+                    label={t('salaryMaxLabel')}
                     value={salaryMax}
                     onChange={setSalaryMax}
                     type="number"
@@ -1265,18 +1325,18 @@ export function ApplicationDetailPage({
                 </Box>
                 <Box flex={1} styles={{ minWidth: 120 }}>
                   <Select
-                    label={t("salaryCurrencyLabel")}
+                    label={t('salaryCurrencyLabel')}
                     value={salaryCurrency}
                     onChange={(v) =>
-                      setSalaryCurrency(v as SalaryCurrency | "")
+                      setSalaryCurrency(v as SalaryCurrency | '')
                     }
                     options={[
-                      { value: "", label: t("salaryCurrencyPlaceholder") },
-                      { value: "USD", label: "USD" },
-                      { value: "CAD", label: "CAD" },
-                      { value: "EUR", label: "EUR" },
-                      { value: "MXN", label: "MXN" },
-                      { value: "GBP", label: "GBP" },
+                      { value: '', label: t('salaryCurrencyPlaceholder') },
+                      { value: 'USD', label: 'USD' },
+                      { value: 'CAD', label: 'CAD' },
+                      { value: 'EUR', label: 'EUR' },
+                      { value: 'MXN', label: 'MXN' },
+                      { value: 'GBP', label: 'GBP' },
                     ]}
                     width="100%"
                   />
@@ -1287,16 +1347,16 @@ export function ApplicationDetailPage({
                   variant="body"
                   color="var(--muted-foreground, #6b7280)"
                 >
-                  {t("workTypeLabel")}
+                  {t('workTypeLabel')}
                 </Typography>
                 <Box
                   display="flex"
                   flexDirection="column"
                   gap={8}
                   role="group"
-                  aria-label={t("workTypeLabel")}
+                  aria-label={t('workTypeLabel')}
                 >
-                  {(["remote", "onsite", "hybrid"] as WorkType[]).map((wt) => (
+                  {(['remote', 'onsite', 'hybrid'] as WorkType[]).map((wt) => (
                     <Box
                       key={wt}
                       display="flex"
@@ -1323,15 +1383,15 @@ export function ApplicationDetailPage({
                 </Box>
               </Box>
               <Select
-                label={t("usCitizenOrPrLabel")}
+                label={t('usCitizenOrPrLabel')}
                 value={usCitizenOrPr}
                 onChange={(v) =>
-                  setUsCitizenOrPr(v as "null" | "true" | "false")
+                  setUsCitizenOrPr(v as 'null' | 'true' | 'false')
                 }
                 options={[
-                  { value: "null", label: t("usCitizenOrPr.null") },
-                  { value: "true", label: t("usCitizenOrPr.true") },
-                  { value: "false", label: t("usCitizenOrPr.false") },
+                  { value: 'null', label: t('usCitizenOrPr.null') },
+                  { value: 'true', label: t('usCitizenOrPr.true') },
+                  { value: 'false', label: t('usCitizenOrPr.false') },
                 ]}
                 width="100%"
               />
@@ -1341,7 +1401,7 @@ export function ApplicationDetailPage({
                   color="var(--muted-foreground, #6b7280)"
                   marginBottom={6}
                 >
-                  {t("jdLabel")}
+                  {t('jdLabel')}
                 </Typography>
                 <TextInput
                   multirow
@@ -1350,7 +1410,7 @@ export function ApplicationDetailPage({
                   onChange={setJobDescription}
                   required
                   width="100%"
-                  aria-label={t("jdLabel")}
+                  aria-label={t('jdLabel')}
                 />
               </Box>
               <Box>
@@ -1364,7 +1424,7 @@ export function ApplicationDetailPage({
                     variant="body"
                     color="var(--muted-foreground, #6b7280)"
                   >
-                    {t("notesLabel")}
+                    {t('notesLabel')}
                   </Typography>
                   <SpeechButton
                     mode="batch"
@@ -1381,7 +1441,7 @@ export function ApplicationDetailPage({
                   value={notes}
                   onChange={setNotes}
                   width="100%"
-                  aria-label={t("notesLabel")}
+                  aria-label={t('notesLabel')}
                 />
               </Box>
               {saveError && (
@@ -1391,13 +1451,13 @@ export function ApplicationDetailPage({
               )}
               <Box display="flex" gap={8} justifyContent="flex-end">
                 <Button
-                  text={t("cancel")}
+                  text={t('cancel')}
                   type="button"
                   size="md"
                   onClick={() => setEditing(false)}
                 />
                 <Button
-                  text={saving ? t("saving") : t("save")}
+                  text={saving ? t('saving') : t('save')}
                   type="submit"
                   size="md"
                   kind="primary"
@@ -1425,18 +1485,18 @@ export function ApplicationDetailPage({
               <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
                 <Card gap={10}>
                   <MatchMetrics
-                    explainAriaLabel={t("metricExplain")}
+                    explainAriaLabel={t('metricExplain')}
                     onExplain={(item) =>
                       setExplainModal({
                         title: item.label,
-                        text: item.explanation ?? "",
+                        text: item.explanation ?? '',
                       })
                     }
                     items={[
                       ...(app.overall_match != null
                         ? [
                             {
-                              label: t("overallMatch"),
+                              label: t('overallMatch'),
                               value: app.overall_match,
                               explanation: app.overall_match_explanation,
                             },
@@ -1445,7 +1505,7 @@ export function ApplicationDetailPage({
                       ...(app.technical_match != null
                         ? [
                             {
-                              label: t("technicalMatch"),
+                              label: t('technicalMatch'),
                               value: app.technical_match,
                               explanation: app.technical_match_explanation,
                             },
@@ -1454,7 +1514,7 @@ export function ApplicationDetailPage({
                       ...(app.nafta_tn_likelihood != null
                         ? [
                             {
-                              label: t("naftaLikelihood"),
+                              label: t('naftaLikelihood'),
                               value: app.nafta_tn_likelihood,
                               explanation: app.nafta_tn_likelihood_explanation,
                             },
@@ -1468,41 +1528,41 @@ export function ApplicationDetailPage({
             <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
               <Card gap={10}>
                 <InfoField
-                  label={t("locationLabel")}
-                  value={app.location || t("notSpecified")}
+                  label={t('locationLabel')}
+                  value={app.location || t('notSpecified')}
                 />
                 <InfoField
-                  label={t("workTypeLabel")}
+                  label={t('workTypeLabel')}
                   value={
                     app.work_type && app.work_type.length > 0
                       ? app.work_type
                           .map((wt) => t(`workTypes.${wt}`))
-                          .join(", ")
-                      : t("notSpecified")
+                          .join(', ')
+                      : t('notSpecified')
                   }
                 />
               </Card>
             </Grid>
             <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
               <InfoCard
-                label={t("salaryLabel")}
+                label={t('salaryLabel')}
                 value={formatSalary(
                   app.salary_min,
                   app.salary_max,
                   app.salary_currency,
-                  t("notSpecified"),
+                  t('notSpecified'),
                 )}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
               <InfoCard
-                label={t("usCitizenOrPrLabel")}
+                label={t('usCitizenOrPrLabel')}
                 value={t(
                   app.us_citizen_or_pr_required == null
-                    ? "usCitizenOrPr.null"
+                    ? 'usCitizenOrPr.null'
                     : app.us_citizen_or_pr_required
-                      ? "usCitizenOrPr.true"
-                      : "usCitizenOrPr.false",
+                      ? 'usCitizenOrPr.true'
+                      : 'usCitizenOrPr.false',
                 )}
               />
             </Grid>
@@ -1520,8 +1580,8 @@ export function ApplicationDetailPage({
 
       {tnSuggestModal && (
         <ConfirmationModal
-          title={t("tnSuggestModalTitle")}
-          text={t("tnSuggestModalSubtitle")}
+          title={t('tnSuggestModalTitle')}
+          text={t('tnSuggestModalSubtitle')}
           okCallback={() => setTnSuggestModal(false)}
           panelMaxWidth="540px"
         >
@@ -1531,16 +1591,16 @@ export function ApplicationDetailPage({
                 variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
-                {t("tnSuggestNoMatches")}
+                {t('tnSuggestNoMatches')}
               </Typography>
             ) : (
               tnSuggestResults.map((r) => {
                 const color =
                   r.likelihood >= 70
-                    ? "var(--success, #22c55e)"
+                    ? 'var(--success, #22c55e)'
                     : r.likelihood >= 45
-                      ? "#f59e0b"
-                      : "var(--error, #ef4444)";
+                      ? '#f59e0b'
+                      : 'var(--error, #ef4444)';
                 return (
                   <Box
                     key={r.category}
@@ -1580,10 +1640,10 @@ export function ApplicationDetailPage({
       {!editing && (
         <Box marginBottom={28} marginTop={40}>
           <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
-            {t("jdLabel")}
+            {t('jdLabel')}
           </Typography>
           <Box
-            styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+            styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }}
             marginBottom={16}
           />
           <Card gap={8}>
@@ -1591,8 +1651,8 @@ export function ApplicationDetailPage({
               as="p"
               variant="body"
               styles={{
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
                 lineHeight: 1.6,
               }}
             >
@@ -1603,9 +1663,9 @@ export function ApplicationDetailPage({
                 variant="body"
                 color="var(--muted-foreground, #6b7280)"
                 as="p"
-                styles={{ marginTop: "12px", marginBottom: "4px" }}
+                styles={{ marginTop: '12px', marginBottom: '4px' }}
               >
-                {t("jobUrlLabel")}
+                {t('jobUrlLabel')}
               </Typography>
             )}
             {app.job_url && (
@@ -1623,16 +1683,16 @@ export function ApplicationDetailPage({
                 variant="body"
                 color="var(--muted-foreground, #6b7280)"
                 as="p"
-                styles={{ marginTop: "12px", marginBottom: "6px" }}
+                styles={{ marginTop: '12px', marginBottom: '6px' }}
               >
-                {t("notesLabel")}
+                {t('notesLabel')}
               </Typography>
             )}
             {app.notes && (
               <Typography
                 as="p"
                 variant="body"
-                styles={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                styles={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
               >
                 {app.notes}
               </Typography>
@@ -1645,39 +1705,39 @@ export function ApplicationDetailPage({
       {!editing && (
         <Box marginBottom={28} marginTop={40}>
           <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
-            {t("companyInfoTitle")}
+            {t('companyInfoTitle')}
           </Typography>
           <Box
-            styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+            styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }}
             marginBottom={16}
           />
 
           {/* Gathering / failed states */}
-          {(app.company?.status === "pending" ||
-            app.company?.status === "processing") && (
+          {(app.company?.status === 'pending' ||
+            app.company?.status === 'processing') && (
             <Box display="flex" alignItems="center" gap={8} marginBottom={14}>
-              <Spinner size={16} label={t("gatheringCompanyData")} />
+              <Spinner size={16} label={t('gatheringCompanyData')} />
               <Typography
                 variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
-                {t("gatheringCompanyData")}
+                {t('gatheringCompanyData')}
               </Typography>
             </Box>
           )}
-          {app.company?.status === "failed" &&
+          {app.company?.status === 'failed' &&
             !companyDescription &&
             !companyIntel && (
               <Typography
                 variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
-                {t("companyDataUnavailable")}
+                {t('companyDataUnavailable')}
               </Typography>
             )}
           {!app.company && (
             <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-              {t("companyInfoEmpty")}
+              {t('companyInfoEmpty')}
             </Typography>
           )}
 
@@ -1691,7 +1751,7 @@ export function ApplicationDetailPage({
                     fontWeight={600}
                     color="var(--foreground)"
                   >
-                    {t("companyAboutTitle")}
+                    {t('companyAboutTitle')}
                   </Typography>
 
                   <Card gap={8}>
@@ -1699,8 +1759,8 @@ export function ApplicationDetailPage({
                       as="p"
                       variant="body"
                       styles={{
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
                         lineHeight: 1.6,
                       }}
                     >
@@ -1716,7 +1776,7 @@ export function ApplicationDetailPage({
                     fontWeight={600}
                     color="var(--foreground)"
                   >
-                    {t("companyAnalysisTitle")}
+                    {t('companyAnalysisTitle')}
                   </Typography>
                   <CompanyAnalysisPanel analysis={companyAnalysis} />
                 </Box>
@@ -1726,7 +1786,7 @@ export function ApplicationDetailPage({
                   {(companyIntel.company_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <IntelSwiperCard
-                        title={t("companyNewsTitle")}
+                        title={t('companyNewsTitle')}
                         items={companyIntel.company_news}
                       />
                     </Grid>
@@ -1734,7 +1794,7 @@ export function ApplicationDetailPage({
                   {(companyIntel.hiring_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <IntelSwiperCard
-                        title={t("companyHiringTitle")}
+                        title={t('companyHiringTitle')}
                         items={companyIntel.hiring_news}
                       />
                     </Grid>
@@ -1742,7 +1802,7 @@ export function ApplicationDetailPage({
                   {(companyIntel.layoff_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <IntelSwiperCard
-                        title={t("companyLayoffsTitle")}
+                        title={t('companyLayoffsTitle')}
                         items={companyIntel.layoff_news}
                       />
                     </Grid>
@@ -1750,7 +1810,7 @@ export function ApplicationDetailPage({
                   {(companyIntel.reputation?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <IntelSwiperCard
-                        title={t("companyReputationTitle")}
+                        title={t('companyReputationTitle')}
                         items={companyIntel.reputation}
                       />
                     </Grid>
@@ -1758,7 +1818,7 @@ export function ApplicationDetailPage({
                   {(companyIntel.funding_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <IntelSwiperCard
-                        title={t("companyFundingTitle")}
+                        title={t('companyFundingTitle')}
                         items={companyIntel.funding_news}
                       />
                     </Grid>
@@ -1766,7 +1826,7 @@ export function ApplicationDetailPage({
                   {(companyIntel.leadership_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <IntelSwiperCard
-                        title={t("companyLeadershipTitle")}
+                        title={t('companyLeadershipTitle')}
                         items={companyIntel.leadership_news}
                       />
                     </Grid>
@@ -1774,7 +1834,7 @@ export function ApplicationDetailPage({
                   {(companyIntel.acquisition_news?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <IntelSwiperCard
-                        title={t("companyAcquisitionsTitle")}
+                        title={t('companyAcquisitionsTitle')}
                         items={companyIntel.acquisition_news}
                       />
                     </Grid>
@@ -1782,7 +1842,7 @@ export function ApplicationDetailPage({
                   {(companyIntel.engineering_culture?.length ?? 0) > 0 && (
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <IntelSwiperCard
-                        title={t("companyEngineeringCultureTitle")}
+                        title={t('companyEngineeringCultureTitle')}
                         items={companyIntel.engineering_culture}
                       />
                     </Grid>
@@ -1805,15 +1865,15 @@ export function ApplicationDetailPage({
           marginBottom={8}
         >
           <Typography as="h2" variant="h3" fontWeight={600}>
-            {t("tailorTitle")}
+            {t('tailorTitle')}
           </Typography>
           <Button
             text={
               tailoring
-                ? t("tailoring")
+                ? t('tailoring')
                 : tailoredBullets
-                  ? t("tailorAgain")
-                  : t("tailor")
+                  ? t('tailorAgain')
+                  : t('tailor')
             }
             icon="/icons/enhance.svg"
             type="button"
@@ -1824,11 +1884,11 @@ export function ApplicationDetailPage({
           />
         </Box>
         <Box
-          styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+          styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }}
           marginBottom={12}
         />
 
-        {tailoring && <ProgressBar label={t("tailoring")} />}
+        {tailoring && <ProgressBar label={t('tailoring')} />}
 
         {tailorError && (
           <Typography variant="body" color="var(--error, #ef4444)">
@@ -1838,7 +1898,7 @@ export function ApplicationDetailPage({
         {tailoredBullets && tailoredBullets.length > 0 && (
           <Box display="flex" flexDirection="column" gap={16}>
             <Typography variant="body" color="var(--muted-foreground, #6b7280)">
-              {t("tailoredSubtitle")}
+              {t('tailoredSubtitle')}
             </Typography>
             {professionalSummary && (
               <Card display="flex" flexDirection="column" gap={6}>
@@ -1847,15 +1907,15 @@ export function ApplicationDetailPage({
                   fontWeight={600}
                   color="var(--foreground)"
                 >
-                  {t("professionalSummaryLabel")}
+                  {t('professionalSummaryLabel')}
                 </Typography>
                 <Typography
                   as="p"
                   variant="body"
                   styles={{
                     lineHeight: 1.7,
-                    wordBreak: "break-word",
-                    fontStyle: "italic",
+                    wordBreak: 'break-word',
+                    fontStyle: 'italic',
                   }}
                 >
                   {professionalSummary}
@@ -1869,7 +1929,7 @@ export function ApplicationDetailPage({
                   fontWeight={600}
                   color="var(--foreground)"
                 >
-                  {t("tailoredSkillsTitle")}
+                  {t('tailoredSkillsTitle')}
                 </Typography>
                 <Card>
                   <Box display="flex" flexWrap="wrap" gap={8}>
@@ -1878,9 +1938,9 @@ export function ApplicationDetailPage({
                         key={skill.id}
                         variant="body"
                         styles={{
-                          padding: "2px 10px",
+                          padding: '2px 10px',
                           borderRadius: 999,
-                          border: "1px solid var(--border, #e5e7eb)",
+                          border: '1px solid var(--border, #e5e7eb)',
                         }}
                       >
                         {skill.name}
@@ -1897,7 +1957,7 @@ export function ApplicationDetailPage({
                   variant="body"
                   fontWeight={600}
                   color="var(--foreground)"
-                  styles={{ textTransform: "capitalize" }}
+                  styles={{ textTransform: 'capitalize' }}
                 >
                   {t(`categories.${cat}`)}
                 </Typography>
@@ -1907,7 +1967,7 @@ export function ApplicationDetailPage({
                       key={b.id}
                       as="p"
                       variant="body"
-                      styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
+                      styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}
                     >
                       - {b.tailored_text}
                     </Typography>
@@ -1924,7 +1984,7 @@ export function ApplicationDetailPage({
                   fontWeight={600}
                   color="var(--foreground)"
                 >
-                  {t("tailoredWorkExpTitle")}
+                  {t('tailoredWorkExpTitle')}
                 </Typography>
                 {tailoredWorkExperiences.map((twe) => {
                   const we = exportData?.workExps.find((e) => e.id === twe.id);
@@ -1948,7 +2008,7 @@ export function ApplicationDetailPage({
                       <Typography
                         as="p"
                         variant="body"
-                        styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
+                        styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}
                       >
                         {twe.tailored_description}
                       </Typography>
@@ -1966,7 +2026,7 @@ export function ApplicationDetailPage({
                   fontWeight={600}
                   color="var(--foreground)"
                 >
-                  {t("tailoredProjectsTitle")}
+                  {t('tailoredProjectsTitle')}
                 </Typography>
                 {tailoredProjects.map((tp) => {
                   const proj = exportData?.projects.find((p) => p.id === tp.id);
@@ -1990,7 +2050,7 @@ export function ApplicationDetailPage({
                       <Typography
                         as="p"
                         variant="body"
-                        styles={{ lineHeight: 1.6, wordBreak: "break-word" }}
+                        styles={{ lineHeight: 1.6, wordBreak: 'break-word' }}
                       >
                         {tp.tailored_description}
                       </Typography>
@@ -2015,10 +2075,10 @@ export function ApplicationDetailPage({
             marginBottom={8}
           >
             <Typography as="h2" variant="h3" fontWeight={600}>
-              {t("exportTitle")}
+              {t('exportTitle')}
             </Typography>
             <Button
-              text={t("liveResume")}
+              text={t('liveResume')}
               type="button"
               size="md"
               icon="/icons/fullscreen.svg"
@@ -2029,7 +2089,7 @@ export function ApplicationDetailPage({
             />
           </Box>
           <Box
-            styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+            styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }}
             marginBottom={12}
           />
           <Typography
@@ -2038,12 +2098,12 @@ export function ApplicationDetailPage({
             marginBottom={14}
             as="p"
           >
-            {t("exportSubtitle")}
+            {t('exportSubtitle')}
           </Typography>
 
           {/* ── Customization ── */}
           <Typography as="h3" variant="body" fontWeight={600} marginBottom={10}>
-            {t("exportCustomizeTitle")}
+            {t('exportCustomizeTitle')}
           </Typography>
 
           {exportDataLoading && (
@@ -2053,7 +2113,7 @@ export function ApplicationDetailPage({
                 variant="body"
                 color="var(--muted-foreground, #6b7280)"
               >
-                {t("exportLoadingData")}
+                {t('exportLoadingData')}
               </Typography>
             </Box>
           )}
@@ -2068,24 +2128,24 @@ export function ApplicationDetailPage({
               {/* Global toggles */}
               <Card display="flex" flexDirection="column" gap={10}>
                 <SwitchRow
-                  label={t("exportIncludeContact")}
+                  label={t('exportIncludeContact')}
                   checked={includeContact}
                   onChange={setIncludeContact}
                 />
                 <SwitchRow
-                  label={t("exportIncludeLinks")}
+                  label={t('exportIncludeLinks')}
                   checked={includeLinks}
                   onChange={setIncludeLinks}
                 />
                 <SwitchRow
-                  label={t("exportIncludeSkills")}
+                  label={t('exportIncludeSkills')}
                   checked={includeSkills}
                   onChange={setIncludeSkills}
                 />
                 {profile?.profile_picture && (
                   <Box display="flex" flexDirection="column" gap={4}>
                     <SwitchRow
-                      label={t("exportIncludePhoto")}
+                      label={t('exportIncludePhoto')}
                       checked={includePhoto}
                       onChange={setIncludePhoto}
                     />
@@ -2093,7 +2153,7 @@ export function ApplicationDetailPage({
                       variant="body"
                       color="var(--muted-foreground, #6b7280)"
                     >
-                      {t("exportIncludePhotoHint")}
+                      {t('exportIncludePhotoHint')}
                     </Typography>
                   </Box>
                 )}
@@ -2103,7 +2163,7 @@ export function ApplicationDetailPage({
               {exportData.workExps.length > 0 && (
                 <Box display="flex" flexDirection="column" gap={8}>
                   <Typography variant="body" fontWeight={600}>
-                    {t("exportJobsTitle")}
+                    {t('exportJobsTitle')}
                   </Typography>
                   <Grid container spacing={2}>
                     {exportData.workExps.map((exp) => {
@@ -2117,8 +2177,8 @@ export function ApplicationDetailPage({
                             gap={12}
                             styles={{
                               opacity: isIncluded ? 1 : 0.5,
-                              transition: "opacity 0.2s ease",
-                              height: "100%",
+                              transition: 'opacity 0.2s ease',
+                              height: '100%',
                             }}
                           >
                             <Box display="flex" flexDirection="column" gap={4}>
@@ -2141,7 +2201,7 @@ export function ApplicationDetailPage({
                                     size="sm"
                                     color="var(--primary, #06b6d4)"
                                   >
-                                    {t("aiTailored")}
+                                    {t('aiTailored')}
                                   </Badge>
                                 )}
                               </Box>
@@ -2154,7 +2214,7 @@ export function ApplicationDetailPage({
                             </Box>
                             <Box display="flex" flexDirection="column" gap={8}>
                               <SwitchRow
-                                label={t("exportIncludeItem")}
+                                label={t('exportIncludeItem')}
                                 checked={isIncluded}
                                 onChange={(checked) =>
                                   setIncludedWorkExpIds((prev) => {
@@ -2167,7 +2227,7 @@ export function ApplicationDetailPage({
                               />
                               {isTailored && isIncluded && (
                                 <SwitchRow
-                                  label={t("useTailoredVersion")}
+                                  label={t('useTailoredVersion')}
                                   checked={useTailoredWeIds.has(exp.id)}
                                   onChange={(checked) =>
                                     setUseTailoredWeIds((prev) => {
@@ -2192,7 +2252,7 @@ export function ApplicationDetailPage({
               {exportData.projects.length > 0 && (
                 <Box display="flex" flexDirection="column" gap={8}>
                   <Typography variant="body" fontWeight={600}>
-                    {t("exportProjectsTitle")}
+                    {t('exportProjectsTitle')}
                   </Typography>
                   <Grid container spacing={2}>
                     {exportData.projects.map((proj) => {
@@ -2206,8 +2266,8 @@ export function ApplicationDetailPage({
                             gap={12}
                             styles={{
                               opacity: isIncluded ? 1 : 0.5,
-                              transition: "opacity 0.2s ease",
-                              height: "100%",
+                              transition: 'opacity 0.2s ease',
+                              height: '100%',
                             }}
                           >
                             <Box
@@ -2229,13 +2289,13 @@ export function ApplicationDetailPage({
                                   size="sm"
                                   color="var(--primary, #06b6d4)"
                                 >
-                                  {t("aiTailored")}
+                                  {t('aiTailored')}
                                 </Badge>
                               )}
                             </Box>
                             <Box display="flex" flexDirection="column" gap={8}>
                               <SwitchRow
-                                label={t("exportIncludeItem")}
+                                label={t('exportIncludeItem')}
                                 checked={isIncluded}
                                 onChange={(checked) =>
                                   setIncludedProjectIds((prev) => {
@@ -2248,7 +2308,7 @@ export function ApplicationDetailPage({
                               />
                               {isTailored && isIncluded && (
                                 <SwitchRow
-                                  label={t("useTailoredVersion")}
+                                  label={t('useTailoredVersion')}
                                   checked={useTailoredProjectIds.has(proj.id)}
                                   onChange={(checked) =>
                                     setUseTailoredProjectIds((prev) => {
@@ -2273,7 +2333,7 @@ export function ApplicationDetailPage({
               {exportData.educations.length > 0 && (
                 <Box display="flex" flexDirection="column" gap={8}>
                   <Typography variant="body" fontWeight={600}>
-                    {t("exportEducationTitle")}
+                    {t('exportEducationTitle')}
                   </Typography>
                   <Grid container spacing={2}>
                     {exportData.educations.map((edu) => {
@@ -2299,7 +2359,7 @@ export function ApplicationDetailPage({
                               )}
                             </Box>
                             <SwitchRow
-                              label={t("exportIncludeItem")}
+                              label={t('exportIncludeItem')}
                               checked={isIncluded}
                               onChange={(checked) =>
                                 setIncludedEducationIds((prev) => {
@@ -2322,7 +2382,7 @@ export function ApplicationDetailPage({
               {exportData.languages.length > 0 && (
                 <Box display="flex" flexDirection="column" gap={8}>
                   <Typography variant="body" fontWeight={600}>
-                    {t("exportLanguagesTitle")}
+                    {t('exportLanguagesTitle')}
                   </Typography>
                   <Card gap={12}>
                     {exportData.languages.map((lang) => (
@@ -2349,7 +2409,7 @@ export function ApplicationDetailPage({
           {/* ── Export buttons ── */}
           <Box display="flex" justifyContent="center" gap={10} flexWrap="wrap">
             <Button
-              text={t("exportMarkdown")}
+              text={t('exportMarkdown')}
               type="button"
               size="md"
               disabled={exportDataLoading || !exportData}
@@ -2357,7 +2417,7 @@ export function ApplicationDetailPage({
               kind="primary"
             />
             <Button
-              text={exportingPDF ? t("exportingPDF") : t("exportPDF")}
+              text={exportingPDF ? t('exportingPDF') : t('exportPDF')}
               type="button"
               size="md"
               kind="primary"
@@ -2390,15 +2450,15 @@ export function ApplicationDetailPage({
             marginBottom={8}
           >
             <Typography as="h2" variant="h3" fontWeight={600}>
-              {t("coverLetterTitle")}
+              {t('coverLetterTitle')}
             </Typography>
             <Button
               text={
                 generatingCL
-                  ? t("generatingCL")
+                  ? t('generatingCL')
                   : coverLetter
-                    ? t("regenerateCL")
-                    : t("generateCL")
+                    ? t('regenerateCL')
+                    : t('generateCL')
               }
               type="button"
               size="md"
@@ -2408,10 +2468,10 @@ export function ApplicationDetailPage({
             />
           </Box>
           <Box
-            styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+            styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }}
             marginBottom={12}
           />
-          {generatingCL && <ProgressBar label={t("generatingCL")} />}
+          {generatingCL && <ProgressBar label={t('generatingCL')} />}
           {clError && (
             <Typography variant="body" color="var(--error, #ef4444)">
               {clError}
@@ -2421,10 +2481,10 @@ export function ApplicationDetailPage({
             <Box display="flex" flexDirection="column" gap={8}>
               <Box display="flex" justifyContent="flex-end">
                 <Button
-                  text={copied ? t("copied") : t("copy")}
+                  text={copied ? t('copied') : t('copy')}
                   type="button"
                   size="md"
-                  kind={copied ? "success" : undefined}
+                  kind={copied ? 'success' : undefined}
                   onClick={handleCopy}
                 />
               </Box>
@@ -2435,7 +2495,7 @@ export function ApplicationDetailPage({
                 onChange={setCoverLetter}
                 rows={16}
                 width="100%"
-                aria-label={t("coverLetterTitle")}
+                aria-label={t('coverLetterTitle')}
               />
             </Box>
           )}
@@ -2445,10 +2505,10 @@ export function ApplicationDetailPage({
       {/* ── NAFTA TN Visa Letter ──────────────────────────────────────── */}
       <Box marginBottom={28} marginTop={48}>
         <Typography as="h2" variant="h3" fontWeight={600} marginBottom={8}>
-          {t("naftaLetterTitle")}
+          {t('naftaLetterTitle')}
         </Typography>
         <Box
-          styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+          styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }}
           marginBottom={12}
         />
         <Typography
@@ -2457,7 +2517,7 @@ export function ApplicationDetailPage({
           marginBottom={16}
           as="p"
         >
-          {t("naftaLetterSubtitle")}
+          {t('naftaLetterSubtitle')}
         </Typography>
 
         {/* ── NAFTA parameters ── */}
@@ -2467,11 +2527,11 @@ export function ApplicationDetailPage({
               <Box display="flex" alignItems="center" gap={8}>
                 <Box styles={{ flex: 1 }}>
                   <Select
-                    label={t("naftaProfessionLabel")}
+                    label={t('naftaProfessionLabel')}
                     value={naftaTnProfession}
                     onChange={setNaftaTnProfession}
                     options={[
-                      { value: "", label: t("naftaProfessionPlaceholder") },
+                      { value: '', label: t('naftaProfessionPlaceholder') },
                       ...TN_PROFESSIONS,
                     ]}
                     disabled={tnSuggestLoading}
@@ -2485,23 +2545,23 @@ export function ApplicationDetailPage({
                   iconSize="16px"
                   iconColor={
                     tnSuggestLoading
-                      ? "var(--primary, #06b6d4)"
-                      : "var(--foreground, #171717)"
+                      ? 'var(--primary, #06b6d4)'
+                      : 'var(--foreground, #171717)'
                   }
                   disabled={tnSuggestLoading}
                   onClick={() => void handleSuggestTnCategory()}
-                  aria-label={t("tnSuggestLabel")}
-                  title={t("tnSuggestLabel")}
+                  aria-label={t('tnSuggestLabel')}
+                  title={t('tnSuggestLabel')}
                   className={[
-                    "ai-enhance-btn",
-                    tnSuggestLoading ? "ai-enhance-btn--busy" : "",
+                    'ai-enhance-btn',
+                    tnSuggestLoading ? 'ai-enhance-btn--busy' : '',
                   ]
                     .filter(Boolean)
-                    .join(" ")}
+                    .join(' ')}
                 />
               </Box>
               {tnSuggestLoading && (
-                <ProgressBar label={t("tnSuggestGenerating")} marginTop={8} />
+                <ProgressBar label={t('tnSuggestGenerating')} marginTop={8} />
               )}
               {tnSuggestError && (
                 <Typography
@@ -2515,11 +2575,11 @@ export function ApplicationDetailPage({
             </Box>
             <Box flex={1} styles={{ minWidth: 140 }}>
               <Select
-                label={t("naftaCitizenshipLabel")}
+                label={t('naftaCitizenshipLabel')}
                 value={naftaCitizenship}
                 onChange={setNaftaCitizenship}
                 options={[
-                  { value: "", label: t("naftaCitizenshipPlaceholder") },
+                  { value: '', label: t('naftaCitizenshipPlaceholder') },
                   ...CITIZENSHIP_OPTIONS,
                 ]}
                 width="100%"
@@ -2530,7 +2590,7 @@ export function ApplicationDetailPage({
           <Box display="flex" gap={12} flexWrap="wrap">
             <Box flex={1} styles={{ minWidth: 160 }}>
               <TextInput
-                label={t("naftaDobLabel")}
+                label={t('naftaDobLabel')}
                 value={naftaDob}
                 onChange={setNaftaDob}
                 placeholder="e.g. January 1, 1990"
@@ -2539,7 +2599,7 @@ export function ApplicationDetailPage({
             </Box>
             <Box flex={1} styles={{ minWidth: 160 }}>
               <TextInput
-                label={t("naftaPassportLabel")}
+                label={t('naftaPassportLabel')}
                 value={naftaPassport}
                 onChange={setNaftaPassport}
                 width="100%"
@@ -2550,7 +2610,7 @@ export function ApplicationDetailPage({
           <Box display="flex" gap={12} flexWrap="wrap">
             <Box flex={1} styles={{ minWidth: 120 }}>
               <TextInput
-                label={t("naftaHoursLabel")}
+                label={t('naftaHoursLabel')}
                 value={naftaHoursPerWeek}
                 onChange={setNaftaHoursPerWeek}
                 type="number"
@@ -2559,7 +2619,7 @@ export function ApplicationDetailPage({
             </Box>
             <Box flex={1} styles={{ minWidth: 160 }}>
               <TextInput
-                label={t("naftaDurationLabel")}
+                label={t('naftaDurationLabel')}
                 value={naftaDuration}
                 onChange={setNaftaDuration}
                 placeholder="e.g. 3 years"
@@ -2569,7 +2629,7 @@ export function ApplicationDetailPage({
           </Box>
 
           <SwitchRow
-            label={t("naftaContinuationLabel")}
+            label={t('naftaContinuationLabel')}
             checked={naftaIsContinuation}
             onChange={setNaftaIsContinuation}
           />
@@ -2582,16 +2642,16 @@ export function ApplicationDetailPage({
               marginBottom={6}
               marginTop={8}
             >
-              {t("naftaCompanyDescLabel")}
+              {t('naftaCompanyDescLabel')}
             </Typography>
             <TextInput
               multirow
               rows={10}
               value={naftaCompanyDescription}
               onChange={setNaftaCompanyDescription}
-              placeholder={t("naftaCompanyDescPlaceholder")}
+              placeholder={t('naftaCompanyDescPlaceholder')}
               width="100%"
-              aria-label={t("naftaCompanyDescLabel")}
+              aria-label={t('naftaCompanyDescLabel')}
             />
           </Box>
         </Card>
@@ -2600,18 +2660,22 @@ export function ApplicationDetailPage({
           <Button
             text={
               generatingNafta
-                ? t("generatingNafta")
+                ? t('generatingNafta')
                 : naftaLetter
-                  ? t("regenerateNafta")
-                  : t("generateNafta")
+                  ? t('regenerateNafta')
+                  : t('generateNafta')
             }
             type="button"
             size="md"
             kind="primary"
-            disabled={generatingNafta}
+            disabled={
+              generatingNafta ||
+              app.company?.status === 'pending' ||
+              app.company?.status === 'processing'
+            }
             onClick={handleGenerateNafta}
           />
-          {generatingNafta && <ProgressBar label={t("generatingNafta")} />}
+          {generatingNafta && <ProgressBar label={t('generatingNafta')} />}
         </Box>
         {naftaError && (
           <Typography variant="body" color="var(--error, #ef4444)">
@@ -2625,7 +2689,7 @@ export function ApplicationDetailPage({
               color="var(--muted-foreground, #6b7280)"
               as="p"
             >
-              {t("naftaEditHint")}
+              {t('naftaEditHint')}
             </Typography>
             <TextInput
               multirow
@@ -2634,14 +2698,14 @@ export function ApplicationDetailPage({
               onChange={setNaftaLetter}
               rows={24}
               width="100%"
-              aria-label={t("naftaLetterTitle")}
+              aria-label={t('naftaLetterTitle')}
             />
             <Box display="flex" gap={8} justifyContent="center">
               <Button
                 text={
                   exportingNaftaPDF
-                    ? t("downloadingNaftaPDF")
-                    : t("downloadNaftaPDF")
+                    ? t('downloadingNaftaPDF')
+                    : t('downloadNaftaPDF')
                 }
                 type="button"
                 size="md"

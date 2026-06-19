@@ -175,6 +175,10 @@ def compute_match_metrics(user, job_description: str, job_title: str, company_na
         .order_by('-start_year')
         .values('institution', 'degree', 'field_of_study', 'start_year', 'end_year')
     )
+    try:
+        tn_profession = user.profile.tn_profession or ''
+    except Exception:
+        tn_profession = ''
 
     overall, overall_explanation = calculate_overall_match(
         job_description=job_description,
@@ -200,6 +204,7 @@ def compute_match_metrics(user, job_description: str, job_title: str, company_na
         skills=skills,
         work_experiences=work_experiences,
         educations=educations,
+        tn_profession=tn_profession,
         locale=locale,
     )
 

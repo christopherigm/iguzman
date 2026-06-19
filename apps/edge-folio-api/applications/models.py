@@ -38,6 +38,12 @@ TAILOR_STATUS_CHOICES = [
     ('failed', 'Failed'),
 ]
 
+NAFTA_STATUS_CHOICES = [
+    ('processing', 'Processing'),
+    ('complete', 'Complete'),
+    ('failed', 'Failed'),
+]
+
 INTEL_SCORE_CHOICES = [
     ('positive', 'Positive'),
     ('mixed', 'Mixed'),
@@ -119,6 +125,8 @@ class JobApplication(Common):
     professional_summary = models.TextField(blank=True)
     cover_letter = models.TextField(blank=True)
     nafta_letter = models.TextField(blank=True)
+    nafta_letter_status = models.CharField(max_length=20, choices=NAFTA_STATUS_CHOICES, blank=True)
+    nafta_letter_started_at = models.DateTimeField(null=True, blank=True)
     overall_match = models.PositiveSmallIntegerField(null=True, blank=True)
     overall_match_explanation = models.TextField(blank=True)
     technical_match = models.PositiveSmallIntegerField(null=True, blank=True)

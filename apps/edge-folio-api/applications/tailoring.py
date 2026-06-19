@@ -837,6 +837,7 @@ def calculate_nafta_likelihood(
     skills: list[dict],
     work_experiences: list[dict],
     educations: list[dict],
+    tn_profession: str = '',
     locale: str = 'en',
 ) -> tuple[int, str]:
     """Return (score, explanation) for TN NAFTA approval likelihood."""
@@ -856,10 +857,25 @@ def calculate_nafta_likelihood(
         for e in work_experiences
     ) or "None listed"
 
+    # Build optional TN profession context from the lookup table.
+    tn_profession_block = ''
+    if tn_profession:
+        prof_data = _TN_PROFESSION_LOOKUP.get(tn_profession, {})
+        tn_official_name = prof_data.get('tn_official_name', tn_profession) or tn_profession
+        tn_description = prof_data.get('description', '')
+        tn_requirements = prof_data.get('requirements', '')
+        tn_profession_block = (
+            f"CANDIDATE'S SELF-IDENTIFIED TN PROFESSION CATEGORY: {tn_official_name}\n"
+            + (f"Category description: {tn_description}\n" if tn_description else '')
+            + (f"Category requirements: {tn_requirements}\n" if tn_requirements else '')
+            + "Use this as the primary TN profession lens when evaluating the role and credentials.\n\n"
+        )
+
     user_message = (
         f"POSITION TITLE: {job_title}\n\n"
         f"JOB DESCRIPTION:\n{job_description[:5000]}\n\n"
-        f"CANDIDATE EDUCATION:\n{edu_lines}\n\n"
+        + tn_profession_block
+        + f"CANDIDATE EDUCATION:\n{edu_lines}\n\n"
         f"CANDIDATE WORK EXPERIENCE:\n{we_lines}\n\n"
         f"CANDIDATE SKILLS: {skill_summary or 'None listed'}\n\n"
         "Return the TN visa approval likelihood score and explanation as JSON."
@@ -1012,9 +1028,9 @@ def generate_nafta_letter(
 
     # RE line and application type
     re_line = (
-        f"RE: TN Visa Entry - {full_name or '[To be provided]'}"
+        "RE: TN Visa Entry"
         if is_continuation
-        else f"RE: TN Visa Application - {full_name or '[To be provided]'}"
+        else "RE: TN Visa Application"
     )
     application_type = (
         'CONTINUATION / EXTENSION of existing TN status'

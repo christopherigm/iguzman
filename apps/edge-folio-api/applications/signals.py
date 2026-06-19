@@ -52,6 +52,11 @@ def _compute_metrics(application_id: int, user_id: int) -> None:
         .order_by('-start_year')
         .values('institution', 'degree', 'field_of_study', 'start_year', 'end_year')
     )
+    try:
+        from users.models import UserProfile
+        tn_profession = UserProfile.objects.filter(user_id=user_id).values_list('tn_profession', flat=True).first() or ''
+    except Exception:
+        tn_profession = ''
 
     try:
         overall, overall_explanation = calculate_overall_match(
@@ -76,6 +81,7 @@ def _compute_metrics(application_id: int, user_id: int) -> None:
             skills=skills,
             work_experiences=work_experiences,
             educations=educations,
+            tn_profession=tn_profession,
         )
     except Exception:
         logger.exception('Failed to compute metrics for application %d', application_id)
