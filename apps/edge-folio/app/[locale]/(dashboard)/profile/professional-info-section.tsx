@@ -150,7 +150,7 @@ export function ProfessionalInfoPanel() {
     setTnSuggestError(null);
     setTnSuggestLoading(true);
     try {
-      const result = await suggestTnCategory();
+      const result = await suggestTnCategory(locale);
       setTnSuggestResults(result.suggestions);
       setTnSuggestModal(true);
     } catch (err) {
@@ -159,7 +159,7 @@ export function ProfessionalInfoPanel() {
     } finally {
       setTnSuggestLoading(false);
     }
-  }, [t]);
+  }, [t, locale]);
 
   const handleSummaryConfirmEnhanceOptions = useCallback(() => {
     setSummaryShowEnhanceOptions(false);

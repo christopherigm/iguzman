@@ -1,9 +1,12 @@
-import { apiFetch } from "@/lib/api-fetch";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST() {
+import { apiFetch } from "@/lib/api-fetch";
+
+export async function POST(request: NextRequest) {
+  const locale = request.headers.get("accept-language") || "";
   const res = await apiFetch("/api/applications/tn-suggest/", {
     method: "POST",
+    headers: { "Accept-Language": locale },
     cache: "no-store",
   });
   const isJson = res.headers.get("content-type")?.includes("application/json");

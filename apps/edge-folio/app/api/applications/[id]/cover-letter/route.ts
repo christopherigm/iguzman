@@ -5,10 +5,11 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, { params }: Params) {
   const { id } = await params;
+  const locale = request.headers.get("accept-language") || "";
   const body = await request.json();
   const res = await apiFetch(`/api/applications/${id}/cover-letter/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept-Language": locale },
     body: JSON.stringify(body),
     cache: "no-store",
   });

@@ -8,6 +8,7 @@ from django.conf import settings
 from pydantic import BaseModel, Field
 
 from edge_folio_api.llm import chat_structured, chat_text
+from edge_folio_api.utils import locale_name
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +123,18 @@ _STOPWORDS = frozenset({
 _MAX_BULLETS_TO_LLM = 40
 
 
+def _with_locale(system_prompt: str, locale: str) -> str:
+    """Append a language instruction to the system prompt for the given locale."""
+    if not locale or locale == 'en':
+        return system_prompt
+    lang = locale_name(locale)
+    return (
+        f'{system_prompt}\n\n'
+        f'IMPORTANT: Write your entire response in {lang}. '
+        f'All text, explanations, bullet points, and any other content must be in {lang}.'
+    )
+
+
 def _format_custom_instructions(custom_instructions: str) -> str:
     """
     Render the user's free-text tailoring instructions as a clearly-delimited,
@@ -145,6 +158,7 @@ def _format_custom_instructions(custom_instructions: str) -> str:
 def suggest_tn_categories(
     work_experiences: list[dict],
     educations: list[dict],
+    locale: str = 'en',
 ) -> list[dict]:
     """
     Suggest NAFTA/USMCA TN visa categories based on the user's career profile.
@@ -193,7 +207,7 @@ def suggest_tn_categories(
 
     result = chat_structured(
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": _with_locale(system_prompt, locale)},
             {"role": "user", "content": f"WORK EXPERIENCE:\n{work_section}\n\nEDUCATION:\n{edu_section}"},
         ],
         response_model=_TNSuggestionsResponse,
@@ -223,7 +237,7 @@ def _rank_bullets(job_description: str, bullets: list[dict]) -> list[dict]:
     return sorted(bullets, key=score, reverse=True)
 
 
-def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict]) -> list[dict]:
+def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict], locale: str = 'en') -> list[dict]:
     """
     Call Groq LLM to select and rewrite the user's bullet points for a job.
 
@@ -256,7 +270,7 @@ def tailor_resume(job_description: str, bullets: list[dict], skills: list[dict])
 
     result = chat_structured(
         messages=[
-            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "system", "content": _with_locale(_SYSTEM_PROMPT, locale)},
             {"role": "user", "content": user_message},
         ],
         response_model=_TailoredBulletsResponse,
@@ -281,7 +295,7 @@ Response schema:
 """
 
 
-def tailor_skills(job_description: str, skills: list[dict]) -> list[int]:
+def tailor_skills(job_description: str, skills: list[dict], locale: str = 'en') -> list[int]:
     """
     Select the most relevant skill IDs from the user's matrix for the given job.
 
@@ -302,7 +316,7 @@ def tailor_skills(job_description: str, skills: list[dict]) -> list[int]:
 
     result = chat_structured(
         messages=[
-            {"role": "system", "content": _SKILLS_SYSTEM_PROMPT},
+            {"role": "system", "content": _with_locale(_SKILLS_SYSTEM_PROMPT, locale)},
             {"role": "user", "content": user_message},
         ],
         response_model=_TailoredSkillsResponse,
@@ -342,7 +356,7 @@ Response schema:
 """
 
 
-def tailor_work_experiences(job_description: str, work_experiences: list[dict]) -> list[dict]:
+def tailor_work_experiences(job_description: str, work_experiences: list[dict], locale: str = 'en') -> list[dict]:
     """
     Select and rewrite the most relevant work experience descriptions for a job.
 
@@ -372,7 +386,7 @@ def tailor_work_experiences(job_description: str, work_experiences: list[dict]) 
 
     result = chat_structured(
         messages=[
-            {"role": "system", "content": _WE_TAILORING_SYSTEM_PROMPT},
+            {"role": "system", "content": _with_locale(_WE_TAILORING_SYSTEM_PROMPT, locale)},
             {"role": "user", "content": user_message},
         ],
         response_model=_TailoredWorkExperiencesResponse,
@@ -407,7 +421,7 @@ Response schema:
 """
 
 
-def tailor_projects(job_description: str, projects: list[dict]) -> list[dict]:
+def tailor_projects(job_description: str, projects: list[dict], locale: str = 'en') -> list[dict]:
     """
     Select and rewrite the most relevant project descriptions for a job.
 
@@ -434,7 +448,7 @@ def tailor_projects(job_description: str, projects: list[dict]) -> list[dict]:
 
     result = chat_structured(
         messages=[
-            {"role": "system", "content": _PROJECTS_TAILORING_SYSTEM_PROMPT},
+            {"role": "system", "content": _with_locale(_PROJECTS_TAILORING_SYSTEM_PROMPT, locale)},
             {"role": "user", "content": user_message},
         ],
         response_model=_TailoredProjectsResponse,
@@ -458,6 +472,7 @@ def tailor_full_resume(
     work_experiences: list[dict],
     projects: list[dict],
     profile_job_title: str = '',
+    locale: str = 'en',
 ) -> dict:
     """
     Orchestrate complete resume tailoring across all sections.
@@ -478,10 +493,10 @@ def tailor_full_resume(
         "summary": str,
     }
     """
-    tailored_bullets = tailor_resume(job_description, bullets, skills)
-    tailored_skill_ids = tailor_skills(job_description, skills)
-    tailored_work_experiences = tailor_work_experiences(job_description, work_experiences)
-    tailored_projects = tailor_projects(job_description, projects)
+    tailored_bullets = tailor_resume(job_description, bullets, skills, locale=locale)
+    tailored_skill_ids = tailor_skills(job_description, skills, locale=locale)
+    tailored_work_experiences = tailor_work_experiences(job_description, work_experiences, locale=locale)
+    tailored_projects = tailor_projects(job_description, projects, locale=locale)
     summary = generate_professional_summary(
         job_title=job_title,
         company_name=company_name,
@@ -490,6 +505,7 @@ def tailor_full_resume(
         skills=skills,
         work_experiences=work_experiences,
         profile_job_title=profile_job_title,
+        locale=locale,
     )
     return {
         "bullets": tailored_bullets,
@@ -559,6 +575,7 @@ def generate_professional_summary(
     skills: list[dict],
     work_experiences: list[dict],
     profile_job_title: str = '',
+    locale: str = 'en',
 ) -> str:
     """
     Generate a 50-100 word professional summary grounded in tailored bullets.
@@ -589,7 +606,7 @@ def generate_professional_summary(
 
     return chat_text(
         messages=[
-            {"role": "system", "content": _PROFESSIONAL_SUMMARY_SYSTEM_PROMPT},
+            {"role": "system", "content": _with_locale(_PROFESSIONAL_SUMMARY_SYSTEM_PROMPT, locale)},
             {"role": "user", "content": user_message},
         ],
         temperature=0.4,
@@ -622,6 +639,7 @@ def generate_cover_letter(
     company_name: str,
     job_description: str,
     tailored_bullets: list[dict],
+    locale: str = 'en',
 ) -> str:
     """
     Generate a cover letter grounded strictly in the provided tailored bullets.
@@ -641,7 +659,7 @@ def generate_cover_letter(
 
     return chat_text(
         messages=[
-            {"role": "system", "content": _COVER_LETTER_SYSTEM_PROMPT},
+            {"role": "system", "content": _with_locale(_COVER_LETTER_SYSTEM_PROMPT, locale)},
             {"role": "user", "content": user_message},
         ],
         temperature=0.5,
@@ -759,6 +777,7 @@ def calculate_overall_match(
     bullets: list[dict],
     skills: list[dict],
     languages: list[dict] | None = None,
+    locale: str = 'en',
 ) -> tuple[int, str]:
     """Return (score, explanation) for overall candidate-job fit."""
     skill_summary = ", ".join(f"{s['name']} ({s['proficiency']}/5)" for s in skills)
@@ -778,7 +797,7 @@ def calculate_overall_match(
         f"CANDIDATE EXPERIENCE BULLETS:\n{bullet_lines or 'None listed'}\n\n"
         "Return the overall match score and explanation as JSON."
     )
-    return _call_score(_OVERALL_MATCH_SYSTEM_PROMPT, user_message)
+    return _call_score(_with_locale(_OVERALL_MATCH_SYSTEM_PROMPT, locale), user_message)
 
 
 def calculate_technical_match(
@@ -788,6 +807,7 @@ def calculate_technical_match(
     bullets: list[dict],
     skills: list[dict],
     languages: list[dict] | None = None,
+    locale: str = 'en',
 ) -> tuple[int, str]:
     """Return (score, explanation) for technical skills match."""
     skill_summary = ", ".join(f"{s['name']} ({s['proficiency']}/5)" for s in skills)
@@ -808,7 +828,7 @@ def calculate_technical_match(
         f"CANDIDATE TECHNICAL BULLETS:\n{bullet_lines or 'None listed'}\n\n"
         "Return the technical match score and explanation as JSON."
     )
-    return _call_score(_TECHNICAL_MATCH_SYSTEM_PROMPT, user_message)
+    return _call_score(_with_locale(_TECHNICAL_MATCH_SYSTEM_PROMPT, locale), user_message)
 
 
 def calculate_nafta_likelihood(
@@ -817,6 +837,7 @@ def calculate_nafta_likelihood(
     skills: list[dict],
     work_experiences: list[dict],
     educations: list[dict],
+    locale: str = 'en',
 ) -> tuple[int, str]:
     """Return (score, explanation) for TN NAFTA approval likelihood."""
     skill_summary = ", ".join(s['name'] for s in skills)
@@ -843,7 +864,7 @@ def calculate_nafta_likelihood(
         f"CANDIDATE SKILLS: {skill_summary or 'None listed'}\n\n"
         "Return the TN visa approval likelihood score and explanation as JSON."
     )
-    return _call_score(_NAFTA_LIKELIHOOD_SYSTEM_PROMPT, user_message)
+    return _call_score(_with_locale(_NAFTA_LIKELIHOOD_SYSTEM_PROMPT, locale), user_message)
 
 
 # ---------------------------------------------------------------------------
@@ -969,6 +990,7 @@ def generate_nafta_letter(
     date_of_birth: str = '',
     citizenship: str = '',
     work_experiences: list | None = None,
+    locale: str = 'en',
 ) -> str:
     """
     Generate a TN NAFTA Visa Support Letter grounded in the provided job application and
@@ -1026,7 +1048,7 @@ def generate_nafta_letter(
 
     return chat_text(
         messages=[
-            {"role": "system", "content": _NAFTA_SYSTEM_PROMPT},
+            {"role": "system", "content": _with_locale(_NAFTA_SYSTEM_PROMPT, locale)},
             {"role": "user", "content": user_message},
         ],
         temperature=0.3,

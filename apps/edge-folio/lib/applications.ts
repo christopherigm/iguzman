@@ -211,8 +211,14 @@ export interface TailorStartResult {
  * tailor status - the heavy LLM work runs in the background and is polled
  * via `getApplication` until `tailor_status` reaches `complete`/`failed`.
  */
-export function tailorApplication(id: number): Promise<TailorStartResult> {
-  return request(`/api/applications/${id}/tailor`, { method: "POST" });
+export function tailorApplication(
+  id: number,
+  locale?: string,
+): Promise<TailorStartResult> {
+  return request(`/api/applications/${id}/tailor`, {
+    method: "POST",
+    headers: locale ? { "Accept-Language": locale } : undefined,
+  });
 }
 
 export interface CoverLetterResult {
@@ -222,10 +228,14 @@ export interface CoverLetterResult {
 export function generateCoverLetter(
   id: number,
   bullets: TailoredBullet[],
+  locale?: string,
 ): Promise<CoverLetterResult> {
   return request(`/api/applications/${id}/cover-letter`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(locale ? { "Accept-Language": locale } : {}),
+    },
     body: JSON.stringify({ bullets }),
   });
 }
@@ -248,10 +258,14 @@ export interface NaftaLetterPayload {
 export function generateNaftaLetter(
   id: number,
   payload: NaftaLetterPayload = {},
+  locale?: string,
 ): Promise<NaftaLetterResult> {
   return request(`/api/applications/${id}/nafta-letter`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(locale ? { "Accept-Language": locale } : {}),
+    },
     body: JSON.stringify(payload),
   });
 }
@@ -265,8 +279,14 @@ export interface MetricsResult {
   nafta_tn_likelihood_explanation: string;
 }
 
-export function refreshMetrics(id: number): Promise<MetricsResult> {
-  return request(`/api/applications/${id}/metrics`, { method: "POST" });
+export function refreshMetrics(
+  id: number,
+  locale?: string,
+): Promise<MetricsResult> {
+  return request(`/api/applications/${id}/metrics`, {
+    method: "POST",
+    headers: locale ? { "Accept-Language": locale } : undefined,
+  });
 }
 
 export interface TnCategorySuggestion {
@@ -279,6 +299,9 @@ export interface TnSuggestResult {
   suggestions: TnCategorySuggestion[];
 }
 
-export function suggestTnCategory(): Promise<TnSuggestResult> {
-  return request("/api/applications/tn-suggest", { method: "POST" });
+export function suggestTnCategory(locale?: string): Promise<TnSuggestResult> {
+  return request("/api/applications/tn-suggest", {
+    method: "POST",
+    headers: locale ? { "Accept-Language": locale } : undefined,
+  });
 }

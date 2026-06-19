@@ -759,7 +759,7 @@ export function ApplicationDetailPage({
   async function handleRefreshMetrics() {
     setRefreshingMetrics(true);
     try {
-      const result = await refreshMetrics(app.id);
+      const result = await refreshMetrics(app.id, locale);
       setApp((prev) => ({
         ...prev,
         overall_match: result.overall_match,
@@ -782,7 +782,7 @@ export function ApplicationDetailPage({
     setTailorError(null);
     setCoverLetter(null);
     try {
-      const result = await tailorApplication(app.id);
+      const result = await tailorApplication(app.id, locale);
       if (result.status === "complete") {
         // Eager (no broker) path: work already finished - fetch the result.
         const data = await getApplication(app.id);
@@ -805,7 +805,7 @@ export function ApplicationDetailPage({
     setGeneratingCL(true);
     setClError(null);
     try {
-      const result = await generateCoverLetter(app.id, tailoredBullets);
+      const result = await generateCoverLetter(app.id, tailoredBullets, locale);
       setCoverLetter(result.cover_letter);
       setCopied(false);
     } catch {
@@ -842,7 +842,7 @@ export function ApplicationDetailPage({
       company_description: combinedCompanyDesc || undefined,
     };
     try {
-      const result = await generateNaftaLetter(app.id, payload);
+      const result = await generateNaftaLetter(app.id, payload, locale);
       setNaftaLetter(result.nafta_letter);
     } catch {
       setNaftaError(t("errorNaftaLetter"));
@@ -884,7 +884,7 @@ export function ApplicationDetailPage({
     setTnSuggestError(null);
     setTnSuggestLoading(true);
     try {
-      const result = await suggestTnCategory();
+      const result = await suggestTnCategory(locale);
       setTnSuggestResults(result.suggestions);
       setTnSuggestModal(true);
     } catch (err) {

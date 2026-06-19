@@ -468,7 +468,7 @@ def refresh_stale_companies() -> None:
 # ── Resume tailoring task ────────────────────────────────────────────────────────
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=30)
-def run_tailor_pipeline(self, application_id: int) -> None:
+def run_tailor_pipeline(self, application_id: int, locale: str = 'en') -> None:
     from career.models import Project, WorkExperience
     from matrix.models import BulletPoint, Skill
 
@@ -538,6 +538,7 @@ def run_tailor_pipeline(self, application_id: int) -> None:
             work_experiences=work_experiences,
             projects=projects_payload,
             profile_job_title=profile_job_title,
+            locale=locale,
         )
     except Exception as exc:
         logger.error('LLM error during full resume tailoring for application %s: %s', application_id, exc)

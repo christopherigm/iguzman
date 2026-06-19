@@ -140,7 +140,7 @@ def detect_unmet_language_requirement(job_description: str, languages) -> bool:
     return False
 
 
-def compute_match_metrics(user, job_description: str, job_title: str, company_name: str) -> dict:
+def compute_match_metrics(user, job_description: str, job_title: str, company_name: str, locale: str = 'en') -> dict:
     """Compute the three LLM match metrics for ``user`` against a job description.
 
     Returns a dict with ``overall_match`` / ``technical_match`` /
@@ -183,6 +183,7 @@ def compute_match_metrics(user, job_description: str, job_title: str, company_na
         bullets=bullets_payload,
         skills=skills,
         languages=languages,
+        locale=locale,
     )
     technical, technical_explanation = calculate_technical_match(
         job_description=job_description,
@@ -191,6 +192,7 @@ def compute_match_metrics(user, job_description: str, job_title: str, company_na
         bullets=bullets_payload,
         skills=skills,
         languages=languages,
+        locale=locale,
     )
     nafta, nafta_explanation = calculate_nafta_likelihood(
         job_description=job_description,
@@ -198,6 +200,7 @@ def compute_match_metrics(user, job_description: str, job_title: str, company_na
         skills=skills,
         work_experiences=work_experiences,
         educations=educations,
+        locale=locale,
     )
 
     return {

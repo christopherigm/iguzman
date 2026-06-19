@@ -10,6 +10,8 @@ from rest_framework.views import APIView
 from career.models import Education, WorkExperience
 from matrix.models import BulletPoint
 
+from edge_folio_api.utils import parse_accept_language
+
 from .metrics import sync_posting_metrics
 from .models import Company, JobApplication, _normalize_company_name
 from .scoring import compute_match_metrics
@@ -165,7 +167,8 @@ class TailorApplicationView(APIView):
         application.save(update_fields=['tailor_status', 'tailor_started_at', 'modified'])
         _invalidate_application(request.user.id, pk)
 
-        run_tailor_pipeline.delay(application.pk)
+        locale = parse_accept_language(request.META.get('HTTP_ACCEPT_LANGUAGE', ''))
+        run_tailor_pipeline.delay(application.pk, locale=locale)
 
         application.refresh_from_db(fields=['tailor_status'])
         return Response({'status': application.tailor_status}, status=status.HTTP_202_ACCEPTED)
@@ -197,11 +200,13 @@ class CoverLetterView(APIView):
         company_name = application.company.name if application.company_id else application.company_name
 
         try:
+            locale = parse_accept_language(request.META.get('HTTP_ACCEPT_LANGUAGE', ''))
             cover_letter = generate_cover_letter(
                 job_title=application.job_title,
                 company_name=company_name,
                 job_description=application.job_description,
                 tailored_bullets=bullets,
+                locale=locale,
             )
         except Exception as exc:
             logger.error('LLM error during cover letter generation: %s', exc)
@@ -245,6 +250,7 @@ class NaftaLetterView(APIView):
 
         data = request.data
         try:
+            locale = parse_accept_language(request.META.get('HTTP_ACCEPT_LANGUAGE', ''))
             hours_raw = data.get('hours_per_week', 40)
             try:
                 hours_per_week = int(hours_raw)
@@ -269,6 +275,7 @@ class NaftaLetterView(APIView):
                 date_of_birth=data.get('date_of_birth', ''),
                 citizenship=data.get('citizenship', ''),
                 work_experiences=work_experiences,
+                locale=locale,
             )
         except Exception as exc:
             logger.error('LLM error during NAFTA letter generation: %s', exc)
@@ -301,11 +308,13 @@ class RefreshMetricsView(APIView):
         company_name = application.company.name if application.company_id else application.company_name
 
         try:
+            locale = parse_accept_language(request.META.get('HTTP_ACCEPT_LANGUAGE', ''))
             metrics = compute_match_metrics(
                 user=user,
                 job_description=application.job_description,
                 job_title=application.job_title,
                 company_name=company_name,
+                locale=locale,
             )
         except Exception as exc:
             logger.error('LLM error during metrics refresh: %s', exc)
@@ -361,7 +370,8 @@ class TnSuggestView(APIView):
             )
 
         try:
-            suggestions = suggest_tn_categories(work_experiences, educations)
+            locale = parse_accept_language(request.META.get('HTTP_ACCEPT_LANGUAGE', ''))
+            suggestions = suggest_tn_categories(work_experiences, educations, locale=locale)
         except (ValueError, KeyError) as exc:
             logger.error('TN suggest parse error: %s', exc)
             return Response(
