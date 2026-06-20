@@ -1,17 +1,17 @@
-import { setRequestLocale } from 'next-intl/server';
-import { getTranslations } from 'next-intl/server';
-import { Container } from '@repo/ui/core-elements/container';
-import { NavbarSpacer } from '@repo/ui/core-elements/navbar';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Card } from '@repo/ui/core-elements/card';
+import { setRequestLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { Container } from "@repo/ui/core-elements/container";
+import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Card } from "@repo/ui/core-elements/card";
 
 type Props = { params: Promise<{ locale: string }> };
 
 export default async function AnalysisPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations('AnalysisPage');
+  const t = await getTranslations("AnalysisPage");
 
   return (
     <>
@@ -20,93 +20,102 @@ export default async function AnalysisPage({ params }: Props) {
         display="flex"
         flexDirection="column"
         alignItems="center"
-        styles={{ minHeight: '100vh', paddingTop: 12, paddingBottom: 64 }}
+        styles={{ minHeight: "100vh", paddingTop: 12, paddingBottom: 64 }}
         size="lg"
+        paddingX={12}
       >
-        <Box display="flex" flexDirection="column" gap={32}>
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap={32}
+          width="100%"
+          styles={{ maxWidth: "100%", minWidth: 0 }}
+        >
           {/* Page Header */}
           <Box display="flex" flexDirection="column" gap={8}>
             <Typography as="h1" fontWeight={700} color="var(--foreground)">
-              {t('heading')}
+              {t("heading")}
             </Typography>
             <Typography color="var(--muted-foreground, #6b7280)">
-              {t('subtitle')}
+              {t("subtitle")}
             </Typography>
           </Box>
 
           {/* Section 1: Project Overview */}
-          <Section title={t('section.overview')}>
+          <Section title={t("section.overview")}>
             <Typography styles={{ lineHeight: 1.7 }} color="var(--foreground)">
-              {t('overview.body')}
+              {t("overview.body")}
             </Typography>
-            <InfoRow
-              label={t('overview.objectiveLabel')}
-              value={t('overview.objective')}
-            />
-            <InfoRow
-              label={t('overview.stackLabel')}
-              value={t('overview.stack')}
-            />
-            <InfoRow
-              label={t('overview.courseLabel')}
-              value={t('overview.courseValue')}
-            />
-            <InfoRow
-              label={t('overview.studentLabel')}
-              value={t('overview.studentValue')}
-            />
+            <Card display="flex" flexDirection="column">
+              <InfoRow
+                label={t("overview.objectiveLabel")}
+                value={t("overview.objective")}
+              />
+              <InfoRow
+                label={t("overview.stackLabel")}
+                value={t("overview.stack")}
+              />
+              <InfoRow
+                label={t("overview.courseLabel")}
+                value={t("overview.courseValue")}
+              />
+              <InfoRow
+                label={t("overview.studentLabel")}
+                value={t("overview.studentValue")}
+              />
+            </Card>
           </Section>
 
           {/* Section 2: Core Risk Verticals */}
-          <Section title={t('section.riskVerticals')}>
+          <Section title={t("section.riskVerticals")}>
             <TierCard
               tier="1"
-              name={t('tiers.t1.name')}
-              term={t('tiers.t1.term')}
-              delta={t('tiers.t1.delta')}
-              mitigation={t('tiers.t1.mitigation')}
+              name={t("tiers.t1.name")}
+              term={t("tiers.t1.term")}
+              delta={t("tiers.t1.delta")}
+              mitigation={t("tiers.t1.mitigation")}
               color="var(--success, #16a34a)"
               icon="🏠"
             />
             <TierCard
               tier="2"
-              name={t('tiers.t2.name')}
-              term={t('tiers.t2.term')}
-              delta={t('tiers.t2.delta')}
-              mitigation={t('tiers.t2.mitigation')}
+              name={t("tiers.t2.name")}
+              term={t("tiers.t2.term")}
+              delta={t("tiers.t2.delta")}
+              mitigation={t("tiers.t2.mitigation")}
               color="var(--warning, #d97706)"
               icon="🚗"
             />
             <TierCard
               tier="3"
-              name={t('tiers.t3.name')}
-              term={t('tiers.t3.term')}
-              delta={t('tiers.t3.delta')}
-              mitigation={t('tiers.t3.mitigation')}
+              name={t("tiers.t3.name")}
+              term={t("tiers.t3.term")}
+              delta={t("tiers.t3.delta")}
+              mitigation={t("tiers.t3.mitigation")}
               color="var(--accent, #06b6d4)"
               icon="✈️"
             />
           </Section>
 
           {/* Section 3: Math Models */}
-          <Section title={t('section.mathModels')}>
+          <Section title={t("section.mathModels")}>
             <Box display="flex" flexDirection="column" gap={4}>
               <Typography
                 styles={{ fontWeight: 600 }}
                 color="var(--muted-foreground)"
               >
-                {t('math.universalVarsLabel')}
+                {t("math.universalVarsLabel")}
               </Typography>
-              <Card padding={16} gap={4} styles={{ fontFamily: 'monospace' }}>
+              <Card padding={16} gap={4} styles={{ fontFamily: "monospace" }}>
                 {[
-                  'G  — Target Asset Price (Base Value)',
-                  'N  — Number of participants in the group',
-                  'd  — Downpayment percentage (varies by tier)',
-                  'δ  — Annual Price Delta (+ inflation / − depreciation)',
-                  'r  — Annual Treasury Yield (e.g., CETES at 0.065)',
-                  'T  — Total term in years',
-                  'M  — Total term in months (M = T × 12)',
-                  'm  — Current month index',
+                  "G  — Target Asset Price (Base Value)",
+                  "N  — Number of participants in the group",
+                  "d  — Downpayment percentage (varies by tier)",
+                  "δ  — Annual Price Delta (+ inflation / − depreciation)",
+                  "r  — Annual Treasury Yield (e.g., CETES at 0.065)",
+                  "T  — Total term in years",
+                  "M  — Total term in months (M = T × 12)",
+                  "m  — Current month index",
                 ].map((v) => (
                   <Typography
                     key={v}
@@ -142,114 +151,114 @@ export default async function AnalysisPage({ params }: Props) {
           </Section>
 
           {/* Section 4: Agentic Task Breakdown */}
-          <Section title={t('section.taskBreakdown')}>
+          <Section title={t("section.taskBreakdown")}>
             {/* Phase 1 */}
-            <PhaseHeader phase="1" label={t('phase.be')} />
+            <PhaseHeader phase="1" label={t("phase.be")} />
             <TaskTable
               tasks={[
                 {
-                  id: 'BE-01',
-                  component: 'Core DB & Ledger',
+                  id: "BE-01",
+                  component: "Core DB & Ledger",
                   directive:
-                    'Build User, Group, AssetCategory, and LedgerEntry models. AssetCategory fields: max_term, delta_rate, requires_insurance, escrow_threshold. LedgerEntry MUST be append-only. No updates/deletes.',
+                    "Build User, Group, AssetCategory, and LedgerEntry models. AssetCategory fields: max_term, delta_rate, requires_insurance, escrow_threshold. LedgerEntry MUST be append-only. No updates/deletes.",
                 },
                 {
-                  id: 'BE-02',
-                  component: 'Multi-Vertical Simulator API',
+                  id: "BE-02",
+                  component: "Multi-Vertical Simulator API",
                   directive:
-                    'Build stateless endpoint /api/v1/simulate/. Inputs: G, T, d, category_id. Apply Delta Curve formulas to return N, P and mitigation string.',
+                    "Build stateless endpoint /api/v1/simulate/. Inputs: G, T, d, category_id. Apply Delta Curve formulas to return N, P and mitigation string.",
                 },
                 {
-                  id: 'BE-03',
-                  component: 'Group Matching Algo',
+                  id: "BE-03",
+                  component: "Group Matching Algo",
                   directive:
                     'Build /api/v1/groups/match/. Group KYC-verified users by matching P within 5% variance. Create a Group instance when N target is met. Set status to "AWAITING_DOWNPAYMENT".',
                 },
                 {
-                  id: 'BE-04',
-                  component: 'Treasury Yield Worker',
+                  id: "BE-04",
+                  component: "Treasury Yield Worker",
                   directive:
-                    'Celery task running nightly. Calculate yield for active groups: (balance × (r / 365)). Append YIELD ledger entry.',
+                    "Celery task running nightly. Calculate yield for active groups: (balance × (r / 365)). Append YIELD ledger entry.",
                 },
                 {
-                  id: 'BE-05',
-                  component: 'Insurance & Fees Worker',
+                  id: "BE-05",
+                  component: "Insurance & Fees Worker",
                   directive:
-                    'Celery task running monthly. Check requires_insurance flag. If true, deduct premium and append INSURANCE_FEE ledger entry.',
+                    "Celery task running monthly. Check requires_insurance flag. If true, deduct premium and append INSURANCE_FEE ledger entry.",
                 },
                 {
-                  id: 'BE-06',
-                  component: 'Smart Payout Queue',
+                  id: "BE-06",
+                  component: "Smart Payout Queue",
                   directive:
-                    'Monthly Celery task. If B_m ≥ G_m, check category escrow rules. If threshold passed, execute PAYOUT ledger entry. Queue order determined by joined date and secure hash.',
+                    "Monthly Celery task. If B_m ≥ G_m, check category escrow rules. If threshold passed, execute PAYOUT ledger entry. Queue order determined by joined date and secure hash.",
                 },
               ]}
             />
 
             {/* Phase 2 */}
-            <PhaseHeader phase="2" label={t('phase.fe')} />
+            <PhaseHeader phase="2" label={t("phase.fe")} />
             <TaskTable
               tasks={[
                 {
-                  id: 'FE-01',
-                  component: 'Omni-Simulator UI',
+                  id: "FE-01",
+                  component: "Omni-Simulator UI",
                   directive:
-                    'Build Simulator.tsx client component. Use tabs for Asset Type (House, Car, Travel). Dynamically adjust slider limits per tier. Debounce calls to /api/v1/simulate/.',
+                    "Build Simulator.tsx client component. Use tabs for Asset Type (House, Car, Travel). Dynamically adjust slider limits per tier. Debounce calls to /api/v1/simulate/.",
                 },
                 {
-                  id: 'FE-02',
-                  component: 'Contract & Mitigation UI',
+                  id: "FE-02",
+                  component: "Contract & Mitigation UI",
                   directive:
-                    'Build dynamic warning rendering. Show mandatory insurance acknowledgment for Tier 2. Show visual 60% Escrow Unlock progress bar for Tier 3.',
+                    "Build dynamic warning rendering. Show mandatory insurance acknowledgment for Tier 2. Show visual 60% Escrow Unlock progress bar for Tier 3.",
                 },
                 {
-                  id: 'FE-03',
-                  component: 'Auth & KYC Flow',
+                  id: "FE-03",
+                  component: "Auth & KYC Flow",
                   directive:
-                    'Implement NextAuth. Build onboarding wizard capturing ID. Integrate Stripe Elements to capture a pre-authorization hold for Tier 3.',
+                    "Implement NextAuth. Build onboarding wizard capturing ID. Integrate Stripe Elements to capture a pre-authorization hold for Tier 3.",
                 },
                 {
-                  id: 'FE-04',
-                  component: 'User Dashboard UI',
+                  id: "FE-04",
+                  component: "User Dashboard UI",
                   directive:
-                    'Fetch user ledger data. Build modular Recharts components: QueueTimeline.tsx showing queue position, and TreasuryChart.tsx tracking group balance (B_m) and yield over time.',
+                    "Fetch user ledger data. Build modular Recharts components: QueueTimeline.tsx showing queue position, and TreasuryChart.tsx tracking group balance (B_m) and yield over time.",
                 },
               ]}
             />
 
             {/* Phase 3 */}
-            <PhaseHeader phase="3" label={t('phase.do')} />
+            <PhaseHeader phase="3" label={t("phase.do")} />
             <TaskTable
               tasks={[
                 {
-                  id: 'DO-01',
-                  component: 'Dockerization',
+                  id: "DO-01",
+                  component: "Dockerization",
                   directive:
-                    'Write multi-stage Dockerfiles for Next.js, Django, and Celery workers. Optimize for slim production images.',
+                    "Write multi-stage Dockerfiles for Next.js, Django, and Celery workers. Optimize for slim production images.",
                 },
                 {
-                  id: 'DO-02',
-                  component: 'K8s Manifests',
+                  id: "DO-02",
+                  component: "K8s Manifests",
                   directive:
-                    'Create deployment.yaml and service.yaml. Provision two distinct Celery deployments: worker-general and worker-financial-critical. Configure Liveness/Readiness probes.',
+                    "Create deployment.yaml and service.yaml. Provision two distinct Celery deployments: worker-general and worker-financial-critical. Configure Liveness/Readiness probes.",
                 },
                 {
-                  id: 'DO-03',
-                  component: 'Ingress & TLS',
+                  id: "DO-03",
+                  component: "Ingress & TLS",
                   directive:
                     "Configure Ingress controller with routing rules (/api/* to backend, / to frontend). Configure cert-manager for automated Let's Encrypt certificates.",
                 },
                 {
-                  id: 'DO-04',
-                  component: 'Immutable DB Config',
+                  id: "DO-04",
+                  component: "Immutable DB Config",
                   directive:
-                    'Deploy PostgreSQL StatefulSet with PersistentVolumeClaims (PVCs). Define ConfigMaps and Secrets for environment variables.',
+                    "Deploy PostgreSQL StatefulSet with PersistentVolumeClaims (PVCs). Define ConfigMaps and Secrets for environment variables.",
                 },
                 {
-                  id: 'DO-05',
-                  component: 'Disaster Recovery',
+                  id: "DO-05",
+                  component: "Disaster Recovery",
                   directive:
-                    'Configure a K8s CronJob to trigger pg_dump every 12 hours, piped directly to an encrypted object storage bucket.',
+                    "Configure a K8s CronJob to trigger pg_dump every 12 hours, piped directly to an encrypted object storage bucket.",
                 },
               ]}
             />
@@ -273,7 +282,7 @@ function Section({
     <Box display="flex" flexDirection="column" gap={16}>
       <Box
         padding="10px 0"
-        styles={{ borderBottom: '2px solid var(--accent, #06b6d4)' }}
+        styles={{ borderBottom: "2px solid var(--accent, #06b6d4)" }}
       >
         <Typography as="h2" fontWeight={700} color="var(--foreground)">
           {title}
@@ -291,7 +300,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       flexDirection="row"
       gap={12}
       padding="8px 0"
-      styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }}
+      styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
     >
       <Typography
         fontWeight={600}
@@ -300,7 +309,15 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       >
         {label}
       </Typography>
-      <Typography styles={{ lineHeight: 1.6 }} color="var(--foreground)">
+      <Typography
+        styles={{
+          lineHeight: 1.6,
+          flex: 1,
+          minWidth: 0,
+          overflowWrap: "anywhere",
+        }}
+        color="var(--foreground)"
+      >
         {value}
       </Typography>
     </Box>
@@ -325,7 +342,7 @@ function TierCard({
   icon: string;
 }) {
   return (
-    <Card padding={0} styles={{ overflow: 'hidden' }}>
+    <Card padding={0} styles={{ overflow: "hidden" }}>
       <Box
         padding="10px 16px"
         display="flex"
@@ -333,7 +350,7 @@ function TierCard({
         gap={10}
         styles={{
           borderLeft: `4px solid ${color}`,
-          backgroundColor: 'var(--surface-2)',
+          backgroundColor: "var(--surface-2)",
         }}
       >
         <Typography>{icon}</Typography>
@@ -346,7 +363,7 @@ function TierCard({
           display="flex"
           padding="8px 16px"
           gap={8}
-          styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }}
+          styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
         >
           <Typography
             styles={{ minWidth: 90 }}
@@ -355,13 +372,18 @@ function TierCard({
           >
             Term
           </Typography>
-          <Typography color="var(--foreground)">{term}</Typography>
+          <Typography
+            styles={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
+            color="var(--foreground)"
+          >
+            {term}
+          </Typography>
         </Box>
         <Box
           display="flex"
           padding="8px 16px"
           gap={8}
-          styles={{ borderBottom: '1px solid var(--border, #e5e7eb)' }}
+          styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
         >
           <Typography
             styles={{ minWidth: 90 }}
@@ -370,7 +392,12 @@ function TierCard({
           >
             Price Delta (δ)
           </Typography>
-          <Typography color="var(--foreground)">{delta}</Typography>
+          <Typography
+            styles={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
+            color="var(--foreground)"
+          >
+            {delta}
+          </Typography>
         </Box>
         <Box display="flex" padding="8px 16px" gap={8}>
           <Typography
@@ -380,7 +407,12 @@ function TierCard({
           >
             Mitigation
           </Typography>
-          <Typography color="var(--foreground)">{mitigation}</Typography>
+          <Typography
+            styles={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
+            color="var(--foreground)"
+          >
+            {mitigation}
+          </Typography>
         </Box>
       </Box>
     </Card>
@@ -408,10 +440,10 @@ function FormulaCard({
         padding="10px 14px"
         borderRadius={6}
         backgroundColor="var(--surface-2)"
-        styles={{ fontFamily: 'monospace' }}
+        styles={{ fontFamily: "monospace" }}
       >
         <Typography
-          styles={{ fontFamily: 'monospace', letterSpacing: 0.3 }}
+          styles={{ fontFamily: "monospace", letterSpacing: 0.3 }}
           color="var(--accent, #06b6d4)"
         >
           {formula}
@@ -441,69 +473,63 @@ function TaskTable({
   tasks: { id: string; component: string; directive: string }[];
 }) {
   return (
-    <Box
+    <Card
       display="flex"
       flexDirection="column"
       gap={0}
-      styles={{
-        borderRadius: 8,
-        overflow: 'hidden',
-        border: '1px solid var(--border, #e5e7eb)',
-      }}
+      padding={0}
+      styles={{ overflow: "hidden" }}
     >
       {tasks.map((task, idx) => (
         <Box
           key={task.id}
           display="flex"
-          flexDirection="row"
-          gap={0}
+          flexDirection="column"
+          gap={8}
+          padding="14px 16px"
           backgroundColor={
-            idx % 2 === 0 ? 'var(--surface-1)' : 'var(--surface-2)'
+            idx % 2 === 0 ? "var(--surface-1)" : "var(--surface-2)"
           }
           styles={{
             borderBottom:
               idx < tasks.length - 1
-                ? '1px solid var(--border, #e5e7eb)'
+                ? "1px solid var(--border, #e5e7eb)"
                 : undefined,
           }}
         >
           <Box
-            padding="12px 14px"
-            styles={{
-              minWidth: 80,
-              borderRight: '1px solid var(--border, #e5e7eb)',
-            }}
+            display="flex"
+            flexDirection="row"
+            alignItems="center"
+            gap={10}
+            styles={{ flexWrap: "wrap" }}
           >
             <Typography
               fontWeight={700}
-              styles={{ fontFamily: 'monospace' }}
+              padding="2px 8px"
+              borderRadius={4}
+              backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 14%, transparent)"
+              styles={{ fontFamily: "monospace", flexShrink: 0 }}
               color="var(--accent, #06b6d4)"
             >
               {task.id}
             </Typography>
-          </Box>
-          <Box
-            padding="12px 14px"
-            styles={{
-              minWidth: 160,
-              borderRight: '1px solid var(--border, #e5e7eb)',
-              flexShrink: 0,
-            }}
-          >
-            <Typography fontWeight={600} color="var(--foreground)">
+            <Typography
+              fontWeight={600}
+              color="var(--foreground)"
+              styles={{ minWidth: 0, overflowWrap: "anywhere" }}
+            >
               {task.component}
             </Typography>
           </Box>
-          <Box padding="12px 14px" styles={{ flex: 1 }}>
-            <Typography
-              styles={{ lineHeight: 1.6 }}
-              color="var(--muted-foreground)"
-            >
-              {task.directive}
-            </Typography>
-          </Box>
+          <Typography
+            styles={{ lineHeight: 1.6, overflowWrap: "anywhere" }}
+            color="var(--muted-foreground)"
+          >
+            {task.directive}
+          </Typography>
         </Box>
       ))}
-    </Box>
+    </Card>
   );
 }

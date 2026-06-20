@@ -18,6 +18,7 @@ export default async function Home({ params }: Props) {
         alignItems="center"
         styles={{ minHeight: "100vh", paddingTop: 12, paddingBottom: 64 }}
         size="lg"
+        paddingX={12}
       >
         <Simulator />
       </Container>

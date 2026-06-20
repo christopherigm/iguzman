@@ -49,9 +49,11 @@ const VEHICLE_USED_DEFAULT_DELTA = -0.07;
 
 // Traditional-bank APR steps per vehicle condition.
 // Defaults sourced from US June 2026 averages: new auto ~7%, used auto ~12%.
-const VEHICLE_NEW_BANK_APR_STEPS = [0.05, 0.06, 0.07, 0.08, 0.09, 0.1];
+const VEHICLE_NEW_BANK_APR_STEPS = [
+  0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.15,
+];
 const VEHICLE_USED_BANK_APR_STEPS = [0.08, 0.1, 0.12, 0.14, 0.16];
-const VEHICLE_NEW_BANK_APR_DEFAULT = 0.07;
+const VEHICLE_NEW_BANK_APR_DEFAULT = 0.14;
 const VEHICLE_USED_BANK_APR_DEFAULT = 0.12;
 
 const TIERS: Record<TierKey, TierConfig> = {
@@ -59,23 +61,23 @@ const TIERS: Record<TierKey, TierConfig> = {
     icon: "🏠",
     monthSteps: [60, 72, 84, 96, 108, 120, 240, 360],
     deltaSteps: [0.04, 0.045, 0.05, 0.055, 0.06],
-    defaultMonths: 84,
+    defaultMonths: 120,
     defaultDelta: 0.05,
     downpaymentPct: 0.15,
-    defaultPrice: 150000,
+    defaultPrice: 2500000,
     mitigationKind: "success",
     // US June 2026 avg 30-yr mortgage APR ~6.5%.
     bankAprSteps: [0.05, 0.0575, 0.065, 0.0725, 0.08, 0.1, 0.12, 0.13, 0.14],
-    bankAprDefault: 0.065,
+    bankAprDefault: 0.12,
   },
   vehicle: {
     icon: "🚗",
-    monthSteps: [12, 18, 24, 30, 36],
+    monthSteps: [12, 18, 24, 30, 36, 48, 72, 84, 96],
     deltaSteps: VEHICLE_NEW_DELTA_STEPS,
-    defaultMonths: 24,
+    defaultMonths: 48,
     defaultDelta: VEHICLE_NEW_DEFAULT_DELTA,
     downpaymentPct: 0.2,
-    defaultPrice: 25000,
+    defaultPrice: 350000,
     mitigationKind: "warning",
     requiresInsurance: true,
     bankAprSteps: VEHICLE_NEW_BANK_APR_STEPS,
@@ -84,16 +86,16 @@ const TIERS: Record<TierKey, TierConfig> = {
   travel: {
     icon: "✈️",
     monthSteps: [6, 7, 8, 9, 10, 11, 12],
-    deltaSteps: [0.02, 0.025, 0.03, 0.035, 0.04],
-    defaultMonths: 9,
+    deltaSteps: [0.02, 0.025, 0.03, 0.035, 0.04, 0.05, 0.06],
+    defaultMonths: 10,
     defaultDelta: 0.03,
     downpaymentPct: 0.1,
-    defaultPrice: 5000,
+    defaultPrice: 50000,
     mitigationKind: "info",
     escrowThreshold: 0.6,
     // Travel typically financed via personal loan; US June 2026 avg ~14% APR.
-    bankAprSteps: [0.1, 0.12, 0.14, 0.18, 0.24],
-    bankAprDefault: 0.14,
+    bankAprSteps: [0.1, 0.12, 0.14, 0.18, 0.24, 0.36],
+    bankAprDefault: 0.24,
   },
 };
 
@@ -249,15 +251,15 @@ function ResultRow({
       backgroundColor={shaded ? "var(--surface-2)" : "var(--surface-1)"}
     >
       <Box display="flex" alignItems="center" gap={6}>
-        <Typography color="var(--muted-foreground, #6b7280)">
-          {label}
-        </Typography>
+        <Typography>{label}</Typography>
         {onExplain && <ExplainBtn onClick={onExplain} />}
       </Box>
       <Typography
         fontWeight={highlight ? 700 : 500}
         color={highlight ? "var(--accent, #06b6d4)" : "var(--foreground)"}
         styles={{ fontSize: highlight ? 20 : undefined }}
+        textAlign="right"
+        minWidth={130}
       >
         {value}
       </Typography>
@@ -561,7 +563,7 @@ export function Simulator() {
           borderRadius={6}
           backgroundColor="var(--surface-2)"
         >
-          <Box display="flex" alignItems="center" gap={6}>
+          <Box display="flex" alignItems="center">
             <Typography color="var(--muted-foreground, #6b7280)">
               {t("downpaymentLabel")}
             </Typography>
@@ -574,7 +576,7 @@ export function Simulator() {
               }
             />
           </Box>
-          <Typography fontWeight={600}>
+          <Typography fontWeight={600} minWidth={120} textAlign="right">
             {(cfg.downpaymentPct * 100).toFixed(0)}%
             {G > 0 ? `  ·  ${fmtUSD.format(G * cfg.downpaymentPct)}` : ""}
           </Typography>
