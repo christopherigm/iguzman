@@ -103,7 +103,13 @@ const TIERS: Record<TierKey, TierConfig> = {
 
 /**
  * B. Fixed Monthly Payment (Delta Adjusted)
- * P = [G × (1 + δ × T/2) - G × d] / M
+ *
+ *   P = [G × (1 + δ × T/2) - G × d] / M        (T = M/12)
+ *
+ * Each member contributes monthly across the full term so that their total
+ * contribution equals one delta-averaged asset price. This is independent of
+ * the group size: in a ROSCA every member funds exactly one asset, so the
+ * monthly amount is set by the term, not by how many people share the pool.
  */
 function calcMonthlyPayment(G: number, M: number, delta: number, d: number) {
   const T = M / 12;
@@ -144,6 +150,8 @@ interface SimResult {
   downpayment: number;
   G_final: number;
   totalPaid: number;
+  /** Months between consecutive payouts (M / N). Smaller groups pay out less often. */
+  cadenceMonths: number;
 }
 
 function simulate(
@@ -151,14 +159,17 @@ function simulate(
   M: number,
   delta: number,
   d: number,
+  N: number,
 ): SimResult | null {
-  if (G <= 0 || M <= 0) return null;
+  if (G <= 0 || M <= 0 || N <= 0) return null;
   const P = calcMonthlyPayment(G, M, delta, d);
-  const N = M; // Classic ROSCA: one participant per month slot
   const downpayment = G * d;
   const G_final = calcAssetPriceAtMonth(G, delta, M);
   const totalPaid = P * M + downpayment;
-  return { P, N, downpayment, G_final, totalPaid };
+  // The group funds N payouts over the term, one per member. Cadence is how
+  // often someone is funded; a smaller group means fewer, more spaced payouts.
+  const cadenceMonths = M / N;
+  return { P, N, downpayment, G_final, totalPaid, cadenceMonths };
 }
 
 interface BankResult {
@@ -288,6 +299,10 @@ export function Simulator() {
 
   const [priceStr, setPriceStr] = useState<string>(String(cfg.defaultPrice));
   const [months, setMonths] = useState<number>(cfg.defaultMonths);
+  // Group size (N) is now independent of the term. It defaults to the term in
+  // months (which reproduces the classic ROSCA numbers) and is re-anchored to
+  // the term whenever the term changes.
+  const [groupSize, setGroupSize] = useState<number>(cfg.defaultMonths);
   const [delta, setDelta] = useState<number>(cfg.defaultDelta);
   const [bankApr, setBankApr] = useState<number>(cfg.bankAprDefault);
   const [vehicleCondition, setVehicleCondition] = useState<"new" | "used">(
@@ -310,8 +325,8 @@ export function Simulator() {
   );
 
   const result = useMemo(
-    () => simulate(G, months, delta, cfg.downpaymentPct),
-    [G, months, delta, cfg.downpaymentPct],
+    () => simulate(G, months, delta, cfg.downpaymentPct, groupSize),
+    [G, months, delta, cfg.downpaymentPct, groupSize],
   );
 
   const bankResult = useMemo(
@@ -337,6 +352,25 @@ export function Simulator() {
   const monthSliderSteps: SliderStep[] = cfg.monthSteps.map((m) => ({
     value: m,
     label: m >= 12 && m % 12 === 0 ? `${m / 12}y` : `${m}m`,
+  }));
+
+  // Group Size (N) is independent of the term and does not affect the payment;
+  // it sets the payout cadence (M / N). Its selectable range is anchored to the
+  // current term: N = M is the "balanced" group (one payout per month), and the
+  // steps fan out to smaller/larger groups around it. The range recomputes
+  // whenever the term changes.
+  const groupSizeSteps = useMemo(() => {
+    const multipliers = [0.25, 0.5, 0.75, 1, 1.5, 2, 4];
+    const values = new Set<number>();
+    for (const mult of multipliers) {
+      values.add(Math.max(1, Math.round(months * mult)));
+    }
+    return Array.from(values).sort((a, b) => a - b);
+  }, [months]);
+
+  const groupSizeSliderSteps: SliderStep[] = groupSizeSteps.map((n) => ({
+    value: n,
+    label: `${n}`,
   }));
 
   const effectiveDeltaSteps =
@@ -377,10 +411,18 @@ export function Simulator() {
     );
   };
 
+  // Re-anchor the group size to the term: N = M is the balanced default and
+  // keeps the selected value aligned with a valid step in the new range.
+  const handleTermChange = (nextMonths: number) => {
+    setMonths(nextMonths);
+    setGroupSize(nextMonths);
+  };
+
   const handleTierSwitch = (next: TierKey) => {
     const nextCfg = TIERS[next];
     setTier(next);
     setMonths(nextCfg.defaultMonths);
+    setGroupSize(nextCfg.defaultMonths);
     if (next === "vehicle") {
       setVehicleCondition("new");
       setDelta(VEHICLE_NEW_DEFAULT_DELTA);
@@ -396,6 +438,23 @@ export function Simulator() {
   const escrowPct = escrowUnlockMonth
     ? Math.round((escrowUnlockMonth / months) * 100)
     : null;
+
+  // Human-readable payout cadence driven by group size (N).
+  const cadenceLabel = (() => {
+    if (!result) return "";
+    const c = result.cadenceMonths; // months between payouts (M / N)
+    if (c >= 1) {
+      const rounded = Math.round(c * 10) / 10;
+      if (rounded <= 1) return t("payoutCadenceMonthly");
+      const value = Number.isInteger(rounded)
+        ? String(rounded)
+        : rounded.toFixed(1);
+      return t("payoutCadenceEvery", { months: value });
+    }
+    // N > M: more than one member is funded per month.
+    const perMonth = Math.max(1, Math.round(1 / c));
+    return t("payoutCadencePerMonth", { count: perMonth });
+  })();
 
   return (
     <Box display="flex" flexDirection="column" gap={24} width="100%">
@@ -501,7 +560,31 @@ export function Simulator() {
           <Slider
             steps={monthSliderSteps}
             value={months}
-            onChange={(v) => setMonths(Number(v))}
+            onChange={(v) => handleTermChange(Number(v))}
+          />
+        </Box>
+
+        {/* Group Size Slider (independent of term; re-anchors on term change) */}
+        <Box display="flex" flexDirection="column" gap={6}>
+          <Box display="flex" alignItems="center" gap={6}>
+            <Typography
+              as="label"
+              fontWeight={600}
+              color="var(--foreground, #1a1a1a)"
+              styles={{ userSelect: "none" }}
+            >
+              {t("groupSizeSliderLabel", { n: groupSize })}
+            </Typography>
+            <ExplainBtn
+              onClick={() =>
+                openExplain("explain.groupSizeTitle", "explain.groupSizeText")
+              }
+            />
+          </Box>
+          <Slider
+            steps={groupSizeSliderSteps}
+            value={groupSize}
+            onChange={(v) => setGroupSize(Number(v))}
           />
         </Box>
 
@@ -678,8 +761,19 @@ export function Simulator() {
                 }
               />
               <ResultRow
+                label={t("payoutCadence")}
+                value={cadenceLabel}
+                onExplain={() =>
+                  openExplain(
+                    "explain.payoutCadenceTitle",
+                    "explain.payoutCadenceText",
+                  )
+                }
+              />
+              <ResultRow
                 label={t("assetPriceAtEnd", { years: T.toFixed(1) })}
                 value={fmtUSD.format(result.G_final)}
+                shaded
                 onExplain={() =>
                   openExplain(
                     "explain.assetPriceAtEndTitle",
@@ -691,7 +785,6 @@ export function Simulator() {
                 label={t("totalContributed")}
                 value={fmtUSD.format(result.totalPaid)}
                 highlight
-                shaded
                 onExplain={() =>
                   openExplain(
                     "explain.totalContributedTitle",
