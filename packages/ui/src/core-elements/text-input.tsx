@@ -5,6 +5,83 @@ import { UIComponentProps, buildStyleProps } from "./utils";
 import "./text-input.css";
 
 /**
+ * Supported input masks. The mask is applied to the *displayed* value while the
+ * user types; `onChange` always receives the raw, unformatted value.
+ *
+ * - `text`     — no formatting (default).
+ * - `currency` — US: `$` prefix, comma thousands, dot decimal (raw: `1234.5`).
+ * - `number`   — comma thousands, dot decimal, no symbol (raw: `1234.5`).
+ * - `date`     — US `MM/DD/YYYY` mask (raw: `12252026`).
+ * - `phone`    — US `(XXX) XXX-XXXX` mask (raw: `1234567890`).
+ */
+export type TextInputFormat = "text" | "currency" | "number" | "date" | "phone";
+
+/** Mobile virtual-keyboard hint per format. */
+const FORMAT_INPUT_MODE: Record<
+  TextInputFormat,
+  InputHTMLAttributes<HTMLInputElement>["inputMode"]
+> = {
+  text: undefined,
+  currency: "decimal",
+  number: "decimal",
+  date: "numeric",
+  phone: "numeric",
+};
+
+/** Strip whatever the user typed down to the raw, unformatted value. */
+const toRawValue = (input: string, format: TextInputFormat): string => {
+  switch (format) {
+    case "currency":
+    case "number": {
+      // Keep digits and a single decimal point.
+      let raw = input.replace(/[^\d.]/g, "");
+      const firstDot = raw.indexOf(".");
+      if (firstDot !== -1) {
+        raw =
+          raw.slice(0, firstDot + 1) +
+          raw.slice(firstDot + 1).replace(/\./g, "");
+      }
+      return raw;
+    }
+    case "date":
+      return input.replace(/\D/g, "").slice(0, 8);
+    case "phone":
+      return input.replace(/\D/g, "").slice(0, 10);
+    default:
+      return input;
+  }
+};
+
+/** Produce the masked display string from the raw value. */
+const toDisplayValue = (raw: string, format: TextInputFormat): string => {
+  if (!raw) return "";
+  switch (format) {
+    case "currency":
+    case "number": {
+      const [intPart = "", ...rest] = raw.split(".");
+      const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      let out = grouped;
+      if (raw.includes(".")) out += "." + rest.join("");
+      return format === "currency" ? "$" + out : out;
+    }
+    case "date": {
+      let out = raw.slice(0, 2);
+      if (raw.length > 2) out += "/" + raw.slice(2, 4);
+      if (raw.length > 4) out += "/" + raw.slice(4, 8);
+      return out;
+    }
+    case "phone": {
+      if (raw.length < 3) return "(" + raw;
+      let out = "(" + raw.slice(0, 3) + ") " + raw.slice(3, 6);
+      if (raw.length > 6) out += "-" + raw.slice(6, 10);
+      return out;
+    }
+    default:
+      return raw;
+  }
+};
+
+/**
  * Native HTML input attributes we forward, minus the keys that overlap with
  * `UIComponentProps` or are overridden by `TextInputProps`.
  */
@@ -33,6 +110,13 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
   onChange?: (value: string) => void;
   /** Floating label text. Acts as placeholder when idle. */
   label?: string;
+  /**
+   * Input mask applied to the displayed value while typing. Defaults to
+   * `"text"` (no formatting). When set to anything else, `onChange` receives the
+   * raw unformatted value (e.g. `"1234.5"`, `"12252026"`) while the field shows
+   * the formatted version (e.g. `"$1,234.5"`, `"12/25/2026"`).
+   */
+  format?: TextInputFormat;
   /** HTML input type. Defaults to `"text"`. Ignored when `multirow` is true. */
   type?: string;
   /** Render a `<textarea>` instead of an `<input>`. */
@@ -60,12 +144,19 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
  * ```tsx
  * <TextInput label="Bio" multirow rows={5} />
  * ```
+ *
+ * @example Masked input — `onChange` receives the raw value, the field shows the mask.
+ * ```tsx
+ * // amount === "1234.5", displayed as "$1,234.5"
+ * <TextInput label="Amount" format="currency" value={amount} onChange={setAmount} />
+ * ```
  */
 export const TextInput = ({
   value,
   onChange,
   label,
   type = "text",
+  format = "text",
   multirow = false,
   rows = 3,
   placeholder,
@@ -86,7 +177,16 @@ export const TextInput = ({
   // ── Controlled / uncontrolled ──────────────────────────────────
   const isControlled = value !== undefined;
   const [internalValue, setInternalValue] = useState("");
+  // The stored value is always the raw, unformatted value.
   const currentValue = isControlled ? value : internalValue;
+
+  // A mask always renders as a plain text field so we control the formatting;
+  // the displayed value is masked, while the stored/emitted value stays raw.
+  const isMasked = format !== "text";
+  const effectiveType = isMasked ? "text" : type;
+  const displayValue = isMasked
+    ? toDisplayValue(currentValue ?? "", format)
+    : (currentValue ?? "");
 
   // Track focus independently so the label stays floated while typing.
   const [isFocused, setIsFocused] = useState(false);
@@ -101,7 +201,7 @@ export const TextInput = ({
     "week",
     "month",
     "color",
-  ].includes(type);
+  ].includes(effectiveType);
 
   // Label floats when focused OR when the field has content OR type always shows UI.
   const isActive = alwaysActive || isFocused || (currentValue ?? "").length > 0;
@@ -114,7 +214,7 @@ export const TextInput = ({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    const next = e.target.value;
+    const next = isMasked ? toRawValue(e.target.value, format) : e.target.value;
     if (!isControlled) setInternalValue(next);
     onChange?.(next);
   };
@@ -154,7 +254,7 @@ export const TextInput = ({
   const sharedProps = {
     id,
     ref: assignRef,
-    value: currentValue ?? "",
+    value: displayValue,
     onChange: handleChange,
     onFocus: handleFocus,
     onBlur: handleBlur,
@@ -166,6 +266,7 @@ export const TextInput = ({
     min,
     max,
     step,
+    inputMode: isMasked ? FORMAT_INPUT_MODE[format] : undefined,
     // If a placeholder is explicitly provided, use it. Otherwise the label
     // visually replaces the placeholder via CSS, so we keep it empty.
     placeholder: placeholder ?? (isFocused && label ? label : undefined),
@@ -195,7 +296,7 @@ export const TextInput = ({
         <input
           {...(sharedProps as React.InputHTMLAttributes<HTMLInputElement>)}
           className="ui-text-input"
-          type={type}
+          type={effectiveType}
         />
       )}
 

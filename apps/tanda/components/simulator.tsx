@@ -585,7 +585,12 @@ export function Simulator() {
               }
             />
           </Box>
-          <TextInput value={priceStr} onChange={setPriceStr} type="text" />
+          <TextInput
+            value={priceStr}
+            onChange={setPriceStr}
+            type="text"
+            format="currency"
+          />
         </Box>
 
         {/* Term Slider */}

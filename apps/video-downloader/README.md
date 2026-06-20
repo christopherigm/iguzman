@@ -1,25 +1,27 @@
-# video-downloader
+# video-downloader (Media 2 Go)
 
-A Next.js PWA for downloading videos from major social and streaming platforms, with full offline support via the browser's Origin Private File System (OPFS). Videos are stored directly on the device so they remain accessible without a network connection. All video processing runs client-side through FFmpeg compiled to WebAssembly - no server-side video processing required.
+**Media 2 Go** (deployed at [media2go.app](https://media2go.app)) is a Next.js PWA for downloading videos from major social and streaming platforms, with full offline support via the browser's Origin Private File System (OPFS). Videos can be stored directly on the device so they remain accessible without a network connection. Heavy FFmpeg work can run either **client-side** through FFmpeg compiled to WebAssembly or **server-side** on the app's own backend (credit-metered); both paths share the same operation set.
 
 ## Features
 
 - **Multi-platform downloads** via yt-dlp and gallery-dl: YouTube, TikTok, Instagram, Pinterest, Facebook, X, Rednote, Tidal
-- **Offline-first storage**: save videos, thumbnails, and captions to OPFS for on-device playback without a connection
-- **Comment scraping**: fetch and browse post comments for TikTok, Instagram, and Facebook via ScrapeCreators; yt-dlp comment extraction used as primary source with ScrapeCreators as fallback
-- **Client-side FFmpeg processing**: black bar removal, FPS interpolation (60/90/120), H.264/H.265 conversion
-- **Server offloading**: route FFmpeg jobs to a connected `server-video-editor` agent over WebSockets
+- **Offline-first storage**: save videos, thumbnails, captions, and comments to OPFS for on-device playback without a connection
+- **Client-side FFmpeg processing** (FFmpeg WASM in a Web Worker): black bar removal, FPS interpolation (60/90/120), H.264 / H.265 conversion, scale-down, subtitle burn-in
+- **Server-side FFmpeg processing**: the same operations can run on the app backend (`/api/server-processing`) for devices that can't handle WASM, metered against the credits system
 - **Caption/subtitle support**: fetch available captions, burn-in with custom styling and animation effects
-- **Subtitle translation** via Groq LLM (preserves SRT format)
-- **Admin dashboard** with real-time task status and 24h activity tracking
+- **Subtitle translation** via Groq LLM, with an OpenRouter fallback on rate-limit (preserves SRT format)
+- **Subtitle generation (diarization)**: transcribe a video's audio into a timed SRT via an external diarization service (`/api/diarize`)
+- **Comment scraping**: fetch and browse post comments; yt-dlp is the primary source, with ScrapeCreators as a fallback for TikTok, Instagram, and Facebook
+- **Credits & payments**: usage is metered in credits, topped up via Stripe checkout or redeemable coupon codes
+- **Music Player** and **Reel Mode**: an audio player for downloaded tracks and an infinite vertical gallery of saved videos
 - **Multi-locale UI** (en, es, de, fr, pt)
-- Media served by an nginx sidecar for high-performance large-file delivery
+- **R2 object storage**: downloaded and processed media is stored in Cloudflare R2 (S3-compatible) in production, with local disk used in development
 
 ---
 
 ## Download process flow
 
-Paste a video URL (YouTube, TikTok, Instagram, etc.) into the input field and the app immediately starts downloading via yt-dlp or gallery-dl. Before or during download you can opt in to **OPFS storage** (saves the file locally on-device for offline access), enable **comment scraping** (downloads the post's comments as a JSON file stored alongside the video), or configure processing options such as black bar removal, FPS conversion, H.264 encode, and subtitle burn-in. When the download and any processing complete, the video is served from OPFS (if stored) or the nginx sidecar, and added to your completed videos list for re-processing or downloading again. Comments can be browsed inline in the video card.
+Paste a video URL (YouTube, TikTok, Instagram, etc.) into the input field and the app immediately starts downloading via yt-dlp or gallery-dl. Before or during download you can opt in to **OPFS storage** (saves the file locally on-device for offline access), enable **comment scraping** (downloads the post's comments as a JSON file stored alongside the video), or configure processing options such as black bar removal, FPS conversion, H.264/H.265 encode, scale-down, and subtitle burn-in. When the download and any processing complete, the video is served from R2 (or local disk in dev), or from OPFS if stored on-device, and added to your completed videos list for re-processing or downloading again. Comments can be browsed inline in the video card.
 
 ### Prerequisites
 
@@ -40,6 +42,12 @@ pnpm dev --filter=apps/video-downloader
 
 The app runs at `http://localhost:3000`.
 
+To test the Stripe credits flow locally, forward webhooks to the dev server in a second terminal:
+
+```bash
+pnpm --filter=video-downloader dev:stripe   # stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
+
 ### Lint and type-check
 
 ```bash
@@ -57,7 +65,7 @@ Build the image from the repo root (uses `scripts/docker-build.mjs`):
 pnpm docker video-downloader
 ```
 
-The Dockerfile uses a multi-stage Turborepo prune build. The final image is based on `node:20-alpine` with `ffmpeg`, `yt-dlp`, `gallery-dl`, `python3`, `curl`, `jq`, and `wget` installed.
+The Dockerfile uses a multi-stage Turborepo prune build. The final image is based on `node:22-alpine` with `ffmpeg`, `yt-dlp`, and `gallery-dl` installed. The `yt-dlp`/`gallery-dl` layer is keyed on the latest yt-dlp release so it rebuilds whenever a new version ships.
 
 ---
 
@@ -267,12 +275,22 @@ Copy `env.example` to `.env` before deploying:
 cp env.example .env
 ```
 
-| Variable                 | How to set                                                      | Description                                                                                                                   |
-| ------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `MONGO_URI`              | `helm/values.yaml` → `env`                                      | MongoDB connection string (defaults to in-cluster service)                                                                    |
-| `GROQ_API_KEY`           | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | Groq API key for subtitle translation. **Note:** route via `eth0` (not VPN) in `wg0.conf` - Surfshark IPs are blocked by Groq |
-| `SCRAPECREATORS_API_KEY` | K8s Secret `vd2-secrets` → `helm/values.yaml` → `envFromSecret` | ScrapeCreators API key for comment scraping (TikTok, Instagram, Facebook)                                                     |
-| `LOG_LEVEL`              | `helm/values.yaml` → `env`                                      | Override default log level (`debug` in dev, `info` in prod)                                                                   |
+| Variable                              | How to set                                                      | Description                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `MONGO_URI`                           | `helm/values.yaml` → `env`                                      | MongoDB connection string (tasks, credits, coupons)                                                                          |
+| `R2_ACCOUNT_ID`                       | K8s Secret `vd2-secrets` → `envFromSecret`                      | Cloudflare R2 account ID. **Setting this enables R2 storage**; unset falls back to local disk                               |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | K8s Secret `vd2-secrets` → `envFromSecret`                | R2 (S3-compatible) credentials                                                                                              |
+| `R2_BUCKET_NAME`                      | K8s Secret `vd2-secrets` → `envFromSecret`                      | R2 bucket that holds downloaded/processed media                                                                            |
+| `R2_PUBLIC_URL`                       | `helm/values.yaml` → `env`                                      | Public base URL/CDN for served R2 objects                                                                                  |
+| `GROQ_API_KEY`                        | K8s Secret `vd2-secrets` → `envFromSecret`                      | Groq API key for subtitle translation. **Note:** route via `eth0` (not VPN) in `wg0.conf` - Surfshark IPs are blocked by Groq |
+| `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | K8s Secret `vd2-secrets` → `envFromSecret`                 | OpenRouter fallback for `/api/groq/chat` when Groq returns 429. Use a plain instruct model, **not** a reasoning model        |
+| `SCRAPECREATORS_API_KEY`              | K8s Secret `vd2-secrets` → `envFromSecret`                      | ScrapeCreators API key for comment/metadata scraping (TikTok, Instagram, Facebook)                                          |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | K8s Secret `vd2-secrets` → `envFromSecret`             | Stripe keys for the credits checkout and webhook receiver                                                                  |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`  | `helm/values.yaml` → `env`                                      | Stripe publishable key (client-side checkout)                                                                              |
+| `NEXT_PUBLIC_BASE_URL`                | `helm/values.yaml` → `env`                                      | Public site URL, used for Stripe checkout return URLs                                                                      |
+| `DIARIZATION_URL` / `DIARIZATION_API_KEY` | K8s Secret `vd2-secrets` → `envFromSecret`                 | Endpoint + key for the external diarization service backing `/api/diarize`                                                 |
+| `INTERNAL_SECRET`                     | K8s Secret `vd2-secrets` → `envFromSecret`                      | Shared secret guarding `/api/internal/coupons` and the `coupon` CLI                                                        |
+| `LOG_LEVEL`                           | `helm/values.yaml` → `env`                                      | Override default log level (`debug` in dev, `info` in prod)                                                                |
 
 To add a secret value:
 
@@ -293,52 +311,62 @@ helm upgrade --install video-downloader ./apps/video-downloader/helm \
 
 ## API routes
 
-| Method            | Path                              | Description                                                                                                                                     |
-| ----------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST`            | `/api/download-video`             | Start a download task (`url`, `justAudio?`, `maxHeight?`, `checkCodec?`, `captionsEnabled?`, `captionUrl?`, `commentsEnabled?`, `maxComments?`) |
-| `GET`             | `/api/download-video/[id]`        | Poll task progress                                                                                                                              |
-| `POST`            | `/api/server-processing`          | Route an FFmpeg job to a registered server client (`clientUuid`, `op`, `taskId`, `params`)                                                      |
-| `GET`             | `/api/server-processing/[taskId]` | Poll server job result                                                                                                                          |
-| `GET`             | `/api/video-metadata`             | Fetch video formats and available captions for a URL                                                                                            |
-| `POST/GET/DELETE` | `/api/ws-clients`                 | Register, list, or deregister server-video-editor clients                                                                                       |
-| `POST`            | `/api/groq/chat`                  | SSE proxy to Groq API for subtitle translation                                                                                                  |
-| `GET`             | `/api/media/[filename]`           | Fallback file serving (normally handled by the nginx sidecar)                                                                                   |
+| Method   | Path                       | Description                                                                                                                                     |
+| -------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | `/api/download-video`      | Start a download task (`url`, `justAudio?`, `maxHeight?`, `checkCodec?`, `captionsEnabled?`, `captionUrl?`, `commentsEnabled?`, `maxComments?`) |
+| `GET`    | `/api/download-video/[id]` | Poll task progress (the client polls this on a 2 s interval)                                                                                    |
+| `DELETE` | `/api/download-video/[id]` | Delete a task and its underlying media file (from R2 or local disk)                                                                             |
+| `POST`   | `/api/server-processing`   | Run a server-side FFmpeg job (`op`, `taskId`, `params`); creates a new task that is polled via `/api/download-video/[id]`                       |
+| `POST`   | `/api/diarize`             | Transcribe a task's audio into a timed SRT via the external diarization service                                                                 |
+| `GET`    | `/api/video-metadata`      | Fetch video formats and available captions for a URL                                                                                            |
+| `POST`   | `/api/social-metadata`     | Fetch social post metadata via ScrapeCreators (credit-metered)                                                                                  |
+| `POST`   | `/api/groq/chat`           | SSE proxy to Groq for subtitle translation (falls back to OpenRouter on 429)                                                                    |
+| `GET`    | `/api/credits/balance`     | Read the caller's current credit balance                                                                                                        |
+| `POST`   | `/api/credits/purchase`    | Create a Stripe checkout session for a credit pack                                                                                              |
+| `POST`   | `/api/credits/redeem`      | Redeem a coupon code for credits                                                                                                                |
+| `POST`   | `/api/webhooks/stripe`     | Stripe webhook receiver (credits a balance after successful payment)                                                                            |
+| `POST`   | `/api/internal/coupons`    | Internal coupon management (guarded by `INTERNAL_SECRET`; used by the `coupon` CLI)                                                             |
+| `GET`    | `/api/media/[filename]`    | Serve a media file (presigned R2 redirect in production, local disk in dev)                                                                     |
+| `POST`   | `/api/media/multipart`     | Multipart upload of large processed media to R2                                                                                                 |
+| `POST`   | `/api/media/stage`         | Stage an uploaded file before finalizing a task                                                                                                 |
+| `GET`    | `/api/health`              | Liveness/readiness probe                                                                                                                        |
 
-Valid server-processing ops: `interpolateFps`, `removeBlackBars`, `convertToH264`, `burnSubtitles`.
+Valid server-processing ops: `interpolateFps`, `convertToH264`, `convertToH265`, `removeBlackBars`, `burnSubtitles`, `scaleDown`. The `burnSubtitles` op also accepts `translate` / `translateLang` to translate the SRT (via Groq) before burning it in.
 
 ---
 
-## Media & binaries
+## Media storage
 
-Shared media is stored on the host at `/shared-master` and mounted into every pod at `/app/media`. The nginx sidecar serves:
+In production, downloaded and processed media is stored in **Cloudflare R2** (S3-compatible object storage) - enabled whenever `R2_ACCOUNT_ID` is set. `/api/media/[filename]` issues a presigned redirect to the object, and large processed outputs are uploaded via `/api/media/multipart`. The host-path media volume is disabled (`hostPathVolume.enabled: false`).
 
-- `/api/media/**` - downloaded and processed video files
-- `/media/binaries/**` - `server-video-editor` installer binaries (`.deb`, `.exe`)
+In development (no R2 configured), files are written to `./public/media` and served by Next.js directly.
 
-Place installer binaries at `/shared-master/binaries/` on the host node.
-
-Pod health is checked via a file probe at `/app/media/.healthy` (startup: 30 attempts, liveness: ongoing).
+Pod health is checked over HTTP at `/api/health` (used by both the readiness and liveness probes).
 
 ---
 
 ## Architecture notes
 
-**SharedArrayBuffer requirement:** FFmpeg WASM requires `SharedArrayBuffer`, which is gated behind cross-origin isolation. `next.config.ts` sets `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on all routes.
+**SharedArrayBuffer requirement:** FFmpeg WASM requires `SharedArrayBuffer`, which is gated behind cross-origin isolation. `next.config.js` sets `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` on all routes, plus `Cross-Origin-Resource-Policy: cross-origin` on `/media/*` (so the OPFS migration `fetch()` can read R2/redirected files) and `Cache-Control: no-store` on `/sw.js`.
 
 **Component split:**
 
-- `PinnedVideoItem` - active downloads, embeds `useFFmpeg` directly, handles all client-side processing
-- `ReadOnlyVideoItem` - completed videos, supports re-processing
-- `VideoExtraActions` - FPS, H.264 convert, black bar removal panel
-- `BurnCaptionsModal` - caption styling (font, color, alignment, border, animation)
-- `VideoComments` - renders downloaded comments inline in the video card (supports nested replies, avatars, likes)
-- `WsClientPanel` - device selector (This Device vs. connected servers)
-- `InfinitePage` - infinite-scroll gallery view
+- `pinned-video-item-client` - active downloads processed on-device, embeds `useFFmpeg` (WASM) directly
+- `pinned-video-item-server` - active downloads processed on the app backend via `/api/server-processing`
+- `pinned-video-item-downloading` - the in-progress download card
+- `readonly-video-item` - completed videos, supports re-processing
+- `video-toolbar` - per-video actions (FPS, H.264/H.265 convert, black bar removal, scale-down, captions)
+- `burn-captions-modal` - caption styling (font, color, alignment, border, animation)
+- `video-comments` - renders downloaded comments inline in the video card (supports nested replies, avatars, likes)
+- `music-player` - audio player for downloaded tracks
+- `infinite-page` - infinite-scroll gallery view (also backs Reel Mode)
 
 **OPFS storage:** When enabled for a video, the downloaded file, thumbnail, captions, and comments JSON are all written to the browser's Origin Private File System (`lib/opfs.ts`). Stored videos are served from `blob:` URLs derived from OPFS reads, making them available offline. `OPFSUrlProvider` (`opfs-url-context.tsx`) manages the blob URL lifecycle (registration and revocation) for the whole page. `lib/opfs-processing.ts` handles migrating a processed output back into OPFS and cleaning up the old key.
 
 **Comment scraping:** yt-dlp is used as the primary comment source. For TikTok, Instagram, and Facebook posts where yt-dlp returns no comments, the server falls back to ScrapeCreators (`lib/scrapecreators.ts`) using the `SCRAPECREATORS_API_KEY` env var (or a per-request key supplied via `x-scrapecreators-key`). Comments are stored as a JSON file on disk and optionally in OPFS (`opfsCommentsKey`).
 
-**State management:** Zustand (`use-video-store.ts`) persists pinned and completed video lists. Filter state in `VideoGrid` lives in URL search params (`?platform=`, `?status=`, `?audio=`, `?per=`, `?page=`), making filters bookmarkable.
+**State management:** Zustand (`use-video-store.ts`) persists pinned and completed video lists; `use-credits-store.ts` tracks the credit balance. Filter state in `VideoGrid` lives in URL search params (`?platform=`, `?status=`, `?audio=`, `?per=`, `?page=`), making filters bookmarkable.
 
-**Download polling** uses Server-Sent Events (`/api/download-video/[id]/stream`). `use-poll-task.ts` uses `EventSource` to receive push updates.
+**Download polling:** `use-poll-task.ts` polls `/api/download-video/[id]` on a 2 s interval (with abort + error backoff). Both downloads and server-side processing jobs are tracked as tasks and polled the same way.
+
+**Credits:** operations are metered in credits (`lib/operation-credits.ts`, `lib/credit-packs.ts`), debited and refunded through `lib/credits-middleware.ts`, and persisted in MongoDB (`lib/credits-db.ts`). Balances are topped up via Stripe checkout (`/api/credits/purchase` + the `/api/webhooks/stripe` receiver) or by redeeming coupon codes.
