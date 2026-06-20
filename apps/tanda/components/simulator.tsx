@@ -24,13 +24,26 @@ interface TierConfig {
   defaultDelta: number;
   downpaymentPct: number;
   defaultPrice: number;
+  /** ISO currency code the amounts in this tier are denominated in. */
+  currency: "USD" | "MXN";
   mitigationKind: "success" | "warning" | "info";
   escrowThreshold?: number;
   requiresInsurance?: boolean;
-  /** Traditional-bank APR slider steps (annual interest rate). */
+  /**
+   * How the rate-slider values are interpreted: "apr" = US-style nominal annual
+   * rate (÷12); "cat" = Mexico's effective Costo Anual Total. Defaults to "apr".
+   */
+  rateKind?: "apr" | "cat";
+  /** Lender rate slider steps (annual rate, interpreted per rateKind). */
   bankAprSteps: number[];
-  /** Default selected bank APR for this tier. */
+  /** Default selected lender rate for this tier. */
   bankAprDefault: number;
+  /** i18n key for the comparison column heading. Defaults to "bankColumnHeading". */
+  comparisonHeadingKey?: string;
+  /** i18n key for the comparison notice. Defaults to "bankInterestNotice". */
+  comparisonNoticeKey?: string;
+  /** Show the "X× the loan" total-repayment-multiple row in the comparison panel. */
+  showRepayMultiple?: boolean;
 }
 
 /** Maps TierKey → next-intl nested key for tier translations. */
@@ -65,6 +78,7 @@ const TIERS: Record<TierKey, TierConfig> = {
     defaultDelta: 0.05,
     downpaymentPct: 0.15,
     defaultPrice: 2500000,
+    currency: "USD",
     mitigationKind: "success",
     // US June 2026 avg 30-yr mortgage APR ~6.5%.
     bankAprSteps: [0.05, 0.0575, 0.065, 0.0725, 0.08, 0.1, 0.12, 0.13, 0.14],
@@ -72,12 +86,13 @@ const TIERS: Record<TierKey, TierConfig> = {
   },
   vehicle: {
     icon: "🚗",
-    monthSteps: [12, 18, 24, 30, 36, 48, 72, 84, 96],
+    monthSteps: [6, 12, 18, 24, 30, 36, 48, 72, 84, 96],
     deltaSteps: VEHICLE_NEW_DELTA_STEPS,
     defaultMonths: 48,
     defaultDelta: VEHICLE_NEW_DEFAULT_DELTA,
     downpaymentPct: 0.2,
     defaultPrice: 350000,
+    currency: "USD",
     mitigationKind: "warning",
     requiresInsurance: true,
     bankAprSteps: VEHICLE_NEW_BANK_APR_STEPS,
@@ -85,17 +100,28 @@ const TIERS: Record<TierKey, TierConfig> = {
   },
   travel: {
     icon: "✈️",
-    monthSteps: [6, 7, 8, 9, 10, 11, 12],
+    // Mexican consumer lenders typically amortize over multi-year terms.
+    monthSteps: [6, 12, 24, 36, 48, 72],
     deltaSteps: [0.02, 0.025, 0.03, 0.035, 0.04, 0.05, 0.06],
-    defaultMonths: 10,
+    defaultMonths: 24,
     defaultDelta: 0.03,
     downpaymentPct: 0.1,
+    // Denominated in MXN: the realistic alternative is a Mexican consumer loan.
     defaultPrice: 50000,
+    currency: "MXN",
     mitigationKind: "info",
     escrowThreshold: 0.6,
-    // Travel typically financed via personal loan; US June 2026 avg ~14% APR.
-    bankAprSteps: [0.1, 0.12, 0.14, 0.18, 0.24, 0.36],
-    bankAprDefault: 0.24,
+    // Travel here is financed via a Mexican consumer/payday lender, not a bank,
+    // so the rate is a CAT (effective annual cost), not a nominal APR. Steps are
+    // real published CATs: Kubo 55–78.1%, Provident 388.20%, CrediLikeMe 456%.
+    // The default (Provident's 388.20%) compounds steeply over the multi-year
+    // terms Mexican consumer lenders typically offer.
+    rateKind: "cat",
+    bankAprSteps: [0.55, 0.781, 1.5, 2.5, 3.882, 4.56],
+    bankAprDefault: 1.5,
+    comparisonHeadingKey: "consumerLenderColumnHeading",
+    comparisonNoticeKey: "consumerLenderNotice",
+    showRepayMultiple: true,
   },
 };
 
@@ -182,43 +208,61 @@ interface BankResult {
 }
 
 /**
- * Traditional bank financing (standard amortized loan).
- * The asset is purchased today at price G; the bank finances (G − downpayment)
- * and charges interest at the given APR over the same term.
+ * Lender financing (standard amortized loan).
+ * The asset is purchased today at price G; the lender finances (G − downpayment)
+ * and charges the given annual rate over the same term.
  *
- *   r = APR / 12 (monthly rate)
+ * Two rate conventions are supported:
+ *   - "apr": a US-style nominal annual rate compounded monthly → r = rate / 12.
+ *   - "cat": Mexico's Costo Anual Total, an *effective* annual rate (an IRR), so
+ *     the equivalent monthly rate is the 12th root: r = (1 + rate)^(1/12) − 1.
+ *     Note CAT is an all-in figure (interest + fees + mandatory insurance) and,
+ *     when quoted "sin IVA", excludes the 16% VAT on interest — so amortizing the
+ *     principal at the CAT approximates the borrower's total outflow.
+ *
  *   P = L × r / (1 − (1 + r)^−M)
  */
 function simulateBank(
   G: number,
   M: number,
-  apr: number,
+  rate: number,
   d: number,
+  rateKind: "apr" | "cat",
 ): BankResult | null {
   if (G <= 0 || M <= 0) return null;
   const downpayment = G * d;
   const principal = G - downpayment;
-  const r = apr / 12;
+  const r = rateKind === "cat" ? Math.pow(1 + rate, 1 / 12) - 1 : rate / 12;
   const P = r > 0 ? (principal * r) / (1 - Math.pow(1 + r, -M)) : principal / M;
   const totalPaid = P * M + downpayment;
   const totalInterest = P * M - principal;
-  return { P, downpayment, principal, totalInterest, totalPaid, apr };
+  return { P, downpayment, principal, totalInterest, totalPaid, apr: rate };
 }
 
 // ─── Formatters ────────────────────────────────────────────────────────────────
 
-const fmtUSD = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
+const CURRENCY_LOCALE: Record<TierConfig["currency"], string> = {
+  USD: "en-US",
+  MXN: "es-MX",
+};
 
-const fmtUSDCents = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+/** Builds whole-unit and 2-decimal currency formatters for a tier currency. */
+function makeFormatters(currency: TierConfig["currency"]) {
+  const locale = CURRENCY_LOCALE[currency];
+  return {
+    whole: new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }),
+    cents: new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+  };
+}
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -297,6 +341,11 @@ export function Simulator() {
   const [tier, setTier] = useState<TierKey>("real_estate");
   const cfg = TIERS[tier];
 
+  const { whole: fmtWhole, cents: fmtCents } = useMemo(
+    () => makeFormatters(cfg.currency),
+    [cfg.currency],
+  );
+
   const [priceStr, setPriceStr] = useState<string>(String(cfg.defaultPrice));
   const [months, setMonths] = useState<number>(cfg.defaultMonths);
   const [delta, setDelta] = useState<number>(cfg.defaultDelta);
@@ -325,14 +374,31 @@ export function Simulator() {
     [G, months, delta, cfg.downpaymentPct],
   );
 
+  const rateKind = cfg.rateKind ?? "apr";
+
   const bankResult = useMemo(
-    () => simulateBank(G, months, bankApr, cfg.downpaymentPct),
-    [G, months, bankApr, cfg.downpaymentPct],
+    () => simulateBank(G, months, bankApr, cfg.downpaymentPct, rateKind),
+    [G, months, bankApr, cfg.downpaymentPct, rateKind],
   );
 
   // Savings: total cost via bank minus total cost via TandaOmni.
   const savings =
     result && bankResult ? bankResult.totalPaid - result.totalPaid : null;
+
+  // How many times the borrowed amount the lender is repaid (payments / principal).
+  const repayMultiple =
+    bankResult && bankResult.principal > 0
+      ? (bankResult.P * months) / bankResult.principal
+      : null;
+
+  // i18n keys for the lender rate differ by convention (nominal APR vs Mexican CAT).
+  const isCat = rateKind === "cat";
+  const rateLabelKey = isCat ? "catLabel" : "bankAprLabel";
+  const rateValueKey = isCat ? "catValue" : "bankAprValue";
+  const rateExplainTitleKey = isCat
+    ? "explain.catTitle"
+    : "explain.bankAprTitle";
+  const rateExplainTextKey = isCat ? "explain.catText" : "explain.bankAprText";
 
   const escrowUnlockMonth = useMemo(() => {
     if (!cfg.escrowThreshold || G <= 0) return null;
@@ -557,7 +623,7 @@ export function Simulator() {
           />
         </Box>
 
-        {/* Bank APR Slider */}
+        {/* Lender rate slider (nominal APR, or CAT for the travel tier) */}
         <Box display="flex" flexDirection="column" gap={6}>
           <Box display="flex" alignItems="center" gap={6}>
             <Typography
@@ -566,11 +632,13 @@ export function Simulator() {
               color="var(--foreground, #1a1a1a)"
               styles={{ userSelect: "none" }}
             >
-              {t("bankAprLabel", { pct: (Number(bankApr) * 100).toFixed(2) })}
+              {t(rateLabelKey as Parameters<typeof t>[0], {
+                pct: (Number(bankApr) * 100).toFixed(2),
+              })}
             </Typography>
             <ExplainBtn
               onClick={() =>
-                openExplain("explain.bankAprTitle", "explain.bankAprText")
+                openExplain(rateExplainTitleKey, rateExplainTextKey)
               }
             />
           </Box>
@@ -606,7 +674,7 @@ export function Simulator() {
           </Box>
           <Typography fontWeight={600} minWidth={120} textAlign="right">
             {(cfg.downpaymentPct * 100).toFixed(0)}%
-            {G > 0 ? `  ·  ${fmtUSD.format(G * cfg.downpaymentPct)}` : ""}
+            {G > 0 ? `  ·  ${fmtWhole.format(G * cfg.downpaymentPct)}` : ""}
           </Typography>
         </Box>
       </Card>
@@ -651,7 +719,7 @@ export function Simulator() {
                   color="var(--success, #16a34a)"
                   styles={{ fontSize: 26 }}
                 >
-                  {t("savingsAmount", { amount: fmtUSD.format(savings) })}
+                  {t("savingsAmount", { amount: fmtWhole.format(savings) })}
                 </Typography>
               </Box>
             </Card>
@@ -673,7 +741,7 @@ export function Simulator() {
 
               <ResultRow
                 label={t("monthlyPayment")}
-                value={fmtUSDCents.format(result.P)}
+                value={fmtCents.format(result.P)}
                 highlight
                 onExplain={() =>
                   openExplain(
@@ -684,7 +752,7 @@ export function Simulator() {
               />
               <ResultRow
                 label={t("downpaymentRequired")}
-                value={fmtUSD.format(result.downpayment)}
+                value={fmtWhole.format(result.downpayment)}
                 shaded
                 onExplain={() =>
                   openExplain(
@@ -717,7 +785,7 @@ export function Simulator() {
               />
               <ResultRow
                 label={t("assetPriceAtEnd", { years: T.toFixed(1) })}
-                value={fmtUSD.format(result.G_final)}
+                value={fmtWhole.format(result.G_final)}
                 shaded
                 onExplain={() =>
                   openExplain(
@@ -728,7 +796,7 @@ export function Simulator() {
               />
               <ResultRow
                 label={t("totalContributed")}
-                value={fmtUSD.format(result.totalPaid)}
+                value={fmtWhole.format(result.totalPaid)}
                 highlight
                 onExplain={() =>
                   openExplain(
@@ -810,13 +878,16 @@ export function Simulator() {
                   color="#ffffff"
                   styles={{ textTransform: "uppercase", letterSpacing: 1 }}
                 >
-                  {t("bankColumnHeading")}
+                  {t(
+                    (cfg.comparisonHeadingKey ??
+                      "bankColumnHeading") as Parameters<typeof t>[0],
+                  )}
                 </Typography>
               </Box>
 
               <ResultRow
                 label={t("monthlyPayment")}
-                value={fmtUSDCents.format(bankResult.P)}
+                value={fmtCents.format(bankResult.P)}
                 highlight
                 onExplain={() =>
                   openExplain(
@@ -827,7 +898,7 @@ export function Simulator() {
               />
               <ResultRow
                 label={t("downpaymentRequired")}
-                value={fmtUSD.format(bankResult.downpayment)}
+                value={fmtWhole.format(bankResult.downpayment)}
                 shaded
                 onExplain={() =>
                   openExplain(
@@ -838,16 +909,16 @@ export function Simulator() {
               />
               <ResultRow
                 label={t("interestCharged")}
-                value={t("bankAprValue", {
+                value={t(rateValueKey as Parameters<typeof t>[0], {
                   pct: (bankResult.apr * 100).toFixed(2),
                 })}
                 onExplain={() =>
-                  openExplain("explain.bankAprTitle", "explain.bankAprText")
+                  openExplain(rateExplainTitleKey, rateExplainTextKey)
                 }
               />
               <ResultRow
                 label={t("bankFinancedAmount")}
-                value={fmtUSD.format(bankResult.principal)}
+                value={fmtWhole.format(bankResult.principal)}
                 shaded
                 onExplain={() =>
                   openExplain(
@@ -858,7 +929,7 @@ export function Simulator() {
               />
               <ResultRow
                 label={t("bankTotalInterest")}
-                value={fmtUSD.format(bankResult.totalInterest)}
+                value={fmtWhole.format(bankResult.totalInterest)}
                 onExplain={() =>
                   openExplain(
                     "explain.bankTotalInterestTitle",
@@ -868,7 +939,7 @@ export function Simulator() {
               />
               <ResultRow
                 label={t("bankTotalCost")}
-                value={fmtUSD.format(bankResult.totalPaid)}
+                value={fmtWhole.format(bankResult.totalPaid)}
                 highlight
                 shaded
                 onExplain={() =>
@@ -878,15 +949,28 @@ export function Simulator() {
                   )
                 }
               />
+              {cfg.showRepayMultiple && repayMultiple !== null && (
+                <ResultRow
+                  label={t("repayMultiple")}
+                  value={t("repayMultipleValue", {
+                    multiple: repayMultiple.toFixed(1),
+                  })}
+                  highlight
+                />
+              )}
 
-              {/* Bank interest notice */}
+              {/* Lender interest notice */}
               <Box
                 padding="12px 20px"
                 backgroundColor="color-mix(in srgb, var(--warning, #d97706) 12%, transparent)"
                 styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
               >
                 <Typography color="var(--foreground)">
-                  🏦 {t("bankInterestNotice")}
+                  🏦{" "}
+                  {t(
+                    (cfg.comparisonNoticeKey ??
+                      "bankInterestNotice") as Parameters<typeof t>[0],
+                  )}
                 </Typography>
               </Box>
             </Card>
