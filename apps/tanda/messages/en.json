@@ -102,7 +102,6 @@
     },
     "priceLabelG": "Target Asset Price (G)",
     "termLabel": "Term: {months} months ({years} yrs)",
-    "groupSizeSliderLabel": "Group Size (N): {n} members",
     "deltaLabel": "Annual Price Delta (\u03b4): {pct}%",
     "downpaymentLabel": "Required Downpayment (d)",
     "resultsHeading": "Simulation Results",

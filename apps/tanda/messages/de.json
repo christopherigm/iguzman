@@ -107,7 +107,6 @@
     },
     "priceLabelG": "Zielpreis des Vermögenswerts (G)",
     "termLabel": "Laufzeit: {months} Monate ({years} J.)",
-    "groupSizeSliderLabel": "Gruppengröße (N): {n} Mitglieder",
     "deltaLabel": "Jährliche Preisänderung (δ): {pct}%",
     "downpaymentLabel": "Erforderliche Anzahlung (d)",
     "resultsHeading": "Simulationsergebnisse",

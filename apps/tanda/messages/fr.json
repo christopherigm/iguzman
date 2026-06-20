@@ -107,7 +107,6 @@
     },
     "priceLabelG": "Prix cible de l’actif (G)",
     "termLabel": "Durée : {months} mois ({years} ans)",
-    "groupSizeSliderLabel": "Taille du groupe (N) : {n} membres",
     "deltaLabel": "Delta de prix annuel (δ) : {pct}%",
     "downpaymentLabel": "Apport initial requis (d)",
     "resultsHeading": "Résultats de la simulation",
