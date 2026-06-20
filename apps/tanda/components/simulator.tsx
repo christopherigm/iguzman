@@ -57,44 +57,57 @@ const TIER_I18N_KEY: Record<TierKey, "realEstate" | "vehicle" | "travel"> = {
 
 const VEHICLE_NEW_DELTA_STEPS = [0.03, 0.035, 0.04, 0.045, 0.05, 0.06];
 const VEHICLE_USED_DELTA_STEPS = [-0.1, -0.08, -0.07, -0.06, -0.05];
-const VEHICLE_NEW_DEFAULT_DELTA = 0.04;
+const VEHICLE_NEW_DEFAULT_DELTA = 0.035;
 const VEHICLE_USED_DEFAULT_DELTA = -0.07;
 
-// Traditional-bank APR steps per vehicle condition.
-// Defaults sourced from US June 2026 averages: new auto ~7%, used auto ~12%.
+// Mexican auto-loan CAT steps per vehicle condition (effective annual cost, sin IVA).
+// Sourced from June 2026 published CATs: new-car CATs run ~16–29% (BBVA, Banorte
+// "CAT promedio" 22.4%, Santander up to 20.49%, HSBC Inmediauto 29.0%); used/seminuevo
+// runs a few points higher. Defaults sit at the high end (HSBC-tier) per spec.
 const VEHICLE_NEW_BANK_APR_STEPS = [
-  0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.12, 0.14, 0.15,
+  0.14, 0.16, 0.18, 0.2, 0.224, 0.25, 0.29, 0.32,
 ];
-const VEHICLE_USED_BANK_APR_STEPS = [0.08, 0.1, 0.12, 0.14, 0.16];
-const VEHICLE_NEW_BANK_APR_DEFAULT = 0.14;
-const VEHICLE_USED_BANK_APR_DEFAULT = 0.12;
+const VEHICLE_USED_BANK_APR_STEPS = [0.2, 0.224, 0.25, 0.29, 0.32, 0.36];
+const VEHICLE_NEW_BANK_APR_DEFAULT = 0.29;
+const VEHICLE_USED_BANK_APR_DEFAULT = 0.32;
 
 const TIERS: Record<TierKey, TierConfig> = {
   real_estate: {
     icon: "🏠",
-    monthSteps: [60, 72, 84, 96, 108, 120, 240, 360],
-    deltaSteps: [0.04, 0.045, 0.05, 0.055, 0.06],
-    defaultMonths: 120,
-    defaultDelta: 0.05,
+    // Mexican mortgages amortize up to 30 years (BBVA/Banorte headline term).
+    monthSteps: [60, 84, 108, 120, 180, 240, 360],
+    deltaSteps: [0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06],
+    defaultMonths: 240,
+    defaultDelta: 0.035,
     downpaymentPct: 0.15,
-    defaultPrice: 2500000,
-    currency: "USD",
+    // Denominated in MXN: the realistic alternative is a Mexican bank mortgage.
+    defaultPrice: 2000000,
+    currency: "MXN",
     mitigationKind: "success",
-    // US June 2026 avg 30-yr mortgage APR ~6.5%.
-    bankAprSteps: [0.05, 0.0575, 0.065, 0.0725, 0.08, 0.1, 0.12, 0.13, 0.14],
-    bankAprDefault: 0.12,
+    // Mexican bank mortgages are advertised as a CAT (effective annual cost, sin IVA),
+    // not a nominal APR. Steps are real June 2026 published CATs for a good credit
+    // profile: Inbursa 12.10%, BBVA 12.80%, Banorte 13.10%, Scotiabank 13.20%,
+    // Santander 13.50%, HSBC 13.90%. Default sits at the high end (HSBC) per spec.
+    rateKind: "cat",
+    bankAprSteps: [0.121, 0.128, 0.131, 0.132, 0.135, 0.139, 0.14],
+    bankAprDefault: 0.139,
   },
   vehicle: {
     icon: "🚗",
-    monthSteps: [6, 12, 18, 24, 30, 36, 48, 72, 84, 96],
+    // Mexican auto loans cap at 72 months (BBVA/Banorte/Santander).
+    monthSteps: [12, 24, 36, 48, 60, 72],
     deltaSteps: VEHICLE_NEW_DELTA_STEPS,
     defaultMonths: 48,
     defaultDelta: VEHICLE_NEW_DEFAULT_DELTA,
     downpaymentPct: 0.2,
-    defaultPrice: 350000,
-    currency: "USD",
+    // Denominated in MXN: the realistic alternative is a Mexican bank auto loan.
+    defaultPrice: 250000,
+    currency: "MXN",
     mitigationKind: "warning",
     requiresInsurance: true,
+    // Mexican auto loans are advertised as a CAT (effective annual cost, sin IVA),
+    // not a nominal APR. See the per-condition CAT steps above.
+    rateKind: "cat",
     bankAprSteps: VEHICLE_NEW_BANK_APR_STEPS,
     bankAprDefault: VEHICLE_NEW_BANK_APR_DEFAULT,
   },
