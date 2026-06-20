@@ -125,6 +125,20 @@
       "used": "🔄 Usado"
     },
     "emptyState": "Insira um preço do ativo para ver sua simulação.",
+    "bankAprLabel": "Taxa de Juros Bancária (CET): {pct}%",
+    "comparisonHeading": "TandaOmni vs. Banco Tradicional",
+    "tandaColumnHeading": "TandaOmni · Sem Juros",
+    "bankColumnHeading": "Banco Tradicional",
+    "interestCharged": "Juros Cobrados",
+    "zeroInterest": "0% · Nenhum",
+    "bankAprValue": "{pct}% a.a.",
+    "bankFinancedAmount": "Valor Financiado",
+    "bankTotalInterest": "Total de Juros Pagos",
+    "bankTotalCost": "Custo Total",
+    "bankInterestNotice": "Um empréstimo tradicional cobra juros sobre o saldo financiado durante todo o prazo — dinheiro pago além do preço do ativo.",
+    "savingsHeading": "Sua Vantagem TandaOmni",
+    "savingsNote": "Total economizado em relação a um empréstimo bancário tradicional no mesmo prazo.",
+    "savingsAmount": "Economize {amount}",
     "explain": {
       "priceLabelGTitle": "Preço-alvo do ativo (G)",
       "priceLabelGText": "O valor base do ativo que você deseja adquirir. Este é o valor que seu grupo tanda financiará coletivamente. Todos os pagamentos mensais, entradas e projeções derivam desta figura.",
@@ -145,7 +159,15 @@
       "totalContributedTitle": "Total contribuído por membro",
       "totalContributedText": "O valor total que cada membro paga ao longo de todo o prazo: (P × M) + entrada. Como o TandaOmni não cobra juros, isso se aproxima do preço original do ativo — a comunidade se financia mutuamente sem custo.",
       "escrowTitle": "Limiar de liberação da custódia",
-      "escrowText": "Para viagens & experiências (ativos irrecuperáveis), seu pagamento fica bloqueado até que suas contribuições totais atinjam 60% do custo atual do ativo. Isso protege o grupo contra o financiamento de uma experiência que não pode ser reembolsada se um membro inadimplir."
+      "escrowText": "Para viagens & experiências (ativos irrecuperáveis), seu pagamento fica bloqueado até que suas contribuições totais atinjam 60% do custo atual do ativo. Isso protege o grupo contra o financiamento de uma experiência que não pode ser reembolsada se um membro inadimplir.",
+      "bankAprTitle": "Taxa de Juros Bancária (CET)",
+      "bankAprText": "A taxa anual que um credor tradicional cobra sobre o saldo financiado. Os padrões refletem médias dos EUA de junho de 2026 (hipoteca ~6,5%, carro novo ~7%, carro usado ~12%, viagem/empréstimo pessoal ~14%). Ajuste o controle para igualar uma proposta que você recebeu.",
+      "bankFinancedTitle": "Valor Financiado",
+      "bankFinancedText": "A parte do preço do ativo que o banco empresta a você: o preço-alvo menos sua entrada. Os juros incidem sobre esse saldo.",
+      "bankTotalInterestTitle": "Total de Juros Pagos",
+      "bankTotalInterestText": "O total de juros pagos ao banco durante todo o prazo: (parcela mensal × meses) − valor financiado. É um custo puro sobre o ativo — exatamente o que a TandaOmni elimina.",
+      "bankTotalCostTitle": "Custo Total",
+      "bankTotalCostText": "Tudo o que você paga pelo banco: entrada + (parcela mensal × meses). Compare com o Total Contribuído da TandaOmni para ver sua economia."
     }
   },
   "AnalysisPage": {

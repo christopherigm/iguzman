@@ -120,6 +120,20 @@
       "used": "\ud83d\udd04 Usado"
     },
     "emptyState": "Ingresa el precio del activo para ver tu simulaci\u00f3n.",
+    "bankAprLabel": "Tasa de Inter\u00e9s Bancaria (TAE): {pct}%",
+    "comparisonHeading": "TandaOmni vs. Banco Tradicional",
+    "tandaColumnHeading": "TandaOmni \u00b7 Sin Intereses",
+    "bankColumnHeading": "Banco Tradicional",
+    "interestCharged": "Inter\u00e9s Cobrado",
+    "zeroInterest": "0% \u00b7 Ninguno",
+    "bankAprValue": "{pct}% TAE",
+    "bankFinancedAmount": "Monto Financiado",
+    "bankTotalInterest": "Total de Intereses Pagados",
+    "bankTotalCost": "Costo Total",
+    "bankInterestNotice": "Un pr\u00e9stamo tradicional cobra intereses sobre el saldo financiado durante todo el plazo \u2014 dinero pagado por encima del precio del activo.",
+    "savingsHeading": "Tu Ventaja TandaOmni",
+    "savingsNote": "Total ahorrado frente a un pr\u00e9stamo bancario tradicional en el mismo plazo.",
+    "savingsAmount": "Ahorra {amount}",
     "explain": {
       "priceLabelGTitle": "Precio objetivo del activo (G)",
       "priceLabelGText": "El valor base del activo que deseas adquirir. Este es el monto que tu grupo tanda financiar\u00e1 colectivamente. Todos los pagos mensuales, enganches y proyecciones se derivan de esta cifra.",
@@ -140,7 +154,15 @@
       "totalContributedTitle": "Total aportado por miembro",
       "totalContributedText": "El monto total que cada miembro paga durante todo el plazo: (P \u00d7 M) + enganche. Dado que TandaOmni cobra cero intereses, esto se aproxima al precio original del activo \u2014 la comunidad se financia mutuamente sin costo.",
       "escrowTitle": "Umbral de liberaci\u00f3n del dep\u00f3sito",
-      "escrowText": "Para viajes y experiencias (activos irrecuperables), tu pago queda bloqueado hasta que tus aportaciones totales alcancen el 60% del costo actual del activo. Esto protege al grupo contra el financiamiento de una experiencia que no puede reembolsarse si un miembro incumple."
+      "escrowText": "Para viajes y experiencias (activos irrecuperables), tu pago queda bloqueado hasta que tus aportaciones totales alcancen el 60% del costo actual del activo. Esto protege al grupo contra el financiamiento de una experiencia que no puede reembolsarse si un miembro incumple.",
+      "bankAprTitle": "Tasa de Interés Bancaria (TAE)",
+      "bankAprText": "La tasa anual que un prestamista tradicional cobra sobre el saldo financiado. Los valores por defecto reflejan promedios de EE. UU. de junio de 2026 (hipoteca ~6.5%, auto nuevo ~7%, auto usado ~12%, viajes/préstamo personal ~14%). Ajusta el control para igualar una cotización que hayas recibido.",
+      "bankFinancedTitle": "Monto Financiado",
+      "bankFinancedText": "La parte del precio del activo que el banco te presta: el precio objetivo menos tu enganche. Los intereses se acumulan sobre este saldo.",
+      "bankTotalInterestTitle": "Total de Intereses Pagados",
+      "bankTotalInterestText": "El total de intereses pagados al banco durante todo el plazo: (pago mensual × meses) − monto financiado. Es un costo puro sobre el activo — exactamente lo que TandaOmni elimina.",
+      "bankTotalCostTitle": "Costo Total",
+      "bankTotalCostText": "Todo lo que pagas a través del banco: enganche + (pago mensual × meses). Compáralo con el Total Aportado de TandaOmni para ver tu ahorro."
     }
   },
   "AnalysisPage": {

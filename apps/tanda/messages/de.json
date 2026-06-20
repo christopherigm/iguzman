@@ -125,6 +125,20 @@
       "used": "\ud83d\udd04 Gebraucht"
     },
     "emptyState": "Gib einen Preis ein, um deine Simulation zu sehen.",
+    "bankAprLabel": "Bankzins (eff. Jahreszins): {pct}%",
+    "comparisonHeading": "TandaOmni vs. traditionelle Bank",
+    "tandaColumnHeading": "TandaOmni · Zinsfrei",
+    "bankColumnHeading": "Traditionelle Bank",
+    "interestCharged": "Berechnete Zinsen",
+    "zeroInterest": "0% · Keine",
+    "bankAprValue": "{pct}% eff. Jahreszins",
+    "bankFinancedAmount": "Finanzierter Betrag",
+    "bankTotalInterest": "Gezahlte Zinsen gesamt",
+    "bankTotalCost": "Gesamtkosten",
+    "bankInterestNotice": "Ein klassischer Kredit berechnet über die gesamte Laufzeit Zinsen auf den finanzierten Saldo — Geld, das zusätzlich zum Preis des Vermögenswerts gezahlt wird.",
+    "savingsHeading": "Dein TandaOmni-Vorteil",
+    "savingsNote": "Gesamtersparnis gegenüber einem klassischen Bankkredit bei gleicher Laufzeit.",
+    "savingsAmount": "Spare {amount}",
     "explain": {
       "priceLabelGTitle": "Zielpreis des Vermögenswerts (G)",
       "priceLabelGText": "Der Basiswert des Vermögenswerts, den du erwerben möchtest. Dies ist der Zielbetrag, den deine Tanda-Gruppe gemeinsam finanzieren wird. Alle monatlichen Zahlungen, Anzahlungen und Prognosen basieren auf dieser Zahl.",
@@ -145,7 +159,15 @@
       "totalContributedTitle": "Gesamt beigetragen pro Mitglied",
       "totalContributedText": "Der Gesamtbetrag, den jedes Mitglied über die gesamte Laufzeit zahlt: (P × M) + Anzahlung. Da TandaOmni keine Zinsen erhebt, entspricht dies annähernd dem ursprünglichen Preis des Vermögenswerts — die Gemeinschaft finanziert sich gegenseitig kostenlos.",
       "escrowTitle": "Treuhand-Freigabeschwelle",
-      "escrowText": "Für Reisen & Erlebnisse (nicht rückerstattbare Posten) ist deine Auszahlung gesperrt, bis deine Gesamtbeiträge 60 % der aktuellen Kosten erreichen. Dies schützt die Gruppe vor der Finanzierung eines Erlebnisses, das nicht erstattet werden kann, falls ein Mitglied ausfällt."
+      "escrowText": "Für Reisen & Erlebnisse (nicht rückerstattbare Posten) ist deine Auszahlung gesperrt, bis deine Gesamtbeiträge 60 % der aktuellen Kosten erreichen. Dies schützt die Gruppe vor der Finanzierung eines Erlebnisses, das nicht erstattet werden kann, falls ein Mitglied ausfällt.",
+      "bankAprTitle": "Bankzins (eff. Jahreszins)",
+      "bankAprText": "Der effektive Jahreszins, den eine klassische Bank auf den finanzierten Saldo berechnet. Die Standardwerte entsprechen US-Durchschnittswerten von Juni 2026 (Hypothek ~6,5 %, Neuwagen ~7 %, Gebrauchtwagen ~12 %, Reise-/Privatkredit ~14 %). Passe den Regler an ein dir vorliegendes Angebot an.",
+      "bankFinancedTitle": "Finanzierter Betrag",
+      "bankFinancedText": "Der Teil des Preises, den die Bank dir leiht: Zielpreis minus Anzahlung. Auf diesen Saldo fallen Zinsen an.",
+      "bankTotalInterestTitle": "Gezahlte Zinsen gesamt",
+      "bankTotalInterestText": "Die über die gesamte Laufzeit an die Bank gezahlten Zinsen: (monatliche Rate × Monate) − finanzierter Betrag. Reine Zusatzkosten auf den Vermögenswert — genau das, was TandaOmni eliminiert.",
+      "bankTotalCostTitle": "Gesamtkosten",
+      "bankTotalCostText": "Alles, was du über die Bank zahlst: Anzahlung + (monatliche Rate × Monate). Vergleiche dies mit dem Gesamtbeitrag von TandaOmni, um deine Ersparnis zu sehen."
     }
   },
   "AnalysisPage": {

@@ -120,6 +120,20 @@
       "used": "\ud83d\udd04 Used"
     },
     "emptyState": "Enter an asset price above to see your simulation.",
+    "bankAprLabel": "Bank Interest Rate (APR): {pct}%",
+    "comparisonHeading": "TandaOmni vs. Traditional Bank",
+    "tandaColumnHeading": "TandaOmni · Zero-Interest",
+    "bankColumnHeading": "Traditional Bank",
+    "interestCharged": "Interest Charged",
+    "zeroInterest": "0% · None",
+    "bankAprValue": "{pct}% APR",
+    "bankFinancedAmount": "Amount Financed",
+    "bankTotalInterest": "Total Interest Paid",
+    "bankTotalCost": "Total Cost",
+    "bankInterestNotice": "A traditional loan charges interest on the financed balance for the full term — money paid on top of the asset price.",
+    "savingsHeading": "Your TandaOmni Advantage",
+    "savingsNote": "Total saved versus a traditional bank loan over the same term.",
+    "savingsAmount": "Save {amount}",
     "explain": {
       "priceLabelGTitle": "Target Asset Price (G)",
       "priceLabelGText": "The base value of the asset you want to acquire. This is the goal amount your tanda group will collectively fund. All monthly payments, downpayment amounts, and projections are derived from this figure.",
@@ -140,7 +154,15 @@
       "totalContributedTitle": "Total Contributed per Member",
       "totalContributedText": "The total amount each member pays over the full term: (P \u00d7 M) + downpayment. Because TandaOmni charges zero interest, this closely matches the original asset price \u2014 your community funds each other at no cost.",
       "escrowTitle": "Escrow Unlock Threshold",
-      "escrowText": "For travel & experiences (unrecoverable assets), your payout is locked until your total contributions reach 60% of the current asset cost. This protects the group against funding an experience that cannot be refunded if a member defaults."
+      "escrowText": "For travel & experiences (unrecoverable assets), your payout is locked until your total contributions reach 60% of the current asset cost. This protects the group against funding an experience that cannot be refunded if a member defaults.",
+      "bankAprTitle": "Bank Interest Rate (APR)",
+      "bankAprText": "The annual percentage rate a traditional lender charges on the financed balance. Defaults reflect US June 2026 averages (mortgage ~6.5%, new auto ~7%, used auto ~12%, travel/personal loan ~14%). Adjust the slider to match a quote you've received.",
+      "bankFinancedTitle": "Amount Financed",
+      "bankFinancedText": "The portion of the asset price the bank lends you: the target price minus your downpayment. Interest accrues on this balance.",
+      "bankTotalInterestTitle": "Total Interest Paid",
+      "bankTotalInterestText": "The total interest paid to the bank over the full term: (monthly payment × months) − amount financed. This is pure cost on top of the asset — exactly what TandaOmni eliminates.",
+      "bankTotalCostTitle": "Total Cost",
+      "bankTotalCostText": "Everything you pay through the bank: downpayment + (monthly payment × months). Compare this against TandaOmni's Total Contributed to see your savings."
     }
   },
   "AnalysisPage": {

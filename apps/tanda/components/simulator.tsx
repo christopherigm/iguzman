@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Card } from '@repo/ui/core-elements/card';
-import { Button } from '@repo/ui/core-elements/button';
-import { Slider, type SliderStep } from '@repo/ui/core-elements/slider';
-import { TextInput } from '@repo/ui/core-elements/text-input';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import './simulator.css';
+import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Card } from "@repo/ui/core-elements/card";
+import { Button } from "@repo/ui/core-elements/button";
+import { Slider, type SliderStep } from "@repo/ui/core-elements/slider";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import "./simulator.css";
 
 // ─── Tier Configuration ────────────────────────────────────────────────────────
 
-type TierKey = 'real_estate' | 'vehicle' | 'travel';
+type TierKey = "real_estate" | "vehicle" | "travel";
 
 interface TierConfig {
   icon: string;
@@ -24,16 +24,20 @@ interface TierConfig {
   defaultDelta: number;
   downpaymentPct: number;
   defaultPrice: number;
-  mitigationKind: 'success' | 'warning' | 'info';
+  mitigationKind: "success" | "warning" | "info";
   escrowThreshold?: number;
   requiresInsurance?: boolean;
+  /** Traditional-bank APR slider steps (annual interest rate). */
+  bankAprSteps: number[];
+  /** Default selected bank APR for this tier. */
+  bankAprDefault: number;
 }
 
 /** Maps TierKey → next-intl nested key for tier translations. */
-const TIER_I18N_KEY: Record<TierKey, 'realEstate' | 'vehicle' | 'travel'> = {
-  real_estate: 'realEstate',
-  vehicle: 'vehicle',
-  travel: 'travel',
+const TIER_I18N_KEY: Record<TierKey, "realEstate" | "vehicle" | "travel"> = {
+  real_estate: "realEstate",
+  vehicle: "vehicle",
+  travel: "travel",
 };
 
 // ─── Vehicle Condition Config ─────────────────────────────────────────────────
@@ -43,38 +47,53 @@ const VEHICLE_USED_DELTA_STEPS = [-0.1, -0.08, -0.07, -0.06, -0.05];
 const VEHICLE_NEW_DEFAULT_DELTA = 0.04;
 const VEHICLE_USED_DEFAULT_DELTA = -0.07;
 
+// Traditional-bank APR steps per vehicle condition.
+// Defaults sourced from US June 2026 averages: new auto ~7%, used auto ~12%.
+const VEHICLE_NEW_BANK_APR_STEPS = [0.05, 0.06, 0.07, 0.08, 0.09, 0.1];
+const VEHICLE_USED_BANK_APR_STEPS = [0.08, 0.1, 0.12, 0.14, 0.16];
+const VEHICLE_NEW_BANK_APR_DEFAULT = 0.07;
+const VEHICLE_USED_BANK_APR_DEFAULT = 0.12;
+
 const TIERS: Record<TierKey, TierConfig> = {
   real_estate: {
-    icon: '🏠',
-    monthSteps: [60, 72, 84, 96, 108, 120],
+    icon: "🏠",
+    monthSteps: [60, 72, 84, 96, 108, 120, 240, 360],
     deltaSteps: [0.04, 0.045, 0.05, 0.055, 0.06],
     defaultMonths: 84,
     defaultDelta: 0.05,
     downpaymentPct: 0.15,
     defaultPrice: 150000,
-    mitigationKind: 'success',
+    mitigationKind: "success",
+    // US June 2026 avg 30-yr mortgage APR ~6.5%.
+    bankAprSteps: [0.05, 0.0575, 0.065, 0.0725, 0.08, 0.1, 0.12, 0.13, 0.14],
+    bankAprDefault: 0.065,
   },
   vehicle: {
-    icon: '🚗',
+    icon: "🚗",
     monthSteps: [12, 18, 24, 30, 36],
     deltaSteps: VEHICLE_NEW_DELTA_STEPS,
     defaultMonths: 24,
     defaultDelta: VEHICLE_NEW_DEFAULT_DELTA,
     downpaymentPct: 0.2,
     defaultPrice: 25000,
-    mitigationKind: 'warning',
+    mitigationKind: "warning",
     requiresInsurance: true,
+    bankAprSteps: VEHICLE_NEW_BANK_APR_STEPS,
+    bankAprDefault: VEHICLE_NEW_BANK_APR_DEFAULT,
   },
   travel: {
-    icon: '✈️',
+    icon: "✈️",
     monthSteps: [6, 7, 8, 9, 10, 11, 12],
     deltaSteps: [0.02, 0.025, 0.03, 0.035, 0.04],
     defaultMonths: 9,
     defaultDelta: 0.03,
     downpaymentPct: 0.1,
     defaultPrice: 5000,
-    mitigationKind: 'info',
+    mitigationKind: "info",
     escrowThreshold: 0.6,
+    // Travel typically financed via personal loan; US June 2026 avg ~14% APR.
+    bankAprSteps: [0.1, 0.12, 0.14, 0.18, 0.24],
+    bankAprDefault: 0.14,
   },
 };
 
@@ -140,17 +159,50 @@ function simulate(
   return { P, N, downpayment, G_final, totalPaid };
 }
 
+interface BankResult {
+  P: number;
+  downpayment: number;
+  principal: number;
+  totalInterest: number;
+  totalPaid: number;
+  apr: number;
+}
+
+/**
+ * Traditional bank financing (standard amortized loan).
+ * The asset is purchased today at price G; the bank finances (G − downpayment)
+ * and charges interest at the given APR over the same term.
+ *
+ *   r = APR / 12 (monthly rate)
+ *   P = L × r / (1 − (1 + r)^−M)
+ */
+function simulateBank(
+  G: number,
+  M: number,
+  apr: number,
+  d: number,
+): BankResult | null {
+  if (G <= 0 || M <= 0) return null;
+  const downpayment = G * d;
+  const principal = G - downpayment;
+  const r = apr / 12;
+  const P = r > 0 ? (principal * r) / (1 - Math.pow(1 + r, -M)) : principal / M;
+  const totalPaid = P * M + downpayment;
+  const totalInterest = P * M - principal;
+  return { P, downpayment, principal, totalInterest, totalPaid, apr };
+}
+
 // ─── Formatters ────────────────────────────────────────────────────────────────
 
-const fmtUSD = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
+const fmtUSD = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
   maximumFractionDigits: 0,
 });
 
-const fmtUSDCents = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
+const fmtUSDCents = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
@@ -194,7 +246,7 @@ function ResultRow({
       justifyContent="space-between"
       alignItems="center"
       padding="12px 20px"
-      backgroundColor={shaded ? 'var(--surface-2)' : 'var(--surface-1)'}
+      backgroundColor={shaded ? "var(--surface-2)" : "var(--surface-1)"}
     >
       <Box display="flex" alignItems="center" gap={6}>
         <Typography color="var(--muted-foreground, #6b7280)">
@@ -204,7 +256,7 @@ function ResultRow({
       </Box>
       <Typography
         fontWeight={highlight ? 700 : 500}
-        color={highlight ? 'var(--accent, #06b6d4)' : 'var(--foreground)'}
+        color={highlight ? "var(--accent, #06b6d4)" : "var(--foreground)"}
         styles={{ fontSize: highlight ? 20 : undefined }}
       >
         {value}
@@ -213,30 +265,31 @@ function ResultRow({
   );
 }
 
-const MITIGATION_BG: Record<TierConfig['mitigationKind'], string> = {
-  success: 'color-mix(in srgb, var(--success, #16a34a) 12%, transparent)',
-  warning: 'color-mix(in srgb, var(--warning, #d97706) 12%, transparent)',
-  info: 'color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent)',
+const MITIGATION_BG: Record<TierConfig["mitigationKind"], string> = {
+  success: "color-mix(in srgb, var(--success, #16a34a) 12%, transparent)",
+  warning: "color-mix(in srgb, var(--warning, #d97706) 12%, transparent)",
+  info: "color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent)",
 };
 
-const MITIGATION_ICON: Record<TierConfig['mitigationKind'], string> = {
-  success: '🔒',
-  warning: '⚠️',
-  info: '🔐',
+const MITIGATION_ICON: Record<TierConfig["mitigationKind"], string> = {
+  success: "🔒",
+  warning: "⚠️",
+  info: "🔐",
 };
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export function Simulator() {
-  const t = useTranslations('SimulatorPage');
-  const [tier, setTier] = useState<TierKey>('real_estate');
+  const t = useTranslations("SimulatorPage");
+  const [tier, setTier] = useState<TierKey>("real_estate");
   const cfg = TIERS[tier];
 
   const [priceStr, setPriceStr] = useState<string>(String(cfg.defaultPrice));
   const [months, setMonths] = useState<number>(cfg.defaultMonths);
   const [delta, setDelta] = useState<number>(cfg.defaultDelta);
-  const [vehicleCondition, setVehicleCondition] = useState<'new' | 'used'>(
-    'new',
+  const [bankApr, setBankApr] = useState<number>(cfg.bankAprDefault);
+  const [vehicleCondition, setVehicleCondition] = useState<"new" | "used">(
+    "new",
   );
   const [explainModal, setExplainModal] = useState<{
     title: string;
@@ -250,7 +303,7 @@ export function Simulator() {
     });
 
   const G = useMemo(
-    () => parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0,
+    () => parseFloat(priceStr.replace(/[^0-9.]/g, "")) || 0,
     [priceStr],
   );
 
@@ -258,6 +311,15 @@ export function Simulator() {
     () => simulate(G, months, delta, cfg.downpaymentPct),
     [G, months, delta, cfg.downpaymentPct],
   );
+
+  const bankResult = useMemo(
+    () => simulateBank(G, months, bankApr, cfg.downpaymentPct),
+    [G, months, bankApr, cfg.downpaymentPct],
+  );
+
+  // Savings: total cost via bank minus total cost via TandaOmni.
+  const savings =
+    result && bankResult ? bankResult.totalPaid - result.totalPaid : null;
 
   const escrowUnlockMonth = useMemo(() => {
     if (!cfg.escrowThreshold || G <= 0) return null;
@@ -276,8 +338,8 @@ export function Simulator() {
   }));
 
   const effectiveDeltaSteps =
-    tier === 'vehicle'
-      ? vehicleCondition === 'new'
+    tier === "vehicle"
+      ? vehicleCondition === "new"
         ? VEHICLE_NEW_DELTA_STEPS
         : VEHICLE_USED_DELTA_STEPS
       : cfg.deltaSteps;
@@ -287,12 +349,29 @@ export function Simulator() {
     label: `${(d * 100).toFixed(1)}%`,
   }));
 
-  const handleVehicleConditionSwitch = (condition: 'new' | 'used') => {
+  const effectiveBankAprSteps =
+    tier === "vehicle"
+      ? vehicleCondition === "new"
+        ? VEHICLE_NEW_BANK_APR_STEPS
+        : VEHICLE_USED_BANK_APR_STEPS
+      : cfg.bankAprSteps;
+
+  const bankAprSliderSteps: SliderStep[] = effectiveBankAprSteps.map((a) => ({
+    value: a,
+    label: `${(a * 100).toFixed(1)}%`,
+  }));
+
+  const handleVehicleConditionSwitch = (condition: "new" | "used") => {
     setVehicleCondition(condition);
     setDelta(
-      condition === 'new'
+      condition === "new"
         ? VEHICLE_NEW_DEFAULT_DELTA
         : VEHICLE_USED_DEFAULT_DELTA,
+    );
+    setBankApr(
+      condition === "new"
+        ? VEHICLE_NEW_BANK_APR_DEFAULT
+        : VEHICLE_USED_BANK_APR_DEFAULT,
     );
   };
 
@@ -300,11 +379,13 @@ export function Simulator() {
     const nextCfg = TIERS[next];
     setTier(next);
     setMonths(nextCfg.defaultMonths);
-    if (next === 'vehicle') {
-      setVehicleCondition('new');
+    if (next === "vehicle") {
+      setVehicleCondition("new");
       setDelta(VEHICLE_NEW_DEFAULT_DELTA);
+      setBankApr(VEHICLE_NEW_BANK_APR_DEFAULT);
     } else {
       setDelta(nextCfg.defaultDelta);
+      setBankApr(nextCfg.bankAprDefault);
     }
     setPriceStr(String(nextCfg.defaultPrice));
   };
@@ -319,10 +400,10 @@ export function Simulator() {
       {/* Header */}
       <Box display="flex" flexDirection="column" gap={4}>
         <Typography as="h1" fontWeight={700} color="var(--foreground)">
-          {t('heading')}
+          {t("heading")}
         </Typography>
         <Typography color="var(--muted-foreground, #6b7280)">
-          {t('subtitle')}
+          {t("subtitle")}
         </Typography>
       </Box>
 
@@ -335,12 +416,12 @@ export function Simulator() {
       )}
 
       {/* Tier Tabs */}
-      <Box display="flex" gap={8} styles={{ flexWrap: 'wrap' }}>
+      <Box display="flex" gap={8} styles={{ flexWrap: "wrap" }}>
         {(Object.keys(TIERS) as TierKey[]).map((tierKey) => (
           <Button
             key={tierKey}
             text={`${TIERS[tierKey].icon}  ${t(`tiers.${TIER_I18N_KEY[tierKey]}.label`)}`}
-            kind={tier === tierKey ? 'primary' : undefined}
+            kind={tier === tierKey ? "primary" : undefined}
             size="md"
             onClick={() => handleTierSwitch(tierKey)}
           />
@@ -348,26 +429,26 @@ export function Simulator() {
       </Box>
 
       {/* Vehicle New / Used Toggle */}
-      {tier === 'vehicle' && (
+      {tier === "vehicle" && (
         <Box
           display="flex"
           alignItems="center"
           gap={12}
-          styles={{ flexWrap: 'wrap' }}
+          styles={{ flexWrap: "wrap" }}
         >
-          <Typography fontWeight={600}>{t('vehicleConditionLabel')}</Typography>
+          <Typography fontWeight={600}>{t("vehicleConditionLabel")}</Typography>
           <Box display="flex" gap={8}>
             <Button
-              text={t('vehicleCondition.new')}
-              kind={vehicleCondition === 'new' ? 'primary' : undefined}
+              text={t("vehicleCondition.new")}
+              kind={vehicleCondition === "new" ? "primary" : undefined}
               size="md"
-              onClick={() => handleVehicleConditionSwitch('new')}
+              onClick={() => handleVehicleConditionSwitch("new")}
             />
             <Button
-              text={t('vehicleCondition.used')}
-              kind={vehicleCondition === 'used' ? 'primary' : undefined}
+              text={t("vehicleCondition.used")}
+              kind={vehicleCondition === "used" ? "primary" : undefined}
               size="md"
-              onClick={() => handleVehicleConditionSwitch('used')}
+              onClick={() => handleVehicleConditionSwitch("used")}
             />
           </Box>
         </Box>
@@ -382,15 +463,15 @@ export function Simulator() {
               as="label"
               fontWeight={600}
               color="var(--foreground, #1a1a1a)"
-              styles={{ userSelect: 'none' }}
+              styles={{ userSelect: "none" }}
             >
-              {t('priceLabelG')}
+              {t("priceLabelG")}
             </Typography>
             <ExplainBtn
               onClick={() =>
                 openExplain(
-                  'explain.priceLabelGTitle',
-                  'explain.priceLabelGText',
+                  "explain.priceLabelGTitle",
+                  "explain.priceLabelGText",
                 )
               }
             />
@@ -405,13 +486,13 @@ export function Simulator() {
               as="label"
               fontWeight={600}
               color="var(--foreground, #1a1a1a)"
-              styles={{ userSelect: 'none' }}
+              styles={{ userSelect: "none" }}
             >
-              {t('termLabel', { months, years: T.toFixed(1) })}
+              {t("termLabel", { months, years: T.toFixed(1) })}
             </Typography>
             <ExplainBtn
               onClick={() =>
-                openExplain('explain.termTitle', 'explain.termText')
+                openExplain("explain.termTitle", "explain.termText")
               }
             />
           </Box>
@@ -429,13 +510,13 @@ export function Simulator() {
               as="label"
               fontWeight={600}
               color="var(--foreground, #1a1a1a)"
-              styles={{ userSelect: 'none' }}
+              styles={{ userSelect: "none" }}
             >
-              {t('deltaLabel', { pct: (Number(delta) * 100).toFixed(1) })}
+              {t("deltaLabel", { pct: (Number(delta) * 100).toFixed(1) })}
             </Typography>
             <ExplainBtn
               onClick={() =>
-                openExplain('explain.deltaTitle', 'explain.deltaText')
+                openExplain("explain.deltaTitle", "explain.deltaText")
               }
             />
           </Box>
@@ -443,6 +524,30 @@ export function Simulator() {
             steps={deltaSliderSteps}
             value={delta}
             onChange={(v) => setDelta(Number(v))}
+          />
+        </Box>
+
+        {/* Bank APR Slider */}
+        <Box display="flex" flexDirection="column" gap={6}>
+          <Box display="flex" alignItems="center" gap={6}>
+            <Typography
+              as="label"
+              fontWeight={600}
+              color="var(--foreground, #1a1a1a)"
+              styles={{ userSelect: "none" }}
+            >
+              {t("bankAprLabel", { pct: (Number(bankApr) * 100).toFixed(2) })}
+            </Typography>
+            <ExplainBtn
+              onClick={() =>
+                openExplain("explain.bankAprTitle", "explain.bankAprText")
+              }
+            />
+          </Box>
+          <Slider
+            steps={bankAprSliderSteps}
+            value={bankApr}
+            onChange={(v) => setBankApr(Number(v))}
           />
         </Box>
 
@@ -458,155 +563,304 @@ export function Simulator() {
         >
           <Box display="flex" alignItems="center" gap={6}>
             <Typography color="var(--muted-foreground, #6b7280)">
-              {t('downpaymentLabel')}
+              {t("downpaymentLabel")}
             </Typography>
             <ExplainBtn
               onClick={() =>
                 openExplain(
-                  'explain.downpaymentTitle',
-                  'explain.downpaymentText',
+                  "explain.downpaymentTitle",
+                  "explain.downpaymentText",
                 )
               }
             />
           </Box>
           <Typography fontWeight={600}>
             {(cfg.downpaymentPct * 100).toFixed(0)}%
-            {G > 0 ? `  ·  ${fmtUSD.format(G * cfg.downpaymentPct)}` : ''}
+            {G > 0 ? `  ·  ${fmtUSD.format(G * cfg.downpaymentPct)}` : ""}
           </Typography>
         </Box>
       </Card>
 
-      {/* Results Card */}
-      {result && G > 0 ? (
-        <Card padding={0} styles={{ overflow: 'hidden' }}>
-          {/* Results header */}
-          <Box padding="12px 20px" backgroundColor="var(--accent, #06b6d4)">
-            <Typography
-              fontWeight={700}
-              color="var(--accent-foreground, #fff)"
-              styles={{
-                textTransform: 'uppercase',
-                letterSpacing: 1,
-              }}
-            >
-              {t('resultsHeading')}
-            </Typography>
-          </Box>
+      {/* Comparison */}
+      {result && bankResult && G > 0 ? (
+        <Box display="flex" flexDirection="column" gap={20}>
+          <Typography
+            as="h2"
+            fontWeight={700}
+            color="var(--foreground)"
+            styles={{ textTransform: "uppercase", letterSpacing: 1 }}
+          >
+            {t("comparisonHeading")}
+          </Typography>
 
-          {/* Result rows */}
-          <ResultRow
-            label={t('monthlyPayment')}
-            value={fmtUSDCents.format(result.P)}
-            highlight
-            onExplain={() =>
-              openExplain(
-                'explain.monthlyPaymentTitle',
-                'explain.monthlyPaymentText',
-              )
-            }
-          />
-          <ResultRow
-            label={t('downpaymentRequired')}
-            value={fmtUSD.format(result.downpayment)}
-            shaded
-            onExplain={() =>
-              openExplain(
-                'explain.downpaymentRequiredTitle',
-                'explain.downpaymentRequiredText',
-              )
-            }
-          />
-          <ResultRow
-            label={t('groupSize')}
-            value={t('groupSizeValue', { n: result.N })}
-            onExplain={() =>
-              openExplain('explain.groupSizeTitle', 'explain.groupSizeText')
-            }
-          />
-          <ResultRow
-            label={t('assetPriceAtEnd', { years: T.toFixed(1) })}
-            value={fmtUSD.format(result.G_final)}
-            shaded
-            onExplain={() =>
-              openExplain(
-                'explain.assetPriceAtEndTitle',
-                'explain.assetPriceAtEndText',
-              )
-            }
-          />
-          <ResultRow
-            label={t('totalContributed')}
-            value={fmtUSD.format(result.totalPaid)}
-            onExplain={() =>
-              openExplain(
-                'explain.totalContributedTitle',
-                'explain.totalContributedText',
-              )
-            }
-          />
-
-          {/* Escrow progress bar (Tier 3 only) */}
-          {cfg.escrowThreshold && escrowUnlockMonth && escrowPct !== null && (
-            <Box
-              display="flex"
-              flexDirection="column"
-              gap={8}
+          {/* Savings banner */}
+          {savings !== null && savings > 0 && (
+            <Card
               padding="16px 20px"
-              styles={{ borderTop: '1px solid var(--border, #e5e7eb)' }}
+              backgroundColor="color-mix(in srgb, var(--success, #16a34a) 14%, transparent)"
+              styles={{ border: "1px solid var(--success, #16a34a)" }}
             >
               <Box
                 display="flex"
                 flexDirection="row"
                 justifyContent="space-between"
                 alignItems="center"
+                gap={12}
+                styles={{ flexWrap: "wrap" }}
               >
-                <Box display="flex" alignItems="center" gap={6}>
-                  <Typography fontWeight={600}>{t('escrowHeading')}</Typography>
-                  <ExplainBtn
-                    onClick={() =>
-                      openExplain('explain.escrowTitle', 'explain.escrowText')
-                    }
-                  />
+                <Box display="flex" flexDirection="column" gap={2}>
+                  <Typography fontWeight={700} color="var(--foreground)">
+                    💸 {t("savingsHeading")}
+                  </Typography>
+                  <Typography color="var(--muted-foreground, #6b7280)">
+                    {t("savingsNote")}
+                  </Typography>
                 </Box>
-                <Typography color="var(--muted-foreground, #6b7280)">
-                  {t('escrowUnlocks', {
-                    month: escrowUnlockMonth,
-                    total: months,
-                  })}
+                <Typography
+                  fontWeight={700}
+                  color="var(--success, #16a34a)"
+                  styles={{ fontSize: 26 }}
+                >
+                  {t("savingsAmount", { amount: fmtUSD.format(savings) })}
                 </Typography>
               </Box>
-              <ProgressBar
-                value={escrowPct}
-                size={8}
-                label={t('escrowHeading')}
-              />
-              <Typography color="var(--muted-foreground, #6b7280)">
-                {t('escrowNote')}
-              </Typography>
-            </Box>
+            </Card>
           )}
 
-          {/* Mitigation notice */}
-          <Box
-            padding="12px 20px"
-            backgroundColor={MITIGATION_BG[cfg.mitigationKind]}
-            styles={{ borderTop: '1px solid var(--border, #e5e7eb)' }}
-          >
-            <Typography color="var(--foreground)">
-              {MITIGATION_ICON[cfg.mitigationKind]}{' '}
-              {t(`tiers.${TIER_I18N_KEY[tier]}.mitigation`)}
-            </Typography>
+          {/* Side-by-side panels */}
+          <Box className="simulator__compare-grid">
+            {/* ── TandaOmni panel ───────────────────────────────── */}
+            <Card padding={0} styles={{ overflow: "hidden" }}>
+              <Box padding="12px 20px" backgroundColor="var(--accent, #06b6d4)">
+                <Typography
+                  fontWeight={700}
+                  color="var(--accent-foreground, #fff)"
+                  styles={{ textTransform: "uppercase", letterSpacing: 1 }}
+                >
+                  {t("tandaColumnHeading")}
+                </Typography>
+              </Box>
+
+              <ResultRow
+                label={t("monthlyPayment")}
+                value={fmtUSDCents.format(result.P)}
+                highlight
+                onExplain={() =>
+                  openExplain(
+                    "explain.monthlyPaymentTitle",
+                    "explain.monthlyPaymentText",
+                  )
+                }
+              />
+              <ResultRow
+                label={t("downpaymentRequired")}
+                value={fmtUSD.format(result.downpayment)}
+                shaded
+                onExplain={() =>
+                  openExplain(
+                    "explain.downpaymentRequiredTitle",
+                    "explain.downpaymentRequiredText",
+                  )
+                }
+              />
+              <ResultRow
+                label={t("interestCharged")}
+                value={t("zeroInterest")}
+              />
+              <ResultRow
+                label={t("groupSize")}
+                value={t("groupSizeValue", { n: result.N })}
+                shaded
+                onExplain={() =>
+                  openExplain("explain.groupSizeTitle", "explain.groupSizeText")
+                }
+              />
+              <ResultRow
+                label={t("assetPriceAtEnd", { years: T.toFixed(1) })}
+                value={fmtUSD.format(result.G_final)}
+                onExplain={() =>
+                  openExplain(
+                    "explain.assetPriceAtEndTitle",
+                    "explain.assetPriceAtEndText",
+                  )
+                }
+              />
+              <ResultRow
+                label={t("totalContributed")}
+                value={fmtUSD.format(result.totalPaid)}
+                highlight
+                shaded
+                onExplain={() =>
+                  openExplain(
+                    "explain.totalContributedTitle",
+                    "explain.totalContributedText",
+                  )
+                }
+              />
+
+              {/* Escrow progress bar (Tier 3 only) */}
+              {cfg.escrowThreshold &&
+                escrowUnlockMonth &&
+                escrowPct !== null && (
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    gap={8}
+                    padding="16px 20px"
+                    styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
+                  >
+                    <Box
+                      display="flex"
+                      flexDirection="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Box display="flex" alignItems="center" gap={6}>
+                        <Typography fontWeight={600}>
+                          {t("escrowHeading")}
+                        </Typography>
+                        <ExplainBtn
+                          onClick={() =>
+                            openExplain(
+                              "explain.escrowTitle",
+                              "explain.escrowText",
+                            )
+                          }
+                        />
+                      </Box>
+                      <Typography color="var(--muted-foreground, #6b7280)">
+                        {t("escrowUnlocks", {
+                          month: escrowUnlockMonth,
+                          total: months,
+                        })}
+                      </Typography>
+                    </Box>
+                    <ProgressBar
+                      value={escrowPct}
+                      size={8}
+                      label={t("escrowHeading")}
+                    />
+                    <Typography color="var(--muted-foreground, #6b7280)">
+                      {t("escrowNote")}
+                    </Typography>
+                  </Box>
+                )}
+
+              {/* Mitigation notice */}
+              <Box
+                padding="12px 20px"
+                backgroundColor={MITIGATION_BG[cfg.mitigationKind]}
+                styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
+              >
+                <Typography color="var(--foreground)">
+                  {MITIGATION_ICON[cfg.mitigationKind]}{" "}
+                  {t(`tiers.${TIER_I18N_KEY[tier]}.mitigation`)}
+                </Typography>
+              </Box>
+            </Card>
+
+            {/* ── Traditional Bank panel ────────────────────────── */}
+            <Card padding={0} styles={{ overflow: "hidden" }}>
+              <Box
+                padding="12px 20px"
+                backgroundColor="var(--muted-foreground, #6b7280)"
+              >
+                <Typography
+                  fontWeight={700}
+                  color="#ffffff"
+                  styles={{ textTransform: "uppercase", letterSpacing: 1 }}
+                >
+                  {t("bankColumnHeading")}
+                </Typography>
+              </Box>
+
+              <ResultRow
+                label={t("monthlyPayment")}
+                value={fmtUSDCents.format(bankResult.P)}
+                highlight
+                onExplain={() =>
+                  openExplain(
+                    "explain.monthlyPaymentTitle",
+                    "explain.monthlyPaymentText",
+                  )
+                }
+              />
+              <ResultRow
+                label={t("downpaymentRequired")}
+                value={fmtUSD.format(bankResult.downpayment)}
+                shaded
+                onExplain={() =>
+                  openExplain(
+                    "explain.downpaymentRequiredTitle",
+                    "explain.downpaymentRequiredText",
+                  )
+                }
+              />
+              <ResultRow
+                label={t("interestCharged")}
+                value={t("bankAprValue", {
+                  pct: (bankResult.apr * 100).toFixed(2),
+                })}
+                onExplain={() =>
+                  openExplain("explain.bankAprTitle", "explain.bankAprText")
+                }
+              />
+              <ResultRow
+                label={t("bankFinancedAmount")}
+                value={fmtUSD.format(bankResult.principal)}
+                shaded
+                onExplain={() =>
+                  openExplain(
+                    "explain.bankFinancedTitle",
+                    "explain.bankFinancedText",
+                  )
+                }
+              />
+              <ResultRow
+                label={t("bankTotalInterest")}
+                value={fmtUSD.format(bankResult.totalInterest)}
+                onExplain={() =>
+                  openExplain(
+                    "explain.bankTotalInterestTitle",
+                    "explain.bankTotalInterestText",
+                  )
+                }
+              />
+              <ResultRow
+                label={t("bankTotalCost")}
+                value={fmtUSD.format(bankResult.totalPaid)}
+                highlight
+                shaded
+                onExplain={() =>
+                  openExplain(
+                    "explain.bankTotalCostTitle",
+                    "explain.bankTotalCostText",
+                  )
+                }
+              />
+
+              {/* Bank interest notice */}
+              <Box
+                padding="12px 20px"
+                backgroundColor="color-mix(in srgb, var(--warning, #d97706) 12%, transparent)"
+                styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
+              >
+                <Typography color="var(--foreground)">
+                  🏦 {t("bankInterestNotice")}
+                </Typography>
+              </Box>
+            </Card>
           </Box>
-        </Card>
+        </Box>
       ) : (
         <Card
           padding={32}
           alignItems="center"
           justifyContent="center"
-          styles={{ textAlign: 'center' }}
+          styles={{ textAlign: "center" }}
         >
           <Typography color="var(--muted-foreground, #6b7280)">
-            {t('emptyState')}
+            {t("emptyState")}
           </Typography>
         </Card>
       )}

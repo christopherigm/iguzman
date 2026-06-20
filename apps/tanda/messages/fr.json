@@ -125,6 +125,20 @@
       "used": "🔄 Occasion"
     },
     "emptyState": "Entrez un prix d’actif pour voir votre simulation.",
+    "bankAprLabel": "Taux d’intérêt bancaire (TAEG) : {pct}%",
+    "comparisonHeading": "TandaOmni vs. banque traditionnelle",
+    "tandaColumnHeading": "TandaOmni · Sans intérêts",
+    "bankColumnHeading": "Banque traditionnelle",
+    "interestCharged": "Intérêts facturés",
+    "zeroInterest": "0% · Aucun",
+    "bankAprValue": "{pct}% TAEG",
+    "bankFinancedAmount": "Montant financé",
+    "bankTotalInterest": "Total des intérêts payés",
+    "bankTotalCost": "Coût total",
+    "bankInterestNotice": "Un prêt traditionnel facture des intérêts sur le solde financé pendant toute la durée — de l’argent payé en plus du prix de l’actif.",
+    "savingsHeading": "Votre avantage TandaOmni",
+    "savingsNote": "Total économisé par rapport à un prêt bancaire traditionnel sur la même durée.",
+    "savingsAmount": "Économisez {amount}",
     "explain": {
       "priceLabelGTitle": "Prix cible de l’actif (G)",
       "priceLabelGText": "La valeur de base de l’actif que vous souhaitez acquérir. C’est le montant objectif que votre groupe tanda financera collectivement. Tous les paiements mensuels, apports initiaux et projections en découlent.",
@@ -145,7 +159,15 @@
       "totalContributedTitle": "Total versé par membre",
       "totalContributedText": "Le montant total que chaque membre paie sur toute la durée : (P × M) + apport initial. Comme TandaOmni ne prélève aucun intérêt, cela correspond approximativement au prix original de l’actif — la communauté se finance mutuellement sans frais.",
       "escrowTitle": "Seuil de déblocage du séquestre",
-      "escrowText": "Pour les voyages & expériences (actifs non récupérables), votre versement est bloqué jusqu’à ce que vos contributions totales atteignent 60 % du coût actuel de l’actif. Cela protège le groupe contre le financement d’une expérience non remboursable en cas de défaillance d’un membre."
+      "escrowText": "Pour les voyages & expériences (actifs non récupérables), votre versement est bloqué jusqu’à ce que vos contributions totales atteignent 60 % du coût actuel de l’actif. Cela protège le groupe contre le financement d’une expérience non remboursable en cas de défaillance d’un membre.",
+      "bankAprTitle": "Taux d’intérêt bancaire (TAEG)",
+      "bankAprText": "Le taux annuel effectif global qu’un prêteur traditionnel applique sur le solde financé. Les valeurs par défaut reflètent les moyennes américaines de juin 2026 (hypothèque ~6,5 %, auto neuve ~7 %, auto d’occasion ~12 %, voyage/prêt personnel ~14 %). Ajustez le curseur pour correspondre à une offre reçue.",
+      "bankFinancedTitle": "Montant financé",
+      "bankFinancedText": "La part du prix que la banque vous prête : le prix cible moins votre apport. Les intérêts s’accumulent sur ce solde.",
+      "bankTotalInterestTitle": "Total des intérêts payés",
+      "bankTotalInterestText": "Le total des intérêts versés à la banque sur toute la durée : (mensualité × mois) − montant financé. Un coût pur en plus de l’actif — exactement ce que TandaOmni élimine.",
+      "bankTotalCostTitle": "Coût total",
+      "bankTotalCostText": "Tout ce que vous payez via la banque : apport + (mensualité × mois). Comparez-le au Total cotisé de TandaOmni pour voir vos économies."
     }
   },
   "AnalysisPage": {

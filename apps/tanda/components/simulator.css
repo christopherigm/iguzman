@@ -15,3 +15,21 @@
   background: var(--accent, #06b6d4);
   color: #ffffff;
 }
+
+/*
+ * Two-column comparison grid (TandaOmni vs. Traditional Bank).
+ * Defined in CSS because the responsive collapse below requires an @media
+ * query, which UIComponentProps / the `styles` escape-hatch cannot express.
+ */
+.simulator__compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .simulator__compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
