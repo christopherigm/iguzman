@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@repo/i18n/navigation";
 import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { LinkButton } from "@repo/ui/core-elements/link-button";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -210,17 +210,21 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
         {t("signIn.orDivider")}
       </Typography>
       <Box display="flex" justifyContent="center" gap={12}>
-        <Button
-          unstyled
+        <IconButton
           type="button"
+          icon="/icons/fingerprint.svg"
+          iconSize={28}
+          iconColor="var(--foreground)"
           onClick={handlePasskeySignIn}
           disabled={!email}
           className="auth-form__passkey-icon-btn"
           aria-label={t("signIn.passkeyButton")}
           title={t("signIn.passkeyButton")}
-        >
-          <Image src="/icons/fingerprint.svg" width={28} height={28} alt="" />
-        </Button>
+          width={48}
+          height={48}
+          borderRadius="50%"
+          border="1.5px solid var(--border, #e5e7eb)"
+        />
       </Box>
       <Box display="flex" flexDirection="column" gap={8} alignItems="center">
         <LinkButton

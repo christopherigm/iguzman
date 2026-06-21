@@ -95,7 +95,9 @@
     "statusError": "Lookup failed",
     "scanCount": "{count} scanned",
     "permissionDenied": "Camera access denied",
-    "permissionHelp": "Please allow camera access in your browser settings."
+    "permissionHelp": "Please allow camera access in your browser settings.",
+    "manualLabel": "Enter barcode manually",
+    "manualSubmit": "Look up"
   },
   "AccountPage": {
     "title": "My Account",
@@ -172,7 +174,30 @@
     "delete": "Delete",
     "confirmDeleteTitle": "Delete movie",
     "confirmDeleteText": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
-    "deleteError": "Failed to delete movie. Please try again."
+    "deleteError": "Failed to delete movie. Please try again.",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "titleLabel": "Title",
+    "directorLabel": "Director",
+    "yearLabel": "Year",
+    "formatLabel": "Format",
+    "formatUnset": "Unset",
+    "genresLabel": "Genres (comma separated)",
+    "castLabel": "Cast (comma separated)",
+    "saveError": "Failed to save changes. Please try again.",
+    "saved": "Changes saved.",
+    "getBackdrop": "Get backdrop",
+    "fetchingBackdrop": "Fetching backdrop…",
+    "backdropError": "Couldn't find a backdrop for this movie.",
+    "trailer": "Trailer",
+    "synopsis": "Synopsis",
+    "getSynopsis": "Get synopsis",
+    "getTrailer": "Get trailer",
+    "fetchingSynopsis": "Fetching synopsis…",
+    "fetchingTrailer": "Fetching trailer…",
+    "synopsisError": "Couldn't find a synopsis for this movie.",
+    "trailerError": "Couldn't find a trailer for this movie."
   },
   "InboxPage": {
     "title": "Inbox",

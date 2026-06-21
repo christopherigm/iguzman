@@ -7,7 +7,8 @@ replicaCount: 2
 
 # ─── Container image ────────────────────────────────────────
 image:
-  repository: christopherguzman/edge-folio-api
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) -> ${DOCKER_REGISTRY}/edge-folio-api
+  repository: edge-folio-api
   tag: 'latest'
   pullPolicy: IfNotPresent
 

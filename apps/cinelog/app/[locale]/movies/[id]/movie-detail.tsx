@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -15,10 +15,18 @@ import { Toast } from "@repo/ui/core-elements/toast";
 import {
   ApiError,
   deleteMovie,
+  fetchBackdrop,
+  fetchSynopsis,
+  fetchTrailer,
   getMovie,
+  updateMovie,
   type MovieDetail as MovieDetailData,
+  type MovieUpdatePayload,
 } from "@/lib/catalog";
+import { useIsLoggedIn } from "@/lib/use-is-logged-in";
+import { MovieEditForm } from "./movie-edit-form";
 import "./movie-detail.css";
+import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
 
 type Status = "loading" | "ready" | "not_found" | "error";
 
@@ -28,15 +36,61 @@ const LABEL_STYLES = {
   letterSpacing: "0.05em",
 };
 
+/** Convert a YouTube watch / short URL into an embeddable player URL. */
+function toYouTubeEmbed(url: string): string {
+  try {
+    const u = new URL(url);
+    const key = u.hostname.includes("youtu.be")
+      ? u.pathname.slice(1)
+      : (u.searchParams.get("v") ?? "");
+    return key ? `https://www.youtube.com/embed/${key}` : url;
+  } catch {
+    return url;
+  }
+}
+
 export function MovieDetail({ id }: { id: string }) {
   const t = useTranslations("MovieDetailPage");
   const tFormat = useTranslations("MovieFormat");
   const router = useRouter();
+  const isLoggedIn = useIsLoggedIn();
   const [movie, setMovie] = useState<MovieDetailData | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [showTrailer, setShowTrailer] = useState(false);
+
+  async function handleSave(payload: MovieUpdatePayload) {
+    setSaveError(false);
+    try {
+      const updated = await updateMovie(id, payload);
+      setMovie(updated);
+      setEditing(false);
+      setSaved(true);
+    } catch (err) {
+      setSaveError(true);
+      throw err; // Let the form re-enable so the user can retry.
+    }
+  }
+
+  async function handleGetBackdrop() {
+    const updated = await fetchBackdrop(id);
+    setMovie(updated);
+  }
+
+  async function handleGetSynopsis() {
+    const updated = await fetchSynopsis(id);
+    setMovie(updated);
+  }
+
+  async function handleGetTrailer() {
+    const updated = await fetchTrailer(id);
+    setMovie(updated);
+  }
 
   async function handleConfirmDelete() {
     setShowDeleteConfirm(false);
@@ -49,6 +103,13 @@ export function MovieDetail({ id }: { id: string }) {
       setDeleteError(true);
     }
   }
+
+  // Auto-clear the success flag so a later save can re-trigger the toast.
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), 5000);
+    return () => clearTimeout(timer);
+  }, [saved]);
 
   useEffect(() => {
     let active = true;
@@ -88,8 +149,27 @@ export function MovieDetail({ id }: { id: string }) {
     );
   }
 
+  // Dim, full-bleed wallpaper behind the whole card; falls back to the plain
+  // layout when the API resolved no backdrop. The image URL is dynamic, so it
+  // rides in as a CSS variable consumed by the `::before` in movie-detail.css.
+  const backdropStyles = movie.backdrop
+    ? ({
+        position: "relative",
+        isolation: "isolate",
+        "--backdrop-image": `url("${movie.backdrop}")`,
+      } as CSSProperties)
+    : undefined;
+
   return (
-    <Box flexDirection="column" gap={20} paddingY={16}>
+    <Box
+      flexDirection="column"
+      gap={20}
+      paddingY={16}
+      className={movie.backdrop ? "movie-detail__backdrop" : undefined}
+      styles={backdropStyles}
+    >
+      <NavbarSpacer />
+
       {showDeleteConfirm && (
         <ConfirmationModal
           title={t("confirmDeleteTitle")}
@@ -97,6 +177,33 @@ export function MovieDetail({ id }: { id: string }) {
           okCallback={handleConfirmDelete}
           cancelCallback={() => setShowDeleteConfirm(false)}
         />
+      )}
+
+      {showTrailer && movie.trailer_url && (
+        <ConfirmationModal
+          title={t("trailer")}
+          text={movie.title}
+          okCallback={() => setShowTrailer(false)}
+          panelMaxWidth="760px"
+        >
+          <Box
+            width="100%"
+            borderRadius={8}
+            styles={{
+              position: "relative",
+              overflow: "hidden",
+              aspectRatio: "16 / 9",
+            }}
+          >
+            <iframe
+              className="movie-detail__trailer-frame"
+              src={toYouTubeEmbed(movie.trailer_url)}
+              title={t("trailer")}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </Box>
+        </ConfirmationModal>
       )}
 
       {deleteError && (
@@ -107,6 +214,14 @@ export function MovieDetail({ id }: { id: string }) {
         />
       )}
 
+      {saveError && (
+        <Toast message={t("saveError")} variant="error" position="top-center" />
+      )}
+
+      {saved && (
+        <Toast message={t("saved")} variant="success" position="top-center" />
+      )}
+
       <Box
         display="flex"
         alignItems="center"
@@ -115,39 +230,64 @@ export function MovieDetail({ id }: { id: string }) {
         gap={8}
       >
         <LinkButton label={t("back")} href="/" />
-        <Button
-          text={t("delete")}
-          icon="/icons/delete.svg"
-          kind="error"
-          size="md"
-          onClick={() => setShowDeleteConfirm(true)}
-          disabled={deleting}
-        />
+        {!editing && (movie.trailer_url || isLoggedIn) && (
+          <Box display="flex" gap={8} flexWrap="wrap">
+            {movie.trailer_url && (
+              <Button
+                text={t("trailer")}
+                size="md"
+                onClick={() => setShowTrailer(true)}
+                disabled={deleting}
+                kind="primary"
+              />
+            )}
+            {isLoggedIn && (
+              <>
+                <Button
+                  text={t("edit")}
+                  kind="warning"
+                  size="md"
+                  onClick={() => setEditing(true)}
+                  disabled={deleting}
+                />
+                <Button
+                  text={t("delete")}
+                  icon="/icons/delete.svg"
+                  kind="error"
+                  size="md"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={deleting}
+                />
+              </>
+            )}
+          </Box>
+        )}
       </Box>
 
       <Box
         display="flex"
-        flexDirection="column"
         className="movie-detail__layout"
         gap={24}
+        marginTop={24}
       >
         <Box
           width="100%"
-          maxWidth={280}
           borderRadius={8}
+          className="movie-detail__cover"
           styles={{
             position: "relative",
             overflow: "hidden",
             aspectRatio: "2 / 3",
             flexShrink: 0,
           }}
+          elevation={5}
         >
           {movie.cover ? (
             <Image
               src={movie.cover}
               alt=""
               fill
-              sizes="(max-width: 600px) 100vw, 280px"
+              sizes="(max-width: 900px) 196px, (max-width: 1200px) 224px, 280px"
               className="movie-detail__image"
             />
           ) : (
@@ -167,49 +307,76 @@ export function MovieDetail({ id }: { id: string }) {
         </Box>
 
         <Box flexDirection="column" gap={16} flex={1}>
-          <Typography as="h1" variant="h2" fontWeight={700}>
-            {movie.title}
-          </Typography>
-
-          <Box display="flex" gap={8} flexWrap="wrap">
-            {movie.year && <Badge variant="subtle">{movie.year}</Badge>}
-            {movie.format && (
-              <Badge variant="subtle">{tFormat(movie.format)}</Badge>
-            )}
-          </Box>
-
-          {movie.director && (
-            <Box flexDirection="column" gap={2}>
-              <Typography variant="label" styles={LABEL_STYLES}>
-                {t("director")}
+          {editing ? (
+            <MovieEditForm
+              movie={movie}
+              onSave={handleSave}
+              onCancel={() => setEditing(false)}
+              onGetBackdrop={handleGetBackdrop}
+              onGetSynopsis={handleGetSynopsis}
+              onGetTrailer={handleGetTrailer}
+            />
+          ) : (
+            <Box display="flex" flexDirection="column" gap={16} flex={1}>
+              <Typography as="h1" variant="h2" fontWeight={700}>
+                {movie.title}
               </Typography>
-              <Typography variant="body">{movie.director}</Typography>
-            </Box>
-          )}
 
-          {movie.genres.length > 0 && (
-            <Box flexDirection="column" gap={6}>
-              <Typography variant="label" styles={LABEL_STYLES}>
-                {t("genres")}
-              </Typography>
-              <Box display="flex" gap={6} flexWrap="wrap">
-                {movie.genres.map((genre) => (
-                  <Badge key={genre.id} variant="outlined" size="sm">
-                    {genre.name}
-                  </Badge>
-                ))}
+              <Box display="flex" gap={8} flexWrap="wrap">
+                {movie.year && <Badge variant="subtle">{movie.year}</Badge>}
+                {movie.format && (
+                  <Badge variant="subtle">{tFormat(movie.format)}</Badge>
+                )}
               </Box>
-            </Box>
-          )}
 
-          {movie.cast.length > 0 && (
-            <Box flexDirection="column" gap={6}>
-              <Typography variant="label" styles={LABEL_STYLES}>
-                {t("cast")}
-              </Typography>
-              <Typography variant="body">
-                {movie.cast.map((actor) => actor.name).join(", ")}
-              </Typography>
+              {movie.director && (
+                <Box flexDirection="column" gap={2}>
+                  <Typography variant="label" styles={LABEL_STYLES}>
+                    {t("director")}
+                  </Typography>
+                  <Typography variant="body">{movie.director}</Typography>
+                </Box>
+              )}
+
+              {movie.genres.length > 0 && (
+                <Box flexDirection="column" gap={6}>
+                  <Typography variant="label" styles={LABEL_STYLES}>
+                    {t("genres")}
+                  </Typography>
+                  <Box display="flex" gap={6} flexWrap="wrap">
+                    {movie.genres.map((genre) => (
+                      <Badge key={genre.id} variant="outlined" size="sm">
+                        {genre.name}
+                      </Badge>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {movie.synopsis && (
+                <Box flexDirection="column" gap={6}>
+                  <Typography variant="label" styles={LABEL_STYLES}>
+                    {t("synopsis")}
+                  </Typography>
+                  <Typography
+                    variant="body"
+                    styles={{ lineHeight: 1.6, whiteSpace: "pre-line" }}
+                  >
+                    {movie.synopsis}
+                  </Typography>
+                </Box>
+              )}
+
+              {movie.cast.length > 0 && (
+                <Box flexDirection="column" gap={6}>
+                  <Typography variant="label" styles={LABEL_STYLES}>
+                    {t("cast")}
+                  </Typography>
+                  <Typography variant="body">
+                    {movie.cast.map((actor) => actor.name).join(", ")}
+                  </Typography>
+                </Box>
+              )}
             </Box>
           )}
         </Box>

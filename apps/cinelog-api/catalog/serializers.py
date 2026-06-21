@@ -35,13 +35,14 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     genres = CategorySerializer(many=True, read_only=True)
     cast = ActorSerializer(many=True, read_only=True)
     cover = serializers.SerializerMethodField()
+    backdrop = serializers.SerializerMethodField()
 
     class Meta:
         model = Movie
         fields = [
             'id', 'barcode', 'title', 'director', 'year', 'format',
-            'cover', 'cover_url', 'tmdb_id', 'genres', 'cast',
-            'created', 'modified',
+            'cover', 'cover_url', 'backdrop', 'tmdb_id', 'synopsis', 'trailer_url',
+            'genres', 'cast', 'created', 'modified',
         ]
 
     def get_cover(self, obj):
@@ -50,6 +51,13 @@ class MovieDetailSerializer(serializers.ModelSerializer):
             url = obj.cover_image.url
             return request.build_absolute_uri(url) if request else url
         return obj.cover_url or ''
+
+    def get_backdrop(self, obj):
+        request = self.context.get('request')
+        if obj.backdrop_image:
+            url = obj.backdrop_image.url
+            return request.build_absolute_uri(url) if request else url
+        return ''
 
 
 class MovieWriteSerializer(serializers.ModelSerializer):
@@ -103,11 +111,12 @@ class ScanQueueSerializer(serializers.ModelSerializer):
         read_only_fields = ['status', 'retry_count', 'error_message', 'created', 'modified']
 
 
-class InboxAcceptSerializer(serializers.Serializer):
+class MovieEditSerializer(serializers.Serializer):
     """
-    Editable fields the user can correct in the Inbox before an AI-resolved
-    `ScanQueue` entry is promoted to the main catalog (Phase 5.3). The barcode
-    is taken from the queue entry, never the client.
+    Fields the user may correct on an existing catalog `Movie` from the detail
+    page. Genres and cast arrive as plain names (resolved/created in the view);
+    cover and tmdb_id are intentionally excluded so editing never clobbers the
+    authoritative TMDB cover.
     """
 
     title = serializers.CharField(max_length=500)
@@ -118,13 +127,23 @@ class InboxAcceptSerializer(serializers.Serializer):
     format = serializers.ChoiceField(
         choices=FORMAT_CHOICES, required=False, allow_blank=True, default=''
     )
-    cover_url = serializers.URLField(
-        max_length=1000, required=False, allow_blank=True, default=''
-    )
-    tmdb_id = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')
     genres = serializers.ListField(
         child=serializers.CharField(max_length=100), required=False, default=list
     )
     cast = serializers.ListField(
         child=serializers.CharField(max_length=255), required=False, default=list
     )
+
+
+class InboxAcceptSerializer(MovieEditSerializer):
+    """
+    Editable fields the user can correct in the Inbox before an AI-resolved
+    `ScanQueue` entry is promoted to the main catalog (Phase 5.3). The barcode
+    is taken from the queue entry, never the client. Extends the catalog edit
+    fields with the TMDB cover/id carried over from the resolved entry.
+    """
+
+    cover_url = serializers.URLField(
+        max_length=1000, required=False, allow_blank=True, default=''
+    )
+    tmdb_id = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')

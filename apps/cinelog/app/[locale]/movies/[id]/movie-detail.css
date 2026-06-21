@@ -1,10 +1,67 @@
-@media (min-width: 600px) {
-  /* sm */
+/* Direction lives here (not as a Box prop) so the breakpoint override below
+   can win - inline styles from props would otherwise beat the media query. */
+.movie-detail__layout {
+  flex-direction: column;
+}
+
+/* Cover sizing relative to the 280px desktop baseline: 30% smaller on mobile
+   (xs), 20% smaller on tablet (md), full size on desktop (lg). Centered while
+   stacked, top-aligned once it sits beside the movie data. These are inherently
+   responsive, so they must live in CSS media queries rather than Box props. */
+.movie-detail__cover {
+  align-self: center;
+  max-width: 196px;
+}
+
+@media (min-width: 900px) {
+  /* md - tablet: cover and movie data side by side, cover 20% smaller */
   .movie-detail__layout {
     flex-direction: row;
+  }
+
+  .movie-detail__cover {
+    align-self: flex-start;
+    max-width: 224px;
+  }
+}
+
+@media (min-width: 1200px) {
+  /* lg - desktop: full-size cover beside the movie data */
+  .movie-detail__cover {
+    max-width: 280px;
   }
 }
 
 .movie-detail__image {
   object-fit: cover;
+}
+
+/* YouTube trailer embed fills its 16:9 wrapper inside the modal. */
+.movie-detail__trailer-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Dimmed wallpaper layer; sits below the card content (isolated stacking
+   context set inline) and fades toward the bottom so text stays readable. */
+.movie-detail__backdrop::before {
+  content: "";
+  /* Fixed to the viewport so the wallpaper stays put while the page
+     scrolls, spanning the full viewport rather than tracking this card. */
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  z-index: -1;
+  background-image: var(--backdrop-image);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.27;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+  mask-image: linear-gradient(to bottom, black, transparent);
 }

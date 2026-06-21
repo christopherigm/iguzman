@@ -54,6 +54,16 @@ def _scan_cover_path(instance, filename):
     return f'scan_queue/covers/{uuid.uuid4().hex}.{ext}'
 
 
+def _movie_backdrop_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lstrip('.') or 'jpg'
+    return f'movies/backdrops/{uuid.uuid4().hex}.{ext}'
+
+
+def _scan_backdrop_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lstrip('.') or 'jpg'
+    return f'scan_queue/backdrops/{uuid.uuid4().hex}.{ext}'
+
+
 class Movie(Common):
     barcode = models.CharField(max_length=20, unique=True, db_index=True)
     title = models.CharField(max_length=500)
@@ -62,7 +72,14 @@ class Movie(Common):
     format = models.CharField(max_length=10, choices=FORMAT_CHOICES, blank=True)
     cover_url = models.URLField(max_length=1000, blank=True)
     cover_image = models.ImageField(upload_to=_movie_cover_path, null=True, blank=True)
+    # Stored wide backdrop/wallpaper bytes - downloaded so the page background
+    # survives the source URL (TMDB or web) going away.
+    backdrop_image = models.ImageField(upload_to=_movie_backdrop_path, null=True, blank=True)
     tmdb_id = models.CharField(max_length=20, blank=True)
+    # Plot summary shown on the detail page (TMDB overview, web/LLM fallback).
+    synopsis = models.TextField(blank=True)
+    # YouTube watch URL for the film's official trailer.
+    trailer_url = models.URLField(max_length=500, blank=True)
     genres = models.ManyToManyField(Category, blank=True, related_name='movies')
     cast = models.ManyToManyField(Actor, blank=True, related_name='movies')
 
@@ -87,6 +104,8 @@ class ScanQueue(Common):
     extracted_tmdb_id = models.CharField(max_length=20, blank=True)
     extracted_cover_url = models.URLField(max_length=1000, blank=True)
     extracted_cover_image = models.ImageField(upload_to=_scan_cover_path, null=True, blank=True)
+    # Wallpaper carried through review; copied onto the Movie on accept.
+    extracted_backdrop_image = models.ImageField(upload_to=_scan_backdrop_path, null=True, blank=True)
     retry_count = models.PositiveSmallIntegerField(default=0)
     error_message = models.TextField(blank=True)
     movie = models.OneToOneField(

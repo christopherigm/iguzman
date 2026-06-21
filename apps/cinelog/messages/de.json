@@ -95,7 +95,9 @@
     "statusError": "Suche fehlgeschlagen",
     "scanCount": "{count} gescannt",
     "permissionDenied": "Kamerazugriff verweigert",
-    "permissionHelp": "Bitte erlaube den Kamerazugriff in deinen Browsereinstellungen."
+    "permissionHelp": "Bitte erlaube den Kamerazugriff in deinen Browsereinstellungen.",
+    "manualLabel": "Barcode manuell eingeben",
+    "manualSubmit": "Nachschlagen"
   },
   "AccountPage": {
     "title": "Mein Konto",
@@ -172,7 +174,30 @@
     "delete": "Löschen",
     "confirmDeleteTitle": "Film löschen",
     "confirmDeleteText": "Möchtest du \"{title}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
-    "deleteError": "Film konnte nicht gelöscht werden. Bitte versuche es erneut."
+    "deleteError": "Film konnte nicht gelöscht werden. Bitte versuche es erneut.",
+    "edit": "Bearbeiten",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "titleLabel": "Titel",
+    "directorLabel": "Regie",
+    "yearLabel": "Jahr",
+    "formatLabel": "Format",
+    "formatUnset": "Nicht festgelegt",
+    "genresLabel": "Genres (durch Kommas getrennt)",
+    "castLabel": "Besetzung (durch Kommas getrennt)",
+    "saveError": "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut.",
+    "saved": "Änderungen gespeichert.",
+    "getBackdrop": "Hintergrund holen",
+    "fetchingBackdrop": "Hintergrund wird geladen…",
+    "backdropError": "Für diesen Film wurde kein Hintergrund gefunden.",
+    "trailer": "Trailer",
+    "synopsis": "Handlung",
+    "getSynopsis": "Handlung abrufen",
+    "getTrailer": "Trailer abrufen",
+    "fetchingSynopsis": "Handlung wird abgerufen…",
+    "fetchingTrailer": "Trailer wird abgerufen…",
+    "synopsisError": "Für diesen Film wurde keine Handlung gefunden.",
+    "trailerError": "Für diesen Film wurde kein Trailer gefunden."
   },
   "InboxPage": {
     "title": "Posteingang",

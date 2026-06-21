@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
+import { TextInput } from "@repo/ui/core-elements/text-input";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import {
   useBarcodeScanner,
   type ScanStatus,
@@ -16,7 +18,16 @@ export function BarcodeScanner() {
   const t = useTranslations("ScannerPage");
   const { lastScan, flash, scanCount, onScan } = useBarcodeScanner();
   const [scanStatus, setScanStatus] = useState<ScanStatus>("idle");
+  const [manualBarcode, setManualBarcode] = useState("");
   const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = manualBarcode.trim();
+    if (!trimmed) return;
+    onScan(trimmed);
+    setManualBarcode("");
+  };
 
   useEffect(() => {
     let active = true;
@@ -139,6 +150,36 @@ export function BarcodeScanner() {
           </Box>
         </Box>
       </Box>
+
+      {/* Manual barcode entry */}
+      <form
+        onSubmit={handleManualSubmit}
+        style={{ width: "100%", maxWidth: "480px" }}
+      >
+        <Box
+          flexDirection="row"
+          alignItems="center"
+          justifyContent="space-between"
+          width="100%"
+          gap={8}
+        >
+          <TextInput
+            flex={1}
+            label={t("manualLabel")}
+            value={manualBarcode}
+            onChange={setManualBarcode}
+            inputMode="numeric"
+            aria-label={t("manualLabel")}
+            width="auto"
+          />
+          <IconButton
+            type="submit"
+            icon="/icons/search.svg"
+            aria-label={t("manualSubmit")}
+            disabled={manualBarcode.trim().length === 0}
+          />
+        </Box>
+      </form>
 
       {/* Permission denied */}
       {scanStatus === "permission_denied" && (

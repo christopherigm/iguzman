@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/api-fetch";
 export async function GET(request: NextRequest) {
   const res = await apiFetch(
     `/api/catalog/categories/${request.nextUrl.search}`,
-    { cache: "no-store" },
+    { cache: "no-store", allowAnonymous: true },
   );
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });

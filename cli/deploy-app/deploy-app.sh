@@ -83,6 +83,7 @@ setup_strings() {
     SUMMARY_ACTION="Acción"
     SUMMARY_NAMESPACE="Namespace"
     SUMMARY_CHART="Chart"
+    SUMMARY_REPOSITORY="Repositorio"
     SUMMARY_TAG="Tag"
     SUMMARY_REPLICAS="Réplicas"
     SUMMARY_COMMAND="Comando"
@@ -139,6 +140,7 @@ setup_strings() {
     SUMMARY_ACTION="Action"
     SUMMARY_NAMESPACE="Namespace"
     SUMMARY_CHART="Chart"
+    SUMMARY_REPOSITORY="Repository"
     SUMMARY_TAG="Tag"
     SUMMARY_REPLICAS="Replicas"
     SUMMARY_COMMAND="Command"
@@ -585,9 +587,15 @@ main() {
     echo ""
   fi
 
+  # Resolve the image repository from DOCKER_REGISTRY (.env) so each contributor
+  # deploys their own registry's image instead of a value hardcoded in the chart.
+  local image_repository=""
+  [[ -n "${docker_registry}" ]] && image_repository="${docker_registry}/${app_name}"
+
   local -a set_args=()
-  [[ -n "${helm_image_tag}" ]] && set_args+=(--set "image.tag=${helm_image_tag}")
-  [[ -n "${replica_count}" ]]  && set_args+=(--set "replicaCount=${replica_count}")
+  [[ -n "${image_repository}" ]] && set_args+=(--set "image.repository=${image_repository}")
+  [[ -n "${helm_image_tag}" ]]   && set_args+=(--set "image.tag=${helm_image_tag}")
+  [[ -n "${replica_count}" ]]    && set_args+=(--set "replicaCount=${replica_count}")
 
   local helm_chart="./apps/${app_name}/helm"
   local action
@@ -598,8 +606,9 @@ main() {
   fi
 
   local display_cmd="helm upgrade --install ${app_name} ${helm_chart} --namespace ${namespace} --create-namespace"
-  [[ -n "${helm_image_tag}" ]] && display_cmd+=" --set image.tag=${helm_image_tag}"
-  [[ -n "${replica_count}" ]]  && display_cmd+=" --set replicaCount=${replica_count}"
+  [[ -n "${image_repository}" ]] && display_cmd+=" --set image.repository=${image_repository}"
+  [[ -n "${helm_image_tag}" ]]   && display_cmd+=" --set image.tag=${helm_image_tag}"
+  [[ -n "${replica_count}" ]]    && display_cmd+=" --set replicaCount=${replica_count}"
 
   local sep
   sep="$(printf '─%.0s' {1..53})"
@@ -608,6 +617,7 @@ main() {
   printf "  %-22s %s\n" "$(clr_dim "${SUMMARY_ACTION}:")"    "$(clr_bold "${action}")"
   printf "  %-22s %s\n" "$(clr_dim "${SUMMARY_NAMESPACE}:")" "${namespace}"
   printf "  %-22s %s\n" "$(clr_dim "${SUMMARY_CHART}:")"     "${helm_chart}"
+  printf "  %-22s %s\n" "$(clr_dim "${SUMMARY_REPOSITORY}:")" "${image_repository:-chart default}"
   printf "  %-22s %s\n" "$(clr_dim "${SUMMARY_TAG}:")"       "${helm_image_tag:-chart default}"
   [[ -n "${replica_count}" ]] && \
   printf "  %-22s %s\n" "$(clr_dim "${SUMMARY_REPLICAS}:")"  "${replica_count}"

@@ -1,6 +1,6 @@
 {
   "name": "cinelog",
-  "version": "0.1.9",
+  "version": "0.1.12",
   "type": "module",
   "private": true,
   "scripts": {

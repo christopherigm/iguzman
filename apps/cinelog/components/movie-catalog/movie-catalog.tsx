@@ -17,6 +17,7 @@ import {
   type Movie,
   type MovieFormat,
 } from "@/lib/catalog";
+import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { MovieCard } from "./movie-card";
 import { MovieFilters } from "./movie-filters";
 import { MoviePagination } from "./movie-pagination";
@@ -28,6 +29,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export function MovieCatalog() {
   const t = useTranslations("CatalogPage");
+  const isLoggedIn = useIsLoggedIn();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [status, setStatus] = useState<Status>("loading");
   const [view, setView] = useState<ViewMode>("grid");
@@ -139,6 +141,7 @@ export function MovieCatalog() {
         justifyContent="space-between"
         flexWrap="wrap"
         gap={8}
+        marginBottom={16}
       >
         <Typography as="h1" variant="h2" fontWeight={700}>
           {t("title")}
@@ -192,23 +195,19 @@ export function MovieCatalog() {
       )}
 
       {status === "ready" && movies.length === 0 && (
-        <Typography
-          variant="body"
-          textAlign="center"
-          styles={{ opacity: 0.6 }}
-        >
+        <Typography variant="body" textAlign="center" styles={{ opacity: 0.6 }}>
           {isFiltered ? t("noResults") : t("empty")}
         </Typography>
       )}
 
       {status === "ready" && movies.length > 0 && view === "grid" && (
-        <Grid container spacing={2}>
+        <Grid container spacing={2} marginTop={12}>
           {movies.map((movie) => (
             <Grid key={movie.id} size={{ xs: 6, sm: 4, md: 3, lg: 2 }}>
               <MovieCard
                 movie={movie}
                 view="grid"
-                onDelete={setPendingDelete}
+                onDelete={isLoggedIn ? setPendingDelete : undefined}
               />
             </Grid>
           ))}
@@ -216,13 +215,13 @@ export function MovieCatalog() {
       )}
 
       {status === "ready" && movies.length > 0 && view === "list" && (
-        <Box flexDirection="column" gap={8}>
+        <Box flexDirection="column" gap={8} marginTop={12}>
           {movies.map((movie) => (
             <MovieCard
               key={movie.id}
               movie={movie}
               view="list"
-              onDelete={setPendingDelete}
+              onDelete={isLoggedIn ? setPendingDelete : undefined}
             />
           ))}
         </Box>

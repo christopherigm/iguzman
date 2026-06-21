@@ -3,8 +3,10 @@ import logging
 from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
 
-from .models import ScanQueue
+from .models import Movie, ScanQueue
+from .services.backdrop import fetch_backdrop
 from .services.extract import extract_movie
+from .services.extras import fetch_synopsis, fetch_trailer
 from .services.scraper import scrape_barcode
 from .services.tmdb import search_tmdb
 
@@ -105,5 +107,78 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
         # No TMDB match - keep the LLM title for manual correction in the Inbox.
         entry.error_message = 'No TMDB match - LLM-extracted title saved for manual correction.'
 
+    # ── Backdrop wallpaper (best-effort) ───────────────────────────────────────
+    # TMDB backdrop first, web-image fallback. A failure here never strands the
+    # entry: the wallpaper is decorative and the entry still lands in `review`.
+    try:
+        backdrop = fetch_backdrop(
+            tmdb['backdrop_url'] if tmdb else '',
+            entry.extracted_title,
+            entry.extracted_year,
+        )
+        if backdrop:
+            entry.extracted_backdrop_image.save(backdrop.name, backdrop, save=False)
+    except Exception as exc:
+        logger.warning('resolve_scan_queue_entry: backdrop fetch failed for %s: %s', entry.barcode, exc)
+
     entry.status = 'review'
     entry.save()
+
+
+@shared_task
+def fetch_movie_backdrop(movie_id: int, backdrop_url: str = '') -> None:
+    """
+    Download a wallpaper for a fast-path Movie out of band (Phase 4 step 4).
+
+    The scan endpoint saves the Movie synchronously and dispatches this so the
+    request isn't blocked on image I/O (TMDB download + possible web-search
+    fallback). Best-effort: a Movie without a backdrop simply renders the plain
+    detail layout.
+    """
+    try:
+        movie = Movie.objects.get(pk=movie_id)
+    except Movie.DoesNotExist:
+        logger.warning('fetch_movie_backdrop: movie %s no longer exists', movie_id)
+        return
+
+    if movie.backdrop_image:
+        return  # Already has one - don't re-fetch or clobber.
+
+    backdrop = fetch_backdrop(backdrop_url, movie.title, movie.year)
+    if backdrop:
+        movie.backdrop_image.save(backdrop.name, backdrop, save=True)
+
+
+@shared_task
+def fetch_movie_extras(movie_id: int) -> None:
+    """
+    Backfill a fast-path Movie's synopsis and trailer out of band (Phase 4).
+
+    The scan endpoint dispatches this so the request isn't blocked on the TMDB
+    detail calls (and possible scraper/LLM fallbacks). Each field is fetched
+    only when still empty, so a re-dispatch never clobbers existing values.
+    Best-effort: a Movie without a synopsis or trailer simply renders without.
+    """
+    try:
+        movie = Movie.objects.get(pk=movie_id)
+    except Movie.DoesNotExist:
+        logger.warning('fetch_movie_extras: movie %s no longer exists', movie_id)
+        return
+
+    update_fields = []
+
+    if not movie.synopsis:
+        synopsis = fetch_synopsis(movie)
+        if synopsis:
+            movie.synopsis = synopsis
+            update_fields.append('synopsis')
+
+    if not movie.trailer_url:
+        trailer_url = fetch_trailer(movie)
+        if trailer_url:
+            movie.trailer_url = trailer_url
+            update_fields.append('trailer_url')
+
+    if update_fields:
+        update_fields.append('modified')
+        movie.save(update_fields=update_fields)

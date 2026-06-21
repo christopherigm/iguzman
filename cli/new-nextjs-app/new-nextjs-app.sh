@@ -599,7 +599,7 @@ html, body {
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background: var(--surface-2);
   touch-action: pan-x pan-y;
 }
 
@@ -2565,7 +2565,8 @@ revisionHistoryLimit: 2
 replicaCount: 1
 
 image:
-  repository: ${registry_user}/${name}
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) → \${DOCKER_REGISTRY}/${name}
+  repository: ${name}
   tag: 'latest'
   pullPolicy: IfNotPresent
 

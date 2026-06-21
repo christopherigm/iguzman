@@ -10,7 +10,7 @@ export default async function ScanPage({ params }: Props) {
   setRequestLocale(locale);
 
   return (
-    <Container>
+    <Container paddingX={12}>
       <NavbarSpacer />
       <BarcodeScanner />
     </Container>

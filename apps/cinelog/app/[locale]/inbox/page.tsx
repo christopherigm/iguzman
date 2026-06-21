@@ -10,7 +10,7 @@ export default async function InboxPage({ params }: Props) {
   setRequestLocale(locale);
 
   return (
-    <Container>
+    <Container paddingX={12}>
       <NavbarSpacer />
       <Inbox />
     </Container>

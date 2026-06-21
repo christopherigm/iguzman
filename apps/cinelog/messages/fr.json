@@ -95,7 +95,9 @@
     "statusError": "Recherche échouée",
     "scanCount": "{count} scannés",
     "permissionDenied": "Accès à la caméra refusé",
-    "permissionHelp": "Veuillez autoriser l'accès à la caméra dans les paramètres de votre navigateur."
+    "permissionHelp": "Veuillez autoriser l'accès à la caméra dans les paramètres de votre navigateur.",
+    "manualLabel": "Saisir le code-barres manuellement",
+    "manualSubmit": "Rechercher"
   },
   "AccountPage": {
     "title": "Mon Compte",
@@ -172,7 +174,30 @@
     "delete": "Supprimer",
     "confirmDeleteTitle": "Supprimer le film",
     "confirmDeleteText": "Voulez-vous vraiment supprimer « {title} » ? Cette action est irréversible.",
-    "deleteError": "Échec de la suppression du film. Veuillez réessayer."
+    "deleteError": "Échec de la suppression du film. Veuillez réessayer.",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "titleLabel": "Titre",
+    "directorLabel": "Réalisateur",
+    "yearLabel": "Année",
+    "formatLabel": "Format",
+    "formatUnset": "Non défini",
+    "genresLabel": "Genres (séparés par des virgules)",
+    "castLabel": "Distribution (séparée par des virgules)",
+    "saveError": "Échec de l'enregistrement des modifications. Veuillez réessayer.",
+    "saved": "Modifications enregistrées.",
+    "getBackdrop": "Obtenir l'arrière-plan",
+    "fetchingBackdrop": "Récupération de l'arrière-plan…",
+    "backdropError": "Aucun arrière-plan trouvé pour ce film.",
+    "trailer": "Bande-annonce",
+    "synopsis": "Synopsis",
+    "getSynopsis": "Obtenir le synopsis",
+    "getTrailer": "Obtenir la bande-annonce",
+    "fetchingSynopsis": "Récupération du synopsis…",
+    "fetchingTrailer": "Récupération de la bande-annonce…",
+    "synopsisError": "Aucun synopsis trouvé pour ce film.",
+    "trailerError": "Aucune bande-annonce trouvée pour ce film."
   },
   "InboxPage": {
     "title": "Boîte de réception",

@@ -5,14 +5,15 @@ import { Card } from "@repo/ui/core-elements/card";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
-import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import type { Movie } from "@/lib/catalog";
 import "./movie-card.css";
 
 type Props = {
   movie: Movie;
   view: "grid" | "list";
-  onDelete: (movie: Movie) => void;
+  // Omitted for anonymous (read-only) visitors, which hides the delete button.
+  onDelete?: (movie: Movie) => void;
 };
 
 export function MovieCard({ movie, view, onDelete }: Props) {
@@ -24,12 +25,12 @@ export function MovieCard({ movie, view, onDelete }: Props) {
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    onDelete(movie);
+    onDelete?.(movie);
   };
 
-  const deleteButton = (
-    <Button
-      unstyled
+  const deleteButton = !onDelete ? null : (
+    <IconButton
+      size="sm"
       icon="/icons/delete.svg"
       iconColor="#ffffff"
       iconSize="14px"
@@ -39,10 +40,6 @@ export function MovieCard({ movie, view, onDelete }: Props) {
       className="movie-card__delete"
       backgroundColor="rgba(0, 0, 0, 0.55)"
       borderRadius="50%"
-      padding={6}
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
       styles={
         view === "grid"
           ? { position: "absolute", top: 6, right: 6, zIndex: 2 }

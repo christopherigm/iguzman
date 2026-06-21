@@ -3,6 +3,9 @@ from django.conf import settings
 
 _BASE = 'https://api.themoviedb.org/3'
 _IMAGE_BASE = 'https://image.tmdb.org/t/p/w500'
+# Wide, high-res rendition for the detail-page background wallpaper.
+_BACKDROP_BASE = 'https://image.tmdb.org/t/p/w1280'
+_YOUTUBE_WATCH = 'https://www.youtube.com/watch?v='
 _CAST_LIMIT = 15
 
 
@@ -13,12 +16,81 @@ def _headers() -> dict:
     }
 
 
+def _pick_trailer(videos: list) -> str:
+    """
+    Choose the best YouTube trailer URL from a TMDB `videos.results` list.
+
+    Prefers an official "Trailer", then any trailer, then any other YouTube
+    video. Returns a watch URL or an empty string when no YouTube clip exists.
+    """
+    youtube = [v for v in videos if v.get('site') == 'YouTube' and v.get('key')]
+    if not youtube:
+        return ''
+
+    def rank(v: dict) -> tuple:
+        name = (v.get('name') or '').lower()
+        is_trailer = v.get('type') == 'Trailer'
+        is_official = bool(v.get('official')) or 'official' in name
+        return (is_trailer, is_official)
+
+    best = max(youtube, key=rank)
+    return f'{_YOUTUBE_WATCH}{best["key"]}'
+
+
+def fetch_tmdb_extras(tmdb_id: str = '', title: str = '') -> dict:
+    """
+    Resolve a film's synopsis + trailer from TMDB.
+
+    Identifies the movie by `tmdb_id` when available, otherwise by a title
+    search. Returns {'synopsis': str, 'trailer_url': str} - either value may be
+    empty, and both are empty on a miss or any network/HTTP error (best-effort).
+    """
+    empty = {'synopsis': '', 'trailer_url': ''}
+
+    movie_id = tmdb_id
+    if not movie_id and title:
+        try:
+            search_resp = requests.get(
+                f'{_BASE}/search/movie',
+                params={'query': title, 'language': 'en-US'},
+                headers=_headers(),
+                timeout=10,
+            )
+            search_resp.raise_for_status()
+            results = search_resp.json().get('results') or []
+        except Exception:
+            return empty
+        if not results:
+            return empty
+        movie_id = str(results[0]['id'])
+
+    if not movie_id:
+        return empty
+
+    try:
+        detail_resp = requests.get(
+            f'{_BASE}/movie/{movie_id}',
+            params={'append_to_response': 'videos', 'language': 'en-US'},
+            headers=_headers(),
+            timeout=10,
+        )
+        detail_resp.raise_for_status()
+        detail = detail_resp.json()
+    except Exception:
+        return empty
+
+    return {
+        'synopsis': (detail.get('overview') or '').strip(),
+        'trailer_url': _pick_trailer(detail.get('videos', {}).get('results', [])),
+    }
+
+
 def search_tmdb(title: str) -> dict | None:
     """
     Search TMDB by title and fetch full details + credits for the top result.
 
-    Returns a dict with keys: title, director, year, cover_url, tmdb_id,
-    genres (list[str]), cast (list[str]). Returns None on miss or error.
+    Returns a dict with keys: title, director, year, cover_url, backdrop_url,
+    tmdb_id, genres (list[str]), cast (list[str]). Returns None on miss or error.
     """
     try:
         search_resp = requests.get(
@@ -57,6 +129,7 @@ def search_tmdb(title: str) -> dict | None:
     cast = [p['name'] for p in credits.get('cast', [])[:_CAST_LIMIT]]
     genres = [g['name'] for g in detail.get('genres', [])]
     poster = detail.get('poster_path', '')
+    backdrop = detail.get('backdrop_path', '')
     release_date = detail.get('release_date', '')
     year = int(release_date[:4]) if release_date else None
 
@@ -65,6 +138,7 @@ def search_tmdb(title: str) -> dict | None:
         'director': director,
         'year': year,
         'cover_url': f'{_IMAGE_BASE}{poster}' if poster else '',
+        'backdrop_url': f'{_BACKDROP_BASE}{backdrop}' if backdrop else '',
         'tmdb_id': str(movie_id),
         'genres': genres,
         'cast': cast,

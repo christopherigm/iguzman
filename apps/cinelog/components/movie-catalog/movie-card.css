@@ -2,11 +2,6 @@
   display: block;
   text-decoration: none;
   color: inherit;
-  transition: transform 150ms ease;
-}
-
-.movie-card:hover {
-  transform: translateY(-2px);
 }
 
 .movie-card__image {

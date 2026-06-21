@@ -56,20 +56,52 @@ def _format_results(results: list[dict]) -> str:
     return '\n\n'.join(lines)
 
 
-def scrape_barcode(barcode: str) -> str:
+def search_image(query: str) -> str:
     """
-    Gather raw web text about a barcode via the `scraper` microservice.
+    Return the first usable image URL (`og_image`) from a web search for
+    `query`, or an empty string when none of the results carry one.
 
-    Runs `POST /search` on the barcode and concatenates the result snippets.
-    When those snippets are thin, falls back to `POST /extract` on the top
-    result URL to pull fuller page content.
+    Used as the wallpaper fallback when TMDB has no backdrop. Network/HTTP
+    errors propagate to the caller (the backdrop fetch swallows them).
+    """
+    results = _search(query)
+    for r in results:
+        image = (r.get('og_image') or '').strip()
+        if image:
+            return image
+    return ''
+
+
+def search_youtube(query: str) -> str:
+    """
+    Return the first YouTube watch URL from a web search for `query`, or an
+    empty string when none of the results point at a YouTube video.
+
+    Used as the trailer fallback when TMDB carries no video. Network/HTTP
+    errors propagate to the caller (the trailer fetch swallows them).
+    """
+    results = _search(query)
+    for r in results:
+        url = (r.get('url') or '').strip()
+        if 'youtube.com/watch' in url or 'youtu.be/' in url:
+            return url
+    return ''
+
+
+def scrape_text(query: str) -> str:
+    """
+    Gather raw web text for an arbitrary `query` via the `scraper` microservice.
+
+    Runs `POST /search` and concatenates the result snippets. When those
+    snippets are thin, falls back to `POST /extract` on the top result URL to
+    pull fuller page content.
 
     Returns the combined raw text (possibly empty on no results). Network and
-    HTTP errors propagate to the caller (the Celery task handles retries).
+    HTTP errors propagate to the caller.
     """
-    results = _search(barcode)
+    results = _search(query)
     if not results:
-        logger.info('Scraper returned no results for barcode %s', barcode)
+        logger.info('Scraper returned no results for query %r', query)
         return ''
 
     combined = _format_results(results)
@@ -90,3 +122,14 @@ def scrape_barcode(barcode: str) -> str:
         return combined
 
     return f'{combined}\n\n{extracted}' if combined else extracted
+
+
+def scrape_barcode(barcode: str) -> str:
+    """
+    Gather raw web text about a barcode via the `scraper` microservice.
+
+    Thin wrapper over `scrape_text`; kept as a named entry point for the scan
+    resolution pipeline. Network and HTTP errors propagate to the caller (the
+    Celery task handles retries).
+    """
+    return scrape_text(barcode)

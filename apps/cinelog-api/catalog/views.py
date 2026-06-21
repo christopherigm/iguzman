@@ -1,8 +1,16 @@
+import os
+
+from django.core.files.base import ContentFile
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from rest_framework import status
-from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveDestroyAPIView
+from rest_framework.generics import (
+    ListAPIView,
+    ListCreateAPIView,
+    RetrieveUpdateDestroyAPIView,
+)
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,12 +20,16 @@ from .serializers import (
     CategorySerializer,
     InboxAcceptSerializer,
     MovieDetailSerializer,
+    MovieEditSerializer,
     MovieListSerializer,
     MovieWriteSerializer,
     ScanQueueSerializer,
 )
+from .services.backdrop import fetch_backdrop
+from .services.extras import fetch_synopsis, fetch_trailer
 from .services.lookup import lookup_barcode
-from .tasks import resolve_scan_queue_entry
+from .services.tmdb import search_tmdb
+from .tasks import fetch_movie_backdrop, fetch_movie_extras, resolve_scan_queue_entry
 
 
 def resolve_genre_ids(names):
@@ -30,6 +42,8 @@ def resolve_genre_ids(names):
 
 
 class MovieListView(ListCreateAPIView):
+    # Anonymous users may browse the catalog (GET); creating still needs auth.
+    permission_classes = [IsAuthenticatedOrReadOnly]
     pagination_class = MoviePagination
 
     def get_queryset(self):
@@ -65,12 +79,137 @@ class MovieListView(ListCreateAPIView):
         return Response(MovieDetailSerializer(movie, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
-class MovieDetailView(RetrieveDestroyAPIView):
+class MovieDetailView(RetrieveUpdateDestroyAPIView):
+    # Anonymous users may view a movie (GET); editing/deleting still needs auth.
+    permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = Movie.objects.filter(enabled=True).prefetch_related('genres', 'cast')
     serializer_class = MovieDetailSerializer
 
+    def update(self, request, *args, **kwargs):
+        """
+        PATCH/PUT a saved movie's editable fields from the UI. Genre names are
+        resolved to Category ids (creating any missing) and cast names are
+        synced, mirroring the inbox-accept flow. Cover and tmdb_id are left
+        untouched. Responds with the full detail representation.
+        """
+        instance = self.get_object()
+
+        serializer = MovieEditSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        write_data = {
+            'title': data['title'],
+            'director': data['director'],
+            'year': data['year'],
+            'format': data['format'],
+            'genre_ids': resolve_genre_ids(data['genres']),
+            'cast_names': data['cast'],
+        }
+        write_serializer = MovieWriteSerializer(instance, data=write_data, partial=True)
+        write_serializer.is_valid(raise_exception=True)
+        movie = write_serializer.save()
+
+        return Response(MovieDetailSerializer(movie, context={'request': request}).data)
+
+
+class MovieBackdropView(APIView):
+    """
+    POST /api/catalog/movies/<id>/backdrop/
+
+    Backfill a wallpaper for an existing catalog Movie that has none. Resolves a
+    TMDB backdrop by title (with the scraper web-image fallback baked into
+    `fetch_backdrop`), downloads the bytes, and saves them onto the Movie.
+
+    Unlike the scan flow - which fetches the backdrop out of band in a Celery
+    task - this runs synchronously so the edit UI can show a progress bar and
+    reflect the new wallpaper the moment the request returns. Responds with the
+    full detail representation.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        movie = get_object_or_404(Movie, pk=pk, enabled=True)
+
+        # Already has one - nothing to do; surface the current representation so
+        # the client simply re-renders with the existing wallpaper.
+        if movie.backdrop_image:
+            return Response(MovieDetailSerializer(movie, context={'request': request}).data)
+
+        try:
+            tmdb = search_tmdb(movie.title)
+        except Exception:
+            tmdb = None
+
+        backdrop = fetch_backdrop(
+            tmdb['backdrop_url'] if tmdb else '',
+            movie.title,
+            movie.year,
+        )
+        if not backdrop:
+            return Response(
+                {'detail': 'No backdrop image could be found for this movie.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        movie.backdrop_image.save(backdrop.name, backdrop, save=True)
+        return Response(MovieDetailSerializer(movie, context={'request': request}).data)
+
+
+class MovieSynopsisView(APIView):
+    """
+    POST /api/catalog/movies/<id>/synopsis/
+
+    Fetch and store a plot synopsis for an existing catalog Movie. Resolves it
+    from TMDB (overview) with a scraper + LLM fallback, then saves it onto the
+    Movie. Runs synchronously so the edit UI can show progress and re-render
+    with the new synopsis. Responds with the full detail representation.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        movie = get_object_or_404(Movie, pk=pk, enabled=True)
+        synopsis = fetch_synopsis(movie)
+        if not synopsis:
+            return Response(
+                {'detail': 'No synopsis could be found for this movie.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        movie.synopsis = synopsis
+        movie.save(update_fields=['synopsis', 'modified'])
+        return Response(MovieDetailSerializer(movie, context={'request': request}).data)
+
+
+class MovieTrailerView(APIView):
+    """
+    POST /api/catalog/movies/<id>/trailer/
+
+    Fetch and store a YouTube trailer URL for an existing catalog Movie.
+    Resolves it from TMDB videos with a web-search fallback, then saves it onto
+    the Movie. Runs synchronously so the edit UI can show progress. Responds
+    with the full detail representation.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        movie = get_object_or_404(Movie, pk=pk, enabled=True)
+        trailer_url = fetch_trailer(movie)
+        if not trailer_url:
+            return Response(
+                {'detail': 'No trailer could be found for this movie.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        movie.trailer_url = trailer_url
+        movie.save(update_fields=['trailer_url', 'modified'])
+        return Response(MovieDetailSerializer(movie, context={'request': request}).data)
+
 
 class CategoryListView(ListAPIView):
+    # Genre filter dropdown must load for anonymous catalog browsing.
+    permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     pagination_class = CategoryPagination
@@ -122,6 +261,11 @@ class ScanView(APIView):
             serializer = MovieWriteSerializer(data=write_data)
             serializer.is_valid(raise_exception=True)
             movie = serializer.save()
+            # Fetch the wallpaper out of band so the scan response isn't blocked
+            # on image download (Phase 4 step 4).
+            fetch_movie_backdrop.delay(movie.id, data.backdrop_url)
+            # Backfill synopsis + trailer out of band too (TMDB, web fallback).
+            fetch_movie_extras.delay(movie.id)
             return Response(
                 {'status': 'saved', 'movie': MovieDetailSerializer(movie, context={'request': request}).data},
                 status=status.HTTP_201_CREATED,
@@ -183,6 +327,18 @@ class InboxAcceptView(APIView):
         movie_serializer = MovieWriteSerializer(data=write_data)
         movie_serializer.is_valid(raise_exception=True)
         movie = movie_serializer.save()
+
+        # Carry the wallpaper resolved during review onto the new catalog Movie.
+        if entry.extracted_backdrop_image:
+            entry.extracted_backdrop_image.open('rb')
+            try:
+                movie.backdrop_image.save(
+                    os.path.basename(entry.extracted_backdrop_image.name),
+                    ContentFile(entry.extracted_backdrop_image.read()),
+                    save=True,
+                )
+            finally:
+                entry.extracted_backdrop_image.close()
 
         entry.status = 'accepted'
         entry.movie = movie

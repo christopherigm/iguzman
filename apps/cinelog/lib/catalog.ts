@@ -25,7 +25,13 @@ export interface Movie {
 
 export interface MovieDetail extends Movie {
   cover_url: string;
+  /** Stored wallpaper URL for the page background; "" when none was found. */
+  backdrop: string;
   tmdb_id: string;
+  /** Plot summary; "" when none has been fetched. */
+  synopsis: string;
+  /** YouTube watch URL for the trailer; "" when none has been fetched. */
+  trailer_url: string;
   cast: Actor[];
   modified: string;
 }
@@ -82,6 +88,80 @@ export async function getMovies(
 
 export async function getMovie(id: string | number): Promise<MovieDetail> {
   const res = await fetch(`/api/catalog/movies/${id}`);
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<MovieDetail>;
+}
+
+/** Editable fields the user can correct on a saved movie from the detail page. */
+export interface MovieUpdatePayload {
+  title: string;
+  director: string;
+  year: number | null;
+  format: MovieFormat;
+  genres: string[];
+  cast: string[];
+}
+
+export async function updateMovie(
+  id: string | number,
+  payload: MovieUpdatePayload,
+): Promise<MovieDetail> {
+  const res = await fetch(`/api/catalog/movies/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<MovieDetail>;
+}
+
+/**
+ * Backfill a wallpaper for an existing movie that has none. The API resolves a
+ * TMDB/web backdrop synchronously and returns the updated movie detail (with
+ * `backdrop` now populated). Throws ApiError when no image could be found.
+ */
+export async function fetchBackdrop(id: string | number): Promise<MovieDetail> {
+  const res = await fetch(`/api/catalog/movies/${id}/backdrop`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<MovieDetail>;
+}
+
+/**
+ * Fetch and store a plot synopsis for a movie on demand. The API resolves it
+ * from TMDB (with a scraper/LLM fallback) and returns the updated movie detail
+ * with `synopsis` populated. Throws ApiError when none could be found.
+ */
+export async function fetchSynopsis(id: string | number): Promise<MovieDetail> {
+  const res = await fetch(`/api/catalog/movies/${id}/synopsis`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<MovieDetail>;
+}
+
+/**
+ * Fetch and store a YouTube trailer URL for a movie on demand. The API resolves
+ * it from TMDB videos (with a web-search fallback) and returns the updated
+ * movie detail with `trailer_url` populated. Throws ApiError when none found.
+ */
+export async function fetchTrailer(id: string | number): Promise<MovieDetail> {
+  const res = await fetch(`/api/catalog/movies/${id}/trailer`, {
+    method: "POST",
+  });
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);

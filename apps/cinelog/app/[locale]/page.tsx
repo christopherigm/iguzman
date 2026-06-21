@@ -10,7 +10,7 @@ export default async function Home({ params }: Props) {
   setRequestLocale(locale);
 
   return (
-    <Container>
+    <Container paddingX={12}>
       <NavbarSpacer />
       <MovieCatalog />
     </Container>

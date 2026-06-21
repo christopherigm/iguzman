@@ -45,21 +45,27 @@ export async function refreshAccessToken(): Promise<string | null> {
 
 export async function apiFetch(
   path: string,
-  init: RequestInit = {},
+  // `allowAnonymous` lets a logged-out request fall through to Django without an
+  // Authorization header (for read-only endpoints) instead of short-circuiting
+  // to 401 - Django's IsAuthenticatedOrReadOnly then serves the GET publicly.
+  init: RequestInit & { allowAnonymous?: boolean } = {},
 ): Promise<Response> {
+  const { allowAnonymous, ...requestInit } = init;
   const cookieStore = await cookies();
   let token = cookieStore.get("access_token")?.value;
   if (!token) {
     const newToken = await refreshAccessToken();
-    if (!newToken)
+    if (!newToken) {
+      if (allowAnonymous) return fetch(`${API}${path}`, requestInit);
       return Response.json({ detail: "Unauthorized" }, { status: 401 });
+    }
     token = newToken;
   }
 
   const withAuth = (t: string): RequestInit => ({
-    ...init,
+    ...requestInit,
     headers: {
-      ...(init.headers as Record<string, string>),
+      ...(requestInit.headers as Record<string, string>),
       Authorization: `Bearer ${t}`,
     },
   });

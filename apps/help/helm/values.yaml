@@ -2,7 +2,8 @@ revisionHistoryLimit: 2
 replicaCount: 1
 
 image:
-  repository: christopherguzman/help
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) -> ${DOCKER_REGISTRY}/help
+  repository: help
   tag: 'latest'
   pullPolicy: IfNotPresent
 

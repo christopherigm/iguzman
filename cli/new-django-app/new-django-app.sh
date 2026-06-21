@@ -2324,7 +2324,8 @@ replicaCount: 1
 
 # ─── Container image ────────────────────────────────────────
 image:
-  repository: ${registry_user}/${name}
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) → \${DOCKER_REGISTRY}/${name}
+  repository: ${name}
   tag: 'latest'
   pullPolicy: IfNotPresent
 

@@ -95,7 +95,9 @@
     "statusError": "Falha na busca",
     "scanCount": "{count} escaneados",
     "permissionDenied": "Acesso à câmera negado",
-    "permissionHelp": "Por favor, permita o acesso à câmera nas configurações do seu navegador."
+    "permissionHelp": "Por favor, permita o acesso à câmera nas configurações do seu navegador.",
+    "manualLabel": "Digite o código de barras manualmente",
+    "manualSubmit": "Buscar"
   },
   "AccountPage": {
     "title": "Minha Conta",
@@ -172,7 +174,30 @@
     "delete": "Excluir",
     "confirmDeleteTitle": "Excluir filme",
     "confirmDeleteText": "Tem certeza de que deseja excluir \"{title}\"? Esta ação não pode ser desfeita.",
-    "deleteError": "Falha ao excluir o filme. Tente novamente."
+    "deleteError": "Falha ao excluir o filme. Tente novamente.",
+    "edit": "Editar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "titleLabel": "Título",
+    "directorLabel": "Diretor",
+    "yearLabel": "Ano",
+    "formatLabel": "Formato",
+    "formatUnset": "Não definido",
+    "genresLabel": "Gêneros (separados por vírgulas)",
+    "castLabel": "Elenco (separado por vírgulas)",
+    "saveError": "Falha ao salvar as alterações. Tente novamente.",
+    "saved": "Alterações salvas.",
+    "getBackdrop": "Obter fundo",
+    "fetchingBackdrop": "Obtendo fundo…",
+    "backdropError": "Nenhum fundo encontrado para este filme.",
+    "trailer": "Trailer",
+    "synopsis": "Sinopse",
+    "getSynopsis": "Obter sinopse",
+    "getTrailer": "Obter trailer",
+    "fetchingSynopsis": "Obtendo sinopse…",
+    "fetchingTrailer": "Obtendo trailer…",
+    "synopsisError": "Nenhuma sinopse encontrada para este filme.",
+    "trailerError": "Nenhum trailer encontrado para este filme."
   },
   "InboxPage": {
     "title": "Caixa de entrada",

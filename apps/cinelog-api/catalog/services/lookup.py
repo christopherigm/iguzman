@@ -11,6 +11,7 @@ class MovieData:
     director: str
     year: int | None
     cover_url: str
+    backdrop_url: str
     tmdb_id: str
     genres: list[str] = field(default_factory=list)
     cast: list[str] = field(default_factory=list)

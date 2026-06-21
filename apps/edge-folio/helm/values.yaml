@@ -10,7 +10,8 @@ replicaCount: 2
 
 # ─── Container image ────────────────────────────────────────
 image:
-  repository: christopherguzman/edge-folio # registry/image (no tag)
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) -> ${DOCKER_REGISTRY}/edge-folio
+  repository: edge-folio
   tag: 'latest' # overrides Chart.appVersion
   pullPolicy: IfNotPresent
 

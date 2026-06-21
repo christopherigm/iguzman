@@ -10,7 +10,8 @@ replicaCount: 4
 
 # ─── Container image ────────────────────────────────────────
 image:
-  repository: christopherguzman/video-downloader # registry/image (no tag)
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) -> ${DOCKER_REGISTRY}/video-downloader
+  repository: video-downloader
   tag: 'latest' # overrides Chart.appVersion
   pullPolicy: IfNotPresent
 

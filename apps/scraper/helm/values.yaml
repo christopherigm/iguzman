@@ -10,7 +10,8 @@ replicaCount: 2
 
 # ─── Container image ────────────────────────────────────────
 image:
-  repository: christopherguzman/scraper # registry/image (no tag)
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) -> ${DOCKER_REGISTRY}/scraper
+  repository: scraper
   tag: 'latest' # overrides Chart.appVersion
   pullPolicy: IfNotPresent
 

@@ -2,7 +2,8 @@ revisionHistoryLimit: 2
 replicaCount: 1
 
 image:
-  repository: elizabethguzmanalvarez25/cinelog
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) -> ${DOCKER_REGISTRY}/cinelog
+  repository: cinelog
   tag: 'latest'
   pullPolicy: IfNotPresent
 

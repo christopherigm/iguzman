@@ -10,7 +10,8 @@ replicaCount: 1
 
 # ─── Container image ────────────────────────────────────────
 image:
-  repository: christopherguzman/website # registry/image (no tag)
+  # Overridden at deploy time from DOCKER_REGISTRY (.env) -> ${DOCKER_REGISTRY}/website
+  repository: website
   tag: 'latest' # overrides Chart.appVersion
   pullPolicy: IfNotPresent
 

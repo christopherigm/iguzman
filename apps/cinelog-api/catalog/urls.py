@@ -5,14 +5,20 @@ from .views import (
     InboxAcceptView,
     InboxListView,
     InboxRejectView,
+    MovieBackdropView,
     MovieDetailView,
     MovieListView,
+    MovieSynopsisView,
+    MovieTrailerView,
     ScanView,
 )
 
 urlpatterns = [
     path('movies/', MovieListView.as_view(), name='movie-list'),
     path('movies/<int:pk>/', MovieDetailView.as_view(), name='movie-detail'),
+    path('movies/<int:pk>/backdrop/', MovieBackdropView.as_view(), name='movie-backdrop'),
+    path('movies/<int:pk>/synopsis/', MovieSynopsisView.as_view(), name='movie-synopsis'),
+    path('movies/<int:pk>/trailer/', MovieTrailerView.as_view(), name='movie-trailer'),
     path('categories/', CategoryListView.as_view(), name='category-list'),
     path('scan/', ScanView.as_view(), name='scan'),
     path('inbox/', InboxListView.as_view(), name='inbox-list'),
