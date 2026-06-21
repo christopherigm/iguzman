@@ -34,6 +34,7 @@
     "@ffmpeg/util": "^0.12.2",
     "@huggingface/transformers": "^3.0.0",
     "@repo/helpers": "workspace:*",
+    "katex": "^0.17.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-markdown": "^9",

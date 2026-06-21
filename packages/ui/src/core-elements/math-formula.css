@@ -1,0 +1,17 @@
+.math-formula {
+  display: inline;
+  font-size: 1.3em;
+  line-height: inherit;
+}
+
+.math-formula--display {
+  display: block;
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* Inherit accent color for operators and relation symbols */
+.math-formula .katex .mrel,
+.math-formula .katex .mbin {
+  color: var(--accent, #06b6d4);
+}

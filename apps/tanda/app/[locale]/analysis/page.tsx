@@ -5,6 +5,7 @@ import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Card } from "@repo/ui/core-elements/card";
+import { MathFormula } from "@repo/ui/core-elements/math-formula";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -350,7 +351,7 @@ function TierCard({
         gap={10}
         styles={{
           borderLeft: `4px solid ${color}`,
-          backgroundColor: "var(--surface-2)",
+          borderBottom: "1px solid var(--border, #e5e7eb)",
         }}
       >
         <Typography>{icon}</Typography>
@@ -440,14 +441,8 @@ function FormulaCard({
         padding="10px 14px"
         borderRadius={6}
         backgroundColor="var(--surface-2)"
-        styles={{ fontFamily: "monospace" }}
       >
-        <Typography
-          styles={{ fontFamily: "monospace", letterSpacing: 0.3 }}
-          color="var(--accent, #06b6d4)"
-        >
-          {formula}
-        </Typography>
+        <MathFormula formula={formula} displayMode />
       </Box>
     </Card>
   );
