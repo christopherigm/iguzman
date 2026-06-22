@@ -6,7 +6,8 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
-import type { Movie } from "@/lib/catalog";
+import { Icon } from "@repo/ui/core-elements/icon";
+import type { Movie, MovieFormat } from "@/lib/catalog";
 import "./movie-card.css";
 
 type Props = {
@@ -14,6 +15,16 @@ type Props = {
   view: "grid" | "list";
   // Omitted for anonymous (read-only) visitors, which hides the delete button.
   onDelete?: (movie: Movie) => void;
+};
+
+// Visual style for the format header bar rendered on top of the cover.
+// "other"/"" formats have no header.
+const FORMAT_HEADER: Partial<
+  Record<MovieFormat, { icon: string; background: string }>
+> = {
+  bluray: { icon: "/icons/blu-ray.svg", background: "#0033a1" },
+  "4k": { icon: "/icons/blu-ray.svg", background: "#000000" },
+  dvd: { icon: "/icons/dvd.svg", background: "#6b7280" },
 };
 
 export function MovieCard({ movie, view, onDelete }: Props) {
@@ -46,6 +57,37 @@ export function MovieCard({ movie, view, onDelete }: Props) {
           : undefined
       }
     />
+  );
+
+  const headerStyle = FORMAT_HEADER[movie.format];
+  const formatHeader = !headerStyle ? null : (
+    <Box
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      gap={4}
+      height={20}
+      width="100%"
+      backgroundColor={headerStyle.background}
+      styles={{ position: "absolute", top: 0, left: 0, zIndex: 1 }}
+    >
+      <Icon icon={headerStyle.icon} color="#ffffff" size="20px" />
+      {movie.format === "4k" && (
+        <Typography
+          variant="label"
+          color="#ffffff"
+          fontWeight={700}
+          // Sub-scale label sized to fit the 18px header bar.
+          styles={{
+            fontSize: 12,
+            letterSpacing: "0.04em",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {tFormat("ultraHd4k")}
+        </Typography>
+      )}
+    </Box>
   );
 
   const cover = (
@@ -89,6 +131,7 @@ export function MovieCard({ movie, view, onDelete }: Props) {
           </Typography>
         </Box>
       )}
+      {formatHeader}
       {view === "grid" && deleteButton}
     </Box>
   );

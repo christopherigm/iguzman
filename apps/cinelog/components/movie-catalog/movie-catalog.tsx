@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -27,19 +27,52 @@ type Status = "loading" | "ready" | "error";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
+// Persist the catalog's page, filters, view and scroll position for the
+// lifetime of the tab so that returning from a movie's detail page (the
+// "Back to catalog" / home link remounts this component) lands the user back
+// on the exact page and scroll offset they left from. Page state is stored
+// together with its filters because a page number is only meaningful relative
+// to the filters that produced it.
+const STORAGE_KEY = "cinelog:catalog-state";
+const SCROLL_PERSIST_MS = 150;
+
+type CatalogSnapshot = {
+  page: number;
+  search: string;
+  genre: string;
+  format: MovieFormat;
+  view: ViewMode;
+  scrollY: number;
+};
+
+function readSnapshot(): CatalogSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as CatalogSnapshot) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function MovieCatalog() {
   const t = useTranslations("CatalogPage");
   const isLoggedIn = useIsLoggedIn();
+  // Read the persisted snapshot once, on first render, so the state below can
+  // be seeded from it without re-parsing sessionStorage on every render.
+  const [snapshot] = useState(readSnapshot);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [status, setStatus] = useState<Status>("loading");
-  const [view, setView] = useState<ViewMode>("grid");
+  const [view, setView] = useState<ViewMode>(snapshot?.view ?? "grid");
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [genre, setGenre] = useState("");
-  const [format, setFormat] = useState<MovieFormat>("");
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState(snapshot?.search ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(
+    snapshot?.search.trim() ?? "",
+  );
+  const [genre, setGenre] = useState(snapshot?.genre ?? "");
+  const [format, setFormat] = useState<MovieFormat>(snapshot?.format ?? "");
+  const [page, setPage] = useState(snapshot?.page ?? 1);
   const [totalPages, setTotalPages] = useState(1);
 
   const [pendingDelete, setPendingDelete] = useState<Movie | null>(null);
@@ -114,6 +147,56 @@ export function MovieCatalog() {
       active = false;
     };
   }, [debouncedSearch, genre, format, page]);
+
+  // Keep the latest page/filter/view values in a ref so the scroll listener
+  // can write a complete snapshot without re-subscribing on every change.
+  const persistedRef = useRef({ page, search, genre, format, view });
+
+  const persist = useCallback((scrollY: number) => {
+    try {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ ...persistedRef.current, scrollY }),
+      );
+    } catch {
+      // sessionStorage may be unavailable (private mode / quota) — non-fatal.
+    }
+  }, []);
+
+  // Sync the ref and persist immediately whenever the page, filters or view
+  // change so the snapshot is current even if the user leaves without scrolling.
+  useEffect(() => {
+    persistedRef.current = { page, search, genre, format, view };
+    persist(window.scrollY);
+  }, [page, search, genre, format, view, persist]);
+
+  // Throttle scroll writes so the latest offset is captured before navigation.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onScroll = () => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        persist(window.scrollY);
+      }, SCROLL_PERSIST_MS);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (timer) clearTimeout(timer);
+    };
+  }, [persist]);
+
+  // Restore the saved scroll offset once, after the first batch of movies has
+  // rendered (the grid reserves height via aspect-ratio, so layout is stable).
+  const didRestoreScroll = useRef(false);
+  useEffect(() => {
+    if (status !== "ready" || didRestoreScroll.current) return;
+    didRestoreScroll.current = true;
+    if (snapshot && snapshot.scrollY > 0) {
+      window.scrollTo(0, snapshot.scrollY);
+    }
+  }, [status, snapshot]);
 
   return (
     <Box flexDirection="column" gap={16} paddingY={16}>

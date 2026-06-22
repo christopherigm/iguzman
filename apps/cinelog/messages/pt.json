@@ -137,6 +137,7 @@
     "dvd": "DVD",
     "bluray": "Blu-ray",
     "4k": "4K",
+    "ultraHd4k": "4K ULTRA HD",
     "other": "Outro"
   },
   "CatalogPage": {
