@@ -106,6 +106,9 @@ class ScanQueue(Common):
     extracted_cover_image = models.ImageField(upload_to=_scan_cover_path, null=True, blank=True)
     # Wallpaper carried through review; copied onto the Movie on accept.
     extracted_backdrop_image = models.ImageField(upload_to=_scan_backdrop_path, null=True, blank=True)
+    # Plot summary + trailer resolved during review; copied onto the Movie on accept.
+    extracted_synopsis = models.TextField(blank=True)
+    extracted_trailer_url = models.URLField(max_length=500, blank=True)
     retry_count = models.PositiveSmallIntegerField(default=0)
     error_message = models.TextField(blank=True)
     movie = models.OneToOneField(
@@ -121,3 +124,38 @@ class ScanQueue(Common):
 
     def __str__(self):
         return f'ScanQueue({self.barcode}) - {self.get_status_display()}'
+
+
+class ScanCandidate(models.Model):
+    """
+    A single TMDB search result offered as an alternative match for a queued
+    barcode (Phase 5.4).
+
+    TMDB ranks `/search/movie` by popularity, so a bare title query can bury the
+    right film beneath a more famous near-namesake (e.g. "X" 2022 vs "Fast X"
+    2023). During slow-path resolution we persist the top few results here so the
+    Inbox can render a picker and let the user re-pin the entry to the exact film
+    by `tmdb_id`. Rows are wiped when the entry is accepted, and cascade-deleted
+    when it is rejected.
+    """
+
+    entry = models.ForeignKey(
+        ScanQueue,
+        on_delete=models.CASCADE,
+        related_name='candidates',
+    )
+    tmdb_id = models.CharField(max_length=20)
+    title = models.CharField(max_length=500)
+    year = models.PositiveSmallIntegerField(null=True, blank=True)
+    cover_url = models.URLField(max_length=1000, blank=True)
+    # Short plot blurb from the search result - the key signal a user needs to
+    # tell two similarly-titled films apart at a glance.
+    overview = models.TextField(blank=True)
+    # Preserves TMDB's popularity ranking so the picker lists them in order.
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['sort_order']
+
+    def __str__(self):
+        return f'{self.title} ({self.year}) [{self.tmdb_id}]'

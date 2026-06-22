@@ -1,0 +1,77 @@
+/* Dimmed wallpaper layer contained within the card; sits above the card's own
+   surface (z-index -1 paints over the element background but below content) so
+   the form stays readable. The image URL is dynamic, so it rides in as a CSS
+   variable set inline on the Card. */
+.inbox-card__backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--backdrop-image);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Direction lives here (not as a Box prop) so the breakpoint override below can
+   win - inline styles from props would otherwise beat the media query. Cover and
+   form stack on mobile, sit side by side from md up. */
+.inbox-card__layout {
+  flex-direction: column;
+}
+
+/* Cover centered while stacked, top-aligned once it sits beside the form. These
+   are inherently responsive, so they live in media queries rather than props. */
+.inbox-card__cover {
+  align-self: center;
+}
+
+@media (min-width: 900px) {
+  /* md - tablet/desktop: cover and form side by side */
+  .inbox-card__layout {
+    flex-direction: row;
+  }
+
+  .inbox-card__cover {
+    align-self: flex-start;
+  }
+}
+
+.inbox-card__image {
+  object-fit: cover;
+}
+
+/* Candidate picker: a horizontally scrollable strip of alternative matches. */
+.inbox-card__candidates {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.inbox-card__candidate {
+  transition: background-color 0.15s ease;
+}
+
+.inbox-card__candidate:hover {
+  background-color: var(--surface-2);
+}
+
+.inbox-card__candidate:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Clamp the title to two lines and the blurb to three so cards stay even. */
+.inbox-card__candidate-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.inbox-card__candidate-overview {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

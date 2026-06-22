@@ -113,11 +113,66 @@ def search_tmdb(title: str, year: int | None = None) -> dict | None:
     if not results:
         return None
 
-    movie_id = results[0]['id']
+    return fetch_tmdb_by_id(str(results[0]['id']))
 
+
+def search_tmdb_candidates(title: str, year: int | None = None, limit: int = 7) -> list[dict]:
+    """
+    Return the top TMDB search results for a title as lightweight candidates.
+
+    TMDB ranks `/search/movie` by popularity, so the right film can sit below a
+    more famous near-namesake. This surfaces the top `limit` results - in TMDB's
+    own order - so the Inbox can offer a picker to re-pin the exact match. Only
+    the search payload is used (no per-result detail calls), so this stays one
+    cheap request.
+
+    Each candidate is a dict with keys: tmdb_id, title, year, cover_url,
+    overview. Returns an empty list on a miss or any network/HTTP error.
+    """
+    params = {'query': title, 'language': 'en-US'}
+    if year:
+        params['primary_release_year'] = year
+    try:
+        search_resp = requests.get(
+            f'{_BASE}/search/movie',
+            params=params,
+            headers=_headers(),
+            timeout=10,
+        )
+        search_resp.raise_for_status()
+        results = search_resp.json().get('results') or []
+    except Exception:
+        return []
+
+    candidates = []
+    for result in results[:limit]:
+        poster = result.get('poster_path', '')
+        release_date = result.get('release_date', '')
+        candidates.append({
+            'tmdb_id': str(result['id']),
+            'title': result.get('title', ''),
+            'year': int(release_date[:4]) if release_date else None,
+            'cover_url': f'{_IMAGE_BASE}{poster}' if poster else '',
+            'overview': (result.get('overview') or '').strip(),
+        })
+    return candidates
+
+
+def fetch_tmdb_by_id(tmdb_id: str) -> dict | None:
+    """
+    Fetch full details + credits for a single TMDB movie id.
+
+    Resolves the authoritative metadata for an exact film - used both by the
+    top-result path of `search_tmdb` and by the Inbox candidate picker, which
+    pins the user-chosen `tmdb_id` directly so a re-search can't drift back to
+    the wrong title.
+
+    Returns a dict with keys: title, director, year, cover_url, backdrop_url,
+    tmdb_id, genres (list[str]), cast (list[str]). Returns None on error.
+    """
     try:
         detail_resp = requests.get(
-            f'{_BASE}/movie/{movie_id}',
+            f'{_BASE}/movie/{tmdb_id}',
             params={'append_to_response': 'credits', 'language': 'en-US'},
             headers=_headers(),
             timeout=10,
@@ -145,7 +200,7 @@ def search_tmdb(title: str, year: int | None = None) -> dict | None:
         'year': year,
         'cover_url': f'{_IMAGE_BASE}{poster}' if poster else '',
         'backdrop_url': f'{_BACKDROP_BASE}{backdrop}' if backdrop else '',
-        'tmdb_id': str(movie_id),
+        'tmdb_id': str(tmdb_id),
         'genres': genres,
         'cast': cast,
     }

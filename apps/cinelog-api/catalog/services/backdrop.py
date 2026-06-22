@@ -21,11 +21,15 @@ _EXT_BY_TYPE = {
 }
 
 
-def _download_image(url: str) -> ContentFile | None:
+def download_image(url: str, stem: str = 'image') -> ContentFile | None:
     """
     Fetch `url` and return its bytes as a named ContentFile, or None when the
     response is not a usable image (wrong content type, empty, oversized) or the
-    request fails. Never raises - the backdrop is always best-effort.
+    request fails. Never raises - callers treat the image as best-effort.
+
+    `stem` names the returned file (extension is derived from the content type);
+    the model's upload_to ignores it beyond the extension, but it keeps logs and
+    temp names meaningful (e.g. 'cover' vs 'backdrop').
     """
     try:
         resp = requests.get(url, timeout=_TIMEOUT)
@@ -45,7 +49,7 @@ def _download_image(url: str) -> ContentFile | None:
         logger.info('backdrop: %s rejected (size %d bytes)', url, len(content))
         return None
 
-    return ContentFile(content, name=f'backdrop.{ext}')
+    return ContentFile(content, name=f'{stem}.{ext}')
 
 
 def fetch_backdrop(tmdb_backdrop_url: str, title: str, year: int | None) -> ContentFile | None:
@@ -58,7 +62,7 @@ def fetch_backdrop(tmdb_backdrop_url: str, title: str, year: int | None) -> Cont
     caller treats the wallpaper as optional.
     """
     if tmdb_backdrop_url:
-        image = _download_image(tmdb_backdrop_url)
+        image = download_image(tmdb_backdrop_url, 'backdrop')
         if image:
             return image
 
@@ -72,4 +76,4 @@ def fetch_backdrop(tmdb_backdrop_url: str, title: str, year: int | None) -> Cont
         logger.warning('backdrop: scraper image search failed for %r: %s', query, exc)
         return None
 
-    return _download_image(image_url) if image_url else None
+    return download_image(image_url, 'backdrop') if image_url else None

@@ -3,12 +3,12 @@ import logging
 from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
 
-from .models import Movie, ScanQueue
+from .models import Movie, ScanCandidate, ScanQueue
 from .services.backdrop import fetch_backdrop
-from .services.extract import extract_movie
+from .services.extract import extract_movie, extract_synopsis
 from .services.extras import fetch_synopsis, fetch_trailer
-from .services.scraper import scrape_barcode
-from .services.tmdb import search_tmdb
+from .services.scraper import scrape_barcode, search_youtube
+from .services.tmdb import fetch_tmdb_extras, search_tmdb, search_tmdb_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +107,19 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
         # No TMDB match - keep the LLM title for manual correction in the Inbox.
         entry.error_message = 'No TMDB match - LLM-extracted title saved for manual correction.'
 
+    # ── Alternative candidates (best-effort) ───────────────────────────────────
+    # The default match above is just the top result; a popular near-namesake can
+    # outrank the right film. Persist the top few so the Inbox can offer a picker
+    # to re-pin the exact match. We search with the LLM-extracted title (the same
+    # query that fed `search_tmdb`) - NOT `entry.extracted_title`, which a TMDB
+    # hit has already overwritten with the possibly-wrong top match's title. A
+    # failure here never strands the entry.
+    try:
+        candidates = search_tmdb_candidates(scraped.title.strip())
+    except Exception as exc:
+        logger.warning('resolve_scan_queue_entry: candidate search failed for %s: %s', entry.barcode, exc)
+        candidates = []
+
     # ── Backdrop wallpaper (best-effort) ───────────────────────────────────────
     # TMDB backdrop first, web-image fallback. A failure here never strands the
     # entry: the wallpaper is decorative and the entry still lands in `review`.
@@ -121,8 +134,62 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
     except Exception as exc:
         logger.warning('resolve_scan_queue_entry: backdrop fetch failed for %s: %s', entry.barcode, exc)
 
+    # ── Synopsis + trailer (best-effort) ───────────────────────────────────────
+    # TMDB overview / videos are preferred; on a miss reuse the text already
+    # scraped above for the synopsis (no second scrape) and a YouTube search for
+    # the trailer. A failure here never strands the entry - both are decorative
+    # and the entry still lands in `review`.
+    try:
+        extras = fetch_tmdb_extras(
+            tmdb_id=entry.extracted_tmdb_id,
+            title=entry.extracted_title,
+        )
+    except Exception as exc:
+        logger.warning('resolve_scan_queue_entry: extras fetch failed for %s: %s', entry.barcode, exc)
+        extras = {'synopsis': '', 'trailer_url': ''}
+
+    synopsis = extras.get('synopsis', '')
+    if not synopsis:
+        try:
+            synopsis = extract_synopsis(raw_text, entry.extracted_title)
+        except Exception as exc:
+            logger.warning('resolve_scan_queue_entry: synopsis extract failed for %s: %s', entry.barcode, exc)
+            synopsis = ''
+    entry.extracted_synopsis = synopsis
+
+    trailer_url = extras.get('trailer_url', '')
+    if not trailer_url and entry.extracted_title:
+        query = (
+            f'{entry.extracted_title} {entry.extracted_year} official trailer youtube'
+            if entry.extracted_year
+            else f'{entry.extracted_title} official trailer youtube'
+        )
+        try:
+            trailer_url = search_youtube(query)
+        except Exception as exc:
+            logger.warning('resolve_scan_queue_entry: trailer search failed for %s: %s', entry.barcode, exc)
+            trailer_url = ''
+    entry.extracted_trailer_url = trailer_url
+
     entry.status = 'review'
     entry.save()
+
+    # Persist the alternative matches now the entry has a saved pk. Replace any
+    # from a previous resolution attempt so a retry never stacks duplicates.
+    entry.candidates.all().delete()
+    if candidates:
+        ScanCandidate.objects.bulk_create([
+            ScanCandidate(
+                entry=entry,
+                tmdb_id=c['tmdb_id'],
+                title=c['title'],
+                year=c['year'],
+                cover_url=c['cover_url'],
+                overview=c['overview'],
+                sort_order=index,
+            )
+            for index, c in enumerate(candidates)
+        ])
 
 
 @shared_task

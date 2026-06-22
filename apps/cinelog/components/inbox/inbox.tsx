@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import { Toast } from "@repo/ui/core-elements/toast";
@@ -115,16 +116,17 @@ export function Inbox() {
       )}
 
       {status === "ready" && items.length > 0 && (
-        <Box flexDirection="column" gap={12}>
+        <Grid container spacing={2} marginTop={16}>
           {items.map((item) => (
-            <InboxCard
-              key={item.id}
-              item={item}
-              onAccept={handleAccept}
-              onReject={handleReject}
-            />
+            <Grid key={item.id} size={{ xs: 12 }}>
+              <InboxCard
+                item={item}
+                onAccept={handleAccept}
+                onReject={handleReject}
+              />
+            </Grid>
           ))}
-        </Box>
+        </Grid>
       )}
 
       {status === "ready" && items.length > 0 && (

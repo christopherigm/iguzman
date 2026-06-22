@@ -2,9 +2,43 @@ import logging
 
 from .extract import extract_movie, extract_synopsis
 from .scraper import scrape_text, search_youtube
-from .tmdb import fetch_tmdb_extras, search_tmdb
+from .tmdb import fetch_tmdb_by_id, fetch_tmdb_extras, search_tmdb
 
 logger = logging.getLogger(__name__)
+
+
+def refetch_movie_data_by_id(tmdb_id: str) -> dict | None:
+    """
+    Resolve a film's full preview metadata from an exact TMDB id, WITHOUT
+    touching the database.
+
+    Used by the Inbox candidate picker: the user chose a specific result, so we
+    pin its `tmdb_id` directly (no re-search that could drift back to the wrong
+    title). Returns the same preview dict as `refetch_movie_data` - keys: title,
+    director, year, genres, cast, synopsis, trailer_url, cover_url,
+    backdrop_url, tmdb_id. Returns None when the id cannot be resolved.
+    """
+    tmdb_id = (tmdb_id or '').strip()
+    if not tmdb_id:
+        return None
+
+    tmdb = fetch_tmdb_by_id(tmdb_id)
+    if not tmdb:
+        return None
+
+    extras = fetch_tmdb_extras(tmdb_id=tmdb['tmdb_id'])
+    return {
+        'title': tmdb['title'],
+        'director': tmdb['director'],
+        'year': tmdb['year'],
+        'genres': tmdb['genres'],
+        'cast': tmdb['cast'],
+        'cover_url': tmdb['cover_url'],
+        'backdrop_url': tmdb['backdrop_url'],
+        'tmdb_id': tmdb['tmdb_id'],
+        'synopsis': extras.get('synopsis', ''),
+        'trailer_url': extras.get('trailer_url', ''),
+    }
 
 
 def refetch_movie_data(title: str, year: int | None) -> dict | None:

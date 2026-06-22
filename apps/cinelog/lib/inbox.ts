@@ -2,8 +2,19 @@ import {
   ApiError,
   type MovieDetail,
   type MovieFormat,
+  type MovieRefetchPreview,
   type Paginated,
 } from "./catalog";
+
+/** An alternative TMDB match the user can re-pin the entry to. */
+export interface InboxCandidate {
+  id: number;
+  tmdb_id: string;
+  title: string;
+  year: number | null;
+  cover_url: string;
+  overview: string;
+}
 
 export interface InboxItem {
   id: number;
@@ -16,6 +27,10 @@ export interface InboxItem {
   extracted_genres: string[];
   extracted_tmdb_id: string;
   extracted_cover_url: string;
+  extracted_backdrop: string;
+  extracted_synopsis: string;
+  extracted_trailer_url: string;
+  candidates: InboxCandidate[];
   retry_count: number;
   error_message: string;
   created: string;
@@ -28,7 +43,11 @@ export interface InboxAcceptPayload {
   director: string;
   year: number | null;
   format: MovieFormat;
+  synopsis: string;
+  trailer_url: string;
   cover_url: string;
+  /** Sent only when saving a re-fetch: source URL to re-download the wallpaper. */
+  backdrop_url: string;
   tmdb_id: string;
   genres: string[];
   cast: string[];
@@ -58,6 +77,54 @@ export async function acceptInboxItem(
     throw new ApiError(res.status, data);
   }
   return res.json() as Promise<MovieDetail>;
+}
+
+/**
+ * Re-resolve a review entry's metadata from TMDB (year-aware) with a scraper/LLM
+ * fallback, using the user-corrected `title` and `year` to pin the right
+ * version. Returns the resolved fields as a preview WITHOUT promoting the entry;
+ * the card applies them and the user accepts or discards. Throws ApiError when
+ * nothing could be found.
+ */
+export async function refetchInboxItem(
+  id: number,
+  title: string,
+  year: number | null,
+): Promise<MovieRefetchPreview> {
+  const res = await fetch(`/api/catalog/inbox/${id}/refetch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, year }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<MovieRefetchPreview>;
+}
+
+/**
+ * Re-pin a review entry to one of its alternative candidate matches, identified
+ * by `tmdbId`. TMDB ranks search results by popularity, so the default match can
+ * be the wrong film; the picker lets the user choose the right one. Resolves the
+ * chosen id to full metadata and returns it as a preview WITHOUT promoting the
+ * entry - the card applies the fields and the user accepts. Throws ApiError when
+ * the option could not be resolved.
+ */
+export async function selectInboxCandidate(
+  id: number,
+  tmdbId: string,
+): Promise<MovieRefetchPreview> {
+  const res = await fetch(`/api/catalog/inbox/${id}/select`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tmdb_id: tmdbId }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<MovieRefetchPreview>;
 }
 
 export async function rejectInboxItem(id: number): Promise<void> {

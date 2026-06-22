@@ -1,6 +1,8 @@
+import logging
 import os
 
 from django.core.files.base import ContentFile
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
@@ -19,6 +21,7 @@ from .pagination import CategoryPagination, InboxPagination, MoviePagination
 from .serializers import (
     CategorySerializer,
     InboxAcceptSerializer,
+    InboxSelectSerializer,
     MovieDetailSerializer,
     MovieEditMediaSerializer,
     MovieListSerializer,
@@ -26,12 +29,14 @@ from .serializers import (
     MovieWriteSerializer,
     ScanQueueSerializer,
 )
-from .services.backdrop import fetch_backdrop
+from .services.backdrop import download_image, fetch_backdrop
 from .services.extras import fetch_synopsis, fetch_trailer
 from .services.lookup import lookup_barcode
-from .services.refetch import refetch_movie_data
+from .services.refetch import refetch_movie_data, refetch_movie_data_by_id
 from .services.tmdb import search_tmdb
 from .tasks import fetch_movie_backdrop, fetch_movie_extras, resolve_scan_queue_entry
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_genre_ids(names):
@@ -376,6 +381,14 @@ class InboxAcceptView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        # Resolve the poster and wallpaper bytes BEFORE writing the catalog row so
+        # the catalog owns the images (surviving the source URL going away) and a
+        # failed download never leaves a half-saved movie. Both are best-effort:
+        # the movie still saves (carrying the source URLs) when an image can't be
+        # fetched.
+        cover = download_image(data['cover_url'], 'cover') if data['cover_url'] else None
+        backdrop = self._resolve_backdrop(data, entry)
+
         write_data = {
             'barcode': entry.barcode,
             'title': data['title'],
@@ -384,33 +397,133 @@ class InboxAcceptView(APIView):
             'format': data['format'],
             'cover_url': data['cover_url'],
             'tmdb_id': data['tmdb_id'],
+            'synopsis': data['synopsis'],
+            'trailer_url': data['trailer_url'],
             'genre_ids': resolve_genre_ids(data['genres']),
             'cast_names': data['cast'],
         }
-        movie_serializer = MovieWriteSerializer(data=write_data)
-        movie_serializer.is_valid(raise_exception=True)
-        movie = movie_serializer.save()
 
-        # Carry the wallpaper resolved during review onto the new catalog Movie.
-        if entry.extracted_backdrop_image:
-            entry.extracted_backdrop_image.open('rb')
-            try:
-                movie.backdrop_image.save(
-                    os.path.basename(entry.extracted_backdrop_image.name),
-                    ContentFile(entry.extracted_backdrop_image.read()),
-                    save=True,
-                )
-            finally:
-                entry.extracted_backdrop_image.close()
+        # One transaction so a failure anywhere never strands an orphan movie or a
+        # half-promoted queue entry (the earlier bug saved the movie first, then
+        # 500'd copying the backdrop, leaving the title in the catalog anyway).
+        with transaction.atomic():
+            movie_serializer = MovieWriteSerializer(data=write_data)
+            movie_serializer.is_valid(raise_exception=True)
+            movie = movie_serializer.save()
+            if cover:
+                movie.cover_image.save(cover.name, cover, save=True)
+            if backdrop:
+                movie.backdrop_image.save(backdrop.name, backdrop, save=True)
 
-        entry.status = 'accepted'
-        entry.movie = movie
-        entry.save(update_fields=['status', 'movie', 'modified'])
+            entry.status = 'accepted'
+            entry.movie = movie
+            entry.save(update_fields=['status', 'movie', 'modified'])
+
+            # The picker's alternatives are no longer needed once a match is
+            # chosen; drop them so accepted entries don't carry dangling results.
+            entry.candidates.all().delete()
 
         return Response(
             MovieDetailSerializer(movie, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+    @staticmethod
+    def _resolve_backdrop(data, entry):
+        """
+        Wallpaper bytes for an accepted entry, or None.
+
+        A saved re-fetch sends a fresh `backdrop_url` to re-download (it takes
+        priority); otherwise copy the wallpaper downloaded during review. The
+        copy is guarded: the worker that resolved the entry may have written the
+        file to storage this web process can't read (e.g. an unshared media
+        volume in development), and a missing file must not 500 the accept - the
+        wallpaper is decorative.
+        """
+        if data.get('backdrop_url'):
+            return fetch_backdrop(data['backdrop_url'], data['title'], data['year'])
+
+        image = entry.extracted_backdrop_image
+        if not image:
+            return None
+        try:
+            image.open('rb')
+            try:
+                return ContentFile(image.read(), name=os.path.basename(image.name))
+            finally:
+                image.close()
+        except (FileNotFoundError, ValueError) as exc:
+            logger.warning(
+                'inbox accept: backdrop file unreadable for entry %s: %s', entry.pk, exc
+            )
+            return None
+
+
+class InboxRefetchView(APIView):
+    """
+    POST /api/catalog/inbox/<id>/refetch/  { "title": "...", "year": 1999 }
+
+    Re-resolve a review entry's metadata from TMDB (year-aware) with a scraper +
+    LLM fallback and return it as a PREVIEW - nothing is written. Mirrors
+    `MovieRefetchView` for the Inbox: the card sends the user-corrected title and
+    year to pin the right version, overrides its fields with the response, and
+    promotes via accept. Responds 404 when nothing usable can be found.
+    """
+
+    def post(self, request, pk):
+        entry = get_object_or_404(ScanQueue, pk=pk, status='review')
+
+        serializer = MovieRefetchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        # Fall back to the extracted title if the form somehow sent only whitespace.
+        title = data['title'].strip() or entry.extracted_title
+        preview = refetch_movie_data(title, data['year'])
+        if not preview:
+            return Response(
+                {'detail': 'No data could be found for this title and year.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(preview)
+
+
+class InboxSelectView(APIView):
+    """
+    POST /api/catalog/inbox/<id>/select/  { "tmdb_id": "..." }
+
+    Re-pin a review entry to one of its alternative candidate matches. TMDB ranks
+    search results by popularity, so the default top match can be the wrong film
+    (e.g. "Fast X" for a scan of "X"); the Inbox picker lets the user choose the
+    right candidate, and this resolves that exact `tmdb_id` to full metadata.
+
+    Returns the same PREVIEW shape as `InboxRefetchView` - nothing is written;
+    the card applies the fields and the user accepts. The chosen id is validated
+    against the entry's own candidates so a client can't pin an arbitrary movie.
+    Responds 404 when the id cannot be resolved.
+    """
+
+    def post(self, request, pk):
+        entry = get_object_or_404(ScanQueue, pk=pk, status='review')
+
+        serializer = InboxSelectSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tmdb_id = serializer.validated_data['tmdb_id']
+
+        # Only the entry's own candidates may be selected.
+        if not entry.candidates.filter(tmdb_id=tmdb_id).exists():
+            return Response(
+                {'detail': 'That option is not a candidate for this entry.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        preview = refetch_movie_data_by_id(tmdb_id)
+        if not preview:
+            return Response(
+                {'detail': 'No data could be found for the selected option.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(preview)
 
 
 class InboxRejectView(APIView):

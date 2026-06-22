@@ -4,7 +4,9 @@ from .views import (
     CategoryListView,
     InboxAcceptView,
     InboxListView,
+    InboxRefetchView,
     InboxRejectView,
+    InboxSelectView,
     MovieBackdropView,
     MovieDetailView,
     MovieListView,
@@ -25,5 +27,7 @@ urlpatterns = [
     path('scan/', ScanView.as_view(), name='scan'),
     path('inbox/', InboxListView.as_view(), name='inbox-list'),
     path('inbox/<int:pk>/accept/', InboxAcceptView.as_view(), name='inbox-accept'),
+    path('inbox/<int:pk>/refetch/', InboxRefetchView.as_view(), name='inbox-refetch'),
+    path('inbox/<int:pk>/select/', InboxSelectView.as_view(), name='inbox-select'),
     path('inbox/<int:pk>/reject/', InboxRejectView.as_view(), name='inbox-reject'),
 ]

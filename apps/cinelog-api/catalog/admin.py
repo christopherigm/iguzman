@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Actor, Category, Movie, ScanQueue
+from .models import Actor, Category, Movie, ScanCandidate, ScanQueue
 
 
 @admin.register(Category)
@@ -25,9 +25,17 @@ class MovieAdmin(admin.ModelAdmin):
     readonly_fields = ['created', 'modified']
 
 
+class ScanCandidateInline(admin.TabularInline):
+    model = ScanCandidate
+    extra = 0
+    fields = ['sort_order', 'title', 'year', 'tmdb_id', 'cover_url']
+    ordering = ['sort_order']
+
+
 @admin.register(ScanQueue)
 class ScanQueueAdmin(admin.ModelAdmin):
     list_display = ['barcode', 'status', 'extracted_title', 'retry_count', 'created']
     list_filter = ['status']
     search_fields = ['barcode', 'extracted_title']
     readonly_fields = ['created', 'modified']
+    inlines = [ScanCandidateInline]

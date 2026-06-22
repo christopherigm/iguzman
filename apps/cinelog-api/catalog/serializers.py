@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import FORMAT_CHOICES, Actor, Category, Movie, ScanQueue
+from .models import FORMAT_CHOICES, Actor, Category, Movie, ScanCandidate, ScanQueue
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -101,15 +101,35 @@ class MovieWriteSerializer(serializers.ModelSerializer):
         return instance
 
 
+class ScanCandidateSerializer(serializers.ModelSerializer):
+    """Alternative TMDB matches offered for an entry's picker (read-only)."""
+
+    class Meta:
+        model = ScanCandidate
+        fields = ['id', 'tmdb_id', 'title', 'year', 'cover_url', 'overview']
+
+
 class ScanQueueSerializer(serializers.ModelSerializer):
+    extracted_backdrop = serializers.SerializerMethodField()
+    candidates = ScanCandidateSerializer(many=True, read_only=True)
+
     class Meta:
         model = ScanQueue
         fields = [
             'id', 'barcode', 'status', 'extracted_title', 'extracted_director',
             'extracted_year', 'extracted_cast', 'extracted_genres', 'extracted_tmdb_id',
-            'extracted_cover_url', 'retry_count', 'error_message', 'created', 'modified',
+            'extracted_cover_url', 'extracted_backdrop', 'extracted_synopsis',
+            'extracted_trailer_url', 'candidates', 'retry_count',
+            'error_message', 'created', 'modified',
         ]
         read_only_fields = ['status', 'retry_count', 'error_message', 'created', 'modified']
+
+    def get_extracted_backdrop(self, obj):
+        request = self.context.get('request')
+        if obj.extracted_backdrop_image:
+            url = obj.extracted_backdrop_image.url
+            return request.build_absolute_uri(url) if request else url
+        return ''
 
 
 class MovieEditSerializer(serializers.Serializer):
@@ -173,6 +193,15 @@ class MovieRefetchSerializer(serializers.Serializer):
     )
 
 
+class InboxSelectSerializer(serializers.Serializer):
+    """
+    Input for selecting a candidate match in the Inbox: the chosen TMDB id. The
+    view resolves it to full preview metadata - nothing is written.
+    """
+
+    tmdb_id = serializers.CharField(max_length=20)
+
+
 class InboxAcceptSerializer(MovieEditSerializer):
     """
     Editable fields the user can correct in the Inbox before an AI-resolved
@@ -182,6 +211,9 @@ class InboxAcceptSerializer(MovieEditSerializer):
     """
 
     cover_url = serializers.URLField(
+        max_length=1000, required=False, allow_blank=True, default=''
+    )
+    backdrop_url = serializers.URLField(
         max_length=1000, required=False, allow_blank=True, default=''
     )
     tmdb_id = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')
