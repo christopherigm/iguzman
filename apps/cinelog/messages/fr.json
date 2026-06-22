@@ -1,5 +1,8 @@
 {
-  "Metadata": { "title": "Cinelog", "description": "" },
+  "Metadata": {
+    "title": "Cinelog",
+    "description": ""
+  },
   "Navbar": {
     "home": "Accueil",
     "scan": "Scanner",
@@ -186,8 +189,13 @@
     "formatUnset": "Non défini",
     "genresLabel": "Genres (séparés par des virgules)",
     "castLabel": "Distribution (séparée par des virgules)",
+    "synopsisLabel": "Synopsis",
+    "trailerLabel": "URL de la bande-annonce",
     "saveError": "Échec de l'enregistrement des modifications. Veuillez réessayer.",
     "saved": "Modifications enregistrées.",
+    "refetchData": "Récupérer à nouveau les données",
+    "fetchingRefetch": "Nouvelle récupération des données…",
+    "refetchError": "Impossible de récupérer à nouveau les données pour ce titre et cette année.",
     "getBackdrop": "Obtenir l'arrière-plan",
     "fetchingBackdrop": "Récupération de l'arrière-plan…",
     "backdropError": "Aucun arrière-plan trouvé pour ce film.",

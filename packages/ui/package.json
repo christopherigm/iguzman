@@ -4,6 +4,7 @@
   "private": true,
   "exports": {
     "./*": "./src/*.tsx",
+    "./core-elements/utils": "./src/core-elements/utils.ts",
     "./palettes": "./src/palettes.ts",
     "./use-ffmpeg": "./src/use-ffmpeg.ts",
     "./use-speech-to-text": "./src/use-speech-to-text.ts",

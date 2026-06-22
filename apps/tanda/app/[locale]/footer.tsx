@@ -1,27 +1,27 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import { getTranslations, getLocale } from 'next-intl/server';
-import { Container } from '@repo/ui/core-elements/container';
-import { Grid } from '@repo/ui/core-elements/grid';
-import { Box } from '@repo/ui/core-elements/box';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { ThemeSwitch } from '@repo/ui/theme-switch';
-import { LocaleSwitcher } from '@repo/ui/core-elements/locale-switcher';
-import { routing } from '@repo/i18n/routing';
-import { version } from '../../package.json';
-import './footer.css';
+import Image from "next/image";
+import Link from "next/link";
+import { getTranslations, getLocale } from "next-intl/server";
+import { Container } from "@repo/ui/core-elements/container";
+import { Grid } from "@repo/ui/core-elements/grid";
+import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { ThemeSwitch } from "@repo/ui/theme-switch";
+import { LocaleSwitcher } from "@repo/ui/core-elements/locale-switcher";
+import { routing } from "@repo/i18n/routing";
+import { version } from "../../package.json";
+import "./footer.css";
 
 export async function Footer({ logo }: { logo: string }) {
   const [t, locale] = await Promise.all([
-    getTranslations('Footer'),
+    getTranslations("Footer"),
     getLocale(),
   ]);
 
   const appLinks = [
-    { label: t('home'), href: '/' },
-    { label: t('account'), href: '/account' },
+    { label: t("home"), href: "/" },
+    { label: t("account"), href: "/account" },
   ];
-  const legalLinks = [{ label: t('analysis'), href: '/analysis' }];
+  const legalLinks = [{ label: t("analysis"), href: "/analysis" }];
 
   return (
     <footer className="footer">
@@ -60,7 +60,7 @@ export async function Footer({ logo }: { logo: string }) {
               fontWeight={700}
               className="footer__col-heading"
             >
-              {t('appHeading')}
+              {t("appHeading")}
             </Typography>
             <Grid container spacingY={1} spacingX={2}>
               {appLinks.map((link) => (
@@ -79,7 +79,7 @@ export async function Footer({ logo }: { logo: string }) {
               fontWeight={700}
               className="footer__col-heading"
             >
-              {t('legalHeading')}
+              {t("legalHeading")}
             </Typography>
             <Grid container spacingY={1} spacingX={2}>
               {legalLinks.map((link) => (
@@ -99,7 +99,7 @@ export async function Footer({ logo }: { logo: string }) {
             textAlign="center"
             className="footer__description"
           >
-            {t('copyright', { year: new Date().getFullYear(), version })}
+            {t("copyright", { year: new Date().getFullYear(), version })}
           </Typography>
         </Box>
       </Container>

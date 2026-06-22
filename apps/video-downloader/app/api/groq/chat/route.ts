@@ -76,8 +76,7 @@ async function inspectStreamForLogging(
           continue;
         }
         const choice = json.choices?.[0];
-        const token =
-          choice?.delta?.content ?? choice?.message?.content ?? "";
+        const token = choice?.delta?.content ?? choice?.message?.content ?? "";
         if (token) content += token;
         if (choice?.finish_reason) finishReason = choice.finish_reason;
       }

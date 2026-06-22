@@ -109,11 +109,7 @@ export function Inbox() {
       )}
 
       {status === "ready" && items.length === 0 && (
-        <Typography
-          variant="body"
-          textAlign="center"
-          styles={{ opacity: 0.6 }}
-        >
+        <Typography variant="body" textAlign="center" styles={{ opacity: 0.6 }}>
           {t("empty")}
         </Typography>
       )}

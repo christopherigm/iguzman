@@ -11,6 +11,7 @@ import { Toast } from "@repo/ui/core-elements/toast";
 import type {
   MovieDetail,
   MovieFormat,
+  MovieRefetchPreview,
   MovieUpdatePayload,
 } from "@/lib/catalog";
 
@@ -20,15 +21,20 @@ type Props = {
   movie: MovieDetail;
   onSave: (payload: MovieUpdatePayload) => Promise<void>;
   onCancel: () => void;
+  onRefetch: (
+    title: string,
+    year: number | null,
+  ) => Promise<MovieRefetchPreview>;
   onGetBackdrop: () => Promise<void>;
-  onGetSynopsis: () => Promise<void>;
-  onGetTrailer: () => Promise<void>;
+  onGetSynopsis: () => Promise<string>;
+  onGetTrailer: () => Promise<string>;
 };
 
 export function MovieEditForm({
   movie,
   onSave,
   onCancel,
+  onRefetch,
   onGetBackdrop,
   onGetSynopsis,
   onGetTrailer,
@@ -46,8 +52,20 @@ export function MovieEditForm({
   const [cast, setCast] = useState(
     movie.cast.map((actor) => actor.name).join(", "),
   );
+  const [synopsis, setSynopsis] = useState(movie.synopsis);
+  const [trailerUrl, setTrailerUrl] = useState(movie.trailer_url);
+
+  // Media a re-fetch may replace. These aren't editable inputs - they ride along
+  // in the save payload only after a re-fetch sets `refetched`, so a plain text
+  // edit never disturbs the existing cover, backdrop, or tmdb_id.
+  const [coverUrl, setCoverUrl] = useState(movie.cover_url);
+  const [backdropUrl, setBackdropUrl] = useState("");
+  const [tmdbId, setTmdbId] = useState(movie.tmdb_id);
+  const [refetched, setRefetched] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  const [fetchingRefetch, setFetchingRefetch] = useState(false);
+  const [refetchError, setRefetchError] = useState(false);
   const [fetchingBackdrop, setFetchingBackdrop] = useState(false);
   const [backdropError, setBackdropError] = useState(false);
   const [fetchingSynopsis, setFetchingSynopsis] = useState(false);
@@ -58,7 +76,11 @@ export function MovieEditForm({
   // Any in-flight action locks the whole row so the user can't save, cancel, or
   // re-trigger a fetch mid-request.
   const busy =
-    saving || fetchingBackdrop || fetchingSynopsis || fetchingTrailer;
+    saving ||
+    fetchingRefetch ||
+    fetchingBackdrop ||
+    fetchingSynopsis ||
+    fetchingTrailer;
 
   const formatOptions: SelectOption[] = [
     { value: "", label: t("formatUnset") },
@@ -70,6 +92,37 @@ export function MovieEditForm({
       .split(",")
       .map((part) => part.trim())
       .filter(Boolean);
+
+  const parseYear = () => {
+    const parsed = year.trim() ? Number.parseInt(year.trim(), 10) : null;
+    return Number.isNaN(parsed as number) ? null : parsed;
+  };
+
+  async function handleRefetch() {
+    setFetchingRefetch(true);
+    setRefetchError(false);
+    try {
+      // Re-search with the (possibly corrected) title + year, then overwrite
+      // every field with the resolved version. The parent live-previews the new
+      // poster/backdrop on the page; we keep them for the save payload.
+      const data = await onRefetch(title.trim(), parseYear());
+      setTitle(data.title);
+      setDirector(data.director);
+      setYear(data.year ? String(data.year) : "");
+      setGenres(data.genres.join(", "));
+      setCast(data.cast.join(", "));
+      setSynopsis(data.synopsis);
+      setTrailerUrl(data.trailer_url);
+      setCoverUrl(data.cover_url);
+      setBackdropUrl(data.backdrop_url);
+      setTmdbId(data.tmdb_id);
+      setRefetched(true);
+    } catch {
+      setRefetchError(true);
+    } finally {
+      setFetchingRefetch(false);
+    }
+  }
 
   async function handleGetBackdrop() {
     setFetchingBackdrop(true);
@@ -89,7 +142,9 @@ export function MovieEditForm({
     setFetchingSynopsis(true);
     setSynopsisError(false);
     try {
-      await onGetSynopsis();
+      // Mirror the auto-fetched text into the editable field so the user can
+      // tweak it before saving.
+      setSynopsis(await onGetSynopsis());
     } catch {
       setSynopsisError(true);
     } finally {
@@ -101,7 +156,7 @@ export function MovieEditForm({
     setFetchingTrailer(true);
     setTrailerError(false);
     try {
-      await onGetTrailer();
+      setTrailerUrl(await onGetTrailer());
     } catch {
       setTrailerError(true);
     } finally {
@@ -111,15 +166,23 @@ export function MovieEditForm({
 
   async function handleSave() {
     setSaving(true);
-    const parsedYear = year.trim() ? Number.parseInt(year.trim(), 10) : null;
     try {
       await onSave({
         title: title.trim(),
         director: director.trim(),
-        year: Number.isNaN(parsedYear as number) ? null : parsedYear,
+        year: parseYear(),
         format,
+        synopsis: synopsis.trim(),
+        trailer_url: trailerUrl.trim(),
         genres: splitList(genres),
         cast: splitList(cast),
+        // Carry the re-fetched media only when a re-fetch happened, so a plain
+        // edit never clobbers the existing cover, backdrop, or tmdb_id.
+        ...(refetched && {
+          cover_url: coverUrl,
+          backdrop_url: backdropUrl,
+          tmdb_id: tmdbId,
+        }),
       });
     } catch {
       // The parent surfaces the error toast; keep the form open to retry.
@@ -178,6 +241,21 @@ export function MovieEditForm({
         disabled={busy}
       />
 
+      <TextInput
+        label={t("synopsisLabel")}
+        value={synopsis}
+        onChange={setSynopsis}
+        multirow
+        rows={5}
+        disabled={busy}
+      />
+      <TextInput
+        label={t("trailerLabel")}
+        value={trailerUrl}
+        onChange={setTrailerUrl}
+        disabled={busy}
+      />
+
       <Box
         display="flex"
         gap={8}
@@ -187,6 +265,14 @@ export function MovieEditForm({
         marginTop={12}
       >
         <Box display="flex" gap={8} flexWrap="wrap">
+          <Button
+            text={t("refetchData")}
+            size="md"
+            onClick={handleRefetch}
+            isLoading={fetchingRefetch}
+            disabled={busy || title.trim() === ""}
+            kind="primary"
+          />
           {!movie.backdrop && (
             <Button
               text={t("getBackdrop")}
@@ -197,22 +283,26 @@ export function MovieEditForm({
               kind="primary"
             />
           )}
-          <Button
-            text={t("getSynopsis")}
-            size="md"
-            onClick={handleGetSynopsis}
-            isLoading={fetchingSynopsis}
-            disabled={busy}
-            kind="primary"
-          />
-          <Button
-            text={t("getTrailer")}
-            size="md"
-            onClick={handleGetTrailer}
-            isLoading={fetchingTrailer}
-            disabled={busy}
-            kind="primary"
-          />
+          {!synopsis && (
+            <Button
+              text={t("getSynopsis")}
+              size="md"
+              onClick={handleGetSynopsis}
+              isLoading={fetchingSynopsis}
+              disabled={busy}
+              kind="primary"
+            />
+          )}
+          {!trailerUrl && (
+            <Button
+              text={t("getTrailer")}
+              size="md"
+              onClick={handleGetTrailer}
+              isLoading={fetchingTrailer}
+              disabled={busy}
+              kind="primary"
+            />
+          )}
         </Box>
         <Box display="flex" gap={8} flexWrap="wrap">
           <Button
@@ -232,9 +322,18 @@ export function MovieEditForm({
         </Box>
       </Box>
 
+      {fetchingRefetch && <ProgressBar label={t("fetchingRefetch")} />}
       {fetchingBackdrop && <ProgressBar label={t("fetchingBackdrop")} />}
       {fetchingSynopsis && <ProgressBar label={t("fetchingSynopsis")} />}
       {fetchingTrailer && <ProgressBar label={t("fetchingTrailer")} />}
+
+      {refetchError && (
+        <Toast
+          message={t("refetchError")}
+          variant="error"
+          position="top-center"
+        />
+      )}
 
       {backdropError && (
         <Toast

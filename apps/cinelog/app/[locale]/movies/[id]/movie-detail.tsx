@@ -19,11 +19,13 @@ import {
   fetchSynopsis,
   fetchTrailer,
   getMovie,
+  refetchMovie,
   updateMovie,
   type MovieDetail as MovieDetailData,
   type MovieUpdatePayload,
 } from "@/lib/catalog";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
+import { FormatHeader } from "@/components/format-header";
 import { MovieEditForm } from "./movie-edit-form";
 import "./movie-detail.css";
 import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
@@ -63,6 +65,16 @@ export function MovieDetail({ id }: { id: string }) {
   const [saveError, setSaveError] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
+  // Live preview of a re-fetched poster/wallpaper while editing; null falls back
+  // to the saved image. Cleared on save (the reloaded movie carries the new art)
+  // and on cancel (discard the preview).
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [backdropPreview, setBackdropPreview] = useState<string | null>(null);
+
+  function clearPreviews() {
+    setCoverPreview(null);
+    setBackdropPreview(null);
+  }
 
   async function handleSave(payload: MovieUpdatePayload) {
     setSaveError(false);
@@ -70,11 +82,26 @@ export function MovieDetail({ id }: { id: string }) {
       const updated = await updateMovie(id, payload);
       setMovie(updated);
       setEditing(false);
+      clearPreviews();
       setSaved(true);
     } catch (err) {
       setSaveError(true);
       throw err; // Let the form re-enable so the user can retry.
     }
+  }
+
+  async function handleRefetch(title: string, year: number | null) {
+    const data = await refetchMovie(id, title, year);
+    // Live-preview the resolved art on the page. An empty URL means the fallback
+    // found no image, so keep showing the current one rather than blanking it.
+    if (data.cover_url) setCoverPreview(data.cover_url);
+    if (data.backdrop_url) setBackdropPreview(data.backdrop_url);
+    return data;
+  }
+
+  function handleCancelEdit() {
+    setEditing(false);
+    clearPreviews();
   }
 
   async function handleGetBackdrop() {
@@ -85,11 +112,13 @@ export function MovieDetail({ id }: { id: string }) {
   async function handleGetSynopsis() {
     const updated = await fetchSynopsis(id);
     setMovie(updated);
+    return updated.synopsis;
   }
 
   async function handleGetTrailer() {
     const updated = await fetchTrailer(id);
     setMovie(updated);
+    return updated.trailer_url;
   }
 
   async function handleConfirmDelete() {
@@ -149,14 +178,19 @@ export function MovieDetail({ id }: { id: string }) {
     );
   }
 
+  // A re-fetch preview overrides the saved art while editing so the user sees
+  // the matched version before saving.
+  const displayCover = coverPreview ?? movie.cover;
+  const displayBackdrop = backdropPreview ?? movie.backdrop;
+
   // Dim, full-bleed wallpaper behind the whole card; falls back to the plain
   // layout when the API resolved no backdrop. The image URL is dynamic, so it
   // rides in as a CSS variable consumed by the `::before` in movie-detail.css.
-  const backdropStyles = movie.backdrop
+  const backdropStyles = displayBackdrop
     ? ({
         position: "relative",
         isolation: "isolate",
-        "--backdrop-image": `url("${movie.backdrop}")`,
+        "--backdrop-image": `url("${displayBackdrop}")`,
       } as CSSProperties)
     : undefined;
 
@@ -165,7 +199,7 @@ export function MovieDetail({ id }: { id: string }) {
       flexDirection="column"
       gap={20}
       paddingY={16}
-      className={movie.backdrop ? "movie-detail__backdrop" : undefined}
+      className={displayBackdrop ? "movie-detail__backdrop" : undefined}
       styles={backdropStyles}
     >
       <NavbarSpacer />
@@ -272,38 +306,50 @@ export function MovieDetail({ id }: { id: string }) {
       >
         <Box
           width="100%"
+          flexDirection="column"
           borderRadius={8}
           className="movie-detail__cover"
           styles={{
-            position: "relative",
             overflow: "hidden",
-            aspectRatio: "2 / 3",
             flexShrink: 0,
           }}
           elevation={5}
         >
-          {movie.cover ? (
-            <Image
-              src={movie.cover}
-              alt=""
-              fill
-              sizes="(max-width: 900px) 196px, (max-width: 1200px) 224px, 280px"
-              className="movie-detail__image"
-            />
-          ) : (
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              width="100%"
-              height="100%"
-              backgroundColor="var(--surface-2)"
-            >
-              <Typography variant="caption" styles={{ opacity: 0.6 }}>
-                {t("noCover")}
-              </Typography>
-            </Box>
-          )}
+          <FormatHeader
+            format={movie.format}
+            kind="bar"
+            size={{ xs: "md", md: "lg" }}
+          />
+          <Box
+            width="100%"
+            styles={{
+              position: "relative",
+              aspectRatio: "2 / 3",
+            }}
+          >
+            {displayCover ? (
+              <Image
+                src={displayCover}
+                alt=""
+                fill
+                sizes="(max-width: 900px) 196px, (max-width: 1200px) 224px, 280px"
+                className="movie-detail__image"
+              />
+            ) : (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                width="100%"
+                height="100%"
+                backgroundColor="var(--surface-2)"
+              >
+                <Typography variant="caption" styles={{ opacity: 0.6 }}>
+                  {t("noCover")}
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Box>
 
         <Box flexDirection="column" gap={16} flex={1}>
@@ -311,7 +357,8 @@ export function MovieDetail({ id }: { id: string }) {
             <MovieEditForm
               movie={movie}
               onSave={handleSave}
-              onCancel={() => setEditing(false)}
+              onCancel={handleCancelEdit}
+              onRefetch={handleRefetch}
               onGetBackdrop={handleGetBackdrop}
               onGetSynopsis={handleGetSynopsis}
               onGetTrailer={handleGetTrailer}
@@ -323,9 +370,15 @@ export function MovieDetail({ id }: { id: string }) {
               </Typography>
 
               <Box display="flex" gap={8} flexWrap="wrap">
-                {movie.year && <Badge variant="subtle">{movie.year}</Badge>}
+                {movie.year && (
+                  <Badge variant="subtle" size="md">
+                    {movie.year}
+                  </Badge>
+                )}
                 {movie.format && (
-                  <Badge variant="subtle">{tFormat(movie.format)}</Badge>
+                  <Badge variant="subtle" size="md">
+                    {tFormat(movie.format)}
+                  </Badge>
                 )}
               </Box>
 
@@ -343,9 +396,9 @@ export function MovieDetail({ id }: { id: string }) {
                   <Typography variant="label" styles={LABEL_STYLES}>
                     {t("genres")}
                   </Typography>
-                  <Box display="flex" gap={6} flexWrap="wrap">
+                  <Box display="flex" gap={6} flexWrap="wrap" paddingTop={8}>
                     {movie.genres.map((genre) => (
-                      <Badge key={genre.id} variant="outlined" size="sm">
+                      <Badge key={genre.id} variant="outlined" size="md">
                         {genre.name}
                       </Badge>
                     ))}

@@ -1,5 +1,8 @@
 {
-  "Metadata": { "title": "Cinelog", "description": "" },
+  "Metadata": {
+    "title": "Cinelog",
+    "description": ""
+  },
   "Navbar": {
     "home": "Inicio",
     "scan": "Escanear",
@@ -186,8 +189,13 @@
     "formatUnset": "Sin definir",
     "genresLabel": "Géneros (separados por comas)",
     "castLabel": "Reparto (separado por comas)",
+    "synopsisLabel": "Sinopsis",
+    "trailerLabel": "URL del tráiler",
     "saveError": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
     "saved": "Cambios guardados.",
+    "refetchData": "Volver a buscar datos",
+    "fetchingRefetch": "Volviendo a buscar datos…",
+    "refetchError": "No se pudieron volver a buscar datos para este título y año.",
     "getBackdrop": "Obtener fondo",
     "fetchingBackdrop": "Obteniendo fondo…",
     "backdropError": "No se encontró un fondo para esta película.",

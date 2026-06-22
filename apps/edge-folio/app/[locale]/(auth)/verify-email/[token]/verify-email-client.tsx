@@ -97,10 +97,7 @@ export function VerifyEmailClient({ token }: Props) {
             styles={{ textAlign: "center" }}
           >
             <Typography variant="h5">{t("successTitle")}</Typography>
-            <Typography
-              variant="body"
-              color="var(--muted-foreground, #6b7280)"
-            >
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t("successDetail")}
             </Typography>
             <Typography
@@ -127,10 +124,7 @@ export function VerifyEmailClient({ token }: Props) {
             <Typography variant="h5" role="alert" color="var(--error, #ef4444)">
               {t("expiredTitle")}
             </Typography>
-            <Typography
-              variant="body"
-              color="var(--muted-foreground, #6b7280)"
-            >
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t("expiredDetail")}
             </Typography>
           </Box>
@@ -147,10 +141,7 @@ export function VerifyEmailClient({ token }: Props) {
             <Typography variant="h5" role="alert" color="var(--error, #ef4444)">
               {t("invalidTitle")}
             </Typography>
-            <Typography
-              variant="body"
-              color="var(--muted-foreground, #6b7280)"
-            >
+            <Typography variant="body" color="var(--muted-foreground, #6b7280)">
               {t("invalidDetail")}
             </Typography>
           </Box>

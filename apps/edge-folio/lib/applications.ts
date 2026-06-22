@@ -1,14 +1,14 @@
 export type ApplicationStatus =
-  | 'draft'
-  | 'applied'
-  | 'interview'
-  | 'offer'
-  | 'rejected';
-export type WorkType = 'remote' | 'onsite' | 'hybrid';
-export type SalaryCurrency = 'USD' | 'CAD' | 'EUR' | 'MXN' | 'GBP';
-export type CompanyStatus = 'pending' | 'processing' | 'complete' | 'failed';
-export type TailorStatus = '' | 'processing' | 'complete' | 'failed';
-export type NaftaLetterStatus = '' | 'processing' | 'complete' | 'failed';
+  | "draft"
+  | "applied"
+  | "interview"
+  | "offer"
+  | "rejected";
+export type WorkType = "remote" | "onsite" | "hybrid";
+export type SalaryCurrency = "USD" | "CAD" | "EUR" | "MXN" | "GBP";
+export type CompanyStatus = "pending" | "processing" | "complete" | "failed";
+export type TailorStatus = "" | "processing" | "complete" | "failed";
+export type NaftaLetterStatus = "" | "processing" | "complete" | "failed";
 
 export interface CompanyIntelItem {
   title: string;
@@ -28,7 +28,7 @@ export interface CompanyIntel {
   engineering_culture: CompanyIntelItem[];
 }
 
-export type SignalLevel = 'positive' | 'mixed' | 'concerning';
+export type SignalLevel = "positive" | "mixed" | "concerning";
 
 export interface CompanySignal {
   level: SignalLevel;
@@ -49,7 +49,7 @@ export interface Company {
   name: string;
   normalized_name: string;
   status: CompanyStatus;
-  intel_score: SignalLevel | '';
+  intel_score: SignalLevel | "";
   is_refreshing: boolean;
   description: string;
   intel: CompanyIntel | null;
@@ -107,7 +107,7 @@ export interface JobApplication {
   nafta_tn_likelihood_explanation: string;
   salary_min: string | null;
   salary_max: string | null;
-  salary_currency: SalaryCurrency | '';
+  salary_currency: SalaryCurrency | "";
   work_type: WorkType[] | null;
   location: string;
   us_citizen_or_pr_required: boolean | null;
@@ -128,7 +128,7 @@ export class ApplicationError extends Error {
     public readonly status: number,
     public readonly data: Record<string, unknown>,
   ) {
-    super('Applications API request failed');
+    super("Applications API request failed");
   }
 }
 
@@ -143,7 +143,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function getApplications(): Promise<PaginatedApplications> {
-  return request('/api/applications');
+  return request("/api/applications");
 }
 
 export interface CreateApplicationPayload {
@@ -155,7 +155,7 @@ export interface CreateApplicationPayload {
   job_url: string;
   salary_min?: number | null;
   salary_max?: number | null;
-  salary_currency?: SalaryCurrency | '';
+  salary_currency?: SalaryCurrency | "";
   work_type?: WorkType[] | null;
   location?: string;
   us_citizen_or_pr_required?: boolean | null;
@@ -164,9 +164,9 @@ export interface CreateApplicationPayload {
 export function createApplication(
   payload: CreateApplicationPayload,
 ): Promise<JobApplication> {
-  return request('/api/applications', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  return request("/api/applications", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
@@ -180,7 +180,7 @@ export interface UpdateApplicationPayload {
   location?: string;
   salary_min?: number | null;
   salary_max?: number | null;
-  salary_currency?: SalaryCurrency | '';
+  salary_currency?: SalaryCurrency | "";
   work_type?: WorkType[] | null;
   us_citizen_or_pr_required?: boolean | null;
 }
@@ -190,14 +190,14 @@ export function updateApplication(
   payload: UpdateApplicationPayload,
 ): Promise<JobApplication> {
   return request(`/api/applications/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export function deleteApplication(id: number): Promise<void> {
-  return request(`/api/applications/${id}`, { method: 'DELETE' });
+  return request(`/api/applications/${id}`, { method: "DELETE" });
 }
 
 export function getApplication(id: number): Promise<JobApplication> {
@@ -218,8 +218,8 @@ export function tailorApplication(
   locale?: string,
 ): Promise<TailorStartResult> {
   return request(`/api/applications/${id}/tailor`, {
-    method: 'POST',
-    headers: locale ? { 'Accept-Language': locale } : undefined,
+    method: "POST",
+    headers: locale ? { "Accept-Language": locale } : undefined,
   });
 }
 
@@ -233,10 +233,10 @@ export function generateCoverLetter(
   locale?: string,
 ): Promise<CoverLetterResult> {
   return request(`/api/applications/${id}/cover-letter`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      ...(locale ? { 'Accept-Language': locale } : {}),
+      "Content-Type": "application/json",
+      ...(locale ? { "Accept-Language": locale } : {}),
     },
     body: JSON.stringify({ bullets }),
   });
@@ -272,10 +272,10 @@ export function generateNaftaLetter(
   locale?: string,
 ): Promise<NaftaLetterStartResult> {
   return request(`/api/applications/${id}/nafta-letter`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      ...(locale ? { 'Accept-Language': locale } : {}),
+      "Content-Type": "application/json",
+      ...(locale ? { "Accept-Language": locale } : {}),
     },
     body: JSON.stringify(payload),
   });
@@ -295,8 +295,8 @@ export function refreshMetrics(
   locale?: string,
 ): Promise<MetricsResult> {
   return request(`/api/applications/${id}/metrics`, {
-    method: 'POST',
-    headers: locale ? { 'Accept-Language': locale } : undefined,
+    method: "POST",
+    headers: locale ? { "Accept-Language": locale } : undefined,
   });
 }
 
@@ -311,8 +311,8 @@ export interface TnSuggestResult {
 }
 
 export function suggestTnCategory(locale?: string): Promise<TnSuggestResult> {
-  return request('/api/applications/tn-suggest', {
-    method: 'POST',
-    headers: locale ? { 'Accept-Language': locale } : undefined,
+  return request("/api/applications/tn-suggest", {
+    method: "POST",
+    headers: locale ? { "Accept-Language": locale } : undefined,
   });
 }

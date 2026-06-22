@@ -30,6 +30,15 @@ function getPageItems(current: number, total: number): PageItem[] {
 export function MoviePagination({ page, totalPages, onPageChange }: Props) {
   const t = useTranslations("CatalogPage");
 
+  // Switch pages, then ease back to the top so the new results start in view.
+  // Falls back to an instant jump when the browser lacks smooth-scroll support.
+  const goToPage = (next: number) => {
+    onPageChange(next);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   if (totalPages <= 1) return null;
 
   return (
@@ -41,11 +50,12 @@ export function MoviePagination({ page, totalPages, onPageChange }: Props) {
       alignItems="center"
       gap={4}
       flexWrap="wrap"
+      marginTop={16}
     >
       <Button
-        size="sm"
+        size="md"
         disabled={page <= 1}
-        onClick={() => onPageChange(page - 1)}
+        onClick={() => goToPage(page - 1)}
       >
         {t("previousPage")}
       </Button>
@@ -54,9 +64,9 @@ export function MoviePagination({ page, totalPages, onPageChange }: Props) {
         typeof item === "number" ? (
           <Button
             key={item}
-            size="sm"
+            size="md"
             aria-pressed={item === page}
-            onClick={() => onPageChange(item)}
+            onClick={() => goToPage(item)}
             backgroundColor={item === page ? "var(--accent)" : undefined}
             color={
               item === page ? "var(--accent-foreground, #ffffff)" : undefined
@@ -78,9 +88,9 @@ export function MoviePagination({ page, totalPages, onPageChange }: Props) {
       )}
 
       <Button
-        size="sm"
+        size="md"
         disabled={page >= totalPages}
-        onClick={() => onPageChange(page + 1)}
+        onClick={() => goToPage(page + 1)}
       >
         {t("nextPage")}
       </Button>

@@ -72,7 +72,8 @@ class MovieWriteSerializer(serializers.ModelSerializer):
         model = Movie
         fields = [
             'barcode', 'title', 'director', 'year', 'format',
-            'cover_url', 'cover_image', 'tmdb_id', 'genre_ids', 'cast_names',
+            'cover_url', 'cover_image', 'tmdb_id', 'synopsis', 'trailer_url',
+            'genre_ids', 'cast_names',
         ]
 
     def _sync_cast(self, instance, cast_names):
@@ -132,6 +133,43 @@ class MovieEditSerializer(serializers.Serializer):
     )
     cast = serializers.ListField(
         child=serializers.CharField(max_length=255), required=False, default=list
+    )
+    synopsis = serializers.CharField(required=False, allow_blank=True, default='')
+    trailer_url = serializers.URLField(
+        max_length=500, required=False, allow_blank=True, default=''
+    )
+
+
+class MovieEditMediaSerializer(MovieEditSerializer):
+    """
+    Catalog edit fields plus the optional media a user chose to keep from a
+    re-fetch: a new poster URL, a wallpaper source URL to re-download, and the
+    matched TMDB id. All default to ``None`` and are simply absent on a plain
+    text edit, so a normal save never clobbers the existing cover, backdrop, or
+    tmdb_id (only a saved re-fetch sends them).
+    """
+
+    cover_url = serializers.URLField(
+        max_length=1000, required=False, allow_blank=True, allow_null=True, default=None
+    )
+    backdrop_url = serializers.URLField(
+        max_length=1000, required=False, allow_blank=True, allow_null=True, default=None
+    )
+    tmdb_id = serializers.CharField(
+        max_length=20, required=False, allow_blank=True, allow_null=True, default=None
+    )
+
+
+class MovieRefetchSerializer(serializers.Serializer):
+    """
+    Inputs for a preview re-fetch from the edit form: the (possibly
+    user-corrected) title and year used to re-search TMDB / the scraper. Nothing
+    is written - the view returns the resolved metadata for the form to apply.
+    """
+
+    title = serializers.CharField(max_length=500)
+    year = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1870, max_value=2200, default=None
     )
 
 

@@ -179,10 +179,7 @@ export function ResumePreview({
           <Typography as="h1" variant="h3" fontWeight={600}>
             {t("liveResume")}
           </Typography>
-          <Typography
-            variant="body"
-            color="var(--muted-foreground, #6b7280)"
-          >
+          <Typography variant="body" color="var(--muted-foreground, #6b7280)">
             {`${application.job_title} · ${application.company_name}`}
           </Typography>
         </Box>

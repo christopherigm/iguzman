@@ -20,14 +20,16 @@ from .serializers import (
     CategorySerializer,
     InboxAcceptSerializer,
     MovieDetailSerializer,
-    MovieEditSerializer,
+    MovieEditMediaSerializer,
     MovieListSerializer,
+    MovieRefetchSerializer,
     MovieWriteSerializer,
     ScanQueueSerializer,
 )
 from .services.backdrop import fetch_backdrop
 from .services.extras import fetch_synopsis, fetch_trailer
 from .services.lookup import lookup_barcode
+from .services.refetch import refetch_movie_data
 from .services.tmdb import search_tmdb
 from .tasks import fetch_movie_backdrop, fetch_movie_extras, resolve_scan_queue_entry
 
@@ -89,12 +91,18 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
         """
         PATCH/PUT a saved movie's editable fields from the UI. Genre names are
         resolved to Category ids (creating any missing) and cast names are
-        synced, mirroring the inbox-accept flow. Cover and tmdb_id are left
-        untouched. Responds with the full detail representation.
+        synced, mirroring the inbox-accept flow.
+
+        A plain text edit leaves the cover, backdrop, and tmdb_id untouched. When
+        the user saves a re-fetch the request additionally carries `cover_url`,
+        `backdrop_url`, and `tmdb_id` for the matched version - the poster URL
+        replaces the stored cover, the tmdb_id is re-pinned, and the wallpaper is
+        re-downloaded from the new source. Responds with the full detail
+        representation.
         """
         instance = self.get_object()
 
-        serializer = MovieEditSerializer(data=request.data)
+        serializer = MovieEditMediaSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
@@ -103,12 +111,35 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
             'director': data['director'],
             'year': data['year'],
             'format': data['format'],
+            'synopsis': data['synopsis'],
+            'trailer_url': data['trailer_url'],
             'genre_ids': resolve_genre_ids(data['genres']),
             'cast_names': data['cast'],
         }
+        # Optional media from a saved re-fetch (`None` means "not sent" - a plain
+        # text edit, which must not disturb the existing cover / tmdb_id).
+        if data['cover_url'] is not None:
+            write_data['cover_url'] = data['cover_url']
+        if data['tmdb_id'] is not None:
+            write_data['tmdb_id'] = data['tmdb_id']
+
         write_serializer = MovieWriteSerializer(instance, data=write_data, partial=True)
         write_serializer.is_valid(raise_exception=True)
         movie = write_serializer.save()
+
+        # A new poster URL takes over only when no downloaded cover_image masks it
+        # in the detail serializer; clear any stale file so the new URL shows.
+        if data['cover_url'] is not None and movie.cover_image:
+            movie.cover_image.delete(save=False)
+            movie.cover_image = None
+            movie.save(update_fields=['cover_image'])
+
+        # Re-download the wallpaper for the matched version when a source URL was
+        # supplied (best-effort; an empty value clears nothing and is skipped).
+        if data['backdrop_url']:
+            backdrop = fetch_backdrop(data['backdrop_url'], movie.title, movie.year)
+            if backdrop:
+                movie.backdrop_image.save(backdrop.name, backdrop, save=True)
 
         return Response(MovieDetailSerializer(movie, context={'request': request}).data)
 
@@ -205,6 +236,38 @@ class MovieTrailerView(APIView):
         movie.trailer_url = trailer_url
         movie.save(update_fields=['trailer_url', 'modified'])
         return Response(MovieDetailSerializer(movie, context={'request': request}).data)
+
+
+class MovieRefetchView(APIView):
+    """
+    POST /api/catalog/movies/<id>/refetch/  { "title": "...", "year": 1999 }
+
+    Re-resolve a movie's metadata from TMDB (year-aware) with a scraper + LLM
+    fallback and return it as a PREVIEW - nothing is written to the database. A
+    barcode title often matches a different version of a remade / re-released
+    film; the edit form sends the user-corrected title and year to pin the right
+    one, overrides its fields with the response, and lets the user save (PATCH)
+    or discard. Responds 404 when nothing usable can be found.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        movie = get_object_or_404(Movie, pk=pk, enabled=True)
+
+        serializer = MovieRefetchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        # Fall back to the stored title if the form somehow sent only whitespace.
+        title = data['title'].strip() or movie.title
+        preview = refetch_movie_data(title, data['year'])
+        if not preview:
+            return Response(
+                {'detail': 'No data could be found for this title and year.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(preview)
 
 
 class CategoryListView(ListAPIView):

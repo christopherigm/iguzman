@@ -101,8 +101,59 @@ export interface MovieUpdatePayload {
   director: string;
   year: number | null;
   format: MovieFormat;
+  synopsis: string;
+  trailer_url: string;
   genres: string[];
   cast: string[];
+  /** Sent only when saving a re-fetch: new poster URL for the matched version. */
+  cover_url?: string;
+  /** Sent only when saving a re-fetch: source URL to re-download the wallpaper. */
+  backdrop_url?: string;
+  /** Sent only when saving a re-fetch: TMDB id of the matched version. */
+  tmdb_id?: string;
+}
+
+/**
+ * Metadata resolved by a preview re-fetch. Mirrors the editable fields plus the
+ * media the user can choose to keep (poster, wallpaper source, tmdb_id). Nothing
+ * is persisted until the user saves; the scraper fallback may leave cast,
+ * genres, and the image URLs empty.
+ */
+export interface MovieRefetchPreview {
+  title: string;
+  director: string;
+  year: number | null;
+  genres: string[];
+  cast: string[];
+  synopsis: string;
+  trailer_url: string;
+  cover_url: string;
+  backdrop_url: string;
+  tmdb_id: string;
+}
+
+/**
+ * Re-resolve a movie's metadata from TMDB (year-aware) with a scraper/LLM
+ * fallback, using the user-corrected `title` and `year` to pin the right
+ * version. The API returns the resolved fields as a preview WITHOUT saving;
+ * the caller applies them to the form and the user saves or discards. Throws
+ * ApiError when nothing could be found.
+ */
+export async function refetchMovie(
+  id: string | number,
+  title: string,
+  year: number | null,
+): Promise<MovieRefetchPreview> {
+  const res = await fetch(`/api/catalog/movies/${id}/refetch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, year }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<MovieRefetchPreview>;
 }
 
 export async function updateMovie(

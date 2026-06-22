@@ -319,7 +319,13 @@ async function translateChunk(
         out.some((b) => !b.text.trim()) ? " (some empty)" : ""
       }`;
       log.warn(
-        { provider, chunkStart, attempt, expected: chunk.length, got: out.length },
+        {
+          provider,
+          chunkStart,
+          attempt,
+          expected: chunk.length,
+          got: out.length,
+        },
         "Translation chunk incomplete; retrying",
       );
       continue;

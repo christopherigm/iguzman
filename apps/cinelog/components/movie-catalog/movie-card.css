@@ -7,7 +7,3 @@
 .movie-card__image {
   object-fit: cover;
 }
-
-.movie-card__delete:hover {
-  background-color: rgba(0, 0, 0, 0.75);
-}

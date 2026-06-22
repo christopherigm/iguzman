@@ -1120,7 +1120,11 @@ export function JobsPage() {
           cancelCallback={() => setRefineOpen(false)}
           panelMaxWidth="640px"
         >
-          <JobSearchPanel ref={jobSearchPanelRef} hideSaveButton showEditProfile />
+          <JobSearchPanel
+            ref={jobSearchPanelRef}
+            hideSaveButton
+            showEditProfile
+          />
         </ConfirmationModal>
       )}
 

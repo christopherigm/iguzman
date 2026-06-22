@@ -122,10 +122,7 @@ function HighlightCard({
           )}
 
           {description && (
-            <Typography
-              variant="body"
-              className="highlight-card__description"
-            >
+            <Typography variant="body" className="highlight-card__description">
               {description}
             </Typography>
           )}

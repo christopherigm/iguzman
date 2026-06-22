@@ -460,9 +460,7 @@ export function ReadOnlyVideoItem({
           onMakeOffline={handleMakeOffline}
           onDuplicate={handleDuplicate}
           onGetMetadata={handleGetMetadata}
-          onDiarize={(maxWords) =>
-            onReprocess(video.uuid, "diarize", maxWords)
-          }
+          onDiarize={(maxWords) => onReprocess(video.uuid, "diarize", maxWords)}
           useServerProcessing={video.useServerProcessing}
           onServerModeChange={handleServerModeChange}
           t={t}

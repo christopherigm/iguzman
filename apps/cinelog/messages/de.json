@@ -1,5 +1,8 @@
 {
-  "Metadata": { "title": "Cinelog", "description": "" },
+  "Metadata": {
+    "title": "Cinelog",
+    "description": ""
+  },
   "Navbar": {
     "home": "Startseite",
     "scan": "Scannen",
@@ -186,8 +189,13 @@
     "formatUnset": "Nicht festgelegt",
     "genresLabel": "Genres (durch Kommas getrennt)",
     "castLabel": "Besetzung (durch Kommas getrennt)",
+    "synopsisLabel": "Handlung",
+    "trailerLabel": "Trailer-URL",
     "saveError": "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut.",
     "saved": "Änderungen gespeichert.",
+    "refetchData": "Daten neu abrufen",
+    "fetchingRefetch": "Daten werden neu abgerufen…",
+    "refetchError": "Für diesen Titel und dieses Jahr konnten keine Daten neu abgerufen werden.",
     "getBackdrop": "Hintergrund holen",
     "fetchingBackdrop": "Hintergrund wird geladen…",
     "backdropError": "Für diesen Film wurde kein Hintergrund gefunden.",

@@ -7,17 +7,13 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Button } from "@repo/ui/core-elements/button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
-import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
-import { Toast } from "@repo/ui/core-elements/toast";
 import {
-  deleteMovie,
   getMovies,
   getCategories,
   type Category,
   type Movie,
   type MovieFormat,
 } from "@/lib/catalog";
-import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { MovieCard } from "./movie-card";
 import { MovieFilters } from "./movie-filters";
 import { MoviePagination } from "./movie-pagination";
@@ -57,7 +53,6 @@ function readSnapshot(): CatalogSnapshot | null {
 
 export function MovieCatalog() {
   const t = useTranslations("CatalogPage");
-  const isLoggedIn = useIsLoggedIn();
   // Read the persisted snapshot once, on first render, so the state below can
   // be seeded from it without re-parsing sessionStorage on every render.
   const [snapshot] = useState(readSnapshot);
@@ -74,31 +69,6 @@ export function MovieCatalog() {
   const [format, setFormat] = useState<MovieFormat>(snapshot?.format ?? "");
   const [page, setPage] = useState(snapshot?.page ?? 1);
   const [totalPages, setTotalPages] = useState(1);
-
-  const [pendingDelete, setPendingDelete] = useState<Movie | null>(null);
-  const [toast, setToast] = useState<{
-    text: string;
-    variant: "success" | "error";
-  } | null>(null);
-  const [toastKey, setToastKey] = useState(0);
-
-  function showToast(text: string, variant: "success" | "error") {
-    setToast({ text, variant });
-    setToastKey((k) => k + 1);
-  }
-
-  async function handleConfirmDelete() {
-    if (!pendingDelete) return;
-    const movie = pendingDelete;
-    setPendingDelete(null);
-    try {
-      await deleteMovie(movie.id);
-      setMovies((prev) => prev.filter((m) => m.id !== movie.id));
-      showToast(t("deleted"), "success");
-    } catch {
-      showToast(t("deleteError"), "error");
-    }
-  }
 
   const isFiltered = debouncedSearch !== "" || genre !== "" || format !== "";
 
@@ -200,24 +170,6 @@ export function MovieCatalog() {
 
   return (
     <Box flexDirection="column" gap={16} paddingY={16}>
-      {pendingDelete && (
-        <ConfirmationModal
-          title={t("confirmDeleteTitle")}
-          text={t("confirmDeleteText", { title: pendingDelete.title })}
-          okCallback={handleConfirmDelete}
-          cancelCallback={() => setPendingDelete(null)}
-        />
-      )}
-
-      {toast && (
-        <Toast
-          key={toastKey}
-          message={toast.text}
-          variant={toast.variant}
-          position="top-center"
-        />
-      )}
-
       <Box
         display="flex"
         alignItems="center"
@@ -284,14 +236,10 @@ export function MovieCatalog() {
       )}
 
       {status === "ready" && movies.length > 0 && view === "grid" && (
-        <Grid container spacing={2} marginTop={12}>
+        <Grid container spacing={1} marginTop={12}>
           {movies.map((movie) => (
             <Grid key={movie.id} size={{ xs: 6, sm: 4, md: 3, lg: 2 }}>
-              <MovieCard
-                movie={movie}
-                view="grid"
-                onDelete={isLoggedIn ? setPendingDelete : undefined}
-              />
+              <MovieCard movie={movie} view="grid" />
             </Grid>
           ))}
         </Grid>
@@ -300,12 +248,7 @@ export function MovieCatalog() {
       {status === "ready" && movies.length > 0 && view === "list" && (
         <Box flexDirection="column" gap={8} marginTop={12}>
           {movies.map((movie) => (
-            <MovieCard
-              key={movie.id}
-              movie={movie}
-              view="list"
-              onDelete={isLoggedIn ? setPendingDelete : undefined}
-            />
+            <MovieCard key={movie.id} movie={movie} view="list" />
           ))}
         </Box>
       )}

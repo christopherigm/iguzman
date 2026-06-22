@@ -179,7 +179,9 @@ export const IconButton: React.FC<IconButtonProps> = (props) => {
         className={classes}
         style={finalStyle}
         aria-label={ariaLabel}
-        {...(ariaControls !== undefined ? { "aria-controls": ariaControls } : {})}
+        {...(ariaControls !== undefined
+          ? { "aria-controls": ariaControls }
+          : {})}
       >
         {waveEl}
         {inner}

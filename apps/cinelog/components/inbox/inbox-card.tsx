@@ -11,6 +11,7 @@ import { Button } from "@repo/ui/core-elements/button";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select, type SelectOption } from "@repo/ui/core-elements/select";
 import type { MovieFormat } from "@/lib/catalog";
+import { FormatHeader } from "@/components/format-header";
 import type { InboxAcceptPayload, InboxItem } from "@/lib/inbox";
 
 const FORMATS: Exclude<MovieFormat, "">[] = ["dvd", "bluray", "4k", "other"];
@@ -85,40 +86,52 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
       <Box display="flex" gap={16} flexWrap="wrap">
         <Box
           width={96}
+          flexDirection="column"
           borderRadius={6}
           styles={{
-            position: "relative",
             overflow: "hidden",
-            aspectRatio: "2 / 3",
             flexShrink: 0,
           }}
         >
-          {item.extracted_cover_url ? (
-            <Image
-              src={item.extracted_cover_url}
-              alt=""
-              fill
-              sizes="96px"
-              style={{ objectFit: "cover" }}
-            />
-          ) : (
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              width="100%"
-              height="100%"
-              backgroundColor="var(--surface-2)"
-            >
-              <Typography
-                variant="caption"
-                textAlign="center"
-                styles={{ opacity: 0.6 }}
+          <FormatHeader
+            format={format}
+            kind="bar"
+            size={{ xs: "md", md: "lg" }}
+          />
+          <Box
+            width="100%"
+            styles={{
+              position: "relative",
+              aspectRatio: "2 / 3",
+            }}
+          >
+            {item.extracted_cover_url ? (
+              <Image
+                src={item.extracted_cover_url}
+                alt=""
+                fill
+                sizes="96px"
+                style={{ objectFit: "cover" }}
+              />
+            ) : (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                width="100%"
+                height="100%"
+                backgroundColor="var(--surface-2)"
               >
-                {t("noCover")}
-              </Typography>
-            </Box>
-          )}
+                <Typography
+                  variant="caption"
+                  textAlign="center"
+                  styles={{ opacity: 0.6 }}
+                >
+                  {t("noCover")}
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Box>
 
         <Box flexDirection="column" gap={6} flex="1 1 200px" minWidth={0}>
@@ -126,7 +139,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
             <Typography variant="label" styles={{ opacity: 0.6 }}>
               {t("barcodeLabel")}
             </Typography>
-            <Badge variant="subtle" size="sm">
+            <Badge variant="subtle" size="md">
               {item.barcode}
             </Badge>
           </Box>

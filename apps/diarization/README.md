@@ -68,13 +68,13 @@ Speaker-attributed transcription - runs both diarization and Whisper, then merge
 
 **Request** - `multipart/form-data`
 
-| Field          | Type       | Required | Description                                              |
-| -------------- | ---------- | -------- | -------------------------------------------------------- |
-| `file`         | audio file | ✅       | Same formats as `/diarize`                               |
-| `language`     | string     |          | BCP-47 code (e.g. `en`, `es`). Auto-detected if omitted. |
-| `num_speakers` | int        |          | Exact number of speakers                                 |
-| `min_speakers` | int        |          | Minimum number of speakers                               |
-| `max_speakers` | int        |          | Maximum number of speakers                               |
+| Field          | Type       | Required | Description                                                                                                                                    |
+| -------------- | ---------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `file`         | audio file | ✅       | Same formats as `/diarize`                                                                                                                     |
+| `language`     | string     |          | BCP-47 code (e.g. `en`, `es`). Auto-detected if omitted.                                                                                       |
+| `num_speakers` | int        |          | Exact number of speakers                                                                                                                       |
+| `min_speakers` | int        |          | Minimum number of speakers                                                                                                                     |
+| `max_speakers` | int        |          | Maximum number of speakers                                                                                                                     |
 | `max_words`    | int        |          | Max words per subtitle row, `1`-`10` (default `4`). Each segment is re-chunked into rows of at most this many words using per-word timestamps. |
 
 **Response**

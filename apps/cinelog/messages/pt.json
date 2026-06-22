@@ -1,5 +1,8 @@
 {
-  "Metadata": { "title": "Cinelog", "description": "" },
+  "Metadata": {
+    "title": "Cinelog",
+    "description": ""
+  },
   "Navbar": {
     "home": "Início",
     "scan": "Escanear",
@@ -186,8 +189,13 @@
     "formatUnset": "Não definido",
     "genresLabel": "Gêneros (separados por vírgulas)",
     "castLabel": "Elenco (separado por vírgulas)",
+    "synopsisLabel": "Sinopse",
+    "trailerLabel": "URL do trailer",
     "saveError": "Falha ao salvar as alterações. Tente novamente.",
     "saved": "Alterações salvas.",
+    "refetchData": "Rebuscar dados",
+    "fetchingRefetch": "Rebuscando dados…",
+    "refetchError": "Não foi possível rebuscar dados para este título e ano.",
     "getBackdrop": "Obter fundo",
     "fetchingBackdrop": "Obtendo fundo…",
     "backdropError": "Nenhum fundo encontrado para este filme.",

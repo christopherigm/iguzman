@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
-import { Box } from '@repo/ui/core-elements/box';
-import { ProgressBar } from '@repo/ui/core-elements/progress-bar';
-import { ConfirmationModal } from '@repo/ui/core-elements/confirmation-modal';
-import { Typography } from '@repo/ui/core-elements/typography';
-import { Button } from '@repo/ui/core-elements/button';
-import type { VideoStatus } from '@/lib/types';
-import { TRANSLATE_LANGUAGES } from './burn-captions-modal';
-import { usePollTask, type TaskData } from './use-poll-task';
-import type { StoredVideo } from './use-video-store';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
+import { Box } from "@repo/ui/core-elements/box";
+import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
+import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Typography } from "@repo/ui/core-elements/typography";
+import { Button } from "@repo/ui/core-elements/button";
+import type { VideoStatus } from "@/lib/types";
+import { TRANSLATE_LANGUAGES } from "./burn-captions-modal";
+import { usePollTask, type TaskData } from "./use-poll-task";
+import type { StoredVideo } from "./use-video-store";
 import {
   STATUS_COLORS,
   resolveMediaUrl,
@@ -19,10 +19,10 @@ import {
   VideoMediaPreview,
   VideoFooterLink,
   PlatformIconBg,
-} from './video-item-shared';
-import { useOPFSUrls } from './opfs-url-context';
-import { readFromOPFS, writeToOPFS } from '@/lib/opfs';
-import { saveProcessedToOPFS } from '@/lib/opfs-processing';
+} from "./video-item-shared";
+import { useOPFSUrls } from "./opfs-url-context";
+import { readFromOPFS, writeToOPFS } from "@/lib/opfs";
+import { saveProcessedToOPFS } from "@/lib/opfs-processing";
 
 // Files larger than this threshold are split into chunks so each request stays
 // under Cloudflare's 100 MB proxy limit. 90 MB gives a comfortable margin.
@@ -36,7 +36,7 @@ async function uploadOpfsFile(
   if (file.size <= MULTIPART_THRESHOLD) {
     return new Promise<string>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', `/api/media?ext=${encodeURIComponent(ext)}&tmp=1`);
+      xhr.open("POST", `/api/media?ext=${encodeURIComponent(ext)}&tmp=1`);
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable)
           onProgress(Math.round((e.loaded / e.total) * 100));
@@ -45,10 +45,10 @@ async function uploadOpfsFile(
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve((JSON.parse(xhr.responseText) as { file: string }).file);
         } else {
-          reject(new Error('Upload failed'));
+          reject(new Error("Upload failed"));
         }
       };
-      xhr.onerror = () => reject(new Error('Upload failed'));
+      xhr.onerror = () => reject(new Error("Upload failed"));
       xhr.send(file);
     });
   }
@@ -56,9 +56,9 @@ async function uploadOpfsFile(
   // Chunked path: split into ≤90 MB pieces and stage sequentially to /tmp.
   const initRes = await fetch(
     `/api/media/stage?action=initiate&ext=${encodeURIComponent(ext)}`,
-    { method: 'POST' },
+    { method: "POST" },
   );
-  if (!initRes.ok) throw new Error('Upload failed');
+  if (!initRes.ok) throw new Error("Upload failed");
   const { key } = (await initRes.json()) as { key: string };
 
   const numChunks = Math.ceil(file.size / MULTIPART_THRESHOLD);
@@ -73,7 +73,7 @@ async function uploadOpfsFile(
     await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open(
-        'POST',
+        "POST",
         `/api/media/stage?action=append&key=${encodeURIComponent(key)}`,
       );
       xhr.upload.onprogress = (e) => {
@@ -84,10 +84,10 @@ async function uploadOpfsFile(
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
-          reject(new Error('Upload failed'));
+          reject(new Error("Upload failed"));
         }
       };
-      xhr.onerror = () => reject(new Error('Upload failed'));
+      xhr.onerror = () => reject(new Error("Upload failed"));
       xhr.send(chunk);
     });
   }
@@ -95,8 +95,8 @@ async function uploadOpfsFile(
   onProgress(100);
   return key;
 }
-import { setCreditsBalance } from './use-credits-store';
-import './video-item.css';
+import { setCreditsBalance } from "./use-credits-store";
+import "./video-item.css";
 
 /* ── Constants ──────────────────────────────────────── */
 
@@ -112,7 +112,7 @@ function hexToSSA(hex: string, opacity: number): string {
   const b = hex.slice(5, 7);
   const alpha = Math.round((1 - opacity / 100) * 255)
     .toString(16)
-    .padStart(2, '0');
+    .padStart(2, "0");
   return `&H${alpha}${b}${g}${r}`.toUpperCase();
 }
 
@@ -122,7 +122,7 @@ async function fetchWithRetry(
   options: RequestInit,
   maxRetries = 3,
 ): Promise<Response> {
-  let lastErr: Error = new Error('Unknown error');
+  let lastErr: Error = new Error("Unknown error");
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fetch(url, options);
@@ -153,17 +153,17 @@ export function PinnedVideoItemServer({
   onComplete,
   onRemove,
 }: PinnedVideoItemServerProps) {
-  const t = useTranslations('VideoGrid');
+  const t = useTranslations("VideoGrid");
   const { getUrls, registerUrls } = useOPFSUrls();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [copying, setCopying] = useState(false);
   const [jobProgress, setJobProgress] = useState(0);
-  const [jobPhase, setJobPhase] = useState<'idle' | 'dispatching' | 'polling'>(
-    'idle',
+  const [jobPhase, setJobPhase] = useState<"idle" | "dispatching" | "polling">(
+    "idle",
   );
-  const [conversionTarget, setConversionTarget] = useState<'h264' | 'h265'>(
-    'h264',
+  const [conversionTarget, setConversionTarget] = useState<"h264" | "h265">(
+    "h264",
   );
   const [opfsUploading, setOpfsUploading] = useState(false);
   const [opfsUploadProgress, setOpfsUploadProgress] = useState(0);
@@ -194,17 +194,17 @@ export function PinnedVideoItemServer({
   const { startPolling } = usePollTask();
 
   const isProcessing =
-    video.status === 'processing' ||
-    video.status === 'converting' ||
-    video.status === 'burning' ||
-    video.status === 'translating' ||
-    video.status === 'diarizing';
+    video.status === "processing" ||
+    video.status === "converting" ||
+    video.status === "burning" ||
+    video.status === "translating" ||
+    video.status === "diarizing";
 
   const displayName =
     video.fulltitle ??
     video.name ??
     video.uploader ??
-    (video.justAudio ? t('untitledAudio') : t('untitledVideo'));
+    (video.justAudio ? t("untitledAudio") : t("untitledVideo"));
 
   /* ── Copy link ──────────────────────────────────────── */
   const handleCopy = useCallback(async () => {
@@ -223,12 +223,12 @@ export function PinnedVideoItemServer({
       sourceFile?: string;
       activeStatus: VideoStatus;
       op:
-        | 'interpolateFps'
-        | 'removeBlackBars'
-        | 'convertToH264'
-        | 'convertToH265'
-        | 'burnSubtitles'
-        | 'scaleDown';
+        | "interpolateFps"
+        | "removeBlackBars"
+        | "convertToH264"
+        | "convertToH265"
+        | "burnSubtitles"
+        | "scaleDown";
       extraParams?: Record<string, unknown>;
       donePatch: Partial<StoredVideo>;
       errorKey: string;
@@ -247,14 +247,14 @@ export function PinnedVideoItemServer({
             const checkData = (await checkRes.json()) as { task: TaskData };
             const existing = checkData.task;
             if (
-              existing.status === 'processing' ||
-              existing.status === 'converting' ||
-              existing.status === 'burning' ||
-              existing.status === 'translating' ||
-              existing.status === 'done'
+              existing.status === "processing" ||
+              existing.status === "converting" ||
+              existing.status === "burning" ||
+              existing.status === "translating" ||
+              existing.status === "done"
             ) {
               onUpdate(video.uuid, { status: opts.activeStatus, error: null });
-              setJobPhase('polling');
+              setJobPhase("polling");
               setJobProgress(existing.progress ?? 0);
               pollForTaskRef.current(video.serverTaskId, {
                 donePatch: opts.donePatch,
@@ -283,7 +283,7 @@ export function PinnedVideoItemServer({
         setOpfsUploading(true);
         try {
           const opfsFile = await readFromOPFS(video.opfsKey);
-          const ext = video.opfsKey.split('.').pop() ?? 'mp4';
+          const ext = video.opfsKey.split(".").pop() ?? "mp4";
           setOpfsUploadProgress(0);
           const uploadedFile = await uploadOpfsFile(
             opfsFile,
@@ -291,7 +291,7 @@ export function PinnedVideoItemServer({
             setOpfsUploadProgress,
           );
           if (staleServerFile) {
-            fetch(`/api/media/${staleServerFile}`, { method: 'DELETE' }).catch(
+            fetch(`/api/media/${staleServerFile}`, { method: "DELETE" }).catch(
               () => {},
             );
           }
@@ -304,8 +304,8 @@ export function PinnedVideoItemServer({
         } catch {
           setOpfsUploading(false);
           onUpdate(video.uuid, {
-            status: 'error',
-            error: t('errorOpfsUploadFailed'),
+            status: "error",
+            error: t("errorOpfsUploadFailed"),
           });
           return;
         }
@@ -315,7 +315,7 @@ export function PinnedVideoItemServer({
       if (!file) return;
 
       onUpdate(video.uuid, { status: opts.activeStatus, error: null });
-      setJobPhase('dispatching');
+      setJobPhase("dispatching");
       setJobProgress(0);
 
       const params: Record<string, unknown> = {
@@ -324,16 +324,16 @@ export function PinnedVideoItemServer({
       };
 
       try {
-        const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
-        const res = await fetchWithRetry('/api/server-processing', {
-          method: 'POST',
+        const creditsKey = localStorage.getItem("vd_credits_key") ?? "";
+        const res = await fetchWithRetry("/api/server-processing", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
+            "Content-Type": "application/json",
+            ...(creditsKey ? { "x-credits-key": creditsKey } : {}),
           },
           body: JSON.stringify({
             op: opts.op,
-            taskId: video.taskId ?? '',
+            taskId: video.taskId ?? "",
             params,
           }),
         });
@@ -359,10 +359,10 @@ export function PinnedVideoItemServer({
         });
       } catch (err) {
         console.error(`${opts.errorKey} failed:`, err);
-        setJobPhase('idle');
+        setJobPhase("idle");
         const detail = err instanceof Error ? err.message : String(err);
         onUpdate(video.uuid, {
-          status: 'error',
+          status: "error",
           error: `${t(opts.errorKey)}: ${detail}`,
           serverTaskId: null,
         });
@@ -387,11 +387,11 @@ export function PinnedVideoItemServer({
   const handleInterpolateFps = useCallback(
     (completeAfter = true) =>
       runServerProcessing({
-        activeStatus: 'processing',
-        op: 'interpolateFps',
+        activeStatus: "processing",
+        op: "interpolateFps",
         extraParams: { fps: Number(video.fps) },
         donePatch: { fpsApplied: true },
-        errorKey: 'errorFfmpegFailed',
+        errorKey: "errorFfmpegFailed",
         completeAfter,
       }),
     [runServerProcessing, video.fps],
@@ -399,24 +399,24 @@ export function PinnedVideoItemServer({
 
   /* ── H.265 → H.264 conversion ───────────────────────── */
   const handleConvertH264 = useCallback(() => {
-    setConversionTarget('h264');
+    setConversionTarget("h264");
     return runServerProcessing({
-      activeStatus: 'converting',
-      op: 'convertToH264',
+      activeStatus: "converting",
+      op: "convertToH264",
       donePatch: { h264Converted: true, isH265: false },
-      errorKey: 'errorConvertFailed',
+      errorKey: "errorConvertFailed",
       completeAfter: true,
     });
   }, [runServerProcessing]);
 
   /* ── H.264 → H.265 conversion ───────────────────────── */
   const handleConvertH265 = useCallback(() => {
-    setConversionTarget('h265');
+    setConversionTarget("h265");
     return runServerProcessing({
-      activeStatus: 'converting',
-      op: 'convertToH265',
+      activeStatus: "converting",
+      op: "convertToH265",
       donePatch: { h265Converted: true, isH265: true },
-      errorKey: 'errorConvertH265Failed',
+      errorKey: "errorConvertH265Failed",
       completeAfter: true,
     });
   }, [runServerProcessing]);
@@ -425,10 +425,10 @@ export function PinnedVideoItemServer({
   const handleRemoveBlackBars = useCallback(
     () =>
       runServerProcessing({
-        activeStatus: 'processing',
-        op: 'removeBlackBars',
+        activeStatus: "processing",
+        op: "removeBlackBars",
         donePatch: { blackBarsRemoved: true },
-        errorKey: 'errorRemoveBlackBarsFailed',
+        errorKey: "errorRemoveBlackBarsFailed",
         completeAfter: true,
       }),
     [runServerProcessing],
@@ -453,11 +453,11 @@ export function PinnedVideoItemServer({
         }
       }
       return runServerProcessing({
-        activeStatus: 'processing',
-        op: 'scaleDown',
+        activeStatus: "processing",
+        op: "scaleDown",
         extraParams: { targetHeight },
         donePatch,
-        errorKey: 'errorScaleDownFailed',
+        errorKey: "errorScaleDownFailed",
         completeAfter: true,
       });
     },
@@ -480,15 +480,15 @@ export function PinnedVideoItemServer({
         srtContent = await captionsFile.text();
       } else {
         const srtRes = await fetch(resolveMediaUrl(video.captionsFile));
-        if (!srtRes.ok) throw new Error('Failed to fetch captions file');
+        if (!srtRes.ok) throw new Error("Failed to fetch captions file");
         srtContent = await srtRes.text();
       }
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
-      console.error('Caption preparation failed:', reason, err);
+      console.error("Caption preparation failed:", reason, err);
       onUpdate(video.uuid, {
-        status: 'error',
-        error: `${t('errorBurnCaptionsFailed')} (${reason})`,
+        status: "error",
+        error: `${t("errorBurnCaptionsFailed")} (${reason})`,
       });
       return;
     }
@@ -503,12 +503,12 @@ export function PinnedVideoItemServer({
     const backColour =
       borderStyle === 3
         ? hexToSSA(config.bgColor, config.bgOpacity)
-        : '&HFF000000';
+        : "&HFF000000";
     const outline = borderStyle === 3 ? 8 : (config.outlineThickness ?? 2);
 
     const animCfg = config.animation;
     const animation =
-      animCfg && animCfg.type !== 'none'
+      animCfg && animCfg.type !== "none"
         ? {
             types: [animCfg.type] as string[],
             fadeInMs: animCfg.fadeInMs,
@@ -525,11 +525,11 @@ export function PinnedVideoItemServer({
           }
         : ({} as Record<string, unknown>);
 
-    const fontStyle = config.fontStyle ?? 'normal';
+    const fontStyle = config.fontStyle ?? "normal";
 
     void runServerProcessing({
-      activeStatus: (translate ? 'translating' : 'burning') as VideoStatus,
-      op: 'burnSubtitles',
+      activeStatus: (translate ? "translating" : "burning") as VideoStatus,
+      op: "burnSubtitles",
       extraParams: {
         srtContent,
         ...(translate
@@ -542,8 +542,8 @@ export function PinnedVideoItemServer({
         alignment: config.alignment,
         marginV: config.marginV,
         fontSize: config.fontSize,
-        bold: fontStyle === 'bold' || fontStyle === 'bold-italic',
-        italic: fontStyle === 'italic' || fontStyle === 'bold-italic',
+        bold: fontStyle === "bold" || fontStyle === "bold-italic",
+        italic: fontStyle === "italic" || fontStyle === "bold-italic",
         primaryColour,
         backColour,
         borderStyle,
@@ -551,7 +551,7 @@ export function PinnedVideoItemServer({
         animation,
       },
       donePatch: { captionsBurned: true, burnCaptionsConfig: null },
-      errorKey: 'errorBurnCaptionsFailed',
+      errorKey: "errorBurnCaptionsFailed",
       completeAfter: true,
     });
   }, [
@@ -575,8 +575,8 @@ export function PinnedVideoItemServer({
     const finishDiarize = async (captionsFileName: string | null) => {
       if (!captionsFileName) {
         onUpdate(video.uuid, {
-          status: 'error',
-          error: t('errorDiarizeFailed'),
+          status: "error",
+          error: t("errorDiarizeFailed"),
           serverTaskId: null,
         });
         return;
@@ -590,11 +590,11 @@ export function PinnedVideoItemServer({
         setOpfsMigrating(true);
         try {
           const srtText = await fetch(captionsUrl).then((r) => r.text());
-          const srtBlob = new Blob([srtText], { type: 'text/plain' });
+          const srtBlob = new Blob([srtText], { type: "text/plain" });
           opfsCaptionsKey = `captions_${captionsFileName}`;
           await writeToOPFS(opfsCaptionsKey, srtBlob);
         } catch (err) {
-          console.error('Failed to save captions to OPFS:', err);
+          console.error("Failed to save captions to OPFS:", err);
         } finally {
           setOpfsMigrating(false);
         }
@@ -602,7 +602,7 @@ export function PinnedVideoItemServer({
         // empty, so fall back to video.file (the persisted upload name).
         const inputFile = opfsInputFileRef.current ?? video.file;
         if (inputFile) {
-          fetch(`/api/media/${inputFile}`, { method: 'DELETE' }).catch(
+          fetch(`/api/media/${inputFile}`, { method: "DELETE" }).catch(
             () => {},
           );
           opfsInputFileRef.current = null;
@@ -610,7 +610,7 @@ export function PinnedVideoItemServer({
       }
 
       onUpdate(video.uuid, {
-        status: 'done',
+        status: "done",
         captionsFile: captionsUrl,
         ...(opfsCaptionsKey ? { opfsCaptionsKey } : {}),
         serverTaskId: null,
@@ -624,14 +624,14 @@ export function PinnedVideoItemServer({
       startPolling({
         taskId: diarizeTaskId,
         onUpdate: (task) => {
-          if (task.status === 'diarizing') {
-            onUpdate(video.uuid, { status: 'diarizing', error: null });
-          } else if (task.status === 'done') {
+          if (task.status === "diarizing") {
+            onUpdate(video.uuid, { status: "diarizing", error: null });
+          } else if (task.status === "done") {
             void finishDiarize(task.captionsFile ?? null);
-          } else if (task.status === 'error') {
+          } else if (task.status === "error") {
             onUpdate(video.uuid, {
-              status: 'error',
-              error: `${t('errorDiarizeFailed')}: ${task.error?.message ?? 'Diarization failed'}`,
+              status: "error",
+              error: `${t("errorDiarizeFailed")}: ${task.error?.message ?? "Diarization failed"}`,
               serverTaskId: null,
             });
           }
@@ -651,12 +651,12 @@ export function PinnedVideoItemServer({
         if (checkRes.ok) {
           const checkData = (await checkRes.json()) as { task: TaskData };
           const existing = checkData.task;
-          if (existing.status === 'diarizing') {
-            onUpdate(video.uuid, { status: 'diarizing', error: null });
+          if (existing.status === "diarizing") {
+            onUpdate(video.uuid, { status: "diarizing", error: null });
             pollDiarize(video.serverTaskId);
             return;
           }
-          if (existing.status === 'done') {
+          if (existing.status === "done") {
             void finishDiarize(existing.captionsFile ?? null);
             return;
           }
@@ -676,7 +676,7 @@ export function PinnedVideoItemServer({
       setOpfsUploading(true);
       try {
         const opfsFile = await readFromOPFS(video.opfsKey);
-        const ext = video.opfsKey.split('.').pop() ?? 'mp4';
+        const ext = video.opfsKey.split(".").pop() ?? "mp4";
         setOpfsUploadProgress(0);
         const uploadedFile = await uploadOpfsFile(
           opfsFile,
@@ -684,7 +684,7 @@ export function PinnedVideoItemServer({
           setOpfsUploadProgress,
         );
         if (staleServerFile) {
-          fetch(`/api/media/${staleServerFile}`, { method: 'DELETE' }).catch(
+          fetch(`/api/media/${staleServerFile}`, { method: "DELETE" }).catch(
             () => {},
           );
         }
@@ -694,8 +694,8 @@ export function PinnedVideoItemServer({
       } catch {
         setOpfsUploading(false);
         onUpdate(video.uuid, {
-          status: 'error',
-          error: t('errorOpfsUploadFailed'),
+          status: "error",
+          error: t("errorOpfsUploadFailed"),
         });
         return;
       }
@@ -704,22 +704,22 @@ export function PinnedVideoItemServer({
 
     if (!serverFile) return;
 
-    onUpdate(video.uuid, { status: 'diarizing', error: null });
+    onUpdate(video.uuid, { status: "diarizing", error: null });
 
     // Kick off the background diarization job and grab the task id to poll.
     let diarizeTaskId: string;
     try {
-      const creditsKey = localStorage.getItem('vd_credits_key') ?? '';
-      const res = await fetchWithRetry('/api/diarize', {
-        method: 'POST',
+      const creditsKey = localStorage.getItem("vd_credits_key") ?? "";
+      const res = await fetchWithRetry("/api/diarize", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          ...(creditsKey ? { 'x-credits-key': creditsKey } : {}),
+          "Content-Type": "application/json",
+          ...(creditsKey ? { "x-credits-key": creditsKey } : {}),
         },
         body: JSON.stringify({
           file: serverFile,
           duration: video.duration,
-          taskId: video.taskId ?? '',
+          taskId: video.taskId ?? "",
           maxWords: video.diarizeMaxWords ?? undefined,
         }),
       });
@@ -742,8 +742,8 @@ export function PinnedVideoItemServer({
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       onUpdate(video.uuid, {
-        status: 'error',
-        error: `${t('errorDiarizeFailed')}: ${detail}`,
+        status: "error",
+        error: `${t("errorDiarizeFailed")}: ${detail}`,
       });
       return;
     }
@@ -777,11 +777,11 @@ export function PinnedVideoItemServer({
       const file = task.file;
       const downloadURL = file ? `/api/media/${file}` : null;
 
-      setJobPhase('idle');
+      setJobPhase("idle");
       setJobProgress(task.progress ?? 100);
 
       onUpdate(video.uuid, {
-        status: 'done',
+        status: "done",
         file: file ?? null,
         name: task.name ?? video.name,
         downloadURL,
@@ -810,7 +810,7 @@ export function PinnedVideoItemServer({
           const blob = await fetch(resolveMediaUrl(downloadURL!)).then((r) =>
             r.blob(),
           );
-          const ext = file.split('.').pop() ?? 'mp4';
+          const ext = file.split(".").pop() ?? "mp4";
 
           const newKey = await saveProcessedToOPFS({
             blob,
@@ -822,12 +822,12 @@ export function PinnedVideoItemServer({
           });
 
           // Delete the server output file
-          fetch(`/api/media/${file}`, { method: 'DELETE' }).catch(() => {});
+          fetch(`/api/media/${file}`, { method: "DELETE" }).catch(() => {});
 
           // Delete the server input file (uploaded from OPFS or still present)
           const inputFile = opfsInputFileRef.current;
           if (inputFile && inputFile !== file) {
-            fetch(`/api/media/${inputFile}`, { method: 'DELETE' }).catch(
+            fetch(`/api/media/${inputFile}`, { method: "DELETE" }).catch(
               () => {},
             );
             opfsInputFileRef.current = null;
@@ -842,16 +842,16 @@ export function PinnedVideoItemServer({
             fileSize: blob.size,
           });
         } catch (err) {
-          console.error('OPFS save-back failed:', err);
+          console.error("OPFS save-back failed:", err);
         } finally {
           setOpfsMigrating(false);
         }
       } else if (file) {
         try {
           const headRes = await fetch(resolveMediaUrl(`/api/media/${file}`), {
-            method: 'HEAD',
+            method: "HEAD",
           });
-          const cl = headRes.headers.get('content-length');
+          const cl = headRes.headers.get("content-length");
           if (cl) onUpdate(video.uuid, { fileSize: parseInt(cl, 10) });
         } catch {}
       }
@@ -891,16 +891,16 @@ export function PinnedVideoItemServer({
         taskId,
         onUpdate: (task) => {
           if (
-            task.status === 'processing' ||
-            task.status === 'converting' ||
-            task.status === 'burning' ||
-            task.status === 'translating'
+            task.status === "processing" ||
+            task.status === "converting" ||
+            task.status === "burning" ||
+            task.status === "translating"
           ) {
-            setJobPhase('polling');
+            setJobPhase("polling");
             setJobProgress(task.progress ?? 0);
             onUpdate(video.uuid, {
               status:
-                task.status === 'processing' && opts?.activeStatus
+                task.status === "processing" && opts?.activeStatus
                   ? opts.activeStatus
                   : task.status,
               error: null,
@@ -909,13 +909,13 @@ export function PinnedVideoItemServer({
             return;
           }
 
-          if (task.status === 'done' && opts?.donePatch) {
+          if (task.status === "done" && opts?.donePatch) {
             void handleServerTaskDone(task, opts.donePatch, opts.completeAfter);
-          } else if (task.status === 'error') {
-            setJobPhase('idle');
+          } else if (task.status === "error") {
+            setJobPhase("idle");
             onUpdate(video.uuid, {
-              status: 'error',
-              error: task.error?.message ?? 'Processing failed',
+              status: "error",
+              error: task.error?.message ?? "Processing failed",
               serverTaskId: null,
             });
           }
@@ -934,10 +934,10 @@ export function PinnedVideoItemServer({
 
     const needsResume =
       video.file &&
-      video.fps !== 'original' &&
+      video.fps !== "original" &&
       !video.justAudio &&
       !video.fpsApplied &&
-      (video.status === 'done' || video.status === 'processing');
+      (video.status === "done" || video.status === "processing");
 
     if (needsResume) queueMicrotask(() => handleInterpolateFps(true));
   }, [
@@ -962,7 +962,7 @@ export function PinnedVideoItemServer({
       video.file &&
       video.isH265 &&
       !video.justAudio &&
-      video.status === 'converting';
+      video.status === "converting";
 
     if (needsResume) queueMicrotask(() => handleConvertH264());
   }, [
@@ -984,7 +984,7 @@ export function PinnedVideoItemServer({
       video.file &&
       !video.isH265 &&
       !video.justAudio &&
-      video.status === 'converting';
+      video.status === "converting";
 
     if (needsResume) queueMicrotask(() => handleConvertH265());
   }, [
@@ -1005,8 +1005,8 @@ export function PinnedVideoItemServer({
       !video.justAudio &&
       !video.blackBarsRemoved &&
       video.scaleDownTargetHeight == null &&
-      video.status === 'processing' &&
-      (video.fps === 'original' || !!video.fpsApplied);
+      video.status === "processing" &&
+      (video.fps === "original" || !!video.fpsApplied);
 
     if (needsResume) queueMicrotask(() => handleRemoveBlackBars());
   }, [
@@ -1030,7 +1030,7 @@ export function PinnedVideoItemServer({
       !video.justAudio &&
       !video.captionsBurned &&
       video.burnCaptionsConfig !== null &&
-      video.status === 'burning';
+      video.status === "burning";
 
     if (needsResume) queueMicrotask(() => handleBurnCaptions());
   }, [
@@ -1051,7 +1051,7 @@ export function PinnedVideoItemServer({
       video.file &&
       !video.justAudio &&
       video.scaleDownTargetHeight != null &&
-      video.status === 'processing';
+      video.status === "processing";
 
     if (needsResume)
       queueMicrotask(() => handleScaleDown(video.scaleDownTargetHeight!));
@@ -1072,7 +1072,7 @@ export function PinnedVideoItemServer({
       video.file &&
       !video.justAudio &&
       video.duration &&
-      video.status === 'diarizing';
+      video.status === "diarizing";
 
     if (needsResume) queueMicrotask(() => handleDiarize());
   }, [
@@ -1085,34 +1085,34 @@ export function PinnedVideoItemServer({
 
   /* ── Auto-move errored items to completed ─────────────── */
   useEffect(() => {
-    if (video.status === 'error') onComplete(video.uuid);
+    if (video.status === "error") onComplete(video.uuid);
   }, [video.status, video.uuid, onComplete]);
 
   /* ── Status hint text ────────────────────────────────── */
   const statusHint = (() => {
     if (opfsUploading)
       return opfsUploadProgress > 0
-        ? t('uploadingFromDeviceWithPct', { pct: opfsUploadProgress })
-        : t('uploadingFromDevice');
-    if (opfsMigrating) return t('savingToDevice');
-    if (jobPhase === 'dispatching') return t('serverDispatching');
-    if (jobPhase === 'polling' && jobProgress > 0)
-      return t('serverProcessing', { progress: jobProgress });
-    if (video.status === 'translating') return t('translatingCaptions');
-    if (video.status === 'diarizing') return t('diarizing');
+        ? t("uploadingFromDeviceWithPct", { pct: opfsUploadProgress })
+        : t("uploadingFromDevice");
+    if (opfsMigrating) return t("savingToDevice");
+    if (jobPhase === "dispatching") return t("serverDispatching");
+    if (jobPhase === "polling" && jobProgress > 0)
+      return t("serverProcessing", { progress: jobProgress });
+    if (video.status === "translating") return t("translatingCaptions");
+    if (video.status === "diarizing") return t("diarizing");
     return null;
   })();
 
   const showProgressBar =
     isProcessing ||
-    jobPhase === 'dispatching' ||
-    jobPhase === 'polling' ||
+    jobPhase === "dispatching" ||
+    jobPhase === "polling" ||
     opfsUploading ||
     opfsMigrating;
   const progressValue =
     opfsUploading && opfsUploadProgress > 0
       ? opfsUploadProgress
-      : jobPhase === 'polling' && jobProgress > 0
+      : jobPhase === "polling" && jobProgress > 0
         ? jobProgress
         : undefined;
 
@@ -1122,7 +1122,7 @@ export function PinnedVideoItemServer({
       borderRadius={14}
       className="vi-card"
       flexDirection="column"
-      styles={{ overflow: 'hidden' }}
+      styles={{ overflow: "hidden" }}
     >
       <PlatformIconBg
         platform={video.platform}
@@ -1148,11 +1148,11 @@ export function PinnedVideoItemServer({
         <VideoDetailsPanel
           video={video}
           ffmpegStatus={
-            jobPhase === 'polling'
-              ? 'processing'
-              : jobPhase === 'dispatching'
-                ? 'loading'
-                : 'idle'
+            jobPhase === "polling"
+              ? "processing"
+              : jobPhase === "dispatching"
+                ? "loading"
+                : "idle"
           }
           ffmpegProgress={jobProgress}
           ffmpegLastError={null}
@@ -1197,8 +1197,8 @@ export function PinnedVideoItemServer({
             unstyled
             className="vi-icon-btn"
             onClick={() => setConfirmRemove(true)}
-            aria-label={t('delete')}
-            title={t('delete')}
+            aria-label={t("delete")}
+            title={t("delete")}
             icon="/icons/delete-video.svg"
             iconSize="15px"
             iconColor="var(--foreground, #171717)"
@@ -1207,12 +1207,12 @@ export function PinnedVideoItemServer({
             unstyled
             className="vi-icon-btn"
             onClick={handleCopy}
-            aria-label={t('copyLink')}
-            title={copying ? t('copied') : t('copyLink')}
+            aria-label={t("copyLink")}
+            title={copying ? t("copied") : t("copyLink")}
             icon="/icons/url.svg"
             iconSize="15px"
             iconColor={
-              copying ? 'var(--accent, #06b6d4)' : 'var(--foreground, #171717)'
+              copying ? "var(--accent, #06b6d4)" : "var(--foreground, #171717)"
             }
           />
         </Box>
@@ -1220,8 +1220,8 @@ export function PinnedVideoItemServer({
       {/* ── Delete confirmation ──────────────────────── */}
       {confirmRemove ? (
         <ConfirmationModal
-          title={t('confirmDeleteTitle')}
-          text={t('confirmDeleteText')}
+          title={t("confirmDeleteTitle")}
+          text={t("confirmDeleteText")}
           okCallback={() => {
             setConfirmRemove(false);
             onRemove(video.uuid);

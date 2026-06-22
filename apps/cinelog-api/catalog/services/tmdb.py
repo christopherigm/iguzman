@@ -85,17 +85,23 @@ def fetch_tmdb_extras(tmdb_id: str = '', title: str = '') -> dict:
     }
 
 
-def search_tmdb(title: str) -> dict | None:
+def search_tmdb(title: str, year: int | None = None) -> dict | None:
     """
     Search TMDB by title and fetch full details + credits for the top result.
+
+    When `year` is given it is passed as `primary_release_year` to pin the exact
+    version of a remade / re-released title (e.g. 1990 vs 2017 "It").
 
     Returns a dict with keys: title, director, year, cover_url, backdrop_url,
     tmdb_id, genres (list[str]), cast (list[str]). Returns None on miss or error.
     """
+    params = {'query': title, 'language': 'en-US'}
+    if year:
+        params['primary_release_year'] = year
     try:
         search_resp = requests.get(
             f'{_BASE}/search/movie',
-            params={'query': title, 'language': 'en-US'},
+            params=params,
             headers=_headers(),
             timeout=10,
         )

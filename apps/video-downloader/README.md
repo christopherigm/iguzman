@@ -275,22 +275,22 @@ Copy `env.example` to `.env` before deploying:
 cp env.example .env
 ```
 
-| Variable                              | How to set                                                      | Description                                                                                                                   |
-| ------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `MONGO_URI`                           | `helm/values.yaml` → `env`                                      | MongoDB connection string (tasks, credits, coupons)                                                                          |
-| `R2_ACCOUNT_ID`                       | K8s Secret `vd2-secrets` → `envFromSecret`                      | Cloudflare R2 account ID. **Setting this enables R2 storage**; unset falls back to local disk                               |
-| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | K8s Secret `vd2-secrets` → `envFromSecret`                | R2 (S3-compatible) credentials                                                                                              |
-| `R2_BUCKET_NAME`                      | K8s Secret `vd2-secrets` → `envFromSecret`                      | R2 bucket that holds downloaded/processed media                                                                            |
-| `R2_PUBLIC_URL`                       | `helm/values.yaml` → `env`                                      | Public base URL/CDN for served R2 objects                                                                                  |
-| `GROQ_API_KEY`                        | K8s Secret `vd2-secrets` → `envFromSecret`                      | Groq API key for subtitle translation. **Note:** route via `eth0` (not VPN) in `wg0.conf` - Surfshark IPs are blocked by Groq |
-| `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | K8s Secret `vd2-secrets` → `envFromSecret`                 | OpenRouter fallback for `/api/groq/chat` when Groq returns 429. Use a plain instruct model, **not** a reasoning model        |
-| `SCRAPECREATORS_API_KEY`              | K8s Secret `vd2-secrets` → `envFromSecret`                      | ScrapeCreators API key for comment/metadata scraping (TikTok, Instagram, Facebook)                                          |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | K8s Secret `vd2-secrets` → `envFromSecret`             | Stripe keys for the credits checkout and webhook receiver                                                                  |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`  | `helm/values.yaml` → `env`                                      | Stripe publishable key (client-side checkout)                                                                              |
-| `NEXT_PUBLIC_BASE_URL`                | `helm/values.yaml` → `env`                                      | Public site URL, used for Stripe checkout return URLs                                                                      |
-| `DIARIZATION_URL` / `DIARIZATION_API_KEY` | K8s Secret `vd2-secrets` → `envFromSecret`                 | Endpoint + key for the external diarization service backing `/api/diarize`                                                 |
-| `INTERNAL_SECRET`                     | K8s Secret `vd2-secrets` → `envFromSecret`                      | Shared secret guarding `/api/internal/coupons` and the `coupon` CLI                                                        |
-| `LOG_LEVEL`                           | `helm/values.yaml` → `env`                                      | Override default log level (`debug` in dev, `info` in prod)                                                                |
+| Variable                                      | How to set                                 | Description                                                                                                                   |
+| --------------------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `MONGO_URI`                                   | `helm/values.yaml` → `env`                 | MongoDB connection string (tasks, credits, coupons)                                                                           |
+| `R2_ACCOUNT_ID`                               | K8s Secret `vd2-secrets` → `envFromSecret` | Cloudflare R2 account ID. **Setting this enables R2 storage**; unset falls back to local disk                                 |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`   | K8s Secret `vd2-secrets` → `envFromSecret` | R2 (S3-compatible) credentials                                                                                                |
+| `R2_BUCKET_NAME`                              | K8s Secret `vd2-secrets` → `envFromSecret` | R2 bucket that holds downloaded/processed media                                                                               |
+| `R2_PUBLIC_URL`                               | `helm/values.yaml` → `env`                 | Public base URL/CDN for served R2 objects                                                                                     |
+| `GROQ_API_KEY`                                | K8s Secret `vd2-secrets` → `envFromSecret` | Groq API key for subtitle translation. **Note:** route via `eth0` (not VPN) in `wg0.conf` - Surfshark IPs are blocked by Groq |
+| `OPENROUTER_API_KEY` / `OPENROUTER_MODEL`     | K8s Secret `vd2-secrets` → `envFromSecret` | OpenRouter fallback for `/api/groq/chat` when Groq returns 429. Use a plain instruct model, **not** a reasoning model         |
+| `SCRAPECREATORS_API_KEY`                      | K8s Secret `vd2-secrets` → `envFromSecret` | ScrapeCreators API key for comment/metadata scraping (TikTok, Instagram, Facebook)                                            |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | K8s Secret `vd2-secrets` → `envFromSecret` | Stripe keys for the credits checkout and webhook receiver                                                                     |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`          | `helm/values.yaml` → `env`                 | Stripe publishable key (client-side checkout)                                                                                 |
+| `NEXT_PUBLIC_BASE_URL`                        | `helm/values.yaml` → `env`                 | Public site URL, used for Stripe checkout return URLs                                                                         |
+| `DIARIZATION_URL` / `DIARIZATION_API_KEY`     | K8s Secret `vd2-secrets` → `envFromSecret` | Endpoint + key for the external diarization service backing `/api/diarize`                                                    |
+| `INTERNAL_SECRET`                             | K8s Secret `vd2-secrets` → `envFromSecret` | Shared secret guarding `/api/internal/coupons` and the `coupon` CLI                                                           |
+| `LOG_LEVEL`                                   | `helm/values.yaml` → `env`                 | Override default log level (`debug` in dev, `info` in prod)                                                                   |
 
 To add a secret value:
 

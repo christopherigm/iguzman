@@ -16,7 +16,7 @@ function toKaTeX(input: string): string {
   return input
     .replace(/×/g, "\\times")
     .replace(/÷/g, "\\div")
-    .replace(/−/g, "-")        // U+2212 MINUS SIGN → ASCII hyphen-minus
+    .replace(/−/g, "-") // U+2212 MINUS SIGN → ASCII hyphen-minus
     .replace(/≥/g, "\\geq")
     .replace(/≤/g, "\\leq")
     .replace(/≠/g, "\\neq")
@@ -42,7 +42,10 @@ function toKaTeX(input: string): string {
     .replace(/\^\(([^)]+)\)/g, "^{$1}"); // ^(expr) → ^{expr}
 }
 
-export function MathFormula({ formula, displayMode = false }: MathFormulaProps) {
+export function MathFormula({
+  formula,
+  displayMode = false,
+}: MathFormulaProps) {
   const html = katex.renderToString(toKaTeX(formula), {
     displayMode,
     throwOnError: false,

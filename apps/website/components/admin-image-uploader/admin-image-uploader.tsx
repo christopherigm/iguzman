@@ -190,11 +190,7 @@ export function AdminImageUploader({
           aria-label={t("dropzoneLabel")}
         >
           <span className="aiu__dropzone-icon">🖼️</span>
-          <Typography
-            as="span"
-            variant="body"
-            className="aiu__dropzone-text"
-          >
+          <Typography as="span" variant="body" className="aiu__dropzone-text">
             {t("dropzoneText")}
           </Typography>
           <Typography

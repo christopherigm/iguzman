@@ -69,7 +69,11 @@ async function runFfmpegJob(
   creditsKey: string,
   opCost: number,
   preDownloadedInput?: string,
-  translation?: { langName: string; cachedSrt: string | null; cacheKey: string },
+  translation?: {
+    langName: string;
+    cachedSrt: string | null;
+    cacheKey: string;
+  },
 ): Promise<void> {
   const refundOnFailure = () =>
     refundCredits(creditsKey, opCost).catch((err: unknown) =>
