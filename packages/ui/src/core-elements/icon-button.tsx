@@ -67,6 +67,44 @@ const KIND_BACKGROUNDS: Record<IconButtonKind, string> = {
 };
 
 /**
+ * Fully opaque background per semantic kind. Used when `solid` is set so the
+ * button reads as a filled, high-emphasis control instead of a faint tint.
+ */
+const KIND_SOLID_BACKGROUNDS: Record<IconButtonKind, string> = {
+  default: "var(--foreground, #111)",
+  primary: "var(--accent, #06b6d4)",
+  error: "var(--error, #ef4444)",
+  success: "var(--success, #16a34a)",
+  warning: "var(--warning, #d97706)",
+};
+
+/**
+ * Subtle border per semantic kind, tinted from the same color that drives the
+ * icon. Mixed at a low percentage so it reads as a faint, lighter outline that
+ * defines the button's edge without competing with the icon.
+ */
+const KIND_BORDERS: Record<IconButtonKind, string> = {
+  default: "color-mix(in srgb, var(--foreground, #111) 14%, transparent)",
+  primary: "color-mix(in srgb, var(--accent, #06b6d4) 32%, transparent)",
+  error: "color-mix(in srgb, var(--error, #ef4444) 28%, transparent)",
+  success: "color-mix(in srgb, var(--success, #16a34a) 28%, transparent)",
+  warning: "color-mix(in srgb, var(--warning, #d97706) 28%, transparent)",
+};
+
+/**
+ * Border per semantic kind for `solid` buttons. The fill is already the opaque
+ * kind color, so the rim is the kind color lightened toward white to read as a
+ * subtle highlight edge rather than a darker outline.
+ */
+const KIND_SOLID_BORDERS: Record<IconButtonKind, string> = {
+  default: "color-mix(in srgb, var(--foreground, #111) 70%, #fff)",
+  primary: "color-mix(in srgb, var(--accent, #06b6d4) 65%, #fff)",
+  error: "color-mix(in srgb, var(--error, #ef4444) 65%, #fff)",
+  success: "color-mix(in srgb, var(--success, #16a34a) 65%, #fff)",
+  warning: "color-mix(in srgb, var(--warning, #d97706) 65%, #fff)",
+};
+
+/**
  * Props for `IconButton` component.
  */
 export interface IconButtonProps extends UIComponentProps {
@@ -100,6 +138,12 @@ export interface IconButtonProps extends UIComponentProps {
   iconSize?: string | number;
   /** Overrides the icon color. Defaults to the color for `kind`. */
   iconColor?: string;
+  /**
+   * When `true`, the inner `Icon` renders the SVG as a real multi-color image
+   * (preserving its own colors) instead of a single-color mask. Defaults to
+   * `false`. Use for multi-color art/badges that must keep their own colors.
+   */
+  fullColor?: boolean;
   /** Disables the button and suppresses interaction. */
   disabled?: boolean;
   /** HTML `title` attribute (tooltip shown on hover). */
@@ -113,6 +157,14 @@ export interface IconButtonProps extends UIComponentProps {
    * opt-in and should only be enabled over a genuinely translucent backdrop.
    */
   translucent?: boolean;
+  /**
+   * When `true`, the button renders with a fully opaque, kind-tinted background
+   * (no transparency or blur) and a white icon — giving a high-emphasis,
+   * "filled" appearance. Defaults to `false`. The white icon overrides
+   * `iconColor`; only `fullColor` (which keeps the SVG's own colors) takes
+   * precedence over it. Suppresses `translucent` blur when set.
+   */
+  solid?: boolean;
   /** Indicates whether a toggle button is currently pressed. */
   "aria-pressed"?: boolean;
   /** Indicates whether a control is expanded or collapsed. */
@@ -145,8 +197,10 @@ export const IconButton: React.FC<IconButtonProps> = (props) => {
     kind = "default",
     iconSize,
     iconColor,
+    fullColor = false,
     isLoading,
     translucent = false,
+    solid = false,
   } = props;
 
   const ariaLabel = props["aria-label"];
@@ -156,13 +210,20 @@ export const IconButton: React.FC<IconButtonProps> = (props) => {
 
   const isDisabled = disabled || isLoading;
 
+  // Solid buttons force a white icon (overriding iconColor) for contrast on the
+  // opaque fill — unless fullColor keeps the SVG's own colors. Otherwise an
+  // explicit iconColor wins, falling back to the kind's color.
+  const resolvedIconColor =
+    solid && !fullColor ? "#fff" : iconColor ?? KIND_ICON_COLORS[kind];
+
   const inner = isLoading ? (
     <Spinner size={SPINNER_SIZES[size]} thickness={2} />
   ) : (
     <Icon
       icon={icon}
       size={iconSize ?? ICON_SIZES[size]}
-      color={iconColor ?? KIND_ICON_COLORS[kind]}
+      color={resolvedIconColor}
+      fullColor={fullColor}
     />
   );
 
@@ -172,12 +233,13 @@ export const IconButton: React.FC<IconButtonProps> = (props) => {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    border: "none",
-    backgroundColor: KIND_BACKGROUNDS[kind],
+    border: `1px solid ${solid ? KIND_SOLID_BORDERS[kind] : KIND_BORDERS[kind]}`,
+    backgroundColor: solid ? KIND_SOLID_BACKGROUNDS[kind] : KIND_BACKGROUNDS[kind],
     // Opt-in backdrop blur for translucent surfaces (e.g. inside a translucent
     // Navbar). Off by default: backdrop-filter re-samples the backdrop every
     // frame and is a major scroll-jank source when many buttons are on screen.
-    ...(translucent
+    // Suppressed for solid buttons — a fully opaque fill has nothing to blur.
+    ...(translucent && !solid
       ? { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }
       : {}),
     cursor: "pointer",

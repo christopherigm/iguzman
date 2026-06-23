@@ -16,15 +16,16 @@ const FORMAT_BUTTONS: {
   value: Exclude<MovieFormat, "">;
   icon: string;
   iconColor?: string;
+  fullColor?: boolean;
 }[] = [
-  { value: "dvd", icon: "/icons/dvd.svg" },
+  { value: "dvd", icon: "/icons/dvd.svg", iconColor: "#eb7d00" },
   { value: "bluray", icon: "/icons/blu-ray.svg", iconColor: "#2563eb" },
   {
     value: "4k",
-    icon: "/icons/blu-ray.svg",
-    iconColor: "var(--foreground, #111)",
+    icon: "/icons/4k.svg",
+    fullColor: true,
   },
-  { value: "other", icon: "/icons/disc.svg" },
+  { value: "other", icon: "/icons/disc.svg", iconColor: "#39a400" },
 ];
 
 // Sort options as {value, labelKey} pairs. The value is the API `ordering`
@@ -75,7 +76,7 @@ export function MovieFilters({
 
   return (
     <Box display="flex" flexDirection="column" gap={16}>
-      <Box display="flex" gap={8} flexWrap="wrap">
+      <Box display="flex" gap={12} flexWrap="wrap">
         <TextInput
           type="search"
           label={t("searchLabel")}
@@ -83,12 +84,19 @@ export function MovieFilters({
           onChange={onSearchChange}
           flex="2 1 200px"
         />
-        <Box display="flex" flexDirection="column" gap={4} flex="1 1 140px">
+        <Select
+          label={t("sortLabel")}
+          value={sort}
+          onChange={(value) => onSortChange(value as MovieSort)}
+          options={sortOptions}
+          flex="1 1 40px"
+        />
+        <Box display="flex" flexDirection="column" gap={4}>
           <Typography variant="caption" styles={{ opacity: 0.7 }}>
             {t("formatLabel")}
           </Typography>
           <Box display="flex" gap={4} alignItems="center">
-            {FORMAT_BUTTONS.map(({ value, icon, iconColor }) => {
+            {FORMAT_BUTTONS.map(({ value, icon, iconColor, fullColor }) => {
               const selected = format === value;
               return (
                 <IconButton
@@ -102,18 +110,13 @@ export function MovieFilters({
                   size="sm"
                   // Toggle: re-selecting the active format clears it ("all formats").
                   onClick={() => onFormatChange(selected ? "" : value)}
+                  fullColor={fullColor}
+                  solid={selected}
                 />
               );
             })}
           </Box>
         </Box>
-        <Select
-          label={t("sortLabel")}
-          value={sort}
-          onChange={(value) => onSortChange(value as MovieSort)}
-          options={sortOptions}
-          flex="1 1 160px"
-        />
       </Box>
 
       {categories.length > 0 && (

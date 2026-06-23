@@ -19,6 +19,10 @@ export type CardProps = BoxProps;
  * <Card gap={8} backgroundColor="var(--surface-1)" className="my-card">
  *   Content
  * </Card>
+ *
+ * @example
+ * // Frosted-glass card over a background image
+ * <Card translucent backgroundColor="rgba(255,255,255,0.6)">Content</Card>
  */
 export const Card: React.FC<CardProps> = ({
   display = "flex",
@@ -28,6 +32,8 @@ export const Card: React.FC<CardProps> = ({
   border = "1px solid var(--border, #e5e7eb)",
   elevation = 5,
   backgroundColor = "var(--surface-1)",
+  translucent = false,
+  styles,
   ...rest
 }) => (
   <Box
@@ -37,7 +43,11 @@ export const Card: React.FC<CardProps> = ({
     borderRadius={borderRadius}
     border={border}
     elevation={elevation}
-    backgroundColor={backgroundColor}
+    backgroundColor={translucent ? undefined : backgroundColor}
+    translucent={translucent}
+    // Clip children to the rounded corners so content can't bleed past the
+    // border / blurred backdrop. Callers can override via `styles`.
+    styles={{ overflow: "hidden", ...styles }}
     {...rest}
   />
 );

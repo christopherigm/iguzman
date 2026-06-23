@@ -140,7 +140,6 @@
     "dvd": "DVD",
     "bluray": "Blu-ray",
     "4k": "4K",
-    "ultraHd4k": "4K ULTRA HD",
     "other": "Otro"
   },
   "CatalogPage": {
@@ -215,7 +214,8 @@
     "fetchingSynopsis": "Obteniendo sinopsis…",
     "fetchingTrailer": "Obteniendo tráiler…",
     "synopsisError": "No se encontró una sinopsis para esta película.",
-    "trailerError": "No se encontró un tráiler para esta película."
+    "trailerError": "No se encontró un tráiler para esta película.",
+    "related": "Películas relacionadas"
   },
   "InboxPage": {
     "title": "Bandeja",

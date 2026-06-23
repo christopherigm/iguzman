@@ -140,7 +140,6 @@
     "dvd": "DVD",
     "bluray": "Blu-ray",
     "4k": "4K",
-    "ultraHd4k": "4K ULTRA HD",
     "other": "Outro"
   },
   "CatalogPage": {
@@ -215,7 +214,8 @@
     "fetchingSynopsis": "Obtendo sinopse…",
     "fetchingTrailer": "Obtendo trailer…",
     "synopsisError": "Nenhuma sinopse encontrada para este filme.",
-    "trailerError": "Nenhum trailer encontrado para este filme."
+    "trailerError": "Nenhum trailer encontrado para este filme.",
+    "related": "Filmes relacionados"
   },
   "InboxPage": {
     "title": "Caixa de entrada",

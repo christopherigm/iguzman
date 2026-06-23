@@ -1,5 +1,12 @@
+from django.core.cache import cache
 from rest_framework import serializers
 
+from .cache import (
+    RELATED_CACHE_TTL,
+    cache_version,
+    get_related_movies,
+    related_cache_key,
+)
 from .models import FORMAT_CHOICES, Actor, Category, Movie, ScanCandidate, ScanQueue
 
 
@@ -36,13 +43,14 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     cast = ActorSerializer(many=True, read_only=True)
     cover = serializers.SerializerMethodField()
     backdrop = serializers.SerializerMethodField()
+    related = serializers.SerializerMethodField()
 
     class Meta:
         model = Movie
         fields = [
             'id', 'barcode', 'title', 'director', 'year', 'format',
             'cover', 'cover_url', 'backdrop', 'tmdb_id', 'synopsis', 'trailer_url',
-            'genres', 'cast', 'created', 'modified',
+            'genres', 'cast', 'related', 'created', 'modified',
         ]
 
     def get_cover(self, obj):
@@ -58,6 +66,23 @@ class MovieDetailSerializer(serializers.ModelSerializer):
             url = obj.backdrop_image.url
             return request.build_absolute_uri(url) if request else url
         return ''
+
+    def get_related(self, obj):
+        """
+        Up to six suggested movies sharing a genre or director, served from
+        Redis. The serialized payload is cached per movie under the current
+        cache version; a catalog change bumps the version (see `catalog.signals`)
+        so the next read recomputes against fresh data.
+        """
+        key = related_cache_key(obj.pk, cache_version())
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+        data = MovieListSerializer(
+            get_related_movies(obj), many=True, context=self.context
+        ).data
+        cache.set(key, data, RELATED_CACHE_TTL)
+        return data
 
 
 class MovieWriteSerializer(serializers.ModelSerializer):

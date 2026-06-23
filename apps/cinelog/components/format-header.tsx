@@ -1,7 +1,5 @@
 import type { CSSProperties } from "react";
-import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
-import { Typography } from "@repo/ui/core-elements/typography";
 import { Icon } from "@repo/ui/core-elements/icon";
 import { BREAKPOINTS, type Breakpoint } from "@repo/ui/core-elements/utils";
 import type { MovieFormat } from "@/lib/catalog";
@@ -9,25 +7,25 @@ import "./format-header.css";
 
 // Visual style for the format header rendered above the cover image.
 // "other"/"" formats have no header.
+// `fullColor` formats render the SVG as a real multi-color image (via the
+// Icon `fullColor` prop) instead of the monochrome mask, so the badge keeps
+// its own colors.
 const FORMAT_HEADER: Partial<
-  Record<MovieFormat, { icon: string; background: string }>
+  Record<MovieFormat, { icon: string; background: string; fullColor?: boolean }>
 > = {
   bluray: { icon: "/icons/blu-ray.svg", background: "#0040cb" },
-  "4k": { icon: "/icons/blu-ray.svg", background: "#000000" },
+  "4k": { icon: "/icons/4k.svg", background: "#000000", fullColor: true },
   dvd: { icon: "/icons/dvd.svg", background: "#6b7280" },
 };
 
 type Size = "sm" | "md" | "lg";
 
 // Header dimensions (px) per size. "sm" is the base; "md" is 1.2x and "lg" is
-// 1.5x the bar height, with the icon and label scaled to match.
-const SIZE_TOKENS: Record<
-  Size,
-  { height: number; icon: number; font: number }
-> = {
-  sm: { height: 20, icon: 20, font: 12 },
-  md: { height: 24, icon: 24, font: 14 },
-  lg: { height: 30, icon: 30, font: 18 },
+// 1.5x the bar height, with the icon scaled to match.
+const SIZE_TOKENS: Record<Size, { height: number; icon: number }> = {
+  sm: { height: 20, icon: 20 },
+  md: { height: 24, icon: 24 },
+  lg: { height: 30, icon: 30 },
 };
 
 // A single size, or a per-breakpoint map (mobile-first carry-forward).
@@ -56,14 +54,12 @@ function buildSizeVars(size: Partial<Record<Breakpoint, Size>>): CSSProperties {
     const token = SIZE_TOKENS[current];
     vars[`--fh-h-${bp}`] = `${token.height}px`;
     vars[`--fh-i-${bp}`] = `${token.icon}px`;
-    vars[`--fh-f-${bp}`] = `${token.font}px`;
   }
   return vars as CSSProperties;
 }
 
 /** Format strip sat above a movie cover, or a self-sized banner in list view. */
 export function FormatHeader({ format, kind, size = "sm" }: Props) {
-  const tFormat = useTranslations("MovieFormat");
   const headerStyle = FORMAT_HEADER[format];
 
   if (!headerStyle) return null;
@@ -77,7 +73,6 @@ export function FormatHeader({ format, kind, size = "sm" }: Props) {
   const iconValue = responsive
     ? "var(--fh-icon)"
     : `${SIZE_TOKENS[size].icon}px`;
-  const fontValue = responsive ? "var(--fh-font)" : SIZE_TOKENS[size].font;
 
   const badgeStyles =
     kind === "badge"
@@ -101,22 +96,12 @@ export function FormatHeader({ format, kind, size = "sm" }: Props) {
         sizeVars || badgeStyles ? { ...sizeVars, ...badgeStyles } : undefined
       }
     >
-      <Icon icon={headerStyle.icon} color="#ffffff" size={iconValue} />
-      {format === "4k" && (
-        <Typography
-          variant="label"
-          color="#ffffff"
-          fontWeight={700}
-          // Sub-scale label sized to the header bar (responsive via --fh-font).
-          styles={{
-            fontSize: fontValue,
-            letterSpacing: "0.04em",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {tFormat("ultraHd4k")}
-        </Typography>
-      )}
+      <Icon
+        icon={headerStyle.icon}
+        color="#ffffff"
+        size={iconValue}
+        fullColor={headerStyle.fullColor}
+      />
     </Box>
   );
 }

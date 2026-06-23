@@ -10,6 +10,7 @@ import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { BREAKPOINTS } from "@repo/ui/core-elements/utils";
 import { LinkButton } from "@repo/ui/core-elements/link-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
@@ -28,6 +29,7 @@ import {
 } from "@/lib/catalog";
 import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { FormatHeader } from "@/components/format-header";
+import { MovieCard } from "@/components/movie-catalog/movie-card";
 import { MovieEditForm } from "./movie-edit-form";
 import "./movie-detail.css";
 import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
@@ -414,7 +416,7 @@ export function MovieDetail({
           </Box>
         </Box>
 
-        <Box flexDirection="column" gap={16} flex={1}>
+        <Box flexDirection="column" gap={16} flex={1} padding={8} translucent>
           {editing ? (
             <MovieEditForm
               movie={movie}
@@ -496,6 +498,21 @@ export function MovieDetail({
           )}
         </Box>
       </Box>
+
+      {!editing && movie.related?.length > 0 && (
+        <Box display="flex" flexDirection="column" gap={12} marginTop={64}>
+          <Typography as="h2" variant="h4" fontWeight={700}>
+            {t("related")}
+          </Typography>
+          <Grid container spacing={2}>
+            {movie.related.map((related) => (
+              <Grid key={related.id} size={{ xs: 6, sm: 4, md: 3, lg: 2 }}>
+                <MovieCard movie={related} view="grid" />
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
     </Box>
   );
 }

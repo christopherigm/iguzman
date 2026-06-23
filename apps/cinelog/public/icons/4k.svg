@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg width="500" height="410" viewBox="0 0 500 410" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Yellow outer frame -->
+  <rect x="0" y="0" width="500" height="410" rx="44" fill="#F0B400" />
+
+  <!-- Dark rounded badge -->
+  <rect x="16" y="16" width="468" height="268" rx="32" fill="#2B2B2B" />
+
+  <!-- "4K" -->
+  <text x="250" y="218" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif" font-weight="900"
+        font-size="230" fill="#F0B400" letter-spacing="-6">4K</text>
+
+  <!-- "ULTRA HD" -->
+  <text x="250" y="390" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="84" fill="#2B2B2B" letter-spacing="2">
+    <tspan font-weight="500">ULTRA </tspan><tspan font-weight="900">HD</tspan>
+  </text>
+</svg>

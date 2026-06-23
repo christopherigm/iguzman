@@ -140,7 +140,6 @@
     "dvd": "DVD",
     "bluray": "Blu-ray",
     "4k": "4K",
-    "ultraHd4k": "4K ULTRA HD",
     "other": "Autre"
   },
   "CatalogPage": {
@@ -215,7 +214,8 @@
     "fetchingSynopsis": "Récupération du synopsis…",
     "fetchingTrailer": "Récupération de la bande-annonce…",
     "synopsisError": "Aucun synopsis trouvé pour ce film.",
-    "trailerError": "Aucune bande-annonce trouvée pour ce film."
+    "trailerError": "Aucune bande-annonce trouvée pour ce film.",
+    "related": "Films similaires"
   },
   "InboxPage": {
     "title": "Boîte de réception",

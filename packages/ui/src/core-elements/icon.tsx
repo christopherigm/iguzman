@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import type { UIComponentProps } from "./utils";
 import { buildStyleProps } from "./utils";
 
@@ -17,6 +18,10 @@ export interface IconProps extends UIComponentProps {
   backgroundColor?: string; // optional background color
   backgroundShape?: BackgroundShape; // optional background shape
   shadow?: boolean; // optional drop-shadow for the background
+  // When true the SVG renders as a real <Image> (preserving its own colors)
+  // instead of a single-color mask. The image is laid out inside the square
+  // `size` box with objectFit:contain, so non-square art is letterboxed.
+  fullColor?: boolean;
 }
 
 export const Icon = ({
@@ -27,6 +32,7 @@ export const Icon = ({
   backgroundColor = "",
   backgroundShape = "",
   shadow = false,
+  fullColor = false,
   className,
   ...props
 }: IconProps) => {
@@ -57,6 +63,8 @@ export const Icon = ({
     clipPath: triangleClip,
     boxSizing: "border-box",
     filter: shadow ? "drop-shadow(0 6px 10px rgba(0,0,0,0.12))" : undefined,
+    // `Image fill` needs a positioned ancestor to size against.
+    position: fullColor ? "relative" : undefined,
   };
 
   const maskStyle: React.CSSProperties = {
@@ -78,7 +86,18 @@ export const Icon = ({
 
   return (
     <span className={className} style={outerStyle} aria-hidden>
-      <span style={maskStyle} />
+      {fullColor ? (
+        <Image
+          src={icon}
+          alt=""
+          fill
+          unoptimized
+          sizes="100%"
+          style={{ objectFit: "contain" }}
+        />
+      ) : (
+        <span style={maskStyle} />
+      )}
     </span>
   );
 };

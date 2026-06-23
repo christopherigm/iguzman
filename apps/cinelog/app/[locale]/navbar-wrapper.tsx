@@ -59,8 +59,12 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
       logo={logo}
       items={[
         { label: labels.home, href: "/" },
-        { label: labels.scan, href: "/scan" },
-        { label: labels.inbox, href: "/inbox" },
+        ...(displayName
+          ? [
+              { label: labels.scan, href: "/scan" },
+              { label: labels.inbox, href: "/inbox" },
+            ]
+          : []),
         accountItem,
       ]}
       fixedItems={[]}

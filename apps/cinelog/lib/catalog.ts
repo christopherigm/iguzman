@@ -49,6 +49,8 @@ export interface MovieDetail extends Movie {
   /** YouTube watch URL for the trailer; "" when none has been fetched. */
   trailer_url: string;
   cast: Actor[];
+  /** Up to 6 suggested movies sharing a genre or director. */
+  related: Movie[];
   modified: string;
 }
 

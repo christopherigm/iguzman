@@ -34,6 +34,12 @@ export interface BoxProps extends UIComponentProps {
   onDragStart?: React.DragEventHandler<HTMLDivElement>;
   /** Drag-end handler. */
   onDragEnd?: React.DragEventHandler<HTMLDivElement>;
+  /**
+   * Applies a frosted-glass backdrop blur (same effect as `Badge`/translucent
+   * `Navbar`). Pair with a translucent/tinted `backgroundColor` so the blur
+   * reads through. @default false
+   */
+  translucent?: boolean;
 }
 
 /**
@@ -69,9 +75,18 @@ export const Box: React.FC<BoxProps> = (props) => {
     onDragStart,
     onDragEnd,
     tabIndex,
+    translucent = false,
   } = props;
 
-  const style: CSSProperties = { ...buildStyleProps(props), ...styles };
+  const style: CSSProperties = {
+    ...buildStyleProps(props),
+    // Same backdrop blur as the translucent Navbar / Badge. The
+    // translucent/tinted background lets the blur read through.
+    ...(translucent
+      ? { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }
+      : {}),
+    ...styles,
+  };
 
   return (
     <div

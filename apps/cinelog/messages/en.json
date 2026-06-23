@@ -140,7 +140,6 @@
     "dvd": "DVD",
     "bluray": "Blu-ray",
     "4k": "4K",
-    "ultraHd4k": "4K ULTRA HD",
     "other": "Other"
   },
   "CatalogPage": {
@@ -215,7 +214,8 @@
     "fetchingSynopsis": "Fetching synopsis…",
     "fetchingTrailer": "Fetching trailer…",
     "synopsisError": "Couldn't find a synopsis for this movie.",
-    "trailerError": "Couldn't find a trailer for this movie."
+    "trailerError": "Couldn't find a trailer for this movie.",
+    "related": "Related movies"
   },
   "InboxPage": {
     "title": "Inbox",

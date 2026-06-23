@@ -13,19 +13,39 @@
 
 /* Hover fill color per semantic kind. */
 .ui-icon-button--default {
-  --icon-button-fill: color-mix(in srgb, var(--foreground, #111) 14%, transparent);
+  --icon-button-fill: color-mix(
+    in srgb,
+    var(--foreground, #111) 14%,
+    transparent
+  );
 }
 .ui-icon-button--primary {
-  --icon-button-fill: color-mix(in srgb, var(--accent, #06b6d4) 24%, transparent);
+  --icon-button-fill: color-mix(
+    in srgb,
+    var(--accent, #06b6d4) 24%,
+    transparent
+  );
 }
 .ui-icon-button--error {
-  --icon-button-fill: color-mix(in srgb, var(--error, #ef4444) 16%, transparent);
+  --icon-button-fill: color-mix(
+    in srgb,
+    var(--error, #ef4444) 16%,
+    transparent
+  );
 }
 .ui-icon-button--success {
-  --icon-button-fill: color-mix(in srgb, var(--success, #16a34a) 16%, transparent);
+  --icon-button-fill: color-mix(
+    in srgb,
+    var(--success, #16a34a) 16%,
+    transparent
+  );
 }
 .ui-icon-button--warning {
-  --icon-button-fill: color-mix(in srgb, var(--warning, #d97706) 16%, transparent);
+  --icon-button-fill: color-mix(
+    in srgb,
+    var(--warning, #d97706) 16%,
+    transparent
+  );
 }
 
 /* Radial fill that expands from the center on hover and stays for as long as

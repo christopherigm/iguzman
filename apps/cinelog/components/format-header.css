@@ -1,11 +1,10 @@
 /* Responsive sizing for <FormatHeader size={{ ... }} />.
- * The component sets per-breakpoint source variables (--fh-h/-i/-f-{bp}) inline;
+ * The component sets per-breakpoint source variables (--fh-h/-i-{bp}) inline;
  * this cascade maps them onto the consumed variables the element reads via props
- * (height/icon size/font-size). Static (non-responsive) sizes skip this class. */
+ * (height/icon size). Static (non-responsive) sizes skip this class. */
 .format-header {
   --fh-height: var(--fh-h-xs);
   --fh-icon: var(--fh-i-xs);
-  --fh-font: var(--fh-f-xs);
 }
 
 @media (min-width: 600px) {
@@ -13,7 +12,6 @@
   .format-header {
     --fh-height: var(--fh-h-sm);
     --fh-icon: var(--fh-i-sm);
-    --fh-font: var(--fh-f-sm);
   }
 }
 
@@ -22,7 +20,6 @@
   .format-header {
     --fh-height: var(--fh-h-md);
     --fh-icon: var(--fh-i-md);
-    --fh-font: var(--fh-f-md);
   }
 }
 
@@ -31,7 +28,6 @@
   .format-header {
     --fh-height: var(--fh-h-lg);
     --fh-icon: var(--fh-i-lg);
-    --fh-font: var(--fh-f-lg);
   }
 }
 
@@ -40,6 +36,5 @@
   .format-header {
     --fh-height: var(--fh-h-xl);
     --fh-icon: var(--fh-i-xl);
-    --fh-font: var(--fh-f-xl);
   }
 }

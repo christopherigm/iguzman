@@ -140,7 +140,6 @@
     "dvd": "DVD",
     "bluray": "Blu-ray",
     "4k": "4K",
-    "ultraHd4k": "4K ULTRA HD",
     "other": "Andere"
   },
   "CatalogPage": {
@@ -215,7 +214,8 @@
     "fetchingSynopsis": "Handlung wird abgerufen…",
     "fetchingTrailer": "Trailer wird abgerufen…",
     "synopsisError": "Für diesen Film wurde keine Handlung gefunden.",
-    "trailerError": "Für diesen Film wurde kein Trailer gefunden."
+    "trailerError": "Für diesen Film wurde kein Trailer gefunden.",
+    "related": "Ähnliche Filme"
   },
   "InboxPage": {
     "title": "Posteingang",
