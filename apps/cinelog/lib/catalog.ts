@@ -84,9 +84,12 @@ export interface MovieFilters {
 // dropdown fetches them in a single page rather than paginating.
 const CATEGORY_PAGE_SIZE = 200;
 
-export async function getMovies(
-  filters: MovieFilters = {},
-): Promise<Paginated<Movie>> {
+/**
+ * Build the API query string for the movies endpoint from catalog filters.
+ * Shared by the client `getMovies` fetch and the server-side prefetch in
+ * `app/[locale]/page.tsx`, so both hit the API with identical params.
+ */
+export function buildMovieQuery(filters: MovieFilters = {}): string {
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
   // Repeated `genre` params — the API ANDs them (movie must match every slug).
@@ -96,14 +99,87 @@ export async function getMovies(
   if (filters.sort) params.set("ordering", filters.sort);
   if (filters.page && filters.page > 1)
     params.set("page", String(filters.page));
-  const qs = params.toString();
+  return params.toString();
+}
 
+export async function getMovies(
+  filters: MovieFilters = {},
+): Promise<Paginated<Movie>> {
+  const qs = buildMovieQuery(filters);
   const res = await fetch(`/api/catalog/movies${qs ? `?${qs}` : ""}`);
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
   }
   return res.json() as Promise<Paginated<Movie>>;
+}
+
+export type CatalogView = "grid" | "list";
+
+/**
+ * Catalog state encoded in the page URL's query string: filters, sort, page and
+ * view. Keeping it in the URL (rather than sessionStorage) makes a catalog view
+ * shareable and bookmarkable and lets the server prefetch the exact grid.
+ */
+export interface CatalogParams {
+  search: string;
+  genres: string[];
+  format: MovieFormat;
+  sort: MovieSort;
+  page: number;
+  view: CatalogView;
+}
+
+const VALID_FORMATS: MovieFormat[] = ["dvd", "bluray", "4k", "other"];
+const VALID_SORTS: MovieSort[] = [
+  "title",
+  "-title",
+  "year",
+  "-year",
+  "format",
+  "created",
+  "-created",
+];
+
+/**
+ * Parse catalog filters/sort/page/view from a URL query string (friendly param
+ * names: `q`, `genre`, `format`, `sort`, `page`, `view`). Used by both the
+ * server page (to prefetch) and the client catalog (to seed its initial state),
+ * so a shared link reproduces the same grid. Unknown or malformed values fall
+ * back to defaults since the query string is user-editable.
+ */
+export function parseCatalogParams(sp: URLSearchParams): CatalogParams {
+  const rawFormat = sp.get("format") ?? "";
+  const rawSort = sp.get("sort") ?? "";
+  const pageNum = Number.parseInt(sp.get("page") ?? "", 10);
+  return {
+    search: sp.get("q")?.trim() ?? "",
+    genres: sp.getAll("genre"),
+    format: (VALID_FORMATS as string[]).includes(rawFormat)
+      ? (rawFormat as MovieFormat)
+      : "",
+    sort: (VALID_SORTS as string[]).includes(rawSort)
+      ? (rawSort as MovieSort)
+      : "",
+    page: Number.isFinite(pageNum) && pageNum > 1 ? pageNum : 1,
+    view: sp.get("view") === "list" ? "list" : "grid",
+  };
+}
+
+/**
+ * Encode catalog state into a URL query string. Defaults (page 1, grid view,
+ * empty filters/sort) are omitted to keep the bare catalog URL clean. Inverse
+ * of `parseCatalogParams`.
+ */
+export function buildCatalogQuery(p: CatalogParams): string {
+  const params = new URLSearchParams();
+  if (p.search) params.set("q", p.search);
+  p.genres.forEach((slug) => params.append("genre", slug));
+  if (p.format) params.set("format", p.format);
+  if (p.sort) params.set("sort", p.sort);
+  if (p.page > 1) params.set("page", String(p.page));
+  if (p.view !== "grid") params.set("view", p.view);
+  return params.toString();
 }
 
 export async function getMovie(id: string | number): Promise<MovieDetail> {

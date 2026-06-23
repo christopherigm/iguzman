@@ -311,7 +311,18 @@ export function MovieDetail({
         flexWrap="wrap"
         gap={8}
       >
-        <Button text={t("back")} icon="/icons/return.svg" href="/" size="md" />
+        <Button
+          text={t("back")}
+          icon="/icons/return.svg"
+          size="md"
+          onClick={() => {
+            // Return to the exact catalog the user came from (its URL carries
+            // the filters/sort/page, and the browser restores scroll). Fall
+            // back to home on a direct/deep link with no in-app history.
+            if (window.history.length > 1) router.back();
+            else router.push("/");
+          }}
+        />
         {!editing && (movie.trailer_url || isLoggedIn) && (
           <Box display="flex" gap={8} flexWrap="wrap">
             {isLoggedIn && (

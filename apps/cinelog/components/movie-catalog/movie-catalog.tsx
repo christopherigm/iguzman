@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
@@ -10,6 +11,8 @@ import { Spinner } from "@repo/ui/core-elements/spinner";
 import {
   getMovies,
   getCategories,
+  buildCatalogQuery,
+  parseCatalogParams,
   type Category,
   type Movie,
   type MovieFormat,
@@ -25,85 +28,60 @@ type Status = "loading" | "ready" | "error";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
-// Persist the catalog's page, filters, view and scroll position for the
-// lifetime of the tab so that returning from a movie's detail page (the
-// "Back to catalog" / home link remounts this component) lands the user back
-// on the exact page and scroll offset they left from. Page state is stored
-// together with its filters because a page number is only meaningful relative
-// to the filters that produced it.
-const STORAGE_KEY = "cinelog:catalog-state";
+// The catalog's page, filters, sort and view live in the URL query string so a
+// view is shareable/bookmarkable and the server can prefetch the exact grid on
+// first paint (see app/[locale]/page.tsx). Only the scroll offset stays in
+// sessionStorage — it's per-tab and meaningless in a shared link — and is
+// restored when returning to the catalog (e.g. browser-back from a detail page).
+const SCROLL_KEY = "cinelog:catalog-scroll";
 const SCROLL_PERSIST_MS = 150;
 
-type CatalogSnapshot = {
-  page: number;
-  search: string;
-  genres: string[];
-  format: MovieFormat;
-  sort: MovieSort;
-  view: ViewMode;
-  scrollY: number;
-};
-
-function readSnapshot(): CatalogSnapshot | null {
-  if (typeof window === "undefined") return null;
+function readScroll(): number {
+  if (typeof window === "undefined") return 0;
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as CatalogSnapshot) : null;
+    return Number(sessionStorage.getItem(SCROLL_KEY)) || 0;
   } catch {
-    return null;
+    return 0;
   }
-}
-
-// The server prefetch always represents the default view: first page, no search,
-// genre, format or sort. We can only seed the grid from it when the restored
-// snapshot also points at that default view; otherwise the snapshot's page/
-// filters drive a normal client fetch.
-function isDefaultView(s: CatalogSnapshot | null): boolean {
-  if (!s) return true;
-  return (
-    s.page === 1 &&
-    s.search.trim() === "" &&
-    (s.genres ?? []).length === 0 &&
-    s.format === "" &&
-    s.sort === ""
-  );
 }
 
 export function MovieCatalog({
   initialMovies = null,
   initialCategories = null,
 }: {
-  /** Server-prefetched first page (default filters); seeds the first paint. */
+  /** Server-prefetched page for the URL's view; seeds the first paint. */
   initialMovies?: Paginated<Movie> | null;
   /** Server-prefetched genre list; skips the client categories fetch. */
   initialCategories?: Category[] | null;
 } = {}) {
   const t = useTranslations("CatalogPage");
-  // Read the persisted snapshot once, on first render, so the state below can
-  // be seeded from it without re-parsing sessionStorage on every render.
-  const [snapshot] = useState(readSnapshot);
-  // Use the server-prefetched movies only when the restored view is the default
-  // one they represent; otherwise fall through to a client fetch.
-  const seedFromPrefetch = initialMovies !== null && isDefaultView(snapshot);
+  const searchParams = useSearchParams();
+  // Seed all filter/sort/page/view state from the URL once, on first render.
+  // The server prefetched movies for this exact query, so the grid can paint
+  // from `initialMovies` without a client round-trip.
+  const [initial] = useState(() =>
+    parseCatalogParams(new URLSearchParams(searchParams.toString())),
+  );
+  // The server prefetch now mirrors the URL's view, so any non-null result can
+  // seed the grid directly — no "is this the default view?" check needed.
+  const seedFromPrefetch = initialMovies !== null;
   const [movies, setMovies] = useState<Movie[]>(
     seedFromPrefetch ? initialMovies.results : [],
   );
   const [status, setStatus] = useState<Status>(
     seedFromPrefetch ? "ready" : "loading",
   );
-  const [view, setView] = useState<ViewMode>(snapshot?.view ?? "grid");
+  const [view, setView] = useState<ViewMode>(initial.view);
   const [categories, setCategories] = useState<Category[]>(
     initialCategories ?? [],
   );
 
-  const [search, setSearch] = useState(snapshot?.search ?? "");
-  const [debouncedSearch, setDebouncedSearch] = useState(
-    snapshot?.search.trim() ?? "",
-  );
-  const [genres, setGenres] = useState<string[]>(snapshot?.genres ?? []);
-  const [format, setFormat] = useState<MovieFormat>(snapshot?.format ?? "");
-  const [sort, setSort] = useState<MovieSort>(snapshot?.sort ?? "");
-  const [page, setPage] = useState(snapshot?.page ?? 1);
+  const [search, setSearch] = useState(initial.search);
+  const [debouncedSearch, setDebouncedSearch] = useState(initial.search);
+  const [genres, setGenres] = useState<string[]>(initial.genres);
+  const [format, setFormat] = useState<MovieFormat>(initial.format);
+  const [sort, setSort] = useState<MovieSort>(initial.sort);
+  const [page, setPage] = useState(initial.page);
   const [totalPages, setTotalPages] = useState(
     seedFromPrefetch ? initialMovies.total_pages : 1,
   );
@@ -157,8 +135,8 @@ export function MovieCatalog({
   }, [search]);
 
   useEffect(() => {
-    // First run after a server-seeded mount: the grid already holds the default
-    // page, so skip the redundant fetch (subsequent filter/page changes fetch).
+    // First run after a server-seeded mount: the grid already holds the page
+    // the URL asked for, so skip the redundant fetch (later changes do fetch).
     if (skipInitialFetch.current) {
       skipInitialFetch.current = false;
       return;
@@ -180,27 +158,31 @@ export function MovieCatalog({
     };
   }, [debouncedSearch, genres, format, sort, page]);
 
-  // Keep the latest page/filter/view values in a ref so the scroll listener
-  // can write a complete snapshot without re-subscribing on every change.
-  const persistedRef = useRef({ page, search, genres, format, sort, view });
+  // Mirror the current filters/sort/page/view into the URL so the view is
+  // shareable and survives a refresh. history.replaceState updates the address
+  // bar WITHOUT a Next.js navigation — no server round-trip, no double fetch —
+  // while keeping useSearchParams in sync. Uses debouncedSearch so typing
+  // doesn't churn the URL on every keystroke.
+  useEffect(() => {
+    const qs = buildCatalogQuery({
+      search: debouncedSearch,
+      genres,
+      format,
+      sort,
+      page,
+      view,
+    });
+    const url = qs ? `?${qs}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }, [debouncedSearch, genres, format, sort, page, view]);
 
-  const persist = useCallback((scrollY: number) => {
+  const persistScroll = useCallback((scrollY: number) => {
     try {
-      sessionStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ ...persistedRef.current, scrollY }),
-      );
+      sessionStorage.setItem(SCROLL_KEY, String(scrollY));
     } catch {
       // sessionStorage may be unavailable (private mode / quota) — non-fatal.
     }
   }, []);
-
-  // Sync the ref and persist immediately whenever the page, filters or view
-  // change so the snapshot is current even if the user leaves without scrolling.
-  useEffect(() => {
-    persistedRef.current = { page, search, genres, format, sort, view };
-    persist(window.scrollY);
-  }, [page, search, genres, format, sort, view, persist]);
 
   // Throttle scroll writes so the latest offset is captured before navigation.
   useEffect(() => {
@@ -209,7 +191,7 @@ export function MovieCatalog({
       if (timer) return;
       timer = setTimeout(() => {
         timer = null;
-        persist(window.scrollY);
+        persistScroll(window.scrollY);
       }, SCROLL_PERSIST_MS);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -217,18 +199,17 @@ export function MovieCatalog({
       window.removeEventListener("scroll", onScroll);
       if (timer) clearTimeout(timer);
     };
-  }, [persist]);
+  }, [persistScroll]);
 
   // Restore the saved scroll offset once, after the first batch of movies has
   // rendered (the grid reserves height via aspect-ratio, so layout is stable).
+  const [initialScroll] = useState(readScroll);
   const didRestoreScroll = useRef(false);
   useEffect(() => {
     if (status !== "ready" || didRestoreScroll.current) return;
     didRestoreScroll.current = true;
-    if (snapshot && snapshot.scrollY > 0) {
-      window.scrollTo(0, snapshot.scrollY);
-    }
-  }, [status, snapshot]);
+    if (initialScroll > 0) window.scrollTo(0, initialScroll);
+  }, [status, initialScroll]);
 
   return (
     <Box flexDirection="column" gap={16} paddingY={16}>

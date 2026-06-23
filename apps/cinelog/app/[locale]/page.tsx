@@ -2,23 +2,49 @@ import { setRequestLocale } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
 import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
 import { apiFetch } from "@/lib/api-fetch";
-import type { Category, Movie, Paginated } from "@/lib/catalog";
+import {
+  buildMovieQuery,
+  parseCatalogParams,
+  type Category,
+  type Movie,
+  type MovieFilters,
+  type Paginated,
+} from "@/lib/catalog";
 import { MovieCatalog } from "@/components/movie-catalog/movie-catalog";
 
-type Props = { params: Promise<{ locale: string }> };
+type Props = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 // Categories are bounded, so the genre dropdown loads them in a single page.
 const CATEGORY_PAGE_SIZE = 200;
 
+/** Convert Next's searchParams object into a URLSearchParams for parsing. */
+function toSearchParams(
+  sp: Record<string, string | string[] | undefined>,
+): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp)) {
+    if (Array.isArray(value)) value.forEach((v) => params.append(key, v));
+    else if (value !== undefined) params.set(key, value);
+  }
+  return params;
+}
+
 /**
- * Prefetch the default (unfiltered, first-page) catalog on the server so the
- * home page renders the grid on first paint instead of after a client
- * round-trip. The Django endpoint is Redis-backed, so this stays cheap. Returns
- * null on any failure so the client component falls back to its own fetch.
+ * Prefetch the catalog for the exact view described by the URL (filters, sort,
+ * page) on the server so the home page renders the grid on first paint instead
+ * of after a client round-trip. The Django endpoint is Redis-backed, so this
+ * stays cheap. Returns null on any failure so the client falls back to its own
+ * fetch.
  */
-async function prefetchMovies(): Promise<Paginated<Movie> | null> {
+async function prefetchMovies(
+  filters: MovieFilters,
+): Promise<Paginated<Movie> | null> {
   try {
-    const res = await apiFetch("/api/catalog/movies/", {
+    const qs = buildMovieQuery(filters);
+    const res = await apiFetch(`/api/catalog/movies/${qs ? `?${qs}` : ""}`, {
       cache: "no-store",
       allowAnonymous: true,
     });
@@ -44,12 +70,14 @@ async function prefetchCategories(): Promise<Category[] | null> {
   }
 }
 
-export default async function Home({ params }: Props) {
+export default async function Home({ params, searchParams }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
+  const filters = parseCatalogParams(toSearchParams(await searchParams));
+
   const [initialMovies, initialCategories] = await Promise.all([
-    prefetchMovies(),
+    prefetchMovies(filters),
     prefetchCategories(),
   ]);
 
