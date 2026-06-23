@@ -322,6 +322,7 @@ export function MovieDetail({
             if (window.history.length > 1) router.back();
             else router.push("/");
           }}
+          translucent
         />
         {!editing && (movie.trailer_url || isLoggedIn) && (
           <Box display="flex" gap={8} flexWrap="wrap">
@@ -335,6 +336,7 @@ export function MovieDetail({
                   size="md"
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={deleting}
+                  translucent
                 />
                 <IconButton
                   icon="/icons/edit.svg"
@@ -344,6 +346,7 @@ export function MovieDetail({
                   size="md"
                   onClick={() => setEditing(true)}
                   disabled={deleting}
+                  translucent
                 />
               </>
             )}
@@ -355,6 +358,7 @@ export function MovieDetail({
                 onClick={handleTrailerClick}
                 disabled={deleting}
                 kind="primary"
+                translucent
               />
             )}
           </Box>

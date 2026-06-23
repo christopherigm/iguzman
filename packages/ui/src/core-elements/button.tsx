@@ -135,6 +135,13 @@ export interface ButtonProps extends UIComponentProps {
    * its text to wrap when space is tight.
    */
   shrink?: boolean;
+  /**
+   * When `true`, the default-kind button applies a `backdrop-filter: blur(8px)`
+   * so it blends into a translucent surface (e.g. inside a translucent Navbar).
+   * Defaults to `false` — backdrop blur is expensive to composite while
+   * scrolling, so it is opt-in and only affects the default (neutral) kind.
+   */
+  translucent?: boolean;
 }
 
 /**
@@ -165,6 +172,7 @@ export const Button: React.FC<ButtonProps> = (props) => {
     iconColor,
     isLoading,
     shrink = false,
+    translucent = false,
   } = props;
   const [isHovered, setIsHovered] = React.useState(false);
 
@@ -222,16 +230,16 @@ export const Button: React.FC<ButtonProps> = (props) => {
       content
     );
 
-  // Default/undefined kind gets the same backdrop blur as the translucent
-  // Navbar (see navbar.css → .ui-navbar--translucent). Its faint background
-  // tint lets the blur read through.
+  // Opt-in backdrop blur for the default (neutral) kind on translucent
+  // surfaces (e.g. inside a translucent Navbar). Off by default: backdrop-filter
+  // re-samples the backdrop every frame and is a major scroll-jank source.
   const isDefaultKind = (kind ?? "default") === "default";
 
   const defaultStyle: CSSProperties = {
     ...SIZE_STYLES[size],
     ...iconFlexDefaults,
     ...KIND_STYLES[isDisabled ? "default" : (kind ?? "default")],
-    ...(isDefaultKind
+    ...(isDefaultKind && translucent
       ? { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }
       : {}),
     border: "none",

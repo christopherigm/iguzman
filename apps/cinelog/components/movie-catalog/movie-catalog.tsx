@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
@@ -55,7 +55,11 @@ export function MovieCatalog({
   initialCategories?: Category[] | null;
 } = {}) {
   const t = useTranslations("CatalogPage");
+  const router = useRouter();
   const searchParams = useSearchParams();
+  // Filter changes drive a router.replace; the transition keeps the current
+  // grid on screen (no spinner flash) until the server returns the new page.
+  const [isPending, startTransition] = useTransition();
   // Seed all filter/sort/page/view state from the URL once, on first render.
   // The server prefetched movies for this exact query, so the grid can paint
   // from `initialMovies` without a client round-trip.
@@ -88,9 +92,6 @@ export function MovieCatalog({
   const [totalCount, setTotalCount] = useState(
     seedFromPrefetch ? initialMovies.count : 0,
   );
-  // Skip the first client fetch when the grid was seeded from the server, the
-  // same way the detail page short-circuits its mount fetch on prefetched data.
-  const skipInitialFetch = useRef(seedFromPrefetch);
 
   const isFiltered =
     debouncedSearch !== "" || genres.length > 0 || format !== "";
@@ -134,13 +135,30 @@ export function MovieCatalog({
     return () => clearTimeout(timer);
   }, [search]);
 
+  // The grid is server-driven: a filter change pushes the new query into the URL
+  // (effect below), Next re-runs the page's prefetch, and the fresh page arrives
+  // as a new `initialMovies` prop. Re-seed from it whenever it changes so the
+  // grid follows the URL — including on browser-back from a detail page, where
+  // the router restores the filtered URL and the server prefetches that view.
+  // Done during render (React's "adjust state on prop change" pattern) rather
+  // than in an effect, so the grid updates in the same commit with no extra
+  // render and no cascading-setState lint warning.
+  const [seededFrom, setSeededFrom] = useState(initialMovies);
+  if (initialMovies && initialMovies !== seededFrom) {
+    setSeededFrom(initialMovies);
+    setMovies(initialMovies.results);
+    setTotalPages(initialMovies.total_pages);
+    setTotalCount(initialMovies.count);
+    setStatus("ready");
+  }
+
+  // Fallback for when the server prefetch failed (initialMovies is null): fetch
+  // the current view on the client so the catalog still renders. The happy path
+  // above is server-driven and never enters this effect. Loading feedback comes
+  // from the initial "loading" status (mount) and the router transition's
+  // isPending dim (filter changes), so no synchronous setState is needed here.
   useEffect(() => {
-    // First run after a server-seeded mount: the grid already holds the page
-    // the URL asked for, so skip the redundant fetch (later changes do fetch).
-    if (skipInitialFetch.current) {
-      skipInitialFetch.current = false;
-      return;
-    }
+    if (initialMovies) return;
     let active = true;
     getMovies({ search: debouncedSearch, genres, format, sort, page })
       .then((data) => {
@@ -156,13 +174,15 @@ export function MovieCatalog({
     return () => {
       active = false;
     };
-  }, [debouncedSearch, genres, format, sort, page]);
+  }, [initialMovies, debouncedSearch, genres, format, sort, page]);
 
-  // Mirror the current filters/sort/page/view into the URL so the view is
-  // shareable and survives a refresh. history.replaceState updates the address
-  // bar WITHOUT a Next.js navigation — no server round-trip, no double fetch —
-  // while keeping useSearchParams in sync. Uses debouncedSearch so typing
-  // doesn't churn the URL on every keystroke.
+  // Mirror the current filters/sort/page/view into the URL via the Next router
+  // so the view is shareable, survives a refresh, AND is restored on browser
+  // back/forward. router.replace (not history.replaceState) registers the
+  // filtered URL as the canonical entry, so the App Router re-runs the page's
+  // server prefetch for these params instead of replaying a stale cached `/`.
+  // Skips when already in sync (mount, back-restore) so it only fires on a real
+  // filter change; uses debouncedSearch so typing doesn't churn the URL.
   useEffect(() => {
     const qs = buildCatalogQuery({
       search: debouncedSearch,
@@ -172,9 +192,10 @@ export function MovieCatalog({
       page,
       view,
     });
-    const url = qs ? `?${qs}` : window.location.pathname;
-    window.history.replaceState(null, "", url);
-  }, [debouncedSearch, genres, format, sort, page, view]);
+    if (qs === window.location.search.replace(/^\?/, "")) return;
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    startTransition(() => router.replace(url, { scroll: false }));
+  }, [debouncedSearch, genres, format, sort, page, view, router]);
 
   const persistScroll = useCallback((scrollY: number) => {
     try {
@@ -263,7 +284,12 @@ export function MovieCatalog({
       )}
 
       {status === "ready" && movies.length > 0 && view === "grid" && (
-        <Grid container spacing={1} marginTop={12}>
+        <Grid
+          container
+          spacing={1}
+          marginTop={12}
+          styles={{ opacity: isPending ? 0.5 : 1, transition: "opacity 150ms" }}
+        >
           {movies.map((movie) => (
             <Grid key={movie.id} size={{ xs: 6, sm: 4, md: 3, lg: 2 }}>
               <MovieCard movie={movie} view="grid" />
@@ -273,7 +299,13 @@ export function MovieCatalog({
       )}
 
       {status === "ready" && movies.length > 0 && view === "list" && (
-        <Grid container flexDirection="column" spacing={1} marginTop={12}>
+        <Grid
+          container
+          flexDirection="column"
+          spacing={1}
+          marginTop={12}
+          styles={{ opacity: isPending ? 0.5 : 1, transition: "opacity 150ms" }}
+        >
           {movies.map((movie) => (
             <MovieCard key={movie.id} movie={movie} view="list" />
           ))}

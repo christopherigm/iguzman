@@ -106,6 +106,13 @@ export interface IconButtonProps extends UIComponentProps {
   title?: string;
   /** Shows a loading spinner and disables the button while true. */
   isLoading?: boolean;
+  /**
+   * When `true`, applies a `backdrop-filter: blur(8px)` so the button blends
+   * into a translucent surface (e.g. inside a translucent Navbar). Defaults to
+   * `false` — backdrop blur is expensive to composite while scrolling, so it is
+   * opt-in and should only be enabled over a genuinely translucent backdrop.
+   */
+  translucent?: boolean;
   /** Indicates whether a toggle button is currently pressed. */
   "aria-pressed"?: boolean;
   /** Indicates whether a control is expanded or collapsed. */
@@ -139,6 +146,7 @@ export const IconButton: React.FC<IconButtonProps> = (props) => {
     iconSize,
     iconColor,
     isLoading,
+    translucent = false,
   } = props;
 
   const ariaLabel = props["aria-label"];
@@ -166,11 +174,12 @@ export const IconButton: React.FC<IconButtonProps> = (props) => {
     flexShrink: 0,
     border: "none",
     backgroundColor: KIND_BACKGROUNDS[kind],
-    // Always apply the same backdrop blur as the translucent Navbar (see
-    // navbar.css → .ui-navbar--translucent), regardless of kind. The faint
-    // per-kind background tint lets the blur read through.
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
+    // Opt-in backdrop blur for translucent surfaces (e.g. inside a translucent
+    // Navbar). Off by default: backdrop-filter re-samples the backdrop every
+    // frame and is a major scroll-jank source when many buttons are on screen.
+    ...(translucent
+      ? { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }
+      : {}),
     cursor: "pointer",
     textDecoration: "none",
     position: "relative",

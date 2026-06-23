@@ -310,6 +310,7 @@ export function MovieEditForm({
             size="md"
             onClick={onCancel}
             disabled={busy}
+            translucent
           />
           <Button
             text={t("save")}
