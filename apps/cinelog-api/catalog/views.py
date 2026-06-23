@@ -77,9 +77,15 @@ class MovieListView(ListCreateAPIView):
                 Q(title__icontains=search) | Q(director__icontains=search)
             )
 
-        genre = self.request.query_params.get('genre', '').strip()
-        if genre:
-            qs = qs.filter(genres__slug=genre)
+        # `?genre=` may repeat; a movie must belong to ALL selected genres, so
+        # each slug needs its own filter (chaining adds an independent join per
+        # genre, giving AND semantics across the m2m).
+        genres = [g.strip() for g in self.request.query_params.getlist('genre')]
+        genres = [g for g in genres if g]
+        for slug in genres:
+            qs = qs.filter(genres__slug=slug)
+        if genres:
+            qs = qs.distinct()
 
         # Named "media_format" (not "format") to avoid colliding with DRF's
         # `?format=` content-negotiation override.

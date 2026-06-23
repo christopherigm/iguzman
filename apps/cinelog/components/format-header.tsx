@@ -12,7 +12,7 @@ import "./format-header.css";
 const FORMAT_HEADER: Partial<
   Record<MovieFormat, { icon: string; background: string }>
 > = {
-  bluray: { icon: "/icons/blu-ray.svg", background: "#0033a1" },
+  bluray: { icon: "/icons/blu-ray.svg", background: "#0040cb" },
   "4k": { icon: "/icons/blu-ray.svg", background: "#000000" },
   dvd: { icon: "/icons/dvd.svg", background: "#6b7280" },
 };

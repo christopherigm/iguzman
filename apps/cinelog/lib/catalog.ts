@@ -73,7 +73,8 @@ export interface Paginated<T> {
 
 export interface MovieFilters {
   search?: string;
-  genre?: string;
+  /** Genre slugs; a movie must match ALL of them (AND semantics). */
+  genres?: string[];
   format?: MovieFormat;
   sort?: MovieSort;
   page?: number;
@@ -88,7 +89,8 @@ export async function getMovies(
 ): Promise<Paginated<Movie>> {
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
-  if (filters.genre) params.set("genre", filters.genre);
+  // Repeated `genre` params — the API ANDs them (movie must match every slug).
+  filters.genres?.forEach((slug) => params.append("genre", slug));
   // Sent as "media_format" - DRF reserves the "format" query param for content negotiation.
   if (filters.format) params.set("media_format", filters.format);
   if (filters.sort) params.set("ordering", filters.sort);

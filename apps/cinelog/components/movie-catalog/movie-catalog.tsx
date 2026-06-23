@@ -14,6 +14,7 @@ import {
   type Movie,
   type MovieFormat,
   type MovieSort,
+  type Paginated,
 } from "@/lib/catalog";
 import { MovieCard } from "./movie-card";
 import { MovieFilters } from "./movie-filters";
@@ -36,7 +37,7 @@ const SCROLL_PERSIST_MS = 150;
 type CatalogSnapshot = {
   page: number;
   search: string;
-  genre: string;
+  genres: string[];
   format: MovieFormat;
   sort: MovieSort;
   view: ViewMode;
@@ -53,36 +54,79 @@ function readSnapshot(): CatalogSnapshot | null {
   }
 }
 
-export function MovieCatalog() {
+// The server prefetch always represents the default view: first page, no search,
+// genre, format or sort. We can only seed the grid from it when the restored
+// snapshot also points at that default view; otherwise the snapshot's page/
+// filters drive a normal client fetch.
+function isDefaultView(s: CatalogSnapshot | null): boolean {
+  if (!s) return true;
+  return (
+    s.page === 1 &&
+    s.search.trim() === "" &&
+    (s.genres ?? []).length === 0 &&
+    s.format === "" &&
+    s.sort === ""
+  );
+}
+
+export function MovieCatalog({
+  initialMovies = null,
+  initialCategories = null,
+}: {
+  /** Server-prefetched first page (default filters); seeds the first paint. */
+  initialMovies?: Paginated<Movie> | null;
+  /** Server-prefetched genre list; skips the client categories fetch. */
+  initialCategories?: Category[] | null;
+} = {}) {
   const t = useTranslations("CatalogPage");
   // Read the persisted snapshot once, on first render, so the state below can
   // be seeded from it without re-parsing sessionStorage on every render.
   const [snapshot] = useState(readSnapshot);
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [status, setStatus] = useState<Status>("loading");
+  // Use the server-prefetched movies only when the restored view is the default
+  // one they represent; otherwise fall through to a client fetch.
+  const seedFromPrefetch = initialMovies !== null && isDefaultView(snapshot);
+  const [movies, setMovies] = useState<Movie[]>(
+    seedFromPrefetch ? initialMovies.results : [],
+  );
+  const [status, setStatus] = useState<Status>(
+    seedFromPrefetch ? "ready" : "loading",
+  );
   const [view, setView] = useState<ViewMode>(snapshot?.view ?? "grid");
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(
+    initialCategories ?? [],
+  );
 
   const [search, setSearch] = useState(snapshot?.search ?? "");
   const [debouncedSearch, setDebouncedSearch] = useState(
     snapshot?.search.trim() ?? "",
   );
-  const [genre, setGenre] = useState(snapshot?.genre ?? "");
+  const [genres, setGenres] = useState<string[]>(snapshot?.genres ?? []);
   const [format, setFormat] = useState<MovieFormat>(snapshot?.format ?? "");
   const [sort, setSort] = useState<MovieSort>(snapshot?.sort ?? "");
   const [page, setPage] = useState(snapshot?.page ?? 1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(
+    seedFromPrefetch ? initialMovies.total_pages : 1,
+  );
+  const [totalCount, setTotalCount] = useState(
+    seedFromPrefetch ? initialMovies.count : 0,
+  );
+  // Skip the first client fetch when the grid was seeded from the server, the
+  // same way the detail page short-circuits its mount fetch on prefetched data.
+  const skipInitialFetch = useRef(seedFromPrefetch);
 
-  const isFiltered = debouncedSearch !== "" || genre !== "" || format !== "";
+  const isFiltered =
+    debouncedSearch !== "" || genres.length > 0 || format !== "";
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPage(1);
   };
 
-  const handleGenreChange = (value: string) => {
-    setGenre(value);
+  // Toggle a genre slug in/out of the AND-filtered selection.
+  const handleGenreToggle = (slug: string) => {
+    setGenres((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
     setPage(1);
   };
 
@@ -97,10 +141,12 @@ export function MovieCatalog() {
   };
 
   useEffect(() => {
+    // Already seeded from the server prefetch — no client round-trip needed.
+    if (initialCategories) return;
     getCategories()
       .then(setCategories)
       .catch(() => undefined);
-  }, []);
+  }, [initialCategories]);
 
   useEffect(() => {
     const timer = setTimeout(
@@ -111,8 +157,14 @@ export function MovieCatalog() {
   }, [search]);
 
   useEffect(() => {
+    // First run after a server-seeded mount: the grid already holds the default
+    // page, so skip the redundant fetch (subsequent filter/page changes fetch).
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
     let active = true;
-    getMovies({ search: debouncedSearch, genre, format, sort, page })
+    getMovies({ search: debouncedSearch, genres, format, sort, page })
       .then((data) => {
         if (!active) return;
         setMovies(data.results);
@@ -126,11 +178,11 @@ export function MovieCatalog() {
     return () => {
       active = false;
     };
-  }, [debouncedSearch, genre, format, sort, page]);
+  }, [debouncedSearch, genres, format, sort, page]);
 
   // Keep the latest page/filter/view values in a ref so the scroll listener
   // can write a complete snapshot without re-subscribing on every change.
-  const persistedRef = useRef({ page, search, genre, format, sort, view });
+  const persistedRef = useRef({ page, search, genres, format, sort, view });
 
   const persist = useCallback((scrollY: number) => {
     try {
@@ -146,9 +198,9 @@ export function MovieCatalog() {
   // Sync the ref and persist immediately whenever the page, filters or view
   // change so the snapshot is current even if the user leaves without scrolling.
   useEffect(() => {
-    persistedRef.current = { page, search, genre, format, sort, view };
+    persistedRef.current = { page, search, genres, format, sort, view };
     persist(window.scrollY);
-  }, [page, search, genre, format, sort, view, persist]);
+  }, [page, search, genres, format, sort, view, persist]);
 
   // Throttle scroll writes so the latest offset is captured before navigation.
   useEffect(() => {
@@ -195,14 +247,15 @@ export function MovieCatalog() {
           icon={view === "grid" ? "/icons/list.svg" : "/icons/grid.svg"}
           aria-label={view === "grid" ? t("listView") : t("gridView")}
           onClick={() => setView(view === "grid" ? "list" : "grid")}
+          size="sm"
         />
       </Box>
 
       <MovieFilters
         search={search}
         onSearchChange={handleSearchChange}
-        genre={genre}
-        onGenreChange={handleGenreChange}
+        selectedGenres={genres}
+        onGenreToggle={handleGenreToggle}
         format={format}
         onFormatChange={handleFormatChange}
         sort={sort}

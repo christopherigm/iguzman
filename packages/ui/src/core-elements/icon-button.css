@@ -15,6 +15,9 @@
 .ui-icon-button--default {
   --icon-button-fill: color-mix(in srgb, var(--foreground, #111) 14%, transparent);
 }
+.ui-icon-button--primary {
+  --icon-button-fill: color-mix(in srgb, var(--accent, #06b6d4) 24%, transparent);
+}
 .ui-icon-button--error {
   --icon-button-fill: color-mix(in srgb, var(--error, #ef4444) 16%, transparent);
 }

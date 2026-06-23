@@ -33,7 +33,7 @@ const KIND_STYLES: Record<
   Pick<CSSProperties, "backgroundColor" | "color">
 > = {
   default: {
-    backgroundColor: "var(--surface-2)",
+    backgroundColor: "color-mix(in srgb, var(--foreground, #111) 7%, transparent)",
     color: "var(--foreground)",
   },
   primary: {
@@ -222,10 +222,18 @@ export const Button: React.FC<ButtonProps> = (props) => {
       content
     );
 
+  // Default/undefined kind gets the same backdrop blur as the translucent
+  // Navbar (see navbar.css → .ui-navbar--translucent). Its faint background
+  // tint lets the blur read through.
+  const isDefaultKind = (kind ?? "default") === "default";
+
   const defaultStyle: CSSProperties = {
     ...SIZE_STYLES[size],
     ...iconFlexDefaults,
     ...KIND_STYLES[isDisabled ? "default" : (kind ?? "default")],
+    ...(isDefaultKind
+      ? { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }
+      : {}),
     border: "none",
     cursor: "pointer",
     fontWeight: 600,

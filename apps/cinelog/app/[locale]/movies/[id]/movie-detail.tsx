@@ -311,13 +311,7 @@ export function MovieDetail({
         flexWrap="wrap"
         gap={8}
       >
-        <Button
-          kind="primary"
-          text={t("back")}
-          icon="/icons/return.svg"
-          href="/"
-          size="md"
-        />
+        <Button text={t("back")} icon="/icons/return.svg" href="/" size="md" />
         {!editing && (movie.trailer_url || isLoggedIn) && (
           <Box display="flex" gap={8} flexWrap="wrap">
             {isLoggedIn && (

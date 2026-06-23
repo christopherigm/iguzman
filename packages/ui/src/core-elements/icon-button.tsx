@@ -15,7 +15,12 @@ export type IconButtonType = "button" | "submit" | "reset";
 export type IconButtonSize = "sm" | "md" | "lg";
 
 /** Semantic color intent for an icon button. */
-export type IconButtonKind = "default" | "error" | "success" | "warning";
+export type IconButtonKind =
+  | "default"
+  | "primary"
+  | "error"
+  | "success"
+  | "warning";
 
 /** Square box size and border-radius per size token. */
 const BOX_STYLES: Record<
@@ -42,9 +47,23 @@ const SPINNER_SIZES: Record<IconButtonSize, number> = {
 /** Icon color per semantic kind. Drives the masked icon fill. */
 const KIND_ICON_COLORS: Record<IconButtonKind, string> = {
   default: "var(--muted-foreground, #6b7280)",
+  primary: "var(--accent, #06b6d4)",
   error: "var(--error, #ef4444)",
   success: "var(--success, #16a34a)",
   warning: "var(--warning, #d97706)",
+};
+
+/**
+ * Subtle tinted background per semantic kind. Always present so the button
+ * shape is discoverable even at rest. Mixed at a low percentage with
+ * transparent so it reads as a faint tint over any surface.
+ */
+const KIND_BACKGROUNDS: Record<IconButtonKind, string> = {
+  default: "color-mix(in srgb, var(--foreground, #111) 7%, transparent)",
+  primary: "color-mix(in srgb, var(--accent, #06b6d4) 16%, transparent)",
+  error: "color-mix(in srgb, var(--error, #ef4444) 12%, transparent)",
+  success: "color-mix(in srgb, var(--success, #16a34a) 12%, transparent)",
+  warning: "color-mix(in srgb, var(--warning, #d97706) 12%, transparent)",
 };
 
 /**
@@ -146,7 +165,12 @@ export const IconButton: React.FC<IconButtonProps> = (props) => {
     justifyContent: "center",
     flexShrink: 0,
     border: "none",
-    backgroundColor: "transparent",
+    backgroundColor: KIND_BACKGROUNDS[kind],
+    // Always apply the same backdrop blur as the translucent Navbar (see
+    // navbar.css → .ui-navbar--translucent), regardless of kind. The faint
+    // per-kind background tint lets the blur read through.
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
     cursor: "pointer",
     textDecoration: "none",
     position: "relative",

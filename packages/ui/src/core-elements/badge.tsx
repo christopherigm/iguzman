@@ -67,7 +67,18 @@ export const Badge: React.FC<BadgeProps> = ({
     .join(" ");
 
   return (
-    <span className={classes} style={{ ...cssVars, ...style }}>
+    <span
+      className={classes}
+      style={{
+        // Same backdrop blur as the translucent Navbar (see navbar.css →
+        // .ui-navbar--translucent). The translucent/tinted backgrounds let
+        // the blur read through.
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        ...cssVars,
+        ...style,
+      }}
+    >
       {children}
     </span>
   );
