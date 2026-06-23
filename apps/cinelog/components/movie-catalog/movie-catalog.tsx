@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Grid } from "@repo/ui/core-elements/grid";
-import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
 import {
   getMovies,
@@ -13,6 +13,7 @@ import {
   type Category,
   type Movie,
   type MovieFormat,
+  type MovieSort,
 } from "@/lib/catalog";
 import { MovieCard } from "./movie-card";
 import { MovieFilters } from "./movie-filters";
@@ -37,6 +38,7 @@ type CatalogSnapshot = {
   search: string;
   genre: string;
   format: MovieFormat;
+  sort: MovieSort;
   view: ViewMode;
   scrollY: number;
 };
@@ -67,8 +69,10 @@ export function MovieCatalog() {
   );
   const [genre, setGenre] = useState(snapshot?.genre ?? "");
   const [format, setFormat] = useState<MovieFormat>(snapshot?.format ?? "");
+  const [sort, setSort] = useState<MovieSort>(snapshot?.sort ?? "");
   const [page, setPage] = useState(snapshot?.page ?? 1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   const isFiltered = debouncedSearch !== "" || genre !== "" || format !== "";
 
@@ -84,6 +88,11 @@ export function MovieCatalog() {
 
   const handleFormatChange = (value: MovieFormat) => {
     setFormat(value);
+    setPage(1);
+  };
+
+  const handleSortChange = (value: MovieSort) => {
+    setSort(value);
     setPage(1);
   };
 
@@ -103,11 +112,12 @@ export function MovieCatalog() {
 
   useEffect(() => {
     let active = true;
-    getMovies({ search: debouncedSearch, genre, format, page })
+    getMovies({ search: debouncedSearch, genre, format, sort, page })
       .then((data) => {
         if (!active) return;
         setMovies(data.results);
         setTotalPages(data.total_pages);
+        setTotalCount(data.count);
         setStatus("ready");
       })
       .catch(() => {
@@ -116,11 +126,11 @@ export function MovieCatalog() {
     return () => {
       active = false;
     };
-  }, [debouncedSearch, genre, format, page]);
+  }, [debouncedSearch, genre, format, sort, page]);
 
   // Keep the latest page/filter/view values in a ref so the scroll listener
   // can write a complete snapshot without re-subscribing on every change.
-  const persistedRef = useRef({ page, search, genre, format, view });
+  const persistedRef = useRef({ page, search, genre, format, sort, view });
 
   const persist = useCallback((scrollY: number) => {
     try {
@@ -136,9 +146,9 @@ export function MovieCatalog() {
   // Sync the ref and persist immediately whenever the page, filters or view
   // change so the snapshot is current even if the user leaves without scrolling.
   useEffect(() => {
-    persistedRef.current = { page, search, genre, format, view };
+    persistedRef.current = { page, search, genre, format, sort, view };
     persist(window.scrollY);
-  }, [page, search, genre, format, view, persist]);
+  }, [page, search, genre, format, sort, view, persist]);
 
   // Throttle scroll writes so the latest offset is captured before navigation.
   useEffect(() => {
@@ -179,32 +189,13 @@ export function MovieCatalog() {
         marginBottom={16}
       >
         <Typography as="h1" variant="h2" fontWeight={700}>
-          {t("title")}
+          {status === "ready" ? `${t("title")} (${totalCount})` : t("title")}
         </Typography>
-        <Box display="flex" gap={4}>
-          <Button
-            size="sm"
-            aria-pressed={view === "grid"}
-            onClick={() => setView("grid")}
-            backgroundColor={view === "grid" ? "var(--accent)" : undefined}
-            color={
-              view === "grid" ? "var(--accent-foreground, #ffffff)" : undefined
-            }
-          >
-            {t("gridView")}
-          </Button>
-          <Button
-            size="sm"
-            aria-pressed={view === "list"}
-            onClick={() => setView("list")}
-            backgroundColor={view === "list" ? "var(--accent)" : undefined}
-            color={
-              view === "list" ? "var(--accent-foreground, #ffffff)" : undefined
-            }
-          >
-            {t("listView")}
-          </Button>
-        </Box>
+        <IconButton
+          icon={view === "grid" ? "/icons/list.svg" : "/icons/grid.svg"}
+          aria-label={view === "grid" ? t("listView") : t("gridView")}
+          onClick={() => setView(view === "grid" ? "list" : "grid")}
+        />
       </Box>
 
       <MovieFilters
@@ -214,6 +205,8 @@ export function MovieCatalog() {
         onGenreChange={handleGenreChange}
         format={format}
         onFormatChange={handleFormatChange}
+        sort={sort}
+        onSortChange={handleSortChange}
         categories={categories}
       />
 
@@ -246,11 +239,11 @@ export function MovieCatalog() {
       )}
 
       {status === "ready" && movies.length > 0 && view === "list" && (
-        <Box flexDirection="column" gap={8} marginTop={12}>
+        <Grid container flexDirection="column" spacing={1} marginTop={12}>
           {movies.map((movie) => (
             <MovieCard key={movie.id} movie={movie} view="list" />
           ))}
-        </Box>
+        </Grid>
       )}
 
       {status === "ready" && movies.length > 0 && (

@@ -11,6 +11,22 @@ export interface Actor {
 
 export type MovieFormat = "dvd" | "bluray" | "4k" | "other" | "";
 
+/**
+ * Catalog sort key. Sent to the API as the `ordering` query param; the values
+ * mirror Django ORM ordering expressions (a `-` prefix means descending). The
+ * empty string means "no explicit sort" - the API falls back to its default
+ * ordering (by title).
+ */
+export type MovieSort =
+  | ""
+  | "title"
+  | "-title"
+  | "-year"
+  | "year"
+  | "format"
+  | "-created"
+  | "created";
+
 export interface Movie {
   id: number;
   barcode: string;
@@ -59,6 +75,7 @@ export interface MovieFilters {
   search?: string;
   genre?: string;
   format?: MovieFormat;
+  sort?: MovieSort;
   page?: number;
 }
 
@@ -74,6 +91,7 @@ export async function getMovies(
   if (filters.genre) params.set("genre", filters.genre);
   // Sent as "media_format" - DRF reserves the "format" query param for content negotiation.
   if (filters.format) params.set("media_format", filters.format);
+  if (filters.sort) params.set("ordering", filters.sort);
   if (filters.page && filters.page > 1)
     params.set("page", String(filters.page));
   const qs = params.toString();

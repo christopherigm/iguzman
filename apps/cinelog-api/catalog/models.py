@@ -39,7 +39,6 @@ SCAN_STATUS_CHOICES = [
     ('pending', 'Pending'),
     ('processing', 'Processing'),
     ('review', 'Awaiting Review'),
-    ('accepted', 'Accepted'),
     ('failed', 'Failed'),
 ]
 
@@ -111,13 +110,6 @@ class ScanQueue(Common):
     extracted_trailer_url = models.URLField(max_length=500, blank=True)
     retry_count = models.PositiveSmallIntegerField(default=0)
     error_message = models.TextField(blank=True)
-    movie = models.OneToOneField(
-        Movie,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='scan_queue_entry',
-    )
 
     class Meta:
         ordering = ['-created']
@@ -135,8 +127,8 @@ class ScanCandidate(models.Model):
     right film beneath a more famous near-namesake (e.g. "X" 2022 vs "Fast X"
     2023). During slow-path resolution we persist the top few results here so the
     Inbox can render a picker and let the user re-pin the entry to the exact film
-    by `tmdb_id`. Rows are wiped when the entry is accepted, and cascade-deleted
-    when it is rejected.
+    by `tmdb_id`. Rows cascade-deleted with the entry, which happens both when it
+    is accepted (promoted to a Movie) and when it is rejected.
     """
 
     entry = models.ForeignKey(

@@ -164,7 +164,16 @@
     "confirmDeleteTitle": "Film löschen",
     "confirmDeleteText": "Möchtest du \"{title}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
     "deleted": "Film gelöscht.",
-    "deleteError": "Film konnte nicht gelöscht werden. Bitte versuche es erneut."
+    "deleteError": "Film konnte nicht gelöscht werden. Bitte versuche es erneut.",
+    "sortLabel": "Sortieren nach",
+    "sortNone": "Keine",
+    "sortNameAsc": "Name (A–Z)",
+    "sortNameDesc": "Name (Z–A)",
+    "sortYearDesc": "Jahr (neueste zuerst)",
+    "sortYearAsc": "Jahr (älteste zuerst)",
+    "sortFormat": "Format",
+    "sortDateAddedDesc": "Kürzlich hinzugefügt",
+    "sortDateAddedAsc": "Zuerst hinzugefügt"
   },
   "MovieDetailPage": {
     "back": "Zurück zum Katalog",

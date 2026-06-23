@@ -164,7 +164,16 @@
     "confirmDeleteTitle": "Delete movie",
     "confirmDeleteText": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
     "deleted": "Movie deleted.",
-    "deleteError": "Failed to delete movie. Please try again."
+    "deleteError": "Failed to delete movie. Please try again.",
+    "sortLabel": "Sort by",
+    "sortNone": "None",
+    "sortNameAsc": "Name (A–Z)",
+    "sortNameDesc": "Name (Z–A)",
+    "sortYearDesc": "Year (newest first)",
+    "sortYearAsc": "Year (oldest first)",
+    "sortFormat": "Format",
+    "sortDateAddedDesc": "Recently added",
+    "sortDateAddedAsc": "Oldest added"
   },
   "MovieDetailPage": {
     "back": "Back to catalog",

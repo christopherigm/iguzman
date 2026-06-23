@@ -164,7 +164,16 @@
     "confirmDeleteTitle": "Excluir filme",
     "confirmDeleteText": "Tem certeza de que deseja excluir \"{title}\"? Esta ação não pode ser desfeita.",
     "deleted": "Filme excluído.",
-    "deleteError": "Falha ao excluir o filme. Tente novamente."
+    "deleteError": "Falha ao excluir o filme. Tente novamente.",
+    "sortLabel": "Ordenar por",
+    "sortNone": "Nenhum",
+    "sortNameAsc": "Nome (A–Z)",
+    "sortNameDesc": "Nome (Z–A)",
+    "sortYearDesc": "Ano (mais recentes)",
+    "sortYearAsc": "Ano (mais antigos)",
+    "sortFormat": "Formato",
+    "sortDateAddedDesc": "Adicionados recentemente",
+    "sortDateAddedAsc": "Adicionados há mais tempo"
   },
   "MovieDetailPage": {
     "back": "Voltar ao catálogo",

@@ -8,7 +8,9 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { Spinner } from "@repo/ui/core-elements/spinner";
+import { BREAKPOINTS } from "@repo/ui/core-elements/utils";
 import { LinkButton } from "@repo/ui/core-elements/link-button";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Toast } from "@repo/ui/core-elements/toast";
@@ -51,13 +53,39 @@ function toYouTubeEmbed(url: string): string {
   }
 }
 
-export function MovieDetail({ id }: { id: string }) {
+/**
+ * True once the viewport is at the `lg` breakpoint (desktop) or wider. Defaults
+ * to false on the server / first paint so mobile behaviour is the safe fallback.
+ */
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(`(min-width: ${BREAKPOINTS.lg}px)`);
+    const update = () => setIsDesktop(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+  return isDesktop;
+}
+
+export function MovieDetail({
+  id,
+  initialMovie = null,
+}: {
+  id: string;
+  /** Server-prefetched movie; seeds the first paint and skips the client fetch. */
+  initialMovie?: MovieDetailData | null;
+}) {
   const t = useTranslations("MovieDetailPage");
   const tFormat = useTranslations("MovieFormat");
   const router = useRouter();
   const isLoggedIn = useIsLoggedIn();
-  const [movie, setMovie] = useState<MovieDetailData | null>(null);
-  const [status, setStatus] = useState<Status>("loading");
+  const isDesktop = useIsDesktop();
+  const [movie, setMovie] = useState<MovieDetailData | null>(initialMovie);
+  const [status, setStatus] = useState<Status>(
+    initialMovie ? "ready" : "loading",
+  );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
@@ -121,6 +149,18 @@ export function MovieDetail({ id }: { id: string }) {
     return updated.trailer_url;
   }
 
+  // On desktop (lg+) play the trailer in the in-page modal. On smaller screens
+  // most users are on a phone/tablet, so open the YouTube URL directly to hand
+  // off to the native app instead of cramming a player into the viewport.
+  function handleTrailerClick() {
+    if (!movie?.trailer_url) return;
+    if (isDesktop) {
+      setShowTrailer(true);
+    } else {
+      window.open(movie.trailer_url, "_blank", "noopener,noreferrer");
+    }
+  }
+
   async function handleConfirmDelete() {
     setShowDeleteConfirm(false);
     setDeleting(true);
@@ -141,7 +181,15 @@ export function MovieDetail({ id }: { id: string }) {
   }, [saved]);
 
   useEffect(() => {
+    // The server prefetched this movie; render it without a client round-trip.
+    // (On navigation the parent passes fresh data for the new id.)
+    if (initialMovie) {
+      setMovie(initialMovie);
+      setStatus("ready");
+      return;
+    }
     let active = true;
+    setStatus("loading");
     getMovie(id)
       .then((data) => {
         if (!active) return;
@@ -157,7 +205,7 @@ export function MovieDetail({ id }: { id: string }) {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, initialMovie]);
 
   if (status === "loading") {
     return (
@@ -263,36 +311,46 @@ export function MovieDetail({ id }: { id: string }) {
         flexWrap="wrap"
         gap={8}
       >
-        <LinkButton label={t("back")} href="/" />
+        <Button
+          kind="primary"
+          text={t("back")}
+          icon="/icons/return.svg"
+          href="/"
+          size="md"
+        />
         {!editing && (movie.trailer_url || isLoggedIn) && (
           <Box display="flex" gap={8} flexWrap="wrap">
-            {movie.trailer_url && (
-              <Button
-                text={t("trailer")}
-                size="md"
-                onClick={() => setShowTrailer(true)}
-                disabled={deleting}
-                kind="primary"
-              />
-            )}
             {isLoggedIn && (
               <>
-                <Button
-                  text={t("edit")}
-                  kind="warning"
-                  size="md"
-                  onClick={() => setEditing(true)}
-                  disabled={deleting}
-                />
-                <Button
-                  text={t("delete")}
+                <IconButton
                   icon="/icons/delete.svg"
+                  aria-label={t("delete")}
+                  title={t("delete")}
                   kind="error"
                   size="md"
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={deleting}
                 />
+                <IconButton
+                  icon="/icons/edit.svg"
+                  aria-label={t("edit")}
+                  title={t("edit")}
+                  kind="warning"
+                  size="md"
+                  onClick={() => setEditing(true)}
+                  disabled={deleting}
+                />
               </>
+            )}
+            {movie.trailer_url && (
+              <Button
+                text={t("trailer")}
+                icon="/icons/trailer.svg"
+                size="md"
+                onClick={handleTrailerClick}
+                disabled={deleting}
+                kind="primary"
+              />
             )}
           </Box>
         )}

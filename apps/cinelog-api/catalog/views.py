@@ -53,6 +53,21 @@ class MovieListView(ListCreateAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     pagination_class = MoviePagination
 
+    # Allowlist of `?ordering=` values mapped to the ORM order_by args. Each
+    # value is validated against this map so a client can't order by an
+    # arbitrary (or expensive/unindexed) column. Non-title sorts carry `title`
+    # as a tiebreaker for stable, deterministic paging; an absent or unknown
+    # value falls through to the model's default ordering (by title).
+    ORDERING_MAP = {
+        'title': ('title',),
+        '-title': ('-title',),
+        'year': ('year', 'title'),
+        '-year': ('-year', 'title'),
+        'format': ('format', 'title'),
+        'created': ('created', 'title'),
+        '-created': ('-created', 'title'),
+    }
+
     def get_queryset(self):
         qs = Movie.objects.filter(enabled=True).prefetch_related('genres')
 
@@ -71,6 +86,11 @@ class MovieListView(ListCreateAPIView):
         media_format = self.request.query_params.get('media_format', '').strip()
         if media_format:
             qs = qs.filter(format=media_format)
+
+        ordering = self.request.query_params.get('ordering', '').strip()
+        order_by = self.ORDERING_MAP.get(ordering)
+        if order_by:
+            qs = qs.order_by(*order_by)
 
         return qs
 
@@ -306,8 +326,11 @@ class ScanView(APIView):
         except Movie.DoesNotExist:
             pass
 
-        # Already queued
-        if ScanQueue.objects.filter(barcode=barcode).exists():
+        # Already in flight - only active work blocks a re-scan. Terminal rows
+        # (e.g. a `failed` resolution) must not wedge the barcode forever.
+        if ScanQueue.objects.filter(
+            barcode=barcode, status__in=['pending', 'processing', 'review']
+        ).exists():
             return Response({'status': 'queued'}, status=status.HTTP_202_ACCEPTED)
 
         # Fast path
@@ -370,8 +393,9 @@ class InboxAcceptView(APIView):
 
     Promotes a review entry to the main catalog, applying any field
     corrections from the request body (Phase 5.3). The barcode is taken from
-    the queue entry. On success the entry is marked `accepted` and linked to
-    the new Movie.
+    the queue entry. On success the entry is deleted - the new Movie (with its
+    unique barcode) becomes the source of truth, leaving the barcode free to be
+    re-scanned if the film is later removed from the catalog.
     """
 
     def post(self, request, pk):
@@ -415,13 +439,11 @@ class InboxAcceptView(APIView):
             if backdrop:
                 movie.backdrop_image.save(backdrop.name, backdrop, save=True)
 
-            entry.status = 'accepted'
-            entry.movie = movie
-            entry.save(update_fields=['status', 'movie', 'modified'])
-
-            # The picker's alternatives are no longer needed once a match is
-            # chosen; drop them so accepted entries don't carry dangling results.
-            entry.candidates.all().delete()
+            # The queue entry is a work item, not an archive: once the film is
+            # promoted to the catalog the Movie (with its unique barcode) is the
+            # source of truth, so drop the entry to free the barcode for a
+            # future re-scan. Candidates cascade away with it.
+            entry.delete()
 
         return Response(
             MovieDetailSerializer(movie, context={'request': request}).data,

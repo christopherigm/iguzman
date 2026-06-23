@@ -164,7 +164,16 @@
     "confirmDeleteTitle": "Eliminar película",
     "confirmDeleteText": "¿Seguro que quieres eliminar \"{title}\"? Esta acción no se puede deshacer.",
     "deleted": "Película eliminada.",
-    "deleteError": "No se pudo eliminar la película. Inténtalo de nuevo."
+    "deleteError": "No se pudo eliminar la película. Inténtalo de nuevo.",
+    "sortLabel": "Ordenar por",
+    "sortNone": "Ninguno",
+    "sortNameAsc": "Nombre (A–Z)",
+    "sortNameDesc": "Nombre (Z–A)",
+    "sortYearDesc": "Año (más reciente)",
+    "sortYearAsc": "Año (más antiguo)",
+    "sortFormat": "Formato",
+    "sortDateAddedDesc": "Añadido recientemente",
+    "sortDateAddedAsc": "Añadido hace tiempo"
   },
   "MovieDetailPage": {
     "back": "Volver al catálogo",

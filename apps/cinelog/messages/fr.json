@@ -164,7 +164,16 @@
     "confirmDeleteTitle": "Supprimer le film",
     "confirmDeleteText": "Voulez-vous vraiment supprimer « {title} » ? Cette action est irréversible.",
     "deleted": "Film supprimé.",
-    "deleteError": "Échec de la suppression du film. Veuillez réessayer."
+    "deleteError": "Échec de la suppression du film. Veuillez réessayer.",
+    "sortLabel": "Trier par",
+    "sortNone": "Aucun",
+    "sortNameAsc": "Nom (A–Z)",
+    "sortNameDesc": "Nom (Z–A)",
+    "sortYearDesc": "Année (récentes)",
+    "sortYearAsc": "Année (anciennes)",
+    "sortFormat": "Format",
+    "sortDateAddedDesc": "Ajouts récents",
+    "sortDateAddedAsc": "Ajouts anciens"
   },
   "MovieDetailPage": {
     "back": "Retour au catalogue",
