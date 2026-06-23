@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay } from "swiper/modules";
@@ -35,14 +35,12 @@ const CARDS: FeatureCard[] = [
 export function FeatureSlider() {
   const t = useTranslations("FeatureSlider");
   const swiperRef = useRef<SwiperType | null>(null);
-  const [visible, setVisible] = useState(false);
+  // Seeded from localStorage via lazy init (avoids a mount setState-in-effect).
+  const [visible, setVisible] = useState(
+    () =>
+      typeof window !== "undefined" && localStorage.getItem(LS_KEY) !== "true",
+  );
   const [showConfirm, setShowConfirm] = useState(false);
-
-  useEffect(() => {
-    if (localStorage.getItem(LS_KEY) !== "true") {
-      setVisible(true);
-    }
-  }, []);
 
   if (!visible) return null;
 

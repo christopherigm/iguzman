@@ -20,7 +20,7 @@ import type { StoredVideo } from "./use-video-store";
 import { readFromOPFS } from "@/lib/opfs";
 import "./music-player.css";
 import { Button } from "@repo/ui/core-elements/button";
-import { parseBlob } from "music-metadata-browser";
+import { parseBlob } from "music-metadata";
 
 type RepeatMode = "none" | "one" | "all";
 
@@ -198,12 +198,10 @@ export function MusicPlayer() {
 
   const currentTrack = playlist[currentIndex] ?? null;
 
-  /* Clamp index when playlist shrinks */
-  useEffect(() => {
-    if (playlist.length > 0 && currentIndex >= playlist.length) {
-      setCurrentIndex(playlist.length - 1);
-    }
-  }, [playlist.length, currentIndex]);
+  /* Clamp index when playlist shrinks (adjusted during render, not in an effect). */
+  if (playlist.length > 0 && currentIndex >= playlist.length) {
+    setCurrentIndex(playlist.length - 1);
+  }
 
   const getNextIndex = useCallback(
     (current: number): number => {
@@ -288,7 +286,10 @@ export function MusicPlayer() {
     handleNextRef.current = handleNext;
   }, [handleNext]);
 
-  /* Load OPFS file when the current track changes */
+  /* Load OPFS file when the current track changes. This effect loads media from
+     OPFS and manages object-URL lifecycles; the synchronous resets/loading flag
+     are intrinsic to that async load. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const track = currentTrack;
     if (!track?.opfsKey) {
@@ -359,6 +360,7 @@ export function MusicPlayer() {
     // Only reload when the actual track UUID changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack?.uuid]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   /* Update audio src whenever the blob URL changes */
   useEffect(() => {

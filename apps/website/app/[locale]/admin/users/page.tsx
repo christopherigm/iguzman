@@ -29,7 +29,9 @@ export default function AdminUsersPage() {
   }, [t]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const columns: Column[] = [

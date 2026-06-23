@@ -38,16 +38,15 @@ export default function AdminVariantOptionFormPage({ params }: Props) {
   const [slugError, setSlugError] = useState<string | null>(null);
   const systemId = getUserFromToken()?.systemId ?? 0;
 
-  // Auto-populate slug from name for new records
-  useEffect(() => {
-    if (isNew) {
-      setValues((prev) => ({
-        ...prev,
-        slug: buildSlug(String(prev.name ?? ""), systemId),
-      }));
+  // Auto-populate slug from name for new records (the slug field is read-only).
+  // Derived during render rather than in an effect; the guard stops it looping
+  // once the slug already matches the name.
+  if (isNew) {
+    const derivedSlug = buildSlug(String(values.name ?? ""), systemId);
+    if (values.slug !== derivedSlug) {
+      setValues((prev) => ({ ...prev, slug: derivedSlug }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values.name, isNew, systemId]);
+  }
 
   const handleNameBlur = useCallback(async () => {
     const currentSlug = String(values.slug ?? "");
@@ -67,7 +66,6 @@ export default function AdminVariantOptionFormPage({ params }: Props) {
 
   useEffect(() => {
     if (!isNew) {
-      setLoading(true);
       getVariantOption(Number(id))
         .then((data) =>
           setValues({

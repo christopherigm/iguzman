@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -69,7 +69,9 @@ async function parseBody(res: Response): Promise<string> {
 export function ScraperPanel() {
   const t = useTranslations("HomePage");
 
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState(() =>
+    typeof window === "undefined" ? "" : (localStorage.getItem(LS_KEY) ?? ""),
+  );
 
   const [healthLoading, setHealthLoading] = useState(false);
   const [healthResult, setHealthResult] = useState<string | null>(null);
@@ -86,10 +88,6 @@ export function ScraperPanel() {
   const [extractLoading, setExtractLoading] = useState(false);
   const [extractResult, setExtractResult] = useState<string | null>(null);
   const [extractError, setExtractError] = useState<ErrorState>(null);
-
-  useEffect(() => {
-    setApiKey(localStorage.getItem(LS_KEY) ?? "");
-  }, []);
 
   const handleApiKeyChange = (v: string) => {
     setApiKey(v);

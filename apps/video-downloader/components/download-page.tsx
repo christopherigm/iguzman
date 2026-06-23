@@ -214,7 +214,6 @@ function DownloadPageInner({ serverDate }: { serverDate: string }) {
     removePinned,
     removeCompleted,
     removeCompletedBulk,
-    clearCompleted,
     moveCompletedToFirst,
     insertBeforeCompleted,
     storageError,

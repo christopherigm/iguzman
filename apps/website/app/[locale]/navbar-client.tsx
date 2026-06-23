@@ -11,6 +11,10 @@ import {
   getUserFromToken,
 } from "@/lib/auth";
 
+function hasTokens(): boolean {
+  return Boolean(getAccessToken() && getRefreshToken());
+}
+
 interface NavbarClientProps {
   logo: string;
   version: string;
@@ -26,18 +30,20 @@ export function NavbarClient({
 }: NavbarClientProps) {
   const t = useTranslations("Navbar");
   const pathname = usePathname();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  const syncAuth = () => {
-    const access = getAccessToken();
-    const refresh = getRefreshToken();
-    setIsLoggedIn(Boolean(access && refresh));
-    setIsAdmin(getUserFromToken()?.isAdmin === true);
-  };
+  // Seed auth state from tokens on the client (lazy init avoids a mount
+  // setState-in-effect); the listener keeps it current on auth changes.
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    () => typeof window !== "undefined" && hasTokens(),
+  );
+  const [isAdmin, setIsAdmin] = useState(
+    () => typeof window !== "undefined" && getUserFromToken()?.isAdmin === true,
+  );
 
   useEffect(() => {
-    syncAuth();
+    const syncAuth = () => {
+      setIsLoggedIn(hasTokens());
+      setIsAdmin(getUserFromToken()?.isAdmin === true);
+    };
     window.addEventListener("auth-changed", syncAuth);
     return () => window.removeEventListener("auth-changed", syncAuth);
   }, []);

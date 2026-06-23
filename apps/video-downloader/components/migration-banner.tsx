@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Box } from "@repo/ui/core-elements/box";
@@ -17,16 +17,23 @@ export interface MigrationBannerProps {
 
 export function MigrationBanner({ serverDate }: MigrationBannerProps) {
   const t = useTranslations("MigrationBanner");
-  const [visible, setVisible] = useState(false);
-  const [daysLeft, setDaysLeft] = useState(0);
-
-  useEffect(() => {
-    if (MEDIA2GO_HOSTS.has(window.location.hostname)) return;
-    const nowMs = new Date(serverDate).getTime();
-    const days = Math.max(0, Math.ceil((DEADLINE_MS - nowMs) / 86_400_000));
-    setDaysLeft(days);
-    setVisible(true);
-  }, [serverDate]);
+  // The banner depends on the hostname, unavailable during SSR. useSyncExternalStore
+  // returns false on the server and true after hydration, so visibility derives
+  // during render without a setState-in-effect or a hydration mismatch.
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  const [dismissed, setDismissed] = useState(false);
+  const visible =
+    isClient && !dismissed && !MEDIA2GO_HOSTS.has(window.location.hostname);
+  const daysLeft = visible
+    ? Math.max(
+        0,
+        Math.ceil((DEADLINE_MS - new Date(serverDate).getTime()) / 86_400_000),
+      )
+    : 0;
 
   if (!visible) return null;
 
@@ -52,7 +59,7 @@ export function MigrationBanner({ serverDate }: MigrationBannerProps) {
             iconSize={14}
             iconColor="#fff"
             aria-label={t("close")}
-            onClick={() => setVisible(false)}
+            onClick={() => setDismissed(true)}
             size="sm"
             backgroundColor="rgba(0, 0, 0, 0.45)"
             borderRadius="50%"

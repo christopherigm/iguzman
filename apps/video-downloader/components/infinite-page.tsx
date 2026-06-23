@@ -170,6 +170,9 @@ function InfinitePageInner() {
     return shuffled;
   }
 
+  // Populates the feed once the store has hydrated. shuffle() is impure (random
+  // order), so this must run in an effect rather than during render.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!storeLoaded) return;
     const eligible = completed.filter((v) => v.opfsStored && !v.justAudio);
@@ -177,6 +180,7 @@ function InfinitePageInner() {
     setLoaded(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeLoaded]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleReshuffle() {
     if (swiperRef.current) {
@@ -271,6 +275,9 @@ function InfinitePageInner() {
     };
   }, [activeIndex, videos, autoSwipe]);
 
+  // Drives a 1s countdown timer; reaching zero advances the swiper (a DOM side
+  // effect). The setState calls are intrinsic to the timer loop.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (deletedCountdown === null) return;
     if (deletedCountdown === 0) {
@@ -286,6 +293,7 @@ function InfinitePageInner() {
     );
     return () => clearTimeout(timer);
   }, [deletedCountdown, activeIndex, videos.length]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleVideoError(index: number) {
     if (index === activeIndex) setDeletedCountdown(3);

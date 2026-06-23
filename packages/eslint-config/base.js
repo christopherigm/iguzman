@@ -19,6 +19,17 @@ export const config = [
     },
     rules: {
       "turbo/no-undeclared-env-vars": "warn",
+      // Best-effort catches (cache/OPFS/network cleanup) are intentionally empty.
+      "no-empty": ["warn", { allowEmptyCatch: true }],
+      // Honour the `_`-prefix convention for intentionally unused vars/args.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
   {

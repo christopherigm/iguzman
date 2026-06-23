@@ -116,8 +116,6 @@ function useJobList(scope: JobScope, filters: JobListFilters): JobListState {
   const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
     try {
       const res = await getJobFeed({
         scope,
@@ -137,8 +135,22 @@ function useJobList(scope: JobScope, filters: JobListFilters): JobListState {
     }
   }, [scope, location, workType, q, search, page, per]);
 
+  // Show the spinner and clear any prior error whenever the query changes. Done
+  // during render (a sanctioned setState-on-changed-value) rather than inside the
+  // fetch effect, which would be a setState-in-effect. `loading` starts true, so
+  // the initial mount render matches queryKey and skips the reset.
+  const queryKey = `${scope}|${location}|${workType}|${q}|${search}|${page}|${per}`;
+  const [loadedKey, setLoadedKey] = useState(queryKey);
+  if (loadedKey !== queryKey) {
+    setLoadedKey(queryKey);
+    setLoading(true);
+    setError(false);
+  }
+
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const removePosting = useCallback((id: number) => {
@@ -582,9 +594,12 @@ export function JobsPage() {
   );
 
   // Stable ref to the latest private reload so the poll loop (started once) always
-  // calls the current version without having to re-subscribe.
+  // calls the current version without having to re-subscribe. Written in an effect
+  // rather than during render (refs must not be mutated while rendering).
   const privateReloadRef = useRef(privateList.reload);
-  privateReloadRef.current = privateList.reload;
+  useEffect(() => {
+    privateReloadRef.current = privateList.reload;
+  });
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -630,13 +645,22 @@ export function JobsPage() {
     pollRef.current = setTimeout(tick, POLL_INTERVAL);
   }, []);
 
-  // Load recent searches on mount; resume polling if one is still running.
+  // Load recent searches on mount; resume polling if one is still running. The
+  // fetch is inlined as an async IIFE so the setState lands after the await
+  // (never synchronously within the effect body).
   useEffect(() => {
-    loadSearches().then((data) => {
-      if (data?.some((s) => s.status === "running")) startPolling();
-    });
-    return () => stopPolling();
-  }, [loadSearches, startPolling, stopPolling]);
+    let active = true;
+    (async () => {
+      const data = await getJobSearches().catch(() => null);
+      if (!active || !data) return;
+      setSearches(data);
+      if (data.some((s) => s.status === "running")) startPolling();
+    })();
+    return () => {
+      active = false;
+      stopPolling();
+    };
+  }, [startPolling, stopPolling]);
 
   // Surface the "Fetch Jobs" control for staff (shared catalog) and for BYOK
   // users with a stored key (private feed). Anonymous users keep both false.
@@ -717,6 +741,12 @@ export function JobsPage() {
     [t],
   );
 
+  // confirmDelete (below) calls removePosting() into the useJobList hooks, which
+  // the React Compiler treats as mutating captured deps, so it cannot preserve the
+  // manual memoization of this callback block — and reports the diagnostic at the
+  // block's start (here). The compiler is not enabled (advisory rule only) and the
+  // callbacks are correct, so the diagnostic is suppressed.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleDelete = useCallback((posting: JobPosting) => {
     setPendingDelete(posting);
   }, []);

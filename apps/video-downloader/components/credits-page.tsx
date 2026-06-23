@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -62,7 +67,13 @@ function PackButton({
 export function CreditsPageContent() {
   const t = useTranslations("Credits");
   const locale = useLocale();
-  const [mounted, setMounted] = useState(false);
+  // Client-mount flag without a setState-in-effect: false on the server, true
+  // after hydration.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const [hasKey, setHasKey] = useState(false);
   const [keyValue, setKeyValue] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
@@ -140,9 +151,12 @@ export function CreditsPageContent() {
     }
   }, []);
 
+  // On entry this reads the URL query (Stripe redirect), persists the credits
+  // key, cleans the URL, then seeds state from it — a one-time mount side effect
+  // whose state seeding cannot move to lazy init (it depends on the URL→storage
+  // write above).
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setMounted(true);
-
     const params = new URLSearchParams(window.location.search);
     const keyParam = params.get("credits_key");
     const creditsAdded = parseInt(params.get("credits_added") ?? "0", 10);
@@ -189,6 +203,7 @@ export function CreditsPageContent() {
       void handleRedeemCoupon(couponParam);
     }
   }, [fetchBalance, handleRedeemCoupon]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleCopyKey = useCallback(async () => {
     if (!keyValue) return;
@@ -255,7 +270,7 @@ export function CreditsPageContent() {
     } finally {
       setCheckoutLoading(false);
     }
-  }, [selectedPack, t]);
+  }, [selectedPack, t, locale]);
 
   if (!mounted) return null;
 

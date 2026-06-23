@@ -296,19 +296,26 @@ export function useVideoStore() {
   const [storageError, setStorageError] = useState<string | null>(null);
   const [storeLoaded, setStoreLoaded] = useState(false);
 
-  /* Load from localStorage after mount (client-only). */
+  /* Load from localStorage after mount (client-only). The state is intentionally
+     hydrated here (not via lazy init) so the first client render matches the
+     server's empty render and avoids a hydration mismatch on the video list. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const { pinned: p, completed: c } = initializeStore();
     setPinned(p);
     setCompleted(c);
     setStoreLoaded(true);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   /* Persist each array independently - skip until the store has been hydrated.
      Using storeLoaded (not a ref) ensures the guard value is always in sync
      with the render that triggered the effect, avoiding the race where effects
      from the first render (completed=[]) would overwrite localStorage before
      the hydrated values were applied. */
+  // These effects synchronise the store to localStorage (an external system) and
+  // surface the write result via storageError — a legitimate effect side effect.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!storeLoaded) return;
     try {
@@ -331,6 +338,7 @@ export function useVideoStore() {
       );
     }
   }, [completed, storeLoaded]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   /** Add a brand-new video entry directly to pinned and return its uuid. */
   const addToPinned = useCallback(

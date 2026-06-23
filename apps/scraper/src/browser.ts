@@ -18,7 +18,11 @@ let browser: Browser | null = null;
 export async function getBrowser(): Promise<Browser> {
   if (browser?.isConnected()) return browser;
 
-  browser = await chromium.launch({
+  // playwright-extra resolves its own (older) playwright-core copy as an
+  // optional peer, so the launched Browser is typed against a sibling version
+  // of the types. It is the same runtime object, so cast it to the `playwright`
+  // Browser type used throughout the rest of the app.
+  browser = (await chromium.launch({
     headless: true,
     args: [
       "--no-sandbox",
@@ -26,7 +30,7 @@ export async function getBrowser(): Promise<Browser> {
       "--disable-dev-shm-usage", // required in Docker (low /dev/shm)
       "--disable-gpu",
     ],
-  });
+  })) as unknown as Browser;
 
   browser.on("disconnected", () => {
     browser = null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Grid } from "@repo/ui/core-elements/grid";
@@ -20,13 +20,12 @@ function trimName(name: string): string {
 
 export default function AdminPage() {
   const t = useTranslations("Admin");
-  const [username, setUsername] = useState(t("breadcrumbAdmin"));
-
-  useEffect(() => {
+  // Derived from the client-only token via lazy init (avoids a setState-in-effect).
+  const [username] = useState(() => {
+    if (typeof window === "undefined") return t("breadcrumbAdmin");
     const user = getUserFromToken();
-    const rawName = user?.firstName ?? user?.email ?? t("breadcrumbAdmin");
-    setUsername(trimName(rawName));
-  }, [t]);
+    return trimName(user?.firstName ?? user?.email ?? t("breadcrumbAdmin"));
+  });
 
   return (
     <Box className="admin-home">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 
 export type DirPickerStatus =
   | "idle"
@@ -109,13 +109,11 @@ type ShowDirectoryPickerFn = (opts?: {
 }) => Promise<FileSystemDirectoryHandle>;
 
 export function useDirectoryPicker() {
-  const [isSupported, setIsSupported] = useState(false);
+  const [isSupported] = useState(
+    () => typeof window !== "undefined" && "showDirectoryPicker" in window,
+  );
   const [status, setStatus] = useState<DirPickerStatus>("idle");
   const [dir, setDir] = useState<ScannedDirectory | null>(null);
-
-  useEffect(() => {
-    setIsSupported("showDirectoryPicker" in window);
-  }, []);
 
   const pick = useCallback(async () => {
     if (!isSupported) return;

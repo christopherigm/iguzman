@@ -24,6 +24,13 @@ export const nextJsConfig = [
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated, minified service-worker bundles from @ducanh2912/next-pwa.
+    // These are gitignored build artifacts and must not be linted.
+    "public/sw.js",
+    "public/swe-worker-*.js",
+    "public/workbox-*.js",
+    "public/fallback-*.js",
+    "public/*.js.map",
   ]),
   {
     ...pluginReact.configs.flat.recommended,
@@ -31,6 +38,16 @@ export const nextJsConfig = [
       ...pluginReact.configs.flat.recommended.languageOptions,
       globals: {
         ...globals.serviceworker,
+      },
+    },
+  },
+  {
+    // Node-context files (next.config.js, build scripts, etc.) use `process`,
+    // `module`, `require` and other Node globals.
+    files: ["**/*.config.{js,cjs,mjs,ts}", "**/scripts/**/*.{js,cjs,mjs,ts}"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
       },
     },
   },
@@ -52,6 +69,19 @@ export const nextJsConfig = [
       ...pluginReactHooks.configs.recommended.rules,
       // React scope no longer necessary with new JSX transform.
       "react/react-in-jsx-scope": "off",
+      // Best-effort catches (cache/OPFS/network cleanup) are intentionally empty.
+      // (Re-applied here because js.configs.recommended is spread after baseConfig.)
+      "no-empty": ["warn", { allowEmptyCatch: true }],
+      // Honour the `_`-prefix convention for intentionally unused vars/args.
+      // (Re-applied here because tseslint.configs.recommended follows baseConfig.)
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 ];

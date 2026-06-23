@@ -50,33 +50,24 @@ export function HeroVideo({ url }: Props) {
           aspectRatio: "16 / 9",
         }}
       >
+        {/*
+         * react-player v3 controls autoplay/controls/mute/inline through the
+         * standard media props below (no longer via per-player config). Only
+         * provider-specific options remain in `config`: hide YouTube related
+         * videos (rel) and enable Vimeo background mode.
+         */}
         <ReactPlayer
-          url={url}
+          src={url}
           playing
           muted
           loop
           controls={false}
+          playsInline
           width="100%"
           height="100%"
           config={{
-            youtube: {
-              playerVars: {
-                autoplay: 1,
-                controls: 0,
-                rel: 0,
-                modestbranding: 1,
-                playsinline: 1,
-                mute: 1,
-              },
-            },
-            vimeo: {
-              playerOptions: {
-                autoplay: true,
-                muted: true,
-                loop: true,
-                background: true,
-              },
-            },
+            youtube: { rel: 0 },
+            vimeo: { background: true },
           }}
         />
       </div>

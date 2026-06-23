@@ -53,10 +53,14 @@ function SpeechFieldButton({
   getFieldValue: () => string;
   onChange: (key: string, value: unknown) => void;
 }) {
+  // Keep the latest callbacks in refs (written in an effect, not during render)
+  // so the memoized handlers below can call the current versions.
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
   const getValueRef = useRef(getFieldValue);
-  getValueRef.current = getFieldValue;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    getValueRef.current = getFieldValue;
+  });
 
   const handleTranscript = useCallback(
     (text: string) => {
@@ -259,14 +263,15 @@ export function AdminForm({
   const router = useRouter();
 
   // ── AI provider (read from sidebar localStorage selection) ───────────────
-  const [aiProvider, setAiProvider] = useState<AdminAiProvider>("groq");
-
-  useEffect(() => {
+  const [aiProvider, setAiProvider] = useState<AdminAiProvider>(() => {
+    if (typeof window === "undefined") return "groq";
     const stored = localStorage.getItem(
       ADMIN_AI_PROVIDER_KEY,
     ) as AdminAiProvider | null;
-    if (stored === "ollama" || stored === "groq") setAiProvider(stored);
+    return stored === "ollama" || stored === "groq" ? stored : "groq";
+  });
 
+  useEffect(() => {
     const handler = (e: Event) => {
       const provider = (e as CustomEvent<AdminAiProvider>).detail;
       if (provider === "ollama" || provider === "groq") setAiProvider(provider);

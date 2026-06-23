@@ -181,15 +181,10 @@ export function MovieDetail({
   }, [saved]);
 
   useEffect(() => {
-    // The server prefetched this movie; render it without a client round-trip.
-    // (On navigation the parent passes fresh data for the new id.)
-    if (initialMovie) {
-      setMovie(initialMovie);
-      setStatus("ready");
-      return;
-    }
+    // The server prefetched this movie and it already seeds state via lazy init
+    // (the component remounts per id), so no client round-trip is needed.
+    if (initialMovie) return;
     let active = true;
-    setStatus("loading");
     getMovie(id)
       .then((data) => {
         if (!active) return;

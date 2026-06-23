@@ -96,7 +96,9 @@ export function PinnedVideoItemDownloading({
   // Always-current references used by stable event listeners and timer callbacks
   const videoRef = useRef(video);
   const runMigrationRef = useRef<((p: MigrationParams) => void) | null>(null);
-  videoRef.current = video;
+  useEffect(() => {
+    videoRef.current = video;
+  });
 
   const { startPolling, stopPolling } = usePollTask();
 
@@ -325,8 +327,11 @@ export function PinnedVideoItemDownloading({
   );
 
   // Keep ref current so stable callbacks (timer, visibilitychange) always
-  // call the latest version without re-registering listeners.
-  runMigrationRef.current = (p) => void runOpfsMigration(p);
+  // call the latest version without re-registering listeners. Written in an
+  // effect rather than during render (refs must not be mutated while rendering).
+  useEffect(() => {
+    runMigrationRef.current = (p) => void runOpfsMigration(p);
+  });
 
   /* ── Handle completed download ─────────────────────── */
   const handleTaskDone = useCallback(

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
-import { getLocale } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -42,10 +41,11 @@ export default async function ProductsPage({ params }: Props) {
     ...categories.map((c) => c.image),
     ...products.map((p) => p.image),
   ].filter(Boolean) as string[];
-  const heroImage =
-    images.length > 0
-      ? images[Math.floor(Math.random() * images.length)]
-      : null;
+  // Server component: a fresh random hero per request is intentional and carries
+  // no hydration concern (rendered once on the server).
+  // eslint-disable-next-line react-hooks/purity
+  const randomIndex = Math.floor(Math.random() * images.length);
+  const heroImage = images.length > 0 ? images[randomIndex] : null;
 
   return (
     <>

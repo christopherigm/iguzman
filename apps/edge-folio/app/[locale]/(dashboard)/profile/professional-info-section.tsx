@@ -102,11 +102,10 @@ export function ProfessionalInfoPanel() {
   }, []);
 
   // Voice input for summary
-  const summaryRef = useRef(contactSummary);
-  summaryRef.current = contactSummary;
   const handleSummaryTranscript = useCallback((transcript: string) => {
-    const current = summaryRef.current;
-    setContactSummary(current ? `${current} ${transcript}` : transcript);
+    setContactSummary((current) =>
+      current ? `${current} ${transcript}` : transcript,
+    );
     setInfoSuccess(false);
   }, []);
 

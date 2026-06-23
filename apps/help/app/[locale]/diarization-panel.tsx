@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
@@ -90,7 +90,9 @@ function toSrt(segments: Segment[]): string {
 export function DiarizationPanel() {
   const t = useTranslations("HomePage");
 
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState(() =>
+    typeof window === "undefined" ? "" : (localStorage.getItem(LS_KEY) ?? ""),
+  );
 
   // health
   const [healthLoading, setHealthLoading] = useState(false);
@@ -121,10 +123,6 @@ export function DiarizationPanel() {
     string | null
   >(null);
   const [transcribeError, setTranscribeError] = useState<ErrorState>(null);
-
-  useEffect(() => {
-    setApiKey(localStorage.getItem(LS_KEY) ?? "");
-  }, []);
 
   const handleApiKeyChange = (v: string) => {
     setApiKey(v);

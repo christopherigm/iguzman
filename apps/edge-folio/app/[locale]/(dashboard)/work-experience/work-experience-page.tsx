@@ -198,11 +198,10 @@ function WorkExperienceForm({
   };
 
   // ── Voice input ──────────────────────────────────────────────────────────────
-  const descriptionRef = useRef(description);
-  descriptionRef.current = description;
   const handleTranscript = useCallback((transcript: string) => {
-    const current = descriptionRef.current;
-    setDescription(current ? `${current} ${transcript}` : transcript);
+    setDescription((current) =>
+      current ? `${current} ${transcript}` : transcript,
+    );
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -657,11 +656,10 @@ function ProjectForm({
   };
 
   // ── Voice input ──────────────────────────────────────────────────────────────
-  const descriptionRef = useRef(description);
-  descriptionRef.current = description;
   const handleTranscript = useCallback((transcript: string) => {
-    const current = descriptionRef.current;
-    setDescription(current ? `${current} ${transcript}` : transcript);
+    setDescription((current) =>
+      current ? `${current} ${transcript}` : transcript,
+    );
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -1026,8 +1024,6 @@ export function WorkExperiencePage() {
   }
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
       const [weRes, projRes] = await Promise.all([
         getWorkExperiences(),
@@ -1042,7 +1038,17 @@ export function WorkExperiencePage() {
     }
   }, [t]);
 
+  // `loading` starts true, so the initial mount fetch needs no synchronous
+  // reset. Manual retries do, so they go through this handler.
   useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
+
+  const retry = useCallback(() => {
+    setLoading(true);
+    setError(null);
     load();
   }, [load]);
 
@@ -1159,7 +1165,7 @@ export function WorkExperiencePage() {
         <Typography variant="body" color="var(--error, #ef4444)">
           {error}
         </Typography>
-        <Button text={t("retry")} type="button" size="md" onClick={load} />
+        <Button text={t("retry")} type="button" size="md" onClick={retry} />
       </Container>
     );
   }

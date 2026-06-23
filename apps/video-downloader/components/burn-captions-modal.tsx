@@ -189,16 +189,18 @@ export function BurnCaptionsModal({
 }: BurnCaptionsModalProps) {
   const t = useTranslations("VideoGrid");
   const [config, setConfig] = useState<BurnCaptionsConfig>(DEFAULT_CONFIG);
-  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
-  const [creditsLoading, setCreditsLoading] = useState(true);
+  // No stored key means no credits and nothing to fetch; seed those via lazy
+  // init so the effect only runs the (async) fetch when a key exists.
+  const hasCreditsKey =
+    typeof window !== "undefined" && !!localStorage.getItem("vd_credits_key");
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(
+    hasCreditsKey ? null : 0,
+  );
+  const [creditsLoading, setCreditsLoading] = useState(hasCreditsKey);
 
   useEffect(() => {
     const key = localStorage.getItem("vd_credits_key");
-    if (!key) {
-      setCreditsBalance(0);
-      setCreditsLoading(false);
-      return;
-    }
+    if (!key) return;
     fetch("/api/credits/balance", { headers: { "x-credits-key": key } })
       .then((res) =>
         res.ok

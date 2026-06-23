@@ -72,14 +72,23 @@ export function ResumePreview({
   const t = useTranslations("ApplicationDetailPage");
   const locale = useLocale();
 
-  const tailoredBullets = application.tailored_bullets ?? [];
+  const tailoredBullets = useMemo(
+    () => application.tailored_bullets ?? [],
+    [application.tailored_bullets],
+  );
   const isTailored = tailoredBullets.length > 0;
 
   const [careerData, setCareerData] = useState<CareerData | null>(null);
   const [loading, setLoading] = useState(isTailored);
-  // Stored "Customize Export" config (mirrors the detail page). null until read.
+  // Stored "Customize Export" config (mirrors the detail page). Seeded from
+  // localStorage and kept in sync via the storage event below.
   const [storedConfig, setStoredConfig] = useState<ResumeExportConfig | null>(
-    null,
+    () =>
+      typeof window === "undefined"
+        ? null
+        : parseStoredConfig(
+            localStorage.getItem(resumeExportConfigKey(application.id)),
+          ),
   );
 
   // Load career collections (same data source the export uses).
@@ -116,8 +125,6 @@ export function ResumePreview({
   // changes the export selections.
   useEffect(() => {
     const key = resumeExportConfigKey(application.id);
-    setStoredConfig(parseStoredConfig(localStorage.getItem(key)));
-
     const onStorage = (e: StorageEvent) => {
       if (e.key !== key) return;
       setStoredConfig(parseStoredConfig(e.newValue));

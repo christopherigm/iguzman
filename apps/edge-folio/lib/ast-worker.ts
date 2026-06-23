@@ -146,13 +146,15 @@ function send(msg: AstWorkerOutbound): void {
 
 async function initParsers(): Promise<void> {
   try {
-    // Dynamic import keeps tree-sitter out of the main bundle
-    const { default: Parser } = await import("web-tree-sitter");
+    // Dynamic import keeps tree-sitter out of the main bundle.
+    // web-tree-sitter v0.25+ exposes named exports (Parser, Language) instead
+    // of a default export, and Language.load() replaces Parser.Language.load().
+    const { Parser, Language } = await import("web-tree-sitter");
     await Parser.init({ locateFile: () => "/wasm/tree-sitter.wasm" });
 
     const tryGrammar = async (path: string): Promise<TsParser | null> => {
       try {
-        const lang = await Parser.Language.load(path);
+        const lang = await Language.load(path);
         const p = new Parser();
         p.setLanguage(lang);
         return p;
@@ -300,7 +302,7 @@ function parseGoMod(text: string): string[] {
   const deps: string[] = [];
   const block = text.match(/require\s*\(([^)]+)\)/s)?.[1] ?? "";
   for (const line of (block + "\n" + text).split("\n")) {
-    const m = line.trim().match(/^([\w./\-]+(?:\/[\w.\-]+)+)\s+/);
+    const m = line.trim().match(/^([\w./-]+(?:\/[\w.-]+)+)\s+/);
     if (m) deps.push(m[1]!);
   }
   return [...new Set(deps)];
@@ -319,7 +321,7 @@ function parseCargoToml(text: string): string[] {
     } else if (/^\[/.test(trimmed)) {
       inDeps = false;
     } else if (inDeps) {
-      const m = trimmed.match(/^([\w\-]+)\s*=/);
+      const m = trimmed.match(/^([\w-]+)\s*=/);
       if (m) deps.push(m[1]!);
     }
   }
@@ -482,7 +484,7 @@ async function walk(
       } else if (lower === "pyproject.toml") {
         // Minimal: look for project.dependencies block
         for (const line of text.split("\n")) {
-          const m = line.trim().match(/^['"]?([\w\-]+(?:[>=<!][^'"]*)?)/);
+          const m = line.trim().match(/^['"]?([\w-]+(?:[>=<!][^'"]*)?)/);
           if (m && !line.includes("[") && !line.includes("#")) {
             const pkg = m[1]!.split(/[>=<!]/)[0]!.trim();
             if (pkg) result.runtimeDeps.push(pkg);

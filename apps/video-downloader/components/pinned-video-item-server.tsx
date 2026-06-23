@@ -868,6 +868,7 @@ export function PinnedVideoItemServer({
       video.width,
       video.height,
       video.captionsFile,
+      video.commentsFile,
       video.opfsEnabled,
       video.opfsKey,
       onUpdate,
@@ -925,7 +926,9 @@ export function PinnedVideoItemServer({
     [startPolling, handleServerTaskDone, onUpdate, video.uuid, video.file],
   );
 
-  pollForTaskRef.current = pollForTask;
+  useEffect(() => {
+    pollForTaskRef.current = pollForTask;
+  });
 
   /* ── Resume interrupted FPS interpolation ───────────── */
   useEffect(() => {

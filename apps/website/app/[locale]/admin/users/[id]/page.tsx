@@ -29,7 +29,6 @@ export default function AdminUserFormPage({ params }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
     listAdminUsers()
       .then((users) => {
         const found = users.find((u) => String(u.id) === id);

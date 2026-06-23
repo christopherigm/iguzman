@@ -37,9 +37,13 @@ export function Inbox() {
     setToastKey((k) => k + 1);
   }
 
+  function handlePageChange(next: number) {
+    setStatus("loading");
+    setPage(next);
+  }
+
   useEffect(() => {
     let active = true;
-    setStatus("loading");
     getInboxItems(page)
       .then((data) => {
         if (!active) return;
@@ -133,7 +137,7 @@ export function Inbox() {
         <MoviePagination
           page={page}
           totalPages={totalPages}
-          onPageChange={setPage}
+          onPageChange={handlePageChange}
         />
       )}
     </Box>

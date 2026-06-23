@@ -59,7 +59,7 @@ export function ItemGalleryClient({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [fullscreenIndex, closeFullscreen]);
+  }, [fullscreenIndex, closeFullscreen, images.length]);
 
   useEffect(() => {
     if (images.length === 0) return;

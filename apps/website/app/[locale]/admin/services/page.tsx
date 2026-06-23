@@ -27,7 +27,9 @@ export default function AdminServicesPage() {
   }, [systemId, t]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const handleDelete = async (id: number) => {

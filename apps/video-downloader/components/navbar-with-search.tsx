@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { usePathname } from "@repo/i18n/navigation";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
@@ -41,10 +41,12 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
   const [modalQuery, setModalQuery] = useState("");
 
   // When the search store is cleared externally (e.g. "Clear search" in VideoGrid),
-  // keep modal query in sync.
-  useEffect(() => {
+  // keep the modal query in sync. Tracked during render rather than in an effect.
+  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
+  if (searchQuery !== prevSearchQuery) {
+    setPrevSearchQuery(searchQuery);
     if (!searchQuery) setModalQuery("");
-  }, [searchQuery]);
+  }
 
   const allItems = [
     { label: t("home"), href: "/" },
@@ -66,10 +68,15 @@ export function NavbarWithSearch(props: NavbarWithSearchProps) {
     setSearchQuery(cleaned);
   }, []);
 
+  // These handlers call the external search-store setter, which the React
+  // Compiler treats as a mutation and so cannot preserve their memoization. The
+  // compiler is not enabled (advisory rule only) and the handlers are correct.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleOk = useCallback(() => {
     setModalOpen(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleCancel = useCallback(() => {
     setModalQuery("");
     setSearchQuery("");

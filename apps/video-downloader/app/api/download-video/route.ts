@@ -27,7 +27,7 @@ import {
   calculateOperationCredits,
   getVideoMetaFromFile,
 } from "@/lib/operation-credits";
-import { USE_R2, uploadFromPath, deleteObject } from "@/lib/r2";
+import { USE_R2, uploadFromPath } from "@/lib/r2";
 import { getWritableCookiesPath } from "@/lib/writable-cookies";
 
 const CREDITS_PER_COMMENTS = 1;

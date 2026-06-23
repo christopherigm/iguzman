@@ -448,21 +448,23 @@ export function MyAccountForm({ apiUrl }: Props) {
   const t = useTranslations("MyAccountPage");
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  // Seed the client-only token via lazy init so the effect below need not set it
+  // synchronously (which would be a setState-in-effect).
+  const [accessToken] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : getAccessToken(),
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) {
+    if (!accessToken) {
       router.push("/auth");
       return;
     }
-    setAccessToken(token);
-    getProfile(token, apiUrl)
+    getProfile(accessToken, apiUrl)
       .then(setProfile)
       .catch(() => router.push("/auth"))
       .finally(() => setLoading(false));
-  }, [apiUrl, router]);
+  }, [accessToken, apiUrl, router]);
 
   if (loading || !profile || !accessToken) {
     return (

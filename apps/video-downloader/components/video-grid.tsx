@@ -137,6 +137,9 @@ export function VideoGrid({
     null,
   );
 
+  // Paginates to and scrolls a freshly duplicated video into view (a DOM side
+  // effect); the setState calls drive that orchestration across renders.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!pendingScrollUuid) return;
 
@@ -164,6 +167,7 @@ export function VideoGrid({
 
     return () => cancelAnimationFrame(raf);
   }, [pendingScrollUuid, filtered, safePage, perPage]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   /* ── Reprocess handler: move completed → pinned ──── */
   const handleReprocess = useCallback(

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "passThroughEnv": [
+        "PORT",
+        "LOG_LEVEL",
+        "SCRAPER_API_KEY",
+        "BRAVE_API_KEY",
+        "COOKIES_PATH",
+        "PROXY_HOST",
+        "PROXY_PORT",
+        "PROXY_USER",
+        "PROXY_PASS",
+        "PROXY_DOMAINS"
+      ]
+    }
+  }
+}

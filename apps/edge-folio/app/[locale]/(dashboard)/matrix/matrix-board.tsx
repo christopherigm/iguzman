@@ -168,11 +168,8 @@ function BulletForm({
   };
 
   // ── Voice input ──────────────────────────────────────────────────────────────
-  const textRef = useRef(text);
-  textRef.current = text;
   const handleTranscript = useCallback((transcript: string) => {
-    const current = textRef.current;
-    setText(current ? `${current} ${transcript}` : transcript);
+    setText((current) => (current ? `${current} ${transcript}` : transcript));
   }, []);
 
   // ── Form submit ──────────────────────────────────────────────────────────────
@@ -340,6 +337,8 @@ function BulletForm({
 
 interface BulletCardProps {
   bullet: BulletPoint;
+  // skills is drilled through from the parent list but BulletCard renders only
+  // bullet.skills; kept on the props to preserve the existing call sites.
   skills: Skill[];
   onEdit: (bullet: BulletPoint) => void;
   onDelete: (id: number) => void;
@@ -348,7 +347,6 @@ interface BulletCardProps {
 
 function BulletCard({
   bullet,
-  skills,
   onEdit,
   onDelete,
   onApprove,
@@ -753,8 +751,6 @@ export function MatrixBoard() {
   }
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
       const [bulletRes, skillRes] = await Promise.all([
         getBullets(),
@@ -769,7 +765,17 @@ export function MatrixBoard() {
     }
   }, [t]);
 
+  // `loading` starts true, so the initial mount fetch needs no synchronous
+  // reset. Manual retries do, so they go through this handler.
   useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
+
+  const retry = useCallback(() => {
+    setLoading(true);
+    setError(null);
     load();
   }, [load]);
 
@@ -831,7 +837,7 @@ export function MatrixBoard() {
         <Typography variant="body" color="var(--error, #ef4444)">
           {error}
         </Typography>
-        <Button text="Retry" type="button" size="md" onClick={load} />
+        <Button text="Retry" type="button" size="md" onClick={retry} />
       </Container>
     );
   }

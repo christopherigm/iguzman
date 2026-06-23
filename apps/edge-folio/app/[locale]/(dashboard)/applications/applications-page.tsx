@@ -719,8 +719,6 @@ export function ApplicationsPage() {
   }
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
       const res = await getApplications();
       setApplications(res.results);
@@ -731,7 +729,17 @@ export function ApplicationsPage() {
     }
   }, [t]);
 
+  // `loading` starts true, so the initial mount fetch needs no synchronous
+  // reset. Manual retries do, so they go through this handler.
   useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
+
+  const retry = useCallback(() => {
+    setLoading(true);
+    setError(null);
     load();
   }, [load]);
 
@@ -786,7 +794,7 @@ export function ApplicationsPage() {
           text={t("retry")}
           type="button"
           size="md"
-          onClick={load}
+          onClick={retry}
           kind="primary"
         />
       </Container>

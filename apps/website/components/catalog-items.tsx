@@ -2,7 +2,6 @@ import { getTranslations, getLocale } from "next-intl/server";
 import {
   getFeaturedProducts,
   getFeaturedServices,
-  type FeaturedProduct,
   type FeaturedService,
 } from "@/lib/catalog";
 import { Box } from "@repo/ui/core-elements/box";
@@ -21,12 +20,14 @@ export async function CatalogItems() {
 
   if (products.length === 0 && services.length === 0) return null;
 
-  // Shuffle products and services together
+  // Shuffle products and services together. Server component: shuffling per
+  // request is intentional and has no hydration concern (rendered once).
   const items: BuyableItem[] = [
     ...products.map((data): BuyableItem => ({ kind: "product", data })),
     ...services.map(
       (data: FeaturedService): BuyableItem => ({ kind: "service", data }),
     ),
+    // eslint-disable-next-line react-hooks/purity
   ].sort(() => Math.random() - 0.5);
 
   return (

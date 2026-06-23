@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Box } from "@repo/ui/core-elements/box";
@@ -313,36 +313,80 @@ export function DownloadForm({
   const t = useTranslations("DownloadForm");
   const router = useRouter();
   const [url, setUrl] = useState("");
-  const [ios, setIos] = useState(false);
-  const [autoDownload, setAutoDownload] = useState(false);
-  const [opfsSupported, setOpfsSupported] = useState(false);
+  // Client-only capability/setting reads via lazy init (avoids a mount
+  // setState-in-effect). On the server these fall back to defaults.
+  const [ios] = useState(() => typeof window !== "undefined" && isIOS());
+  const [autoDownload, setAutoDownload] = useState(() => {
+    if (typeof window === "undefined" || isIOS()) return false;
+    const stored = localStorage.getItem("vd_auto_download");
+    return stored !== null ? stored === "true" : false;
+  });
+  const [opfsSupported] = useState(
+    () => typeof window !== "undefined" && isOPFSSupported(),
+  );
   const [storageInfo, setStorageInfo] = useState<{
     usedBytes: number;
     totalBytes: number;
   } | null>(null);
 
-  useEffect(() => {
-    const isIOSDevice = isIOS();
-    setIos(isIOSDevice);
-    if (isIOSDevice) {
-      setAutoDownload(false);
-    } else {
-      const stored = localStorage.getItem("vd_auto_download");
-      setAutoDownload(stored !== null ? stored === "true" : false);
-    }
-    const supported = isOPFSSupported();
-    setOpfsSupported(supported);
-    const storedSmart = localStorage.getItem("vd_smart_download");
-    setSmartDownload(storedSmart === "true");
-    const storedSmartCaptions = localStorage.getItem("vd_smart_captions");
-    setSmartCaptions(storedSmartCaptions !== "false");
-    const storedSmartComments = localStorage.getItem("vd_smart_comments");
-    setSmartComments(storedSmartComments === "true");
-    const storedSmartHeight = localStorage.getItem("vd_smart_max_height");
-    setSmartMaxHeight(storedSmartHeight ? Number(storedSmartHeight) : 1080);
-    const storedSmartMetadata = localStorage.getItem("vd_smart_metadata");
-    setSmartMetadata(storedSmartMetadata === "true");
-  }, []);
+  // State declared before the effects/handlers that reference its setters (the
+  // React Compiler flags setters used above their declaration).
+  const [justAudio, setJustAudio] = useState(false);
+  const [enhance] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  const [resolutions, setResolutions] = useState<number[]>([]);
+  const [widthByHeight, setWidthByHeight] = useState<Record<number, number>>(
+    {},
+  );
+  const [selectedResolution, setSelectedResolution] = useState<number | null>(
+    null,
+  );
+  const [metadataLoading, setMetadataLoading] = useState(false);
+  const [metadataFetched, setMetadataFetched] = useState(false);
+
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [availableCaptions, setAvailableCaptions] = useState<CaptionOption[]>(
+    [],
+  );
+  const [selectedCaptionUrl, setSelectedCaptionUrl] = useState<string | null>(
+    null,
+  );
+  const [captionsUnavailable, setCaptionsUnavailable] = useState(false);
+
+  const [commentsEnabled, setCommentsEnabled] = useState(false);
+  const [commentsUnavailable, setCommentsUnavailable] = useState(false);
+  const [commentCount, setCommentCount] = useState<5 | 10 | 20 | 50>(20);
+
+  const [smartDownload, setSmartDownload] = useState(
+    () => typeof window !== "undefined" &&
+      localStorage.getItem("vd_smart_download") === "true",
+  );
+  const [smartCaptions, setSmartCaptions] = useState(
+    () => typeof window === "undefined" ||
+      localStorage.getItem("vd_smart_captions") !== "false",
+  );
+  const [smartMaxHeight, setSmartMaxHeight] = useState(() => {
+    if (typeof window === "undefined") return 1080;
+    const stored = localStorage.getItem("vd_smart_max_height");
+    return stored ? Number(stored) : 1080;
+  });
+  const [smartComments, setSmartComments] = useState(
+    () => typeof window !== "undefined" &&
+      localStorage.getItem("vd_smart_comments") === "true",
+  );
+  const [smartMetadata, setSmartMetadata] = useState(
+    () => typeof window !== "undefined" &&
+      localStorage.getItem("vd_smart_metadata") === "true",
+  );
+
+  const creditsBalance = useCreditsBalance();
+  const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+
+  const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
+    null,
+  );
 
   const handleAutoDownloadChange = useCallback((value: boolean) => {
     setAutoDownload(value);
@@ -402,47 +446,6 @@ export function DownloadForm({
       clearInterval(id);
     };
   }, [opfsSupported]);
-  const [justAudio, setJustAudio] = useState(false);
-  const [enhance] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-
-  const [resolutions, setResolutions] = useState<number[]>([]);
-  const [widthByHeight, setWidthByHeight] = useState<Record<number, number>>(
-    {},
-  );
-  const [selectedResolution, setSelectedResolution] = useState<number | null>(
-    null,
-  );
-  const [metadataLoading, setMetadataLoading] = useState(false);
-  const [metadataFetched, setMetadataFetched] = useState(false);
-
-  const [captionsEnabled, setCaptionsEnabled] = useState(false);
-  const [availableCaptions, setAvailableCaptions] = useState<CaptionOption[]>(
-    [],
-  );
-  const [selectedCaptionUrl, setSelectedCaptionUrl] = useState<string | null>(
-    null,
-  );
-  const [captionsUnavailable, setCaptionsUnavailable] = useState(false);
-
-  const [commentsEnabled, setCommentsEnabled] = useState(false);
-  const [commentsUnavailable, setCommentsUnavailable] = useState(false);
-  const [commentCount, setCommentCount] = useState<5 | 10 | 20 | 50>(20);
-
-  const [smartDownload, setSmartDownload] = useState(false);
-  const [smartCaptions, setSmartCaptions] = useState(true);
-  const [smartMaxHeight, setSmartMaxHeight] = useState(1080);
-  const [smartComments, setSmartComments] = useState(false);
-  const [smartMetadata, setSmartMetadata] = useState(false);
-
-  const creditsBalance = useCreditsBalance();
-  const [showClearStorageConfirm, setShowClearStorageConfirm] = useState(false);
-  const [showCreditsModal, setShowCreditsModal] = useState(false);
-  const prevValidPlatformUrlRef = useRef(false);
-
-  const [duplicateEntry, setDuplicateEntry] = useState<DuplicateEntry | null>(
-    null,
-  );
 
   /* Paste from clipboard when the URL input is focused */
   const handleInputFocus = useCallback(async () => {
@@ -457,8 +460,11 @@ export function DownloadForm({
     }
   }, [url]);
 
-  /* Clear metadata whenever the URL changes */
-  useEffect(() => {
+  /* Clear metadata whenever the URL changes. Done during render (a sanctioned
+     setState-on-changed-value) rather than in an effect. */
+  const [metadataUrl, setMetadataUrl] = useState(url);
+  if (url !== metadataUrl) {
+    setMetadataUrl(url);
     setMetadataFetched(false);
     setResolutions([]);
     setWidthByHeight({});
@@ -469,7 +475,7 @@ export function DownloadForm({
     setCaptionsUnavailable(false);
     setCommentsEnabled(false);
     setCommentsUnavailable(false);
-  }, [url]);
+  }
 
   /* Derived state */
   const validUrl = useMemo(() => isValidUrl(url), [url]);
@@ -506,16 +512,18 @@ export function DownloadForm({
   /* Effective values (justAudio overrides enhance) */
   const effectiveEnhance = justAudio ? false : enhance;
 
-  /* Show credits modal when URL first becomes valid and user has no credits/key */
-  useEffect(() => {
-    if (validPlatformUrl && !prevValidPlatformUrlRef.current) {
+  /* Show credits modal when the URL first becomes valid and the user has no
+     credits/key. Tracked during render via a state token instead of an effect. */
+  const [creditsCheckedValid, setCreditsCheckedValid] = useState(false);
+  if (validPlatformUrl !== creditsCheckedValid) {
+    setCreditsCheckedValid(validPlatformUrl);
+    if (validPlatformUrl) {
       const key = localStorage.getItem("vd_credits_key");
       if (creditsBalance <= 0 || !key) {
         setShowCreditsModal(true);
       }
     }
-    prevValidPlatformUrlRef.current = validPlatformUrl;
-  }, [validPlatformUrl, creditsBalance]);
+  }
 
   /* Handlers */
   const handleCheckSpecs = useCallback(async () => {
@@ -642,7 +650,6 @@ export function DownloadForm({
     commentCount,
     smartComments,
     smartMetadata,
-    isScrapePlatform,
     onVideoAdded,
     opfsSupported,
     smartDownload,

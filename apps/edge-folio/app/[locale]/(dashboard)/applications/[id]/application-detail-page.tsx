@@ -30,7 +30,6 @@ import {
   type JobApplication,
   type ApplicationStatus,
   type TailoredBullet,
-  type TailoredSkill,
   type TailoredWorkExperience,
   type TailoredProject,
   type NaftaLetterPayload,
@@ -70,7 +69,6 @@ import { MatchMetrics } from "../../_components/match-metrics";
 import "swiper/css";
 import "swiper/css/pagination";
 import "./application-detail-page.css";
-import Icon from "@repo/ui/core-elements/icon";
 import IconButton from "@repo/ui/core-elements/icon-button";
 
 const STATUSES: ApplicationStatus[] = [

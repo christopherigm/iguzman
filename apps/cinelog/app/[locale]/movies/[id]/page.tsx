@@ -34,7 +34,9 @@ export default async function MovieDetailPage({ params }: Props) {
 
   return (
     <Container paddingX={12}>
-      <MovieDetail id={id} initialMovie={initialMovie} />
+      {/* key={id} remounts on navigation so the freshly prefetched movie seeds
+          state via lazy init instead of a setState-in-effect re-sync. */}
+      <MovieDetail key={id} id={id} initialMovie={initialMovie} />
       <PageBottomSpacer />
     </Container>
   );

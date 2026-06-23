@@ -10,10 +10,10 @@
     "./*": "./src/*.ts"
   },
   "dependencies": {
-    "next-intl": "^4.9.0"
+    "next-intl": "^4.13.0"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "typescript": "6.0.2"
+    "typescript": "6.0.3"
   }
 }

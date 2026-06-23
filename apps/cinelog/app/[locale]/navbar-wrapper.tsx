@@ -1,10 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@repo/ui/core-elements/navbar";
 import type { MenuItem } from "@repo/ui/core-elements/navbar";
 import { logout, clearUser, getStoredUser } from "@/lib/auth";
+
+// The stored user lives in localStorage; `app-auth` is dispatched (after the
+// store is updated) whenever it changes. Reading it through useSyncExternalStore
+// avoids a setState-in-effect on mount.
+function subscribeAuth(callback: () => void): () => void {
+  window.addEventListener("app-auth", callback);
+  return () => window.removeEventListener("app-auth", callback);
+}
+
+function getDisplayNameSnapshot(): string | null {
+  return getStoredUser()?.displayName ?? null;
+}
 
 interface NavbarWrapperProps {
   logo: string;
@@ -20,18 +32,11 @@ interface NavbarWrapperProps {
 
 export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
   const router = useRouter();
-  const [displayName, setDisplayName] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDisplayName(getStoredUser()?.displayName ?? null);
-    const handler = (e: Event) => {
-      setDisplayName(
-        (e as CustomEvent<{ displayName: string | null }>).detail.displayName,
-      );
-    };
-    window.addEventListener("app-auth", handler);
-    return () => window.removeEventListener("app-auth", handler);
-  }, []);
+  const displayName = useSyncExternalStore(
+    subscribeAuth,
+    getDisplayNameSnapshot,
+    () => null,
+  );
 
   const handleSignOut = async () => {
     await logout();

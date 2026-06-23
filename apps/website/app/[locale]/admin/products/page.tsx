@@ -26,10 +26,12 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, systemId]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const handleDelete = async (id: number) => {

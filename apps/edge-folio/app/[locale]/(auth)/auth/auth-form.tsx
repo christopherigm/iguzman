@@ -30,6 +30,16 @@ import {
 const REMEMBERED_EMAIL_KEY = "auth_remembered_email";
 const REMEMBER_EMAIL_PREF_KEY = "auth_remember_email";
 
+function readRememberPref(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(REMEMBER_EMAIL_PREF_KEY) === "true";
+}
+
+function readRememberedEmail(): string {
+  if (typeof window === "undefined") return "";
+  return readRememberPref() ? (localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? "") : "";
+}
+
 type Tab = "sign-in" | "sign-up" | "reset-password";
 
 function ErrorMessage({ message }: { message: string }) {
@@ -45,7 +55,7 @@ function ErrorMessage({ message }: { message: string }) {
 function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
   const t = useTranslations("AuthPage");
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(readRememberedEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,16 +64,7 @@ function SignInTab({ switchTab }: { switchTab: (tab: Tab) => void }) {
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(
     null,
   );
-  const [rememberEmail, setRememberEmail] = useState(false);
-
-  useEffect(() => {
-    const pref = localStorage.getItem(REMEMBER_EMAIL_PREF_KEY) === "true";
-    setRememberEmail(pref);
-    if (pref) {
-      const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? "";
-      if (saved) setEmail(saved);
-    }
-  }, []);
+  const [rememberEmail, setRememberEmail] = useState(readRememberPref);
 
   function handleEmailChange(value: string) {
     setEmail(value);
@@ -494,8 +495,18 @@ export function AuthForm() {
     return () => window.removeEventListener("hashchange", readHash);
   }, []);
 
+  // Keep the URL hash in sync with the active tab. Done in an effect (rather than
+  // mutating window.location inline in switchTab) so it is a sanctioned side
+  // effect; the empty-hash + default-tab case is skipped so a fresh load does not
+  // gain a "#sign-in" suffix.
+  useEffect(() => {
+    const current = window.location.hash.replace("#", "");
+    if (current !== tab && !(current === "" && tab === "sign-in")) {
+      window.location.hash = tab;
+    }
+  }, [tab]);
+
   const switchTab = (newTab: Tab) => {
-    window.location.hash = newTab;
     setTab(newTab);
   };
 

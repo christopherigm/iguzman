@@ -107,7 +107,6 @@ export default function AdminSystemPage() {
 
   useEffect(() => {
     if (!systemId) return;
-    setLoading(true);
     getSystem(systemId)
       .then((data) => {
         setValues({

@@ -19,26 +19,25 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [aiProvider, setAiProvider] = useState<AdminAiProvider>("groq");
-
-  useEffect(() => {
+  // Derive admin authorization from the client-only token via lazy init (null on
+  // the server) instead of seeding it from an effect.
+  const [authorized] = useState<boolean | null>(() => {
+    if (typeof window === "undefined") return null;
     const token = getAccessToken();
     const user = getUserFromToken();
-    if (!token || !user?.isAdmin) {
-      router.replace("/auth");
-      setAuthorized(false);
-    } else {
-      setAuthorized(true);
-    }
-  }, [router]);
-
-  useEffect(() => {
+    return Boolean(token && user?.isAdmin);
+  });
+  const [aiProvider, setAiProvider] = useState<AdminAiProvider>(() => {
+    if (typeof window === "undefined") return "groq";
     const stored = localStorage.getItem(
       ADMIN_AI_PROVIDER_KEY,
     ) as AdminAiProvider | null;
-    if (stored === "ollama" || stored === "groq") setAiProvider(stored);
-  }, []);
+    return stored === "ollama" || stored === "groq" ? stored : "groq";
+  });
+
+  useEffect(() => {
+    if (authorized === false) router.replace("/auth");
+  }, [authorized, router]);
 
   const handleProviderChange = (provider: AdminAiProvider) => {
     setAiProvider(provider);

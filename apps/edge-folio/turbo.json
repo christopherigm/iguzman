@@ -1,0 +1,17 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "env": ["NEXT_PUBLIC_ENABLE_SW"],
+      "passThroughEnv": [
+        "API_URL",
+        "LOG_LEVEL",
+        "SCRAPER_API_KEY",
+        "GROQ_API_KEY",
+        "OPENROUTER_API_KEY",
+        "OPENROUTER_MODEL"
+      ]
+    }
+  }
+}
