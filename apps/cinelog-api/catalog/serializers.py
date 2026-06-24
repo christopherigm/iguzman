@@ -15,6 +15,7 @@ from .models import (
     Format,
     HdrFormat,
     Movie,
+    MovieOwnership,
     ScanCandidate,
     ScanQueue,
     SpokenLanguage,
@@ -173,20 +174,42 @@ class MovieDetailSerializer(serializers.ModelSerializer):
         Redis. The serialized payload is cached per movie under the current
         cache version; a catalog change bumps the version (see `catalog.signals`)
         so the next read recomputes against fresh data.
+
+        The cached block is user-agnostic (the per-user `owned` field is dropped
+        before caching), so the requesting user's ownership is overlaid here, on
+        every read, without baking one user's ownership into the shared entry.
         """
         key = related_cache_key(obj.pk, cache_version())
-        cached = cache.get(key)
-        if cached is not None:
-            return cached
-        data = MovieListSerializer(
-            get_related_movies(obj),
-            many=True,
-            # This block is cached across all users; drop the per-user `owned`
-            # field so no user's ownership is baked into the shared cache entry.
-            context={**self.context, 'omit_owned': True},
-        ).data
-        cache.set(key, data, RELATED_CACHE_TTL)
-        return data
+        data = cache.get(key)
+        if data is None:
+            data = MovieListSerializer(
+                get_related_movies(obj),
+                many=True,
+                # This block is cached across all users; drop the per-user
+                # `owned` field so no user's ownership leaks into the shared
+                # cache entry (it's re-applied per request below).
+                context={**self.context, 'omit_owned': True},
+            ).data
+            cache.set(key, data, RELATED_CACHE_TTL)
+        return self._overlay_owned(data)
+
+    def _overlay_owned(self, related):
+        """
+        Return a copy of the cached related list with each card's `owned` flag
+        resolved for the requesting user, so the catalog "add to library" button
+        is hidden on titles they already own. Anonymous users get `owned=False`
+        throughout (the UI hides the button for them regardless).
+        """
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is None or not user.is_authenticated:
+            return [{**item, 'owned': False} for item in related]
+        ids = [item['id'] for item in related]
+        owned_ids = set(
+            MovieOwnership.objects.filter(user=user, movie_id__in=ids)
+            .values_list('movie_id', flat=True)
+        )
+        return [{**item, 'owned': item['id'] in owned_ids} for item in related]
 
 
 def resolve_formats(codes):
@@ -449,6 +472,22 @@ class InboxSelectSerializer(serializers.Serializer):
     """
 
     tmdb_id = serializers.CharField(max_length=20)
+
+
+class ManualScanSerializer(serializers.Serializer):
+    """
+    Inputs for the manual title-entry form: for a disc whose barcode won't scan,
+    the user types the title and year (and optionally the director they remember)
+    instead. The view seeds a barcode-less ScanQueue entry with these values and
+    hands it to the resolver; nothing is written to the catalog. ``year`` leads
+    the TMDB search alongside the title, so it is required.
+    """
+
+    title = serializers.CharField(max_length=500)
+    year = serializers.IntegerField(min_value=1870, max_value=2200)
+    director = serializers.CharField(
+        max_length=255, required=False, allow_blank=True, default=''
+    )
 
 
 class InboxAcceptSerializer(MovieEditSerializer):

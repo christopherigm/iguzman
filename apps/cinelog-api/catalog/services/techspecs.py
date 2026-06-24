@@ -40,9 +40,14 @@ def _has_specs(specs: dict) -> bool:
 
 
 def _scrape_specs(query: str) -> dict:
-    """Scrape one query and LLM-normalize it; all-empty on any miss / failure."""
+    """Scrape one query and LLM-normalize it; all-empty on any miss / failure.
+
+    blu-ray.com is the richest disc-spec source, so when it surfaces in the
+    search results we pull its full page (not just the snippet) and lead the
+    scraped text with it - see ``scrape_text(priority_host=...)``.
+    """
     try:
-        raw = scrape_text(query)
+        raw = scrape_text(query, priority_host='blu-ray.com')
     except Exception as exc:
         logger.warning('tech specs: scrape failed for %r: %s', query, exc)
         return dict(_EMPTY)

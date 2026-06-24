@@ -5,8 +5,7 @@
   },
   "Navbar": {
     "home": "Startseite",
-    "scan": "Scannen",
-    "inbox": "Posteingang",
+    "addMovie": "Film hinzufügen",
     "account": "Konto",
     "signOut": "Abmelden"
   },
@@ -14,7 +13,7 @@
     "appHeading": "App",
     "legalHeading": "Rechtliches",
     "home": "Startseite",
-    "scan": "Scannen",
+    "addMovie": "Film hinzufügen",
     "account": "Konto",
     "privacyPolicy": "Datenschutz",
     "terms": "Nutzungsbedingungen",
@@ -90,6 +89,8 @@
     }
   },
   "ScannerPage": {
+    "pageTitle": "Film hinzufügen",
+    "pageSubtitle": "Scanne einen Barcode oder suche nach Titel, um ihn zur Überprüfung an deinen Posteingang zu senden.",
     "subtitle": "Kamera auf Barcode richten",
     "statusPending": "Wird gesucht…",
     "statusSaved": "Zum Katalog hinzugefügt",
@@ -100,7 +101,15 @@
     "permissionDenied": "Kamerazugriff verweigert",
     "permissionHelp": "Bitte erlaube den Kamerazugriff in deinen Browsereinstellungen.",
     "manualLabel": "Barcode manuell eingeben",
-    "manualSubmit": "Nachschlagen"
+    "manualSubmit": "Nachschlagen",
+    "scannerHeading": "Barcode scannen",
+    "formHeading": "Nach Titel hinzufügen",
+    "formSubtitle": "Barcode lässt sich nicht scannen? Suche nach Titel und Jahr.",
+    "titleLabel": "Titel",
+    "yearLabel": "Jahr",
+    "directorLabel": "Regie (optional)",
+    "formSubmit": "Zum Posteingang hinzufügen",
+    "formError": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
   },
   "AccountPage": {
     "title": "Mein Konto",
@@ -239,6 +248,7 @@
   "InboxPage": {
     "title": "Posteingang",
     "subtitle": "Prüfe KI-aufgelöste Scans, bevor du sie zum Katalog hinzufügst.",
+    "refresh": "Aktualisieren",
     "loading": "Posteingang wird geladen…",
     "error": "Posteingang konnte nicht geladen werden.",
     "empty": "Nichts zu prüfen. Gescannte Titel, die noch aufgelöst werden, erscheinen hier.",

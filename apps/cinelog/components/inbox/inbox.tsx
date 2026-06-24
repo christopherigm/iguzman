@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
+import { Button } from "@repo/ui/core-elements/button";
 import { Grid } from "@repo/ui/core-elements/grid";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Spinner } from "@repo/ui/core-elements/spinner";
@@ -26,6 +27,8 @@ export function Inbox() {
   const [status, setStatus] = useState<Status>("loading");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  // Bumped to force a refetch in place (e.g. after a scan on this same page).
+  const [reloadToken, setReloadToken] = useState(0);
   // Genre vocabulary for each card's genre buttons; fetched once on mount.
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -43,6 +46,11 @@ export function Inbox() {
   function handlePageChange(next: number) {
     setStatus("loading");
     setPage(next);
+  }
+
+  function handleRefresh() {
+    setStatus("loading");
+    setReloadToken((t) => t + 1);
   }
 
   useEffect(() => {
@@ -66,7 +74,19 @@ export function Inbox() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, reloadToken]);
+
+  // A scan / manual add on the same "Add Movie" page queues a review entry; jump
+  // back to the newest page and refetch so it appears without a manual reload.
+  useEffect(() => {
+    function onScanQueued() {
+      setPage(1);
+      setReloadToken((t) => t + 1);
+    }
+    window.addEventListener("cinelog:scan-queued", onScanQueued);
+    return () =>
+      window.removeEventListener("cinelog:scan-queued", onScanQueued);
+  }, []);
 
   async function handleAccept(id: number, payload: InboxAcceptPayload) {
     try {
@@ -91,7 +111,7 @@ export function Inbox() {
   }
 
   return (
-    <Box flexDirection="column" gap={16} paddingY={16}>
+    <Box flexDirection="column" marginTop={32} marginBottom={32}>
       {toast && (
         <Toast
           key={toastKey}
@@ -101,14 +121,22 @@ export function Inbox() {
         />
       )}
 
-      <Box flexDirection="column" gap={4}>
+      <Box justifyContent="space-between" alignItems="flex-start">
         <Typography as="h1" variant="h2" fontWeight={700}>
           {t("title")}
         </Typography>
-        <Typography variant="body" styles={{ opacity: 0.6 }}>
-          {t("subtitle")}
-        </Typography>
+        <Button
+          text={t("refresh")}
+          icon="/icons/refresh.svg"
+          onClick={handleRefresh}
+          isLoading={status === "loading"}
+          kind="primary"
+          size="md"
+        />
       </Box>
+      <Typography variant="body" styles={{ opacity: 0.6 }} marginTop={4}>
+        {t("subtitle")}
+      </Typography>
 
       {status === "loading" && (
         <Box display="flex" justifyContent="center" paddingY={40}>

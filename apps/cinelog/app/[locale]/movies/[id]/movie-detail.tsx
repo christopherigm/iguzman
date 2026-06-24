@@ -363,7 +363,7 @@ export function MovieDetail({
         <Button
           text={t("back")}
           icon="/icons/return.svg"
-          size="md"
+          size="lg"
           onClick={() => {
             // Return to the exact catalog the user came from (its URL carries
             // the filters/sort/page, and the browser restores scroll). Fall
@@ -378,64 +378,64 @@ export function MovieDetail({
             movie.owned ||
             movie.can_purge ||
             (isLoggedIn && !movie.owned)) && (
-          <Box display="flex" gap={8} flexWrap="wrap">
-            {movie.can_purge && (
-              <IconButton
-                icon="/icons/purge.svg"
-                aria-label={t("purge")}
-                title={t("purge")}
-                kind="error"
-                size="md"
-                onClick={() => setShowPurgeConfirm(true)}
-                disabled={deleting}
-              />
-            )}
-            {movie.owned && (
-              <>
+            <Box display="flex" gap={8} flexWrap="wrap">
+              {movie.can_purge && (
                 <IconButton
-                  icon="/icons/delete.svg"
-                  aria-label={t("delete")}
-                  title={t("delete")}
+                  icon="/icons/purge.svg"
+                  aria-label={t("purge")}
+                  title={t("purge")}
                   kind="error"
                   size="md"
-                  onClick={() => setShowDeleteConfirm(true)}
+                  onClick={() => setShowPurgeConfirm(true)}
                   disabled={deleting}
-                  translucent
                 />
-                <IconButton
-                  icon="/icons/edit.svg"
-                  aria-label={t("edit")}
-                  title={t("edit")}
-                  kind="warning"
+              )}
+              {movie.owned && (
+                <>
+                  <IconButton
+                    icon="/icons/delete.svg"
+                    aria-label={t("delete")}
+                    title={t("delete")}
+                    kind="error"
+                    size="md"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={deleting}
+                    translucent
+                  />
+                  <IconButton
+                    icon="/icons/edit.svg"
+                    aria-label={t("edit")}
+                    title={t("edit")}
+                    kind="warning"
+                    size="md"
+                    onClick={() => setEditing(true)}
+                    disabled={deleting}
+                    translucent
+                  />
+                </>
+              )}
+              {isLoggedIn && !movie.owned && (
+                <AddToLibraryButton
+                  movieId={movie.id}
+                  movieTitle={movie.title}
                   size="md"
-                  onClick={() => setEditing(true)}
+                  translucent
+                  onAdded={setMovie}
+                />
+              )}
+              {movie.trailer_url && (
+                <Button
+                  text={t("trailer")}
+                  icon="/icons/trailer.svg"
+                  size="md"
+                  onClick={handleTrailerClick}
                   disabled={deleting}
+                  kind="primary"
                   translucent
                 />
-              </>
-            )}
-            {isLoggedIn && !movie.owned && (
-              <AddToLibraryButton
-                movieId={movie.id}
-                movieTitle={movie.title}
-                size="md"
-                translucent
-                onAdded={setMovie}
-              />
-            )}
-            {movie.trailer_url && (
-              <Button
-                text={t("trailer")}
-                icon="/icons/trailer.svg"
-                size="md"
-                onClick={handleTrailerClick}
-                disabled={deleting}
-                kind="primary"
-                translucent
-              />
-            )}
-          </Box>
-        )}
+              )}
+            </Box>
+          )}
       </Box>
 
       <Box
@@ -633,7 +633,7 @@ export function MovieDetail({
           <Typography as="h2" variant="h4" fontWeight={700}>
             {t("related")}
           </Typography>
-          <Grid container spacing={2}>
+          <Grid container spacing={1}>
             {movie.related.map((related) => (
               <Grid key={related.id} size={{ xs: 6, sm: 4, md: 3, lg: 2 }}>
                 <MovieCard movie={related} view="grid" />

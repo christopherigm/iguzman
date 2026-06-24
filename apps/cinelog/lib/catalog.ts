@@ -66,8 +66,9 @@ export interface Movie {
   genres: Category[];
   /**
    * True when the signed-in user already owns this movie; gates the catalog's
-   * "add to library" button. Absent on related-movie payloads (that block is
-   * cached cross-user, so per-user ownership is omitted there).
+   * "add to library" button. Present everywhere the user can act, including
+   * related-movie cards (the cross-user cached block has the requesting user's
+   * ownership overlaid per request). Optional only for anonymous browsing.
    */
   owned?: boolean;
   created: string;

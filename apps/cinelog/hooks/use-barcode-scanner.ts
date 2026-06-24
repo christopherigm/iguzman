@@ -62,10 +62,12 @@ export function useBarcodeScanner() {
         if (data.status === "saved") vibrate(150);
         else if (data.status === "exists") vibrate([50, 50, 50]);
         setLastScan({ barcode, status: data.status, title: data.movie?.title });
-        // The slow path is already handed off to the worker; the user can keep
-        // scanning and review it later in the inbox. Auto-clear so the lingering
-        // "queued" card doesn't imply there's something to wait for here.
+        // A queued scan landed a per-user ScanQueue entry; tell the inbox on the
+        // same "Add Movie" page to refetch so it shows without a manual reload.
+        // The user can keep scanning and review it below. Auto-clear so the
+        // lingering "queued" card doesn't imply there's something to wait for here.
         if (data.status === "queued") {
+          window.dispatchEvent(new Event("cinelog:scan-queued"));
           clearRef.current = setTimeout(() => setLastScan(null), 2500);
         }
       } else {

@@ -5,8 +5,7 @@
   },
   "Navbar": {
     "home": "Home",
-    "scan": "Scan",
-    "inbox": "Inbox",
+    "addMovie": "Add Movie",
     "account": "Account",
     "signOut": "Sign out"
   },
@@ -14,7 +13,7 @@
     "appHeading": "App",
     "legalHeading": "Legal",
     "home": "Home",
-    "scan": "Scan",
+    "addMovie": "Add Movie",
     "account": "Account",
     "privacyPolicy": "Privacy Policy",
     "terms": "Terms of Service",
@@ -90,6 +89,8 @@
     }
   },
   "ScannerPage": {
+    "pageTitle": "Add Movie",
+    "pageSubtitle": "Scan a barcode or search by title to send it to your inbox for review.",
     "subtitle": "Point camera at barcode",
     "statusPending": "Looking up…",
     "statusSaved": "Added to catalog",
@@ -100,7 +101,15 @@
     "permissionDenied": "Camera access denied",
     "permissionHelp": "Please allow camera access in your browser settings.",
     "manualLabel": "Enter barcode manually",
-    "manualSubmit": "Look up"
+    "manualSubmit": "Look up",
+    "scannerHeading": "Scan a barcode",
+    "formHeading": "Add by title",
+    "formSubtitle": "Can't scan the barcode? Look it up by title and year.",
+    "titleLabel": "Title",
+    "yearLabel": "Year",
+    "directorLabel": "Director (optional)",
+    "formSubmit": "Add to inbox",
+    "formError": "Something went wrong. Please try again."
   },
   "AccountPage": {
     "title": "My Account",
@@ -239,6 +248,7 @@
   "InboxPage": {
     "title": "Inbox",
     "subtitle": "Review AI-resolved scans before adding them to your catalog.",
+    "refresh": "Refresh",
     "loading": "Loading inbox…",
     "error": "Failed to load the inbox.",
     "empty": "Nothing to review. Scanned titles awaiting resolution will appear here.",

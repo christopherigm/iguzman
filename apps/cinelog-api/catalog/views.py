@@ -23,6 +23,7 @@ from .serializers import (
     CategorySerializer,
     InboxAcceptSerializer,
     InboxSelectSerializer,
+    ManualScanSerializer,
     MovieDetailSerializer,
     MovieEditMediaSerializer,
     MovieListSerializer,
@@ -41,7 +42,11 @@ from .services.extras import fetch_synopsis, fetch_trailer
 from .services.lookup import lookup_barcode
 from .services.refetch import refetch_movie_data, refetch_movie_data_by_id
 from .services.tmdb import search_tmdb
-from .tasks import fetch_movie_backdrop, fetch_movie_extras, resolve_scan_queue_entry
+from .tasks import (
+    enrich_scan_queue_entry,
+    resolve_manual_queue_entry,
+    resolve_scan_queue_entry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -466,13 +471,16 @@ class ScanView(APIView):
     """
     POST /api/catalog/scan/  { "barcode": "..." }
 
-    Always records the scanning user's ownership of the resolved film.
+    A scan never writes straight to the catalog: it lands in the per-user
+    ScanQueue for review in the inbox, except when the barcode is already known.
 
-    Known barcode: grant ownership and return the existing movie.
-    Fast path (UPCitemdb -> TMDB): attach the barcode to an existing matching
-        movie when one is found (a different format of an owned title), else
-        create the movie; grant ownership either way.
-    Slow path: any miss -> create a per-user ScanQueue entry and return 202.
+    Known barcode: grant ownership of the existing (already reviewed) movie and
+        return it - nothing new enters the catalog, so no review is needed.
+    Fast path (UPCitemdb -> TMDB): pre-fill a ScanQueue entry from the instant
+        lookup and set it to `review` so it shows in the inbox immediately;
+        enrich the remaining fields in the background. Return 202.
+    Slow path: any miss -> create a per-user ScanQueue entry, hand it to the
+        async resolver, and return 202.
     """
 
     permission_classes = [IsAuthenticated]
@@ -504,58 +512,68 @@ class ScanView(APIView):
         ).exists():
             return Response({'status': 'queued'}, status=status.HTTP_202_ACCEPTED)
 
-        # Fast path
+        # Fast path - the barcode resolves instantly via UPCitemdb -> TMDB. Pre-fill
+        # a per-user review entry from that data and set it to `review` so it shows
+        # in the inbox immediately (no waiting on the worker); enrich the remaining
+        # fields - synopsis, trailer, tech specs, wallpaper, alternative matches -
+        # in the background. Nothing is written to the catalog until the user
+        # accepts the entry in the inbox.
         data = lookup_barcode(barcode)
         if data:
-            existing = find_existing_movie(data.tmdb_id, data.title, data.year)
-            fmt = resolve_formats([data.format])[0] if data.format else None
-
-            with transaction.atomic():
-                if existing is None:
-                    write_data = {
-                        'title': data.title,
-                        'director': data.director,
-                        'year': data.year,
-                        'format_codes': [data.format] if data.format else [],
-                        'cover_url': data.cover_url,
-                        'tmdb_id': data.tmdb_id,
-                        'cast_names': data.cast,
-                        'genre_ids': resolve_genre_ids(data.genres),
-                    }
-                    serializer = MovieWriteSerializer(data=write_data)
-                    serializer.is_valid(raise_exception=True)
-                    movie = serializer.save()
-                else:
-                    # A different release of a title already in the catalog - add
-                    # this format to its aggregate; leave its metadata/art alone.
-                    movie = existing
-                    if fmt:
-                        movie.formats.add(fmt)
-
-                bc = Barcode.objects.create(movie=movie, code=barcode, format=fmt)
-                MovieOwnership.objects.get_or_create(
-                    user=user, movie=movie, defaults={'barcode': bc}
-                )
-
-            if existing is None:
-                # Fetch the wallpaper out of band so the scan response isn't blocked
-                # on image download, and backfill synopsis + trailer too.
-                fetch_movie_backdrop.delay(movie.id, data.backdrop_url)
-                fetch_movie_extras.delay(movie.id)
-                response_status = status.HTTP_201_CREATED
-                label = 'saved'
-            else:
-                response_status = status.HTTP_200_OK
-                label = 'exists'
-
+            entry = ScanQueue.objects.create(
+                scanned_by=user,
+                barcode=barcode,
+                status='review',
+                extracted_title=data.title,
+                extracted_director=data.director,
+                extracted_year=data.year,
+                extracted_cast=data.cast,
+                extracted_genres=data.genres,
+                extracted_tmdb_id=data.tmdb_id,
+                extracted_cover_url=data.cover_url,
+            )
+            enrich_scan_queue_entry.delay(entry.id, data.tmdb_id, data.backdrop_url)
             return Response(
-                {'status': label, 'movie': MovieDetailSerializer(movie, context={'request': request}).data},
-                status=response_status,
+                {'status': 'queued', 'queue_id': entry.id},
+                status=status.HTTP_202_ACCEPTED,
             )
 
         # Slow path - hand off to the async resolution queue for this user.
         entry = ScanQueue.objects.create(barcode=barcode, scanned_by=user)
         resolve_scan_queue_entry.delay(entry.id)
+        return Response(
+            {'status': 'queued', 'queue_id': entry.id},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class ManualScanView(APIView):
+    """
+    POST /api/catalog/manual-scan/  { "title": "...", "year": 1999, "director": "..." }
+
+    Queue a manually-entered title for AI resolution and Inbox review, for a disc
+    whose barcode won't scan. Seeds a barcode-less, per-user ScanQueue entry with
+    the typed title / year / director and hands it to the resolver, which fills
+    in the metadata and lands it in `review`. Nothing is written to the catalog
+    here - the entry is corrected and accepted in the Inbox like any scanned one.
+    Always returns 202 queued, mirroring the slow-path barcode scan.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ManualScanSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        entry = ScanQueue.objects.create(
+            scanned_by=request.user,
+            barcode='',
+            extracted_title=data['title'].strip(),
+            extracted_year=data['year'],
+            extracted_director=data['director'].strip(),
+        )
+        resolve_manual_queue_entry.delay(entry.id)
         return Response(
             {'status': 'queued', 'queue_id': entry.id},
             status=status.HTTP_202_ACCEPTED,
@@ -664,10 +682,15 @@ class InboxAcceptView(APIView):
                 if data['subtitle_languages']:
                     movie.subtitle_languages.add(*resolve_subtitle_languages(data['subtitle_languages']))
 
-            # Attach the scanned barcode and grant ownership to the scanner.
-            bc, _ = Barcode.objects.get_or_create(
-                code=entry.barcode, defaults={'movie': movie, 'format': barcode_format}
-            )
+            # Attach the scanned barcode and grant ownership to the scanner. A
+            # manually-entered title carries no barcode, so the ownership is
+            # recorded without one (empty codes can't be deduped - the unique
+            # `code` would collide across manual accepts).
+            bc = None
+            if entry.barcode:
+                bc, _ = Barcode.objects.get_or_create(
+                    code=entry.barcode, defaults={'movie': movie, 'format': barcode_format}
+                )
             MovieOwnership.objects.get_or_create(
                 user=request.user, movie=movie, defaults={'barcode': bc}
             )

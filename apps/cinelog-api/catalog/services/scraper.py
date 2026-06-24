@@ -9,7 +9,11 @@ logger = logging.getLogger(__name__)
 # page extraction of the top result to gather richer text for the LLM.
 _THIN_SNIPPET_THRESHOLD = 300
 _SEARCH_RESULTS = 5
-_TIMEOUT = 30
+# Both scraper calls hit live web pages and can be slow: `/search` runs a web
+# search (spec-oriented queries are slow to resolve) and `/extract` renders a
+# full page (blu-ray.com spec sheets are heavy). Give both a generous budget.
+_SEARCH_TIMEOUT = 90
+_EXTRACT_TIMEOUT = 90
 
 
 def _headers() -> dict:
@@ -24,7 +28,7 @@ def _search(query: str) -> list[dict]:
         f'{settings.SCRAPER_BASE_URL}/search',
         json={'query': query, 'maxResults': _SEARCH_RESULTS},
         headers=_headers(),
-        timeout=_TIMEOUT,
+        timeout=_SEARCH_TIMEOUT,
     )
     resp.raise_for_status()
     # The scraper returns a bare JSON array of results; tolerate a
@@ -40,10 +44,19 @@ def _extract(url: str) -> str:
         f'{settings.SCRAPER_BASE_URL}/extract',
         json={'url': url},
         headers=_headers(),
-        timeout=_TIMEOUT,
+        timeout=_EXTRACT_TIMEOUT,
     )
     resp.raise_for_status()
     return (resp.json().get('content') or '').strip()
+
+
+def _safe_extract(url: str) -> str:
+    """Full-page extraction for `url`; '' on any failure (best-effort)."""
+    try:
+        return _extract(url)
+    except Exception:
+        logger.warning('Scraper /extract failed for %s; using snippets only', url)
+        return ''
 
 
 def _format_results(results: list[dict]) -> str:
@@ -88,7 +101,7 @@ def search_youtube(query: str) -> str:
     return ''
 
 
-def scrape_text(query: str) -> str:
+def scrape_text(query: str, priority_host: str = '') -> str:
     """
     Gather raw web text for an arbitrary `query` via the `scraper` microservice.
 
@@ -96,8 +109,15 @@ def scrape_text(query: str) -> str:
     snippets are thin, falls back to `POST /extract` on the top result URL to
     pull fuller page content.
 
+    When `priority_host` is set and one of the results points at that host (e.g.
+    ``blu-ray.com`` for disc tech specs), that page carries far richer data than
+    its snippet, so its full page is extracted via `POST /extract` and prepended
+    to the snippets - giving the LLM the authoritative source up front, followed
+    by the remaining search context. A failed priority extract is swallowed and
+    the flow falls back to the normal thin-snippet behavior.
+
     Returns the combined raw text (possibly empty on no results). Network and
-    HTTP errors propagate to the caller.
+    HTTP errors on the `POST /search` call propagate to the caller.
     """
     results = _search(query)
     if not results:
@@ -105,6 +125,19 @@ def scrape_text(query: str) -> str:
         return ''
 
     combined = _format_results(results)
+
+    # A priority host's full spec page beats every snippet; lead with it and
+    # append the remaining search context underneath.
+    if priority_host:
+        priority_url = next(
+            (r.get('url') for r in results if priority_host in (r.get('url') or '')),
+            None,
+        )
+        if priority_url:
+            extracted = _safe_extract(priority_url)
+            if extracted:
+                return f'{extracted}\n\n{combined}' if combined else extracted
+
     if len(combined) >= _THIN_SNIPPET_THRESHOLD:
         return combined
 
@@ -112,12 +145,7 @@ def scrape_text(query: str) -> str:
     if not top_url:
         return combined
 
-    try:
-        extracted = _extract(top_url)
-    except Exception:
-        logger.warning('Scraper /extract failed for %s; using snippets only', top_url)
-        return combined
-
+    extracted = _safe_extract(top_url)
     if not extracted:
         return combined
 

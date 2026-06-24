@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
+import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
@@ -93,22 +94,23 @@ export function BarcodeScanner() {
     : null;
 
   return (
-    <Box
-      flexDirection="column"
-      alignItems="center"
-      width="100%"
-      gap={16}
-      paddingY={16}
-    >
-      <Typography
-        variant="caption"
-        color="var(--foreground)"
-        styles={{ opacity: 0.6 }}
-      >
-        {t("subtitle")}
-      </Typography>
+    /* Scan a barcode section - a grid item on the Add Movie page. */
+    <Card width="100%" gap={16} marginTop={16} marginBottom={16}>
+      <Box flexDirection="column" gap={4}>
+        <Typography as="h2" variant="h4">
+          {t("scannerHeading")}
+        </Typography>
+        <Typography
+          variant="caption"
+          color="var(--foreground)"
+          styles={{ opacity: 0.6 }}
+        >
+          {t("subtitle")}
+        </Typography>
+      </Box>
 
-      {/* Camera viewfinder */}
+      {/* Camera viewfinder - aspect ratio kept wide so the viewfinder is ~30%
+            shorter than a 4:3 frame at the same column width. */}
       <Box
         className="scanner-viewfinder"
         width="100%"
@@ -116,8 +118,7 @@ export function BarcodeScanner() {
         styles={{
           position: "relative",
           overflow: "hidden",
-          aspectRatio: "4 / 3",
-          maxWidth: "480px",
+          aspectRatio: "2.5 / 1",
           background: "#000",
           boxShadow: flash ? "0 0 0 3px var(--accent)" : "none",
         }}
@@ -152,11 +153,9 @@ export function BarcodeScanner() {
       </Box>
 
       {/* Manual barcode entry */}
-      <form
-        onSubmit={handleManualSubmit}
-        style={{ width: "100%", maxWidth: "480px" }}
-      >
+      <form onSubmit={handleManualSubmit} style={{ width: "100%" }}>
         <Box
+          display="flex"
           flexDirection="row"
           alignItems="center"
           justifyContent="space-between"
@@ -216,7 +215,6 @@ export function BarcodeScanner() {
           flexDirection="column"
           alignItems="center"
           width="100%"
-          styles={{ maxWidth: "480px" }}
           borderRadius={8}
           paddingX={16}
           paddingY={12}
@@ -240,6 +238,6 @@ export function BarcodeScanner() {
           </Typography>
         </Box>
       )}
-    </Box>
+    </Card>
   );
 }

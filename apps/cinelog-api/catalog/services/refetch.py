@@ -1,11 +1,33 @@
 import logging
 
+from django.utils.text import slugify
+
+from ..models import Category
 from .extract import extract_movie, extract_synopsis
 from .scraper import scrape_text, search_youtube
 from .techspecs import fetch_tech_specs
 from .tmdb import fetch_tmdb_by_id, fetch_tmdb_extras, search_tmdb
 
 logger = logging.getLogger(__name__)
+
+
+def _canonical_genres(names: list[str]) -> list[str]:
+    """Map resolved genre names onto the catalog's existing category names.
+
+    Categories are keyed by ``slug``; their display ``name`` may carry decoration
+    (e.g. a trailing emoji) that raw TMDB / scraped names lack. The metadata
+    editor's genre buttons match by name, so a preview must echo the stored name
+    to land pre-selected after a re-fetch - this mirrors the slug lookup that
+    ``resolve_genre_ids`` uses on save. Genres not yet in the catalog pass
+    through as-is.
+    """
+    if not names:
+        return names
+    slugs = [slugify(name) for name in names]
+    by_slug = dict(
+        Category.objects.filter(slug__in=slugs).values_list('slug', 'name')
+    )
+    return [by_slug.get(slug, name) for name, slug in zip(names, slugs)]
 
 
 def _tech_specs(barcode: str, title: str, year: int | None) -> dict:
@@ -53,7 +75,7 @@ def _from_tmdb(tmdb: dict, barcode: str, fallback_title: str = '') -> dict:
         'title': title,
         'director': tmdb['director'],
         'year': tmdb['year'],
-        'genres': tmdb['genres'],
+        'genres': _canonical_genres(tmdb['genres']),
         'cast': tmdb['cast'],
         'cover_url': tmdb['cover_url'],
         'backdrop_url': tmdb['backdrop_url'],

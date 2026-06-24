@@ -5,8 +5,7 @@
   },
   "Navbar": {
     "home": "Accueil",
-    "scan": "Scanner",
-    "inbox": "Boîte de réception",
+    "addMovie": "Ajouter un film",
     "account": "Mon Compte",
     "signOut": "Se déconnecter"
   },
@@ -14,7 +13,7 @@
     "appHeading": "Application",
     "legalHeading": "Légal",
     "home": "Accueil",
-    "scan": "Scanner",
+    "addMovie": "Ajouter un film",
     "account": "Mon Compte",
     "privacyPolicy": "Politique de Confidentialité",
     "terms": "Conditions d'Utilisation",
@@ -90,6 +89,8 @@
     }
   },
   "ScannerPage": {
+    "pageTitle": "Ajouter un film",
+    "pageSubtitle": "Scannez un code-barres ou recherchez par titre pour l'envoyer dans votre boîte de réception pour révision.",
     "subtitle": "Pointez la caméra vers le code-barres",
     "statusPending": "Recherche en cours…",
     "statusSaved": "Ajouté au catalogue",
@@ -100,7 +101,15 @@
     "permissionDenied": "Accès à la caméra refusé",
     "permissionHelp": "Veuillez autoriser l'accès à la caméra dans les paramètres de votre navigateur.",
     "manualLabel": "Saisir le code-barres manuellement",
-    "manualSubmit": "Rechercher"
+    "manualSubmit": "Rechercher",
+    "scannerHeading": "Scanner un code-barres",
+    "formHeading": "Ajouter par titre",
+    "formSubtitle": "Impossible de scanner le code-barres ? Recherchez par titre et année.",
+    "titleLabel": "Titre",
+    "yearLabel": "Année",
+    "directorLabel": "Réalisateur (facultatif)",
+    "formSubmit": "Ajouter à la boîte de réception",
+    "formError": "Une erreur s'est produite. Veuillez réessayer."
   },
   "AccountPage": {
     "title": "Mon Compte",
@@ -239,6 +248,7 @@
   "InboxPage": {
     "title": "Boîte de réception",
     "subtitle": "Vérifiez les scans résolus par l'IA avant de les ajouter à votre catalogue.",
+    "refresh": "Actualiser",
     "loading": "Chargement de la boîte de réception…",
     "error": "Échec du chargement de la boîte de réception.",
     "empty": "Rien à vérifier. Les titres scannés en attente de résolution apparaîtront ici.",

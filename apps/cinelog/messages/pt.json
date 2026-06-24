@@ -5,8 +5,7 @@
   },
   "Navbar": {
     "home": "Início",
-    "scan": "Escanear",
-    "inbox": "Caixa de entrada",
+    "addMovie": "Adicionar filme",
     "account": "Minha Conta",
     "signOut": "Sair"
   },
@@ -14,7 +13,7 @@
     "appHeading": "App",
     "legalHeading": "Legal",
     "home": "Início",
-    "scan": "Escanear",
+    "addMovie": "Adicionar filme",
     "account": "Minha Conta",
     "privacyPolicy": "Política de Privacidade",
     "terms": "Termos de Serviço",
@@ -90,6 +89,8 @@
     }
   },
   "ScannerPage": {
+    "pageTitle": "Adicionar filme",
+    "pageSubtitle": "Escaneie um código de barras ou pesquise por título para enviá-lo à sua caixa de entrada para revisão.",
     "subtitle": "Aponte a câmera para o código de barras",
     "statusPending": "Buscando…",
     "statusSaved": "Adicionado ao catálogo",
@@ -100,7 +101,15 @@
     "permissionDenied": "Acesso à câmera negado",
     "permissionHelp": "Por favor, permita o acesso à câmera nas configurações do seu navegador.",
     "manualLabel": "Digite o código de barras manualmente",
-    "manualSubmit": "Buscar"
+    "manualSubmit": "Buscar",
+    "scannerHeading": "Escanear um código de barras",
+    "formHeading": "Adicionar por título",
+    "formSubtitle": "Não consegue escanear o código? Busque pelo título e ano.",
+    "titleLabel": "Título",
+    "yearLabel": "Ano",
+    "directorLabel": "Diretor (opcional)",
+    "formSubmit": "Adicionar à caixa de entrada",
+    "formError": "Algo deu errado. Tente novamente."
   },
   "AccountPage": {
     "title": "Minha Conta",
@@ -239,6 +248,7 @@
   "InboxPage": {
     "title": "Caixa de entrada",
     "subtitle": "Revise os scans resolvidos por IA antes de adicioná-los ao seu catálogo.",
+    "refresh": "Atualizar",
     "loading": "Carregando caixa de entrada…",
     "error": "Falha ao carregar a caixa de entrada.",
     "empty": "Nada para revisar. Títulos escaneados aguardando resolução aparecerão aqui.",

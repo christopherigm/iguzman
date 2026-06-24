@@ -5,8 +5,7 @@
   },
   "Navbar": {
     "home": "Inicio",
-    "scan": "Escanear",
-    "inbox": "Bandeja",
+    "addMovie": "Añadir película",
     "account": "Cuenta",
     "signOut": "Cerrar sesión"
   },
@@ -14,7 +13,7 @@
     "appHeading": "Aplicación",
     "legalHeading": "Legal",
     "home": "Inicio",
-    "scan": "Escanear",
+    "addMovie": "Añadir película",
     "account": "Cuenta",
     "privacyPolicy": "Política de privacidad",
     "terms": "Términos de servicio",
@@ -90,6 +89,8 @@
     }
   },
   "ScannerPage": {
+    "pageTitle": "Agregar película",
+    "pageSubtitle": "Escanea un código de barras o busca por título para enviarlo a tu bandeja de entrada para revisión.",
     "subtitle": "Apunta la cámara al código de barras",
     "statusPending": "Buscando…",
     "statusSaved": "Agregado al catálogo",
@@ -100,7 +101,15 @@
     "permissionDenied": "Acceso a la cámara denegado",
     "permissionHelp": "Permite el acceso a la cámara en la configuración de tu navegador.",
     "manualLabel": "Introduce el código de barras manualmente",
-    "manualSubmit": "Buscar"
+    "manualSubmit": "Buscar",
+    "scannerHeading": "Escanear un código de barras",
+    "formHeading": "Agregar por título",
+    "formSubtitle": "¿No puedes escanear el código? Búscalo por título y año.",
+    "titleLabel": "Título",
+    "yearLabel": "Año",
+    "directorLabel": "Director (opcional)",
+    "formSubmit": "Agregar a la bandeja",
+    "formError": "Algo salió mal. Inténtalo de nuevo."
   },
   "AccountPage": {
     "title": "Mi cuenta",
@@ -239,6 +248,7 @@
   "InboxPage": {
     "title": "Bandeja",
     "subtitle": "Revisa los escaneos resueltos por IA antes de añadirlos a tu catálogo.",
+    "refresh": "Actualizar",
     "loading": "Cargando bandeja…",
     "error": "No se pudo cargar la bandeja.",
     "empty": "Nada que revisar. Los títulos escaneados pendientes de resolver aparecerán aquí.",

@@ -186,6 +186,189 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
         ])
 
 
+@shared_task(bind=True, max_retries=_MAX_RETRIES, default_retry_delay=_RETRY_DELAY)
+def resolve_manual_queue_entry(self, entry_id: int) -> None:
+    """
+    Resolve a manually-entered title (no barcode) into a review entry.
+
+    Mirrors :func:`resolve_scan_queue_entry` but skips the barcode scrape + LLM
+    extraction: the user typed the title and year on the scan page's manual form,
+    so we feed them straight into the shared resolver. The same year-aware TMDB
+    match + extras the barcode path uses, so a manually-added title carries the
+    identical data a scanned one would. A failure never strands the entry - the
+    user's typed title is already persisted, so it still lands in `review` for
+    correction in the Inbox.
+    """
+    try:
+        entry = ScanQueue.objects.get(pk=entry_id)
+    except ScanQueue.DoesNotExist:
+        logger.warning('resolve_manual_queue_entry: entry %s no longer exists', entry_id)
+        return
+
+    entry.status = 'processing'
+    entry.retry_count = self.request.retries
+    entry.save(update_fields=['status', 'retry_count', 'modified'])
+
+    title = entry.extracted_title.strip()
+    year = entry.extracted_year
+
+    # ── Resolve full metadata (shared resolver) ─────────────────────────────────
+    # No barcode and no pre-scraped text: the resolver runs a year-aware TMDB
+    # match and, on a miss, scrapes a `title + year` query itself. A failure never
+    # strands the entry - the typed title/year/director are already persisted.
+    try:
+        preview = resolve_movie_metadata(title=title, year=year)
+    except Exception as exc:
+        logger.warning('resolve_manual_queue_entry: metadata resolve failed for %r: %s', title, exc)
+        preview = None
+
+    if preview:
+        entry.extracted_title = preview['title'] or title
+        # Keep the user's typed director when the resolver couldn't supply one.
+        entry.extracted_director = preview['director'] or entry.extracted_director
+        entry.extracted_year = preview['year'] if preview['year'] is not None else year
+        entry.extracted_cast = preview['cast']
+        entry.extracted_genres = preview['genres']
+        entry.extracted_tmdb_id = preview['tmdb_id']
+        entry.extracted_cover_url = preview['cover_url']
+        entry.extracted_synopsis = preview['synopsis']
+        entry.extracted_trailer_url = preview['trailer_url']
+        entry.extracted_audio_formats = preview['audio_formats']
+        entry.extracted_hdr_formats = preview['hdr_formats']
+        entry.extracted_spoken_languages = preview['spoken_languages']
+        entry.extracted_subtitle_languages = preview['subtitle_languages']
+        # A non-empty tmdb_id marks an authoritative match; otherwise the typed
+        # title may need manual correction in the Inbox.
+        entry.error_message = '' if preview['tmdb_id'] else (
+            'No TMDB match - your entered title was saved for manual correction.'
+        )
+    else:
+        entry.error_message = 'No TMDB match - your entered title was saved for manual correction.'
+
+    backdrop_url = preview['backdrop_url'] if preview else ''
+
+    # ── Alternative candidates (best-effort) ───────────────────────────────────
+    # Search with the title the user typed (NOT entry.extracted_title, which a
+    # TMDB hit has already overwritten with the possibly-wrong top match). The
+    # year is omitted so the picker can surface a different-year alternative.
+    try:
+        candidates = search_tmdb_candidates(title)
+    except Exception as exc:
+        logger.warning('resolve_manual_queue_entry: candidate search failed for %r: %s', title, exc)
+        candidates = []
+
+    # ── Backdrop wallpaper (best-effort) ───────────────────────────────────────
+    try:
+        backdrop = fetch_backdrop(
+            backdrop_url,
+            entry.extracted_title,
+            entry.extracted_year,
+        )
+        if backdrop:
+            entry.extracted_backdrop_image.save(backdrop.name, backdrop, save=False)
+    except Exception as exc:
+        logger.warning('resolve_manual_queue_entry: backdrop fetch failed for %r: %s', title, exc)
+
+    entry.status = 'review'
+    entry.save()
+
+    # Persist the alternative matches now the entry has a saved pk. Replace any
+    # from a previous resolution attempt so a retry never stacks duplicates.
+    entry.candidates.all().delete()
+    if candidates:
+        ScanCandidate.objects.bulk_create([
+            ScanCandidate(
+                entry=entry,
+                tmdb_id=c['tmdb_id'],
+                title=c['title'],
+                year=c['year'],
+                cover_url=c['cover_url'],
+                overview=c['overview'],
+                sort_order=index,
+            )
+            for index, c in enumerate(candidates)
+        ])
+
+
+@shared_task
+def enrich_scan_queue_entry(entry_id: int, tmdb_id: str = '', backdrop_url: str = '') -> None:
+    """
+    Enrich a fast-path review entry in the background.
+
+    The scan endpoint pre-fills a ScanQueue entry from the instant UPCitemdb →
+    TMDB lookup and sets it straight to `review`, so it appears in the inbox
+    without waiting on a worker. This layers on the richer fields a slow-path
+    entry carries - synopsis, trailer, disc tech specs, wallpaper, and the
+    alternative TMDB matches the picker needs - pinning the authoritative
+    `tmdb_id` so the metadata never drifts to a different film. The entry stays
+    in `review` throughout; every step is best-effort and a failure leaves the
+    pre-filled data intact.
+    """
+    try:
+        entry = ScanQueue.objects.get(pk=entry_id)
+    except ScanQueue.DoesNotExist:
+        logger.warning('enrich_scan_queue_entry: entry %s no longer exists', entry_id)
+        return
+
+    try:
+        preview = resolve_movie_metadata(tmdb_id=tmdb_id, barcode=entry.barcode)
+    except Exception as exc:
+        logger.warning('enrich_scan_queue_entry: metadata resolve failed for entry %s: %s', entry_id, exc)
+        preview = None
+
+    if preview:
+        # tmdb_id is authoritative for the same film, so the richer values win;
+        # fall back to the pre-filled data only where the resolver came up empty.
+        entry.extracted_title = preview['title'] or entry.extracted_title
+        entry.extracted_director = preview['director'] or entry.extracted_director
+        if preview['year'] is not None:
+            entry.extracted_year = preview['year']
+        entry.extracted_cast = preview['cast'] or entry.extracted_cast
+        entry.extracted_genres = preview['genres'] or entry.extracted_genres
+        entry.extracted_cover_url = preview['cover_url'] or entry.extracted_cover_url
+        entry.extracted_synopsis = preview['synopsis']
+        entry.extracted_trailer_url = preview['trailer_url']
+        entry.extracted_audio_formats = preview['audio_formats']
+        entry.extracted_hdr_formats = preview['hdr_formats']
+        entry.extracted_spoken_languages = preview['spoken_languages']
+        entry.extracted_subtitle_languages = preview['subtitle_languages']
+
+    resolved_backdrop_url = (preview['backdrop_url'] if preview else '') or backdrop_url
+
+    # ── Backdrop wallpaper (best-effort) ───────────────────────────────────────
+    try:
+        backdrop = fetch_backdrop(resolved_backdrop_url, entry.extracted_title, entry.extracted_year)
+        if backdrop:
+            entry.extracted_backdrop_image.save(backdrop.name, backdrop, save=False)
+    except Exception as exc:
+        logger.warning('enrich_scan_queue_entry: backdrop fetch failed for entry %s: %s', entry_id, exc)
+
+    entry.save()
+
+    # ── Alternative candidates for the inbox picker (best-effort) ──────────────
+    # Replace any from an earlier attempt so a re-enrich never stacks duplicates.
+    try:
+        candidates = search_tmdb_candidates(entry.extracted_title)
+    except Exception as exc:
+        logger.warning('enrich_scan_queue_entry: candidate search failed for entry %s: %s', entry_id, exc)
+        candidates = []
+
+    entry.candidates.all().delete()
+    if candidates:
+        ScanCandidate.objects.bulk_create([
+            ScanCandidate(
+                entry=entry,
+                tmdb_id=c['tmdb_id'],
+                title=c['title'],
+                year=c['year'],
+                cover_url=c['cover_url'],
+                overview=c['overview'],
+                sort_order=index,
+            )
+            for index, c in enumerate(candidates)
+        ])
+
+
 @shared_task
 def fetch_movie_backdrop(movie_id: int, backdrop_url: str = '') -> None:
     """

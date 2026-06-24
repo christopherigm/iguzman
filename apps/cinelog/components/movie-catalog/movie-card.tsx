@@ -22,8 +22,8 @@ export function MovieCard({ movie, view }: Props) {
   const t = useTranslations("CatalogPage");
   const tFormat = useTranslations("MovieFormat");
   // The "add to library" control is shown only to a signed-in user who doesn't
-  // already own the movie. (`owned` is absent on related-movie cards, which are
-  // cached cross-user; those default to showing the button.)
+  // already own the movie. `owned` is resolved per-user on every card (including
+  // related-movie cards, where it's overlaid onto the cross-user cached block).
   const showAdd = useIsLoggedIn() && !movie.owned;
 
   const cover = (

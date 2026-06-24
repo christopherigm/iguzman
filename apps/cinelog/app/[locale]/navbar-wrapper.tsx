@@ -23,8 +23,7 @@ interface NavbarWrapperProps {
   version: string;
   labels: {
     home: string;
-    scan: string;
-    inbox: string;
+    addMovie: string;
     account: string;
     signOut: string;
   };
@@ -60,10 +59,7 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
       items={[
         { label: labels.home, href: "/" },
         ...(displayName
-          ? [
-              { label: labels.scan, href: "/scan" },
-              { label: labels.inbox, href: "/inbox" },
-            ]
+          ? [{ label: labels.addMovie, href: "/add-movie" }]
           : []),
         accountItem,
       ]}

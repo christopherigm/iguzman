@@ -19,7 +19,7 @@ export async function Footer({ logo }: { logo: string }) {
 
   const appLinks = [
     { label: t("home"), href: "/" },
-    { label: t("scan"), href: "/scan" },
+    { label: t("addMovie"), href: "/add-movie" },
     { label: t("account"), href: "/account" },
   ];
   const legalLinks = [

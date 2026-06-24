@@ -43,11 +43,29 @@ export interface BoxProps extends UIComponentProps {
 }
 
 /**
+ * Flex *container* props. When any of these is set but `display` is not,
+ * Box infers `display: "flex"` so the prop actually takes effect. Flex
+ * *child* props (`flex`, `flexGrow`, `alignSelf`, `order`) are intentionally
+ * excluded - they style the Box as a child of some other flex container and
+ * must not turn the Box itself into a flex container.
+ */
+const FLEX_CONTAINER_KEYS: (keyof BoxProps)[] = [
+  "flexDirection",
+  "justifyContent",
+  "alignItems",
+  "flexWrap",
+  "gap",
+];
+
+/**
  * Box - a small, flexible div wrapper that accepts inline layout props.
+ *
+ * Setting any flex container prop (`flexDirection`, `justifyContent`,
+ * `alignItems`, `flexWrap`, `gap`) automatically applies `display: "flex"`
+ * unless `display` is set explicitly (e.g. `display="grid"` / `"block"`).
  *
  * @example
  * <Box
- *   display="flex"
  *   flexDirection="row"
  *   gap={8}
  *   width="100%"
@@ -78,8 +96,18 @@ export const Box: React.FC<BoxProps> = (props) => {
     translucent = false,
   } = props;
 
+  const built = buildStyleProps(props);
+  // Infer flex display so flex container props aren't silently inert on a
+  // default `display: block` div. Explicit `display` always wins.
+  if (
+    built.display === undefined &&
+    FLEX_CONTAINER_KEYS.some((key) => props[key] !== undefined)
+  ) {
+    built.display = "flex";
+  }
+
   const style: CSSProperties = {
-    ...buildStyleProps(props),
+    ...built,
     // Same backdrop blur as the translucent Navbar / Badge. The
     // translucent/tinted background lets the blur read through.
     ...(translucent
