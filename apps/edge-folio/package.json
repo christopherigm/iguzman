@@ -1,6 +1,6 @@
 {
   "name": "edge-folio",
-  "version": "0.1.94",
+  "version": "0.1.97",
   "type": "module",
   "private": true,
   "scripts": {
@@ -24,7 +24,8 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "swiper": "^12.2.0",
-    "web-tree-sitter": "^0.26.9"
+    "web-tree-sitter": "^0.26.9",
+    "next": "16.3.0-canary.66"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

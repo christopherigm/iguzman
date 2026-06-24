@@ -32,6 +32,7 @@ const nextConfig = {
     resolveAlias: {
       fs: "./lib/browser-empty.js",
       path: "./lib/browser-empty.js",
+      module: "./lib/browser-empty.js",
     },
   },
   webpack(config, { isServer }) {
@@ -42,14 +43,15 @@ const nextConfig = {
       "onnxruntime-node": false,
     };
     if (!isServer) {
-      // web-tree-sitter has a conditional require('fs') for its Node.js code
-      // path. resolve.alias:false silently returns an empty module at build
-      // time - resolve.fallback:false does not suppress the "Module not found"
-      // error, which is why we use alias here instead.
+      // web-tree-sitter has conditional require('fs'/'path'/'module') calls for
+      // its Node.js code path. resolve.alias:false silently returns an empty
+      // module at build time - resolve.fallback:false does not suppress the
+      // "Module not found" error, which is why we use alias here instead.
       config.resolve.alias = {
         ...config.resolve.alias,
         fs: false,
         path: false,
+        module: false,
       };
     }
     return config;
