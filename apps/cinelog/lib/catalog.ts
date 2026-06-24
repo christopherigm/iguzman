@@ -64,6 +64,12 @@ export interface Movie {
   formats: Exclude<MovieFormat, "">[];
   cover: string;
   genres: Category[];
+  /**
+   * True when the signed-in user already owns this movie; gates the catalog's
+   * "add to library" button. Absent on related-movie payloads (that block is
+   * cached cross-user, so per-user ownership is omitted there).
+   */
+  owned?: boolean;
   created: string;
 }
 
@@ -399,6 +405,28 @@ export async function purgeMovie(id: string | number): Promise<void> {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
   }
+}
+
+/**
+ * Add an existing catalog movie to the signed-in user's library without a scan,
+ * in the chosen `format`. The API records ownership, advertises the format on
+ * the title, and links the ownership to that format's existing barcode when the
+ * title already carries one. Returns the updated movie detail (now `owned`).
+ */
+export async function addToLibrary(
+  id: string | number,
+  format: Exclude<MovieFormat, "">,
+): Promise<MovieDetail> {
+  const res = await fetch(`/api/catalog/movies/${id}/own`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ format }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+  return res.json() as Promise<MovieDetail>;
 }
 
 export async function getCategories(): Promise<Category[]> {

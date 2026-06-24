@@ -48,14 +48,36 @@ class MovieListSerializer(serializers.ModelSerializer):
     genres = CategorySerializer(many=True, read_only=True)
     cover = serializers.SerializerMethodField()
     formats = serializers.SerializerMethodField()
+    # True when the requesting user owns this movie; gates the catalog grid's
+    # "add to library" button. Dropped via the `omit_owned` context flag wherever
+    # the output is shared across users (the cross-user cached related block), so
+    # one user's ownership never leaks into another's cached view.
+    owned = serializers.SerializerMethodField()
 
     class Meta:
         model = Movie
-        fields = ['id', 'title', 'director', 'year', 'formats', 'cover', 'genres', 'created']
+        fields = ['id', 'title', 'director', 'year', 'formats', 'cover', 'genres', 'owned', 'created']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.context.get('omit_owned'):
+            self.fields.pop('owned', None)
 
     def get_formats(self, obj):
         # Plain format codes (e.g. ['dvd', 'bluray']) - the UI translates them.
         return [fmt.code for fmt in obj.formats.all()]
+
+    def get_owned(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is None or not user.is_authenticated:
+            return False
+        # Prefer the per-user prefetch the list view attaches (avoids N+1 over a
+        # page of cards); fall back to a direct existence check when absent.
+        prefetched = getattr(obj, 'user_ownerships', None)
+        if prefetched is not None:
+            return len(prefetched) > 0
+        return obj.ownerships.filter(user=user).exists()
 
     def get_cover(self, obj):
         request = self.context.get('request')
@@ -157,7 +179,11 @@ class MovieDetailSerializer(serializers.ModelSerializer):
         if cached is not None:
             return cached
         data = MovieListSerializer(
-            get_related_movies(obj), many=True, context=self.context
+            get_related_movies(obj),
+            many=True,
+            # This block is cached across all users; drop the per-user `owned`
+            # field so no user's ownership is baked into the shared cache entry.
+            context={**self.context, 'omit_owned': True},
         ).data
         cache.set(key, data, RELATED_CACHE_TTL)
         return data
@@ -391,6 +417,16 @@ class MovieEditMediaSerializer(MovieEditSerializer):
     tmdb_id = serializers.CharField(
         max_length=20, required=False, allow_blank=True, allow_null=True, default=None
     )
+
+
+class MovieOwnSerializer(serializers.Serializer):
+    """
+    Input for adding an existing catalog movie to the user's library without a
+    scan: the single format the user owns it in. The view records ownership,
+    advertises the format on the title, and links any matching existing barcode.
+    """
+
+    format = serializers.ChoiceField(choices=FORMAT_CHOICES)
 
 
 class MovieRefetchSerializer(serializers.Serializer):

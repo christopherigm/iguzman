@@ -30,8 +30,10 @@ import {
   type MovieDetail as MovieDetailData,
   type MovieUpdatePayload,
 } from "@/lib/catalog";
+import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { FormatHeader } from "@/components/format-header";
 import { MovieCard } from "@/components/movie-catalog/movie-card";
+import { AddToLibraryButton } from "@/components/movie-catalog/add-to-library-button";
 import {
   AUDIO_FORMAT_BUTTONS,
   HDR_FORMAT_BUTTONS,
@@ -97,6 +99,7 @@ export function MovieDetail({
   const tFormat = useTranslations("MovieFormat");
   const router = useRouter();
   const isDesktop = useIsDesktop();
+  const isLoggedIn = useIsLoggedIn();
   const [movie, setMovie] = useState<MovieDetailData | null>(initialMovie);
   const [status, setStatus] = useState<Status>(
     initialMovie ? "ready" : "loading",
@@ -370,7 +373,11 @@ export function MovieDetail({
           }}
           translucent
         />
-        {!editing && (movie.trailer_url || movie.owned || movie.can_purge) && (
+        {!editing &&
+          (movie.trailer_url ||
+            movie.owned ||
+            movie.can_purge ||
+            (isLoggedIn && !movie.owned)) && (
           <Box display="flex" gap={8} flexWrap="wrap">
             {movie.can_purge && (
               <IconButton
@@ -406,6 +413,15 @@ export function MovieDetail({
                   translucent
                 />
               </>
+            )}
+            {isLoggedIn && !movie.owned && (
+              <AddToLibraryButton
+                movieId={movie.id}
+                movieTitle={movie.title}
+                size="md"
+                translucent
+                onAdded={setMovie}
+              />
             )}
             {movie.trailer_url && (
               <Button

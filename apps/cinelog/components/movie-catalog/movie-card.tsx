@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -6,7 +8,9 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import type { Movie } from "@/lib/catalog";
+import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { FormatHeader } from "@/components/format-header";
+import { AddToLibraryButton } from "./add-to-library-button";
 import "./movie-card.css";
 
 type Props = {
@@ -17,6 +21,10 @@ type Props = {
 export function MovieCard({ movie, view }: Props) {
   const t = useTranslations("CatalogPage");
   const tFormat = useTranslations("MovieFormat");
+  // The "add to library" control is shown only to a signed-in user who doesn't
+  // already own the movie. (`owned` is absent on related-movie cards, which are
+  // cached cross-user; those default to showing the button.)
+  const showAdd = useIsLoggedIn() && !movie.owned;
 
   const cover = (
     <Box
@@ -115,6 +123,13 @@ export function MovieCard({ movie, view }: Props) {
               ))}
             </Box>
           </Box>
+          {showAdd && (
+            <AddToLibraryButton
+              movieId={movie.id}
+              movieTitle={movie.title}
+              size="sm"
+            />
+          )}
         </Card>
       </Link>
     );
@@ -124,23 +139,40 @@ export function MovieCard({ movie, view }: Props) {
     <Link href={`/movies/${movie.id}`} prefetch className="movie-card">
       <Card padding={0} gap={0} border="">
         {cover}
-        <Box flexDirection="column" gap={2} paddingX={8} paddingY={8}>
-          <Typography
-            as="h3"
-            variant="h5"
-            fontWeight={600}
-            styles={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {movie.title}
-          </Typography>
-          {movie.year && (
-            <Typography variant="caption" styles={{ opacity: 0.6 }}>
-              {movie.year}
+        <Box
+          display="flex"
+          flexDirection="row"
+          alignItems="center"
+          justifyContent="space-between"
+          gap={8}
+          paddingX={8}
+          paddingY={8}
+        >
+          <Box flexDirection="column" gap={2} flex={1} minWidth={0}>
+            <Typography
+              as="h3"
+              variant="h5"
+              fontWeight={600}
+              styles={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {movie.title}
             </Typography>
+            {movie.year && (
+              <Typography variant="caption" styles={{ opacity: 0.6 }}>
+                {movie.year}
+              </Typography>
+            )}
+          </Box>
+          {showAdd && (
+            <AddToLibraryButton
+              movieId={movie.id}
+              movieTitle={movie.title}
+              size="sm"
+            />
           )}
         </Box>
       </Card>

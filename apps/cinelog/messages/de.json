@@ -172,7 +172,11 @@
     "sortYearAsc": "Jahr (älteste zuerst)",
     "sortFormat": "Format",
     "sortDateAddedDesc": "Kürzlich hinzugefügt",
-    "sortDateAddedAsc": "Zuerst hinzugefügt"
+    "sortDateAddedAsc": "Zuerst hinzugefügt",
+    "addToLibrary": "Zur Bibliothek hinzufügen",
+    "addToLibraryTitle": "Zu deiner Bibliothek hinzufügen",
+    "addToLibraryText": "„{title}“ zu deiner Bibliothek hinzufügen. In welchem Format besitzt du den Film?",
+    "addToLibraryError": "Der Film konnte nicht zu deiner Bibliothek hinzugefügt werden. Bitte versuche es erneut."
   },
   "MovieDetailPage": {
     "back": "Zurück zum Katalog",

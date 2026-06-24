@@ -172,7 +172,11 @@
     "sortYearAsc": "Year (oldest first)",
     "sortFormat": "Format",
     "sortDateAddedDesc": "Recently added",
-    "sortDateAddedAsc": "Oldest added"
+    "sortDateAddedAsc": "Oldest added",
+    "addToLibrary": "Add to library",
+    "addToLibraryTitle": "Add to your library",
+    "addToLibraryText": "Add \"{title}\" to your library. Which format do you own?",
+    "addToLibraryError": "Failed to add the movie to your library. Please try again."
   },
   "MovieDetailPage": {
     "back": "Back to catalog",

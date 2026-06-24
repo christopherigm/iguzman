@@ -3,7 +3,7 @@ import os
 
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from rest_framework import status
@@ -26,6 +26,7 @@ from .serializers import (
     MovieDetailSerializer,
     MovieEditMediaSerializer,
     MovieListSerializer,
+    MovieOwnSerializer,
     MovieRefetchSerializer,
     MovieWriteSerializer,
     ScanQueueSerializer,
@@ -120,6 +121,19 @@ class MovieListView(ListCreateAPIView):
 
     def get_queryset(self):
         qs = Movie.objects.filter(enabled=True).prefetch_related('genres', 'formats')
+
+        # Attach the requesting user's ownership rows so the serializer's `owned`
+        # flag (which gates the catalog's "add to library" button) resolves
+        # without an extra query per card. Anonymous browsers skip it entirely.
+        user = self.request.user
+        if user.is_authenticated:
+            qs = qs.prefetch_related(
+                Prefetch(
+                    'ownerships',
+                    queryset=MovieOwnership.objects.filter(user=user),
+                    to_attr='user_ownerships',
+                )
+            )
 
         search = self.request.query_params.get('search', '').strip()
         if search:
@@ -366,6 +380,43 @@ class MovieTrailerView(APIView):
             )
         movie.trailer_url = trailer_url
         movie.save(update_fields=['trailer_url', 'modified'])
+        return Response(MovieDetailSerializer(movie, context={'request': request}).data)
+
+
+class MovieOwnView(APIView):
+    """
+    POST /api/catalog/movies/<id>/own/  { "format": "bluray" }
+
+    Add an existing catalog Movie to the requesting user's library WITHOUT a
+    scan - for when a user browsing the shared catalog recognises a title they
+    own but never scanned. Records the user's ownership (one row per user per
+    movie), advertises the chosen format on the shared title, and links the
+    ownership to that format's existing barcode when the title already carries
+    one (the user owns the physical release but never scanned it; otherwise the
+    ownership's barcode stays null). Idempotent: a user who already owns the
+    movie just keeps their existing ownership. Responds with the full detail
+    representation, now reporting `owned`.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        movie = get_object_or_404(Movie, pk=pk, enabled=True)
+
+        serializer = MovieOwnSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        fmt = resolve_formats([serializer.validated_data['format']])[0]
+
+        with transaction.atomic():
+            # Advertise the format on the shared title (no-op if already present).
+            movie.formats.add(fmt)
+            # Link an existing barcode of this format when the title carries one;
+            # leave it null otherwise (a library add never invents a barcode).
+            barcode = movie.barcodes.filter(format=fmt).first()
+            MovieOwnership.objects.get_or_create(
+                user=request.user, movie=movie, defaults={'barcode': barcode}
+            )
+
         return Response(MovieDetailSerializer(movie, context={'request': request}).data)
 
 
