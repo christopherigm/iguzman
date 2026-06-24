@@ -8,25 +8,7 @@ import { Select, type SelectOption } from "@repo/ui/core-elements/select";
 import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import type { Category, MovieFormat, MovieSort } from "@/lib/catalog";
-
-// Each selectable format renders as an IconButton. Blu-ray and 4K share the
-// same disc icon, distinguished by icon color (blue vs. black); DVD and other
-// formats use their own icons.
-const FORMAT_BUTTONS: {
-  value: Exclude<MovieFormat, "">;
-  icon: string;
-  iconColor?: string;
-  fullColor?: boolean;
-}[] = [
-  { value: "dvd", icon: "/icons/dvd.svg", iconColor: "#eb7d00" },
-  { value: "bluray", icon: "/icons/blu-ray.svg", iconColor: "#2563eb" },
-  {
-    value: "4k",
-    icon: "/icons/4k.svg",
-    fullColor: true,
-  },
-  { value: "other", icon: "/icons/disc.svg", iconColor: "#39a400" },
-];
+import { FORMAT_BUTTONS } from "@/components/format-buttons";
 
 // Sort options as {value, labelKey} pairs. The value is the API `ordering`
 // expression (see MovieSort); the key resolves to a CatalogPage translation.
@@ -36,7 +18,6 @@ const SORTS: { value: MovieSort; labelKey: string }[] = [
   { value: "-title", labelKey: "sortNameDesc" },
   { value: "-year", labelKey: "sortYearDesc" },
   { value: "year", labelKey: "sortYearAsc" },
-  { value: "format", labelKey: "sortFormat" },
   { value: "-created", labelKey: "sortDateAddedDesc" },
   { value: "created", labelKey: "sortDateAddedAsc" },
 ];

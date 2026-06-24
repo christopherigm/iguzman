@@ -29,7 +29,7 @@ export function MovieCard({ movie, view }: Props) {
       }}
     >
       {view === "list" ? null : (
-        <FormatHeader format={movie.format} kind="bar" />
+        <FormatHeader formats={movie.formats} kind="bar" />
       )}
       <Box
         width="100%"
@@ -78,7 +78,7 @@ export function MovieCard({ movie, view }: Props) {
         <Card flexDirection="row" gap={12} padding={8} alignItems="center">
           {cover}
           <Box flexDirection="column" gap={4} flex={1} minWidth={0}>
-            <FormatHeader format={movie.format} kind="badge" />
+            <FormatHeader formats={movie.formats} kind="badge" />
             <Typography
               as="h3"
               variant="h5"
@@ -102,11 +102,11 @@ export function MovieCard({ movie, view }: Props) {
                   {movie.year}
                 </Badge>
               )}
-              {movie.format && (
-                <Badge variant="subtle" size="md">
-                  {tFormat(movie.format)}
+              {movie.formats.map((fmt) => (
+                <Badge key={fmt} variant="subtle" size="md">
+                  {tFormat(fmt)}
                 </Badge>
-              )}
+              ))}
             </Box>
           </Box>
         </Card>

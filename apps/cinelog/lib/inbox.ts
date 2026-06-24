@@ -42,7 +42,8 @@ export interface InboxAcceptPayload {
   title: string;
   director: string;
   year: number | null;
-  format: MovieFormat;
+  /** Formats the title is available in (multi-select). */
+  formats: Exclude<MovieFormat, "">[];
   synopsis: string;
   trailer_url: string;
   cover_url: string;

@@ -8,13 +8,14 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { TextInput } from "@repo/ui/core-elements/text-input";
-import { Select, type SelectOption } from "@repo/ui/core-elements/select";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { Barcode } from "@repo/ui/core-elements/barcode";
 import type { MovieFormat, MovieRefetchPreview } from "@/lib/catalog";
 import { FormatHeader } from "@/components/format-header";
+import { FORMAT_BUTTONS } from "@/components/format-buttons";
 import {
   refetchInboxItem,
   selectInboxCandidate,
@@ -23,7 +24,7 @@ import {
 } from "@/lib/inbox";
 import "./inbox-card.css";
 
-const FORMATS: Exclude<MovieFormat, "">[] = ["dvd", "bluray", "4k", "other"];
+type Format = Exclude<MovieFormat, "">;
 
 type Props = {
   item: InboxItem;
@@ -40,7 +41,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
   const [year, setYear] = useState(
     item.extracted_year ? String(item.extracted_year) : "",
   );
-  const [format, setFormat] = useState<MovieFormat>("");
+  const [formats, setFormats] = useState<Format[]>([]);
   const [genres, setGenres] = useState(item.extracted_genres.join(", "));
   const [cast, setCast] = useState(item.extracted_cast.join(", "));
   const [synopsis, setSynopsis] = useState(item.extracted_synopsis);
@@ -72,10 +73,13 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
   const busy =
     submitting !== null || fetchingRefetch || selectingTmdbId !== null;
 
-  const formatOptions: SelectOption[] = [
-    { value: "", label: t("formatUnset") },
-    ...FORMATS.map((value) => ({ value, label: tFormat(value) })),
-  ];
+  const toggleFormat = (value: Format) => {
+    setFormats((prev) =>
+      prev.includes(value)
+        ? prev.filter((f) => f !== value)
+        : [...prev, value],
+    );
+  };
 
   const splitList = (value: string) =>
     value
@@ -145,7 +149,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
         title: title.trim(),
         director: director.trim(),
         year: parseYear(),
-        format,
+        formats,
         synopsis: synopsis.trim(),
         trailer_url: trailerUrl.trim(),
         cover_url: coverUrl,
@@ -202,7 +206,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
             flexShrink: 0,
           }}
         >
-          <FormatHeader format={format} kind="bar" />
+          <FormatHeader formats={formats} kind="bar" />
           <Box
             width="100%"
             styles={{
@@ -276,7 +280,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
             />
           </Box>
 
-          <Box display="flex" gap={8} flexWrap="wrap">
+          <Box display="flex" gap={8} flexWrap="wrap" alignItems="flex-end">
             <TextInput
               type="number"
               label={t("yearLabel")}
@@ -285,14 +289,32 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
               flex="1 1 100px"
               disabled={busy}
             />
-            <Select
-              label={t("formatLabel")}
-              value={format}
-              onChange={(value) => setFormat(value as MovieFormat)}
-              options={formatOptions}
-              flex="1 1 140px"
-              disabled={busy}
-            />
+            <Box display="flex" flexDirection="column" gap={4}>
+              <Typography variant="caption" styles={{ opacity: 0.7 }}>
+                {t("formatLabel")}
+              </Typography>
+              <Box display="flex" gap={4} alignItems="center">
+                {FORMAT_BUTTONS.map(({ value, icon, iconColor, fullColor }) => {
+                  const selected = formats.includes(value);
+                  return (
+                    <IconButton
+                      key={value}
+                      icon={icon}
+                      iconColor={iconColor}
+                      kind={selected ? "primary" : "default"}
+                      aria-label={tFormat(value)}
+                      aria-pressed={selected}
+                      title={tFormat(value)}
+                      size="sm"
+                      onClick={() => toggleFormat(value)}
+                      fullColor={fullColor}
+                      solid={selected}
+                      disabled={busy}
+                    />
+                  );
+                })}
+              </Box>
+            </Box>
           </Box>
 
           <TextInput

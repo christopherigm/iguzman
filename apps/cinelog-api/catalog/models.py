@@ -1,6 +1,7 @@
 import os
 import uuid
 
+from django.contrib.auth.models import User
 from django.db import models
 
 from core.models import Common
@@ -35,6 +36,26 @@ FORMAT_CHOICES = [
     ('other', 'Other'),
 ]
 
+
+class Format(models.Model):
+    """
+    Physical release format (DVD, Blu-ray, 4K UHD, ...).
+
+    A small fixed lookup table seeded from FORMAT_CHOICES (see the 0008 data
+    migration). Modelled as a table rather than an inline enum so a Movie can
+    carry several formats via a clean M2M, and each Barcode can point at the one
+    format that specific physical release was pressed in.
+    """
+
+    code = models.CharField(max_length=10, unique=True, choices=FORMAT_CHOICES)
+    label = models.CharField(max_length=50)
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return self.label
+
 SCAN_STATUS_CHOICES = [
     ('pending', 'Pending'),
     ('processing', 'Processing'),
@@ -64,11 +85,15 @@ def _scan_backdrop_path(instance, filename):
 
 
 class Movie(Common):
-    barcode = models.CharField(max_length=20, unique=True, db_index=True)
     title = models.CharField(max_length=500)
     director = models.CharField(max_length=255, blank=True)
     year = models.PositiveSmallIntegerField(null=True, blank=True)
-    format = models.CharField(max_length=10, choices=FORMAT_CHOICES, blank=True)
+    # The set of formats this title is available in - the union of its barcodes'
+    # formats, but also directly editable so a Movie can advertise a format it
+    # has no scanned barcode for yet. The barcode (a specific physical release)
+    # is decoupled onto `Barcode` so one title can carry the DVD, Blu-ray and 4K
+    # UPCs of different editions.
+    formats = models.ManyToManyField(Format, blank=True, related_name='movies')
     cover_url = models.URLField(max_length=1000, blank=True)
     cover_image = models.ImageField(upload_to=_movie_cover_path, null=True, blank=True)
     # Stored wide backdrop/wallpaper bytes - downloaded so the page background
@@ -89,8 +114,65 @@ class Movie(Common):
         return f'{self.title} ({self.year})'
 
 
+class Barcode(models.Model):
+    """
+    A single physical release's UPC, tied to its Movie.
+
+    Decoupled from Movie so the same film can hold the distinct barcodes of its
+    DVD, Blu-ray and 4K editions. `code` stays globally unique (a barcode
+    identifies exactly one product worldwide); `format` records which format
+    that product was pressed in.
+    """
+
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='barcodes')
+    code = models.CharField(max_length=20, unique=True, db_index=True)
+    format = models.ForeignKey(
+        Format, on_delete=models.SET_NULL, null=True, blank=True, related_name='barcodes'
+    )
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return self.code
+
+
+class MovieOwnership(models.Model):
+    """
+    Links a user to a Movie they added/own (one row per user per movie).
+
+    Ownership gates editing and deleting a movie: an owner may edit it freely
+    and "delete" it (which only drops their ownership, leaving the shared Movie
+    in the catalog), while non-owners get a read-only view. Many users can own
+    the same Movie. `barcode` records the physical copy that established the
+    ownership (nullable - a legacy or barcode-less ownership is allowed).
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='movie_ownerships')
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='ownerships')
+    barcode = models.ForeignKey(
+        Barcode, on_delete=models.SET_NULL, null=True, blank=True, related_name='ownerships'
+    )
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('user', 'movie')]
+        ordering = ['-created']
+
+    def __str__(self):
+        return f'{self.user} owns {self.movie_id}'
+
+
 class ScanQueue(Common):
-    barcode = models.CharField(max_length=20, unique=True, db_index=True)
+    # The user who scanned this barcode. The Inbox is per-user (each owner only
+    # reviews their own scans), and accepting an entry grants ownership to this
+    # user. Nullable for legacy rows scanned before ownership existed.
+    scanned_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True, related_name='scan_queue_entries'
+    )
+    # Not unique: two users may independently scan the same unknown barcode and
+    # each gets their own review entry (per-user inbox).
+    barcode = models.CharField(max_length=20, db_index=True)
     status = models.CharField(
         max_length=20, choices=SCAN_STATUS_CHOICES, default='pending', db_index=True
     )

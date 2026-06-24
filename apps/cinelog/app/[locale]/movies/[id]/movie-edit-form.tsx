@@ -3,19 +3,23 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
+import { Typography } from "@repo/ui/core-elements/typography";
 import { Button } from "@repo/ui/core-elements/button";
+import { IconButton } from "@repo/ui/core-elements/icon-button";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select, type SelectOption } from "@repo/ui/core-elements/select";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Toast } from "@repo/ui/core-elements/toast";
 import type {
+  MovieBarcode,
   MovieDetail,
   MovieFormat,
   MovieRefetchPreview,
   MovieUpdatePayload,
 } from "@/lib/catalog";
+import { FORMAT_BUTTONS } from "@/components/format-buttons";
 
-const FORMATS: Exclude<MovieFormat, "">[] = ["dvd", "bluray", "4k", "other"];
+type Format = Exclude<MovieFormat, "">;
 
 type Props = {
   movie: MovieDetail;
@@ -45,7 +49,8 @@ export function MovieEditForm({
   const [title, setTitle] = useState(movie.title);
   const [director, setDirector] = useState(movie.director);
   const [year, setYear] = useState(movie.year ? String(movie.year) : "");
-  const [format, setFormat] = useState<MovieFormat>(movie.format);
+  const [formats, setFormats] = useState<Format[]>(movie.formats);
+  const [barcodes, setBarcodes] = useState<MovieBarcode[]>(movie.barcodes);
   const [genres, setGenres] = useState(
     movie.genres.map((genre) => genre.name).join(", "),
   );
@@ -82,10 +87,29 @@ export function MovieEditForm({
     fetchingSynopsis ||
     fetchingTrailer;
 
-  const formatOptions: SelectOption[] = [
+  // Format options for a barcode's format select (includes an "unset" entry).
+  const barcodeFormatOptions: SelectOption[] = [
     { value: "", label: t("formatUnset") },
-    ...FORMATS.map((value) => ({ value, label: tFormat(value) })),
+    ...FORMAT_BUTTONS.map(({ value }) => ({ value, label: tFormat(value) })),
   ];
+
+  const toggleFormat = (value: Format) => {
+    setFormats((prev) =>
+      prev.includes(value) ? prev.filter((f) => f !== value) : [...prev, value],
+    );
+  };
+
+  const updateBarcode = (index: number, patch: Partial<MovieBarcode>) => {
+    setBarcodes((prev) =>
+      prev.map((bc, i) => (i === index ? { ...bc, ...patch } : bc)),
+    );
+  };
+
+  const addBarcode = () =>
+    setBarcodes((prev) => [...prev, { code: "", format: "" }]);
+
+  const removeBarcode = (index: number) =>
+    setBarcodes((prev) => prev.filter((_, i) => i !== index));
 
   const splitList = (value: string) =>
     value
@@ -104,7 +128,8 @@ export function MovieEditForm({
     try {
       // Re-search with the (possibly corrected) title + year, then overwrite
       // every field with the resolved version. The parent live-previews the new
-      // poster/backdrop on the page; we keep them for the save payload.
+      // poster/backdrop on the page; we keep them for the save payload. Formats
+      // and barcodes are physical-copy data, so a re-fetch leaves them alone.
       const data = await onRefetch(title.trim(), parseYear());
       setTitle(data.title);
       setDirector(data.director);
@@ -171,7 +196,11 @@ export function MovieEditForm({
         title: title.trim(),
         director: director.trim(),
         year: parseYear(),
-        format,
+        formats,
+        // Drop blank rows the user added but never filled in.
+        barcodes: barcodes
+          .filter((bc) => bc.code.trim() !== "")
+          .map((bc) => ({ code: bc.code.trim(), format: bc.format })),
         synopsis: synopsis.trim(),
         trailer_url: trailerUrl.trim(),
         genres: splitList(genres),
@@ -191,7 +220,7 @@ export function MovieEditForm({
   }
 
   return (
-    <Box flexDirection="column" gap={16}>
+    <Box display="flex" flexDirection="column" gap={12}>
       <Box display="flex" gap={8} flexWrap="wrap">
         <TextInput
           label={t("titleLabel")}
@@ -209,7 +238,7 @@ export function MovieEditForm({
         />
       </Box>
 
-      <Box display="flex" gap={8} flexWrap="wrap">
+      <Box display="flex" gap={8} flexWrap="wrap" alignItems="flex-end">
         <TextInput
           type="number"
           label={t("yearLabel")}
@@ -218,14 +247,32 @@ export function MovieEditForm({
           flex="1 1 100px"
           disabled={busy}
         />
-        <Select
-          label={t("formatLabel")}
-          value={format}
-          onChange={(value) => setFormat(value as MovieFormat)}
-          options={formatOptions}
-          flex="1 1 140px"
-          disabled={busy}
-        />
+        <Box display="flex" flexDirection="column" gap={4}>
+          <Typography variant="caption" styles={{ opacity: 0.7 }}>
+            {t("formatLabel")}
+          </Typography>
+          <Box display="flex" gap={4} alignItems="center">
+            {FORMAT_BUTTONS.map(({ value, icon, iconColor, fullColor }) => {
+              const selected = formats.includes(value);
+              return (
+                <IconButton
+                  key={value}
+                  icon={icon}
+                  iconColor={iconColor}
+                  kind={selected ? "primary" : "default"}
+                  aria-label={tFormat(value)}
+                  aria-pressed={selected}
+                  title={tFormat(value)}
+                  size="sm"
+                  onClick={() => toggleFormat(value)}
+                  fullColor={fullColor}
+                  solid={selected}
+                  disabled={busy}
+                />
+              );
+            })}
+          </Box>
+        </Box>
       </Box>
 
       <TextInput
@@ -255,6 +302,60 @@ export function MovieEditForm({
         onChange={setTrailerUrl}
         disabled={busy}
       />
+
+      <Box display="flex" flexDirection="column" gap={8}>
+        <Typography variant="caption" styles={{ opacity: 0.7 }}>
+          {t("barcodesLabel")}
+        </Typography>
+        {barcodes.map((bc, index) => (
+          <Box
+            key={index}
+            display="flex"
+            gap={8}
+            alignItems="flex-end"
+            flexWrap="wrap"
+          >
+            <TextInput
+              label={t("barcodeCodeLabel")}
+              value={bc.code}
+              onChange={(value) => updateBarcode(index, { code: value })}
+              flex="2 1 160px"
+              inputMode="numeric"
+              disabled={busy}
+            />
+            <Select
+              label={t("formatLabel")}
+              value={bc.format}
+              onChange={(value) =>
+                updateBarcode(index, { format: value as MovieFormat })
+              }
+              options={barcodeFormatOptions}
+              flex="1 1 120px"
+              disabled={busy}
+            />
+            <IconButton
+              icon="/icons/delete.svg"
+              aria-label={t("removeBarcode")}
+              title={t("removeBarcode")}
+              kind="error"
+              size="md"
+              onClick={() => removeBarcode(index)}
+              disabled={busy}
+              translucent
+            />
+          </Box>
+        ))}
+
+        <Box display="flex" justifyContent="end">
+          <Button
+            text={t("addBarcode")}
+            size="sm"
+            onClick={addBarcode}
+            disabled={busy}
+            kind="primary"
+          />
+        </Box>
+      </Box>
 
       <Box
         display="flex"

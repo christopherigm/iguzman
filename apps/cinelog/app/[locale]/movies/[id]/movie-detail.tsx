@@ -27,7 +27,6 @@ import {
   type MovieDetail as MovieDetailData,
   type MovieUpdatePayload,
 } from "@/lib/catalog";
-import { useIsLoggedIn } from "@/lib/use-is-logged-in";
 import { FormatHeader } from "@/components/format-header";
 import { MovieCard } from "@/components/movie-catalog/movie-card";
 import { MovieEditForm } from "./movie-edit-form";
@@ -82,7 +81,6 @@ export function MovieDetail({
   const t = useTranslations("MovieDetailPage");
   const tFormat = useTranslations("MovieFormat");
   const router = useRouter();
-  const isLoggedIn = useIsLoggedIn();
   const isDesktop = useIsDesktop();
   const [movie, setMovie] = useState<MovieDetailData | null>(initialMovie);
   const [status, setStatus] = useState<Status>(
@@ -321,9 +319,9 @@ export function MovieDetail({
           }}
           translucent
         />
-        {!editing && (movie.trailer_url || isLoggedIn) && (
+        {!editing && (movie.trailer_url || movie.owned) && (
           <Box display="flex" gap={8} flexWrap="wrap">
-            {isLoggedIn && (
+            {movie.owned && (
               <>
                 <IconButton
                   icon="/icons/delete.svg"
@@ -380,7 +378,7 @@ export function MovieDetail({
           elevation={5}
         >
           <FormatHeader
-            format={movie.format}
+            formats={movie.formats}
             kind="bar"
             size={{ xs: "md", md: "lg" }}
           />
@@ -439,11 +437,11 @@ export function MovieDetail({
                     {movie.year}
                   </Badge>
                 )}
-                {movie.format && (
-                  <Badge variant="subtle" size="md">
-                    {tFormat(movie.format)}
+                {movie.formats.map((fmt) => (
+                  <Badge key={fmt} variant="subtle" size="md">
+                    {tFormat(fmt)}
                   </Badge>
-                )}
+                ))}
               </Box>
 
               {movie.director && (

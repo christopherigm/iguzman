@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from .models import Actor, Category, Movie, ScanCandidate, ScanQueue
+from .models import (
+    Actor,
+    Barcode,
+    Category,
+    Format,
+    Movie,
+    MovieOwnership,
+    ScanCandidate,
+    ScanQueue,
+)
 
 
 @admin.register(Category)
@@ -16,13 +25,40 @@ class ActorAdmin(admin.ModelAdmin):
     search_fields = ['name']
 
 
+@admin.register(Format)
+class FormatAdmin(admin.ModelAdmin):
+    list_display = ['code', 'label']
+
+
+class BarcodeInline(admin.TabularInline):
+    model = Barcode
+    extra = 0
+    fields = ['code', 'format']
+
+
+class MovieOwnershipInline(admin.TabularInline):
+    model = MovieOwnership
+    extra = 0
+    fields = ['user', 'barcode', 'created']
+    readonly_fields = ['created']
+    autocomplete_fields = ['user']
+
+
 @admin.register(Movie)
 class MovieAdmin(admin.ModelAdmin):
-    list_display = ['title', 'director', 'year', 'format', 'barcode', 'created']
-    list_filter = ['format', 'genres']
-    search_fields = ['title', 'director', 'barcode', 'tmdb_id']
-    filter_horizontal = ['genres', 'cast']
+    list_display = ['title', 'director', 'year', 'created']
+    list_filter = ['formats', 'genres']
+    search_fields = ['title', 'director', 'barcodes__code', 'tmdb_id']
+    filter_horizontal = ['formats', 'genres', 'cast']
     readonly_fields = ['created', 'modified']
+    inlines = [BarcodeInline, MovieOwnershipInline]
+
+
+@admin.register(Barcode)
+class BarcodeAdmin(admin.ModelAdmin):
+    list_display = ['code', 'movie', 'format']
+    search_fields = ['code', 'movie__title']
+    autocomplete_fields = ['movie']
 
 
 class ScanCandidateInline(admin.TabularInline):
@@ -34,7 +70,7 @@ class ScanCandidateInline(admin.TabularInline):
 
 @admin.register(ScanQueue)
 class ScanQueueAdmin(admin.ModelAdmin):
-    list_display = ['barcode', 'status', 'extracted_title', 'retry_count', 'created']
+    list_display = ['barcode', 'status', 'scanned_by', 'extracted_title', 'retry_count', 'created']
     list_filter = ['status']
     search_fields = ['barcode', 'extracted_title']
     readonly_fields = ['created', 'modified']

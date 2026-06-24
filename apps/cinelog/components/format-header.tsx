@@ -18,6 +18,11 @@ const FORMAT_HEADER: Partial<
   dvd: { icon: "/icons/dvd.svg", background: "#6b7280" },
 };
 
+// Icons render highest-quality first (4K → Blu-ray → DVD). The list also drives
+// the single background color: the first present format wins, so 4K beats
+// Blu-ray beats DVD. "other"/unset formats have no icon and contribute nothing.
+const ICON_ORDER: MovieFormat[] = ["4k", "bluray", "dvd"];
+
 type Size = "sm" | "md" | "lg";
 
 // Header dimensions (px) per size. "sm" is the base; "md" is 1.2x and "lg" is
@@ -34,7 +39,9 @@ type ResponsiveSize = Size | Partial<Record<Breakpoint, Size>>;
 const BREAKPOINT_ORDER = Object.keys(BREAKPOINTS) as Breakpoint[];
 
 type Props = {
-  format: MovieFormat;
+  // The movie's formats; every one that has an icon renders inside a single
+  // colored box. An empty list (or only "other"/unset formats) renders nothing.
+  formats: MovieFormat[];
   // "bar" fills the top of the cover image (grid/detail/inbox); "badge" is a
   // self-sized banner rendered above the title (list). Both share contents.
   kind: "bar" | "badge";
@@ -59,10 +66,17 @@ function buildSizeVars(size: Partial<Record<Breakpoint, Size>>): CSSProperties {
 }
 
 /** Format strip sat above a movie cover, or a self-sized banner in list view. */
-export function FormatHeader({ format, kind, size = "sm" }: Props) {
-  const headerStyle = FORMAT_HEADER[format];
+export function FormatHeader({ formats = [], kind, size = "sm" }: Props) {
+  // Keep only the formats that have an icon, ordered 4K → Blu-ray → DVD.
+  // `formats` is defaulted in case an upstream payload (e.g. a stale cached
+  // related-movie entry) predates the field and omits it entirely.
+  const shown = ICON_ORDER.filter((fmt) => formats.includes(fmt));
 
-  if (!headerStyle) return null;
+  // Single background by priority: `shown` is ordered highest-quality first, so
+  // its first entry picks the color (4K > Blu-ray > DVD). No icon → no header.
+  const primary = shown[0];
+  if (!primary) return null;
+  const background = FORMAT_HEADER[primary]!.background;
 
   // Static sizes resolve to plain px props; a breakpoint map switches to the
   // CSS-variable path so the @media cascade can resize the strip responsively.
@@ -73,11 +87,6 @@ export function FormatHeader({ format, kind, size = "sm" }: Props) {
   const iconValue = responsive
     ? "var(--fh-icon)"
     : `${SIZE_TOKENS[size].icon}px`;
-
-  const badgeStyles =
-    kind === "badge"
-      ? { alignSelf: "flex-start" as const, width: "fit-content" }
-      : undefined;
   const sizeVars = responsive ? buildSizeVars(size) : undefined;
 
   return (
@@ -85,23 +94,32 @@ export function FormatHeader({ format, kind, size = "sm" }: Props) {
       display="flex"
       alignItems="center"
       justifyContent="center"
-      gap={4}
+      gap={12}
       height={heightValue}
       width={kind === "bar" ? "100%" : undefined}
+      // A badge sizes to its icons with a little breathing room.
       paddingX={kind === "badge" ? 8 : undefined}
       borderRadius={kind === "badge" ? 4 : undefined}
-      backgroundColor={headerStyle.background}
+      backgroundColor={background}
       className={responsive ? "format-header" : undefined}
       styles={
-        sizeVars || badgeStyles ? { ...sizeVars, ...badgeStyles } : undefined
+        kind === "badge"
+          ? { alignSelf: "flex-start", width: "fit-content", ...sizeVars }
+          : sizeVars
       }
     >
-      <Icon
-        icon={headerStyle.icon}
-        color="#ffffff"
-        size={iconValue}
-        fullColor={headerStyle.fullColor}
-      />
+      {shown.map((fmt) => {
+        const headerStyle = FORMAT_HEADER[fmt]!;
+        return (
+          <Icon
+            key={fmt}
+            icon={headerStyle.icon}
+            color="#ffffff"
+            size={iconValue}
+            fullColor={headerStyle.fullColor}
+          />
+        );
+      })}
     </Box>
   );
 }

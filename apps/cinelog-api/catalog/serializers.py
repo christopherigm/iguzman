@@ -7,7 +7,18 @@ from .cache import (
     get_related_movies,
     related_cache_key,
 )
-from .models import FORMAT_CHOICES, Actor, Category, Movie, ScanCandidate, ScanQueue
+from .models import (
+    FORMAT_CHOICES,
+    Actor,
+    Category,
+    Format,
+    Movie,
+    ScanCandidate,
+    ScanQueue,
+)
+
+# Maps a format code to its human label for on-the-fly Format.get_or_create.
+FORMAT_LABELS = dict(FORMAT_CHOICES)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -25,10 +36,15 @@ class ActorSerializer(serializers.ModelSerializer):
 class MovieListSerializer(serializers.ModelSerializer):
     genres = CategorySerializer(many=True, read_only=True)
     cover = serializers.SerializerMethodField()
+    formats = serializers.SerializerMethodField()
 
     class Meta:
         model = Movie
-        fields = ['id', 'barcode', 'title', 'director', 'year', 'format', 'cover', 'genres', 'created']
+        fields = ['id', 'title', 'director', 'year', 'formats', 'cover', 'genres', 'created']
+
+    def get_formats(self, obj):
+        # Plain format codes (e.g. ['dvd', 'bluray']) - the UI translates them.
+        return [fmt.code for fmt in obj.formats.all()]
 
     def get_cover(self, obj):
         request = self.context.get('request')
@@ -44,14 +60,37 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     cover = serializers.SerializerMethodField()
     backdrop = serializers.SerializerMethodField()
     related = serializers.SerializerMethodField()
+    formats = serializers.SerializerMethodField()
+    barcodes = serializers.SerializerMethodField()
+    # True when the requesting user owns this movie. Gates edit/delete in the UI;
+    # an owner-less movie reports False for everyone (read-only until an owner is
+    # assigned in the admin).
+    owned = serializers.SerializerMethodField()
 
     class Meta:
         model = Movie
         fields = [
-            'id', 'barcode', 'title', 'director', 'year', 'format',
+            'id', 'title', 'director', 'year', 'formats', 'barcodes',
             'cover', 'cover_url', 'backdrop', 'tmdb_id', 'synopsis', 'trailer_url',
-            'genres', 'cast', 'related', 'created', 'modified',
+            'genres', 'cast', 'related', 'owned', 'created', 'modified',
         ]
+
+    def get_formats(self, obj):
+        return [fmt.code for fmt in obj.formats.all()]
+
+    def get_barcodes(self, obj):
+        # Each barcode with the format it was pressed in ('' when unset).
+        return [
+            {'code': bc.code, 'format': bc.format.code if bc.format else ''}
+            for bc in obj.barcodes.all()
+        ]
+
+    def get_owned(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is None or not user.is_authenticated:
+            return False
+        return obj.ownerships.filter(user=user).exists()
 
     def get_cover(self, obj):
         request = self.context.get('request')
@@ -85,6 +124,14 @@ class MovieDetailSerializer(serializers.ModelSerializer):
         return data
 
 
+def resolve_formats(codes):
+    """Map a list of format codes to Format objects, creating any that are missing."""
+    return [
+        Format.objects.get_or_create(code=code, defaults={'label': FORMAT_LABELS.get(code, code)})[0]
+        for code in codes
+    ]
+
+
 class MovieWriteSerializer(serializers.ModelSerializer):
     genre_ids = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), many=True, write_only=True, required=False, source='genres'
@@ -92,13 +139,18 @@ class MovieWriteSerializer(serializers.ModelSerializer):
     cast_names = serializers.ListField(
         child=serializers.CharField(max_length=255), write_only=True, required=False
     )
+    # Format codes for the movie's `formats` M2M. Barcodes are created/synced by
+    # the views (they carry per-release format + ownership), not here.
+    format_codes = serializers.ListField(
+        child=serializers.ChoiceField(choices=FORMAT_CHOICES), write_only=True, required=False
+    )
 
     class Meta:
         model = Movie
         fields = [
-            'barcode', 'title', 'director', 'year', 'format',
+            'title', 'director', 'year',
             'cover_url', 'cover_image', 'tmdb_id', 'synopsis', 'trailer_url',
-            'genre_ids', 'cast_names',
+            'genre_ids', 'cast_names', 'format_codes',
         ]
 
     def _sync_cast(self, instance, cast_names):
@@ -108,14 +160,18 @@ class MovieWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         cast_names = validated_data.pop('cast_names', [])
         genres = validated_data.pop('genres', [])
+        format_codes = validated_data.pop('format_codes', None)
         movie = Movie.objects.create(**validated_data)
         movie.genres.set(genres)
         self._sync_cast(movie, cast_names)
+        if format_codes is not None:
+            movie.formats.set(resolve_formats(format_codes))
         return movie
 
     def update(self, instance, validated_data):
         cast_names = validated_data.pop('cast_names', None)
         genres = validated_data.pop('genres', None)
+        format_codes = validated_data.pop('format_codes', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -123,6 +179,8 @@ class MovieWriteSerializer(serializers.ModelSerializer):
             instance.genres.set(genres)
         if cast_names is not None:
             self._sync_cast(instance, cast_names)
+        if format_codes is not None:
+            instance.formats.set(resolve_formats(format_codes))
         return instance
 
 
@@ -157,12 +215,22 @@ class ScanQueueSerializer(serializers.ModelSerializer):
         return ''
 
 
+class BarcodeInputSerializer(serializers.Serializer):
+    """One barcode in a Movie's editable barcode list: a code and its format."""
+
+    code = serializers.CharField(max_length=20)
+    format = serializers.ChoiceField(
+        choices=FORMAT_CHOICES, required=False, allow_blank=True, default=''
+    )
+
+
 class MovieEditSerializer(serializers.Serializer):
     """
     Fields the user may correct on an existing catalog `Movie` from the detail
     page. Genres and cast arrive as plain names (resolved/created in the view);
     cover and tmdb_id are intentionally excluded so editing never clobbers the
-    authoritative TMDB cover.
+    authoritative TMDB cover. `formats` is the multi-select set of formats the
+    title is available in; `barcodes` is its editable list of release UPCs.
     """
 
     title = serializers.CharField(max_length=500)
@@ -170,9 +238,10 @@ class MovieEditSerializer(serializers.Serializer):
     year = serializers.IntegerField(
         required=False, allow_null=True, min_value=1870, max_value=2200, default=None
     )
-    format = serializers.ChoiceField(
-        choices=FORMAT_CHOICES, required=False, allow_blank=True, default=''
+    formats = serializers.ListField(
+        child=serializers.ChoiceField(choices=FORMAT_CHOICES), required=False, default=list
     )
+    barcodes = BarcodeInputSerializer(many=True, required=False, default=list)
     genres = serializers.ListField(
         child=serializers.CharField(max_length=100), required=False, default=list
     )

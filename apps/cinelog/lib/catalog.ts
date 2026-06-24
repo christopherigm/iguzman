@@ -11,6 +11,12 @@ export interface Actor {
 
 export type MovieFormat = "dvd" | "bluray" | "4k" | "other" | "";
 
+/** One of a movie's barcodes: the release UPC and the format it was pressed in. */
+export interface MovieBarcode {
+  code: string;
+  format: MovieFormat;
+}
+
 /**
  * Catalog sort key. Sent to the API as the `ordering` query param; the values
  * mirror Django ORM ordering expressions (a `-` prefix means descending). The
@@ -23,23 +29,24 @@ export type MovieSort =
   | "-title"
   | "-year"
   | "year"
-  | "format"
   | "-created"
   | "created";
 
 export interface Movie {
   id: number;
-  barcode: string;
   title: string;
   director: string;
   year: number | null;
-  format: MovieFormat;
+  /** Formats this title is available in (union of its barcodes' formats). */
+  formats: Exclude<MovieFormat, "">[];
   cover: string;
   genres: Category[];
   created: string;
 }
 
 export interface MovieDetail extends Movie {
+  /** Release UPCs for this title; empty for movies added without a barcode. */
+  barcodes: MovieBarcode[];
   cover_url: string;
   /** Stored wallpaper URL for the page background; "" when none was found. */
   backdrop: string;
@@ -51,6 +58,8 @@ export interface MovieDetail extends Movie {
   cast: Actor[];
   /** Up to 6 suggested movies sharing a genre or director. */
   related: Movie[];
+  /** True when the signed-in user owns this movie (gates edit/delete in the UI). */
+  owned: boolean;
   modified: string;
 }
 
@@ -138,7 +147,6 @@ const VALID_SORTS: MovieSort[] = [
   "-title",
   "year",
   "-year",
-  "format",
   "created",
   "-created",
 ];
@@ -198,7 +206,10 @@ export interface MovieUpdatePayload {
   title: string;
   director: string;
   year: number | null;
-  format: MovieFormat;
+  /** Formats the title is available in (multi-select). */
+  formats: Exclude<MovieFormat, "">[];
+  /** Full replacement set of the movie's release barcodes. */
+  barcodes: MovieBarcode[];
   synopsis: string;
   trailer_url: string;
   genres: string[];

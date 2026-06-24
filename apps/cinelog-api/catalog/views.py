@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import (
     ListAPIView,
     ListCreateAPIView,
@@ -16,7 +17,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Category, Movie, ScanQueue
+from .models import Barcode, Category, Movie, MovieOwnership, ScanQueue
 from .pagination import CategoryPagination, InboxPagination, MoviePagination
 from .serializers import (
     CategorySerializer,
@@ -28,6 +29,7 @@ from .serializers import (
     MovieRefetchSerializer,
     MovieWriteSerializer,
     ScanQueueSerializer,
+    resolve_formats,
 )
 from .services.backdrop import download_image, fetch_backdrop
 from .services.extras import fetch_synopsis, fetch_trailer
@@ -48,6 +50,51 @@ def resolve_genre_ids(names):
     return genre_ids
 
 
+def find_existing_movie(tmdb_id, title, year):
+    """
+    Locate an existing catalog Movie the same film should attach to, so a second
+    scan (a different format/barcode of a title already owned by someone) adds a
+    barcode instead of duplicating the movie. Matches on the authoritative
+    `tmdb_id` first, then a case-insensitive title + year (year required - a
+    bare title is too weak to safely dedupe remakes/namesakes).
+    """
+    if tmdb_id:
+        movie = Movie.objects.filter(tmdb_id=tmdb_id, enabled=True).first()
+        if movie:
+            return movie
+    if title and year is not None:
+        return Movie.objects.filter(title__iexact=title.strip(), year=year, enabled=True).first()
+    return None
+
+
+def sync_barcodes(movie, barcode_inputs):
+    """
+    Replace ``movie``'s barcodes with the supplied ``[{'code', 'format'}]`` list
+    (full-set semantics): create new codes, update the format of existing ones,
+    and delete those the user dropped. A code already attached to a DIFFERENT
+    movie is rejected - a barcode identifies exactly one product worldwide.
+    """
+    seen = []
+    for item in barcode_inputs:
+        code = item['code'].strip()
+        if not code:
+            continue
+        fmt = resolve_formats([item['format']])[0] if item.get('format') else None
+        existing = Barcode.objects.filter(code=code).first()
+        if existing and existing.movie_id != movie.id:
+            raise ValidationError(
+                {'barcodes': f'Barcode {code} already belongs to another movie.'}
+            )
+        if existing:
+            if existing.format_id != (fmt.id if fmt else None):
+                existing.format = fmt
+                existing.save(update_fields=['format'])
+        else:
+            Barcode.objects.create(movie=movie, code=code, format=fmt)
+        seen.append(code)
+    movie.barcodes.exclude(code__in=seen).delete()
+
+
 class MovieListView(ListCreateAPIView):
     # Anonymous users may browse the catalog (GET); creating still needs auth.
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -63,13 +110,12 @@ class MovieListView(ListCreateAPIView):
         '-title': ('-title',),
         'year': ('year', 'title'),
         '-year': ('-year', 'title'),
-        'format': ('format', 'title'),
         'created': ('created', 'title'),
         '-created': ('-created', 'title'),
     }
 
     def get_queryset(self):
-        qs = Movie.objects.filter(enabled=True).prefetch_related('genres')
+        qs = Movie.objects.filter(enabled=True).prefetch_related('genres', 'formats')
 
         search = self.request.query_params.get('search', '').strip()
         if search:
@@ -91,7 +137,7 @@ class MovieListView(ListCreateAPIView):
         # `?format=` content-negotiation override.
         media_format = self.request.query_params.get('media_format', '').strip()
         if media_format:
-            qs = qs.filter(format=media_format)
+            qs = qs.filter(formats__code=media_format).distinct()
 
         ordering = self.request.query_params.get('ordering', '').strip()
         order_by = self.ORDERING_MAP.get(ordering)
@@ -109,20 +155,37 @@ class MovieListView(ListCreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         movie = serializer.save()
+        # The creator owns what they add, so they can edit/delete it afterwards.
+        MovieOwnership.objects.get_or_create(user=request.user, movie=movie)
         return Response(MovieDetailSerializer(movie, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
 class MovieDetailView(RetrieveUpdateDestroyAPIView):
     # Anonymous users may view a movie (GET); editing/deleting still needs auth.
     permission_classes = [IsAuthenticatedOrReadOnly]
-    queryset = Movie.objects.filter(enabled=True).prefetch_related('genres', 'cast')
+    queryset = Movie.objects.filter(enabled=True).prefetch_related(
+        'genres', 'cast', 'formats', 'barcodes__format', 'ownerships'
+    )
     serializer_class = MovieDetailSerializer
+
+    @staticmethod
+    def _assert_can_edit(request, movie):
+        """
+        Only an owner (or staff) may edit a movie. Movies with no ownership rows
+        are read-only over the API for everyone until an owner is assigned in the
+        Django admin (legacy rows after the ownership migration).
+        """
+        user = request.user
+        if user.is_staff or movie.ownerships.filter(user=user).exists():
+            return
+        raise PermissionDenied('You do not own this movie.')
 
     def update(self, request, *args, **kwargs):
         """
         PATCH/PUT a saved movie's editable fields from the UI. Genre names are
-        resolved to Category ids (creating any missing) and cast names are
-        synced, mirroring the inbox-accept flow.
+        resolved to Category ids (creating any missing), cast names are synced,
+        `formats` is set from the multi-select, and `barcodes` is synced to the
+        edited list. Editing requires ownership.
 
         A plain text edit leaves the cover, backdrop, and tmdb_id untouched. When
         the user saves a re-fetch the request additionally carries `cover_url`,
@@ -132,6 +195,7 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
         representation.
         """
         instance = self.get_object()
+        self._assert_can_edit(request, instance)
 
         serializer = MovieEditMediaSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -141,7 +205,7 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
             'title': data['title'],
             'director': data['director'],
             'year': data['year'],
-            'format': data['format'],
+            'format_codes': data['formats'],
             'synopsis': data['synopsis'],
             'trailer_url': data['trailer_url'],
             'genre_ids': resolve_genre_ids(data['genres']),
@@ -154,9 +218,11 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
         if data['tmdb_id'] is not None:
             write_data['tmdb_id'] = data['tmdb_id']
 
-        write_serializer = MovieWriteSerializer(instance, data=write_data, partial=True)
-        write_serializer.is_valid(raise_exception=True)
-        movie = write_serializer.save()
+        with transaction.atomic():
+            write_serializer = MovieWriteSerializer(instance, data=write_data, partial=True)
+            write_serializer.is_valid(raise_exception=True)
+            movie = write_serializer.save()
+            sync_barcodes(movie, data['barcodes'])
 
         # A new poster URL takes over only when no downloaded cover_image masks it
         # in the detail serializer; clear any stale file so the new URL shows.
@@ -173,6 +239,19 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
                 movie.backdrop_image.save(backdrop.name, backdrop, save=True)
 
         return Response(MovieDetailSerializer(movie, context={'request': request}).data)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        "Delete" a movie from the user's collection: drop only THIS user's
+        ownership and leave the shared Movie in the catalog for its other owners.
+        A non-owner has no ownership to remove and is rejected.
+        """
+        movie = self.get_object()
+        ownership = movie.ownerships.filter(user=request.user).first()
+        if ownership is None:
+            raise PermissionDenied('You do not own this movie.')
+        ownership.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MovieBackdropView(APIView):
@@ -313,63 +392,95 @@ class ScanView(APIView):
     """
     POST /api/catalog/scan/  { "barcode": "..." }
 
-    Fast path: UPCitemdb → TMDB → save Movie and return it.
-    Slow path: any miss → create ScanQueue entry and return 202.
+    Always records the scanning user's ownership of the resolved film.
+
+    Known barcode: grant ownership and return the existing movie.
+    Fast path (UPCitemdb -> TMDB): attach the barcode to an existing matching
+        movie when one is found (a different format of an owned title), else
+        create the movie; grant ownership either way.
+    Slow path: any miss -> create a per-user ScanQueue entry and return 202.
     """
+
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         barcode = (request.data.get('barcode') or '').strip()
         if not barcode:
             return Response({'detail': 'barcode is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Already in catalog
-        try:
-            movie = Movie.objects.get(barcode=barcode)
+        user = request.user
+
+        # Already a known barcode - grant ownership (if new) and return its movie.
+        known = Barcode.objects.select_related('movie').filter(code=barcode).first()
+        if known:
+            movie = known.movie
+            MovieOwnership.objects.get_or_create(
+                user=user, movie=movie, defaults={'barcode': known}
+            )
             return Response(
                 {'status': 'exists', 'movie': MovieDetailSerializer(movie, context={'request': request}).data},
                 status=status.HTTP_200_OK,
             )
-        except Movie.DoesNotExist:
-            pass
 
-        # Already in flight - only active work blocks a re-scan. Terminal rows
-        # (e.g. a `failed` resolution) must not wedge the barcode forever.
+        # This user already has an active scan for this barcode in flight. Per-user
+        # inbox: another user's in-flight scan of the same code doesn't block this
+        # one. Terminal rows (e.g. a `failed` resolution) never wedge a re-scan.
         if ScanQueue.objects.filter(
-            barcode=barcode, status__in=['pending', 'processing', 'review']
+            barcode=barcode, scanned_by=user, status__in=['pending', 'processing', 'review']
         ).exists():
             return Response({'status': 'queued'}, status=status.HTTP_202_ACCEPTED)
 
         # Fast path
         data = lookup_barcode(barcode)
         if data:
-            write_data = {
-                'barcode': data.barcode,
-                'title': data.title,
-                'director': data.director,
-                'year': data.year,
-                'format': data.format,
-                'cover_url': data.cover_url,
-                'tmdb_id': data.tmdb_id,
-                'cast_names': data.cast,
-            }
-            # Resolve genre names to Category objects (create if missing)
-            write_data['genre_ids'] = resolve_genre_ids(data.genres)
+            existing = find_existing_movie(data.tmdb_id, data.title, data.year)
+            fmt = resolve_formats([data.format])[0] if data.format else None
 
-            serializer = MovieWriteSerializer(data=write_data)
-            serializer.is_valid(raise_exception=True)
-            movie = serializer.save()
-            # Fetch the wallpaper out of band so the scan response isn't blocked
-            # on image download (Phase 4 step 4).
-            fetch_movie_backdrop.delay(movie.id, data.backdrop_url)
-            # Backfill synopsis + trailer out of band too (TMDB, web fallback).
-            fetch_movie_extras.delay(movie.id)
+            with transaction.atomic():
+                if existing is None:
+                    write_data = {
+                        'title': data.title,
+                        'director': data.director,
+                        'year': data.year,
+                        'format_codes': [data.format] if data.format else [],
+                        'cover_url': data.cover_url,
+                        'tmdb_id': data.tmdb_id,
+                        'cast_names': data.cast,
+                        'genre_ids': resolve_genre_ids(data.genres),
+                    }
+                    serializer = MovieWriteSerializer(data=write_data)
+                    serializer.is_valid(raise_exception=True)
+                    movie = serializer.save()
+                else:
+                    # A different release of a title already in the catalog - add
+                    # this format to its aggregate; leave its metadata/art alone.
+                    movie = existing
+                    if fmt:
+                        movie.formats.add(fmt)
+
+                bc = Barcode.objects.create(movie=movie, code=barcode, format=fmt)
+                MovieOwnership.objects.get_or_create(
+                    user=user, movie=movie, defaults={'barcode': bc}
+                )
+
+            if existing is None:
+                # Fetch the wallpaper out of band so the scan response isn't blocked
+                # on image download, and backfill synopsis + trailer too.
+                fetch_movie_backdrop.delay(movie.id, data.backdrop_url)
+                fetch_movie_extras.delay(movie.id)
+                response_status = status.HTTP_201_CREATED
+                label = 'saved'
+            else:
+                response_status = status.HTTP_200_OK
+                label = 'exists'
+
             return Response(
-                {'status': 'saved', 'movie': MovieDetailSerializer(movie, context={'request': request}).data},
-                status=status.HTTP_201_CREATED,
+                {'status': label, 'movie': MovieDetailSerializer(movie, context={'request': request}).data},
+                status=response_status,
             )
 
-        # Slow path - hand off to the async resolution queue.
-        entry = ScanQueue.objects.create(barcode=barcode)
+        # Slow path - hand off to the async resolution queue for this user.
+        entry = ScanQueue.objects.create(barcode=barcode, scanned_by=user)
         resolve_scan_queue_entry.delay(entry.id)
         return Response(
             {'status': 'queued', 'queue_id': entry.id},
@@ -390,7 +501,8 @@ class InboxListView(ListAPIView):
     pagination_class = InboxPagination
 
     def get_queryset(self):
-        return ScanQueue.objects.filter(status='review')
+        # Per-user inbox: each user only reviews the entries they scanned.
+        return ScanQueue.objects.filter(status='review', scanned_by=self.request.user)
 
 
 class InboxAcceptView(APIView):
@@ -404,51 +516,76 @@ class InboxAcceptView(APIView):
     re-scanned if the film is later removed from the catalog.
     """
 
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, pk):
-        entry = get_object_or_404(ScanQueue, pk=pk, status='review')
+        # Per-user inbox: a user may only accept their own scanned entries.
+        entry = get_object_or_404(
+            ScanQueue, pk=pk, status='review', scanned_by=request.user
+        )
 
         serializer = InboxAcceptSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        # Resolve the poster and wallpaper bytes BEFORE writing the catalog row so
-        # the catalog owns the images (surviving the source URL going away) and a
-        # failed download never leaves a half-saved movie. Both are best-effort:
-        # the movie still saves (carrying the source URLs) when an image can't be
-        # fetched.
-        cover = download_image(data['cover_url'], 'cover') if data['cover_url'] else None
-        backdrop = self._resolve_backdrop(data, entry)
+        formats = data['formats']
+        # The scanned disc is one physical release; tag its barcode with the
+        # first selected format as a best guess (editable later in the catalog).
+        barcode_format = resolve_formats([formats[0]])[0] if formats else None
 
-        write_data = {
-            'barcode': entry.barcode,
-            'title': data['title'],
-            'director': data['director'],
-            'year': data['year'],
-            'format': data['format'],
-            'cover_url': data['cover_url'],
-            'tmdb_id': data['tmdb_id'],
-            'synopsis': data['synopsis'],
-            'trailer_url': data['trailer_url'],
-            'genre_ids': resolve_genre_ids(data['genres']),
-            'cast_names': data['cast'],
-        }
+        # Dedupe against the catalog: a slow-path title may already exist (added
+        # by another user or via the fast path). When it does we attach this scan
+        # to it rather than duplicating, and leave its metadata/art untouched.
+        existing = find_existing_movie(data['tmdb_id'], data['title'], data['year'])
+
+        # Resolve poster/wallpaper bytes only for a brand-new movie - an existing
+        # one keeps its own art. Done BEFORE the write so a failed download never
+        # leaves a half-saved movie; both are best-effort.
+        cover = (
+            download_image(data['cover_url'], 'cover')
+            if existing is None and data['cover_url']
+            else None
+        )
+        backdrop = self._resolve_backdrop(data, entry) if existing is None else None
 
         # One transaction so a failure anywhere never strands an orphan movie or a
-        # half-promoted queue entry (the earlier bug saved the movie first, then
-        # 500'd copying the backdrop, leaving the title in the catalog anyway).
+        # half-promoted queue entry.
         with transaction.atomic():
-            movie_serializer = MovieWriteSerializer(data=write_data)
-            movie_serializer.is_valid(raise_exception=True)
-            movie = movie_serializer.save()
-            if cover:
-                movie.cover_image.save(cover.name, cover, save=True)
-            if backdrop:
-                movie.backdrop_image.save(backdrop.name, backdrop, save=True)
+            if existing is None:
+                write_data = {
+                    'title': data['title'],
+                    'director': data['director'],
+                    'year': data['year'],
+                    'format_codes': formats,
+                    'cover_url': data['cover_url'],
+                    'tmdb_id': data['tmdb_id'],
+                    'synopsis': data['synopsis'],
+                    'trailer_url': data['trailer_url'],
+                    'genre_ids': resolve_genre_ids(data['genres']),
+                    'cast_names': data['cast'],
+                }
+                movie_serializer = MovieWriteSerializer(data=write_data)
+                movie_serializer.is_valid(raise_exception=True)
+                movie = movie_serializer.save()
+                if cover:
+                    movie.cover_image.save(cover.name, cover, save=True)
+                if backdrop:
+                    movie.backdrop_image.save(backdrop.name, backdrop, save=True)
+            else:
+                movie = existing
+                if formats:
+                    movie.formats.add(*resolve_formats(formats))
 
-            # The queue entry is a work item, not an archive: once the film is
-            # promoted to the catalog the Movie (with its unique barcode) is the
-            # source of truth, so drop the entry to free the barcode for a
-            # future re-scan. Candidates cascade away with it.
+            # Attach the scanned barcode and grant ownership to the scanner.
+            bc, _ = Barcode.objects.get_or_create(
+                code=entry.barcode, defaults={'movie': movie, 'format': barcode_format}
+            )
+            MovieOwnership.objects.get_or_create(
+                user=request.user, movie=movie, defaults={'barcode': bc}
+            )
+
+            # The queue entry is a work item, not an archive: drop it once
+            # promoted. Candidates cascade away with it.
             entry.delete()
 
         return Response(
@@ -499,7 +636,7 @@ class InboxRefetchView(APIView):
     """
 
     def post(self, request, pk):
-        entry = get_object_or_404(ScanQueue, pk=pk, status='review')
+        entry = get_object_or_404(ScanQueue, pk=pk, status='review', scanned_by=request.user)
 
         serializer = MovieRefetchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -532,7 +669,7 @@ class InboxSelectView(APIView):
     """
 
     def post(self, request, pk):
-        entry = get_object_or_404(ScanQueue, pk=pk, status='review')
+        entry = get_object_or_404(ScanQueue, pk=pk, status='review', scanned_by=request.user)
 
         serializer = InboxSelectSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -563,6 +700,6 @@ class InboxRejectView(APIView):
     """
 
     def post(self, request, pk):
-        entry = get_object_or_404(ScanQueue, pk=pk, status='review')
+        entry = get_object_or_404(ScanQueue, pk=pk, status='review', scanned_by=request.user)
         entry.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
