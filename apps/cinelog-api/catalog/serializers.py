@@ -10,11 +10,22 @@ from .cache import (
 from .models import (
     FORMAT_CHOICES,
     Actor,
+    AudioFormat,
     Category,
     Format,
+    HdrFormat,
     Movie,
     ScanCandidate,
     ScanQueue,
+    SpokenLanguage,
+    SubtitleLanguage,
+)
+from .vocab import (
+    AUDIO_FORMAT_CODES,
+    HDR_FORMAT_CODES,
+    normalize_audio_formats,
+    normalize_hdr_formats,
+    normalize_language_names,
 )
 
 # Maps a format code to its human label for on-the-fly Format.get_or_create.
@@ -62,6 +73,12 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     related = serializers.SerializerMethodField()
     formats = serializers.SerializerMethodField()
     barcodes = serializers.SerializerMethodField()
+    # Disc technical specs. Audio / HDR as canonical codes (UI button keys);
+    # languages as their English names (rendered as badges / comma-list inputs).
+    audio_formats = serializers.SerializerMethodField()
+    hdr_formats = serializers.SerializerMethodField()
+    spoken_languages = serializers.SerializerMethodField()
+    subtitle_languages = serializers.SerializerMethodField()
     # True when the requesting user owns this movie. Gates edit/delete in the UI;
     # an owner-less movie reports False for everyone (read-only until an owner is
     # assigned in the admin).
@@ -76,11 +93,24 @@ class MovieDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'director', 'year', 'formats', 'barcodes',
             'cover', 'cover_url', 'backdrop', 'tmdb_id', 'synopsis', 'trailer_url',
-            'genres', 'cast', 'related', 'owned', 'can_purge', 'created', 'modified',
+            'genres', 'cast', 'audio_formats', 'hdr_formats', 'spoken_languages',
+            'subtitle_languages', 'related', 'owned', 'can_purge', 'created', 'modified',
         ]
 
     def get_formats(self, obj):
         return [fmt.code for fmt in obj.formats.all()]
+
+    def get_audio_formats(self, obj):
+        return [a.code for a in obj.audio_formats.all()]
+
+    def get_hdr_formats(self, obj):
+        return [h.code for h in obj.hdr_formats.all()]
+
+    def get_spoken_languages(self, obj):
+        return [lang.name for lang in obj.spoken_languages.all()]
+
+    def get_subtitle_languages(self, obj):
+        return [lang.name for lang in obj.subtitle_languages.all()]
 
     def get_barcodes(self, obj):
         # Each barcode with the format it was pressed in ('' when unset).
@@ -141,6 +171,26 @@ def resolve_formats(codes):
     ]
 
 
+def resolve_audio_formats(values):
+    """Map raw audio-format strings to seeded AudioFormat rows (unknowns dropped)."""
+    return list(AudioFormat.objects.filter(code__in=normalize_audio_formats(values)))
+
+
+def resolve_hdr_formats(values):
+    """Map raw HDR-format strings to seeded HdrFormat rows (unknowns dropped)."""
+    return list(HdrFormat.objects.filter(code__in=normalize_hdr_formats(values)))
+
+
+def resolve_spoken_languages(values):
+    """Map raw language strings to seeded SpokenLanguage rows (unknowns dropped)."""
+    return list(SpokenLanguage.objects.filter(name__in=normalize_language_names(values)))
+
+
+def resolve_subtitle_languages(values):
+    """Map raw language strings to seeded SubtitleLanguage rows (unknowns dropped)."""
+    return list(SubtitleLanguage.objects.filter(name__in=normalize_language_names(values)))
+
+
 class MovieWriteSerializer(serializers.ModelSerializer):
     genre_ids = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), many=True, write_only=True, required=False, source='genres'
@@ -153,6 +203,20 @@ class MovieWriteSerializer(serializers.ModelSerializer):
     format_codes = serializers.ListField(
         child=serializers.ChoiceField(choices=FORMAT_CHOICES), write_only=True, required=False
     )
+    # Disc tech specs. Audio / HDR arrive as codes, languages as English names;
+    # all are mapped to seeded rows (unknowns dropped) - never created on the fly.
+    audio_format_codes = serializers.ListField(
+        child=serializers.CharField(), write_only=True, required=False
+    )
+    hdr_format_codes = serializers.ListField(
+        child=serializers.CharField(), write_only=True, required=False
+    )
+    spoken_language_names = serializers.ListField(
+        child=serializers.CharField(), write_only=True, required=False
+    )
+    subtitle_language_names = serializers.ListField(
+        child=serializers.CharField(), write_only=True, required=False
+    )
 
     class Meta:
         model = Movie
@@ -160,27 +224,56 @@ class MovieWriteSerializer(serializers.ModelSerializer):
             'title', 'director', 'year',
             'cover_url', 'cover_image', 'tmdb_id', 'synopsis', 'trailer_url',
             'genre_ids', 'cast_names', 'format_codes',
+            'audio_format_codes', 'hdr_format_codes',
+            'spoken_language_names', 'subtitle_language_names',
         ]
 
     def _sync_cast(self, instance, cast_names):
         actors = [Actor.objects.get_or_create(name=name)[0] for name in cast_names]
         instance.cast.set(actors)
 
+    def _sync_tech_specs(self, instance, validated_data):
+        """Set any tech-spec M2M present in the payload, mapping to seeded rows."""
+        audio = validated_data.pop('audio_format_codes', None)
+        hdr = validated_data.pop('hdr_format_codes', None)
+        spoken = validated_data.pop('spoken_language_names', None)
+        subtitle = validated_data.pop('subtitle_language_names', None)
+        if audio is not None:
+            instance.audio_formats.set(resolve_audio_formats(audio))
+        if hdr is not None:
+            instance.hdr_formats.set(resolve_hdr_formats(hdr))
+        if spoken is not None:
+            instance.spoken_languages.set(resolve_spoken_languages(spoken))
+        if subtitle is not None:
+            instance.subtitle_languages.set(resolve_subtitle_languages(subtitle))
+
     def create(self, validated_data):
         cast_names = validated_data.pop('cast_names', [])
         genres = validated_data.pop('genres', [])
         format_codes = validated_data.pop('format_codes', None)
+        # Pull the tech-spec lists out before create() so they don't hit the model.
+        audio = validated_data.pop('audio_format_codes', None)
+        hdr = validated_data.pop('hdr_format_codes', None)
+        spoken = validated_data.pop('spoken_language_names', None)
+        subtitle = validated_data.pop('subtitle_language_names', None)
         movie = Movie.objects.create(**validated_data)
         movie.genres.set(genres)
         self._sync_cast(movie, cast_names)
         if format_codes is not None:
             movie.formats.set(resolve_formats(format_codes))
+        self._sync_tech_specs(movie, {
+            'audio_format_codes': audio,
+            'hdr_format_codes': hdr,
+            'spoken_language_names': spoken,
+            'subtitle_language_names': subtitle,
+        })
         return movie
 
     def update(self, instance, validated_data):
         cast_names = validated_data.pop('cast_names', None)
         genres = validated_data.pop('genres', None)
         format_codes = validated_data.pop('format_codes', None)
+        self._sync_tech_specs(instance, validated_data)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -211,7 +304,9 @@ class ScanQueueSerializer(serializers.ModelSerializer):
             'id', 'barcode', 'status', 'extracted_title', 'extracted_director',
             'extracted_year', 'extracted_cast', 'extracted_genres', 'extracted_tmdb_id',
             'extracted_cover_url', 'extracted_backdrop', 'extracted_synopsis',
-            'extracted_trailer_url', 'candidates', 'retry_count',
+            'extracted_trailer_url', 'extracted_audio_formats', 'extracted_hdr_formats',
+            'extracted_spoken_languages', 'extracted_subtitle_languages',
+            'candidates', 'retry_count',
             'error_message', 'created', 'modified',
         ]
         read_only_fields = ['status', 'retry_count', 'error_message', 'created', 'modified']
@@ -260,6 +355,21 @@ class MovieEditSerializer(serializers.Serializer):
     synopsis = serializers.CharField(required=False, allow_blank=True, default='')
     trailer_url = serializers.URLField(
         max_length=500, required=False, allow_blank=True, default=''
+    )
+    # Disc tech specs the user can correct. Audio / HDR as codes (button keys),
+    # languages as English names (comma-list inputs); the view maps them to
+    # seeded rows, so an unrecognised value is simply ignored.
+    audio_formats = serializers.ListField(
+        child=serializers.CharField(max_length=40), required=False, default=list
+    )
+    hdr_formats = serializers.ListField(
+        child=serializers.CharField(max_length=40), required=False, default=list
+    )
+    spoken_languages = serializers.ListField(
+        child=serializers.CharField(max_length=60), required=False, default=list
+    )
+    subtitle_languages = serializers.ListField(
+        child=serializers.CharField(max_length=60), required=False, default=list
     )
 
 

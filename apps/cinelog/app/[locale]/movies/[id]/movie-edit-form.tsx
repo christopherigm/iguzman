@@ -11,6 +11,7 @@ import { Select, type SelectOption } from "@repo/ui/core-elements/select";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Toast } from "@repo/ui/core-elements/toast";
 import type {
+  Category,
   MovieBarcode,
   MovieDetail,
   MovieFormat,
@@ -18,11 +19,17 @@ import type {
   MovieUpdatePayload,
 } from "@/lib/catalog";
 import { FORMAT_BUTTONS } from "@/components/format-buttons";
-
-type Format = Exclude<MovieFormat, "">;
+import {
+  MovieMetadataFields,
+  parseYearInput,
+  splitList,
+  type MovieMetadataValue,
+} from "@/components/movie-metadata-fields";
 
 type Props = {
   movie: MovieDetail;
+  /** The selectable genre set, threaded down to the shared metadata fields. */
+  categories: Category[];
   onSave: (payload: MovieUpdatePayload) => Promise<void>;
   onCancel: () => void;
   onRefetch: (
@@ -36,6 +43,7 @@ type Props = {
 
 export function MovieEditForm({
   movie,
+  categories,
   onSave,
   onCancel,
   onRefetch,
@@ -46,19 +54,27 @@ export function MovieEditForm({
   const t = useTranslations("MovieDetailPage");
   const tFormat = useTranslations("MovieFormat");
 
-  const [title, setTitle] = useState(movie.title);
-  const [director, setDirector] = useState(movie.director);
-  const [year, setYear] = useState(movie.year ? String(movie.year) : "");
-  const [formats, setFormats] = useState<Format[]>(movie.formats);
+  // All editable metadata fields live in one object so the shared
+  // MovieMetadataFields can render them; physical-copy data (barcodes) and the
+  // re-fetch media stay as their own state below.
+  const [meta, setMeta] = useState<MovieMetadataValue>({
+    title: movie.title,
+    director: movie.director,
+    year: movie.year ? String(movie.year) : "",
+    formats: movie.formats,
+    audioFormats: movie.audio_formats,
+    hdrFormats: movie.hdr_formats,
+    genres: movie.genres.map((genre) => genre.name),
+    cast: movie.cast.map((actor) => actor.name).join(", "),
+    spokenLanguages: movie.spoken_languages.join(", "),
+    subtitleLanguages: movie.subtitle_languages.join(", "),
+    synopsis: movie.synopsis,
+    trailerUrl: movie.trailer_url,
+  });
+  const patchMeta = (patch: Partial<MovieMetadataValue>) =>
+    setMeta((prev) => ({ ...prev, ...patch }));
+
   const [barcodes, setBarcodes] = useState<MovieBarcode[]>(movie.barcodes);
-  const [genres, setGenres] = useState(
-    movie.genres.map((genre) => genre.name).join(", "),
-  );
-  const [cast, setCast] = useState(
-    movie.cast.map((actor) => actor.name).join(", "),
-  );
-  const [synopsis, setSynopsis] = useState(movie.synopsis);
-  const [trailerUrl, setTrailerUrl] = useState(movie.trailer_url);
 
   // Media a re-fetch may replace. These aren't editable inputs - they ride along
   // in the save payload only after a re-fetch sets `refetched`, so a plain text
@@ -93,12 +109,6 @@ export function MovieEditForm({
     ...FORMAT_BUTTONS.map(({ value }) => ({ value, label: tFormat(value) })),
   ];
 
-  const toggleFormat = (value: Format) => {
-    setFormats((prev) =>
-      prev.includes(value) ? prev.filter((f) => f !== value) : [...prev, value],
-    );
-  };
-
   const updateBarcode = (index: number, patch: Partial<MovieBarcode>) => {
     setBarcodes((prev) =>
       prev.map((bc, i) => (i === index ? { ...bc, ...patch } : bc)),
@@ -111,17 +121,6 @@ export function MovieEditForm({
   const removeBarcode = (index: number) =>
     setBarcodes((prev) => prev.filter((_, i) => i !== index));
 
-  const splitList = (value: string) =>
-    value
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean);
-
-  const parseYear = () => {
-    const parsed = year.trim() ? Number.parseInt(year.trim(), 10) : null;
-    return Number.isNaN(parsed as number) ? null : parsed;
-  };
-
   async function handleRefetch() {
     setFetchingRefetch(true);
     setRefetchError(false);
@@ -130,14 +129,20 @@ export function MovieEditForm({
       // every field with the resolved version. The parent live-previews the new
       // poster/backdrop on the page; we keep them for the save payload. Formats
       // and barcodes are physical-copy data, so a re-fetch leaves them alone.
-      const data = await onRefetch(title.trim(), parseYear());
-      setTitle(data.title);
-      setDirector(data.director);
-      setYear(data.year ? String(data.year) : "");
-      setGenres(data.genres.join(", "));
-      setCast(data.cast.join(", "));
-      setSynopsis(data.synopsis);
-      setTrailerUrl(data.trailer_url);
+      const data = await onRefetch(meta.title.trim(), parseYearInput(meta.year));
+      patchMeta({
+        title: data.title,
+        director: data.director,
+        year: data.year ? String(data.year) : "",
+        genres: data.genres,
+        cast: data.cast.join(", "),
+        audioFormats: data.audio_formats,
+        hdrFormats: data.hdr_formats,
+        spokenLanguages: data.spoken_languages.join(", "),
+        subtitleLanguages: data.subtitle_languages.join(", "),
+        synopsis: data.synopsis,
+        trailerUrl: data.trailer_url,
+      });
       setCoverUrl(data.cover_url);
       setBackdropUrl(data.backdrop_url);
       setTmdbId(data.tmdb_id);
@@ -169,7 +174,7 @@ export function MovieEditForm({
     try {
       // Mirror the auto-fetched text into the editable field so the user can
       // tweak it before saving.
-      setSynopsis(await onGetSynopsis());
+      patchMeta({ synopsis: await onGetSynopsis() });
     } catch {
       setSynopsisError(true);
     } finally {
@@ -181,7 +186,7 @@ export function MovieEditForm({
     setFetchingTrailer(true);
     setTrailerError(false);
     try {
-      setTrailerUrl(await onGetTrailer());
+      patchMeta({ trailerUrl: await onGetTrailer() });
     } catch {
       setTrailerError(true);
     } finally {
@@ -193,18 +198,22 @@ export function MovieEditForm({
     setSaving(true);
     try {
       await onSave({
-        title: title.trim(),
-        director: director.trim(),
-        year: parseYear(),
-        formats,
+        title: meta.title.trim(),
+        director: meta.director.trim(),
+        year: parseYearInput(meta.year),
+        formats: meta.formats,
         // Drop blank rows the user added but never filled in.
         barcodes: barcodes
           .filter((bc) => bc.code.trim() !== "")
           .map((bc) => ({ code: bc.code.trim(), format: bc.format })),
-        synopsis: synopsis.trim(),
-        trailer_url: trailerUrl.trim(),
-        genres: splitList(genres),
-        cast: splitList(cast),
+        synopsis: meta.synopsis.trim(),
+        trailer_url: meta.trailerUrl.trim(),
+        genres: meta.genres,
+        cast: splitList(meta.cast),
+        audio_formats: meta.audioFormats,
+        hdr_formats: meta.hdrFormats,
+        spoken_languages: splitList(meta.spokenLanguages),
+        subtitle_languages: splitList(meta.subtitleLanguages),
         // Carry the re-fetched media only when a re-fetch happened, so a plain
         // edit never clobbers the existing cover, backdrop, or tmdb_id.
         ...(refetched && {
@@ -221,85 +230,11 @@ export function MovieEditForm({
 
   return (
     <Box display="flex" flexDirection="column" gap={12}>
-      <Box display="flex" gap={8} flexWrap="wrap">
-        <TextInput
-          label={t("titleLabel")}
-          value={title}
-          onChange={setTitle}
-          flex="2 1 200px"
-          disabled={busy}
-        />
-        <TextInput
-          label={t("directorLabel")}
-          value={director}
-          onChange={setDirector}
-          flex="1 1 160px"
-          disabled={busy}
-        />
-      </Box>
-
-      <Box display="flex" gap={8} flexWrap="wrap" alignItems="flex-end">
-        <TextInput
-          type="number"
-          label={t("yearLabel")}
-          value={year}
-          onChange={setYear}
-          flex="1 1 100px"
-          disabled={busy}
-        />
-        <Box display="flex" flexDirection="column" gap={4}>
-          <Typography variant="caption" styles={{ opacity: 0.7 }}>
-            {t("formatLabel")}
-          </Typography>
-          <Box display="flex" gap={4} alignItems="center">
-            {FORMAT_BUTTONS.map(({ value, icon, iconColor, fullColor }) => {
-              const selected = formats.includes(value);
-              return (
-                <IconButton
-                  key={value}
-                  icon={icon}
-                  iconColor={iconColor}
-                  kind={selected ? "primary" : "default"}
-                  aria-label={tFormat(value)}
-                  aria-pressed={selected}
-                  title={tFormat(value)}
-                  size="sm"
-                  onClick={() => toggleFormat(value)}
-                  fullColor={fullColor}
-                  solid={selected}
-                  disabled={busy}
-                />
-              );
-            })}
-          </Box>
-        </Box>
-      </Box>
-
-      <TextInput
-        label={t("genresLabel")}
-        value={genres}
-        onChange={setGenres}
-        disabled={busy}
-      />
-      <TextInput
-        label={t("castLabel")}
-        value={cast}
-        onChange={setCast}
-        disabled={busy}
-      />
-
-      <TextInput
-        label={t("synopsisLabel")}
-        value={synopsis}
-        onChange={setSynopsis}
-        multirow
-        rows={5}
-        disabled={busy}
-      />
-      <TextInput
-        label={t("trailerLabel")}
-        value={trailerUrl}
-        onChange={setTrailerUrl}
+      <MovieMetadataFields
+        value={meta}
+        onPatch={patchMeta}
+        namespace="MovieDetailPage"
+        categories={categories}
         disabled={busy}
       />
 
@@ -371,7 +306,7 @@ export function MovieEditForm({
             size="md"
             onClick={handleRefetch}
             isLoading={fetchingRefetch}
-            disabled={busy || title.trim() === ""}
+            disabled={busy || meta.title.trim() === ""}
             kind="primary"
           />
           {!movie.backdrop && (
@@ -384,7 +319,7 @@ export function MovieEditForm({
               kind="primary"
             />
           )}
-          {!synopsis && (
+          {!meta.synopsis && (
             <Button
               text={t("getSynopsis")}
               size="md"
@@ -394,7 +329,7 @@ export function MovieEditForm({
               kind="primary"
             />
           )}
-          {!trailerUrl && (
+          {!meta.trailerUrl && (
             <Button
               text={t("getTrailer")}
               size="md"
@@ -419,7 +354,7 @@ export function MovieEditForm({
             size="md"
             onClick={handleSave}
             isLoading={saving}
-            disabled={busy || title.trim() === ""}
+            disabled={busy || meta.title.trim() === ""}
           />
         </Box>
       </Box>

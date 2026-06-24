@@ -2,6 +2,14 @@ import logging
 
 from pydantic import BaseModel, Field
 
+from ..vocab import (
+    AUDIO_FORMAT_CHOICES,
+    HDR_FORMAT_CHOICES,
+    LANGUAGE_NAMES,
+    normalize_audio_formats,
+    normalize_hdr_formats,
+    normalize_language_names,
+)
 from .llm import chat_structured
 
 logger = logging.getLogger(__name__)
@@ -106,6 +114,109 @@ def extract_synopsis(raw_text: str, title: str) -> str:
         temperature=0.2,
     )
     return result.synopsis.strip()
+
+
+# Allowed values handed to the LLM, built from the canonical vocab so the prompt
+# never drifts from the lookup tables.
+_AUDIO_VOCAB = ', '.join(f'{code} ({label})' for code, label in AUDIO_FORMAT_CHOICES)
+_HDR_VOCAB = ', '.join(f'{code} ({label})' for code, label in HDR_FORMAT_CHOICES)
+_LANGUAGE_VOCAB = ', '.join(LANGUAGE_NAMES)
+
+
+class ScrapedTechSpecs(BaseModel):
+    """
+    Schema the LLM returns when reading a disc's technical-spec text.
+
+    Every field is a list mapped onto the catalog's controlled vocabulary -
+    audio / HDR as short codes, languages as English names. The values are still
+    re-normalized in Python afterwards (`extract_tech_specs`), so a stray spelling
+    the model slips through is dropped rather than creating a junk row.
+    """
+
+    audio_formats: list[str] = Field(
+        default_factory=list,
+        description='Audio track formats present on the disc, as codes from the allowed set.',
+    )
+    hdr_formats: list[str] = Field(
+        default_factory=list,
+        description='Dynamic-range / HDR formats on the disc, as codes from the allowed set.',
+    )
+    spoken_languages: list[str] = Field(
+        default_factory=list,
+        description='Languages the disc has audio tracks in, as English names from the allowed set.',
+    )
+    subtitle_languages: list[str] = Field(
+        default_factory=list,
+        description='Languages the disc has subtitle tracks in, as English names from the allowed set.',
+    )
+
+
+_TECH_SPECS_SYSTEM_PROMPT = f"""\
+You are a physical-media (DVD / Blu-ray / 4K UHD) technical-specification \
+extraction assistant.
+
+You are given raw, messy web text gathered for a specific disc release (often \
+from blu-ray.com or a retailer listing). Identify the disc's audio formats, \
+HDR/dynamic-range formats, audio (spoken) languages, and subtitle languages.
+
+Rules:
+- Map every value onto the allowed sets below. Use the exact code for audio and \
+  HDR, and the exact English name for languages. Discard anything that does not \
+  clearly map to an allowed value.
+- Allowed audio format codes: {_AUDIO_VOCAB}.
+- Allowed HDR format codes: {_HDR_VOCAB}. A standard (non-HDR) disc is "sdr".
+- Allowed languages: {_LANGUAGE_VOCAB}.
+- Keep audio languages (spoken/dub tracks) and subtitle languages separate; a \
+  language may appear in both.
+- Only include a value when the text genuinely supports it. When the text says \
+  nothing about a field, return an empty list - never guess.
+- Return ONLY valid JSON - no markdown, no explanation, no extra text.
+
+Response schema:
+{{"audio_formats": [<codes>], "hdr_formats": [<codes>], \
+"spoken_languages": [<names>], "subtitle_languages": [<names>]}}
+"""
+
+
+def extract_tech_specs(raw_text: str) -> dict:
+    """
+    Extract a disc's technical specs from raw scraped web text and normalize them
+    onto the catalog's controlled vocabulary.
+
+    Returns a dict with keys ``audio_formats`` / ``hdr_formats`` (canonical
+    codes) and ``spoken_languages`` / ``subtitle_languages`` (English names),
+    each a de-duplicated list with unrecognised values dropped. Best-effort: an
+    empty input (or text with no spec signal) yields all-empty lists. Network /
+    rate-limit errors from the LLM layer propagate to the caller (the pipeline
+    swallows them).
+    """
+    empty = {
+        'audio_formats': [],
+        'hdr_formats': [],
+        'spoken_languages': [],
+        'subtitle_languages': [],
+    }
+    if not raw_text.strip():
+        return empty
+
+    result = chat_structured(
+        messages=[
+            {'role': 'system', 'content': _TECH_SPECS_SYSTEM_PROMPT},
+            {
+                'role': 'user',
+                'content': f'RAW DISC SPEC TEXT:\n{raw_text[:_MAX_INPUT_CHARS]}\n\n'
+                'Extract the technical specs as JSON.',
+            },
+        ],
+        response_model=ScrapedTechSpecs,
+        temperature=0.0,
+    )
+    return {
+        'audio_formats': normalize_audio_formats(result.audio_formats),
+        'hdr_formats': normalize_hdr_formats(result.hdr_formats),
+        'spoken_languages': normalize_language_names(result.spoken_languages),
+        'subtitle_languages': normalize_language_names(result.subtitle_languages),
+    }
 
 
 def extract_movie(raw_text: str) -> ScrapedMovie:

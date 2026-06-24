@@ -222,7 +222,15 @@
     "fetchingTrailer": "Trailer wird abgerufen…",
     "synopsisError": "Für diesen Film wurde keine Handlung gefunden.",
     "trailerError": "Für diesen Film wurde kein Trailer gefunden.",
-    "related": "Ähnliche Filme"
+    "related": "Ähnliche Filme",
+    "audioLabel": "Audio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Audiosprachen",
+    "subtitlesLabel": "Untertitel",
+    "audio": "Audio",
+    "hdr": "HDR",
+    "spokenLanguages": "Audiosprachen",
+    "subtitles": "Untertitel"
   },
   "InboxPage": {
     "title": "Posteingang",
@@ -230,7 +238,6 @@
     "loading": "Posteingang wird geladen…",
     "error": "Posteingang konnte nicht geladen werden.",
     "empty": "Nichts zu prüfen. Gescannte Titel, die noch aufgelöst werden, erscheinen hier.",
-    "barcodeLabel": "Barcode",
     "noCover": "Kein Cover",
     "titleLabel": "Titel",
     "directorLabel": "Regie",
@@ -253,6 +260,10 @@
     "accepted": "\"{title}\" zum Katalog hinzugefügt.",
     "acceptError": "Hinzufügen zum Katalog fehlgeschlagen. Bitte versuche es erneut.",
     "rejected": "Eintrag abgelehnt.",
-    "rejectError": "Eintrag konnte nicht abgelehnt werden. Bitte versuche es erneut."
+    "rejectError": "Eintrag konnte nicht abgelehnt werden. Bitte versuche es erneut.",
+    "audioLabel": "Audio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Audiosprachen",
+    "subtitlesLabel": "Untertitel"
   }
 }

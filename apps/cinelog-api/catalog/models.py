@@ -6,6 +6,12 @@ from django.db import models
 
 from core.models import Common
 
+from .vocab import (
+    AUDIO_FORMAT_CHOICES,
+    HDR_FORMAT_CHOICES,
+    LANGUAGE_CHOICES,
+)
+
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -55,6 +61,83 @@ class Format(models.Model):
 
     def __str__(self):
         return self.label
+
+
+class AudioFormat(models.Model):
+    """
+    A disc audio track format (Dolby Atmos, DTS:X, ...).
+
+    A small controlled-vocabulary lookup table seeded from
+    ``vocab.AUDIO_FORMAT_CHOICES`` (see the 0009 data migration). Modelled as a
+    table - rather than an inline enum - so a Movie carries its formats via a
+    clean M2M the catalog can filter on, and the set stays free of near-duplicate
+    spellings.
+    """
+
+    code = models.CharField(max_length=20, unique=True, choices=AUDIO_FORMAT_CHOICES)
+    label = models.CharField(max_length=50)
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return self.label
+
+
+class HdrFormat(models.Model):
+    """
+    A disc dynamic-range format (Dolby Vision, HDR10, HDR10+, HLG, SDR).
+
+    Controlled-vocabulary lookup seeded from ``vocab.HDR_FORMAT_CHOICES``;
+    same rationale as :class:`AudioFormat`.
+    """
+
+    code = models.CharField(max_length=20, unique=True, choices=HDR_FORMAT_CHOICES)
+    label = models.CharField(max_length=50)
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return self.label
+
+
+class SpokenLanguage(models.Model):
+    """
+    A language a disc carries an audio track in (ISO 639-1 code + English name).
+
+    Controlled-vocabulary lookup seeded from ``vocab.LANGUAGE_CHOICES``. Kept as
+    its own table (separate from :class:`SubtitleLanguage`) so audio and subtitle
+    coverage can be filtered independently.
+    """
+
+    code = models.CharField(max_length=10, unique=True, choices=LANGUAGE_CHOICES)
+    name = models.CharField(max_length=60)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class SubtitleLanguage(models.Model):
+    """
+    A language a disc carries subtitles in (ISO 639-1 code + English name).
+
+    Controlled-vocabulary lookup seeded from ``vocab.LANGUAGE_CHOICES``; a sibling
+    of :class:`SpokenLanguage` so the two can be filtered independently.
+    """
+
+    code = models.CharField(max_length=10, unique=True, choices=LANGUAGE_CHOICES)
+    name = models.CharField(max_length=60)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
 
 SCAN_STATUS_CHOICES = [
     ('pending', 'Pending'),
@@ -106,6 +189,13 @@ class Movie(Common):
     trailer_url = models.URLField(max_length=500, blank=True)
     genres = models.ManyToManyField(Category, blank=True, related_name='movies')
     cast = models.ManyToManyField(Actor, blank=True, related_name='movies')
+    # Disc technical specs (best-effort, scraped + LLM-normalized). Modelled as
+    # M2Ms onto controlled-vocabulary lookups so the catalog can filter by audio
+    # format, HDR support, and audio / subtitle language coverage.
+    audio_formats = models.ManyToManyField(AudioFormat, blank=True, related_name='movies')
+    hdr_formats = models.ManyToManyField(HdrFormat, blank=True, related_name='movies')
+    spoken_languages = models.ManyToManyField(SpokenLanguage, blank=True, related_name='movies')
+    subtitle_languages = models.ManyToManyField(SubtitleLanguage, blank=True, related_name='movies')
 
     class Meta:
         ordering = ['title']
@@ -190,6 +280,13 @@ class ScanQueue(Common):
     # Plot summary + trailer resolved during review; copied onto the Movie on accept.
     extracted_synopsis = models.TextField(blank=True)
     extracted_trailer_url = models.URLField(max_length=500, blank=True)
+    # Disc technical specs resolved during review; copied onto the Movie on accept.
+    # Audio / HDR are stored as canonical codes (the UI button keys); languages as
+    # their English names (like extracted_genres), so the comma-list inputs work.
+    extracted_audio_formats = models.JSONField(default=list, blank=True)
+    extracted_hdr_formats = models.JSONField(default=list, blank=True)
+    extracted_spoken_languages = models.JSONField(default=list, blank=True)
+    extracted_subtitle_languages = models.JSONField(default=list, blank=True)
     retry_count = models.PositiveSmallIntegerField(default=0)
     error_message = models.TextField(blank=True)
 

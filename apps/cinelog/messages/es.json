@@ -222,7 +222,15 @@
     "fetchingTrailer": "Obteniendo tráiler…",
     "synopsisError": "No se encontró una sinopsis para esta película.",
     "trailerError": "No se encontró un tráiler para esta película.",
-    "related": "Películas relacionadas"
+    "related": "Películas relacionadas",
+    "audioLabel": "Audio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Idiomas de audio",
+    "subtitlesLabel": "Subtítulos",
+    "audio": "Audio",
+    "hdr": "HDR",
+    "spokenLanguages": "Idiomas de audio",
+    "subtitles": "Subtítulos"
   },
   "InboxPage": {
     "title": "Bandeja",
@@ -230,7 +238,6 @@
     "loading": "Cargando bandeja…",
     "error": "No se pudo cargar la bandeja.",
     "empty": "Nada que revisar. Los títulos escaneados pendientes de resolver aparecerán aquí.",
-    "barcodeLabel": "Código de barras",
     "noCover": "Sin portada",
     "titleLabel": "Título",
     "directorLabel": "Director",
@@ -253,6 +260,10 @@
     "accepted": "\"{title}\" añadida al catálogo.",
     "acceptError": "No se pudo añadir al catálogo. Inténtalo de nuevo.",
     "rejected": "Entrada rechazada.",
-    "rejectError": "No se pudo rechazar la entrada. Inténtalo de nuevo."
+    "rejectError": "No se pudo rechazar la entrada. Inténtalo de nuevo.",
+    "audioLabel": "Audio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Idiomas de audio",
+    "subtitlesLabel": "Subtítulos"
   }
 }

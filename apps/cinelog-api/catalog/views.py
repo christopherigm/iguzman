@@ -29,7 +29,11 @@ from .serializers import (
     MovieRefetchSerializer,
     MovieWriteSerializer,
     ScanQueueSerializer,
+    resolve_audio_formats,
     resolve_formats,
+    resolve_hdr_formats,
+    resolve_spoken_languages,
+    resolve_subtitle_languages,
 )
 from .services.backdrop import download_image, fetch_backdrop
 from .services.extras import fetch_synopsis, fetch_trailer
@@ -164,7 +168,8 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
     # Anonymous users may view a movie (GET); editing/deleting still needs auth.
     permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = Movie.objects.filter(enabled=True).prefetch_related(
-        'genres', 'cast', 'formats', 'barcodes__format', 'ownerships'
+        'genres', 'cast', 'formats', 'barcodes__format', 'ownerships',
+        'audio_formats', 'hdr_formats', 'spoken_languages', 'subtitle_languages',
     )
     serializer_class = MovieDetailSerializer
 
@@ -210,6 +215,10 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
             'trailer_url': data['trailer_url'],
             'genre_ids': resolve_genre_ids(data['genres']),
             'cast_names': data['cast'],
+            'audio_format_codes': data['audio_formats'],
+            'hdr_format_codes': data['hdr_formats'],
+            'spoken_language_names': data['spoken_languages'],
+            'subtitle_language_names': data['subtitle_languages'],
         }
         # Optional media from a saved re-fetch (`None` means "not sent" - a plain
         # text edit, which must not disturb the existing cover / tmdb_id).
@@ -383,7 +392,9 @@ class MovieRefetchView(APIView):
 
         # Fall back to the stored title if the form somehow sent only whitespace.
         title = data['title'].strip() or movie.title
-        preview = refetch_movie_data(title, data['year'])
+        # A barcode pins the exact physical release for tech specs when present.
+        barcode = movie.barcodes.values_list('code', flat=True).first() or ''
+        preview = refetch_movie_data(title, data['year'], barcode=barcode)
         if not preview:
             return Response(
                 {'detail': 'No data could be found for this title and year.'},
@@ -575,6 +586,10 @@ class InboxAcceptView(APIView):
                     'trailer_url': data['trailer_url'],
                     'genre_ids': resolve_genre_ids(data['genres']),
                     'cast_names': data['cast'],
+                    'audio_format_codes': data['audio_formats'],
+                    'hdr_format_codes': data['hdr_formats'],
+                    'spoken_language_names': data['spoken_languages'],
+                    'subtitle_language_names': data['subtitle_languages'],
                 }
                 movie_serializer = MovieWriteSerializer(data=write_data)
                 movie_serializer.is_valid(raise_exception=True)
@@ -584,9 +599,19 @@ class InboxAcceptView(APIView):
                 if backdrop:
                     movie.backdrop_image.save(backdrop.name, backdrop, save=True)
             else:
+                # A different release of a title already in the catalog: union the
+                # new formats and tech specs onto it; leave its metadata/art alone.
                 movie = existing
                 if formats:
                     movie.formats.add(*resolve_formats(formats))
+                if data['audio_formats']:
+                    movie.audio_formats.add(*resolve_audio_formats(data['audio_formats']))
+                if data['hdr_formats']:
+                    movie.hdr_formats.add(*resolve_hdr_formats(data['hdr_formats']))
+                if data['spoken_languages']:
+                    movie.spoken_languages.add(*resolve_spoken_languages(data['spoken_languages']))
+                if data['subtitle_languages']:
+                    movie.subtitle_languages.add(*resolve_subtitle_languages(data['subtitle_languages']))
 
             # Attach the scanned barcode and grant ownership to the scanner.
             bc, _ = Barcode.objects.get_or_create(
@@ -656,7 +681,7 @@ class InboxRefetchView(APIView):
 
         # Fall back to the extracted title if the form somehow sent only whitespace.
         title = data['title'].strip() or entry.extracted_title
-        preview = refetch_movie_data(title, data['year'])
+        preview = refetch_movie_data(title, data['year'], barcode=entry.barcode)
         if not preview:
             return Response(
                 {'detail': 'No data could be found for this title and year.'},

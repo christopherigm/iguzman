@@ -4,11 +4,19 @@ from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
 
 from .models import Movie, ScanCandidate, ScanQueue
+from .serializers import (
+    resolve_audio_formats,
+    resolve_hdr_formats,
+    resolve_spoken_languages,
+    resolve_subtitle_languages,
+)
 from .services.backdrop import fetch_backdrop
-from .services.extract import extract_movie, extract_synopsis
+from .services.extract import extract_movie
 from .services.extras import fetch_synopsis, fetch_trailer
-from .services.scraper import scrape_barcode, search_youtube
-from .services.tmdb import fetch_tmdb_extras, search_tmdb, search_tmdb_candidates
+from .services.refetch import resolve_movie_metadata
+from .services.scraper import scrape_barcode
+from .services.techspecs import fetch_tech_specs
+from .services.tmdb import search_tmdb_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -86,34 +94,57 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
     entry.extracted_year = scraped.year
     entry.extracted_director = scraped.director.strip()
 
-    # ── TMDB authoritative match ────────────────────────────────────────────────
-    # A TMDB error here must not strand the entry: the LLM extraction is already
-    # persisted above, so fall through to `review` for manual correction.
+    # ── Resolve full metadata (shared resolver) ─────────────────────────────────
+    # The same year-aware TMDB match + extras + barcode-aware tech specs the
+    # refetch / candidate-select endpoints use, so a freshly scanned entry carries
+    # the identical data a manual refetch would produce. `raw_text` is reused for
+    # the TMDB-miss text fallback (no second scrape). A failure never strands the
+    # entry: the LLM extraction is already persisted above, so it still lands in
+    # `review` for manual correction.
     try:
-        tmdb = search_tmdb(scraped.title)
+        preview = resolve_movie_metadata(
+            title=scraped.title.strip(),
+            year=scraped.year,
+            barcode=entry.barcode,
+            raw_text=raw_text,
+        )
     except Exception as exc:
-        logger.warning('resolve_scan_queue_entry: TMDB lookup failed for %s: %s', entry.barcode, exc)
-        tmdb = None
-    if tmdb:
-        entry.extracted_title = tmdb['title']
-        entry.extracted_director = tmdb['director']
-        entry.extracted_year = tmdb['year']
-        entry.extracted_cast = tmdb['cast']
-        entry.extracted_genres = tmdb['genres']
-        entry.extracted_tmdb_id = tmdb['tmdb_id']
-        entry.extracted_cover_url = tmdb['cover_url']
-        entry.error_message = ''
+        logger.warning('resolve_scan_queue_entry: metadata resolve failed for %s: %s', entry.barcode, exc)
+        preview = None
+
+    if preview:
+        entry.extracted_title = preview['title']
+        entry.extracted_director = preview['director']
+        entry.extracted_year = preview['year']
+        entry.extracted_cast = preview['cast']
+        entry.extracted_genres = preview['genres']
+        entry.extracted_tmdb_id = preview['tmdb_id']
+        entry.extracted_cover_url = preview['cover_url']
+        entry.extracted_synopsis = preview['synopsis']
+        entry.extracted_trailer_url = preview['trailer_url']
+        entry.extracted_audio_formats = preview['audio_formats']
+        entry.extracted_hdr_formats = preview['hdr_formats']
+        entry.extracted_spoken_languages = preview['spoken_languages']
+        entry.extracted_subtitle_languages = preview['subtitle_languages']
+        # A non-empty tmdb_id marks an authoritative match; otherwise the title
+        # came from the LLM fallback and may need manual correction in the Inbox.
+        entry.error_message = '' if preview['tmdb_id'] else (
+            'No TMDB match - LLM-extracted title saved for manual correction.'
+        )
     else:
-        # No TMDB match - keep the LLM title for manual correction in the Inbox.
+        # Nothing usable resolved - keep the LLM title for manual correction.
         entry.error_message = 'No TMDB match - LLM-extracted title saved for manual correction.'
+
+    backdrop_url = preview['backdrop_url'] if preview else ''
 
     # ── Alternative candidates (best-effort) ───────────────────────────────────
     # The default match above is just the top result; a popular near-namesake can
     # outrank the right film. Persist the top few so the Inbox can offer a picker
     # to re-pin the exact match. We search with the LLM-extracted title (the same
-    # query that fed `search_tmdb`) - NOT `entry.extracted_title`, which a TMDB
-    # hit has already overwritten with the possibly-wrong top match's title. A
-    # failure here never strands the entry.
+    # query that fed the resolver) - NOT `entry.extracted_title`, which a TMDB hit
+    # has already overwritten with the possibly-wrong top match's title. The year
+    # is deliberately omitted: it may be exactly what's wrong, so constraining the
+    # candidates by it would hide the right alternative. A failure never strands.
     try:
         candidates = search_tmdb_candidates(scraped.title.strip())
     except Exception as exc:
@@ -125,7 +156,7 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
     # entry: the wallpaper is decorative and the entry still lands in `review`.
     try:
         backdrop = fetch_backdrop(
-            tmdb['backdrop_url'] if tmdb else '',
+            backdrop_url,
             entry.extracted_title,
             entry.extracted_year,
         )
@@ -133,43 +164,6 @@ def resolve_scan_queue_entry(self, entry_id: int) -> None:
             entry.extracted_backdrop_image.save(backdrop.name, backdrop, save=False)
     except Exception as exc:
         logger.warning('resolve_scan_queue_entry: backdrop fetch failed for %s: %s', entry.barcode, exc)
-
-    # ── Synopsis + trailer (best-effort) ───────────────────────────────────────
-    # TMDB overview / videos are preferred; on a miss reuse the text already
-    # scraped above for the synopsis (no second scrape) and a YouTube search for
-    # the trailer. A failure here never strands the entry - both are decorative
-    # and the entry still lands in `review`.
-    try:
-        extras = fetch_tmdb_extras(
-            tmdb_id=entry.extracted_tmdb_id,
-            title=entry.extracted_title,
-        )
-    except Exception as exc:
-        logger.warning('resolve_scan_queue_entry: extras fetch failed for %s: %s', entry.barcode, exc)
-        extras = {'synopsis': '', 'trailer_url': ''}
-
-    synopsis = extras.get('synopsis', '')
-    if not synopsis:
-        try:
-            synopsis = extract_synopsis(raw_text, entry.extracted_title)
-        except Exception as exc:
-            logger.warning('resolve_scan_queue_entry: synopsis extract failed for %s: %s', entry.barcode, exc)
-            synopsis = ''
-    entry.extracted_synopsis = synopsis
-
-    trailer_url = extras.get('trailer_url', '')
-    if not trailer_url and entry.extracted_title:
-        query = (
-            f'{entry.extracted_title} {entry.extracted_year} official trailer youtube'
-            if entry.extracted_year
-            else f'{entry.extracted_title} official trailer youtube'
-        )
-        try:
-            trailer_url = search_youtube(query)
-        except Exception as exc:
-            logger.warning('resolve_scan_queue_entry: trailer search failed for %s: %s', entry.barcode, exc)
-            trailer_url = ''
-    entry.extracted_trailer_url = trailer_url
 
     entry.status = 'review'
     entry.save()
@@ -249,3 +243,28 @@ def fetch_movie_extras(movie_id: int) -> None:
     if update_fields:
         update_fields.append('modified')
         movie.save(update_fields=update_fields)
+
+    # Backfill disc technical specs only when the movie carries none yet, so a
+    # re-dispatch never clobbers values an owner has since corrected. A barcode
+    # for this fast-path movie pins the exact release when available.
+    has_specs = (
+        movie.audio_formats.exists()
+        or movie.hdr_formats.exists()
+        or movie.spoken_languages.exists()
+        or movie.subtitle_languages.exists()
+    )
+    if not has_specs:
+        barcode = movie.barcodes.values_list('code', flat=True).first() or ''
+        try:
+            specs = fetch_tech_specs(barcode=barcode, title=movie.title, year=movie.year)
+        except Exception as exc:
+            logger.warning('fetch_movie_extras: tech specs failed for %s: %s', movie.id, exc)
+            specs = {}
+        if specs.get('audio_formats'):
+            movie.audio_formats.set(resolve_audio_formats(specs['audio_formats']))
+        if specs.get('hdr_formats'):
+            movie.hdr_formats.set(resolve_hdr_formats(specs['hdr_formats']))
+        if specs.get('spoken_languages'):
+            movie.spoken_languages.set(resolve_spoken_languages(specs['spoken_languages']))
+        if specs.get('subtitle_languages'):
+            movie.subtitle_languages.set(resolve_subtitle_languages(specs['subtitle_languages']))

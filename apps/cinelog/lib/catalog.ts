@@ -11,6 +11,29 @@ export interface Actor {
 
 export type MovieFormat = "dvd" | "bluray" | "4k" | "other" | "";
 
+/**
+ * Canonical disc audio-format codes (the catalog's controlled vocabulary). Used
+ * as the button keys in the metadata forms and carried through the API.
+ */
+export type AudioFormatCode =
+  | "atmos"
+  | "truehd"
+  | "ddplus"
+  | "dd"
+  | "dtsx"
+  | "dtshd"
+  | "dts"
+  | "lpcm"
+  | "other";
+
+/** Canonical disc HDR / dynamic-range codes (controlled vocabulary). */
+export type HdrFormatCode =
+  | "dolbyvision"
+  | "hdr10plus"
+  | "hdr10"
+  | "hlg"
+  | "sdr";
+
 /** One of a movie's barcodes: the release UPC and the format it was pressed in. */
 export interface MovieBarcode {
   code: string;
@@ -56,6 +79,14 @@ export interface MovieDetail extends Movie {
   /** YouTube watch URL for the trailer; "" when none has been fetched. */
   trailer_url: string;
   cast: Actor[];
+  /** Disc audio-track formats (controlled-vocab codes); best-effort, may be empty. */
+  audio_formats: AudioFormatCode[];
+  /** Disc HDR / dynamic-range formats (controlled-vocab codes); may be empty. */
+  hdr_formats: HdrFormatCode[];
+  /** Languages the disc has audio tracks in (English names); may be empty. */
+  spoken_languages: string[];
+  /** Languages the disc has subtitle tracks in (English names); may be empty. */
+  subtitle_languages: string[];
   /** Up to 6 suggested movies sharing a genre or director. */
   related: Movie[];
   /** True when the signed-in user owns this movie (gates edit/delete in the UI). */
@@ -216,6 +247,14 @@ export interface MovieUpdatePayload {
   trailer_url: string;
   genres: string[];
   cast: string[];
+  /** Disc audio-track formats (controlled-vocab codes). */
+  audio_formats: AudioFormatCode[];
+  /** Disc HDR / dynamic-range formats (controlled-vocab codes). */
+  hdr_formats: HdrFormatCode[];
+  /** Audio-track languages (English names; unrecognised names are dropped). */
+  spoken_languages: string[];
+  /** Subtitle-track languages (English names; unrecognised names are dropped). */
+  subtitle_languages: string[];
   /** Sent only when saving a re-fetch: new poster URL for the matched version. */
   cover_url?: string;
   /** Sent only when saving a re-fetch: source URL to re-download the wallpaper. */
@@ -238,6 +277,14 @@ export interface MovieRefetchPreview {
   cast: string[];
   synopsis: string;
   trailer_url: string;
+  /** Disc audio-track formats (controlled-vocab codes); best-effort, may be empty. */
+  audio_formats: AudioFormatCode[];
+  /** Disc HDR / dynamic-range formats (controlled-vocab codes); may be empty. */
+  hdr_formats: HdrFormatCode[];
+  /** Audio-track languages (English names); may be empty. */
+  spoken_languages: string[];
+  /** Subtitle-track languages (English names); may be empty. */
+  subtitle_languages: string[];
   cover_url: string;
   backdrop_url: string;
   tmdb_id: string;

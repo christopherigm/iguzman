@@ -222,7 +222,15 @@
     "fetchingTrailer": "Récupération de la bande-annonce…",
     "synopsisError": "Aucun synopsis trouvé pour ce film.",
     "trailerError": "Aucune bande-annonce trouvée pour ce film.",
-    "related": "Films similaires"
+    "related": "Films similaires",
+    "audioLabel": "Audio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Langues audio",
+    "subtitlesLabel": "Sous-titres",
+    "audio": "Audio",
+    "hdr": "HDR",
+    "spokenLanguages": "Langues audio",
+    "subtitles": "Sous-titres"
   },
   "InboxPage": {
     "title": "Boîte de réception",
@@ -230,7 +238,6 @@
     "loading": "Chargement de la boîte de réception…",
     "error": "Échec du chargement de la boîte de réception.",
     "empty": "Rien à vérifier. Les titres scannés en attente de résolution apparaîtront ici.",
-    "barcodeLabel": "Code-barres",
     "noCover": "Pas de jaquette",
     "titleLabel": "Titre",
     "directorLabel": "Réalisateur",
@@ -253,6 +260,10 @@
     "accepted": "« {title} » ajouté au catalogue.",
     "acceptError": "Échec de l'ajout au catalogue. Veuillez réessayer.",
     "rejected": "Entrée rejetée.",
-    "rejectError": "Échec du rejet de l'entrée. Veuillez réessayer."
+    "rejectError": "Échec du rejet de l'entrée. Veuillez réessayer.",
+    "audioLabel": "Audio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Langues audio",
+    "subtitlesLabel": "Sous-titres"
   }
 }

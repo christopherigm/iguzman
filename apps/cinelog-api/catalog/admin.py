@@ -2,13 +2,17 @@ from django.contrib import admin
 
 from .models import (
     Actor,
+    AudioFormat,
     Barcode,
     Category,
     Format,
+    HdrFormat,
     Movie,
     MovieOwnership,
     ScanCandidate,
     ScanQueue,
+    SpokenLanguage,
+    SubtitleLanguage,
 )
 
 
@@ -30,6 +34,28 @@ class FormatAdmin(admin.ModelAdmin):
     list_display = ['code', 'label']
 
 
+@admin.register(AudioFormat)
+class AudioFormatAdmin(admin.ModelAdmin):
+    list_display = ['code', 'label']
+
+
+@admin.register(HdrFormat)
+class HdrFormatAdmin(admin.ModelAdmin):
+    list_display = ['code', 'label']
+
+
+@admin.register(SpokenLanguage)
+class SpokenLanguageAdmin(admin.ModelAdmin):
+    list_display = ['code', 'name']
+    search_fields = ['code', 'name']
+
+
+@admin.register(SubtitleLanguage)
+class SubtitleLanguageAdmin(admin.ModelAdmin):
+    list_display = ['code', 'name']
+    search_fields = ['code', 'name']
+
+
 class BarcodeInline(admin.TabularInline):
     model = Barcode
     extra = 0
@@ -47,9 +73,12 @@ class MovieOwnershipInline(admin.TabularInline):
 @admin.register(Movie)
 class MovieAdmin(admin.ModelAdmin):
     list_display = ['title', 'director', 'year', 'created']
-    list_filter = ['formats', 'genres']
+    list_filter = ['formats', 'genres', 'audio_formats', 'hdr_formats']
     search_fields = ['title', 'director', 'barcodes__code', 'tmdb_id']
-    filter_horizontal = ['formats', 'genres', 'cast']
+    filter_horizontal = [
+        'formats', 'genres', 'cast',
+        'audio_formats', 'hdr_formats', 'spoken_languages', 'subtitle_languages',
+    ]
     readonly_fields = ['created', 'modified']
     inlines = [BarcodeInline, MovieOwnershipInline]
 

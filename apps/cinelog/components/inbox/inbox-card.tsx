@@ -8,14 +8,17 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
-import { IconButton } from "@repo/ui/core-elements/icon-button";
-import { TextInput } from "@repo/ui/core-elements/text-input";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Toast } from "@repo/ui/core-elements/toast";
 import { Barcode } from "@repo/ui/core-elements/barcode";
-import type { MovieFormat, MovieRefetchPreview } from "@/lib/catalog";
+import type { Category, MovieRefetchPreview } from "@/lib/catalog";
 import { FormatHeader } from "@/components/format-header";
-import { FORMAT_BUTTONS } from "@/components/format-buttons";
+import {
+  MovieMetadataFields,
+  parseYearInput,
+  splitList,
+  type MovieMetadataValue,
+} from "@/components/movie-metadata-fields";
 import {
   refetchInboxItem,
   selectInboxCandidate,
@@ -24,28 +27,36 @@ import {
 } from "@/lib/inbox";
 import "./inbox-card.css";
 
-type Format = Exclude<MovieFormat, "">;
-
 type Props = {
   item: InboxItem;
+  /** The selectable genre set, threaded down to the shared metadata fields. */
+  categories: Category[];
   onAccept: (id: number, payload: InboxAcceptPayload) => Promise<void>;
   onReject: (id: number) => Promise<void>;
 };
 
-export function InboxCard({ item, onAccept, onReject }: Props) {
+export function InboxCard({ item, categories, onAccept, onReject }: Props) {
   const t = useTranslations("InboxPage");
-  const tFormat = useTranslations("MovieFormat");
 
-  const [title, setTitle] = useState(item.extracted_title);
-  const [director, setDirector] = useState(item.extracted_director);
-  const [year, setYear] = useState(
-    item.extracted_year ? String(item.extracted_year) : "",
-  );
-  const [formats, setFormats] = useState<Format[]>([]);
-  const [genres, setGenres] = useState(item.extracted_genres.join(", "));
-  const [cast, setCast] = useState(item.extracted_cast.join(", "));
-  const [synopsis, setSynopsis] = useState(item.extracted_synopsis);
-  const [trailerUrl, setTrailerUrl] = useState(item.extracted_trailer_url);
+  // All editable metadata fields live in one object so the shared
+  // MovieMetadataFields can render them. Formats start empty - the scanned disc's
+  // format is chosen by the reviewer before accepting.
+  const [meta, setMeta] = useState<MovieMetadataValue>({
+    title: item.extracted_title,
+    director: item.extracted_director,
+    year: item.extracted_year ? String(item.extracted_year) : "",
+    formats: [],
+    audioFormats: item.extracted_audio_formats,
+    hdrFormats: item.extracted_hdr_formats,
+    genres: item.extracted_genres,
+    cast: item.extracted_cast.join(", "),
+    spokenLanguages: item.extracted_spoken_languages.join(", "),
+    subtitleLanguages: item.extracted_subtitle_languages.join(", "),
+    synopsis: item.extracted_synopsis,
+    trailerUrl: item.extracted_trailer_url,
+  });
+  const patchMeta = (patch: Partial<MovieMetadataValue>) =>
+    setMeta((prev) => ({ ...prev, ...patch }));
 
   // Media a re-fetch may replace. Seeded from the resolved entry; only a
   // re-fetch overwrites them, so accepting without one keeps the original cover,
@@ -73,36 +84,23 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
   const busy =
     submitting !== null || fetchingRefetch || selectingTmdbId !== null;
 
-  const toggleFormat = (value: Format) => {
-    setFormats((prev) =>
-      prev.includes(value)
-        ? prev.filter((f) => f !== value)
-        : [...prev, value],
-    );
-  };
-
-  const splitList = (value: string) =>
-    value
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean);
-
-  const parseYear = () => {
-    const parsed = year.trim() ? Number.parseInt(year.trim(), 10) : null;
-    return Number.isNaN(parsed as number) ? null : parsed;
-  };
-
   // Overwrite the editable fields with a resolved preview and live-preview its
   // art. Shared by the re-fetch (title+year re-search) and the candidate picker
   // (exact tmdb_id) since both return the same preview shape.
   function applyPreview(data: MovieRefetchPreview) {
-    setTitle(data.title);
-    setDirector(data.director);
-    setYear(data.year ? String(data.year) : "");
-    setGenres(data.genres.join(", "));
-    setCast(data.cast.join(", "));
-    setSynopsis(data.synopsis);
-    setTrailerUrl(data.trailer_url);
+    patchMeta({
+      title: data.title,
+      director: data.director,
+      year: data.year ? String(data.year) : "",
+      genres: data.genres,
+      cast: data.cast.join(", "),
+      audioFormats: data.audio_formats,
+      hdrFormats: data.hdr_formats,
+      spokenLanguages: data.spoken_languages.join(", "),
+      subtitleLanguages: data.subtitle_languages.join(", "),
+      synopsis: data.synopsis,
+      trailerUrl: data.trailer_url,
+    });
     setCoverUrl(data.cover_url);
     setBackdropUrl(data.backdrop_url);
     setTmdbId(data.tmdb_id);
@@ -117,7 +115,11 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
     try {
       // Re-search with the (possibly corrected) title + year, then apply the
       // resolved version to the form.
-      const data = await refetchInboxItem(item.id, title.trim(), parseYear());
+      const data = await refetchInboxItem(
+        item.id,
+        meta.title.trim(),
+        parseYearInput(meta.year),
+      );
       applyPreview(data);
     } catch {
       setRefetchError(true);
@@ -126,13 +128,13 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
     }
   }
 
-  async function handleSelectCandidate(tmdbId: string) {
-    setSelectingTmdbId(tmdbId);
+  async function handleSelectCandidate(candidateTmdbId: string) {
+    setSelectingTmdbId(candidateTmdbId);
     setRefetchError(false);
     try {
       // Pin the chosen candidate by its exact id, apply the resolved metadata,
       // then collapse the picker - the user can now review and accept.
-      const data = await selectInboxCandidate(item.id, tmdbId);
+      const data = await selectInboxCandidate(item.id, candidateTmdbId);
       applyPreview(data);
       setShowCandidates(false);
     } catch {
@@ -146,17 +148,21 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
     setSubmitting("accept");
     try {
       await onAccept(item.id, {
-        title: title.trim(),
-        director: director.trim(),
-        year: parseYear(),
-        formats,
-        synopsis: synopsis.trim(),
-        trailer_url: trailerUrl.trim(),
+        title: meta.title.trim(),
+        director: meta.director.trim(),
+        year: parseYearInput(meta.year),
+        formats: meta.formats,
+        synopsis: meta.synopsis.trim(),
+        trailer_url: meta.trailerUrl.trim(),
         cover_url: coverUrl,
         backdrop_url: backdropUrl,
         tmdb_id: tmdbId,
-        genres: splitList(genres),
-        cast: splitList(cast),
+        genres: meta.genres,
+        cast: splitList(meta.cast),
+        audio_formats: meta.audioFormats,
+        hdr_formats: meta.hdrFormats,
+        spoken_languages: splitList(meta.spokenLanguages),
+        subtitle_languages: splitList(meta.subtitleLanguages),
       });
     } catch {
       // On success the card unmounts; only reset when the call failed.
@@ -206,7 +212,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
             flexShrink: 0,
           }}
         >
-          <FormatHeader formats={formats} kind="bar" />
+          <FormatHeader formats={meta.formats} kind="bar" />
           <Box
             width="100%"
             styles={{
@@ -249,98 +255,17 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
         </Box>
 
         <Box flexDirection="column" gap={16} flex={1} minWidth={0}>
-          <Box display="flex" gap={6} alignItems="center" flexWrap="wrap">
-            <Typography variant="label" styles={{ opacity: 0.6 }}>
-              {t("barcodeLabel")}
-            </Typography>
-            <Badge variant="subtle" size="md">
-              {item.barcode}
-            </Badge>
-          </Box>
           {item.error_message && (
             <Typography variant="caption" styles={{ opacity: 0.7 }}>
               {item.error_message}
             </Typography>
           )}
 
-          <Box display="flex" gap={8} flexWrap="wrap">
-            <TextInput
-              label={t("titleLabel")}
-              value={title}
-              onChange={setTitle}
-              flex="2 1 200px"
-              disabled={busy}
-            />
-            <TextInput
-              label={t("directorLabel")}
-              value={director}
-              onChange={setDirector}
-              flex="1 1 160px"
-              disabled={busy}
-            />
-          </Box>
-
-          <Box display="flex" gap={8} flexWrap="wrap" alignItems="flex-end">
-            <TextInput
-              type="number"
-              label={t("yearLabel")}
-              value={year}
-              onChange={setYear}
-              flex="1 1 100px"
-              disabled={busy}
-            />
-            <Box display="flex" flexDirection="column" gap={4}>
-              <Typography variant="caption" styles={{ opacity: 0.7 }}>
-                {t("formatLabel")}
-              </Typography>
-              <Box display="flex" gap={4} alignItems="center">
-                {FORMAT_BUTTONS.map(({ value, icon, iconColor, fullColor }) => {
-                  const selected = formats.includes(value);
-                  return (
-                    <IconButton
-                      key={value}
-                      icon={icon}
-                      iconColor={iconColor}
-                      kind={selected ? "primary" : "default"}
-                      aria-label={tFormat(value)}
-                      aria-pressed={selected}
-                      title={tFormat(value)}
-                      size="sm"
-                      onClick={() => toggleFormat(value)}
-                      fullColor={fullColor}
-                      solid={selected}
-                      disabled={busy}
-                    />
-                  );
-                })}
-              </Box>
-            </Box>
-          </Box>
-
-          <TextInput
-            label={t("genresLabel")}
-            value={genres}
-            onChange={setGenres}
-            disabled={busy}
-          />
-          <TextInput
-            label={t("castLabel")}
-            value={cast}
-            onChange={setCast}
-            disabled={busy}
-          />
-          <TextInput
-            label={t("synopsisLabel")}
-            value={synopsis}
-            onChange={setSynopsis}
-            multirow
-            rows={5}
-            disabled={busy}
-          />
-          <TextInput
-            label={t("trailerLabel")}
-            value={trailerUrl}
-            onChange={setTrailerUrl}
+          <MovieMetadataFields
+            value={meta}
+            onPatch={patchMeta}
+            namespace="InboxPage"
+            categories={categories}
             disabled={busy}
           />
 
@@ -350,7 +275,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
             justifyContent="space-between"
             alignItems="center"
             flexWrap="wrap"
-            marginTop={4}
+            marginTop={12}
           >
             <Box display="flex" gap={8} flexWrap="wrap">
               <Button
@@ -358,7 +283,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
                 size="md"
                 onClick={handleRefetch}
                 isLoading={fetchingRefetch}
-                disabled={busy || title.trim() === ""}
+                disabled={busy || meta.title.trim() === ""}
                 kind="primary"
               />
               {item.candidates.length > 0 && (
@@ -385,7 +310,7 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
                 size="md"
                 onClick={handleAccept}
                 isLoading={submitting === "accept"}
-                disabled={busy || title.trim() === ""}
+                disabled={busy || meta.title.trim() === ""}
               />
             </Box>
           </Box>
@@ -408,7 +333,11 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
                   key={candidate.id}
                   role="button"
                   tabIndex={busy ? -1 : 0}
-                  onClick={busy ? undefined : () => handleSelectCandidate(candidate.tmdb_id)}
+                  onClick={
+                    busy
+                      ? undefined
+                      : () => handleSelectCandidate(candidate.tmdb_id)
+                  }
                   onKeyDown={(event) => {
                     if (busy) return;
                     if (event.key === "Enter" || event.key === " ") {
@@ -425,7 +354,10 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
                     selected ? "var(--surface-2)" : "transparent"
                   }
                   className="inbox-card__candidate"
-                  styles={{ flexShrink: 0, cursor: busy ? "default" : "pointer" }}
+                  styles={{
+                    flexShrink: 0,
+                    cursor: busy ? "default" : "pointer",
+                  }}
                 >
                   <Box
                     width="100%"
@@ -473,13 +405,19 @@ export function InboxCard({ item, onAccept, onReject }: Props) {
                           background: "rgba(0, 0, 0, 0.5)",
                         }}
                       >
-                        <Typography variant="caption" styles={{ color: "#fff" }}>
+                        <Typography
+                          variant="caption"
+                          styles={{ color: "#fff" }}
+                        >
                           {t("selecting")}
                         </Typography>
                       </Box>
                     )}
                   </Box>
-                  <Typography variant="caption" className="inbox-card__candidate-title">
+                  <Typography
+                    variant="caption"
+                    className="inbox-card__candidate-title"
+                  >
                     {candidate.title}
                     {candidate.year ? ` (${candidate.year})` : ""}
                   </Typography>

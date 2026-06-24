@@ -22,19 +22,33 @@ import {
   fetchBackdrop,
   fetchSynopsis,
   fetchTrailer,
+  getCategories,
   getMovie,
   refetchMovie,
   updateMovie,
+  type Category,
   type MovieDetail as MovieDetailData,
   type MovieUpdatePayload,
 } from "@/lib/catalog";
 import { FormatHeader } from "@/components/format-header";
 import { MovieCard } from "@/components/movie-catalog/movie-card";
+import {
+  AUDIO_FORMAT_BUTTONS,
+  HDR_FORMAT_BUTTONS,
+} from "@/components/tech-spec-buttons";
 import { MovieEditForm } from "./movie-edit-form";
 import "./movie-detail.css";
 import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
 
 type Status = "loading" | "ready" | "not_found" | "error";
+
+// Code -> brand label lookups for rendering the read-only tech-spec badges.
+const AUDIO_LABELS = new Map(
+  AUDIO_FORMAT_BUTTONS.map(({ value, label }) => [value, label]),
+);
+const HDR_LABELS = new Map(
+  HDR_FORMAT_BUTTONS.map(({ value, label }) => [value, label]),
+);
 
 const LABEL_STYLES = {
   opacity: 0.6,
@@ -92,6 +106,9 @@ export function MovieDetail({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
   const [editing, setEditing] = useState(false);
+  // The genre vocabulary for the edit form's genre buttons. Fetched lazily the
+  // first time the user edits, so read-only views skip the request.
+  const [categories, setCategories] = useState<Category[]>([]);
   const [saveError, setSaveError] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
@@ -188,6 +205,15 @@ export function MovieDetail({
       setDeleteError(true);
     }
   }
+
+  // Load the genre vocabulary once the user starts editing (and not before),
+  // so it's ready for the edit form's genre buttons.
+  useEffect(() => {
+    if (!editing || categories.length > 0) return;
+    getCategories()
+      .then(setCategories)
+      .catch(() => undefined);
+  }, [editing, categories.length]);
 
   // Auto-clear the success flag so a later save can re-trigger the toast.
   useEffect(() => {
@@ -346,6 +372,17 @@ export function MovieDetail({
         />
         {!editing && (movie.trailer_url || movie.owned || movie.can_purge) && (
           <Box display="flex" gap={8} flexWrap="wrap">
+            {movie.can_purge && (
+              <IconButton
+                icon="/icons/purge.svg"
+                aria-label={t("purge")}
+                title={t("purge")}
+                kind="error"
+                size="md"
+                onClick={() => setShowPurgeConfirm(true)}
+                disabled={deleting}
+              />
+            )}
             {movie.owned && (
               <>
                 <IconButton
@@ -369,17 +406,6 @@ export function MovieDetail({
                   translucent
                 />
               </>
-            )}
-            {movie.can_purge && (
-              <IconButton
-                icon="/icons/purge.svg"
-                aria-label={t("purge")}
-                title={t("purge")}
-                kind="error"
-                size="md"
-                onClick={() => setShowPurgeConfirm(true)}
-                disabled={deleting}
-              />
             )}
             {movie.trailer_url && (
               <Button
@@ -454,6 +480,7 @@ export function MovieDetail({
           {editing ? (
             <MovieEditForm
               movie={movie}
+              categories={categories}
               onSave={handleSave}
               onCancel={handleCancelEdit}
               onRefetch={handleRefetch}
@@ -525,6 +552,58 @@ export function MovieDetail({
                   </Typography>
                   <Typography variant="body">
                     {movie.cast.map((actor) => actor.name).join(", ")}
+                  </Typography>
+                </Box>
+              )}
+
+              {movie.audio_formats.length > 0 && (
+                <Box flexDirection="column" gap={6}>
+                  <Typography variant="label" styles={LABEL_STYLES}>
+                    {t("audio")}
+                  </Typography>
+                  <Box display="flex" gap={6} flexWrap="wrap" paddingTop={8}>
+                    {movie.audio_formats.map((code) => (
+                      <Badge key={code} variant="outlined" size="md">
+                        {AUDIO_LABELS.get(code) ?? code}
+                      </Badge>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {movie.hdr_formats.length > 0 && (
+                <Box flexDirection="column" gap={6}>
+                  <Typography variant="label" styles={LABEL_STYLES}>
+                    {t("hdr")}
+                  </Typography>
+                  <Box display="flex" gap={6} flexWrap="wrap" paddingTop={8}>
+                    {movie.hdr_formats.map((code) => (
+                      <Badge key={code} variant="outlined" size="md">
+                        {HDR_LABELS.get(code) ?? code}
+                      </Badge>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {movie.spoken_languages.length > 0 && (
+                <Box flexDirection="column" gap={2}>
+                  <Typography variant="label" styles={LABEL_STYLES}>
+                    {t("spokenLanguages")}
+                  </Typography>
+                  <Typography variant="body">
+                    {movie.spoken_languages.join(", ")}
+                  </Typography>
+                </Box>
+              )}
+
+              {movie.subtitle_languages.length > 0 && (
+                <Box flexDirection="column" gap={2}>
+                  <Typography variant="label" styles={LABEL_STYLES}>
+                    {t("subtitles")}
+                  </Typography>
+                  <Typography variant="body">
+                    {movie.subtitle_languages.join(", ")}
                   </Typography>
                 </Box>
               )}

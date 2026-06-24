@@ -1,5 +1,7 @@
 import {
   ApiError,
+  type AudioFormatCode,
+  type HdrFormatCode,
   type MovieDetail,
   type MovieFormat,
   type MovieRefetchPreview,
@@ -30,6 +32,14 @@ export interface InboxItem {
   extracted_backdrop: string;
   extracted_synopsis: string;
   extracted_trailer_url: string;
+  /** Disc audio-track formats (controlled-vocab codes); best-effort, may be empty. */
+  extracted_audio_formats: AudioFormatCode[];
+  /** Disc HDR / dynamic-range formats (controlled-vocab codes); may be empty. */
+  extracted_hdr_formats: HdrFormatCode[];
+  /** Audio-track languages (English names); may be empty. */
+  extracted_spoken_languages: string[];
+  /** Subtitle-track languages (English names); may be empty. */
+  extracted_subtitle_languages: string[];
   candidates: InboxCandidate[];
   retry_count: number;
   error_message: string;
@@ -52,6 +62,14 @@ export interface InboxAcceptPayload {
   tmdb_id: string;
   genres: string[];
   cast: string[];
+  /** Disc audio-track formats (controlled-vocab codes). */
+  audio_formats: AudioFormatCode[];
+  /** Disc HDR / dynamic-range formats (controlled-vocab codes). */
+  hdr_formats: HdrFormatCode[];
+  /** Audio-track languages (English names; unrecognised names are dropped). */
+  spoken_languages: string[];
+  /** Subtitle-track languages (English names; unrecognised names are dropped). */
+  subtitle_languages: string[];
 }
 
 export async function getInboxItems(page = 1): Promise<Paginated<InboxItem>> {

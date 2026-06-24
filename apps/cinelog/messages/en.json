@@ -222,7 +222,15 @@
     "fetchingTrailer": "Fetching trailer…",
     "synopsisError": "Couldn't find a synopsis for this movie.",
     "trailerError": "Couldn't find a trailer for this movie.",
-    "related": "Related movies"
+    "related": "Related movies",
+    "audioLabel": "Audio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Audio languages",
+    "subtitlesLabel": "Subtitles",
+    "audio": "Audio",
+    "hdr": "HDR",
+    "spokenLanguages": "Audio languages",
+    "subtitles": "Subtitles"
   },
   "InboxPage": {
     "title": "Inbox",
@@ -230,7 +238,6 @@
     "loading": "Loading inbox…",
     "error": "Failed to load the inbox.",
     "empty": "Nothing to review. Scanned titles awaiting resolution will appear here.",
-    "barcodeLabel": "Barcode",
     "noCover": "No cover",
     "titleLabel": "Title",
     "directorLabel": "Director",
@@ -253,6 +260,10 @@
     "accepted": "\"{title}\" added to catalog.",
     "acceptError": "Failed to add to catalog. Please try again.",
     "rejected": "Entry rejected.",
-    "rejectError": "Failed to reject entry. Please try again."
+    "rejectError": "Failed to reject entry. Please try again.",
+    "audioLabel": "Audio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Audio languages",
+    "subtitlesLabel": "Subtitles"
   }
 }

@@ -14,6 +14,7 @@ import {
   type InboxAcceptPayload,
   type InboxItem,
 } from "@/lib/inbox";
+import { getCategories, type Category } from "@/lib/catalog";
 import { MoviePagination } from "@/components/movie-catalog/movie-pagination";
 import { InboxCard } from "./inbox-card";
 
@@ -25,6 +26,8 @@ export function Inbox() {
   const [status, setStatus] = useState<Status>("loading");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  // Genre vocabulary for each card's genre buttons; fetched once on mount.
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [toast, setToast] = useState<{
     text: string;
@@ -41,6 +44,12 @@ export function Inbox() {
     setStatus("loading");
     setPage(next);
   }
+
+  useEffect(() => {
+    getCategories()
+      .then(setCategories)
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -125,6 +134,7 @@ export function Inbox() {
             <Grid key={item.id} size={{ xs: 12 }}>
               <InboxCard
                 item={item}
+                categories={categories}
                 onAccept={handleAccept}
                 onReject={handleReject}
               />

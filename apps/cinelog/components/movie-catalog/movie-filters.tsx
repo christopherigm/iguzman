@@ -5,10 +5,10 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { Select, type SelectOption } from "@repo/ui/core-elements/select";
-import { Button } from "@repo/ui/core-elements/button";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
 import type { Category, MovieFormat, MovieSort } from "@/lib/catalog";
 import { FORMAT_BUTTONS } from "@/components/format-buttons";
+import { GenreSelector } from "@/components/genre-selector";
 
 // Sort options as {value, labelKey} pairs. The value is the API `ordering`
 // expression (see MovieSort); the key resolves to a CatalogPage translation.
@@ -100,39 +100,12 @@ export function MovieFilters({
         </Box>
       </Box>
 
-      {categories.length > 0 && (
-        <Box
-          display="flex"
-          flexDirection="column"
-          gap={8}
-          width="100%"
-          alignItems="center"
-          marginBottom={8}
-        >
-          <Box
-            display="flex"
-            flexWrap="wrap"
-            gap={8}
-            justifyContent="center"
-            width="100%"
-          >
-            {categories.map((category) => {
-              const selected = selectedGenres.includes(category.slug);
-              return (
-                <Button
-                  key={category.slug}
-                  kind={selected ? "primary" : undefined}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => onGenreToggle(category.slug)}
-                >
-                  {category.name}
-                </Button>
-              );
-            })}
-          </Box>
-        </Box>
-      )}
+      <GenreSelector
+        categories={categories}
+        selected={selectedGenres}
+        onToggle={onGenreToggle}
+        align="center"
+      />
     </Box>
   );
 }

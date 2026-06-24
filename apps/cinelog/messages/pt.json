@@ -222,7 +222,15 @@
     "fetchingTrailer": "Obtendo trailer…",
     "synopsisError": "Nenhuma sinopse encontrada para este filme.",
     "trailerError": "Nenhum trailer encontrado para este filme.",
-    "related": "Filmes relacionados"
+    "related": "Filmes relacionados",
+    "audioLabel": "Áudio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Idiomas de áudio",
+    "subtitlesLabel": "Legendas",
+    "audio": "Áudio",
+    "hdr": "HDR",
+    "spokenLanguages": "Idiomas de áudio",
+    "subtitles": "Legendas"
   },
   "InboxPage": {
     "title": "Caixa de entrada",
@@ -230,7 +238,6 @@
     "loading": "Carregando caixa de entrada…",
     "error": "Falha ao carregar a caixa de entrada.",
     "empty": "Nada para revisar. Títulos escaneados aguardando resolução aparecerão aqui.",
-    "barcodeLabel": "Código de barras",
     "noCover": "Sem capa",
     "titleLabel": "Título",
     "directorLabel": "Diretor",
@@ -253,6 +260,10 @@
     "accepted": "\"{title}\" adicionado ao catálogo.",
     "acceptError": "Falha ao adicionar ao catálogo. Tente novamente.",
     "rejected": "Entrada rejeitada.",
-    "rejectError": "Falha ao rejeitar a entrada. Tente novamente."
+    "rejectError": "Falha ao rejeitar a entrada. Tente novamente.",
+    "audioLabel": "Áudio",
+    "hdrLabel": "HDR",
+    "spokenLanguagesLabel": "Idiomas de áudio",
+    "subtitlesLabel": "Legendas"
   }
 }
