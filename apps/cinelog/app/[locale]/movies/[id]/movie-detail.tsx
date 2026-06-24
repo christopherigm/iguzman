@@ -18,6 +18,7 @@ import { Toast } from "@repo/ui/core-elements/toast";
 import {
   ApiError,
   deleteMovie,
+  purgeMovie,
   fetchBackdrop,
   fetchSynopsis,
   fetchTrailer,
@@ -87,6 +88,7 @@ export function MovieDetail({
     initialMovie ? "ready" : "loading",
   );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -166,6 +168,20 @@ export function MovieDetail({
     setDeleting(true);
     try {
       await deleteMovie(id);
+      router.push("/");
+    } catch {
+      setDeleting(false);
+      setDeleteError(true);
+    }
+  }
+
+  // Staff-only hard delete: removes the shared movie from the catalog for
+  // everyone, not just the current user's ownership.
+  async function handleConfirmPurge() {
+    setShowPurgeConfirm(false);
+    setDeleting(true);
+    try {
+      await purgeMovie(id);
       router.push("/");
     } catch {
       setDeleting(false);
@@ -256,6 +272,15 @@ export function MovieDetail({
         />
       )}
 
+      {showPurgeConfirm && (
+        <ConfirmationModal
+          title={t("confirmPurgeTitle")}
+          text={t("confirmPurgeText", { title: movie.title })}
+          okCallback={handleConfirmPurge}
+          cancelCallback={() => setShowPurgeConfirm(false)}
+        />
+      )}
+
       {showTrailer && movie.trailer_url && (
         <ConfirmationModal
           title={t("trailer")}
@@ -319,7 +344,7 @@ export function MovieDetail({
           }}
           translucent
         />
-        {!editing && (movie.trailer_url || movie.owned) && (
+        {!editing && (movie.trailer_url || movie.owned || movie.can_purge) && (
           <Box display="flex" gap={8} flexWrap="wrap">
             {movie.owned && (
               <>
@@ -344,6 +369,17 @@ export function MovieDetail({
                   translucent
                 />
               </>
+            )}
+            {movie.can_purge && (
+              <IconButton
+                icon="/icons/purge.svg"
+                aria-label={t("purge")}
+                title={t("purge")}
+                kind="error"
+                size="md"
+                onClick={() => setShowPurgeConfirm(true)}
+                disabled={deleting}
+              />
             )}
             {movie.trailer_url && (
               <Button

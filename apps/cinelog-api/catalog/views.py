@@ -245,8 +245,20 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
         "Delete" a movie from the user's collection: drop only THIS user's
         ownership and leave the shared Movie in the catalog for its other owners.
         A non-owner has no ownership to remove and is rejected.
+
+        With `?purge=true` and staff privileges this becomes a hard delete - the
+        shared Movie row (and its cascading barcodes / ownerships) is removed from
+        the catalog for everyone. Reserved for staff; non-staff are rejected.
         """
         movie = self.get_object()
+
+        purge = request.query_params.get('purge', '').lower() in ('1', 'true', 'yes')
+        if purge:
+            if not request.user.is_staff:
+                raise PermissionDenied('Only staff can purge a movie from the catalog.')
+            movie.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
         ownership = movie.ownerships.filter(user=request.user).first()
         if ownership is None:
             raise PermissionDenied('You do not own this movie.')

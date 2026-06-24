@@ -66,13 +66,17 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     # an owner-less movie reports False for everyone (read-only until an owner is
     # assigned in the admin).
     owned = serializers.SerializerMethodField()
+    # True for staff users. Gates the "purge" control in the UI, which hard-deletes
+    # the shared Movie for everyone (vs. the owner "delete" that only drops the
+    # requesting user's ownership).
+    can_purge = serializers.SerializerMethodField()
 
     class Meta:
         model = Movie
         fields = [
             'id', 'title', 'director', 'year', 'formats', 'barcodes',
             'cover', 'cover_url', 'backdrop', 'tmdb_id', 'synopsis', 'trailer_url',
-            'genres', 'cast', 'related', 'owned', 'created', 'modified',
+            'genres', 'cast', 'related', 'owned', 'can_purge', 'created', 'modified',
         ]
 
     def get_formats(self, obj):
@@ -91,6 +95,11 @@ class MovieDetailSerializer(serializers.ModelSerializer):
         if user is None or not user.is_authenticated:
             return False
         return obj.ownerships.filter(user=user).exists()
+
+    def get_can_purge(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        return bool(user and user.is_authenticated and user.is_staff)
 
     def get_cover(self, obj):
         request = self.context.get('request')

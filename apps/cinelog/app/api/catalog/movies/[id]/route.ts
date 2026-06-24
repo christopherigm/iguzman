@@ -30,13 +30,20 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const res = await apiFetch(`/api/catalog/movies/${id}/`, {
-    method: "DELETE",
-  });
+  // Forward `?purge=true` so a staff user can hard-delete the shared movie
+  // (Django gates the purge on `is_staff`); without it Django only drops the
+  // requesting user's ownership.
+  const purge = request.nextUrl.searchParams.get("purge") === "true";
+  const res = await apiFetch(
+    `/api/catalog/movies/${id}/${purge ? "?purge=true" : ""}`,
+    {
+      method: "DELETE",
+    },
+  );
   if (res.status === 204) return new NextResponse(null, { status: 204 });
   const data: unknown = await res.json();
   return NextResponse.json(data, { status: res.status });

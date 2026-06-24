@@ -60,6 +60,8 @@ export interface MovieDetail extends Movie {
   related: Movie[];
   /** True when the signed-in user owns this movie (gates edit/delete in the UI). */
   owned: boolean;
+  /** True for staff users; gates the "purge" control that hard-deletes the movie. */
+  can_purge: boolean;
   modified: string;
 }
 
@@ -331,6 +333,21 @@ export async function fetchTrailer(id: string | number): Promise<MovieDetail> {
 
 export async function deleteMovie(id: string | number): Promise<void> {
   const res = await fetch(`/api/catalog/movies/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}
+
+/**
+ * Hard-delete the shared movie from the catalog for everyone (staff only). Unlike
+ * `deleteMovie`, which only drops the requesting user's ownership, this removes
+ * the Movie row itself. The backend gates the `purge` flag on `is_staff`.
+ */
+export async function purgeMovie(id: string | number): Promise<void> {
+  const res = await fetch(`/api/catalog/movies/${id}?purge=true`, {
+    method: "DELETE",
+  });
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));
     throw new ApiError(res.status, data);
