@@ -73,8 +73,32 @@ DEEP3D_GPU_NAME=""
 LOG_FILE=""
 BG_MODE=0
 
+# ── Per-file audio/subtitle stream curation ──────────────────────────────────
+# STREAM_SELECTION_MODE=1 enables per-file selection; the two arrays are indexed
+# parallel to video_files[] and hold a space-separated list of relative stream
+# indices to keep, or a sentinel ("*" = keep all, "-" = keep none).
+STREAM_SELECTION_MODE=0
+STREAM_SEL_AUDIO=()
+STREAM_SEL_SUBS=()
+CUR_STREAM_SEL_AUDIO="*"
+CUR_STREAM_SEL_SUBS="*"
+
 # Portable case helper (macOS bash 3 does not support ${var,,})
 lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
+# Build a human-readable checkbox label for one audio/subtitle stream.
+# Args: kind(a|s) relidx codec channel_layout language title
+_fmt_stream_label() {
+  local kind="$1" ri="$2" codec="$3" layout="$4" lang="$5" title="$6"
+  local out
+  [[ "${kind}" == "a" ]] && out="${STREAM_AUDIO_LABEL}" || out="${STREAM_SUBTITLE_LABEL}"
+  out+=" #${ri}"
+  [[ -n "${lang}" ]] && out+="  ${lang}" || out+="  ${STREAM_NO_LANG}"
+  [[ -n "${codec}" ]] && out+="  ${codec}"
+  [[ "${kind}" == "a" && -n "${layout}" ]] && out+="  ${layout}"
+  [[ -n "${title}" ]] && out+="  \"${title}\""
+  printf '%s' "${out}"
+}
 
 # ── main ──────────────────────────────────────────────────────────────────────
 main() {
@@ -664,6 +688,89 @@ main() {
 
   local total="${#video_files[@]}"
 
+  # ── Audio / subtitle stream selection ─────────────────────────────────────
+  # Only relevant for the per-file encode/copy path (TikTok assembles one reel
+  # and bypasses it). The prompt appears only when at least one file actually
+  # has a choice to make: more than one audio track, or any subtitle track.
+  STREAM_SELECTION_MODE=0
+  STREAM_SEL_AUDIO=()
+  STREAM_SEL_SUBS=()
+  if [[ "${DO_TIKTOK}" -eq 0 && "${total}" -gt 0 ]]; then
+    local _stream_audio_cache=() _stream_subs_cache=()
+    local _has_choice=0 _fi
+    printf "  %s" "$(clr_dim "${STREAM_INSPECTING}")"
+    for ((_fi=0; _fi<total; _fi++)); do
+      local _astreams _sstreams _acount _scount
+      _astreams="$(_probe_streams_of_type a "${video_files[$_fi]}")"
+      _sstreams="$(_probe_streams_of_type s "${video_files[$_fi]}")"
+      _stream_audio_cache[$_fi]="${_astreams}"
+      _stream_subs_cache[$_fi]="${_sstreams}"
+      _acount=0; [[ -n "${_astreams}" ]] && _acount="$(grep -c '' <<< "${_astreams}")"
+      _scount=0; [[ -n "${_sstreams}" ]] && _scount="$(grep -c '' <<< "${_sstreams}")"
+      [[ "${_acount}" -gt 1 || "${_scount}" -gt 0 ]] && _has_choice=1
+    done
+    printf "\r\033[K"  # clear the inspecting line
+
+    if [[ "${_has_choice}" -eq 1 ]]; then
+      printf "  %s\n" "$(clr_bold "${STREAM_SELECT_TITLE}:")"
+      printf "  %s\n\n" "$(clr_dim "↑↓ ${CB_PROMPT##*↑↓ }")"
+      _CB_LABELS=("${STREAM_KEEP_ALL}" "${STREAM_SELECT_PER_FILE}")
+      _CB_SEL=(1 0)
+      _CB_DISABLED=(0 0)
+      interactive_radio
+
+      if [[ "${SELECTED_INDICES[0]:-0}" -eq 1 ]]; then
+        STREAM_SELECTION_MODE=1
+        for ((_fi=0; _fi<total; _fi++)); do
+          local _astreams="${_stream_audio_cache[$_fi]}"
+          local _sstreams="${_stream_subs_cache[$_fi]}"
+          _CB_LABELS=(); _CB_SEL=(); _CB_DISABLED=()
+          local _row_kind=() _row_idx=()
+          local _ri _codec _layout _lang _title
+          while IFS='|' read -r _ri _codec _layout _lang _title; do
+            [[ -z "${_ri}" ]] && continue
+            _CB_LABELS+=("$(_fmt_stream_label a "${_ri}" "${_codec}" "${_layout}" "${_lang}" "${_title}")")
+            _CB_SEL+=(1); _CB_DISABLED+=(0)
+            _row_kind+=("a"); _row_idx+=("${_ri}")
+          done <<< "${_astreams}"
+          while IFS='|' read -r _ri _codec _layout _lang _title; do
+            [[ -z "${_ri}" ]] && continue
+            _CB_LABELS+=("$(_fmt_stream_label s "${_ri}" "${_codec}" "${_layout}" "${_lang}" "${_title}")")
+            _CB_SEL+=(1); _CB_DISABLED+=(0)
+            _row_kind+=("s"); _row_idx+=("${_ri}")
+          done <<< "${_sstreams}"
+
+          # Nothing to choose (0-1 tracks) → keep all of this file untouched.
+          if [[ "${#_CB_LABELS[@]}" -le 1 ]]; then
+            STREAM_SEL_AUDIO[$_fi]="*"
+            STREAM_SEL_SUBS[$_fi]="*"
+            continue
+          fi
+
+          printf "\n  %s %s\n" \
+            "$(clr_bold "${STREAM_SELECT_FILE_PROMPT}:")" \
+            "$(clr_cyan "$(basename "${video_files[$_fi]}")")"
+          printf "  %s\n" "$(clr_dim "${STREAM_VIDEO_KEPT_NOTE}")"
+          interactive_checkbox
+
+          local _sa=() _ss=() _si
+          for _si in "${SELECTED_INDICES[@]}"; do
+            if [[ "${_row_kind[$_si]}" == "a" ]]; then
+              _sa+=("${_row_idx[$_si]}")
+            else
+              _ss+=("${_row_idx[$_si]}")
+            fi
+          done
+          STREAM_SEL_AUDIO[$_fi]="${_sa[*]:--}"
+          STREAM_SEL_SUBS[$_fi]="${_ss[*]:--}"
+          [[ "${#_sa[@]}" -eq 0 && "${#_ss[@]}" -eq 0 ]] && \
+            printf "  %s %s\n" "$(clr_yellow '⚠')" "$(clr_dim "${STREAM_NONE_SELECTED_WARN}")"
+        done
+      fi
+      echo ""
+    fi
+  fi
+
   # ── Pre-flight summary ────────────────────────────────────────────────────
   local divider; divider="$(printf '─%.0s' {1..60})"
   echo "  ${divider}"
@@ -697,6 +804,8 @@ main() {
   [[ "${DO_DEEP3D}" -eq 1 && -n "${DEEP3D_GPU_NAME:-}" ]] && \
     printf "  %s: %s\n" "$(clr_bold_magenta 'AI GPU')" "$(clr_magenta "${DEEP3D_GPU_NAME} (CUDA)")"
   printf "  %s: %s\n" "$(clr_dim "${THREADS_LABEL}")" "$(clr_dim "${THREAD_COUNT}")"
+  [[ "${STREAM_SELECTION_MODE}" -eq 1 ]] && \
+    printf "  %s: %s\n" "$(clr_bold "${STREAM_SELECT_TITLE}")" "$(clr_cyan "${STREAM_SELECT_PER_FILE}")"
   echo "  ${divider}"
   echo ""
 

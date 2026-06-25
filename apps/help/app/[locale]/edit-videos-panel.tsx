@@ -74,6 +74,21 @@ const EV_COMPRESS_PARAMS =
   "# achieved reduction % are logged after each file.\n" +
   "Level: 50";
 
+const EV_STREAMS_PARAMS =
+  "# Prompted only when at least one file has >1 audio track or any\n" +
+  "# subtitle/caption track. Choose once for the whole batch:\n" +
+  "#   1) Keep all audio streams & subtitles/captions   (default)\n" +
+  "#   2) Select streams & subtitles per video\n" +
+  "\n" +
+  "# Option 2 shows a checkbox list per qualifying file (all pre-checked):\n" +
+  '[✓] Audio #0     eng  aac     5.1     "Director Commentary"\n' +
+  "[✓] Audio #1     spa  ac3     stereo\n" +
+  '[ ] Subtitle #0  eng  subrip  "English"\n' +
+  "\n" +
+  "# The video stream is always kept. Unchecked audio/subtitle tracks are\n" +
+  "# dropped on re-encode and on plain remux. Bitmap subtitles (PGS/DVD/DVB)\n" +
+  "# are still dropped automatically when the output container is MP4.";
+
 const EV_RIFE_PARAMS =
   "# Multiplier (default: 2)\n" +
   "# Options: 2× | 4× | 8×\n" +
@@ -270,6 +285,11 @@ export async function ToolsPanel() {
       <EvSection
         heading={t("toolsEvMpgHeading")}
         description={t("toolsEvMpgDesc")}
+      />
+      <EvSection
+        heading={t("toolsEvStreamsHeading")}
+        description={t("toolsEvStreamsDesc")}
+        code={EV_STREAMS_PARAMS}
       />
 
       <GroupLabel marginTop={8}>{t("toolsEvAiGroup")}</GroupLabel>

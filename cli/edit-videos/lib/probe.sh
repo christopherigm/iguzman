@@ -81,6 +81,48 @@ probe_dimensions() {
   echo "${w:-0} ${h:-0}"
 }
 
+# ── Audio / subtitle stream inspection ────────────────────────────────────────
+#
+# Lists the audio (a) or subtitle (s) streams of a file, one per line, as:
+#     <relidx>|<codec>|<channel_layout>|<language>|<title>
+# where <relidx> is the stream's index *within its own type* (0-based), i.e. the
+# value usable in an ffmpeg `-map 0:a:<relidx>` / `-map 0:s:<relidx>` selector.
+#
+# ffprobe's `flat` output numbers the selected streams 0,1,2… in type order and
+# quotes string values, so titles containing commas/spaces parse cleanly.
+_probe_streams_of_type() {
+  local sel="$1" input="$2"
+  local _ffprobe="${FFPROBE_BIN}"
+  [[ ! -x "${_ffprobe}" ]] && _ffprobe="ffprobe"
+
+  "${_ffprobe}" -v quiet -select_streams "${sel}" \
+    -show_entries stream=codec_name,channels,channel_layout:stream_tags=language,title \
+    -of flat "${input}" 2>/dev/null | awk '
+    {
+      eq = index($0, "=")
+      if (eq == 0) next
+      key = substr($0, 1, eq - 1)
+      val = substr($0, eq + 1)
+      gsub(/^"|"$/, "", val)                 # strip surrounding quotes
+      n = split(key, p, ".")                 # streams.stream.<idx>.<field>[.<tag>]
+      idx = p[3]
+      field = p[4]
+      if (field == "tags") field = p[5]
+      if (idx == "") next
+      data[idx SUBSEP field] = val
+      seen[idx] = 1
+      if (idx + 0 > maxidx) maxidx = idx + 0
+    }
+    END {
+      for (i = 0; i <= maxidx; i++) {
+        if (!(i in seen)) continue
+        printf "%s|%s|%s|%s|%s\n", i, \
+          data[i SUBSEP "codec_name"], data[i SUBSEP "channel_layout"], \
+          data[i SUBSEP "language"], data[i SUBSEP "title"]
+      }
+    }'
+}
+
 # ── Stream mapping (keep all audio + subtitles) ───────────────────────────────
 #
 # Builds the -map / codec args needed to carry every audio track and every
@@ -101,14 +143,44 @@ probe_dimensions() {
 # Subtitle handling is container-aware: Matroska/WebM copy every subtitle as-is;
 # MP4-family containers only accept text subtitles (re-muxed to mov_text) and
 # silently drop bitmap subs (PGS/DVD/DVB) which the format cannot hold.
+#
+# Per-file stream curation: when the user opted to pick streams individually
+# (edit-videos.sh), the current file's choice is passed in via two globals,
+# each holding a space-separated list of *relative* indices, or a sentinel:
+#   CUR_STREAM_SEL_AUDIO / CUR_STREAM_SEL_SUBS
+#     "*"      keep every stream of this type (default)
+#     "-"      keep none
+#     "0 2 …"  keep only these relative indices
 STREAM_EXTRA_INPUTS=()
 STREAM_MAP_ARGS=()
+
+# Whether $1 (a relative index) is present in the space-separated list $2.
+_stream_idx_selected() {
+  local needle="$1" list="$2" x
+  for x in ${list}; do [[ "${x}" == "${needle}" ]] && return 0; done
+  return 1
+}
 
 build_stream_maps() {
   local primary="$1" sub_src="$2" out="$3"
   STREAM_EXTRA_INPUTS=()
-  # Processed video + every audio track from the primary input (index 0).
-  STREAM_MAP_ARGS=(-map 0:v:0 -map 0:a? -c:a copy)
+
+  local sel_a="${CUR_STREAM_SEL_AUDIO:-*}"
+  local sel_s="${CUR_STREAM_SEL_SUBS:-*}"
+
+  # Processed video, then audio per selection.
+  STREAM_MAP_ARGS=(-map 0:v:0)
+  if [[ "${sel_a}" == "*" ]]; then
+    STREAM_MAP_ARGS+=(-map 0:a? -c:a copy)
+  elif [[ "${sel_a}" != "-" ]]; then
+    local _ai
+    for _ai in ${sel_a}; do STREAM_MAP_ARGS+=(-map "0:a:${_ai}"); done
+    STREAM_MAP_ARGS+=(-c:a copy)
+  fi
+  # sel_a == "-" → no audio mapped.
+
+  # No subtitles requested at all.
+  [[ "${sel_s}" == "-" ]] && return 0
 
   local out_ext="${out##*.}"; out_ext="$(lc "${out_ext}")"
 
@@ -130,24 +202,38 @@ build_stream_maps() {
 
   case "${out_ext}" in
     mkv|webm)
-      STREAM_MAP_ARGS+=(-map "${sub_idx}:s?" -c:s copy)
+      if [[ "${sel_s}" == "*" ]]; then
+        STREAM_MAP_ARGS+=(-map "${sub_idx}:s?" -c:s copy)
+      else
+        local _si sub_maps=()
+        for _si in ${sel_s}; do sub_maps+=(-map "${sub_idx}:s:${_si}"); done
+        [[ "${#sub_maps[@]}" -gt 0 ]] && STREAM_MAP_ARGS+=("${sub_maps[@]}" -c:s copy)
+      fi
       ;;
     mp4|m4v|mov|3gp)
       # Only text subtitles can live in MP4 (as mov_text); map them individually.
       local rel=0 codec text_maps=()
       while IFS= read -r codec; do
         [[ -z "${codec}" ]] && continue
-        case "$(lc "${codec}")" in
-          subrip|srt|ass|ssa|mov_text|webvtt|text|subviewer|subviewer1|eia_608|microdvd)
-            text_maps+=(-map "${sub_idx}:s:${rel}")
-            ;;
-        esac
+        if [[ "${sel_s}" == "*" ]] || _stream_idx_selected "${rel}" "${sel_s}"; then
+          case "$(lc "${codec}")" in
+            subrip|srt|ass|ssa|mov_text|webvtt|text|subviewer|subviewer1|eia_608|microdvd)
+              text_maps+=(-map "${sub_idx}:s:${rel}")
+              ;;
+          esac
+        fi
         rel=$(( rel + 1 ))
       done <<< "${sub_codecs}"
       [[ "${#text_maps[@]}" -gt 0 ]] && STREAM_MAP_ARGS+=("${text_maps[@]}" -c:s mov_text)
       ;;
     *)
-      STREAM_MAP_ARGS+=(-map "${sub_idx}:s?" -c:s copy)
+      if [[ "${sel_s}" == "*" ]]; then
+        STREAM_MAP_ARGS+=(-map "${sub_idx}:s?" -c:s copy)
+      else
+        local _si2 sub_maps2=()
+        for _si2 in ${sel_s}; do sub_maps2+=(-map "${sub_idx}:s:${_si2}"); done
+        [[ "${#sub_maps2[@]}" -gt 0 ]] && STREAM_MAP_ARGS+=("${sub_maps2[@]}" -c:s copy)
+      fi
       ;;
   esac
 }

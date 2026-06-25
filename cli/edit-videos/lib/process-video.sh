@@ -441,8 +441,25 @@ process_video() {
       fi
     fi
   else
-    # Pure remux (same container): -map 0 keeps every audio/subtitle/data track.
-    if ! run_ffmpeg_step "${STEP_COPY}" "${dur_sec}" -i "${src}" -map 0 -c copy "${output}"; then
+    # Pure remux (same container). Default keeps every track (-map 0); when the
+    # user curated streams for this file, map only the chosen audio/subtitles.
+    local copy_maps=(-map 0)
+    local _sel_a="${CUR_STREAM_SEL_AUDIO:-*}" _sel_s="${CUR_STREAM_SEL_SUBS:-*}"
+    if [[ "${_sel_a}" != "*" || "${_sel_s}" != "*" ]]; then
+      copy_maps=(-map 0:v?)
+      local _ci
+      if [[ "${_sel_a}" == "*" ]]; then
+        copy_maps+=(-map 0:a?)
+      elif [[ "${_sel_a}" != "-" ]]; then
+        for _ci in ${_sel_a}; do copy_maps+=(-map "0:a:${_ci}"); done
+      fi
+      if [[ "${_sel_s}" == "*" ]]; then
+        copy_maps+=(-map 0:s?)
+      elif [[ "${_sel_s}" != "-" ]]; then
+        for _ci in ${_sel_s}; do copy_maps+=(-map "0:s:${_ci}"); done
+      fi
+    fi
+    if ! run_ffmpeg_step "${STEP_COPY}" "${dur_sec}" -i "${src}" "${copy_maps[@]}" -c copy "${output}"; then
       [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
       [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
       return 1
@@ -534,6 +551,16 @@ _run_processing() {
 
     printf "\n  [%d/%d] %s\n" "${count_idx}" "${#video_files[@]}" "$(clr_bold "${base}")"
     _log "[${count_idx}/${#video_files[@]}] Starting: ${base}"
+
+    # Per-file audio/subtitle curation (set by the stream-selection prompt).
+    if [[ "${STREAM_SELECTION_MODE:-0}" -eq 1 ]]; then
+      local _sidx=$(( count_idx - 1 ))
+      CUR_STREAM_SEL_AUDIO="${STREAM_SEL_AUDIO[$_sidx]:-*}"
+      CUR_STREAM_SEL_SUBS="${STREAM_SEL_SUBS[$_sidx]:-*}"
+    else
+      CUR_STREAM_SEL_AUDIO="*"
+      CUR_STREAM_SEL_SUBS="*"
+    fi
 
     if process_video "${vf}" "${out}" \
         "${do_black_bars}" "${do_fps}" "${do_stab}" \
