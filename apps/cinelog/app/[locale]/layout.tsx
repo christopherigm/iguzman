@@ -126,6 +126,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                   version={`v${packageJson.version}`}
                   labels={{
                     home: tNav("home"),
+                    statistics: tNav("statistics"),
                     addMovie: tNav("addMovie"),
                     account: tNav("account"),
                     signOut: tNav("signOut"),

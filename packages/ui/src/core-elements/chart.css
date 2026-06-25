@@ -1,0 +1,5 @@
+/* Chart canvas fills the sized wrapper Box (Chart.js maintainAspectRatio:false). */
+.ui-chart-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}

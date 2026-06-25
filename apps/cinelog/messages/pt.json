@@ -5,6 +5,7 @@
   },
   "Navbar": {
     "home": "Início",
+    "statistics": "Estatísticas",
     "addMovie": "Adicionar filme",
     "account": "Minha Conta",
     "signOut": "Sair"
@@ -279,5 +280,62 @@
     "hdrLabel": "HDR",
     "spokenLanguagesLabel": "Idiomas de áudio",
     "subtitlesLabel": "Legendas"
+  },
+  "StatisticsPage": {
+    "title": "Estatísticas",
+    "subtitle": "Uma análise visual da coleção de filmes.",
+    "scopeLabel": "Mostrando",
+    "scope": {
+      "catalog": "Catálogo completo",
+      "library": "Minha biblioteca"
+    },
+    "loading": "Carregando estatísticas…",
+    "error": "Não foi possível carregar as estatísticas.",
+    "empty": "Ainda não há dados.",
+    "seriesLabel": "Filmes",
+    "chartStyleLabel": "Estilo do gráfico",
+    "chartStyle": {
+      "line": "Linha",
+      "pie": "Pizza",
+      "radar": "Radar"
+    },
+    "kpi": {
+      "movies": "Filmes",
+      "genres": "Gêneros",
+      "years": "Anos",
+      "formats": "Formatos"
+    },
+    "overview": {
+      "title": "Coleção ao longo do tempo",
+      "description": "Quantos títulos foram lançados a cada ano na coleção."
+    },
+    "formats": {
+      "title": "Formato",
+      "description": "Quantos títulos há em cada formato físico (4K, Blu-ray, DVD, outro)."
+    },
+    "years": {
+      "title": "Filmes por ano de lançamento",
+      "description": "Número de títulos agrupados pelo ano de lançamento."
+    },
+    "genres": {
+      "title": "Filmes por gênero",
+      "description": "Quantos títulos pertencem a cada gênero."
+    },
+    "audio_formats": {
+      "title": "Formatos de áudio",
+      "description": "Títulos por formato de faixa de áudio do disco (DTS, Dolby Atmos, DTS:X, …)."
+    },
+    "hdr_formats": {
+      "title": "Formatos HDR",
+      "description": "Títulos por formato de faixa dinâmica (Dolby Vision, HDR10, HDR10+, …)."
+    },
+    "spoken_languages": {
+      "title": "Áudio falado",
+      "description": "Títulos conforme os idiomas de suas faixas de áudio."
+    },
+    "subtitle_languages": {
+      "title": "Legendas",
+      "description": "Títulos conforme os idiomas de suas legendas."
+    }
   }
 }

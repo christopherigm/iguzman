@@ -5,6 +5,7 @@
   },
   "Navbar": {
     "home": "Inicio",
+    "statistics": "Estadísticas",
     "addMovie": "Añadir película",
     "account": "Cuenta",
     "signOut": "Cerrar sesión"
@@ -279,5 +280,62 @@
     "hdrLabel": "HDR",
     "spokenLanguagesLabel": "Idiomas de audio",
     "subtitlesLabel": "Subtítulos"
+  },
+  "StatisticsPage": {
+    "title": "Estadísticas",
+    "subtitle": "Un desglose visual de la colección de películas.",
+    "scopeLabel": "Mostrando",
+    "scope": {
+      "catalog": "Catálogo completo",
+      "library": "Mi biblioteca"
+    },
+    "loading": "Cargando estadísticas…",
+    "error": "No se pudieron cargar las estadísticas.",
+    "empty": "Aún no hay datos.",
+    "seriesLabel": "Películas",
+    "chartStyleLabel": "Estilo de gráfico",
+    "chartStyle": {
+      "line": "Línea",
+      "pie": "Circular",
+      "radar": "Radar"
+    },
+    "kpi": {
+      "movies": "Películas",
+      "genres": "Géneros",
+      "years": "Años",
+      "formats": "Formatos"
+    },
+    "overview": {
+      "title": "Colección a lo largo del tiempo",
+      "description": "Cuántos títulos se estrenaron cada año en la colección."
+    },
+    "formats": {
+      "title": "Formato",
+      "description": "Cuántos títulos hay en cada formato físico (4K, Blu-ray, DVD, otro)."
+    },
+    "years": {
+      "title": "Películas por año de estreno",
+      "description": "Número de títulos agrupados por su año de estreno."
+    },
+    "genres": {
+      "title": "Películas por género",
+      "description": "Cuántos títulos pertenecen a cada género."
+    },
+    "audio_formats": {
+      "title": "Formatos de audio",
+      "description": "Títulos por formato de pista de audio del disco (DTS, Dolby Atmos, DTS:X, …)."
+    },
+    "hdr_formats": {
+      "title": "Formatos HDR",
+      "description": "Títulos por formato de rango dinámico (Dolby Vision, HDR10, HDR10+, …)."
+    },
+    "spoken_languages": {
+      "title": "Audio hablado",
+      "description": "Títulos según los idiomas de sus pistas de audio."
+    },
+    "subtitle_languages": {
+      "title": "Subtítulos",
+      "description": "Títulos según los idiomas de sus subtítulos."
+    }
   }
 }

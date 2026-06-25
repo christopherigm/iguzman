@@ -5,6 +5,7 @@
   },
   "Navbar": {
     "home": "Startseite",
+    "statistics": "Statistik",
     "addMovie": "Film hinzufügen",
     "account": "Konto",
     "signOut": "Abmelden"
@@ -279,5 +280,62 @@
     "hdrLabel": "HDR",
     "spokenLanguagesLabel": "Audiosprachen",
     "subtitlesLabel": "Untertitel"
+  },
+  "StatisticsPage": {
+    "title": "Statistik",
+    "subtitle": "Eine visuelle Aufschlüsselung der Filmsammlung.",
+    "scopeLabel": "Anzeige",
+    "scope": {
+      "catalog": "Gesamter Katalog",
+      "library": "Meine Bibliothek"
+    },
+    "loading": "Statistik wird geladen…",
+    "error": "Statistik konnte nicht geladen werden.",
+    "empty": "Noch keine Daten.",
+    "seriesLabel": "Filme",
+    "chartStyleLabel": "Diagrammstil",
+    "chartStyle": {
+      "line": "Linie",
+      "pie": "Kreis",
+      "radar": "Radar"
+    },
+    "kpi": {
+      "movies": "Filme",
+      "genres": "Genres",
+      "years": "Jahre",
+      "formats": "Formate"
+    },
+    "overview": {
+      "title": "Sammlung im Zeitverlauf",
+      "description": "Wie viele Titel pro Jahr in der Sammlung erschienen sind."
+    },
+    "formats": {
+      "title": "Format",
+      "description": "Wie viele Titel in jedem physischen Format vorliegen (4K, Blu-ray, DVD, andere)."
+    },
+    "years": {
+      "title": "Filme pro Erscheinungsjahr",
+      "description": "Anzahl der Titel, gruppiert nach Erscheinungsjahr."
+    },
+    "genres": {
+      "title": "Filme nach Genre",
+      "description": "Wie viele Titel zu jedem Genre gehören."
+    },
+    "audio_formats": {
+      "title": "Audioformate",
+      "description": "Titel nach Audiospur-Format der Disc (DTS, Dolby Atmos, DTS:X, …)."
+    },
+    "hdr_formats": {
+      "title": "HDR-Formate",
+      "description": "Titel nach Dynamikumfang-Format (Dolby Vision, HDR10, HDR10+, …)."
+    },
+    "spoken_languages": {
+      "title": "Tonspuren",
+      "description": "Titel nach den Sprachen ihrer Tonspuren."
+    },
+    "subtitle_languages": {
+      "title": "Untertitel",
+      "description": "Titel nach den Sprachen ihrer Untertitel."
+    }
   }
 }

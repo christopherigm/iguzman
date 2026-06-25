@@ -23,6 +23,7 @@ interface NavbarWrapperProps {
   version: string;
   labels: {
     home: string;
+    statistics: string;
     addMovie: string;
     account: string;
     signOut: string;
@@ -61,6 +62,8 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
         ...(displayName
           ? [{ label: labels.addMovie, href: "/add-movie" }]
           : []),
+        // Statistics is a public, read-only page - shown to everyone.
+        { label: labels.statistics, href: "/statistics" },
         accountItem,
       ]}
       fixedItems={[]}

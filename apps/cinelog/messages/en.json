@@ -5,6 +5,7 @@
   },
   "Navbar": {
     "home": "Home",
+    "statistics": "Statistics",
     "addMovie": "Add Movie",
     "account": "Account",
     "signOut": "Sign out"
@@ -279,5 +280,62 @@
     "hdrLabel": "HDR",
     "spokenLanguagesLabel": "Audio languages",
     "subtitlesLabel": "Subtitles"
+  },
+  "StatisticsPage": {
+    "title": "Statistics",
+    "subtitle": "A visual breakdown of the movie collection.",
+    "scopeLabel": "Showing",
+    "scope": {
+      "catalog": "Entire catalog",
+      "library": "My library"
+    },
+    "loading": "Loading statistics…",
+    "error": "Statistics could not be loaded.",
+    "empty": "No data yet.",
+    "seriesLabel": "Movies",
+    "chartStyleLabel": "Chart style",
+    "chartStyle": {
+      "line": "Line",
+      "pie": "Pie",
+      "radar": "Radar"
+    },
+    "kpi": {
+      "movies": "Movies",
+      "genres": "Genres",
+      "years": "Years",
+      "formats": "Formats"
+    },
+    "overview": {
+      "title": "Collection over time",
+      "description": "How many titles were released each year across the collection."
+    },
+    "formats": {
+      "title": "Movie format",
+      "description": "How many titles are held in each physical format (4K, Blu-ray, DVD, other)."
+    },
+    "years": {
+      "title": "Movies per release year",
+      "description": "Number of titles grouped by their release year."
+    },
+    "genres": {
+      "title": "Movies by genre",
+      "description": "How many titles fall under each genre."
+    },
+    "audio_formats": {
+      "title": "Audio formats",
+      "description": "Titles by disc audio-track format (DTS, Dolby Atmos, DTS:X, …)."
+    },
+    "hdr_formats": {
+      "title": "HDR formats",
+      "description": "Titles by dynamic-range format (Dolby Vision, HDR10, HDR10+, …)."
+    },
+    "spoken_languages": {
+      "title": "Spoken audio",
+      "description": "Titles by the languages their audio tracks are available in."
+    },
+    "subtitle_languages": {
+      "title": "Subtitles",
+      "description": "Titles by the languages their subtitles are available in."
+    }
   }
 }

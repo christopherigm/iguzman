@@ -3,7 +3,7 @@ import os
 
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Prefetch, Q
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from rest_framework import status
@@ -465,6 +465,81 @@ class CategoryListView(ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     pagination_class = CategoryPagination
+
+
+class MovieStatsView(APIView):
+    """
+    GET /api/catalog/stats/?scope=catalog|library
+
+    Public, read-only aggregation feeding the Statistics page's charts. Returns a
+    count breakdown for each catalog dimension (format, release year, genre, disc
+    audio format, HDR format, spoken-audio language, subtitle language) plus the
+    movie total, all computed server-side in a handful of grouped queries.
+
+    `scope=catalog` (default, and the only option for anonymous visitors) covers
+    every enabled movie. `scope=library` narrows to the movies the signed-in user
+    owns; an anonymous request silently falls back to the whole catalog so the
+    public page always renders.
+
+    Each dimension is a list of ``{ "key", "label", "count" }`` rows ordered by
+    descending count (years ascending, so the per-year line reads left to right).
+    `key` is the stable code/value (used as the chart's data key); `label` is the
+    human-readable display string.
+    """
+
+    # Read-only and public: the page is viewable without authentication.
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get(self, request):
+        scope = request.query_params.get('scope', 'catalog').strip()
+        movies = Movie.objects.filter(enabled=True)
+        if scope == 'library' and request.user.is_authenticated:
+            movies = movies.filter(ownerships__user=request.user).distinct()
+        else:
+            scope = 'catalog'
+
+        def breakdown(key_field, label_field, *, order_by_key=False):
+            # Group the (filtered) movies by a related field, counting distinct
+            # movies per bucket. Null buckets (movies missing that relation) are
+            # dropped. Each movie is counted once per bucket via distinct=True so
+            # the m2m join fan-out doesn't inflate the totals.
+            #
+            # `.order_by()` clears Movie's default `Meta.ordering = ['title']`:
+            # without it Django appends `title` to the GROUP BY, so every movie
+            # lands in its own (bucket, title) group and each bucket collapses to
+            # count 1 - one chart point per movie instead of a real aggregate.
+            rows = (
+                movies.exclude(**{f'{key_field}__isnull': True})
+                .order_by()
+                .values(key_field, label_field)
+                .annotate(count=Count('id', distinct=True))
+            )
+            data = [
+                {
+                    'key': str(row[key_field]),
+                    'label': str(row[label_field]),
+                    'count': row['count'],
+                }
+                for row in rows
+            ]
+            data.sort(key=lambda item: (item['key'] if order_by_key else -item['count']))
+            return data
+
+        return Response(
+            {
+                'scope': scope,
+                'total': movies.distinct().count(),
+                'formats': breakdown('formats__code', 'formats__label'),
+                'years': breakdown('year', 'year', order_by_key=True),
+                'genres': breakdown('genres__slug', 'genres__name'),
+                'audio_formats': breakdown('audio_formats__code', 'audio_formats__label'),
+                'hdr_formats': breakdown('hdr_formats__code', 'hdr_formats__label'),
+                'spoken_languages': breakdown('spoken_languages__code', 'spoken_languages__name'),
+                'subtitle_languages': breakdown(
+                    'subtitle_languages__code', 'subtitle_languages__name'
+                ),
+            }
+        )
 
 
 class ScanView(APIView):
