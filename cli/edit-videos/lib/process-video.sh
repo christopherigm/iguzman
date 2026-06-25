@@ -19,38 +19,36 @@
 #   $2  output path
 #   $3  do_black_bars   (0/1)
 #   $4  do_fps          (0/1)
-#   $5  do_h264         (0/1)
-#   $6  do_stab         (0/1)
-#   $7  fps_multiplier
-#   $8  stab_shakiness
-#   $9  stab_accuracy
-#   $10 stab_smoothing
-#   $11 use_gpu         (0/1)
-#   $12 gpu_encoder     e.g. h264_nvenc
-#   $13 stab_mode       vidstab|deshake
-#   $14 stab_maxangle
-#   $15 stab_maxshift
-#   $16 do_rife         (0/1)
-#   $17 rife_multiplier
+#   $5  do_stab         (0/1)
+#   $6  fps_multiplier
+#   $7  stab_shakiness
+#   $8  stab_accuracy
+#   $9  stab_smoothing
+#   $10 use_gpu         (0/1)
+#   $11 gpu_encoder     e.g. h264_nvenc
+#   $12 stab_mode       vidstab|deshake
+#   $13 stab_maxangle
+#   $14 stab_maxshift
+#   $15 do_rife         (0/1)
+#   $16 rife_multiplier
 
 process_video() {
   local input="$1"
   local output="$2"
   local do_black_bars="$3"
   local do_fps="$4"
-  local do_h264="$5"
-  local do_stab="$6"
-  local fps_multiplier="$7"
-  local stab_shakiness="$8"
-  local stab_accuracy="$9"
-  local stab_smoothing="${10}"
-  local use_gpu="${11}"
-  local gpu_encoder="${12}"
-  local stab_mode="${13:-vidstab}"
-  local stab_maxangle="${14:-0.15}"
-  local stab_maxshift="${15:-60}"
-  local do_rife="${16:-0}"
-  local rife_multiplier="${17:-2}"
+  local do_stab="$5"
+  local fps_multiplier="$6"
+  local stab_shakiness="$7"
+  local stab_accuracy="$8"
+  local stab_smoothing="${9}"
+  local use_gpu="${10}"
+  local gpu_encoder="${11}"
+  local stab_mode="${12:-vidstab}"
+  local stab_maxangle="${13:-0.15}"
+  local stab_maxshift="${14:-60}"
+  local do_rife="${15:-0}"
+  local rife_multiplier="${16:-2}"
 
   local trf_file=""
   local intermediate=""
@@ -63,7 +61,7 @@ process_video() {
   dur_sec="${probe_out%% *}"
 
   # ── HDR detection + conversion filters ─────────────────────────────────
-  local do_any=$(( do_black_bars | do_fps | do_h264 | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | do_rife | DO_VIDEO2X | DO_DEEP3D | DO_MPG_TO_MP4 ))
+  local do_any=$(( do_black_bars | do_fps | do_stab | DO_DENOISE | DO_SHARPEN | DO_UPSCALE | DO_DOWNSIZE | DO_COLOR | DO_COMPRESS | do_rife | DO_VIDEO2X | DO_DEEP3D | DO_MPG_TO_MP4 ))
   local hdr_type="sdr_8bit"
   if [[ "${do_any}" -eq 1 ]]; then
     printf "    %s\n" "$(clr_dim "${HDR_DETECT}")"
@@ -342,11 +340,14 @@ process_video() {
   # ── Final encode pass ────────────────────────────────────────────────────
   local needs_encode=0
   [[ "${#vf_chain[@]}" -gt 0 ]] && needs_encode=1
-  [[ "${do_h264}" -eq 1 ]]      && needs_encode=1
+  [[ "${DO_COMPRESS}" -eq 1 ]]  && needs_encode=1
   if [[ "${DO_MPG_TO_MP4}" -eq 1 ]]; then
-    local _mpg_ext="${src##*.}"; _mpg_ext="$(lc "${_mpg_ext}")"
-    if [[ "${_mpg_ext}" == "mpg" || "${_mpg_ext}" == "mpeg" || \
-          "${_mpg_ext}" == "m2v" || "${_mpg_ext}" == "vob" ]]; then
+    # Re-encode legacy MPEG containers (→ MP4) and MKV sources (codec change,
+    # container kept). Other formats are left untouched (handled by the copy path).
+    local _conv_ext="${input##*.}"; _conv_ext="$(lc "${_conv_ext}")"
+    if [[ "${_conv_ext}" == "mpg" || "${_conv_ext}" == "mpeg" || \
+          "${_conv_ext}" == "m2v" || "${_conv_ext}" == "vob" || \
+          "${_conv_ext}" == "mkv" ]]; then
       needs_encode=1
     else
       printf "    %s %s\n" "$(clr_dim '○')" "$(clr_dim "${MPG_TO_MP4_SKIP_MSG}")"
@@ -355,6 +356,13 @@ process_video() {
 
   if [[ "${needs_encode}" -eq 1 ]]; then
     local pre_input_args=() encode_args=()
+
+    # Compression strength → quality value (higher % = smaller file, lower quality).
+    local q_h264=23 q_h265=28
+    if [[ "${DO_COMPRESS}" -eq 1 ]]; then
+      q_h264=$(( 18 + COMPRESS_PERCENT * 22 / 100 ))
+      q_h265=$(( 22 + COMPRESS_PERCENT * 22 / 100 ))
+    fi
 
     # Full CUDA pipeline: no CPU filters and only scale/resize requested
     local _use_cuda_scale=0
@@ -369,24 +377,25 @@ process_video() {
       pre_input_args=(-hwaccel cuda -hwaccel_output_format cuda)
     fi
 
+    # Video codec args only - audio/subtitle handling comes from build_stream_maps.
     if [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_nvenc" ]]; then
-      encode_args=(-c:v h264_nvenc -preset p4 -cq 23 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
+      encode_args=(-c:v h264_nvenc -preset p4 -cq "${q_h264}" -surfaces 64 -rc-lookahead 32 -multipass fullres)
       [[ "${do_stab}" -eq 1 && "${stab_mode}" == "vidstab" ]] && vf_chain+=("format=yuv420p")
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_nvenc" ]]; then
-      encode_args=(-c:v hevc_nvenc -preset p4 -cq 28 -surfaces 64 -rc-lookahead 32 -multipass fullres -c:a copy)
+      encode_args=(-c:v hevc_nvenc -preset p4 -cq "${q_h265}" -surfaces 64 -rc-lookahead 32 -multipass fullres)
       [[ "${do_stab}" -eq 1 && "${stab_mode}" == "vidstab" ]] && vf_chain+=("format=yuv420p")
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "h264_vaapi" ]]; then
       pre_input_args=(-vaapi_device /dev/dri/renderD128)
       vf_chain+=("format=nv12" "hwupload")
-      encode_args=(-c:v h264_vaapi -qp 23 -c:a copy)
+      encode_args=(-c:v h264_vaapi -qp "${q_h264}")
     elif [[ "${use_gpu}" -eq 1 && "${gpu_encoder}" == "hevc_vaapi" ]]; then
       pre_input_args=(-vaapi_device /dev/dri/renderD128)
       vf_chain+=("format=nv12" "hwupload")
-      encode_args=(-c:v hevc_vaapi -qp 28 -c:a copy)
+      encode_args=(-c:v hevc_vaapi -qp "${q_h265}")
     elif [[ "${USE_H265}" -eq 1 ]]; then
-      encode_args=(-c:v libx265 -preset faster -crf 28 -c:a copy)
+      encode_args=(-c:v libx265 -preset faster -crf "${q_h265}")
     else
-      encode_args=(-c:v libx264 -preset faster -crf 23 -c:a copy)
+      encode_args=(-c:v libx264 -preset faster -crf "${q_h264}")
     fi
 
     local final_vf=""
@@ -398,9 +407,14 @@ process_video() {
       fi
     fi
 
-    local ffmpeg_args=("${pre_input_args[@]}" -i "${src}")
+    # Keep every audio track and (container-permitting) every subtitle track.
+    # Subtitles always come from the original input; audio from the encode source
+    # (an intermediate already carries copied audio, but never the subtitles).
+    build_stream_maps "${src}" "${input}" "${output}"
+
+    local ffmpeg_args=("${pre_input_args[@]}" -i "${src}" "${STREAM_EXTRA_INPUTS[@]}")
     [[ -n "${final_vf}" ]] && ffmpeg_args+=(-vf "${final_vf}")
-    ffmpeg_args+=("${encode_args[@]}" "${output}")
+    ffmpeg_args+=("${encode_args[@]}" "${STREAM_MAP_ARGS[@]}" "${output}")
 
     if ! run_ffmpeg_step "${STEP_ENCODE}" "${dur_sec}" "${ffmpeg_args[@]}"; then
       # vidstabtransform + NVENC: retry CPU on failure
@@ -410,11 +424,11 @@ process_video() {
         printf "    %s NVENC encode failed - retrying with CPU encoder...\n" "$(clr_yellow '⚠')"
         local cpu_encode_args=()
         [[ "${USE_H265}" -eq 1 ]] \
-          && cpu_encode_args=(-c:v libx265 -preset faster -crf 28 -c:a copy) \
-          || cpu_encode_args=(-c:v libx264 -preset faster -crf 23 -c:a copy)
-        local cpu_ffmpeg_args=(-i "${src}")
+          && cpu_encode_args=(-c:v libx265 -preset faster -crf "${q_h265}") \
+          || cpu_encode_args=(-c:v libx264 -preset faster -crf "${q_h264}")
+        local cpu_ffmpeg_args=(-i "${src}" "${STREAM_EXTRA_INPUTS[@]}")
         [[ -n "${final_vf}" ]] && cpu_ffmpeg_args+=(-vf "${final_vf}")
-        cpu_ffmpeg_args+=("${cpu_encode_args[@]}" "${output}")
+        cpu_ffmpeg_args+=("${cpu_encode_args[@]}" "${STREAM_MAP_ARGS[@]}" "${output}")
         if ! run_ffmpeg_step "${STEP_ENCODE}" "${dur_sec}" "${cpu_ffmpeg_args[@]}"; then
           [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
           [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
@@ -427,7 +441,8 @@ process_video() {
       fi
     fi
   else
-    if ! run_ffmpeg_step "${STEP_COPY}" "${dur_sec}" -i "${src}" -c copy "${output}"; then
+    # Pure remux (same container): -map 0 keeps every audio/subtitle/data track.
+    if ! run_ffmpeg_step "${STEP_COPY}" "${dur_sec}" -i "${src}" -map 0 -c copy "${output}"; then
       [[ -n "${trf_file}" ]] && rm -f "${trf_file}"
       [[ -n "${intermediate}" ]] && rm -f "${intermediate}"
       return 1
@@ -439,12 +454,40 @@ process_video() {
   return 0
 }
 
+# ── _report_size_change ───────────────────────────────────────────────────────
+#
+# When compression is active, prints and logs the original vs. new file size and
+# the percentage of size reduction (or growth) achieved.
+_report_size_change() {
+  [[ "${DO_COMPRESS:-0}" -eq 1 ]] || return 0
+  local in_file="$1" out_file="$2"
+  local osz nsz
+  osz="$(_file_size "${in_file}")"
+  nsz="$(_file_size "${out_file}")"
+  [[ "${osz}" -gt 0 && "${nsz}" -gt 0 ]] || return 0
+
+  local pct dir_label
+  if [[ "${nsz}" -le "${osz}" ]]; then
+    pct=$(( (osz - nsz) * 100 / osz ))
+    dir_label="${COMPRESS_SMALLER_LABEL}"
+  else
+    pct=$(( (nsz - osz) * 100 / osz ))
+    dir_label="${COMPRESS_LARGER_LABEL}"
+  fi
+
+  printf "    %s %s: %s → %s  (%s%% %s)\n" \
+    "$(clr_cyan '→')" "${COMPRESS_RESULT_LABEL}" \
+    "$(clr_dim "$(_fmt_bytes "${osz}")")" "$(clr_bold "$(_fmt_bytes "${nsz}")")" \
+    "$(clr_bold "${pct}")" "$(clr_dim "${dir_label}")"
+  _log "${COMPRESS_RESULT_LABEL} $(basename "${in_file}"): $(_fmt_bytes "${osz}") → $(_fmt_bytes "${nsz}") (${pct}% ${dir_label})"
+}
+
 # ── _run_processing ───────────────────────────────────────────────────────────
 #
 # Iterates video_files[] calling process_video, prints per-file status,
 # writes LOG_FILE header/footer, and prints final summary.
 # Uses globals: folder, out_dir, video_files[], action_list[],
-#               do_black_bars, do_fps, do_h264, do_stab, fps_multiplier,
+#               do_black_bars, do_fps, do_stab, fps_multiplier,
 #               stab_shakiness, stab_accuracy, stab_smoothing, use_gpu,
 #               GPU_ENCODER, stab_mode, stab_maxangle, stab_maxshift,
 #               DO_RIFE, RIFE_MULTIPLIER, DO_MPG_TO_MP4, LOG_FILE
@@ -493,12 +536,13 @@ _run_processing() {
     _log "[${count_idx}/${#video_files[@]}] Starting: ${base}"
 
     if process_video "${vf}" "${out}" \
-        "${do_black_bars}" "${do_fps}" "${do_h264}" "${do_stab}" \
+        "${do_black_bars}" "${do_fps}" "${do_stab}" \
         "${fps_multiplier}" "${stab_shakiness}" "${stab_accuracy}" "${stab_smoothing}" \
         "${use_gpu}" "${GPU_ENCODER}" "${stab_mode}" \
         "${stab_maxangle}" "${stab_maxshift}" \
         "${DO_RIFE}" "${RIFE_MULTIPLIER}"; then
       count_ok=$(( count_ok + 1 ))
+      _report_size_change "${vf}" "${out}"
       _log "[${count_idx}/${#video_files[@]}] Done: ${base}"
     else
       printf "  %s %s: %s\n" "$(clr_red '✗')" "${STEP_FAIL}" "${base}"

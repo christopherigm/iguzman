@@ -45,7 +45,7 @@ Documents the `apps/scraper/` REST API. Update when endpoints, request/response 
 
 | Script                                 | Sections documented                                                                                                                                                          |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cli/edit-videos/edit-videos.sh`       | Invocation, workflow, filters (black bars, FPS, H264, stabilization, denoise, sharpen, upscale, downsize, color correction, MPG), AI filters (RIFE, video2x, Deep3D, TikTok) |
+| `cli/edit-videos/edit-videos.sh`       | Invocation, workflow, filters (black bars, FPS, stabilization, denoise, sharpen, upscale, downsize, color correction, compress, MPG/MKV), AI filters (RIFE, video2x, Deep3D, TikTok) |
 | `cli/docker-cleanup/docker-cleanup.sh` | Invocation, workflow, operations (dangling images, old images, all unused, stopped containers, build cache, system prune)                                                    |
 | `cli/play-videos/play-videos.sh`       | Invocation, examples, flag groups (media, playback, display, audio, advanced)                                                                                                |
 | `cli/server-audit/server-audit.sh`     | Invocation, all 12 audit checks                                                                                                                                              |

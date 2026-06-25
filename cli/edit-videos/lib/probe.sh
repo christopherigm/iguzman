@@ -81,6 +81,77 @@ probe_dimensions() {
   echo "${w:-0} ${h:-0}"
 }
 
+# ── Stream mapping (keep all audio + subtitles) ───────────────────────────────
+#
+# Builds the -map / codec args needed to carry every audio track and every
+# (compatible) subtitle track into the output, instead of FFmpeg's default of
+# one stream per type.
+#
+# Args:
+#   $1  primary    - the input being encoded (index 0): video + audio source
+#   $2  sub_src    - the ORIGINAL input that holds the subtitles (== primary when
+#                    no intermediate was produced; differs after a pre-transcode)
+#   $3  out        - the output path (extension decides subtitle handling)
+#
+# Sets:
+#   STREAM_EXTRA_INPUTS  - extra "-i <sub_src>" when subtitles live in a separate
+#                          file from the primary (else empty)
+#   STREAM_MAP_ARGS      - the full -map / -c:a / -c:s argument list
+#
+# Subtitle handling is container-aware: Matroska/WebM copy every subtitle as-is;
+# MP4-family containers only accept text subtitles (re-muxed to mov_text) and
+# silently drop bitmap subs (PGS/DVD/DVB) which the format cannot hold.
+STREAM_EXTRA_INPUTS=()
+STREAM_MAP_ARGS=()
+
+build_stream_maps() {
+  local primary="$1" sub_src="$2" out="$3"
+  STREAM_EXTRA_INPUTS=()
+  # Processed video + every audio track from the primary input (index 0).
+  STREAM_MAP_ARGS=(-map 0:v:0 -map 0:a? -c:a copy)
+
+  local out_ext="${out##*.}"; out_ext="$(lc "${out_ext}")"
+
+  # Subtitle source index: 0 when it is the primary, otherwise add it as input 1.
+  local sub_idx=0
+  [[ "${primary}" != "${sub_src}" ]] && sub_idx=1
+
+  local _ffprobe="${FFPROBE_BIN}"
+  [[ ! -x "${_ffprobe}" ]] && _ffprobe="ffprobe"
+
+  local sub_codecs
+  sub_codecs="$("${_ffprobe}" -v quiet -select_streams s \
+    -show_entries stream=codec_name -of csv=p=0 "${sub_src}" 2>/dev/null || true)"
+
+  # No subtitles → nothing else to map.
+  [[ -z "${sub_codecs//[[:space:]]/}" ]] && return 0
+
+  [[ "${sub_idx}" -eq 1 ]] && STREAM_EXTRA_INPUTS=(-i "${sub_src}")
+
+  case "${out_ext}" in
+    mkv|webm)
+      STREAM_MAP_ARGS+=(-map "${sub_idx}:s?" -c:s copy)
+      ;;
+    mp4|m4v|mov|3gp)
+      # Only text subtitles can live in MP4 (as mov_text); map them individually.
+      local rel=0 codec text_maps=()
+      while IFS= read -r codec; do
+        [[ -z "${codec}" ]] && continue
+        case "$(lc "${codec}")" in
+          subrip|srt|ass|ssa|mov_text|webvtt|text|subviewer|subviewer1|eia_608|microdvd)
+            text_maps+=(-map "${sub_idx}:s:${rel}")
+            ;;
+        esac
+        rel=$(( rel + 1 ))
+      done <<< "${sub_codecs}"
+      [[ "${#text_maps[@]}" -gt 0 ]] && STREAM_MAP_ARGS+=("${text_maps[@]}" -c:s mov_text)
+      ;;
+    *)
+      STREAM_MAP_ARGS+=(-map "${sub_idx}:s?" -c:s copy)
+      ;;
+  esac
+}
+
 # ── HDR type detection ────────────────────────────────────────────────────────
 
 # Returns: "hdr10", "hlg", "dolby_vision", "sdr_10bit", or "sdr_8bit"

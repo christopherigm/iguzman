@@ -66,6 +66,14 @@ const EV_COLOR_PARAMS =
   "# Example - subtle punch:\n" +
   "contrast=1.1  brightness=0.0  saturation=1.2  gamma=1.0";
 
+const EV_COMPRESS_PARAMS =
+  "# Compression level % (default: 50)\n" +
+  "# Range: 1-100   (higher = smaller file, lower quality)\n" +
+  "#\n" +
+  "# Maps to the encoder CRF/CQ/QP; original vs. new size and the\n" +
+  "# achieved reduction % are logged after each file.\n" +
+  "Level: 50";
+
 const EV_RIFE_PARAMS =
   "# Multiplier (default: 2)\n" +
   "# Options: 2× | 4× | 8×\n" +
@@ -225,10 +233,6 @@ export async function ToolsPanel() {
         code={EV_FPS_PARAMS}
       />
       <EvSection
-        heading={t("toolsEvH264Heading")}
-        description={t("toolsEvH264Desc")}
-      />
-      <EvSection
         heading={t("toolsEvStabHeading")}
         description={t("toolsEvStabDesc")}
         code={EV_STAB_PARAMS}
@@ -257,6 +261,11 @@ export async function ToolsPanel() {
         heading={t("toolsEvColorHeading")}
         description={t("toolsEvColorDesc")}
         code={EV_COLOR_PARAMS}
+      />
+      <EvSection
+        heading={t("toolsEvCompressHeading")}
+        description={t("toolsEvCompressDesc")}
+        code={EV_COMPRESS_PARAMS}
       />
       <EvSection
         heading={t("toolsEvMpgHeading")}

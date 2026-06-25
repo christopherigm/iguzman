@@ -39,6 +39,25 @@ _fmt_time() {
   fi
 }
 
+# ── File-size helpers ─────────────────────────────────────────────────────────
+
+# Portable byte count of a file (Linux `stat -c`, macOS/BSD `stat -f`).
+_file_size() {
+  local f="$1"
+  [[ -f "${f}" ]] || { echo 0; return; }
+  stat -c%s "${f}" 2>/dev/null || stat -f%z "${f}" 2>/dev/null || echo 0
+}
+
+# Human-readable byte formatter (e.g. "1.50 GB").
+_fmt_bytes() {
+  awk -v b="${1:-0}" 'BEGIN{
+    split("B KB MB GB TB PB", u, " ");
+    i = 1;
+    while (b >= 1024 && i < 6) { b /= 1024; i++ }
+    if (i == 1) printf "%d %s", b, u[i]; else printf "%.2f %s", b, u[i];
+  }'
+}
+
 # ── Logging helper ────────────────────────────────────────────────────────────
 # Writes a timestamped line to LOG_FILE when set.
 

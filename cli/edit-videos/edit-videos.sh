@@ -55,7 +55,10 @@ DO_SHARPEN=0
 DO_UPSCALE=0
 DO_DOWNSIZE=0
 DO_COLOR=0
+DO_COMPRESS=0
 DO_TIKTOK=0
+
+COMPRESS_PERCENT=50
 
 DENOISE_LUMA_S=4; DENOISE_CHROMA_S=4; DENOISE_LUMA_T=3; DENOISE_CHROMA_T=3
 COLOR_CONTRAST=1.1; COLOR_BRIGHTNESS=0.0; COLOR_SATURATION=1.1; COLOR_GAMMA=1.0
@@ -237,13 +240,13 @@ main() {
   _CB_LABELS=(
     "${ACTION_BLACK_BARS}"
     "${ACTION_FPS}"
-    "${ACTION_H264}"
     "${ACTION_STAB}"
     "${ACTION_DENOISE}"
     "${ACTION_SHARPEN}"
     "${ACTION_UPSCALE}"
     "${ACTION_DOWNSIZE}"
     "${ACTION_COLOR}"
+    "${ACTION_COMPRESS}"
     "${ACTION_RIFE}"
     "${ACTION_VIDEO2X}"
     "${ACTION_DEEP3D}"
@@ -257,21 +260,21 @@ main() {
   _CB_DISABLED=(0 0 0 0 0 0 0 0 0 "${_dis_vulkan}" "${_dis_vulkan}" "${_dis_cuda}" 0 0)
   interactive_checkbox
 
-  local do_black_bars=0 do_fps=0 do_h264=0 do_stab=0
-  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_DOWNSIZE=0; DO_COLOR=0
+  local do_black_bars=0 do_fps=0 do_stab=0
+  DO_DENOISE=0; DO_SHARPEN=0; DO_UPSCALE=0; DO_DOWNSIZE=0; DO_COLOR=0; DO_COMPRESS=0
   DO_RIFE=0; DO_VIDEO2X=0; DO_DEEP3D=0; DO_MPG_TO_MP4=0; DO_TIKTOK=0
 
   for idx in "${SELECTED_INDICES[@]}"; do
     case "${idx}" in
       0) do_black_bars=1 ;;
       1) do_fps=1 ;;
-      2) do_h264=1 ;;
-      3) do_stab=1 ;;
-      4) DO_DENOISE=1 ;;
-      5) DO_SHARPEN=1 ;;
-      6) DO_UPSCALE=1 ;;
-      7) DO_DOWNSIZE=1 ;;
-      8) DO_COLOR=1 ;;
+      2) do_stab=1 ;;
+      3) DO_DENOISE=1 ;;
+      4) DO_SHARPEN=1 ;;
+      5) DO_UPSCALE=1 ;;
+      6) DO_DOWNSIZE=1 ;;
+      7) DO_COLOR=1 ;;
+      8) DO_COMPRESS=1 ;;
       9) DO_RIFE=1 ;;
       10) DO_VIDEO2X=1 ;;
       11) DO_DEEP3D=1 ;;
@@ -280,9 +283,10 @@ main() {
     esac
   done
 
-  if [[ "${do_black_bars}" -eq 0 && "${do_fps}" -eq 0 && "${do_h264}" -eq 0 && \
+  if [[ "${do_black_bars}" -eq 0 && "${do_fps}" -eq 0 && \
         "${do_stab}" -eq 0 && "${DO_DENOISE}" -eq 0 && "${DO_SHARPEN}" -eq 0 && \
         "${DO_UPSCALE}" -eq 0 && "${DO_DOWNSIZE}" -eq 0 && "${DO_COLOR}" -eq 0 && \
+        "${DO_COMPRESS}" -eq 0 && \
         "${DO_RIFE}" -eq 0 && "${DO_VIDEO2X}" -eq 0 && "${DO_DEEP3D}" -eq 0 && \
         "${DO_MPG_TO_MP4}" -eq 0 && "${DO_TIKTOK}" -eq 0 ]]; then
     printf "\n  %s\n\n" "$(clr_yellow "${NO_ACTIONS_SELECTED}")"
@@ -524,6 +528,11 @@ main() {
     _read_float COLOR_GAMMA      "$(clr_dim "${COLOR_GAMMA_LABEL}")"      1.0 0.1 10.0
   fi
 
+  if [[ "${DO_COMPRESS}" -eq 1 ]]; then
+    _read_int COMPRESS_PERCENT "$(clr_bold "${COMPRESS_PERCENT_LABEL}")" 50 1 100
+    echo ""
+  fi
+
   if [[ "${DO_RIFE}" -eq 1 ]]; then
     printf "  %s\n" "$(clr_yellow "⚠  ${RIFE_DISK_WARN}")"
     printf "  %s (2): " "$(clr_bold "${RIFE_MULTIPLIER_PROMPT}")"
@@ -667,13 +676,13 @@ main() {
   local action_list=()
   [[ "${do_black_bars}" -eq 1 ]] && action_list+=("black bars")
   [[ "${do_fps}" -eq 1 ]]        && action_list+=("minterpolate ${fps_multiplier}×")
-  [[ "${do_h264}" -eq 1 ]]       && action_list+=("H.264")
   [[ "${do_stab}" -eq 1 ]]       && action_list+=("stabilize (sh=${stab_shakiness} ac=${stab_accuracy} sm=${stab_smoothing})")
   [[ "${DO_DENOISE}" -eq 1 ]]    && action_list+=("denoise (ls=${DENOISE_LUMA_S} cs=${DENOISE_CHROMA_S})")
   [[ "${DO_SHARPEN}" -eq 1 ]]    && action_list+=("sharpen (m=${SHARPEN_MATRIX} la=${SHARPEN_LUMA_AMOUNT})")
   [[ "${DO_UPSCALE}" -eq 1 ]]    && action_list+=("upscale→${UPSCALE_TARGET_W}x${UPSCALE_TARGET_H}")
   [[ "${DO_DOWNSIZE}" -eq 1 ]]   && action_list+=("downsize→${DOWNSIZE_TARGET_W}x${DOWNSIZE_TARGET_H}")
   [[ "${DO_COLOR}" -eq 1 ]]      && action_list+=("color (c=${COLOR_CONTRAST} b=${COLOR_BRIGHTNESS})")
+  [[ "${DO_COMPRESS}" -eq 1 ]]   && action_list+=("compress ${COMPRESS_PERCENT}%")
   [[ "${DO_RIFE}" -eq 1 ]]       && action_list+=("RIFE ${RIFE_MULTIPLIER}× (${RIFE_MODEL})")
   [[ "${DO_VIDEO2X}" -eq 1 ]]    && action_list+=("video2x ${VIDEO2X_SCALE}× (${VIDEO2X_MODEL})")
   [[ "${DO_DEEP3D}" -eq 1 ]]     && action_list+=("deep3d (stability=${DEEP3D_STABILITY})")
