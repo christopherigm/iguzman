@@ -172,7 +172,7 @@ export interface LanguagePayload {
   order?: number;
 }
 
-// In-flight request dedupe — the profile page and job-search section both load
+// In-flight request dedupe - the profile page and job-search section both load
 // languages on mount in the same tick. Share one request and clear once it
 // settles so later calls refetch fresh data. See getProfile in lib/auth.ts.
 let languagesInFlight: Promise<ListResponse<Language>> | null = null;

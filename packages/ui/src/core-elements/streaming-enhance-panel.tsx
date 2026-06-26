@@ -20,7 +20,7 @@ import {
 // re-render only this panel, not the parent form/page. The parent triggers a
 // run via the imperative `start` handle and learns about coarse state changes
 // (generating on/off, preview present/absent) through callbacks that fire only
-// on transitions — never per token.
+// on transitions - never per token.
 
 export interface StreamingEnhanceHandle {
   /** Start a new generation. Resets any previous preview first. */

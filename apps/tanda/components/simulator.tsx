@@ -10,6 +10,7 @@ import { Slider, type SliderStep } from "@repo/ui/core-elements/slider";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
+import { Chart } from "@repo/ui/core-elements/chart";
 import "./simulator.css";
 
 // ─── Tier Configuration ────────────────────────────────────────────────────────
@@ -230,7 +231,7 @@ interface BankResult {
  *   - "cat": Mexico's Costo Anual Total, an *effective* annual rate (an IRR), so
  *     the equivalent monthly rate is the 12th root: r = (1 + rate)^(1/12) − 1.
  *     Note CAT is an all-in figure (interest + fees + mandatory insurance) and,
- *     when quoted "sin IVA", excludes the 16% VAT on interest — so amortizing the
+ *     when quoted "sin IVA", excludes the 16% VAT on interest - so amortizing the
  *     principal at the CAT approximates the borrower's total outflow.
  *
  *   P = L × r / (1 − (1 + r)^−M)
@@ -423,6 +424,34 @@ export function Simulator() {
       cfg.escrowThreshold,
     );
   }, [G, months, delta, cfg]);
+
+  // Yearly-sampled projection series for the line charts. Both monthly payments
+  // are fixed, so the payment charts plot the *running total paid* (downpayment +
+  // P × month), which curves; the price chart plots the delta-driven asset price.
+  // Short terms (≤ 12 months) sample monthly so the curve isn't a single segment.
+  const chartData = useMemo(() => {
+    if (!result || !bankResult || G <= 0) return null;
+    const M = months;
+    const sampleMonths: number[] = [];
+    if (M <= 12) {
+      for (let m = 0; m <= M; m++) sampleMonths.push(m);
+    } else {
+      for (let m = 0; m <= M; m += 12) sampleMonths.push(m);
+      if (sampleMonths[sampleMonths.length - 1] !== M) sampleMonths.push(M);
+    }
+    return {
+      labels: sampleMonths.map((m) =>
+        m % 12 === 0 ? `${m / 12}y` : `${m}m`,
+      ),
+      tandaCumulative: sampleMonths.map(
+        (m) => result.downpayment + result.P * m,
+      ),
+      bankCumulative: sampleMonths.map(
+        (m) => bankResult.downpayment + bankResult.P * m,
+      ),
+      assetPrice: sampleMonths.map((m) => calcAssetPriceAtMonth(G, delta, m)),
+    };
+  }, [result, bankResult, G, months, delta]);
 
   const monthSliderSteps: SliderStep[] = cfg.monthSteps.map((m) => ({
     value: m,
@@ -993,6 +1022,80 @@ export function Simulator() {
               </Box>
             </Card>
           </Box>
+
+          {/* ── Projection charts ─────────────────────────────── */}
+          {chartData && (
+            <Box display="flex" flexDirection="column" gap={20}>
+              <Typography
+                as="h2"
+                fontWeight={700}
+                color="var(--foreground)"
+                styles={{ textTransform: "uppercase", letterSpacing: 1 }}
+              >
+                {t("chartsHeading")}
+              </Typography>
+
+              {/* Cumulative amount paid: TandaOmni vs lender */}
+              <Card gap={12} padding={20}>
+                <Typography as="h3" fontWeight={600} color="var(--foreground)">
+                  {t("paymentsChartTitle")}
+                </Typography>
+                <Typography color="var(--muted-foreground, #6b7280)">
+                  {t("paymentsChartNote", {
+                    tanda: fmtCents.format(result.P),
+                    lender: fmtCents.format(bankResult.P),
+                  })}
+                </Typography>
+                <Chart
+                  type="line"
+                  labels={chartData.labels}
+                  series={[
+                    {
+                      label: t("tandaColumnHeading"),
+                      data: chartData.tandaCumulative,
+                      color: "#06b6d4",
+                    },
+                    {
+                      label: t(
+                        (cfg.comparisonHeadingKey ??
+                          "bankColumnHeading") as Parameters<typeof t>[0],
+                      ),
+                      data: chartData.bankCumulative,
+                      color: "#6b7280",
+                    },
+                  ]}
+                  height={300}
+                  ariaLabel={t("paymentsChartTitle")}
+                />
+              </Card>
+
+              {/* Asset price over time (inflation / depreciation curve) */}
+              <Card gap={12} padding={20}>
+                <Typography as="h3" fontWeight={600} color="var(--foreground)">
+                  {t("priceChartTitle")}
+                </Typography>
+                <Typography color="var(--muted-foreground, #6b7280)">
+                  {t("priceChartNote", {
+                    pct: (Number(delta) * 100).toFixed(1),
+                  })}
+                </Typography>
+                <Chart
+                  type="line"
+                  labels={chartData.labels}
+                  series={[
+                    {
+                      label: t("assetPriceSeriesLabel"),
+                      data: chartData.assetPrice,
+                      color: "#f59e0b",
+                    },
+                  ]}
+                  height={300}
+                  hideLegend
+                  ariaLabel={t("priceChartTitle")}
+                />
+              </Card>
+            </Box>
+          )}
         </Box>
       ) : (
         <Card

@@ -90,7 +90,7 @@
   },
   "SimulatorPage": {
     "heading": "Simulateur TandaOmni",
-    "subtitle": "Estimez votre plan d’épargne communautaire sans intérêts. Réalisé pour le Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM, par Christopher Guzman.",
+    "subtitle": "Estimez votre plan d’épargne communautaire sans intérêts. Réalisé pour le Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM, par Christopher Guzman.",
     "tiers": {
       "realEstate": {
         "label": "Immobilier",
@@ -98,7 +98,7 @@
       },
       "vehicle": {
         "label": "Véhicule / Équipement",
-        "mitigation": "Une police d'assurance obligatoire gérée par la plateforme est requise pour toute la durée du groupe — qu'il s'agisse d'un véhicule neuf ou d'occasion."
+        "mitigation": "Une police d'assurance obligatoire gérée par la plateforme est requise pour toute la durée du groupe - qu'il s'agisse d'un véhicule neuf ou d'occasion."
       },
       "travel": {
         "label": "Voyages & Expériences",
@@ -141,9 +141,9 @@
     "bankFinancedAmount": "Montant financé",
     "bankTotalInterest": "Total des intérêts payés",
     "bankTotalCost": "Coût total",
-    "bankInterestNotice": "Un prêt traditionnel facture des intérêts sur le solde financé pendant toute la durée — de l’argent payé en plus du prix de l’actif.",
+    "bankInterestNotice": "Un prêt traditionnel facture des intérêts sur le solde financé pendant toute la durée - de l’argent payé en plus du prix de l’actif.",
     "consumerLenderColumnHeading": "Prêteur à la consommation",
-    "consumerLenderNotice": "Les prêteurs à la consommation au Mexique affichent un CAT (coût annuel total, sin IVA) de 78 % à 456 %. Sur une courte durée typique, cela revient à rembourser près du double de la somme empruntée — et le coût réel est plus élevé une fois ajoutée la TVA (IVA) de 16 %.",
+    "consumerLenderNotice": "Les prêteurs à la consommation au Mexique affichent un CAT (coût annuel total, sin IVA) de 78 % à 456 %. Sur une courte durée typique, cela revient à rembourser près du double de la somme empruntée - et le coût réel est plus élevé une fois ajoutée la TVA (IVA) de 16 %.",
     "repayMultiple": "Remboursement total",
     "repayMultipleValue": "{multiple}× le prêt",
     "savingsHeading": "Votre avantage TandaOmni",
@@ -169,24 +169,30 @@
       "assetPriceAtEndTitle": "Prix de l’actif en fin de période",
       "assetPriceAtEndText": "Le prix projeté de l’actif à la fin de la période, calculé avec la Courbe Delta : G₂ = G × (1 + δ)^T. Cela représente ce que le dernier membre de la file paiera pour son actif.",
       "totalContributedTitle": "Total versé par membre",
-      "totalContributedText": "Le montant total que chaque membre paie sur toute la durée : (P × M) + apport initial. Comme TandaOmni ne prélève aucun intérêt, cela correspond approximativement au prix original de l’actif — la communauté se finance mutuellement sans frais.",
+      "totalContributedText": "Le montant total que chaque membre paie sur toute la durée : (P × M) + apport initial. Comme TandaOmni ne prélève aucun intérêt, cela correspond approximativement au prix original de l’actif - la communauté se finance mutuellement sans frais.",
       "escrowTitle": "Seuil de déblocage du séquestre",
       "escrowText": "Pour les voyages & expériences (actifs non récupérables), votre versement est bloqué jusqu’à ce que vos contributions totales atteignent 60 % du coût actuel de l’actif. Cela protège le groupe contre le financement d’une expérience non remboursable en cas de défaillance d’un membre.",
       "bankAprTitle": "Taux d’intérêt bancaire (TAEG)",
       "bankAprText": "Le taux annuel effectif global qu’un prêteur traditionnel applique sur le solde financé. Les valeurs par défaut reflètent les moyennes américaines de juin 2026 (hypothèque ~6,5 %, auto neuve ~7 %, auto d’occasion ~12 %, voyage/prêt personnel ~14 %). Ajustez le curseur pour correspondre à une offre reçue.",
-      "catTitle": "CAT — Costo Anual Total",
+      "catTitle": "CAT - Costo Anual Total",
       "catText": "Le coût total réglementé du crédit au Mexique. Contrairement à un TAEG nominal, le CAT est un taux annuel effectif (composé) qui intègre les intérêts, commissions, frais et assurances obligatoires. Affiché « sin IVA », il exclut la TVA de 16 % sur les intérêts, votre coût réel est donc un peu plus élevé.",
       "bankFinancedTitle": "Montant financé",
       "bankFinancedText": "La part du prix que la banque vous prête : le prix cible moins votre apport. Les intérêts s’accumulent sur ce solde.",
       "bankTotalInterestTitle": "Total des intérêts payés",
-      "bankTotalInterestText": "Le total des intérêts versés à la banque sur toute la durée : (mensualité × mois) − montant financé. Un coût pur en plus de l’actif — exactement ce que TandaOmni élimine.",
+      "bankTotalInterestText": "Le total des intérêts versés à la banque sur toute la durée : (mensualité × mois) − montant financé. Un coût pur en plus de l’actif - exactement ce que TandaOmni élimine.",
       "bankTotalCostTitle": "Coût total",
       "bankTotalCostText": "Tout ce que vous payez via la banque : apport + (mensualité × mois). Comparez-le au Total cotisé de TandaOmni pour voir vos économies."
-    }
+    },
+    "chartsHeading": "Projection des Coûts et du Prix",
+    "paymentsChartTitle": "Montant Cumulé Payé",
+    "paymentsChartNote": "Chaque plan a une mensualité fixe : {tanda} avec TandaOmni contre {lender} avec le prêteur. Les courbes montrent le total cumulé payé, acompte initial inclus.",
+    "priceChartTitle": "Prix de l'Actif dans le Temps",
+    "priceChartNote": "Comment le prix de l'actif évolue avec le delta annuel de {pct}% sur la durée.",
+    "assetPriceSeriesLabel": "Prix de l'Actif"
   },
   "AnalysisPage": {
-    "heading": "TandaOmni — Analyse Produit",
-    "subtitle": "Un écosystème financier communautaire sans intérêts pour l’Immobilier, les Véhicules et les Expériences. Réalisé pour le Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM.",
+    "heading": "TandaOmni - Analyse Produit",
+    "subtitle": "Un écosystème financier communautaire sans intérêts pour l’Immobilier, les Véhicules et les Expériences. Réalisé pour le Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM.",
     "section": {
       "overview": "1. Présentation du Projet",
       "riskVerticals": "2. Segments de Risque",
@@ -199,7 +205,7 @@
       "stackLabel": "Stack Technique",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (BDD), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Formation",
-      "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM",
+      "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM",
       "studentLabel": "Étudiant",
       "studentValue": "Christopher Guzman"
     },
@@ -220,7 +226,7 @@
         "name": "Voyages & Expériences (Irrécupérable)",
         "term": "6 à 12 Mois",
         "delta": "+2% à +4%",
-        "mitigation": "Blocage Fiduciaire — Le déboursement est libéré après 60% du coût financé. Pré-autorisation carte bancaire."
+        "mitigation": "Blocage Fiduciaire - Le déboursement est libéré après 60% du coût financé. Pré-autorisation carte bancaire."
       }
     },
     "math": {

@@ -21,7 +21,7 @@ The platform dynamically groups users into specific risk tiers based on the asse
   - **Used Vehicle:** −5% to −10% (tracks depreciation; the specific target asset ages and loses value while the user waits in the payout queue).
 - **Mitigation:** 20% Downpayment, Mandatory Platform-Held Insurance Policy.
 
-  > **Risk Engine Note — Acquisition Cost vs. Collateral Value:** Do not conflate the two. A "New Vehicle" goal requires a _positive_ delta to correctly price future acquisition costs (the 2028 model will cost more than today's). However, the moment the car leaves the lot, it becomes a _depreciating_ collateral asset. Mandatory insurance is therefore non-negotiable regardless of delta direction — if the asset is destroyed in Month 2, the platform must recover capital from the insurer, not from the wreckage's resale value.
+  > **Risk Engine Note - Acquisition Cost vs. Collateral Value:** Do not conflate the two. A "New Vehicle" goal requires a _positive_ delta to correctly price future acquisition costs (the 2028 model will cost more than today's). However, the moment the car leaves the lot, it becomes a _depreciating_ collateral asset. Mandatory insurance is therefore non-negotiable regardless of delta direction - if the asset is destroyed in Month 2, the platform must recover capital from the insurer, not from the wreckage's resale value.
 
 - **Tier 3: Travel & Experiences (Unrecoverable)**
 - **Term:** 6 to 12 Months

@@ -90,7 +90,7 @@
   },
   "SimulatorPage": {
     "heading": "Simulador TandaOmni",
-    "subtitle": "Estima tu plan de ahorro comunitario sin intereses. Desarrollado para el Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM, por Christopher Guzman.",
+    "subtitle": "Estima tu plan de ahorro comunitario sin intereses. Desarrollado para el Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM, por Christopher Guzman.",
     "tiers": {
       "realEstate": {
         "label": "Bienes Raíces",
@@ -98,7 +98,7 @@
       },
       "vehicle": {
         "label": "Vehículo / Equipo",
-        "mitigation": "Se requiere una póliza de seguro obligatoria administrada por la plataforma durante todo el plazo del grupo — independientemente de si el vehículo es nuevo o usado."
+        "mitigation": "Se requiere una póliza de seguro obligatoria administrada por la plataforma durante todo el plazo del grupo - independientemente de si el vehículo es nuevo o usado."
       },
       "travel": {
         "label": "Viajes y Experiencias",
@@ -141,9 +141,9 @@
     "bankFinancedAmount": "Monto Financiado",
     "bankTotalInterest": "Total de Intereses Pagados",
     "bankTotalCost": "Costo Total",
-    "bankInterestNotice": "Un préstamo tradicional cobra intereses sobre el saldo financiado durante todo el plazo — dinero pagado por encima del precio del activo.",
+    "bankInterestNotice": "Un préstamo tradicional cobra intereses sobre el saldo financiado durante todo el plazo - dinero pagado por encima del precio del activo.",
     "consumerLenderColumnHeading": "Prestamista de consumo",
-    "consumerLenderNotice": "Los prestamistas de consumo en México anuncian un CAT (costo anual total, sin IVA) de 78% a 456%. En un plazo corto típico eso significa pagar casi el doble de lo que pediste — y el costo real en efectivo es mayor al sumar el 16% de IVA.",
+    "consumerLenderNotice": "Los prestamistas de consumo en México anuncian un CAT (costo anual total, sin IVA) de 78% a 456%. En un plazo corto típico eso significa pagar casi el doble de lo que pediste - y el costo real en efectivo es mayor al sumar el 16% de IVA.",
     "repayMultiple": "Pagas en total",
     "repayMultipleValue": "{multiple}× el préstamo",
     "savingsHeading": "Tu Ventaja TandaOmni",
@@ -169,24 +169,30 @@
       "assetPriceAtEndTitle": "Precio del activo al vencimiento",
       "assetPriceAtEndText": "El precio proyectado del activo al final del plazo, calculado con la Curva Delta: G₂ = G × (1 + δ)^T. Representa lo que pagará el último miembro en la cola para adquirir su activo.",
       "totalContributedTitle": "Total aportado por miembro",
-      "totalContributedText": "El monto total que cada miembro paga durante todo el plazo: (P × M) + enganche. Dado que TandaOmni cobra cero intereses, esto se aproxima al precio original del activo — la comunidad se financia mutuamente sin costo.",
+      "totalContributedText": "El monto total que cada miembro paga durante todo el plazo: (P × M) + enganche. Dado que TandaOmni cobra cero intereses, esto se aproxima al precio original del activo - la comunidad se financia mutuamente sin costo.",
       "escrowTitle": "Umbral de liberación del depósito",
       "escrowText": "Para viajes y experiencias (activos irrecuperables), tu pago queda bloqueado hasta que tus aportaciones totales alcancen el 60% del costo actual del activo. Esto protege al grupo contra el financiamiento de una experiencia que no puede reembolsarse si un miembro incumple.",
       "bankAprTitle": "Tasa de Interés Bancaria (TAE)",
       "bankAprText": "La tasa anual que un prestamista tradicional cobra sobre el saldo financiado. Los valores por defecto reflejan promedios de EE. UU. de junio de 2026 (hipoteca ~6.5%, auto nuevo ~7%, auto usado ~12%, viajes/préstamo personal ~14%). Ajusta el control para igualar una cotización que hayas recibido.",
-      "catTitle": "CAT — Costo Anual Total",
+      "catTitle": "CAT - Costo Anual Total",
       "catText": "El costo total de financiamiento regulado en México. A diferencia de una TAE nominal, el CAT es una tasa anual efectiva (compuesta) e incluye intereses, comisiones, cargos y seguros obligatorios. Cuando se cita 'sin IVA', excluye el 16% de IVA sobre los intereses, por lo que tu costo real en efectivo es algo mayor.",
       "bankFinancedTitle": "Monto Financiado",
       "bankFinancedText": "La parte del precio del activo que el banco te presta: el precio objetivo menos tu enganche. Los intereses se acumulan sobre este saldo.",
       "bankTotalInterestTitle": "Total de Intereses Pagados",
-      "bankTotalInterestText": "El total de intereses pagados al banco durante todo el plazo: (pago mensual × meses) − monto financiado. Es un costo puro sobre el activo — exactamente lo que TandaOmni elimina.",
+      "bankTotalInterestText": "El total de intereses pagados al banco durante todo el plazo: (pago mensual × meses) − monto financiado. Es un costo puro sobre el activo - exactamente lo que TandaOmni elimina.",
       "bankTotalCostTitle": "Costo Total",
       "bankTotalCostText": "Todo lo que pagas a través del banco: enganche + (pago mensual × meses). Compáralo con el Total Aportado de TandaOmni para ver tu ahorro."
-    }
+    },
+    "chartsHeading": "Proyección de Costos y Precio",
+    "paymentsChartTitle": "Monto Acumulado Pagado",
+    "paymentsChartNote": "Cada plan tiene un pago mensual fijo: {tanda} con TandaOmni frente a {lender} con el prestamista. Las líneas muestran el total acumulado pagado, incluido el enganche inicial.",
+    "priceChartTitle": "Precio del Activo en el Tiempo",
+    "priceChartNote": "Cómo cambia el precio del activo con el delta anual de {pct}% durante el plazo.",
+    "assetPriceSeriesLabel": "Precio del Activo"
   },
   "AnalysisPage": {
-    "heading": "TandaOmni — Análisis del Producto",
-    "subtitle": "Un ecosistema financiero comunitario sin intereses para Bienes Raíces, Vehículos y Experiencias. Desarrollado para el Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM.",
+    "heading": "TandaOmni - Análisis del Producto",
+    "subtitle": "Un ecosistema financiero comunitario sin intereses para Bienes Raíces, Vehículos y Experiencias. Desarrollado para el Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM.",
     "section": {
       "overview": "1. Descripción del Proyecto",
       "riskVerticals": "2. Segmentos de Riesgo",
@@ -199,7 +205,7 @@
       "stackLabel": "Stack Tecnológico",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (BD), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Diplomado",
-      "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM",
+      "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM",
       "studentLabel": "Estudiante",
       "studentValue": "Christopher Guzman"
     },
@@ -220,7 +226,7 @@
         "name": "Viajes y Experiencias (Irrecuperable)",
         "term": "6 a 12 Meses",
         "delta": "+2% a +4%",
-        "mitigation": "Bloqueo de Depósito — El pago se libera hasta que el 60% del costo esté fondeado. Preautorización de tarjeta de crédito."
+        "mitigation": "Bloqueo de Depósito - El pago se libera hasta que el 60% del costo esté fondeado. Preautorización de tarjeta de crédito."
       }
     },
     "math": {

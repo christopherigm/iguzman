@@ -1,4 +1,4 @@
-# User Personas — Media 2 Go
+# User Personas - Media 2 Go
 
 User personas for **Media 2 Go**, the offline-first PWA video downloader. These describe who the
 app is actually built for today, grounded in the shipped feature set: multi-platform downloads
@@ -11,7 +11,7 @@ personas whose needs the advanced and paid features serve.
 
 ---
 
-## 1. Maya — The Offline Saver (Primary)
+## 1. Maya - The Offline Saver (Primary)
 
 > _"I just want to keep the videos I like so I can watch them on the train with no signal."_
 
@@ -30,7 +30,7 @@ personas whose needs the advanced and paid features serve.
 
 ### How the app serves her
 
-- **Paste-and-go download form** with autosave to gallery — the fastest possible path.
+- **Paste-and-go download form** with autosave to gallery - the fastest possible path.
 - **OPFS device storage** so videos play back from `blob:` URLs with no network.
 - **Installable PWA** with a home-screen icon and offline gallery (`InfinitePage`).
 - **"Just audio"** toggle when she only wants the sound (e.g. a song from a clip).
@@ -39,7 +39,7 @@ personas whose needs the advanced and paid features serve.
 
 - Confused by device-storage limits; needs the **storage usage meter** and **clear-storage**
   flow to stay legible.
-- Doesn't read warnings — error states must be self-explanatory and recoverable.
+- Doesn't read warnings - error states must be self-explanatory and recoverable.
 - Will close the tab mid-download; **resume-on-next-visit** is essential, not a nice-to-have.
 
 ### Success metric
@@ -48,7 +48,7 @@ She reopens the app offline and her saved videos just play.
 
 ---
 
-## 2. Diego — The Creator / Power Editor (Secondary)
+## 2. Diego - The Creator / Power Editor (Secondary)
 
 > _"If I'm going to repost this, it needs to look smooth, be the right codec, and have no black bars."_
 
@@ -68,7 +68,7 @@ She reopens the app offline and her saved videos just play.
 ### How the app serves him
 
 - **Client-side FFmpeg (WASM)**: black-bar removal, **FPS interpolation (60/90/120)**,
-  **H.264 / H.265 conversion** — all on-device, no upload.
+  **H.264 / H.265 conversion** - all on-device, no upload.
 - **Server offloading** to a connected `server-video-editor` agent over WebSockets for heavy
   jobs his browser shouldn't grind through (`WsClientPanel` "This Device vs. server" selector).
 - **Re-processing of completed videos** (`ReadOnlyVideoItem`) so his gallery is a working set.
@@ -76,7 +76,7 @@ She reopens the app offline and her saved videos just play.
 
 ### Frustrations / watch-outs
 
-- Long client-side jobs feel risky — he needs **clear progress** and the guarantee that
+- Long client-side jobs feel risky - he needs **clear progress** and the guarantee that
   processing **resumes** if the page reloads.
 - Cares about codec/quality fidelity; silent re-encodes or quality loss erode trust.
 - Wants to know **where the job is running** (device vs. server) and how long it'll take.
@@ -87,9 +87,9 @@ He turns a raw download into a smooth, correctly-encoded, properly-framed clip i
 
 ---
 
-## 3. Priya — The Localizer / Researcher (Secondary, paid)
+## 3. Priya - The Localizer / Researcher (Secondary, paid)
 
-> _"I need the captions in my language and the comments saved — that's the whole reason I'm here."_
+> _"I need the captions in my language and the comments saved - that's the whole reason I'm here."_
 
 |                              |                                                                          |
 | ---------------------------- | ------------------------------------------------------------------------ |
@@ -100,7 +100,7 @@ He turns a raw download into a smooth, correctly-encoded, properly-framed clip i
 
 ### Goals
 
-- Get videos **with captions** — fetched, styled, and optionally **burned in**.
+- Get videos **with captions** - fetched, styled, and optionally **burned in**.
 - **Translate subtitles** into her target language while preserving timing.
 - **Capture post comments** for research, moderation, or archival.
 
@@ -111,7 +111,7 @@ He turns a raw download into a smooth, correctly-encoded, properly-framed clip i
 - **Subtitle translation** through the Groq LLM proxy, preserving SRT format.
 - **Comment scraping** (yt-dlp primary, ScrapeCreators fallback for TikTok/IG/Facebook),
   browsable inline (`VideoComments`) and saved as JSON, optionally to OPFS.
-- **Credits + coupon system** — she's the persona most likely to spend, since comments and
+- **Credits + coupon system** - she's the persona most likely to spend, since comments and
   premium processing draw down credits she tops up via Stripe.
 - **Multi-locale UI** (en, es, de, fr, pt) that matches the languages she works in.
 
@@ -119,7 +119,7 @@ He turns a raw download into a smooth, correctly-encoded, properly-framed clip i
 
 - Needs captions/comments to **gracefully degrade** when a platform doesn't expose them
   ("not available for this video") rather than failing opaquely.
-- Credit consumption must be **transparent** — she needs to know what a comment fetch costs
+- Credit consumption must be **transparent** - she needs to know what a comment fetch costs
   before committing.
 - Translation must keep timing intact; a desynced SRT is worse than none.
 
@@ -131,7 +131,7 @@ She exports a video with accurate, well-styled translated subtitles plus a clean
 
 ## Persona summary
 
-|                      | Maya — Offline Saver        | Diego — Power Editor                    | Priya — Localizer                                   |
+|                      | Maya - Offline Saver        | Diego - Power Editor                    | Priya - Localizer                                   |
 | -------------------- | --------------------------- | --------------------------------------- | --------------------------------------------------- |
 | **Core need**        | Save & watch offline        | Process into quality assets             | Captions, translation, comments                     |
 | **Key features**     | OPFS storage, PWA, autosave | FFmpeg (FPS/codec/bars), server offload | Caption burn-in, Groq translation, comment scraping |
@@ -141,9 +141,9 @@ She exports a video with accurate, well-styled translated subtitles plus a clean
 
 ### Design implications
 
-- **Keep the core download flow brutally simple** for Maya — advanced options stay collapsed
+- **Keep the core download flow brutally simple** for Maya - advanced options stay collapsed
   behind a toggle and never block the happy path.
-- **Make long-running work trustworthy** for Diego — visible progress, resume-on-reload, and a
+- **Make long-running work trustworthy** for Diego - visible progress, resume-on-reload, and a
   clear device-vs-server choice.
-- **Make cost and availability transparent** for Priya — credit costs surfaced up front, and
+- **Make cost and availability transparent** for Priya - credit costs surfaced up front, and
   honest "not available" states when a platform withholds captions or comments.

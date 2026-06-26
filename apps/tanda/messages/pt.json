@@ -90,7 +90,7 @@
   },
   "SimulatorPage": {
     "heading": "Simulador TandaOmni",
-    "subtitle": "Estime seu plano de poupança comunitário sem juros. Desenvolvido para o Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM, por Christopher Guzman.",
+    "subtitle": "Estime seu plano de poupança comunitário sem juros. Desenvolvido para o Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM, por Christopher Guzman.",
     "tiers": {
       "realEstate": {
         "label": "Imóveis",
@@ -98,7 +98,7 @@
       },
       "vehicle": {
         "label": "Veículo / Equipamento",
-        "mitigation": "Apólice de seguro obrigatória gerida pela plataforma é exigida durante todo o prazo do grupo — independentemente de o veículo ser novo ou usado."
+        "mitigation": "Apólice de seguro obrigatória gerida pela plataforma é exigida durante todo o prazo do grupo - independentemente de o veículo ser novo ou usado."
       },
       "travel": {
         "label": "Viagens & Experiências",
@@ -141,9 +141,9 @@
     "bankFinancedAmount": "Valor Financiado",
     "bankTotalInterest": "Total de Juros Pagos",
     "bankTotalCost": "Custo Total",
-    "bankInterestNotice": "Um empréstimo tradicional cobra juros sobre o saldo financiado durante todo o prazo — dinheiro pago além do preço do ativo.",
+    "bankInterestNotice": "Um empréstimo tradicional cobra juros sobre o saldo financiado durante todo o prazo - dinheiro pago além do preço do ativo.",
     "consumerLenderColumnHeading": "Credor de consumo",
-    "consumerLenderNotice": "Os credores de consumo no México anunciam um CAT (custo anual total, sin IVA) de 78% a 456%. Em um prazo curto típico, isso significa pagar quase o dobro do que você pediu emprestado — e o custo real é maior ao somar o IVA de 16%.",
+    "consumerLenderNotice": "Os credores de consumo no México anunciam um CAT (custo anual total, sin IVA) de 78% a 456%. Em um prazo curto típico, isso significa pagar quase o dobro do que você pediu emprestado - e o custo real é maior ao somar o IVA de 16%.",
     "repayMultiple": "Você paga no total",
     "repayMultipleValue": "{multiple}× o empréstimo",
     "savingsHeading": "Sua Vantagem TandaOmni",
@@ -169,24 +169,30 @@
       "assetPriceAtEndTitle": "Preço do ativo ao final do prazo",
       "assetPriceAtEndText": "O preço projetado do ativo no final do prazo, calculado pela Curva Delta: G₂ = G × (1 + δ)^T. Representa o que o último membro da fila pagará pelo seu ativo.",
       "totalContributedTitle": "Total contribuído por membro",
-      "totalContributedText": "O valor total que cada membro paga ao longo de todo o prazo: (P × M) + entrada. Como o TandaOmni não cobra juros, isso se aproxima do preço original do ativo — a comunidade se financia mutuamente sem custo.",
+      "totalContributedText": "O valor total que cada membro paga ao longo de todo o prazo: (P × M) + entrada. Como o TandaOmni não cobra juros, isso se aproxima do preço original do ativo - a comunidade se financia mutuamente sem custo.",
       "escrowTitle": "Limiar de liberação da custódia",
       "escrowText": "Para viagens & experiências (ativos irrecuperáveis), seu pagamento fica bloqueado até que suas contribuições totais atinjam 60% do custo atual do ativo. Isso protege o grupo contra o financiamento de uma experiência que não pode ser reembolsada se um membro inadimplir.",
       "bankAprTitle": "Taxa de Juros Bancária (CET)",
       "bankAprText": "A taxa anual que um credor tradicional cobra sobre o saldo financiado. Os padrões refletem médias dos EUA de junho de 2026 (hipoteca ~6,5%, carro novo ~7%, carro usado ~12%, viagem/empréstimo pessoal ~14%). Ajuste o controle para igualar uma proposta que você recebeu.",
-      "catTitle": "CAT — Costo Anual Total",
+      "catTitle": "CAT - Costo Anual Total",
       "catText": "O custo total regulado do crédito no México. Diferente de uma taxa nominal, o CAT é uma taxa anual efetiva (composta) e inclui juros, comissões, tarifas e seguros obrigatórios. Quando informado 'sin IVA', exclui o IVA de 16% sobre os juros, então seu custo real é um pouco maior.",
       "bankFinancedTitle": "Valor Financiado",
       "bankFinancedText": "A parte do preço do ativo que o banco empresta a você: o preço-alvo menos sua entrada. Os juros incidem sobre esse saldo.",
       "bankTotalInterestTitle": "Total de Juros Pagos",
-      "bankTotalInterestText": "O total de juros pagos ao banco durante todo o prazo: (parcela mensal × meses) − valor financiado. É um custo puro sobre o ativo — exatamente o que a TandaOmni elimina.",
+      "bankTotalInterestText": "O total de juros pagos ao banco durante todo o prazo: (parcela mensal × meses) − valor financiado. É um custo puro sobre o ativo - exatamente o que a TandaOmni elimina.",
       "bankTotalCostTitle": "Custo Total",
       "bankTotalCostText": "Tudo o que você paga pelo banco: entrada + (parcela mensal × meses). Compare com o Total Contribuído da TandaOmni para ver sua economia."
-    }
+    },
+    "chartsHeading": "Projeção de Custos e Preço",
+    "paymentsChartTitle": "Valor Acumulado Pago",
+    "paymentsChartNote": "Cada plano tem um pagamento mensal fixo: {tanda} com TandaOmni frente a {lender} com o credor. As linhas mostram o total acumulado pago, incluindo a entrada inicial.",
+    "priceChartTitle": "Preço do Ativo ao Longo do Tempo",
+    "priceChartNote": "Como o preço do ativo muda com o delta anual de {pct}% durante o prazo.",
+    "assetPriceSeriesLabel": "Preço do Ativo"
   },
   "AnalysisPage": {
-    "heading": "TandaOmni — Análise do Produto",
-    "subtitle": "Um ecossistema financeiro comunitário sem juros para Imóveis, Veículos e Experiências. Desenvolvido para o Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM.",
+    "heading": "TandaOmni - Análise do Produto",
+    "subtitle": "Um ecossistema financeiro comunitário sem juros para Imóveis, Veículos e Experiências. Desenvolvido para o Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM.",
     "section": {
       "overview": "1. Visão Geral do Projeto",
       "riskVerticals": "2. Segmentos de Risco",
@@ -199,7 +205,7 @@
       "stackLabel": "Stack Tecnológico",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (BD), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Curso",
-      "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM",
+      "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM",
       "studentLabel": "Estudante",
       "studentValue": "Christopher Guzman"
     },
@@ -220,7 +226,7 @@
         "name": "Viagens & Experiências (Irrecuperável)",
         "term": "6 a 12 Meses",
         "delta": "+2% a +4%",
-        "mitigation": "Bloqueio de Depósito — O pagamento é liberado após 60% do custo financiado. Pré-autorização no cartão de crédito."
+        "mitigation": "Bloqueio de Depósito - O pagamento é liberado após 60% do custo financiado. Pré-autorização no cartão de crédito."
       }
     },
     "math": {

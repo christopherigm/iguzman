@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useSyncExternalStore,
-} from "react";
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
@@ -152,7 +147,7 @@ export function CreditsPageContent() {
   }, []);
 
   // On entry this reads the URL query (Stripe redirect), persists the credits
-  // key, cleans the URL, then seeds state from it — a one-time mount side effect
+  // key, cleans the URL, then seeds state from it - a one-time mount side effect
   // whose state seeding cannot move to lazy init (it depends on the URL→storage
   // write above).
   /* eslint-disable react-hooks/set-state-in-effect */

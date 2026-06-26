@@ -67,7 +67,7 @@ export function MovieCard({ movie, view }: Props) {
             className="movie-card__image"
             // Posters are static assets already served (and CDN-cached) by
             // Cloudflare via the R2 custom domain. Bypass Next's image optimizer
-            // so the browser fetches them straight from R2 — the optimizer's
+            // so the browser fetches them straight from R2 - the optimizer's
             // per-request fetch+re-encode on a cold pod was the load delay.
             unoptimized
           />

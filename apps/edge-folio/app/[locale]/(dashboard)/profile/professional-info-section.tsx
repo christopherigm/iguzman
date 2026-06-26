@@ -84,7 +84,7 @@ export function ProfessionalInfoPanel() {
   const [tnSuggestLoading, setTnSuggestLoading] = useState(false);
   const [tnSuggestError, setTnSuggestError] = useState<string | null>(null);
 
-  // Summary enhance state — the streaming itself lives in <StreamingEnhancePanel>
+  // Summary enhance state - the streaming itself lives in <StreamingEnhancePanel>
   // so per-token updates don't re-render this panel. These flags only track
   // coarse transitions reported by the panel.
   const [summaryShowEnhanceOptions, setSummaryShowEnhanceOptions] =

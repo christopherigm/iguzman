@@ -3,14 +3,14 @@
  *
  * A grid (grid-template-columns: 1fr 1fr) ties the two cards of each row to a
  * shared row track sized to the taller card, leaving a vertical gap under the
- * shorter one — the gap bug. column-count masonry closes that gap but forces
+ * shorter one - the gap bug. column-count masonry closes that gap but forces
  * the browser to re-balance every card across columns on any height change
- * (typing in the summary, the AI enhance preview, a save ProgressBar) — the
+ * (typing in the summary, the AI enhance preview, a save ProgressBar) - the
  * source of typing/streaming lag.
  *
  * Two explicit flex columns give masonry-style packing with neither problem:
  * each column flows its own cards top-to-bottom, so a height change only
- * reflows the cards below it within the same column — never across columns.
+ * reflows the cards below it within the same column - never across columns.
  */
 .profile__sections {
   display: flex;

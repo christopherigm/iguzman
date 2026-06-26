@@ -153,13 +153,13 @@ export interface IconButtonProps extends UIComponentProps {
   /**
    * When `true`, applies a `backdrop-filter: blur(8px)` so the button blends
    * into a translucent surface (e.g. inside a translucent Navbar). Defaults to
-   * `false` — backdrop blur is expensive to composite while scrolling, so it is
+   * `false` - backdrop blur is expensive to composite while scrolling, so it is
    * opt-in and should only be enabled over a genuinely translucent backdrop.
    */
   translucent?: boolean;
   /**
    * When `true`, the button renders with a fully opaque, kind-tinted background
-   * (no transparency or blur) and a white icon — giving a high-emphasis,
+   * (no transparency or blur) and a white icon - giving a high-emphasis,
    * "filled" appearance. Defaults to `false`. The white icon overrides
    * `iconColor`; only `fullColor` (which keeps the SVG's own colors) takes
    * precedence over it. Suppresses `translucent` blur when set.
@@ -211,10 +211,10 @@ export const IconButton: React.FC<IconButtonProps> = (props) => {
   const isDisabled = disabled || isLoading;
 
   // Solid buttons force a white icon (overriding iconColor) for contrast on the
-  // opaque fill — unless fullColor keeps the SVG's own colors. Otherwise an
+  // opaque fill - unless fullColor keeps the SVG's own colors. Otherwise an
   // explicit iconColor wins, falling back to the kind's color.
   const resolvedIconColor =
-    solid && !fullColor ? "#fff" : iconColor ?? KIND_ICON_COLORS[kind];
+    solid && !fullColor ? "#fff" : (iconColor ?? KIND_ICON_COLORS[kind]);
 
   const inner = isLoading ? (
     <Spinner size={SPINNER_SIZES[size]} thickness={2} />
@@ -234,11 +234,13 @@ export const IconButton: React.FC<IconButtonProps> = (props) => {
     justifyContent: "center",
     flexShrink: 0,
     border: `1px solid ${solid ? KIND_SOLID_BORDERS[kind] : KIND_BORDERS[kind]}`,
-    backgroundColor: solid ? KIND_SOLID_BACKGROUNDS[kind] : KIND_BACKGROUNDS[kind],
+    backgroundColor: solid
+      ? KIND_SOLID_BACKGROUNDS[kind]
+      : KIND_BACKGROUNDS[kind],
     // Opt-in backdrop blur for translucent surfaces (e.g. inside a translucent
     // Navbar). Off by default: backdrop-filter re-samples the backdrop every
     // frame and is a major scroll-jank source when many buttons are on screen.
-    // Suppressed for solid buttons — a fully opaque fill has nothing to blur.
+    // Suppressed for solid buttons - a fully opaque fill has nothing to blur.
     ...(translucent && !solid
       ? { backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }
       : {}),

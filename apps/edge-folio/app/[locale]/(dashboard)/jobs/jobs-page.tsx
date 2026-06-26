@@ -296,7 +296,7 @@ function JobSection({
 
 // Compact usage readout for the credential backing job searches: "Search 1/200"
 // over a progress bar whose width tracks the label's own width and whose fill
-// reflects the searches consumed. Works for both BYOK and trial credentials —
+// reflects the searches consumed. Works for both BYOK and trial credentials -
 // the API already exposes the right tally for each via `calls_used_today`.
 function SearchUsage({ credential }: { credential: JobApiCredential }) {
   const t = useTranslations("JobsPage");
@@ -489,7 +489,7 @@ export function JobsPage() {
   const location = searchParams.get("location") || "";
   const workType = (searchParams.get("work_type") || "") as JobWorkType | "";
   const q = searchParams.get("q") || "";
-  // "Hide saved jobs" toggle, on by default — hides postings already saved as
+  // "Hide saved jobs" toggle, on by default - hides postings already saved as
   // applications so the lists surface roles still worth acting on. Persisted in
   // the URL ("0" means show saved); the feed API has no saved param, so this
   // filters the loaded data in place.
@@ -743,7 +743,7 @@ export function JobsPage() {
 
   // confirmDelete (below) calls removePosting() into the useJobList hooks, which
   // the React Compiler treats as mutating captured deps, so it cannot preserve the
-  // manual memoization of this callback block — and reports the diagnostic at the
+  // manual memoization of this callback block - and reports the diagnostic at the
   // block's start (here). The compiler is not enabled (advisory rule only) and the
   // callbacks are correct, so the diagnostic is suppressed.
   // eslint-disable-next-line react-hooks/preserve-manual-memoization

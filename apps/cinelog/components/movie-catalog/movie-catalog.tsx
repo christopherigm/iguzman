@@ -31,7 +31,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 // The catalog's page, filters, sort and view live in the URL query string so a
 // view is shareable/bookmarkable and the server can prefetch the exact grid on
 // first paint (see app/[locale]/page.tsx). Only the scroll offset stays in
-// sessionStorage — it's per-tab and meaningless in a shared link — and is
+// sessionStorage - it's per-tab and meaningless in a shared link - and is
 // restored when returning to the catalog (e.g. browser-back from a detail page).
 const SCROLL_KEY = "cinelog:catalog-scroll";
 const SCROLL_PERSIST_MS = 150;
@@ -67,7 +67,7 @@ export function MovieCatalog({
     parseCatalogParams(new URLSearchParams(searchParams.toString())),
   );
   // The server prefetch now mirrors the URL's view, so any non-null result can
-  // seed the grid directly — no "is this the default view?" check needed.
+  // seed the grid directly - no "is this the default view?" check needed.
   const seedFromPrefetch = initialMovies !== null;
   const [movies, setMovies] = useState<Movie[]>(
     seedFromPrefetch ? initialMovies.results : [],
@@ -120,7 +120,7 @@ export function MovieCatalog({
   };
 
   useEffect(() => {
-    // Already seeded from the server prefetch — no client round-trip needed.
+    // Already seeded from the server prefetch - no client round-trip needed.
     if (initialCategories) return;
     getCategories()
       .then(setCategories)
@@ -138,7 +138,7 @@ export function MovieCatalog({
   // The grid is server-driven: a filter change pushes the new query into the URL
   // (effect below), Next re-runs the page's prefetch, and the fresh page arrives
   // as a new `initialMovies` prop. Re-seed from it whenever it changes so the
-  // grid follows the URL — including on browser-back from a detail page, where
+  // grid follows the URL - including on browser-back from a detail page, where
   // the router restores the filtered URL and the server prefetches that view.
   // Done during render (React's "adjust state on prop change" pattern) rather
   // than in an effect, so the grid updates in the same commit with no extra
@@ -193,7 +193,9 @@ export function MovieCatalog({
       view,
     });
     if (qs === window.location.search.replace(/^\?/, "")) return;
-    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    const url = qs
+      ? `${window.location.pathname}?${qs}`
+      : window.location.pathname;
     startTransition(() => router.replace(url, { scroll: false }));
   }, [debouncedSearch, genres, format, sort, page, view, router]);
 
@@ -201,7 +203,7 @@ export function MovieCatalog({
     try {
       sessionStorage.setItem(SCROLL_KEY, String(scrollY));
     } catch {
-      // sessionStorage may be unavailable (private mode / quota) — non-fatal.
+      // sessionStorage may be unavailable (private mode / quota) - non-fatal.
     }
   }, []);
 

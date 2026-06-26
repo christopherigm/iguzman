@@ -90,7 +90,7 @@
   },
   "SimulatorPage": {
     "heading": "TandaOmni Simulator",
-    "subtitle": "Estimate your zero-interest, community-funded savings plan. Built for the Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM, by Christopher Guzman.",
+    "subtitle": "Estimate your zero-interest, community-funded savings plan. Built for the Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM, by Christopher Guzman.",
     "tiers": {
       "realEstate": {
         "label": "Real Estate",
@@ -98,7 +98,7 @@
       },
       "vehicle": {
         "label": "Vehicle / Equipment",
-        "mitigation": "Mandatory platform-held insurance policy required throughout the entire group term — regardless of whether the vehicle is new or used."
+        "mitigation": "Mandatory platform-held insurance policy required throughout the entire group term - regardless of whether the vehicle is new or used."
       },
       "travel": {
         "label": "Travel & Experiences",
@@ -141,9 +141,9 @@
     "bankFinancedAmount": "Amount Financed",
     "bankTotalInterest": "Total Interest Paid",
     "bankTotalCost": "Total Cost",
-    "bankInterestNotice": "A traditional loan charges interest on the financed balance for the full term — money paid on top of the asset price.",
+    "bankInterestNotice": "A traditional loan charges interest on the financed balance for the full term - money paid on top of the asset price.",
     "consumerLenderColumnHeading": "Consumer Lender",
-    "consumerLenderNotice": "Mexican consumer lenders advertise a CAT (annual total cost, sin IVA) of 78%–456%. Over a typical short term that means repaying nearly double what you borrowed — and the real cash cost is higher once 16% IVA is added.",
+    "consumerLenderNotice": "Mexican consumer lenders advertise a CAT (annual total cost, sin IVA) of 78%–456%. Over a typical short term that means repaying nearly double what you borrowed - and the real cash cost is higher once 16% IVA is added.",
     "repayMultiple": "You Repay",
     "repayMultipleValue": "{multiple}× the loan",
     "savingsHeading": "Your TandaOmni Advantage",
@@ -169,24 +169,30 @@
       "assetPriceAtEndTitle": "Asset Price at Term End",
       "assetPriceAtEndText": "The projected price of the asset at the end of the full term, calculated using the Delta Curve: G₂ = G × (1 + δ)^T. This represents what the last member in the payout queue will pay for their asset.",
       "totalContributedTitle": "Total Contributed per Member",
-      "totalContributedText": "The total amount each member pays over the full term: (P × M) + downpayment. Because TandaOmni charges zero interest, this closely matches the original asset price — your community funds each other at no cost.",
+      "totalContributedText": "The total amount each member pays over the full term: (P × M) + downpayment. Because TandaOmni charges zero interest, this closely matches the original asset price - your community funds each other at no cost.",
       "escrowTitle": "Escrow Unlock Threshold",
       "escrowText": "For travel & experiences (unrecoverable assets), your payout is locked until your total contributions reach 60% of the current asset cost. This protects the group against funding an experience that cannot be refunded if a member defaults.",
       "bankAprTitle": "Bank Interest Rate (APR)",
       "bankAprText": "The annual percentage rate a traditional lender charges on the financed balance. Defaults reflect US June 2026 averages (mortgage ~6.5%, new auto ~7%, used auto ~12%, travel/personal loan ~14%). Adjust the slider to match a quote you've received.",
-      "catTitle": "CAT — Costo Anual Total",
+      "catTitle": "CAT - Costo Anual Total",
       "catText": "Mexico's regulated all-in cost of borrowing. Unlike a nominal APR, the CAT is an effective (compounded) annual rate and folds in interest, commissions, fees, and mandatory insurance. Quoted 'sin IVA', it excludes the 16% VAT on interest, so your real cash cost is a bit higher.",
       "bankFinancedTitle": "Amount Financed",
       "bankFinancedText": "The portion of the asset price the bank lends you: the target price minus your downpayment. Interest accrues on this balance.",
       "bankTotalInterestTitle": "Total Interest Paid",
-      "bankTotalInterestText": "The total interest paid to the bank over the full term: (monthly payment × months) − amount financed. This is pure cost on top of the asset — exactly what TandaOmni eliminates.",
+      "bankTotalInterestText": "The total interest paid to the bank over the full term: (monthly payment × months) − amount financed. This is pure cost on top of the asset - exactly what TandaOmni eliminates.",
       "bankTotalCostTitle": "Total Cost",
       "bankTotalCostText": "Everything you pay through the bank: downpayment + (monthly payment × months). Compare this against TandaOmni's Total Contributed to see your savings."
-    }
+    },
+    "chartsHeading": "Cost & Price Projection",
+    "paymentsChartTitle": "Cumulative Amount Paid",
+    "paymentsChartNote": "Each plan has a fixed monthly payment — {tanda} with TandaOmni vs. {lender} with the lender. The lines show the running total paid, including the upfront downpayment.",
+    "priceChartTitle": "Asset Price Over Time",
+    "priceChartNote": "How the asset's price moves at the {pct}% annual delta across the term.",
+    "assetPriceSeriesLabel": "Asset Price"
   },
   "AnalysisPage": {
-    "heading": "TandaOmni — Product Analysis",
-    "subtitle": "A zero-interest, community-funded financial ecosystem supporting Real Estate, Vehicles, and Experiences. Built for the Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM.",
+    "heading": "TandaOmni - Product Analysis",
+    "subtitle": "A zero-interest, community-funded financial ecosystem supporting Real Estate, Vehicles, and Experiences. Built for the Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM.",
     "section": {
       "overview": "1. Project Overview",
       "riskVerticals": "2. Core Risk Verticals",
@@ -199,7 +205,7 @@
       "stackLabel": "Tech Stack",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (DB), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Course",
-      "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM",
+      "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM",
       "studentLabel": "Student",
       "studentValue": "Christopher Guzman"
     },
@@ -220,7 +226,7 @@
         "name": "Travel & Experiences (Unrecoverable)",
         "term": "6 to 12 Months",
         "delta": "+2% to +4%",
-        "mitigation": "Escrow Lock — Payout only releases after user contributes 60% of total goal. Credit Card Pre-authorization."
+        "mitigation": "Escrow Lock - Payout only releases after user contributes 60% of total goal. Credit Card Pre-authorization."
       }
     },
     "math": {

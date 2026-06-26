@@ -33,7 +33,8 @@ const KIND_STYLES: Record<
   Pick<CSSProperties, "backgroundColor" | "color">
 > = {
   default: {
-    backgroundColor: "color-mix(in srgb, var(--foreground, #111) 7%, transparent)",
+    backgroundColor:
+      "color-mix(in srgb, var(--foreground, #111) 7%, transparent)",
     color: "var(--foreground)",
   },
   primary: {
@@ -138,7 +139,7 @@ export interface ButtonProps extends UIComponentProps {
   /**
    * When `true`, the default-kind button applies a `backdrop-filter: blur(8px)`
    * so it blends into a translucent surface (e.g. inside a translucent Navbar).
-   * Defaults to `false` — backdrop blur is expensive to composite while
+   * Defaults to `false` - backdrop blur is expensive to composite while
    * scrolling, so it is opt-in and only affects the default (neutral) kind.
    */
   translucent?: boolean;

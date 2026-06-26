@@ -314,7 +314,7 @@ export function useVideoStore() {
      from the first render (completed=[]) would overwrite localStorage before
      the hydrated values were applied. */
   // These effects synchronise the store to localStorage (an external system) and
-  // surface the write result via storageError — a legitimate effect side effect.
+  // surface the write result via storageError - a legitimate effect side effect.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!storeLoaded) return;

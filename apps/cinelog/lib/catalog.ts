@@ -154,7 +154,7 @@ const CATEGORY_PAGE_SIZE = 200;
 export function buildMovieQuery(filters: MovieFilters = {}): string {
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
-  // Repeated `genre` params — the API ANDs them (movie must match every slug).
+  // Repeated `genre` params - the API ANDs them (movie must match every slug).
   filters.genres?.forEach((slug) => params.append("genre", slug));
   // Sent as "media_format" - DRF reserves the "format" query param for content negotiation.
   if (filters.format) params.set("media_format", filters.format);
@@ -192,7 +192,13 @@ export interface CatalogParams {
   view: CatalogView;
 }
 
-const VALID_FORMATS: MovieFormat[] = ["dvd", "bluray", "4k", "digital", "other"];
+const VALID_FORMATS: MovieFormat[] = [
+  "dvd",
+  "bluray",
+  "4k",
+  "digital",
+  "other",
+];
 const VALID_SORTS: MovieSort[] = [
   "title",
   "-title",

@@ -5,7 +5,7 @@ import "./math-formula.css";
 export interface MathFormulaProps {
   /** Plain-text formula using Unicode math symbols and ^(...) for superscripts */
   formula: string;
-  /** Render in display (block) mode — centers and enlarges the formula */
+  /** Render in display (block) mode - centers and enlarges the formula */
   displayMode?: boolean;
 }
 

@@ -8,11 +8,11 @@ import "./text-input.css";
  * Supported input masks. The mask is applied to the *displayed* value while the
  * user types; `onChange` always receives the raw, unformatted value.
  *
- * - `text`     — no formatting (default).
- * - `currency` — US: `$` prefix, comma thousands, dot decimal (raw: `1234.5`).
- * - `number`   — comma thousands, dot decimal, no symbol (raw: `1234.5`).
- * - `date`     — US `MM/DD/YYYY` mask (raw: `12252026`).
- * - `phone`    — US `(XXX) XXX-XXXX` mask (raw: `1234567890`).
+ * - `text`     - no formatting (default).
+ * - `currency` - US: `$` prefix, comma thousands, dot decimal (raw: `1234.5`).
+ * - `number`   - comma thousands, dot decimal, no symbol (raw: `1234.5`).
+ * - `date`     - US `MM/DD/YYYY` mask (raw: `12252026`).
+ * - `phone`    - US `(XXX) XXX-XXXX` mask (raw: `1234567890`).
  */
 export type TextInputFormat = "text" | "currency" | "number" | "date" | "phone";
 
@@ -145,7 +145,7 @@ export interface TextInputProps extends UIComponentProps, NativeInputProps {
  * <TextInput label="Bio" multirow rows={5} />
  * ```
  *
- * @example Masked input — `onChange` receives the raw value, the field shows the mask.
+ * @example Masked input - `onChange` receives the raw value, the field shows the mask.
  * ```tsx
  * // amount === "1234.5", displayed as "$1,234.5"
  * <TextInput label="Amount" format="currency" value={amount} onChange={setAmount} />
