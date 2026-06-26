@@ -104,6 +104,7 @@
     "manualLabel": "Barcode manuell eingeben",
     "manualSubmit": "Nachschlagen",
     "scannerHeading": "Barcode scannen",
+    "scanButton": "Barcode scannen",
     "formHeading": "Nach Titel hinzufügen",
     "formSubtitle": "Barcode lässt sich nicht scannen? Suche nach Titel und Jahr.",
     "titleLabel": "Titel",
@@ -150,6 +151,7 @@
     "dvd": "DVD",
     "bluray": "Blu-ray",
     "4k": "4K",
+    "digital": "Digital",
     "other": "Andere"
   },
   "CatalogPage": {
@@ -186,7 +188,8 @@
     "addToLibrary": "Zur Bibliothek hinzufügen",
     "addToLibraryTitle": "Zu deiner Bibliothek hinzufügen",
     "addToLibraryText": "„{title}“ zu deiner Bibliothek hinzufügen. In welchem Format besitzt du den Film?",
-    "addToLibraryError": "Der Film konnte nicht zu deiner Bibliothek hinzugefügt werden. Bitte versuche es erneut."
+    "addToLibraryError": "Der Film konnte nicht zu deiner Bibliothek hinzugefügt werden. Bitte versuche es erneut.",
+    "digitalCopyLabel": "Link zur digitalen Kopie"
   },
   "MovieDetailPage": {
     "back": "Zurück",
@@ -244,7 +247,9 @@
     "audio": "Audio",
     "hdr": "HDR",
     "spokenLanguages": "Audiosprachen",
-    "subtitles": "Untertitel"
+    "subtitles": "Untertitel",
+    "digitalCopyLabel": "Link zur digitalen Kopie",
+    "digitalCopy": "Digitale Kopie"
   },
   "InboxPage": {
     "title": "Posteingang",
@@ -263,6 +268,7 @@
     "castLabel": "Besetzung (durch Kommas getrennt)",
     "synopsisLabel": "Handlung",
     "trailerLabel": "Trailer-URL",
+    "digitalCopyLabel": "Link zur digitalen Kopie",
     "refetchData": "Daten neu abrufen",
     "fetchingRefetch": "Daten werden neu abgerufen…",
     "refetchError": "Für diesen Titel und dieses Jahr konnten keine Daten neu abgerufen werden.",

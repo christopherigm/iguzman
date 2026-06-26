@@ -159,7 +159,20 @@ class MovieListView(ListCreateAPIView):
         # Named "media_format" (not "format") to avoid colliding with DRF's
         # `?format=` content-negotiation override.
         media_format = self.request.query_params.get('media_format', '').strip()
-        if media_format:
+        if media_format == 'digital':
+            # "Digital" is a per-user signal - the requesting user saved their own
+            # digital-copy link on their ownership row, not a shared property of
+            # the title. Filter on that ownership (mirroring how the card's digital
+            # icon is gated) instead of the shared `formats` M2M, which would miss
+            # links added via the edit form and leak across users. Anonymous
+            # browsers have no digital copies, so the filter yields nothing.
+            if user.is_authenticated:
+                qs = qs.filter(ownerships__user=user).exclude(
+                    ownerships__user=user, ownerships__digital_copy_url=''
+                ).distinct()
+            else:
+                qs = qs.none()
+        elif media_format:
             qs = qs.filter(formats__code=media_format).distinct()
 
         ordering = self.request.query_params.get('ordering', '').strip()
@@ -265,6 +278,15 @@ class MovieDetailView(RetrieveUpdateDestroyAPIView):
             backdrop = fetch_backdrop(data['backdrop_url'], movie.title, movie.year)
             if backdrop:
                 movie.backdrop_image.save(backdrop.name, backdrop, save=True)
+
+        # The digital-copy link is per-user data, so it rides on the editor's own
+        # ownership row, not the shared Movie. `None` means the field wasn't sent
+        # (leave it untouched); '' clears it. Only an owner has a row to update -
+        # a staff non-owner editing the shared title simply has nothing to write.
+        if data['digital_copy_url'] is not None:
+            MovieOwnership.objects.filter(user=request.user, movie=movie).update(
+                digital_copy_url=data['digital_copy_url']
+            )
 
         return Response(MovieDetailSerializer(movie, context={'request': request}).data)
 
@@ -411,15 +433,24 @@ class MovieOwnView(APIView):
         serializer = MovieOwnSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         fmt = resolve_formats([serializer.validated_data['format']])[0]
+        # Private streaming link, stored on the user's own ownership row (only
+        # present/required for the digital format).
+        digital_copy_url = serializer.validated_data.get('digital_copy_url', '')
 
         with transaction.atomic():
             # Advertise the format on the shared title (no-op if already present).
-            movie.formats.add(fmt)
+            # "digital" is the exception: it's a per-user signal carried by the
+            # ownership's digital_copy_url below, never a shared property of the
+            # title, so it's not advertised on the shared `formats`.
+            if serializer.validated_data['format'] != 'digital':
+                movie.formats.add(fmt)
             # Link an existing barcode of this format when the title carries one;
             # leave it null otherwise (a library add never invents a barcode).
             barcode = movie.barcodes.filter(format=fmt).first()
             MovieOwnership.objects.get_or_create(
-                user=request.user, movie=movie, defaults={'barcode': barcode}
+                user=request.user,
+                movie=movie,
+                defaults={'barcode': barcode, 'digital_copy_url': digital_copy_url},
             )
 
         return Response(MovieDetailSerializer(movie, context={'request': request}).data)
@@ -766,9 +797,15 @@ class InboxAcceptView(APIView):
                 bc, _ = Barcode.objects.get_or_create(
                     code=entry.barcode, defaults={'movie': movie, 'format': barcode_format}
                 )
-            MovieOwnership.objects.get_or_create(
+            ownership, _ = MovieOwnership.objects.get_or_create(
                 user=request.user, movie=movie, defaults={'barcode': bc}
             )
+            # The optional private digital-copy link the reviewer typed rides on
+            # their own ownership row (per-user, not the shared Movie). Only write
+            # it when supplied so accepting without one leaves nothing to clear.
+            if data['digital_copy_url']:
+                ownership.digital_copy_url = data['digital_copy_url']
+                ownership.save(update_fields=['digital_copy_url'])
 
             # The queue entry is a work item, not an archive: drop it once
             # promoted. Candidates cascade away with it.

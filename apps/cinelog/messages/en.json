@@ -104,6 +104,7 @@
     "manualLabel": "Enter barcode manually",
     "manualSubmit": "Look up",
     "scannerHeading": "Scan a barcode",
+    "scanButton": "Scan barcode",
     "formHeading": "Add by title",
     "formSubtitle": "Can't scan the barcode? Look it up by title and year.",
     "titleLabel": "Title",
@@ -150,6 +151,7 @@
     "dvd": "DVD",
     "bluray": "Blu-ray",
     "4k": "4K",
+    "digital": "Digital",
     "other": "Other"
   },
   "CatalogPage": {
@@ -186,7 +188,8 @@
     "addToLibrary": "Add to library",
     "addToLibraryTitle": "Add to your library",
     "addToLibraryText": "Add \"{title}\" to your library. Which format do you own?",
-    "addToLibraryError": "Failed to add the movie to your library. Please try again."
+    "addToLibraryError": "Failed to add the movie to your library. Please try again.",
+    "digitalCopyLabel": "Digital copy link"
   },
   "MovieDetailPage": {
     "back": "Back",
@@ -244,7 +247,9 @@
     "audio": "Audio",
     "hdr": "HDR",
     "spokenLanguages": "Audio languages",
-    "subtitles": "Subtitles"
+    "subtitles": "Subtitles",
+    "digitalCopyLabel": "Digital copy link",
+    "digitalCopy": "Digital copy"
   },
   "InboxPage": {
     "title": "Inbox",
@@ -263,6 +268,7 @@
     "castLabel": "Cast (comma separated)",
     "synopsisLabel": "Synopsis",
     "trailerLabel": "Trailer URL",
+    "digitalCopyLabel": "Digital copy link",
     "refetchData": "Re-fetch data",
     "fetchingRefetch": "Re-fetching data…",
     "refetchError": "Couldn't re-fetch data for this title and year.",

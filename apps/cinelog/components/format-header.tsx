@@ -16,11 +16,16 @@ const FORMAT_HEADER: Partial<
   bluray: { icon: "/icons/blu-ray.svg", background: "#0040cb" },
   "4k": { icon: "/icons/4k.svg", background: "#000000", fullColor: true },
   dvd: { icon: "/icons/dvd.svg", background: "#6b7280" },
+  digital: { icon: "/icons/play-stream.svg", background: "#c30000" },
 };
 
 // Icons render highest-quality first (4K → Blu-ray → DVD). The list also drives
 // the single background color: the first present format wins, so 4K beats
 // Blu-ray beats DVD. "other"/unset formats have no icon and contribute nothing.
+// "digital" is intentionally absent here: unlike the shared physical formats it
+// is a per-user signal, appended only when the caller passes `showDigital` (the
+// requesting user has saved their own digital-copy link), never read from the
+// movie's shared `formats`.
 const ICON_ORDER: MovieFormat[] = ["4k", "bluray", "dvd"];
 
 type Size = "sm" | "md" | "lg";
@@ -48,6 +53,11 @@ type Props = {
   // Height of the strip. Pass a breakpoint map (e.g. `{ xs: "md", md: "lg" }`)
   // to scale responsively. Defaults to "sm".
   size?: ResponsiveSize;
+  // Append the digital streaming icon. Per-user (the requesting user saved their
+  // own digital-copy link), so it's a caller-supplied flag rather than read from
+  // the movie's shared `formats`. Lets a digital-only title render a header that
+  // its owner sees while everyone else sees none.
+  showDigital?: boolean;
 };
 
 // Build the inline CSS variables that drive the responsive @media cascade in
@@ -66,14 +76,25 @@ function buildSizeVars(size: Partial<Record<Breakpoint, Size>>): CSSProperties {
 }
 
 /** Format strip sat above a movie cover, or a self-sized banner in list view. */
-export function FormatHeader({ formats = [], kind, size = "sm" }: Props) {
+export function FormatHeader({
+  formats = [],
+  kind,
+  size = "sm",
+  showDigital = false,
+}: Props) {
   // Keep only the formats that have an icon, ordered 4K → Blu-ray → DVD.
   // `formats` is defaulted in case an upstream payload (e.g. a stale cached
   // related-movie entry) predates the field and omits it entirely.
-  const shown = ICON_ORDER.filter((fmt) => formats.includes(fmt));
+  const physical = ICON_ORDER.filter((fmt) => formats.includes(fmt));
+  // Append the per-user digital icon last so a physical format still owns the
+  // background color (digital only sets it when the title is digital-only).
+  const shown: MovieFormat[] = showDigital
+    ? [...physical, "digital"]
+    : physical;
 
   // Single background by priority: `shown` is ordered highest-quality first, so
-  // its first entry picks the color (4K > Blu-ray > DVD). No icon → no header.
+  // its first entry picks the color (4K > Blu-ray > DVD > Digital). No icon → no
+  // header.
   const primary = shown[0];
   if (!primary) return null;
   const background = FORMAT_HEADER[primary]!.background;

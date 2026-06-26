@@ -54,19 +54,40 @@ class MovieListSerializer(serializers.ModelSerializer):
     # the output is shared across users (the cross-user cached related block), so
     # one user's ownership never leaks into another's cached view.
     owned = serializers.SerializerMethodField()
+    # The requesting user's private link to their own digital copy of this title
+    # ('' when they have none / are anonymous). Per-user, like `owned`: dropped
+    # from the cross-user related cache and re-overlaid per request.
+    digital_copy_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Movie
-        fields = ['id', 'title', 'director', 'year', 'formats', 'cover', 'genres', 'owned', 'created']
+        fields = [
+            'id', 'title', 'director', 'year', 'formats', 'cover', 'genres',
+            'owned', 'digital_copy_url', 'created',
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.context.get('omit_owned'):
             self.fields.pop('owned', None)
+            self.fields.pop('digital_copy_url', None)
 
     def get_formats(self, obj):
         # Plain format codes (e.g. ['dvd', 'bluray']) - the UI translates them.
         return [fmt.code for fmt in obj.formats.all()]
+
+    def get_digital_copy_url(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is None or not user.is_authenticated:
+            return ''
+        # Prefer the per-user prefetch the list view attaches (same one that
+        # backs `owned`); fall back to a direct lookup when absent.
+        prefetched = getattr(obj, 'user_ownerships', None)
+        if prefetched is not None:
+            return prefetched[0].digital_copy_url if prefetched else ''
+        ownership = obj.ownerships.filter(user=user).first()
+        return ownership.digital_copy_url if ownership else ''
 
     def get_owned(self, obj):
         request = self.context.get('request')
@@ -106,6 +127,9 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     # an owner-less movie reports False for everyone (read-only until an owner is
     # assigned in the admin).
     owned = serializers.SerializerMethodField()
+    # The requesting user's private link to their own digital copy ('' when none).
+    # Gates the detail page's "stream digital copy" button - per-user, never shared.
+    digital_copy_url = serializers.SerializerMethodField()
     # True for staff users. Gates the "purge" control in the UI, which hard-deletes
     # the shared Movie for everyone (vs. the owner "delete" that only drops the
     # requesting user's ownership).
@@ -117,7 +141,8 @@ class MovieDetailSerializer(serializers.ModelSerializer):
             'id', 'title', 'director', 'year', 'formats', 'barcodes',
             'cover', 'cover_url', 'backdrop', 'tmdb_id', 'synopsis', 'trailer_url',
             'genres', 'cast', 'audio_formats', 'hdr_formats', 'spoken_languages',
-            'subtitle_languages', 'related', 'owned', 'can_purge', 'created', 'modified',
+            'subtitle_languages', 'related', 'owned', 'digital_copy_url',
+            'can_purge', 'created', 'modified',
         ]
 
     def get_formats(self, obj):
@@ -148,6 +173,14 @@ class MovieDetailSerializer(serializers.ModelSerializer):
         if user is None or not user.is_authenticated:
             return False
         return obj.ownerships.filter(user=user).exists()
+
+    def get_digital_copy_url(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user is None or not user.is_authenticated:
+            return ''
+        ownership = obj.ownerships.filter(user=user).first()
+        return ownership.digital_copy_url if ownership else ''
 
     def get_can_purge(self, obj):
         request = self.context.get('request')
@@ -203,13 +236,22 @@ class MovieDetailSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         user = getattr(request, 'user', None)
         if user is None or not user.is_authenticated:
-            return [{**item, 'owned': False} for item in related]
+            return [{**item, 'owned': False, 'digital_copy_url': ''} for item in related]
         ids = [item['id'] for item in related]
-        owned_ids = set(
+        # One query for both per-user fields dropped before caching: ownership
+        # presence (`owned`) and the user's private digital-copy link.
+        links = dict(
             MovieOwnership.objects.filter(user=user, movie_id__in=ids)
-            .values_list('movie_id', flat=True)
+            .values_list('movie_id', 'digital_copy_url')
         )
-        return [{**item, 'owned': item['id'] in owned_ids} for item in related]
+        return [
+            {
+                **item,
+                'owned': item['id'] in links,
+                'digital_copy_url': links.get(item['id'], ''),
+            }
+            for item in related
+        ]
 
 
 def resolve_formats(codes):
@@ -440,16 +482,34 @@ class MovieEditMediaSerializer(MovieEditSerializer):
     tmdb_id = serializers.CharField(
         max_length=20, required=False, allow_blank=True, allow_null=True, default=None
     )
+    # The requesting user's private digital-copy link, saved onto THEIR ownership
+    # (never the shared Movie). `None` means "not sent" so a plain edit leaves the
+    # existing link untouched; an empty string explicitly clears it.
+    digital_copy_url = serializers.URLField(
+        max_length=1000, required=False, allow_blank=True, allow_null=True, default=None
+    )
 
 
 class MovieOwnSerializer(serializers.Serializer):
     """
     Input for adding an existing catalog movie to the user's library without a
-    scan: the single format the user owns it in. The view records ownership,
+    scan: the single format the user owns it in, plus (for the digital format)
+    the private link to their own digital copy. The view records ownership,
     advertises the format on the title, and links any matching existing barcode.
     """
 
     format = serializers.ChoiceField(choices=FORMAT_CHOICES)
+    digital_copy_url = serializers.URLField(
+        max_length=1000, required=False, allow_blank=True, default=''
+    )
+
+    def validate(self, attrs):
+        # A digital copy is meaningless without its link, so require one.
+        if attrs['format'] == 'digital' and not attrs.get('digital_copy_url', '').strip():
+            raise serializers.ValidationError(
+                {'digital_copy_url': 'A digital copy link is required for the digital format.'}
+            )
+        return attrs
 
 
 class MovieRefetchSerializer(serializers.Serializer):
@@ -505,3 +565,9 @@ class InboxAcceptSerializer(MovieEditSerializer):
         max_length=1000, required=False, allow_blank=True, default=''
     )
     tmdb_id = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')
+    # The reviewer's private digital-copy link, written onto THEIR ownership row
+    # (never the shared Movie). Empty means "not supplied" so accepting without
+    # one leaves nothing to write - see the accept view's guarded save.
+    digital_copy_url = serializers.URLField(
+        max_length=1000, required=False, allow_blank=True, default=''
+    )

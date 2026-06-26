@@ -7,6 +7,7 @@ import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { TextInput } from "@repo/ui/core-elements/text-input";
 import { IconButton } from "@repo/ui/core-elements/icon-button";
+import { Button } from "@repo/ui/core-elements/button";
 import {
   useBarcodeScanner,
   type ScanStatus,
@@ -19,6 +20,7 @@ export function BarcodeScanner() {
   const t = useTranslations("ScannerPage");
   const { lastScan, flash, scanCount, onScan } = useBarcodeScanner();
   const [scanStatus, setScanStatus] = useState<ScanStatus>("idle");
+  const [scanActive, setScanActive] = useState(false);
   const [manualBarcode, setManualBarcode] = useState("");
   const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
 
@@ -31,6 +33,8 @@ export function BarcodeScanner() {
   };
 
   useEffect(() => {
+    if (!scanActive) return;
+
     let active = true;
 
     async function start() {
@@ -79,7 +83,7 @@ export function BarcodeScanner() {
       scannerRef.current = null;
       scanner?.stop().catch(() => {});
     };
-  }, [onScan]);
+  }, [onScan, scanActive]);
 
   const statusLabel = lastScan
     ? lastScan.status === "saved"
@@ -115,41 +119,56 @@ export function BarcodeScanner() {
         className="scanner-viewfinder"
         width="100%"
         borderRadius={12}
+        alignItems="center"
+        justifyContent="center"
         styles={{
           position: "relative",
           overflow: "hidden",
           aspectRatio: "2.5 / 1",
-          background: "#000",
+          background: scanActive ? "#000" : "var(--surface-2)",
           boxShadow: flash ? "0 0 0 3px var(--accent)" : "none",
         }}
       >
-        {/* html5-qrcode render target */}
-        <Box
-          id={CONTAINER_ID}
-          className="scanner-video-container"
-          styles={{ position: "absolute", inset: 0 }}
-        />
+        {scanActive ? (
+          <>
+            {/* html5-qrcode render target */}
+            <Box
+              id={CONTAINER_ID}
+              className="scanner-video-container"
+              styles={{ position: "absolute", inset: 0 }}
+            />
 
-        {/* Scanning frame overlay */}
-        <Box
-          aria-hidden={true}
-          styles={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Box styles={{ position: "relative", width: "72%", height: "32%" }}>
-            <span className="scanner-corner scanner-corner--tl" />
-            <span className="scanner-corner scanner-corner--tr" />
-            <span className="scanner-corner scanner-corner--bl" />
-            <span className="scanner-corner scanner-corner--br" />
-            {scanStatus === "scanning" && <span className="scanner-line" />}
-          </Box>
-        </Box>
+            {/* Scanning frame overlay */}
+            <Box
+              aria-hidden={true}
+              styles={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Box
+                styles={{ position: "relative", width: "72%", height: "32%" }}
+              >
+                <span className="scanner-corner scanner-corner--tl" />
+                <span className="scanner-corner scanner-corner--tr" />
+                <span className="scanner-corner scanner-corner--bl" />
+                <span className="scanner-corner scanner-corner--br" />
+                {scanStatus === "scanning" && <span className="scanner-line" />}
+              </Box>
+            </Box>
+          </>
+        ) : (
+          /* Default state - tap to activate the camera scanner */
+          <Button
+            text={t("scanButton")}
+            icon="/icons/barcode.svg"
+            onClick={() => setScanActive(true)}
+          />
+        )}
       </Box>
 
       {/* Manual barcode entry */}

@@ -104,6 +104,7 @@
     "manualLabel": "Digite o código de barras manualmente",
     "manualSubmit": "Buscar",
     "scannerHeading": "Escanear um código de barras",
+    "scanButton": "Escanear código de barras",
     "formHeading": "Adicionar por título",
     "formSubtitle": "Não consegue escanear o código? Busque pelo título e ano.",
     "titleLabel": "Título",
@@ -150,6 +151,7 @@
     "dvd": "DVD",
     "bluray": "Blu-ray",
     "4k": "4K",
+    "digital": "Digital",
     "other": "Outro"
   },
   "CatalogPage": {
@@ -186,7 +188,8 @@
     "addToLibrary": "Adicionar à biblioteca",
     "addToLibraryTitle": "Adicionar à sua biblioteca",
     "addToLibraryText": "Adicionar \"{title}\" à sua biblioteca. Em que formato você o possui?",
-    "addToLibraryError": "Falha ao adicionar o filme à sua biblioteca. Tente novamente."
+    "addToLibraryError": "Falha ao adicionar o filme à sua biblioteca. Tente novamente.",
+    "digitalCopyLabel": "Link da cópia digital"
   },
   "MovieDetailPage": {
     "back": "Voltar",
@@ -244,7 +247,9 @@
     "audio": "Áudio",
     "hdr": "HDR",
     "spokenLanguages": "Idiomas de áudio",
-    "subtitles": "Legendas"
+    "subtitles": "Legendas",
+    "digitalCopyLabel": "Link da cópia digital",
+    "digitalCopy": "Cópia digital"
   },
   "InboxPage": {
     "title": "Caixa de entrada",
@@ -263,6 +268,7 @@
     "castLabel": "Elenco (separado por vírgulas)",
     "synopsisLabel": "Sinopse",
     "trailerLabel": "URL do trailer",
+    "digitalCopyLabel": "Link da cópia digital",
     "refetchData": "Rebuscar dados",
     "fetchingRefetch": "Rebuscando dados…",
     "refetchError": "Não foi possível rebuscar dados para este título e ano.",

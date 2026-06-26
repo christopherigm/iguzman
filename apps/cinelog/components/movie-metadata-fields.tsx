@@ -39,6 +39,12 @@ export interface MovieMetadataValue {
   subtitleLanguages: string;
   synopsis: string;
   trailerUrl: string;
+  /**
+   * The user's private digital-copy link. A per-user metadata field (it rides on
+   * the user's ownership row, not the shared movie), edited here alongside the
+   * other fields and saved when the form / Inbox entry is accepted.
+   */
+  digitalCopyUrl: string;
 }
 
 /** Split a comma-separated input into a trimmed, non-empty list. */
@@ -123,7 +129,10 @@ export function MovieMetadataFields({
             {t("formatLabel")}
           </Typography>
           <Box display="flex" gap={4} alignItems="center">
-            {FORMAT_BUTTONS.map(
+            {/* "digital" is omitted here: a digital copy is set via the
+                digital-copy URL input (its presence implies the format), so it
+                isn't a manually togglable format on the metadata stack. */}
+            {FORMAT_BUTTONS.filter(({ value }) => value !== "digital").map(
               ({ value: code, icon, iconColor, fullColor }) => {
                 const selected = value.formats.includes(code);
                 return (
@@ -242,6 +251,13 @@ export function MovieMetadataFields({
         label={t("trailerLabel")}
         value={value.trailerUrl}
         onChange={(trailerUrl) => onPatch({ trailerUrl })}
+        disabled={disabled}
+      />
+      <TextInput
+        label={t("digitalCopyLabel")}
+        type="url"
+        value={value.digitalCopyUrl}
+        onChange={(digitalCopyUrl) => onPatch({ digitalCopyUrl })}
         disabled={disabled}
       />
     </Box>

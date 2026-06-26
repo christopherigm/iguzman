@@ -70,6 +70,7 @@ export function MovieEditForm({
     subtitleLanguages: movie.subtitle_languages.join(", "),
     synopsis: movie.synopsis,
     trailerUrl: movie.trailer_url,
+    digitalCopyUrl: movie.digital_copy_url,
   });
   const patchMeta = (patch: Partial<MovieMetadataValue>) =>
     setMeta((prev) => ({ ...prev, ...patch }));
@@ -208,6 +209,7 @@ export function MovieEditForm({
           .map((bc) => ({ code: bc.code.trim(), format: bc.format })),
         synopsis: meta.synopsis.trim(),
         trailer_url: meta.trailerUrl.trim(),
+        digital_copy_url: meta.digitalCopyUrl.trim(),
         genres: meta.genres,
         cast: splitList(meta.cast),
         audio_formats: meta.audioFormats,

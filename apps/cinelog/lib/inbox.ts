@@ -56,6 +56,8 @@ export interface InboxAcceptPayload {
   formats: Exclude<MovieFormat, "">[];
   synopsis: string;
   trailer_url: string;
+  /** The reviewer's private digital-copy link, saved onto their new ownership. */
+  digital_copy_url: string;
   cover_url: string;
   /** Sent only when saving a re-fetch: source URL to re-download the wallpaper. */
   backdrop_url: string;

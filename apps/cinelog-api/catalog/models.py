@@ -39,6 +39,7 @@ FORMAT_CHOICES = [
     ('dvd', 'DVD'),
     ('bluray', 'Blu-ray'),
     ('4k', '4K UHD'),
+    ('digital', 'Digital'),
     ('other', 'Other'),
 ]
 
@@ -243,6 +244,11 @@ class MovieOwnership(models.Model):
     barcode = models.ForeignKey(
         Barcode, on_delete=models.SET_NULL, null=True, blank=True, related_name='ownerships'
     )
+    # Private link to this user's own digital copy of the movie (a YouTube,
+    # Prime, etc. URL they purchased). Per-user and visible only to its owner -
+    # it rides on the ownership row, never on the shared Movie. Blank when the
+    # user owns the title on disc only.
+    digital_copy_url = models.URLField(max_length=1000, blank=True)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:

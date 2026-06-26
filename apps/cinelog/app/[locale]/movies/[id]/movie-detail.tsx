@@ -377,6 +377,7 @@ export function MovieDetail({
           (movie.trailer_url ||
             movie.owned ||
             movie.can_purge ||
+            movie.digital_copy_url ||
             (isLoggedIn && !movie.owned)) && (
             <Box display="flex" gap={8} flexWrap="wrap">
               {movie.can_purge && (
@@ -434,6 +435,18 @@ export function MovieDetail({
                   translucent
                 />
               )}
+              {isLoggedIn && movie.digital_copy_url && (
+                <IconButton
+                  icon="/icons/play-stream.svg"
+                  href={movie.digital_copy_url}
+                  target="_blank"
+                  aria-label={t("digitalCopy")}
+                  title={t("digitalCopy")}
+                  kind="primary"
+                  size="md"
+                  translucent
+                />
+              )}
             </Box>
           )}
       </Box>
@@ -459,6 +472,7 @@ export function MovieDetail({
             formats={movie.formats}
             kind="bar"
             size={{ xs: "md", md: "lg" }}
+            showDigital={isLoggedIn && !!movie.digital_copy_url}
           />
           <Box
             width="100%"

@@ -9,7 +9,7 @@ export interface Actor {
   name: string;
 }
 
-export type MovieFormat = "dvd" | "bluray" | "4k" | "other" | "";
+export type MovieFormat = "dvd" | "bluray" | "4k" | "digital" | "other" | "";
 
 /**
  * Canonical disc audio-format codes (the catalog's controlled vocabulary). Used
@@ -71,6 +71,12 @@ export interface Movie {
    * ownership overlaid per request). Optional only for anonymous browsing.
    */
   owned?: boolean;
+  /**
+   * The signed-in user's private link to their own digital copy of this title
+   * (a YouTube / Prime / etc. URL), or "" when they have none. Per-user and
+   * visible only to its owner; gates the digital streaming icon on cards.
+   */
+  digital_copy_url?: string;
   created: string;
 }
 
@@ -98,6 +104,11 @@ export interface MovieDetail extends Movie {
   related: Movie[];
   /** True when the signed-in user owns this movie (gates edit/delete in the UI). */
   owned: boolean;
+  /**
+   * The signed-in user's private digital-copy link, or "" when they have none.
+   * Gates the detail page's "stream digital copy" button (per-user, never shared).
+   */
+  digital_copy_url: string;
   /** True for staff users; gates the "purge" control that hard-deletes the movie. */
   can_purge: boolean;
   modified: string;
@@ -181,7 +192,7 @@ export interface CatalogParams {
   view: CatalogView;
 }
 
-const VALID_FORMATS: MovieFormat[] = ["dvd", "bluray", "4k", "other"];
+const VALID_FORMATS: MovieFormat[] = ["dvd", "bluray", "4k", "digital", "other"];
 const VALID_SORTS: MovieSort[] = [
   "title",
   "-title",
@@ -252,6 +263,12 @@ export interface MovieUpdatePayload {
   barcodes: MovieBarcode[];
   synopsis: string;
   trailer_url: string;
+  /**
+   * The user's private digital-copy link, saved onto THEIR ownership (never the
+   * shared movie). Sent as "" to clear it; the API leaves it untouched when the
+   * key is absent, but the edit form always sends the current value.
+   */
+  digital_copy_url: string;
   genres: string[];
   cast: string[];
   /** Disc audio-track formats (controlled-vocab codes). */
@@ -417,11 +434,13 @@ export async function purgeMovie(id: string | number): Promise<void> {
 export async function addToLibrary(
   id: string | number,
   format: Exclude<MovieFormat, "">,
+  /** Required for the "digital" format: the user's private streaming link. */
+  digitalCopyUrl = "",
 ): Promise<MovieDetail> {
   const res = await fetch(`/api/catalog/movies/${id}/own`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ format }),
+    body: JSON.stringify({ format, digital_copy_url: digitalCopyUrl }),
   });
   if (!res.ok) {
     const data: Record<string, unknown> = await res.json().catch(() => ({}));

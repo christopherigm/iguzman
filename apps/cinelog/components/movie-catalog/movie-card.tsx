@@ -21,10 +21,14 @@ type Props = {
 export function MovieCard({ movie, view }: Props) {
   const t = useTranslations("CatalogPage");
   const tFormat = useTranslations("MovieFormat");
+  const isLoggedIn = useIsLoggedIn();
   // The "add to library" control is shown only to a signed-in user who doesn't
   // already own the movie. `owned` is resolved per-user on every card (including
   // related-movie cards, where it's overlaid onto the cross-user cached block).
-  const showAdd = useIsLoggedIn() && !movie.owned;
+  const showAdd = isLoggedIn && !movie.owned;
+  // The digital streaming icon is per-user: shown only when the signed-in user
+  // has saved their own digital-copy link for this title.
+  const showDigital = isLoggedIn && !!movie.digital_copy_url;
 
   const cover = (
     <Box
@@ -37,7 +41,11 @@ export function MovieCard({ movie, view }: Props) {
       }}
     >
       {view === "list" ? null : (
-        <FormatHeader formats={movie.formats} kind="bar" />
+        <FormatHeader
+          formats={movie.formats}
+          kind="bar"
+          showDigital={showDigital}
+        />
       )}
       <Box
         width="100%"
@@ -97,7 +105,11 @@ export function MovieCard({ movie, view }: Props) {
         >
           {cover}
           <Box flexDirection="column" gap={4} flex={1} minWidth={0}>
-            <FormatHeader formats={movie.formats} kind="badge" />
+            <FormatHeader
+              formats={movie.formats}
+              kind="badge"
+              showDigital={showDigital}
+            />
             <Typography
               as="h3"
               variant="h5"

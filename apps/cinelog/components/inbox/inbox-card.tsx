@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { Card } from "@repo/ui/core-elements/card";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
-import { Badge } from "@repo/ui/core-elements/badge";
 import { Button } from "@repo/ui/core-elements/button";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { Toast } from "@repo/ui/core-elements/toast";
@@ -54,6 +53,9 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
     subtitleLanguages: item.extracted_subtitle_languages.join(", "),
     synopsis: item.extracted_synopsis,
     trailerUrl: item.extracted_trailer_url,
+    // AI resolution never produces a private digital-copy link; the reviewer
+    // optionally types one before accepting, and it saves onto their ownership.
+    digitalCopyUrl: "",
   });
   const patchMeta = (patch: Partial<MovieMetadataValue>) =>
     setMeta((prev) => ({ ...prev, ...patch }));
@@ -154,6 +156,7 @@ export function InboxCard({ item, categories, onAccept, onReject }: Props) {
         formats: meta.formats,
         synopsis: meta.synopsis.trim(),
         trailer_url: meta.trailerUrl.trim(),
+        digital_copy_url: meta.digitalCopyUrl.trim(),
         cover_url: coverUrl,
         backdrop_url: backdropUrl,
         tmdb_id: tmdbId,
