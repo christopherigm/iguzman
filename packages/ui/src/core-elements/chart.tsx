@@ -130,11 +130,19 @@ export function Chart({
       if (value) setForeground(value);
     };
     readColor();
-    // The app toggles `data-theme` on <html> for light/dark; re-read on change.
+    // Re-read on theme changes. The app toggles `data-theme` on <html>, but the
+    // palette vars (incl. --foreground) are written to <body>'s inline style by
+    // PaletteProvider — and that happens on a later tick than the <html> flip.
+    // Watch both: in `system` mode on a fresh load the <html> attribute settles
+    // before <body>'s vars do, so observing <html> alone latches a stale color.
     const observer = new MutationObserver(readColor);
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-theme", "style"],
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["style", "class"],
     });
     return () => observer.disconnect();
   }, []);

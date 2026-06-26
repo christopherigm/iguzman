@@ -25,7 +25,7 @@ const nextConfig = {
   logging: { incomingRequests: false },
   images: {
     dangerouslyAllowLocalIP: true,
-    qualities: [75, 80, 85, 90],
+    qualities: [75],
     remotePatterns: [
       { protocol: 'http', hostname: '127.0.0.1' },
       { protocol: 'http', hostname: 'localhost' },

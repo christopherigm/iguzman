@@ -55,11 +55,11 @@ export type StatDimension = (typeof STAT_DIMENSIONS)[number];
 export const STAT_DEFAULT_CHART: Record<StatDimension, ChartType> = {
   formats: "pie",
   years: "line",
-  genres: "pie",
-  audio_formats: "radar",
-  hdr_formats: "radar",
-  spoken_languages: "radar",
-  subtitle_languages: "radar",
+  genres: "radar",
+  audio_formats: "pie",
+  hdr_formats: "pie",
+  spoken_languages: "pie",
+  subtitle_languages: "pie",
 };
 
 export async function getStats(

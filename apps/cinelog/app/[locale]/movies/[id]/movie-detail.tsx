@@ -474,6 +474,10 @@ export function MovieDetail({
                 fill
                 sizes="(max-width: 900px) 196px, (max-width: 1200px) 224px, 280px"
                 className="movie-detail__image"
+                // Served (and CDN-cached) by Cloudflare via the R2 custom domain
+                // already; skip Next's optimizer so the browser loads straight
+                // from R2 instead of waiting on a cold-pod fetch+re-encode.
+                unoptimized
               />
             ) : (
               <Box
