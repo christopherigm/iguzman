@@ -161,7 +161,7 @@
       "monthlyPaymentTitle": "Pago mensual (P)",
       "monthlyPaymentText": "Tu aportación mensual fija. Se calcula promediando el precio cambiante del activo durante todo el plazo: P = [G × (1 + δ × T/2) − G × d] / M. Todos los miembros pagan la misma cantidad sin importar cuándo reciban su pago.",
       "downpaymentRequiredTitle": "Enganche requerido",
-      "downpaymentRequiredText": "El monto en dólares de tu enganche (G × d). Debe pagarse por adelantado para activar tu posición en la cola de pagos del grupo.",
+      "downpaymentRequiredText": "El monto en pesos de tu enganche (G × d). Debe pagarse por adelantado para activar tu posición en la cola de pagos del grupo.",
       "groupSizeTitle": "Tamaño del grupo (N)",
       "groupSizeText": "El número de participantes en tu grupo tanda. El tamaño del grupo es independiente del plazo y NO cambia tu pago mensual: en una ROSCA cada miembro financia exactamente un activo, por lo que el pago lo determina solo el plazo. En cambio, el tamaño del grupo controla la frecuencia de pagos: un grupo más pequeño financia a los miembros con menos frecuencia (un pago mayor, más espaciado), mientras que un grupo más grande los financia con mayor frecuencia.",
       "payoutCadenceTitle": "Frecuencia de pagos",
@@ -181,11 +181,18 @@
       "bankTotalInterestTitle": "Total de Intereses Pagados",
       "bankTotalInterestText": "El total de intereses pagados al banco durante todo el plazo: (pago mensual × meses) − monto financiado. Es un costo puro sobre el activo - exactamente lo que TandaOmni elimina.",
       "bankTotalCostTitle": "Costo Total",
-      "bankTotalCostText": "Todo lo que pagas a través del banco: enganche + (pago mensual × meses). Compáralo con el Total Aportado de TandaOmni para ver tu ahorro."
+      "bankTotalCostText": "Todo lo que pagas a través del banco: enganche + (pago mensual × meses). Compáralo con el Total Aportado de TandaOmni para ver tu ahorro.",
+      "cetesTitle": "Rendimiento CETES de Tesorería",
+      "cetesText": "Los enganches reunidos y las aportaciones mensuales permanecen en la tesorería del grupo entre pagos. Invertir ese saldo ocioso en CETES (bonos del gobierno mexicano, ~6.5% anual) capitaliza el excedente y fortalece el fondo. Mueve el control para simular distintos rendimientos."
     },
     "chartsHeading": "Proyección de Costos y Precio",
     "assetPriceSeriesLabel": "Precio del Activo",
-    "combinedChartNote": "Monto acumulado pagado: {tanda}/mes con TandaOmni frente a {lender}/mes con el prestamista, comparado con el precio del activo que cambia con el delta anual de {pct}%."
+    "combinedChartNote": "Monto acumulado pagado: {tanda}/mes con TandaOmni frente a {lender}/mes con el prestamista, comparado con el precio del activo que cambia con el delta anual de {pct}%.",
+    "cetesLabel": "Rendimiento CETES de Tesorería (r): {pct}%",
+    "treasuryHeading": "Fondo de Liquidez de Tesorería",
+    "treasuryChartNote": "El primer día el grupo reúne el enganche de cada miembro ({pool}). Cada mes recauda {monthly} en aportaciones y financia el activo de un miembro. Invertido al {rate}% de rendimiento CETES, el saldo ocioso se capitaliza: la distancia con la línea gris es el valor de invertir.",
+    "treasuryWithYieldLabel": "Fondo con rendimiento CETES",
+    "treasuryNoYieldLabel": "Fondo sin invertir"
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Análisis del Producto",
@@ -194,7 +201,8 @@
       "overview": "1. Descripción del Proyecto",
       "riskVerticals": "2. Segmentos de Riesgo",
       "mathModels": "3. Modelos Matemáticos de Riesgo",
-      "taskBreakdown": "4. Desglose de Tareas"
+      "taskBreakdown": "4. Desglose de Tareas",
+      "infrastructure": "5. Infraestructura y Despliegue"
     },
     "overview": {
       "objectiveLabel": "Objetivo",
@@ -329,6 +337,33 @@
       "do05": {
         "component": "Recuperación ante Desastres",
         "directive": "Configurar un CronJob de K8s que ejecute pg_dump cada 12 horas, canalizado directamente a un bucket de almacenamiento de objetos cifrado."
+      }
+    },
+    "infra": {
+      "intro": "TandaOmni se ejecuta como una app Next.js 16 en contenedor (salida standalone, App Router, React 19) con un backend Django/DRF, PostgreSQL y Redis/Celery para tareas asíncronas. El frontend se distribuye como PWA mediante Serwist, usa next-intl para el enrutamiento multilingüe y SimpleWebAuthn para autenticación con passkeys. Todo se despliega en un clúster de Kubernetes detrás de Cloudflare.",
+      "imageAlt": "Servidor Kubernetes que ejecuta el clúster de TandaOmni",
+      "imageCaption": "Foto real del clúster de Kubernetes - 1 nodo maestro y 4 nodos trabajadores, todos laptops guardadas en mi clóset, expuestos a internet a través de Cloudflare.",
+      "techStackLabel": "Stack Tecnológico",
+      "deployLabel": "Especificaciones de Despliegue (chart de Helm)",
+      "specs": {
+        "orchestrationLabel": "Orquestación",
+        "orchestration": "MicroK8s (Kubernetes), desplegado mediante un chart de Helm versionado (apps/tanda/helm).",
+        "edgeLabel": "Edge / CDN",
+        "edge": "Proxy de Cloudflare frente a un controlador de ingress nginx, que termina el tráfico público hacia el clúster.",
+        "tlsLabel": "TLS",
+        "tls": "Certificados HTTPS automáticos emitidos por cert-manager mediante el cluster issuer letsencrypt-prod.",
+        "hostLabel": "Host",
+        "host": "tanda.iguzman.com.mx (ingress nginx, ruta / → Prefix).",
+        "containerLabel": "Contenedor",
+        "container": "Imagen Docker standalone de Next.js, NODE_ENV=production, telemetría desactivada.",
+        "serviceLabel": "Servicio",
+        "service": "ClusterIP que expone el puerto 80 → targetPort 3000 del contenedor.",
+        "replicasLabel": "Réplicas",
+        "replicas": "1 réplica, revisionHistoryLimit 2.",
+        "resourcesLabel": "Recursos",
+        "resources": "Solicitudes 100m CPU / 128Mi memoria; límites 500m CPU / 512Mi memoria.",
+        "probesLabel": "Sondas de Salud",
+        "probes": "Sonda de arranque HTTP (5s de retraso, 30 reintentos) y sonda de vivacidad (periodo 10s) en /."
       }
     }
   },

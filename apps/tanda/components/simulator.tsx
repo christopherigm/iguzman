@@ -72,6 +72,11 @@ const VEHICLE_USED_BANK_APR_STEPS = [0.2, 0.224, 0.25, 0.29, 0.32, 0.36];
 const VEHICLE_NEW_BANK_APR_DEFAULT = 0.29;
 const VEHICLE_USED_BANK_APR_DEFAULT = 0.32;
 
+// CETES (Mexican government treasury bills) annual yield steps for the treasury
+// simulation. Default 6.5% matches the PRD's r = 0.065.
+const CETES_STEPS = [0.05, 0.06, 0.065, 0.07, 0.08, 0.09, 0.1, 0.11];
+const CETES_DEFAULT = 0.065;
+
 const TIERS: Record<TierKey, TierConfig> = {
   real_estate: {
     icon: "🏠",
@@ -162,6 +167,27 @@ function calcMonthlyPayment(G: number, M: number, delta: number, d: number) {
  */
 function calcAssetPriceAtMonth(G: number, delta: number, m: number) {
   return G * Math.pow(1 + delta, m / 12);
+}
+
+/**
+ * Year-spaced month indices for charting: one point per year, plus the final
+ * month if it isn't a year boundary. Short terms (≤ 12 months) sample monthly so
+ * the curve isn't a single segment. Shared by every projection chart.
+ */
+function sampleChartMonths(M: number): number[] {
+  const out: number[] = [];
+  if (M <= 12) {
+    for (let m = 0; m <= M; m++) out.push(m);
+  } else {
+    for (let m = 0; m <= M; m += 12) out.push(m);
+    if (out[out.length - 1] !== M) out.push(M);
+  }
+  return out;
+}
+
+/** X-axis label for a month index: `Ny` on year boundaries, else `Nm`. */
+function monthLabel(m: number): string {
+  return m % 12 === 0 ? `${m / 12}y` : `${m}m`;
 }
 
 /**
@@ -364,6 +390,7 @@ export function Simulator() {
   const [months, setMonths] = useState<number>(cfg.defaultMonths);
   const [delta, setDelta] = useState<number>(cfg.defaultDelta);
   const [bankApr, setBankApr] = useState<number>(cfg.bankAprDefault);
+  const [cetesRate, setCetesRate] = useState<number>(CETES_DEFAULT);
   const [vehicleCondition, setVehicleCondition] = useState<"new" | "used">(
     "new",
   );
@@ -428,30 +455,52 @@ export function Simulator() {
   // Yearly-sampled projection series for the line charts. Both monthly payments
   // are fixed, so the payment charts plot the *running total paid* (downpayment +
   // P × month), which curves; the price chart plots the delta-driven asset price.
-  // Short terms (≤ 12 months) sample monthly so the curve isn't a single segment.
   const chartData = useMemo(() => {
     if (!result || !bankResult || G <= 0) return null;
-    const M = months;
-    const sampleMonths: number[] = [];
-    if (M <= 12) {
-      for (let m = 0; m <= M; m++) sampleMonths.push(m);
-    } else {
-      for (let m = 0; m <= M; m += 12) sampleMonths.push(m);
-      if (sampleMonths[sampleMonths.length - 1] !== M) sampleMonths.push(M);
-    }
+    const sample = sampleChartMonths(months);
     return {
-      labels: sampleMonths.map((m) =>
-        m % 12 === 0 ? `${m / 12}y` : `${m}m`,
-      ),
-      tandaCumulative: sampleMonths.map(
-        (m) => result.downpayment + result.P * m,
-      ),
-      bankCumulative: sampleMonths.map(
+      labels: sample.map(monthLabel),
+      tandaCumulative: sample.map((m) => result.downpayment + result.P * m),
+      bankCumulative: sample.map(
         (m) => bankResult.downpayment + bankResult.P * m,
       ),
-      assetPrice: sampleMonths.map((m) => calcAssetPriceAtMonth(G, delta, m)),
+      assetPrice: sample.map((m) => calcAssetPriceAtMonth(G, delta, m)),
     };
   }, [result, bankResult, G, months, delta]);
+
+  // Treasury liquidity pool over the term (PRD formula D). On day one the group
+  // collects every member's downpayment (N × downpayment). Each month it adds the
+  // N × P contributions, earns CETES yield on the running balance, and funds one
+  // member's asset (G_m). The "uninvested" series sets the yield to zero so the
+  // gap between the two lines is the value of investing the idle pool. Insurance
+  // premiums (I_m) are omitted - the PRD gives no premium figure to model them.
+  const treasuryData = useMemo(() => {
+    if (!result || G <= 0) return null;
+    const M = months;
+    const N = result.N;
+    const inflow = N * result.P; // monthly contributions from the whole group
+    const monthlyYield = cetesRate / 12;
+    const pool = N * result.downpayment; // day-one balance B_0
+    const withYield: number[] = [pool];
+    const noYield: number[] = [pool];
+    let by = pool;
+    let ny = pool;
+    for (let m = 1; m <= M; m++) {
+      const payout = calcAssetPriceAtMonth(G, delta, m);
+      by = by + inflow + by * monthlyYield - payout;
+      ny = ny + inflow - payout;
+      withYield.push(by);
+      noYield.push(ny);
+    }
+    const sample = sampleChartMonths(M);
+    return {
+      labels: sample.map(monthLabel),
+      withYield: sample.map((m) => withYield[m]!),
+      noYield: sample.map((m) => noYield[m]!),
+      pool,
+      monthlyInflow: inflow,
+    };
+  }, [result, G, months, delta, cetesRate]);
 
   const monthSliderSteps: SliderStep[] = cfg.monthSteps.map((m) => ({
     value: m,
@@ -480,6 +529,11 @@ export function Simulator() {
   const bankAprSliderSteps: SliderStep[] = effectiveBankAprSteps.map((a) => ({
     value: a,
     label: `${(a * 100).toFixed(1)}%`,
+  }));
+
+  const cetesSliderSteps: SliderStep[] = CETES_STEPS.map((r) => ({
+    value: r,
+    label: `${(r * 100).toFixed(1)}%`,
   }));
 
   const handleVehicleConditionSwitch = (condition: "new" | "used") => {
@@ -693,6 +747,30 @@ export function Simulator() {
             steps={bankAprSliderSteps}
             value={bankApr}
             onChange={(v) => setBankApr(Number(v))}
+          />
+        </Box>
+
+        {/* CETES Treasury yield slider (drives the treasury pool simulation) */}
+        <Box display="flex" flexDirection="column" gap={6}>
+          <Box display="flex" alignItems="center" gap={6}>
+            <Typography
+              as="label"
+              fontWeight={600}
+              color="var(--foreground, #1a1a1a)"
+              styles={{ userSelect: "none" }}
+            >
+              {t("cetesLabel", { pct: (cetesRate * 100).toFixed(1) })}
+            </Typography>
+            <ExplainBtn
+              onClick={() =>
+                openExplain("explain.cetesTitle", "explain.cetesText")
+              }
+            />
+          </Box>
+          <Slider
+            steps={cetesSliderSteps}
+            value={cetesRate}
+            onChange={(v) => setCetesRate(Number(v))}
           />
         </Box>
 
@@ -1070,6 +1148,49 @@ export function Simulator() {
                   ]}
                   height={340}
                   ariaLabel={t("chartsHeading")}
+                />
+              </Card>
+            </Box>
+          )}
+
+          {/* ── Treasury liquidity pool chart ─────────────────── */}
+          {treasuryData && (
+            <Box display="flex" flexDirection="column" gap={20}>
+              <Typography
+                as="h2"
+                fontWeight={700}
+                color="var(--foreground)"
+                styles={{ textTransform: "uppercase", letterSpacing: 1 }}
+              >
+                {t("treasuryHeading")}
+              </Typography>
+
+              {/* Group treasury balance B_m: invested in CETES vs uninvested. */}
+              <Card gap={12} padding={20}>
+                <Typography color="var(--muted-foreground, #6b7280)">
+                  {t("treasuryChartNote", {
+                    pool: fmtWhole.format(treasuryData.pool),
+                    monthly: fmtWhole.format(treasuryData.monthlyInflow),
+                    rate: (cetesRate * 100).toFixed(1),
+                  })}
+                </Typography>
+                <Chart
+                  type="line"
+                  labels={treasuryData.labels}
+                  series={[
+                    {
+                      label: t("treasuryWithYieldLabel"),
+                      data: treasuryData.withYield,
+                      color: "#16a34a",
+                    },
+                    {
+                      label: t("treasuryNoYieldLabel"),
+                      data: treasuryData.noYield,
+                      color: "#6b7280",
+                    },
+                  ]}
+                  height={340}
+                  ariaLabel={t("treasuryHeading")}
                 />
               </Card>
             </Box>

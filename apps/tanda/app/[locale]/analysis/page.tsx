@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
@@ -5,6 +6,7 @@ import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Card } from "@repo/ui/core-elements/card";
+import { Badge } from "@repo/ui/core-elements/badge";
 import { MathFormula } from "@repo/ui/core-elements/math-formula";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -318,6 +320,67 @@ export default async function AnalysisPage({ params }: Props) {
               ]}
             />
           </Section>
+
+          {/* Section 5: Infrastructure & Deployment */}
+          <Section title={t("section.infrastructure")}>
+            <DeploymentCard
+              imageAlt={t("infra.imageAlt")}
+              imageCaption={t("infra.imageCaption")}
+              intro={t("infra.intro")}
+              techStackLabel={t("infra.techStackLabel")}
+              techStack={[
+                "Next.js 16",
+                "React 19",
+                "next-intl",
+                "Serwist (PWA)",
+                "SimpleWebAuthn",
+                "Django / DRF",
+                "PostgreSQL",
+                "Redis / Celery",
+                "Kubernetes",
+                "Cloudflare",
+              ]}
+              deployLabel={t("infra.deployLabel")}
+              specs={[
+                {
+                  label: t("infra.specs.orchestrationLabel"),
+                  value: t("infra.specs.orchestration"),
+                },
+                {
+                  label: t("infra.specs.edgeLabel"),
+                  value: t("infra.specs.edge"),
+                },
+                {
+                  label: t("infra.specs.tlsLabel"),
+                  value: t("infra.specs.tls"),
+                },
+                {
+                  label: t("infra.specs.hostLabel"),
+                  value: t("infra.specs.host"),
+                },
+                {
+                  label: t("infra.specs.containerLabel"),
+                  value: t("infra.specs.container"),
+                },
+                {
+                  label: t("infra.specs.serviceLabel"),
+                  value: t("infra.specs.service"),
+                },
+                {
+                  label: t("infra.specs.replicasLabel"),
+                  value: t("infra.specs.replicas"),
+                },
+                {
+                  label: t("infra.specs.resourcesLabel"),
+                  value: t("infra.specs.resources"),
+                },
+                {
+                  label: t("infra.specs.probesLabel"),
+                  value: t("infra.specs.probes"),
+                },
+              ]}
+            />
+          </Section>
         </Box>
       </Container>
     </>
@@ -482,6 +545,123 @@ function FormulaCard({
         backgroundColor="var(--surface-2)"
       >
         <MathFormula formula={formula} displayMode />
+      </Box>
+    </Card>
+  );
+}
+
+function DeploymentCard({
+  imageAlt,
+  imageCaption,
+  intro,
+  techStackLabel,
+  techStack,
+  deployLabel,
+  specs,
+}: {
+  imageAlt: string;
+  imageCaption: string;
+  intro: string;
+  techStackLabel: string;
+  techStack: string[];
+  deployLabel: string;
+  specs: { label: string; value: string }[];
+}) {
+  return (
+    <Card padding={0} styles={{ overflow: "hidden" }}>
+      {/* Server photo (Kubernetes node behind Cloudflare) - centered 4:3 frame */}
+      <Box padding="16px" alignItems="center" justifyContent="center">
+        <Box
+          width="100%"
+          styles={{
+            position: "relative",
+            aspectRatio: "4 / 3",
+            maxWidth: 420,
+            overflow: "hidden",
+          }}
+        >
+          <Image
+            src="/server.jpg"
+            alt={imageAlt}
+            fill
+            sizes="(max-width: 900px) 100vw, 420px"
+            style={{ objectFit: "cover" }}
+          />
+        </Box>
+      </Box>
+      <Box
+        padding="8px 16px"
+        backgroundColor="var(--surface-2)"
+        styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+      >
+        <Typography variant="caption" color="var(--muted-foreground)">
+          {imageCaption}
+        </Typography>
+      </Box>
+
+      {/* Intro + tech stack */}
+      <Box display="flex" flexDirection="column" gap={16} padding="16px">
+        <Typography styles={{ lineHeight: 1.6 }} color="var(--foreground)">
+          {intro}
+        </Typography>
+
+        <Box display="flex" flexDirection="column" gap={8}>
+          <Typography fontWeight={600} color="var(--muted-foreground)">
+            {techStackLabel}
+          </Typography>
+          <Box display="flex" flexWrap="wrap" gap={8}>
+            {techStack.map((tech) => (
+              <Badge key={tech} variant="subtle" color="var(--accent, #06b6d4)">
+                {tech}
+              </Badge>
+            ))}
+          </Box>
+        </Box>
+
+        <Typography fontWeight={600} color="var(--muted-foreground)">
+          {deployLabel}
+        </Typography>
+      </Box>
+
+      {/* Deployment specs */}
+      <Box display="flex" flexDirection="column" gap={0}>
+        {specs.map((row, idx, arr) => (
+          <Box
+            key={row.label}
+            display="flex"
+            flexDirection="column"
+            gap={4}
+            padding="12px 16px"
+            backgroundColor={
+              idx % 2 === 0 ? "var(--surface-1)" : "var(--surface-2)"
+            }
+            styles={{
+              borderTop: "1px solid var(--border, #e5e7eb)",
+              borderBottom:
+                idx === arr.length - 1
+                  ? undefined
+                  : "1px solid var(--border, #e5e7eb)",
+            }}
+          >
+            <Typography
+              fontWeight={700}
+              color="var(--accent, #06b6d4)"
+              styles={{ fontFamily: "monospace" }}
+            >
+              {row.label}
+            </Typography>
+            <Typography
+              styles={{
+                lineHeight: 1.6,
+                minWidth: 0,
+                overflowWrap: "anywhere",
+              }}
+              color="var(--foreground)"
+            >
+              {row.value}
+            </Typography>
+          </Box>
+        ))}
       </Box>
     </Card>
   );

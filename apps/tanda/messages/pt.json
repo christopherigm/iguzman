@@ -161,7 +161,7 @@
       "monthlyPaymentTitle": "Pagamento mensal (P)",
       "monthlyPaymentText": "Sua contribuição mensal fixa. Calculada pela média do preço variável do ativo ao longo de todo o prazo: P = [G × (1 + δ × T/2) − G × d] / M. Todos os membros pagam o mesmo valor independentemente de quando receberem seu pagamento.",
       "downpaymentRequiredTitle": "Entrada exigida",
-      "downpaymentRequiredText": "O valor em dólares da sua entrada (G × d). Deve ser pago antecipadamente para ativar sua posição na fila de pagamentos do grupo.",
+      "downpaymentRequiredText": "O valor em pesos da sua entrada (G × d). Deve ser pago antecipadamente para ativar sua posição na fila de pagamentos do grupo.",
       "groupSizeTitle": "Tamanho do grupo (N)",
       "groupSizeText": "O número de participantes no seu grupo tanda. O tamanho do grupo é independente do prazo e NÃO altera o seu pagamento mensal: em uma ROSCA cada membro financia exatamente um ativo, portanto o pagamento é determinado apenas pelo prazo. Em vez disso, o tamanho do grupo controla a frequência de pagamentos: um grupo menor financia os membros com menos frequência (um pagamento maior, mais espaçado), enquanto um grupo maior os financia com mais frequência.",
       "payoutCadenceTitle": "Frequência de pagamentos",
@@ -181,11 +181,18 @@
       "bankTotalInterestTitle": "Total de Juros Pagos",
       "bankTotalInterestText": "O total de juros pagos ao banco durante todo o prazo: (parcela mensal × meses) − valor financiado. É um custo puro sobre o ativo - exatamente o que a TandaOmni elimina.",
       "bankTotalCostTitle": "Custo Total",
-      "bankTotalCostText": "Tudo o que você paga pelo banco: entrada + (parcela mensal × meses). Compare com o Total Contribuído da TandaOmni para ver sua economia."
+      "bankTotalCostText": "Tudo o que você paga pelo banco: entrada + (parcela mensal × meses). Compare com o Total Contribuído da TandaOmni para ver sua economia.",
+      "cetesTitle": "Rendimento CETES da Tesouraria",
+      "cetesText": "Os enganches reunidos e as contribuições mensais ficam na tesouraria do grupo entre os pagamentos. Investir esse saldo ocioso em CETES (títulos do governo mexicano, ~6,5% ao ano) capitaliza o excedente e fortalece o fundo. Mova o controle para simular diferentes rendimentos."
     },
     "chartsHeading": "Projeção de Custos e Preço",
     "assetPriceSeriesLabel": "Preço do Ativo",
-    "combinedChartNote": "Valor acumulado pago — {tanda}/mês com TandaOmni frente a {lender}/mês com o credor — comparado ao preço do ativo que muda com o delta anual de {pct}%."
+    "combinedChartNote": "Valor acumulado pago - {tanda}/mês com TandaOmni frente a {lender}/mês com o credor - comparado ao preço do ativo que muda com o delta anual de {pct}%.",
+    "cetesLabel": "Rendimento CETES da Tesouraria (r): {pct}%",
+    "treasuryHeading": "Fundo de Liquidez da Tesouraria",
+    "treasuryChartNote": "No primeiro dia o grupo reúne o enganche de cada membro ({pool}). A cada mês arrecada {monthly} em contribuições e financia o ativo de um membro. Investido ao rendimento CETES de {rate}%, o saldo ocioso se capitaliza - a distância para a linha cinza é o valor de investir.",
+    "treasuryWithYieldLabel": "Fundo com rendimento CETES",
+    "treasuryNoYieldLabel": "Fundo sem investir"
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Análise do Produto",
@@ -194,7 +201,8 @@
       "overview": "1. Visão Geral do Projeto",
       "riskVerticals": "2. Segmentos de Risco",
       "mathModels": "3. Modelos Matemáticos de Risco",
-      "taskBreakdown": "4. Detalhamento das Tarefas"
+      "taskBreakdown": "4. Detalhamento das Tarefas",
+      "infrastructure": "5. Infraestrutura e Implantação"
     },
     "overview": {
       "objectiveLabel": "Objetivo",
@@ -329,6 +337,33 @@
       "do05": {
         "component": "Recuperação de Desastres",
         "directive": "Configurar um CronJob do K8s para acionar pg_dump a cada 12 horas, canalizado diretamente para um bucket de armazenamento de objetos criptografado."
+      }
+    },
+    "infra": {
+      "intro": "O TandaOmni roda como um app Next.js 16 em contêiner (saída standalone, App Router, React 19) com um backend Django/DRF, PostgreSQL e Redis/Celery para tarefas assíncronas. O frontend é entregue como PWA via Serwist, usa next-intl para roteamento multilíngue e SimpleWebAuthn para autenticação com passkeys. Tudo é implantado em um cluster Kubernetes auto-hospedado atrás do Cloudflare.",
+      "imageAlt": "Nó de servidor Kubernetes auto-hospedado executando o cluster do TandaOmni",
+      "imageCaption": "Foto real do cluster Kubernetes auto-hospedado - 1 nó mestre e 4 nós trabalhadores, todos laptops guardados no meu armário, expostos à internet através do Cloudflare.",
+      "techStackLabel": "Stack de Tecnologia",
+      "deployLabel": "Especificações de Implantação (chart Helm)",
+      "specs": {
+        "orchestrationLabel": "Orquestração",
+        "orchestration": "MicroK8s (Kubernetes), implantado via um chart Helm versionado (apps/tanda/helm).",
+        "edgeLabel": "Edge / CDN",
+        "edge": "Proxy Cloudflare à frente de um controlador de ingress nginx, terminando o tráfego público para o cluster.",
+        "tlsLabel": "TLS",
+        "tls": "Certificados HTTPS automáticos emitidos pelo cert-manager via o cluster issuer letsencrypt-prod.",
+        "hostLabel": "Host",
+        "host": "tanda.iguzman.com.mx (ingress nginx, caminho / → Prefix).",
+        "containerLabel": "Contêiner",
+        "container": "Imagem Docker standalone do Next.js, NODE_ENV=production, telemetria desativada.",
+        "serviceLabel": "Serviço",
+        "service": "ClusterIP expondo a porta 80 → targetPort 3000 do contêiner.",
+        "replicasLabel": "Réplicas",
+        "replicas": "1 réplica, revisionHistoryLimit 2.",
+        "resourcesLabel": "Recursos",
+        "resources": "Solicitações 100m CPU / 128Mi memória; limites 500m CPU / 512Mi memória.",
+        "probesLabel": "Sondas de Saúde",
+        "probes": "Sonda de inicialização HTTP (5s de atraso, 30 tentativas) e sonda de vivacidade (período 10s) em /."
       }
     }
   },

@@ -161,7 +161,7 @@
       "monthlyPaymentTitle": "Monthly Payment (P)",
       "monthlyPaymentText": "Your fixed monthly contribution. Calculated by averaging the changing asset price across the full term: P = [G × (1 + δ × T/2) − G × d] / M. Every member pays this same amount regardless of when they receive their payout.",
       "downpaymentRequiredTitle": "Downpayment Required",
-      "downpaymentRequiredText": "The actual dollar amount of your downpayment (G × d). This must be paid upfront to activate your position in the group's payout queue.",
+      "downpaymentRequiredText": "The actual peso amount of your downpayment (G × d). This must be paid upfront to activate your position in the group's payout queue.",
       "groupSizeTitle": "Group Size (N)",
       "groupSizeText": "The number of participants in your tanda group. Group size is independent of the term and does NOT change your monthly payment - in a ROSCA every member funds exactly one asset, so the payment is set by the term alone. Instead, group size controls the payout cadence: a smaller group funds members less often (a larger payout, spaced further apart), while a larger group funds members more frequently.",
       "payoutCadenceTitle": "Payout Cadence",
@@ -181,11 +181,18 @@
       "bankTotalInterestTitle": "Total Interest Paid",
       "bankTotalInterestText": "The total interest paid to the bank over the full term: (monthly payment × months) − amount financed. This is pure cost on top of the asset - exactly what TandaOmni eliminates.",
       "bankTotalCostTitle": "Total Cost",
-      "bankTotalCostText": "Everything you pay through the bank: downpayment + (monthly payment × months). Compare this against TandaOmni's Total Contributed to see your savings."
+      "bankTotalCostText": "Everything you pay through the bank: downpayment + (monthly payment × months). Compare this against TandaOmni's Total Contributed to see your savings.",
+      "cetesTitle": "CETES Treasury Yield",
+      "cetesText": "The pooled downpayments and monthly contributions sit in the group treasury between payouts. Investing that idle balance in CETES (Mexican government treasury bills, ~6.5% annually) compounds the surplus and strengthens the pool. Move the slider to simulate different yields."
     },
     "chartsHeading": "Cost & Price Projection",
     "assetPriceSeriesLabel": "Asset Price",
-    "combinedChartNote": "Cumulative amount paid — {tanda}/mo with TandaOmni vs. {lender}/mo with the lender — plotted against the asset's price as it moves at the {pct}% annual delta."
+    "combinedChartNote": "Cumulative amount paid - {tanda}/mo with TandaOmni vs. {lender}/mo with the lender - plotted against the asset's price as it moves at the {pct}% annual delta.",
+    "cetesLabel": "CETES Treasury Yield (r): {pct}%",
+    "treasuryHeading": "Treasury Liquidity Pool",
+    "treasuryChartNote": "On day one the group pools every member's downpayment ({pool}). Each month it collects {monthly} in contributions and funds one member's asset. Invested at the {rate}% CETES yield, the idle balance compounds - the gap to the grey line is the value of investing.",
+    "treasuryWithYieldLabel": "Pool with CETES yield",
+    "treasuryNoYieldLabel": "Pool, uninvested"
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Product Analysis",
@@ -194,7 +201,8 @@
       "overview": "1. Project Overview",
       "riskVerticals": "2. Core Risk Verticals",
       "mathModels": "3. Mathematical Risk Models",
-      "taskBreakdown": "4. Task Breakdown"
+      "taskBreakdown": "4. Task Breakdown",
+      "infrastructure": "5. Infrastructure & Deployment"
     },
     "overview": {
       "objectiveLabel": "Objective",
@@ -329,6 +337,33 @@
       "do05": {
         "component": "Disaster Recovery",
         "directive": "Configure a K8s CronJob to trigger pg_dump every 12 hours, piped directly to an encrypted object storage bucket."
+      }
+    },
+    "infra": {
+      "intro": "TandaOmni runs as a containerized Next.js 16 app (standalone output, App Router, React 19) with a Django/DRF backend, PostgreSQL, and Redis/Celery for async work. The frontend ships as a PWA via Serwist, uses next-intl for multilingual routing, and SimpleWebAuthn for passkey auth. Everything is deployed to a self-hosted Kubernetes cluster sitting behind Cloudflare.",
+      "imageAlt": "Self-hosted Kubernetes server node running the TandaOmni cluster",
+      "imageCaption": "Live photo of the self-hosted Kubernetes cluster - 1 master node and 4 worker nodes, all laptops stored in my closet, exposed to the internet through Cloudflare.",
+      "techStackLabel": "Technology Stack",
+      "deployLabel": "Deployment Specifications (Helm chart)",
+      "specs": {
+        "orchestrationLabel": "Orchestration",
+        "orchestration": "MicroK8s (Kubernetes), deployed via a versioned Helm chart (apps/tanda/helm).",
+        "edgeLabel": "Edge / CDN",
+        "edge": "Cloudflare proxy in front of an nginx ingress controller, terminating public traffic to the cluster.",
+        "tlsLabel": "TLS",
+        "tls": "Automatic HTTPS certificates issued by cert-manager via the letsencrypt-prod cluster issuer.",
+        "hostLabel": "Host",
+        "host": "tanda.iguzman.com.mx (nginx ingress, path / → Prefix).",
+        "containerLabel": "Container",
+        "container": "Standalone Next.js Docker image, NODE_ENV=production, telemetry disabled.",
+        "serviceLabel": "Service",
+        "service": "ClusterIP exposing port 80 → container targetPort 3000.",
+        "replicasLabel": "Replicas",
+        "replicas": "1 replica, revisionHistoryLimit 2.",
+        "resourcesLabel": "Resources",
+        "resources": "Requests 100m CPU / 128Mi memory; limits 500m CPU / 512Mi memory.",
+        "probesLabel": "Health Probes",
+        "probes": "HTTP startup probe (5s delay, 30 retries) and liveness probe (10s period) on /."
       }
     }
   },

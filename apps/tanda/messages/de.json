@@ -161,7 +161,7 @@
       "monthlyPaymentTitle": "Monatliche Rate (P)",
       "monthlyPaymentText": "Dein fester monatlicher Beitrag. Berechnet durch Mittelung des sich ändernden Preises über die gesamte Laufzeit: P = [G × (1 + δ × T/2) − G × d] / M. Jedes Mitglied zahlt denselben Betrag, unabhängig vom Zeitpunkt seiner Auszahlung.",
       "downpaymentRequiredTitle": "Erforderliche Anzahlung",
-      "downpaymentRequiredText": "Der tatsächliche Betrag deiner Anzahlung (G × d). Dieser muss im Voraus gezahlt werden, um deinen Platz in der Gruppen-Auszahlungsreihe zu aktivieren.",
+      "downpaymentRequiredText": "Der Betrag deiner Anzahlung in Pesos (G × d). Dieser muss im Voraus gezahlt werden, um deinen Platz in der Gruppen-Auszahlungsreihe zu aktivieren.",
       "groupSizeTitle": "Gruppengröße (N)",
       "groupSizeText": "Die Anzahl der Teilnehmer in deiner Tanda-Gruppe. Die Gruppengröße ist unabhängig von der Laufzeit und ändert deine monatliche Zahlung NICHT - in einer ROSCA finanziert jedes Mitglied genau einen Vermögenswert, daher wird die Zahlung allein durch die Laufzeit bestimmt. Stattdessen steuert die Gruppengröße den Auszahlungsrhythmus: Eine kleinere Gruppe finanziert Mitglieder seltener (eine größere, weiter auseinanderliegende Auszahlung), während eine größere Gruppe sie häufiger finanziert.",
       "payoutCadenceTitle": "Auszahlungsrhythmus",
@@ -181,11 +181,18 @@
       "bankTotalInterestTitle": "Gezahlte Zinsen gesamt",
       "bankTotalInterestText": "Die über die gesamte Laufzeit an die Bank gezahlten Zinsen: (monatliche Rate × Monate) − finanzierter Betrag. Reine Zusatzkosten auf den Vermögenswert - genau das, was TandaOmni eliminiert.",
       "bankTotalCostTitle": "Gesamtkosten",
-      "bankTotalCostText": "Alles, was du über die Bank zahlst: Anzahlung + (monatliche Rate × Monate). Vergleiche dies mit dem Gesamtbeitrag von TandaOmni, um deine Ersparnis zu sehen."
+      "bankTotalCostText": "Alles, was du über die Bank zahlst: Anzahlung + (monatliche Rate × Monate). Vergleiche dies mit dem Gesamtbeitrag von TandaOmni, um deine Ersparnis zu sehen.",
+      "cetesTitle": "CETES-Tresorerie-Rendite",
+      "cetesText": "Die gebündelten Anzahlungen und monatlichen Beiträge liegen zwischen den Auszahlungen in der Gruppenkasse. Wird dieses ungenutzte Guthaben in CETES (mexikanische Staatsanleihen, ~6,5% jährlich) angelegt, verzinst sich der Überschuss und stärkt den Pool. Bewege den Regler, um verschiedene Renditen zu simulieren."
     },
     "chartsHeading": "Kosten- & Preisprognose",
     "assetPriceSeriesLabel": "Vermögenswertpreis",
-    "combinedChartNote": "Kumulierter Zahlbetrag – {tanda}/Monat mit TandaOmni gegenüber {lender}/Monat beim Kreditgeber – im Vergleich zum Vermögenswertpreis, der sich mit dem jährlichen Delta von {pct}% entwickelt."
+    "combinedChartNote": "Kumulierter Zahlbetrag – {tanda}/Monat mit TandaOmni gegenüber {lender}/Monat beim Kreditgeber – im Vergleich zum Vermögenswertpreis, der sich mit dem jährlichen Delta von {pct}% entwickelt.",
+    "cetesLabel": "CETES-Tresorerie-Rendite (r): {pct}%",
+    "treasuryHeading": "Tresorerie-Liquiditätspool",
+    "treasuryChartNote": "Am ersten Tag bündelt die Gruppe die Anzahlung jedes Mitglieds ({pool}). Jeden Monat sammelt sie {monthly} an Beiträgen und finanziert den Vermögenswert eines Mitglieds. Zur CETES-Rendite von {rate}% angelegt, verzinst sich das ungenutzte Guthaben – der Abstand zur grauen Linie ist der Wert des Investierens.",
+    "treasuryWithYieldLabel": "Pool mit CETES-Rendite",
+    "treasuryNoYieldLabel": "Pool, nicht investiert"
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Produktanalyse",
@@ -194,7 +201,8 @@
       "overview": "1. Projektübersicht",
       "riskVerticals": "2. Kern-Risikosegmente",
       "mathModels": "3. Mathematische Risikomodelle",
-      "taskBreakdown": "4. Aufgabenübersicht"
+      "taskBreakdown": "4. Aufgabenübersicht",
+      "infrastructure": "5. Infrastruktur & Bereitstellung"
     },
     "overview": {
       "objectiveLabel": "Ziel",
@@ -329,6 +337,33 @@
       "do05": {
         "component": "Notfallwiederherstellung",
         "directive": "Einen K8s-CronJob konfigurieren, der alle 12 Stunden pg_dump auslöst und direkt in einen verschlüsselten Objektspeicher-Bucket weiterleitet."
+      }
+    },
+    "infra": {
+      "intro": "TandaOmni läuft als containerisierte Next.js-16-App (Standalone-Output, App Router, React 19) mit einem Django/DRF-Backend, PostgreSQL und Redis/Celery für asynchrone Aufgaben. Das Frontend wird als PWA über Serwist ausgeliefert, nutzt next-intl für mehrsprachiges Routing und SimpleWebAuthn für Passkey-Authentifizierung. Alles wird in einem selbstgehosteten Kubernetes-Cluster hinter Cloudflare bereitgestellt.",
+      "imageAlt": "Selbstgehosteter Kubernetes-Serverknoten, der den TandaOmni-Cluster betreibt",
+      "imageCaption": "Echtes Foto des selbstgehosteten Kubernetes-Clusters - 1 Master-Knoten und 4 Worker-Knoten, alle Laptops in meinem Schrank verstaut, über Cloudflare ins Internet exponiert.",
+      "techStackLabel": "Technologie-Stack",
+      "deployLabel": "Bereitstellungsspezifikationen (Helm-Chart)",
+      "specs": {
+        "orchestrationLabel": "Orchestrierung",
+        "orchestration": "MicroK8s (Kubernetes), bereitgestellt über ein versioniertes Helm-Chart (apps/tanda/helm).",
+        "edgeLabel": "Edge / CDN",
+        "edge": "Cloudflare-Proxy vor einem nginx-Ingress-Controller, der den öffentlichen Datenverkehr zum Cluster terminiert.",
+        "tlsLabel": "TLS",
+        "tls": "Automatische HTTPS-Zertifikate, ausgestellt von cert-manager über den Cluster-Issuer letsencrypt-prod.",
+        "hostLabel": "Host",
+        "host": "tanda.iguzman.com.mx (nginx-Ingress, Pfad / → Prefix).",
+        "containerLabel": "Container",
+        "container": "Standalone-Next.js-Docker-Image, NODE_ENV=production, Telemetrie deaktiviert.",
+        "serviceLabel": "Dienst",
+        "service": "ClusterIP, der Port 80 → Container-targetPort 3000 bereitstellt.",
+        "replicasLabel": "Replikate",
+        "replicas": "1 Replikat, revisionHistoryLimit 2.",
+        "resourcesLabel": "Ressourcen",
+        "resources": "Anforderungen 100m CPU / 128Mi Speicher; Limits 500m CPU / 512Mi Speicher.",
+        "probesLabel": "Health-Probes",
+        "probes": "HTTP-Startup-Probe (5s Verzögerung, 30 Versuche) und Liveness-Probe (10s Intervall) auf /."
       }
     }
   },

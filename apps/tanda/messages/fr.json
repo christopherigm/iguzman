@@ -161,7 +161,7 @@
       "monthlyPaymentTitle": "Mensualité (P)",
       "monthlyPaymentText": "Votre contribution mensuelle fixe. Calculée en moyennant le prix changeant de l’actif sur toute la durée : P = [G × (1 + δ × T/2) − G × d] / M. Chaque membre paie le même montant quelle que soit la date de son versement.",
       "downpaymentRequiredTitle": "Apport initial requis",
-      "downpaymentRequiredText": "Le montant réel de votre apport initial (G × d). Il doit être versé à l’avance pour activer votre position dans la file de versement du groupe.",
+      "downpaymentRequiredText": "Le montant en pesos de votre apport initial (G × d). Il doit être versé à l’avance pour activer votre position dans la file de versement du groupe.",
       "groupSizeTitle": "Taille du groupe (N)",
       "groupSizeText": "Le nombre de participants dans votre groupe tanda. La taille du groupe est indépendante de la durée et ne modifie PAS votre paiement mensuel : dans une ROSCA, chaque membre finance exactement un actif, le paiement est donc déterminé par la durée seule. La taille du groupe contrôle plutôt la fréquence des versements : un groupe plus petit finance les membres moins souvent (un versement plus important, plus espacé), tandis qu'un groupe plus grand les finance plus fréquemment.",
       "payoutCadenceTitle": "Fréquence des versements",
@@ -181,11 +181,18 @@
       "bankTotalInterestTitle": "Total des intérêts payés",
       "bankTotalInterestText": "Le total des intérêts versés à la banque sur toute la durée : (mensualité × mois) − montant financé. Un coût pur en plus de l’actif - exactement ce que TandaOmni élimine.",
       "bankTotalCostTitle": "Coût total",
-      "bankTotalCostText": "Tout ce que vous payez via la banque : apport + (mensualité × mois). Comparez-le au Total cotisé de TandaOmni pour voir vos économies."
+      "bankTotalCostText": "Tout ce que vous payez via la banque : apport + (mensualité × mois). Comparez-le au Total cotisé de TandaOmni pour voir vos économies.",
+      "cetesTitle": "Rendement de trésorerie CETES",
+      "cetesText": "Les acomptes mis en commun et les cotisations mensuelles restent dans la trésorerie du groupe entre les versements. Investir ce solde inutilisé en CETES (bons du Trésor mexicain, ~6,5% par an) capitalise l'excédent et renforce la cagnotte. Déplacez le curseur pour simuler différents rendements."
     },
     "chartsHeading": "Projection des Coûts et du Prix",
     "assetPriceSeriesLabel": "Prix de l'Actif",
-    "combinedChartNote": "Montant cumulé payé — {tanda}/mois avec TandaOmni contre {lender}/mois avec le prêteur — comparé au prix de l'actif qui évolue avec le delta annuel de {pct}%."
+    "combinedChartNote": "Montant cumulé payé - {tanda}/mois avec TandaOmni contre {lender}/mois avec le prêteur - comparé au prix de l'actif qui évolue avec le delta annuel de {pct}%.",
+    "cetesLabel": "Rendement de trésorerie CETES (r) : {pct}%",
+    "treasuryHeading": "Cagnotte de Liquidité de Trésorerie",
+    "treasuryChartNote": "Le premier jour, le groupe met en commun l'acompte de chaque membre ({pool}). Chaque mois, il collecte {monthly} de cotisations et finance l'actif d'un membre. Investi au rendement CETES de {rate}%, le solde inutilisé se capitalise - l'écart avec la ligne grise est la valeur de l'investissement.",
+    "treasuryWithYieldLabel": "Cagnotte avec rendement CETES",
+    "treasuryNoYieldLabel": "Cagnotte, non investie"
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Analyse Produit",
@@ -194,7 +201,8 @@
       "overview": "1. Présentation du Projet",
       "riskVerticals": "2. Segments de Risque",
       "mathModels": "3. Modèles Mathématiques de Risque",
-      "taskBreakdown": "4. Détail des Tâches"
+      "taskBreakdown": "4. Détail des Tâches",
+      "infrastructure": "5. Infrastructure et Déploiement"
     },
     "overview": {
       "objectiveLabel": "Objectif",
@@ -329,6 +337,33 @@
       "do05": {
         "component": "Reprise après Sinistre",
         "directive": "Configurer un CronJob K8s pour déclencher pg_dump toutes les 12 heures, redirigé directement vers un bucket de stockage d'objets chiffré."
+      }
+    },
+    "infra": {
+      "intro": "TandaOmni s'exécute comme une application Next.js 16 conteneurisée (sortie standalone, App Router, React 19) avec un backend Django/DRF, PostgreSQL et Redis/Celery pour les tâches asynchrones. Le frontend est livré en PWA via Serwist, utilise next-intl pour le routage multilingue et SimpleWebAuthn pour l'authentification par passkey. Tout est déployé sur un cluster Kubernetes auto-hébergé derrière Cloudflare.",
+      "imageAlt": "Nœud serveur Kubernetes auto-hébergé exécutant le cluster TandaOmni",
+      "imageCaption": "Photo réelle du cluster Kubernetes auto-hébergé - 1 nœud maître et 4 nœuds workers, tous des ordinateurs portables rangés dans mon placard, exposés à Internet via Cloudflare.",
+      "techStackLabel": "Pile Technologique",
+      "deployLabel": "Spécifications de Déploiement (chart Helm)",
+      "specs": {
+        "orchestrationLabel": "Orchestration",
+        "orchestration": "MicroK8s (Kubernetes), déployé via un chart Helm versionné (apps/tanda/helm).",
+        "edgeLabel": "Edge / CDN",
+        "edge": "Proxy Cloudflare devant un contrôleur d'ingress nginx, terminant le trafic public vers le cluster.",
+        "tlsLabel": "TLS",
+        "tls": "Certificats HTTPS automatiques émis par cert-manager via le cluster issuer letsencrypt-prod.",
+        "hostLabel": "Hôte",
+        "host": "tanda.iguzman.com.mx (ingress nginx, chemin / → Prefix).",
+        "containerLabel": "Conteneur",
+        "container": "Image Docker Next.js standalone, NODE_ENV=production, télémétrie désactivée.",
+        "serviceLabel": "Service",
+        "service": "ClusterIP exposant le port 80 → targetPort 3000 du conteneur.",
+        "replicasLabel": "Répliques",
+        "replicas": "1 réplique, revisionHistoryLimit 2.",
+        "resourcesLabel": "Ressources",
+        "resources": "Demandes 100m CPU / 128Mi mémoire ; limites 500m CPU / 512Mi mémoire.",
+        "probesLabel": "Sondes de Santé",
+        "probes": "Sonde de démarrage HTTP (5s de délai, 30 tentatives) et sonde de vivacité (période 10s) sur /."
       }
     }
   },
