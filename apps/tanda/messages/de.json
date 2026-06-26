@@ -184,11 +184,8 @@
       "bankTotalCostText": "Alles, was du über die Bank zahlst: Anzahlung + (monatliche Rate × Monate). Vergleiche dies mit dem Gesamtbeitrag von TandaOmni, um deine Ersparnis zu sehen."
     },
     "chartsHeading": "Kosten- & Preisprognose",
-    "paymentsChartTitle": "Kumulierter Zahlbetrag",
-    "paymentsChartNote": "Jeder Plan hat eine feste monatliche Rate – {tanda} mit TandaOmni gegenüber {lender} beim Kreditgeber. Die Linien zeigen die kumulierte Gesamtsumme inklusive der Anzahlung.",
-    "priceChartTitle": "Vermögenswertpreis im Zeitverlauf",
-    "priceChartNote": "Wie sich der Preis des Vermögenswerts mit dem jährlichen Delta von {pct}% über die Laufzeit entwickelt.",
-    "assetPriceSeriesLabel": "Vermögenswertpreis"
+    "assetPriceSeriesLabel": "Vermögenswertpreis",
+    "combinedChartNote": "Kumulierter Zahlbetrag – {tanda}/Monat mit TandaOmni gegenüber {lender}/Monat beim Kreditgeber – im Vergleich zum Vermögenswertpreis, der sich mit dem jährlichen Delta von {pct}% entwickelt."
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Produktanalyse",

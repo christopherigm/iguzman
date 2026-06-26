@@ -184,11 +184,8 @@
       "bankTotalCostText": "Tudo o que você paga pelo banco: entrada + (parcela mensal × meses). Compare com o Total Contribuído da TandaOmni para ver sua economia."
     },
     "chartsHeading": "Projeção de Custos e Preço",
-    "paymentsChartTitle": "Valor Acumulado Pago",
-    "paymentsChartNote": "Cada plano tem um pagamento mensal fixo: {tanda} com TandaOmni frente a {lender} com o credor. As linhas mostram o total acumulado pago, incluindo a entrada inicial.",
-    "priceChartTitle": "Preço do Ativo ao Longo do Tempo",
-    "priceChartNote": "Como o preço do ativo muda com o delta anual de {pct}% durante o prazo.",
-    "assetPriceSeriesLabel": "Preço do Ativo"
+    "assetPriceSeriesLabel": "Preço do Ativo",
+    "combinedChartNote": "Valor acumulado pago — {tanda}/mês com TandaOmni frente a {lender}/mês com o credor — comparado ao preço do ativo que muda com o delta anual de {pct}%."
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Análise do Produto",

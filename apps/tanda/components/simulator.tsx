@@ -1023,7 +1023,7 @@ export function Simulator() {
             </Card>
           </Box>
 
-          {/* ── Projection charts ─────────────────────────────── */}
+          {/* ── Projection chart ──────────────────────────────── */}
           {chartData && (
             <Box display="flex" flexDirection="column" gap={20}>
               <Typography
@@ -1035,15 +1035,14 @@ export function Simulator() {
                 {t("chartsHeading")}
               </Typography>
 
-              {/* Cumulative amount paid: TandaOmni vs lender */}
+              {/* Cumulative amount paid (TandaOmni vs lender) plotted against the
+                  asset price curve - all three share a comparable currency scale. */}
               <Card gap={12} padding={20}>
-                <Typography as="h3" fontWeight={600} color="var(--foreground)">
-                  {t("paymentsChartTitle")}
-                </Typography>
                 <Typography color="var(--muted-foreground, #6b7280)">
-                  {t("paymentsChartNote", {
+                  {t("combinedChartNote", {
                     tanda: fmtCents.format(result.P),
                     lender: fmtCents.format(bankResult.P),
+                    pct: (Number(delta) * 100).toFixed(1),
                   })}
                 </Typography>
                 <Chart
@@ -1063,35 +1062,14 @@ export function Simulator() {
                       data: chartData.bankCumulative,
                       color: "#6b7280",
                     },
-                  ]}
-                  height={300}
-                  ariaLabel={t("paymentsChartTitle")}
-                />
-              </Card>
-
-              {/* Asset price over time (inflation / depreciation curve) */}
-              <Card gap={12} padding={20}>
-                <Typography as="h3" fontWeight={600} color="var(--foreground)">
-                  {t("priceChartTitle")}
-                </Typography>
-                <Typography color="var(--muted-foreground, #6b7280)">
-                  {t("priceChartNote", {
-                    pct: (Number(delta) * 100).toFixed(1),
-                  })}
-                </Typography>
-                <Chart
-                  type="line"
-                  labels={chartData.labels}
-                  series={[
                     {
                       label: t("assetPriceSeriesLabel"),
                       data: chartData.assetPrice,
                       color: "#f59e0b",
                     },
                   ]}
-                  height={300}
-                  hideLegend
-                  ariaLabel={t("priceChartTitle")}
+                  height={340}
+                  ariaLabel={t("chartsHeading")}
                 />
               </Card>
             </Box>

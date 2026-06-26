@@ -184,11 +184,8 @@
       "bankTotalCostText": "Tout ce que vous payez via la banque : apport + (mensualité × mois). Comparez-le au Total cotisé de TandaOmni pour voir vos économies."
     },
     "chartsHeading": "Projection des Coûts et du Prix",
-    "paymentsChartTitle": "Montant Cumulé Payé",
-    "paymentsChartNote": "Chaque plan a une mensualité fixe : {tanda} avec TandaOmni contre {lender} avec le prêteur. Les courbes montrent le total cumulé payé, acompte initial inclus.",
-    "priceChartTitle": "Prix de l'Actif dans le Temps",
-    "priceChartNote": "Comment le prix de l'actif évolue avec le delta annuel de {pct}% sur la durée.",
-    "assetPriceSeriesLabel": "Prix de l'Actif"
+    "assetPriceSeriesLabel": "Prix de l'Actif",
+    "combinedChartNote": "Montant cumulé payé — {tanda}/mois avec TandaOmni contre {lender}/mois avec le prêteur — comparé au prix de l'actif qui évolue avec le delta annuel de {pct}%."
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Analyse Produit",

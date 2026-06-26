@@ -184,11 +184,8 @@
       "bankTotalCostText": "Todo lo que pagas a través del banco: enganche + (pago mensual × meses). Compáralo con el Total Aportado de TandaOmni para ver tu ahorro."
     },
     "chartsHeading": "Proyección de Costos y Precio",
-    "paymentsChartTitle": "Monto Acumulado Pagado",
-    "paymentsChartNote": "Cada plan tiene un pago mensual fijo: {tanda} con TandaOmni frente a {lender} con el prestamista. Las líneas muestran el total acumulado pagado, incluido el enganche inicial.",
-    "priceChartTitle": "Precio del Activo en el Tiempo",
-    "priceChartNote": "Cómo cambia el precio del activo con el delta anual de {pct}% durante el plazo.",
-    "assetPriceSeriesLabel": "Precio del Activo"
+    "assetPriceSeriesLabel": "Precio del Activo",
+    "combinedChartNote": "Monto acumulado pagado: {tanda}/mes con TandaOmni frente a {lender}/mes con el prestamista, comparado con el precio del activo que cambia con el delta anual de {pct}%."
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Análisis del Producto",

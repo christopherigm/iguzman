@@ -184,11 +184,8 @@
       "bankTotalCostText": "Everything you pay through the bank: downpayment + (monthly payment × months). Compare this against TandaOmni's Total Contributed to see your savings."
     },
     "chartsHeading": "Cost & Price Projection",
-    "paymentsChartTitle": "Cumulative Amount Paid",
-    "paymentsChartNote": "Each plan has a fixed monthly payment — {tanda} with TandaOmni vs. {lender} with the lender. The lines show the running total paid, including the upfront downpayment.",
-    "priceChartTitle": "Asset Price Over Time",
-    "priceChartNote": "How the asset's price moves at the {pct}% annual delta across the term.",
-    "assetPriceSeriesLabel": "Asset Price"
+    "assetPriceSeriesLabel": "Asset Price",
+    "combinedChartNote": "Cumulative amount paid — {tanda}/mo with TandaOmni vs. {lender}/mo with the lender — plotted against the asset's price as it moves at the {pct}% annual delta."
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Product Analysis",
