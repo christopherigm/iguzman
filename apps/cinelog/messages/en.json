@@ -189,7 +189,7 @@
     "addToLibraryError": "Failed to add the movie to your library. Please try again."
   },
   "MovieDetailPage": {
-    "back": "Back to catalog",
+    "back": "Back",
     "director": "Director",
     "genres": "Genres",
     "cast": "Cast",

@@ -189,7 +189,7 @@
     "addToLibraryError": "No se pudo añadir la película a tu biblioteca. Inténtalo de nuevo."
   },
   "MovieDetailPage": {
-    "back": "Volver al catálogo",
+    "back": "Volver",
     "director": "Director",
     "genres": "Géneros",
     "cast": "Reparto",

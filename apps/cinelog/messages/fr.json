@@ -189,7 +189,7 @@
     "addToLibraryError": "Échec de l'ajout du film à votre bibliothèque. Veuillez réessayer."
   },
   "MovieDetailPage": {
-    "back": "Retour au catalogue",
+    "back": "Retour",
     "director": "Réalisateur",
     "genres": "Genres",
     "cast": "Distribution",

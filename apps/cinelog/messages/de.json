@@ -189,7 +189,7 @@
     "addToLibraryError": "Der Film konnte nicht zu deiner Bibliothek hinzugefügt werden. Bitte versuche es erneut."
   },
   "MovieDetailPage": {
-    "back": "Zurück zum Katalog",
+    "back": "Zurück",
     "director": "Regie",
     "genres": "Genres",
     "cast": "Besetzung",

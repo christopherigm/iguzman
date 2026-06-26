@@ -1,6 +1,11 @@
 {
-  "Metadata": { "title": "Tanda", "description": "" },
-  "HomePage": { "title": "Tanda" },
+  "Metadata": {
+    "title": "Tanda",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Tanda"
+  },
   "Navbar": {
     "home": "Home",
     "analysis": "Analysis",
@@ -93,7 +98,7 @@
       },
       "vehicle": {
         "label": "Vehicle / Equipment",
-        "mitigation": "Mandatory platform-held insurance policy required throughout the entire group term \u2014 regardless of whether the vehicle is new or used."
+        "mitigation": "Mandatory platform-held insurance policy required throughout the entire group term — regardless of whether the vehicle is new or used."
       },
       "travel": {
         "label": "Travel & Experiences",
@@ -102,7 +107,7 @@
     },
     "priceLabelG": "Target Asset Price (G)",
     "termLabel": "Term: {months} months ({years} yrs)",
-    "deltaLabel": "Annual Price Delta (\u03b4): {pct}%",
+    "deltaLabel": "Annual Price Delta (δ): {pct}%",
     "downpaymentLabel": "Required Downpayment (d)",
     "resultsHeading": "Simulation Results",
     "monthlyPayment": "Monthly Payment (P)",
@@ -120,8 +125,8 @@
     "escrowNote": "Payout releases once contributions reach 60% of the current asset cost.",
     "vehicleConditionLabel": "Vehicle Type",
     "vehicleCondition": {
-      "new": "\ud83c\udd95 New",
-      "used": "\ud83d\udd04 Used"
+      "new": "🆕 New",
+      "used": "🔄 Used"
     },
     "emptyState": "Enter an asset price above to see your simulation.",
     "bankAprLabel": "Bank Interest Rate (APR): {pct}%",
@@ -149,22 +154,22 @@
       "priceLabelGText": "The base value of the asset you want to acquire. This is the goal amount your tanda group will collectively fund. All monthly payments, downpayment amounts, and projections are derived from this figure.",
       "termTitle": "Group Term",
       "termText": "The total duration of your savings group in months. Each month, one member receives the full group payout. Longer terms produce smaller monthly payments but increase exposure to price changes over time.",
-      "deltaTitle": "Annual Price Delta (\u03b4)",
-      "deltaText": "The estimated annual rate at which the asset's price changes. Positive for appreciating assets like real estate (+4%\u2013+6%). For vehicles, the direction depends on what you are buying: positive (+3%\u2013+6%) if targeting a brand-new model (tracks MSRP inflation each model year), or negative (\u22125%\u201310%) if targeting a specific used vehicle (tracks depreciation while it ages in the queue). This rate is used to calculate your fixed monthly payment and the projected asset price at term end.",
+      "deltaTitle": "Annual Price Delta (δ)",
+      "deltaText": "The estimated annual rate at which the asset's price changes. Positive for appreciating assets like real estate (+4%–+6%). For vehicles, the direction depends on what you are buying: positive (+3%–+6%) if targeting a brand-new model (tracks MSRP inflation each model year), or negative (−5%–10%) if targeting a specific used vehicle (tracks depreciation while it ages in the queue). This rate is used to calculate your fixed monthly payment and the projected asset price at term end.",
       "downpaymentTitle": "Required Downpayment (d)",
       "downpaymentText": "An upfront payment as a percentage of the target price, paid before the group begins. It reduces the monthly burden for all members and secures your position in the payout queue.",
       "monthlyPaymentTitle": "Monthly Payment (P)",
-      "monthlyPaymentText": "Your fixed monthly contribution. Calculated by averaging the changing asset price across the full term: P = [G \u00d7 (1 + \u03b4 \u00d7 T/2) \u2212 G \u00d7 d] / M. Every member pays this same amount regardless of when they receive their payout.",
+      "monthlyPaymentText": "Your fixed monthly contribution. Calculated by averaging the changing asset price across the full term: P = [G × (1 + δ × T/2) − G × d] / M. Every member pays this same amount regardless of when they receive their payout.",
       "downpaymentRequiredTitle": "Downpayment Required",
-      "downpaymentRequiredText": "The actual dollar amount of your downpayment (G \u00d7 d). This must be paid upfront to activate your position in the group's payout queue.",
+      "downpaymentRequiredText": "The actual dollar amount of your downpayment (G × d). This must be paid upfront to activate your position in the group's payout queue.",
       "groupSizeTitle": "Group Size (N)",
       "groupSizeText": "The number of participants in your tanda group. Group size is independent of the term and does NOT change your monthly payment - in a ROSCA every member funds exactly one asset, so the payment is set by the term alone. Instead, group size controls the payout cadence: a smaller group funds members less often (a larger payout, spaced further apart), while a larger group funds members more frequently.",
       "payoutCadenceTitle": "Payout Cadence",
       "payoutCadenceText": "How often the group funds a member's asset. The group buys N assets over the term (one per member), so payouts happen every M / N months. A smaller group means fewer, more widely spaced payouts; a larger group means more frequent ones. Your own wait depends on your position in the queue.",
       "assetPriceAtEndTitle": "Asset Price at Term End",
-      "assetPriceAtEndText": "The projected price of the asset at the end of the full term, calculated using the Delta Curve: G\u2082 = G \u00d7 (1 + \u03b4)^T. This represents what the last member in the payout queue will pay for their asset.",
+      "assetPriceAtEndText": "The projected price of the asset at the end of the full term, calculated using the Delta Curve: G₂ = G × (1 + δ)^T. This represents what the last member in the payout queue will pay for their asset.",
       "totalContributedTitle": "Total Contributed per Member",
-      "totalContributedText": "The total amount each member pays over the full term: (P \u00d7 M) + downpayment. Because TandaOmni charges zero interest, this closely matches the original asset price \u2014 your community funds each other at no cost.",
+      "totalContributedText": "The total amount each member pays over the full term: (P × M) + downpayment. Because TandaOmni charges zero interest, this closely matches the original asset price — your community funds each other at no cost.",
       "escrowTitle": "Escrow Unlock Threshold",
       "escrowText": "For travel & experiences (unrecoverable assets), your payout is locked until your total contributions reach 60% of the current asset cost. This protects the group against funding an experience that cannot be refunded if a member defaults.",
       "bankAprTitle": "Bank Interest Rate (APR)",
@@ -186,18 +191,17 @@
       "overview": "1. Project Overview",
       "riskVerticals": "2. Core Risk Verticals",
       "mathModels": "3. Mathematical Risk Models",
-      "taskBreakdown": "4. Agentic Task Breakdown"
+      "taskBreakdown": "4. Task Breakdown"
     },
     "overview": {
       "objectiveLabel": "Objective",
-      "objective": "A zero-interest, community-funded financial ecosystem (ROSCA/Tanda model) supporting Real Estate (Appreciating), Vehicles/Equipment (Destructible), and Experiences (Unrecoverable).",
+      "objective": "A zero-interest, community-funded financial ecosystem (ROSCA/Tanda model) supporting Real Estate (Appreciating), Vehicles/Equipment (Destructible), and Experiences (Unrecoverable). The platform dynamically groups users into specific risk tiers based on the asset class they are funding.",
       "stackLabel": "Tech Stack",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (DB), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Course",
       "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM",
       "studentLabel": "Student",
-      "studentValue": "Christopher Guzman",
-      "body": "The platform dynamically groups users into specific risk tiers based on the asset class they are funding."
+      "studentValue": "Christopher Guzman"
     },
     "tiers": {
       "t1": {
@@ -209,7 +213,7 @@
       "t2": {
         "name": "Vehicles & Commercial Equipment (Depreciating / Destructible)",
         "term": "12 to 36 Months",
-        "delta": "New: +3% to +6% / Used: \u22125% to \u221210%",
+        "delta": "New: +3% to +6% / Used: −5% to −10%",
         "mitigation": "20% Downpayment, Mandatory Platform-Held Insurance Policy (regardless of delta direction)."
       },
       "t3": {
@@ -226,6 +230,103 @@
       "be": "Backend Infrastructure & Risk Engine (Django / DRF)",
       "fe": "Frontend Implementation (Next.js)",
       "do": "Deployment & Infrastructure (Kubernetes)"
+    },
+    "vars": {
+      "G": "Target Asset Price (Base Value)",
+      "N": "Number of participants in the group",
+      "d": "Downpayment percentage (varies by tier)",
+      "delta": "Annual Price Delta (+ inflation / − depreciation)",
+      "r": "Annual Treasury Yield (e.g., CETES at 0.065)",
+      "T": "Total term in years",
+      "M": "Total term in months (M = T × 12)",
+      "m": "Current month index"
+    },
+    "formulas": {
+      "a": {
+        "label": "A. Dynamic Price Adjustment (Delta Curve)",
+        "description": "Calculates the actual cost to purchase the asset at month m."
+      },
+      "b": {
+        "label": "B. Fixed Monthly Payment (Delta Adjusted)",
+        "description": "Averages the changing asset price over the term to lock in a fixed monthly payment."
+      },
+      "c": {
+        "label": "C. Escrow Release Threshold (Tier 3)",
+        "description": "Payout is locked until total paid contributions plus downpayment reach 60% of current asset cost."
+      },
+      "d": {
+        "label": "D. Treasury Ledger & Monthly Balance",
+        "description": "Total platform liquidity pool accounting for contributions, yield, payouts, and insurance premiums."
+      }
+    },
+    "tierLabels": {
+      "tierPrefix": "Tier",
+      "term": "Term",
+      "delta": "Price Delta (δ)",
+      "mitigation": "Mitigation"
+    },
+    "phasePrefix": "Phase",
+    "tasks": {
+      "be01": {
+        "component": "Core DB & Ledger",
+        "directive": "Build User, Group, AssetCategory, and LedgerEntry models. AssetCategory fields: max_term, delta_rate, requires_insurance, escrow_threshold. LedgerEntry MUST be append-only. No updates/deletes."
+      },
+      "be02": {
+        "component": "Multi-Vertical Simulator API",
+        "directive": "Build stateless endpoint /api/v1/simulate/. Inputs: G, T, d, category_id. Apply Delta Curve formulas to return N, P and mitigation string."
+      },
+      "be03": {
+        "component": "Group Matching Algo",
+        "directive": "Build /api/v1/groups/match/. Group KYC-verified users by matching P within 5% variance. Create a Group instance when N target is met. Set status to \"AWAITING_DOWNPAYMENT\"."
+      },
+      "be04": {
+        "component": "Treasury Yield Worker",
+        "directive": "Celery task running nightly. Calculate yield for active groups: (balance × (r / 365)). Append YIELD ledger entry."
+      },
+      "be05": {
+        "component": "Insurance & Fees Worker",
+        "directive": "Celery task running monthly. Check requires_insurance flag. If true, deduct premium and append INSURANCE_FEE ledger entry."
+      },
+      "be06": {
+        "component": "Smart Payout Queue",
+        "directive": "Monthly Celery task. If B_m ≥ G_m, check category escrow rules. If threshold passed, execute PAYOUT ledger entry. Queue order determined by joined date and secure hash."
+      },
+      "fe01": {
+        "component": "Omni-Simulator UI",
+        "directive": "Build Simulator.tsx client component. Use tabs for Asset Type (House, Car, Travel). Dynamically adjust slider limits per tier. Debounce calls to /api/v1/simulate/."
+      },
+      "fe02": {
+        "component": "Contract & Mitigation UI",
+        "directive": "Build dynamic warning rendering. Show mandatory insurance acknowledgment for Tier 2. Show visual 60% Escrow Unlock progress bar for Tier 3."
+      },
+      "fe03": {
+        "component": "Auth & KYC Flow",
+        "directive": "Implement NextAuth. Build onboarding wizard capturing ID. Integrate Stripe Elements to capture a pre-authorization hold for Tier 3."
+      },
+      "fe04": {
+        "component": "User Dashboard UI",
+        "directive": "Fetch user ledger data. Build modular Recharts components: QueueTimeline.tsx showing queue position, and TreasuryChart.tsx tracking group balance (B_m) and yield over time."
+      },
+      "do01": {
+        "component": "Dockerization",
+        "directive": "Write multi-stage Dockerfiles for Next.js, Django, and Celery workers. Optimize for slim production images."
+      },
+      "do02": {
+        "component": "K8s Manifests",
+        "directive": "Create deployment.yaml and service.yaml. Provision two distinct Celery deployments: worker-general and worker-financial-critical. Configure Liveness/Readiness probes."
+      },
+      "do03": {
+        "component": "Ingress & TLS",
+        "directive": "Configure Ingress controller with routing rules (/api/* to backend, / to frontend). Configure cert-manager for automated Let's Encrypt certificates."
+      },
+      "do04": {
+        "component": "Immutable DB Config",
+        "directive": "Deploy PostgreSQL StatefulSet with PersistentVolumeClaims (PVCs). Define ConfigMaps and Secrets for environment variables."
+      },
+      "do05": {
+        "component": "Disaster Recovery",
+        "directive": "Configure a K8s CronJob to trigger pg_dump every 12 hours, piped directly to an encrypted object storage bucket."
+      }
     }
   },
   "AccountPage": {

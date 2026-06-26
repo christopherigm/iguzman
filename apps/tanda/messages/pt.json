@@ -195,14 +195,13 @@
     },
     "overview": {
       "objectiveLabel": "Objetivo",
-      "objective": "Um ecossistema financeiro comunitário sem juros (modelo ROSCA/Tanda) para Imóveis (valorizantes), Veículos/Equipamentos (destrutivos) e Experiências (irrecuperáveis).",
+      "objective": "Um ecossistema financeiro comunitário sem juros (modelo ROSCA/Tanda) para Imóveis (valorizantes), Veículos/Equipamentos (destrutivos) e Experiências (irrecuperáveis). A plataforma agrupa dinamicamente usuários em níveis de risco específicos com base na classe de ativo que financiam.",
       "stackLabel": "Stack Tecnológico",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (BD), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Curso",
       "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM",
       "studentLabel": "Estudante",
-      "studentValue": "Christopher Guzman",
-      "body": "A plataforma agrupa dinamicamente usuários em níveis de risco específicos com base na classe de ativo."
+      "studentValue": "Christopher Guzman"
     },
     "tiers": {
       "t1": {
@@ -231,6 +230,103 @@
       "be": "Infraestrutura Backend & Motor de Risco (Django / DRF)",
       "fe": "Implementação Frontend (Next.js)",
       "do": "Implantação & Infraestrutura (Kubernetes)"
+    },
+    "vars": {
+      "G": "Preço-Alvo do Ativo (Valor Base)",
+      "N": "Número de participantes no grupo",
+      "d": "Percentual de entrada (varia por segmento)",
+      "delta": "Delta Anual de Preço (+ inflação / − depreciação)",
+      "r": "Rendimento Anual do Tesouro (ex.: CETES a 0,065)",
+      "T": "Prazo total em anos",
+      "M": "Prazo total em meses (M = T × 12)",
+      "m": "Índice do mês atual"
+    },
+    "formulas": {
+      "a": {
+        "label": "A. Ajuste Dinâmico de Preço (Curva Delta)",
+        "description": "Calcula o custo real de comprar o ativo no mês m."
+      },
+      "b": {
+        "label": "B. Pagamento Mensal Fixo (Ajustado por Delta)",
+        "description": "Calcula a média do preço variável do ativo ao longo do prazo para fixar um pagamento mensal fixo."
+      },
+      "c": {
+        "label": "C. Limite de Liberação do Depósito (Segmento 3)",
+        "description": "O pagamento fica bloqueado até que as contribuições pagas mais a entrada atinjam 60% do custo atual do ativo."
+      },
+      "d": {
+        "label": "D. Livro-Razão do Tesouro e Saldo Mensal",
+        "description": "Fundo total de liquidez da plataforma que contabiliza contribuições, rendimentos, pagamentos e prêmios de seguro."
+      }
+    },
+    "tierLabels": {
+      "tierPrefix": "Segmento",
+      "term": "Prazo",
+      "delta": "Delta de Preço (δ)",
+      "mitigation": "Mitigação"
+    },
+    "phasePrefix": "Fase",
+    "tasks": {
+      "be01": {
+        "component": "BD Central e Livro-Razão",
+        "directive": "Construir os modelos User, Group, AssetCategory e LedgerEntry. Campos de AssetCategory: max_term, delta_rate, requires_insurance, escrow_threshold. LedgerEntry DEVE ser somente de anexação. Sem atualizações/exclusões."
+      },
+      "be02": {
+        "component": "API do Simulador Multi-Vertical",
+        "directive": "Construir o endpoint sem estado /api/v1/simulate/. Entradas: G, T, d, category_id. Aplicar as fórmulas da Curva Delta para retornar N, P e a string de mitigação."
+      },
+      "be03": {
+        "component": "Algoritmo de Correspondência de Grupos",
+        "directive": "Construir /api/v1/groups/match/. Agrupar usuários verificados por KYC correspondendo P com variação de 5%. Criar uma instância de Group quando a meta N for atingida. Definir o status como \"AWAITING_DOWNPAYMENT\"."
+      },
+      "be04": {
+        "component": "Worker de Rendimento do Tesouro",
+        "directive": "Tarefa Celery executada todas as noites. Calcular o rendimento dos grupos ativos: (saldo × (r / 365)). Anexar uma entrada YIELD ao livro-razão."
+      },
+      "be05": {
+        "component": "Worker de Seguros e Taxas",
+        "directive": "Tarefa Celery executada mensalmente. Verificar o sinalizador requires_insurance. Se verdadeiro, descontar o prêmio e anexar uma entrada INSURANCE_FEE ao livro-razão."
+      },
+      "be06": {
+        "component": "Fila Inteligente de Pagamentos",
+        "directive": "Tarefa Celery mensal. Se B_m ≥ G_m, verificar as regras de depósito da categoria. Se o limite for ultrapassado, executar uma entrada PAYOUT no livro-razão. A ordem da fila é determinada pela data de ingresso e um hash seguro."
+      },
+      "fe01": {
+        "component": "UI do Omni-Simulador",
+        "directive": "Construir o componente cliente Simulator.tsx. Usar abas para o Tipo de Ativo (Casa, Carro, Viagem). Ajustar dinamicamente os limites dos controles deslizantes por segmento. Aplicar debounce às chamadas a /api/v1/simulate/."
+      },
+      "fe02": {
+        "component": "UI de Contrato e Mitigação",
+        "directive": "Construir a renderização dinâmica de avisos. Mostrar o reconhecimento de seguro obrigatório para o Segmento 2. Mostrar uma barra de progresso visual de Desbloqueio de Depósito de 60% para o Segmento 3."
+      },
+      "fe03": {
+        "component": "Fluxo de Autenticação e KYC",
+        "directive": "Implementar o NextAuth. Construir um assistente de integração que captura a identificação. Integrar o Stripe Elements para capturar uma retenção de pré-autorização para o Segmento 3."
+      },
+      "fe04": {
+        "component": "UI do Painel do Usuário",
+        "directive": "Obter os dados do livro-razão do usuário. Construir componentes modulares do Recharts: QueueTimeline.tsx mostrando a posição na fila e TreasuryChart.tsx rastreando o saldo do grupo (B_m) e o rendimento ao longo do tempo."
+      },
+      "do01": {
+        "component": "Dockerização",
+        "directive": "Escrever Dockerfiles multiestágio para Next.js, Django e os workers Celery. Otimizar para imagens de produção enxutas."
+      },
+      "do02": {
+        "component": "Manifestos K8s",
+        "directive": "Criar deployment.yaml e service.yaml. Provisionar dois deployments Celery distintos: worker-general e worker-financial-critical. Configurar sondas de Liveness/Readiness."
+      },
+      "do03": {
+        "component": "Ingress e TLS",
+        "directive": "Configurar o controlador Ingress com regras de roteamento (/api/* para o backend, / para o frontend). Configurar o cert-manager para certificados automáticos Let's Encrypt."
+      },
+      "do04": {
+        "component": "Configuração de BD Imutável",
+        "directive": "Implantar um StatefulSet do PostgreSQL com PersistentVolumeClaims (PVCs). Definir ConfigMaps e Secrets para as variáveis de ambiente."
+      },
+      "do05": {
+        "component": "Recuperação de Desastres",
+        "directive": "Configurar um CronJob do K8s para acionar pg_dump a cada 12 horas, canalizado diretamente para um bucket de armazenamento de objetos criptografado."
+      }
     }
   },
   "AccountPage": {

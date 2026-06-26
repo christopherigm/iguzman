@@ -98,7 +98,7 @@
       },
       "vehicle": {
         "label": "Fahrzeug / Ausrüstung",
-        "mitigation": "F\u00fcr die gesamte Laufzeit der Gruppe ist eine von der Plattform verwaltete Pflichtversicherung erforderlich \u2014 unabh\u00e4ngig davon, ob das Fahrzeug neu oder gebraucht ist."
+        "mitigation": "Für die gesamte Laufzeit der Gruppe ist eine von der Plattform verwaltete Pflichtversicherung erforderlich — unabhängig davon, ob das Fahrzeug neu oder gebraucht ist."
       },
       "travel": {
         "label": "Reisen & Erlebnisse",
@@ -125,8 +125,8 @@
     "escrowNote": "Die Auszahlung erfolgt, sobald die Beiträge 60 % der aktuellen Kosten erreichen.",
     "vehicleConditionLabel": "Fahrzeugtyp",
     "vehicleCondition": {
-      "new": "\ud83c\udd95 Neu",
-      "used": "\ud83d\udd04 Gebraucht"
+      "new": "🆕 Neu",
+      "used": "🔄 Gebraucht"
     },
     "emptyState": "Gib einen Preis ein, um deine Simulation zu sehen.",
     "bankAprLabel": "Bankzins (eff. Jahreszins): {pct}%",
@@ -195,14 +195,13 @@
     },
     "overview": {
       "objectiveLabel": "Ziel",
-      "objective": "Ein zinsloses, gemeinschaftlich finanziertes Finanzökosystem (ROSCA/Tanda-Modell) für Immobilien (wertsteigernd), Fahrzeuge/Ausrüstung (abnutzbar) und Erlebnisse (nicht rückholbar).",
+      "objective": "Ein zinsloses, gemeinschaftlich finanziertes Finanzökosystem (ROSCA/Tanda-Modell) für Immobilien (wertsteigernd), Fahrzeuge/Ausrüstung (abnutzbar) und Erlebnisse (nicht rückholbar). Die Plattform gruppiert Nutzer dynamisch in spezifische Risikostufen basierend auf der Anlageklasse, die sie finanzieren.",
       "stackLabel": "Tech-Stack",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (DB), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Kurs",
       "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM",
       "studentLabel": "Student",
-      "studentValue": "Christopher Guzman",
-      "body": "Die Plattform gruppiert Nutzer dynamisch in spezifische Risikostufen basierend auf der Anlageklasse."
+      "studentValue": "Christopher Guzman"
     },
     "tiers": {
       "t1": {
@@ -214,8 +213,8 @@
       "t2": {
         "name": "Fahrzeuge & Gewerbliche Ausrüstung (Abnutzbar)",
         "term": "12 bis 36 Monate",
-        "delta": "Neu: +3% bis +6% / Gebraucht: \u22125% bis \u221210%",
-        "mitigation": "20% Anzahlung, Pflicht-Versicherungspolice der Plattform (unabh\u00e4ngig vom Delta)."
+        "delta": "Neu: +3% bis +6% / Gebraucht: −5% bis −10%",
+        "mitigation": "20% Anzahlung, Pflicht-Versicherungspolice der Plattform (unabhängig vom Delta)."
       },
       "t3": {
         "name": "Reisen & Erlebnisse (Nicht Rückholbar)",
@@ -231,6 +230,103 @@
       "be": "Backend-Infrastruktur & Risikorechner (Django / DRF)",
       "fe": "Frontend-Implementierung (Next.js)",
       "do": "Deployment & Infrastruktur (Kubernetes)"
+    },
+    "vars": {
+      "G": "Zielpreis des Vermögenswerts (Basiswert)",
+      "N": "Anzahl der Teilnehmer in der Gruppe",
+      "d": "Anzahlungsprozentsatz (variiert je nach Stufe)",
+      "delta": "Jährliches Preis-Delta (+ Inflation / − Wertverlust)",
+      "r": "Jährliche Staatsanleihenrendite (z. B. CETES bei 0,065)",
+      "T": "Gesamtlaufzeit in Jahren",
+      "M": "Gesamtlaufzeit in Monaten (M = T × 12)",
+      "m": "Aktueller Monatsindex"
+    },
+    "formulas": {
+      "a": {
+        "label": "A. Dynamische Preisanpassung (Delta-Kurve)",
+        "description": "Berechnet die tatsächlichen Kosten für den Kauf des Vermögenswerts im Monat m."
+      },
+      "b": {
+        "label": "B. Feste Monatliche Zahlung (Delta-angepasst)",
+        "description": "Mittelt den sich ändernden Preis des Vermögenswerts über die Laufzeit, um eine feste monatliche Zahlung festzulegen."
+      },
+      "c": {
+        "label": "C. Treuhand-Freigabeschwelle (Stufe 3)",
+        "description": "Die Auszahlung bleibt gesperrt, bis die gezahlten Beiträge plus Anzahlung 60% der aktuellen Kosten des Vermögenswerts erreichen."
+      },
+      "d": {
+        "label": "D. Treuhandbuch & Monatssaldo",
+        "description": "Gesamter Liquiditätspool der Plattform, der Beiträge, Renditen, Auszahlungen und Versicherungsprämien verbucht."
+      }
+    },
+    "tierLabels": {
+      "tierPrefix": "Stufe",
+      "term": "Laufzeit",
+      "delta": "Preis-Delta (δ)",
+      "mitigation": "Risikominderung"
+    },
+    "phasePrefix": "Phase",
+    "tasks": {
+      "be01": {
+        "component": "Zentrale DB & Hauptbuch",
+        "directive": "Modelle User, Group, AssetCategory und LedgerEntry erstellen. AssetCategory-Felder: max_term, delta_rate, requires_insurance, escrow_threshold. LedgerEntry MUSS nur anhängbar sein. Keine Aktualisierungen/Löschungen."
+      },
+      "be02": {
+        "component": "Multi-Vertical-Simulator-API",
+        "directive": "Zustandslosen Endpoint /api/v1/simulate/ erstellen. Eingaben: G, T, d, category_id. Delta-Kurven-Formeln anwenden, um N, P und die Risikominderungs-Zeichenfolge zurückzugeben."
+      },
+      "be03": {
+        "component": "Gruppen-Matching-Algorithmus",
+        "directive": "/api/v1/groups/match/ erstellen. KYC-verifizierte Nutzer durch Abgleich von P mit 5% Abweichung gruppieren. Eine Group-Instanz erstellen, wenn das N-Ziel erreicht ist. Status auf \"AWAITING_DOWNPAYMENT\" setzen."
+      },
+      "be04": {
+        "component": "Treuhand-Rendite-Worker",
+        "directive": "Nächtlich laufende Celery-Aufgabe. Rendite für aktive Gruppen berechnen: (Saldo × (r / 365)). Einen YIELD-Hauptbucheintrag anhängen."
+      },
+      "be05": {
+        "component": "Versicherungs- & Gebühren-Worker",
+        "directive": "Monatlich laufende Celery-Aufgabe. Das requires_insurance-Flag prüfen. Wenn wahr, Prämie abziehen und einen INSURANCE_FEE-Hauptbucheintrag anhängen."
+      },
+      "be06": {
+        "component": "Intelligente Auszahlungswarteschlange",
+        "directive": "Monatliche Celery-Aufgabe. Wenn B_m ≥ G_m, die Treuhandregeln der Kategorie prüfen. Wenn die Schwelle überschritten ist, einen PAYOUT-Hauptbucheintrag ausführen. Die Warteschlangenreihenfolge wird durch das Beitrittsdatum und einen sicheren Hash bestimmt."
+      },
+      "fe01": {
+        "component": "Omni-Simulator-UI",
+        "directive": "Die Client-Komponente Simulator.tsx erstellen. Tabs für den Vermögenstyp (Haus, Auto, Reise) verwenden. Schieberegler-Grenzen dynamisch je nach Stufe anpassen. Aufrufe an /api/v1/simulate/ entprellen (Debounce)."
+      },
+      "fe02": {
+        "component": "Vertrags- & Risikominderungs-UI",
+        "directive": "Dynamisches Rendering von Warnungen erstellen. Pflicht-Versicherungsbestätigung für Stufe 2 anzeigen. Visuelle 60%-Treuhand-Freischaltungs-Fortschrittsleiste für Stufe 3 anzeigen."
+      },
+      "fe03": {
+        "component": "Authentifizierungs- & KYC-Ablauf",
+        "directive": "NextAuth implementieren. Onboarding-Assistenten erstellen, der den Ausweis erfasst. Stripe Elements integrieren, um eine Vorautorisierungs-Reservierung für Stufe 3 zu erfassen."
+      },
+      "fe04": {
+        "component": "Benutzer-Dashboard-UI",
+        "directive": "Hauptbuchdaten des Nutzers abrufen. Modulare Recharts-Komponenten erstellen: QueueTimeline.tsx zeigt die Warteschlangenposition und TreasuryChart.tsx verfolgt den Gruppensaldo (B_m) und die Rendite im Zeitverlauf."
+      },
+      "do01": {
+        "component": "Dockerisierung",
+        "directive": "Mehrstufige Dockerfiles für Next.js, Django und Celery-Worker schreiben. Für schlanke Produktions-Images optimieren."
+      },
+      "do02": {
+        "component": "K8s-Manifeste",
+        "directive": "deployment.yaml und service.yaml erstellen. Zwei separate Celery-Deployments bereitstellen: worker-general und worker-financial-critical. Liveness-/Readiness-Probes konfigurieren."
+      },
+      "do03": {
+        "component": "Ingress & TLS",
+        "directive": "Ingress-Controller mit Routing-Regeln konfigurieren (/api/* zum Backend, / zum Frontend). cert-manager für automatische Let's-Encrypt-Zertifikate konfigurieren."
+      },
+      "do04": {
+        "component": "Unveränderliche DB-Konfiguration",
+        "directive": "PostgreSQL-StatefulSet mit PersistentVolumeClaims (PVCs) bereitstellen. ConfigMaps und Secrets für Umgebungsvariablen definieren."
+      },
+      "do05": {
+        "component": "Notfallwiederherstellung",
+        "directive": "Einen K8s-CronJob konfigurieren, der alle 12 Stunden pg_dump auslöst und direkt in einen verschlüsselten Objektspeicher-Bucket weiterleitet."
+      }
     }
   },
   "AccountPage": {

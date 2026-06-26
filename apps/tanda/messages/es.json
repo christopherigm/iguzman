@@ -1,6 +1,11 @@
 {
-  "Metadata": { "title": "Tanda", "description": "" },
-  "HomePage": { "title": "Tanda" },
+  "Metadata": {
+    "title": "Tanda",
+    "description": ""
+  },
+  "HomePage": {
+    "title": "Tanda"
+  },
   "Navbar": {
     "home": "Inicio",
     "analysis": "Análisis",
@@ -88,84 +93,84 @@
     "subtitle": "Estima tu plan de ahorro comunitario sin intereses. Desarrollado para el Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM, por Christopher Guzman.",
     "tiers": {
       "realEstate": {
-        "label": "Bienes Ra\u00edces",
+        "label": "Bienes Raíces",
         "mitigation": "Se requiere Fideicomiso Legal (Reserva de Dominio). Tu escritura queda en fideicomiso hasta que el grupo complete todos los pagos."
       },
       "vehicle": {
-        "label": "Veh\u00edculo / Equipo",
-        "mitigation": "Se requiere una p\u00f3liza de seguro obligatoria administrada por la plataforma durante todo el plazo del grupo \u2014 independientemente de si el veh\u00edculo es nuevo o usado."
+        "label": "Vehículo / Equipo",
+        "mitigation": "Se requiere una póliza de seguro obligatoria administrada por la plataforma durante todo el plazo del grupo — independientemente de si el vehículo es nuevo o usado."
       },
       "travel": {
         "label": "Viajes y Experiencias",
-        "mitigation": "Bloqueo de dep\u00f3sito en garant\u00eda: el pago se libera solo cuando el 60% del costo actual del activo est\u00e9 fondeado. Se realizar\u00e1 un cargo preventivo a tu tarjeta de cr\u00e9dito."
+        "mitigation": "Bloqueo de depósito en garantía: el pago se libera solo cuando el 60% del costo actual del activo esté fondeado. Se realizará un cargo preventivo a tu tarjeta de crédito."
       }
     },
     "priceLabelG": "Precio objetivo del activo (G)",
-    "termLabel": "Plazo: {months} meses ({years} a\u00f1os)",
-    "deltaLabel": "Delta de precio anual (\u03b4): {pct}%",
+    "termLabel": "Plazo: {months} meses ({years} años)",
+    "deltaLabel": "Delta de precio anual (δ): {pct}%",
     "downpaymentLabel": "Enganche requerido (d)",
-    "resultsHeading": "Resultados de la simulaci\u00f3n",
+    "resultsHeading": "Resultados de la simulación",
     "monthlyPayment": "Pago mensual (P)",
     "downpaymentRequired": "Enganche requerido",
-    "groupSize": "Tama\u00f1o del grupo (N)",
+    "groupSize": "Tamaño del grupo (N)",
     "groupSizeValue": "{n} miembros",
     "payoutCadence": "Frecuencia de pagos",
     "payoutCadenceMonthly": "Un miembro financiado cada mes",
     "payoutCadenceEvery": "Un miembro financiado cada {months} meses",
     "payoutCadencePerMonth": "~{count} miembros financiados por mes",
-    "assetPriceAtEnd": "Precio del activo al vencimiento (G + {years} a\u00f1os)",
+    "assetPriceAtEnd": "Precio del activo al vencimiento (G + {years} años)",
     "totalContributed": "Total aportado por miembro",
-    "escrowHeading": "Umbral de liberaci\u00f3n del dep\u00f3sito",
+    "escrowHeading": "Umbral de liberación del depósito",
     "escrowUnlocks": "Se libera en el mes {month} / {total}",
     "escrowNote": "El pago se libera cuando las aportaciones alcancen el 60% del costo actual del activo.",
-    "vehicleConditionLabel": "Tipo de veh\u00edculo",
+    "vehicleConditionLabel": "Tipo de vehículo",
     "vehicleCondition": {
-      "new": "\ud83c\udd95 Nuevo",
-      "used": "\ud83d\udd04 Usado"
+      "new": "🆕 Nuevo",
+      "used": "🔄 Usado"
     },
-    "emptyState": "Ingresa el precio del activo para ver tu simulaci\u00f3n.",
-    "bankAprLabel": "Tasa de Inter\u00e9s Bancaria (TAE): {pct}%",
+    "emptyState": "Ingresa el precio del activo para ver tu simulación.",
+    "bankAprLabel": "Tasa de Interés Bancaria (TAE): {pct}%",
     "catLabel": "CAT (costo anual total): {pct}%",
     "catValue": "{pct}% CAT",
     "comparisonHeading": "TandaOmni vs. Banco Tradicional",
-    "tandaColumnHeading": "TandaOmni \u00b7 Sin Intereses",
+    "tandaColumnHeading": "TandaOmni · Sin Intereses",
     "bankColumnHeading": "Banco Tradicional",
-    "interestCharged": "Inter\u00e9s Cobrado",
-    "zeroInterest": "0% \u00b7 Ninguno",
+    "interestCharged": "Interés Cobrado",
+    "zeroInterest": "0% · Ninguno",
     "bankAprValue": "{pct}% TAE",
     "bankFinancedAmount": "Monto Financiado",
     "bankTotalInterest": "Total de Intereses Pagados",
     "bankTotalCost": "Costo Total",
-    "bankInterestNotice": "Un pr\u00e9stamo tradicional cobra intereses sobre el saldo financiado durante todo el plazo \u2014 dinero pagado por encima del precio del activo.",
+    "bankInterestNotice": "Un préstamo tradicional cobra intereses sobre el saldo financiado durante todo el plazo — dinero pagado por encima del precio del activo.",
     "consumerLenderColumnHeading": "Prestamista de consumo",
-    "consumerLenderNotice": "Los prestamistas de consumo en M\u00e9xico anuncian un CAT (costo anual total, sin IVA) de 78% a 456%. En un plazo corto t\u00edpico eso significa pagar casi el doble de lo que pediste \u2014 y el costo real en efectivo es mayor al sumar el 16% de IVA.",
+    "consumerLenderNotice": "Los prestamistas de consumo en México anuncian un CAT (costo anual total, sin IVA) de 78% a 456%. En un plazo corto típico eso significa pagar casi el doble de lo que pediste — y el costo real en efectivo es mayor al sumar el 16% de IVA.",
     "repayMultiple": "Pagas en total",
-    "repayMultipleValue": "{multiple}\u00d7 el pr\u00e9stamo",
+    "repayMultipleValue": "{multiple}× el préstamo",
     "savingsHeading": "Tu Ventaja TandaOmni",
-    "savingsNote": "Total ahorrado frente a un pr\u00e9stamo bancario tradicional en el mismo plazo.",
+    "savingsNote": "Total ahorrado frente a un préstamo bancario tradicional en el mismo plazo.",
     "savingsAmount": "Ahorra {amount}",
     "explain": {
       "priceLabelGTitle": "Precio objetivo del activo (G)",
-      "priceLabelGText": "El valor base del activo que deseas adquirir. Este es el monto que tu grupo tanda financiar\u00e1 colectivamente. Todos los pagos mensuales, enganches y proyecciones se derivan de esta cifra.",
+      "priceLabelGText": "El valor base del activo que deseas adquirir. Este es el monto que tu grupo tanda financiará colectivamente. Todos los pagos mensuales, enganches y proyecciones se derivan de esta cifra.",
       "termTitle": "Plazo del grupo",
-      "termText": "La duraci\u00f3n total de tu grupo de ahorro en meses. Cada mes, un miembro recibe el pago completo del grupo. Plazos m\u00e1s largos generan pagos mensuales menores, pero aumentan la exposici\u00f3n a cambios de precio con el tiempo.",
-      "deltaTitle": "Delta de precio anual (\u03b4)",
-      "deltaText": "La tasa anual estimada de cambio del precio del activo. Positiva para activos que se aprecian como bienes ra\u00edces (+4%\u2013+6%). Para veh\u00edculos, la direcci\u00f3n depende de lo que est\u00e1s comprando: positiva (+3%\u2013+6%) si buscas un modelo nuevo de a\u00f1o actual (sigue la inflaci\u00f3n del MSRP cada modelo), o negativa (\u22125%\u201310%) si buscas un veh\u00edculo usado espec\u00edfico (sigue la depreciaci\u00f3n mientras envejece en la cola). Esta tasa se usa para calcular tu pago mensual fijo y el precio proyectado al vencimiento.",
+      "termText": "La duración total de tu grupo de ahorro en meses. Cada mes, un miembro recibe el pago completo del grupo. Plazos más largos generan pagos mensuales menores, pero aumentan la exposición a cambios de precio con el tiempo.",
+      "deltaTitle": "Delta de precio anual (δ)",
+      "deltaText": "La tasa anual estimada de cambio del precio del activo. Positiva para activos que se aprecian como bienes raíces (+4%–+6%). Para vehículos, la dirección depende de lo que estás comprando: positiva (+3%–+6%) si buscas un modelo nuevo de año actual (sigue la inflación del MSRP cada modelo), o negativa (−5%–10%) si buscas un vehículo usado específico (sigue la depreciación mientras envejece en la cola). Esta tasa se usa para calcular tu pago mensual fijo y el precio proyectado al vencimiento.",
       "downpaymentTitle": "Enganche requerido (d)",
-      "downpaymentText": "Un pago inicial como porcentaje del precio objetivo, pagado antes de que comience el grupo. Reduce la carga mensual de todos los miembros y asegura tu posici\u00f3n en la cola de pagos.",
+      "downpaymentText": "Un pago inicial como porcentaje del precio objetivo, pagado antes de que comience el grupo. Reduce la carga mensual de todos los miembros y asegura tu posición en la cola de pagos.",
       "monthlyPaymentTitle": "Pago mensual (P)",
-      "monthlyPaymentText": "Tu aportaci\u00f3n mensual fija. Se calcula promediando el precio cambiante del activo durante todo el plazo: P = [G \u00d7 (1 + \u03b4 \u00d7 T/2) \u2212 G \u00d7 d] / M. Todos los miembros pagan la misma cantidad sin importar cu\u00e1ndo reciban su pago.",
+      "monthlyPaymentText": "Tu aportación mensual fija. Se calcula promediando el precio cambiante del activo durante todo el plazo: P = [G × (1 + δ × T/2) − G × d] / M. Todos los miembros pagan la misma cantidad sin importar cuándo reciban su pago.",
       "downpaymentRequiredTitle": "Enganche requerido",
-      "downpaymentRequiredText": "El monto en d\u00f3lares de tu enganche (G \u00d7 d). Debe pagarse por adelantado para activar tu posici\u00f3n en la cola de pagos del grupo.",
-      "groupSizeTitle": "Tama\u00f1o del grupo (N)",
-      "groupSizeText": "El n\u00famero de participantes en tu grupo tanda. El tama\u00f1o del grupo es independiente del plazo y NO cambia tu pago mensual: en una ROSCA cada miembro financia exactamente un activo, por lo que el pago lo determina solo el plazo. En cambio, el tama\u00f1o del grupo controla la frecuencia de pagos: un grupo m\u00e1s peque\u00f1o financia a los miembros con menos frecuencia (un pago mayor, m\u00e1s espaciado), mientras que un grupo m\u00e1s grande los financia con mayor frecuencia.",
+      "downpaymentRequiredText": "El monto en dólares de tu enganche (G × d). Debe pagarse por adelantado para activar tu posición en la cola de pagos del grupo.",
+      "groupSizeTitle": "Tamaño del grupo (N)",
+      "groupSizeText": "El número de participantes en tu grupo tanda. El tamaño del grupo es independiente del plazo y NO cambia tu pago mensual: en una ROSCA cada miembro financia exactamente un activo, por lo que el pago lo determina solo el plazo. En cambio, el tamaño del grupo controla la frecuencia de pagos: un grupo más pequeño financia a los miembros con menos frecuencia (un pago mayor, más espaciado), mientras que un grupo más grande los financia con mayor frecuencia.",
       "payoutCadenceTitle": "Frecuencia de pagos",
-      "payoutCadenceText": "Con qu\u00e9 frecuencia el grupo financia el activo de un miembro. El grupo compra N activos durante el plazo (uno por miembro), por lo que los pagos ocurren cada M / N meses. Un grupo m\u00e1s peque\u00f1o implica pagos menos frecuentes y m\u00e1s espaciados; uno m\u00e1s grande, pagos m\u00e1s frecuentes. Tu propia espera depende de tu posici\u00f3n en la cola.",
+      "payoutCadenceText": "Con qué frecuencia el grupo financia el activo de un miembro. El grupo compra N activos durante el plazo (uno por miembro), por lo que los pagos ocurren cada M / N meses. Un grupo más pequeño implica pagos menos frecuentes y más espaciados; uno más grande, pagos más frecuentes. Tu propia espera depende de tu posición en la cola.",
       "assetPriceAtEndTitle": "Precio del activo al vencimiento",
-      "assetPriceAtEndText": "El precio proyectado del activo al final del plazo, calculado con la Curva Delta: G\u2082 = G \u00d7 (1 + \u03b4)^T. Representa lo que pagar\u00e1 el \u00faltimo miembro en la cola para adquirir su activo.",
+      "assetPriceAtEndText": "El precio proyectado del activo al final del plazo, calculado con la Curva Delta: G₂ = G × (1 + δ)^T. Representa lo que pagará el último miembro en la cola para adquirir su activo.",
       "totalContributedTitle": "Total aportado por miembro",
-      "totalContributedText": "El monto total que cada miembro paga durante todo el plazo: (P \u00d7 M) + enganche. Dado que TandaOmni cobra cero intereses, esto se aproxima al precio original del activo \u2014 la comunidad se financia mutuamente sin costo.",
-      "escrowTitle": "Umbral de liberaci\u00f3n del dep\u00f3sito",
+      "totalContributedText": "El monto total que cada miembro paga durante todo el plazo: (P × M) + enganche. Dado que TandaOmni cobra cero intereses, esto se aproxima al precio original del activo — la comunidad se financia mutuamente sin costo.",
+      "escrowTitle": "Umbral de liberación del depósito",
       "escrowText": "Para viajes y experiencias (activos irrecuperables), tu pago queda bloqueado hasta que tus aportaciones totales alcancen el 60% del costo actual del activo. Esto protege al grupo contra el financiamiento de una experiencia que no puede reembolsarse si un miembro incumple.",
       "bankAprTitle": "Tasa de Interés Bancaria (TAE)",
       "bankAprText": "La tasa anual que un prestamista tradicional cobra sobre el saldo financiado. Los valores por defecto reflejan promedios de EE. UU. de junio de 2026 (hipoteca ~6.5%, auto nuevo ~7%, auto usado ~12%, viajes/préstamo personal ~14%). Ajusta el control para igualar una cotización que hayas recibido.",
@@ -190,14 +195,13 @@
     },
     "overview": {
       "objectiveLabel": "Objetivo",
-      "objective": "Un ecosistema financiero comunitario sin intereses (modelo ROSCA/Tanda) para Bienes Raíces (apreciables), Vehículos/Equipos (depreciables) y Experiencias (irrecuperables).",
+      "objective": "Un ecosistema financiero comunitario sin intereses (modelo ROSCA/Tanda) para Bienes Raíces (apreciables), Vehículos/Equipos (depreciables) y Experiencias (irrecuperables). La plataforma agrupa dinámicamente a los usuarios en niveles de riesgo específicos según la clase de activo que financian.",
       "stackLabel": "Stack Tecnológico",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (BD), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Diplomado",
       "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° — UNAM",
       "studentLabel": "Estudiante",
-      "studentValue": "Christopher Guzman",
-      "body": "La plataforma agrupa dinámicamente a los usuarios en niveles de riesgo específicos según la clase de activo."
+      "studentValue": "Christopher Guzman"
     },
     "tiers": {
       "t1": {
@@ -209,8 +213,8 @@
       "t2": {
         "name": "Vehículos y Equipo Comercial (Depreciable)",
         "term": "12 a 36 Meses",
-        "delta": "Nuevo: +3% a +6% / Usado: \u22125% a \u221210%",
-        "mitigation": "20% de Enganche, P\u00f3liza de Seguro Obligatoria en la Plataforma (independientemente del delta)."
+        "delta": "Nuevo: +3% a +6% / Usado: −5% a −10%",
+        "mitigation": "20% de Enganche, Póliza de Seguro Obligatoria en la Plataforma (independientemente del delta)."
       },
       "t3": {
         "name": "Viajes y Experiencias (Irrecuperable)",
@@ -226,6 +230,103 @@
       "be": "Infraestructura Backend y Motor de Riesgo (Django / DRF)",
       "fe": "Implementación Frontend (Next.js)",
       "do": "Despliegue e Infraestructura (Kubernetes)"
+    },
+    "vars": {
+      "G": "Precio Objetivo del Activo (Valor Base)",
+      "N": "Número de participantes en el grupo",
+      "d": "Porcentaje de enganche (varía según el segmento)",
+      "delta": "Delta Anual de Precio (+ inflación / − depreciación)",
+      "r": "Rendimiento Anual del Tesoro (p. ej., CETES a 0.065)",
+      "T": "Plazo total en años",
+      "M": "Plazo total en meses (M = T × 12)",
+      "m": "Índice del mes actual"
+    },
+    "formulas": {
+      "a": {
+        "label": "A. Ajuste Dinámico de Precio (Curva Delta)",
+        "description": "Calcula el costo real de comprar el activo en el mes m."
+      },
+      "b": {
+        "label": "B. Pago Mensual Fijo (Ajustado por Delta)",
+        "description": "Promedia el precio cambiante del activo durante el plazo para fijar un pago mensual fijo."
+      },
+      "c": {
+        "label": "C. Umbral de Liberación del Depósito (Segmento 3)",
+        "description": "El pago queda bloqueado hasta que las contribuciones pagadas más el enganche alcancen el 60% del costo actual del activo."
+      },
+      "d": {
+        "label": "D. Libro Mayor del Tesoro y Saldo Mensual",
+        "description": "Fondo total de liquidez de la plataforma que contabiliza contribuciones, rendimientos, pagos y primas de seguro."
+      }
+    },
+    "tierLabels": {
+      "tierPrefix": "Segmento",
+      "term": "Plazo",
+      "delta": "Delta de Precio (δ)",
+      "mitigation": "Mitigación"
+    },
+    "phasePrefix": "Fase",
+    "tasks": {
+      "be01": {
+        "component": "BD Central y Libro Mayor",
+        "directive": "Construir los modelos User, Group, AssetCategory y LedgerEntry. Campos de AssetCategory: max_term, delta_rate, requires_insurance, escrow_threshold. LedgerEntry DEBE ser de solo anexado. Sin actualizaciones/eliminaciones."
+      },
+      "be02": {
+        "component": "API del Simulador Multi-Vertical",
+        "directive": "Construir el endpoint sin estado /api/v1/simulate/. Entradas: G, T, d, category_id. Aplicar las fórmulas de la Curva Delta para devolver N, P y la cadena de mitigación."
+      },
+      "be03": {
+        "component": "Algoritmo de Emparejamiento de Grupos",
+        "directive": "Construir /api/v1/groups/match/. Agrupar usuarios verificados por KYC emparejando P con una variación del 5%. Crear una instancia de Group cuando se alcance el objetivo N. Establecer el estado en \"AWAITING_DOWNPAYMENT\"."
+      },
+      "be04": {
+        "component": "Worker de Rendimiento del Tesoro",
+        "directive": "Tarea de Celery que se ejecuta cada noche. Calcular el rendimiento de los grupos activos: (saldo × (r / 365)). Anexar una entrada YIELD al libro mayor."
+      },
+      "be05": {
+        "component": "Worker de Seguros y Comisiones",
+        "directive": "Tarea de Celery que se ejecuta mensualmente. Verificar el indicador requires_insurance. Si es verdadero, descontar la prima y anexar una entrada INSURANCE_FEE al libro mayor."
+      },
+      "be06": {
+        "component": "Cola Inteligente de Pagos",
+        "directive": "Tarea mensual de Celery. Si B_m ≥ G_m, verificar las reglas de depósito de la categoría. Si se supera el umbral, ejecutar una entrada PAYOUT en el libro mayor. El orden de la cola se determina por la fecha de ingreso y un hash seguro."
+      },
+      "fe01": {
+        "component": "UI del Omni-Simulador",
+        "directive": "Construir el componente cliente Simulator.tsx. Usar pestañas para el Tipo de Activo (Casa, Auto, Viaje). Ajustar dinámicamente los límites de los deslizadores por segmento. Aplicar debounce a las llamadas a /api/v1/simulate/."
+      },
+      "fe02": {
+        "component": "UI de Contrato y Mitigación",
+        "directive": "Construir el renderizado dinámico de advertencias. Mostrar el reconocimiento de seguro obligatorio para el Segmento 2. Mostrar una barra de progreso visual de Desbloqueo de Depósito del 60% para el Segmento 3."
+      },
+      "fe03": {
+        "component": "Flujo de Autenticación y KYC",
+        "directive": "Implementar NextAuth. Construir un asistente de incorporación que capture la identificación. Integrar Stripe Elements para capturar una retención de preautorización para el Segmento 3."
+      },
+      "fe04": {
+        "component": "UI del Panel del Usuario",
+        "directive": "Obtener los datos del libro mayor del usuario. Construir componentes modulares de Recharts: QueueTimeline.tsx que muestra la posición en la cola y TreasuryChart.tsx que rastrea el saldo del grupo (B_m) y el rendimiento a lo largo del tiempo."
+      },
+      "do01": {
+        "component": "Dockerización",
+        "directive": "Escribir Dockerfiles multietapa para Next.js, Django y los workers de Celery. Optimizar para imágenes de producción ligeras."
+      },
+      "do02": {
+        "component": "Manifiestos de K8s",
+        "directive": "Crear deployment.yaml y service.yaml. Aprovisionar dos despliegues de Celery distintos: worker-general y worker-financial-critical. Configurar sondas de Liveness/Readiness."
+      },
+      "do03": {
+        "component": "Ingress y TLS",
+        "directive": "Configurar el controlador de Ingress con reglas de enrutamiento (/api/* al backend, / al frontend). Configurar cert-manager para certificados automáticos de Let's Encrypt."
+      },
+      "do04": {
+        "component": "Configuración de BD Inmutable",
+        "directive": "Desplegar un StatefulSet de PostgreSQL con PersistentVolumeClaims (PVCs). Definir ConfigMaps y Secrets para las variables de entorno."
+      },
+      "do05": {
+        "component": "Recuperación ante Desastres",
+        "directive": "Configurar un CronJob de K8s que ejecute pg_dump cada 12 horas, canalizado directamente a un bucket de almacenamiento de objetos cifrado."
+      }
     }
   },
   "AccountPage": {

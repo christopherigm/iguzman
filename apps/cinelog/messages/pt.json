@@ -189,7 +189,7 @@
     "addToLibraryError": "Falha ao adicionar o filme à sua biblioteca. Tente novamente."
   },
   "MovieDetailPage": {
-    "back": "Voltar ao catálogo",
+    "back": "Voltar",
     "director": "Diretor",
     "genres": "Gêneros",
     "cast": "Elenco",

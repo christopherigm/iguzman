@@ -14,6 +14,13 @@ export default async function AnalysisPage({ params }: Props) {
   setRequestLocale(locale);
   const t = await getTranslations("AnalysisPage");
 
+  const tierLabels = {
+    tier: t("tierLabels.tierPrefix"),
+    term: t("tierLabels.term"),
+    delta: t("tierLabels.delta"),
+    mitigation: t("tierLabels.mitigation"),
+  };
+
   return (
     <>
       <NavbarSpacer />
@@ -44,26 +51,39 @@ export default async function AnalysisPage({ params }: Props) {
 
           {/* Section 1: Project Overview */}
           <Section title={t("section.overview")}>
-            <Typography styles={{ lineHeight: 1.7 }} color="var(--foreground)">
-              {t("overview.body")}
-            </Typography>
-            <Card display="flex" flexDirection="column">
-              <InfoRow
-                label={t("overview.objectiveLabel")}
-                value={t("overview.objective")}
-              />
-              <InfoRow
-                label={t("overview.stackLabel")}
-                value={t("overview.stack")}
-              />
-              <InfoRow
-                label={t("overview.courseLabel")}
-                value={t("overview.courseValue")}
-              />
-              <InfoRow
-                label={t("overview.studentLabel")}
-                value={t("overview.studentValue")}
-              />
+            <Card
+              display="flex"
+              flexDirection="column"
+              gap={0}
+              padding={0}
+              styles={{ overflow: "hidden" }}
+            >
+              {[
+                {
+                  label: t("overview.objectiveLabel"),
+                  value: t("overview.objective"),
+                },
+                {
+                  label: t("overview.stackLabel"),
+                  value: t("overview.stack"),
+                },
+                {
+                  label: t("overview.courseLabel"),
+                  value: t("overview.courseValue"),
+                },
+                {
+                  label: t("overview.studentLabel"),
+                  value: t("overview.studentValue"),
+                },
+              ].map((row, idx, arr) => (
+                <InfoRow
+                  key={row.label}
+                  label={row.label}
+                  value={row.value}
+                  idx={idx}
+                  last={idx === arr.length - 1}
+                />
+              ))}
             </Card>
           </Section>
 
@@ -77,6 +97,7 @@ export default async function AnalysisPage({ params }: Props) {
               mitigation={t("tiers.t1.mitigation")}
               color="var(--success, #16a34a)"
               icon="🏠"
+              labels={tierLabels}
             />
             <TierCard
               tier="2"
@@ -86,6 +107,7 @@ export default async function AnalysisPage({ params }: Props) {
               mitigation={t("tiers.t2.mitigation")}
               color="var(--warning, #d97706)"
               icon="🚗"
+              labels={tierLabels}
             />
             <TierCard
               tier="3"
@@ -95,6 +117,7 @@ export default async function AnalysisPage({ params }: Props) {
               mitigation={t("tiers.t3.mitigation")}
               color="var(--accent, #06b6d4)"
               icon="✈️"
+              labels={tierLabels}
             />
           </Section>
 
@@ -107,159 +130,190 @@ export default async function AnalysisPage({ params }: Props) {
               >
                 {t("math.universalVarsLabel")}
               </Typography>
-              <Card padding={16} gap={4} styles={{ fontFamily: "monospace" }}>
+              <Card
+                display="flex"
+                flexDirection="column"
+                gap={0}
+                padding={0}
+                styles={{ overflow: "hidden" }}
+              >
                 {[
-                  "G  — Target Asset Price (Base Value)",
-                  "N  — Number of participants in the group",
-                  "d  — Downpayment percentage (varies by tier)",
-                  "δ  — Annual Price Delta (+ inflation / − depreciation)",
-                  "r  — Annual Treasury Yield (e.g., CETES at 0.065)",
-                  "T  — Total term in years",
-                  "M  — Total term in months (M = T × 12)",
-                  "m  — Current month index",
-                ].map((v) => (
-                  <Typography
-                    key={v}
-                    styles={{ lineHeight: 1.8 }}
-                    color="var(--foreground)"
+                  { symbol: "G", description: t("vars.G") },
+                  { symbol: "N", description: t("vars.N") },
+                  { symbol: "d", description: t("vars.d") },
+                  { symbol: "δ", description: t("vars.delta") },
+                  { symbol: "r", description: t("vars.r") },
+                  { symbol: "T", description: t("vars.T") },
+                  { symbol: "M", description: t("vars.M") },
+                  { symbol: "m", description: t("vars.m") },
+                ].map((row, idx, arr) => (
+                  <Box
+                    key={row.symbol}
+                    display="flex"
+                    flexDirection="row"
+                    gap={12}
+                    padding="14px 16px"
+                    backgroundColor={
+                      idx % 2 === 0 ? "var(--surface-1)" : "var(--surface-2)"
+                    }
+                    styles={{
+                      borderBottom:
+                        idx < arr.length - 1
+                          ? "1px solid var(--border, #e5e7eb)"
+                          : undefined,
+                    }}
                   >
-                    {v}
-                  </Typography>
+                    <Typography
+                      fontWeight={700}
+                      styles={{ minWidth: 40, fontFamily: "monospace" }}
+                      color="var(--accent, #06b6d4)"
+                    >
+                      {row.symbol}
+                    </Typography>
+                    <Typography
+                      styles={{
+                        lineHeight: 1.6,
+                        flex: 1,
+                        minWidth: 0,
+                        overflowWrap: "anywhere",
+                      }}
+                      color="var(--foreground)"
+                    >
+                      {row.description}
+                    </Typography>
+                  </Box>
                 ))}
               </Card>
             </Box>
 
             <FormulaCard
-              label="A. Dynamic Price Adjustment (Delta Curve)"
-              description="Calculates the actual cost to purchase the asset at month m."
+              label={t("formulas.a.label")}
+              description={t("formulas.a.description")}
               formula="G_m = G × (1 + δ)^(m/12)"
             />
             <FormulaCard
-              label="B. Fixed Monthly Payment (Delta Adjusted)"
-              description="Averages the changing asset price over the term to lock in a fixed monthly payment."
+              label={t("formulas.b.label")}
+              description={t("formulas.b.description")}
               formula="P = [G × (1 + δ × T/2) − G × d] / M"
             />
             <FormulaCard
-              label="C. Escrow Release Threshold (Tier 3)"
-              description="Payout is locked until total paid contributions plus downpayment reach 60% of current asset cost."
+              label={t("formulas.c.label")}
+              description={t("formulas.c.description")}
               formula="ΣP_k + (G × d) ≥ G_m × c"
             />
             <FormulaCard
-              label="D. Treasury Ledger & Monthly Balance"
-              description="Total platform liquidity pool accounting for contributions, yield, payouts, and insurance premiums."
+              label={t("formulas.d.label")}
+              description={t("formulas.d.description")}
               formula="B_m = B_{m-1} + (N × P) + (B_{m-1} × r/12) − G_m − I_m"
             />
           </Section>
 
-          {/* Section 4: Agentic Task Breakdown */}
+          {/* Section 4: Task Breakdown */}
           <Section title={t("section.taskBreakdown")}>
             {/* Phase 1 */}
-            <PhaseHeader phase="1" label={t("phase.be")} />
+            <PhaseHeader
+              phase="1"
+              label={t("phase.be")}
+              prefix={t("phasePrefix")}
+            />
             <TaskTable
               tasks={[
                 {
                   id: "BE-01",
-                  component: "Core DB & Ledger",
-                  directive:
-                    "Build User, Group, AssetCategory, and LedgerEntry models. AssetCategory fields: max_term, delta_rate, requires_insurance, escrow_threshold. LedgerEntry MUST be append-only. No updates/deletes.",
+                  component: t("tasks.be01.component"),
+                  directive: t("tasks.be01.directive"),
                 },
                 {
                   id: "BE-02",
-                  component: "Multi-Vertical Simulator API",
-                  directive:
-                    "Build stateless endpoint /api/v1/simulate/. Inputs: G, T, d, category_id. Apply Delta Curve formulas to return N, P and mitigation string.",
+                  component: t("tasks.be02.component"),
+                  directive: t("tasks.be02.directive"),
                 },
                 {
                   id: "BE-03",
-                  component: "Group Matching Algo",
-                  directive:
-                    'Build /api/v1/groups/match/. Group KYC-verified users by matching P within 5% variance. Create a Group instance when N target is met. Set status to "AWAITING_DOWNPAYMENT".',
+                  component: t("tasks.be03.component"),
+                  directive: t("tasks.be03.directive"),
                 },
                 {
                   id: "BE-04",
-                  component: "Treasury Yield Worker",
-                  directive:
-                    "Celery task running nightly. Calculate yield for active groups: (balance × (r / 365)). Append YIELD ledger entry.",
+                  component: t("tasks.be04.component"),
+                  directive: t("tasks.be04.directive"),
                 },
                 {
                   id: "BE-05",
-                  component: "Insurance & Fees Worker",
-                  directive:
-                    "Celery task running monthly. Check requires_insurance flag. If true, deduct premium and append INSURANCE_FEE ledger entry.",
+                  component: t("tasks.be05.component"),
+                  directive: t("tasks.be05.directive"),
                 },
                 {
                   id: "BE-06",
-                  component: "Smart Payout Queue",
-                  directive:
-                    "Monthly Celery task. If B_m ≥ G_m, check category escrow rules. If threshold passed, execute PAYOUT ledger entry. Queue order determined by joined date and secure hash.",
+                  component: t("tasks.be06.component"),
+                  directive: t("tasks.be06.directive"),
                 },
               ]}
             />
 
             {/* Phase 2 */}
-            <PhaseHeader phase="2" label={t("phase.fe")} />
+            <PhaseHeader
+              phase="2"
+              label={t("phase.fe")}
+              prefix={t("phasePrefix")}
+            />
             <TaskTable
               tasks={[
                 {
                   id: "FE-01",
-                  component: "Omni-Simulator UI",
-                  directive:
-                    "Build Simulator.tsx client component. Use tabs for Asset Type (House, Car, Travel). Dynamically adjust slider limits per tier. Debounce calls to /api/v1/simulate/.",
+                  component: t("tasks.fe01.component"),
+                  directive: t("tasks.fe01.directive"),
                 },
                 {
                   id: "FE-02",
-                  component: "Contract & Mitigation UI",
-                  directive:
-                    "Build dynamic warning rendering. Show mandatory insurance acknowledgment for Tier 2. Show visual 60% Escrow Unlock progress bar for Tier 3.",
+                  component: t("tasks.fe02.component"),
+                  directive: t("tasks.fe02.directive"),
                 },
                 {
                   id: "FE-03",
-                  component: "Auth & KYC Flow",
-                  directive:
-                    "Implement NextAuth. Build onboarding wizard capturing ID. Integrate Stripe Elements to capture a pre-authorization hold for Tier 3.",
+                  component: t("tasks.fe03.component"),
+                  directive: t("tasks.fe03.directive"),
                 },
                 {
                   id: "FE-04",
-                  component: "User Dashboard UI",
-                  directive:
-                    "Fetch user ledger data. Build modular Recharts components: QueueTimeline.tsx showing queue position, and TreasuryChart.tsx tracking group balance (B_m) and yield over time.",
+                  component: t("tasks.fe04.component"),
+                  directive: t("tasks.fe04.directive"),
                 },
               ]}
             />
 
             {/* Phase 3 */}
-            <PhaseHeader phase="3" label={t("phase.do")} />
+            <PhaseHeader
+              phase="3"
+              label={t("phase.do")}
+              prefix={t("phasePrefix")}
+            />
             <TaskTable
               tasks={[
                 {
                   id: "DO-01",
-                  component: "Dockerization",
-                  directive:
-                    "Write multi-stage Dockerfiles for Next.js, Django, and Celery workers. Optimize for slim production images.",
+                  component: t("tasks.do01.component"),
+                  directive: t("tasks.do01.directive"),
                 },
                 {
                   id: "DO-02",
-                  component: "K8s Manifests",
-                  directive:
-                    "Create deployment.yaml and service.yaml. Provision two distinct Celery deployments: worker-general and worker-financial-critical. Configure Liveness/Readiness probes.",
+                  component: t("tasks.do02.component"),
+                  directive: t("tasks.do02.directive"),
                 },
                 {
                   id: "DO-03",
-                  component: "Ingress & TLS",
-                  directive:
-                    "Configure Ingress controller with routing rules (/api/* to backend, / to frontend). Configure cert-manager for automated Let's Encrypt certificates.",
+                  component: t("tasks.do03.component"),
+                  directive: t("tasks.do03.directive"),
                 },
                 {
                   id: "DO-04",
-                  component: "Immutable DB Config",
-                  directive:
-                    "Deploy PostgreSQL StatefulSet with PersistentVolumeClaims (PVCs). Define ConfigMaps and Secrets for environment variables.",
+                  component: t("tasks.do04.component"),
+                  directive: t("tasks.do04.directive"),
                 },
                 {
                   id: "DO-05",
-                  component: "Disaster Recovery",
-                  directive:
-                    "Configure a K8s CronJob to trigger pg_dump every 12 hours, piped directly to an encrypted object storage bucket.",
+                  component: t("tasks.do05.component"),
+                  directive: t("tasks.do05.directive"),
                 },
               ]}
             />
@@ -294,26 +348,32 @@ function Section({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({
+  label,
+  value,
+  idx,
+  last,
+}: {
+  label: string;
+  value: string;
+  idx: number;
+  last: boolean;
+}) {
   return (
     <Box
       display="flex"
-      flexDirection="row"
-      gap={12}
-      padding="8px 0"
-      styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
+      flexDirection="column"
+      gap={6}
+      padding="14px 16px"
+      backgroundColor={idx % 2 === 0 ? "var(--surface-1)" : "var(--surface-2)"}
+      styles={{
+        borderBottom: last ? undefined : "1px solid var(--border, #e5e7eb)",
+      }}
     >
-      <Typography
-        fontWeight={600}
-        styles={{ minWidth: 120 }}
-        color="var(--muted-foreground, #6b7280)"
-      >
-        {label}
-      </Typography>
+      <Typography fontWeight={600}>{label}</Typography>
       <Typography
         styles={{
           lineHeight: 1.6,
-          flex: 1,
           minWidth: 0,
           overflowWrap: "anywhere",
         }}
@@ -333,6 +393,7 @@ function TierCard({
   mitigation,
   color,
   icon,
+  labels,
 }: {
   tier: string;
   name: string;
@@ -341,6 +402,7 @@ function TierCard({
   mitigation: string;
   color: string;
   icon: string;
+  labels: { tier: string; term: string; delta: string; mitigation: string };
 }) {
   return (
     <Card padding={0} styles={{ overflow: "hidden" }}>
@@ -356,65 +418,42 @@ function TierCard({
       >
         <Typography>{icon}</Typography>
         <Typography fontWeight={700} color="var(--foreground)">
-          Tier {tier}: {name}
+          {labels.tier} {tier}: {name}
         </Typography>
       </Box>
       <Box display="flex" flexDirection="column" gap={0}>
-        <Box
-          display="flex"
-          padding="8px 16px"
-          gap={8}
-          styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
-        >
-          <Typography
-            styles={{ minWidth: 90 }}
-            fontWeight={600}
-            color="var(--muted-foreground)"
+        {[
+          { label: labels.term, value: term },
+          { label: labels.delta, value: delta },
+          { label: labels.mitigation, value: mitigation },
+        ].map((row, idx, arr) => (
+          <Box
+            key={row.label}
+            display="flex"
+            flexDirection="column"
+            padding="14px 16px"
+            gap={6}
+            backgroundColor={
+              idx % 2 === 0 ? "var(--surface-1)" : "var(--surface-2)"
+            }
+            styles={{
+              borderBottom:
+                idx < arr.length - 1
+                  ? "1px solid var(--border, #e5e7eb)"
+                  : undefined,
+            }}
           >
-            Term
-          </Typography>
-          <Typography
-            styles={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
-            color="var(--foreground)"
-          >
-            {term}
-          </Typography>
-        </Box>
-        <Box
-          display="flex"
-          padding="8px 16px"
-          gap={8}
-          styles={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}
-        >
-          <Typography
-            styles={{ minWidth: 90 }}
-            fontWeight={600}
-            color="var(--muted-foreground)"
-          >
-            Price Delta (δ)
-          </Typography>
-          <Typography
-            styles={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
-            color="var(--foreground)"
-          >
-            {delta}
-          </Typography>
-        </Box>
-        <Box display="flex" padding="8px 16px" gap={8}>
-          <Typography
-            styles={{ minWidth: 90 }}
-            fontWeight={600}
-            color="var(--muted-foreground)"
-          >
-            Mitigation
-          </Typography>
-          <Typography
-            styles={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}
-            color="var(--foreground)"
-          >
-            {mitigation}
-          </Typography>
-        </Box>
+            <Typography fontWeight={600} color="var(--muted-foreground)">
+              {row.label}
+            </Typography>
+            <Typography
+              styles={{ minWidth: 0, overflowWrap: "anywhere" }}
+              color="var(--foreground)"
+            >
+              {row.value}
+            </Typography>
+          </Box>
+        ))}
       </Box>
     </Card>
   );
@@ -448,7 +487,15 @@ function FormulaCard({
   );
 }
 
-function PhaseHeader({ phase, label }: { phase: string; label: string }) {
+function PhaseHeader({
+  phase,
+  label,
+  prefix,
+}: {
+  phase: string;
+  label: string;
+  prefix: string;
+}) {
   return (
     <Box
       padding="8px 14px"
@@ -456,7 +503,7 @@ function PhaseHeader({ phase, label }: { phase: string; label: string }) {
       backgroundColor="color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent)"
     >
       <Typography fontWeight={700} color="var(--foreground)">
-        Phase {phase}: {label}
+        {prefix} {phase}: {label}
       </Typography>
     </Box>
   );
