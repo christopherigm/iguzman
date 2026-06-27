@@ -37,7 +37,9 @@ function readRememberPref(): boolean {
 
 function readRememberedEmail(): string {
   if (typeof window === "undefined") return "";
-  return readRememberPref() ? (localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? "") : "";
+  return readRememberPref()
+    ? (localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? "")
+    : "";
 }
 
 type Tab = "sign-in" | "sign-up" | "reset-password";

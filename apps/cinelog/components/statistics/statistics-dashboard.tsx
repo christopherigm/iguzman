@@ -63,30 +63,27 @@ export function StatisticsDashboard({ initialStats }: Props) {
   // Fetch a scope's stats (or reuse a server-provided fallback). Called from the
   // scope picker (an event handler) and the mount effect below - never written
   // synchronously inside an effect body, so it doesn't cascade renders.
-  const load = useCallback(
-    (next: StatsScope, fallback: MovieStats | null) => {
-      if (fallback) {
-        setStats(fallback);
-        setError(false);
-        setLoading(false);
-        return;
-      }
-      const id = ++reqId.current;
-      setLoading(true);
+  const load = useCallback((next: StatsScope, fallback: MovieStats | null) => {
+    if (fallback) {
+      setStats(fallback);
       setError(false);
-      getStats(next)
-        .then((data) => {
-          if (id === reqId.current) setStats(data);
-        })
-        .catch(() => {
-          if (id === reqId.current) setError(true);
-        })
-        .finally(() => {
-          if (id === reqId.current) setLoading(false);
-        });
-    },
-    [],
-  );
+      setLoading(false);
+      return;
+    }
+    const id = ++reqId.current;
+    setLoading(true);
+    setError(false);
+    getStats(next)
+      .then((data) => {
+        if (id === reqId.current) setStats(data);
+      })
+      .catch(() => {
+        if (id === reqId.current) setError(true);
+      })
+      .finally(() => {
+        if (id === reqId.current) setLoading(false);
+      });
+  }, []);
 
   // Only the catalog scope is prefetched on the server. When that prefetch
   // failed (initialStats === null), fetch it on mount. All state writes happen

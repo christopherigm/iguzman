@@ -120,6 +120,8 @@
     "payoutCadencePerMonth": "~{count} members funded per month",
     "assetPriceAtEnd": "Asset Price at Term End (G + {years}y)",
     "totalContributed": "Total Contributed per Member",
+    "pieBreakdownHeading": "Cost Breakdown",
+    "pieMonthlyPayments": "Monthly Payments",
     "escrowHeading": "Escrow Unlock Threshold",
     "escrowUnlocks": "Unlocks at month {month} / {total}",
     "escrowNote": "Payout releases once contributions reach 60% of the current asset cost.",
@@ -213,6 +215,27 @@
       "loadingNote": "Crunching your numbers and writing a recommendation…",
       "searchNote": "Gathering up-to-date market info to ground the analysis…",
       "error": "Something went wrong generating the analysis. Please try again."
+    },
+    "pdf": {
+      "cardHeading": "Export your simulation",
+      "cardDescription": "Download a PDF report with your parameters, the TandaOmni vs. bank comparison, the projection charts, and the AI analysis.",
+      "exportButton": "Export to PDF",
+      "exporting": "Generating PDF…",
+      "exportError": "Could not generate the PDF. Please try again.",
+      "title": "TandaOmni - Financial Simulation",
+      "generatedOn": "Generated on {date}",
+      "parametersHeading": "Simulation Parameters",
+      "assetType": "Asset Type",
+      "currency": "Currency",
+      "term": "Term",
+      "termValue": "{months} months ({years} yrs)",
+      "priceAppreciation": "Annual Price Appreciation",
+      "downpayment": "Downpayment",
+      "lenderRate": "Lender Rate",
+      "cetesYield": "CETES Treasury Yield",
+      "escrow": "Escrow Unlocks",
+      "escrowValue": "Month {month} of {total}",
+      "disclaimer": "Figures are estimates based on the parameters you selected and are provided for informational purposes only. They are not financial advice."
     }
   },
   "AnalysisPage": {

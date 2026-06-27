@@ -52,11 +52,7 @@ export function MoviePagination({ page, totalPages, onPageChange }: Props) {
       flexWrap="wrap"
       marginTop={16}
     >
-      <Button
-        size="md"
-        disabled={page <= 1}
-        onClick={() => goToPage(page - 1)}
-      >
+      <Button size="md" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
         {t("previousPage")}
       </Button>
 

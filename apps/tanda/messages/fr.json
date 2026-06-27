@@ -120,6 +120,8 @@
     "payoutCadencePerMonth": "~{count} membres financés par mois",
     "assetPriceAtEnd": "Prix de l’actif en fin de période (G + {years} ans)",
     "totalContributed": "Total versé par membre",
+    "pieBreakdownHeading": "Répartition des coûts",
+    "pieMonthlyPayments": "Paiements mensuels",
     "escrowHeading": "Seuil de déblocage du séquestre",
     "escrowUnlocks": "Débloqué au mois {month} / {total}",
     "escrowNote": "Le versement est libéré lorsque les contributions atteignent 60 % du coût actuel de l’actif.",
@@ -213,6 +215,27 @@
       "loadingNote": "Calcul de vos chiffres et rédaction d'une recommandation…",
       "searchNote": "Collecte d'informations de marché à jour pour étayer l'analyse…",
       "error": "Une erreur s'est produite lors de la génération de l'analyse. Veuillez réessayer."
+    },
+    "pdf": {
+      "cardHeading": "Exporter votre simulation",
+      "cardDescription": "Téléchargez un rapport PDF avec vos paramètres, la comparaison TandaOmni vs. banque, les graphiques de projection et l'analyse par IA.",
+      "exportButton": "Exporter en PDF",
+      "exporting": "Génération du PDF…",
+      "exportError": "Impossible de générer le PDF. Veuillez réessayer.",
+      "title": "TandaOmni - Simulation Financière",
+      "generatedOn": "Généré le {date}",
+      "parametersHeading": "Paramètres de la Simulation",
+      "assetType": "Type d'Actif",
+      "currency": "Devise",
+      "term": "Durée",
+      "termValue": "{months} mois ({years} ans)",
+      "priceAppreciation": "Appréciation Annuelle du Prix",
+      "downpayment": "Acompte",
+      "lenderRate": "Taux du Prêteur",
+      "cetesYield": "Rendement CETES",
+      "escrow": "Déblocage du Séquestre",
+      "escrowValue": "Mois {month} sur {total}",
+      "disclaimer": "Les chiffres sont des estimations basées sur les paramètres que vous avez sélectionnés et sont fournis à titre informatif uniquement. Ils ne constituent pas un conseil financier."
     }
   },
   "AnalysisPage": {

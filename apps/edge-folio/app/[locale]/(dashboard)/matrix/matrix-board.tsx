@@ -345,12 +345,7 @@ interface BulletCardProps {
   onApprove: (id: number) => void;
 }
 
-function BulletCard({
-  bullet,
-  onEdit,
-  onDelete,
-  onApprove,
-}: BulletCardProps) {
+function BulletCard({ bullet, onEdit, onDelete, onApprove }: BulletCardProps) {
   const t = useTranslations("MatrixPage");
   const showApprove = bullet.source === "extracted" && !bullet.is_approved;
 

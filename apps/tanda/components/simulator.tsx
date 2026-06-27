@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Card } from "@repo/ui/core-elements/card";
@@ -12,6 +12,11 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Chart } from "@repo/ui/core-elements/chart";
 import { AiAnalysis, type AnalysisContext } from "./ai-analysis";
+import type {
+  PdfRow,
+  PdfLineChart,
+  SimulationPdfProps,
+} from "./simulation-pdf";
 import "./simulator.css";
 
 // ─── Tier Configuration ────────────────────────────────────────────────────────
@@ -389,6 +394,7 @@ const MITIGATION_ICON: Record<TierConfig["mitigationKind"], string> = {
 
 export function Simulator() {
   const t = useTranslations("SimulatorPage");
+  const locale = useLocale();
   const [tier, setTier] = useState<TierKey>("real_estate");
   const cfg = TIERS[tier];
 
@@ -409,6 +415,11 @@ export function Simulator() {
     title: string;
     text: string;
   } | null>(null);
+  // Latest AI analysis text, surfaced by the AiAnalysis panel so it can be
+  // embedded in the exported PDF. Null until the user runs an analysis.
+  const [analysisText, setAnalysisText] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
 
   const openExplain = (titleKey: string, textKey: string) =>
     setExplainModal({
@@ -648,15 +659,252 @@ export function Simulator() {
         )}`,
       );
     }
-    lines.push(
-      "",
-      `CETES treasury yield (r): ${(cetesRate * 100).toFixed(1)}%`,
-    );
+    // Note: the CETES treasury yield is deliberately excluded from the analysis
+    // context. It drives the platform's treasury pool, not the user's decision of
+    // TandaOmni vs. a loan, so it should not influence the AI recommendation.
     if (escrowUnlockMonth !== null) {
-      lines.push(`Escrow unlocks at month ${escrowUnlockMonth} of ${months}.`);
+      lines.push(
+        "",
+        `Escrow unlocks at month ${escrowUnlockMonth} of ${months}.`,
+      );
     }
 
     return { summary: lines.join("\n"), assetTypeLabel };
+  };
+
+  // Assemble the fully-localized, presentation-ready payload for the PDF
+  // document. All labels/values are formatted here (the PDF module stays a pure
+  // view) so the export matches exactly what the user sees on screen.
+  const buildPdfData = (): SimulationPdfProps | null => {
+    if (!result || !bankResult || G <= 0) return null;
+
+    const assetTypeLabel = t(`tiers.${TIER_I18N_KEY[tier]}.label`);
+    const assetLabel =
+      tier === "vehicle"
+        ? `${assetTypeLabel} (${t(`vehicleCondition.${vehicleCondition}`)})`
+        : assetTypeLabel;
+
+    const parameters: PdfRow[] = [
+      { label: t("pdf.assetType"), value: assetLabel },
+      { label: t("pdf.currency"), value: cfg.currency },
+      { label: t("priceLabelG"), value: fmtWhole.format(G) },
+      {
+        label: t("pdf.term"),
+        value: t("pdf.termValue", { months, years: T.toFixed(1) }),
+      },
+      {
+        label: t("pdf.priceAppreciation"),
+        value: `${(delta * 100).toFixed(1)}%`,
+      },
+      {
+        label: t("pdf.downpayment"),
+        value: `${(cfg.downpaymentPct * 100).toFixed(0)}% · ${fmtWhole.format(
+          result.downpayment,
+        )}`,
+      },
+      {
+        label: t("pdf.lenderRate"),
+        value: `${(bankResult.apr * 100).toFixed(2)}% ${
+          rateKind === "cat" ? "CAT" : "APR"
+        }`,
+      },
+      {
+        label: t("pdf.cetesYield"),
+        value: `${(cetesRate * 100).toFixed(1)}%`,
+      },
+    ];
+    if (escrowUnlockMonth !== null) {
+      parameters.push({
+        label: t("pdf.escrow"),
+        value: t("pdf.escrowValue", {
+          month: escrowUnlockMonth,
+          total: months,
+        }),
+      });
+    }
+
+    const tandaRows: PdfRow[] = [
+      {
+        label: t("monthlyPayment"),
+        value: fmtCents.format(result.P),
+        highlight: true,
+      },
+      {
+        label: t("downpaymentRequired"),
+        value: fmtWhole.format(result.downpayment),
+      },
+      { label: t("interestCharged"), value: t("zeroInterest") },
+      {
+        label: t("groupSize"),
+        value: t("groupSizeValue", { n: result.N }),
+      },
+      { label: t("payoutCadence"), value: cadenceLabel },
+      {
+        label: t("assetPriceAtEnd", { years: T.toFixed(1) }),
+        value: fmtWhole.format(result.G_final),
+      },
+      {
+        label: t("totalContributed"),
+        value: fmtWhole.format(result.totalPaid),
+        highlight: true,
+      },
+    ];
+
+    const bankRows: PdfRow[] = [
+      {
+        label: t("monthlyPayment"),
+        value: fmtCents.format(bankResult.P),
+        highlight: true,
+      },
+      {
+        label: t("downpaymentRequired"),
+        value: fmtWhole.format(bankResult.downpayment),
+      },
+      {
+        label: t("interestCharged"),
+        value: t(rateValueKey as Parameters<typeof t>[0], {
+          pct: (bankResult.apr * 100).toFixed(2),
+        }),
+      },
+      {
+        label: t("bankFinancedAmount"),
+        value: fmtWhole.format(bankResult.principal),
+      },
+      {
+        label: t("bankTotalInterest"),
+        value: fmtWhole.format(bankResult.totalInterest),
+      },
+      {
+        label: t("bankTotalCost"),
+        value: fmtWhole.format(bankResult.totalPaid),
+        highlight: true,
+      },
+    ];
+    if (cfg.showRepayMultiple && repayMultiple !== null) {
+      bankRows.push({
+        label: t("repayMultiple"),
+        value: t("repayMultipleValue", { multiple: repayMultiple.toFixed(1) }),
+        highlight: true,
+      });
+    }
+
+    const bankHeading = t(
+      (cfg.comparisonHeadingKey ?? "bankColumnHeading") as Parameters<
+        typeof t
+      >[0],
+    );
+
+    const charts: PdfLineChart[] = [];
+    if (chartData) {
+      charts.push({
+        heading: t("chartsHeading"),
+        note: t("combinedChartNote", {
+          tanda: fmtCents.format(result.P),
+          lender: fmtCents.format(bankResult.P),
+          pct: (delta * 100).toFixed(1),
+        }),
+        labels: chartData.labels,
+        formatTick: (v) => fmtWhole.format(v),
+        series: [
+          {
+            label: t("tandaColumnHeading"),
+            color: "#06b6d4",
+            data: chartData.tandaCumulative,
+          },
+          {
+            label: bankHeading,
+            color: "#6b7280",
+            data: chartData.bankCumulative,
+          },
+          {
+            label: t("assetPriceSeriesLabel"),
+            color: "#f59e0b",
+            data: chartData.assetPrice,
+          },
+        ],
+      });
+    }
+    if (treasuryData) {
+      charts.push({
+        heading: t("treasuryHeading"),
+        note: t("treasuryChartNote", {
+          pool: fmtWhole.format(treasuryData.pool),
+          monthly: fmtWhole.format(treasuryData.monthlyInflow),
+          rate: (cetesRate * 100).toFixed(1),
+        }),
+        labels: treasuryData.labels,
+        formatTick: (v) => fmtWhole.format(v),
+        series: [
+          {
+            label: t("treasuryWithYieldLabel"),
+            color: "#16a34a",
+            data: treasuryData.withYield,
+          },
+          {
+            label: t("treasuryNoYieldLabel"),
+            color: "#6b7280",
+            data: treasuryData.noYield,
+          },
+        ],
+      });
+    }
+
+    return {
+      title: t("pdf.title"),
+      subtitle: `${assetLabel} · ${fmtWhole.format(G)} · ${t("pdf.termValue", {
+        months,
+        years: T.toFixed(1),
+      })}`,
+      generatedOn: t("pdf.generatedOn", {
+        date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
+          new Date(),
+        ),
+      }),
+      parametersHeading: t("pdf.parametersHeading"),
+      parameters,
+      comparisonHeading: t("comparisonHeading"),
+      tandaHeading: t("tandaColumnHeading"),
+      tandaRows,
+      bankHeading,
+      bankRows,
+      savings:
+        savings !== null && savings > 0
+          ? {
+              label: t("savingsHeading"),
+              value: t("savingsAmount", { amount: fmtWhole.format(savings) }),
+            }
+          : undefined,
+      charts,
+      analysisHeading: analysisText ? t("aiAnalysis.heading") : undefined,
+      analysisText: analysisText ?? undefined,
+      disclaimer: t("pdf.disclaimer"),
+    };
+  };
+
+  const handleExportPdf = async () => {
+    const data = buildPdfData();
+    if (!data) return;
+    setExporting(true);
+    setExportError(false);
+    try {
+      const { pdf } = await import("@react-pdf/renderer");
+      const { SimulationDocument } = await import("./simulation-pdf");
+      const blob = await pdf(<SimulationDocument {...data} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        `tandaomni-${t(`tiers.${TIER_I18N_KEY[tier]}.label`)}-simulation.pdf`
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, "-")
+          .replace(/-+/g, "-");
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError(true);
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -969,6 +1217,32 @@ export function Simulator() {
                 }
               />
 
+              {/* Cost breakdown pie: downpayment + monthly payments sum to the
+                  total contributed (zero interest, so no third slice). */}
+              <Box
+                display="flex"
+                flexDirection="column"
+                gap={8}
+                padding="16px 20px"
+                styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
+              >
+                <Typography fontWeight={600}>
+                  {t("pieBreakdownHeading")}
+                </Typography>
+                <Chart
+                  type="pie"
+                  labels={[t("downpaymentRequired"), t("pieMonthlyPayments")]}
+                  series={[
+                    {
+                      label: t("totalContributed"),
+                      data: [result.downpayment, result.P * months],
+                    },
+                  ]}
+                  height={240}
+                  ariaLabel={t("tandaColumnHeading")}
+                />
+              </Box>
+
               {/* Escrow progress bar (Tier 3 only) */}
               {cfg.escrowThreshold &&
                 escrowUnlockMonth &&
@@ -1122,6 +1396,43 @@ export function Simulator() {
                 />
               )}
 
+              {/* Cost breakdown pie: downpayment + amount financed + total
+                  interest sum exactly to the total cost. */}
+              <Box
+                display="flex"
+                flexDirection="column"
+                gap={8}
+                padding="16px 20px"
+                styles={{ borderTop: "1px solid var(--border, #e5e7eb)" }}
+              >
+                <Typography fontWeight={600}>
+                  {t("pieBreakdownHeading")}
+                </Typography>
+                <Chart
+                  type="pie"
+                  labels={[
+                    t("downpaymentRequired"),
+                    t("bankFinancedAmount"),
+                    t("bankTotalInterest"),
+                  ]}
+                  series={[
+                    {
+                      label: t("bankTotalCost"),
+                      data: [
+                        bankResult.downpayment,
+                        bankResult.principal,
+                        bankResult.totalInterest,
+                      ],
+                    },
+                  ]}
+                  height={240}
+                  ariaLabel={t(
+                    (cfg.comparisonHeadingKey ??
+                      "bankColumnHeading") as Parameters<typeof t>[0],
+                  )}
+                />
+              </Box>
+
               {/* Lender interest notice */}
               <Box
                 padding="12px 20px"
@@ -1269,7 +1580,37 @@ export function Simulator() {
           )}
 
           {/* ── AI Analysis ───────────────────────────────────── */}
-          <AiAnalysis buildContext={buildAnalysisContext} />
+          <AiAnalysis
+            buildContext={buildAnalysisContext}
+            onAnalysisChange={setAnalysisText}
+          />
+
+          {/* ── Export to PDF ─────────────────────────────────── */}
+          <Card gap={12} padding={20}>
+            <Box display="flex" flexDirection="column" gap={2}>
+              <Typography fontWeight={700} color="var(--foreground)">
+                {t("pdf.cardHeading")}
+              </Typography>
+              <Typography color="var(--muted-foreground, #6b7280)">
+                {t("pdf.cardDescription")}
+              </Typography>
+            </Box>
+            <Box justifyContent="center">
+              <Button
+                text={exporting ? t("pdf.exporting") : t("pdf.exportButton")}
+                kind="primary"
+                size="md"
+                onClick={handleExportPdf}
+                disabled={exporting}
+                width={200}
+              />
+            </Box>
+            {exportError && (
+              <Typography color="var(--error, #dc2626)">
+                {t("pdf.exportError")}
+              </Typography>
+            )}
+          </Card>
         </Box>
       ) : (
         <Card

@@ -130,7 +130,10 @@ export function MovieEditForm({
       // every field with the resolved version. The parent live-previews the new
       // poster/backdrop on the page; we keep them for the save payload. Formats
       // and barcodes are physical-copy data, so a re-fetch leaves them alone.
-      const data = await onRefetch(meta.title.trim(), parseYearInput(meta.year));
+      const data = await onRefetch(
+        meta.title.trim(),
+        parseYearInput(meta.year),
+      );
       patchMeta({
         title: data.title,
         director: data.director,

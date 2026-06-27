@@ -120,6 +120,8 @@
     "payoutCadencePerMonth": "~{count} Mitglieder pro Monat finanziert",
     "assetPriceAtEnd": "Preis am Laufzeitende (G + {years} J.)",
     "totalContributed": "Gesamt beigetragen pro Mitglied",
+    "pieBreakdownHeading": "Kostenaufschlüsselung",
+    "pieMonthlyPayments": "Monatliche Zahlungen",
     "escrowHeading": "Treuhand-Freigabeschwelle",
     "escrowUnlocks": "Freigabe in Monat {month} / {total}",
     "escrowNote": "Die Auszahlung erfolgt, sobald die Beiträge 60 % der aktuellen Kosten erreichen.",
@@ -213,6 +215,27 @@
       "loadingNote": "Ihre Zahlen werden ausgewertet und eine Empfehlung wird verfasst…",
       "searchNote": "Aktuelle Marktinformationen werden gesammelt, um die Analyse zu fundieren…",
       "error": "Bei der Erstellung der Analyse ist ein Fehler aufgetreten. Bitte erneut versuchen."
+    },
+    "pdf": {
+      "cardHeading": "Simulation exportieren",
+      "cardDescription": "Lade einen PDF-Bericht mit deinen Parametern, dem Vergleich TandaOmni vs. Bank, den Projektionsdiagrammen und der KI-Analyse herunter.",
+      "exportButton": "Als PDF exportieren",
+      "exporting": "PDF wird erstellt…",
+      "exportError": "Das PDF konnte nicht erstellt werden. Bitte versuche es erneut.",
+      "title": "TandaOmni - Finanzsimulation",
+      "generatedOn": "Erstellt am {date}",
+      "parametersHeading": "Simulationsparameter",
+      "assetType": "Art des Vermögenswerts",
+      "currency": "Währung",
+      "term": "Laufzeit",
+      "termValue": "{months} Monate ({years} Jahre)",
+      "priceAppreciation": "Jährliche Preissteigerung",
+      "downpayment": "Anzahlung",
+      "lenderRate": "Kreditgeberzins",
+      "cetesYield": "CETES-Rendite",
+      "escrow": "Treuhand-Freigabe",
+      "escrowValue": "Monat {month} von {total}",
+      "disclaimer": "Die Zahlen sind Schätzungen auf Grundlage der von dir gewählten Parameter und dienen ausschließlich zu Informationszwecken. Sie stellen keine Finanzberatung dar."
     }
   },
   "AnalysisPage": {

@@ -62,12 +62,12 @@ export default async function AnalysisPage({ params }: Props) {
             >
               {[
                 {
-                  label: t("overview.objectiveLabel"),
-                  value: t("overview.objective"),
-                },
-                {
                   label: t("overview.problemLabel"),
                   value: t("overview.problem"),
+                },
+                {
+                  label: t("overview.objectiveLabel"),
+                  value: t("overview.objective"),
                 },
                 {
                   label: t("overview.stackLabel"),

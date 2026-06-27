@@ -6,7 +6,11 @@ import { Box } from "@repo/ui/core-elements/box";
 import { Card } from "@repo/ui/core-elements/card";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Select } from "@repo/ui/core-elements/select";
-import { Chart, type ChartSeries, type ChartType } from "@repo/ui/core-elements/chart";
+import {
+  Chart,
+  type ChartSeries,
+  type ChartType,
+} from "@repo/ui/core-elements/chart";
 
 const CHART_TYPES: ChartType[] = ["line", "pie", "radar"];
 
@@ -66,7 +70,11 @@ export function StatCard({
         />
       </Box>
 
-      <Typography as="p" variant="body" color="var(--foreground-muted, #6b7280)">
+      <Typography
+        as="p"
+        variant="body"
+        color="var(--foreground-muted, #6b7280)"
+      >
         {description}
       </Typography>
 

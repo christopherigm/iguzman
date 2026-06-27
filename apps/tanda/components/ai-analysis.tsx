@@ -41,7 +41,7 @@ const FORMALITY_LEVELS = [
   {
     key: "slang",
     emoji: "😈",
-    tone: "a very casual streen tone using local slang, bad words, two meaning words, colloquial expressions",
+    tone: "a heavy street tone using local slang, bad words, two meaning words, colloquial expressions",
   },
 ] as const;
 
@@ -101,6 +101,11 @@ interface AiAnalysisProps {
    * so the summary always reflects the current inputs.
    */
   buildContext: () => AnalysisContext | null;
+  /**
+   * Reports the latest analysis text to the parent (or `null` when cleared), so
+   * it can be embedded in the exported PDF.
+   */
+  onAnalysisChange?: (text: string | null) => void;
 }
 
 /**
@@ -109,7 +114,10 @@ interface AiAnalysisProps {
  * simulation. Owns all AI-specific state and the enrichment + LLM pipeline; the
  * parent only supplies the simulation context via `buildContext`.
  */
-export function AiAnalysis({ buildContext }: AiAnalysisProps) {
+export function AiAnalysis({
+  buildContext,
+  onAnalysisChange,
+}: AiAnalysisProps) {
   const t = useTranslations("SimulatorPage");
   const locale = useLocale();
 
@@ -140,6 +148,7 @@ export function AiAnalysis({ buildContext }: AiAnalysisProps) {
     const context = buildContext();
     if (!context) return;
     setAnalysis(null);
+    onAnalysisChange?.(null);
 
     const { summary, assetTypeLabel } = context;
     const language = LOCALE_LANGUAGE[locale] ?? "English";
@@ -175,23 +184,29 @@ export function AiAnalysis({ buildContext }: AiAnalysisProps) {
       {
         role: "system",
         content:
-          "You are a financial advisor for TandaOmni, a savings-circle (tanda / ROSCA) " +
-          "platform that helps people in Mexico buy big-ticket items without paying bank " +
-          "interest. Analyze the user's simulation comparing TandaOmni to a traditional " +
-          `loan and advise whether their intended purchase is financially sound. Respond ONLY in ${language}. ` +
-          "You may be given recent web research gathered live for this purchase; use it to " +
-          "ground the risks and recommendation and mention a relevant finding where it helps, " +
-          "but never contradict the simulation numbers. If no research is provided, rely on the " +
-          "simulation alone. " +
-          `Write in ${tone}. Format the answer in Markdown using EXACTLY these four section ` +
+          "You are an impartial financial advisor helping a person in Mexico decide how to fund a " +
+          "specific purchase. They are comparing TandaOmni, an interest-free savings circle (tanda / " +
+          "ROSCA), against a traditional bank loan. Your only job is to give an objective, " +
+          "user-perspective analysis of which option is the better financial choice for THIS purchase, " +
+          "based on what the user wants to buy and the numbers in their simulation. " +
+          `Respond ONLY in ${language}. ` +
+          "Reason from the user's point of view: total cost, interest paid, monthly payment, time to " +
+          "ownership, and whether the purchase itself is a sensible use of their money. " +
+          "Do NOT advise about the TandaOmni platform itself, its operations, or its trustworthiness, " +
+          "and do NOT raise risks about the tanda mechanism such as members missing or defaulting on " +
+          "payments, the circle collapsing, or payout ordering - those risks are already mitigated by " +
+          "the platform and are out of scope. Treat TandaOmni's stated terms as given. " +
+          "You may be given recent web research gathered live for this purchase; use it to ground your " +
+          "assessment of the purchase and mention a relevant finding where it helps, but never " +
+          "contradict the simulation numbers. If no research is provided, rely on the simulation alone. " +
+          `Write in ${tone}. Format the answer in Markdown using EXACTLY these three section ` +
           "headings, in this order, each rendered as a Markdown heading:\n" +
           "🎯 Quick Summary\n" +
           "💸 TandaOmni vs. loan\n" +
-          "⚠️ Risks to watch\n" +
           "✅ Final recommendation\n" +
           `Translate the heading text into ${language}, but ALWAYS keep the leading emoji ` +
-          "(🎯, 💸, ⚠️, ✅) exactly as shown at the start of each heading. Use short sentences and " +
-          "bullet points under each heading. Keep it concise (about 200 words). Do not invent " +
+          "(🎯, 💸, ✅) exactly as shown at the start of each heading. Use short sentences and " +
+          "bullet points under each heading. Keep it concise (about 180 words). Do not invent " +
           "numbers beyond those provided.",
       },
       {
@@ -200,18 +215,21 @@ export function AiAnalysis({ buildContext }: AiAnalysisProps) {
           `The user is considering purchasing: ${purchase}.\n\n` +
           `Simulation data:\n${summary}\n\n` +
           (research
-            ? `${research}\n\nUse the web research above to ground the risks and final ` +
-              "recommendation, citing a specific finding where it helps.\n\n"
+            ? `${research}\n\nUse the web research above to ground your assessment of the purchase ` +
+              "and final recommendation, citing a specific finding where it helps.\n\n"
             : "") +
-          "Under the first two headings, briefly recap the situation and how TandaOmni compares to " +
-          "the loan. Then give your actual analysis only as the main risks to watch and a clear " +
-          "final recommendation.",
+          "Under the first heading, briefly recap what they want to buy and their situation. Under the " +
+          "second, objectively compare TandaOmni to the loan on total cost, interest, and monthly " +
+          "payment. Then give a clear final recommendation on whether TandaOmni or a loan is the better " +
+          "choice for this purchase. Focus only on the purchase and these two funding options - do not " +
+          "discuss the platform or tanda payment risks.",
       },
     ];
 
     try {
       const text = await generateAnalysis(messages);
       setAnalysis(text);
+      onAnalysisChange?.(text);
     } catch {
       // Error surfaced via the hook's `error` state.
     }
@@ -247,17 +265,6 @@ export function AiAnalysis({ buildContext }: AiAnalysisProps) {
         {/* Tone, live web-search toggle, and run button. Stacked on mobile;
             one row from tablet (sm) up. */}
         <Grid container spacing={2} alignItems="center">
-          {/* Response formality */}
-          <Grid size={{ xs: 12, sm: 3 }}>
-            <Select
-              label={t("aiAnalysis.formalityLabel")}
-              value={formality}
-              onChange={setFormality}
-              options={formalityOptions}
-              disabled={analyzing || enriching}
-            />
-          </Grid>
-
           {/* Live web-search enrichment toggle */}
           <Grid size={{ xs: 12, sm: 6 }}>
             <Box
@@ -281,10 +288,21 @@ export function AiAnalysis({ buildContext }: AiAnalysisProps) {
               <Switch
                 checked={webSearch}
                 onChange={setWebSearch}
-                disabled={analyzing || enriching}
+                disabled={analyzing || enriching || !purchaseDesc}
                 aria-label={t("aiAnalysis.webSearchLabel")}
               />
             </Box>
+          </Grid>
+
+          {/* Response formality */}
+          <Grid size={{ xs: 12, sm: 3 }}>
+            <Select
+              label={t("aiAnalysis.formalityLabel")}
+              value={formality}
+              onChange={setFormality}
+              options={formalityOptions}
+              disabled={analyzing || enriching}
+            />
           </Grid>
 
           {/* Run analysis */}

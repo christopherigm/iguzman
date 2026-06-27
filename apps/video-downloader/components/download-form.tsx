@@ -359,11 +359,13 @@ export function DownloadForm({
   const [commentCount, setCommentCount] = useState<5 | 10 | 20 | 50>(20);
 
   const [smartDownload, setSmartDownload] = useState(
-    () => typeof window !== "undefined" &&
+    () =>
+      typeof window !== "undefined" &&
       localStorage.getItem("vd_smart_download") === "true",
   );
   const [smartCaptions, setSmartCaptions] = useState(
-    () => typeof window === "undefined" ||
+    () =>
+      typeof window === "undefined" ||
       localStorage.getItem("vd_smart_captions") !== "false",
   );
   const [smartMaxHeight, setSmartMaxHeight] = useState(() => {
@@ -372,11 +374,13 @@ export function DownloadForm({
     return stored ? Number(stored) : 1080;
   });
   const [smartComments, setSmartComments] = useState(
-    () => typeof window !== "undefined" &&
+    () =>
+      typeof window !== "undefined" &&
       localStorage.getItem("vd_smart_comments") === "true",
   );
   const [smartMetadata, setSmartMetadata] = useState(
-    () => typeof window !== "undefined" &&
+    () =>
+      typeof window !== "undefined" &&
       localStorage.getItem("vd_smart_metadata") === "true",
   );
 
