@@ -243,10 +243,12 @@
     "subtitle": "Ein zinsloses, gemeinschaftlich finanziertes Ökosystem für Immobilien, Fahrzeuge und Erlebnisse.",
     "section": {
       "overview": "1. Projektübersicht",
-      "riskVerticals": "2. Kern-Risikosegmente",
-      "mathModels": "3. Mathematische Risikomodelle",
-      "taskBreakdown": "4. Aufgabenübersicht",
-      "infrastructure": "5. Infrastruktur & Bereitstellung"
+      "stakeholders": "2. Stakeholder-Profile",
+      "riskVerticals": "3. Kern-Risikosegmente",
+      "mathModels": "4. Mathematische Risikomodelle",
+      "userStories": "5. User Stories",
+      "taskBreakdown": "6. Aufgabenübersicht",
+      "infrastructure": "7. Infrastruktur & Bereitstellung"
     },
     "overview": {
       "objectiveLabel": "Ziel",
@@ -259,6 +261,42 @@
       "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM",
       "studentLabel": "Student",
       "studentValue": "Christopher Guzman"
+    },
+    "stakeholders": {
+      "categoryUser": "Endnutzer",
+      "categoryPlatform": "Plattform",
+      "goalLabel": "Ziel",
+      "profileLabel": "Profil",
+      "s1": {
+        "name": "Der Eigenheim-Bauer",
+        "goal": "Ein an Wert gewinnendes Haus oder Grundstück über einen langen Zeitraum erwerben und Miete sowie Wucherhypotheken entkommen.",
+        "profile": "60–120 Monate Bindung, 15% Anzahlung, akzeptiert den Eigentumsvorbehalt (Reserva de Dominio)."
+      },
+      "s2": {
+        "name": "Der Betreiber",
+        "goal": "Ein Arbeitsfahrzeug oder einkommensgenerierendes Gerät mit Sicherheit über die Anschaffungskosten finanzieren.",
+        "profile": "12–36 Monate, 20% Anzahlung, obligatorische plattformgehaltene Versicherung; wählt Neu (Preisinflation) oder Gebraucht (Wertverlust)."
+      },
+      "s3": {
+        "name": "Der Erlebnis-Suchende",
+        "goal": "Eine Hochzeit, Reise oder ein einmaliges Erlebnis durch diszipliniertes, schuldenfreies Sparen finanzieren.",
+        "profile": "6–12 Monate, 60%-Schwelle zur Treuhand-Freigabe, Kreditkarten-Vorautorisierung."
+      },
+      "s4": {
+        "name": "Treasury- & Risiko-Beauftragter",
+        "goal": "Den Liquiditätspool solvent halten und das Anlageklassen-Risiko korrekt bepreisen.",
+        "profile": "Verantwortet den Bₘ-Saldo, die CETES-Rendite, Versicherungsprämien und die Solvenz der Auszahlungswarteschlange; zahlt nie vor Bₘ ≥ Gₘ aus."
+      },
+      "s5": {
+        "name": "Compliance- & KYC-Beauftragter",
+        "goal": "Identitätsintegrität und regulatorische Konformität gewährleisten.",
+        "profile": "Verantwortet KYC-Verifizierung, legitime Gruppenbildung, Stripe-Vorautorisierungen und ein prüfbares, nur anfügbares Hauptbuch."
+      },
+      "s6": {
+        "name": "Plattform-Betreiber (SRE)",
+        "goal": "Das System verfügbar, sicher und wiederherstellbar halten.",
+        "profile": "Verantwortet Kubernetes-Infrastruktur, isolierte finanzkritische Celery-Worker, pg_dump-Notfallwiederherstellung und TLS/Ingress."
+      }
     },
     "tiers": {
       "t1": {
@@ -282,6 +320,56 @@
     },
     "math": {
       "universalVarsLabel": "Universelle Variablen"
+    },
+    "userStories": {
+      "us01": {
+        "component": "Omni-Simulator",
+        "directive": "Als potenzielles Mitglied möchte ich jeden Vermögenstyp (Haus, Auto, Reise) simulieren und sofort meine monatliche Zahlung, die Gruppengröße und die Risikominderungsregeln sehen, um zu entscheiden, ob eine Tanda zu meinem Budget passt, bevor ich mich verpflichte."
+      },
+      "us02": {
+        "component": "Preisgestaltung Neu-/Gebrauchtfahrzeug",
+        "directive": "Als Betreiber, der ein Fahrzeug finanziert, möchte ich zwischen Neu und Gebraucht umschalten, damit die Delta-Kurve die Listenpreis-Inflation oder die Wertminderung abbildet, damit meine Zahlung die tatsächlichen künftigen Anschaffungskosten widerspiegelt."
+      },
+      "us03": {
+        "component": "KYC-Onboarding",
+        "directive": "Als neuer Nutzer möchte ich einen Onboarding-Assistenten mit Identitätsprüfung, um in eine legitime, regelkonforme Gruppe aufgenommen zu werden."
+      },
+      "us04": {
+        "component": "Gruppen-Matching",
+        "directive": "Als verifizierter Nutzer möchte ich automatisch einer Gruppe zugeordnet werden, deren Mitglieder eine ähnliche monatliche Zahlung haben, damit die Finanzierung beginnt, sobald genügend Teilnehmer beigetreten sind."
+      },
+      "us05": {
+        "component": "Offenlegung der Risikominderung",
+        "directive": "Als Mitglied in einer Hochrisikostufe möchte ich die Pflichtversicherung (Stufe 2) oder den Treuhand-Freigabefortschritt (Stufe 3) sehen und bestätigen, um die Absicherungen meines Beitrags zu verstehen."
+      },
+      "us06": {
+        "component": "Warteschlangen-Zeitachse",
+        "directive": "Als Mitglied möchte ich meine Position in der Warteschlange und den voraussichtlichen Auszahlungsmonat sehen, um zu wissen, wann ich meinen Vermögenswert erhalte."
+      },
+      "us07": {
+        "component": "Treasury-Transparenz",
+        "directive": "Als Mitglied möchte ich den Treasury-Saldo der Gruppe und die Rendite im Zeitverlauf sehen, um darauf vertrauen zu können, dass der Pool solvent ist."
+      },
+      "us08": {
+        "component": "Prüfbares Hauptbuch",
+        "directive": "Als Compliance-Beauftragter möchte ich, dass jede Transaktion in einem nur anhängbaren Hauptbuch erfasst wird, damit die Plattform manipulationssicher und prüfbar bleibt."
+      },
+      "us09": {
+        "component": "Solvente Auszahlungen",
+        "directive": "Als Treasury-Beauftragter möchte ich, dass Auszahlungen nur erfolgen, wenn der Saldo die aktuellen Anschaffungskosten deckt (Bₘ ≥ Gₘ) und die Treuhandregeln erfüllt sind, damit der Pool niemals zahlungsunfähig wird."
+      },
+      "us10": {
+        "component": "Vorautorisierung Stufe 3",
+        "directive": "Als Erlebnissuchender möchte ich, dass bei der Anmeldung eine Kreditkarten-Vorautorisierung erfasst wird, um das Ausfallrisiko bei nicht wiederherstellbaren Zielen zu mindern."
+      },
+      "us11": {
+        "component": "Automatisierte Treasury-Abläufe",
+        "directive": "Als Treasury-Beauftragter möchte ich, dass nächtliche Renditen und monatliche Versicherungen automatisch angewendet werden, damit das Hauptbuch ohne manuellen Eingriff korrekt bleibt."
+      },
+      "us12": {
+        "component": "Zuverlässige & wiederherstellbare Plattform",
+        "directive": "Als Plattformbetreiber (SRE) möchte ich isolierte finanzkritische Worker und automatische verschlüsselte Backups, damit das System verfügbar und wiederherstellbar bleibt."
+      }
     },
     "phase": {
       "be": "Backend-Infrastruktur & Risikorechner (Django / DRF)",

@@ -243,10 +243,12 @@
     "subtitle": "A zero-interest, community-funded financial ecosystem supporting Real Estate, Vehicles, and Experiences. Built for the Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM.",
     "section": {
       "overview": "1. Project Overview",
-      "riskVerticals": "2. Core Risk Verticals",
-      "mathModels": "3. Mathematical Risk Models",
-      "taskBreakdown": "4. Task Breakdown",
-      "infrastructure": "5. Infrastructure & Deployment"
+      "stakeholders": "2. Stakeholder Profiles",
+      "riskVerticals": "3. Core Risk Verticals",
+      "mathModels": "4. Mathematical Risk Models",
+      "userStories": "5. User Stories",
+      "taskBreakdown": "6. Task Breakdown",
+      "infrastructure": "7. Infrastructure & Deployment"
     },
     "overview": {
       "objectiveLabel": "Objective",
@@ -259,6 +261,42 @@
       "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM",
       "studentLabel": "Student",
       "studentValue": "Christopher Guzman"
+    },
+    "stakeholders": {
+      "categoryUser": "End User",
+      "categoryPlatform": "Platform",
+      "goalLabel": "Goal",
+      "profileLabel": "Profile",
+      "s1": {
+        "name": "The Homebuilder",
+        "goal": "Acquire an appreciating home or land over a long horizon, escaping rent and predatory mortgages.",
+        "profile": "60–120 month commitment, 15% downpayment, accepts the Legal Deed Trust (Reserva de Dominio)."
+      },
+      "s2": {
+        "name": "The Operator",
+        "goal": "Finance a work vehicle or income-generating equipment with acquisition-cost certainty.",
+        "profile": "12–36 months, 20% downpayment, mandatory platform-held insurance; chooses New (MSRP inflation) or Used (depreciation)."
+      },
+      "s3": {
+        "name": "The Experience Seeker",
+        "goal": "Fund a wedding, trip, or one-time experience through disciplined, debt-free saving.",
+        "profile": "6–12 months, 60% escrow-unlock threshold, credit-card pre-authorization."
+      },
+      "s4": {
+        "name": "Treasury & Risk Officer",
+        "goal": "Keep the liquidity pool solvent and price asset-class risk correctly.",
+        "profile": "Owns the Bₘ balance, CETES yield, insurance premiums, and payout-queue solvency; never pays out before Bₘ ≥ Gₘ."
+      },
+      "s5": {
+        "name": "Compliance & KYC Officer",
+        "goal": "Guarantee identity integrity and regulatory standing.",
+        "profile": "Owns KYC verification, legitimate group matching, Stripe pre-auth holds, and an auditable append-only ledger."
+      },
+      "s6": {
+        "name": "Platform Operator (SRE)",
+        "goal": "Keep the system available, secure, and recoverable.",
+        "profile": "Owns Kubernetes infra, isolated financial-critical Celery workers, pg_dump disaster recovery, and TLS/ingress."
+      }
     },
     "tiers": {
       "t1": {
@@ -282,6 +320,56 @@
     },
     "math": {
       "universalVarsLabel": "Universal Variables"
+    },
+    "userStories": {
+      "us01": {
+        "component": "Omni-Simulator",
+        "directive": "As a prospective member, I want to simulate any asset type (house, car, travel) and instantly see my monthly payment, group size, and mitigation rules, so I can decide if a tanda fits my budget before committing."
+      },
+      "us02": {
+        "component": "Vehicle New/Used Pricing",
+        "directive": "As an Operator funding a vehicle, I want to toggle New vs. Used so the delta curve reflects MSRP inflation or depreciation, so my payment reflects the true future acquisition cost."
+      },
+      "us03": {
+        "component": "KYC Onboarding",
+        "directive": "As a new user, I want an identity-verified onboarding wizard, so I can be placed into a legitimate, compliant group."
+      },
+      "us04": {
+        "component": "Group Matching",
+        "directive": "As a verified user, I want to be auto-matched into a group whose members share a similar monthly payment, so financing begins once enough participants join."
+      },
+      "us05": {
+        "component": "Risk Mitigation Disclosure",
+        "directive": "As a member in a high-risk tier, I want to see and acknowledge mandatory insurance (Tier 2) or escrow-unlock progress (Tier 3), so I understand the protections on my contribution."
+      },
+      "us06": {
+        "component": "Queue Timeline",
+        "directive": "As a member, I want to see my queue position and estimated payout month, so I know when I'll receive my asset."
+      },
+      "us07": {
+        "component": "Treasury Transparency",
+        "directive": "As a member, I want to view the group's treasury balance and yield over time, so I can trust the pool is solvent."
+      },
+      "us08": {
+        "component": "Auditable Ledger",
+        "directive": "As a Compliance Officer, I want every transaction recorded in an append-only ledger, so the platform stays tamper-proof and auditable."
+      },
+      "us09": {
+        "component": "Solvent Payouts",
+        "directive": "As a Treasury Officer, I want payouts to release only when the balance covers the current asset cost (Bₘ ≥ Gₘ) and escrow rules pass, so the pool never goes insolvent."
+      },
+      "us10": {
+        "component": "Tier 3 Pre-authorization",
+        "directive": "As an Experience Seeker, I want a credit-card pre-authorization captured at signup, so default risk on unrecoverable goals is mitigated."
+      },
+      "us11": {
+        "component": "Automated Treasury Ops",
+        "directive": "As a Treasury Officer, I want nightly yield and monthly insurance applied automatically, so the ledger stays accurate without manual intervention."
+      },
+      "us12": {
+        "component": "Reliable & Recoverable Platform",
+        "directive": "As a Platform Operator (SRE), I want isolated financial-critical workers and automated encrypted backups, so the system stays available and recoverable."
+      }
     },
     "phase": {
       "be": "Backend Infrastructure & Risk Engine (Django / DRF)",

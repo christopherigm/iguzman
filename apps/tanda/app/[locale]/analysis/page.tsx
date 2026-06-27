@@ -5,6 +5,7 @@ import { NavbarSpacer } from "@repo/ui/core-elements/navbar";
 import { Box } from "@repo/ui/core-elements/box";
 import { Typography } from "@repo/ui/core-elements/typography";
 import { Card } from "@repo/ui/core-elements/card";
+import { Grid } from "@repo/ui/core-elements/grid";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { MathFormula } from "@repo/ui/core-elements/math-formula";
 import { ServerImageToggle } from "@/components/server-image-toggle";
@@ -93,7 +94,64 @@ export default async function AnalysisPage({ params }: Props) {
             </Card>
           </Section>
 
-          {/* Section 2: Core Risk Verticals */}
+          {/* Section 2: Stakeholder Profiles */}
+          <Section title={t("section.stakeholders")}>
+            <Grid container spacing={2}>
+              {[
+                {
+                  key: "s1",
+                  icon: "🏠",
+                  accent: "var(--success, #16a34a)",
+                  category: t("stakeholders.categoryUser"),
+                },
+                {
+                  key: "s2",
+                  icon: "🚗",
+                  accent: "var(--warning, #d97706)",
+                  category: t("stakeholders.categoryUser"),
+                },
+                {
+                  key: "s3",
+                  icon: "✈️",
+                  accent: "var(--accent, #06b6d4)",
+                  category: t("stakeholders.categoryUser"),
+                },
+                {
+                  key: "s4",
+                  icon: "🛡️",
+                  accent: "#7c3aed",
+                  category: t("stakeholders.categoryPlatform"),
+                },
+                {
+                  key: "s5",
+                  icon: "✅",
+                  accent: "#2563eb",
+                  category: t("stakeholders.categoryPlatform"),
+                },
+                {
+                  key: "s6",
+                  icon: "⚙️",
+                  accent: "#0891b2",
+                  category: t("stakeholders.categoryPlatform"),
+                },
+              ].map((s) => (
+                <Grid key={s.key} size={{ xs: 12, sm: 6, lg: 4 }}>
+                  <StakeholderCard
+                    icon={s.icon}
+                    accent={s.accent}
+                    name={t(`stakeholders.${s.key}.name`)}
+                    category={s.category}
+                    goalLabel={t("stakeholders.goalLabel")}
+                    goal={t(`stakeholders.${s.key}.goal`)}
+                    profileLabel={t("stakeholders.profileLabel")}
+                    profile={t(`stakeholders.${s.key}.profile`)}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </Section>
+
+          {/* Section 3: Core Risk Verticals */}
           <Section title={t("section.riskVerticals")}>
             <TierCard
               tier="1"
@@ -127,7 +185,7 @@ export default async function AnalysisPage({ params }: Props) {
             />
           </Section>
 
-          {/* Section 3: Math Models */}
+          {/* Section 4: Math Models */}
           <Section title={t("section.mathModels")}>
             <Box display="flex" flexDirection="column" gap={4}>
               <Typography
@@ -214,7 +272,31 @@ export default async function AnalysisPage({ params }: Props) {
             />
           </Section>
 
-          {/* Section 4: Task Breakdown */}
+          {/* Section 5: User Stories */}
+          <Section title={t("section.userStories")}>
+            <TaskTable
+              tasks={[
+                "us01",
+                "us02",
+                "us03",
+                "us04",
+                "us05",
+                "us06",
+                "us07",
+                "us08",
+                "us09",
+                "us10",
+                "us11",
+                "us12",
+              ].map((key) => ({
+                id: key.toUpperCase().replace(/^US/, "US-"),
+                component: t(`userStories.${key}.component`),
+                directive: t(`userStories.${key}.directive`),
+              }))}
+            />
+          </Section>
+
+          {/* Section 6: Task Breakdown */}
           <Section title={t("section.taskBreakdown")}>
             {/* Phase 1 */}
             <PhaseHeader
@@ -325,7 +407,7 @@ export default async function AnalysisPage({ params }: Props) {
             />
           </Section>
 
-          {/* Section 5: Infrastructure & Deployment */}
+          {/* Section 7: Infrastructure & Deployment */}
           <Section title={t("section.infrastructure")}>
             <DeploymentCard
               imageAlt={t("infra.imageAlt")}
@@ -450,6 +532,96 @@ function InfoRow({
         {value}
       </Typography>
     </Box>
+  );
+}
+
+function StakeholderCard({
+  icon,
+  accent,
+  name,
+  category,
+  goalLabel,
+  goal,
+  profileLabel,
+  profile,
+}: {
+  icon: string;
+  accent: string;
+  name: string;
+  category: string;
+  goalLabel: string;
+  goal: string;
+  profileLabel: string;
+  profile: string;
+}) {
+  return (
+    <Card
+      padding={0}
+      display="flex"
+      flexDirection="column"
+      styles={{ overflow: "hidden", height: "100%" }}
+    >
+      <Box
+        padding="12px 16px"
+        display="flex"
+        alignItems="center"
+        gap={10}
+        styles={{
+          borderLeft: `4px solid ${accent}`,
+          borderBottom: "1px solid var(--border, #e5e7eb)",
+        }}
+      >
+        <Typography styles={{ fontSize: 22 }}>{icon}</Typography>
+        <Box
+          display="flex"
+          flexDirection="column"
+          gap={6}
+          alignItems="flex-start"
+          styles={{ minWidth: 0, flex: 1 }}
+        >
+          <Typography
+            fontWeight={700}
+            color="var(--foreground)"
+            styles={{ minWidth: 0, overflowWrap: "anywhere" }}
+          >
+            {name}
+          </Typography>
+          <Badge variant="subtle" size="sm" color={accent}>
+            {category}
+          </Badge>
+        </Box>
+      </Box>
+      <Box
+        display="flex"
+        flexDirection="column"
+        gap={12}
+        padding="14px 16px"
+        styles={{ flex: 1 }}
+      >
+        <Box display="flex" flexDirection="column" gap={4}>
+          <Typography fontWeight={600} color="var(--muted-foreground)">
+            {goalLabel}
+          </Typography>
+          <Typography
+            styles={{ lineHeight: 1.6, minWidth: 0, overflowWrap: "anywhere" }}
+            color="var(--foreground)"
+          >
+            {goal}
+          </Typography>
+        </Box>
+        <Box display="flex" flexDirection="column" gap={4}>
+          <Typography fontWeight={600} color="var(--muted-foreground)">
+            {profileLabel}
+          </Typography>
+          <Typography
+            styles={{ lineHeight: 1.6, minWidth: 0, overflowWrap: "anywhere" }}
+            color="var(--foreground)"
+          >
+            {profile}
+          </Typography>
+        </Box>
+      </Box>
+    </Card>
   );
 }
 

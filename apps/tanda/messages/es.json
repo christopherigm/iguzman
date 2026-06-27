@@ -243,10 +243,12 @@
     "subtitle": "Un ecosistema financiero comunitario sin intereses para Bienes Raíces, Vehículos y Experiencias. Desarrollado para el Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM.",
     "section": {
       "overview": "1. Descripción del Proyecto",
-      "riskVerticals": "2. Segmentos de Riesgo",
-      "mathModels": "3. Modelos Matemáticos de Riesgo",
-      "taskBreakdown": "4. Desglose de Tareas",
-      "infrastructure": "5. Infraestructura y Despliegue"
+      "stakeholders": "2. Perfiles de Interesados (stakeholders)",
+      "riskVerticals": "3. Segmentos de Riesgo",
+      "mathModels": "4. Modelos Matemáticos de Riesgo",
+      "userStories": "5. Historias de Usuario",
+      "taskBreakdown": "6. Desglose de Tareas",
+      "infrastructure": "7. Infraestructura y Despliegue"
     },
     "overview": {
       "objectiveLabel": "Objetivo",
@@ -259,6 +261,42 @@
       "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM",
       "studentLabel": "Estudiante",
       "studentValue": "Christopher Guzman"
+    },
+    "stakeholders": {
+      "categoryUser": "Usuario Final",
+      "categoryPlatform": "Plataforma",
+      "goalLabel": "Objetivo",
+      "profileLabel": "Perfil",
+      "s1": {
+        "name": "El Constructor de Hogar",
+        "goal": "Adquirir una vivienda o terreno que se revaloriza a largo plazo, escapando del alquiler y las hipotecas abusivas.",
+        "profile": "Compromiso de 60–120 meses, 15% de enganche, acepta la Reserva de Dominio."
+      },
+      "s2": {
+        "name": "El Operador",
+        "goal": "Financiar un vehículo de trabajo o equipo generador de ingresos con certeza del costo de adquisición.",
+        "profile": "12–36 meses, 20% de enganche, seguro obligatorio retenido por la plataforma; elige Nuevo (inflación del precio) o Usado (depreciación)."
+      },
+      "s3": {
+        "name": "El Buscador de Experiencias",
+        "goal": "Financiar una boda, viaje o experiencia única mediante un ahorro disciplinado y sin deudas.",
+        "profile": "6–12 meses, umbral de liberación de depósito del 60%, preautorización con tarjeta de crédito."
+      },
+      "s4": {
+        "name": "Oficial de Tesorería y Riesgo",
+        "goal": "Mantener solvente el fondo de liquidez y valorar correctamente el riesgo por clase de activo.",
+        "profile": "Gestiona el balance Bₘ, el rendimiento CETES, las primas de seguro y la solvencia de la cola de pagos; nunca paga antes de Bₘ ≥ Gₘ."
+      },
+      "s5": {
+        "name": "Oficial de Cumplimiento y KYC",
+        "goal": "Garantizar la integridad de la identidad y la conformidad regulatoria.",
+        "profile": "Gestiona la verificación KYC, la formación legítima de grupos, las retenciones de Stripe y un libro mayor auditable de solo anexión."
+      },
+      "s6": {
+        "name": "Operador de Plataforma (SRE)",
+        "goal": "Mantener el sistema disponible, seguro y recuperable.",
+        "profile": "Gestiona la infraestructura Kubernetes, los workers Celery críticos aislados, la recuperación con pg_dump y TLS/ingress."
+      }
     },
     "tiers": {
       "t1": {
@@ -282,6 +320,56 @@
     },
     "math": {
       "universalVarsLabel": "Variables Universales"
+    },
+    "userStories": {
+      "us01": {
+        "component": "Omni-Simulador",
+        "directive": "Como futuro miembro, quiero simular cualquier tipo de activo (casa, auto, viaje) y ver al instante mi pago mensual, el tamaño del grupo y las reglas de mitigación, para decidir si una tanda se ajusta a mi presupuesto antes de comprometerme."
+      },
+      "us02": {
+        "component": "Precio Vehículo Nuevo/Usado",
+        "directive": "Como Operador que financia un vehículo, quiero alternar entre Nuevo y Usado para que la curva delta refleje la inflación del precio de lista o la depreciación, para que mi pago refleje el costo real de adquisición futuro."
+      },
+      "us03": {
+        "component": "Alta con KYC",
+        "directive": "Como nuevo usuario, quiero un asistente de incorporación con verificación de identidad, para ser colocado en un grupo legítimo y conforme a la normativa."
+      },
+      "us04": {
+        "component": "Emparejamiento de Grupos",
+        "directive": "Como usuario verificado, quiero ser emparejado automáticamente en un grupo cuyos miembros compartan un pago mensual similar, para que el financiamiento comience cuando se unan suficientes participantes."
+      },
+      "us05": {
+        "component": "Divulgación de Mitigación de Riesgo",
+        "directive": "Como miembro de un nivel de alto riesgo, quiero ver y aceptar el seguro obligatorio (Nivel 2) o el progreso de desbloqueo de garantía (Nivel 3), para entender las protecciones sobre mi aportación."
+      },
+      "us06": {
+        "component": "Línea de Tiempo de la Cola",
+        "directive": "Como miembro, quiero ver mi posición en la cola y el mes estimado de pago, para saber cuándo recibiré mi activo."
+      },
+      "us07": {
+        "component": "Transparencia de Tesorería",
+        "directive": "Como miembro, quiero ver el saldo de tesorería del grupo y el rendimiento a lo largo del tiempo, para confiar en que el fondo es solvente."
+      },
+      "us08": {
+        "component": "Libro Mayor Auditable",
+        "directive": "Como Oficial de Cumplimiento, quiero que cada transacción se registre en un libro mayor de solo anexado, para que la plataforma sea inalterable y auditable."
+      },
+      "us09": {
+        "component": "Pagos Solventes",
+        "directive": "Como Oficial de Tesorería, quiero que los pagos se liberen solo cuando el saldo cubra el costo actual del activo (Bₘ ≥ Gₘ) y se cumplan las reglas de garantía, para que el fondo nunca caiga en insolvencia."
+      },
+      "us10": {
+        "component": "Preautorización de Nivel 3",
+        "directive": "Como Buscador de Experiencias, quiero que se capture una preautorización de tarjeta de crédito al registrarme, para mitigar el riesgo de incumplimiento en metas no recuperables."
+      },
+      "us11": {
+        "component": "Operaciones de Tesorería Automatizadas",
+        "directive": "Como Oficial de Tesorería, quiero que el rendimiento nocturno y el seguro mensual se apliquen automáticamente, para que el libro mayor se mantenga preciso sin intervención manual."
+      },
+      "us12": {
+        "component": "Plataforma Fiable y Recuperable",
+        "directive": "Como Operador de Plataforma (SRE), quiero workers financieros críticos aislados y respaldos cifrados automáticos, para que el sistema se mantenga disponible y recuperable."
+      }
     },
     "phase": {
       "be": "Infraestructura Backend y Motor de Riesgo (Django / DRF)",

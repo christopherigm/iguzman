@@ -243,10 +243,12 @@
     "subtitle": "Un écosystème financier communautaire sans intérêts pour l’Immobilier, les Véhicules et les Expériences. Réalisé pour le Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM.",
     "section": {
       "overview": "1. Présentation du Projet",
-      "riskVerticals": "2. Segments de Risque",
-      "mathModels": "3. Modèles Mathématiques de Risque",
-      "taskBreakdown": "4. Détail des Tâches",
-      "infrastructure": "5. Infrastructure et Déploiement"
+      "stakeholders": "2. Profils des Parties Prenantes",
+      "riskVerticals": "3. Segments de Risque",
+      "mathModels": "4. Modèles Mathématiques de Risque",
+      "userStories": "5. User Stories",
+      "taskBreakdown": "6. Détail des Tâches",
+      "infrastructure": "7. Infrastructure et Déploiement"
     },
     "overview": {
       "objectiveLabel": "Objectif",
@@ -259,6 +261,42 @@
       "courseValue": "Diplomado de Desarrollo y Optimización de Sitios Web 1° - UNAM",
       "studentLabel": "Étudiant",
       "studentValue": "Christopher Guzman"
+    },
+    "stakeholders": {
+      "categoryUser": "Utilisateur Final",
+      "categoryPlatform": "Plateforme",
+      "goalLabel": "Objectif",
+      "profileLabel": "Profil",
+      "s1": {
+        "name": "Le Bâtisseur de Foyer",
+        "goal": "Acquérir un logement ou un terrain qui prend de la valeur sur le long terme, en échappant au loyer et aux prêts abusifs.",
+        "profile": "Engagement de 60–120 mois, 15% d'apport, accepte la Réserve de Propriété (Reserva de Dominio)."
+      },
+      "s2": {
+        "name": "L'Opérateur",
+        "goal": "Financer un véhicule de travail ou un équipement générateur de revenus avec une certitude sur le coût d'acquisition.",
+        "profile": "12–36 mois, 20% d'apport, assurance obligatoire détenue par la plateforme ; choisit Neuf (inflation des prix) ou Occasion (dépréciation)."
+      },
+      "s3": {
+        "name": "Le Chercheur d'Expériences",
+        "goal": "Financer un mariage, un voyage ou une expérience unique grâce à une épargne disciplinée et sans dette.",
+        "profile": "6–12 mois, seuil de déblocage d'entiercement de 60%, pré-autorisation par carte de crédit."
+      },
+      "s4": {
+        "name": "Responsable Trésorerie et Risque",
+        "goal": "Maintenir la solvabilité du pool de liquidités et évaluer correctement le risque par classe d'actif.",
+        "profile": "Gère le solde Bₘ, le rendement CETES, les primes d'assurance et la solvabilité de la file de paiement ; ne paie jamais avant Bₘ ≥ Gₘ."
+      },
+      "s5": {
+        "name": "Responsable Conformité et KYC",
+        "goal": "Garantir l'intégrité de l'identité et la conformité réglementaire.",
+        "profile": "Gère la vérification KYC, la formation légitime des groupes, les pré-autorisations Stripe et un grand livre auditable en ajout seul."
+      },
+      "s6": {
+        "name": "Opérateur de Plateforme (SRE)",
+        "goal": "Maintenir le système disponible, sécurisé et récupérable.",
+        "profile": "Gère l'infrastructure Kubernetes, les workers Celery critiques isolés, la reprise après sinistre par pg_dump et TLS/ingress."
+      }
     },
     "tiers": {
       "t1": {
@@ -282,6 +320,56 @@
     },
     "math": {
       "universalVarsLabel": "Variables Universelles"
+    },
+    "userStories": {
+      "us01": {
+        "component": "Omni-Simulateur",
+        "directive": "En tant que futur membre, je veux simuler tout type d'actif (maison, voiture, voyage) et voir instantanément mon paiement mensuel, la taille du groupe et les règles d'atténuation, afin de décider si une tanda correspond à mon budget avant de m'engager."
+      },
+      "us02": {
+        "component": "Tarification Véhicule Neuf/Occasion",
+        "directive": "En tant qu'Opérateur finançant un véhicule, je veux basculer entre Neuf et Occasion afin que la courbe delta reflète l'inflation du prix catalogue ou la dépréciation, pour que mon paiement reflète le coût d'acquisition futur réel."
+      },
+      "us03": {
+        "component": "Intégration KYC",
+        "directive": "En tant que nouvel utilisateur, je veux un assistant d'intégration avec vérification d'identité, afin d'être placé dans un groupe légitime et conforme."
+      },
+      "us04": {
+        "component": "Mise en Relation de Groupe",
+        "directive": "En tant qu'utilisateur vérifié, je veux être automatiquement associé à un groupe dont les membres partagent un paiement mensuel similaire, afin que le financement débute dès que suffisamment de participants rejoignent."
+      },
+      "us05": {
+        "component": "Divulgation de l'Atténuation des Risques",
+        "directive": "En tant que membre d'un niveau à haut risque, je veux voir et accepter l'assurance obligatoire (Niveau 2) ou la progression du déverrouillage de l'entiercement (Niveau 3), afin de comprendre les protections sur ma contribution."
+      },
+      "us06": {
+        "component": "Chronologie de la File d'Attente",
+        "directive": "En tant que membre, je veux voir ma position dans la file et le mois de versement estimé, afin de savoir quand je recevrai mon actif."
+      },
+      "us07": {
+        "component": "Transparence de la Trésorerie",
+        "directive": "En tant que membre, je veux consulter le solde de trésorerie du groupe et le rendement au fil du temps, afin d'avoir confiance dans la solvabilité du fonds."
+      },
+      "us08": {
+        "component": "Grand Livre Auditable",
+        "directive": "En tant que Responsable de la Conformité, je veux que chaque transaction soit enregistrée dans un grand livre en ajout seul, afin que la plateforme reste inviolable et auditable."
+      },
+      "us09": {
+        "component": "Versements Solvables",
+        "directive": "En tant que Responsable de la Trésorerie, je veux que les versements ne soient libérés que lorsque le solde couvre le coût actuel de l'actif (Bₘ ≥ Gₘ) et que les règles d'entiercement sont respectées, afin que le fonds ne soit jamais insolvable."
+      },
+      "us10": {
+        "component": "Pré-autorisation Niveau 3",
+        "directive": "En tant que Chercheur d'Expériences, je veux qu'une pré-autorisation de carte de crédit soit capturée à l'inscription, afin d'atténuer le risque de défaut sur les objectifs non récupérables."
+      },
+      "us11": {
+        "component": "Opérations de Trésorerie Automatisées",
+        "directive": "En tant que Responsable de la Trésorerie, je veux que le rendement nocturne et l'assurance mensuelle soient appliqués automatiquement, afin que le grand livre reste exact sans intervention manuelle."
+      },
+      "us12": {
+        "component": "Plateforme Fiable et Récupérable",
+        "directive": "En tant qu'Opérateur de Plateforme (SRE), je veux des workers financiers critiques isolés et des sauvegardes chiffrées automatiques, afin que le système reste disponible et récupérable."
+      }
     },
     "phase": {
       "be": "Infrastructure Backend & Moteur de Risque (Django / DRF)",
