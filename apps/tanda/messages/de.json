@@ -500,6 +500,17 @@
         "probesLabel": "Health-Probes",
         "probes": "HTTP-Startup-Probe (5s Verzögerung, 30 Versuche) und Liveness-Probe (10s Intervall) auf /."
       }
+    },
+    "pdf": {
+      "cardHeading": "Als PDF exportieren",
+      "cardDescription": "Lade diese Produktanalyse als PDF-Dokument herunter. Wähle unten aus, welche Abschnitte enthalten sein sollen.",
+      "selectLabel": "Zu exportierende Abschnitte",
+      "exportButton": "Als PDF exportieren",
+      "exporting": "PDF wird erstellt…",
+      "exportError": "Das PDF konnte nicht erstellt werden. Bitte versuche es erneut.",
+      "fileLabel": "tandaomni-produktanalyse",
+      "generatedOn": "Erstellt am {date}",
+      "disclaimer": "Dieses Dokument ist eine Produktanalyse für das Diplomado de Desarrollo y Optimización de Sitios Web 1° (UNAM). Zahlen und Spezifikationen sind beispielhaft und können sich ändern."
     }
   },
   "AccountPage": {

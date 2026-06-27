@@ -500,6 +500,17 @@
         "probesLabel": "Health Probes",
         "probes": "HTTP startup probe (5s delay, 30 retries) and liveness probe (10s period) on /."
       }
+    },
+    "pdf": {
+      "cardHeading": "Export to PDF",
+      "cardDescription": "Download this product analysis as a PDF document. Choose which sections to include below.",
+      "selectLabel": "Sections to export",
+      "exportButton": "Export to PDF",
+      "exporting": "Generating PDF…",
+      "exportError": "Could not generate the PDF. Please try again.",
+      "fileLabel": "tandaomni-product-analysis",
+      "generatedOn": "Generated on {date}",
+      "disclaimer": "This document is a product analysis prepared for the Diplomado de Desarrollo y Optimización de Sitios Web 1° (UNAM). Figures and specifications are illustrative and subject to change."
     }
   },
   "AccountPage": {

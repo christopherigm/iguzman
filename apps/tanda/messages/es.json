@@ -500,6 +500,17 @@
         "probesLabel": "Sondas de Salud",
         "probes": "Sonda de arranque HTTP (5s de retraso, 30 reintentos) y sonda de vivacidad (periodo 10s) en /."
       }
+    },
+    "pdf": {
+      "cardHeading": "Exportar a PDF",
+      "cardDescription": "Descarga este análisis de producto como documento PDF. Elige a continuación qué secciones incluir.",
+      "selectLabel": "Secciones a exportar",
+      "exportButton": "Exportar a PDF",
+      "exporting": "Generando PDF…",
+      "exportError": "No se pudo generar el PDF. Inténtalo de nuevo.",
+      "fileLabel": "tandaomni-analisis-de-producto",
+      "generatedOn": "Generado el {date}",
+      "disclaimer": "Este documento es un análisis de producto elaborado para el Diplomado de Desarrollo y Optimización de Sitios Web 1° (UNAM). Las cifras y especificaciones son ilustrativas y están sujetas a cambios."
     }
   },
   "AccountPage": {
