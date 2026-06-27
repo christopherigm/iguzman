@@ -12,383 +12,39 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Chart } from "@repo/ui/core-elements/chart";
 import { AiAnalysis, type AnalysisContext } from "./ai-analysis";
-import type {
-  PdfRow,
-  PdfLineChart,
-  SimulationPdfProps,
-} from "./simulation-pdf";
+import { ExplainBtn, ResultRow } from "./simulator-fields";
+import {
+  type TierKey,
+  TIERS,
+  TIER_I18N_KEY,
+  makeFormatters,
+  MITIGATION_BG,
+  MITIGATION_ICON,
+  VEHICLE_NEW_DELTA_STEPS,
+  VEHICLE_USED_DELTA_STEPS,
+  VEHICLE_NEW_DEFAULT_DELTA,
+  VEHICLE_USED_DEFAULT_DELTA,
+  VEHICLE_NEW_BANK_APR_STEPS,
+  VEHICLE_USED_BANK_APR_STEPS,
+  VEHICLE_NEW_BANK_APR_DEFAULT,
+  VEHICLE_USED_BANK_APR_DEFAULT,
+  CETES_STEPS,
+  CETES_DEFAULT,
+} from "../lib/tiers";
+import {
+  simulate,
+  simulateBank,
+  calcAssetPriceAtMonth,
+  sampleChartMonths,
+  monthLabel,
+  findEscrowUnlockMonth,
+} from "../lib/simulation-engine";
+import {
+  buildSimulationPdfData,
+  downloadSimulationPdf,
+  type Translate,
+} from "../lib/simulation-pdf";
 import "./simulator.css";
-
-// ─── Tier Configuration ────────────────────────────────────────────────────────
-
-type TierKey = "real_estate" | "vehicle" | "travel";
-
-interface TierConfig {
-  icon: string;
-  monthSteps: number[];
-  deltaSteps: number[];
-  defaultMonths: number;
-  defaultDelta: number;
-  downpaymentPct: number;
-  defaultPrice: number;
-  /** ISO currency code the amounts in this tier are denominated in. */
-  currency: "USD" | "MXN";
-  mitigationKind: "success" | "warning" | "info";
-  escrowThreshold?: number;
-  requiresInsurance?: boolean;
-  /**
-   * How the rate-slider values are interpreted: "apr" = US-style nominal annual
-   * rate (÷12); "cat" = Mexico's effective Costo Anual Total. Defaults to "apr".
-   */
-  rateKind?: "apr" | "cat";
-  /** Lender rate slider steps (annual rate, interpreted per rateKind). */
-  bankAprSteps: number[];
-  /** Default selected lender rate for this tier. */
-  bankAprDefault: number;
-  /** i18n key for the comparison column heading. Defaults to "bankColumnHeading". */
-  comparisonHeadingKey?: string;
-  /** i18n key for the comparison notice. Defaults to "bankInterestNotice". */
-  comparisonNoticeKey?: string;
-  /** Show the "X× the loan" total-repayment-multiple row in the comparison panel. */
-  showRepayMultiple?: boolean;
-}
-
-/** Maps TierKey → next-intl nested key for tier translations. */
-const TIER_I18N_KEY: Record<TierKey, "realEstate" | "vehicle" | "travel"> = {
-  real_estate: "realEstate",
-  vehicle: "vehicle",
-  travel: "travel",
-};
-
-// ─── Vehicle Condition Config ─────────────────────────────────────────────────
-
-const VEHICLE_NEW_DELTA_STEPS = [0.03, 0.035, 0.04, 0.045, 0.05, 0.06];
-const VEHICLE_USED_DELTA_STEPS = [-0.1, -0.08, -0.07, -0.06, -0.05];
-const VEHICLE_NEW_DEFAULT_DELTA = 0.035;
-const VEHICLE_USED_DEFAULT_DELTA = -0.07;
-
-// Mexican auto-loan CAT steps per vehicle condition (effective annual cost, sin IVA).
-// Sourced from June 2026 published CATs: new-car CATs run ~16–29% (BBVA, Banorte
-// "CAT promedio" 22.4%, Santander up to 20.49%, HSBC Inmediauto 29.0%); used/seminuevo
-// runs a few points higher. Defaults sit at the high end (HSBC-tier) per spec.
-const VEHICLE_NEW_BANK_APR_STEPS = [
-  0.14, 0.16, 0.18, 0.2, 0.224, 0.25, 0.29, 0.32,
-];
-const VEHICLE_USED_BANK_APR_STEPS = [0.2, 0.224, 0.25, 0.29, 0.32, 0.36];
-const VEHICLE_NEW_BANK_APR_DEFAULT = 0.29;
-const VEHICLE_USED_BANK_APR_DEFAULT = 0.32;
-
-// CETES (Mexican government treasury bills) annual yield steps for the treasury
-// simulation. Default 6.5% matches the PRD's r = 0.065.
-const CETES_STEPS = [0.05, 0.06, 0.065, 0.07, 0.08, 0.09, 0.1, 0.11];
-const CETES_DEFAULT = 0.065;
-
-const TIERS: Record<TierKey, TierConfig> = {
-  real_estate: {
-    icon: "🏠",
-    // Mexican mortgages amortize up to 30 years (BBVA/Banorte headline term).
-    monthSteps: [60, 84, 108, 120, 180, 240, 360],
-    deltaSteps: [0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06],
-    defaultMonths: 240,
-    defaultDelta: 0.035,
-    downpaymentPct: 0.15,
-    // Denominated in MXN: the realistic alternative is a Mexican bank mortgage.
-    defaultPrice: 2000000,
-    currency: "MXN",
-    mitigationKind: "success",
-    // Mexican bank mortgages are advertised as a CAT (effective annual cost, sin IVA),
-    // not a nominal APR. Steps are real June 2026 published CATs for a good credit
-    // profile: Inbursa 12.10%, BBVA 12.80%, Banorte 13.10%, Scotiabank 13.20%,
-    // Santander 13.50%, HSBC 13.90%. Default sits at the high end (HSBC) per spec.
-    rateKind: "cat",
-    bankAprSteps: [0.121, 0.128, 0.131, 0.132, 0.135, 0.139, 0.14],
-    bankAprDefault: 0.139,
-  },
-  vehicle: {
-    icon: "🚗",
-    // Mexican auto loans cap at 72 months (BBVA/Banorte/Santander).
-    monthSteps: [12, 24, 36, 48, 60, 72],
-    deltaSteps: VEHICLE_NEW_DELTA_STEPS,
-    defaultMonths: 48,
-    defaultDelta: VEHICLE_NEW_DEFAULT_DELTA,
-    downpaymentPct: 0.2,
-    // Denominated in MXN: the realistic alternative is a Mexican bank auto loan.
-    defaultPrice: 250000,
-    currency: "MXN",
-    mitigationKind: "warning",
-    requiresInsurance: true,
-    // Mexican auto loans are advertised as a CAT (effective annual cost, sin IVA),
-    // not a nominal APR. See the per-condition CAT steps above.
-    rateKind: "cat",
-    bankAprSteps: VEHICLE_NEW_BANK_APR_STEPS,
-    bankAprDefault: VEHICLE_NEW_BANK_APR_DEFAULT,
-  },
-  travel: {
-    icon: "✈️",
-    // Mexican consumer lenders typically amortize over multi-year terms.
-    monthSteps: [6, 12, 24, 36, 48, 72],
-    deltaSteps: [0.02, 0.025, 0.03, 0.035, 0.04, 0.05, 0.06],
-    defaultMonths: 24,
-    defaultDelta: 0.03,
-    downpaymentPct: 0.1,
-    // Denominated in MXN: the realistic alternative is a Mexican consumer loan.
-    defaultPrice: 50000,
-    currency: "MXN",
-    mitigationKind: "info",
-    escrowThreshold: 0.6,
-    // Travel here is financed via a Mexican consumer/payday lender, not a bank,
-    // so the rate is a CAT (effective annual cost), not a nominal APR. Steps are
-    // real published CATs: Kubo 55–78.1%, Provident 388.20%, CrediLikeMe 456%.
-    // The default (Provident's 388.20%) compounds steeply over the multi-year
-    // terms Mexican consumer lenders typically offer.
-    rateKind: "cat",
-    bankAprSteps: [0.55, 0.781, 1.5, 2.5, 3.882, 4.56],
-    bankAprDefault: 1.5,
-    comparisonHeadingKey: "consumerLenderColumnHeading",
-    comparisonNoticeKey: "consumerLenderNotice",
-    showRepayMultiple: true,
-  },
-};
-
-// ─── Math Engine ───────────────────────────────────────────────────────────────
-
-/**
- * B. Fixed Monthly Payment (Delta Adjusted)
- *
- *   P = [Ḡ − (G × d)] / M     where  Ḡ = (1/M) · Σ_{m=1..M} G × (1 + δ)^(m/12)
- *
- * Ḡ is the *true compound average* of the asset price across the term, using the
- * same curve the payouts follow (G_m = G × (1+δ)^(m/12)). Net of the downpayment
- * it is spread evenly across the M months to lock in a fixed monthly contribution.
- * This matches the classic ROSCA where the group size equals the term (N = M):
- * one member is funded each month.
- *
- * Pricing off the compound average (rather than the linear δ·T/2 midpoint
- * approximation) makes the contributions collect exactly the appreciating value
- * of the payouts, so the uninvested treasury pool breaks even at term end instead
- * of ending in a small deficit.
- */
-function calcMonthlyPayment(G: number, M: number, delta: number, d: number) {
-  let priceSum = 0;
-  for (let m = 1; m <= M; m++) {
-    priceSum += G * Math.pow(1 + delta, m / 12);
-  }
-  const avgAssetPrice = priceSum / M;
-  return (avgAssetPrice - G * d) / M;
-}
-
-/**
- * A. Dynamic Price Adjustment (Delta Curve)
- * G_m = G × (1 + δ)^(m/12)
- */
-function calcAssetPriceAtMonth(G: number, delta: number, m: number) {
-  return G * Math.pow(1 + delta, m / 12);
-}
-
-/**
- * Year-spaced month indices for charting: one point per year, plus the final
- * month if it isn't a year boundary. Short terms (≤ 12 months) sample monthly so
- * the curve isn't a single segment. Shared by every projection chart.
- */
-function sampleChartMonths(M: number): number[] {
-  const out: number[] = [];
-  if (M <= 12) {
-    for (let m = 0; m <= M; m++) out.push(m);
-  } else {
-    for (let m = 0; m <= M; m += 12) out.push(m);
-    if (out[out.length - 1] !== M) out.push(M);
-  }
-  return out;
-}
-
-/** X-axis label for a month index: `Ny` on year boundaries, else `Nm`. */
-function monthLabel(m: number): string {
-  return m % 12 === 0 ? `${m / 12}y` : `${m}m`;
-}
-
-/**
- * C. Escrow Release Threshold (Tier 3)
- * Finds the first month m where: ΣP_k + (G × d) ≥ G_m × c
- */
-function findEscrowUnlockMonth(
-  G: number,
-  M: number,
-  delta: number,
-  d: number,
-  threshold: number,
-): number {
-  const P = calcMonthlyPayment(G, M, delta, d);
-  const downpayment = G * d;
-  for (let m = 1; m <= M; m++) {
-    const G_m = calcAssetPriceAtMonth(G, delta, m);
-    if (P * m + downpayment >= G_m * threshold) return m;
-  }
-  return M;
-}
-
-interface SimResult {
-  P: number;
-  N: number;
-  downpayment: number;
-  G_final: number;
-  totalPaid: number;
-  /** Months between consecutive payouts (M / N). One payout per month at N = M. */
-  cadenceMonths: number;
-}
-
-function simulate(
-  G: number,
-  M: number,
-  delta: number,
-  d: number,
-): SimResult | null {
-  if (G <= 0 || M <= 0) return null;
-  const P = calcMonthlyPayment(G, M, delta, d);
-  const downpayment = G * d;
-  const G_final = calcAssetPriceAtMonth(G, delta, M);
-  const totalPaid = P * M + downpayment;
-  // Classic ROSCA: the group size equals the term, so one member is funded each
-  // month and payouts run monthly.
-  const N = M;
-  const cadenceMonths = M / N;
-  return { P, N, downpayment, G_final, totalPaid, cadenceMonths };
-}
-
-interface BankResult {
-  P: number;
-  downpayment: number;
-  principal: number;
-  totalInterest: number;
-  totalPaid: number;
-  apr: number;
-}
-
-/**
- * Lender financing (standard amortized loan).
- * The asset is purchased today at price G; the lender finances (G − downpayment)
- * and charges the given annual rate over the same term.
- *
- * Two rate conventions are supported:
- *   - "apr": a US-style nominal annual rate compounded monthly → r = rate / 12.
- *   - "cat": Mexico's Costo Anual Total, an *effective* annual rate (an IRR), so
- *     the equivalent monthly rate is the 12th root: r = (1 + rate)^(1/12) − 1.
- *     Note CAT is an all-in figure (interest + fees + mandatory insurance) and,
- *     when quoted "sin IVA", excludes the 16% VAT on interest - so amortizing the
- *     principal at the CAT approximates the borrower's total outflow.
- *
- *   P = L × r / (1 − (1 + r)^−M)
- */
-function simulateBank(
-  G: number,
-  M: number,
-  rate: number,
-  d: number,
-  rateKind: "apr" | "cat",
-): BankResult | null {
-  if (G <= 0 || M <= 0) return null;
-  const downpayment = G * d;
-  const principal = G - downpayment;
-  const r = rateKind === "cat" ? Math.pow(1 + rate, 1 / 12) - 1 : rate / 12;
-  const P = r > 0 ? (principal * r) / (1 - Math.pow(1 + r, -M)) : principal / M;
-  const totalPaid = P * M + downpayment;
-  const totalInterest = P * M - principal;
-  return { P, downpayment, principal, totalInterest, totalPaid, apr: rate };
-}
-
-// ─── Formatters ────────────────────────────────────────────────────────────────
-
-const CURRENCY_LOCALE: Record<TierConfig["currency"], string> = {
-  USD: "en-US",
-  MXN: "es-MX",
-};
-
-/** Builds whole-unit and 2-decimal currency formatters for a tier currency. */
-function makeFormatters(currency: TierConfig["currency"]) {
-  const locale = CURRENCY_LOCALE[currency];
-  return {
-    whole: new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }),
-    cents: new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }),
-  };
-}
-
-// ─── Sub-components ────────────────────────────────────────────────────────────
-
-function ExplainBtn({ onClick }: { onClick: () => void }) {
-  return (
-    <Button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick();
-      }}
-      aria-label="Learn more"
-      className="simulator__explain-btn"
-    >
-      ?
-    </Button>
-  );
-}
-
-function ResultRow({
-  label,
-  value,
-  highlight,
-  shaded,
-  onExplain,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-  shaded?: boolean;
-  onExplain?: () => void;
-}) {
-  return (
-    <Box
-      display="flex"
-      flexDirection="row"
-      justifyContent="space-between"
-      alignItems="center"
-      padding="12px 20px"
-      backgroundColor={shaded ? "var(--surface-2)" : "var(--surface-1)"}
-    >
-      <Box display="flex" alignItems="center" gap={6}>
-        <Typography>{label}</Typography>
-        {onExplain && <ExplainBtn onClick={onExplain} />}
-      </Box>
-      <Typography
-        fontWeight={highlight ? 700 : 500}
-        color={highlight ? "var(--accent, #06b6d4)" : "var(--foreground)"}
-        styles={{ fontSize: highlight ? 20 : undefined }}
-        textAlign="right"
-        minWidth={130}
-      >
-        {value}
-      </Typography>
-    </Box>
-  );
-}
-
-const MITIGATION_BG: Record<TierConfig["mitigationKind"], string> = {
-  success: "color-mix(in srgb, var(--success, #16a34a) 12%, transparent)",
-  warning: "color-mix(in srgb, var(--warning, #d97706) 12%, transparent)",
-  info: "color-mix(in srgb, var(--accent, #06b6d4) 12%, transparent)",
-};
-
-const MITIGATION_ICON: Record<TierConfig["mitigationKind"], string> = {
-  success: "🔒",
-  warning: "⚠️",
-  info: "🔐",
-};
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
@@ -672,234 +328,37 @@ export function Simulator() {
     return { summary: lines.join("\n"), assetTypeLabel };
   };
 
-  // Assemble the fully-localized, presentation-ready payload for the PDF
-  // document. All labels/values are formatted here (the PDF module stays a pure
-  // view) so the export matches exactly what the user sees on screen.
-  const buildPdfData = (): SimulationPdfProps | null => {
-    if (!result || !bankResult || G <= 0) return null;
-
-    const assetTypeLabel = t(`tiers.${TIER_I18N_KEY[tier]}.label`);
-    const assetLabel =
-      tier === "vehicle"
-        ? `${assetTypeLabel} (${t(`vehicleCondition.${vehicleCondition}`)})`
-        : assetTypeLabel;
-
-    const parameters: PdfRow[] = [
-      { label: t("pdf.assetType"), value: assetLabel },
-      { label: t("pdf.currency"), value: cfg.currency },
-      { label: t("priceLabelG"), value: fmtWhole.format(G) },
-      {
-        label: t("pdf.term"),
-        value: t("pdf.termValue", { months, years: T.toFixed(1) }),
-      },
-      {
-        label: t("pdf.priceAppreciation"),
-        value: `${(delta * 100).toFixed(1)}%`,
-      },
-      {
-        label: t("pdf.downpayment"),
-        value: `${(cfg.downpaymentPct * 100).toFixed(0)}% · ${fmtWhole.format(
-          result.downpayment,
-        )}`,
-      },
-      {
-        label: t("pdf.lenderRate"),
-        value: `${(bankResult.apr * 100).toFixed(2)}% ${
-          rateKind === "cat" ? "CAT" : "APR"
-        }`,
-      },
-      {
-        label: t("pdf.cetesYield"),
-        value: `${(cetesRate * 100).toFixed(1)}%`,
-      },
-    ];
-    if (escrowUnlockMonth !== null) {
-      parameters.push({
-        label: t("pdf.escrow"),
-        value: t("pdf.escrowValue", {
-          month: escrowUnlockMonth,
-          total: months,
-        }),
-      });
-    }
-
-    const tandaRows: PdfRow[] = [
-      {
-        label: t("monthlyPayment"),
-        value: fmtCents.format(result.P),
-        highlight: true,
-      },
-      {
-        label: t("downpaymentRequired"),
-        value: fmtWhole.format(result.downpayment),
-      },
-      { label: t("interestCharged"), value: t("zeroInterest") },
-      {
-        label: t("groupSize"),
-        value: t("groupSizeValue", { n: result.N }),
-      },
-      { label: t("payoutCadence"), value: cadenceLabel },
-      {
-        label: t("assetPriceAtEnd", { years: T.toFixed(1) }),
-        value: fmtWhole.format(result.G_final),
-      },
-      {
-        label: t("totalContributed"),
-        value: fmtWhole.format(result.totalPaid),
-        highlight: true,
-      },
-    ];
-
-    const bankRows: PdfRow[] = [
-      {
-        label: t("monthlyPayment"),
-        value: fmtCents.format(bankResult.P),
-        highlight: true,
-      },
-      {
-        label: t("downpaymentRequired"),
-        value: fmtWhole.format(bankResult.downpayment),
-      },
-      {
-        label: t("interestCharged"),
-        value: t(rateValueKey as Parameters<typeof t>[0], {
-          pct: (bankResult.apr * 100).toFixed(2),
-        }),
-      },
-      {
-        label: t("bankFinancedAmount"),
-        value: fmtWhole.format(bankResult.principal),
-      },
-      {
-        label: t("bankTotalInterest"),
-        value: fmtWhole.format(bankResult.totalInterest),
-      },
-      {
-        label: t("bankTotalCost"),
-        value: fmtWhole.format(bankResult.totalPaid),
-        highlight: true,
-      },
-    ];
-    if (cfg.showRepayMultiple && repayMultiple !== null) {
-      bankRows.push({
-        label: t("repayMultiple"),
-        value: t("repayMultipleValue", { multiple: repayMultiple.toFixed(1) }),
-        highlight: true,
-      });
-    }
-
-    const bankHeading = t(
-      (cfg.comparisonHeadingKey ?? "bankColumnHeading") as Parameters<
-        typeof t
-      >[0],
-    );
-
-    const charts: PdfLineChart[] = [];
-    if (chartData) {
-      charts.push({
-        heading: t("chartsHeading"),
-        note: t("combinedChartNote", {
-          tanda: fmtCents.format(result.P),
-          lender: fmtCents.format(bankResult.P),
-          pct: (delta * 100).toFixed(1),
-        }),
-        labels: chartData.labels,
-        formatTick: (v) => fmtWhole.format(v),
-        series: [
-          {
-            label: t("tandaColumnHeading"),
-            color: "#06b6d4",
-            data: chartData.tandaCumulative,
-          },
-          {
-            label: bankHeading,
-            color: "#6b7280",
-            data: chartData.bankCumulative,
-          },
-          {
-            label: t("assetPriceSeriesLabel"),
-            color: "#f59e0b",
-            data: chartData.assetPrice,
-          },
-        ],
-      });
-    }
-    if (treasuryData) {
-      charts.push({
-        heading: t("treasuryHeading"),
-        note: t("treasuryChartNote", {
-          pool: fmtWhole.format(treasuryData.pool),
-          monthly: fmtWhole.format(treasuryData.monthlyInflow),
-          rate: (cetesRate * 100).toFixed(1),
-        }),
-        labels: treasuryData.labels,
-        formatTick: (v) => fmtWhole.format(v),
-        series: [
-          {
-            label: t("treasuryWithYieldLabel"),
-            color: "#16a34a",
-            data: treasuryData.withYield,
-          },
-          {
-            label: t("treasuryNoYieldLabel"),
-            color: "#6b7280",
-            data: treasuryData.noYield,
-          },
-        ],
-      });
-    }
-
-    return {
-      title: t("pdf.title"),
-      subtitle: `${assetLabel} · ${fmtWhole.format(G)} · ${t("pdf.termValue", {
-        months,
-        years: T.toFixed(1),
-      })}`,
-      generatedOn: t("pdf.generatedOn", {
-        date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
-          new Date(),
-        ),
-      }),
-      parametersHeading: t("pdf.parametersHeading"),
-      parameters,
-      comparisonHeading: t("comparisonHeading"),
-      tandaHeading: t("tandaColumnHeading"),
-      tandaRows,
-      bankHeading,
-      bankRows,
-      savings:
-        savings !== null && savings > 0
-          ? {
-              label: t("savingsHeading"),
-              value: t("savingsAmount", { amount: fmtWhole.format(savings) }),
-            }
-          : undefined,
-      charts,
-      analysisHeading: analysisText ? t("aiAnalysis.heading") : undefined,
-      analysisText: analysisText ?? undefined,
-      disclaimer: t("pdf.disclaimer"),
-    };
-  };
-
   const handleExportPdf = async () => {
-    const data = buildPdfData();
+    const data = buildSimulationPdfData({
+      t: t as Translate,
+      locale,
+      tier,
+      cfg,
+      vehicleCondition,
+      G,
+      months,
+      delta,
+      cetesRate,
+      result,
+      bankResult,
+      escrowUnlockMonth,
+      cadenceLabel,
+      repayMultiple,
+      savings,
+      chartData,
+      treasuryData,
+      analysisText,
+      fmtWhole,
+      fmtCents,
+    });
     if (!data) return;
     setExporting(true);
     setExportError(false);
     try {
-      const { pdf } = await import("@react-pdf/renderer");
-      const { SimulationDocument } = await import("./simulation-pdf");
-      const blob = await pdf(<SimulationDocument {...data} />).toBlob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download =
-        `tandaomni-${t(`tiers.${TIER_I18N_KEY[tier]}.label`)}-simulation.pdf`
-          .toLowerCase()
-          .replace(/[^a-z0-9-]/g, "-")
-          .replace(/-+/g, "-");
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadSimulationPdf(
+        data,
+        t(`tiers.${TIER_I18N_KEY[tier]}.label`),
+      );
     } catch {
       setExportError(true);
     } finally {

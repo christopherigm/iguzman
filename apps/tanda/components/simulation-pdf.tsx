@@ -382,7 +382,10 @@ function ChartBlock({ chart }: { chart: PdfLineChart }) {
 // broken boxes overlapping the text). Covers emoticons, misc symbols &
 // pictographs, transport, supplemental & extended pictographs, dingbats, misc
 // technical/symbols, plus the variation selectors and ZWJ that join them.
+// The variation selectors / ZWJ are listed deliberately so the emoji components
+// they join are stripped from the Helvetica-rendered PDF text.
 const EMOJI_RE =
+  // eslint-disable-next-line no-misleading-character-class
   /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]/gu;
 
 function stripInline(line: string): string {
