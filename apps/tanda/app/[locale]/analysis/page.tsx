@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { setRequestLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { Container } from "@repo/ui/core-elements/container";
@@ -8,6 +7,7 @@ import { Typography } from "@repo/ui/core-elements/typography";
 import { Card } from "@repo/ui/core-elements/card";
 import { Badge } from "@repo/ui/core-elements/badge";
 import { MathFormula } from "@repo/ui/core-elements/math-formula";
+import { ServerImageToggle } from "@/components/server-image-toggle";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -196,7 +196,7 @@ export default async function AnalysisPage({ params }: Props) {
             <FormulaCard
               label={t("formulas.b.label")}
               description={t("formulas.b.description")}
-              formula="P = [G × (1 + δ × T/2) − G × d] / M"
+              formula="P = [(1/M) × Σ G × (1 + δ)^(m/12) − G × d] / M"
             />
             <FormulaCard
               label={t("formulas.c.label")}
@@ -326,6 +326,7 @@ export default async function AnalysisPage({ params }: Props) {
             <DeploymentCard
               imageAlt={t("infra.imageAlt")}
               imageCaption={t("infra.imageCaption")}
+              toggleLabel={t("infra.toggleLabel")}
               intro={t("infra.intro")}
               techStackLabel={t("infra.techStackLabel")}
               techStack={[
@@ -553,6 +554,7 @@ function FormulaCard({
 function DeploymentCard({
   imageAlt,
   imageCaption,
+  toggleLabel,
   intro,
   techStackLabel,
   techStack,
@@ -561,6 +563,7 @@ function DeploymentCard({
 }: {
   imageAlt: string;
   imageCaption: string;
+  toggleLabel: string;
   intro: string;
   techStackLabel: string;
   techStack: string[];
@@ -569,26 +572,9 @@ function DeploymentCard({
 }) {
   return (
     <Card padding={0} styles={{ overflow: "hidden" }}>
-      {/* Server photo (Kubernetes node behind Cloudflare) - centered 4:3 frame */}
-      <Box padding="16px" alignItems="center" justifyContent="center">
-        <Box
-          width="100%"
-          styles={{
-            position: "relative",
-            aspectRatio: "4 / 3",
-            maxWidth: 420,
-            overflow: "hidden",
-          }}
-        >
-          <Image
-            src="/server.jpg"
-            alt={imageAlt}
-            fill
-            sizes="(max-width: 900px) 100vw, 420px"
-            style={{ objectFit: "cover" }}
-          />
-        </Box>
-      </Box>
+      {/* Server photo (Kubernetes node behind Cloudflare) - centered 4:3 frame.
+          Click to swap between server.jpg and server-2.jpg. */}
+      <ServerImageToggle imageAlt={imageAlt} toggleLabel={toggleLabel} />
       <Box
         padding="8px 16px"
         backgroundColor="var(--surface-2)"

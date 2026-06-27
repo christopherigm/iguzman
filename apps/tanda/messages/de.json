@@ -259,7 +259,7 @@
       },
       "b": {
         "label": "B. Feste Monatliche Zahlung (Delta-angepasst)",
-        "description": "Mittelt den sich ändernden Preis des Vermögenswerts über die Laufzeit, um eine feste monatliche Zahlung festzulegen."
+        "description": "Mittelt den Vermögenspreis über die Laufzeit anhand der echten Zinseszinskurve G × (1 + δ)^(m/12), sodass die feste Rate die sich verteuernden Auszahlungen vollständig deckt und der Pool ausgeglichen bleibt."
       },
       "c": {
         "label": "C. Treuhand-Freigabeschwelle (Stufe 3)",
@@ -343,6 +343,7 @@
       "intro": "TandaOmni läuft als containerisierte Next.js-16-App (Standalone-Output, App Router, React 19) mit einem Django/DRF-Backend, PostgreSQL und Redis/Celery für asynchrone Aufgaben. Das Frontend wird als PWA über Serwist ausgeliefert, nutzt next-intl für mehrsprachiges Routing und SimpleWebAuthn für Passkey-Authentifizierung. Alles wird in einem selbstgehosteten Kubernetes-Cluster hinter Cloudflare bereitgestellt.",
       "imageAlt": "Selbstgehosteter Kubernetes-Serverknoten, der den TandaOmni-Cluster betreibt",
       "imageCaption": "Echtes Foto des selbstgehosteten Kubernetes-Clusters - 1 Master-Knoten und 4 Worker-Knoten, alle Laptops in meinem Schrank verstaut, über Cloudflare ins Internet exponiert.",
+      "toggleLabel": "Serverfoto umschalten",
       "techStackLabel": "Technologie-Stack",
       "deployLabel": "Bereitstellungsspezifikationen (Helm-Chart)",
       "specs": {

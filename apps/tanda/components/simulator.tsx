@@ -149,16 +149,26 @@ const TIERS: Record<TierKey, TierConfig> = {
 /**
  * B. Fixed Monthly Payment (Delta Adjusted)
  *
- *   P = [G × (1 + δ × T/2) - (G × d)] / M          (T = M/12)
+ *   P = [Ḡ − (G × d)] / M     where  Ḡ = (1/M) · Σ_{m=1..M} G × (1 + δ)^(m/12)
  *
- * The changing asset price is delta-averaged over the term and, net of the
- * downpayment, spread evenly across the M months to lock in a fixed monthly
- * contribution. This matches the classic ROSCA where the group size equals the
- * term (N = M): one member is funded each month.
+ * Ḡ is the *true compound average* of the asset price across the term, using the
+ * same curve the payouts follow (G_m = G × (1+δ)^(m/12)). Net of the downpayment
+ * it is spread evenly across the M months to lock in a fixed monthly contribution.
+ * This matches the classic ROSCA where the group size equals the term (N = M):
+ * one member is funded each month.
+ *
+ * Pricing off the compound average (rather than the linear δ·T/2 midpoint
+ * approximation) makes the contributions collect exactly the appreciating value
+ * of the payouts, so the uninvested treasury pool breaks even at term end instead
+ * of ending in a small deficit.
  */
 function calcMonthlyPayment(G: number, M: number, delta: number, d: number) {
-  const T = M / 12;
-  return (G * (1 + delta * (T / 2)) - G * d) / M;
+  let priceSum = 0;
+  for (let m = 1; m <= M; m++) {
+    priceSum += G * Math.pow(1 + delta, m / 12);
+  }
+  const avgAssetPrice = priceSum / M;
+  return (avgAssetPrice - G * d) / M;
 }
 
 /**
@@ -816,40 +826,6 @@ export function Simulator() {
             {t("comparisonHeading")}
           </Typography>
 
-          {/* Savings banner */}
-          {savings !== null && savings > 0 && (
-            <Card
-              padding="16px 20px"
-              backgroundColor="color-mix(in srgb, var(--success, #16a34a) 14%, transparent)"
-              styles={{ border: "1px solid var(--success, #16a34a)" }}
-            >
-              <Box
-                display="flex"
-                flexDirection="row"
-                justifyContent="space-between"
-                alignItems="center"
-                gap={12}
-                styles={{ flexWrap: "wrap" }}
-              >
-                <Box display="flex" flexDirection="column" gap={2}>
-                  <Typography fontWeight={700} color="var(--foreground)">
-                    💸 {t("savingsHeading")}
-                  </Typography>
-                  <Typography color="var(--muted-foreground, #6b7280)">
-                    {t("savingsNote")}
-                  </Typography>
-                </Box>
-                <Typography
-                  fontWeight={700}
-                  color="var(--success, #16a34a)"
-                  styles={{ fontSize: 26 }}
-                >
-                  {t("savingsAmount", { amount: fmtWhole.format(savings) })}
-                </Typography>
-              </Box>
-            </Card>
-          )}
-
           {/* Side-by-side panels */}
           <Box className="simulator__compare-grid">
             {/* ── TandaOmni panel ───────────────────────────────── */}
@@ -1100,6 +1076,40 @@ export function Simulator() {
               </Box>
             </Card>
           </Box>
+
+          {/* Savings banner */}
+          {savings !== null && savings > 0 && (
+            <Card
+              padding="16px 20px"
+              backgroundColor="color-mix(in srgb, var(--success, #16a34a) 14%, transparent)"
+              styles={{ border: "1px solid var(--success, #16a34a)" }}
+            >
+              <Box
+                display="flex"
+                flexDirection="row"
+                justifyContent="space-between"
+                alignItems="center"
+                gap={12}
+                styles={{ flexWrap: "wrap" }}
+              >
+                <Box display="flex" flexDirection="column" gap={2}>
+                  <Typography fontWeight={700} color="var(--foreground)">
+                    💸 {t("savingsHeading")}
+                  </Typography>
+                  <Typography color="var(--muted-foreground, #6b7280)">
+                    {t("savingsNote")}
+                  </Typography>
+                </Box>
+                <Typography
+                  fontWeight={700}
+                  color="var(--success, #16a34a)"
+                  styles={{ fontSize: 26 }}
+                >
+                  {t("savingsAmount", { amount: fmtWhole.format(savings) })}
+                </Typography>
+              </Box>
+            </Card>
+          )}
 
           {/* ── Projection chart ──────────────────────────────── */}
           {chartData && (

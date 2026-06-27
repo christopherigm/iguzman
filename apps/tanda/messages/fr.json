@@ -259,7 +259,7 @@
       },
       "b": {
         "label": "B. Paiement Mensuel Fixe (Ajusté par Delta)",
-        "description": "Moyenne le prix variable de l'actif sur la durée pour fixer un paiement mensuel fixe."
+        "description": "Moyenne le prix de l'actif sur la durée à partir de la véritable courbe composée G × (1 + δ)^(m/12), de sorte que le paiement fixe couvre entièrement les versements qui s'apprécient et que la trésorerie s'équilibre."
       },
       "c": {
         "label": "C. Seuil de Libération du Dépôt Fiduciaire (Niveau 3)",
@@ -343,6 +343,7 @@
       "intro": "TandaOmni s'exécute comme une application Next.js 16 conteneurisée (sortie standalone, App Router, React 19) avec un backend Django/DRF, PostgreSQL et Redis/Celery pour les tâches asynchrones. Le frontend est livré en PWA via Serwist, utilise next-intl pour le routage multilingue et SimpleWebAuthn pour l'authentification par passkey. Tout est déployé sur un cluster Kubernetes auto-hébergé derrière Cloudflare.",
       "imageAlt": "Nœud serveur Kubernetes auto-hébergé exécutant le cluster TandaOmni",
       "imageCaption": "Photo réelle du cluster Kubernetes auto-hébergé - 1 nœud maître et 4 nœuds workers, tous des ordinateurs portables rangés dans mon placard, exposés à Internet via Cloudflare.",
+      "toggleLabel": "Changer la photo du serveur",
       "techStackLabel": "Pile Technologique",
       "deployLabel": "Spécifications de Déploiement (chart Helm)",
       "specs": {

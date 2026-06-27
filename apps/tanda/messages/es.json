@@ -259,7 +259,7 @@
       },
       "b": {
         "label": "B. Pago Mensual Fijo (Ajustado por Delta)",
-        "description": "Promedia el precio cambiante del activo durante el plazo para fijar un pago mensual fijo."
+        "description": "Promedia el precio del activo durante el plazo usando la curva compuesta real G × (1 + δ)^(m/12), de modo que el pago fijo cubre por completo los desembolsos que se aprecian y el fondo común queda en equilibrio."
       },
       "c": {
         "label": "C. Umbral de Liberación del Depósito (Segmento 3)",
@@ -343,6 +343,7 @@
       "intro": "TandaOmni se ejecuta como una app Next.js 16 en contenedor (salida standalone, App Router, React 19) con un backend Django/DRF, PostgreSQL y Redis/Celery para tareas asíncronas. El frontend se distribuye como PWA mediante Serwist, usa next-intl para el enrutamiento multilingüe y SimpleWebAuthn para autenticación con passkeys. Todo se despliega en un clúster de Kubernetes detrás de Cloudflare.",
       "imageAlt": "Servidor Kubernetes que ejecuta el clúster de TandaOmni",
       "imageCaption": "Foto real del clúster de Kubernetes - 1 nodo maestro y 4 nodos trabajadores, todos laptops guardadas en mi clóset, expuestos a internet a través de Cloudflare.",
+      "toggleLabel": "Cambiar foto del servidor",
       "techStackLabel": "Stack Tecnológico",
       "deployLabel": "Especificaciones de Despliegue (chart de Helm)",
       "specs": {

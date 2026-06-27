@@ -259,7 +259,7 @@
       },
       "b": {
         "label": "B. Fixed Monthly Payment (Delta Adjusted)",
-        "description": "Averages the changing asset price over the term to lock in a fixed monthly payment."
+        "description": "Averages the asset price over the term using the true compound curve G × (1 + δ)^(m/12), so the fixed payment fully funds the appreciating payouts and the treasury pool breaks even."
       },
       "c": {
         "label": "C. Escrow Release Threshold (Tier 3)",
@@ -343,6 +343,7 @@
       "intro": "TandaOmni runs as a containerized Next.js 16 app (standalone output, App Router, React 19) with a Django/DRF backend, PostgreSQL, and Redis/Celery for async work. The frontend ships as a PWA via Serwist, uses next-intl for multilingual routing, and SimpleWebAuthn for passkey auth. Everything is deployed to a self-hosted Kubernetes cluster sitting behind Cloudflare.",
       "imageAlt": "Self-hosted Kubernetes server node running the TandaOmni cluster",
       "imageCaption": "Live photo of the self-hosted Kubernetes cluster - 1 master node and 4 worker nodes, all laptops stored in my closet, exposed to the internet through Cloudflare.",
+      "toggleLabel": "Toggle server photo",
       "techStackLabel": "Technology Stack",
       "deployLabel": "Deployment Specifications (Helm chart)",
       "specs": {
