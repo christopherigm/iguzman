@@ -138,6 +138,10 @@ export interface MovieFilters {
   /** Genre slugs; a movie must match ALL of them (AND semantics). */
   genres?: string[];
   format?: MovieFormat;
+  /** Disc audio-format codes; a movie must carry ALL of them (AND semantics). */
+  audioFormats?: AudioFormatCode[];
+  /** Disc HDR-format codes; a movie must carry ALL of them (AND semantics). */
+  hdrFormats?: HdrFormatCode[];
   sort?: MovieSort;
   page?: number;
 }
@@ -158,6 +162,10 @@ export function buildMovieQuery(filters: MovieFilters = {}): string {
   filters.genres?.forEach((slug) => params.append("genre", slug));
   // Sent as "media_format" - DRF reserves the "format" query param for content negotiation.
   if (filters.format) params.set("media_format", filters.format);
+  // Repeated `audio_format` / `hdr_format` params - the API ANDs them (movie
+  // must carry every selected code).
+  filters.audioFormats?.forEach((code) => params.append("audio_format", code));
+  filters.hdrFormats?.forEach((code) => params.append("hdr_format", code));
   if (filters.sort) params.set("ordering", filters.sort);
   if (filters.page && filters.page > 1)
     params.set("page", String(filters.page));
@@ -187,6 +195,10 @@ export interface CatalogParams {
   search: string;
   genres: string[];
   format: MovieFormat;
+  /** Selected disc audio-format codes (AND-filtered). */
+  audioFormats: AudioFormatCode[];
+  /** Selected disc HDR-format codes (AND-filtered). */
+  hdrFormats: HdrFormatCode[];
   sort: MovieSort;
   page: number;
   view: CatalogView;
@@ -198,6 +210,24 @@ const VALID_FORMATS: MovieFormat[] = [
   "4k",
   "digital",
   "other",
+];
+const VALID_AUDIO_FORMATS: AudioFormatCode[] = [
+  "atmos",
+  "truehd",
+  "ddplus",
+  "dd",
+  "dtsx",
+  "dtshd",
+  "dts",
+  "lpcm",
+  "other",
+];
+const VALID_HDR_FORMATS: HdrFormatCode[] = [
+  "dolbyvision",
+  "hdr10plus",
+  "hdr10",
+  "hlg",
+  "sdr",
 ];
 const VALID_SORTS: MovieSort[] = [
   "title",
@@ -225,6 +255,16 @@ export function parseCatalogParams(sp: URLSearchParams): CatalogParams {
     format: (VALID_FORMATS as string[]).includes(rawFormat)
       ? (rawFormat as MovieFormat)
       : "",
+    audioFormats: sp
+      .getAll("audio")
+      .filter((c) =>
+        (VALID_AUDIO_FORMATS as string[]).includes(c),
+      ) as AudioFormatCode[],
+    hdrFormats: sp
+      .getAll("hdr")
+      .filter((c) =>
+        (VALID_HDR_FORMATS as string[]).includes(c),
+      ) as HdrFormatCode[],
     sort: (VALID_SORTS as string[]).includes(rawSort)
       ? (rawSort as MovieSort)
       : "",
@@ -243,6 +283,8 @@ export function buildCatalogQuery(p: CatalogParams): string {
   if (p.search) params.set("q", p.search);
   p.genres.forEach((slug) => params.append("genre", slug));
   if (p.format) params.set("format", p.format);
+  p.audioFormats.forEach((code) => params.append("audio", code));
+  p.hdrFormats.forEach((code) => params.append("hdr", code));
   if (p.sort) params.set("sort", p.sort);
   if (p.page > 1) params.set("page", String(p.page));
   if (p.view !== "grid") params.set("view", p.view);

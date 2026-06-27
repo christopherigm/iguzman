@@ -13,7 +13,9 @@ import {
   getCategories,
   buildCatalogQuery,
   parseCatalogParams,
+  type AudioFormatCode,
   type Category,
+  type HdrFormatCode,
   type Movie,
   type MovieFormat,
   type MovieSort,
@@ -84,6 +86,12 @@ export function MovieCatalog({
   const [debouncedSearch, setDebouncedSearch] = useState(initial.search);
   const [genres, setGenres] = useState<string[]>(initial.genres);
   const [format, setFormat] = useState<MovieFormat>(initial.format);
+  const [audioFormats, setAudioFormats] = useState<AudioFormatCode[]>(
+    initial.audioFormats,
+  );
+  const [hdrFormats, setHdrFormats] = useState<HdrFormatCode[]>(
+    initial.hdrFormats,
+  );
   const [sort, setSort] = useState<MovieSort>(initial.sort);
   const [page, setPage] = useState(initial.page);
   const [totalPages, setTotalPages] = useState(
@@ -94,7 +102,11 @@ export function MovieCatalog({
   );
 
   const isFiltered =
-    debouncedSearch !== "" || genres.length > 0 || format !== "";
+    debouncedSearch !== "" ||
+    genres.length > 0 ||
+    format !== "" ||
+    audioFormats.length > 0 ||
+    hdrFormats.length > 0;
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -111,6 +123,22 @@ export function MovieCatalog({
 
   const handleFormatChange = (value: MovieFormat) => {
     setFormat(value);
+    setPage(1);
+  };
+
+  // Toggle a disc audio-format code in/out of the AND-filtered selection.
+  const handleAudioToggle = (code: AudioFormatCode) => {
+    setAudioFormats((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
+    );
+    setPage(1);
+  };
+
+  // Toggle a disc HDR-format code in/out of the AND-filtered selection.
+  const handleHdrToggle = (code: HdrFormatCode) => {
+    setHdrFormats((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
+    );
     setPage(1);
   };
 
@@ -160,7 +188,15 @@ export function MovieCatalog({
   useEffect(() => {
     if (initialMovies) return;
     let active = true;
-    getMovies({ search: debouncedSearch, genres, format, sort, page })
+    getMovies({
+      search: debouncedSearch,
+      genres,
+      format,
+      audioFormats,
+      hdrFormats,
+      sort,
+      page,
+    })
       .then((data) => {
         if (!active) return;
         setMovies(data.results);
@@ -174,7 +210,16 @@ export function MovieCatalog({
     return () => {
       active = false;
     };
-  }, [initialMovies, debouncedSearch, genres, format, sort, page]);
+  }, [
+    initialMovies,
+    debouncedSearch,
+    genres,
+    format,
+    audioFormats,
+    hdrFormats,
+    sort,
+    page,
+  ]);
 
   // Mirror the current filters/sort/page/view into the URL via the Next router
   // so the view is shareable, survives a refresh, AND is restored on browser
@@ -188,6 +233,8 @@ export function MovieCatalog({
       search: debouncedSearch,
       genres,
       format,
+      audioFormats,
+      hdrFormats,
       sort,
       page,
       view,
@@ -197,7 +244,17 @@ export function MovieCatalog({
       ? `${window.location.pathname}?${qs}`
       : window.location.pathname;
     startTransition(() => router.replace(url, { scroll: false }));
-  }, [debouncedSearch, genres, format, sort, page, view, router]);
+  }, [
+    debouncedSearch,
+    genres,
+    format,
+    audioFormats,
+    hdrFormats,
+    sort,
+    page,
+    view,
+    router,
+  ]);
 
   const persistScroll = useCallback((scrollY: number) => {
     try {
@@ -262,6 +319,10 @@ export function MovieCatalog({
         onGenreToggle={handleGenreToggle}
         format={format}
         onFormatChange={handleFormatChange}
+        selectedAudio={audioFormats}
+        onAudioToggle={handleAudioToggle}
+        selectedHdr={hdrFormats}
+        onHdrToggle={handleHdrToggle}
         sort={sort}
         onSortChange={handleSortChange}
         categories={categories}

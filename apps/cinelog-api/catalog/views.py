@@ -175,6 +175,23 @@ class MovieListView(ListCreateAPIView):
         elif media_format:
             qs = qs.filter(formats__code=media_format).distinct()
 
+        # Disc audio-format filter: `?audio_format=` may repeat; a movie must
+        # carry ALL selected formats (AND semantics, like genres), so each code
+        # gets its own independent join.
+        audio_formats = [a.strip() for a in self.request.query_params.getlist('audio_format')]
+        audio_formats = [a for a in audio_formats if a]
+        for code in audio_formats:
+            qs = qs.filter(audio_formats__code=code)
+
+        # Disc HDR / dynamic-range filter: same repeated-param AND semantics.
+        hdr_formats = [h.strip() for h in self.request.query_params.getlist('hdr_format')]
+        hdr_formats = [h for h in hdr_formats if h]
+        for code in hdr_formats:
+            qs = qs.filter(hdr_formats__code=code)
+
+        if audio_formats or hdr_formats:
+            qs = qs.distinct()
+
         ordering = self.request.query_params.get('ordering', '').strip()
         order_by = self.ORDERING_MAP.get(ordering)
         if order_by:
