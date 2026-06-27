@@ -192,7 +192,28 @@
     "treasuryHeading": "Treasury Liquidity Pool",
     "treasuryChartNote": "On day one the group pools every member's downpayment ({pool}). Each month it collects {monthly} in contributions and funds one member's asset. Invested at the {rate}% CETES yield, the idle balance compounds - the gap to the grey line is the value of investing.",
     "treasuryWithYieldLabel": "Pool with CETES yield",
-    "treasuryNoYieldLabel": "Pool, uninvested"
+    "treasuryNoYieldLabel": "Pool, uninvested",
+    "aiAnalysis": {
+      "heading": "AI Analysis",
+      "description": "Get a personalized, AI-generated take on your plan. Describe what you want to buy and pick a tone - the analysis considers every value above.",
+      "purchaseLabel": "What are you planning to buy?",
+      "purchasePlaceholder": "e.g. a family house, a used car, a trip to Japan",
+      "formalityLabel": "Response tone",
+      "formality": {
+        "professional": "Professional",
+        "formal": "Formal",
+        "casual": "Casual",
+        "slang": "Slang"
+      },
+      "webSearchLabel": "Enrich with live web data",
+      "webSearchHint": "Searches the web for up-to-date market info before analyzing (slower).",
+      "analyzeButton": "Analyze with AI",
+      "analyzing": "Analyzing…",
+      "searching": "Searching the web…",
+      "loadingNote": "Crunching your numbers and writing a recommendation…",
+      "searchNote": "Gathering up-to-date market info to ground the analysis…",
+      "error": "Something went wrong generating the analysis. Please try again."
+    }
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Product Analysis",
@@ -207,6 +228,8 @@
     "overview": {
       "objectiveLabel": "Objective",
       "objective": "A zero-interest, community-funded financial ecosystem (ROSCA/Tanda model) supporting Real Estate (Appreciating), Vehicles/Equipment (Destructible), and Experiences (Unrecoverable). The platform dynamically groups users into specific risk tiers based on the asset class they are funding.",
+      "problemLabel": "Problem Statement",
+      "problem": "Acquiring high-value assets traditionally forces people into predatory interest-bearing credit, while informal tandas (ROSCAs) lack the financial controls to handle assets whose value shifts over time - real estate that appreciates, vehicles that depreciate, and experiences that are unrecoverable once consumed. TandaOmni replaces interest with a community-funded model that prices each asset class with its own delta curve, mitigates default risk per tier (downpayments, mandatory insurance, escrow locks), and keeps an append-only treasury ledger - making zero-interest collective financing safe, transparent, and viable across appreciating, destructible, and unrecoverable goals.",
       "stackLabel": "Tech Stack",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (DB), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Course",

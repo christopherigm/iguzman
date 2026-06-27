@@ -192,7 +192,28 @@
     "treasuryHeading": "Fondo de Liquidez de Tesorería",
     "treasuryChartNote": "El primer día el grupo reúne el enganche de cada miembro ({pool}). Cada mes recauda {monthly} en aportaciones y financia el activo de un miembro. Invertido al {rate}% de rendimiento CETES, el saldo ocioso se capitaliza: la distancia con la línea gris es el valor de invertir.",
     "treasuryWithYieldLabel": "Fondo con rendimiento CETES",
-    "treasuryNoYieldLabel": "Fondo sin invertir"
+    "treasuryNoYieldLabel": "Fondo sin invertir",
+    "aiAnalysis": {
+      "heading": "Análisis con IA",
+      "description": "Obtén una opinión personalizada generada por IA sobre tu plan. Describe qué quieres comprar y elige un tono: el análisis considera todos los valores anteriores.",
+      "purchaseLabel": "¿Qué planeas comprar?",
+      "purchasePlaceholder": "p. ej. una casa familiar, un auto usado, un viaje a Japón",
+      "formalityLabel": "Tono de la respuesta",
+      "formality": {
+        "professional": "Profesional",
+        "formal": "Formal",
+        "casual": "Informal",
+        "slang": "Coloquial"
+      },
+      "webSearchLabel": "Enriquecer con datos web en vivo",
+      "webSearchHint": "Busca en la web información de mercado actualizada antes de analizar (más lento).",
+      "analyzeButton": "Analizar con IA",
+      "analyzing": "Analizando…",
+      "searching": "Buscando en la web…",
+      "loadingNote": "Procesando tus números y redactando una recomendación…",
+      "searchNote": "Recopilando información de mercado actualizada para fundamentar el análisis…",
+      "error": "Ocurrió un error al generar el análisis. Inténtalo de nuevo."
+    }
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Análisis del Producto",
@@ -207,6 +228,8 @@
     "overview": {
       "objectiveLabel": "Objetivo",
       "objective": "Un ecosistema financiero comunitario sin intereses (modelo ROSCA/Tanda) para Bienes Raíces (apreciables), Vehículos/Equipos (depreciables) y Experiencias (irrecuperables). La plataforma agrupa dinámicamente a los usuarios en niveles de riesgo específicos según la clase de activo que financian.",
+      "problemLabel": "Planteamiento del Problema",
+      "problem": "Adquirir activos de alto valor obliga tradicionalmente a las personas a recurrir a créditos con intereses abusivos, mientras que las tandas informales (ROSCAs) carecen de los controles financieros para manejar activos cuyo valor cambia con el tiempo: inmuebles que se aprecian, vehículos que se deprecian y experiencias irrecuperables una vez consumidas. TandaOmni reemplaza el interés con un modelo de financiamiento comunitario que valora cada clase de activo con su propia curva de delta, mitiga el riesgo de incumplimiento por nivel (enganches, seguro obligatorio, bloqueos de garantía) y mantiene un libro mayor de tesorería de solo anexado, haciendo que el financiamiento colectivo sin intereses sea seguro, transparente y viable para metas apreciables, destructibles e irrecuperables.",
       "stackLabel": "Stack Tecnológico",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (BD), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Diplomado",

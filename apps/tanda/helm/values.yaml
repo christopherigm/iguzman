@@ -39,6 +39,15 @@ envFromSecret:
   - name: API_URL
     secretName: tanda-secrets
     secretKey: API_URL
+  - name: GROQ_API_KEY
+    secretName: tanda-secrets
+    secretKey: GROQ_API_KEY
+  - name: OPENROUTER_API_KEY
+    secretName: tanda-secrets
+    secretKey: OPENROUTER_API_KEY
+  - name: SCRAPER_API_KEY
+    secretName: tanda-secrets
+    secretKey: SCRAPER_API_KEY
 
 probes:
   startupProbe:

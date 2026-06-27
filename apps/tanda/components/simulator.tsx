@@ -11,6 +11,7 @@ import { TextInput } from "@repo/ui/core-elements/text-input";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Chart } from "@repo/ui/core-elements/chart";
+import { AiAnalysis, type AnalysisContext } from "./ai-analysis";
 import "./simulator.css";
 
 // ─── Tier Configuration ────────────────────────────────────────────────────────
@@ -596,6 +597,67 @@ export function Simulator() {
     const perMonth = Math.max(1, Math.round(1 / c));
     return t("payoutCadencePerMonth", { count: perMonth });
   })();
+
+  // Serialize the current simulation into the labelled summary the analysis model
+  // reasons over. Returns null until the simulation is ready. Called by the
+  // AiAnalysis panel each time the user runs an analysis so it reflects exactly
+  // what the user is looking at.
+  const buildAnalysisContext = (): AnalysisContext | null => {
+    if (!result || !bankResult || G <= 0) return null;
+
+    const assetTypeLabel = t(`tiers.${TIER_I18N_KEY[tier]}.label`);
+    const rateConvention =
+      rateKind === "cat" ? "CAT (effective annual)" : "APR";
+    const lines = [
+      `Asset type: ${assetTypeLabel}${
+        tier === "vehicle" ? ` (${vehicleCondition})` : ""
+      }`,
+      `Currency: ${cfg.currency}`,
+      `Target price (G): ${fmtWhole.format(G)}`,
+      `Term: ${months} months (${T.toFixed(1)} years)`,
+      `Annual price appreciation (δ): ${(delta * 100).toFixed(1)}%`,
+      `Downpayment: ${(cfg.downpaymentPct * 100).toFixed(
+        0,
+      )}% = ${fmtWhole.format(result.downpayment)}`,
+      "",
+      "TandaOmni (interest-free savings circle):",
+      `- Monthly payment: ${fmtCents.format(result.P)}`,
+      `- Group size: ${result.N} members`,
+      `- Payout cadence: ${cadenceLabel}`,
+      `- Asset price at end of term: ${fmtWhole.format(result.G_final)}`,
+      `- Total contributed: ${fmtWhole.format(result.totalPaid)}`,
+      `- Interest charged: 0`,
+      "",
+      `Traditional lender (${rateConvention}):`,
+      `- Lender rate: ${(bankResult.apr * 100).toFixed(2)}%`,
+      `- Monthly payment: ${fmtCents.format(bankResult.P)}`,
+      `- Amount financed: ${fmtWhole.format(bankResult.principal)}`,
+      `- Total interest: ${fmtWhole.format(bankResult.totalInterest)}`,
+      `- Total cost: ${fmtWhole.format(bankResult.totalPaid)}`,
+    ];
+    if (repayMultiple !== null) {
+      lines.push(
+        `- Total repaid as a multiple of the loan: ${repayMultiple.toFixed(1)}×`,
+      );
+    }
+    if (savings !== null) {
+      lines.push(
+        "",
+        `Savings vs lender (lender total − TandaOmni total): ${fmtWhole.format(
+          savings,
+        )}`,
+      );
+    }
+    lines.push(
+      "",
+      `CETES treasury yield (r): ${(cetesRate * 100).toFixed(1)}%`,
+    );
+    if (escrowUnlockMonth !== null) {
+      lines.push(`Escrow unlocks at month ${escrowUnlockMonth} of ${months}.`);
+    }
+
+    return { summary: lines.join("\n"), assetTypeLabel };
+  };
 
   return (
     <Box display="flex" flexDirection="column" gap={24} width="100%">
@@ -1205,6 +1267,9 @@ export function Simulator() {
               </Card>
             </Box>
           )}
+
+          {/* ── AI Analysis ───────────────────────────────────── */}
+          <AiAnalysis buildContext={buildAnalysisContext} />
         </Box>
       ) : (
         <Card

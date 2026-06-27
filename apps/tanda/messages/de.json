@@ -192,7 +192,28 @@
     "treasuryHeading": "Tresorerie-Liquiditätspool",
     "treasuryChartNote": "Am ersten Tag bündelt die Gruppe die Anzahlung jedes Mitglieds ({pool}). Jeden Monat sammelt sie {monthly} an Beiträgen und finanziert den Vermögenswert eines Mitglieds. Zur CETES-Rendite von {rate}% angelegt, verzinst sich das ungenutzte Guthaben – der Abstand zur grauen Linie ist der Wert des Investierens.",
     "treasuryWithYieldLabel": "Pool mit CETES-Rendite",
-    "treasuryNoYieldLabel": "Pool, nicht investiert"
+    "treasuryNoYieldLabel": "Pool, nicht investiert",
+    "aiAnalysis": {
+      "heading": "KI-Analyse",
+      "description": "Erhalten Sie eine personalisierte, KI-generierte Einschätzung Ihres Plans. Beschreiben Sie, was Sie kaufen möchten, und wählen Sie einen Ton – die Analyse berücksichtigt alle Werte oben.",
+      "purchaseLabel": "Was möchten Sie kaufen?",
+      "purchasePlaceholder": "z. B. ein Familienhaus, ein Gebrauchtwagen, eine Reise nach Japan",
+      "formalityLabel": "Ton der Antwort",
+      "formality": {
+        "professional": "Professionell",
+        "formal": "Förmlich",
+        "casual": "Locker",
+        "slang": "Umgangssprache"
+      },
+      "webSearchLabel": "Mit aktuellen Webdaten anreichern",
+      "webSearchHint": "Sucht vor der Analyse im Web nach aktuellen Marktinformationen (langsamer).",
+      "analyzeButton": "Mit KI analysieren",
+      "analyzing": "Analysiere…",
+      "searching": "Suche im Web…",
+      "loadingNote": "Ihre Zahlen werden ausgewertet und eine Empfehlung wird verfasst…",
+      "searchNote": "Aktuelle Marktinformationen werden gesammelt, um die Analyse zu fundieren…",
+      "error": "Bei der Erstellung der Analyse ist ein Fehler aufgetreten. Bitte erneut versuchen."
+    }
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Produktanalyse",
@@ -207,6 +228,8 @@
     "overview": {
       "objectiveLabel": "Ziel",
       "objective": "Ein zinsloses, gemeinschaftlich finanziertes Finanzökosystem (ROSCA/Tanda-Modell) für Immobilien (wertsteigernd), Fahrzeuge/Ausrüstung (abnutzbar) und Erlebnisse (nicht rückholbar). Die Plattform gruppiert Nutzer dynamisch in spezifische Risikostufen basierend auf der Anlageklasse, die sie finanzieren.",
+      "problemLabel": "Problemstellung",
+      "problem": "Der Erwerb hochwertiger Vermögenswerte zwingt Menschen traditionell zu zinsbelastetem, oft wucherischem Kredit, während informelle Tandas (ROSCAs) die Finanzkontrollen fehlen, um Vermögenswerte zu handhaben, deren Wert sich im Lauf der Zeit verändert: Immobilien, die an Wert gewinnen, Fahrzeuge, die an Wert verlieren, und Erlebnisse, die nach dem Konsum nicht rückholbar sind. TandaOmni ersetzt Zinsen durch ein gemeinschaftlich finanziertes Modell, das jede Anlageklasse mit ihrer eigenen Delta-Kurve bepreist, das Ausfallrisiko je Stufe mindert (Anzahlungen, Pflichtversicherung, Treuhandsperren) und ein reines Anhänge-Treasury-Hauptbuch führt, wodurch zinslose Gemeinschaftsfinanzierung für wertsteigernde, abnutzbare und nicht rückholbare Ziele sicher, transparent und tragfähig wird.",
       "stackLabel": "Tech-Stack",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (DB), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Kurs",

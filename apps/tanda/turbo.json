@@ -3,7 +3,15 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "passThroughEnv": ["API_URL", "LOG_LEVEL"]
+      "passThroughEnv": [
+        "API_URL",
+        "LOG_LEVEL",
+        "GROQ_API_KEY",
+        "OPENROUTER_API_KEY",
+        "OPENROUTER_MODEL",
+        "SCRAPER_API_KEY",
+        "GROQ_QUERY_MODEL"
+      ]
     }
   }
 }

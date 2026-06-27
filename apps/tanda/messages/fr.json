@@ -192,7 +192,28 @@
     "treasuryHeading": "Cagnotte de Liquidité de Trésorerie",
     "treasuryChartNote": "Le premier jour, le groupe met en commun l'acompte de chaque membre ({pool}). Chaque mois, il collecte {monthly} de cotisations et finance l'actif d'un membre. Investi au rendement CETES de {rate}%, le solde inutilisé se capitalise - l'écart avec la ligne grise est la valeur de l'investissement.",
     "treasuryWithYieldLabel": "Cagnotte avec rendement CETES",
-    "treasuryNoYieldLabel": "Cagnotte, non investie"
+    "treasuryNoYieldLabel": "Cagnotte, non investie",
+    "aiAnalysis": {
+      "heading": "Analyse par IA",
+      "description": "Obtenez un avis personnalisé généré par IA sur votre plan. Décrivez ce que vous souhaitez acheter et choisissez un ton : l'analyse prend en compte toutes les valeurs ci-dessus.",
+      "purchaseLabel": "Qu'envisagez-vous d'acheter ?",
+      "purchasePlaceholder": "p. ex. une maison familiale, une voiture d'occasion, un voyage au Japon",
+      "formalityLabel": "Ton de la réponse",
+      "formality": {
+        "professional": "Professionnel",
+        "formal": "Formel",
+        "casual": "Décontracté",
+        "slang": "Argot"
+      },
+      "webSearchLabel": "Enrichir avec des données web en direct",
+      "webSearchHint": "Recherche sur le web des informations de marché à jour avant l'analyse (plus lent).",
+      "analyzeButton": "Analyser avec l'IA",
+      "analyzing": "Analyse en cours…",
+      "searching": "Recherche sur le web…",
+      "loadingNote": "Calcul de vos chiffres et rédaction d'une recommandation…",
+      "searchNote": "Collecte d'informations de marché à jour pour étayer l'analyse…",
+      "error": "Une erreur s'est produite lors de la génération de l'analyse. Veuillez réessayer."
+    }
   },
   "AnalysisPage": {
     "heading": "TandaOmni - Analyse Produit",
@@ -207,6 +228,8 @@
     "overview": {
       "objectiveLabel": "Objectif",
       "objective": "Un écosystème financier communautaire sans intérêts (modèle ROSCA/Tanda) pour l’Immobilier (valorisant), les Véhicules/Équipements (dévalorisants) et les Expériences (irrécupérables). La plateforme regroupe dynamiquement les utilisateurs en niveaux de risque spécifiques selon la classe d’actif qu’ils financent.",
+      "problemLabel": "Énoncé du Problème",
+      "problem": "Acquérir des actifs de grande valeur contraint traditionnellement les personnes à recourir à un crédit à intérêts abusifs, tandis que les tandas informelles (ROSCAs) manquent des contrôles financiers pour gérer des actifs dont la valeur évolue dans le temps : l’immobilier qui se valorise, les véhicules qui se déprécient et les expériences irrécupérables une fois consommées. TandaOmni remplace l’intérêt par un modèle de financement communautaire qui valorise chaque classe d’actif avec sa propre courbe de delta, atténue le risque de défaut par niveau (apports, assurance obligatoire, blocages de séquestre) et tient un grand livre de trésorerie en ajout seul, rendant le financement collectif sans intérêts sûr, transparent et viable pour des objectifs valorisants, destructibles et irrécupérables.",
       "stackLabel": "Stack Technique",
       "stack": "Next.js (Frontend), Django/DRF (Backend), PostgreSQL (BDD), Redis/Celery (Async), Kubernetes (Infra).",
       "courseLabel": "Formation",
