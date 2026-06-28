@@ -9,6 +9,7 @@ const TABS = [
   "commands",
   "services",
   "tools",
+  "smart-tv",
   "dev-cycle",
 ] as const;
 type Tab = (typeof TABS)[number];
