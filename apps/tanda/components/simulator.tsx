@@ -13,6 +13,7 @@ import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Chart } from "@repo/ui/core-elements/chart";
 import { AiAnalysis, type AnalysisContext } from "./ai-analysis";
 import { ExplainBtn, ResultRow } from "./simulator-fields";
+import { ProjectionChart, TreasuryChart } from "./simulator-charts";
 import {
   type TierKey,
   TIERS,
@@ -45,6 +46,18 @@ import {
   type Translate,
 } from "../lib/simulation-pdf";
 import "./simulator.css";
+
+// Append each slice's share of the total to its legend label (e.g.
+// "Downpayment · 32%"), mirroring the percentage shown beside each slice in the
+// exported PDF (see lib/simulation-pdf.tsx → PieColumn). Labels and data are
+// passed together so the percentage always matches the plotted value.
+function withPiePercents(labels: string[], data: number[]): string[] {
+  const total = data.reduce((sum, v) => sum + v, 0);
+  if (total <= 0) return labels;
+  return labels.map(
+    (label, i) => `${label} · ${Math.round(((data[i] ?? 0) / total) * 100)}%`,
+  );
+}
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
@@ -690,7 +703,10 @@ export function Simulator() {
                 </Typography>
                 <Chart
                   type="pie"
-                  labels={[t("downpaymentRequired"), t("pieMonthlyPayments")]}
+                  labels={withPiePercents(
+                    [t("downpaymentRequired"), t("pieMonthlyPayments")],
+                    [result.downpayment, result.P * months],
+                  )}
                   series={[
                     {
                       label: t("totalContributed"),
@@ -869,11 +885,18 @@ export function Simulator() {
                 </Typography>
                 <Chart
                   type="pie"
-                  labels={[
-                    t("downpaymentRequired"),
-                    t("bankFinancedAmount"),
-                    t("bankTotalInterest"),
-                  ]}
+                  labels={withPiePercents(
+                    [
+                      t("downpaymentRequired"),
+                      t("bankFinancedAmount"),
+                      t("bankTotalInterest"),
+                    ],
+                    [
+                      bankResult.downpayment,
+                      bankResult.principal,
+                      bankResult.totalInterest,
+                    ],
+                  )}
                   series={[
                     {
                       label: t("bankTotalCost"),
@@ -945,97 +968,25 @@ export function Simulator() {
 
           {/* ── Projection chart ──────────────────────────────── */}
           {chartData && (
-            <Box display="flex" flexDirection="column" gap={20}>
-              <Typography
-                as="h2"
-                fontWeight={700}
-                color="var(--foreground)"
-                styles={{ textTransform: "uppercase", letterSpacing: 1 }}
-              >
-                {t("chartsHeading")}
-              </Typography>
-
-              {/* Cumulative amount paid (TandaOmni vs lender) plotted against the
-                  asset price curve - all three share a comparable currency scale. */}
-              <Card gap={12} padding={20}>
-                <Typography color="var(--muted-foreground, #6b7280)">
-                  {t("combinedChartNote", {
-                    tanda: fmtCents.format(result.P),
-                    lender: fmtCents.format(bankResult.P),
-                    pct: (Number(delta) * 100).toFixed(1),
-                  })}
-                </Typography>
-                <Chart
-                  type="line"
-                  labels={chartData.labels}
-                  series={[
-                    {
-                      label: t("tandaColumnHeading"),
-                      data: chartData.tandaCumulative,
-                      color: "#06b6d4",
-                    },
-                    {
-                      label: t(
-                        (cfg.comparisonHeadingKey ??
-                          "bankColumnHeading") as Parameters<typeof t>[0],
-                      ),
-                      data: chartData.bankCumulative,
-                      color: "#6b7280",
-                    },
-                    {
-                      label: t("assetPriceSeriesLabel"),
-                      data: chartData.assetPrice,
-                      color: "#f59e0b",
-                    },
-                  ]}
-                  height={340}
-                  ariaLabel={t("chartsHeading")}
-                />
-              </Card>
-            </Box>
+            <ProjectionChart
+              t={t as Translate}
+              chartData={chartData}
+              tandaMonthly={result.P}
+              lenderMonthly={bankResult.P}
+              delta={delta}
+              fmtCents={fmtCents}
+              lenderHeadingKey={cfg.comparisonHeadingKey ?? "bankColumnHeading"}
+            />
           )}
 
           {/* ── Treasury liquidity pool chart ─────────────────── */}
           {treasuryData && (
-            <Box display="flex" flexDirection="column" gap={20}>
-              <Typography
-                as="h2"
-                fontWeight={700}
-                color="var(--foreground)"
-                styles={{ textTransform: "uppercase", letterSpacing: 1 }}
-              >
-                {t("treasuryHeading")}
-              </Typography>
-
-              {/* Group treasury balance B_m: invested in CETES vs uninvested. */}
-              <Card gap={12} padding={20}>
-                <Typography color="var(--muted-foreground, #6b7280)">
-                  {t("treasuryChartNote", {
-                    pool: fmtWhole.format(treasuryData.pool),
-                    monthly: fmtWhole.format(treasuryData.monthlyInflow),
-                    rate: (cetesRate * 100).toFixed(1),
-                  })}
-                </Typography>
-                <Chart
-                  type="line"
-                  labels={treasuryData.labels}
-                  series={[
-                    {
-                      label: t("treasuryWithYieldLabel"),
-                      data: treasuryData.withYield,
-                      color: "#16a34a",
-                    },
-                    {
-                      label: t("treasuryNoYieldLabel"),
-                      data: treasuryData.noYield,
-                      color: "#6b7280",
-                    },
-                  ]}
-                  height={340}
-                  ariaLabel={t("treasuryHeading")}
-                />
-              </Card>
-            </Box>
+            <TreasuryChart
+              t={t as Translate}
+              treasuryData={treasuryData}
+              cetesRate={cetesRate}
+              fmtWhole={fmtWhole}
+            />
           )}
 
           {/* ── AI Analysis ───────────────────────────────────── */}

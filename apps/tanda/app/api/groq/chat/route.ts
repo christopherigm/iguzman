@@ -96,6 +96,16 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
   });
 
+  // This is a token-by-token stream proxied straight through. The standalone
+  // Next server's compression middleware would otherwise wrap it in a single
+  // Gzip writable and register a `drain` listener per backpressured chunk -
+  // during a fast stream >10 pile up and Node logs a MaxListenersExceededWarning.
+  // `no-transform` makes the compression middleware skip the response entirely
+  // (no Gzip stream, no listeners); `X-Accel-Buffering: no` stops the nginx
+  // ingress from buffering the stream.
+  responseHeaders.set("Cache-Control", "no-cache, no-transform");
+  responseHeaders.set("X-Accel-Buffering", "no");
+
   return new Response(upstream.body, {
     status: upstream.status,
     headers: responseHeaders,

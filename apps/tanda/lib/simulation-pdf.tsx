@@ -8,6 +8,7 @@
 import type {
   PdfRow,
   PdfLineChart,
+  PdfPieSection,
   SimulationPdfProps,
 } from "../components/simulation-pdf";
 import type {
@@ -88,7 +89,6 @@ export function buildSimulationPdfData({
 
   const parameters: PdfRow[] = [
     { label: t("pdf.assetType"), value: assetLabel },
-    { label: t("pdf.currency"), value: cfg.currency },
     { label: t("priceLabelG"), value: fmtWhole.format(G) },
     {
       label: t("pdf.term"),
@@ -109,10 +109,6 @@ export function buildSimulationPdfData({
       value: `${(bankResult.apr * 100).toFixed(2)}% ${
         isCat ? "CAT" : "APR"
       }`,
-    },
-    {
-      label: t("pdf.cetesYield"),
-      value: `${(cetesRate * 100).toFixed(1)}%`,
     },
   ];
   if (escrowUnlockMonth !== null) {
@@ -192,6 +188,53 @@ export function buildSimulationPdfData({
 
   const bankHeading = t(cfg.comparisonHeadingKey ?? "bankColumnHeading");
 
+  // Cost-breakdown pies mirror the two in-app comparison cards: each card's
+  // slices sum exactly to its total (TandaOmni is interest-free, so just
+  // downpayment + monthly contributions; the lender adds a financed-amount and
+  // total-interest slice).
+  const fmtPieValue = (v: number) => fmtWhole.format(v);
+  const pieSection: PdfPieSection = {
+    charts: [
+      {
+        heading: t("tandaColumnHeading"),
+        formatValue: fmtPieValue,
+        slices: [
+          {
+            label: t("downpaymentRequired"),
+            value: result.downpayment,
+            color: "#06b6d4",
+          },
+          {
+            label: t("pieMonthlyPayments"),
+            value: result.P * months,
+            color: "#a5f3fc",
+          },
+        ],
+      },
+      {
+        heading: bankHeading,
+        formatValue: fmtPieValue,
+        slices: [
+          {
+            label: t("downpaymentRequired"),
+            value: bankResult.downpayment,
+            color: "#6b7280",
+          },
+          {
+            label: t("bankFinancedAmount"),
+            value: bankResult.principal,
+            color: "#9ca3af",
+          },
+          {
+            label: t("bankTotalInterest"),
+            value: bankResult.totalInterest,
+            color: "#d97706",
+          },
+        ],
+      },
+    ],
+  };
+
   const charts: PdfLineChart[] = [];
   if (chartData) {
     charts.push({
@@ -258,9 +301,7 @@ export function buildSimulationPdfData({
         new Date(),
       ),
     }),
-    parametersHeading: t("pdf.parametersHeading"),
     parameters,
-    comparisonHeading: t("comparisonHeading"),
     tandaHeading: t("tandaColumnHeading"),
     tandaRows,
     bankHeading,
@@ -272,6 +313,7 @@ export function buildSimulationPdfData({
             value: t("savingsAmount", { amount: fmtWhole.format(savings) }),
           }
         : undefined,
+    pieSection,
     charts,
     analysisHeading: analysisText ? t("aiAnalysis.heading") : undefined,
     analysisText: analysisText ?? undefined,

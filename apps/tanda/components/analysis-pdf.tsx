@@ -1,4 +1,21 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  Font,
+} from "@react-pdf/renderer";
+import { LogoMark } from "./logo-pdf";
+
+// Helvetica cannot draw emoji glyphs (they surface as broken boxes and are
+// stripped from body text by `clean`). Registering an emoji source lets the
+// card icons render as Twemoji images instead. Fetched lazily from the CDN the
+// first time the user exports, so it adds no weight to the initial bundle.
+Font.registerEmojiSource({
+  format: "png",
+  url: "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/",
+});
 
 // Fixed attribution shown in the page footer. Mirrors the simulation export.
 const FOOTER_TEXT =
@@ -22,6 +39,10 @@ export interface PdfKeyValue {
 export interface PdfCard {
   title: string;
   badge?: string;
+  /** Emoji icon shown beside the title (rendered via the Twemoji source). */
+  icon?: string;
+  /** Plain hex accent color for the card's left border and badge. */
+  accent?: string;
   rows: PdfKeyValue[];
 }
 
@@ -36,7 +57,7 @@ export type PdfBlock =
   | { kind: "subheading"; text: string }
   | { kind: "keyValue"; rows: PdfKeyValue[] }
   | { kind: "tags"; label?: string; tags: string[] }
-  | { kind: "cards"; cards: PdfCard[] }
+  | { kind: "cards"; cards: PdfCard[]; columns?: number }
   | { kind: "varTable"; rows: { symbol: string; description: string }[] }
   | { kind: "formula"; label: string; description: string; formula: string }
   | { kind: "tasks"; tasks: PdfTask[] };
@@ -80,16 +101,22 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
   header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
     marginBottom: 18,
     borderBottomWidth: 2,
     borderBottomColor: ACCENT,
     paddingBottom: 12,
   },
+  headerText: {
+    flex: 1,
+  },
   title: {
     fontSize: 20,
     fontFamily: "Helvetica-Bold",
     color: "#111827",
-    marginBottom: 4,
+    marginBottom: 12,
   },
   subtitle: {
     fontSize: 11,
@@ -147,39 +174,44 @@ const styles = StyleSheet.create({
     color: "#111827",
     lineHeight: 1.5,
   },
-  // persona / tier cards
+  // persona / tier cards - laid out three per row
+  cardsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
   card: {
     borderWidth: 0.5,
     borderColor: BORDER,
+    borderLeftWidth: 3,
     borderRadius: 4,
-    padding: 8,
-    marginBottom: 8,
+    padding: 7,
+    marginBottom: 6,
   },
   cardHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    gap: 4,
+    marginBottom: 5,
     paddingBottom: 4,
     borderBottomWidth: 0.5,
     borderBottomColor: BORDER,
   },
+  cardIcon: {
+    fontSize: 12,
+  },
   cardTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Helvetica-Bold",
     color: "#111827",
     flex: 1,
-    paddingRight: 8,
   },
   badge: {
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
     color: ACCENT,
-    borderWidth: 0.5,
-    borderColor: ACCENT,
-    borderRadius: 3,
-    paddingVertical: 1,
-    paddingHorizontal: 5,
+    marginBottom: 5,
+    alignSelf: "flex-start",
   },
   cardRow: {
     marginBottom: 4,
@@ -316,15 +348,28 @@ function KeyValueRows({ rows }: { rows: PdfKeyValue[] }) {
   );
 }
 
-function CardBlock({ card }: { card: PdfCard }) {
+function CardBlock({ card, width }: { card: PdfCard; width: string }) {
   return (
-    <View style={styles.card} wrap={false}>
+    <View
+      style={[
+        styles.card,
+        { width },
+        card.accent ? { borderLeftColor: card.accent } : {},
+      ]}
+      wrap={false}
+    >
       <View style={styles.cardHeader}>
+        {/* Rendered raw (not via `clean`) so the Twemoji source can draw it. */}
+        {card.icon ? <Text style={styles.cardIcon}>{card.icon}</Text> : null}
         <Text style={styles.cardTitle}>{clean(card.title)}</Text>
-        {card.badge ? (
-          <Text style={styles.badge}>{clean(card.badge)}</Text>
-        ) : null}
       </View>
+      {card.badge ? (
+        <Text
+          style={[styles.badge, card.accent ? { color: card.accent } : {}]}
+        >
+          {clean(card.badge)}
+        </Text>
+      ) : null}
       {card.rows.map((r, i) => (
         <View key={i} style={styles.cardRow}>
           <Text style={styles.cardRowLabel}>{clean(r.label)}</Text>
@@ -358,14 +403,20 @@ function Block({ block }: { block: PdfBlock }) {
           </View>
         </View>
       );
-    case "cards":
+    case "cards": {
+      // Per-card width derived from the requested column count (defaults to 3).
+      // The 2%-shy widths leave room for the 6pt grid gap between cards.
+      const columns = block.columns ?? 3;
+      const width =
+        columns <= 1 ? "100%" : columns === 2 ? "48%" : "32%";
       return (
-        <>
+        <View style={styles.cardsGrid}>
           {block.cards.map((c, i) => (
-            <CardBlock key={i} card={c} />
+            <CardBlock key={i} card={c} width={width} />
           ))}
-        </>
+        </View>
       );
+    }
     case "varTable":
       return (
         <View wrap={false}>
@@ -408,9 +459,15 @@ function Block({ block }: { block: PdfBlock }) {
   }
 }
 
-function SectionBlock({ section }: { section: PdfSection }) {
+function SectionBlock({
+  section,
+  breakBefore,
+}: {
+  section: PdfSection;
+  breakBefore: boolean;
+}) {
   return (
-    <View style={styles.section}>
+    <View style={styles.section} break={breakBefore}>
       <Text style={styles.sectionTitle}>{clean(section.heading)}</Text>
       {section.blocks.map((block, i) => (
         <Block key={i} block={block} />
@@ -430,13 +487,20 @@ export function AnalysisDocument({
     <Document title={title}>
       <Page size="LETTER" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.title}>{clean(title)}</Text>
-          <Text style={styles.subtitle}>{clean(subtitle)}</Text>
-          <Text style={styles.generatedOn}>{generatedOn}</Text>
+          <LogoMark />
+          <View style={styles.headerText}>
+            <Text style={styles.title}>{clean(title)}</Text>
+            <Text style={styles.subtitle}>{clean(subtitle)}</Text>
+            <Text style={styles.generatedOn}>{generatedOn}</Text>
+          </View>
         </View>
 
-        {sections.map((section) => (
-          <SectionBlock key={section.id} section={section} />
+        {sections.map((section, i) => (
+          <SectionBlock
+            key={section.id}
+            section={section}
+            breakBefore={i > 0}
+          />
         ))}
 
         <Text style={styles.disclaimer}>{clean(disclaimer)}</Text>

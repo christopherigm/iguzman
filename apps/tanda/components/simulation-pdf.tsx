@@ -8,8 +8,21 @@ import {
   G,
   Line,
   Polyline,
+  Path,
+  Circle,
   Text as SvgText,
+  Font,
 } from "@react-pdf/renderer";
+import { LogoMark } from "./logo-pdf";
+
+// Helvetica cannot draw emoji glyphs (they surface as broken boxes). Registering
+// an emoji source lets emojis in the AI analysis text render as Twemoji images
+// instead. Fetched lazily from the CDN the first time the user exports, so it
+// adds no weight to the initial bundle. Mirrors the analysis export.
+Font.registerEmojiSource({
+  format: "png",
+  url: "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/",
+});
 
 // Fixed attribution shown in the page footer. Not localized - it is a credit
 // line identifying the project and author, mirroring the in-app footnote.
@@ -37,18 +50,36 @@ export interface PdfLineChart {
   formatTick: (value: number) => string;
 }
 
+export interface PdfPieSlice {
+  label: string;
+  value: number;
+  color: string;
+}
+
+export interface PdfPieChart {
+  /** Column heading (e.g. the TandaOmni / lender name). */
+  heading: string;
+  slices: PdfPieSlice[];
+  /** Formats a slice value (e.g. as a whole-unit currency amount). */
+  formatValue: (value: number) => string;
+}
+
+export interface PdfPieSection {
+  heading?: string;
+  charts: PdfPieChart[];
+}
+
 export interface SimulationPdfProps {
   title: string;
   subtitle: string;
   generatedOn: string;
-  parametersHeading: string;
   parameters: PdfRow[];
-  comparisonHeading: string;
   tandaHeading: string;
   tandaRows: PdfRow[];
   bankHeading: string;
   bankRows: PdfRow[];
   savings?: PdfRow;
+  pieSection?: PdfPieSection;
   charts: PdfLineChart[];
   analysisHeading?: string;
   analysisText?: string;
@@ -66,16 +97,22 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
   header: {
-    marginBottom: 18,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+    marginBottom: 12,
     borderBottomWidth: 2,
     borderBottomColor: ACCENT,
-    paddingBottom: 12,
+    paddingBottom: 8,
+  },
+  headerText: {
+    flex: 1,
   },
   title: {
     fontSize: 20,
     fontFamily: "Helvetica-Bold",
     color: "#111827",
-    marginBottom: 4,
+    marginBottom: 12,
   },
   subtitle: {
     fontSize: 11,
@@ -169,7 +206,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: SUCCESS,
     borderRadius: 4,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 14,
     marginTop: 12,
   },
@@ -207,6 +244,44 @@ const styles = StyleSheet.create({
   legendLabel: {
     fontSize: 9,
     color: "#374151",
+  },
+  pieCol: {
+    flex: 1,
+    borderWidth: 0.5,
+    borderColor: BORDER,
+    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  pieHeading: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: "#374151",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  pieLegend: {
+    width: "100%",
+    marginTop: 8,
+  },
+  pieLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 3,
+  },
+  pieLegendLabel: {
+    flex: 1,
+    fontSize: 8,
+    color: "#374151",
+  },
+  pieLegendValue: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: "#111827",
   },
   analysisHeading: {
     fontSize: 11,
@@ -376,23 +451,113 @@ function ChartBlock({ chart }: { chart: PdfLineChart }) {
   );
 }
 
+// ── SVG pie chart ───────────────────────────────────────────────────────────
+// Cost-breakdown donut-less pie, drawn with @react-pdf SVG arcs (mirrors the
+// canvas-based in-app pie, which cannot render into a PDF). One slice per cost
+// component; the slices of a card always sum to that card's total.
+
+const PIE_SIZE = 88;
+
+/** SVG arc path for a pie slice spanning [start, end] radians (clockwise). */
+function arcPath(
+  cx: number,
+  cy: number,
+  r: number,
+  start: number,
+  end: number,
+): string {
+  const x1 = cx + r * Math.cos(start);
+  const y1 = cy + r * Math.sin(start);
+  const x2 = cx + r * Math.cos(end);
+  const y2 = cy + r * Math.sin(end);
+  const largeArc = end - start > Math.PI ? 1 : 0;
+  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+}
+
+function PieChart({ chart }: { chart: PdfPieChart }) {
+  const slices = chart.slices.filter((s) => s.value > 0);
+  const total = slices.reduce((sum, s) => sum + s.value, 0);
+  const r = PIE_SIZE / 2;
+  // Start at the top (12 o'clock) and sweep clockwise.
+  let angle = -Math.PI / 2;
+
+  return (
+    <Svg width={PIE_SIZE} height={PIE_SIZE}>
+      {slices.length === 1 || total <= 0 ? (
+        // A single non-zero slice is a full circle (an arc from start==end
+        // collapses to nothing), so draw it directly.
+        <Circle cx={r} cy={r} r={r} fill={slices[0]?.color ?? BORDER} />
+      ) : (
+        slices.map((s, i) => {
+          const sweep = (s.value / total) * Math.PI * 2;
+          const path = arcPath(r, r, r, angle, angle + sweep);
+          angle += sweep;
+          return <Path key={i} d={path} fill={s.color} />;
+        })
+      )}
+    </Svg>
+  );
+}
+
+function PieColumn({ chart }: { chart: PdfPieChart }) {
+  const total = chart.slices.reduce((sum, s) => sum + s.value, 0);
+  return (
+    <View style={styles.pieCol}>
+      <Text style={styles.pieHeading}>{chart.heading}</Text>
+      <PieChart chart={chart} />
+      <View style={styles.pieLegend}>
+        {chart.slices.map((s, i) => (
+          <View key={i} style={styles.pieLegendItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: s.color }]} />
+            <Text style={styles.pieLegendLabel}>
+              {s.label}
+              {total > 0 ? ` · ${Math.round((s.value / total) * 100)}%` : ""}
+            </Text>
+            <Text style={styles.pieLegendValue}>
+              {chart.formatValue(s.value)}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function PieSectionBlock({
+  section,
+  savings,
+}: {
+  section: PdfPieSection;
+  savings?: PdfRow;
+}) {
+  return (
+    <View style={styles.section} wrap={false}>
+      {section.heading ? (
+        <Text style={styles.sectionTitle}>{section.heading}</Text>
+      ) : null}
+      {savings ? (
+        <View style={[styles.savings, { marginTop: 0, marginBottom: 12 }]}>
+          <Text style={styles.savingsLabel}>{savings.label}</Text>
+          <Text style={styles.savingsValue}>{savings.value}</Text>
+        </View>
+      ) : null}
+      <View style={styles.twoCol}>
+        {section.charts.map((c, i) => (
+          <PieColumn key={i} chart={c} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 // ── Markdown-ish renderer for the AI analysis text ──────────────────────────
 
-// Emoji / pictographic ranges that Helvetica cannot render (they surface as
-// broken boxes overlapping the text). Covers emoticons, misc symbols &
-// pictographs, transport, supplemental & extended pictographs, dingbats, misc
-// technical/symbols, plus the variation selectors and ZWJ that join them.
-// The variation selectors / ZWJ are listed deliberately so the emoji components
-// they join are stripped from the Helvetica-rendered PDF text.
-const EMOJI_RE =
-  // eslint-disable-next-line no-misleading-character-class
-  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]/gu;
-
+// Emojis are left intact so the registered Twemoji source can render them as
+// images; only markdown bold/code markers and runs of whitespace are stripped.
 function stripInline(line: string): string {
   return line
     .replace(/\*\*(.+?)\*\*/g, "$1")
     .replace(/`(.+?)`/g, "$1")
-    .replace(EMOJI_RE, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
@@ -435,14 +600,13 @@ export function SimulationDocument({
   title,
   subtitle,
   generatedOn,
-  parametersHeading,
   parameters,
-  comparisonHeading,
   tandaHeading,
   tandaRows,
   bankHeading,
   bankRows,
   savings,
+  pieSection,
   charts,
   analysisHeading,
   analysisText,
@@ -450,23 +614,27 @@ export function SimulationDocument({
 }: SimulationPdfProps) {
   return (
     <Document title={title}>
+      {/* Page 1 - parameters, comparison and cost breakdown. Section titles for
+          the parameters and comparison blocks are dropped to fit all three on a
+          single page; the panel/cost-breakdown headings keep them identifiable. */}
       <Page size="LETTER" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-          <Text style={styles.generatedOn}>{generatedOn}</Text>
+          <LogoMark />
+          <View style={styles.headerText}>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.subtitle}>{subtitle}</Text>
+            <Text style={styles.generatedOn}>{generatedOn}</Text>
+          </View>
         </View>
 
-        {/* Parameters */}
+        {/* Parameters (title omitted to save space) */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{parametersHeading}</Text>
           <ResultRows rows={parameters} />
         </View>
 
-        {/* Comparison */}
+        {/* Comparison (title omitted to save space) */}
         <View style={styles.section} wrap={false}>
-          <Text style={styles.sectionTitle}>{comparisonHeading}</Text>
           <View style={styles.twoCol}>
             <View style={styles.panel}>
               <Text style={styles.panelHeadingTanda}>{tandaHeading}</Text>
@@ -481,15 +649,21 @@ export function SimulationDocument({
               </View>
             </View>
           </View>
-
-          {savings ? (
-            <View style={styles.savings}>
-              <Text style={styles.savingsLabel}>{savings.label}</Text>
-              <Text style={styles.savingsValue}>{savings.value}</Text>
-            </View>
-          ) : null}
         </View>
 
+        {/* Cost breakdown - advantage banner sits under the heading, above the
+            TandaOmni vs. lender pies. */}
+        {pieSection ? (
+          <PieSectionBlock section={pieSection} savings={savings} />
+        ) : null}
+
+        <Text style={styles.footer} fixed>
+          {FOOTER_TEXT}
+        </Text>
+      </Page>
+
+      {/* Page 2 - AI analysis and the cost/price + treasury projection charts. */}
+      <Page size="LETTER" style={styles.page}>
         {/* AI Analysis (placed above the charts in the export per request) */}
         {analysisText && analysisHeading ? (
           <View style={styles.section}>

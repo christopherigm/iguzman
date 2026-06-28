@@ -30,6 +30,15 @@ export interface BuildAnalysisPdfParams {
   locale: string;
 }
 
+// The content constants store palette colors as CSS custom properties with a
+// hex fallback (e.g. "var(--success, #16a34a)"). react-pdf has no concept of
+// CSS variables, so collapse the value down to the plain hex it can render.
+// Already-plain hex values (e.g. "#7c3aed") pass through untouched.
+function pdfColor(value: string): string {
+  const hex = value.match(/#[0-9a-fA-F]{3,8}/);
+  return hex ? hex[0] : value;
+}
+
 export function buildAnalysisPdfData({
   t,
   locale,
@@ -56,8 +65,11 @@ export function buildAnalysisPdfData({
       blocks: [
         {
           kind: "cards",
+          columns: 2,
           cards: STAKEHOLDERS.map((s) => ({
             title: t(`stakeholders.${s.key}.name`),
+            icon: s.icon,
+            accent: pdfColor(s.accent),
             badge: t(
               s.category === "user"
                 ? "stakeholders.categoryUser"
@@ -84,10 +96,13 @@ export function buildAnalysisPdfData({
       blocks: [
         {
           kind: "cards",
+          columns: 1,
           cards: TIER_DEFS.map((td) => ({
             title: `${t("tierLabels.tierPrefix")} ${td.tier}: ${t(
               `tiers.${td.key}.name`,
             )}`,
+            icon: td.icon,
+            accent: pdfColor(td.color),
             rows: [
               { label: t("tierLabels.term"), value: t(`tiers.${td.key}.term`) },
               {
