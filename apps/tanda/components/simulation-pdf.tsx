@@ -94,6 +94,8 @@ export interface SimulationPdfProps {
   analysisText?: string;
   sourcesHeading?: string;
   sources?: PdfSource[];
+  queriesHeading?: string;
+  queries?: string[];
   disclaimer: string;
 }
 
@@ -335,6 +337,11 @@ const styles = StyleSheet.create({
     color: MUTED,
     lineHeight: 1.4,
     marginTop: 1,
+  },
+  queryRow: {
+    fontSize: 9,
+    color: "#374151",
+    marginBottom: 3,
   },
   disclaimer: {
     fontSize: 8,
@@ -609,6 +616,8 @@ export function SimulationDocument({
   analysisText,
   sourcesHeading,
   sources,
+  queriesHeading,
+  queries,
   disclaimer,
 }: SimulationPdfProps) {
   return (
@@ -698,25 +707,40 @@ export function SimulationDocument({
         </Page>
       ) : null}
 
-      {/* Sources page - the web sources consulted (when web search is on) get
-          their own page, so the export is traceable to the pages it was grounded
-          on. Rendered only when sources exist, so no blank page otherwise. */}
-      {sources && sources.length > 0 && sourcesHeading ? (
+      {/* Sources page - the web sources consulted and the search queries run
+          (when web search is on) get their own page, so the export is traceable
+          to the pages and searches it was grounded on. Rendered only when there
+          is something to show, so no blank page otherwise. */}
+      {(sources && sources.length > 0 && sourcesHeading) ||
+      (queries && queries.length > 0 && queriesHeading) ? (
         <Page size="LETTER" style={styles.page}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{sourcesHeading}</Text>
-            {sources.map((s, i) => (
-              <View key={i} style={styles.sourceRow} wrap={false}>
-                <Text style={styles.sourceTitle}>{s.title || s.url}</Text>
-                <Link src={s.url} style={styles.sourceLink}>
-                  {s.url}
-                </Link>
-                {s.snippet ? (
-                  <Text style={styles.sourceSnippet}>{s.snippet}</Text>
-                ) : null}
-              </View>
-            ))}
-          </View>
+          {sources && sources.length > 0 && sourcesHeading ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{sourcesHeading}</Text>
+              {sources.map((s, i) => (
+                <View key={i} style={styles.sourceRow} wrap={false}>
+                  <Text style={styles.sourceTitle}>{s.title || s.url}</Text>
+                  <Link src={s.url} style={styles.sourceLink}>
+                    {s.url}
+                  </Link>
+                  {s.snippet ? (
+                    <Text style={styles.sourceSnippet}>{s.snippet}</Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          {queries && queries.length > 0 && queriesHeading ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{queriesHeading}</Text>
+              {queries.map((q, i) => (
+                <Text key={i} style={styles.queryRow} wrap={false}>
+                  • {q}
+                </Text>
+              ))}
+            </View>
+          ) : null}
 
           <Text style={styles.footer} fixed>
             {FOOTER_TEXT}

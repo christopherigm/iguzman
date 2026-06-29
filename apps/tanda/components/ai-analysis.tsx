@@ -145,6 +145,11 @@ interface AiAnalysisProps {
    * search is off or none were found), so they can be listed in the PDF export.
    */
   onSourcesChange?: (sources: AnalysisSource[]) => void;
+  /**
+   * Reports the search queries the model ran during enrichment (empty when web
+   * search is off), so they can be listed alongside the sources in the PDF.
+   */
+  onQueriesChange?: (queries: string[]) => void;
 }
 
 /**
@@ -157,6 +162,7 @@ export function AiAnalysis({
   buildContext,
   onAnalysisChange,
   onSourcesChange,
+  onQueriesChange,
 }: AiAnalysisProps) {
   const t = useTranslations("SimulatorPage");
   const locale = useLocale();
@@ -168,6 +174,9 @@ export function AiAnalysis({
   // Web sources consulted for the current analysis (populated by the enrichment
   // step when web search is on); listed below the analysis and in the PDF.
   const [sources, setSources] = useState<AnalysisSource[]>([]);
+  // Search queries the model ran during enrichment; listed below the sources
+  // and carried into the PDF export so the research is fully traceable.
+  const [queries, setQueries] = useState<string[]>([]);
   // True while the pre-analysis web-search enrichment is running (before the
   // streaming LLM call below takes over via `analyzing`).
   const [enriching, setEnriching] = useState<boolean>(false);
@@ -194,6 +203,8 @@ export function AiAnalysis({
     onAnalysisChange?.(null);
     setSources([]);
     onSourcesChange?.([]);
+    setQueries([]);
+    onQueriesChange?.([]);
 
     const { summary, assetTypeLabel } = context;
     const language = LOCALE_LANGUAGE[locale] ?? "English";
@@ -243,6 +254,9 @@ export function AiAnalysis({
           consulted.sort((a, b) => Number(b.main) - Number(a.main));
           setSources(consulted);
           onSourcesChange?.(consulted);
+          const ranQueries = data.queries ?? [];
+          setQueries(ranQueries);
+          onQueriesChange?.(ranQueries);
         }
       } catch {
         // Ignore - analysis proceeds without web research.
@@ -255,28 +269,31 @@ export function AiAnalysis({
       {
         role: "system",
         content:
-          "You are an impartial financial advisor helping a person in Mexico decide whether and how to " +
-          "fund a specific purchase. They are comparing TandaOmni, an interest-free savings circle " +
-          "(tanda / ROSCA), against a traditional bank loan. You have TWO jobs, in this order of " +
-          "importance: (1) judge whether the purchase itself is a sound, worthwhile use of their money, " +
-          "given what they want to buy and the numbers in their simulation; (2) ONLY if the purchase is " +
-          "sound, advise which funding option (TandaOmni or a bank loan) is the better financial choice. " +
+          "You are a practical financial advisor helping a person in Mexico fund a specific " +
+          "purchase. They are comparing TandaOmni, an interest-free savings circle (tanda / ROSCA), " +
+          "against a traditional bank loan. Treat the purchase as the user's own decision that they " +
+          "have already made: your MAIN job is to help them pay for it on the best terms by comparing " +
+          "TandaOmni against a bank loan and showing, with the numbers, why the interest-free TandaOmni " +
+          "route is usually the cheaper, smarter way to pay. " +
           `Respond ONLY in ${language}. ` +
-          "Critically assess the purchase for serious risks BEFORE comparing funding options. Watch for " +
-          "red flags such as: physical hazards or exposure to natural disasters (e.g. building or buying " +
-          "near an active volcano, in a flood zone, on a fault line, on unstable ground, or in a " +
-          "high-crime area), legal or title problems, assets that depreciate quickly or are clearly " +
-          "overpriced relative to their value, poor liquidity, or any mismatch between the price and the " +
-          "user's situation. If the purchase carries a serious risk, you MUST flag it prominently and " +
-          "explain why it matters, even when the financing looks attractive. A cheap or interest-free " +
-          "way to pay for a dangerous or unwise purchase is still a bad decision: NEVER let favourable " +
-          "financing numbers override a fundamentally unsound purchase. " +
-          "When the purchase is high-risk or not worth it, your final recommendation MUST say so clearly " +
-          "and advise AGAINST the purchase regardless of funding method (neither TandaOmni nor a loan), " +
-          "rather than picking the cheaper of the two. Only recommend a funding option when the purchase " +
-          "itself is genuinely sound. " +
-          "Reason from the user's point of view: total cost, interest paid, monthly payment, time to " +
-          "ownership, and above all the risks and merits of the purchase itself. " +
+          "Do NOT moralize about whether they should buy it, second-guess their taste, or lecture them " +
+          "about depreciation, resale value, model turnover, or whether a cheaper alternative exists - " +
+          "assume they have already decided what they want and focus on the financing. Only flag the " +
+          "purchase itself when it crosses a HIGH bar, namely: (a) a GROSS overpayment, where the stated " +
+          "price is wildly out of line with the item's real market value (e.g. a small purchase such as a " +
+          "phone, camera, console, or other consumer electronic priced at several times its normal retail " +
+          "price, such as paying $100,000 MXN for a device that sells for about $30,000 MXN). When the user " +
+          "names a specific small item and live web research is provided, USE that research to establish the " +
+          "item's current street/retail price before judging whether the stated price is a gross overpayment; " +
+          "or (b) a GENUINE physical or legal danger (e.g. building or buying on an active " +
+          "fault line, in a flood zone, on the slope of an active volcano, or property with clear " +
+          "title/legal problems). If - and ONLY if - one of these high-bar red flags is clearly present, " +
+          "flag it prominently and advise caution regardless of how attractive the financing looks. In " +
+          "every other case, do NOT discourage the purchase: keep the focus entirely on TandaOmni vs. " +
+          "the loan and recommend the better funding option. Do not invent a red flag where none exists; " +
+          "a normal, fairly-priced purchase is not a risk. " +
+          "Reason from the user's point of view: total cost, interest paid, monthly payment, and time to " +
+          "ownership. " +
           "Do NOT advise about the TandaOmni platform itself, its operations, or its trustworthiness, " +
           "and do NOT raise risks about the tanda mechanism such as members missing or defaulting on " +
           "payments, the circle collapsing, or payout ordering - those risks are already mitigated by " +
@@ -301,16 +318,21 @@ export function AiAnalysis({
           `Simulation data:\n${summary}\n\n` +
           (research
             ? `${research}\n\nUse the web research above to ground your assessment of the purchase ` +
-              "and final recommendation, citing a specific finding where it helps.\n\n"
+              "and final recommendation, citing a specific finding where it helps. If the purchase is a " +
+              "specific small item (e.g. a phone, camera, or gadget), use the research to check its current " +
+              "market/retail price and only flag a gross overpayment when the stated price is clearly far " +
+              "above it.\n\n"
             : "") +
-          "Under the first heading, briefly recap what they want to buy and their situation, and call " +
-          "out any obvious risk in the purchase itself. Under the second, objectively compare TandaOmni " +
-          "to the loan on total cost, interest, and monthly payment. Under the third heading, give a " +
-          "clear final recommendation: FIRST state whether the purchase is worth making at all given " +
-          "its risks; only if it is sound, then say whether TandaOmni or a loan is the better way to " +
-          "fund it. If the purchase is high-risk or unwise, recommend against it regardless of funding " +
-          "method and explain why - do not default to picking the cheaper option. Focus on the purchase " +
-          "and these two funding options - do not discuss the platform or tanda payment risks.",
+          "Under the first heading, briefly recap what they want to buy and their situation. Only " +
+          "mention a risk in the purchase itself if it crosses the high bar (gross overpayment or " +
+          "genuine danger); otherwise do not raise one. Under the second, objectively compare TandaOmni " +
+          "to the loan on total cost, interest, and monthly payment, highlighting TandaOmni's " +
+          "interest-free advantage. Under the third heading, give a clear final recommendation: by " +
+          "default, recommend the better funding option (usually TandaOmni) and explain why. ONLY if a " +
+          "high-bar red flag is clearly present should you instead advise caution about the purchase " +
+          "itself and explain why. Do not invent risks or discourage a normal, fairly-priced purchase. " +
+          "Focus on the purchase and these two funding options - do not discuss the platform or tanda " +
+          "payment risks.",
       },
     ];
 
@@ -481,6 +503,45 @@ export function AiAnalysis({
                 mainLabel={t("aiAnalysis.mainSourceLabel")}
               />
             ))}
+          </Box>
+        )}
+
+        {/* Search queries the model ran to gather the sources above, so the
+            research path is fully traceable. */}
+        {!analyzing && !enriching && queries.length > 0 && (
+          <Box display="flex" flexDirection="column" gap={8}>
+            <Box display="flex" flexDirection="column" gap={2}>
+              <Typography fontWeight={600} color="var(--foreground)">
+                {t("aiAnalysis.queriesHeading")}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="var(--muted-foreground, #6b7280)"
+              >
+                {t("aiAnalysis.queriesNote")}
+              </Typography>
+            </Box>
+            <Box
+              display="flex"
+              flexDirection="row"
+              flexWrap="wrap"
+              gap={8}
+              alignItems="center"
+            >
+              {queries.map((q) => (
+                <Box
+                  key={q}
+                  padding="4px 12px"
+                  borderRadius={999}
+                  backgroundColor="var(--surface-2)"
+                  styles={{ border: "1px solid var(--border, #e5e7eb)" }}
+                >
+                  <Typography variant="caption" color="var(--foreground)">
+                    {q}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
           </Box>
         )}
       </Card>

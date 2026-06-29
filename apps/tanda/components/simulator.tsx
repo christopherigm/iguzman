@@ -93,6 +93,9 @@ export function Simulator() {
   const [analysisText, setAnalysisText] = useState<string | null>(null);
   // Web sources the AiAnalysis panel consulted, embedded in the exported PDF.
   const [analysisSources, setAnalysisSources] = useState<AnalysisSource[]>([]);
+  // Search queries the AiAnalysis enrichment ran, listed alongside the sources
+  // in the exported PDF so the research path is traceable.
+  const [analysisQueries, setAnalysisQueries] = useState<string[]>([]);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
 
@@ -368,6 +371,7 @@ export function Simulator() {
       treasuryData,
       analysisText,
       analysisSources,
+      analysisQueries,
       fmtWhole,
       fmtCents,
     });
@@ -1013,6 +1017,7 @@ export function Simulator() {
             buildContext={buildAnalysisContext}
             onAnalysisChange={setAnalysisText}
             onSourcesChange={setAnalysisSources}
+            onQueriesChange={setAnalysisQueries}
           />
 
           {/* ── Export to PDF ─────────────────────────────────── */}

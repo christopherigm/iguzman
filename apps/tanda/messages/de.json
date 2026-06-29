@@ -103,6 +103,10 @@
       "travel": {
         "label": "Reisen & Erlebnisse",
         "mitigation": "Treuhandsperre: Die Auszahlung erfolgt erst, wenn 60 % der aktuellen Kosten finanziert sind. Eine Kreditkarten-Vorautorisierung wird vorgenommen."
+      },
+      "smallPurchases": {
+        "label": "Kleine Anschaffungen",
+        "mitigation": "Kurze Laufzeiten (3–24 Monate) und eine Anzahlung von 10 % halten das Risiko bei schnell an Wert verlierender Elektronik wie Handys und Kameras gering. Der Artikel ist bis zur vollständigen Finanzierung auf die Gruppe registriert."
       }
     },
     "priceLabelG": "Zielpreis des Vermögenswerts (G)",
@@ -219,7 +223,9 @@
       "error": "Bei der Erstellung der Analyse ist ein Fehler aufgetreten. Bitte erneut versuchen.",
       "sourcesHeading": "Konsultierte Quellen",
       "sourcesNote": "Aktuelle Webergebnisse, die zur Fundierung dieser Analyse gesammelt wurden. Tippen Sie auf eine Quelle, um sie zu öffnen.",
-      "mainSourceLabel": "Hauptsächlich herangezogener Artikel"
+      "mainSourceLabel": "Hauptsächlich herangezogener Artikel",
+      "queriesHeading": "Verwendete Suchanfragen",
+      "queriesNote": "Die genauen Websuchen, die zum Sammeln der obigen Quellen ausgeführt wurden."
     },
     "pdf": {
       "cardHeading": "Simulation exportieren",

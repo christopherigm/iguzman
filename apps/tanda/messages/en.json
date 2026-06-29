@@ -103,6 +103,10 @@
       "travel": {
         "label": "Travel & Experiences",
         "mitigation": "Escrow Lock: Payout releases only after 60% of the current asset cost is funded. A credit card pre-authorization hold will be placed."
+      },
+      "smallPurchases": {
+        "label": "Small Purchases",
+        "mitigation": "Short terms (3–24 months) and a 10% downpayment keep exposure low on fast-depreciating electronics like phones and cameras. The item is registered to the group until it is fully funded."
       }
     },
     "priceLabelG": "Target Asset Price (G)",
@@ -219,7 +223,9 @@
       "error": "Something went wrong generating the analysis. Please try again.",
       "sourcesHeading": "Sources consulted",
       "sourcesNote": "Live web results gathered to ground this analysis. Tap a source to open it.",
-      "mainSourceLabel": "Main article consulted"
+      "mainSourceLabel": "Main article consulted",
+      "queriesHeading": "Search queries used",
+      "queriesNote": "The exact web searches run to gather the sources above."
     },
     "pdf": {
       "cardHeading": "Export your simulation",

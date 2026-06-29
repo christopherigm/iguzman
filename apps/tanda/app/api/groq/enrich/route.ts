@@ -3,10 +3,66 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const SCRAPER_SEARCH_URL = "https://scraper.iguzman.com.mx/search";
 const SCRAPER_EXTRACT_URL = "https://scraper.iguzman.com.mx/extract";
 // Small, fast model for the query-builder step (mirrors the edge-folio extract route).
 const QUERY_MODEL = process.env.GROQ_QUERY_MODEL ?? "llama-3.1-8b-instant";
+// Fallback model used when Groq is rate-limited (mirrors /api/groq/chat).
+const OPENROUTER_MODEL =
+  process.env.OPENROUTER_MODEL ?? "meta-llama/llama-3.3-70b-instruct";
+
+/**
+ * Runs a non-streaming JSON-mode chat completion through Groq, transparently
+ * falling back to OpenRouter on a Groq 429 (rate limit) — mirroring the
+ * `/api/groq/chat` proxy so enrichment keeps producing queries (and therefore
+ * sources) even when Groq is throttled. Returns the assistant message content,
+ * or "" on any failure so callers can degrade gracefully.
+ */
+async function llmJson(
+  groqApiKey: string,
+  messages: { role: string; content: string }[],
+  temperature: number,
+): Promise<string> {
+  const body = {
+    model: QUERY_MODEL,
+    messages,
+    response_format: { type: "json_object" },
+    temperature,
+  };
+  try {
+    let res = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${groqApiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 429) {
+      const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+      if (!openrouterApiKey) return "";
+      console.warn(
+        "[groq/enrich] Groq rate limit hit; falling back to OpenRouter",
+      );
+      res = await fetch(OPENROUTER_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${openrouterApiKey}`,
+        },
+        body: JSON.stringify({ ...body, model: OPENROUTER_MODEL }),
+      });
+    }
+    if (!res.ok) return "";
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    return data.choices?.[0]?.message?.content ?? "";
+  } catch {
+    return "";
+  }
+}
 
 const MAX_QUERIES = 2;
 const RESULTS_PER_QUERY = 4;
@@ -82,24 +138,8 @@ async function buildQueries(
   ];
 
   try {
-    const res = await fetch(GROQ_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${groqApiKey}`,
-      },
-      body: JSON.stringify({
-        model: QUERY_MODEL,
-        messages,
-        response_format: { type: "json_object" },
-        temperature: 0.3,
-      }),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const content = data.choices?.[0]?.message?.content ?? "{}";
+    const content = await llmJson(groqApiKey, messages, 0.3);
+    if (!content) return [];
     const parsed = JSON.parse(content) as { queries?: unknown };
     const raw = Array.isArray(parsed.queries) ? parsed.queries : [];
     return raw
@@ -177,24 +217,8 @@ async function pickBestResultIndex(
   ];
 
   try {
-    const res = await fetch(GROQ_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${groqApiKey}`,
-      },
-      body: JSON.stringify({
-        model: QUERY_MODEL,
-        messages,
-        response_format: { type: "json_object" },
-        temperature: 0,
-      }),
-    });
-    if (!res.ok) return 0;
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const content = data.choices?.[0]?.message?.content ?? "{}";
+    const content = await llmJson(groqApiKey, messages, 0);
+    if (!content) return 0;
     const parsed = JSON.parse(content) as { index?: unknown };
     const idx =
       typeof parsed.index === "number" ? Math.trunc(parsed.index) : NaN;
@@ -258,15 +282,22 @@ export async function POST(req: NextRequest): Promise<Response> {
   const scraperKey = process.env.SCRAPER_API_KEY ?? "";
 
   // 1. Ask the LLM for up to MAX_QUERIES search queries.
-  const queries = await buildQueries(
+  let queries = await buildQueries(
     groqApiKey,
     purchase || "a major purchase",
     simulationSummary,
     asOf,
   );
 
-  const empty: EnrichResponse = { asOf, queries, results: [], extract: null };
-  if (queries.length === 0) return NextResponse.json(empty);
+  // Guarantee a search always runs when web enrichment is requested: if the
+  // query-builder LLM produced nothing (e.g. both Groq AND OpenRouter are
+  // throttled, or it returned malformed JSON), fall back to a deterministic
+  // query derived from the purchase text and anchored to the current month/year.
+  // Without this the route would return zero results and the UI would silently
+  // show no "Sources consulted" list.
+  if (queries.length === 0) {
+    queries = [`${(purchase || "a major purchase").trim()} ${asOf}`.trim()];
+  }
 
   // 2. Search every query in parallel, then flatten in query order and dedupe by URL.
   const perQuery = await Promise.all(
@@ -302,5 +333,6 @@ export async function POST(req: NextRequest): Promise<Response> {
     extract = await extractUrl(results[bestIdx]!.url, scraperKey);
   }
 
-  return NextResponse.json({ asOf, queries, results, extract });
+  const response: EnrichResponse = { asOf, queries, results, extract };
+  return NextResponse.json(response);
 }

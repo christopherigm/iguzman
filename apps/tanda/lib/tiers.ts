@@ -5,7 +5,11 @@
 // styling. Kept separate from the Simulator UI so the numbers/copy can be tuned
 // without touching component logic.
 
-export type TierKey = "real_estate" | "vehicle" | "travel";
+export type TierKey =
+  | "real_estate"
+  | "vehicle"
+  | "travel"
+  | "small_purchases";
 
 export interface TierConfig {
   icon: string;
@@ -40,11 +44,12 @@ export interface TierConfig {
 /** Maps TierKey → next-intl nested key for tier translations. */
 export const TIER_I18N_KEY: Record<
   TierKey,
-  "realEstate" | "vehicle" | "travel"
+  "realEstate" | "vehicle" | "travel" | "smallPurchases"
 > = {
   real_estate: "realEstate",
   vehicle: "vehicle",
   travel: "travel",
+  small_purchases: "smallPurchases",
 };
 
 // ─── Vehicle Condition Config ─────────────────────────────────────────────────
@@ -128,6 +133,30 @@ export const TIERS: Record<TierKey, TierConfig> = {
     // real published CATs: Kubo 55–78.1%, Provident 388.20%, CrediLikeMe 456%.
     // The default (Provident's 388.20%) compounds steeply over the multi-year
     // terms Mexican consumer lenders typically offer.
+    rateKind: "cat",
+    bankAprSteps: [0.55, 0.781, 1.5, 2.5, 3.882, 4.56],
+    bankAprDefault: 1.5,
+    comparisonHeadingKey: "consumerLenderColumnHeading",
+    comparisonNoticeKey: "consumerLenderNotice",
+    showRepayMultiple: true,
+  },
+  small_purchases: {
+    icon: "📱",
+    // Small consumer goods (phones, cameras, appliances): short terms only,
+    // from 3 months up to 2 years.
+    monthSteps: [3, 6, 9, 12, 18, 24],
+    // Same appreciation (δ) band as the travel tier per spec.
+    deltaSteps: [0.02, 0.025, 0.03, 0.035, 0.04, 0.05, 0.06],
+    defaultMonths: 12,
+    defaultDelta: 0.03,
+    downpaymentPct: 0.1,
+    // Denominated in MXN: the realistic alternative is store credit / a Mexican
+    // consumer lender, like the travel tier.
+    defaultPrice: 15000,
+    currency: "MXN",
+    mitigationKind: "info",
+    // Same CAT band as the travel tier per spec: financed via store credit or a
+    // Mexican consumer/payday lender, advertised as a CAT (not a nominal APR).
     rateKind: "cat",
     bankAprSteps: [0.55, 0.781, 1.5, 2.5, 3.882, 4.56],
     bankAprDefault: 1.5,

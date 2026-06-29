@@ -50,6 +50,7 @@ export interface BuildPdfParams {
   treasuryData: TreasuryData | null;
   analysisText: string | null;
   analysisSources: AnalysisSource[];
+  analysisQueries: string[];
   fmtWhole: Intl.NumberFormat;
   fmtCents: Intl.NumberFormat;
 }
@@ -74,6 +75,7 @@ export function buildSimulationPdfData({
   treasuryData,
   analysisText,
   analysisSources,
+  analysisQueries,
   fmtWhole,
   fmtCents,
 }: BuildPdfParams): SimulationPdfProps | null {
@@ -325,6 +327,12 @@ export function buildSimulationPdfData({
         : undefined,
     sources:
       analysisText && analysisSources.length > 0 ? analysisSources : undefined,
+    queriesHeading:
+      analysisText && analysisQueries.length > 0
+        ? t("aiAnalysis.queriesHeading")
+        : undefined,
+    queries:
+      analysisText && analysisQueries.length > 0 ? analysisQueries : undefined,
     disclaimer: t("pdf.disclaimer"),
   };
 }

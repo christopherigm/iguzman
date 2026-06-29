@@ -103,6 +103,10 @@
       "travel": {
         "label": "Viagens & Experiências",
         "mitigation": "Bloqueio de custódia: o pagamento é liberado somente após 60% do custo atual ser financiado. Uma pré-autorização no cartão de crédito será realizada."
+      },
+      "smallPurchases": {
+        "label": "Compras Pequenas",
+        "mitigation": "Prazos curtos (3–24 meses) e uma entrada de 10% mantêm a exposição baixa em eletrônicos que se desvalorizam rápido, como celulares e câmeras. O item fica registrado no nome do grupo até ser totalmente financiado."
       }
     },
     "priceLabelG": "Preço-alvo do ativo (G)",
@@ -219,7 +223,9 @@
       "error": "Ocorreu um erro ao gerar a análise. Tente novamente.",
       "sourcesHeading": "Fontes consultadas",
       "sourcesNote": "Resultados da web ao vivo reunidos para embasar esta análise. Toque em uma fonte para abri-la.",
-      "mainSourceLabel": "Artigo principal consultado"
+      "mainSourceLabel": "Artigo principal consultado",
+      "queriesHeading": "Buscas utilizadas",
+      "queriesNote": "As buscas na web exatas realizadas para reunir as fontes acima."
     },
     "pdf": {
       "cardHeading": "Exporte sua simulação",

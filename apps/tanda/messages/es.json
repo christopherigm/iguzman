@@ -103,6 +103,10 @@
       "travel": {
         "label": "Viajes y Experiencias",
         "mitigation": "Bloqueo de depósito en garantía: el pago se libera solo cuando el 60% del costo actual del activo esté fondeado. Se realizará un cargo preventivo a tu tarjeta de crédito."
+      },
+      "smallPurchases": {
+        "label": "Compras Pequeñas",
+        "mitigation": "Plazos cortos (3–24 meses) y un enganche del 10% mantienen baja la exposición en electrónicos que se deprecian rápido, como teléfonos y cámaras. El artículo queda registrado a nombre del grupo hasta que se fondee por completo."
       }
     },
     "priceLabelG": "Precio objetivo del activo (G)",
@@ -219,7 +223,9 @@
       "error": "Ocurrió un error al generar el análisis. Inténtalo de nuevo.",
       "sourcesHeading": "Fuentes consultadas",
       "sourcesNote": "Resultados web en vivo recopilados para fundamentar este análisis. Toca una fuente para abrirla.",
-      "mainSourceLabel": "Artículo principal consultado"
+      "mainSourceLabel": "Artículo principal consultado",
+      "queriesHeading": "Búsquedas utilizadas",
+      "queriesNote": "Las búsquedas web exactas realizadas para reunir las fuentes anteriores."
     },
     "pdf": {
       "cardHeading": "Exporta tu simulación",

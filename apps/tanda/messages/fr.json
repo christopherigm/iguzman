@@ -103,6 +103,10 @@
       "travel": {
         "label": "Voyages & Expériences",
         "mitigation": "Blocage séquestre : le versement est libéré uniquement après que 60 % du coût actuel est financé. Une pré-autorisation par carte bancaire sera effectuée."
+      },
+      "smallPurchases": {
+        "label": "Petits Achats",
+        "mitigation": "Des durées courtes (3–24 mois) et un acompte de 10 % limitent l'exposition sur l'électronique qui se déprécie vite, comme les téléphones et les appareils photo. L'article est enregistré au nom du groupe jusqu'à son financement complet."
       }
     },
     "priceLabelG": "Prix cible de l’actif (G)",
@@ -219,7 +223,9 @@
       "error": "Une erreur s'est produite lors de la génération de l'analyse. Veuillez réessayer.",
       "sourcesHeading": "Sources consultées",
       "sourcesNote": "Résultats web en direct recueillis pour étayer cette analyse. Touchez une source pour l'ouvrir.",
-      "mainSourceLabel": "Article principal consulté"
+      "mainSourceLabel": "Article principal consulté",
+      "queriesHeading": "Requêtes de recherche utilisées",
+      "queriesNote": "Les recherches web exactes effectuées pour rassembler les sources ci-dessus."
     },
     "pdf": {
       "cardHeading": "Exporter votre simulation",
