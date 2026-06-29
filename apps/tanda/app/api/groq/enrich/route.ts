@@ -8,8 +8,8 @@ const SCRAPER_EXTRACT_URL = "https://scraper.iguzman.com.mx/extract";
 // Small, fast model for the query-builder step (mirrors the edge-folio extract route).
 const QUERY_MODEL = process.env.GROQ_QUERY_MODEL ?? "llama-3.1-8b-instant";
 
-const MAX_QUERIES = 3;
-const RESULTS_PER_QUERY = 5;
+const MAX_QUERIES = 2;
+const RESULTS_PER_QUERY = 4;
 const MAX_EXTRACT_CHARS = 6_000;
 
 interface EnrichBody {
@@ -138,7 +138,73 @@ async function searchQuery(
   }
 }
 
-// ── Step 3: deep-dive the single most relevant link ────────────────────────────
+// ── Step 3: let the LLM pick the single most relevant link to deep-dive ─────────
+
+async function pickBestResultIndex(
+  groqApiKey: string,
+  purchase: string,
+  results: ResearchResult[],
+): Promise<number> {
+  // Nothing to choose between — keep the top hit.
+  if (results.length <= 1) return 0;
+
+  const list = results
+    .map(
+      (r, i) =>
+        `${i}. ${r.title}\n   URL: ${r.url}\n   ${r.snippet || "(no snippet)"}`,
+    )
+    .join("\n\n");
+
+  const messages = [
+    {
+      role: "system",
+      content:
+        "You select the single most useful web page to read in full for grounding a " +
+        "financial purchase decision. Pick the page richest in real-world, decision-relevant " +
+        "context (market outlook, prices, risks, reviews, expert recommendations). " +
+        "Strongly avoid low-value pages: dictionary/translation entries (e.g. spanishdict, " +
+        "wordreference, linguee), thin definitions, login walls, pure listings/aggregators " +
+        "with no analysis, and unrelated results.",
+    },
+    {
+      role: "user",
+      content:
+        `Purchase under consideration: ${purchase}\n\n` +
+        `Candidate search results:\n\n${list}\n\n` +
+        'Return ONLY a JSON object of the form: { "index": <number> } where index is the ' +
+        "0-based position of the best page to read in full.",
+    },
+  ];
+
+  try {
+    const res = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${groqApiKey}`,
+      },
+      body: JSON.stringify({
+        model: QUERY_MODEL,
+        messages,
+        response_format: { type: "json_object" },
+        temperature: 0,
+      }),
+    });
+    if (!res.ok) return 0;
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    const content = data.choices?.[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(content) as { index?: unknown };
+    const idx =
+      typeof parsed.index === "number" ? Math.trunc(parsed.index) : NaN;
+    return Number.isInteger(idx) && idx >= 0 && idx < results.length ? idx : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ── Step 4: deep-dive the chosen link ──────────────────────────────────────────
 
 async function extractUrl(
   url: string,
@@ -158,7 +224,11 @@ async function extractUrl(
     if (!data?.content) return null;
     return {
       title: data.title ?? "",
-      url: data.url ?? url,
+      // Report the URL we were asked to read (the search-result URL), NOT the
+      // scraper's canonicalized/redirect-resolved one. The client matches this
+      // against `results[*].url` to flag the "main article consulted"; using the
+      // scraper's normalized URL breaks that match and drops the highlight.
+      url,
       content: data.content.slice(0, MAX_EXTRACT_CHARS),
     };
   } catch {
@@ -219,10 +289,18 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
   });
 
-  // 3. Deep-dive the single most relevant link (top hit of the first query that
-  //    returned anything) for richer grounding than the snippets alone.
-  const extract =
-    results.length > 0 ? await extractUrl(results[0]!.url, scraperKey) : null;
+  // 3. Ask the LLM which result is worth reading in full, then deep-dive it for
+  //    richer grounding than the snippets alone. Falls back to the top hit if the
+  //    picker fails, but explicitly steers away from dictionary/low-value pages.
+  let extract: ScraperExtractResult | null = null;
+  if (results.length > 0) {
+    const bestIdx = await pickBestResultIndex(
+      groqApiKey,
+      purchase || "a major purchase",
+      results,
+    );
+    extract = await extractUrl(results[bestIdx]!.url, scraperKey);
+  }
 
   return NextResponse.json({ asOf, queries, results, extract });
 }

@@ -122,6 +122,8 @@
     "totalContributed": "Gesamt beigetragen pro Mitglied",
     "pieBreakdownHeading": "Kostenaufschlüsselung",
     "pieMonthlyPayments": "Monatliche Zahlungen",
+    "pieDownpayment": "Anzahlung (% der Gesamtsumme)",
+    "pieShareNote": "Die Prozentwerte zeigen den Anteil jedes Segments an der Gesamtsumme, nicht den tatsächlichen Anzahlungssatz.",
     "escrowHeading": "Treuhand-Freigabeschwelle",
     "escrowUnlocks": "Freigabe in Monat {month} / {total}",
     "escrowNote": "Die Auszahlung erfolgt, sobald die Beiträge 60 % der aktuellen Kosten erreichen.",
@@ -214,7 +216,10 @@
       "searching": "Suche im Web…",
       "loadingNote": "Ihre Zahlen werden ausgewertet und eine Empfehlung wird verfasst…",
       "searchNote": "Aktuelle Marktinformationen werden gesammelt, um die Analyse zu fundieren…",
-      "error": "Bei der Erstellung der Analyse ist ein Fehler aufgetreten. Bitte erneut versuchen."
+      "error": "Bei der Erstellung der Analyse ist ein Fehler aufgetreten. Bitte erneut versuchen.",
+      "sourcesHeading": "Konsultierte Quellen",
+      "sourcesNote": "Aktuelle Webergebnisse, die zur Fundierung dieser Analyse gesammelt wurden. Tippen Sie auf eine Quelle, um sie zu öffnen.",
+      "mainSourceLabel": "Hauptsächlich herangezogener Artikel"
     },
     "pdf": {
       "cardHeading": "Simulation exportieren",

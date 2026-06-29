@@ -173,7 +173,7 @@ gen_app_package_json() {
   },
   "dependencies": {
     "@repo/ui-tv": "workspace:*",
-    "@noriginmedia/norigin-spatial-navigation": "^4.0.0",
+    "@noriginmedia/norigin-spatial-navigation": "^3.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^6.28.0"
@@ -650,7 +650,7 @@ gen_uitv_package_json() {
     "react-dom": ">=19"
   },
   "dependencies": {
-    "@noriginmedia/norigin-spatial-navigation": "^4.0.0"
+    "@noriginmedia/norigin-spatial-navigation": "^3.2.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

@@ -11,6 +11,7 @@ import {
   Path,
   Circle,
   Text as SvgText,
+  Link,
   Font,
 } from "@react-pdf/renderer";
 import { LogoMark } from "./logo-pdf";
@@ -67,6 +68,14 @@ export interface PdfPieChart {
 export interface PdfPieSection {
   heading?: string;
   charts: PdfPieChart[];
+  /** Footnote clarifying that legend percentages are shares of the total. */
+  note?: string;
+}
+
+export interface PdfSource {
+  title: string;
+  url: string;
+  snippet: string;
 }
 
 export interface SimulationPdfProps {
@@ -83,6 +92,8 @@ export interface SimulationPdfProps {
   charts: PdfLineChart[];
   analysisHeading?: string;
   analysisText?: string;
+  sourcesHeading?: string;
+  sources?: PdfSource[];
   disclaimer: string;
 }
 
@@ -112,7 +123,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: "Helvetica-Bold",
     color: "#111827",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 11,
@@ -124,7 +135,7 @@ const styles = StyleSheet.create({
     color: MUTED,
   },
   section: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 9,
@@ -245,23 +256,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#374151",
   },
-  pieCol: {
-    flex: 1,
-    borderWidth: 0.5,
-    borderColor: BORDER,
-    borderRadius: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+  cardPie: {
     alignItems: "center",
-  },
-  pieHeading: {
-    fontSize: 9,
-    fontFamily: "Helvetica-Bold",
-    color: "#374151",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 8,
-    textAlign: "center",
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 0.5,
+    borderTopColor: BORDER,
   },
   pieLegend: {
     width: "100%",
@@ -312,6 +312,29 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#111827",
     lineHeight: 1.5,
+  },
+  sourceRow: {
+    marginBottom: 6,
+    paddingBottom: 6,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#f3f4f6",
+  },
+  sourceTitle: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: "#111827",
+  },
+  sourceLink: {
+    fontSize: 8,
+    color: ACCENT,
+    textDecoration: "underline",
+    marginTop: 1,
+  },
+  sourceSnippet: {
+    fontSize: 8,
+    color: MUTED,
+    lineHeight: 1.4,
+    marginTop: 1,
   },
   disclaimer: {
     fontSize: 8,
@@ -499,11 +522,12 @@ function PieChart({ chart }: { chart: PdfPieChart }) {
   );
 }
 
-function PieColumn({ chart }: { chart: PdfPieChart }) {
+// Cost-breakdown pie rendered inside a comparison card, below its rows. The
+// card's own heading labels it, so the pie's heading is intentionally omitted.
+function CardPie({ chart }: { chart: PdfPieChart }) {
   const total = chart.slices.reduce((sum, s) => sum + s.value, 0);
   return (
-    <View style={styles.pieCol}>
-      <Text style={styles.pieHeading}>{chart.heading}</Text>
+    <View style={styles.cardPie}>
       <PieChart chart={chart} />
       <View style={styles.pieLegend}>
         {chart.slices.map((s, i) => (
@@ -517,33 +541,6 @@ function PieColumn({ chart }: { chart: PdfPieChart }) {
               {chart.formatValue(s.value)}
             </Text>
           </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function PieSectionBlock({
-  section,
-  savings,
-}: {
-  section: PdfPieSection;
-  savings?: PdfRow;
-}) {
-  return (
-    <View style={styles.section} wrap={false}>
-      {section.heading ? (
-        <Text style={styles.sectionTitle}>{section.heading}</Text>
-      ) : null}
-      {savings ? (
-        <View style={[styles.savings, { marginTop: 0, marginBottom: 12 }]}>
-          <Text style={styles.savingsLabel}>{savings.label}</Text>
-          <Text style={styles.savingsValue}>{savings.value}</Text>
-        </View>
-      ) : null}
-      <View style={styles.twoCol}>
-        {section.charts.map((c, i) => (
-          <PieColumn key={i} chart={c} />
         ))}
       </View>
     </View>
@@ -610,6 +607,8 @@ export function SimulationDocument({
   charts,
   analysisHeading,
   analysisText,
+  sourcesHeading,
+  sources,
   disclaimer,
 }: SimulationPdfProps) {
   return (
@@ -633,28 +632,50 @@ export function SimulationDocument({
           <ResultRows rows={parameters} />
         </View>
 
-        {/* Comparison (title omitted to save space) */}
+        {/* Comparison (title omitted to save space). Each card carries its own
+            cost-breakdown pie below its rows (charts[0] = TandaOmni,
+            charts[1] = lender, ordered by the PDF builder). */}
         <View style={styles.section} wrap={false}>
           <View style={styles.twoCol}>
             <View style={styles.panel}>
               <Text style={styles.panelHeadingTanda}>{tandaHeading}</Text>
               <View style={styles.panelBody}>
                 <ResultRows rows={tandaRows} />
+                {pieSection?.charts[0] ? (
+                  <CardPie chart={pieSection.charts[0]} />
+                ) : null}
               </View>
             </View>
             <View style={styles.panel}>
               <Text style={styles.panelHeadingBank}>{bankHeading}</Text>
               <View style={styles.panelBody}>
                 <ResultRows rows={bankRows} />
+                {pieSection?.charts[1] ? (
+                  <CardPie chart={pieSection.charts[1]} />
+                ) : null}
               </View>
             </View>
           </View>
         </View>
 
-        {/* Cost breakdown - advantage banner sits under the heading, above the
-            TandaOmni vs. lender pies. */}
-        {pieSection ? (
-          <PieSectionBlock section={pieSection} savings={savings} />
+        {/* Savings advantage banner + share-% footnote, kept directly below the
+            comparison cards now that the pies live inside them. */}
+        {savings || pieSection?.note ? (
+          <View style={styles.section} wrap={false}>
+            {pieSection?.note ? (
+              <Text
+                style={[styles.chartNote, { marginTop: 8, marginBottom: 0 }]}
+              >
+                {pieSection.note}
+              </Text>
+            ) : null}
+            {savings ? (
+              <View style={[styles.savings, { marginTop: 0 }]}>
+                <Text style={styles.savingsLabel}>{savings.label}</Text>
+                <Text style={styles.savingsValue}>{savings.value}</Text>
+              </View>
+            ) : null}
+          </View>
         ) : null}
 
         <Text style={styles.footer} fixed>
@@ -662,18 +683,52 @@ export function SimulationDocument({
         </Text>
       </Page>
 
-      {/* Page 2 - AI analysis and the cost/price + treasury projection charts. */}
-      <Page size="LETTER" style={styles.page}>
-        {/* AI Analysis (placed above the charts in the export per request) */}
-        {analysisText && analysisHeading ? (
+      {/* Page 2 - AI analysis. Rendered only when an analysis exists, so the
+          export never carries a blank page. */}
+      {analysisText && analysisHeading ? (
+        <Page size="LETTER" style={styles.page}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{analysisHeading}</Text>
             <AnalysisBody text={analysisText} />
           </View>
-        ) : null}
 
-        {/* Charts - each block carries its own heading (the combined chart's
-            heading is the projection title), so no parent section title here. */}
+          <Text style={styles.footer} fixed>
+            {FOOTER_TEXT}
+          </Text>
+        </Page>
+      ) : null}
+
+      {/* Sources page - the web sources consulted (when web search is on) get
+          their own page, so the export is traceable to the pages it was grounded
+          on. Rendered only when sources exist, so no blank page otherwise. */}
+      {sources && sources.length > 0 && sourcesHeading ? (
+        <Page size="LETTER" style={styles.page}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{sourcesHeading}</Text>
+            {sources.map((s, i) => (
+              <View key={i} style={styles.sourceRow} wrap={false}>
+                <Text style={styles.sourceTitle}>{s.title || s.url}</Text>
+                <Link src={s.url} style={styles.sourceLink}>
+                  {s.url}
+                </Link>
+                {s.snippet ? (
+                  <Text style={styles.sourceSnippet}>{s.snippet}</Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+
+          <Text style={styles.footer} fixed>
+            {FOOTER_TEXT}
+          </Text>
+        </Page>
+      ) : null}
+
+      {/* Charts page - the cost/price + treasury projections get their own page.
+          Each block carries its own heading (the combined chart's heading is the
+          projection title), so no parent section title here. The disclaimer
+          trails the charts so it stays last in the document. */}
+      <Page size="LETTER" style={styles.page}>
         {charts.map((c, i) => (
           <ChartBlock key={i} chart={c} />
         ))}

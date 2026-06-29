@@ -122,6 +122,8 @@
     "totalContributed": "Total Contributed per Member",
     "pieBreakdownHeading": "Cost Breakdown",
     "pieMonthlyPayments": "Monthly Payments",
+    "pieDownpayment": "Downpayment (% of total)",
+    "pieShareNote": "Percentages show each slice's share of the total paid, not the actual downpayment rate.",
     "escrowHeading": "Escrow Unlock Threshold",
     "escrowUnlocks": "Unlocks at month {month} / {total}",
     "escrowNote": "Payout releases once contributions reach 60% of the current asset cost.",
@@ -214,7 +216,10 @@
       "searching": "Searching the web…",
       "loadingNote": "Crunching your numbers and writing a recommendation…",
       "searchNote": "Gathering up-to-date market info to ground the analysis…",
-      "error": "Something went wrong generating the analysis. Please try again."
+      "error": "Something went wrong generating the analysis. Please try again.",
+      "sourcesHeading": "Sources consulted",
+      "sourcesNote": "Live web results gathered to ground this analysis. Tap a source to open it.",
+      "mainSourceLabel": "Main article consulted"
     },
     "pdf": {
       "cardHeading": "Export your simulation",

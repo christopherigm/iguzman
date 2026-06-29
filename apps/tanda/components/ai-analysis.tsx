@@ -13,6 +13,7 @@ import { TextInput } from "@repo/ui/core-elements/text-input";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { RichText } from "@repo/ui/core-elements/rich-text";
 import { useGroqProxy, type LlmMessage } from "@repo/ui/use-groq";
+import { SourceRow } from "./analysis/source-row";
 
 // ─── AI Analysis Configuration ──────────────────────────────────────────────────
 
@@ -62,6 +63,39 @@ interface EnrichResponse {
 }
 
 /**
+ * A single web source consulted during enrichment, surfaced to the user (and to
+ * the parent for the PDF export) so the analysis is traceable to its sources.
+ */
+export interface AnalysisSource {
+  title: string;
+  url: string;
+  snippet: string;
+  /** True for the single deep-dived "main article consulted" (the extract). */
+  main?: boolean;
+}
+
+/**
+ * True for sponsored search "results" that are really ad-network click
+ * trackers/redirects (e.g. `duckduckgo.com/y.js?ad_domain=…`, `bing.com/aclick`)
+ * rather than a genuine source. These are dropped before sources are surfaced.
+ */
+function isAdLink(url: string): boolean {
+  try {
+    const { hostname, pathname, searchParams } = new URL(url);
+    const host = hostname.replace(/^www\./, "");
+    // DuckDuckGo ad redirect: /y.js with ad_* params.
+    if (host === "duckduckgo.com" && pathname.startsWith("/y.js")) return true;
+    if (searchParams.has("ad_domain") || searchParams.has("ad_provider"))
+      return true;
+    // Bing ad click redirect.
+    if (host === "bing.com" && pathname.startsWith("/aclick")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Flattens the enrichment payload into a plain-text block the analysis model can
  * read. Returns "" when there is nothing usable so the caller can skip injecting
  * an empty research section.
@@ -106,6 +140,11 @@ interface AiAnalysisProps {
    * it can be embedded in the exported PDF.
    */
   onAnalysisChange?: (text: string | null) => void;
+  /**
+   * Reports the web sources consulted for the latest analysis (empty when web
+   * search is off or none were found), so they can be listed in the PDF export.
+   */
+  onSourcesChange?: (sources: AnalysisSource[]) => void;
 }
 
 /**
@@ -117,6 +156,7 @@ interface AiAnalysisProps {
 export function AiAnalysis({
   buildContext,
   onAnalysisChange,
+  onSourcesChange,
 }: AiAnalysisProps) {
   const t = useTranslations("SimulatorPage");
   const locale = useLocale();
@@ -125,6 +165,9 @@ export function AiAnalysis({
   // Tone the model writes in, keyed by FORMALITY_LEVELS. Formal by default.
   const [formality, setFormality] = useState<string>("formal");
   const [analysis, setAnalysis] = useState<string | null>(null);
+  // Web sources consulted for the current analysis (populated by the enrichment
+  // step when web search is on); listed below the analysis and in the PDF.
+  const [sources, setSources] = useState<AnalysisSource[]>([]);
   // True while the pre-analysis web-search enrichment is running (before the
   // streaming LLM call below takes over via `analyzing`).
   const [enriching, setEnriching] = useState<boolean>(false);
@@ -149,6 +192,8 @@ export function AiAnalysis({
     if (!context) return;
     setAnalysis(null);
     onAnalysisChange?.(null);
+    setSources([]);
+    onSourcesChange?.([]);
 
     const { summary, assetTypeLabel } = context;
     const language = LOCALE_LANGUAGE[locale] ?? "English";
@@ -171,7 +216,33 @@ export function AiAnalysis({
           body: JSON.stringify({ purchase, simulationSummary: summary }),
         });
         if (res.ok) {
-          research = formatResearch((await res.json()) as EnrichResponse);
+          const data = (await res.json()) as EnrichResponse;
+          research = formatResearch(data);
+          // The deep-dived article (the extract) is the main source consulted.
+          // Flag it and surface it at the top of the list.
+          const deepDiveUrl = data.extract?.url;
+          const consulted: AnalysisSource[] = data.results
+            // Drop ad-network click trackers/redirects masquerading as sources.
+            .filter(({ url }) => !isAdLink(url))
+            .map(({ title, url, snippet }) => ({
+              title,
+              url,
+              snippet,
+              main: !!deepDiveUrl && url === deepDiveUrl,
+            }));
+          // If the deep-dived page wasn't among the search results, prepend it
+          // so the main article is always shown.
+          if (data.extract && !consulted.some((s) => s.main)) {
+            consulted.unshift({
+              title: data.extract.title,
+              url: data.extract.url,
+              snippet: "",
+              main: true,
+            });
+          }
+          consulted.sort((a, b) => Number(b.main) - Number(a.main));
+          setSources(consulted);
+          onSourcesChange?.(consulted);
         }
       } catch {
         // Ignore - analysis proceeds without web research.
@@ -380,6 +451,36 @@ export function AiAnalysis({
             backgroundColor="var(--surface-2)"
           >
             <RichText>{analysis}</RichText>
+          </Box>
+        )}
+
+        {/* Sources consulted via live web search, so the user can trace the
+            analysis back to the pages it was grounded on. */}
+        {!analyzing && !enriching && sources.length > 0 && (
+          <Box display="flex" flexDirection="column" gap={8}>
+            <Box display="flex" flexDirection="column" gap={2}>
+              <Typography fontWeight={600} color="var(--foreground)">
+                {t("aiAnalysis.sourcesHeading")}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="var(--muted-foreground, #6b7280)"
+              >
+                {t("aiAnalysis.sourcesNote")}
+              </Typography>
+            </Box>
+            {sources.map((s, idx) => (
+              <SourceRow
+                key={s.url}
+                title={s.title}
+                url={s.url}
+                snippet={s.snippet}
+                idx={idx}
+                last={idx === sources.length - 1}
+                main={s.main}
+                mainLabel={t("aiAnalysis.mainSourceLabel")}
+              />
+            ))}
           </Box>
         )}
       </Card>

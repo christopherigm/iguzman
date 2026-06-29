@@ -11,7 +11,11 @@ import { TextInput } from "@repo/ui/core-elements/text-input";
 import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { ConfirmationModal } from "@repo/ui/core-elements/confirmation-modal";
 import { Chart } from "@repo/ui/core-elements/chart";
-import { AiAnalysis, type AnalysisContext } from "./ai-analysis";
+import {
+  AiAnalysis,
+  type AnalysisContext,
+  type AnalysisSource,
+} from "./ai-analysis";
 import { ExplainBtn, ResultRow } from "./simulator-fields";
 import { ProjectionChart, TreasuryChart } from "./simulator-charts";
 import {
@@ -87,6 +91,8 @@ export function Simulator() {
   // Latest AI analysis text, surfaced by the AiAnalysis panel so it can be
   // embedded in the exported PDF. Null until the user runs an analysis.
   const [analysisText, setAnalysisText] = useState<string | null>(null);
+  // Web sources the AiAnalysis panel consulted, embedded in the exported PDF.
+  const [analysisSources, setAnalysisSources] = useState<AnalysisSource[]>([]);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
 
@@ -361,6 +367,7 @@ export function Simulator() {
       chartData,
       treasuryData,
       analysisText,
+      analysisSources,
       fmtWhole,
       fmtCents,
     });
@@ -704,7 +711,7 @@ export function Simulator() {
                 <Chart
                   type="pie"
                   labels={withPiePercents(
-                    [t("downpaymentRequired"), t("pieMonthlyPayments")],
+                    [t("pieDownpayment"), t("pieMonthlyPayments")],
                     [result.downpayment, result.P * months],
                   )}
                   series={[
@@ -716,6 +723,12 @@ export function Simulator() {
                   height={240}
                   ariaLabel={t("tandaColumnHeading")}
                 />
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                >
+                  {t("pieShareNote")}
+                </Typography>
               </Box>
 
               {/* Escrow progress bar (Tier 3 only) */}
@@ -887,7 +900,7 @@ export function Simulator() {
                   type="pie"
                   labels={withPiePercents(
                     [
-                      t("downpaymentRequired"),
+                      t("pieDownpayment"),
                       t("bankFinancedAmount"),
                       t("bankTotalInterest"),
                     ],
@@ -913,6 +926,12 @@ export function Simulator() {
                       "bankColumnHeading") as Parameters<typeof t>[0],
                   )}
                 />
+                <Typography
+                  variant="caption"
+                  color="var(--muted-foreground, #6b7280)"
+                >
+                  {t("pieShareNote")}
+                </Typography>
               </Box>
 
               {/* Lender interest notice */}
@@ -993,6 +1012,7 @@ export function Simulator() {
           <AiAnalysis
             buildContext={buildAnalysisContext}
             onAnalysisChange={setAnalysisText}
+            onSourcesChange={setAnalysisSources}
           />
 
           {/* ── Export to PDF ─────────────────────────────────── */}

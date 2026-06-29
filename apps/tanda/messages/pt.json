@@ -122,6 +122,8 @@
     "totalContributed": "Total contribuído por membro",
     "pieBreakdownHeading": "Detalhamento de custos",
     "pieMonthlyPayments": "Pagamentos mensais",
+    "pieDownpayment": "Entrada (% do total)",
+    "pieShareNote": "As porcentagens mostram a participação de cada fatia no total pago, não a taxa real da entrada.",
     "escrowHeading": "Limiar de liberação da custódia",
     "escrowUnlocks": "Liberado no mês {month} / {total}",
     "escrowNote": "O pagamento é liberado quando as contribuições atingirem 60% do custo atual do ativo.",
@@ -214,7 +216,10 @@
       "searching": "Pesquisando na web…",
       "loadingNote": "Processando seus números e escrevendo uma recomendação…",
       "searchNote": "Reunindo informações de mercado atualizadas para embasar a análise…",
-      "error": "Ocorreu um erro ao gerar a análise. Tente novamente."
+      "error": "Ocorreu um erro ao gerar a análise. Tente novamente.",
+      "sourcesHeading": "Fontes consultadas",
+      "sourcesNote": "Resultados da web ao vivo reunidos para embasar esta análise. Toque em uma fonte para abri-la.",
+      "mainSourceLabel": "Artigo principal consultado"
     },
     "pdf": {
       "cardHeading": "Exporte sua simulação",

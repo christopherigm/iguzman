@@ -1,0 +1,29 @@
+{
+  "name": "@repo/ui-tv",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./*": "./src/*.tsx",
+    "./tokens.css": "./src/tokens.css",
+    "./remote-keys": "./src/remote-keys.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "dependencies": {
+    "@noriginmedia/norigin-spatial-navigation": "^3.2.0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "eslint": "^9.39.4",
+    "typescript": "6.0.3"
+  }
+}

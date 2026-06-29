@@ -122,6 +122,8 @@
     "totalContributed": "Total versé par membre",
     "pieBreakdownHeading": "Répartition des coûts",
     "pieMonthlyPayments": "Paiements mensuels",
+    "pieDownpayment": "Acompte (% du total)",
+    "pieShareNote": "Les pourcentages indiquent la part de chaque segment dans le total payé, et non le taux réel de l'acompte.",
     "escrowHeading": "Seuil de déblocage du séquestre",
     "escrowUnlocks": "Débloqué au mois {month} / {total}",
     "escrowNote": "Le versement est libéré lorsque les contributions atteignent 60 % du coût actuel de l’actif.",
@@ -214,7 +216,10 @@
       "searching": "Recherche sur le web…",
       "loadingNote": "Calcul de vos chiffres et rédaction d'une recommandation…",
       "searchNote": "Collecte d'informations de marché à jour pour étayer l'analyse…",
-      "error": "Une erreur s'est produite lors de la génération de l'analyse. Veuillez réessayer."
+      "error": "Une erreur s'est produite lors de la génération de l'analyse. Veuillez réessayer.",
+      "sourcesHeading": "Sources consultées",
+      "sourcesNote": "Résultats web en direct recueillis pour étayer cette analyse. Touchez une source pour l'ouvrir.",
+      "mainSourceLabel": "Article principal consulté"
     },
     "pdf": {
       "cardHeading": "Exporter votre simulation",

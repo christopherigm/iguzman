@@ -18,6 +18,7 @@ import type {
   TreasuryData,
 } from "./simulation-engine";
 import { type TierConfig, type TierKey, TIER_I18N_KEY } from "./tiers";
+import type { AnalysisSource } from "../components/ai-analysis";
 
 /**
  * Loose translation-function shape. The Simulator passes its strict next-intl
@@ -48,6 +49,7 @@ export interface BuildPdfParams {
   chartData: ChartData | null;
   treasuryData: TreasuryData | null;
   analysisText: string | null;
+  analysisSources: AnalysisSource[];
   fmtWhole: Intl.NumberFormat;
   fmtCents: Intl.NumberFormat;
 }
@@ -71,6 +73,7 @@ export function buildSimulationPdfData({
   chartData,
   treasuryData,
   analysisText,
+  analysisSources,
   fmtWhole,
   fmtCents,
 }: BuildPdfParams): SimulationPdfProps | null {
@@ -106,9 +109,7 @@ export function buildSimulationPdfData({
     },
     {
       label: t("pdf.lenderRate"),
-      value: `${(bankResult.apr * 100).toFixed(2)}% ${
-        isCat ? "CAT" : "APR"
-      }`,
+      value: `${(bankResult.apr * 100).toFixed(2)}% ${isCat ? "CAT" : "APR"}`,
     },
   ];
   if (escrowUnlockMonth !== null) {
@@ -200,7 +201,7 @@ export function buildSimulationPdfData({
         formatValue: fmtPieValue,
         slices: [
           {
-            label: t("downpaymentRequired"),
+            label: t("pieDownpayment"),
             value: result.downpayment,
             color: "#06b6d4",
           },
@@ -216,7 +217,7 @@ export function buildSimulationPdfData({
         formatValue: fmtPieValue,
         slices: [
           {
-            label: t("downpaymentRequired"),
+            label: t("pieDownpayment"),
             value: bankResult.downpayment,
             color: "#6b7280",
           },
@@ -233,6 +234,7 @@ export function buildSimulationPdfData({
         ],
       },
     ],
+    note: t("pieShareNote"),
   };
 
   const charts: PdfLineChart[] = [];
@@ -317,6 +319,12 @@ export function buildSimulationPdfData({
     charts,
     analysisHeading: analysisText ? t("aiAnalysis.heading") : undefined,
     analysisText: analysisText ?? undefined,
+    sourcesHeading:
+      analysisText && analysisSources.length > 0
+        ? t("aiAnalysis.sourcesHeading")
+        : undefined,
+    sources:
+      analysisText && analysisSources.length > 0 ? analysisSources : undefined,
     disclaimer: t("pdf.disclaimer"),
   };
 }

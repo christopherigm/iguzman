@@ -1,0 +1,9 @@
+node_modules
+dist
+.buildResult
+.DS_Store
+*.wgt
+*.tsbuildinfo
+.env
+.env.*
+!env.example
