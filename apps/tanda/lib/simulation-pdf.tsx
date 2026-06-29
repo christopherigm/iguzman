@@ -294,6 +294,23 @@ export function buildSimulationPdfData({
     });
   }
 
+  // Mitigation notice for the simulated tier only, shown above the projection
+  // charts so the reader sees the default-risk controls that apply to this
+  // simulation on the same page. Color tracks the tier's mitigationKind.
+  const KIND_COLOR: Record<TierConfig["mitigationKind"], string> = {
+    success: "#16a34a",
+    warning: "#d97706",
+    info: "#06b6d4",
+  };
+  const tierMitigations = [
+    {
+      label: t(`tiers.${TIER_I18N_KEY[tier]}.label`),
+      text: t(`tiers.${TIER_I18N_KEY[tier]}.mitigation`),
+      color: KIND_COLOR[cfg.mitigationKind],
+      current: true,
+    },
+  ];
+
   return {
     title: t("pdf.title"),
     subtitle: `${assetLabel} · ${fmtWhole.format(G)} · ${t("pdf.termValue", {
@@ -318,6 +335,8 @@ export function buildSimulationPdfData({
           }
         : undefined,
     pieSection,
+    mitigationHeading: t("pdf.mitigationHeading"),
+    tierMitigations,
     charts,
     analysisHeading: analysisText ? t("aiAnalysis.heading") : undefined,
     analysisText: analysisText ?? undefined,

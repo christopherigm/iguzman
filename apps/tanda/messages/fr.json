@@ -106,7 +106,7 @@
       },
       "smallPurchases": {
         "label": "Petits Achats",
-        "mitigation": "Des durées courtes (3–24 mois) et un acompte de 10 % limitent l'exposition sur l'électronique qui se déprécie vite, comme les téléphones et les appareils photo. L'article est enregistré au nom du groupe jusqu'à son financement complet."
+        "mitigation": "Des durées courtes (3–24 mois) et un acompte de 10 % limitent l'exposition sur l'électronique qui se déprécie vite, comme les téléphones et les appareils photo. L'article est enregistré au nom du groupe jusqu'à son financement complet. Une pré-autorisation (blocage) sera effectuée sur la carte de crédit."
       }
     },
     "priceLabelG": "Prix cible de l’actif (G)",
@@ -246,6 +246,7 @@
       "cetesYield": "Rendement CETES",
       "escrow": "Déblocage du Séquestre",
       "escrowValue": "Mois {month} sur {total}",
+      "mitigationHeading": "Atténuation des risques",
       "disclaimer": "Les chiffres sont des estimations basées sur les paramètres que vous avez sélectionnés et sont fournis à titre informatif uniquement. Ils ne constituent pas un conseil financier."
     }
   },
@@ -312,21 +313,27 @@
     "tiers": {
       "t1": {
         "name": "Immobilier (Actif Valorisant)",
-        "term": "60 à 120 Mois",
-        "delta": "+4% à +6%",
+        "term": "60 à 360 Mois",
+        "delta": "+3% à +6%",
         "mitigation": "15% d’Apport, Fiducie Juridique (Reserva de Dominio)."
       },
       "t2": {
         "name": "Véhicules & Équipements Commerciaux (Dévalorisant)",
-        "term": "12 à 36 Mois",
+        "term": "12 à 72 Mois",
         "delta": "Neuf : +3% à +6% / Occasion : −5% à −10%",
         "mitigation": "20% d'Apport, Police d'Assurance Obligatoire sur la Plateforme (quelle que soit la direction du delta)."
       },
       "t3": {
         "name": "Voyages & Expériences (Irrécupérable)",
-        "term": "6 à 12 Mois",
-        "delta": "+2% à +4%",
+        "term": "6 à 72 Mois",
+        "delta": "+2% à +6%",
         "mitigation": "Blocage Fiduciaire - Le déboursement est libéré après 60% du coût financé. Pré-autorisation carte bancaire."
+      },
+      "t4": {
+        "name": "Petits Achats (Électronique à Dépréciation Rapide)",
+        "term": "3 à 24 Mois",
+        "delta": "+2% à +6%",
+        "mitigation": "10% d'Apport, Durées Courtes (3–24 Mois). Article enregistré au nom du groupe jusqu'à son financement complet. Pré-autorisation carte bancaire."
       }
     },
     "math": {

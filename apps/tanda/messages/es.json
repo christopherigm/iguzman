@@ -106,7 +106,7 @@
       },
       "smallPurchases": {
         "label": "Compras Pequeñas",
-        "mitigation": "Plazos cortos (3–24 meses) y un enganche del 10% mantienen baja la exposición en electrónicos que se deprecian rápido, como teléfonos y cámaras. El artículo queda registrado a nombre del grupo hasta que se fondee por completo."
+        "mitigation": "Plazos cortos (3–24 meses) y un enganche del 10% mantienen baja la exposición en electrónicos que se deprecian rápido, como teléfonos y cámaras. El artículo queda registrado a nombre del grupo hasta que se fondee por completo. Se realizará una preautorización (retención) en la tarjeta de crédito."
       }
     },
     "priceLabelG": "Precio objetivo del activo (G)",
@@ -246,6 +246,7 @@
       "cetesYield": "Rendimiento CETES",
       "escrow": "Liberación de Garantía",
       "escrowValue": "Mes {month} de {total}",
+      "mitigationHeading": "Mitigación de riesgo",
       "disclaimer": "Las cifras son estimaciones basadas en los parámetros que seleccionaste y se proporcionan únicamente con fines informativos. No constituyen asesoría financiera."
     }
   },
@@ -312,21 +313,27 @@
     "tiers": {
       "t1": {
         "name": "Bienes Raíces (Activo Apreciable)",
-        "term": "60 a 120 Meses",
-        "delta": "+4% a +6%",
+        "term": "60 a 360 Meses",
+        "delta": "+3% a +6%",
         "mitigation": "15% de Enganche, Fideicomiso Legal (Reserva de Dominio)."
       },
       "t2": {
         "name": "Vehículos y Equipo Comercial (Depreciable)",
-        "term": "12 a 36 Meses",
+        "term": "12 a 72 Meses",
         "delta": "Nuevo: +3% a +6% / Usado: −5% a −10%",
         "mitigation": "20% de Enganche, Póliza de Seguro Obligatoria en la Plataforma (independientemente del delta)."
       },
       "t3": {
         "name": "Viajes y Experiencias (Irrecuperable)",
-        "term": "6 a 12 Meses",
-        "delta": "+2% a +4%",
+        "term": "6 a 72 Meses",
+        "delta": "+2% a +6%",
         "mitigation": "Bloqueo de Depósito - El pago se libera hasta que el 60% del costo esté fondeado. Preautorización de tarjeta de crédito."
+      },
+      "t4": {
+        "name": "Compras Pequeñas (Electrónicos de Depreciación Rápida)",
+        "term": "3 a 24 Meses",
+        "delta": "+2% a +6%",
+        "mitigation": "10% de Enganche, Plazos Cortos (3–24 Meses). Artículo Registrado a Nombre del Grupo Hasta su Fondeo Completo. Preautorización de tarjeta de crédito."
       }
     },
     "math": {

@@ -106,7 +106,7 @@
       },
       "smallPurchases": {
         "label": "Compras Pequenas",
-        "mitigation": "Prazos curtos (3–24 meses) e uma entrada de 10% mantêm a exposição baixa em eletrônicos que se desvalorizam rápido, como celulares e câmeras. O item fica registrado no nome do grupo até ser totalmente financiado."
+        "mitigation": "Prazos curtos (3–24 meses) e uma entrada de 10% mantêm a exposição baixa em eletrônicos que se desvalorizam rápido, como celulares e câmeras. O item fica registrado no nome do grupo até ser totalmente financiado. Será feita uma pré-autorização (bloqueio) no cartão de crédito."
       }
     },
     "priceLabelG": "Preço-alvo do ativo (G)",
@@ -246,6 +246,7 @@
       "cetesYield": "Rendimento CETES",
       "escrow": "Liberação da Garantia",
       "escrowValue": "Mês {month} de {total}",
+      "mitigationHeading": "Mitigação de risco",
       "disclaimer": "Os valores são estimativas baseadas nos parâmetros que você selecionou e são fornecidos apenas para fins informativos. Não constituem aconselhamento financeiro."
     }
   },
@@ -312,21 +313,27 @@
     "tiers": {
       "t1": {
         "name": "Imóveis (Ativo Valorizante)",
-        "term": "60 a 120 Meses",
-        "delta": "+4% a +6%",
+        "term": "60 a 360 Meses",
+        "delta": "+3% a +6%",
         "mitigation": "15% de Entrada, Fideição Legal (Reserva de Domínio)."
       },
       "t2": {
         "name": "Veículos & Equipamentos Comerciais (Depreciante)",
-        "term": "12 a 36 Meses",
+        "term": "12 a 72 Meses",
         "delta": "Novo: +3% a +6% / Usado: −5% a −10%",
         "mitigation": "20% de Entrada, Apólice de Seguro Obrigatória na Plataforma (independentemente da direção do delta)."
       },
       "t3": {
         "name": "Viagens & Experiências (Irrecuperável)",
-        "term": "6 a 12 Meses",
-        "delta": "+2% a +4%",
+        "term": "6 a 72 Meses",
+        "delta": "+2% a +6%",
         "mitigation": "Bloqueio de Depósito - O pagamento é liberado após 60% do custo financiado. Pré-autorização no cartão de crédito."
+      },
+      "t4": {
+        "name": "Compras Pequenas (Eletrônicos de Desvalorização Rápida)",
+        "term": "3 a 24 Meses",
+        "delta": "+2% a +6%",
+        "mitigation": "10% de Entrada, Prazos Curtos (3–24 Meses). Item Registrado no Nome do Grupo Até o Financiamento Completo. Pré-autorização no cartão de crédito."
       }
     },
     "math": {

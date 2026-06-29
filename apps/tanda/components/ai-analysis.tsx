@@ -14,6 +14,7 @@ import { ProgressBar } from "@repo/ui/core-elements/progress-bar";
 import { RichText } from "@repo/ui/core-elements/rich-text";
 import { useGroqProxy, type LlmMessage } from "@repo/ui/use-groq";
 import { SourceRow } from "./analysis/source-row";
+import type { TierKey } from "../lib/tiers";
 
 // ─── AI Analysis Configuration ──────────────────────────────────────────────────
 
@@ -120,12 +121,221 @@ function formatResearch(data: EnrichResponse): string {
   return parts.join("\n");
 }
 
+// ─── Per-tier prompt tailoring ──────────────────────────────────────────────────
+//
+// The analysis prompt is split by tier rather than sent as one monolithic
+// message. The shared parts (role, language, no-moralizing, TandaOmni-out-of-
+// scope, web-research grounding, markdown format) live in `buildSystemPrompt` /
+// `buildUserPrompt`; only the tier-specific pieces below are swapped in. This
+// drops the red-flag clauses that don't apply to a given tier (sharpening
+// accuracy) and shrinks the payload, and points the model at the funding
+// counterpart that tier actually competes with.
+
+interface TierPrompt {
+  /** The funding alternative this tier competes with, long form (intro). */
+  counterpartLong: string;
+  /** Short noun for the alternative, used inline in the comparison instructions. */
+  counterpartShort: string;
+  /** Tier-specific red-flag rule for the system prompt (what may be flagged). */
+  systemRedFlag: string;
+  /** How to use any web research for this tier (appended to the research block). */
+  researchGuidance: string;
+  /** Risk instruction under the first heading (recap). */
+  riskFirstHeading: string;
+  /** Risk instruction under the third heading (final recommendation). */
+  riskThirdHeading: string;
+  /** Optional extra emphasis for the comparison heading (high-CAT lenders). */
+  secondHeadingExtra?: string;
+}
+
+const TIER_PROMPTS: Record<TierKey, TierPrompt> = {
+  real_estate: {
+    counterpartLong: "a traditional bank mortgage",
+    counterpartShort: "the bank mortgage",
+    systemRedFlag:
+      "Only flag the purchase itself when it crosses a HIGH bar of GENUINE physical or legal " +
+      "danger to this specific property - for example building or buying on an active fault line, " +
+      "in a flood zone, on the slope of an active volcano, or a property with clear title/legal " +
+      "problems (no clean deed, liens, or irregular/ejido land). If live web research about the " +
+      "location or property is provided, use it to check for such hazards. If - and ONLY if - such " +
+      "a red flag is clearly present, flag it prominently and advise caution regardless of how " +
+      "attractive the financing looks. Otherwise do NOT discourage the purchase; a fairly-priced, " +
+      "legally-clean property is not a risk. Do not invent a red flag where none exists.",
+    researchGuidance:
+      "If location or property research is provided, use it to check for physical or legal hazards " +
+      "(fault line, flood zone, active volcano, title/ejido problems) and only flag the property " +
+      "when such a hazard is clearly present.",
+    riskFirstHeading:
+      "Only mention a risk in the property itself if it crosses the high bar of genuine physical " +
+      "or legal danger; otherwise do not raise one.",
+    riskThirdHeading:
+      "ONLY if such a high-bar danger is clearly present should you instead advise caution about " +
+      "the property; otherwise do not invent risks or discourage a normal, legally-clean purchase.",
+  },
+  vehicle: {
+    counterpartLong: "a traditional bank auto loan",
+    counterpartShort: "the auto loan",
+    systemRedFlag:
+      "Only flag the purchase itself when it crosses a HIGH bar, namely: (a) a GROSS overpayment, " +
+      "where the stated price is wildly out of line with the vehicle's real market value for its " +
+      "make, model, year, and condition; or (b) a GENUINE legal or safety problem with this " +
+      "specific vehicle, such as a salvage/rebuilt or flood-damaged title, a wrecked ('auto " +
+      "chocado') or odometer-rolled-back history, or no clean papers/import documents. When live " +
+      "web research is provided, USE it to establish the vehicle's current market price before " +
+      "judging a gross overpayment. If - and ONLY if - one of these is clearly present, flag it " +
+      "prominently and advise caution regardless of how attractive the financing looks. Otherwise " +
+      "do NOT discourage the purchase; a fairly-priced vehicle with clean papers is not a risk. " +
+      "Do not invent a red flag where none exists.",
+    researchGuidance:
+      "If research is provided, use it to establish the vehicle's current market price for its " +
+      "make, model, year, and condition, and to check for salvage/legal/safety problems; only flag " +
+      "a gross overpayment or a legal problem when clearly present.",
+    riskFirstHeading:
+      "Only mention a risk in the vehicle itself if it crosses the high bar (gross overpayment vs " +
+      "market, or a salvage/legal/safety problem); otherwise do not raise one.",
+    riskThirdHeading:
+      "ONLY if such a high-bar red flag is clearly present should you advise caution about the " +
+      "vehicle; otherwise do not invent risks or discourage a fairly-priced vehicle with clean papers.",
+  },
+  travel: {
+    counterpartLong: "a high-interest consumer or payday lender",
+    counterpartShort: "the consumer lender",
+    systemRedFlag:
+      "A trip is a normal, personal purchase: do NOT raise a red flag about the purchase itself - " +
+      "there is no 'overpriced' or 'dangerous' trip to weigh here. Keep the focus entirely on " +
+      "funding the trip on the best terms. (You may briefly note a safety point only if live web " +
+      "research clearly reports an active travel advisory for the destination, but never discourage " +
+      "the trip on grounds of cost or taste.)",
+    researchGuidance:
+      "If research is provided, use it only to add helpful, concrete context about the trip " +
+      "(typical prices, timing, tips); do not use it to discourage the trip.",
+    riskFirstHeading:
+      "Do not raise a red flag about the trip itself - a trip is a normal personal purchase.",
+    riskThirdHeading:
+      "Recommend the better funding option and do not discourage the trip on grounds of cost or taste.",
+    secondHeadingExtra:
+      "Make the contrast stark: the consumer lender's CAT is extremely high, so emphasize how much " +
+      "interest TandaOmni avoids and reference the total repaid as a multiple of the amount financed.",
+  },
+  small_purchases: {
+    counterpartLong: "store credit or a high-interest consumer lender",
+    counterpartShort: "the store-credit / consumer lender",
+    systemRedFlag:
+      "Only flag the purchase itself when it crosses a HIGH bar: a GROSS overpayment, where the " +
+      "stated price is wildly out of line with the item's real street/retail value - for example a " +
+      "phone, camera, console, or other consumer electronic priced at several times its normal " +
+      "retail price (such as paying $100,000 MXN for a device that sells for about $30,000 MXN). " +
+      "When the item is named and live web research is provided, USE that research to establish the " +
+      "item's current street/retail price before judging a gross overpayment. There is no physical " +
+      "or legal danger to weigh for a small consumer good - only price. If - and ONLY if - the price " +
+      "is clearly far above market, flag it prominently; otherwise do NOT discourage the purchase. " +
+      "Do not invent a red flag where none exists; a fairly-priced item is not a risk.",
+    researchGuidance:
+      "If the item is named and research is provided, use it to check the item's current " +
+      "street/retail price, and only flag a gross overpayment when the stated price is clearly far " +
+      "above it.",
+    riskFirstHeading:
+      "Only mention a risk if the price is a gross overpayment versus the item's market price; " +
+      "there is no physical or legal danger to weigh for a small consumer good.",
+    riskThirdHeading:
+      "ONLY if the price is clearly far above market should you advise caution; otherwise do not " +
+      "discourage a fairly-priced item.",
+    secondHeadingExtra:
+      "Make the contrast stark: the lender's CAT is very high, so emphasize how much interest " +
+      "TandaOmni avoids and reference the total repaid as a multiple of the amount financed.",
+  },
+};
+
+/**
+ * Assembles the tier-tailored system prompt: shared guardrails plus the tier's
+ * own red-flag rule and funding counterpart.
+ */
+function buildSystemPrompt(
+  tier: TierKey,
+  language: string,
+  tone: string,
+): string {
+  const tp = TIER_PROMPTS[tier];
+  return [
+    "You are a practical financial advisor helping a person in Mexico fund a specific purchase. " +
+      "They are comparing TandaOmni, an interest-free savings circle (tanda / ROSCA), against " +
+      `${tp.counterpartLong}. Treat the purchase as the user's own decision that they have already ` +
+      "made: your MAIN job is to help them pay for it on the best terms by comparing TandaOmni " +
+      `against ${tp.counterpartShort} and showing, with the numbers, why the interest-free TandaOmni ` +
+      "route is usually the cheaper, smarter way to pay.",
+    `Respond ONLY in ${language}.`,
+    "Do NOT moralize about whether they should buy it, second-guess their taste, or lecture them " +
+      "about depreciation, resale value, model turnover, or whether a cheaper alternative exists - " +
+      "assume they have already decided what they want and focus on the financing.",
+    tp.systemRedFlag,
+    "Reason from the user's point of view: total cost, interest paid, monthly payment, and time to " +
+      "ownership.",
+    "Do NOT advise about the TandaOmni platform itself, its operations, or its trustworthiness, and " +
+      "do NOT raise risks about the tanda mechanism such as members missing or defaulting on " +
+      "payments, the circle collapsing, or payout ordering - those risks are already mitigated by " +
+      "the platform and are out of scope. Treat TandaOmni's stated terms as given.",
+    "You may be given recent web research gathered live for this purchase; use it to ground your " +
+      "assessment of the purchase and mention a relevant finding where it helps, but never " +
+      "contradict the simulation numbers. If no research is provided, rely on the simulation alone.",
+    `Write in ${tone}. Format the answer in Markdown using EXACTLY these three section headings, in ` +
+      "this order, each rendered as a Markdown heading:\n" +
+      "🎯 Quick Summary\n" +
+      "💸 TandaOmni vs. loan\n" +
+      "✅ Final recommendation\n" +
+      `Translate the heading text into ${language}, but ALWAYS keep the leading emoji ` +
+      "(🎯, 💸, ✅) exactly as shown at the start of each heading. Use short sentences and bullet " +
+      "points under each heading. Keep it concise (about 180 words). Do not invent numbers beyond " +
+      "those provided.",
+  ].join("\n");
+}
+
+/**
+ * Assembles the tier-tailored user prompt: the purchase, the simulation summary,
+ * any web research (with tier-specific guidance), and the per-heading
+ * instructions pointed at the tier's red flags and funding counterpart.
+ */
+function buildUserPrompt(
+  tier: TierKey,
+  purchase: string,
+  summary: string,
+  research: string,
+): string {
+  const tp = TIER_PROMPTS[tier];
+  const parts: string[] = [
+    `The user is considering purchasing: ${purchase}.`,
+    `Simulation data:\n${summary}`,
+  ];
+  if (research) {
+    parts.push(
+      `${research}\n\nUse the web research above to ground your assessment of the purchase and final ` +
+        `recommendation, citing a specific finding where it helps. ${tp.researchGuidance}`,
+    );
+  }
+  parts.push(
+    `Under the first heading, briefly recap what they want to buy and their situation. ${tp.riskFirstHeading} ` +
+      `Under the second heading, objectively compare TandaOmni to ${tp.counterpartShort} on total cost, ` +
+      "interest, and monthly payment, highlighting TandaOmni's interest-free advantage." +
+      (tp.secondHeadingExtra ? ` ${tp.secondHeadingExtra}` : "") +
+      ` Under the third heading, give a clear final recommendation: by default, recommend the better ` +
+      `funding option (usually TandaOmni) and explain why. ${tp.riskThirdHeading} ` +
+      "Focus on the purchase and these two funding options - do not discuss the platform or tanda " +
+      "payment risks.",
+  );
+  return parts.join("\n\n");
+}
+
 /** Simulation data the analysis reasons over, supplied by the parent on demand. */
 export interface AnalysisContext {
   /** Labelled, plain-text dump of every simulation input and calculated figure. */
   summary: string;
   /** Localized asset-type label, used as the purchase fallback when none is typed. */
   assetTypeLabel: string;
+  /**
+   * Which financing tier the simulation is for. Selects a tailored LLM prompt
+   * (relevant red flags + the correct funding counterpart) instead of one
+   * monolithic message, improving accuracy and shrinking the payload.
+   */
+  tier: TierKey;
 }
 
 interface AiAnalysisProps {
@@ -206,7 +416,7 @@ export function AiAnalysis({
     setQueries([]);
     onQueriesChange?.([]);
 
-    const { summary, assetTypeLabel } = context;
+    const { summary, assetTypeLabel, tier } = context;
     const language = LOCALE_LANGUAGE[locale] ?? "English";
     const tone =
       FORMALITY_LEVELS.find((f) => f.key === formality)?.tone ??
@@ -266,73 +476,10 @@ export function AiAnalysis({
     }
 
     const messages: LlmMessage[] = [
-      {
-        role: "system",
-        content:
-          "You are a practical financial advisor helping a person in Mexico fund a specific " +
-          "purchase. They are comparing TandaOmni, an interest-free savings circle (tanda / ROSCA), " +
-          "against a traditional bank loan. Treat the purchase as the user's own decision that they " +
-          "have already made: your MAIN job is to help them pay for it on the best terms by comparing " +
-          "TandaOmni against a bank loan and showing, with the numbers, why the interest-free TandaOmni " +
-          "route is usually the cheaper, smarter way to pay. " +
-          `Respond ONLY in ${language}. ` +
-          "Do NOT moralize about whether they should buy it, second-guess their taste, or lecture them " +
-          "about depreciation, resale value, model turnover, or whether a cheaper alternative exists - " +
-          "assume they have already decided what they want and focus on the financing. Only flag the " +
-          "purchase itself when it crosses a HIGH bar, namely: (a) a GROSS overpayment, where the stated " +
-          "price is wildly out of line with the item's real market value (e.g. a small purchase such as a " +
-          "phone, camera, console, or other consumer electronic priced at several times its normal retail " +
-          "price, such as paying $100,000 MXN for a device that sells for about $30,000 MXN). When the user " +
-          "names a specific small item and live web research is provided, USE that research to establish the " +
-          "item's current street/retail price before judging whether the stated price is a gross overpayment; " +
-          "or (b) a GENUINE physical or legal danger (e.g. building or buying on an active " +
-          "fault line, in a flood zone, on the slope of an active volcano, or property with clear " +
-          "title/legal problems). If - and ONLY if - one of these high-bar red flags is clearly present, " +
-          "flag it prominently and advise caution regardless of how attractive the financing looks. In " +
-          "every other case, do NOT discourage the purchase: keep the focus entirely on TandaOmni vs. " +
-          "the loan and recommend the better funding option. Do not invent a red flag where none exists; " +
-          "a normal, fairly-priced purchase is not a risk. " +
-          "Reason from the user's point of view: total cost, interest paid, monthly payment, and time to " +
-          "ownership. " +
-          "Do NOT advise about the TandaOmni platform itself, its operations, or its trustworthiness, " +
-          "and do NOT raise risks about the tanda mechanism such as members missing or defaulting on " +
-          "payments, the circle collapsing, or payout ordering - those risks are already mitigated by " +
-          "the platform and are out of scope. Treat TandaOmni's stated terms as given. " +
-          "You may be given recent web research gathered live for this purchase; use it to ground your " +
-          "assessment of the purchase and mention a relevant finding where it helps, but never " +
-          "contradict the simulation numbers. If no research is provided, rely on the simulation alone. " +
-          `Write in ${tone}. Format the answer in Markdown using EXACTLY these three section ` +
-          "headings, in this order, each rendered as a Markdown heading:\n" +
-          "🎯 Quick Summary\n" +
-          "💸 TandaOmni vs. loan\n" +
-          "✅ Final recommendation\n" +
-          `Translate the heading text into ${language}, but ALWAYS keep the leading emoji ` +
-          "(🎯, 💸, ✅) exactly as shown at the start of each heading. Use short sentences and " +
-          "bullet points under each heading. Keep it concise (about 180 words). Do not invent " +
-          "numbers beyond those provided.",
-      },
+      { role: "system", content: buildSystemPrompt(tier, language, tone) },
       {
         role: "user",
-        content:
-          `The user is considering purchasing: ${purchase}.\n\n` +
-          `Simulation data:\n${summary}\n\n` +
-          (research
-            ? `${research}\n\nUse the web research above to ground your assessment of the purchase ` +
-              "and final recommendation, citing a specific finding where it helps. If the purchase is a " +
-              "specific small item (e.g. a phone, camera, or gadget), use the research to check its current " +
-              "market/retail price and only flag a gross overpayment when the stated price is clearly far " +
-              "above it.\n\n"
-            : "") +
-          "Under the first heading, briefly recap what they want to buy and their situation. Only " +
-          "mention a risk in the purchase itself if it crosses the high bar (gross overpayment or " +
-          "genuine danger); otherwise do not raise one. Under the second, objectively compare TandaOmni " +
-          "to the loan on total cost, interest, and monthly payment, highlighting TandaOmni's " +
-          "interest-free advantage. Under the third heading, give a clear final recommendation: by " +
-          "default, recommend the better funding option (usually TandaOmni) and explain why. ONLY if a " +
-          "high-bar red flag is clearly present should you instead advise caution about the purchase " +
-          "itself and explain why. Do not invent risks or discourage a normal, fairly-priced purchase. " +
-          "Focus on the purchase and these two funding options - do not discuss the platform or tanda " +
-          "payment risks.",
+        content: buildUserPrompt(tier, purchase, summary, research),
       },
     ];
 

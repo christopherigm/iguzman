@@ -347,7 +347,7 @@ export function Simulator() {
       );
     }
 
-    return { summary: lines.join("\n"), assetTypeLabel };
+    return { summary: lines.join("\n"), assetTypeLabel, tier };
   };
 
   const handleExportPdf = async () => {
@@ -989,6 +989,14 @@ export function Simulator() {
             </Card>
           )}
 
+          {/* ── AI Analysis ───────────────────────────────────── */}
+          <AiAnalysis
+            buildContext={buildAnalysisContext}
+            onAnalysisChange={setAnalysisText}
+            onSourcesChange={setAnalysisSources}
+            onQueriesChange={setAnalysisQueries}
+          />
+
           {/* ── Projection chart ──────────────────────────────── */}
           {chartData && (
             <ProjectionChart
@@ -1011,14 +1019,6 @@ export function Simulator() {
               fmtWhole={fmtWhole}
             />
           )}
-
-          {/* ── AI Analysis ───────────────────────────────────── */}
-          <AiAnalysis
-            buildContext={buildAnalysisContext}
-            onAnalysisChange={setAnalysisText}
-            onSourcesChange={setAnalysisSources}
-            onQueriesChange={setAnalysisQueries}
-          />
 
           {/* ── Export to PDF ─────────────────────────────────── */}
           <Card gap={12} padding={20}>

@@ -89,6 +89,15 @@ export interface SimulationPdfProps {
   bankRows: PdfRow[];
   savings?: PdfRow;
   pieSection?: PdfPieSection;
+  /** Heading for the per-tier risk-mitigation block above the charts. */
+  mitigationHeading: string;
+  /** Default-risk mitigation notice for each tier (the simulated one flagged). */
+  tierMitigations: {
+    label: string;
+    text: string;
+    color: string;
+    current: boolean;
+  }[];
   charts: PdfLineChart[];
   analysisHeading?: string;
   analysisText?: string;
@@ -238,6 +247,28 @@ const styles = StyleSheet.create({
     color: MUTED,
     marginBottom: 6,
   },
+  mitigationItem: {
+    flexDirection: "row",
+    marginBottom: 5,
+    borderLeftWidth: 3,
+    paddingLeft: 8,
+    paddingVertical: 3,
+  },
+  mitigationItemCurrent: {
+    backgroundColor: "#f9fafb",
+  },
+  mitigationLabel: {
+    width: 104,
+    paddingRight: 8,
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+  },
+  mitigationText: {
+    flex: 1,
+    fontSize: 9,
+    color: "#374151",
+    lineHeight: 1.4,
+  },
   legendRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -383,7 +414,9 @@ function ResultRows({ rows }: { rows: PdfRow[] }) {
 // and cannot render into a PDF). Plots every series on a shared currency scale.
 
 const CHART_W = 507;
-const CHART_H = 200;
+// 20% shorter than the original 200 so the per-tier mitigation block fits on the
+// same page as both projection charts.
+const CHART_H = 160;
 const PAD_L = 58;
 const PAD_R = 10;
 const PAD_T = 10;
@@ -611,6 +644,8 @@ export function SimulationDocument({
   bankRows,
   savings,
   pieSection,
+  mitigationHeading,
+  tierMitigations,
   charts,
   analysisHeading,
   analysisText,
@@ -753,6 +788,27 @@ export function SimulationDocument({
           projection title), so no parent section title here. The disclaimer
           trails the charts so it stays last in the document. */}
       <Page size="LETTER" style={styles.page}>
+        {tierMitigations.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{mitigationHeading}</Text>
+            {tierMitigations.map((m, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.mitigationItem,
+                  { borderLeftColor: m.color },
+                  ...(m.current ? [styles.mitigationItemCurrent] : []),
+                ]}
+              >
+                <Text style={[styles.mitigationLabel, { color: m.color }]}>
+                  {m.label}
+                </Text>
+                <Text style={styles.mitigationText}>{m.text}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         {charts.map((c, i) => (
           <ChartBlock key={i} chart={c} />
         ))}

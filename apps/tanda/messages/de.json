@@ -106,7 +106,7 @@
       },
       "smallPurchases": {
         "label": "Kleine Anschaffungen",
-        "mitigation": "Kurze Laufzeiten (3–24 Monate) und eine Anzahlung von 10 % halten das Risiko bei schnell an Wert verlierender Elektronik wie Handys und Kameras gering. Der Artikel ist bis zur vollständigen Finanzierung auf die Gruppe registriert."
+        "mitigation": "Kurze Laufzeiten (3–24 Monate) und eine Anzahlung von 10 % halten das Risiko bei schnell an Wert verlierender Elektronik wie Handys und Kameras gering. Der Artikel ist bis zur vollständigen Finanzierung auf die Gruppe registriert. Auf der Kreditkarte wird eine Vorautorisierung (Reservierung) vorgenommen."
       }
     },
     "priceLabelG": "Zielpreis des Vermögenswerts (G)",
@@ -246,6 +246,7 @@
       "cetesYield": "CETES-Rendite",
       "escrow": "Treuhand-Freigabe",
       "escrowValue": "Monat {month} von {total}",
+      "mitigationHeading": "Risikominderung",
       "disclaimer": "Die Zahlen sind Schätzungen auf Grundlage der von dir gewählten Parameter und dienen ausschließlich zu Informationszwecken. Sie stellen keine Finanzberatung dar."
     }
   },
@@ -312,21 +313,27 @@
     "tiers": {
       "t1": {
         "name": "Immobilien (Wertsteigernd)",
-        "term": "60 bis 120 Monate",
-        "delta": "+4% bis +6%",
+        "term": "60 bis 360 Monate",
+        "delta": "+3% bis +6%",
         "mitigation": "15% Anzahlung, Treuhänderische Eigentumsübertragung (Reserva de Dominio)."
       },
       "t2": {
         "name": "Fahrzeuge & Gewerbliche Ausrüstung (Abnutzbar)",
-        "term": "12 bis 36 Monate",
+        "term": "12 bis 72 Monate",
         "delta": "Neu: +3% bis +6% / Gebraucht: −5% bis −10%",
         "mitigation": "20% Anzahlung, Pflicht-Versicherungspolice der Plattform (unabhängig vom Delta)."
       },
       "t3": {
         "name": "Reisen & Erlebnisse (Nicht Rückholbar)",
-        "term": "6 bis 12 Monate",
-        "delta": "+2% bis +4%",
+        "term": "6 bis 72 Monate",
+        "delta": "+2% bis +6%",
         "mitigation": "Treuhand-Sperre - Auszahlung erst nach 60% der Beiträge. Kreditkarten-Vorautorisierung."
+      },
+      "t4": {
+        "name": "Kleine Anschaffungen (Schnell an Wert verlierende Elektronik)",
+        "term": "3 bis 24 Monate",
+        "delta": "+2% bis +6%",
+        "mitigation": "10% Anzahlung, Kurze Laufzeiten (3–24 Monate). Artikel bis zur vollständigen Finanzierung auf die Gruppe registriert. Kreditkarten-Vorautorisierung."
       }
     },
     "math": {

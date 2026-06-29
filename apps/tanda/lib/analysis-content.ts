@@ -39,8 +39,8 @@ export const STAKEHOLDERS: StakeholderDef[] = [
 ];
 
 export interface TierDef {
-  tier: "1" | "2" | "3";
-  key: "t1" | "t2" | "t3";
+  tier: "1" | "2" | "3" | "4";
+  key: "t1" | "t2" | "t3" | "t4";
   color: string;
   icon: string;
 }
@@ -49,6 +49,7 @@ export const TIER_DEFS: TierDef[] = [
   { tier: "1", key: "t1", color: "var(--success, #16a34a)", icon: "🏠" },
   { tier: "2", key: "t2", color: "var(--warning, #d97706)", icon: "🚗" },
   { tier: "3", key: "t3", color: "var(--accent, #06b6d4)", icon: "✈️" },
+  { tier: "4", key: "t4", color: "#7c3aed", icon: "📱" },
 ];
 
 // Universal math variables. The translation key differs from the rendered

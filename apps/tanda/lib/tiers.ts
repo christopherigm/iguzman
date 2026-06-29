@@ -5,11 +5,7 @@
 // styling. Kept separate from the Simulator UI so the numbers/copy can be tuned
 // without touching component logic.
 
-export type TierKey =
-  | "real_estate"
-  | "vehicle"
-  | "travel"
-  | "small_purchases";
+export type TierKey = "real_estate" | "vehicle" | "travel" | "small_purchases";
 
 export interface TierConfig {
   icon: string;
@@ -154,12 +150,12 @@ export const TIERS: Record<TierKey, TierConfig> = {
     // consumer lender, like the travel tier.
     defaultPrice: 15000,
     currency: "MXN",
-    mitigationKind: "info",
+    mitigationKind: "warning",
     // Same CAT band as the travel tier per spec: financed via store credit or a
     // Mexican consumer/payday lender, advertised as a CAT (not a nominal APR).
     rateKind: "cat",
     bankAprSteps: [0.55, 0.781, 1.5, 2.5, 3.882, 4.56],
-    bankAprDefault: 1.5,
+    bankAprDefault: 2.5,
     comparisonHeadingKey: "consumerLenderColumnHeading",
     comparisonNoticeKey: "consumerLenderNotice",
     showRepayMultiple: true,

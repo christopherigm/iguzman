@@ -106,7 +106,7 @@
       },
       "smallPurchases": {
         "label": "Small Purchases",
-        "mitigation": "Short terms (3–24 months) and a 10% downpayment keep exposure low on fast-depreciating electronics like phones and cameras. The item is registered to the group until it is fully funded."
+        "mitigation": "Short terms (3–24 months) and a 10% downpayment keep exposure low on fast-depreciating electronics like phones and cameras. The item is registered to the group until it is fully funded. A credit card pre-authorization hold will be placed."
       }
     },
     "priceLabelG": "Target Asset Price (G)",
@@ -246,6 +246,7 @@
       "cetesYield": "CETES Treasury Yield",
       "escrow": "Escrow Unlocks",
       "escrowValue": "Month {month} of {total}",
+      "mitigationHeading": "Risk Mitigation",
       "disclaimer": "Figures are estimates based on the parameters you selected and are provided for informational purposes only. They are not financial advice."
     }
   },
@@ -312,21 +313,27 @@
     "tiers": {
       "t1": {
         "name": "Real Estate (Appreciating Asset)",
-        "term": "60 to 120 Months",
-        "delta": "+4% to +6%",
+        "term": "60 to 360 Months",
+        "delta": "+3% to +6%",
         "mitigation": "15% Downpayment, Legal Deed Trust (Reserva de Dominio)."
       },
       "t2": {
         "name": "Vehicles & Commercial Equipment (Depreciating / Destructible)",
-        "term": "12 to 36 Months",
+        "term": "12 to 72 Months",
         "delta": "New: +3% to +6% / Used: −5% to −10%",
         "mitigation": "20% Downpayment, Mandatory Platform-Held Insurance Policy (regardless of delta direction)."
       },
       "t3": {
         "name": "Travel & Experiences (Unrecoverable)",
-        "term": "6 to 12 Months",
-        "delta": "+2% to +4%",
+        "term": "6 to 72 Months",
+        "delta": "+2% to +6%",
         "mitigation": "Escrow Lock - Payout only releases after user contributes 60% of total goal. Credit Card Pre-authorization."
+      },
+      "t4": {
+        "name": "Small Purchases (Fast-Depreciating Electronics)",
+        "term": "3 to 24 Months",
+        "delta": "+2% to +6%",
+        "mitigation": "10% Downpayment, Short Terms (3–24 Months). Item Registered to the Group Until Fully Funded. Credit Card Pre-authorization."
       }
     },
     "math": {
