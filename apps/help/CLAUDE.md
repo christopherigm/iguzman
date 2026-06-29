@@ -53,15 +53,16 @@ Documents the `apps/scraper/` REST API. Update when endpoints, request/response 
 
 ### Smart TV - `app/[locale]/smarttv-panel.tsx`
 
-End-to-end Samsung Tizen TV workflow. Screenshots are self-hosted under `public/smarttv/` (downloaded from developer.samsung.com); update them and the `IMG` map together if Samsung redesigns the tooling. Step descriptions track the official Samsung Developer docs linked per section (`DOC_*` constants).
+End-to-end Samsung Tizen TV workflow, ordered **setup-first**: stand up the testing toolchain (IDE, certs, emulator, real TV) before scaffolding the app, then link the built bundle into Tizen Studio, build the signed `.wgt`, and test. Build/test steps lead with the **Tizen Studio GUI** (Import, Build Signed Package, Run As ▸ Tizen Web Application) and keep the `tizen` CLI as the "or, from a terminal" alternative. Screenshots are self-hosted under `public/smarttv/` (downloaded from developer.samsung.com); update them and the `IMG` map together if Samsung redesigns the tooling. Step descriptions track the official Samsung Developer docs linked per section (`DOC_*` constants).
 
-| Group              | Sections documented                                                                                  |
-| ------------------ | ---------------------------------------------------------------------------------------------------- |
-| Scaffold & Develop | `cli/new-smarttv-app/new-smarttv-app.sh` (`pnpm new-tv-app`), browser preview (`pnpm dev`)           |
-| Tizen Studio Setup | Install Tizen Studio, add TV Extensions + Certificate Extension, create a certificate profile, VS Code extension alternative |
-| Build & Package    | `pnpm build` + `tizen package` to a signed `.wgt` (mirrors the generated `apps/<name>/README.md`)    |
-| Test in Emulator   | Create/launch the TV emulator, `tizen install`/`run` on `emulator-26101`                             |
-| Test on a Real TV  | Enable Developer Mode, `sdb connect`, `tizen install`/`run` on the TV target                         |
+| Group (in order)         | Sections documented                                                                                                     |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Tizen Studio Setup       | Install Tizen Studio, add TV Extensions + Certificate Extension, create a certificate profile, VS Code alternative      |
+| Prepare the Test Targets | Create/launch the TV emulator; enable Developer Mode + register the TV in Device Manager (`sdb connect`)                |
+| Scaffold & Develop       | `cli/new-smarttv-app/new-smarttv-app.sh` (`pnpm new-tv-app`), browser preview (`pnpm dev`)                              |
+| Build & Package          | Link the built `dist/` into Tizen Studio (`File ▸ Import ▸ Tizen Project`), Build Signed Package (CLI: `tizen package`) |
+| Test in Emulator         | Run As ▸ Tizen Web Application on the emulator (CLI: `tizen install`/`run` on `emulator-26101`)                         |
+| Test on a Real TV        | Run As ▸ Tizen Web Application on the TV target (CLI: `tizen install`/`run`)                                            |
 
 ## Adding a New Tool or Section
 

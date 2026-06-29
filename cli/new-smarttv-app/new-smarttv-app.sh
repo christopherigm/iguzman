@@ -316,7 +316,7 @@ gen_app_config_xml() {
   cat > "$out" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://iguzman.com.mx/${name}" version="1.0.0" viewmodes="maximized">
-    <tizen:application id="${pkg_id}.${app_id_name}" package="${pkg_id}" required_version="6.0"/>
+    <tizen:application id="${pkg_id}.${app_id_name}" package="${pkg_id}" required_version="10.0"/>
     <content src="index.html"/>
     <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
     <icon src="icon.png"/>
@@ -325,6 +325,64 @@ gen_app_config_xml() {
     <tizen:profile name="tv"/>
     <tizen:setting screen-orientation="landscape" context-menu="enable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
 </widget>
+EOF
+}
+
+# Eclipse project descriptor. Tizen Studio's Import Wizard lists a folder as a
+# project only when its .project declares the Tizen WebNature/WebBuilder; without
+# these the wizard accepts the dist/ folder but shows an empty project list.
+gen_app_project() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>${name}</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.wst.jsdt.core.javascriptValidator</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+		<buildCommand>
+			<name>org.tizen.web.project.builder.WebBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.tizen.web.project.builder.WebNature</nature>
+		<nature>org.eclipse.wst.jsdt.core.jsNature</nature>
+	</natures>
+</projectDescription>
+EOF
+}
+
+# Tizen project metadata; carries the build profile so the Import Wizard
+# pre-selects tv-samsung instead of leaving the profile blank.
+# The platform name must match an installed TV platform; current Tizen Studio
+# ships "tv-samsung-10.0" (the legacy generic "tv-0.1" tag is no longer
+# recognised and triggers "Cannot support tv-0.1 ..."). The concrete TV API
+# level is still pinned by required_version in config.xml.
+# The empty <blacklist/> child is mandatory: Tizen Studio's TprojectHandler
+# dereferences it on launch, so a self-closed <package/> throws a
+# NullPointerException ("An internal error occurred during: Launching ...").
+gen_app_tproject() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'EOF'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<tproject xmlns="http://www.tizen.org/tproject">
+    <platforms>
+        <platform>
+            <name>tv-samsung-10.0</name>
+        </platform>
+    </platforms>
+    <package>
+        <blacklist/>
+    </package>
+</tproject>
 EOF
 }
 
@@ -610,7 +668,7 @@ Output goes to apps/${name}/dist.
 Install Tizen Studio and create a TV certificate profile first. Then:
 
     # from apps/${name}
-    cp config.xml icon.png dist/
+    cp config.xml icon.png .project .tproject dist/
     tizen package -t wgt -s <your-cert-profile> -- dist
     tizen install -n dist/${app_id_name}.wgt -t <tv-device>
     tizen run -p ${pkg_id} -t <tv-device>
@@ -621,6 +679,9 @@ Connect a physical TV in Developer Mode with: sdb connect <tv-ip>
 
 - config.xml is the Tizen manifest. The package id is a placeholder; Tizen Studio
   rewrites it to match your certificate author when you sign.
+- .project / .tproject are the Tizen Studio project metadata. The Import Wizard
+  (File > Import > Tizen > Tizen Project) only lists dist/ as a project when these
+  are present, so copy them into dist/ alongside config.xml before importing.
 - Add an icon.png (512x512) at the app root before packaging.
 - Deep-linking into a specific video is not a supported Tizen contract; launching
   the target app (YouTube, Prime, etc.) is best-effort. See src/lib/launch-app.ts.
@@ -1021,6 +1082,8 @@ create_app() {
   gen_app_gitignore    "${app}/.gitignore"
   gen_app_env_example  "${app}/env.example"
   gen_app_config_xml   "${app}/config.xml"
+  gen_app_project      "${app}/.project"
+  gen_app_tproject     "${app}/.tproject"
   gen_app_main_tsx     "${app}/src/main.tsx"
   gen_app_app_tsx      "${app}/src/App.tsx"
   gen_app_home_tsx     "${app}/src/screens/home.tsx"

@@ -12,22 +12,30 @@ const TV_SCAFFOLD =
 
 const TV_DEV = "pnpm dev --filter=<app-name>";
 
+// Build the static bundle and hand the dist/ folder to Tizen Studio (the
+// monorepo app has no Tizen project metadata of its own beyond config.xml).
+const TV_LINK =
+  "pnpm build --filter=<app-name>                  # outputs apps/<app-name>/dist\n" +
+  "cp config.xml icon.png .project .tproject dist/ # from apps/<app-name>: manifest, icon + Tizen project metadata\n" +
+  "# Tizen Studio: File ▸ Import ▸ Tizen ▸ Tizen Project ▸ select dist/ ▸ profile tv-samsung";
+
 const TV_PACKAGE =
-  "# from apps/<app-name>\n" +
-  "pnpm build --filter=<app-name>          # outputs dist/\n" +
-  "cp config.xml icon.png dist/            # Tizen manifest + 512×512 icon\n" +
+  "# CLI alternative to right-click ▸ Build Signed Package\n" +
+  "cd apps/<app-name>\n" +
   "tizen package -t wgt -s <cert-profile> -- dist";
 
 const TV_EMULATOR_RUN =
-  "sdb devices                             # note the emulator serial\n" +
+  "# CLI alternative to Run As ▸ Tizen Web Application\n" +
+  "sdb devices                             # note the emulator serial (e.g. emulator-26101)\n" +
   "tizen install -n dist/<App>.wgt -t emulator-26101\n" +
-  "tizen run -p <package-id> -t emulator-26101";
+  "tizen run -p <app-id> -t emulator-26101 # app id = <pkg>.<App> from config.xml";
 
 const TV_DEVICE_RUN =
+  "# CLI alternative to Run As ▸ Tizen Web Application\n" +
   "sdb connect <tv-ip>                     # e.g. sdb connect 192.168.1.10\n" +
   "sdb devices                             # confirm the TV is listed\n" +
   "tizen install -n dist/<App>.wgt -t <tv-device>\n" +
-  "tizen run -p <package-id> -t <tv-device>";
+  "tizen run -p <app-id> -t <tv-device>    # app id = <pkg>.<App> from config.xml";
 
 // Screenshots downloaded from developer.samsung.com (Samsung Smart TV docs),
 // self-hosted under public/smarttv. Intrinsic pixel dimensions are required by
@@ -79,6 +87,8 @@ const DOC_TV_DEVICE =
   "https://developer.samsung.com/smarttv/develop/getting-started/using-sdk/tv-device.html";
 const DOC_VS_CODE =
   "https://developer.samsung.com/smarttv/develop/tools/tizen-extension-for-vs-code.html";
+const DOC_IMPORT =
+  "https://developer.samsung.com/smarttv/develop/getting-started/creating-tv-applications/importing-tv-applications.html";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -87,20 +97,8 @@ export async function SmartTvPanel() {
 
   return (
     <>
-      <GroupLabel>{t("smartTvScaffoldGroup")}</GroupLabel>
-
-      <StepSection
-        heading={t("smartTvScaffoldHeading")}
-        description={t("smartTvScaffoldDesc")}
-        code={TV_SCAFFOLD}
-      />
-      <StepSection
-        heading={t("smartTvDevHeading")}
-        description={t("smartTvDevDesc")}
-        code={TV_DEV}
-      />
-
-      <GroupLabel marginTop={8}>{t("smartTvIdeGroup")}</GroupLabel>
+      {/* 1 ─ Install the IDE, extensions, and certificate profile. */}
+      <GroupLabel>{t("smartTvIdeGroup")}</GroupLabel>
 
       <StepSection
         heading={t("smartTvInstallIdeHeading")}
@@ -128,15 +126,8 @@ export async function SmartTvPanel() {
         links={[{ label: t("smartTvVscodeLink"), href: DOC_VS_CODE }]}
       />
 
-      <GroupLabel marginTop={8}>{t("smartTvPackageGroup")}</GroupLabel>
-
-      <StepSection
-        heading={t("smartTvPackageHeading")}
-        description={t("smartTvPackageDesc")}
-        code={TV_PACKAGE}
-      />
-
-      <GroupLabel marginTop={8}>{t("smartTvEmulatorGroup")}</GroupLabel>
+      {/* 2 ─ Stand up the emulator and the real TV before there's an app. */}
+      <GroupLabel marginTop={8}>{t("smartTvTargetsGroup")}</GroupLabel>
 
       <StepSection
         heading={t("smartTvCreateEmuHeading")}
@@ -147,6 +138,45 @@ export async function SmartTvPanel() {
         ]}
       />
       <StepSection
+        heading={t("smartTvDevModeHeading")}
+        description={t("smartTvDevModeDesc")}
+        links={[{ label: t("smartTvDevModeLink"), href: DOC_TV_DEVICE }]}
+        images={[{ ...IMG.developerMode, alt: t("smartTvDevModeImgAlt") }]}
+      />
+
+      {/* 3 ─ Create the app and iterate in a browser. */}
+      <GroupLabel marginTop={8}>{t("smartTvScaffoldGroup")}</GroupLabel>
+
+      <StepSection
+        heading={t("smartTvScaffoldHeading")}
+        description={t("smartTvScaffoldDesc")}
+        code={TV_SCAFFOLD}
+      />
+      <StepSection
+        heading={t("smartTvDevHeading")}
+        description={t("smartTvDevDesc")}
+        code={TV_DEV}
+      />
+
+      {/* 4 ─ Link the built bundle into Tizen Studio and build the .wgt there. */}
+      <GroupLabel marginTop={8}>{t("smartTvPackageGroup")}</GroupLabel>
+
+      <StepSection
+        heading={t("smartTvLinkIdeHeading")}
+        description={t("smartTvLinkIdeDesc")}
+        links={[{ label: t("smartTvLinkIdeLink"), href: DOC_IMPORT }]}
+        code={TV_LINK}
+      />
+      <StepSection
+        heading={t("smartTvPackageHeading")}
+        description={t("smartTvPackageDesc")}
+        code={TV_PACKAGE}
+      />
+
+      {/* 5 ─ Run the signed package on the emulator, then the real TV. */}
+      <GroupLabel marginTop={8}>{t("smartTvEmulatorGroup")}</GroupLabel>
+
+      <StepSection
         heading={t("smartTvRunEmuHeading")}
         description={t("smartTvRunEmuDesc")}
         code={TV_EMULATOR_RUN}
@@ -154,12 +184,6 @@ export async function SmartTvPanel() {
 
       <GroupLabel marginTop={8}>{t("smartTvDeviceGroup")}</GroupLabel>
 
-      <StepSection
-        heading={t("smartTvDevModeHeading")}
-        description={t("smartTvDevModeDesc")}
-        links={[{ label: t("smartTvDevModeLink"), href: DOC_TV_DEVICE }]}
-        images={[{ ...IMG.developerMode, alt: t("smartTvDevModeImgAlt") }]}
-      />
       <StepSection
         heading={t("smartTvDeployHeading")}
         description={t("smartTvDeployDesc")}
@@ -222,7 +246,9 @@ function StepSection({
         </Box>
       )}
       {code && <CodeBlock language="bash" code={code} />}
-      {images?.map((img) => <Screenshot key={img.src} {...img} />)}
+      {images?.map((img) => (
+        <Screenshot key={img.src} {...img} />
+      ))}
     </Box>
   );
 }
