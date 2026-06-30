@@ -1,25 +1,18 @@
 /* Full-bleed dimmed backdrop behind the detail content. Fixed to the viewport
-   (not the overscan-padded #root) with explicit edge offsets - the `inset`
-   shorthand is ignored on old Tizen browsers (Chromium <87) and would collapse
-   this layer to zero size. */
+   (not the overscan-padded #root). Sized with explicit `100vw`/`100vh` rather
+   than top/right/bottom/left:0 - on old Tizen Chromium (76, Tizen 6.x) a
+   percentage height inside a box whose own height is *derived* from top/bottom
+   collapses to zero, so the TvImage below would never get a height to fill. An
+   explicit viewport height gives it one. */
 .movie-detail__backdrop {
   position: fixed;
   top: 0;
-  right: 0;
-  bottom: 0;
   left: 0;
+  width: 100vw;
+  height: 100vh;
   z-index: -1;
   overflow: hidden;
   background: var(--background);
-}
-
-.movie-detail__backdrop-img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 /* Darken the left where the content sits, fading lighter to the right. */

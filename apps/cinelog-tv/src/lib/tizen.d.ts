@@ -33,8 +33,44 @@ interface TizenStatic {
   ApplicationControlData: new (key: string, value: string[]) => TizenApplicationControlData;
 }
 
+/**
+ * Subset of the Samsung AVPlay listener used by the in-app trailer player. Every
+ * field is optional - AVPlay only invokes the ones provided.
+ */
+interface AVPlayListener {
+  onbufferingstart?: () => void;
+  onbufferingprogress?: (percent: number) => void;
+  onbufferingcomplete?: () => void;
+  onstreamcompleted?: () => void;
+  oncurrentplaytime?: (currentTime: number) => void;
+  onerror?: (eventType: string) => void;
+  onevent?: (eventType: string, eventData: string) => void;
+}
+
+/**
+ * Samsung product AVPlay API (the native TV media player). Provided by the
+ * device's `$WEBAPIS/webapis/webapis.js`; absent in the dev browser/emulator.
+ */
+interface AVPlay {
+  open(url: string): void;
+  close(): void;
+  setDisplayRect(left: number, top: number, width: number, height: number): void;
+  setListener(listener: AVPlayListener): void;
+  prepare(): void;
+  prepareAsync(success: () => void, error: (error: unknown) => void): void;
+  play(): void;
+  pause(): void;
+  stop(): void;
+  getState(): string;
+}
+
+interface WebApis {
+  avplay: AVPlay;
+}
+
 declare global {
   interface Window {
     tizen?: TizenStatic;
+    webapis?: WebApis;
   }
 }

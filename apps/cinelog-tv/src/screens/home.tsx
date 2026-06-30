@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { TvGrid } from "@repo/ui-tv/tv-grid";
 import { TvText } from "@repo/ui-tv/tv-typography";
+import { TvImage } from "@repo/ui-tv/tv-image";
 import { Focusable } from "@repo/ui-tv/focusable";
 import { getMovies, UnauthorizedError, type Movie } from "@/lib/catalog";
 import { TvMovieCard } from "@/components/tv-movie-card";
@@ -77,20 +78,22 @@ export function Home({ onSignOut }: { onSignOut: () => void }) {
   return (
     <>
       <div className="home-backdrop" aria-hidden="true">
+        {/* TvImage (not a bare <img>) so backdrops render on old Tizen Chromium -
+            see @repo/ui-tv tv-image. The wrappers are stacked + crossfaded by
+            the `.home-backdrop .tv-image` rules in home.css. */}
         {backdrop.prev && (
-          <img
+          <TvImage
             key={`prev-${backdrop.prev}`}
-            className="home-backdrop__img"
             src={backdrop.prev}
-            alt=""
+            fit="cover"
           />
         )}
         {backdrop.current && (
-          <img
+          <TvImage
             key={backdrop.current}
-            className="home-backdrop__img home-backdrop__img--current"
+            className="home-backdrop__layer--current"
             src={backdrop.current}
-            alt=""
+            fit="cover"
           />
         )}
         <div className="home-backdrop__scrim" />

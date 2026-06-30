@@ -867,6 +867,81 @@ Connect a physical TV in Developer Mode with: sdb connect <tv-ip>
 EOF
 }
 
+gen_app_claude_md() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'MDEOF'
+# Smart TV App (Tizen)
+
+Vite + React SPA packaged as a Tizen `.wgt`, built on `@repo/ui-tv` (Norigin
+spatial navigation for D-pad focus). **Not a Next.js app** - the Next.js
+conventions in `apps/CLAUDE.md` (next/image, next-intl, proxy.ts, apiFetch) do
+**not** apply here. See `README.md` for build/package/run and
+`packages/ui-tv/CLAUDE.md` for the component library.
+
+## Target the real device: Tizen 6.0 = Chromium 76
+
+`config.xml` pins `required_version="6.0"`. **Real Samsung TVs on Tizen 6.0 run
+Chromium 76** - a 2019 engine, far older than any dev machine. Whenever you add
+or change CSS in this app (or in `@repo/ui-tv`, which it consumes), write it for
+**Chromium 76**, not for your laptop's browser.
+
+**Why this bites repeatedly:** the Tizen *emulator* and `pnpm dev` in a desktop
+browser both run a modern Chromium, so anything you write renders fine there.
+The bug only shows up on the physical TV, after packaging - the slowest possible
+feedback loop. Assume "works in the emulator" tells you nothing about the device.
+
+When something "loads but is invisible, zero-size, or mispositioned" on the TV,
+diagnose it as a **CSS-support gap first**, not a network/CORS/TLS problem.
+
+### CSS support floor (Chromium 76)
+
+The full list lives in `packages/ui-tv/CLAUDE.md` → "Old Tizen browser - CSS
+support floor". The ones most likely to bite:
+
+| Don't use | Min version | Do instead |
+| --------- | ----------- | ---------- |
+| `aspect-ratio` | 88 | `padding-top` ratio hack (see `TvImage`) |
+| `inset` shorthand | 87 | explicit `top` / `right` / `bottom` / `left` |
+| `color-mix()` | 111 | a palette token, or `opacity` / `rgba()` for muted text |
+| `gap` (flexbox) | 84 | `margin` on the children |
+| **percentage height off a derived-height box** | — | give the box an **explicit** height (`100vh`, fixed px) |
+
+That last row is subtle: an element whose own height comes from `top:0; bottom:0`
+(a *derived* height) does **not** give a child's `height: 100%` something to
+resolve against on Chromium 76 - the child collapses to zero and an image,
+though downloaded, never paints. Fixed-size flow elements (explicit px
+width/height) are immune; the trap is percentage/auto sizing.
+
+## Images - always use `TvImage`
+
+Render every image through `TvImage` from `@repo/ui-tv/tv-image`, never a bare
+`<img>`, for exactly the reasons above (it reserves space with the `padding-top`
+ratio hack or fills an explicitly-sized parent, and swaps in a placeholder on a
+missing/failed load).
+
+- **Aspect-ratio box** (poster, thumbnail): `<TvImage src={...} ratio={2/3} />`.
+- **Fill a parent** (full-bleed backdrop): give the parent an **explicit** height
+  (`height: 100vh`, not `top/bottom: 0`), then `<TvImage src={...} fit="cover" />`.
+
+The only acceptable bare `<img>` is a **fixed-size, normal-flow** icon with
+explicit px `width`/`height` and a transparent background - it doesn't hit the
+collapse bug, and `TvImage` would add an opaque background square behind it.
+
+## i18n
+
+Uses a lightweight in-app provider (`src/i18n/provider.tsx`), **not** next-intl.
+Add user-visible strings as keys via `useT()`/`t(...)` and to every file under
+`src/i18n/messages/`; never hardcode them.
+
+## App launching
+
+Deep-linking into another TV app (YouTube, Prime, etc.) is best-effort via the
+Tizen ApplicationControl API in `src/lib/launch-app.ts`; it falls back to
+`window.open` in the browser. There is no guaranteed cross-app deep-link
+contract - launching the target app is the reliable part.
+MDEOF
+}
+
 # ── @repo/ui-tv package generators (seeded once) ─────────────────────────────────
 
 gen_uitv_package_json() {
@@ -990,7 +1065,9 @@ gen_uitv_tokens_css() {
   font-size: 1.5rem;
 }
 .tv-text-input__field::placeholder {
-  color: color-mix(in srgb, var(--foreground, #f5f5f7) 50%, transparent);
+  /* Muted via rgba, not color-mix() (Chromium 111+) - real Tizen TVs run
+     Chromium 76 and would drop a color-mix() color, leaving a default tint. */
+  color: rgba(245, 245, 247, 0.5);
 }
 
 .tv-text { color: var(--foreground, #f5f5f7); display: inline-block; }
@@ -1185,6 +1262,138 @@ export function TvText({ variant = 'body', children, className }: TvTextProps) {
 TSEOF
 }
 
+gen_uitv_tv_image() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'TSEOF'
+import { useState } from 'react';
+import type { ReactNode } from 'react';
+import './tv-image.css';
+
+export interface TvImageProps {
+  /** Image URL. A falsy value renders the `placeholder` instead. */
+  src?: string;
+  /** Alt text. Defaults to "" (decorative) - set it for meaningful images. */
+  alt?: string;
+  /**
+   * Aspect ratio as width / height (e.g. `2 / 3` for a movie poster, `16 / 9`
+   * for a backdrop). When set, the box reserves its own height from its width
+   * via the padding-top hack, so it works on TV browsers without CSS
+   * `aspect-ratio` (Tizen 6.x / Chromium <88). Omit to fill a parent that is
+   * already sized (the parent must give this box a height).
+   */
+  ratio?: number;
+  /** `object-fit` of the image. Defaults to `cover`. */
+  fit?: 'cover' | 'contain';
+  /** Shown when there is no `src` or the image fails to load. */
+  placeholder?: ReactNode;
+  /** Extra class on the wrapper (e.g. for border-radius). */
+  className?: string;
+}
+
+/**
+ * Old-Tizen-safe image box for Smart TV apps.
+ *
+ * Real Tizen TVs run an old Chromium (76-85 on Tizen 6.x) that silently ignores
+ * modern CSS such as `aspect-ratio` and the `inset` shorthand, which collapses
+ * an absolutely-positioned image to zero height - the image loads but never
+ * shows. `TvImage` sidesteps that with only broadly-supported CSS: a
+ * `padding-top` aspect-ratio hack and explicit `top`/`left` offsets. Prefer it
+ * over a bare `<img>` in every `@repo/ui-tv` consumer so images render the same
+ * on the device as in the emulator.
+ *
+ * It also swaps in `placeholder` when there is no `src` or the load fails.
+ */
+export function TvImage({
+  src,
+  alt = '',
+  ratio,
+  fit = 'cover',
+  placeholder,
+  className,
+}: TvImageProps) {
+  const [errored, setErrored] = useState(false);
+  const showImage = Boolean(src) && !errored;
+
+  const cls = ['tv-image', ratio ? '' : 'tv-image--fill', className]
+    .filter(Boolean)
+    .join(' ');
+
+  // The only dynamic style: reserve the aspect ratio as bottom padding
+  // (padding-top is a percentage of WIDTH, so height/width*100 = 100/ratio).
+  const style = ratio ? { paddingTop: `${100 / ratio}%` } : undefined;
+
+  const imgCls = ['tv-image__img', fit === 'contain' ? 'tv-image__img--contain' : '']
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <div className={cls} style={style}>
+      {showImage ? (
+        // `src` is a string here (showImage requires it truthy).
+        <img className={imgCls} src={src} alt={alt} onError={() => setErrored(true)} />
+      ) : (
+        placeholder != null && <div className="tv-image__placeholder">{placeholder}</div>
+      )}
+    </div>
+  );
+}
+TSEOF
+}
+
+gen_uitv_tv_image_css() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'CSSEOF'
+/* Old-Tizen-safe image box. See tv-image.tsx for why these rules avoid modern
+   CSS (no `aspect-ratio`, no `inset` shorthand, no `color-mix`). */
+
+.tv-image {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--surface-2, #1a1a22);
+}
+
+/* No `ratio`: fill a parent that already has a height. With a `ratio`, the
+   inline `padding-top` supplies the height and this is omitted. */
+.tv-image--fill {
+  height: 100%;
+}
+
+/* Image and placeholder are taken out of flow and pinned to all four edges with
+   explicit offsets (the `inset` shorthand is Chromium 87+). Width/height 100%
+   make them fill the (padding- or parent-) sized box. */
+.tv-image__img,
+.tv-image__placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.tv-image__img {
+  object-fit: cover;
+}
+
+.tv-image__img--contain {
+  object-fit: contain;
+}
+
+.tv-image__placeholder {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  /* Muted via opacity rather than color-mix() (Chromium 111+). */
+  color: var(--foreground, #f5f5f7);
+  opacity: 0.6;
+  font-size: 1.125rem;
+}
+CSSEOF
+}
+
 gen_uitv_remote_keys() {
   local out="$1"; mkdir -p "$(dirname "$out")"
   cat > "$out" << 'TSEOF'
@@ -1240,7 +1449,43 @@ when a plain `<input>` is focused. `TvTextInput` wraps that.
 | `@repo/ui-tv/tv-button` → `TvButton` | Focusable button (`onPress` fires on remote Enter). |
 | `@repo/ui-tv/tv-text-input` → `TvTextInput` | Focusable field; Enter opens the TV IME. Requires `ariaLabel`. |
 | `@repo/ui-tv/tv-typography` → `TvText` | 10-foot text scale (`hero`/`title`/`body`/`label`). |
+| `@repo/ui-tv/tv-image` → `TvImage` | Old-Tizen-safe image box (aspect-ratio + fallback) - use instead of a bare `<img>`. |
 | `@repo/ui-tv/remote-keys` → `TV_KEYS`, `onBackButton` | Remote key codes + Back-button helper. |
+
+## Images - always use `TvImage`
+
+Render images with `TvImage`, never a bare `<img>`. Real Tizen TVs run an old
+Chromium (76-85 on Tizen 6.x) that **silently ignores `aspect-ratio` and the
+`inset` shorthand**, which collapses an aspect-ratio'd or absolutely-positioned
+image to zero height: the image downloads fine but never appears (it works in
+the emulator's modern Chromium, so it slips through). `TvImage` reserves space
+with the `padding-top` ratio hack and explicit edge offsets, and swaps in a
+placeholder on missing/failed loads.
+
+```tsx
+import { TvImage } from '@repo/ui-tv/tv-image';
+
+// Self-sizing by aspect ratio (poster); reserves height from width.
+<TvImage src={cover} ratio={2 / 3} placeholder="No cover" />
+
+// Fill a parent that already has a height (e.g. a full-bleed backdrop). Give
+// that parent an EXPLICIT height (e.g. 100vh), not one derived from top/bottom.
+<TvImage src={url} fit="cover" />
+```
+
+## Old Tizen browser - CSS support floor
+
+Target **Chromium 76+** (Tizen 6.x). Avoid CSS newer than that in this package
+and in TV apps, or content renders in the emulator but not on the device:
+
+- `aspect-ratio` (88+) → use a `padding-top` ratio hack.
+- `inset` shorthand (87+) → use explicit `top`/`right`/`bottom`/`left`.
+- `color-mix()` (111+) → use a palette token or `opacity` for muted text.
+- flexbox `gap` (84+) → fine on most current panels but verify; prefer margins if it must work on the oldest.
+- **percentage height inside a box whose own height is derived** (e.g. from `top:0; bottom:0`) collapses to zero → give the box an **explicit** height (`100vh`, fixed px).
+
+Diagnose "image/element loads but is invisible or mispositioned" as a CSS-support
+gap first, not a network/CORS/TLS problem.
 
 ## Conventions
 
@@ -1265,6 +1510,8 @@ create_uitv_package() {
   gen_uitv_tv_button        "${pkg}/src/tv-button.tsx"
   gen_uitv_tv_text_input    "${pkg}/src/tv-text-input.tsx"
   gen_uitv_tv_typography    "${pkg}/src/tv-typography.tsx"
+  gen_uitv_tv_image         "${pkg}/src/tv-image.tsx"
+  gen_uitv_tv_image_css     "${pkg}/src/tv-image.css"
   gen_uitv_remote_keys      "${pkg}/src/remote-keys.ts"
   gen_uitv_claude_md        "${pkg}/CLAUDE.md"
 }
@@ -1293,6 +1540,7 @@ create_app() {
   gen_app_messages_en  "${app}/src/i18n/messages/en.json"
   gen_app_messages_es  "${app}/src/i18n/messages/es.json"
   gen_app_readme       "${app}/README.md"
+  gen_app_claude_md    "${app}/CLAUDE.md"
 }
 
 # ── Orchestration ───────────────────────────────────────────────────────────────

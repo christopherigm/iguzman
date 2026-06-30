@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Focusable } from "@repo/ui-tv/focusable";
@@ -17,6 +17,7 @@ import {
 import { launchDigitalCopy } from "@/lib/launch-app";
 import { useT } from "@/i18n/provider";
 import { TvFormatHeader } from "@/components/tv-format-header";
+import { TrailerOverlay } from "@/components/trailer-overlay";
 import trailerIcon from "@/icons/trailer.svg";
 import playStream from "@/icons/play-stream.svg";
 import "./movie-detail.css";
@@ -93,9 +94,38 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
   const [status, setStatus] = useState<Status>(() =>
     id ? "loading" : "not_found",
   );
+  const [trailerOpen, setTrailerOpen] = useState(false);
+  // A ref lets the single Back listener branch on the open state without
+  // re-subscribing every time it toggles.
+  const trailerOpenRef = useRef(false);
+  // Bumped to remount (and thus re-focus) the action row after the trailer
+  // overlay closes - its Close button stole D-pad focus on the way in, and
+  // Norigin doesn't restore focus when a focused node unmounts.
+  const [actionsKey, setActionsKey] = useState(0);
 
-  // Remote Back returns to the grid (matches the on-screen Back button).
-  useEffect(() => onBackButton(() => navigate(-1)), [navigate]);
+  const openTrailer = () => {
+    trailerOpenRef.current = true;
+    setTrailerOpen(true);
+  };
+  const closeTrailer = useCallback(() => {
+    trailerOpenRef.current = false;
+    setTrailerOpen(false);
+    setActionsKey((k) => k + 1);
+  }, []);
+
+  // Remote Back closes the trailer first, then returns to the grid (matching
+  // the on-screen Back/Close buttons).
+  useEffect(
+    () =>
+      onBackButton(() => {
+        if (trailerOpenRef.current) {
+          closeTrailer();
+          return;
+        }
+        navigate(-1);
+      }),
+    [navigate, closeTrailer],
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -153,11 +183,9 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
     <>
       {movie.backdrop && (
         <div className="movie-detail__backdrop" aria-hidden="true">
-          <img
-            className="movie-detail__backdrop-img"
-            src={movie.backdrop}
-            alt=""
-          />
+          {/* TvImage (not a bare <img>) so the backdrop renders on old Tizen
+              Chromium - see @repo/ui-tv tv-image for why. */}
+          <TvImage src={movie.backdrop} fit="cover" />
           <div className="movie-detail__scrim" />
         </div>
       )}
@@ -165,14 +193,16 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
       <div className="movie-detail">
         {/* Action row claims D-pad focus on mount; buttons navigate left/right.
             Back sits on the left, the play actions group on the right. */}
-        <Focusable group focusOnMount className="movie-detail__actions">
+        <Focusable
+          key={actionsKey}
+          group
+          focusOnMount
+          className="movie-detail__actions"
+        >
           <TvButton onPress={() => navigate(-1)}>{t("back")}</TvButton>
           <div className="movie-detail__actions-right">
             {movie.trailer_url && (
-              <TvButton
-                kind="error"
-                onPress={() => launchDigitalCopy(movie.trailer_url)}
-              >
+              <TvButton kind="error" onPress={openTrailer}>
                 <ButtonIcon src={trailerIcon} />
                 {t("trailer")}
               </TvButton>
@@ -254,6 +284,10 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
           </div>
         </div>
       </div>
+
+      {trailerOpen && movie.trailer_url && (
+        <TrailerOverlay url={movie.trailer_url} onClose={closeTrailer} />
+      )}
     </>
   );
 }

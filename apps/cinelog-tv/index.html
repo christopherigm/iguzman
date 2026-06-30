@@ -7,6 +7,19 @@
       content="width=1920, initial-scale=1, maximum-scale=1, user-scalable=no"
     />
     <title>Cinelog Tv</title>
+    <script>
+      // On a real Samsung TV, $WEBAPIS resolves to the device WebAPIs bundle
+      // that defines `window.webapis` - the Samsung product API that includes
+      // the native AVPlay media player used for the in-app trailer. Injected at
+      // runtime (not a static <script src>) so Vite's build doesn't try to
+      // resolve the $WEBAPIS path as a bundled asset. Harmlessly 404s in the dev
+      // browser / emulator, where the trailer falls back to the YouTube embed.
+      (function () {
+        var s = document.createElement("script");
+        s.src = "$WEBAPIS/webapis/webapis.js";
+        document.head.appendChild(s);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

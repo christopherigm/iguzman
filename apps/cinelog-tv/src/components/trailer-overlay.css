@@ -1,0 +1,56 @@
+/* Fullscreen trailer layer above the detail screen. Sized with explicit
+   100vw/100vh (not inset/top-bottom:0) so the children resolve a real height on
+   old Tizen Chromium 76 - see apps/cinelog-tv/CLAUDE.md. */
+.trailer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 100;
+}
+
+/* Embed (iframe) path: opaque black behind the player so the detail screen
+   doesn't show through and there's no white flash before the video paints.
+   The stream (AVPlay) path is intentionally left transparent - its video is on
+   a hardware plane behind the webview and must show through. */
+.trailer-overlay--embed {
+  background: #000000;
+}
+
+.trailer-overlay__frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  border: 0;
+}
+
+/* AVPlay display placeholder, pinned to the full 1920x1080 screen space. */
+.trailer-overlay__avplay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+}
+
+.trailer-overlay__close {
+  position: absolute;
+  top: 40px;
+  right: 64px;
+  z-index: 101;
+}
+
+.trailer-overlay__message {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000000;
+}

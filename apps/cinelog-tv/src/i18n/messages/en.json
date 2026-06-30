@@ -18,6 +18,8 @@
   "retry": "Try again",
   "back": "Back",
   "trailer": "Trailer",
+  "closeTrailer": "Close",
+  "trailerUnavailable": "Trailer unavailable",
   "digitalCopy": "Watch digital copy",
   "director": "Director",
   "genres": "Genres",

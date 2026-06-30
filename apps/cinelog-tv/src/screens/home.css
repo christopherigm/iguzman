@@ -15,34 +15,35 @@
 /* Full-bleed backdrop of the focused movie. Fixed to the viewport (not the
    overscan-padded #root) so it fills the whole screen, and pushed behind the
    screen content with a negative z-index. The dark base + scrim keep the
-   foreground text legible over any image. */
+   foreground text legible over any image. Sized with explicit `100vw`/`100vh`
+   (not top/right/bottom/left:0): on old Tizen Chromium (76, Tizen 6.x) a
+   percentage height inside a box whose height is *derived* from top/bottom
+   collapses to zero, which would leave the TvImage layers below with no height
+   to fill - they'd download but never show. */
 .home-backdrop {
   position: fixed;
-  /* Explicit edges instead of the `inset` shorthand: older Tizen TV browsers
-     (Chromium <87, e.g. Tizen 6.x) ignore `inset`, which would leave this
-     fixed layer with auto offsets and collapse it to zero size. */
   top: 0;
-  right: 0;
-  bottom: 0;
   left: 0;
+  width: 100vw;
+  height: 100vh;
   z-index: -1;
   overflow: hidden;
   background: var(--background);
 }
 
-/* Two stacked images crossfade on focus change: the incoming layer fades in
-   over the previous one (still at full opacity beneath), so there is no dip to
-   black between movies. object-fit: cover fills the screen keeping aspect. */
-.home-backdrop__img {
+/* Two stacked TvImage layers crossfade on focus change: the incoming layer
+   fades in over the previous one (still at full opacity beneath), so there is
+   no dip to black between movies. The descendant selector outranks TvImage's
+   own `.tv-image` (relative, in-flow) so the wrappers stack and fill. */
+.home-backdrop .tv-image {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
 }
 
-.home-backdrop__img--current {
+.home-backdrop .home-backdrop__layer--current {
   animation: home-backdrop-fade 500ms ease forwards;
 }
 
