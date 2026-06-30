@@ -23,6 +23,7 @@ when a plain `<input>` is focused. `TvTextInput` wraps that.
 | `@repo/ui-tv/tv-typography` → `TvText` | 10-foot text scale (`hero`/`title`/`body`/`label`). |
 | `@repo/ui-tv/tv-image` → `TvImage` | Old-Tizen-safe image box (aspect-ratio + fallback) - use instead of a bare `<img>`. |
 | `@repo/ui-tv/tv-badge` → `TvBadge` | 10-foot status/metadata pill (`filled`/`outlined`/`subtle`); `subtle` uses `rgba()` not `color-mix()` for old Chromium. |
+| `@repo/ui-tv/tv-scrollable` → `TvScrollable` | D-pad-scrollable region for tall, unfocusable content. Focusable itself: Up/Down scroll while focused, falling through to Norigin at the top/bottom edge; top/bottom fades show when more content exists. Needs an explicit `maxHeight`. |
 | `@repo/ui-tv/remote-keys` → `TV_KEYS`, `onBackButton` | Remote key codes + Back-button helper. |
 
 ## Images - always use `TvImage`

@@ -1,0 +1,52 @@
+/* D-pad-scrollable region. Written for old Tizen Chromium (76, Tizen 6.x): no
+   `inset` shorthand, no fl- `gap`, no `color-mix()`. See packages/ui-tv/CLAUDE.md. */
+
+/* Outer box: shrink-wraps the viewport (the fades are absolutely positioned and
+   out of flow), carries the focus ring (.tv-focusable), and anchors the fades. */
+.tv-scrollable {
+  position: relative;
+}
+
+/* The actual scroll container. Its `max-height` (set inline by the component)
+   caps the height; taller content overflows and scrolls. The native scrollbar
+   is hidden - the top/bottom fades signal "more content" instead. */
+.tv-scrollable__viewport {
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* Hide the scrollbar: WebKit (the only engine on Tizen) plus the standard
+     properties for completeness. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.tv-scrollable__viewport::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Top/bottom gradient masks, faded to the app background so clipped content
+   dissolves rather than cutting off hard. Pinned with explicit edges (no `inset`
+   shorthand) and click-through. The component renders each only when there is
+   more content in that direction. */
+.tv-scrollable__fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 64px;
+  pointer-events: none;
+}
+.tv-scrollable__fade--top {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--background, #0b0b0f) 0%,
+    rgba(11, 11, 15, 0) 100%
+  );
+}
+.tv-scrollable__fade--bottom {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    var(--background, #0b0b0f) 0%,
+    rgba(11, 11, 15, 0) 100%
+  );
+}

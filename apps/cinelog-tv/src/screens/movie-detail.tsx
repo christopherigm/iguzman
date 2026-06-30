@@ -6,13 +6,13 @@ import { TvButton } from "@repo/ui-tv/tv-button";
 import { TvText } from "@repo/ui-tv/tv-typography";
 import { TvImage } from "@repo/ui-tv/tv-image";
 import { TvBadge } from "@repo/ui-tv/tv-badge";
+import { TvScrollable } from "@repo/ui-tv/tv-scrollable";
 import { onBackButton } from "@repo/ui-tv/remote-keys";
 import {
   getMovie,
   NotFoundError,
   UnauthorizedError,
   type MovieDetail as MovieDetailData,
-  type MovieFormat,
 } from "@/lib/catalog";
 import { launchDigitalCopy } from "@/lib/launch-app";
 import { useT } from "@/i18n/provider";
@@ -23,16 +23,6 @@ import playStream from "@/icons/play-stream.svg";
 import "./movie-detail.css";
 
 type Status = "loading" | "ready" | "not_found" | "error";
-
-// Disc format display names. Brand-ish labels, not localized (mirrors the web
-// app's MovieFormat namespace values).
-const FORMAT_LABELS: Record<MovieFormat, string> = {
-  dvd: "DVD",
-  bluray: "Blu-ray",
-  "4k": "4K UHD",
-  digital: "Digital",
-  other: "Other",
-};
 
 // Code -> brand label for the disc tech-spec badges (copied from cinelog's
 // tech-spec-buttons.ts; these are untranslated brand names).
@@ -220,37 +210,59 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
         </Focusable>
 
         <div className="movie-detail__layout">
-          <div className="movie-detail__cover">
-            <TvFormatHeader
-              formats={movie.formats}
-              showDigital={!!movie.digital_copy_url}
+          <div className="movie-detail__sidebar">
+            <div className="movie-detail__cover">
+              <TvFormatHeader
+                formats={movie.formats}
+                showDigital={!!movie.digital_copy_url}
+              />
+              <TvImage
+                src={movie.cover}
+                ratio={2 / 3}
+                placeholder={t("noCover")}
+              />
+            </div>
+
+            <MetaText
+              label={t("spokenLanguages")}
+              value={movie.spoken_languages.join(", ")}
             />
-            <TvImage
-              src={movie.cover}
-              ratio={2 / 3}
-              placeholder={t("noCover")}
+            <MetaText
+              label={t("subtitles")}
+              value={movie.subtitle_languages.join(", ")}
             />
           </div>
 
-          <div className="movie-detail__content">
-            <TvText variant="hero">{movie.title}</TvText>
+          {/* The right column can outgrow the screen on text-heavy films, so it
+              is a TvScrollable: D-pad Down from the action row enters it and
+              scrolls; at the bottom edge focus falls back out. maxHeight is an
+              explicit vh-calc (viewport minus overscan + action row) - a
+              percentage off this derived-height layout would collapse on old
+              Tizen Chromium. */}
+          <TvScrollable
+            className="movie-detail__content"
+            maxHeight="calc(100vh - 220px)"
+          >
+            <div className="movie-detail__title-row">
+              <div className="movie-detail__title-line">
+                <TvText variant="hero">{movie.title}</TvText>
 
-            <div className="movie-detail__badges">
-              {movie.year && (
-                <TvBadge variant="subtle">{String(movie.year)}</TvBadge>
+                <div className="movie-detail__badges movie-detail__title-badges">
+                  {movie.year && (
+                    <TvBadge variant="subtle">{String(movie.year)}</TvBadge>
+                  )}
+                </div>
+              </div>
+
+              {movie.director && (
+                <TvText variant="body" className="movie-detail__director">
+                  {t("director")} {movie.director}
+                </TvText>
               )}
-              {movie.formats.map((fmt) => (
-                <TvBadge key={fmt} variant="subtle">
-                  {FORMAT_LABELS[fmt] ?? fmt}
-                </TvBadge>
-              ))}
             </div>
-
-            <MetaText label={t("director")} value={movie.director} />
 
             {movie.genres.length > 0 && (
               <div className="movie-detail__meta">
-                <TvText variant="label">{t("genres")}</TvText>
                 <div className="movie-detail__badges">
                   {movie.genres.map((genre) => (
                     <TvBadge key={genre.id} variant="outlined">
@@ -273,15 +285,7 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
             <MetaText label={t("cast")} value={cast} />
             <MetaText label={t("audio")} value={audio} />
             <MetaText label={t("hdr")} value={hdr} />
-            <MetaText
-              label={t("spokenLanguages")}
-              value={movie.spoken_languages.join(", ")}
-            />
-            <MetaText
-              label={t("subtitles")}
-              value={movie.subtitle_languages.join(", ")}
-            />
-          </div>
+          </TvScrollable>
         </div>
       </div>
 

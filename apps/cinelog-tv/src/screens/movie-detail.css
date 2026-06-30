@@ -61,28 +61,42 @@
   align-items: flex-start;
 }
 
-.movie-detail__cover {
+/* Left column: the poster plus its language/subtitle metadata stacked below. */
+.movie-detail__sidebar {
   display: flex;
   flex-direction: column;
   width: 360px;
   flex-shrink: 0;
   margin-right: 56px;
+}
+.movie-detail__sidebar .movie-detail__meta {
+  margin-top: 24px;
+}
+
+.movie-detail__cover {
+  display: flex;
+  flex-direction: column;
   border-radius: 8px;
   overflow: hidden;
 }
 
+/* The content column is now a TvScrollable; this class lands on its outer box.
+   It must shrink within the flex row so long text wraps instead of pushing the
+   layout wider than the screen. The inner scroll viewport owns the column
+   layout and vertical rhythm below. */
 .movie-detail__content {
-  display: flex;
-  flex-direction: column;
-  /* Allow the column to shrink within the flex row so long text wraps instead
-     of pushing the layout wider than the screen. */
   min-width: 0;
   flex: 1;
 }
 
+.movie-detail__content .tv-scrollable__viewport {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Vertical rhythm via margins (gap support is uneven on the oldest panels). */
-.movie-detail__content > * {
-  margin-bottom: 28px;
+.movie-detail__content .tv-scrollable__viewport > * {
+  margin-bottom: 24px;
 }
 
 .movie-detail__meta {
@@ -93,9 +107,39 @@
   margin-bottom: 10px;
 }
 
+/* Title block: the title + badges line, with the director stacked beneath it. */
+.movie-detail__title-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Title + year/format badges on one line, the badges trailing the title and
+   sitting on its baseline. wrap keeps them readable if the title is very long;
+   margin-right on the title (not `gap`) spaces them on the oldest Tizen panels. */
+.movie-detail__title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+}
+.movie-detail__title-line .tv-text--hero {
+  margin-right: 24px;
+}
+
+/* Director sits directly below the title/badges line. */
+.movie-detail__director {
+  margin-top: 12px;
+}
+
 .movie-detail__badges {
   display: flex;
   flex-wrap: wrap;
+}
+
+/* In the title row the badges share a single baseline line, so drop the stacked
+   bottom margin the badges carry elsewhere. */
+.movie-detail__title-badges .tv-badge {
+  margin-bottom: 0;
 }
 .movie-detail__badges .tv-badge {
   margin-right: 12px;
