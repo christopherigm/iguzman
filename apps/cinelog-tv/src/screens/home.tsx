@@ -11,7 +11,7 @@ export function Home() {
   const [query, setQuery] = useState('');
 
   return (
-    <Focusable group>
+    <Focusable group focusOnMount>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 40, maxWidth: 1100 }}>
         <TvText variant="hero">{t('homeTitle')}</TvText>
 

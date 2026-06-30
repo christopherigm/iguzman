@@ -195,20 +195,54 @@ EOF
 gen_app_vite_config() {
   local out="$1"; mkdir -p "$(dirname "$out")"
   cat > "$out" << EOF
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
+
+// Tizen runs the packaged .wgt from the widget's local filesystem (an opaque,
+// file://-like origin). ES-module scripts are fetched with CORS semantics, so a
+// \`<script type="module" crossorigin>\` entry is blocked there and never executes
+// - React never mounts and only the static HTML renders. This plugin rewrites the
+// entry into a classic <script>, which loads fine from the filesystem. Pair it
+// with an IIFE bundle (see build.rollupOptions.output.format) so the body has no
+// module syntax.
+function tizenClassicScript(): Plugin {
+  return {
+    name: 'tizen-classic-script',
+    transformIndexHtml: {
+      order: 'post',
+      // \`defer\` preserves the module script's implicit "run after DOM parsed"
+      // timing - a plain head script would run before #root exists and throw.
+      handler: (html) =>
+        html
+          .replace(/<script type="module"/g, '<script defer')
+          .replace(/\s+crossorigin/g, ''),
+    },
+  };
+}
 
 // base: './' keeps asset URLs relative so the packaged .wgt loads from the TV
 // filesystem. target es2015 stays safe across older Tizen webviews.
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [react(), tizenClassicScript()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
   server: { port: ${port}, host: true },
-  build: { outDir: 'dist', target: 'es2015' },
+  build: {
+    outDir: 'dist',
+    target: 'es2015',
+    // No module preload links (they assume a module entry).
+    modulePreload: false,
+    // Single self-contained classic bundle - no module imports between chunks.
+    rollupOptions: {
+      output: {
+        format: 'iife',
+        inlineDynamicImports: true,
+      },
+    },
+  },
 });
 EOF
 }
@@ -449,7 +483,7 @@ export function Home() {
   const [query, setQuery] = useState('');
 
   return (
-    <Focusable group>
+    <Focusable group focusOnMount>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 40, maxWidth: 1100 }}>
         <TvText variant="hero">{t('homeTitle')}</TvText>
 
@@ -848,6 +882,7 @@ gen_uitv_focusable() {
   local out="$1"; mkdir -p "$(dirname "$out")"
   cat > "$out" << 'TSEOF'
 import { useFocusable, FocusContext } from '@noriginmedia/norigin-spatial-navigation';
+import { useEffect } from 'react';
 import type { ReactNode, Ref } from 'react';
 import './tokens.css';
 
@@ -861,6 +896,13 @@ export interface FocusableProps {
   className?: string;
   /** Wrap children in a FocusContext so they form a navigable group. */
   group?: boolean;
+  /**
+   * Grab the initial D-pad focus when this mounts. Norigin focuses nothing by
+   * default, so without a node claiming focus the remote's arrows and Enter are
+   * all no-ops. Set this on the top-level container of a screen. For a `group`,
+   * focus delegates to the first focusable child.
+   */
+  focusOnMount?: boolean;
   children: ReactNode | ((props: FocusableRenderProps) => ReactNode);
 }
 
@@ -868,12 +910,23 @@ export interface FocusableProps {
  * Generic D-pad-focusable wrapper. Use `group` for a container whose children
  * should be navigated as a unit; otherwise it is a single focusable item.
  */
-export function Focusable({ onEnterPress, onFocus, className, group, children }: FocusableProps) {
-  const { ref, focused, focusKey } = useFocusable({
+export function Focusable({
+  onEnterPress,
+  onFocus,
+  className,
+  group,
+  focusOnMount,
+  children,
+}: FocusableProps) {
+  const { ref, focused, focusKey, focusSelf } = useFocusable({
     onEnterPress,
     onFocus,
     trackChildren: group,
   });
+
+  useEffect(() => {
+    if (focusOnMount) focusSelf();
+  }, [focusOnMount, focusSelf]);
 
   const cls = ['tv-focusable', focused ? 'tv-focusable--focused' : '', className]
     .filter(Boolean)

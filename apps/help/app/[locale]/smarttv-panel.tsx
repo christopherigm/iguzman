@@ -19,19 +19,34 @@ const TV_LINK =
   "cp config.xml icon.png .project .tproject dist/ # from apps/<app-name>: manifest, icon + Tizen project metadata\n" +
   "# Tizen Studio: File ▸ Import ▸ Tizen ▸ Tizen Project ▸ select dist/ ▸ profile tv-samsung";
 
+// pnpm tv-cert wraps `tizen certificate` + `tizen security-profiles add`. It is
+// emulator-only; physical TVs still need the Samsung distributor cert (DUID) from
+// the Certificate Manager GUI described above.
+const TV_CERT =
+  "pnpm tv-cert                                     # interactive; emulator-only signing profile\n" +
+  "# Physical TVs still need a Samsung distributor cert (DUID) via Certificate Manager (GUI above).";
+
+// pnpm tv-build discovers Tizen apps, picks a signing profile, builds the bundle,
+// copies the manifest into dist/ and runs `tizen package`.
 const TV_PACKAGE =
-  "# CLI alternative to right-click ▸ Build Signed Package\n" +
+  "pnpm tv-build                                    # interactive app + profile picker\n" +
+  "pnpm tv-build <app-name>                         # skip the app picker\n" +
+  "# Or by hand (equivalent to right-click ▸ Build Signed Package):\n" +
   "cd apps/<app-name>\n" +
   "tizen package -t wgt -s <cert-profile> -- dist";
 
+// pnpm tv-deploy lists connected sdb targets, auto-builds the .wgt when missing,
+// then installs and runs it.
 const TV_EMULATOR_RUN =
-  "# CLI alternative to Run As ▸ Tizen Web Application\n" +
+  "pnpm tv-deploy                          # pick app + target; auto-builds the .wgt if missing\n" +
+  "# Or by hand (equivalent to Run As ▸ Tizen Web Application):\n" +
   "sdb devices                             # note the emulator serial (e.g. emulator-26101)\n" +
   "tizen install -n dist/<App>.wgt -t emulator-26101\n" +
   "tizen run -p <app-id> -t emulator-26101 # app id = <pkg>.<App> from config.xml";
 
 const TV_DEVICE_RUN =
-  "# CLI alternative to Run As ▸ Tizen Web Application\n" +
+  "pnpm tv-deploy                          # enter the TV IP when prompted if it isn't connected yet\n" +
+  "# Or by hand (equivalent to Run As ▸ Tizen Web Application):\n" +
   "sdb connect <tv-ip>                     # e.g. sdb connect 192.168.1.10\n" +
   "sdb devices                             # confirm the TV is listed\n" +
   "tizen install -n dist/<App>.wgt -t <tv-device>\n" +
@@ -115,6 +130,7 @@ export async function SmartTvPanel() {
         heading={t("smartTvCertHeading")}
         description={t("smartTvCertDesc")}
         links={[{ label: t("smartTvCertLink"), href: DOC_CERTIFICATES }]}
+        code={TV_CERT}
         images={[
           { ...IMG.certManager, alt: t("smartTvCertManagerImgAlt") },
           { ...IMG.certSelectTv, alt: t("smartTvCertImgAlt") },
