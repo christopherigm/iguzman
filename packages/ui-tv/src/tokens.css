@@ -2,17 +2,19 @@
    --foreground, --surface-2) that the host app defines in its index.css. */
 :root {
   --tv-focus-color: var(--accent, #06b6d4);
-  --tv-radius: 12px;
+  --tv-radius: 2px;
 }
 
 .tv-focusable {
   outline: none;
   border-radius: var(--tv-radius);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .tv-focusable--focused {
   box-shadow: 0 0 0 4px var(--tv-focus-color);
-  transform: scale(1.05);
+  /* transform: scale(1.05); */
 }
 
 .tv-button {
@@ -32,7 +34,6 @@
 .tv-text-input {
   display: block;
   background: var(--surface-2, #1a1a22);
-  padding: 6px;
 }
 .tv-text-input__field {
   width: 100%;
@@ -47,8 +48,25 @@
   color: color-mix(in srgb, var(--foreground, #f5f5f7) 50%, transparent);
 }
 
-.tv-text { color: var(--foreground, #f5f5f7); display: inline-block; }
-.tv-text--hero { font-size: 3.5rem; font-weight: 700; line-height: 1.1; }
-.tv-text--title { font-size: 2.25rem; font-weight: 700; }
-.tv-text--body { font-size: 1.5rem; font-weight: 400; }
-.tv-text--label { font-size: 1.125rem; font-weight: 500; opacity: 0.7; }
+.tv-text {
+  color: var(--foreground, #f5f5f7);
+  display: inline-block;
+}
+.tv-text--hero {
+  font-size: 3.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.tv-text--title {
+  font-size: 2.25rem;
+  font-weight: 700;
+}
+.tv-text--body {
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+.tv-text--label {
+  font-size: 1.125rem;
+  font-weight: 500;
+  opacity: 0.7;
+}

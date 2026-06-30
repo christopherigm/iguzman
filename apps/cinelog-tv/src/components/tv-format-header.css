@@ -1,0 +1,28 @@
+.tv-format-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 32px;
+}
+
+.tv-format-header__icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+/* Monochrome icons are tinted white via a mask so they read on the colored bar.
+   The icon URL arrives as the inline --icon custom property. */
+.tv-format-header__icon--mask {
+  background-color: #ffffff;
+  -webkit-mask-image: var(--icon);
+  mask-image: var(--icon);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}

@@ -59,7 +59,7 @@ setup_strings() {
     PROFILE_FAILED="Falló la creación del perfil de seguridad."
     DONE_MSG="¡Listo! Perfil de firma creado."
     NEXT_STEPS="Próximos pasos"
-    NEXT_BUILD="pnpm tv-build   # empaqueta una app firmada con este perfil"
+    NEXT_BUILD="pnpm tv-deploy   # construye, firma y despliega una app con este perfil"
     DEVICE_NOTE="Para TVs físicas necesitas un certificado de distribuidor de Samsung (Certificate Manager, login de Samsung). Este perfil sirve para el emulador."
   else
     WELCOME="Samsung Smart TV Certificate"
@@ -89,7 +89,7 @@ setup_strings() {
     PROFILE_FAILED="Security profile creation failed."
     DONE_MSG="Done! Signing profile created."
     NEXT_STEPS="Next steps"
-    NEXT_BUILD="pnpm tv-build   # package a signed app with this profile"
+    NEXT_BUILD="pnpm tv-deploy   # build, sign and deploy an app with this profile"
     DEVICE_NOTE="Physical TVs need a Samsung distributor certificate (Certificate Manager, Samsung login). This profile is for the emulator."
   fi
 }

@@ -26,26 +26,26 @@ const TV_CERT =
   "pnpm tv-cert                                     # interactive; emulator-only signing profile\n" +
   "# Physical TVs still need a Samsung distributor cert (DUID) via Certificate Manager (GUI above).";
 
-// pnpm tv-build discovers Tizen apps, picks a signing profile, builds the bundle,
-// copies the manifest into dist/ and runs `tizen package`.
+// pnpm tv-deploy now builds, signs, packages and deploys in one step (see the
+// Test sections below). To build the signed package on its own, use the GUI
+// (right-click ▸ Build Signed Package) or the `tizen package` CLI equivalent.
 const TV_PACKAGE =
-  "pnpm tv-build                                    # interactive app + profile picker\n" +
-  "pnpm tv-build <app-name>                         # skip the app picker\n" +
-  "# Or by hand (equivalent to right-click ▸ Build Signed Package):\n" +
+  "# pnpm tv-deploy builds, signs, packages and runs in one step (next sections).\n" +
+  "# Or build the signed package by hand (equivalent to right-click ▸ Build Signed Package):\n" +
   "cd apps/<app-name>\n" +
   "tizen package -t wgt -s <cert-profile> -- dist";
 
-// pnpm tv-deploy lists connected sdb targets, auto-builds the .wgt when missing,
-// then installs and runs it.
+// pnpm tv-deploy lists connected sdb targets, builds + signs the .wgt, then
+// installs and runs it.
 const TV_EMULATOR_RUN =
-  "pnpm tv-deploy                          # pick app + target; auto-builds the .wgt if missing\n" +
+  "pnpm tv-deploy                          # pick app + target; builds, signs, installs and runs\n" +
   "# Or by hand (equivalent to Run As ▸ Tizen Web Application):\n" +
   "sdb devices                             # note the emulator serial (e.g. emulator-26101)\n" +
   "tizen install -n dist/<App>.wgt -t emulator-26101\n" +
   "tizen run -p <app-id> -t emulator-26101 # app id = <pkg>.<App> from config.xml";
 
 const TV_DEVICE_RUN =
-  "pnpm tv-deploy                          # enter the TV IP when prompted if it isn't connected yet\n" +
+  "pnpm tv-deploy                          # builds, signs, installs + runs; enter the TV IP if not connected yet\n" +
   "# Or by hand (equivalent to Run As ▸ Tizen Web Application):\n" +
   "sdb connect <tv-ip>                     # e.g. sdb connect 192.168.1.10\n" +
   "sdb devices                             # confirm the TV is listed\n" +

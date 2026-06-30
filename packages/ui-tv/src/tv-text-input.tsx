@@ -1,7 +1,7 @@
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
-import { useRef } from 'react';
-import type { Ref } from 'react';
-import './tokens.css';
+import { useFocusable } from "@noriginmedia/norigin-spatial-navigation";
+import { useRef } from "react";
+import type { Ref } from "react";
+import "./tokens.css";
 
 export interface TvTextInputProps {
   value: string;
@@ -17,13 +17,26 @@ export interface TvTextInputProps {
  * pressing Enter focuses a plain <input>, which opens the TV's system on-screen
  * keyboard (IME).
  */
-export function TvTextInput({ value, onChange, ariaLabel, placeholder, className }: TvTextInputProps) {
+export function TvTextInput({
+  value,
+  onChange,
+  ariaLabel,
+  placeholder,
+  className,
+}: TvTextInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const { ref, focused } = useFocusable({ onEnterPress: () => inputRef.current?.focus() });
+  const { ref, focused } = useFocusable({
+    onEnterPress: () => inputRef.current?.focus(),
+  });
 
-  const cls = ['tv-text-input', 'tv-focusable', focused ? 'tv-focusable--focused' : '', className]
+  const cls = [
+    "tv-text-input",
+    "tv-focusable",
+    focused ? "tv-focusable--focused" : "",
+    className,
+  ]
     .filter(Boolean)
-    .join(' ');
+    .join(" ");
 
   return (
     <div ref={ref as Ref<HTMLDivElement>} className={cls}>

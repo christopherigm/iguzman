@@ -6,15 +6,26 @@
   --surface-2: #1a1a22;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #root { height: 100%; width: 100%; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Roboto', system-ui, sans-serif;
+  font-family: "Roboto", system-ui, sans-serif;
   overflow: hidden;
 }
 
 /* TV overscan-safe area for 1080p (5% margin). */
-#root { padding: 54px 96px; }
+#root {
+  padding: 48px;
+}

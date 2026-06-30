@@ -1,0 +1,8 @@
+.tv-grid {
+  display: grid;
+  /* minmax(0, 1fr) — not the default 1fr (= minmax(auto, 1fr)) — so a wide
+     child (e.g. a long, nowrap movie title) can't blow its track past the
+     equal share and leave the columns uneven. Every column stays identical. */
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 20px;
+}

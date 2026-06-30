@@ -287,7 +287,7 @@ body {
 }
 
 /* TV overscan-safe area for 1080p (5% margin). */
-#root { padding: 54px 96px; }
+#root { padding: 48px; }
 EOF
 }
 
@@ -350,14 +350,16 @@ gen_app_config_xml() {
   cat > "$out" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://iguzman.com.mx/${name}" version="1.0.0" viewmodes="maximized">
-    <tizen:application id="${pkg_id}.${app_id_name}" package="${pkg_id}" required_version="10.0"/>
+    <tizen:application id="${pkg_id}.${app_id_name}" package="${pkg_id}" required_version="6.0"/>
     <content src="index.html"/>
     <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
     <icon src="icon.png"/>
     <name>${title}</name>
     <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
     <tizen:profile name="tv"/>
     <tizen:setting screen-orientation="landscape" context-menu="enable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
+    <access origin="*" subdomains="true"/>
 </widget>
 EOF
 }
@@ -456,15 +458,122 @@ gen_app_app_tsx() {
   cat > "$out" << 'TSEOF'
 import { Routes, Route } from 'react-router-dom';
 import { Home } from './screens/home';
+import { DevScreenGuide } from './dev-screen-guide';
 
 export function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-    </Routes>
+    <>
+      {/* Dev-only: frames the 1920x1080 TV screen + safe area in the browser.
+          Compiled out of the production .wgt via import.meta.env.DEV. */}
+      {import.meta.env.DEV && <DevScreenGuide />}
+      <Routes>
+        <Route path="/" element={<Home />} />
+      </Routes>
+    </>
   );
 }
 TSEOF
+}
+
+gen_app_dev_screen_guide_tsx() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'TSEOF'
+import { useEffect } from "react";
+import "./dev-screen-guide.css";
+
+// Dev-only visual guide. Outlines the 1920x1080 TV screen bounds and the inner
+// overscan-safe area so the layout can be checked in a desktop browser, where
+// the `width=1920` viewport meta is ignored. Render it behind
+// `import.meta.env.DEV` (see App.tsx) so it is excluded from the production
+// .wgt shipped to the TV/emulator.
+export function DevScreenGuide() {
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("dev-tv-frame");
+    return () => root.classList.remove("dev-tv-frame");
+  }, []);
+
+  // Positioned absolutely against #root (made `position: relative` by the
+  // frame styles), so labels track the frame edges at any window size.
+  return (
+    <div aria-hidden="true">
+      <span className="dev-tv-frame__label dev-tv-frame__label--screen">
+        TV screen · 1920×1080
+      </span>
+      <span className="dev-tv-frame__label dev-tv-frame__label--safe">
+        Safe area
+      </span>
+    </div>
+  );
+}
+TSEOF
+}
+
+gen_app_dev_screen_guide_css() {
+  local out="$1"; mkdir -p "$(dirname "$out")"
+  cat > "$out" << 'CSSEOF'
+/* Dev-only TV-screen guides. Activated by the `.dev-tv-frame` class that
+   DevScreenGuide adds to <html> while `vite dev` is running. None of this is
+   present in the built .wgt: the component (and this stylesheet's import) are
+   gated behind `import.meta.env.DEV` and tree-shaken out of production. */
+
+/* Lock the desktop-browser preview to an exact 1920x1080 box so it mirrors the
+   real TV regardless of window size. `safe center` keeps the frame reachable
+   (no clipped top/left) when the browser window is smaller than the frame. */
+.dev-tv-frame body {
+  display: flex;
+  align-items: safe center;
+  justify-content: safe center;
+  overflow: auto;
+  background: #000;
+}
+
+.dev-tv-frame #root {
+  position: relative;
+  flex: 0 0 auto;
+  width: 1920px;
+  height: 1080px;
+  /* Outer border = the 1920x1080 TV screen bounds. `outline` draws over the
+     edge without shifting the existing layout. */
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Inner border = the overscan-safe area. The inset matches #root's existing
+   48px padding, so this line sits exactly where content begins. */
+.dev-tv-frame #root::after {
+  content: "";
+  position: absolute;
+  inset: 48px;
+  border: 1px dashed rgba(245, 245, 247, 0.45);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.dev-tv-frame__label {
+  position: absolute;
+  z-index: 9999;
+  padding: 2px 6px;
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.dev-tv-frame__label--screen {
+  top: 4px;
+  left: 8px;
+  color: var(--accent);
+}
+
+.dev-tv-frame__label--safe {
+  top: 58px;
+  left: 100px;
+  color: rgba(245, 245, 247, 0.55);
+}
+CSSEOF
 }
 
 gen_app_home_tsx() {
@@ -484,7 +593,7 @@ export function Home() {
 
   return (
     <Focusable group focusOnMount>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 40, maxWidth: 1100 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 40, maxWidth: 1825 }}>
         <TvText variant="hero">{t('homeTitle')}</TvText>
 
         <TvTextInput
@@ -513,9 +622,12 @@ gen_app_launch_app() {
  * Best-effort launch of a digital-copy URL into the matching Samsung TV app.
  *
  * Launching the target app (YouTube, Prime, etc.) is supported via the Tizen
- * ApplicationControl API; deep-linking to a *specific* video is NOT a documented
- * contract and most apps just open to their home screen. Falls back to a new tab
- * when not running on Tizen (e.g. browser dev).
+ * ApplicationControl API. For YouTube we can also deep-link to a *specific*
+ * video: the Tizen YouTube app parses a `PAYLOAD` app-control entry of the form
+ * `v=<videoId>` passed with the `default` operation. The generic `view`
+ * operation with a `url` data key (used before) is ignored by YouTube and only
+ * opens its home screen. Falls back to a new tab when not running on Tizen
+ * (e.g. browser dev).
  */
 
 // Tizen numeric app IDs (region-dependent; verify on the target fleet).
@@ -529,10 +641,33 @@ const HOST_TO_APP_ID: Record<string, string> = {
   'disneyplus.com': '3201901017640',
 };
 
+const YOUTUBE_APP_ID = '111299001912';
+
 export function appIdForUrl(rawUrl: string): string | null {
   try {
     const host = new URL(rawUrl).hostname.replace(/^www\./, '');
     return HOST_TO_APP_ID[host] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Extract the YouTube video id from any common YouTube URL shape. */
+export function youtubeVideoId(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    const host = url.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') {
+      return url.pathname.slice(1) || null;
+    }
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      const fromQuery = url.searchParams.get('v');
+      if (fromQuery) return fromQuery;
+      // /embed/<id>, /shorts/<id>, /v/<id>
+      const match = url.pathname.match(/^\/(?:embed|shorts|v)\/([^/?]+)/);
+      return match?.[1] ?? null;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -548,13 +683,23 @@ export function launchDigitalCopy(rawUrl: string): void {
     return;
   }
 
-  const control = new tizen.ApplicationControl(
-    'http://tizen.org/appcontrol/operation/view',
-    rawUrl,
-    null,
-    null,
-    [new tizen.ApplicationControlData('url', [rawUrl])],
-  );
+  // YouTube: deep-link straight to the video via the PAYLOAD `v=<id>` contract.
+  const videoId = appId === YOUTUBE_APP_ID ? youtubeVideoId(rawUrl) : null;
+  const control = videoId
+    ? new tizen.ApplicationControl(
+        'http://tizen.org/appcontrol/operation/default',
+        null,
+        null,
+        null,
+        [new tizen.ApplicationControlData('PAYLOAD', [`v=${videoId}`])],
+      )
+    : new tizen.ApplicationControl(
+        'http://tizen.org/appcontrol/operation/view',
+        rawUrl,
+        null,
+        null,
+        [new tizen.ApplicationControlData('url', [rawUrl])],
+      );
 
   // If launchAppControl fails, fall back to a plain launch of the app.
   tizen.application.launchAppControl(
@@ -1139,6 +1284,8 @@ create_app() {
   gen_app_tproject     "${app}/.tproject"
   gen_app_main_tsx     "${app}/src/main.tsx"
   gen_app_app_tsx      "${app}/src/App.tsx"
+  gen_app_dev_screen_guide_tsx "${app}/src/dev-screen-guide.tsx"
+  gen_app_dev_screen_guide_css "${app}/src/dev-screen-guide.css"
   gen_app_home_tsx     "${app}/src/screens/home.tsx"
   gen_app_launch_app   "${app}/src/lib/launch-app.ts"
   gen_app_tizen_dts    "${app}/src/lib/tizen.d.ts"

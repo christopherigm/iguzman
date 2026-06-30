@@ -35,6 +35,12 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
+# TEMPORARY: allow any origin (including the `null` Origin that the Samsung TV
+# emulator sends when the app is served from file://). Set CORS_ALLOW_ALL=True
+# in the env to bypass the allow-list while diagnosing emulator connectivity.
+# Revert to False (remove the env var) once the real origin is confirmed.
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL', 'False') == 'True'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

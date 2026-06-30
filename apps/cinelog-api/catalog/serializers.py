@@ -48,6 +48,7 @@ class ActorSerializer(serializers.ModelSerializer):
 class MovieListSerializer(serializers.ModelSerializer):
     genres = CategorySerializer(many=True, read_only=True)
     cover = serializers.SerializerMethodField()
+    backdrop = serializers.SerializerMethodField()
     formats = serializers.SerializerMethodField()
     # True when the requesting user owns this movie; gates the catalog grid's
     # "add to library" button. Dropped via the `omit_owned` context flag wherever
@@ -62,8 +63,8 @@ class MovieListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movie
         fields = [
-            'id', 'title', 'director', 'year', 'formats', 'cover', 'genres',
-            'owned', 'digital_copy_url', 'created',
+            'id', 'title', 'director', 'year', 'formats', 'cover', 'backdrop',
+            'genres', 'owned', 'digital_copy_url', 'created',
         ]
 
     def __init__(self, *args, **kwargs):
@@ -107,6 +108,13 @@ class MovieListSerializer(serializers.ModelSerializer):
             url = obj.cover_image.url
             return request.build_absolute_uri(url) if request else url
         return obj.cover_url or ''
+
+    def get_backdrop(self, obj):
+        request = self.context.get('request')
+        if obj.backdrop_image:
+            url = obj.backdrop_image.url
+            return request.build_absolute_uri(url) if request else url
+        return ''
 
 
 class MovieDetailSerializer(serializers.ModelSerializer):

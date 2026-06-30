@@ -11,7 +11,6 @@
     "new-api": "bash cli/new-django-app/new-django-app.sh",
     "new-tv-app": "bash cli/new-smarttv-app/new-smarttv-app.sh",
     "tv-cert": "bash cli/tv-cert/tv-cert.sh",
-    "tv-build": "bash cli/tv-build/tv-build.sh",
     "tv-deploy": "bash cli/tv-deploy/tv-deploy.sh",
     "helm": "bash cli/helm/helm.sh",
     "secrets": "bash cli/setup-k8s-secrets/setup-k8s-secrets.sh",

@@ -12,6 +12,12 @@ import { fileURLToPath, URL } from 'node:url';
 function tizenClassicScript(): Plugin {
   return {
     name: 'tizen-classic-script',
+    // Build-only: the dev server serves source as ES modules (Vite's own
+    // react-refresh preamble and client are module scripts too), so rewriting
+    // them to classic scripts there throws a SyntaxError on `import` and the
+    // app never mounts - a blank screen in the browser. The rewrite is only
+    // correct against the IIFE production bundle that the .wgt ships.
+    apply: 'build',
     transformIndexHtml: {
       order: 'post',
       // `defer` preserves the module script's implicit "run after DOM parsed"

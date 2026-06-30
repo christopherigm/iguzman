@@ -1,5 +1,12 @@
 {
   "homeTitle": "Cinelog Tv",
   "search": "Search a movie",
-  "openYoutube": "Open YouTube"
+  "openYoutube": "Open YouTube",
+  "loading": "Loading…",
+  "error": "Something went wrong. Please try again.",
+  "originHint": "This device's origin (add to API CORS_ALLOWED_ORIGINS):",
+  "empty": "No movies yet.",
+  "noCover": "No cover",
+  "previousPage": "Previous",
+  "nextPage": "Next"
 }

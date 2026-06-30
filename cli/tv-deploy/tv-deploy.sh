@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# tv-deploy.sh - install + run a Samsung Tizen (Smart TV) app on an emulator/TV.
+# tv-deploy.sh - build, sign, install + run a Samsung Tizen (Smart TV) app.
 #
 # Discovers Tizen apps under apps/ (config.xml + .tproject), picks a connected
-# target from `sdb devices` (or connects to a TV by IP), then installs and runs
-# the signed .wgt. If no .wgt exists yet it delegates to cli/tv-build to build +
-# sign + package first.
+# target from `sdb devices` (or connects to a TV by IP), then builds the web
+# bundle with pnpm, copies the Tizen manifest/metadata into dist/, signs and
+# packages it into a .wgt, and installs + runs it on the target. Signing uses a
+# security profile created by cli/tv-cert (run `pnpm tv-cert` first if you have
+# none).
 #
-# Requires Tizen Studio (`tizen` + `sdb` CLIs). pnpm is needed only when a build
-# is triggered. Run: bash cli/tv-deploy/tv-deploy.sh [app-name]  (append "es").
+# Requires Tizen Studio (`tizen` + `sdb` CLIs) and pnpm.
+# Run: bash cli/tv-deploy/tv-deploy.sh [app-name]  (append "es" for Spanish).
 
 set -euo pipefail
 
@@ -31,9 +33,10 @@ setup_strings() {
   local lang="$1"
   if [[ "${lang}" == "es" ]]; then
     WELCOME="Desplegar App Samsung Smart TV"
-    SUBTITLE="Instala y ejecuta una app Tizen en un emulador o TV."
+    SUBTITLE="Construye, firma e instala una app Tizen en un emulador o TV."
     TIZEN_MISSING="No se encontró la herramienta 'tizen' de Tizen Studio."
     SDB_MISSING="No se encontró la herramienta 'sdb' de Tizen Studio."
+    PNPM_MISSING="pnpm no está instalado o no está en PATH."
     TIZEN_HINT="Instala Tizen Studio o exporta TIZEN_HOME apuntando a su carpeta."
     APP_PROMPT="Selecciona la app de TV"
     APP_NOT_FOUND="No se encontraron apps de Tizen (config.xml + .tproject) en apps/."
@@ -44,12 +47,18 @@ setup_strings() {
     CONNECTING="Conectando a"
     CONNECT_FAILED="No se pudo conectar a la TV. Verifica el Modo Desarrollador y la IP."
     STILL_NO_TARGETS="Sigue sin haber destinos disponibles."
-    NO_WGT_BUILD="No hay un .wgt firmado. Construyendo primero…"
-    BUILD_FAILED="El empaquetado falló."
     PROFILE_PROMPT="Selecciona el perfil de firma"
     PROFILE_NONE="No hay perfiles de seguridad. Ejecuta 'pnpm tv-cert' primero."
-    STEP_RESIGN="Volviendo a firmar con tu certificado"
-    RESIGN_FAILED="La re-firma falló."
+    STEP_BUILD="Construyendo el bundle web"
+    STEP_COPY="Copiando metadatos de Tizen a dist/"
+    STEP_PACKAGE="Firmando y empaquetando (.wgt)"
+    WEB_BUILD_FAILED="El build falló."
+    BUILD_OK="Build completado."
+    NO_DIST="No se generó la carpeta dist/."
+    NO_CONFIG="Falta config.xml en la raíz de la app."
+    NO_ICON="Falta icon.png en la raíz de la app."
+    PACKAGE_FAILED="El empaquetado falló."
+    NO_WGT="No se encontró el .wgt generado en dist/."
     STEP_INSTALL="Instalando el paquete"
     STEP_RUN="Ejecutando la app"
     INSTALL_FAILED="La instalación falló."
@@ -58,9 +67,10 @@ setup_strings() {
     DONE_MSG="¡Listo! App lanzada en"
   else
     WELCOME="Deploy Samsung Smart TV App"
-    SUBTITLE="Install and run a Tizen app on an emulator or TV."
+    SUBTITLE="Build, sign and install a Tizen app on an emulator or TV."
     TIZEN_MISSING="Tizen Studio's 'tizen' CLI was not found."
     SDB_MISSING="Tizen Studio's 'sdb' CLI was not found."
+    PNPM_MISSING="pnpm is not installed or not in PATH."
     TIZEN_HINT="Install Tizen Studio or export TIZEN_HOME pointing at its folder."
     APP_PROMPT="Select TV app"
     APP_NOT_FOUND="No Tizen apps (config.xml + .tproject) found in apps/."
@@ -71,12 +81,18 @@ setup_strings() {
     CONNECTING="Connecting to"
     CONNECT_FAILED="Could not connect to the TV. Check Developer Mode and the IP."
     STILL_NO_TARGETS="Still no targets available."
-    NO_WGT_BUILD="No signed .wgt found. Building it first…"
-    BUILD_FAILED="Packaging failed."
     PROFILE_PROMPT="Select signing profile"
     PROFILE_NONE="No security profiles found. Run 'pnpm tv-cert' first."
-    STEP_RESIGN="Re-signing with your certificate"
-    RESIGN_FAILED="Re-signing failed."
+    STEP_BUILD="Building the web bundle"
+    STEP_COPY="Copying Tizen metadata into dist/"
+    STEP_PACKAGE="Signing and packaging (.wgt)"
+    WEB_BUILD_FAILED="Build failed."
+    BUILD_OK="Build completed."
+    NO_DIST="No dist/ folder was produced."
+    NO_CONFIG="config.xml is missing at the app root."
+    NO_ICON="icon.png is missing at the app root."
+    PACKAGE_FAILED="Packaging failed."
+    NO_WGT="Could not find the generated .wgt in dist/."
     STEP_INSTALL="Installing the package"
     STEP_RUN="Running the app"
     INSTALL_FAILED="Install failed."
@@ -209,20 +225,49 @@ sanitize_wgt() {
   fi
 }
 
-# Re-sign the already-built dist/ with ${profile}, replacing the embedded
-# author/distributor signatures so the package carries the certificate whose
-# DUID matches this TV. Caller sets: app_dir profile TIZEN_BIN. Sets RESIGNED_WGT.
-RESIGNED_WGT=""
-resign_package() {
-  local app_dir="$1" profile="$2"
+# Build the web bundle, copy the Tizen manifest/metadata into dist/, then sign +
+# package it with ${profile}. Signing here (rather than reusing a stale .wgt)
+# ensures the package's distributor DUID matches this TV's certificate — a stale
+# signature is the usual cause of a blank-log install failure. Caller sets:
+# app_name app_dir profile repo_root TIZEN_BIN. Sets BUILT_WGT on success.
+# (Build/package output must stream straight to the terminal, so this writes to a
+# global rather than echoing.)
+BUILT_WGT=""
+build_and_package() {
+  local app_name="$1" app_dir="$2" profile="$3" repo_root="$4"
   local dist="${app_dir}/dist"
+
+  # [1/3] pnpm build.
+  echo "" >/dev/tty
+  printf "  %s\n\n" "$(clr_bold_cyan "── ${STEP_BUILD} ──")" >/dev/tty
+  if ! ( cd "${repo_root}" && pnpm build --filter="${app_name}" ); then
+    printf "\n  %s %s\n" "$(clr_bold_red '✗')" "${WEB_BUILD_FAILED}" >/dev/tty; return 1
+  fi
+  printf "\n  %s %s\n" "$(clr_bold_green '✓')" "${BUILD_OK}" >/dev/tty
+
+  [[ -d "${dist}" ]]               || { printf "  %s %s\n" "$(clr_bold_red '✗')" "${NO_DIST}"   >/dev/tty; return 1; }
+  [[ -f "${app_dir}/config.xml" ]] || { printf "  %s %s\n" "$(clr_bold_red '✗')" "${NO_CONFIG}" >/dev/tty; return 1; }
+  [[ -f "${app_dir}/icon.png" ]]   || { printf "  %s %s\n" "$(clr_bold_red '✗')" "${NO_ICON}"   >/dev/tty; return 1; }
+
+  # [2/3] Copy the Tizen manifest, icon and (optional) project metadata in.
+  echo "" >/dev/tty
+  printf "  %s\n" "$(clr_bold_cyan "── ${STEP_COPY} ──")" >/dev/tty
+  cp "${app_dir}/config.xml" "${app_dir}/icon.png" "${dist}/"
+  [[ -f "${app_dir}/.project" ]]  && cp "${app_dir}/.project"  "${dist}/"
+  [[ -f "${app_dir}/.tproject" ]] && cp "${app_dir}/.tproject" "${dist}/"
+
+  # [3/3] Sign + package. Remove a stale .wgt so the glob below is unambiguous.
+  echo "" >/dev/tty
+  printf "  %s\n\n" "$(clr_bold_cyan "── ${STEP_PACKAGE} ──")" >/dev/tty
+  printf "  %s %s package -t wgt -s %s -- dist\n\n" "$(clr_dim '$')" "$(clr_dim "$(basename "${TIZEN_BIN}")")" "$(clr_dim "${profile}")" >/dev/tty
   rm -f "${dist}"/*.wgt
   if ! "${TIZEN_BIN}" package -t wgt -s "${profile}" -- "${dist}"; then
-    return 1
+    printf "\n  %s %s\n" "$(clr_bold_red '✗')" "${PACKAGE_FAILED}" >/dev/tty; return 1
   fi
-  RESIGNED_WGT="$(find "${dist}" -maxdepth 1 -name '*.wgt' -type f 2>/dev/null | head -n1)"
-  [[ -n "${RESIGNED_WGT}" ]] || return 1
-  RESIGNED_WGT="$(sanitize_wgt "${RESIGNED_WGT}")"
+
+  local wgt; wgt="$(find "${dist}" -maxdepth 1 -name '*.wgt' -type f 2>/dev/null | head -n1)"
+  [[ -n "${wgt}" ]] || { printf "  %s %s\n" "$(clr_bold_red '✗')" "${NO_WGT}" >/dev/tty; return 1; }
+  BUILT_WGT="$(sanitize_wgt "${wgt}")"
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -243,6 +288,9 @@ main() {
   fi
   if [[ -z "${SDB_BIN}" ]]; then
     printf "  %s %s\n  %s\n\n" "$(clr_bold_red '✗')" "${SDB_MISSING}" "$(clr_dim "${TIZEN_HINT}")" >/dev/tty; exit 1
+  fi
+  if ! command -v pnpm &>/dev/null; then
+    printf "  %s %s\n\n" "$(clr_bold_red '✗')" "${PNPM_MISSING}" >/dev/tty; exit 1
   fi
 
   local script_dir repo_root
@@ -307,54 +355,33 @@ main() {
     target="${TARGETS[${MENU_SELECTED}]}"
   fi
 
-  # Ensure a freshly-signed .wgt exists. When dist/ already holds an unpacked
-  # build, re-sign it with the active certificate so the package's distributor
-  # DUID matches this TV — a stale signature (e.g. from an earlier profile that
-  # predates this TV's DUID) is the usual cause of a blank-log install failure.
-  # When nothing is built yet, fall back to a full build via tv-build.
-  local dist="${app_dir}/dist"
-  local wgt=""
-  if [[ -f "${dist}/config.xml" ]]; then
-    # Pick a signing profile: the one active in profiles.xml, or prompt if the
-    # active flag is missing and more than one exists.
-    local -a PROFILES=()
-    local p
-    while IFS= read -r p; do [[ -n "${p}" ]] && PROFILES+=("${p}"); done < <(list_profiles)
-    if [[ ${#PROFILES[@]} -eq 0 ]]; then
-      printf "  %s %s\n\n" "$(clr_bold_red '✗')" "${PROFILE_NONE}" >/dev/tty; exit 1
-    fi
+  # Pick a signing profile: the one active in profiles.xml, or prompt if the
+  # active flag is missing and more than one exists.
+  local -a PROFILES=()
+  local p
+  while IFS= read -r p; do [[ -n "${p}" ]] && PROFILES+=("${p}"); done < <(list_profiles)
+  if [[ ${#PROFILES[@]} -eq 0 ]]; then
+    printf "  %s %s\n\n" "$(clr_bold_red '✗')" "${PROFILE_NONE}" >/dev/tty; exit 1
+  fi
 
-    local profile="" active; active="$(active_profile)"
-    if [[ ${#PROFILES[@]} -eq 1 ]]; then
-      profile="${PROFILES[0]}"
-    elif [[ -n "${active}" ]]; then
-      profile="${active}"
-    else
-      echo "" >/dev/tty
-      printf "  %s:\n\n" "$(clr_bold "${PROFILE_PROMPT}")"
-      MENU_ITEMS=("${PROFILES[@]}"); MENU_SELECTED=0
-      interactive_select
-      profile="${PROFILES[${MENU_SELECTED}]}"
-    fi
-
-    echo "" >/dev/tty
-    printf "  %s\n\n" "$(clr_bold_cyan "── ${STEP_RESIGN} ──")" >/dev/tty
-    printf "  %s %s package -t wgt -s %s -- dist\n\n" "$(clr_dim '$')" "$(clr_dim "$(basename "${TIZEN_BIN}")")" "$(clr_dim "${profile}")" >/dev/tty
-    if ! resign_package "${app_dir}" "${profile}"; then
-      printf "\n  %s %s\n\n" "$(clr_bold_red '✗')" "${RESIGN_FAILED}" >/dev/tty; exit 1
-    fi
-    wgt="${RESIGNED_WGT}"
+  local profile="" active; active="$(active_profile)"
+  if [[ ${#PROFILES[@]} -eq 1 ]]; then
+    profile="${PROFILES[0]}"
+  elif [[ -n "${active}" ]]; then
+    profile="${active}"
   else
     echo "" >/dev/tty
-    printf "  %s %s\n" "$(clr_bold_yellow '→')" "${NO_WGT_BUILD}" >/dev/tty
-    local -a build_args=("${app_name}"); [[ "${lang}" == "es" ]] && build_args+=("es")
-    if ! bash "${script_dir}/../tv-build/tv-build.sh" "${build_args[@]}"; then
-      printf "  %s %s\n\n" "$(clr_bold_red '✗')" "${BUILD_FAILED}" >/dev/tty; exit 1
-    fi
-    wgt="$(find "${dist}" -maxdepth 1 -name '*.wgt' -type f 2>/dev/null | head -n1)"
-    [[ -n "${wgt}" ]] || { printf "  %s %s\n\n" "$(clr_bold_red '✗')" "${BUILD_FAILED}" >/dev/tty; exit 1; }
-    wgt="$(sanitize_wgt "${wgt}")"
+    printf "  %s:\n\n" "$(clr_bold "${PROFILE_PROMPT}")"
+    MENU_ITEMS=("${PROFILES[@]}"); MENU_SELECTED=0
+    interactive_select
+    profile="${PROFILES[${MENU_SELECTED}]}"
   fi
+
+  # Build + sign + package.
+  if ! build_and_package "${app_name}" "${app_dir}" "${profile}" "${repo_root}"; then
+    echo "" >/dev/tty; exit 1
+  fi
+  local wgt="${BUILT_WGT}"
 
   # Install. `${target}` is an sdb serial (column 1 of `sdb devices`), so it must
   # be passed with -s/--serial; -t/--target expects the device *name* instead.

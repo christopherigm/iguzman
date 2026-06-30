@@ -18,6 +18,7 @@ when a plain `<input>` is focused. `TvTextInput` wraps that.
 | `@repo/ui-tv/spatial-nav-provider` → `initSpatialNav()` | Init Norigin spatial navigation once at startup. |
 | `@repo/ui-tv/focusable` → `Focusable` | Generic D-pad-focusable wrapper; `group` for navigable containers. |
 | `@repo/ui-tv/tv-button` → `TvButton` | Focusable button (`onPress` fires on remote Enter). |
+| `@repo/ui-tv/tv-grid` → `TvGrid` | Fixed 8-column grid (constant TV screen); wraps children in a FocusContext so focusable items navigate in any direction. |
 | `@repo/ui-tv/tv-text-input` → `TvTextInput` | Focusable field; Enter opens the TV IME. Requires `ariaLabel`. |
 | `@repo/ui-tv/tv-typography` → `TvText` | 10-foot text scale (`hero`/`title`/`body`/`label`). |
 | `@repo/ui-tv/remote-keys` → `TV_KEYS`, `onBackButton` | Remote key codes + Back-button helper. |
