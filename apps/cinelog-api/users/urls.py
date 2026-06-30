@@ -16,6 +16,10 @@ from .views import (
     PasskeyAuthenticationVerifyView,
     PasskeyCredentialListView,
     PasskeyCredentialDetailView,
+    TvAuthorizeView,
+    TvDeviceCodeView,
+    TvTokenRefreshView,
+    TvTokenView,
 )
 
 urlpatterns = [
@@ -36,4 +40,9 @@ urlpatterns = [
     path('passkey/authenticate/verify/', PasskeyAuthenticationVerifyView.as_view(), name='passkey-auth-verify'),
     path('passkey/credentials/', PasskeyCredentialListView.as_view(), name='passkey-credentials'),
     path('passkey/credentials/<int:pk>/', PasskeyCredentialDetailView.as_view(), name='passkey-credential-detail'),
+    # Smart-TV device pairing
+    path('tv/device/', TvDeviceCodeView.as_view(), name='tv-device'),
+    path('tv/token/', TvTokenView.as_view(), name='tv-token'),
+    path('tv/authorize/', TvAuthorizeView.as_view(), name='tv-authorize'),
+    path('tv/refresh/', TvTokenRefreshView.as_view(), name='tv-refresh'),
 ]

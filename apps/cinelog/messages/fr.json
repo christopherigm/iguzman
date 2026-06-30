@@ -8,6 +8,7 @@
     "statistics": "Statistiques",
     "addMovie": "Ajouter un film",
     "account": "Mon Compte",
+    "linkTv": "Associer une TV",
     "signOut": "Se déconnecter"
   },
   "Footer": {
@@ -343,5 +344,18 @@
       "title": "Sous-titres",
       "description": "Titres selon les langues de leurs sous-titres."
     }
+  },
+  "TvLinkPage": {
+    "title": "Associer votre TV",
+    "subtitle": "Saisissez le code affiché sur l'écran de votre TV pour la connecter à votre collection.",
+    "codeLabel": "Code TV",
+    "submit": "Associer la TV",
+    "linking": "Association…",
+    "successTitle": "TV associée",
+    "successBody": "Votre TV est maintenant connectée. Votre collection se chargera dans un instant.",
+    "errorInvalid": "Ce code n'est pas valide. Vérifiez-le et réessayez.",
+    "errorExpired": "Ce code a expiré. Obtenez-en un nouveau sur votre TV et réessayez.",
+    "errorUsed": "Ce code a déjà été utilisé.",
+    "errorGeneric": "Une erreur s'est produite. Veuillez réessayer."
   }
 }

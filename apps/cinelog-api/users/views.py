@@ -1,15 +1,35 @@
+from datetime import timedelta
+
+import secrets
+
 from django.contrib.auth.models import User
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.conf import settings
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
-from .models import EmailVerificationToken, PasswordResetToken
+from .models import (
+    EmailVerificationToken,
+    PasswordResetToken,
+    TvDeviceCode,
+    generate_tv_user_code,
+)
+
+# A Smart TV is a long-lived appliance, so its refresh token outlives the 7-day
+# web default - the user shouldn't have to re-pair after a week of normal use.
+# Each TV refresh re-extends this window (sliding expiry), so a TV in regular use
+# stays signed in indefinitely.
+TV_REFRESH_TOKEN_LIFETIME = timedelta(days=90)
+# How long a displayed pairing code stays valid before the TV must request a new one.
+TV_DEVICE_CODE_EXPIRY_MINUTES = 10
 from .serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -433,3 +453,171 @@ class PasskeyCredentialDetailView(APIView):
 
         cred.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Smart-TV device pairing (OAuth 2.0 device-authorization style) ────────────
+
+
+def _mint_tv_tokens(user):
+    """Issue a fresh access token and a long-lived (sliding) TV refresh token."""
+    refresh = CustomTokenObtainPairSerializer.get_token(user)
+    refresh.set_exp(lifetime=TV_REFRESH_TOKEN_LIFETIME)
+    # Mark the token so it's identifiable as a TV session (e.g. in the admin).
+    refresh['tv'] = True
+    return str(refresh.access_token), str(refresh)
+
+
+class TvDeviceCodeView(APIView):
+    """
+    POST /api/auth/tv/device/
+
+    A signed-out TV requests a pairing. Returns the short `user_code` to show on
+    screen, the opaque `device_code` the TV polls with, and the poll cadence.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Opportunistically purge expired codes so the table doesn't grow unbounded.
+        TvDeviceCode.objects.filter(expires_at__lt=timezone.now()).delete()
+
+        # Generate a unique user_code (retry on the vanishingly rare collision).
+        user_code = generate_tv_user_code()
+        for _ in range(10):
+            if not TvDeviceCode.objects.filter(user_code=user_code).exists():
+                break
+            user_code = generate_tv_user_code()
+
+        device_code = secrets.token_urlsafe(32)
+        expires_at = timezone.now() + timedelta(minutes=TV_DEVICE_CODE_EXPIRY_MINUTES)
+        TvDeviceCode.objects.create(
+            user_code=user_code, device_code=device_code, expires_at=expires_at
+        )
+        return Response(
+            {
+                'user_code': user_code,
+                'device_code': device_code,
+                'expires_in': TV_DEVICE_CODE_EXPIRY_MINUTES * 60,
+                'interval': 5,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class TvTokenView(APIView):
+    """
+    POST /api/auth/tv/token/  { "device_code": "..." }
+
+    The TV polls this with its `device_code`. Returns `pending` until the user
+    authorizes the code in the web app, then `authorized` with the JWTs (the
+    single-use entry is consumed). `expired` when the code is unknown or stale.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        device_code = (request.data.get('device_code') or '').strip()
+        if not device_code:
+            return Response(
+                {'detail': 'device_code is required.'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            entry = TvDeviceCode.objects.get(device_code=device_code)
+        except TvDeviceCode.DoesNotExist:
+            return Response({'status': 'expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if entry.is_expired():
+            entry.delete()
+            return Response({'status': 'expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if entry.status != TvDeviceCode.STATUS_AUTHORIZED or entry.user is None:
+            return Response({'status': 'pending'}, status=status.HTTP_200_OK)
+
+        access, refresh = _mint_tv_tokens(entry.user)
+        # Single-use: the code is spent once the TV has its tokens.
+        entry.delete()
+        return Response(
+            {'status': 'authorized', 'access': access, 'refresh': refresh},
+            status=status.HTTP_200_OK,
+        )
+
+
+class TvAuthorizeView(APIView):
+    """
+    POST /api/auth/tv/authorize/  { "user_code": "WQF482JK" }
+
+    The signed-in web user submits the code shown on their TV, linking their
+    account to the pending pairing so the TV's next poll redeems tokens for them.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user_code = (request.data.get('user_code') or '').strip().upper()
+        if not user_code:
+            return Response(
+                {'detail': 'user_code is required.'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            entry = TvDeviceCode.objects.get(user_code=user_code)
+        except TvDeviceCode.DoesNotExist:
+            return Response(
+                {'detail': 'Invalid or expired code.'}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if entry.is_expired():
+            entry.delete()
+            return Response(
+                {'detail': 'This code has expired. Please try again on your TV.'},
+                status=status.HTTP_410_GONE,
+            )
+
+        if entry.status == TvDeviceCode.STATUS_AUTHORIZED:
+            return Response(
+                {'detail': 'This code has already been used.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        entry.user = request.user
+        entry.status = TvDeviceCode.STATUS_AUTHORIZED
+        entry.save(update_fields=['user', 'status'])
+        return Response({'detail': 'Your TV has been linked.'})
+
+
+class TvTokenRefreshView(APIView):
+    """
+    POST /api/auth/tv/refresh/  { "refresh": "..." }
+
+    Refresh a TV session. Validates the supplied refresh token and mints a brand
+    new access + refresh pair, re-extending the long-lived window so a TV in
+    regular use never has to re-pair.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        raw = (request.data.get('refresh') or '').strip()
+        if not raw:
+            return Response(
+                {'detail': 'refresh is required.'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            old = RefreshToken(raw)
+        except TokenError:
+            return Response(
+                {'detail': 'Invalid or expired refresh token.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        try:
+            user = User.objects.get(id=old.get('user_id'), is_active=True)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'Invalid refresh token.'}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        access, refresh = _mint_tv_tokens(user)
+        return Response({'access': access, 'refresh': refresh})

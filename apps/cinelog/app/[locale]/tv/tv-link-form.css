@@ -1,0 +1,14 @@
+.tv-link__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tv-link__success {
+  color: var(--success, #22c55e);
+}
+.tv-link__error {
+  color: var(--error, #ef4444);
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--error-bg, rgba(239, 68, 68, 0.08));
+}

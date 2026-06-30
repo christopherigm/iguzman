@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { TvGrid } from "@repo/ui-tv/tv-grid";
 import { TvText } from "@repo/ui-tv/tv-typography";
-import { getMovies, type Movie } from "@/lib/catalog";
+import { Focusable } from "@repo/ui-tv/focusable";
+import { getMovies, UnauthorizedError, type Movie } from "@/lib/catalog";
 import { TvMovieCard } from "@/components/tv-movie-card";
 import { TvPagination } from "@/components/tv-pagination";
 import { useT } from "@/i18n/provider";
@@ -9,48 +11,33 @@ import "./home.css";
 
 type Status = "loading" | "ready" | "error";
 
-// TEMPORARY diagnostic — transport probes. `no-cors` makes each fetch resolve
-// whenever DNS+TCP+TLS succeed (opaque response, CORS irrelevant) and reject
-// only on a real transport failure. This separates "emulator can't reach / TLS
-// distrust" from "CORS". Compare the three:
-//   all ok            -> transport is fine; the catalog failure is CORS/credentials
-//   api+google fail   -> Tizen distrusts Google Trust Services (our API's CA)
-//   all fail          -> emulator has no network / DNS
-// Remove this block (and the probe effect + render) once the cause is found.
-const PROBES: { label: string; url: string }[] = [
-  {
-    label: "api·GTS",
-    url: "https://cinelog-api.iguzman.com.mx/api/catalog/movies/?page=1&page_size=1",
-  },
-  { label: "google·GTS", url: "https://www.gstatic.com/generate_204" },
-  { label: "example·DigiCert", url: "https://example.com/" },
-];
-
-async function probe(url: string): Promise<string> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 8000);
-  try {
-    await fetch(url, { mode: "no-cors", signal: ctrl.signal });
-    return "ok";
-  } catch (e) {
-    return e instanceof Error ? e.name : "err";
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-export function Home() {
+export function Home({ onSignOut }: { onSignOut: () => void }) {
   const { t } = useT();
-  const [page, setPage] = useState(1);
+  const navigate = useNavigate();
+  // Page lives in the URL so it survives the round-trip to the movie detail:
+  // `navigate(-1)` restores the `/?page=N` history entry and the grid reopens
+  // on the page the user left from.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const setPage = useCallback(
+    (next: number) => {
+      // Replace (not push) so paging doesn't stack history entries between the
+      // grid and the movie detail - one Home entry that updates in place.
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (next <= 1) params.delete("page");
+          else params.set("page", String(next));
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const [movies, setMovies] = useState<Movie[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [status, setStatus] = useState<Status>("loading");
-  // TEMPORARY diagnostic: the raw failure reason, surfaced on the error screen
-  // so the emulator tells us what actually broke (TLS reject, network/privilege
-  // block = "Failed to fetch"/TypeError, vs an HTTP status). Remove once fixed.
-  const [debug, setDebug] = useState("");
-  // TEMPORARY diagnostic — per-host transport probe results (see PROBES above).
-  const [probes, setProbes] = useState("");
   // Backdrop of the currently-focused card. `prev` keeps the outgoing image
   // rendered beneath the incoming one so they crossfade instead of dipping to
   // black between movies. Held as one object so the swap is atomic.
@@ -73,32 +60,19 @@ export function Home() {
         setTotalPages(data.total_pages);
         setStatus("ready");
       })
-      .catch((err: unknown) => {
+      .catch((err) => {
         if (!active) return;
-        setDebug(
-          `${err instanceof Error ? `${err.name}: ${err.message}` : String(err)} | proto=${window.location.protocol}`,
-        );
+        // The session lapsed and couldn't be refreshed - drop back to pairing.
+        if (err instanceof UnauthorizedError) {
+          onSignOut();
+          return;
+        }
         setStatus("error");
       });
     return () => {
       active = false;
     };
-  }, [page]);
-
-  // TEMPORARY diagnostic — when the catalog fetch fails, probe each host so the
-  // error screen shows where the transport breaks. Remove with the PROBES block.
-  useEffect(() => {
-    if (status !== "error") return;
-    let active = true;
-    Promise.all(
-      PROBES.map(async (p) => `${p.label}=${await probe(p.url)}`),
-    ).then((results) => {
-      if (active) setProbes(results.join("  "));
-    });
-    return () => {
-      active = false;
-    };
-  }, [status]);
+  }, [page, onSignOut]);
 
   return (
     <>
@@ -130,7 +104,18 @@ export function Home() {
           maxWidth: 1825,
         }}
       >
-        <TvText variant="hero">{t("homeTitle")}</TvText>
+        <div className="home-header">
+          <TvText variant="hero">{t("homeTitle")}</TvText>
+          {/* Focus the sign-out when there's no grid to claim it (loading,
+              error, or an empty library); otherwise the grid takes focus. */}
+          <Focusable
+            focusOnMount={status !== "ready" || movies.length === 0}
+            onEnterPress={onSignOut}
+            className="home-signout"
+          >
+            <TvText variant="body">{t("signOut")}</TvText>
+          </Focusable>
+        </div>
 
         {status === "loading" && <TvText variant="body">{t("loading")}</TvText>}
 
@@ -142,10 +127,6 @@ export function Home() {
             <TvText variant="body">
               {t("originHint")} {window.location.origin}
             </TvText>
-            {/* TEMPORARY diagnostic — raw fetch failure reason. Remove once fixed. */}
-            {debug && <TvText variant="body">{debug}</TvText>}
-            {/* TEMPORARY diagnostic — per-host transport probe results. */}
-            {probes && <TvText variant="body">{probes}</TvText>}
           </div>
         )}
 
@@ -161,6 +142,7 @@ export function Home() {
                   key={movie.id}
                   movie={movie}
                   onFocus={handleCardFocus}
+                  onSelect={(m) => navigate(`/movie/${m.id}`)}
                 />
               ))}
             </TvGrid>

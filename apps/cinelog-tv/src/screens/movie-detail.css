@@ -1,0 +1,140 @@
+/* Full-bleed dimmed backdrop behind the detail content. Fixed to the viewport
+   (not the overscan-padded #root) with explicit edge offsets - the `inset`
+   shorthand is ignored on old Tizen browsers (Chromium <87) and would collapse
+   this layer to zero size. */
+.movie-detail__backdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.movie-detail__backdrop-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Darken the left where the content sits, fading lighter to the right. */
+.movie-detail__scrim {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background:
+    linear-gradient(
+      to right,
+      rgba(11, 11, 15, 0.95) 0%,
+      rgba(11, 11, 15, 0.8) 50%,
+      rgba(11, 11, 15, 0.55) 100%
+    ),
+    linear-gradient(to top, rgba(11, 11, 15, 0.85) 0%, rgba(11, 11, 15, 0) 70%);
+}
+
+.movie-detail {
+  display: flex;
+  flex-direction: column;
+  max-width: 1825px;
+}
+
+/* Top action row. Back sits on the left, the play actions push to the right via
+   space-between. Margins on the buttons (not `gap`) keep spacing on the oldest
+   Tizen panels; TvButton already has internal flex/gap for its icon + label. */
+.movie-detail__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40px;
+}
+.movie-detail__actions-right {
+  display: flex;
+  align-items: center;
+}
+.movie-detail__actions-right .tv-button {
+  margin-left: 16px;
+}
+
+/* Two columns: a fixed, smaller poster on the left, content filling the right. */
+.movie-detail__layout {
+  display: flex;
+  align-items: flex-start;
+}
+
+.movie-detail__cover {
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  flex-shrink: 0;
+  margin-right: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.movie-detail__content {
+  display: flex;
+  flex-direction: column;
+  /* Allow the column to shrink within the flex row so long text wraps instead
+     of pushing the layout wider than the screen. */
+  min-width: 0;
+  flex: 1;
+}
+
+/* Vertical rhythm via margins (gap support is uneven on the oldest panels). */
+.movie-detail__content > * {
+  margin-bottom: 28px;
+}
+
+.movie-detail__meta {
+  display: flex;
+  flex-direction: column;
+}
+.movie-detail__meta .tv-text--label {
+  margin-bottom: 10px;
+}
+
+.movie-detail__badges {
+  display: flex;
+  flex-wrap: wrap;
+}
+.movie-detail__badges .tv-badge {
+  margin-right: 12px;
+  margin-bottom: 12px;
+}
+
+.movie-detail__synopsis {
+  line-height: 1.5;
+}
+
+.movie-detail__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.movie-detail__status .tv-text {
+  margin-bottom: 32px;
+}
+
+/* White-tinted button glyph: the source SVG is black, so it's painted via a
+   CSS mask (same technique as tv-format-header) to read on the dark button. */
+.movie-detail__btn-icon {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  background-color: #ffffff;
+  -webkit-mask-image: var(--icon);
+  mask-image: var(--icon);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}

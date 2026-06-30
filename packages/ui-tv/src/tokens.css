@@ -34,6 +34,25 @@
   opacity: 0.4;
   cursor: default;
 }
+/* Semantic kind colors, mirroring @repo/ui's Button. The host TV palette only
+   defines --accent, so each kind carries the same hex fallback the web button
+   uses (no color-mix - unsupported on old Tizen Chromium). */
+.tv-button--primary {
+  background: var(--accent, #06b6d4);
+  color: var(--accent-foreground, #ffffff);
+}
+.tv-button--success {
+  background: var(--success, #16a34a);
+  color: var(--success-foreground, #ffffff);
+}
+.tv-button--error {
+  background: var(--error, #8d0e0e);
+  color: var(--error-foreground, #ffffff);
+}
+.tv-button--warning {
+  background: var(--warning, #d97706);
+  color: var(--warning-foreground, #1c1000);
+}
 
 .tv-text-input {
   display: block;

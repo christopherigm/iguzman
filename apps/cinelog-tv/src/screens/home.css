@@ -1,10 +1,30 @@
+/* Header row: screen title on the left, the sign-out control on the right.
+   Margins (not `gap`) keep this safe on Tizen 6.x / Chromium 76-85. */
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-signout {
+  padding: 12px 28px;
+  background: var(--surface-2, #1a1a22);
+  cursor: pointer;
+}
+
 /* Full-bleed backdrop of the focused movie. Fixed to the viewport (not the
    overscan-padded #root) so it fills the whole screen, and pushed behind the
    screen content with a negative z-index. The dark base + scrim keep the
    foreground text legible over any image. */
 .home-backdrop {
   position: fixed;
-  inset: 0;
+  /* Explicit edges instead of the `inset` shorthand: older Tizen TV browsers
+     (Chromium <87, e.g. Tizen 6.x) ignore `inset`, which would leave this
+     fixed layer with auto offsets and collapse it to zero size. */
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: -1;
   overflow: hidden;
   background: var(--background);
@@ -15,7 +35,8 @@
    black between movies. object-fit: cover fills the screen keeping aspect. */
 .home-backdrop__img {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -38,7 +59,10 @@
    lighter top-right so the backdrop still reads. */
 .home-backdrop__scrim {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background:
     linear-gradient(
       to right,

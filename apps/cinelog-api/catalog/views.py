@@ -140,6 +140,13 @@ class MovieListView(ListCreateAPIView):
                 )
             )
 
+        # `?scope=library` narrows the list to the movies the signed-in user owns
+        # (the Smart-TV app renders only the user's own catalog). Mirrors the
+        # stats endpoint's scope param; anonymous or absent falls through to the
+        # full enabled catalog so anonymous web browsing is unaffected.
+        if self.request.query_params.get('scope', '').strip() == 'library' and user.is_authenticated:
+            qs = qs.filter(ownerships__user=user).distinct()
+
         search = self.request.query_params.get('search', '').strip()
         if search:
             qs = qs.filter(

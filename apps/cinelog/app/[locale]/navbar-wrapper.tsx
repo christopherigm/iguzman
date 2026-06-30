@@ -26,6 +26,7 @@ interface NavbarWrapperProps {
     statistics: string;
     addMovie: string;
     account: string;
+    linkTv: string;
     signOut: string;
   };
 }
@@ -49,6 +50,7 @@ export function NavbarWrapper({ logo, version, labels }: NavbarWrapperProps) {
         label: displayName,
         children: [
           { label: labels.account, href: "/account" },
+          { label: labels.linkTv, href: "/tv" },
           { label: labels.signOut, onClick: handleSignOut },
         ],
       }

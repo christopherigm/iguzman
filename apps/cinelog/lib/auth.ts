@@ -108,6 +108,18 @@ export async function requestPasswordReset(email: string): Promise<void> {
   }
 }
 
+export async function linkTv(userCode: string): Promise<void> {
+  const res = await fetch("/api/auth/tv/authorize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_code: userCode }),
+  });
+  if (!res.ok) {
+    const data: Record<string, unknown> = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, data);
+  }
+}
+
 export async function getProfile(): Promise<UserProfile> {
   const res = await fetch("/api/auth/profile");
   if (!res.ok) {

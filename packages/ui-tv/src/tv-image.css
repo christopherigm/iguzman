@@ -1,0 +1,48 @@
+/* Old-Tizen-safe image box. See tv-image.tsx for why these rules avoid modern
+   CSS (no `aspect-ratio`, no `inset` shorthand, no `color-mix`). */
+
+.tv-image {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--surface-2, #1a1a22);
+}
+
+/* No `ratio`: fill a parent that already has a height. With a `ratio`, the
+   inline `padding-top` supplies the height and this is omitted. */
+.tv-image--fill {
+  height: 100%;
+}
+
+/* Image and placeholder are taken out of flow and pinned to all four edges with
+   explicit offsets (the `inset` shorthand is Chromium 87+). Width/height 100%
+   make them fill the (padding- or parent-) sized box. */
+.tv-image__img,
+.tv-image__placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.tv-image__img {
+  object-fit: cover;
+}
+
+.tv-image__img--contain {
+  object-fit: contain;
+}
+
+.tv-image__placeholder {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  /* Muted via opacity rather than color-mix() (Chromium 111+). */
+  color: var(--foreground, #f5f5f7);
+  opacity: 0.6;
+  font-size: 1.125rem;
+}

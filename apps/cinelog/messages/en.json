@@ -8,6 +8,7 @@
     "statistics": "Statistics",
     "addMovie": "Add Movie",
     "account": "Account",
+    "linkTv": "Link a TV",
     "signOut": "Sign out"
   },
   "Footer": {
@@ -343,5 +344,18 @@
       "title": "Subtitles",
       "description": "Titles by the languages their subtitles are available in."
     }
+  },
+  "TvLinkPage": {
+    "title": "Link your TV",
+    "subtitle": "Enter the code shown on your TV screen to sign it in to your library.",
+    "codeLabel": "TV code",
+    "submit": "Link TV",
+    "linking": "Linking…",
+    "successTitle": "TV linked",
+    "successBody": "Your TV is now signed in. It should load your library in a moment.",
+    "errorInvalid": "That code isn't valid. Check it and try again.",
+    "errorExpired": "This code has expired. Get a new one on your TV and try again.",
+    "errorUsed": "This code has already been used.",
+    "errorGeneric": "Something went wrong. Please try again."
   }
 }

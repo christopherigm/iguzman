@@ -1,0 +1,49 @@
+/* Centered 10-foot pairing screen. Uses flex centering with margins (not `gap`)
+   for Tizen 6.x / Chromium 76-85 compatibility. */
+.pairing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 100vh;
+  padding: 40px;
+}
+
+.pairing__hint {
+  margin-top: 24px;
+  max-width: 1200px;
+  opacity: 0.85;
+}
+
+.pairing__url {
+  margin-top: 12px;
+  color: var(--accent, #06b6d4);
+}
+
+/* The pairing code: large, spaced monospace so it reads cleanly from the couch.
+   A plain element (not a TvText) so the letter-spacing/size are owned here. */
+.pairing__code {
+  margin-top: 28px;
+  font-family: "Courier New", monospace;
+  font-size: 6rem;
+  font-weight: 700;
+  letter-spacing: 1.2rem;
+  /* Offset the trailing letter-space so the block stays visually centered. */
+  padding-left: 1.2rem;
+  color: var(--foreground, #f5f5f7);
+}
+
+.pairing__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.pairing__button {
+  margin-top: 24px;
+  padding: 18px 48px;
+  background: var(--surface-2, #1a1a22);
+  cursor: pointer;
+}

@@ -8,6 +8,7 @@
     "statistics": "Estatísticas",
     "addMovie": "Adicionar filme",
     "account": "Minha Conta",
+    "linkTv": "Vincular uma TV",
     "signOut": "Sair"
   },
   "Footer": {
@@ -343,5 +344,18 @@
       "title": "Legendas",
       "description": "Títulos conforme os idiomas de suas legendas."
     }
+  },
+  "TvLinkPage": {
+    "title": "Vincule sua TV",
+    "subtitle": "Digite o código exibido na tela da sua TV para conectá-la à sua coleção.",
+    "codeLabel": "Código da TV",
+    "submit": "Vincular TV",
+    "linking": "Vinculando…",
+    "successTitle": "TV vinculada",
+    "successBody": "Sua TV agora está conectada. Sua coleção será carregada em instantes.",
+    "errorInvalid": "Esse código não é válido. Verifique e tente novamente.",
+    "errorExpired": "Este código expirou. Gere um novo na sua TV e tente novamente.",
+    "errorUsed": "Este código já foi utilizado.",
+    "errorGeneric": "Algo deu errado. Tente novamente."
   }
 }

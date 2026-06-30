@@ -4,7 +4,7 @@ import { routing } from "@repo/i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 
-const PROTECTED_PREFIXES = ["/account", "/add-movie"];
+const PROTECTED_PREFIXES = ["/account", "/add-movie", "/tv"];
 
 const IS_PROD = process.env.NODE_ENV === "production";
 // Access cookie outlives the 1h JWT (see settings.py ACCESS_TOKEN_LIFETIME) so an

@@ -8,6 +8,7 @@
     "statistics": "Statistik",
     "addMovie": "Film hinzufügen",
     "account": "Konto",
+    "linkTv": "TV verknüpfen",
     "signOut": "Abmelden"
   },
   "Footer": {
@@ -343,5 +344,18 @@
       "title": "Untertitel",
       "description": "Titel nach den Sprachen ihrer Untertitel."
     }
+  },
+  "TvLinkPage": {
+    "title": "TV verknüpfen",
+    "subtitle": "Gib den auf deinem TV-Bildschirm angezeigten Code ein, um es bei deiner Sammlung anzumelden.",
+    "codeLabel": "TV-Code",
+    "submit": "TV verknüpfen",
+    "linking": "Wird verknüpft…",
+    "successTitle": "TV verknüpft",
+    "successBody": "Dein TV ist jetzt angemeldet. Deine Sammlung wird gleich geladen.",
+    "errorInvalid": "Dieser Code ist ungültig. Bitte überprüfen und erneut versuchen.",
+    "errorExpired": "Dieser Code ist abgelaufen. Hol dir auf deinem TV einen neuen und versuche es erneut.",
+    "errorUsed": "Dieser Code wurde bereits verwendet.",
+    "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
   }
 }

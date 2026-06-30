@@ -20,11 +20,28 @@ const FORMAT_HEADER: Partial<
 
 // Highest-quality first (4K → Blu-ray → DVD). The first present format also
 // picks the single background color. "other"/unset formats contribute nothing.
+// "digital" is intentionally absent: unlike the shared physical formats it is a
+// per-user signal, appended via `showDigital` (the paired user saved their own
+// digital-copy link), never read from the movie's shared `formats`.
 const ICON_ORDER: MovieFormat[] = ["4k", "bluray", "dvd"];
 
 /** Format strip sat above a movie cover. Renders nothing when no icon applies. */
-export function TvFormatHeader({ formats = [] }: { formats?: MovieFormat[] }) {
-  const shown = ICON_ORDER.filter((fmt) => formats.includes(fmt));
+export function TvFormatHeader({
+  formats = [],
+  showDigital = false,
+}: {
+  formats?: MovieFormat[];
+  // Append the digital streaming icon. Per-user (the paired user saved their own
+  // digital-copy link), so it's a caller-supplied flag rather than read from the
+  // shared `formats`. Lets a digital-only title still render a header.
+  showDigital?: boolean;
+}) {
+  const physical = ICON_ORDER.filter((fmt) => formats.includes(fmt));
+  // Append digital last so a physical format still owns the background color;
+  // digital only sets it when the title is digital-only.
+  const shown: MovieFormat[] = showDigital
+    ? [...physical, "digital"]
+    : physical;
 
   // Single background by priority: `shown` is ordered highest-quality first, so
   // its first entry picks the color. No icon → no header.

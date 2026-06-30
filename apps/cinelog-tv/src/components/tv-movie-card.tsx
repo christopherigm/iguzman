@@ -1,4 +1,5 @@
 import { Focusable } from "@repo/ui-tv/focusable";
+import { TvImage } from "@repo/ui-tv/tv-image";
 import type { Movie } from "@/lib/catalog";
 import { useT } from "@/i18n/provider";
 import { TvFormatHeader } from "./tv-format-header";
@@ -6,16 +7,19 @@ import "./tv-movie-card.css";
 
 /**
  * 10-foot adaptation of apps/cinelog's MovieCard (grid view). D-pad-focusable;
- * the cover URL from the API is already absolute, so a plain <img> is used
- * instead of next/image. Detail navigation and the "add to library" control are
- * intentionally omitted for now.
+ * the cover comes from the API as an absolute URL and is rendered through
+ * `TvImage` so it shows on old Tizen browsers (no `aspect-ratio` support).
+ * Pressing Enter on a focused card fires `onSelect` (the home screen routes to
+ * the detail page). The "add to library" control is intentionally omitted.
  */
 export function TvMovieCard({
   movie,
   onFocus,
+  onSelect,
 }: {
   movie: Movie;
   onFocus?: (movie: Movie) => void;
+  onSelect?: (movie: Movie) => void;
 }) {
   const { t } = useT();
 
@@ -23,16 +27,14 @@ export function TvMovieCard({
     <Focusable
       className="tv-movie-card"
       onFocus={onFocus ? () => onFocus(movie) : undefined}
+      onEnterPress={onSelect ? () => onSelect(movie) : undefined}
     >
       <div className="tv-movie-card__cover">
-        <TvFormatHeader formats={movie.formats} />
-        <div className="tv-movie-card__image-wrap">
-          {movie.cover ? (
-            <img className="tv-movie-card__image" src={movie.cover} alt="" />
-          ) : (
-            <div className="tv-movie-card__placeholder">{t("noCover")}</div>
-          )}
-        </div>
+        <TvFormatHeader
+          formats={movie.formats}
+          showDigital={!!movie.digital_copy_url}
+        />
+        <TvImage src={movie.cover} ratio={2 / 3} placeholder={t("noCover")} />
       </div>
       <div className="tv-movie-card__meta">
         <span className="tv-movie-card__title">{movie.title}</span>
