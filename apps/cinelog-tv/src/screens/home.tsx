@@ -126,7 +126,7 @@ export function Home() {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 40,
+          gap: 18,
           maxWidth: 1825,
         }}
       >

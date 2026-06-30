@@ -76,7 +76,10 @@ const FLEX_CONTAINER_KEYS: (keyof BoxProps)[] = [
  *   Content
  * </Box>
  */
-export const Box: React.FC<BoxProps> = (props) => {
+export const Box = React.forwardRef<HTMLDivElement, BoxProps>(function Box(
+  props,
+  ref,
+) {
   const {
     styles,
     children,
@@ -118,6 +121,7 @@ export const Box: React.FC<BoxProps> = (props) => {
 
   return (
     <div
+      ref={ref}
       id={id}
       className={className}
       style={style}
@@ -145,6 +149,6 @@ export const Box: React.FC<BoxProps> = (props) => {
       {children}
     </div>
   );
-};
+});
 
 export default Box;

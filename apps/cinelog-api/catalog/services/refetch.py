@@ -124,7 +124,7 @@ def _from_scraped_text(raw_text: str, barcode: str) -> dict | None:
 
 def resolve_movie_metadata(
     *,
-    title: str,
+    title: str = '',
     year: int | None = None,
     barcode: str = '',
     tmdb_id: str = '',

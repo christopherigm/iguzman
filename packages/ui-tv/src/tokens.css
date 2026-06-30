@@ -30,6 +30,10 @@
   font-size: 1.5rem;
   font-weight: 600;
 }
+.tv-button--disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 
 .tv-text-input {
   display: block;

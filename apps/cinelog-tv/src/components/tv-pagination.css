@@ -1,10 +1,23 @@
 .tv-pagination {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
+  /* Distribute buttons across the full row; `gap` is the minimum spacing and
+     any leftover width is spread between them so the row fills 100%. */
+  justify-content: space-between;
   gap: 12px;
-  margin-top: 16px;
+  width: 100%;
+}
+
+/* Numeric page buttons stay square; only prev/next keep their text width.
+   `--tv-page-size` is set in JS to the measured button height so width == height
+   (aspect-ratio doesn't reliably transfer to width for a flex item here).
+   Scoped to two classes so it beats `.tv-button`'s own horizontal padding. */
+.tv-pagination .tv-pagination__page {
+  flex: 0 0 auto;
+  width: var(--tv-page-size, 64px);
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .tv-pagination__page--active {
