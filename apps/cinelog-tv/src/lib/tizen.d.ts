@@ -10,6 +10,12 @@ interface TizenApplicationControl {
   operation: string;
 }
 
+interface TizenApplicationInformation {
+  id: string;
+  name: string;
+  packageId: string;
+}
+
 interface TizenApplicationManager {
   launch(id: string, onSuccess?: () => void, onError?: (error: unknown) => void): void;
   launchAppControl(
@@ -18,6 +24,10 @@ interface TizenApplicationManager {
     onSuccess?: () => void,
     onError?: (error: unknown) => void,
     replyCallback?: unknown,
+  ): void;
+  getAppsInfo(
+    onSuccess: (apps: TizenApplicationInformation[]) => void,
+    onError?: (error: unknown) => void,
   ): void;
 }
 

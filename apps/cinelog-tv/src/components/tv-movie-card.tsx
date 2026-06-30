@@ -14,11 +14,9 @@ import "./tv-movie-card.css";
  */
 export function TvMovieCard({
   movie,
-  onFocus,
   onSelect,
 }: {
   movie: Movie;
-  onFocus?: (movie: Movie) => void;
   onSelect?: (movie: Movie) => void;
 }) {
   const { t } = useT();
@@ -26,7 +24,6 @@ export function TvMovieCard({
   return (
     <Focusable
       className="tv-movie-card"
-      onFocus={onFocus ? () => onFocus(movie) : undefined}
       onEnterPress={onSelect ? () => onSelect(movie) : undefined}
     >
       <div className="tv-movie-card__cover">

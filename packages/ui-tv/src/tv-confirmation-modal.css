@@ -1,0 +1,73 @@
+/* TvConfirmationModal - 10-foot dialog over a full-screen overlay.
+   Written for old Tizen Chromium (76): explicit width/height (no `inset`),
+   `rgba()` washes (no `color-mix()`), and margins instead of flex `gap`. */
+
+.tv-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* Explicit viewport size, not top/right/bottom/left:0 - on Chromium 76 a box
+     whose height is *derived* from top/bottom can collapse to zero. */
+  width: 100vw;
+  height: 100vh;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  /* `box-sizing: border-box` so the padding stays inside the viewport box. */
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.tv-modal-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  background: var(--background, #0b0b0f);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+/* Scrollable region: title + text + options. Capped by the panel's max-height so
+   a long option list scrolls (options use TvButton `scrollOnFocus` to reveal). */
+.tv-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 36px;
+}
+
+.tv-modal-title {
+  display: block;
+}
+
+.tv-modal-text {
+  display: block;
+  margin-top: 12px;
+  opacity: 0.8;
+}
+
+.tv-modal-content {
+  margin-top: 28px;
+}
+
+.tv-modal-actions {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 24px 36px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Margin (not flex `gap`) between the action buttons for old Chromium. */
+.tv-modal-actions > * {
+  margin-left: 18px;
+}
+.tv-modal-actions > *:first-child {
+  margin-left: 0;
+}

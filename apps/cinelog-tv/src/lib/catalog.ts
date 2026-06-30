@@ -87,12 +87,24 @@ export class NotFoundError extends Error {
 }
 
 /**
- * Fetch one page of the signed-in user's library (two grid rows per page).
- * Attaches the session access token; on a 401 it refreshes once and retries,
- * and throws `UnauthorizedError` when the session can't be recovered.
+ * Fetch one page of the signed-in user's library (two grid rows per page),
+ * optionally narrowed to movies tagged with ALL of `genres` (genre slugs - the
+ * API's `?genre=` repeats with AND semantics). Attaches the session access
+ * token; on a 401 it refreshes once and retries, and throws `UnauthorizedError`
+ * when the session can't be recovered.
  */
-export async function getMovies(page = 1): Promise<Paginated<Movie>> {
-  const url = `${API_URL}/api/catalog/movies/?scope=library&page=${page}&page_size=${PAGE_SIZE}`;
+export async function getMovies(
+  page = 1,
+  genres: string[] = [],
+): Promise<Paginated<Movie>> {
+  const params = new URLSearchParams({
+    scope: "library",
+    page: String(page),
+    page_size: String(PAGE_SIZE),
+  });
+  // `genre` repeats once per selected slug (AND across the m2m on the server).
+  for (const slug of genres) params.append("genre", slug);
+  const url = `${API_URL}/api/catalog/movies/?${params.toString()}`;
 
   const request = (token: string | null): Promise<Response> =>
     fetch(url, {
@@ -108,6 +120,32 @@ export async function getMovies(page = 1): Promise<Paginated<Movie>> {
   }
   if (!res.ok) throw new Error(`getMovies failed: ${res.status}`);
   return res.json() as Promise<Paginated<Movie>>;
+}
+
+/**
+ * Fetch the full list of catalog genres (categories) for the filter modal. The
+ * API paginates categories but the page size (50) comfortably exceeds the genre
+ * count, so the first page is the whole set. Same session handling as
+ * `getMovies`: attaches the access token, refreshes once on a 401 and retries.
+ */
+export async function getGenres(): Promise<Genre[]> {
+  const url = `${API_URL}/api/catalog/categories/`;
+
+  const request = (token: string | null): Promise<Response> =>
+    fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+  let res = await request(getAccessToken());
+  if (res.status === 401) {
+    const refreshed = await refreshSession();
+    if (!refreshed) throw new UnauthorizedError();
+    res = await request(refreshed);
+    if (res.status === 401) throw new UnauthorizedError();
+  }
+  if (!res.ok) throw new Error(`getGenres failed: ${res.status}`);
+  const data = (await res.json()) as Paginated<Genre>;
+  return data.results;
 }
 
 /**

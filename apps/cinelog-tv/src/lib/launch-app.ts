@@ -8,12 +8,17 @@
  * - YouTube parses a `PAYLOAD` app-control entry of the form `v=<videoId>`
  *   passed with the `default` operation. The generic `view` operation with a
  *   `url` data key is ignored by YouTube and only opens its home screen.
- * - Prime Video and Netflix likewise take their title id (ASIN / catalog id)
- *   via a `PAYLOAD` entry on the `default` operation. These payload contracts
- *   are *unverified on the device fleet* - treat them as best-effort. Whenever
- *   the deep-link is ignored (or the id can't be extracted) we fall back to a
- *   plain launch of the app's home screen, so a wrong payload never breaks
- *   "open the app".
+ * - Prime Video opens a specific title when handed its canonical
+ *   `primevideo.com/detail/<gti>` URL via the `view` operation. The id is a GTI
+ *   (`amzn1.dv.gti.<uuid>`); catalog links arrive as Amazon share URLs
+ *   (`watch.amazon.com/detail?gti=...`) which we rewrite to that detail URL.
+ * - Netflix takes its catalog id via a `PAYLOAD` entry on the `default`
+ *   operation. This payload contract is *unverified on the device fleet* -
+ *   treat it as best-effort.
+ *
+ * Whenever the deep-link is ignored (or the id can't be extracted) we fall back
+ * to a plain launch of the app's home screen, so a wrong/missing id never
+ * breaks "open the app".
  *
  * Falls back to a new tab when not running on Tizen (e.g. browser dev).
  */
@@ -30,6 +35,8 @@ const HOST_TO_APP_ID: Record<string, string> = {
   'm.youtube.com': YOUTUBE_APP_ID,
   'primevideo.com': PRIME_VIDEO_APP_ID,
   'amazon.com': PRIME_VIDEO_APP_ID,
+  // Amazon's canonical share host, e.g. watch.amazon.com/detail?gti=...
+  'watch.amazon.com': PRIME_VIDEO_APP_ID,
   'netflix.com': NETFLIX_APP_ID,
   'disneyplus.com': DISNEY_PLUS_APP_ID,
 };
@@ -103,6 +110,33 @@ export function primeVideoAsin(rawUrl: string): string | null {
 }
 
 /**
+ * Extract the Prime Video GTI (Amazon's Global Title Identifier, shaped
+ * `amzn1.dv.gti.<uuid>`) from any common Amazon/Prime URL shape, or accept a
+ * value that is already a bare GTI. The full `amzn1.dv.gti.` prefix is part of
+ * the id and must be preserved - `primevideo.com/detail/<gti>` only resolves
+ * with the prefix intact. Handles:
+ *
+ * - `watch.amazon.com/detail?gti=amzn1.dv.gti.<uuid>` (catalog share links)
+ * - `primevideo.com/detail/<gti>` and `/dp/<gti>`
+ * - `amazon.com/gp/video/detail/<gti>`
+ */
+export function primeVideoGti(rawUrl: string): string | null {
+  const GTI = /amzn1\.dv\.gti\.[0-9a-z-]+/i;
+  const bare = rawUrl.match(/^amzn1\.dv\.gti\.[0-9a-z-]+$/i);
+  if (bare) return bare[0];
+  try {
+    const url = new URL(rawUrl);
+    // Share links carry the GTI in a `gti` query param.
+    const fromQuery = url.searchParams.get('gti')?.match(GTI);
+    if (fromQuery) return fromQuery[0];
+    // Detail pages carry it in the path.
+    return url.pathname.match(GTI)?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Build the best deep-link ApplicationControl for the resolved app, or a generic
  * `view` control when the app has no known deep-link contract / no id could be
  * extracted. A null deep-link id is fine - the caller falls back to a plain app
@@ -132,13 +166,24 @@ function buildControl(
       ]);
     }
   } else if (appId === PRIME_VIDEO_APP_ID) {
-    const asin = primeVideoAsin(rawUrl);
-    if (asin) {
-      // Best-effort, unverified: Prime Video opens the title given its ASIN as
-      // PAYLOAD. Falls back to a plain launch if ignored.
-      return new tizen.ApplicationControl(defaultOp, null, null, null, [
-        new tizen.ApplicationControlData('PAYLOAD', [`asin=${asin}`]),
-      ]);
+    // Prime Video navigates to a title when handed its canonical
+    // primevideo.com detail URL via the `view` operation. Prefer the GTI
+    // (amzn1.dv.gti.<uuid>); fall back to an older 10-char ASIN link.
+    const gti = primeVideoGti(rawUrl);
+    const asin = gti ? null : primeVideoAsin(rawUrl);
+    const titleUrl = gti
+      ? `https://www.primevideo.com/detail/${gti}`
+      : asin
+        ? `https://www.amazon.com/dp/${asin}`
+        : null;
+    if (titleUrl) {
+      return new tizen.ApplicationControl(
+        'http://tizen.org/appcontrol/operation/view',
+        titleUrl,
+        null,
+        null,
+        [new tizen.ApplicationControlData('url', [titleUrl])],
+      );
     }
   }
 
@@ -152,6 +197,42 @@ function buildControl(
   );
 }
 
+/** Format a Tizen WebAPI error (or anything thrown) for on-screen debugging. */
+function describeError(error: unknown): string {
+  if (error && typeof error === 'object' && 'name' in error) {
+    const e = error as { name?: string; message?: string };
+    return `${e.name ?? 'Error'}: ${e.message ?? ''}`;
+  }
+  return String(error);
+}
+
+/**
+ * TEMPORARY on-device debug helper. Lists every installed app id/name whose id
+ * or name mentions the given needle, via an `alert` (the TV has no console).
+ * Wire it to a button to discover the *real* Prime Video app id on the fleet,
+ * then remove. e.g. `debugFindApp('amazon')` / `debugFindApp('prime')`.
+ */
+export function debugFindApp(needle: string): void {
+  const tizen = window.tizen;
+  if (!tizen) {
+    alert('not running on Tizen');
+    return;
+  }
+  const q = needle.toLowerCase();
+  tizen.application.getAppsInfo(
+    (apps) => {
+      const hits = apps
+        .filter(
+          (a) =>
+            a.id.toLowerCase().includes(q) || a.name.toLowerCase().includes(q),
+        )
+        .map((a) => `${a.name} → ${a.id}`);
+      alert(hits.length ? hits.join('\n') : `no app matching "${needle}"`);
+    },
+    (err) => alert(`getAppsInfo failed: ${describeError(err)}`),
+  );
+}
+
 export function launchDigitalCopy(rawUrl: string): void {
   const tizen = window.tizen;
   const appId = appIdForUrl(rawUrl);
@@ -162,15 +243,33 @@ export function launchDigitalCopy(rawUrl: string): void {
     return;
   }
 
-  // Deep-link straight to the title where we have a known PAYLOAD contract
+  // Deep-link straight to the title where we have a known deep-link contract
   // (YouTube / Netflix / Prime Video); otherwise a generic view request.
   const control = buildControl(tizen, appId, rawUrl);
 
-  // If launchAppControl fails, fall back to a plain launch of the app.
-  tizen.application.launchAppControl(
-    control,
-    appId,
-    () => undefined,
-    () => tizen.application.launch(appId),
-  );
+  // If the deep-link is rejected, fall back to a plain launch of the app home.
+  // TEMPORARY: every failure path alerts so we can see what the device does
+  // (deep-link rejected vs. wrong app id vs. API throwing). Remove once the
+  // Prime Video contract is confirmed on the fleet.
+  try {
+    tizen.application.launchAppControl(
+      control,
+      appId,
+      () => undefined,
+      (appControlErr) => {
+        tizen.application.launch(
+          appId,
+          () => alert(`deep-link rejected, opened app home\n${describeError(appControlErr)}`),
+          (launchErr) =>
+            alert(
+              `launch failed for app id ${appId}\n` +
+                `appControl: ${describeError(appControlErr)}\n` +
+                `launch: ${describeError(launchErr)}`,
+            ),
+        );
+      },
+    );
+  } catch (thrown) {
+    alert(`launchAppControl threw\nappId ${appId}\n${describeError(thrown)}`);
+  }
 }

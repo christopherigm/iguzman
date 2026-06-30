@@ -256,7 +256,7 @@ export function MovieDetail({ onSignOut }: { onSignOut: () => void }) {
 
               {movie.director && (
                 <TvText variant="body" className="movie-detail__director">
-                  {t("director")} {movie.director}
+                  {t("director")}: {movie.director}
                 </TvText>
               )}
             </div>

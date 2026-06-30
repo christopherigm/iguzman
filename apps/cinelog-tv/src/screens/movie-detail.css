@@ -15,13 +15,18 @@
   background: var(--background);
 }
 
-/* Darken the left where the content sits, fading lighter to the right. */
+/* Darken the left where the content sits, fading lighter to the right. Sized
+   with explicit `width`/`height: 100%` against the explicitly-sized
+   .movie-detail__backdrop (100vh), not top/right/bottom/left:0 - on Chromium 76
+   a box whose height is *derived* from top/bottom can collapse to zero, leaving
+   the gradient nothing to paint on (it reads on the TV as "the gradient doesn't
+   work"). */
 .movie-detail__scrim {
   position: absolute;
   top: 0;
-  right: 0;
-  bottom: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
   background:
     linear-gradient(
       to right,

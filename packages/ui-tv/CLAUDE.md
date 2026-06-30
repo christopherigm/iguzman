@@ -17,13 +17,14 @@ when a plain `<input>` is focused. `TvTextInput` wraps that.
 | ------ | ------- |
 | `@repo/ui-tv/spatial-nav-provider` → `initSpatialNav()` | Init Norigin spatial navigation once at startup. |
 | `@repo/ui-tv/focusable` → `Focusable` | Generic D-pad-focusable wrapper; `group` for navigable containers. |
-| `@repo/ui-tv/tv-button` → `TvButton` | Focusable button (`onPress` fires on remote Enter); `kind` (`primary`/`success`/`error`/`warning`) tints it, mirroring `@repo/ui`'s Button. |
+| `@repo/ui-tv/tv-button` → `TvButton` | Focusable button (`onPress` fires on remote Enter); `kind` (`primary`/`success`/`error`/`warning`) tints it, mirroring `@repo/ui`'s Button. `focusKey` gives the node a stable key so another component can restore focus via `setFocus(focusKey)`; `scrollOnFocus` scrolls the button into view on focus (use inside a scrollable list/modal). |
 | `@repo/ui-tv/tv-grid` → `TvGrid` | Fixed 8-column grid (constant TV screen); wraps children in a FocusContext so focusable items navigate in any direction. |
 | `@repo/ui-tv/tv-text-input` → `TvTextInput` | Focusable field; Enter opens the TV IME. Requires `ariaLabel`. |
 | `@repo/ui-tv/tv-typography` → `TvText` | 10-foot text scale (`hero`/`title`/`body`/`label`). |
 | `@repo/ui-tv/tv-image` → `TvImage` | Old-Tizen-safe image box (aspect-ratio + fallback) - use instead of a bare `<img>`. |
 | `@repo/ui-tv/tv-badge` → `TvBadge` | 10-foot status/metadata pill (`filled`/`outlined`/`subtle`); `subtle` uses `rgba()` not `color-mix()` for old Chromium. |
 | `@repo/ui-tv/tv-scrollable` → `TvScrollable` | D-pad-scrollable region for tall, unfocusable content. Focusable itself: Up/Down scroll while focused, falling through to Norigin at the top/bottom edge; top/bottom fades show when more content exists. Needs an explicit `maxHeight`. |
+| `@repo/ui-tv/tv-confirmation-modal` → `TvConfirmationModal` | 10-foot port of `@repo/ui`'s `ConfirmationModal`: full-screen overlay + centered panel via a portal, `title`/`text`, optional `children` (e.g. option buttons), OK + optional Cancel (`okCallback`/`cancelCallback`, `okLabel`/`cancelLabel`, `okDisabled`). Traps D-pad focus inside the panel (`isFocusBoundary`) and dismisses on the remote Back button. Focusable option children should set `scrollOnFocus` so they reveal when the list overflows. |
 | `@repo/ui-tv/remote-keys` → `TV_KEYS`, `onBackButton` | Remote key codes + Back-button helper. |
 
 ## Images - always use `TvImage`
